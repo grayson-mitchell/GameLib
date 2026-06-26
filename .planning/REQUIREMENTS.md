@@ -53,21 +53,19 @@
 
 ## Traceability
 
-*Roadmap phase assignments filled in by gsd-roadmapper.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | pending |
-| AUTH-02 | — | pending |
-| AUTH-03 | — | pending |
-| AUTH-04 | — | pending |
-| AUTH-05 | — | pending |
-| LIB-01 | — | pending |
-| LIB-02 | — | pending |
-| LIB-03 | — | pending |
-| LIB-04 | — | pending |
-| GAME-01 | — | pending |
-| GAME-02 | — | pending |
-| GAME-03 | — | pending |
-| GAME-04 | — | pending |
-| BRAND-01 | — | pending |
+| AUTH-01 | Phase 1 | pending |
+| AUTH-02 | Phase 1 | pending |
+| AUTH-03 | Phase 1 | pending |
+| AUTH-04 | Phase 1 | pending |
+| AUTH-05 | Phase 1 | pending |
+| LIB-01 | Phase 2 | pending |
+| LIB-02 | Phase 2 | pending |
+| LIB-03 | Phase 2 | pending |
+| LIB-04 | Phase 2 | pending |
+| GAME-01 | Phase 3 | pending |
+| GAME-02 | Phase 3 | pending |
+| GAME-03 | Phase 3 | pending |
+| GAME-04 | Phase 3 | pending |
+| BRAND-01 | Phase 4 | pending |
