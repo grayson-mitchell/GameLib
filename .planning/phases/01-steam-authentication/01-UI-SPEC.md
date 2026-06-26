@@ -39,9 +39,9 @@ Map to pixel equivalents when reasoning about layout geometry.
 | Token | Em Value | Pixel Equivalent | Usage in Phase 1 |
 |-------|----------|-----------------|-----------------|
 | `--space-3xs` | 0.25em | 4px | Icon gaps, border-radius on inputs and cards |
-| `--space-2xs` | 0.375em | 6px | Dense inline padding |
+| `--space-2xs` | 0.5em | 8px | Dense inline padding |
 | `--space-xs` | 0.5em | 8px | Icon padding inside Runner logo strip; small gaps |
-| `--space-sm` | 0.75em | 12px | Input internal padding; button padding |
+| `--space-sm` | 1em | 16px | Input internal padding; button padding |
 | `--space-md` | 1em | 16px | Default vertical rhythm between form elements |
 | `--space-lg` | 1.5em | 24px | Panel internal padding; section separation |
 | `--space-xl` | 3em | 48px | Tab-to-form-body gap |
@@ -50,8 +50,7 @@ Fixed equivalents (use when em is inappropriate, e.g., fixed-height elements):
 
 | Token | Value | Usage in Phase 1 |
 |-------|-------|-----------------|
-| `--space-md-fixed` | 16px | Consistent button height baseline |
-| `--space-lg-fixed` | 19.2px | Compact row gap in multi-field forms |
+| `--space-md-fixed` | 16px | Consistent button height baseline; compact row gap in multi-field forms |
 
 **Exceptions:**
 - Runner card height: 60px fixed (matches all existing runner cards — do not change)
@@ -69,14 +68,15 @@ Reference: `src/frontend/styles/_typography.scss`.
 
 | Role | CSS Token | Approx Size | Weight Token | Weight | Font Family | Line Height | Usage in Phase 1 |
 |------|-----------|-------------|-------------|--------|-------------|-------------|-----------------|
-| Screen heading | `--text-lg` | 19px | `--bold` | 700 | Rubik | 1.2 | Login screen title "Sign in to Steam"; step headings |
+| Screen heading | `--text-lg` | ~19px | `--bold` | 700 | Rubik | 1.2 | Login screen title "Sign in to Steam"; step headings |
 | Body / instructional | `--text-md` | 16px | `--regular` | 400 | Cabin | 1.5 | SteamGuard instruction text; detection warning body; tab panel copy |
-| Label / button | `--text-md` | 16px | `--medium` | 500 | Cabin | 1.0 | Input labels; button text (uppercase via CSS) |
-| Caption / error | `--text-sm` | 13px | `--regular` | 400 | Cabin | 1.4 | Inline error messages; helper text beneath inputs |
+| Caption / error | `--text-sm` | ~13px | `--regular` | 400 | Cabin | 1.4 | Inline error messages; helper text beneath inputs; input labels |
+| Micro-caption | `--text-xs` | ~11px | `--regular` | 400 | Cabin | 1.4 | QR auto-refresh note; secondary captions |
 
-**Weight constraint:** Use exactly 2 weights within any single view — regular (400) for body content
-and bold (700) for headings or call-to-action labels. Medium (500) is permitted for button text
-only (inherited from `_buttons.scss`).
+**Weight constraint:** Use exactly 2 weights within any single view — regular (400) for body
+content and bold (700) for headings and call-to-action labels. Button text weight (500, medium)
+is inherited from `_buttons.scss` and need not be declared or applied manually in Phase 1
+components.
 
 ---
 
@@ -127,7 +127,7 @@ Components needed for Phase 1, with their source strategy.
 | Spinner / loading | Existing `UpdateComponent` — or inline `<FontAwesomeIcon icon={faSyncAlt} spin />` | `src/frontend/components/UI/UpdateComponent/` |
 | Steam client warning | Inline warning block within `/loginweb/steam` — replaces login form when Steam not found | `.disabledMessage` in `index.scss` (pattern reference) |
 | "Download Steam" button | `.button.is-secondary` class — opens `shell.openExternal('https://store.steampowered.com/about/')` | `_buttons.scss` |
-| "Back" button (step 2) | `.button.is-tertiary` class — returns to step 1 | `_buttons.scss` |
+| "Back to Credentials" button (step 2) | `.button.is-tertiary` class — returns to step 1 | `_buttons.scss` |
 | "Sign In" / "Verify" button | `.button.is-primary` class | `_buttons.scss` |
 
 **QR library decision:** `react-qr-code` v2 (npm `react-qr-code`, ~5KB, SVG-only, no canvas,
@@ -158,8 +158,12 @@ but owns its own inner layout. It does NOT use the `loginContentWrapper` / `runn
 ```
 
 **"Back to Login" navigation:** Renders as `.button.is-link` top-left; navigates to `/login`.
-Not to be confused with the "Back" button on step 2 of the credential flow (which returns
-within the screen to step 1, not to `/login`).
+Not to be confused with the "Back to Credentials" button on step 2 of the credential flow (which
+returns within the screen to step 1, not to `/login`).
+
+**Focal points:**
+- QR Code tab: primary visual anchor is the 200×200px QR image, centered in the tab panel.
+- Credentials tab: primary visual anchor is the "Sign In to Steam" CTA button (full-width, `.button.is-primary`), at the bottom of the form.
 
 ---
 
@@ -171,10 +175,10 @@ Fires before rendering tabs. When `window.api.checkSteamInstalled()` returns fal
 
 ```
 [Warning icon: FontAwesomeIcon faTriangleExclamation, --status-warning color]
-"Steam client not found on your system."         [--text-lg, bold]
-"GamerLib requires Steam to be installed to authenticate and launch games."  [--text-md, regular]
+"Steam client not found"         [--text-lg, bold]
+"GamerLib requires the Steam client to authenticate and launch games."  [--text-md, regular]
 
-[ Download Steam ]    [ Cancel ]
+[ Download Steam ]    [ Return to Login ]
   .button.is-secondary   .button.is-tertiary
   opens store.steampowered.com/about/  navigates to /login
 ```
@@ -288,13 +292,14 @@ Triggered after credentials accepted, steam-session requests a SteamGuard code:
 Steam Guard Code
 [____________]   <input type="text" inputMode="numeric" maxLength={5} width:60%>
 
-[ Verify Code ]        [ Back ]
+[ Verify Code ]        [ Back to Credentials ]
   .button.is-primary     .button.is-tertiary
   disabled when len<5    returns to step 1 (fields reset)
 ```
 
-"Back" button returns to State 5 (step 1). Fields in step 1 clear on back navigation — user
-must re-enter credentials (security convention: never re-populate passwords on error/back).
+"Back to Credentials" button returns to State 5 (step 1). Fields in step 1 clear on back
+navigation — user must re-enter credentials (security convention: never re-populate passwords
+on error/back).
 
 ---
 
@@ -356,7 +361,7 @@ Username truncation: 20 characters max, append `...` if longer (matches existing
 | SteamGuard label | "Steam Guard Code" | |
 | SteamGuard instructional | "Check your authenticator app or email for a Steam Guard code." | `--text-md`, not multi-step numbered list |
 | Primary CTA step 2 | "Verify Code" | Uppercase via CSS; `.button.is-primary` |
-| Back button step 2 | "Back" | Uppercase via CSS; `.button.is-tertiary` |
+| Back button step 2 | "Back to Credentials" | Uppercase via CSS; `.button.is-tertiary`; returns to step 1 |
 | Back to login (top link) | "Back to Login" | `.button.is-link`; NOT uppercase |
 | Loading state CTA | "Signing in..." | Replaces "Sign In to Steam" while `loading=true` |
 | Logged in as (card) | "Logged in as [username]" | `--text-secondary`; truncate at 20 chars |
@@ -365,7 +370,7 @@ Username truncation: 20 characters max, append `...` if longer (matches existing
 | Steam not found heading | "Steam client not found" | `--text-lg`, bold |
 | Steam not found body | "GamerLib requires the Steam client to authenticate and launch games." | `--text-md` |
 | Download Steam button | "Download Steam" | `.button.is-secondary`; opens store.steampowered.com/about/ |
-| Cancel (from not-found) | "Cancel" | `.button.is-tertiary`; navigates to `/login` |
+| Return to login (from not-found) | "Return to Login" | `.button.is-tertiary`; navigates to `/login` |
 | Error: wrong credentials | "Incorrect username or password. Check your credentials and try again." | `--text-sm`, `--danger` color |
 | Error: wrong SteamGuard | "Incorrect code. Check your authenticator and try again." | `--text-sm`, `--danger` color |
 | Error: network failure | "Could not reach Steam. Check your connection and try again." | `--text-sm`, `--danger` color |
