@@ -30,7 +30,22 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Steam accounts appear in the existing Manage Accounts screen alongside Epic, GOG, and Amazon accounts
   4. User can remove a Steam account from GamerLib
   5. GamerLib shows an actionable prompt when Steam client is not installed
-**Plans**: TBD
+**Plans**: 3 (01-01, 01-02, 01-03)
+
+**Wave 1** — Type + dependency foundation:
+- `01-01-PLAN.md` — Install packages; add `'steam'` to Runner union, StoreStructure, IPC types, log constants; register stub LibraryManager/Game. Gate: `npm run codecheck`.
+
+**Wave 2** *(blocked on Wave 1 completion)*:
+- `01-02-PLAN.md` — SteamUser backend: encrypted token storage, QR auth flow, credential+SteamGuard flow, Steam client detection, IPC handlers + preload bridge. Gate: unit tests (`npm test -- --testPathPattern=steam/user`).
+
+**Wave 3** *(blocked on Wave 1 + 2 completion)*:
+- `01-03-PLAN.md` — Frontend: GlobalState/ContextProvider steam wiring, `/loginweb/steam` route (before WebView catch-all), Steam Runner tile, full SteamLogin screen (all 11 UI states). Gate: `npm run codecheck`.
+
+**Cross-cutting constraints:**
+- `steam-user` and `steam-session` must only run in main process — no renderer imports.
+- All CSS uses semantic tokens from `_colors.scss` / `_spacing.scss` — no hard-coded hex or px.
+- `/loginweb/steam` route MUST precede `loginweb/:runner` catch-all in App.tsx.
+
 **UI hint**: yes
 
 ### Phase 2: Steam Library
@@ -77,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Steam Authentication | 0/TBD | Not started | - |
+| 1. Steam Authentication | 0/3 | Planned | - |
 | 2. Steam Library | 0/TBD | Not started | - |
 | 3. Game Operations | 0/TBD | Not started | - |
 | 4. Branding | 0/TBD | Not started | - |

@@ -715,22 +715,25 @@ steam: {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **steam-session event model: is session per-request or persistent?**
    - What we know: `LoginSession` is created per auth attempt; `refreshToken` extracted from `session.refreshToken` after `authenticated` event
    - What's unclear: Whether the same `LoginSession` instance can be reused across the QR polling interval and credential retry, or if a new instance is created per attempt
-   - Recommendation: Create a new `LoginSession` for each auth attempt; persist only the `refreshToken` JWT. [ASSUMED — verify against steam-session 1.9.4 source]
+   - Recommendation: Create a new `LoginSession` for each auth attempt; persist only the `refreshToken` JWT.
+   - **RESOLVED:** Create a new `LoginSession` per auth attempt and hold the active session in a private static field on `SteamUser` for the duration of the QR polling loop. The executor must verify the exact event names (`authenticated`, `qrChallengeAccepted`) against `node_modules/steam-session/build/*.d.ts` before use — see Plan 01-02 Task 2 read_first.
 
 2. **steam-user persona name availability at `loggedOn` time**
    - What we know: `steam-user` client emits `loggedOn` after authenticating; persona names require a separate call or may require `setPersona()` and waiting for the `user` event
    - What's unclear: Whether `client.users[steamid]?.player_name` is populated immediately after `loggedOn` or requires a subscribe/cache update
-   - Recommendation: After `loggedOn`, call `client.getPersonas([client.steamID])` to explicitly fetch persona name. Store result as username. [ASSUMED — verify against steam-user 5.3.0 docs]
+   - Recommendation: After `loggedOn`, call `client.getPersonas([client.steamID])` to explicitly fetch persona name. Store result as username.
+   - **RESOLVED:** Call `client.getPersonas([client.steamID])` after `loggedOn` to explicitly fetch the persona name. The executor must verify the exact callback signature against `node_modules/@types/steam-user` before use — see Plan 01-02 Task 2 read_first.
 
 3. **`clearCache` type union — add `'steam'`?**
    - What we know: The function signature is `library?: 'gog' | 'legendary' | 'nile' | 'zoom'`. Zoom is listed but no handler body exists for it.
    - What's unclear: Whether Phase 1 should extend this union and add a steam handler, or handle it in `SteamUser.logout()` directly
    - Recommendation: Handle steam library clearing in `SteamUser.logout()` directly (simpler; consistent with Zoom pattern). Extending `clearCache` can happen in Phase 2 when the library store is added.
+   - **RESOLVED:** `SteamUser.logout()` clears its own stores directly. `clearCache` is NOT extended in Phase 1 (consistent with Zoom pattern — Zoom is in the type union with no handler body). Phase 2 will add the library store and can extend `clearCache` then.
 
 ---
 
