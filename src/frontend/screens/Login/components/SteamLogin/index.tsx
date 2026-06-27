@@ -72,13 +72,14 @@ export default function SteamLogin() {
   }
 
   // --- QR flow ---
-  async function startQRFlow() {
+  async function startQRFlow(isCancelled: () => boolean = () => false) {
     setStep('qr-generating')
     setChallengeUrl(null)
     clearPollInterval()
     clearQrRefreshTimer()
 
     const result = await window.api.steamStartQR()
+    if (isCancelled()) return
     if (result.status === 'error' || !result.challengeUrl) {
       showError('Could not generate QR code. Check your connection and try again.')
       setStep('tab')
@@ -135,8 +136,19 @@ export default function SteamLogin() {
 
   // --- Start QR when QR tab is shown ---
   useEffect(() => {
+    let cancelled = false
+
     if (step === 'tab' && activeTab === 'qr') {
-      startQRFlow()
+      const run = async () => {
+        await startQRFlow(() => cancelled)
+      }
+      run()
+    }
+
+    return () => {
+      cancelled = true
+      clearPollInterval()
+      clearQrRefreshTimer()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, activeTab])
