@@ -1,8 +1,8 @@
 /**
- * Unit test scaffold for SteamLibraryManager — LIB-01, LIB-02, LIB-03.
+ * Unit tests for SteamLibraryManager — LIB-01, LIB-02, LIB-03.
  *
- * Task 1 converts the buildInstalledMap todos (LIB-02) to real tests.
- * Task 2 converts the refresh / playtime / fallback todos (LIB-01, LIB-03) to real tests.
+ * Task 1 converted the buildInstalledMap todos (LIB-02) — those tests are now green.
+ * Task 2 converts the refresh / playtime / fallback todos (LIB-01, LIB-03).
  *
  * Mock strategy:
  *  - backend/logger uses factory form to prevent transitive fs-extra native crash
@@ -11,10 +11,18 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { buildInstalledMap } from '../library'
+import SteamLibraryManager, { buildInstalledMap } from '../library'
 import * as gfs from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
+import { sendFrontendMessage } from '../../../ipc'
+import { SteamUser } from '../user'
+import {
+  steamLibraryStore,
+  steamMetadataStore,
+  steamSyncStore
+} from '../electronStores'
+import { runOnceWhenOnline } from 'backend/online_monitor'
 import { join } from 'path'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -75,20 +83,35 @@ jest.mock('../electronStores', () => ({
   }
 }))
 
+// ── Shared fixtures ───────────────────────────────────────────────────────────
+
+const makeOwnedApp = (appid: number, name: string, playtime_forever: number) => ({
+  appid,
+  name,
+  playtime_forever,
+  img_icon_url: ''
+})
+
+const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
+  steamID: 'STEAMID_TEST',
+  getUserOwnedApps: jest.fn().mockResolvedValue({ app_count: apps.length, apps })
+})
+
 // ── Describe block ────────────────────────────────────────────────────────────
 
 describe('SteamLibraryManager', () => {
+  let manager: SteamLibraryManager
+
   beforeEach(() => {
     jest.clearAllMocks()
+    manager = new SteamLibraryManager()
+    // Default: getSteamLibraries returns empty so buildInstalledMap is fast
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+    // Default: metadata store returns undefined (no cached artwork)
+    jest.mocked(steamMetadataStore.get).mockReturnValue(undefined)
   })
 
-  // ── LIB-01: refresh() and owned app fetch ─────────────────────────────────
-
-  it.todo('LIB-01: refresh() calls getUserOwnedApps and builds a GameInfo per owned app')
-
-  it.todo('LIB-01: refresh() calls sendFrontendMessage pushGameToLibrary once per game')
-
-  // ── LIB-02: install state via ACF StateFlags ──────────────────────────────
+  // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────
 
   it('LIB-02: buildInstalledMap marks is_installed true when StateFlags bit 4 is set (e.g. 4, 6, 516)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
@@ -159,11 +182,93 @@ describe('SteamLibraryManager', () => {
     expect(result.has(570)).toBe(false)
   })
 
+  // ── LIB-01: refresh() and owned app fetch ─────────────────────────────────
+
+  it('LIB-01: refresh() calls getUserOwnedApps and builds a GameInfo per owned app', async () => {
+    const apps = [
+      makeOwnedApp(570, 'Dota 2', 120),
+      makeOwnedApp(440, 'Team Fortress 2', 60)
+    ]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+    const result = await manager.refresh()
+
+    expect(fakeClient.getUserOwnedApps).toHaveBeenCalledTimes(1)
+    expect(fakeClient.getUserOwnedApps).toHaveBeenCalledWith('STEAMID_TEST', {
+      includePlayedFreeGames: true
+    })
+    expect(result).not.toBeNull()
+  })
+
+  it('LIB-01: refresh() calls sendFrontendMessage pushGameToLibrary once per game', async () => {
+    const apps = [
+      makeOwnedApp(570, 'Dota 2', 120),
+      makeOwnedApp(440, 'Team Fortress 2', 60)
+    ]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+    await manager.refresh()
+
+    expect(sendFrontendMessage).toHaveBeenCalledTimes(2)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ runner: 'steam', app_name: '570', title: 'Dota 2' })
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ runner: 'steam', app_name: '440', title: 'Team Fortress 2' })
+    )
+    // steamLibraryStore and steamSyncStore are written after the loop
+    expect(steamLibraryStore.set).toHaveBeenCalledWith('games', expect.any(Array))
+    expect(steamSyncStore.set).toHaveBeenCalledWith('syncedAt', expect.any(Number))
+  })
+
   // ── LIB-03: playtime mapping ───────────────────────────────────────────────
 
-  it.todo('LIB-03: GameInfo.extra.steamPlaytimeMinutes equals app.playtime_forever')
+  it('LIB-03: GameInfo.extra.steamPlaytimeMinutes equals app.playtime_forever', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 4200)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.extra?.steamPlaytimeMinutes).toBe(4200)
+  })
 
   // ── Cache fallback ────────────────────────────────────────────────────────
 
-  it.todo('refresh() serves cached library from steamLibraryStore when getUserOwnedApps throws')
+  it('refresh() serves cached library from steamLibraryStore when getUserOwnedApps throws', async () => {
+    const cachedGames = [
+      { runner: 'steam', app_name: '570', title: 'Dota 2', is_installed: false } as any
+    ]
+    const fakeClient = {
+      steamID: 'STEAMID_TEST',
+      getUserOwnedApps: jest.fn().mockRejectedValue(new Error('CM unreachable'))
+    }
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue(cachedGames)
+
+    const result = await manager.refresh()
+
+    // Should NOT throw — returns error result
+    expect(result).not.toBeNull()
+    expect((result as any).stderr).toContain('CM unreachable')
+    // Should push each cached game to the frontend
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      cachedGames[0]
+    )
+    // Should NOT write a new list to the store on failure
+    expect(steamLibraryStore.set).not.toHaveBeenCalled()
+  })
 })
