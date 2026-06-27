@@ -128,14 +128,17 @@ export default class SteamLibraryManager implements LibraryManager {
   }
 
   /**
-   * Returns the GameInfo for a given appName from the in-memory map first,
-   * falling back to the persisted library cache.  Lazy metadata fetch
-   * (artwork, description, genres) is handled by SteamGame.getGameInfo()
-   * in plan 02-03.
+   * Returns the GameInfo for a given appName.  Delegates to SteamGame so that
+   * the lazy metadata fetch (artwork, description, genres — LIB-04) is
+   * triggered regardless of whether callers use the library manager or the
+   * per-game entry point.  Falls back to the persisted library cache when the
+   * in-memory Map has not been populated yet (e.g. before init() fires).
    */
   getGameInfo(appName: string, _forceReload?: boolean): GameInfo | undefined {
-    const inMemory = library.get(appName)
-    if (inMemory) return inMemory
+    // Delegate to SteamGame — reads shared library Map and fires lazy fetch
+    // (fetchMetadataIfNeeded) when art_cover is empty (plan 02-03)
+    const fromGame = new SteamGame(appName).getGameInfo()
+    if (fromGame.app_name) return fromGame
 
     // Fallback: consult persistent cache (useful if init() hasn't fired yet)
     const cached = steamLibraryStore.get('games', [])

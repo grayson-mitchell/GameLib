@@ -14,6 +14,7 @@ import axios from 'axios'
 import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore } from '../electronStores'
 import SteamGame from '../games'
+import SteamLibraryManager from '../library'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
 
@@ -56,6 +57,22 @@ jest.mock('../electronStores', () => ({
     get: jest.fn(),
     set: jest.fn()
   }
+}))
+
+// ── Mocks required when SteamLibraryManager is imported for integration test ──
+jest.mock('graceful-fs', () => ({
+  existsSync: jest.fn(),
+  readdirSync: jest.fn(),
+  readFileSync: jest.fn()
+}))
+jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
+jest.mock('backend/utils', () => ({ getSteamLibraries: jest.fn() }))
+jest.mock('../user', () => ({
+  SteamUser: { isLoggedIn: jest.fn(), getClient: jest.fn() }
+}))
+jest.mock('backend/online_monitor', () => ({
+  runOnceWhenOnline: jest.fn(),
+  isOnline: jest.fn()
 }))
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -236,5 +253,34 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     // steamMetadataStore.set and sendFrontendMessage must NOT have been called
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── Integration: lazy fetch reachable through SteamLibraryManager ────────────
+
+describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation', () => {
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+  })
+
+  it('getGameInfo() through the library manager triggers lazy metadata fetch via SteamGame delegation', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    // Entry in shared Map with no artwork — should trigger fetchMetadataIfNeeded
+    library.set(APP_ID, makeEntry())
+
+    const manager = new SteamLibraryManager()
+    const result = manager.getGameInfo(APP_ID)
+
+    // Synchronous return should be the in-Map entry
+    expect(result).toBeDefined()
+    expect(result?.app_name).toBe(APP_ID)
+
+    // Lazy fetch must have been triggered through the delegation chain
+    await flushAsync()
+    expect(axios.get).toHaveBeenCalledTimes(1)
+    expect(axios.get).toHaveBeenCalledWith(
+      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`
+    )
   })
 })
