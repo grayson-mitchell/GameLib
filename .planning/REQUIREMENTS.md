@@ -12,10 +12,10 @@
 
 ### Library
 
-- [ ] **LIB-01**: User can browse their full Steam library alongside Epic, GOG, and Amazon games
-- [ ] **LIB-02**: Each Steam game shows installed vs not-installed state (reads Steam ACF manifests)
-- [ ] **LIB-03**: Playtime is displayed for each Steam game (hours, sourced from library sync)
-- [ ] **LIB-04**: Steam games display cover art and store metadata (title, description, genres)
+- [x] **LIB-01**: User can browse their full Steam library alongside Epic, GOG, and Amazon games
+- [x] **LIB-02**: Each Steam game shows installed vs not-installed state (reads Steam ACF manifests)
+- [x] **LIB-03**: Playtime is displayed for each Steam game (hours, sourced from library sync)
+- [x] **LIB-04**: Steam games display cover art and store metadata (title, description, genres)
 
 ### Game Operations
 
@@ -60,10 +60,10 @@
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-05 | Phase 1 | Complete |
-| LIB-01 | Phase 2 | pending |
-| LIB-02 | Phase 2 | pending |
-| LIB-03 | Phase 2 | pending |
-| LIB-04 | Phase 2 | pending |
+| LIB-01 | Phase 2 | Complete |
+| LIB-02 | Phase 2 | Complete |
+| LIB-03 | Phase 2 | Complete |
+| LIB-04 | Phase 2 | Complete |
 | GAME-01 | Phase 3 | pending |
 | GAME-02 | Phase 3 | pending |
 | GAME-03 | Phase 3 | pending |
