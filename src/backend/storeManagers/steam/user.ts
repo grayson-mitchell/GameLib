@@ -315,6 +315,11 @@ export class SteamUser {
           logError(['Steam guard submit session error:', err], LogPrefix.Steam)
           resolve({ status: 'error' })
         })
+
+        session.on('timeout', () => {
+          logWarning('Steam guard session timed out', LogPrefix.Steam)
+          resolve({ status: 'error' })
+        })
       })
     } catch (err) {
       logError(['Steam submitSteamGuardCode failed:', err], LogPrefix.Steam)
