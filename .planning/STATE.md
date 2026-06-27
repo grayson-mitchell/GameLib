@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-27T08:10:23.023Z"
+last_updated: "2026-06-27T08:15:59.828Z"
 last_activity: 2026-06-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 25
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 02 (steam-library) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-06-27
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [███████░░░] 67%
 | Phase 02-steam-library P01 | 4min | 3 tasks | 5 files |
 | Phase 02-steam-library P02 | 15min | 2 tasks | 3 files |
 | Phase 02-steam-library P03 | 5min | 2 tasks | 3 files |
+| Phase 02-steam-library P04 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase ?]: No enabled/experimental guard per D-08 — Steam is always first-class
 - [Phase ?]: Specific route placed before loginweb/:runner catch-all to prevent WebView capture
 - [Phase ?]: pendingFetches.add() before await in fetchMetadataIfNeeded (T-2-03 dedup)
+- [Phase 02-04]: Gate makeLibrary steam inclusion on steam?.username (not library length) for correct D-02 first-sync empty state
+- [Phase 02-04]: steamLogin uses refreshLibrary({ runInBackground: true, library: 'steam' }) per D-01; blocking handleSuccessfulLogin removed
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T08:10:18.095Z
-Stopped at: Phase 2 UI-SPEC approved
+Last session: 2026-06-27T08:15:59.824Z
+Stopped at: Completed 02-04-PLAN.md — frontend library integration
 Resume file: None
