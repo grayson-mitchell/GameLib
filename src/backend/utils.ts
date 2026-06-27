@@ -510,7 +510,11 @@ export function createNecessaryFolders() {
     darwin: [...defaultFolders, toolsPath]
   }
 
-  necessaryFoldersByPlatform[process.platform].forEach((folder: string) => {
+  const platformFolders =
+    necessaryFoldersByPlatform[
+      process.platform as keyof typeof necessaryFoldersByPlatform
+    ] ?? necessaryFoldersByPlatform['linux']
+  platformFolders.forEach((folder: string) => {
     if (!existsSync(folder)) {
       mkdirSync(folder)
     }
@@ -1424,7 +1428,7 @@ export async function downloadFile({
   const connections = 5
   try {
     const response = await axiosClient.head(url)
-    fileSize = parseInt(response.headers['content-length'], 10)
+    fileSize = parseInt(String(response.headers['content-length'] ?? '0'), 10)
   } catch (err) {
     if (!ignoreFailure) {
       logError(
