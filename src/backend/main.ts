@@ -37,6 +37,7 @@ import { GOGUser } from './storeManagers/gog/user'
 import gogPresence from './storeManagers/gog/presence'
 import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
+import { SteamUser } from './storeManagers/steam/user'
 import {
   clearCache,
   isEpicServiceOffline,
@@ -832,6 +833,20 @@ addHandler('authZoom', async (event, url) => {
 
 addListener('logoutZoom', () => ZoomUser.logout())
 addHandler('getZoomUserInfo', async () => ZoomUser.getUserDetails())
+
+addHandler('steamStartQR', async () => SteamUser.startQRLogin())
+addHandler('steamPollQR', async () => SteamUser.pollQRLogin())
+addHandler(
+  'steamStartCredentials',
+  async (event, { username, password }) =>
+    SteamUser.startCredentialLogin(username, password)
+)
+addHandler('steamSubmitGuard', async (event, code) =>
+  SteamUser.submitSteamGuardCode(code)
+)
+addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
+addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled())
+addListener('logoutSteam', () => SteamUser.logout())
 
 addHandler('getAlternativeWine', async () =>
   GlobalConfig.get().getAlternativeWine()
