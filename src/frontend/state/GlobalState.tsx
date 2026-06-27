@@ -674,7 +674,6 @@ class GlobalState extends PureComponent<Props> {
   }
 
   steamLogin = async (result: { status: string; username?: string }) => {
-    console.log('logging steam')
     if (result.status === 'done') {
       this.setState({
         steam: {
@@ -682,7 +681,10 @@ class GlobalState extends PureComponent<Props> {
           username: result.username
         }
       })
-      this.handleSuccessfulLogin('steam')
+      this.refreshLibrary({
+        runInBackground: true,
+        library: 'steam'
+      })
     }
     return result.status
   }
@@ -994,6 +996,22 @@ class GlobalState extends PureComponent<Props> {
             library: [...library],
             username: this.state.zoom.username,
             enabled: true
+          }
+        })
+      } else if (args.runner === 'steam') {
+        const library = [...this.state.steam.library]
+        const index = library.findIndex(
+          (game) => game.app_name === args.app_name
+        )
+        if (index !== -1) {
+          library[index] = args
+        } else {
+          library.push(args)
+        }
+        this.setState({
+          steam: {
+            library: [...library],
+            username: this.state.steam.username
           }
         })
       }
