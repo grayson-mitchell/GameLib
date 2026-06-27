@@ -9,6 +9,13 @@ import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, LogPrefix } from 'backend/logger'
 import SteamGame from './games'
 
+// ── RED stub: real implementation in Task 1 GREEN ────────────────────────────
+export async function buildInstalledMap(): Promise<
+  Map<number, { installPath: string; sizeOnDisk: string }>
+> {
+  return new Map()
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   async init(): Promise<void> {
     logInfo('Steam library manager initialized (Phase 1 stub)', LogPrefix.Steam)
