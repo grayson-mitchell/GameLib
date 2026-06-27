@@ -3,6 +3,8 @@ import './index.scss'
 import Runner from './components/Runner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSteam } from '@fortawesome/free-brands-svg-icons'
 
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
@@ -21,9 +23,10 @@ export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
 export const amazonLoginPath = '/loginweb/nile'
 export const zoomLoginPath = '/loginweb/zoom'
+export const steamLoginPath = '/loginweb/steam'
 
 export default React.memo(function NewLogin() {
-  const { epic, gog, amazon, zoom, refreshLibrary } =
+  const { epic, gog, amazon, zoom, steam, refreshLibrary } =
     useContext(ContextProvider)
   const { t } = useTranslation()
 
@@ -42,6 +45,7 @@ export default React.memo(function NewLogin() {
     Boolean(amazon.user_id)
   )
   const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
+  const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(Boolean(steam?.username))
 
   const systemInfo = useAwaited(window.api.systemInfo.get)
 
@@ -73,7 +77,8 @@ export default React.memo(function NewLogin() {
     setIsGogLoggedIn(Boolean(gog.username))
     setIsAmazonLoggedIn(Boolean(amazon.user_id))
     setIsZoomLoggedIn(Boolean(zoom.username))
-  }, [epic.username, gog.username, amazon.user_id, zoom.username, t])
+    setIsSteamLoggedIn(Boolean(steam?.username))
+  }, [epic.username, gog.username, amazon.user_id, zoom.username, steam?.username, t])
 
   async function handleLibraryClick() {
     await refreshLibrary({ runInBackground: false })
@@ -161,6 +166,16 @@ export default React.memo(function NewLogin() {
                 disabled={oldMac}
               />
             )}
+            <Runner
+              class="steam"
+              buttonText={t('login.steam', 'Steam Login')}
+              icon={() => <FontAwesomeIcon icon={faSteam} />}
+              loginUrl={steamLoginPath}
+              isLoggedIn={isSteamLoggedIn}
+              user={steam?.username ?? undefined}
+              logoutAction={steam?.logout ?? (() => Promise.resolve())}
+              disabled={oldMac}
+            />
           </div>
         </div>
         <button

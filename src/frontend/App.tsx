@@ -157,6 +157,10 @@ const router = createHashRouter([
         lazy: makeLazyFunc(import('./screens/Discounts'))
       },
       {
+        path: 'loginweb/steam',
+        lazy: makeLazyFunc(import('./screens/Login/components/SteamLogin'))
+      },
+      {
         path: 'loginweb/:runner',
         lazy: makeLazyFunc(import('./screens/WebView'))
       },
