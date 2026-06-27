@@ -344,7 +344,7 @@ if (!gotTheLock) {
 
     // try to fix notification app name on windows
     if (isWindows) {
-      app.setAppUserModelId('Heroic Games Launcher')
+      app.setAppUserModelId('GameLib')
     }
 
     runOnceWhenOnline(async () => {

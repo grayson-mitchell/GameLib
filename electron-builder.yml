@@ -1,5 +1,5 @@
 appId: com.heroicgameslauncher.hgl
-productName: Heroic
+productName: GameLib
 files:
   - build/**/*
   - node_modules/**/*

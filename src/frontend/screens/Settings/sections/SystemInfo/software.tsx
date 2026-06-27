@@ -4,7 +4,7 @@ import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import Grid from '@mui/material/Grid'
 
-import HeroicIcon from 'frontend/assets/heroic-icon.svg?react'
+import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 
 import type { SystemInformation } from 'backend/utils/systeminfo'
 import { useTranslation } from 'react-i18next'
@@ -31,7 +31,7 @@ function SoftwareInfo({ software }: Props) {
       </Typography>
       <Grid container>
         <Grid item xs={2}>
-          <HeroicIcon className="heroic-icon" />
+          <img src={GameLibIcon} className="heroic-icon" alt="GameLib" style={{ width: 40, height: 40, objectFit: 'contain' }} />
         </Grid>
         <Grid item xs={10}>
           {t(

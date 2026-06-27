@@ -7,7 +7,7 @@ import HeroicVersion from './components/HeroicVersion'
 import SidebarTour from './components/SidebarTour'
 import { DMQueueElement } from 'common/types'
 
-import HeroicIcon from 'frontend/assets/heroic-icon.svg?react'
+import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import { useNavigate } from 'react-router-dom'
 import { WebviewTag } from 'electron'
 
@@ -137,7 +137,7 @@ export default React.memo(function Sidebar() {
 
   return (
     <aside ref={sidebarEl} className="Sidebar">
-      <HeroicIcon className="heroicIcon" />
+      <img src={GameLibIcon} className="heroicIcon" alt="GameLib" />
       <SidebarLinks />
       <div className="currentDownloads" data-tour="sidebar-downloads">
         {currentDMElement && (

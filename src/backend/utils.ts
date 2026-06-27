@@ -230,7 +230,7 @@ async function isEpicServiceOffline(
 
 const showAboutWindow = () => {
   app.setAboutPanelOptions({
-    applicationName: 'Heroic Games Launcher',
+    applicationName: 'GameLib',
     applicationVersion: getHeroicVersion(),
     copyright: 'GPL V3',
     iconPath: windowIcon,
