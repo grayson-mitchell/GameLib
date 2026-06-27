@@ -4,11 +4,11 @@
 
 ### Authentication
 
-- [ ] **AUTH-01**: User can add a Steam account via QR code scan (Steam mobile app)
-- [ ] **AUTH-02**: User can add a Steam account via username + password + SteamGuard code
-- [ ] **AUTH-03**: User can view and manage Steam accounts in the existing Manage Accounts screen
-- [ ] **AUTH-04**: User can remove a Steam account from GamerLib
-- [ ] **AUTH-05**: App detects if Steam client is installed and shows an actionable prompt if not
+- [x] **AUTH-01**: User can add a Steam account via QR code scan (Steam mobile app)
+- [x] **AUTH-02**: User can add a Steam account via username + password + SteamGuard code
+- [x] **AUTH-03**: User can view and manage Steam accounts in the existing Manage Accounts screen
+- [x] **AUTH-04**: User can remove a Steam account from GamerLib
+- [x] **AUTH-05**: App detects if Steam client is installed and shows an actionable prompt if not
 
 ### Library
 
@@ -55,11 +55,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | pending |
-| AUTH-02 | Phase 1 | pending |
-| AUTH-03 | Phase 1 | pending |
-| AUTH-04 | Phase 1 | pending |
-| AUTH-05 | Phase 1 | pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
 | LIB-01 | Phase 2 | pending |
 | LIB-02 | Phase 2 | pending |
 | LIB-03 | Phase 2 | pending |
