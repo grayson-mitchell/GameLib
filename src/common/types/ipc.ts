@@ -50,6 +50,7 @@ import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
+import type { SteamUserData } from './steam'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -124,6 +125,7 @@ interface SyncIPCFunctions {
     status: boolean
   ) => void
   logoutZoom: () => void
+  logoutSteam: () => void
   setGameMetadataOverride: (args: {
     appName: string
     title?: string
@@ -209,6 +211,18 @@ interface AsyncIPCFunctions {
     user: NileUserData | undefined
   }>
   authZoom: (url: string) => Promise<{ status: 'done' | 'error' }>
+  steamStartQR: () => Promise<{ status: 'done' | 'error'; challengeUrl?: string }>
+  steamPollQR: () => Promise<{
+    status: 'done' | 'waiting' | 'error'
+    username?: string
+  }>
+  steamStartCredentials: (credentials: {
+    username: string
+    password: string
+  }) => Promise<{ status: 'done' | 'guard_required' | 'error' }>
+  steamSubmitGuard: (code: string) => Promise<{ status: 'done' | 'error' }>
+  getSteamUserInfo: () => Promise<SteamUserData | undefined>
+  checkSteamInstalled: () => Promise<boolean>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
