@@ -168,7 +168,8 @@ export default function SteamLogin() {
     setLoading(false)
 
     if (result.status === 'done') {
-      await steam.login({ status: 'done', username })
+      const userInfo = await window.api.getSteamUserInfo()
+      await steam.login({ status: 'done', username: userInfo?.username })
       navigate('/login')
     } else if (result.status === 'guard_required') {
       setStep('credentials-2')
@@ -185,7 +186,8 @@ export default function SteamLogin() {
     setLoading(false)
 
     if (result.status === 'done') {
-      await steam.login({ status: 'done', username })
+      const userInfo = await window.api.getSteamUserInfo()
+      await steam.login({ status: 'done', username: userInfo?.username })
       navigate('/login')
     } else {
       showError('Incorrect code. Check your authenticator and try again.')
