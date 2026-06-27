@@ -414,7 +414,12 @@
         "modify": "Modify Installation",
         "status": "Status",
         "store": "Store",
-        "title": "Game Title"
+        "title": "Game Title",
+        "hour": "hour",
+        "hours": "hours",
+        "steam": {
+            "neverPlayed": "Never played"
+        }
     },
     "generic": {
         "abort": "Abort",
