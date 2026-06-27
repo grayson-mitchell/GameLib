@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: steam-library
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-06-27
+reviewed_at: 2026-06-27
 ---
 
 # Phase 2 — UI Design Contract: Steam Library
@@ -70,8 +71,8 @@ Reference values are approximate px equivalents.
 | Caption / stale indicator | `--text-xs` | ~11px | `--regular` | 400 | Cabin | "Steam library last synced X ago" |
 | Metadata placeholder / playtime | `--text-sm` | ~13px | `--regular` | 400 | Cabin | AppID placeholder title, playtime label, status badge |
 | Body / card title / list row | `--text-md` | 16px | `--bold` | 700 (title) / `--regular` 400 (info) | Rubik (title), Cabin (info) | GameCard title on hover, list row info column, refresh button label |
-| Sync message | `--text-xl` | ~23px | `--regular` | 400 | Cabin | UpdateComponent first-sync message |
-| Section heading (h5) | `--text-lg` | ~19px | `--medium` | 500 | Rubik | LibraryHeader "All Games" h5 |
+| Sync message | `--text-lg` | ~19px | `--regular` | 400 | Cabin | UpdateComponent first-sync message |
+| Section heading (h5) | `--text-lg` | ~19px | `--bold` | 700 | Rubik | LibraryHeader "All Games" h5 |
 
 Line heights:
 - Body / caption: 1.5 (browser default for Cabin)
