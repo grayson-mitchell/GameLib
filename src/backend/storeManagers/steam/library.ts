@@ -6,38 +6,140 @@ import {
   LaunchOption
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
+import { sendFrontendMessage } from '../../ipc'
+import { SteamUser } from './user'
+import {
+  steamLibraryStore,
+  steamMetadataStore,
+  steamSyncStore
+} from './electronStores'
+import { runOnceWhenOnline } from 'backend/online_monitor'
+import { library } from './state'
 import SteamGame from './games'
 
 export default class SteamLibraryManager implements LibraryManager {
+  /**
+   * On startup: load the cached library immediately (D-02) then trigger a
+   * background sync when online and logged in (D-01 / D-09).
+   */
   async init(): Promise<void> {
-    logInfo(
-      'Steam library manager initialized (Task 2 will add cache load + background sync)',
-      LogPrefix.Steam
-    )
+    const cached = steamLibraryStore.get('games', [])
+    if (cached.length) {
+      library.clear()
+      cached.forEach((g) => {
+        library.set(g.app_name, g)
+        sendFrontendMessage('pushGameToLibrary', g)
+      })
+      logInfo(`Steam: loaded ${cached.length} games from cache`, LogPrefix.Steam)
+    }
+
+    // Background sync once per session (D-01 / D-03)
+    if (SteamUser.isLoggedIn()) {
+      runOnceWhenOnline(() => this.refresh())
+    }
   }
 
   getGame(id: string): SteamGame {
     return new SteamGame(id)
   }
 
+  /**
+   * Fetch the full owned game list + playtime from Steam CM, merge local ACF
+   * install state, push each game to the frontend, persist the list and sync
+   * timestamp.  Falls back to the cached library if the CM call fails (D-09).
+   */
   async refresh(): Promise<ExecResult | null> {
-    logWarning(
-      'Steam library refresh not yet implemented (Task 2)',
-      LogPrefix.Steam
-    )
-    return null
+    const client = SteamUser.getClient()
+    if (!client) {
+      logWarning('Steam not logged in, skipping library refresh', LogPrefix.Steam)
+      return null
+    }
+
+    // ── Step 1: fetch owned games + playtime from Steam CM ────────────────
+    let ownedApps: Array<{
+      appid: number
+      name: string
+      playtime_forever: number
+      img_icon_url?: string
+    }> = []
+    try {
+      const result = await client.getUserOwnedApps(client.steamID!, {
+        includePlayedFreeGames: true
+      })
+      ownedApps = result.apps
+      logInfo(`Steam: fetched ${ownedApps.length} owned games`, LogPrefix.Steam)
+    } catch (err) {
+      logError(['Steam getUserOwnedApps failed:', err], LogPrefix.Steam)
+      // Offline / CM-unreachable fallback — serve cached library (D-09)
+      const cached = steamLibraryStore.get('games', [])
+      cached.forEach((g) => sendFrontendMessage('pushGameToLibrary', g))
+      return { stdout: '', stderr: String(err) }
+    }
+
+    // ── Step 2: build install-state map from ACF manifests on disk ────────
+    const installedMap = await buildInstalledMap()
+
+    // ── Step 3: build and push one GameInfo per owned game ────────────────
+    library.clear()
+    for (const app of ownedApps) {
+      const appIdStr = String(app.appid)
+      const installedData = installedMap.get(app.appid)
+      const cachedMeta = steamMetadataStore.get(appIdStr)
+
+      const gameInfo: GameInfo = {
+        runner: 'steam',
+        app_name: appIdStr,
+        title: app.name,
+        // Seed artwork from metadata cache so previously fetched art survives resync
+        art_cover: cachedMeta?.art_cover ?? '',
+        art_square: cachedMeta?.art_square ?? '',
+        is_installed: !!installedData,
+        install: installedData
+          ? {
+              install_path: installedData.installPath,
+              install_size: installedData.sizeOnDisk,
+              platform: 'Windows' as const
+            }
+          : {},
+        extra: {
+          reqs: [],
+          steamPlaytimeMinutes: app.playtime_forever,
+          ...(cachedMeta?.extra ?? {})
+        },
+        canRunOffline: true,
+        installable: true,
+        store_url: `https://store.steampowered.com/app/${app.appid}/`
+      }
+
+      library.set(appIdStr, gameInfo)
+      sendFrontendMessage('pushGameToLibrary', gameInfo)
+    }
+
+    // ── Step 4: persist library list and sync timestamp ───────────────────
+    steamLibraryStore.set('games', Array.from(library.values()))
+    steamSyncStore.set('syncedAt', Date.now())
+    logInfo(`Steam library sync complete: ${library.size} games`, LogPrefix.Steam)
+    return { stdout: `${library.size} games synced`, stderr: '' }
   }
 
-  getGameInfo(
-    _appName: string,
-    _forceReload?: boolean
-  ): GameInfo | undefined {
-    return undefined
+  /**
+   * Returns the GameInfo for a given appName from the in-memory map first,
+   * falling back to the persisted library cache.  Lazy metadata fetch
+   * (artwork, description, genres) is handled by SteamGame.getGameInfo()
+   * in plan 02-03.
+   */
+  getGameInfo(appName: string, _forceReload?: boolean): GameInfo | undefined {
+    const inMemory = library.get(appName)
+    if (inMemory) return inMemory
+
+    // Fallback: consult persistent cache (useful if init() hasn't fired yet)
+    const cached = steamLibraryStore.get('games', [])
+    return cached.find((g) => g.app_name === appName)
   }
 
   async getInstallInfo(

@@ -108,7 +108,7 @@ describe('SteamLibraryManager', () => {
     // Default: getSteamLibraries returns empty so buildInstalledMap is fast
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     // Default: metadata store returns undefined (no cached artwork)
-    jest.mocked(steamMetadataStore.get).mockReturnValue(undefined)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
   })
 
   // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────
