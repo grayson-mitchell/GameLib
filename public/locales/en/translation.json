@@ -1216,5 +1216,9 @@
         "openGUI": "Open Winetricks GUI",
         "search": "Search fonts or components"
     },
-    "zoom-store": "Zoom Store"
+    "zoom-store": "Zoom Store",
+    "steam": {
+        "syncing": "Syncing your Steam library…",
+        "syncingBody": "Your games will appear here once the sync completes."
+    }
 }
