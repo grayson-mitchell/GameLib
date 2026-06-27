@@ -1,0 +1,551 @@
+import { useContext, useEffect, useRef, useState } from 'react'
+import { Tab, Tabs } from '@mui/material'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faSyncAlt,
+  faTriangleExclamation,
+  faCircleExclamation,
+  faCheckCircle
+} from '@fortawesome/free-solid-svg-icons'
+import { useNavigate } from 'react-router-dom'
+import QRCode from 'react-qr-code'
+import TabPanel from 'frontend/components/UI/TabPanel'
+import ContextProvider from 'frontend/state/ContextProvider'
+import './index.scss'
+
+type Step =
+  | 'checking'
+  | 'not-installed'
+  | 'tab'
+  | 'qr-generating'
+  | 'qr-active'
+  | 'qr-confirmed'
+  | 'credentials-1'
+  | 'credentials-2'
+
+export default function SteamLogin() {
+  const { steam } = useContext(ContextProvider)
+  const navigate = useNavigate()
+
+  const [step, setStep] = useState<Step>('checking')
+  const [activeTab, setActiveTab] = useState<'qr' | 'credentials'>('qr')
+  const [challengeUrl, setChallengeUrl] = useState<string | null>(null)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [guardCode, setGuardCode] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const guardInputRef = useRef<HTMLInputElement>(null)
+  const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // --- Cleanup helpers ---
+  function clearPollInterval() {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }
+
+  function clearErrorTimer() {
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current)
+      errorTimerRef.current = null
+    }
+  }
+
+  function clearQrRefreshTimer() {
+    if (qrRefreshTimerRef.current) {
+      clearTimeout(qrRefreshTimerRef.current)
+      qrRefreshTimerRef.current = null
+    }
+  }
+
+  function showError(msg: string) {
+    clearErrorTimer()
+    setError(msg)
+    errorTimerRef.current = setTimeout(() => {
+      setError(null)
+    }, 3000)
+  }
+
+  // --- QR flow ---
+  async function startQRFlow() {
+    setStep('qr-generating')
+    setChallengeUrl(null)
+    clearPollInterval()
+    clearQrRefreshTimer()
+
+    const result = await window.api.steamStartQR()
+    if (result.status === 'error' || !result.challengeUrl) {
+      showError('Could not generate QR code. Check your connection and try again.')
+      setStep('tab')
+      return
+    }
+
+    setChallengeUrl(result.challengeUrl)
+    setStep('qr-active')
+
+    // Poll for scan confirmation
+    pollIntervalRef.current = setInterval(async () => {
+      const poll = await window.api.steamPollQR()
+      if (poll.status === 'done') {
+        clearPollInterval()
+        clearQrRefreshTimer()
+        setStep('qr-confirmed')
+        await steam.login({ status: 'done', username: poll.username })
+        navigate('/login')
+      } else if (poll.status === 'error') {
+        clearPollInterval()
+        // Auto-refresh: silently start a new QR session
+        await startQRFlow()
+      }
+      // 'waiting' — keep polling
+    }, 2000)
+
+    // Auto-refresh after ~30s if still active
+    qrRefreshTimerRef.current = setTimeout(async () => {
+      clearPollInterval()
+      await startQRFlow()
+    }, 30000)
+  }
+
+  // --- Mount: check Steam install ---
+  useEffect(() => {
+    let mounted = true
+
+    window.api.checkSteamInstalled().then((installed) => {
+      if (!mounted) return
+      if (!installed) {
+        setStep('not-installed')
+      } else {
+        setStep('tab')
+      }
+    })
+
+    return () => {
+      mounted = false
+      clearPollInterval()
+      clearErrorTimer()
+      clearQrRefreshTimer()
+    }
+  }, [])
+
+  // --- Start QR when QR tab is shown ---
+  useEffect(() => {
+    if (step === 'tab' && activeTab === 'qr') {
+      startQRFlow()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, activeTab])
+
+  // --- Focus guard input on step 2 ---
+  useEffect(() => {
+    if (step === 'credentials-2') {
+      guardInputRef.current?.focus()
+    }
+  }, [step])
+
+  // --- Credential submit (step 1) ---
+  async function handleCredentialSubmit() {
+    setLoading(true)
+    setError(null)
+    const result = await window.api.steamStartCredentials({ username, password })
+    setLoading(false)
+
+    if (result.status === 'done') {
+      await steam.login({ status: 'done', username })
+      navigate('/login')
+    } else if (result.status === 'guard_required') {
+      setStep('credentials-2')
+    } else {
+      showError('Incorrect username or password. Check your credentials and try again.')
+    }
+  }
+
+  // --- SteamGuard submit (step 2) ---
+  async function handleGuardSubmit() {
+    setLoading(true)
+    setError(null)
+    const result = await window.api.steamSubmitGuard(guardCode)
+    setLoading(false)
+
+    if (result.status === 'done') {
+      await steam.login({ status: 'done', username })
+      navigate('/login')
+    } else {
+      showError('Incorrect code. Check your authenticator and try again.')
+    }
+  }
+
+  // --- Tab change ---
+  function handleTabChange(_e: React.SyntheticEvent, val: 'qr' | 'credentials') {
+    clearPollInterval()
+    clearQrRefreshTimer()
+    setError(null)
+    setActiveTab(val)
+    if (val === 'qr') {
+      // startQRFlow will be triggered by the effect above
+    }
+  }
+
+  // --- Render: State 1 (not installed) ---
+  if (step === 'not-installed') {
+    return (
+      <div className="steamLoginPanel">
+        <div className="steamNotFound">
+          <FontAwesomeIcon
+            icon={faTriangleExclamation}
+            style={{ color: 'var(--status-warning)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-xs)' }}
+          />
+          <h2
+            style={{
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--bold)',
+              fontFamily: 'var(--primary-font-family)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-xs)'
+            }}
+          >
+            Steam client not found
+          </h2>
+          <p
+            style={{
+              fontSize: 'var(--text-md)',
+              color: 'var(--text-default)',
+              marginBottom: 'var(--space-lg)'
+            }}
+          >
+            GamerLib requires the Steam client to authenticate and launch games.
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+            <button
+              className="button is-secondary"
+              aria-label="Download Steam client from steampowered.com"
+              onClick={() => window.api.openExternalUrl('https://store.steampowered.com/about/')}
+            >
+              Download Steam
+            </button>
+            <button
+              className="button is-tertiary"
+              onClick={() => navigate('/login')}
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- Render: checking state ---
+  if (step === 'checking') {
+    return (
+      <div className="steamLoginPanel">
+        <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2em' }} />
+      </div>
+    )
+  }
+
+  // --- Render: QR tab content ---
+  function renderQRContent() {
+    if (step === 'qr-generating') {
+      return (
+        <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
+          <FontAwesomeIcon
+            icon={faSyncAlt}
+            spin
+            style={{ fontSize: '2.5em', color: 'var(--text-default)', marginBottom: 'var(--space-sm)' }}
+          />
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+            Generating QR code...
+          </p>
+        </div>
+      )
+    }
+
+    if (step === 'qr-confirmed') {
+      return (
+        <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
+          <FontAwesomeIcon
+            icon={faCheckCircle}
+            style={{ fontSize: '2.5em', color: 'var(--status-success)', marginBottom: 'var(--space-sm)' }}
+          />
+          <p style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)' }}>
+            QR scanned. Completing sign-in...
+          </p>
+        </div>
+      )
+    }
+
+    if (step === 'qr-active' && challengeUrl) {
+      return (
+        <div>
+          <p style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)', marginBottom: 'var(--space-md)' }}>
+            Open Steam on your phone and scan this code.
+          </p>
+          <div className="steamQrContainer">
+            <div
+              style={{
+                background: '#ffffff',
+                padding: '8px',
+                display: 'inline-block',
+                borderRadius: 'var(--space-3xs)'
+              }}
+            >
+              <QRCode
+                value={challengeUrl}
+                size={200}
+                fgColor="#000000"
+                bgColor="#ffffff"
+                aria-label="Steam QR code for mobile login"
+                role="img"
+              />
+            </div>
+          </div>
+          <p
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-secondary)',
+              textAlign: 'center'
+            }}
+          >
+            QR code refreshes automatically.
+          </p>
+        </div>
+      )
+    }
+
+    // Fallback while transitioning
+    return (
+      <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
+        <FontAwesomeIcon icon={faSyncAlt} spin style={{ fontSize: '2.5em', color: 'var(--text-default)' }} />
+      </div>
+    )
+  }
+
+  // --- Render: Credentials tab content ---
+  function renderCredentialsContent() {
+    // Step 2: SteamGuard
+    if (step === 'credentials-2') {
+      return (
+        <div>
+          <p
+            id="steamguard-instructions"
+            style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)', marginBottom: 'var(--space-md)' }}
+          >
+            Check your authenticator app or email for a Steam Guard code.
+          </p>
+
+          <div style={{ marginBottom: 'var(--space-md)' }}>
+            <label
+              htmlFor="steamguard-input"
+              style={{
+                display: 'block',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--text-secondary)',
+                marginBottom: 'var(--space-3xs)',
+                fontWeight: 'var(--regular)'
+              }}
+            >
+              Steam Guard Code
+            </label>
+            <input
+              id="steamguard-input"
+              ref={guardInputRef}
+              type="text"
+              className="sid-input"
+              inputMode="numeric"
+              maxLength={5}
+              value={guardCode}
+              aria-label="Steam Guard code"
+              aria-describedby="steamguard-instructions"
+              onChange={(e) => {
+                setGuardCode(e.target.value)
+                if (error) setError(null)
+              }}
+            />
+          </div>
+
+          {error && (
+            <p role="alert" className="steamError">
+              <FontAwesomeIcon icon={faCircleExclamation} style={{ marginRight: 'var(--space-3xs)' }} />
+              {error}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+            <button
+              className="button is-primary"
+              disabled={guardCode.length < 5 || loading}
+              onClick={handleGuardSubmit}
+              style={{ flex: 1 }}
+            >
+              {loading ? (
+                <>
+                  <FontAwesomeIcon icon={faSyncAlt} spin style={{ marginRight: 'var(--space-3xs)' }} />
+                  Verifying...
+                </>
+              ) : (
+                'Verify Code'
+              )}
+            </button>
+            <button
+              className="button is-tertiary"
+              onClick={() => {
+                setStep('credentials-1')
+                setUsername('')
+                setPassword('')
+                setGuardCode('')
+                setError(null)
+              }}
+            >
+              Back to Credentials
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // Step 1: username + password
+    return (
+      <div>
+        <div style={{ marginBottom: 'var(--space-md)' }}>
+          <label
+            htmlFor="steam-username"
+            style={{
+              display: 'block',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-secondary)',
+              marginBottom: 'var(--space-3xs)',
+              fontWeight: 'var(--regular)'
+            }}
+          >
+            Username
+          </label>
+          <input
+            id="steam-username"
+            type="text"
+            className="sid-input"
+            value={username}
+            disabled={loading}
+            onChange={(e) => {
+              setUsername(e.target.value)
+              if (error) setError(null)
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 'var(--space-md)' }}>
+          <label
+            htmlFor="steam-password"
+            style={{
+              display: 'block',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-secondary)',
+              marginBottom: 'var(--space-3xs)',
+              fontWeight: 'var(--regular)'
+            }}
+          >
+            Password
+          </label>
+          <input
+            id="steam-password"
+            type="password"
+            className="sid-input"
+            value={password}
+            disabled={loading}
+            onChange={(e) => {
+              setPassword(e.target.value)
+              if (error) setError(null)
+            }}
+          />
+        </div>
+
+        {error && (
+          <p role="alert" className="steamError">
+            <FontAwesomeIcon icon={faCircleExclamation} style={{ marginRight: 'var(--space-3xs)' }} />
+            {error}
+          </p>
+        )}
+
+        <button
+          className="button is-primary"
+          disabled={!username || !password || loading}
+          onClick={handleCredentialSubmit}
+          style={{ width: '100%', marginTop: 'var(--space-lg)' }}
+        >
+          {loading ? (
+            <>
+              <FontAwesomeIcon icon={faSyncAlt} spin style={{ marginRight: 'var(--space-3xs)' }} />
+              Signing in...
+            </>
+          ) : (
+            'Sign In to Steam'
+          )}
+        </button>
+      </div>
+    )
+  }
+
+  // --- Render: main tabs view (State 2-9) ---
+  return (
+    <div className="steamLoginPanel">
+      <button
+        className="button is-link"
+        onClick={() => {
+          clearPollInterval()
+          clearQrRefreshTimer()
+          navigate('/login')
+        }}
+        style={{ alignSelf: 'flex-start' }}
+      >
+        Back to Login
+      </button>
+
+      <h1
+        style={{
+          fontSize: 'var(--text-lg)',
+          fontWeight: 'var(--bold)',
+          fontFamily: 'var(--primary-font-family)',
+          color: 'var(--text-default)',
+          margin: 0
+        }}
+      >
+        Sign in to Steam
+      </h1>
+
+      <div className="tabsWrapper">
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <Tab
+            value="qr"
+            label="QR Code"
+            id="tab-qr"
+            aria-controls="tabpanel-qr"
+          />
+          <Tab
+            value="credentials"
+            label="Username & Password"
+            id="tab-credentials"
+            aria-controls="tabpanel-credentials"
+          />
+        </Tabs>
+      </div>
+
+      <TabPanel value={activeTab} index="qr">
+        {renderQRContent()}
+      </TabPanel>
+
+      <TabPanel value={activeTab} index="credentials">
+        {renderCredentialsContent()}
+      </TabPanel>
+    </div>
+  )
+}
