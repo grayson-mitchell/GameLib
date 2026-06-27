@@ -121,7 +121,7 @@ export class SteamUser {
     this.client = client
 
     return new Promise<string>((resolve, reject) => {
-      client.on('loggedOn', async () => {
+      client.once('loggedOn', async () => {
         try {
           if (!client.steamID) {
             throw new Error('Steam client logged on but steamID is null')
@@ -158,7 +158,7 @@ export class SteamUser {
         }
       })
 
-      client.on('error', (err: Error) => {
+      client.once('error', (err: Error) => {
         logError(['Steam client error during auth:', err], LogPrefix.Steam)
         reject(err)
       })
@@ -186,7 +186,7 @@ export class SteamUser {
 
       const response = await session.startWithQR()
 
-      session.on('authenticated', async () => {
+      session.once('authenticated', async () => {
         try {
           const username = await this.finishAuth(session.refreshToken)
           this.qrSessionState = { status: 'done', username }
@@ -196,12 +196,12 @@ export class SteamUser {
         }
       })
 
-      session.on('timeout', () => {
+      session.once('timeout', () => {
         logWarning('Steam QR session timed out', LogPrefix.Steam)
         this.qrSessionState = { status: 'error' }
       })
 
-      session.on('error', (err: Error) => {
+      session.once('error', (err: Error) => {
         logError(['Steam QR session error:', err], LogPrefix.Steam)
         this.qrSessionState = { status: 'error' }
       })
@@ -259,7 +259,7 @@ export class SteamUser {
 
       // No guard required — wait for authenticated event (polling started internally)
       return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-        session.on('authenticated', async () => {
+        session.once('authenticated', async () => {
           try {
             await this.finishAuth(session.refreshToken)
             resolve({ status: 'done' })
@@ -269,12 +269,12 @@ export class SteamUser {
           }
         })
 
-        session.on('error', (err: Error) => {
+        session.once('error', (err: Error) => {
           logError(['Steam credential session error:', err], LogPrefix.Steam)
           resolve({ status: 'error' })
         })
 
-        session.on('timeout', () => {
+        session.once('timeout', () => {
           logWarning('Steam credential session timed out', LogPrefix.Steam)
           resolve({ status: 'error' })
         })
@@ -301,7 +301,7 @@ export class SteamUser {
       await session.submitSteamGuardCode(code)
 
       return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-        session.on('authenticated', async () => {
+        session.once('authenticated', async () => {
           try {
             await this.finishAuth(session.refreshToken)
             resolve({ status: 'done' })
@@ -311,12 +311,12 @@ export class SteamUser {
           }
         })
 
-        session.on('error', (err: Error) => {
+        session.once('error', (err: Error) => {
           logError(['Steam guard submit session error:', err], LogPrefix.Steam)
           resolve({ status: 'error' })
         })
 
-        session.on('timeout', () => {
+        session.once('timeout', () => {
           logWarning('Steam guard session timed out', LogPrefix.Steam)
           resolve({ status: 'error' })
         })
