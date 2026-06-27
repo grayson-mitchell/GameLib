@@ -174,6 +174,12 @@ export class SteamUser {
     challengeUrl?: string
   }> {
     try {
+      // Tear down previous session before replacing it
+      if (this.session) {
+        this.session.cancelLoginAttempt()
+        this.session = null
+      }
+
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
       this.session = session
       this.qrSessionState = { status: 'waiting' }
@@ -230,6 +236,12 @@ export class SteamUser {
     password: string
   ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
     try {
+      // Tear down previous session before replacing it
+      if (this.session) {
+        this.session.cancelLoginAttempt()
+        this.session = null
+      }
+
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
       this.session = session
 
