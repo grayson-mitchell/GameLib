@@ -36,7 +36,8 @@ import {
   sideloadLibrary,
   zoomConfigStore,
   zoomInstalledGamesStore,
-  zoomLibraryStore
+  zoomLibraryStore,
+  steamConfigStore
 } from '../helpers/electronStores'
 import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
@@ -73,6 +74,10 @@ interface StateProps {
     library: GameInfo[]
     username?: string
     enabled: boolean
+  }
+  steam: {
+    library: GameInfo[]
+    username?: string | null
   }
   wineVersions: WineVersionInfo[]
   error: boolean
@@ -210,6 +215,10 @@ class GlobalState extends PureComponent<Props> {
       library: this.loadZoomLibrary(),
       username: zoomConfigStore.get_nodefault('username'),
       enabled: !!globalSettings?.experimentalFeatures?.zoomPlatform
+    },
+    steam: {
+      library: [],
+      username: steamConfigStore.get_nodefault('userData')?.username
     },
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
     error: false,
@@ -664,6 +673,32 @@ class GlobalState extends PureComponent<Props> {
     window.location.reload()
   }
 
+  steamLogin = async (result: { status: string; username?: string }) => {
+    console.log('logging steam')
+    if (result.status === 'done') {
+      this.setState({
+        steam: {
+          library: [],
+          username: result.username
+        }
+      })
+      this.handleSuccessfulLogin('steam')
+    }
+    return result.status
+  }
+
+  steamLogout = async () => {
+    window.api.logoutSteam()
+    this.setState({
+      steam: {
+        library: [],
+        username: null
+      }
+    })
+    console.log('Logging out from steam')
+    window.location.reload()
+  }
+
   updateGameOverrides = (overrides: Record<string, GameOverride>) => {
     useGlobalState.getState().setGameOverrides(overrides)
     this.setState({
@@ -1105,6 +1140,7 @@ class GlobalState extends PureComponent<Props> {
       gog,
       amazon,
       zoom,
+      steam,
       favouriteGames,
       customCategories,
       hiddenGames,
@@ -1148,6 +1184,12 @@ class GlobalState extends PureComponent<Props> {
             login: this.zoomLogin,
             logout: this.zoomLogout,
             enabled: this.state.zoom.enabled
+          },
+          steam: {
+            library: steam.library,
+            username: steam.username,
+            login: this.steamLogin,
+            logout: this.steamLogout
           },
           installingEpicGame,
           setLanguage: this.setLanguage,

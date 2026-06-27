@@ -96,6 +96,12 @@ export interface ContextType {
     logout: () => Promise<void>
     enabled: boolean
   }
+  steam: {
+    library: GameInfo[]
+    username?: string | null
+    login: (result: { status: string; username?: string }) => Promise<string>
+    logout: () => Promise<void>
+  }
   installingEpicGame: boolean
   allTilesInColor: boolean
   setAllTilesInColor: (value: boolean) => void
