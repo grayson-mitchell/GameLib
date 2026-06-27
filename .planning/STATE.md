@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-06-27T08:02:19.837Z"
+last_updated: "2026-06-27T08:10:23.023Z"
 last_activity: 2026-06-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 25
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 ## Current Position
 
 Phase: 02 (steam-library) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-06-27
 
-Progress: [██████░░░░] 56%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [██████░░░░] 56%
 | Phase 01 P03 | 8min | 3 tasks | 8 files |
 | Phase 02-steam-library P01 | 4min | 3 tasks | 5 files |
 | Phase 02-steam-library P02 | 15min | 2 tasks | 3 files |
+| Phase 02-steam-library P03 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Recent decisions affecting current work:
 - [Phase ?]: No follow-up getSteamUserInfo call needed since auth flows return username inline
 - [Phase ?]: No enabled/experimental guard per D-08 — Steam is always first-class
 - [Phase ?]: Specific route placed before loginweb/:runner catch-all to prevent WebView capture
+- [Phase ?]: pendingFetches.add() before await in fetchMetadataIfNeeded (T-2-03 dedup)
 
 ### Pending Todos
 
@@ -86,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-27T08:02:19.823Z
+Last session: 2026-06-27T08:10:18.095Z
 Stopped at: Phase 2 UI-SPEC approved
 Resume file: None
