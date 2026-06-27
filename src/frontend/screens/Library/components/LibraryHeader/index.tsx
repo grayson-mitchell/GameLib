@@ -1,18 +1,47 @@
-import React, { useContext, useMemo } from 'react'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import ActionIcons from 'frontend/components/UI/ActionIcons'
 import { GameInfo } from 'common/types'
 import LibraryContext from '../../LibraryContext'
+import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import AddGameButton from '../AddGameButton'
+import classNames from 'classnames'
 
 type Props = {
   list: GameInfo[]
 }
 
+function formatRelativeTime(ms: number): string {
+  const minutes = Math.floor(ms / 60000)
+  if (minutes < 60) {
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+  }
+  const hours = Math.floor(ms / 3600000)
+  if (hours < 24) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+  }
+  const days = Math.floor(ms / 86400000)
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`
+}
+
 export default React.memo(function LibraryHeader({ list }: Props) {
   const { t } = useTranslation()
-  const { showFavourites } = useContext(LibraryContext)
+  const { showFavourites, storesFilters } = useContext(LibraryContext)
+  const { refreshing, refreshingInTheBackground, connectivity } =
+    useContext(ContextProvider)
+
+  const [syncedAt, setSyncedAt] = useState<number | null>(null)
+
+  useEffect(() => {
+    window.api.getSteamSyncedAt().then((ts) => setSyncedAt(ts))
+  }, [])
+
+  useEffect(() => {
+    window.api.getSteamSyncedAt().then((ts) => setSyncedAt(ts))
+  }, [connectivity.status])
 
   const numberOfGames = useMemo(() => {
     if (!list) {
@@ -27,6 +56,15 @@ export default React.memo(function LibraryHeader({ list }: Props) {
     return total > 0 ? `${total}` : 0
   }, [list])
 
+  const isSteamSyncing = refreshing && refreshingInTheBackground
+
+  const showStaleIndicator =
+    connectivity.status !== 'online' && syncedAt !== null
+
+  const staleTime = syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
+
+  const steamFilterActive = storesFilters?.steam === true
+
   return (
     <h5 className="libraryHeader" data-tour="library-header">
       <div className="libraryHeaderWrapper">
@@ -35,9 +73,41 @@ export default React.memo(function LibraryHeader({ list }: Props) {
             ? t('favourites', 'Favourites')
             : t('title.allGames', 'All Games')}
           <span className="numberOfgames">{numberOfGames}</span>
+          {isSteamSyncing && (
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              className="steamSyncSpinner"
+              title={t('steam.syncing', 'Syncing Steam library…')}
+              style={{ fontSize: '14px' }}
+            />
+          )}
           <AddGameButton data-tour="library-add-game" />
         </span>
-        <ActionIcons />
+        {showStaleIndicator && (
+          <span className="steamStaleIndicator">
+            {t('steam.lastSynced', 'Steam library last synced {{time}} ago', {
+              time: staleTime
+            })}
+          </span>
+        )}
+        <div className="actionIconsWrapper">
+          <ActionIcons />
+          {steamFilterActive && (
+            <button
+              className={classNames('steamRefreshButton', {
+                spinning: refreshing
+              })}
+              title={t('steam.refresh', 'Refresh Steam Library')}
+              disabled={refreshing}
+              onClick={() => window.api.refreshLibrary('steam')}
+            >
+              <FontAwesomeIcon
+                icon={faSyncAlt}
+                className={classNames({ 'fa-spin': refreshing })}
+              />
+            </button>
+          )}
+        </div>
       </div>
     </h5>
   )

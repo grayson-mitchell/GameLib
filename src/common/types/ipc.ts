@@ -223,6 +223,7 @@ interface AsyncIPCFunctions {
   steamSubmitGuard: (code: string) => Promise<{ status: 'done' | 'error' }>
   getSteamUserInfo: () => Promise<SteamUserData | undefined>
   checkSteamInstalled: () => Promise<boolean>
+  getSteamSyncedAt: () => Promise<number | null>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>

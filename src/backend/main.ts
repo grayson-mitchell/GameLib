@@ -38,6 +38,7 @@ import gogPresence from './storeManagers/gog/presence'
 import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
+import { steamSyncStore } from './storeManagers/steam/electronStores'
 import {
   clearCache,
   isEpicServiceOffline,
@@ -846,6 +847,7 @@ addHandler('steamSubmitGuard', async (event, code) =>
 )
 addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
 addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled())
+addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
 addListener('logoutSteam', () => SteamUser.logout())
 
 addHandler('getAlternativeWine', async () =>

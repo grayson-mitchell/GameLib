@@ -1224,6 +1224,8 @@
     "zoom-store": "Zoom Store",
     "steam": {
         "syncing": "Syncing your Steam library…",
-        "syncingBody": "Your games will appear here once the sync completes."
+        "syncingBody": "Your games will appear here once the sync completes.",
+        "lastSynced": "Steam library last synced {{time}} ago",
+        "refresh": "Refresh Steam Library"
     }
 }
