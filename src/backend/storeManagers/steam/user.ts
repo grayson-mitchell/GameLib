@@ -70,6 +70,12 @@ export class SteamUser {
     return Boolean(configStore.get_nodefault('isLoggedIn'))
   }
 
+  // ── LIB-01: Authenticated client accessor ─────────────────────────────────
+
+  static getClient(): InstanceType<typeof SteamUserLib> | null {
+    return this.client
+  }
+
   // ── AUTH-04: Logout ────────────────────────────────────────────────────────
 
   static logout(): void {

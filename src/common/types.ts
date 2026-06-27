@@ -159,6 +159,8 @@ export interface ExtraInfo {
   storeUrl?: string
   changelog?: string
   genres?: string[]
+  /** total playtime in minutes from getUserOwnedApps() — undefined for non-Steam games */
+  steamPlaytimeMinutes?: number
 }
 
 export type GameConfigVersion = 'auto' | 'v0' | 'v0.1'
