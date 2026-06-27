@@ -12,7 +12,7 @@ GamerLib forks Heroic Games Launcher and adds Steam as a first-class platform al
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GamerLib
+- [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GamerLib (completed 2026-06-27)
 - [ ] **Phase 2: Steam Library** - Steam games appear in the unified library with metadata and install state
 - [ ] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GamerLib
 - [ ] **Phase 4: Branding** - App is identified and distributed as GamerLib, not Heroic
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Steam Authentication | 2/3 | In Progress|  |
+| 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
 | 2. Steam Library | 0/TBD | Not started | - |
 | 3. Game Operations | 0/TBD | Not started | - |
 | 4. Branding | 0/TBD | Not started | - |
