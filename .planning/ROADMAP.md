@@ -58,7 +58,33 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each Steam game shows whether it is installed or not installed (read from ACF manifests)
   3. Each Steam game displays total playtime in hours
   4. Each Steam game shows cover art, title, description, and genres
-**Plans**: TBD
+**Plans**: 6 plans
+
+**Wave 0** — Foundation + test scaffolds:
+- [ ] `02-01-PLAN.md` — SteamUser.getClient() accessor, CacheStores (library/metadata/sync), ExtraInfo.steamPlaytimeMinutes, library.test.ts + games.test.ts RED scaffolds. Gate: `npm run codecheck` + steam tests green.
+
+**Wave 1** *(blocked on Wave 0)*:
+- [ ] `02-02-PLAN.md` — Backend library sync: refresh() via getUserOwnedApps, ACF install detection, init() cache-then-sync, offline fallback, shared state.ts. Gate: `npm test -- --testPathPattern=steam/library`.
+
+**Wave 2** *(blocked on Wave 1)*:
+- [ ] `02-03-PLAN.md` — Backend lazy metadata: SteamGame.getGameInfo + fetchMetadataIfNeeded (appdetails API, CDN art, pendingFetches dedup), library delegation. Gate: `npm test -- --testPathPattern=steam/games`.
+
+**Wave 3** *(blocked on Wave 2)*:
+- [ ] `02-04-PLAN.md` — Frontend data integration: handleGamePush steam case, background-sync steamLogin, Library/index.tsx 5 gaps, steamCategories. Gate: `npm run codecheck`.
+
+**Wave 4** *(blocked on Wave 3)*:
+- [ ] `02-05-PLAN.md` — Frontend UI: steam-logo.svg + StoreLogos, GameCard playtime + skeleton, getSteamSyncedAt IPC, LibraryHeader sync spinner + stale indicator + manual refresh, i18n. Gate: `npm run codecheck`.
+
+**Wave 5** *(blocked on Wave 3 + 4)*:
+- [ ] `02-06-PLAN.md` — Manual QA checkpoint: LIB-01..04 verified on a real Steam account. Gate: human sign-off.
+
+**Cross-cutting constraints:**
+- `steam-user` / `steam-session` / `axios` Steam calls stay in main process only — renderer receives data via IPC.
+- Use `getUserOwnedApps()` (not `getOwnedApps()` / PICS cache) for ownership + playtime.
+- ACF install check uses `(StateFlags & 4) !== 0` bitmask, never equality.
+- All new CSS uses semantic tokens from `_colors.scss` / `_spacing.scss`; all strings via `t()`.
+- Zero new npm packages.
+
 **UI hint**: yes
 
 ### Phase 3: Game Operations
@@ -93,6 +119,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
-| 2. Steam Library | 0/TBD | Not started | - |
+| 2. Steam Library | 0/6 | Planned | - |
 | 3. Game Operations | 0/TBD | Not started | - |
 | 4. Branding | 0/TBD | Not started | - |
