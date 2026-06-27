@@ -487,13 +487,10 @@ describe('SteamUser', () => {
     })
 
     test('returns { status: "error" } when no active session', async () => {
-      // Call logout to clear the session
+      // Call logout to clear the session — logout() sets this.session = null
       SteamUser.logout()
-      // Force clear private session (bypass by using a fresh logout)
       const result = await SteamUser.submitSteamGuardCode('12345')
-      // Since session may still be held from before logout, check it doesn't crash
-      // at minimum it should return a valid status
-      expect(['done', 'error']).toContain(result.status)
+      expect(result.status).toBe('error')
     })
   })
 
