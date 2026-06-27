@@ -2,7 +2,7 @@ import { safeStorage } from 'electron'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
-import { STEAM_INSTALL_PATHS, TOKEN_PREFIX } from './constants'
+import { STEAM_INSTALL_PATHS, TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
 import { platform } from 'process'
 import type { SteamUserData } from 'common/types/steam'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
@@ -97,7 +97,7 @@ export class SteamUser {
   // ── Credentials ────────────────────────────────────────────────────────────
 
   static async getCredentials(): Promise<{ refreshToken: string } | undefined> {
-    const stored = configStore.get_nodefault('refreshToken')
+    const stored = configStore.get_nodefault(TOKEN_STORE_KEY)
     if (!stored || typeof stored !== 'string') return undefined
 
     const token = decryptToken(stored)
@@ -146,7 +146,7 @@ export class SteamUser {
           }
 
           const encrypted = encryptToken(refreshToken)
-          configStore.set('refreshToken', encrypted)
+          configStore.set(TOKEN_STORE_KEY, encrypted)
           configStore.set('isLoggedIn', true)
           configStore.set('userData', userData)
 
