@@ -119,6 +119,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
-| 2. Steam Library | 1/6 | In Progress|  |
+| 2. Steam Library | 2/6 | In Progress|  |
 | 3. Game Operations | 0/TBD | Not started | - |
 | 4. Branding | 0/TBD | Not started | - |
