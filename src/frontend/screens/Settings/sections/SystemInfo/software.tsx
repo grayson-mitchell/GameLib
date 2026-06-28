@@ -36,7 +36,7 @@ function SoftwareInfo({ software }: Props) {
         <Grid item xs={10}>
           {t(
             'settings.systemInformation.heroicVersion',
-            'Heroic: {{heroicVersion}}',
+            'GameLib: {{heroicVersion}}',
             {
               heroicVersion
             }

@@ -541,7 +541,7 @@
             "click-to-see-changelog": "Click to see changelog",
             "newReleases": "Update Available!",
             "stable": "Stable",
-            "version": "Heroic Version"
+            "version": "GameLib Version"
         },
         "save-sync": {
             "searching": "Trying to detect the correct save folder (click to cancel)"
@@ -1049,7 +1049,7 @@
             "gpu": "GPU:",
             "gpuDriver": "Driver: {{driverVersion}}",
             "gpuWithNumber": "GPU {{number}}:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "Legendary: {{legendaryVersion}}",
             "memory": "Memory:",
             "memoryStats": "{{percentUsed}}% used ({{usedGib}} / {{totalGib}}",
