@@ -86,10 +86,16 @@ jest.mock('../electronStores', () => ({
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
-const makeOwnedApp = (appid: number, name: string, playtime_forever: number) => ({
+const makeOwnedApp = (
+  appid: number,
+  name: string,
+  playtime_forever: number,
+  rtime_last_played = 0
+) => ({
   appid,
   name,
   playtime_forever,
+  rtime_last_played,
   img_icon_url: ''
 })
 
@@ -249,6 +255,23 @@ describe('SteamLibraryManager', () => {
     )?.[1] as any
 
     expect(pushed?.extra?.steamPlaytimeMinutes).toBe(4200)
+  })
+
+  it('LIB-03: GameInfo.extra.steamLastPlayed equals app.rtime_last_played', async () => {
+    const LAST_PLAYED_TS = 1750000000 // arbitrary Unix-seconds timestamp
+    const apps = [makeOwnedApp(570, 'Dota 2', 4200, LAST_PLAYED_TS)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.extra?.steamLastPlayed).toBe(LAST_PLAYED_TS)
   })
 
   // ── Cache fallback ────────────────────────────────────────────────────────

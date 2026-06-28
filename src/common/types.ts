@@ -161,6 +161,8 @@ export interface ExtraInfo {
   genres?: string[]
   /** total playtime in minutes from getUserOwnedApps() — undefined for non-Steam games */
   steamPlaytimeMinutes?: number
+  /** Unix-seconds timestamp of the last play session from getUserOwnedApps() — undefined/0 for non-Steam games */
+  steamLastPlayed?: number
 }
 
 export type GameConfigVersion = 'auto' | 'v0' | 'v0.1'
