@@ -1,7 +1,7 @@
 import { Runner } from 'common/types'
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
-import SideLoad from 'frontend/assets/heroic-icon.svg?react'
+import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import AmazonLogo from 'frontend/assets/amazon-logo.svg?react'
 import ZoomLogo from 'frontend/assets/zoom-logo.svg?react'
 import SteamLogo from 'frontend/assets/steam-logo.svg?react'
@@ -24,6 +24,6 @@ export default function StoreLogos({
     case 'steam':
       return <SteamLogo className={className} />
     default:
-      return <SideLoad className={className} />
+      return <img src={GameLibIcon} className={className} alt="GameLib" />
   }
 }

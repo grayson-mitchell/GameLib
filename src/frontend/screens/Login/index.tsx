@@ -8,7 +8,7 @@ import { faSteam } from '@fortawesome/free-brands-svg-icons'
 
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
-import HeroicLogo from 'frontend/assets/heroic-icon.svg?react'
+import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import AmazonLogo from 'frontend/assets/amazon-logo.svg?react'
 import ZoomLogo from 'frontend/assets/zoom-logo.svg?react'
 
@@ -103,10 +103,13 @@ export default React.memo(function NewLogin() {
       <div className="loginContentWrapper">
         <div className="runnerList">
           <div className="runnerHeader">
-            <HeroicLogo className="runnerHeaderIcon" />
+            <img
+              src={GameLibIcon}
+              className="runnerHeaderIcon"
+              alt="GameLib"
+            />
             <div className="runnerHeaderText">
-              <h1 className="title">Heroic</h1>
-              <h2 className="subtitle">Games Launcher</h2>
+              <h1 className="title">GameLib</h1>
             </div>
 
             {!loading && (
