@@ -365,13 +365,11 @@ describe('SteamGame.launch() — GAME-01', () => {
     expect(result).toBe(true)
   })
 
-  it('D-03: launch() fires notify with hand-off toast before/around openExternal', async () => {
+  it('launch() does NOT show a hand-off toast (toast feature removed — Steam opens fast enough)', async () => {
     const game = new SteamGame(APP_ID)
     await game.launch({} as any)
 
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ body: 'Opening in Steam…' })
-    )
+    expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('T-03-01: launch() does NOT call shell.openExternal when appId is non-numeric (injection guard)', async () => {
@@ -478,13 +476,11 @@ describe('SteamGame.install() — GAME-02', () => {
     expect(result).toEqual({ status: 'done' })
   })
 
-  it('D-03: install() fires notify with hand-off toast', async () => {
+  it('install() does NOT show a hand-off toast (toast feature removed)', async () => {
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ body: 'Opening in Steam…' })
-    )
+    expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('T-03-01: install() does NOT call shell.openExternal when appId is non-numeric', async () => {
@@ -540,13 +536,11 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     expect(result).toEqual(expect.objectContaining({ stdout: '', stderr: '' }))
   })
 
-  it('D-03: uninstall() fires notify with hand-off toast', async () => {
+  it('uninstall() does NOT show a hand-off toast (toast feature removed)', async () => {
     const game = new SteamGame(APP_ID)
     await game.uninstall({} as any)
 
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ body: 'Opening in Steam…' })
-    )
+    expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('D-05: uninstall() does NOT show a GamerLib confirmation dialog', async () => {

@@ -387,21 +387,23 @@ export default function GamesSubmenu({
                 ))}
             </>
           )}
-          {steamRefresh ? (
-            refreshCircle()
-          ) : (
-            <button
-              onClick={async () => handleAddToSteam()}
-              className="link button is-text is-link buttonWithIcon"
-            >
-              <SvgIcon>
-                <FontAwesomeIcon icon={faSteam} />
-              </SvgIcon>
-              {addedToSteam
-                ? t('submenu.removeFromSteam', 'Remove from Steam')
-                : t('submenu.addToSteam', 'Add to Steam')}
-            </button>
-          )}
+          {/* Steam games are already in Steam — hide the add/remove-to-Steam action */}
+          {!isSteam &&
+            (steamRefresh ? (
+              refreshCircle()
+            ) : (
+              <button
+                onClick={async () => handleAddToSteam()}
+                className="link button is-text is-link buttonWithIcon"
+              >
+                <SvgIcon>
+                  <FontAwesomeIcon icon={faSteam} />
+                </SvgIcon>
+                {addedToSteam
+                  ? t('submenu.removeFromSteam', 'Remove from Steam')
+                  : t('submenu.addToSteam', 'Add to Steam')}
+              </button>
+            ))}
           <button
             onClick={() => openGameCategoriesModal(gameInfo)}
             className="link button is-text is-link buttonWithIcon"

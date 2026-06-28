@@ -13,7 +13,6 @@ import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
-import { notify } from 'backend/dialog/dialog'
 import { GameConfig } from 'backend/game_config'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
@@ -192,7 +191,7 @@ export default class SteamGame implements Game {
   /**
    * Delegates install to the Steam client via the steam://install protocol.
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
-   * any URL is constructed. Shows a hand-off toast (D-03).
+   * any URL is constructed.
    *
    * Does NOT call sendProgressUpdate — Steam owns the download with its own UI.
    * Install state is never optimistically flipped on click (D-02); badge
@@ -204,8 +203,6 @@ export default class SteamGame implements Game {
       return { status: 'error', error: `Invalid appId: ${this.appId}` }
     }
 
-    const info = this.getGameInfo()
-    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
     logInfo(
       `SteamGame: delegating install for appId ${this.appId} via ${url}`,
       LogPrefix.Steam
@@ -240,7 +237,6 @@ export default class SteamGame implements Game {
    * isNative() returns true, so launcher.ts skips checkWineBeforeLaunch —
    * Proton selection is fully delegated to Steam (GAME-04 / D-06).
    *
-   * Shows a hand-off toast (D-03) to inform the user Steam is opening.
    * Does NOT call sendGameStatusUpdate — Steam client owns the 'playing' state.
    */
   async launch(
@@ -255,8 +251,6 @@ export default class SteamGame implements Game {
       return false
     }
 
-    const info = this.getGameInfo()
-    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
     logInfo(
       `SteamGame: launching appId ${this.appId} via ${url}`,
       LogPrefix.Steam
@@ -296,7 +290,6 @@ export default class SteamGame implements Game {
   /**
    * Delegates uninstall to the Steam client via the steam://uninstall protocol.
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation).
-   * Shows a hand-off toast (D-03).
    *
    * Does NOT show a GamerLib confirmation dialog — Steam owns its own confirm
    * dialog (D-05). Does NOT call sendFrontendMessage('refreshLibrary', ...) —
@@ -309,8 +302,6 @@ export default class SteamGame implements Game {
       return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
     }
 
-    const info = this.getGameInfo()
-    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
     logInfo(
       `SteamGame: delegating uninstall for appId ${this.appId} via ${url}`,
       LogPrefix.Steam

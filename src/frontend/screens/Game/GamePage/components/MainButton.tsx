@@ -235,20 +235,23 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
           >
             {getButtonLabel()}
           </button>
-          <button
-            disabled={disabledInstallButtons || is.installing || is.importing}
-            className={'button mainBtn outline'}
-            onClick={() =>
-              openInstallGameModal({
-                appName: gameInfo.app_name,
-                runner: gameInfo.runner,
-                gameInfo,
-                action: 'import'
-              })
-            }
-          >
-            {t('button.import', 'Import Game')}
-          </button>
+          {/* Import makes no sense for Steam games — Steam owns install management */}
+          {gameInfo.runner !== 'steam' && (
+            <button
+              disabled={disabledInstallButtons || is.installing || is.importing}
+              className={'button mainBtn outline'}
+              onClick={() =>
+                openInstallGameModal({
+                  appName: gameInfo.app_name,
+                  runner: gameInfo.runner,
+                  gameInfo,
+                  action: 'import'
+                })
+              }
+            >
+              {t('button.import', 'Import Game')}
+            </button>
+          )}
         </span>
       )}
     </div>
