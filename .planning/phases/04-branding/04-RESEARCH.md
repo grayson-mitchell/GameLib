@@ -490,17 +490,19 @@ The one minor note: changing `package.json` `name` from "heroic" to "gamelib" ch
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Planning-doc naming reconciliation (D-03 deferred)**
    - What we know: PROJECT.md, REQUIREMENTS.md, ROADMAP.md, CLAUDE.md say "GamerLib" not "GameLib"
    - What's unclear: Whether to fold the doc fixup into this phase's plan tasks
    - Recommendation: Planner decides; if included, it is a separate task (≤5 file edits in `.planning/` and `CLAUDE.md`)
+   - **RESOLVED (planner):** No task needed — these docs were already reconciled to "GameLib" in a prior commit; `grep` confirms zero "GamerLib" stragglers in CLAUDE.md/PROJECT.md/REQUIREMENTS.md/ROADMAP.md.
 
 2. **`author.email` in package.json**
    - What we know: Currently `heroicgameslauncher@protonmail.com`
    - What's unclear: Whether D-04 ("legitimate Heroic repo references") protects the email field
    - Recommendation: Update `author.name` to "GameLib" but leave the email blank or as-is; the email is the upstream maintainer contact, not a user-visible identity field
+   - **RESOLVED (planner):** Leave `author.email` AS-IS — upstream maintainer contact, not a user-visible identity field (D-04). Only `author.name` → "GameLib".
 
 ---
 

@@ -31,7 +31,7 @@ repo/API references are NOT renamed.
   The user explicitly chose "GameLib" over "GamerLib" during discussion.
 - **D-02:** `electron-builder.yml` already has `productName: GameLib` — this is
   therefore **already correct** and should be left as-is (it is not a typo).
-- **D-03:** PROJECT.md, REQUIREMENTS.md (BRAND-01), ROADMAP.md success
+- **D-03 [informational]:** PROJECT.md, REQUIREMENTS.md (BRAND-01), ROADMAP.md success
   criteria, and CLAUDE.md currently say "GamerLib". These are stale and must be
   reconciled to **GameLib**. Treat every "GamerLib" reference in planning docs
   and the ROADMAP success criteria as meaning "GameLib". (See Deferred Ideas
