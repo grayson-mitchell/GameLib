@@ -18,7 +18,7 @@ const RunnerToStore = {
 
 export default function LibraryFilters() {
   const { t } = useTranslation()
-  const { platform, epic, gog, amazon, zoom } = useContext(ContextProvider)
+  const { platform, epic, gog, amazon, zoom, steam } = useContext(ContextProvider)
   const {
     setShowFavourites,
     setShowHidden,
@@ -187,6 +187,7 @@ export default function LibraryFilters() {
       {gog.username && storeToggle('gog')}
       {amazon.user_id && storeToggle('nile')}
       {zoom.enabled && zoom.username && storeToggle('zoom')} {}
+      {steam.username && storeToggle('steam')}
       {storeToggle('sideload')}
       <hr />
       {platformToggle('win')}
