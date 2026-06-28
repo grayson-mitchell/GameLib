@@ -578,6 +578,120 @@ describe('SteamUser', () => {
     })
   })
 
+  // ── QR race fix (260629-9ly): connectingPromise dedupe + username gating ─────
+
+  describe('QR race fix (260629-9ly)', () => {
+    beforeEach(async () => {
+      mockSessionInstance.startWithQR.mockResolvedValue({
+        qrChallengeUrl: 'steam://...qr_url_here',
+        actionRequired: true
+      })
+      // logOn does NOT fire loggedOn immediately — simulates slow CM connection.
+      // Each test resolves it manually to control timing.
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        // intentionally does nothing — loggedOn fires later in each test
+      })
+      await SteamUser.startQRLogin()
+    })
+
+    test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
+      // Fire authenticated synchronously — stores creds, sets qrSessionState='done',
+      // and (with the fix) assigns this.connectingPromise.
+      sessionOnHandlers['authenticated']()
+
+      // pollQRLogin must return 'done' with username undefined — the background
+      // CM connect is still in-flight so the persona name has not arrived yet.
+      const poll1 = await SteamUser.pollQRLogin()
+      expect(poll1.status).toBe('done')
+      expect(poll1.username).toBeUndefined()
+
+      // Now resolve the CM connect by firing loggedOn (getPersonas returns 'TestUser')
+      steamUserOnHandlers['loggedOn']?.({}, {})
+
+      // Flush microtasks: getPersonas resolution → resolve('TestUser') → .then() sets qrSessionState.username
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      // pollQRLogin should now carry the real persona name
+      const poll2 = await SteamUser.pollQRLogin()
+      expect(poll2.status).toBe('done')
+      expect(poll2.username).toBe('TestUser')
+
+      // configStore.set('userData', ...) must have been called with the real name
+      const userDataCall = mockConfigStore.set.mock.calls.find(([key]) => key === 'userData')
+      expect(userDataCall).toBeDefined()
+      expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
+    })
+
+    test('(b) concurrent ensureConnected dedupes on connectingPromise (no second client, no Steam User overwrite)', async () => {
+      // Temporarily null steamID so ensureConnected cannot take the
+      // early-return path `if (this.client?.steamID) return true`.
+      // This mirrors real Steam client behavior: steamID is null until loggedOn fires.
+      const origSteamID = mockSteamUserInstance.steamID
+      mockSteamUserInstance.steamID = null as any
+
+      // Fire authenticated — with the fix, this.connectingPromise is set synchronously.
+      sessionOnHandlers['authenticated']()
+
+      // Clear construction/call counts so we can assert "no new client" below.
+      MockSteamUserLib.mockClear()
+      mockSteamUserInstance.logOn.mockClear()
+      mockSteamUserInstance.logOff.mockClear()
+
+      // Stub isLoggedIn + refreshToken for ensureConnected's credential lookup.
+      // TOKEN_STORE_KEY = 'refreshToken' (constants.ts). Legacy plaintext path
+      // is used here so decryptToken returns the value directly.
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        return undefined
+      })
+
+      // Call ensureConnected while the QR connect is still in-flight.
+      // With the fix it sees this.connectingPromise non-null and awaits it —
+      // it does NOT call connectSteamUserClient again (no second client, no logOff).
+      // Assertion via logOn call count: dedupe guarantees a single logOn total;
+      // we cleared counts after authenticated, so 0 logOn calls from ensureConnected.
+      const connectResultPromise = SteamUser.ensureConnected()
+
+      // Restore steamID so the loggedOn handler and ensureConnected's final
+      // Boolean(this.client?.steamID) check both see a connected client.
+      mockSteamUserInstance.steamID = origSteamID
+
+      // Resolve the CM connect by firing loggedOn — getPersonas returns 'TestUser'.
+      steamUserOnHandlers['loggedOn']?.({}, {})
+
+      // Await ensureConnected; this drains all pending microtasks from the
+      // loggedOn handler + .then() + .finally() chain before returning.
+      const result = await connectResultPromise
+
+      // ── Dedupe assertions ─────────────────────────────────────────────────
+      // logOn was NOT called by ensureConnected (counts cleared after authenticated).
+      // A single logOn was made during QR auth; ensureConnected reused that promise.
+      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+
+      // No second SteamUserLib client was constructed.
+      expect(MockSteamUserLib).not.toHaveBeenCalled()
+
+      // No logOff on the existing client (no second connectSteamUserClient attempted).
+      expect(mockSteamUserInstance.logOff).not.toHaveBeenCalled()
+
+      // ensureConnected resolved to true (client is now connected).
+      expect(result).toBe(true)
+
+      // ── No 'Steam User' overwrite assertion ───────────────────────────────
+      // userData was written with the real persona name, not the fallback.
+      const userDataCall = mockConfigStore.set.mock.calls.find(([key]) => key === 'userData')
+      expect(userDataCall).toBeDefined()
+      expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
+
+      // Note: frontend SteamLogin poll-handler gating (poll.username truthy check)
+      // is a React component — not feasible to unit-test in this backend Jest harness.
+      // Covered by manual re-audit per plan 260629-9ly task 3 constraint.
+    })
+  })
+
   // ── logout with connected client ───────────────────────────────────────────
 
   describe('logout() with active steam-user client', () => {
