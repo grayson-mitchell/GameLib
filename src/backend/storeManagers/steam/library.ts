@@ -24,8 +24,9 @@ import SteamGame from './games'
 
 export default class SteamLibraryManager implements LibraryManager {
   /**
-   * On startup: load the cached library immediately (D-02) then trigger a
-   * background sync when online and logged in (D-01 / D-09).
+   * On startup: load the cached library immediately, resume any in-progress
+   * install polls (D-07), then trigger a background sync when online and
+   * logged in (D-01 / D-09).
    */
   async init(): Promise<void> {
     // One-time migration: portrait library capsule replaced the cropped
@@ -41,6 +42,24 @@ export default class SteamLibraryManager implements LibraryManager {
         sendFrontendMessage('pushGameToLibrary', g)
       })
       logInfo(`Steam: loaded ${cached.length} games from cache`, LogPrefix.Steam)
+    }
+
+    // Resume polling for any in-progress downloads detected on disk (D-07).
+    // Wrapped in try/catch so a scan failure never blocks startup.
+    try {
+      const downloadingIds = await scanDownloadingAppIds()
+      for (const appId of downloadingIds) {
+        logInfo(
+          `Steam: resuming install poll for appId ${appId} (download in progress on startup)`,
+          LogPrefix.Steam
+        )
+        startInstallPolling(appId)
+      }
+    } catch (err) {
+      logWarning(
+        ['Steam: scanDownloadingAppIds failed during init, skipping resume:', err],
+        LogPrefix.Steam
+      )
     }
 
     // Background sync once per session (D-01 / D-03)
@@ -338,4 +357,234 @@ export async function buildInstalledMap(): Promise<
   }
 
   return installed
+}
+
+// ── Install polling lifecycle (D-07) ─────────────────────────────────────────
+
+/** Module-level registry of active install polls, keyed by appId string. */
+const activePolls = new Map<
+  string,
+  { timer: NodeJS.Timeout; ticks: number; seenDownloading: boolean }
+>()
+
+const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
+const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
+
+/**
+ * Reads the install state of a single appId from its ACF manifest.
+ *
+ * - 'installed':   manifest present and StateFlags bit 4 set (FullyInstalled)
+ * - 'downloading': manifest present but bit 4 unset (download in flight)
+ * - 'absent':      no manifest found for this appId in any library path
+ *
+ * Corrupt/unreadable manifests are skipped without throwing (T-2-01).
+ * Exported for unit testing.
+ */
+export async function readAcfState(appId: string): Promise<{
+  state: 'absent' | 'downloading' | 'installed'
+  installPath?: string
+  sizeOnDisk?: string
+}> {
+  const libraryPaths = await getSteamLibraries()
+
+  for (const libPath of libraryPaths) {
+    const steamappsDir = join(libPath, 'steamapps')
+    if (!existsSync(steamappsDir)) continue
+
+    const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
+    if (!existsSync(manifestFile)) continue
+
+    try {
+      const content = readFileSync(manifestFile, 'utf-8')
+      const parsed = parse(content as string)
+      const state = parsed?.AppState
+      if (!state) continue
+
+      const stateFlags = parseInt(state.StateFlags, 10)
+      if ((stateFlags & 4) !== 0) {
+        return {
+          state: 'installed',
+          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
+          sizeOnDisk: state.SizeOnDisk ?? '0'
+        }
+      }
+      return { state: 'downloading' }
+    } catch {
+      continue // skip corrupt ACF (T-2-01)
+    }
+  }
+
+  return { state: 'absent' }
+}
+
+/**
+ * Executes one polling tick for appId:
+ *   'downloading' → updates seenDownloading flag, sends gameStatusUpdate { status: 'installing' }
+ *   'installed'   → updates library entry, sends pushGameToLibrary +
+ *                   gameStatusUpdate { status: 'done' }, stops the poll
+ *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
+ *
+ * Exported for unit testing.
+ */
+export async function pollInstallOnce(appId: string): Promise<void> {
+  const result = await readAcfState(appId)
+  const poll = activePolls.get(appId)
+
+  if (result.state === 'downloading') {
+    if (poll) poll.seenDownloading = true
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'installing'
+    })
+  } else if (result.state === 'installed') {
+    const existing = library.get(appId)
+    if (existing) {
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: true,
+        install: {
+          install_path: result.installPath!,
+          install_size: result.sizeOnDisk!,
+          platform: 'Windows' as const
+        }
+      }
+      library.set(appId, updated)
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'done'
+    })
+    stopInstallPolling(appId)
+    logInfo(
+      `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
+      LogPrefix.Steam
+    )
+  }
+  // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
+}
+
+/**
+ * Starts an ACF polling loop for appId. Idempotent — calling twice has no
+ * effect. The loop calls pollInstallOnce every intervalMs (default 3 000 ms).
+ *
+ * Stops automatically when:
+ *   - state becomes 'installed' (via pollInstallOnce → stopInstallPolling)
+ *   - state has been 'absent' for GRACE_TICKS without ever seeing 'downloading'
+ *     (user likely cancelled Steam's install dialog — T-03-06 mitigation)
+ *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
+ *
+ * Exported for unit testing.
+ */
+export function startInstallPolling(appId: string, intervalMs = 3000): void {
+  if (activePolls.has(appId)) return // idempotent
+
+  logInfo(
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms)`,
+    LogPrefix.Steam
+  )
+
+  const entry = {
+    timer: null as unknown as NodeJS.Timeout,
+    ticks: 0,
+    seenDownloading: false
+  }
+
+  const timer = setInterval(async () => {
+    entry.ticks++
+
+    // Absolute safety cap — stop after MAX_TICKS and rely on the D-01 focus backstop
+    if (entry.ticks >= MAX_TICKS) {
+      logWarning(
+        `Steam: install polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
+        LogPrefix.Steam
+      )
+      stopInstallPolling(appId)
+      return
+    }
+
+    await pollInstallOnce(appId)
+
+    // pollInstallOnce may have stopped the poll (state became 'installed')
+    if (!activePolls.has(appId)) return
+
+    // Grace window: if no manifest ever appeared after GRACE_TICKS, the user
+    // probably cancelled Steam's install dialog — stop to avoid endless polling
+    if (!entry.seenDownloading && entry.ticks >= GRACE_TICKS) {
+      logWarning(
+        `Steam: install polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no manifest detected; user may have cancelled`,
+        LogPrefix.Steam
+      )
+      stopInstallPolling(appId)
+    }
+  }, intervalMs)
+
+  entry.timer = timer
+  activePolls.set(appId, entry)
+}
+
+/**
+ * Stops the active polling loop for appId (clears the interval and removes the
+ * activePolls entry). Safe to call when no poll is active (no-op).
+ *
+ * Exported for unit testing.
+ */
+export function stopInstallPolling(appId: string): void {
+  const poll = activePolls.get(appId)
+  if (!poll) return
+  clearInterval(poll.timer)
+  activePolls.delete(appId)
+  logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
+}
+
+/**
+ * Scans all Steam library paths for appmanifest_*.acf files whose StateFlags
+ * has bit 4 UNSET (download in progress), and filters to those appIds that
+ * are present in the in-memory library Map.
+ *
+ * Used by SteamLibraryManager.init() to resume polling after an app restart.
+ * Exported for unit testing.
+ */
+export async function scanDownloadingAppIds(): Promise<string[]> {
+  const libraryPaths = await getSteamLibraries()
+  const downloadingIds: string[] = []
+
+  for (const libPath of libraryPaths) {
+    const steamappsDir = join(libPath, 'steamapps')
+    if (!existsSync(steamappsDir)) continue
+
+    let files: string[]
+    try {
+      files = readdirSync(steamappsDir) as string[]
+    } catch {
+      continue
+    }
+
+    for (const file of files) {
+      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+
+      try {
+        const content = readFileSync(join(steamappsDir, file), 'utf-8')
+        const parsed = parse(content as string)
+        const state = parsed?.AppState
+        if (!state) continue
+
+        const appid = parseInt(state.appid, 10)
+        if (isNaN(appid)) continue
+
+        const appIdStr = String(appid)
+        const stateFlags = parseInt(state.StateFlags, 10)
+        // Bit 4 unset = not fully installed (download in progress or other non-installed state)
+        if (!isNaN(stateFlags) && (stateFlags & 4) === 0 && library.has(appIdStr)) {
+          downloadingIds.push(appIdStr)
+        }
+      } catch {
+        /* skip corrupt ACF */
+      }
+    }
+  }
+
+  return downloadingIds
 }
