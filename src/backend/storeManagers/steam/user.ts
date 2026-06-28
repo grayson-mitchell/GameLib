@@ -52,6 +52,7 @@ function decryptToken(stored: string): string {
 export class SteamUser {
   private static client: InstanceType<typeof SteamUserLib> | null = null
   private static session: InstanceType<typeof LoginSession> | null = null
+  private static connectingPromise: Promise<string> | null = null
   private static qrSessionState: {
     status: 'waiting' | 'done' | 'error'
     username?: string
@@ -74,6 +75,40 @@ export class SteamUser {
 
   static getClient(): InstanceType<typeof SteamUserLib> | null {
     return this.client
+  }
+
+  // ── LIB-01: Reconnect on startup ───────────────────────────────────────────
+
+  /**
+   * Ensure a live, authenticated steam-user client exists. The client is an
+   * in-memory connection that does not survive an app restart, so on startup we
+   * re-log-on using the persisted refresh token. Returns true only when the CM
+   * connection is established (client.steamID populated). Concurrent callers
+   * share a single in-flight connection attempt.
+   */
+  static async ensureConnected(): Promise<boolean> {
+    if (this.client?.steamID) return true
+    if (!this.isLoggedIn()) return false
+
+    const creds = await this.getCredentials()
+    if (!creds) {
+      logWarning(
+        'Steam: logged in but no stored refresh token — cannot reconnect',
+        LogPrefix.Steam
+      )
+      return false
+    }
+
+    if (!this.connectingPromise) {
+      this.connectingPromise = this.connectSteamUserClient(
+        creds.refreshToken
+      ).finally(() => {
+        this.connectingPromise = null
+      })
+    }
+    await this.connectingPromise
+
+    return Boolean(this.client?.steamID)
   }
 
   // ── AUTH-04: Logout ────────────────────────────────────────────────────────
@@ -114,7 +149,24 @@ export class SteamUser {
   // ── Shared auth success path ───────────────────────────────────────────────
 
   private static async finishAuth(refreshToken: string): Promise<string> {
-    // Disconnect any existing client
+    // Store credentials immediately — don't block on the steam-user CM connection.
+    const encrypted = encryptToken(refreshToken)
+    configStore.set(TOKEN_STORE_KEY, encrypted)
+    configStore.set('isLoggedIn', true)
+
+    // Connect steam-user to get the persona name. If this fails the user is still
+    // logged in (credentials already stored above), so we fall back to a placeholder.
+    const personaName = await this.connectSteamUserClient(refreshToken)
+    configStore.set('userData', {
+      username: personaName,
+      steamId: this.client?.steamID?.getSteamID64() ?? ''
+    })
+
+    logInfo(`Steam auth complete — logged in as ${personaName}`, LogPrefix.Steam)
+    return personaName
+  }
+
+  private static connectSteamUserClient(refreshToken: string): Promise<string> {
     if (this.client) {
       try {
         this.client.logOff()
@@ -126,47 +178,44 @@ export class SteamUser {
     const client = new SteamUserLib({ enablePicsCache: false })
     this.client = client
 
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => {
+        logWarning(
+          'Steam CM connection timed out after 15s, using fallback username',
+          LogPrefix.Steam
+        )
+        resolve('Steam User')
+      }, 15000)
+
       client.once('loggedOn', async () => {
+        clearTimeout(timeout)
         try {
           if (!client.steamID) {
-            throw new Error('Steam client logged on but steamID is null')
+            resolve('Steam User')
+            return
           }
 
           const steamId64 = client.steamID.getSteamID64()
-          let personaName = 'Unknown'
+          let personaName = 'Steam User'
 
           try {
             const result = await client.getPersonas([client.steamID])
-            personaName = result.personas[steamId64]?.player_name ?? 'Unknown'
+            personaName = result.personas[steamId64]?.player_name ?? 'Steam User'
           } catch (err) {
-            logWarning(
-              ['getPersonas failed, using fallback username:', err],
-              LogPrefix.Steam
-            )
+            logWarning(['getPersonas failed, using fallback username:', err], LogPrefix.Steam)
           }
 
-          const userData: SteamUserData = {
-            username: personaName,
-            steamId: steamId64
-          }
-
-          const encrypted = encryptToken(refreshToken)
-          configStore.set(TOKEN_STORE_KEY, encrypted)
-          configStore.set('isLoggedIn', true)
-          configStore.set('userData', userData)
-
-          logInfo(`Steam auth complete — logged in as ${personaName}`, LogPrefix.Steam)
           resolve(personaName)
         } catch (err) {
-          logError(['Steam finishAuth loggedOn handler failed:', err], LogPrefix.Steam)
-          reject(err)
+          logWarning(['Steam loggedOn handler failed:', err], LogPrefix.Steam)
+          resolve('Steam User')
         }
       })
 
       client.once('error', (err: Error) => {
-        logError(['Steam client error during auth:', err], LogPrefix.Steam)
-        reject(err)
+        clearTimeout(timeout)
+        logWarning(['Steam client error, username unavailable:', err], LogPrefix.Steam)
+        resolve('Steam User')
       })
 
       client.logOn({ refreshToken })
@@ -187,15 +236,40 @@ export class SteamUser {
       }
 
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
+      // Give the user 2 minutes to scan and approve. The default 30 s kills the
+      // session before the phone's approval round-trip completes.
+      session.loginTimeout = 120000
       this.session = session
       this.qrSessionState = { status: 'waiting' }
 
       const response = await session.startWithQR()
 
-      session.once('authenticated', async () => {
+      session.once('authenticated', () => {
         try {
-          const username = await this.finishAuth(session.refreshToken)
-          this.qrSessionState = { status: 'done', username }
+          const encrypted = encryptToken(session.refreshToken)
+          configStore.set(TOKEN_STORE_KEY, encrypted)
+          configStore.set('isLoggedIn', true)
+
+          // Mark done synchronously so pollQRLogin() returns 'done' as soon as
+          // the user approves on their phone — don't block the UI on the CM
+          // connection. The persona name (and client.steamID) are populated in
+          // the background below and surface on a later poll.
+          this.qrSessionState = { status: 'done' }
+
+          void this.connectSteamUserClient(session.refreshToken)
+            .then((personaName) => {
+              configStore.set('userData', {
+                username: personaName,
+                steamId: this.client?.steamID?.getSteamID64() ?? ''
+              })
+              this.qrSessionState = { status: 'done', username: personaName }
+            })
+            .catch((err) => {
+              logWarning(
+                ['Steam QR background CM connect failed:', err],
+                LogPrefix.Steam
+              )
+            })
         } catch (err) {
           logError(['Steam QR auth finalization failed:', err], LogPrefix.Steam)
           this.qrSessionState = { status: 'error' }
@@ -227,6 +301,9 @@ export class SteamUser {
   }> {
     const state = this.qrSessionState
     if (state.status === 'done') {
+      // username is undefined until the background CM connection resolves the
+      // persona name (see the QR 'authenticated' handler). The frontend picks
+      // up the real name on a subsequent poll once it's populated.
       return { status: 'done', username: state.username }
     }
     if (state.status === 'error') {

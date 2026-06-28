@@ -69,6 +69,9 @@ const mockSessionInstance = {
   on: jest.fn((event: string, cb: Function) => {
     sessionOnHandlers[event] = cb
   }),
+  once: jest.fn((event: string, cb: Function) => {
+    sessionOnHandlers[event] = cb
+  }),
   get refreshToken() {
     return 'mock-refresh-token'
   },
@@ -94,6 +97,9 @@ const mockSteamUserInstance = {
     personas: { '76561197900000000': { player_name: 'TestUser' } }
   }),
   on: jest.fn((event: string, cb: Function) => {
+    steamUserOnHandlers[event] = cb
+  }),
+  once: jest.fn((event: string, cb: Function) => {
     steamUserOnHandlers[event] = cb
   })
 }
@@ -133,8 +139,11 @@ describe('SteamUser', () => {
     // LoginSession mock — re-set constructor to return mockSessionInstance
     MockLoginSession.mockImplementation(() => mockSessionInstance)
 
-    // session.on() captures handlers into sessionOnHandlers
+    // session.on/once() captures handlers into sessionOnHandlers
     mockSessionInstance.on.mockImplementation((event: string, cb: Function) => {
+      sessionOnHandlers[event] = cb
+    })
+    mockSessionInstance.once.mockImplementation((event: string, cb: Function) => {
       sessionOnHandlers[event] = cb
     })
 
@@ -143,6 +152,9 @@ describe('SteamUser', () => {
 
     // steam-user instance mocks
     mockSteamUserInstance.on.mockImplementation((event: string, cb: Function) => {
+      steamUserOnHandlers[event] = cb
+    })
+    mockSteamUserInstance.once.mockImplementation((event: string, cb: Function) => {
       steamUserOnHandlers[event] = cb
     })
     mockSteamUserInstance.getPersonas.mockResolvedValue({
@@ -360,14 +372,16 @@ describe('SteamUser', () => {
       expect(result.status).toBe('waiting')
     })
 
-    test('returns { status: "done", username } after authenticated event fires', async () => {
-      // Trigger 'authenticated' on the session mock
+    test('returns { status: "done", username: undefined } after authenticated event fires', async () => {
+      // Trigger 'authenticated' on the session mock.
+      // After the fix, qrSessionState is set to done synchronously (before the CM
+      // connection resolves), so username is undefined at poll time.
       expect(sessionOnHandlers['authenticated']).toBeDefined()
       await sessionOnHandlers['authenticated']!()
 
       const result = await SteamUser.pollQRLogin()
       expect(result.status).toBe('done')
-      expect(typeof result.username).toBe('string')
+      expect(result.username).toBeUndefined()
     })
 
     test('after auth: encrypts and stores token (safeStorage.encryptString called)', async () => {
@@ -384,6 +398,76 @@ describe('SteamUser', () => {
       sessionOnHandlers['timeout']?.()
       const result = await SteamUser.pollQRLogin()
       expect(result.status).toBe('error')
+    })
+  })
+
+  // ── connectSteamUserClient — timeout guard ────────────────────────────────
+
+  describe('connectSteamUserClient() — timeout guard', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    test('resolves pollQRLogin as done immediately (before CM loggedOn fires)', async () => {
+      // logOn() never triggers loggedOn — simulates a slow CM connection
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        // intentionally does nothing
+      })
+
+      mockSessionInstance.startWithQR.mockResolvedValue({
+        qrChallengeUrl: 'steam://test',
+        actionRequired: true
+      })
+      await SteamUser.startQRLogin()
+
+      // Trigger authenticated — stores credentials and sets qrSessionState=done,
+      // then fires background CM connect (which never resolves in this test)
+      await sessionOnHandlers['authenticated']?.()
+
+      // pollQRLogin must be 'done' immediately — not blocked on CM loggedOn
+      const result = await SteamUser.pollQRLogin()
+      expect(result.status).toBe('done')
+      expect(result.username).toBeUndefined()
+    })
+
+    test('resolves with "Steam User" fallback when CM loggedOn never fires (15s timeout)', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+
+      // logOn() never triggers loggedOn — CM hangs indefinitely
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        // intentionally does nothing
+      })
+
+      mockSessionInstance.startWithQR.mockResolvedValue({
+        qrChallengeUrl: 'steam://test',
+        actionRequired: true
+      })
+      await SteamUser.startQRLogin()
+
+      // Kick off the background CM connect
+      void sessionOnHandlers['authenticated']?.()
+      // Flush so connectSteamUserClient starts and registers the timeout
+      await Promise.resolve()
+      await Promise.resolve()
+
+      // Capture the configStore.set call count before the timeout resolves
+      const setCallsBefore = mockConfigStore.set.mock.calls.length
+
+      // Advance past the 15s guard — the timeout resolves the CM promise
+      jest.advanceTimersByTime(15001)
+      // Flush the resolved .then() that writes userData
+      await Promise.resolve()
+      await Promise.resolve()
+
+      // userData should have been written via the background .then()
+      const setCallsAfter = mockConfigStore.set.mock.calls.length
+      expect(setCallsAfter).toBeGreaterThan(setCallsBefore)
+
+      const userDataCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'userData'
+      )
+      expect(userDataCall).toBeDefined()
+      expect(userDataCall![1]).toMatchObject({ username: 'Steam User' })
     })
   })
 
@@ -516,6 +600,72 @@ describe('SteamUser', () => {
       SteamUser.logout()
       expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
       expect(mockConfigStore.clear).toHaveBeenCalled()
+    })
+  })
+
+  // ── LIB-01: reconnect on startup ───────────────────────────────────────────
+
+  describe('ensureConnected()', () => {
+    beforeEach(() => {
+      // Reset the in-memory client to null so we exercise the reconnect path
+      SteamUser.logout()
+    })
+
+    test('returns false when not logged in', async () => {
+      mockConfigStore.get_nodefault.mockReturnValue(undefined) // isLoggedIn false
+      const result = await SteamUser.ensureConnected()
+      expect(result).toBe(false)
+      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+    })
+
+    test('returns false when logged in but no stored refresh token', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'isLoggedIn' ? true : undefined
+      )
+      const result = await SteamUser.ensureConnected()
+      expect(result).toBe(false)
+      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+    })
+
+    test('reconnects with the stored refresh token and returns true when CM logs on', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        return undefined
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(mockSteamUserInstance.logOn).toHaveBeenCalledWith({
+        refreshToken: 'stored-plaintext-token'
+      })
+      expect(result).toBe(true)
+    })
+
+    test('does not reconnect when a live client is already connected', async () => {
+      // Establish a connected client via QR login
+      mockSessionInstance.startWithQR.mockResolvedValue({
+        qrChallengeUrl: 'steam://test',
+        actionRequired: true
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      await SteamUser.startQRLogin()
+      await sessionOnHandlers['authenticated']?.()
+      await new Promise((r) => process.nextTick(r)) // let background CM connect settle
+      mockSteamUserInstance.logOn.mockClear()
+
+      const result = await SteamUser.ensureConnected()
+      expect(result).toBe(true)
+      expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
     })
   })
 })
