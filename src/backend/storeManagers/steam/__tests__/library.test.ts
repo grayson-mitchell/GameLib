@@ -11,7 +11,14 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import SteamLibraryManager, { buildInstalledMap } from '../library'
+import SteamLibraryManager, {
+  buildInstalledMap,
+  readAcfState,
+  startInstallPolling,
+  stopInstallPolling,
+  pollInstallOnce,
+  scanDownloadingAppIds
+} from '../library'
 import * as gfs from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
@@ -487,5 +494,262 @@ describe('SteamLibraryManager', () => {
       // No side effects
       expect(sendFrontendMessage).not.toHaveBeenCalled()
     })
+  })
+
+  // ── D-07: startup resume via scanDownloadingAppIds ────────────────────────
+
+  it('init() resumes polling for in-progress downloads detected on startup', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    // Set up ACF mocks so scanDownloadingAppIds finds '730' downloading
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+
+    await manager.init()
+
+    // If init() called startInstallPolling for '730', setInterval should have been invoked
+    expect(setIntervalSpy).toHaveBeenCalled()
+
+    setIntervalSpy.mockRestore()
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+})
+
+// ── D-07: readAcfState() ─────────────────────────────────────────────────────
+
+describe('readAcfState()', () => {
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(false)
+  })
+
+  it('returns state:"installed" with installPath/sizeOnDisk when StateFlags bit 4 is set', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '9000' }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(join('/steam', 'steamapps', 'common', 'csgo'))
+    expect(result.sizeOnDisk).toBe('9000')
+  })
+
+  it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+    expect(result.installPath).toBeUndefined()
+  })
+
+  it('returns state:"absent" when no manifest file is found for the appId', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(false)
+    const result = await readAcfState('730')
+    expect(result.state).toBe('absent')
+  })
+
+  it('skips a corrupt ACF and returns state:"absent" (T-2-01)', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('absent')
+  })
+})
+
+// ── D-07: pollInstallOnce() ──────────────────────────────────────────────────
+
+describe('pollInstallOnce()', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+  })
+
+  afterEach(() => {
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('sends gameStatusUpdate { status:"installing" } when state is "downloading"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ appName: '730', runner: 'steam', status: 'installing' })
+    )
+  })
+
+  it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    startInstallPolling('730', 60000) // register entry so stopInstallPolling has something to clear
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: '730', is_installed: true })
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ appName: '730', runner: 'steam', status: 'done' })
+    )
+  })
+})
+
+// ── D-07: startInstallPolling / stopInstallPolling ────────────────────────────
+
+describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('calling startInstallPolling twice for the same appId creates only one setInterval', () => {
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+    startInstallPolling('730', 3000)
+    startInstallPolling('730', 3000) // idempotent — second call is a no-op
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+    setIntervalSpy.mockRestore()
+  })
+
+  it('stopInstallPolling clears the entry so startInstallPolling can register a new interval', () => {
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+    startInstallPolling('730', 3000)
+    stopInstallPolling('730')
+    startInstallPolling('730', 3000) // new registration — entry was cleared by stop
+    expect(setIntervalSpy).toHaveBeenCalledTimes(2)
+    setIntervalSpy.mockRestore()
+  })
+})
+
+// ── D-07: scanDownloadingAppIds() ────────────────────────────────────────────
+
+describe('scanDownloadingAppIds()', () => {
+  beforeEach(() => {
+    library.clear()
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readdirSync as jest.Mock).mockReturnValue([])
+  })
+
+  it('returns appIds whose manifest has bit 4 unset AND the appId is in the library', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).toContain('730')
+  })
+
+  it('does NOT return appIds whose manifest has bit 4 set (fully installed)', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).not.toContain('730')
+  })
+
+  it('does NOT return appIds not present in the in-memory library Map', async () => {
+    // library is empty — no '730' entry
+    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).not.toContain('730')
   })
 })

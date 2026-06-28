@@ -14,6 +14,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore } from '../electronStores'
 import SteamGame from '../games'
 import SteamLibraryManager from '../library'
+import * as libraryModule from '../library'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
 
@@ -450,6 +451,7 @@ describe('SteamGame.stop() — no-op', () => {
 describe('SteamGame.install() — GAME-02', () => {
   let shellOpenExternal: jest.Mock
   let notifyMock: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
 
   beforeEach(() => {
     library.clear()
@@ -459,6 +461,14 @@ describe('SteamGame.install() — GAME-02', () => {
     shellOpenExternal.mockResolvedValue(undefined)
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    // Spy on startInstallPolling so install() can call it without running the real poller
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
   })
 
   it('GAME-02: install() calls shell.openExternal with steam://install/{appId} for numeric appId', async () => {
@@ -493,12 +503,25 @@ describe('SteamGame.install() — GAME-02', () => {
     expect(result).toEqual(expect.objectContaining({ status: 'error' }))
   })
 
-  it('GAME-02: install() does NOT call sendFrontendMessage (no optimistic flip)', async () => {
+  it('GAME-02: install() does NOT call sendFrontendMessage directly (no optimistic flip — D-02)', async () => {
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
-    // install state is reconciled only after focus re-read; never assumed from click
+    // Badge flipped by ACF poller (D-07) or focus re-read (D-01), never by click (D-02)
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  it('GAME-02/D-07: install() calls startInstallPolling with this.appId after successful openExternal', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('D-07: install() does NOT call startInstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
+    const badGame = new SteamGame('abc')
+    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
+    await badGame.install({} as any)
+    expect(startInstallPollingSpy).not.toHaveBeenCalled()
   })
 })
 

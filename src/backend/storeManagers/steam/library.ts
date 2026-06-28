@@ -339,3 +339,83 @@ export async function buildInstalledMap(): Promise<
 
   return installed
 }
+
+// ── Install polling lifecycle (D-07) ─────────────────────────────────────────
+
+/** Module-level registry of active install polls, keyed by appId string. */
+const activePolls = new Map<
+  string,
+  { timer: NodeJS.Timeout; ticks: number; seenDownloading: boolean }
+>()
+
+const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
+const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
+
+/**
+ * Reads the install state of a single appId from its ACF manifest.
+ *
+ * - 'installed':   manifest present and StateFlags bit 4 set (FullyInstalled)
+ * - 'downloading': manifest present but bit 4 unset (download in flight)
+ * - 'absent':      no manifest found for this appId in any library path
+ *
+ * Corrupt/unreadable manifests are skipped without throwing (T-2-01).
+ * Exported for unit testing.
+ */
+export async function readAcfState(appId: string): Promise<{
+  state: 'absent' | 'downloading' | 'installed'
+  installPath?: string
+  sizeOnDisk?: string
+}> {
+  throw new Error('readAcfState: not implemented — GREEN phase')
+}
+
+/**
+ * Executes one polling tick for appId:
+ *   'downloading' → sends gameStatusUpdate { status: 'installing' }
+ *   'installed'   → updates library entry, sends pushGameToLibrary +
+ *                   gameStatusUpdate { status: 'done' }, stops the poll
+ *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
+ *
+ * Exported for unit testing.
+ */
+export async function pollInstallOnce(appId: string): Promise<void> {
+  throw new Error('pollInstallOnce: not implemented — GREEN phase')
+}
+
+/**
+ * Starts an ACF polling loop for appId. Idempotent — calling twice has no
+ * effect. The loop calls pollInstallOnce every intervalMs (default 3 000 ms).
+ *
+ * Stops automatically when:
+ *   - state becomes 'installed' (via pollInstallOnce)
+ *   - state has been 'absent' for GRACE_TICKS without ever seeing 'downloading'
+ *     (user likely cancelled Steam's install dialog)
+ *   - MAX_TICKS elapsed (D-01 focus backstop takes over)
+ *
+ * Exported for unit testing.
+ */
+export function startInstallPolling(appId: string, intervalMs = 3000): void {
+  throw new Error('startInstallPolling: not implemented — GREEN phase')
+}
+
+/**
+ * Stops the active polling loop for appId (clears the interval and removes the
+ * activePolls entry). Safe to call when no poll is active (no-op).
+ *
+ * Exported for unit testing.
+ */
+export function stopInstallPolling(appId: string): void {
+  throw new Error('stopInstallPolling: not implemented — GREEN phase')
+}
+
+/**
+ * Scans all Steam library paths for appmanifest_*.acf files whose StateFlags
+ * has bit 4 UNSET (download in progress), and filters to those appIds that
+ * are present in the in-memory library Map.
+ *
+ * Used by SteamLibraryManager.init() to resume polling after an app restart.
+ * Exported for unit testing.
+ */
+export async function scanDownloadingAppIds(): Promise<string[]> {
+  throw new Error('scanDownloadingAppIds: not implemented — GREEN phase')
+}
