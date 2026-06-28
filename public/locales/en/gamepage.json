@@ -146,7 +146,11 @@
         "neverPlayed": "Never",
         "platform": "Select Platform Version to Install",
         "requirements": "System Requirements",
-        "totalPlayed": "Time Played"
+        "totalPlayed": "Time Played",
+        "totalTimePlayed": "Total Time Played",
+        "hour": "hour",
+        "hours": "hours",
+        "minutes": "minutes"
     },
     "gamecard": {
         "moving": "Moving",

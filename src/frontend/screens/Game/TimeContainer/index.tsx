@@ -49,13 +49,36 @@ function TimeContainer({ gameInfo }: Props) {
     fetchPlaytime()
   }, [status])
 
+  // Steam tracks playtime itself (Steam launches the game, not GameLib), so
+  // surface the Steam-reported total directly from the synced library data.
+  const steamPlaytimeMinutes =
+    runner === 'steam' ? gameInfo.extra?.steamPlaytimeMinutes : undefined
+
+  const formatSteamPlaytime = (mins: number) => {
+    if (mins === 0) return t('game.neverPlayed', 'Never')
+    if (mins < 60) return `${mins} ${t('game.minutes', 'minutes')}`
+    const hours = Math.round(mins / 60)
+    return `${hours} ${hours === 1 ? t('game.hour', 'hour') : t('game.hours', 'hours')}`
+  }
+
+  const steamTotalPlaytime = steamPlaytimeMinutes !== undefined && (
+    <p className="timeContainerLabel">
+      <AvTimer />
+      {`${t('game.totalTimePlayed', 'Total Time Played')}:`} {` `}
+      {formatSteamPlaytime(steamPlaytimeMinutes)}
+    </p>
+  )
+
   if (!tsInfo) {
     return (
-      <p className="timeContainerLabel">
-        <AvTimer />
-        {`${t('game.lastPlayed', 'Last Played')}:`} {` `}
-        {`${t('game.neverPlayed', 'Never')}`}
-      </p>
+      <>
+        <p className="timeContainerLabel">
+          <AvTimer />
+          {`${t('game.lastPlayed', 'Last Played')}:`} {` `}
+          {`${t('game.neverPlayed', 'Never')}`}
+        </p>
+        {steamTotalPlaytime}
+      </>
     )
   }
 
