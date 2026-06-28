@@ -75,7 +75,8 @@ jest.mock('../electronStores', () => ({
   },
   steamMetadataStore: {
     get: jest.fn(),
-    set: jest.fn()
+    set: jest.fn(),
+    entries: jest.fn()
   },
   steamSyncStore: {
     get: jest.fn(),
@@ -105,10 +106,15 @@ describe('SteamLibraryManager', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     manager = new SteamLibraryManager()
+    // Default: client reconnect succeeds so refresh() proceeds past the guard
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     // Default: getSteamLibraries returns empty so buildInstalledMap is fast
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     // Default: metadata store returns undefined (no cached artwork)
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    // Defaults so init()/migrateStaleArtUrls have empty caches to scan
+    ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
   })
 
   // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────
@@ -270,5 +276,54 @@ describe('SteamLibraryManager', () => {
     )
     // Should NOT write a new list to the store on failure
     expect(steamLibraryStore.set).not.toHaveBeenCalled()
+  })
+
+  // ── Art URL migration (capsule_616x353 → library_600x900) ──────────────────
+
+  describe('init() migrates stale cover art URLs', () => {
+    const OLD = 'https://cdn.cloudflare.steamstatic.com/steam/apps/570/capsule_616x353.jpg'
+    const NEW = 'https://cdn.cloudflare.steamstatic.com/steam/apps/570/library_600x900.jpg'
+
+    it('rewrites the landscape capsule URL in the metadata cache', async () => {
+      ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([
+        ['570', { art_cover: 'x', art_square: OLD, extra: {} }]
+      ])
+
+      await manager.init()
+
+      expect(steamMetadataStore.set).toHaveBeenCalledWith(
+        '570',
+        expect.objectContaining({ art_square: NEW })
+      )
+    })
+
+    it('rewrites the landscape capsule URL in the persisted library list', async () => {
+      jest.mocked(steamLibraryStore.get).mockReturnValue([
+        { runner: 'steam', app_name: '570', title: 'Dota 2', art_square: OLD } as any,
+        { runner: 'steam', app_name: '440', title: 'TF2', art_square: '' } as any
+      ])
+
+      await manager.init()
+
+      const setCall = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.find(([key]) => key === 'games')
+      expect(setCall).toBeDefined()
+      const savedGames = setCall![1] as Array<{ app_name: string; art_square: string }>
+      expect(savedGames.find((g) => g.app_name === '570')?.art_square).toBe(NEW)
+    })
+
+    it('does not rewrite the library list when no stale URLs are present', async () => {
+      jest.mocked(steamLibraryStore.get).mockReturnValue([
+        { runner: 'steam', app_name: '570', title: 'Dota 2', art_square: NEW } as any
+      ])
+
+      await manager.init()
+
+      const setGames = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.filter(([key]) => key === 'games')
+      expect(setGames).toHaveLength(0)
+    })
   })
 })

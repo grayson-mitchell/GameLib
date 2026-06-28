@@ -93,6 +93,20 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
     return this.current_store.has(key)
   }
 
+  /**
+   * Returns all cached entries as [key, value] pairs, excluding internal
+   * `__timestamp.*` bookkeeping keys. Useful for one-off cache migrations.
+   */
+  public entries(): Array<[KeyType, ValueType]> {
+    const source =
+      this.current_store instanceof Map
+        ? Object.fromEntries(this.current_store)
+        : this.store.store
+    return Object.entries(source)
+      .filter(([key]) => !key.startsWith('__timestamp.'))
+      .map(([key, value]) => [key as KeyType, value as ValueType])
+  }
+
   public commit() {
     if (this.using_in_memory) {
       this.store.store = Object.fromEntries(this.in_memory_store)

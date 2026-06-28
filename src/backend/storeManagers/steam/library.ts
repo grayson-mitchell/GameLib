@@ -28,6 +28,11 @@ export default class SteamLibraryManager implements LibraryManager {
    * background sync when online and logged in (D-01 / D-09).
    */
   async init(): Promise<void> {
+    // One-time migration: portrait library capsule replaced the cropped
+    // landscape capsule. Rewrite any stale art URLs already in the caches so
+    // existing libraries pick up the new art without a manual cache clear.
+    this.migrateStaleArtUrls()
+
     const cached = steamLibraryStore.get('games', [])
     if (cached.length) {
       library.clear()
@@ -49,14 +54,58 @@ export default class SteamLibraryManager implements LibraryManager {
   }
 
   /**
+   * Rewrite cached `art_square` URLs from the old landscape capsule
+   * (capsule_616x353) to the portrait library capsule (library_600x900) in both
+   * the per-game metadata cache and the persisted library list. Idempotent — a
+   * no-op once every entry has been migrated. Done in place so games keep their
+   * art (the new URL resolves for the same appId) with no blank-art flash.
+   */
+  private migrateStaleArtUrls(): void {
+    const OLD_ART = 'capsule_616x353.jpg'
+    const NEW_ART = 'library_600x900.jpg'
+
+    // Per-game metadata cache (refresh() rebuilds art_square from here, so this
+    // must be fixed or the next sync would re-apply the old URL).
+    for (const [appId, meta] of steamMetadataStore.entries()) {
+      if (meta?.art_square?.includes(OLD_ART)) {
+        steamMetadataStore.set(appId, {
+          ...meta,
+          art_square: meta.art_square.replace(OLD_ART, NEW_ART)
+        })
+      }
+    }
+
+    // Persisted library list (what init() loads and pushes to the frontend).
+    const games = steamLibraryStore.get('games', [])
+    let changed = false
+    const migrated = games.map((game) => {
+      if (game.art_square?.includes(OLD_ART)) {
+        changed = true
+        return { ...game, art_square: game.art_square.replace(OLD_ART, NEW_ART) }
+      }
+      return game
+    })
+    if (changed) {
+      steamLibraryStore.set('games', migrated)
+      logInfo(
+        `Steam: migrated ${migrated.filter((g) => g.art_square.includes(NEW_ART)).length} cached cover URLs to portrait art`,
+        LogPrefix.Steam
+      )
+    }
+  }
+
+  /**
    * Fetch the full owned game list + playtime from Steam CM, merge local ACF
    * install state, push each game to the frontend, persist the list and sync
    * timestamp.  Falls back to the cached library if the CM call fails (D-09).
    */
   async refresh(): Promise<ExecResult | null> {
+    // The steam-user client is in-memory and dies on app restart — reconnect
+    // from the persisted refresh token before syncing.
+    const connected = await SteamUser.ensureConnected()
     const client = SteamUser.getClient()
-    if (!client) {
-      logWarning('Steam not logged in, skipping library refresh', LogPrefix.Steam)
+    if (!connected || !client || !client.steamID) {
+      logWarning('Steam client not ready, skipping library refresh', LogPrefix.Steam)
       return null
     }
 

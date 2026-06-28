@@ -78,7 +78,9 @@ export default class SteamGame implements Game {
 
       const artBase = `${STEAM_CDN_BASE}/${this.appId}`
       const art_cover = `${artBase}/header.jpg`
-      const art_square = `${artBase}/capsule_616x353.jpg`
+      // Portrait library capsule (2:3) — matches the portrait game tile. The
+      // landscape capsule_616x353 only filled a cropped center strip of the tile.
+      const art_square = `${artBase}/library_600x900.jpg`
 
       // Build extra — preserve existing fields (especially steamPlaytimeMinutes)
       // T-2-02: short_description stored as plain string only, never HTML-parsed

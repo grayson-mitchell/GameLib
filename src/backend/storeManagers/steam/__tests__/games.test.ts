@@ -164,7 +164,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`
     )
     expect(updated.art_square).toBe(
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/capsule_616x353.jpg`
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`
     )
     expect(updated.title).toBe('Dota 2')
     expect(updated.extra?.genres).toEqual(['Action', 'Strategy'])
@@ -184,7 +184,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       APP_ID,
       expect.objectContaining({
         art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        art_square: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/capsule_616x353.jpg`
+        art_square: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`
       })
     )
   })
