@@ -97,7 +97,25 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can install a Steam game from GamerLib (Steam client handles the download via steam://install)
   3. User can uninstall a Steam game from GamerLib (via steam://uninstall)
   4. Windows-only Steam games on Linux launch via Steam Proton, not Heroic's Wine layer
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1** — Launch slice:
+- [ ] `03-01-PLAN.md` — SteamGame.launch() fires steam://rungameid + hand-off toast + numeric appId guard; supporting getSettings/getExtraInfo/isGameAvailable/stop so GamePage and launchEventCallback work. isNative() stays true (GAME-04). Gate: `npm test -- --testPathPattern=steam/games` + codecheck. (GAME-01, GAME-04)
+
+**Wave 2** *(blocked on Wave 1 — shares games.ts)*:
+- [ ] `03-02-PLAN.md` — SteamGame.install()/uninstall()/forceUninstall() via steam://install|uninstall (no GamerLib confirm, D-05); SteamLibraryManager.refreshInstallState() ACF diff; BrowserWindow 'focus' listener wiring + LibraryManager interface. Gate: steam/games + steam/library tests + codecheck. (GAME-02, GAME-03)
+
+**Wave 3** *(blocked on Wave 2)*:
+- [ ] `03-03-PLAN.md` — Frontend clean action surface: hide Settings/Move/Change/Verify/Force-Update for steam (D-04); install bypasses location modal; uninstall bypasses GamerLib confirm (D-05); human end-to-end verification on a real Steam account. Gate: codecheck + human sign-off. (GAME-02, GAME-03)
+
+**Cross-cutting constraints:**
+- All `steam://` URLs constructed through a single numeric-appId guard (`buildSteamProtocolUrl`, `/^\d+$/`) — never interpolate unvalidated appId.
+- `SteamGame.isNative()` must remain `true` so launchEventCallback skips Heroic's Wine branch (GAME-04 satisfied by absence).
+- No background polling — install-state reconciliation is BrowserWindow `'focus'`-driven only (D-01).
+- No GamerLib install-location or uninstall-confirm modals for Steam — delegate to Steam's own dialogs (D-04/D-05).
+- Zero new npm packages.
+
+**UI hint**: yes
 
 ### Phase 4: Branding
 **Goal**: App is identified and distributed as GamerLib, not Heroic
@@ -120,5 +138,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
 | 2. Steam Library | 6/6 | Complete   | 2026-06-28 |
-| 3. Game Operations | 0/TBD | Not started | - |
+| 3. Game Operations | 0/3 | Not started | - |
 | 4. Branding | 0/TBD | Not started | - |
