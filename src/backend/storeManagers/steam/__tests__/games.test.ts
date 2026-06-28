@@ -1,7 +1,6 @@
 /**
- * Unit tests for SteamGame.getGameInfo lazy metadata — LIB-04.
- * Covers lazy metadata fetch via Steam store appdetails API,
- * pendingFetches dedup, cache persistence, and error handling.
+ * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
+ * and supporting read methods (getSettings, getExtraInfo, isGameAvailable).
  *
  * Mock strategy follows Phase 1 user.test.ts patterns:
  *  - backend/logger uses factory form to prevent transitive fs-extra native crash
@@ -56,6 +55,54 @@ jest.mock('../electronStores', () => ({
   steamSyncStore: {
     get: jest.fn(),
     set: jest.fn()
+  }
+}))
+
+// ── electron shell mock — controls shell.openExternal ────────────────────────
+jest.mock('electron', () => ({
+  shell: {
+    openExternal: jest.fn()
+  },
+  app: {
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path')
+  }
+}))
+
+// ── dialog notify mock ────────────────────────────────────────────────────────
+jest.mock('backend/dialog/dialog', () => ({
+  notify: jest.fn(),
+  showDialogBoxModalAuto: jest.fn()
+}))
+
+// ── GameConfig mock — ensures getSettings() returns defaults ─────────────────
+jest.mock('backend/game_config', () => ({
+  GameConfig: {
+    get: jest.fn().mockReturnValue({
+      config: undefined,
+      getSettings: jest.fn().mockResolvedValue({
+        autoSyncSaves: false,
+        savesPath: '',
+        gogSaves: [],
+        wineVersion: { name: 'Wine', type: 'wine', bin: '' },
+        winePrefix: '',
+        wineCrossoverBottle: '',
+        autoInstallDxvk: false,
+        autoInstallDxvkNvapi: false,
+        autoInstallVkd3d: false,
+        preferSystemLibs: false,
+        enableEsync: false,
+        enableFsync: false,
+        enableFsrSharpening: false,
+        maxSharpening: false,
+        enableDXVKFpsLimit: false,
+        DXVKFpsCap: '0',
+        targetExe: '',
+        verboseLogs: false,
+        launcherArgs: '',
+        enviromentOptions: [],
+        wrapperOptions: []
+      })
+    })
   }
 }))
 
@@ -282,5 +329,229 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
     expect(axios.get).toHaveBeenCalledWith(
       `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`
     )
+  })
+})
+
+// ── GAME-01: SteamGame.launch() + appId guard (T-03-01) ──────────────────────
+
+describe('SteamGame.launch() — GAME-01', () => {
+  let shellOpenExternal: jest.Mock
+  let notifyMock: jest.Mock
+  let logWarningMock: jest.Mock
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
+    logWarningMock = jest.requireMock('backend/logger').logWarning as jest.Mock
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+  })
+
+  it('GAME-01: launch() calls shell.openExternal with steam://rungameid/{appId} for numeric appId', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://rungameid/${APP_ID}`)
+  })
+
+  it('GAME-01: launch() resolves true for a valid numeric appId', async () => {
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(true)
+  })
+
+  it('D-03: launch() fires notify with hand-off toast before/around openExternal', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Opening in Steam…' })
+    )
+  })
+
+  it('T-03-01: launch() does NOT call shell.openExternal when appId is non-numeric (injection guard)', async () => {
+    const badGame = new SteamGame('abc')
+    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
+
+    const result = await badGame.launch({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+  })
+
+  it('T-03-01: launch() does NOT call shell.openExternal for appId with shell metacharacters', async () => {
+    const badId = '12; rm -rf ~'
+    const badGame = new SteamGame(badId)
+    library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
+
+    const result = await badGame.launch({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+  })
+
+  it('T-03-01: launch() does NOT call shell.openExternal for appId with path traversal', async () => {
+    const badId = '10/../uninstall/5'
+    const badGame = new SteamGame(badId)
+    library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
+
+    const result = await badGame.launch({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+  })
+
+  it('T-03-01: launch() logs a warning when appId is invalid', async () => {
+    const badGame = new SteamGame('not-a-number')
+    library.set('not-a-number', makeEntry({ app_name: 'not-a-number', title: 'BadGame' }))
+
+    await badGame.launch({} as any)
+
+    expect(logWarningMock).toHaveBeenCalled()
+  })
+
+  it('GAME-04/D-06: launch() does not invoke any Wine/Proton routine — only shell.openExternal is called as external exec', async () => {
+    // Verify that the steam:// URL contains rungameid (not a Heroic runtime command)
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    // shell.openExternal must be called with a steam:// URL using rungameid — NOT a CLI/Wine command
+    const calls = shellOpenExternal.mock.calls
+    expect(calls.length).toBe(1)
+    const url: string = calls[0][0]
+    expect(url).toMatch(/^steam:\/\/rungameid\/\d+$/)
+  })
+
+  it('GAME-01: isNative() still returns true (unchanged — Wine branch is skipped in launcher.ts)', () => {
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+})
+
+// ── SteamGame.stop() — no-op ──────────────────────────────────────────────────
+
+describe('SteamGame.stop() — no-op', () => {
+  beforeEach(() => {
+    library.clear()
+    library.set(APP_ID, makeEntry())
+  })
+
+  it('stop() resolves void without throwing (Steam owns process lifecycle)', async () => {
+    const game = new SteamGame(APP_ID)
+    await expect(game.stop()).resolves.toBeUndefined()
+  })
+})
+
+// ── Supporting read methods: getSettings, getExtraInfo, isGameAvailable ───────
+
+describe('SteamGame supporting read methods — GAME-01 unblock', () => {
+  let existsSyncMock: jest.Mock
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    existsSyncMock = jest.requireMock('graceful-fs').existsSync as jest.Mock
+    library.set(APP_ID, makeEntry())
+  })
+
+  // ── getSettings ────────────────────────────────────────────────────────────
+
+  it('getSettings() resolves a GameSettings object with autoSyncSaves === false', async () => {
+    const game = new SteamGame(APP_ID)
+    const settings = await game.getSettings()
+
+    expect(settings).toBeDefined()
+    expect(settings.autoSyncSaves).toBe(false)
+  })
+
+  it('getSettings() does not throw', async () => {
+    const game = new SteamGame(APP_ID)
+    await expect(game.getSettings()).resolves.not.toThrow()
+  })
+
+  // ── getExtraInfo ───────────────────────────────────────────────────────────
+
+  it('getExtraInfo() resolves in-memory GameInfo.extra when present', async () => {
+    const extraData = {
+      reqs: [],
+      about: { description: 'A great game', shortDescription: 'A great game' }
+    }
+    library.set(APP_ID, makeEntry({ extra: extraData }))
+
+    const game = new SteamGame(APP_ID)
+    const extra = await game.getExtraInfo()
+
+    expect(extra).toEqual(extraData)
+  })
+
+  it('getExtraInfo() resolves a safe default when extra is absent', async () => {
+    library.set(APP_ID, makeEntry({ extra: undefined }))
+
+    const game = new SteamGame(APP_ID)
+    const extra = await game.getExtraInfo()
+
+    expect(extra).toEqual(
+      expect.objectContaining({
+        reqs: [],
+        about: expect.objectContaining({
+          description: '',
+          shortDescription: ''
+        })
+      })
+    )
+  })
+
+  it('getExtraInfo() does not throw', async () => {
+    const game = new SteamGame(APP_ID)
+    await expect(game.getExtraInfo()).resolves.not.toThrow()
+  })
+
+  // ── isGameAvailable ────────────────────────────────────────────────────────
+
+  it('isGameAvailable() resolves true when game is installed and install_path existsSync returns true', async () => {
+    existsSyncMock.mockReturnValue(true)
+    library.set(
+      APP_ID,
+      makeEntry({
+        is_installed: true,
+        install: { install_path: '/games/dota2' }
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(true)
+    expect(existsSyncMock).toHaveBeenCalledWith('/games/dota2')
+  })
+
+  it('isGameAvailable() resolves false when game is not installed', async () => {
+    library.set(APP_ID, makeEntry({ is_installed: false, install: {} }))
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(false)
+  })
+
+  it('isGameAvailable() resolves false when install_path does not exist on disk', async () => {
+    existsSyncMock.mockReturnValue(false)
+    library.set(
+      APP_ID,
+      makeEntry({
+        is_installed: true,
+        install: { install_path: '/games/dota2' }
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(false)
   })
 })
