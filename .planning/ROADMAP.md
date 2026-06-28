@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GamerLib (completed 2026-06-27)
 - [x] **Phase 2: Steam Library** - Steam games appear in the unified library with metadata and install state (completed 2026-06-28)
-- [ ] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GamerLib
+- [x] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GamerLib (completed 2026-06-28)
 - [ ] **Phase 4: Branding** - App is identified and distributed as GamerLib, not Heroic
 
 ## Phase Details
@@ -138,5 +138,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
 | 2. Steam Library | 6/6 | Complete   | 2026-06-28 |
-| 3. Game Operations | 2/3 | In Progress|  |
+| 3. Game Operations | 3/3 | Complete   | 2026-06-28 |
 | 4. Branding | 0/TBD | Not started | - |

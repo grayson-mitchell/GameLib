@@ -75,6 +75,24 @@ games, save sync, repair/verify, move-install. Those are Steam-managed.
   Steam-not-installed was already handled in Phase 1 AUTH-05). Log and proceed.
 - IPC message names for any operation/state-update events.
 
+### Post-Checkpoint Revisions (2026-06-28, after 03-03 human-verify)
+Manual QA of the shipped slice changed three earlier decisions:
+- **D-03 REVERSED:** The "Opening in Steam…" hand-off toast was **removed**.
+  Steam opens fast enough that the toast added no value (user feedback). No
+  toast fires on launch/install/uninstall.
+- **D-04 extended:** "Add to Steam"/"Remove from Steam" and "Import Game" are
+  also **hidden** for Steam games (they make no sense for a game Steam already
+  manages). The install modal is bypassed for Steam at `openInstallGameModal`.
+- **D-01 REVERSED → D-07 (Plan 03-04):** Focus-only reconciliation is **not
+  enough** for installs — a user who starts an install and stays in GamerLib
+  sees no feedback. Plan 03-04 adds a **polling mechanism**: after firing
+  `steam://install`, poll the ACF manifest to show a "Steam installing"
+  in-progress state (indeterminate spinner, **no percentage**), and detect
+  completion (ACF `StateFlags & 4`) to flip the badge to installed and stop
+  polling. The install button must NOT show pause/cancel for Steam (GamerLib
+  cannot control Steam's download). Focus reconciliation (D-01) remains as a
+  backstop; polling is the primary install-progress signal.
+
 </decisions>
 
 <canonical_refs>
