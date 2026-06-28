@@ -122,6 +122,10 @@ export class SteamUser {
       }
       this.client = null
     }
+    // Clear any in-flight connection promise so a fresh ensureConnected() after
+    // re-login does not await a stale QR-connect promise (Rule 1 — logout must
+    // reset all connection state).
+    this.connectingPromise = null
     this.session = null
     this.qrSessionState = { status: 'waiting' }
     configStore.clear()
@@ -256,7 +260,17 @@ export class SteamUser {
           // the background below and surface on a later poll.
           this.qrSessionState = { status: 'done' }
 
-          void this.connectSteamUserClient(session.refreshToken)
+          // Assign the background connect to connectingPromise so a concurrent
+          // ensureConnected() (triggered by post-login refreshLibrary) sees the
+          // in-flight promise and awaits it instead of starting a second
+          // connectSteamUserClient — which would logOff this client and resolve
+          // the first with the 'Steam User' fallback, overwriting the real name.
+          // .finally() mirrors the ensureConnected dedupe pattern (clears on settle).
+          const connectPromise = this.connectSteamUserClient(session.refreshToken)
+          this.connectingPromise = connectPromise.finally(() => {
+            this.connectingPromise = null
+          })
+          connectPromise
             .then((personaName) => {
               configStore.set('userData', {
                 username: personaName,
