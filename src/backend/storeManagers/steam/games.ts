@@ -189,12 +189,29 @@ export default class SteamGame implements Game {
     )
   }
 
+  /**
+   * Delegates install to the Steam client via the steam://install protocol.
+   * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
+   * any URL is constructed. Shows a hand-off toast (D-03).
+   *
+   * Does NOT call sendProgressUpdate — Steam owns the download with its own UI.
+   * Install state is never optimistically flipped on click (D-02); badge
+   * reconciliation happens when the user tabs back (focus → ACF re-read, D-01).
+   */
   async install(_args: InstallArgs): Promise<InstallResult> {
-    logWarning(
-      `SteamGame.install not implemented until Phase 2 (appId: ${this.appId})`,
+    const url = buildSteamProtocolUrl('install', this.appId)
+    if (!url) {
+      return { status: 'error', error: `Invalid appId: ${this.appId}` }
+    }
+
+    const info = this.getGameInfo()
+    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
+    logInfo(
+      `SteamGame: delegating install for appId ${this.appId} via ${url}`,
       LogPrefix.Steam
     )
-    return { status: 'error', error: 'Steam library not implemented until Phase 2' }
+    await shell.openExternal(url)
+    return { status: 'done' }
   }
 
   isNative(): boolean {
@@ -276,12 +293,30 @@ export default class SteamGame implements Game {
     return 'Steam library not implemented until Phase 2'
   }
 
+  /**
+   * Delegates uninstall to the Steam client via the steam://uninstall protocol.
+   * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation).
+   * Shows a hand-off toast (D-03).
+   *
+   * Does NOT show a GamerLib confirmation dialog — Steam owns its own confirm
+   * dialog (D-05). Does NOT call sendFrontendMessage('refreshLibrary', ...) —
+   * install state is reconciled by the focus-driven ACF re-read (D-01/D-02);
+   * badges flip only after confirmed ACF data, never optimistically from a click.
+   */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
-    logWarning(
-      `SteamGame.uninstall not implemented until Phase 2 (appId: ${this.appId})`,
+    const url = buildSteamProtocolUrl('uninstall', this.appId)
+    if (!url) {
+      return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
+    }
+
+    const info = this.getGameInfo()
+    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
+    logInfo(
+      `SteamGame: delegating uninstall for appId ${this.appId} via ${url}`,
       LogPrefix.Steam
     )
-    return { stdout: '', stderr: 'Steam library not implemented until Phase 2' }
+    await shell.openExternal(url)
+    return { stdout: '', stderr: '' }
   }
 
   async update(): Promise<InstallResult> {
@@ -292,9 +327,19 @@ export default class SteamGame implements Game {
     return { status: 'error', error: 'Steam library not implemented until Phase 2' }
   }
 
+  /**
+   * Force-removes the game from the in-memory library Map and notifies the
+   * frontend to update its install badge immediately (is_installed: false).
+   * This is for cases where Steam's own uninstall dialog has already completed
+   * but the in-memory state has not been reconciled via the focus ACF re-read.
+   * Analog: gog/games.ts lines 1282-1288.
+   */
   async forceUninstall(): Promise<void> {
-    logWarning(
-      `SteamGame.forceUninstall not implemented until Phase 2 (appId: ${this.appId})`,
+    const info = this.getGameInfo()
+    library.delete(this.appId)
+    sendFrontendMessage('pushGameToLibrary', { ...info, is_installed: false })
+    logInfo(
+      `SteamGame: force-uninstalled appId ${this.appId} from in-memory library`,
       LogPrefix.Steam
     )
   }

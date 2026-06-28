@@ -85,4 +85,11 @@ export interface LibraryManager {
   getLaunchOptions: (
     appName: string
   ) => LaunchOption[] | Promise<LaunchOption[]>
+  /**
+   * Optional — only Steam implements this.
+   * Re-reads ACF manifests on BrowserWindow 'focus' to reconcile install badges
+   * without background polling (D-01/D-02). Focus handler in main.ts invokes
+   * this via optional chaining so other runners remain unaffected.
+   */
+  refreshInstallState?: () => Promise<void>
 }

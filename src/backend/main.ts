@@ -212,6 +212,14 @@ async function initializeWindow(): Promise<BrowserWindow> {
   mainWindow.on('leave-full-screen', () =>
     sendFrontendMessage('fullscreen', false)
   )
+  // Reconcile Steam install badges when the user tabs back to GamerLib (D-01/D-02).
+  // No background polling — only on focus. The focus handler passes no renderer
+  // input into refreshInstallState (it takes no args), so there is no untrusted
+  // input surface (T-03-03). Other runners don't implement refreshInstallState,
+  // so optional chaining makes this a safe no-op for Epic/GOG/Amazon.
+  mainWindow.on('focus', () => {
+    void libraryManagerMap['steam']?.refreshInstallState?.()
+  })
   mainWindow.on('close', async (e) => {
     e.preventDefault()
 
