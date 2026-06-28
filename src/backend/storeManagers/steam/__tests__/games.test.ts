@@ -447,6 +447,154 @@ describe('SteamGame.stop() — no-op', () => {
   })
 })
 
+// ── GAME-02: SteamGame.install() ──────────────────────────────────────────────
+
+describe('SteamGame.install() — GAME-02', () => {
+  let shellOpenExternal: jest.Mock
+  let notifyMock: jest.Mock
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+  })
+
+  it('GAME-02: install() calls shell.openExternal with steam://install/{appId} for numeric appId', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+  })
+
+  it('GAME-02: install() resolves { status: "done" } for a valid numeric appId', async () => {
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('D-03: install() fires notify with hand-off toast', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Opening in Steam…' })
+    )
+  })
+
+  it('T-03-01: install() does NOT call shell.openExternal when appId is non-numeric', async () => {
+    const badGame = new SteamGame('abc')
+    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
+
+    const result = await badGame.install({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toEqual(expect.objectContaining({ status: 'error' }))
+  })
+
+  it('GAME-02: install() does NOT call sendFrontendMessage (no optimistic flip)', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    // install state is reconciled only after focus re-read; never assumed from click
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── GAME-03: SteamGame.uninstall() ───────────────────────────────────────────
+
+describe('SteamGame.uninstall() — GAME-03', () => {
+  let shellOpenExternal: jest.Mock
+  let notifyMock: jest.Mock
+  let showDialogBoxModalAutoMock: jest.Mock
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
+    showDialogBoxModalAutoMock = jest.requireMock('backend/dialog/dialog')
+      .showDialogBoxModalAuto as jest.Mock
+    library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
+  })
+
+  it('GAME-03: uninstall() calls shell.openExternal with steam://uninstall/{appId}', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://uninstall/${APP_ID}`)
+  })
+
+  it('GAME-03: uninstall() resolves an ExecResult { stdout, stderr }', async () => {
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(result).toEqual(expect.objectContaining({ stdout: '', stderr: '' }))
+  })
+
+  it('D-03: uninstall() fires notify with hand-off toast', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Opening in Steam…' })
+    )
+  })
+
+  it('D-05: uninstall() does NOT show a GamerLib confirmation dialog', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    // Steam shows its own confirm dialog — GamerLib must not add a second one
+    expect(showDialogBoxModalAutoMock).not.toHaveBeenCalled()
+  })
+
+  it('D-01/D-02: uninstall() does NOT call sendFrontendMessage (no optimistic flip, reconcile on focus)', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    // Badge state is reconciled only after the focus ACF re-read, never assumed from click
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── SteamGame.forceUninstall() ────────────────────────────────────────────────
+
+describe('SteamGame.forceUninstall()', () => {
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
+  })
+
+  it('forceUninstall() deletes the appId from the in-memory library Map', async () => {
+    expect(library.has(APP_ID)).toBe(true)
+
+    const game = new SteamGame(APP_ID)
+    await game.forceUninstall()
+
+    expect(library.has(APP_ID)).toBe(false)
+  })
+
+  it('forceUninstall() calls sendFrontendMessage pushGameToLibrary with is_installed: false', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.forceUninstall()
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, is_installed: false })
+    )
+  })
+})
+
 // ── Supporting read methods: getSettings, getExtraInfo, isGameAvailable ───────
 
 describe('SteamGame supporting read methods — GAME-01 unblock', () => {
