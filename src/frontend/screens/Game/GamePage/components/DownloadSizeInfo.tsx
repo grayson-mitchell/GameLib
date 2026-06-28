@@ -27,6 +27,10 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
     return null
   }
 
+  if (runner === 'steam') {
+    return null
+  }
+
   if (gameInfo.thirdPartyManagedApp) {
     return (
       <div className="iconWithText">
