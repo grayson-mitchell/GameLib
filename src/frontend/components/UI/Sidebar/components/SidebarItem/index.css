@@ -109,3 +109,8 @@
     }
   }
 }
+
+.Sidebar__brandLib {
+  color: #ffd23f;
+  font-weight: 700;
+}

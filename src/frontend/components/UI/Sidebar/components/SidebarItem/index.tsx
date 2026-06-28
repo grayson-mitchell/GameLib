@@ -1,4 +1,4 @@
-import { MouseEventHandler } from 'react'
+import { MouseEventHandler, ReactNode } from 'react'
 import classNames from 'classnames'
 import { NavLink } from 'react-router-dom'
 import {
@@ -9,6 +9,7 @@ import './index.css'
 
 interface SidebarItemProps {
   label: string
+  labelElement?: ReactNode
   url?: string
   icon?: FontAwesomeIconProps['icon']
   isActiveFallback?: boolean
@@ -21,6 +22,7 @@ interface SidebarItemProps {
 export default function SidebarItem({
   icon,
   label,
+  labelElement,
   url = '',
   isActiveFallback = false,
   onClick,
@@ -35,7 +37,7 @@ export default function SidebarItem({
           <FontAwesomeIcon icon={icon} title={label} />
         </div>
       )}
-      <span>{label}</span>
+      <span>{labelElement ?? label}</span>
     </>
   )
 

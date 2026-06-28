@@ -121,7 +121,12 @@ export default function SidebarLinks() {
         isActiveFallback={location.pathname.includes('gamepage')}
         url="/"
         icon={faGamepad}
-        label={t('Library')}
+        label="GameLib"
+        labelElement={
+          <>
+            Game<span className="Sidebar__brandLib">Lib</span>
+          </>
+        }
         onClick={async () => handleRefresh()}
         dataTour="sidebar-library"
       />
