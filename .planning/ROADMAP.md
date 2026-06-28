@@ -1,8 +1,8 @@
-# Roadmap: GamerLib
+# Roadmap: GameLib
 
 ## Overview
 
-GamerLib forks Heroic Games Launcher and adds Steam as a first-class platform alongside Epic, GOG, and Amazon. The roadmap follows the natural dependency chain: Steam authentication is the prerequisite for everything else, library sync requires an authenticated account, game operations require the library to exist, and branding is applied once the core feature set is complete and ready to ship.
+GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alongside Epic, GOG, and Amazon. The roadmap follows the natural dependency chain: Steam authentication is the prerequisite for everything else, library sync requires an authenticated account, game operations require the library to exist, and branding is applied once the core feature set is complete and ready to ship.
 
 ## Phases
 
@@ -12,15 +12,15 @@ GamerLib forks Heroic Games Launcher and adds Steam as a first-class platform al
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GamerLib (completed 2026-06-27)
+- [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GameLib (completed 2026-06-27)
 - [x] **Phase 2: Steam Library** - Steam games appear in the unified library with metadata and install state (completed 2026-06-28)
-- [x] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GamerLib (completed 2026-06-28)
-- [ ] **Phase 4: Branding** - App is identified and distributed as GamerLib, not Heroic
+- [x] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GameLib (completed 2026-06-28)
+- [ ] **Phase 4: Branding** - App is identified and distributed as GameLib, not Heroic
 
 ## Phase Details
 
 ### Phase 1: Steam Authentication
-**Goal**: Users can add, manage, and remove Steam accounts inside GamerLib
+**Goal**: Users can add, manage, and remove Steam accounts inside GameLib
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05
@@ -28,8 +28,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. User can add a Steam account via QR code scan from the Steam mobile app
   2. User can add a Steam account via username/password/SteamGuard code
   3. Steam accounts appear in the existing Manage Accounts screen alongside Epic, GOG, and Amazon accounts
-  4. User can remove a Steam account from GamerLib
-  5. GamerLib shows an actionable prompt when Steam client is not installed
+  4. User can remove a Steam account from GameLib
+  5. GameLib shows an actionable prompt when Steam client is not installed
 **Plans**: 3 (01-01, 01-02, 01-03)
 
 **Wave 1** — Type + dependency foundation:
@@ -88,14 +88,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 **UI hint**: yes
 
 ### Phase 3: Game Operations
-**Goal**: Users can launch, install, and uninstall Steam games from within GamerLib
+**Goal**: Users can launch, install, and uninstall Steam games from within GameLib
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: GAME-01, GAME-02, GAME-03, GAME-04
 **Success Criteria** (what must be TRUE):
-  1. User can launch an installed Steam game from GamerLib (Steam client opens the game via steam://rungameid)
-  2. User can install a Steam game from GamerLib (Steam client handles the download via steam://install)
-  3. User can uninstall a Steam game from GamerLib (via steam://uninstall)
+  1. User can launch an installed Steam game from GameLib (Steam client opens the game via steam://rungameid)
+  2. User can install a Steam game from GameLib (Steam client handles the download via steam://install)
+  3. User can uninstall a Steam game from GameLib (via steam://uninstall)
   4. Windows-only Steam games on Linux launch via Steam Proton, not Heroic's Wine layer
 **Plans**: 4 plans
 
@@ -103,10 +103,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] `03-01-PLAN.md` — SteamGame.launch() fires steam://rungameid + hand-off toast + numeric appId guard; supporting getSettings/getExtraInfo/isGameAvailable/stop so GamePage and launchEventCallback work. isNative() stays true (GAME-04). Gate: `npm test -- --testPathPattern=steam/games` + codecheck. (GAME-01, GAME-04)
 
 **Wave 2** *(blocked on Wave 1 — shares games.ts)*:
-- [ ] `03-02-PLAN.md` — SteamGame.install()/uninstall()/forceUninstall() via steam://install|uninstall (no GamerLib confirm, D-05); SteamLibraryManager.refreshInstallState() ACF diff; BrowserWindow 'focus' listener wiring + LibraryManager interface. Gate: steam/games + steam/library tests + codecheck. (GAME-02, GAME-03)
+- [ ] `03-02-PLAN.md` — SteamGame.install()/uninstall()/forceUninstall() via steam://install|uninstall (no GameLib confirm, D-05); SteamLibraryManager.refreshInstallState() ACF diff; BrowserWindow 'focus' listener wiring + LibraryManager interface. Gate: steam/games + steam/library tests + codecheck. (GAME-02, GAME-03)
 
 **Wave 3** *(blocked on Wave 2)*:
-- [ ] `03-03-PLAN.md` — Frontend clean action surface: hide Settings/Move/Change/Verify/Force-Update for steam (D-04); install bypasses location modal; uninstall bypasses GamerLib confirm (D-05); human end-to-end verification on a real Steam account. Gate: codecheck + human sign-off. (GAME-02, GAME-03)
+- [ ] `03-03-PLAN.md` — Frontend clean action surface: hide Settings/Move/Change/Verify/Force-Update for steam (D-04); install bypasses location modal; uninstall bypasses GameLib confirm (D-05); human end-to-end verification on a real Steam account. Gate: codecheck + human sign-off. (GAME-02, GAME-03)
 
 **Wave 4** *(blocked on Wave 2/3 — install in-progress UX, D-07)*:
 - [ ] `03-04-PLAN.md` — Steam install in-progress UX: backend ACF poller after steam://install (spinner 'Steam installing', no percentage, no pause/cancel), flips badge to installed on StateFlags & 4 + stops; startup resume; focus reconciliation stays as backstop (reverses D-01 to D-07). Gate: steam/library + steam/games tests + codecheck + human sign-off. (GAME-02)
@@ -115,20 +115,20 @@ Decimal phases appear between their surrounding integers in numeric order.
 - All `steam://` URLs constructed through a single numeric-appId guard (`buildSteamProtocolUrl`, `/^\d+$/`) — never interpolate unvalidated appId.
 - `SteamGame.isNative()` must remain `true` so launchEventCallback skips Heroic's Wine branch (GAME-04 satisfied by absence).
 - No background polling — install-state reconciliation is BrowserWindow `'focus'`-driven only (D-01).
-- No GamerLib install-location or uninstall-confirm modals for Steam — delegate to Steam's own dialogs (D-04/D-05).
+- No GameLib install-location or uninstall-confirm modals for Steam — delegate to Steam's own dialogs (D-04/D-05).
 - Zero new npm packages.
 
 **UI hint**: yes
 
 ### Phase 4: Branding
-**Goal**: App is identified and distributed as GamerLib, not Heroic
+**Goal**: App is identified and distributed as GameLib, not Heroic
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: BRAND-01
 **Success Criteria** (what must be TRUE):
-  1. Title bar displays "GamerLib" instead of "Heroic"
-  2. About page reflects the GamerLib name
-  3. Package metadata (package.json and electron-builder config) correctly identifies the app as GamerLib
+  1. Title bar displays "GameLib" instead of "Heroic"
+  2. About page reflects the GameLib name
+  3. Package metadata (package.json and electron-builder config) correctly identifies the app as GameLib
 **Plans**: TBD
 **UI hint**: yes
 

@@ -1,4 +1,4 @@
-# GamerLib — v1 Requirements
+# GameLib — v1 Requirements
 
 ## v1 Requirements
 
@@ -7,7 +7,7 @@
 - [x] **AUTH-01**: User can add a Steam account via QR code scan (Steam mobile app)
 - [x] **AUTH-02**: User can add a Steam account via username + password + SteamGuard code
 - [x] **AUTH-03**: User can view and manage Steam accounts in the existing Manage Accounts screen
-- [x] **AUTH-04**: User can remove a Steam account from GamerLib
+- [x] **AUTH-04**: User can remove a Steam account from GameLib
 - [x] **AUTH-05**: App detects if Steam client is installed and shows an actionable prompt if not
 
 ### Library
@@ -19,14 +19,14 @@
 
 ### Game Operations
 
-- [ ] **GAME-01**: User can launch an installed Steam game from GamerLib (delegates to Steam client via `steam://rungameid`)
-- [ ] **GAME-02**: User can install a Steam game from GamerLib (delegates to Steam client via `steam://install`)
-- [ ] **GAME-03**: User can uninstall a Steam game from GamerLib (via `steam://uninstall`)
+- [ ] **GAME-01**: User can launch an installed Steam game from GameLib (delegates to Steam client via `steam://rungameid`)
+- [ ] **GAME-02**: User can install a Steam game from GameLib (delegates to Steam client via `steam://install`)
+- [ ] **GAME-03**: User can uninstall a Steam game from GameLib (via `steam://uninstall`)
 - [ ] **GAME-04**: Windows-only Steam games on Linux launch via Steam's Proton, not Heroic's Wine layer
 
 ### Branding
 
-- [ ] **BRAND-01**: App name updated from "Heroic" to "GamerLib" in title bar, about page, and app metadata (package.json, electron-builder config)
+- [ ] **BRAND-01**: App name updated from "Heroic" to "GameLib" in title bar, about page, and app metadata (package.json, electron-builder config)
 
 ---
 

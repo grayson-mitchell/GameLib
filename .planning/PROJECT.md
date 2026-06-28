@@ -1,8 +1,8 @@
-# GamerLib
+# GameLib
 
 ## What This Is
 
-GamerLib is a public fork of Heroic Games Launcher that adds Steam as a first-class supported platform. Where Heroic covers Epic Games, GOG, and Amazon Games, GamerLib extends this with full Steam library integration — browse, install, and launch Steam games from the same interface. It targets gamers who want a single unified launcher instead of switching between clients.
+GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-class supported platform. Where Heroic covers Epic Games, GOG, and Amazon Games, GameLib extends this with full Steam library integration — browse, install, and launch Steam games from the same interface. It targets gamers who want a single unified launcher instead of switching between clients.
 
 ## Core Value
 
@@ -17,9 +17,9 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 ### Active
 
 - [ ] User can add and manage a Steam account in Manage Accounts
-- [ ] User can browse their full Steam library from within GamerLib
-- [ ] User can install Steam games from GamerLib
-- [ ] User can launch Steam games from GamerLib
+- [ ] User can browse their full Steam library from within GameLib
+- [ ] User can install Steam games from GameLib
+- [ ] User can launch Steam games from GameLib
 - [ ] Steam games appear alongside Epic/GOG/Amazon games in the library view
 - [ ] Steam authentication works reliably on Linux, macOS, and Windows
 
