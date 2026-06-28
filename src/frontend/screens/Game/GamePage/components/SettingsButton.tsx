@@ -10,7 +10,7 @@ interface Props {
 const SettingsButton = ({ gameInfo }: Props) => {
   const { openGameSettingsModal } = useGlobalState.keys('openGameSettingsModal')
 
-  if (!gameInfo.is_installed) {
+  if (!gameInfo.is_installed || gameInfo.runner === 'steam') {
     return null
   }
 
