@@ -999,19 +999,21 @@ class GlobalState extends PureComponent<Props> {
           }
         })
       } else if (args.runner === 'steam') {
-        const library = [...this.state.steam.library]
-        const index = library.findIndex(
-          (game) => game.app_name === args.app_name
-        )
-        if (index !== -1) {
-          library[index] = args
-        } else {
-          library.push(args)
-        }
-        this.setState({
-          steam: {
-            library: [...library],
-            username: this.state.steam.username
+        this.setState((prevState: StateProps) => {
+          const library = [...prevState.steam.library]
+          const index = library.findIndex(
+            (game) => game.app_name === args.app_name
+          )
+          if (index !== -1) {
+            library[index] = args
+          } else {
+            library.push(args)
+          }
+          return {
+            steam: {
+              library,
+              username: prevState.steam.username
+            }
           }
         })
       }

@@ -17,7 +17,6 @@ type Step =
   | 'checking'
   | 'not-installed'
   | 'tab'
-  | 'qr-generating'
   | 'qr-active'
   | 'qr-confirmed'
   | 'credentials-1'
@@ -30,6 +29,7 @@ export default function SteamLogin() {
   const [step, setStep] = useState<Step>('checking')
   const [activeTab, setActiveTab] = useState<'qr' | 'credentials'>('qr')
   const [challengeUrl, setChallengeUrl] = useState<string | null>(null)
+  const [isQRLoading, setIsQRLoading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [guardCode, setGuardCode] = useState('')
@@ -73,13 +73,17 @@ export default function SteamLogin() {
 
   // --- QR flow ---
   async function startQRFlow(isCancelled: () => boolean = () => false) {
-    setStep('qr-generating')
+    setIsQRLoading(true)
     setChallengeUrl(null)
     clearPollInterval()
     clearQrRefreshTimer()
 
     const result = await window.api.steamStartQR()
-    if (isCancelled()) return
+    if (isCancelled()) {
+      setIsQRLoading(false)
+      return
+    }
+    setIsQRLoading(false)
     if (result.status === 'error' || !result.challengeUrl) {
       showError('Could not generate QR code. Check your connection and try again.')
       setStep('tab')
@@ -106,11 +110,11 @@ export default function SteamLogin() {
       // 'waiting' — keep polling
     }, 2000)
 
-    // Auto-refresh after ~30s if still active
+    // Auto-refresh just before the 2-minute session timeout expires
     qrRefreshTimerRef.current = setTimeout(async () => {
       clearPollInterval()
       await startQRFlow()
-    }, 30000)
+    }, 110000)
   }
 
   // --- Mount: check Steam install ---
@@ -147,8 +151,13 @@ export default function SteamLogin() {
 
     return () => {
       cancelled = true
-      clearPollInterval()
-      clearQrRefreshTimer()
+      setIsQRLoading(false)
+      // Do NOT clear the poll interval or refresh timer here. startQRFlow sets
+      // them up AFTER calling setStep('qr-active'), which triggers this cleanup
+      // before the timers are created. Clearing here would kill the poll
+      // immediately after it's set up. Interval/timer cleanup is handled by
+      // the mount-effect's unmount callback ([] deps) and explicit calls in
+      // handleTabChange and startQRFlow itself.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, activeTab])
@@ -265,7 +274,7 @@ export default function SteamLogin() {
 
   // --- Render: QR tab content ---
   function renderQRContent() {
-    if (step === 'qr-generating') {
+    if (isQRLoading) {
       return (
         <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
           <FontAwesomeIcon
