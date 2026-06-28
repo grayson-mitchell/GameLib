@@ -608,6 +608,20 @@ export default React.memo(function GamePage(): JSX.Element | null {
       return window.api.removeFromDMQueue(appName)
     }
 
+    // Steam: bypass install-location modal — delegate straight to SteamGame.install() (D-04)
+    if (gameInfo.runner === 'steam' && !is_installed) {
+      return window.api.install({
+        appName,
+        path: '',
+        runner: 'steam',
+        installDlcs: [],
+        sdlList: [],
+        installLanguage: 'en-US',
+        platformToInstall: 'Windows',
+        gameInfo
+      })
+    }
+
     if (!is_installed && !isInstalling) {
       return handleModal()
     }

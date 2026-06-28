@@ -206,7 +206,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="installButtons">
           <button
             onClick={async () => {
-              if (!is_installed && !is.queued) {
+              if (!is_installed && !is.queued && gameInfo.runner !== 'steam') {
                 openInstallGameModal({
                   appName: gameInfo.app_name,
                   runner: gameInfo.runner,
