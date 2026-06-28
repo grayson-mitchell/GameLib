@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { shell } from 'electron'
+import { existsSync } from 'graceful-fs'
 import {
   ExtraInfo,
   GameInfo,
@@ -9,14 +11,40 @@ import {
 } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
+import { notify } from 'backend/dialog/dialog'
+import { GameConfig } from 'backend/game_config'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
 import { library, pendingFetches } from './state'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
+
+/**
+ * Build a validated steam:// protocol URL.
+ *
+ * Returns the URL only when appId is a pure decimal integer string (/^\d+$/).
+ * Non-numeric appIds (injected strings, path traversal, shell metacharacters)
+ * are rejected here — this is the single chokepoint that mitigates appId
+ * injection into steam:// URLs (threat T-03-01).
+ *
+ * Reused by install/uninstall (plan 03-02) for the same guard.
+ */
+export function buildSteamProtocolUrl(
+  verb: 'rungameid' | 'install' | 'uninstall',
+  appId: string
+): string | null {
+  if (!/^\d+$/.test(appId)) {
+    logWarning(
+      `SteamGame: rejected non-numeric appId "${appId}" — not constructing steam:// URL (T-03-01)`,
+      LogPrefix.Steam
+    )
+    return null
+  }
+  return `steam://${verb}/${appId}`
+}
 
 export default class SteamGame implements Game {
   private readonly appId: string
@@ -25,10 +53,15 @@ export default class SteamGame implements Game {
     this.appId = appId
   }
 
+  /**
+   * Returns the Heroic GameConfig defaults for this game.
+   * autoSyncSaves resolves false by default — Steam Cloud is Steam-managed;
+   * launcher.ts:151 skips syncSaves when autoSyncSaves is false.
+   * Analog: nile/games.ts lines 65-68.
+   */
   async getSettings(): Promise<GameSettings> {
-    throw new Error(
-      `SteamGame.getSettings not implemented until Phase 2 (appId: ${this.appId})`
-    )
+    const gameConfig = GameConfig.get(this.appId)
+    return gameConfig.config || (await gameConfig.getSettings())
   }
 
   /**
@@ -122,9 +155,18 @@ export default class SteamGame implements Game {
     }
   }
 
+  /**
+   * Returns the in-memory GameInfo.extra (populated by fetchMetadataIfNeeded)
+   * or a safe default when extra is absent.
+   * Analog: nile/games.ts lines 95-107.
+   */
   async getExtraInfo(): Promise<ExtraInfo> {
-    throw new Error(
-      `SteamGame.getExtraInfo not implemented until Phase 2 (appId: ${this.appId})`
+    const info = this.getGameInfo()
+    return (
+      info.extra ?? {
+        reqs: [],
+        about: { description: '', shortDescription: '' }
+      }
     )
   }
 
@@ -173,17 +215,37 @@ export default class SteamGame implements Game {
     )
   }
 
+  /**
+   * Delegates launching to the Steam client via the steam://rungameid protocol.
+   * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
+   * any URL is constructed or passed to shell.openExternal.
+   *
+   * isNative() returns true, so launcher.ts skips checkWineBeforeLaunch —
+   * Proton selection is fully delegated to Steam (GAME-04 / D-06).
+   *
+   * Shows a hand-off toast (D-03) to inform the user Steam is opening.
+   * Does NOT call sendGameStatusUpdate — Steam client owns the 'playing' state.
+   */
   async launch(
     _logWriter: LogWriter,
     _launchArguments?: LaunchOption,
     _args?: string[],
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
-    logWarning(
-      `SteamGame.launch not implemented until Phase 2 (appId: ${this.appId})`,
+    const url = buildSteamProtocolUrl('rungameid', this.appId)
+    if (!url) {
+      // Non-numeric appId — rejection already logged by buildSteamProtocolUrl
+      return false
+    }
+
+    const info = this.getGameInfo()
+    notify({ title: info.title || this.appId, body: 'Opening in Steam…' })
+    logInfo(
+      `SteamGame: launching appId ${this.appId} via ${url}`,
       LogPrefix.Steam
     )
-    return false
+    await shell.openExternal(url)
+    return true
   }
 
   async moveInstall(_newInstallPath: string): Promise<InstallResult> {
@@ -237,14 +299,33 @@ export default class SteamGame implements Game {
     )
   }
 
+  /**
+   * No-op — Steam owns the process lifecycle for its games.
+   * GamerLib cannot observe or terminate Steam game processes.
+   * Analog: gog/games.ts lines 1291-1295.
+   */
   async stop(_stopWine?: boolean): Promise<void> {
     logWarning(
-      `SteamGame.stop not implemented until Phase 2 (appId: ${this.appId})`,
+      `SteamGame.stop: Steam owns process lifecycle for appId ${this.appId}; no-op`,
       LogPrefix.Steam
     )
   }
 
+  /**
+   * Checks if the game is installed and its install_path exists on disk.
+   * Uses existsSync from graceful-fs (same as nile/gog analogs).
+   * Analog: nile/games.ts lines 570-580, gog/games.ts lines 1298-1313.
+   */
   async isGameAvailable(): Promise<boolean> {
-    return false
+    return new Promise((resolve) => {
+      const info = this.getGameInfo()
+      resolve(
+        Boolean(
+          info?.is_installed &&
+            info.install?.install_path &&
+            existsSync(info.install.install_path)
+        )
+      )
+    })
   }
 }
