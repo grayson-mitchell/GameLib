@@ -97,7 +97,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can install a Steam game from GamerLib (Steam client handles the download via steam://install)
   3. User can uninstall a Steam game from GamerLib (via steam://uninstall)
   4. Windows-only Steam games on Linux launch via Steam Proton, not Heroic's Wine layer
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 **Wave 1** — Launch slice:
 - [ ] `03-01-PLAN.md` — SteamGame.launch() fires steam://rungameid + hand-off toast + numeric appId guard; supporting getSettings/getExtraInfo/isGameAvailable/stop so GamePage and launchEventCallback work. isNative() stays true (GAME-04). Gate: `npm test -- --testPathPattern=steam/games` + codecheck. (GAME-01, GAME-04)
@@ -107,6 +107,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 3** *(blocked on Wave 2)*:
 - [ ] `03-03-PLAN.md` — Frontend clean action surface: hide Settings/Move/Change/Verify/Force-Update for steam (D-04); install bypasses location modal; uninstall bypasses GamerLib confirm (D-05); human end-to-end verification on a real Steam account. Gate: codecheck + human sign-off. (GAME-02, GAME-03)
+
+**Wave 4** *(blocked on Wave 2/3 — install in-progress UX, D-07)*:
+- [ ] `03-04-PLAN.md` — Steam install in-progress UX: backend ACF poller after steam://install (spinner 'Steam installing', no percentage, no pause/cancel), flips badge to installed on StateFlags & 4 + stops; startup resume; focus reconciliation stays as backstop (reverses D-01 to D-07). Gate: steam/library + steam/games tests + codecheck + human sign-off. (GAME-02)
 
 **Cross-cutting constraints:**
 - All `steam://` URLs constructed through a single numeric-appId guard (`buildSteamProtocolUrl`, `/^\d+$/`) — never interpolate unvalidated appId.
@@ -138,5 +141,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Steam Authentication | 3/3 | Complete   | 2026-06-27 |
 | 2. Steam Library | 6/6 | Complete   | 2026-06-28 |
-| 3. Game Operations | 3/3 | Complete   | 2026-06-28 |
+| 3. Game Operations | 3/4 | In progress | - |
 | 4. Branding | 0/TBD | Not started | - |
