@@ -96,12 +96,21 @@ export default function SteamLogin() {
     // Poll for scan confirmation
     pollIntervalRef.current = setInterval(async () => {
       const poll = await window.api.steamPollQR()
-      if (poll.status === 'done') {
+      if (poll.status === 'done' && poll.username) {
+        // Username is populated — background CM connect has resolved.
+        // Finalize login and navigate away.
         clearPollInterval()
         clearQrRefreshTimer()
         setStep('qr-confirmed')
         await steam.login({ status: 'done', username: poll.username })
         navigate('/login')
+      } else if (poll.status === 'done') {
+        // QR approved but username not yet populated — the background CM
+        // connect (connectingPromise) is still in-flight. Show the
+        // confirming UI state and keep polling. The connect always
+        // resolves within 15 s (worst case: 'Steam User' fallback),
+        // so a later poll will carry a username and finalize. Cannot re-hang.
+        setStep('qr-confirmed')
       } else if (poll.status === 'error') {
         clearPollInterval()
         // Auto-refresh: silently start a new QR session
