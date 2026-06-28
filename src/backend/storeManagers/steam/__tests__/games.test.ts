@@ -531,6 +531,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   let shellOpenExternal: jest.Mock
   let notifyMock: jest.Mock
   let showDialogBoxModalAutoMock: jest.Mock
+  let startUninstallPollingSpy: jest.SpyInstance
 
   beforeEach(() => {
     library.clear()
@@ -542,6 +543,14 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     showDialogBoxModalAutoMock = jest.requireMock('backend/dialog/dialog')
       .showDialogBoxModalAuto as jest.Mock
     library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
+    // Spy on startUninstallPolling so uninstall() can call it without running the real poller
+    startUninstallPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    startUninstallPollingSpy.mockRestore()
   })
 
   it('GAME-03: uninstall() calls shell.openExternal with steam://uninstall/{appId}', async () => {
@@ -557,6 +566,19 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     const result = await game.uninstall({} as any)
 
     expect(result).toEqual(expect.objectContaining({ stdout: '', stderr: '' }))
+  })
+
+  it('D-07: uninstall() calls startUninstallPolling with this.appId after successful openExternal', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('D-07: uninstall() does NOT call startUninstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
+    const badGame = new SteamGame('abc')
+    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame', is_installed: true }))
+    await badGame.uninstall({} as any)
+    expect(startUninstallPollingSpy).not.toHaveBeenCalled()
   })
 
   it('uninstall() does NOT show a hand-off toast (toast feature removed)', async () => {

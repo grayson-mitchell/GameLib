@@ -17,6 +17,9 @@ import SteamLibraryManager, {
   startInstallPolling,
   stopInstallPolling,
   pollInstallOnce,
+  pollUninstallOnce,
+  startUninstallPolling,
+  stopUninstallPolling,
   scanDownloadingAppIds
 } from '../library'
 import * as gfs from 'graceful-fs'
@@ -683,6 +686,106 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     startInstallPolling('730', 3000)
     stopInstallPolling('730')
     startInstallPolling('730', 3000) // new registration — entry was cleared by stop
+    expect(setIntervalSpy).toHaveBeenCalledTimes(2)
+    setIntervalSpy.mockRestore()
+  })
+})
+
+// ── D-07: pollUninstallOnce() ────────────────────────────────────────────────
+
+describe('pollUninstallOnce()', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: { install_path: '/steam/steamapps/common/csgo', platform: 'Windows' },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+  })
+
+  afterEach(() => {
+    stopUninstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('flips the badge to not-installed + sends done when the manifest is absent (uninstall complete)', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    startUninstallPolling('730', 60000) // register entry so stop has something to clear
+    await pollUninstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: '730', is_installed: false })
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ appName: '730', runner: 'steam', status: 'done' })
+    )
+  })
+
+  it('sends gameStatusUpdate { status:"uninstalling" } while StateFlags bit 0x800 is set', async () => {
+    // 4 (installed) | 2048 (uninstalling) = 2052
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2052', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ appName: '730', runner: 'steam', status: 'uninstalling' })
+    )
+  })
+
+  it('does NOT flip the badge while the game is still fully installed (no uninstalling bit)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730')
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
+  })
+})
+
+// ── D-07: startUninstallPolling / stopUninstallPolling ────────────────────────
+
+describe('startUninstallPolling() idempotency and stopUninstallPolling()', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    library.clear()
+    jest.mocked(getSteamLibraries).mockResolvedValue([])
+  })
+
+  afterEach(() => {
+    stopUninstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('calling startUninstallPolling twice for the same appId creates only one setInterval', () => {
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+    startUninstallPolling('730', 3000)
+    startUninstallPolling('730', 3000) // idempotent — second call is a no-op
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+    setIntervalSpy.mockRestore()
+  })
+
+  it('stopUninstallPolling clears the entry so a new interval can register', () => {
+    const setIntervalSpy = jest.spyOn(global, 'setInterval')
+    startUninstallPolling('730', 3000)
+    stopUninstallPolling('730')
+    startUninstallPolling('730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })

@@ -17,7 +17,7 @@ import { GameConfig } from 'backend/game_config'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
 import { library, pendingFetches } from './state'
-import { startInstallPolling } from './library'
+import { startInstallPolling, startUninstallPolling } from './library'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
@@ -301,9 +301,10 @@ export default class SteamGame implements Game {
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation).
    *
    * Does NOT show a GamerLib confirmation dialog — Steam owns its own confirm
-   * dialog (D-05). Does NOT call sendFrontendMessage('refreshLibrary', ...) —
-   * install state is reconciled by the focus-driven ACF re-read (D-01/D-02);
-   * badges flip only after confirmed ACF data, never optimistically from a click.
+   * dialog (D-05). Install state is never optimistically flipped from a click
+   * (D-02); badges flip only after confirmed ACF data. After the URL fires we
+   * poll the ACF (D-07) so the badge updates to not-installed without a focus
+   * round-trip; the focus re-read (D-01) remains as a backstop.
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
     const url = buildSteamProtocolUrl('uninstall', this.appId)
@@ -316,6 +317,12 @@ export default class SteamGame implements Game {
       LogPrefix.Steam
     )
     await shell.openExternal(url)
+
+    // Poll ACF so the badge flips to not-installed when Steam removes the
+    // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
+    // install polling. State is never optimistically flipped here (D-02).
+    startUninstallPolling(this.appId)
+
     return { stdout: '', stderr: '' }
   }
 

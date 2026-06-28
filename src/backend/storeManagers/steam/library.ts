@@ -382,6 +382,7 @@ const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safet
  */
 export async function readAcfState(appId: string): Promise<{
   state: 'absent' | 'downloading' | 'installed'
+  stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
 }> {
@@ -404,11 +405,12 @@ export async function readAcfState(appId: string): Promise<{
       if ((stateFlags & 4) !== 0) {
         return {
           state: 'installed',
+          stateFlags,
           installPath: join(steamappsDir, 'common', state.installdir ?? ''),
           sizeOnDisk: state.SizeOnDisk ?? '0'
         }
       }
-      return { state: 'downloading' }
+      return { state: 'downloading', stateFlags }
     } catch {
       continue // skip corrupt ACF (T-2-01)
     }
@@ -537,6 +539,153 @@ export function stopInstallPolling(appId: string): void {
   clearInterval(poll.timer)
   activePolls.delete(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
+}
+
+// ── Uninstall polling lifecycle (D-07, symmetric to install) ─────────────────
+
+/** Module-level registry of active uninstall polls, keyed by appId string. */
+const activeUninstallPolls = new Map<
+  string,
+  { timer: NodeJS.Timeout; ticks: number; seenUninstalling: boolean }
+>()
+
+/** Steam EAppState bit 0x800 (2048) = actively uninstalling. */
+const STATE_UNINSTALLING = 2048
+
+/**
+ * Executes one uninstall polling tick for appId:
+ *   'absent'  → manifest gone = uninstall complete: flip the library entry to
+ *               not-installed, send pushGameToLibrary + gameStatusUpdate { done },
+ *               and stop the poll.
+ *   present   → still on disk: if actively uninstalling (StateFlags bit 0x800 set,
+ *               or bit 4 cleared mid-removal) send gameStatusUpdate { uninstalling }.
+ *               A plain installed manifest (no 0x800) means uninstall hasn't started
+ *               or was cancelled — handled by the grace logic in startUninstallPolling.
+ *
+ * Install state is never optimistically flipped (D-02) — only an absent manifest
+ * (confirmed removal) flips the badge. Exported for unit testing.
+ */
+export async function pollUninstallOnce(appId: string): Promise<void> {
+  const result = await readAcfState(appId)
+  const poll = activeUninstallPolls.get(appId)
+
+  if (result.state === 'absent') {
+    const existing = library.get(appId)
+    if (existing) {
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: false,
+        install: {}
+      }
+      library.set(appId, updated)
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'done'
+    })
+    stopUninstallPolling(appId)
+    logInfo(
+      `Steam: uninstall polling complete for appId ${appId} — badge flipped to not-installed`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  const uninstalling =
+    result.state === 'downloading' ||
+    ((result.stateFlags ?? 0) & STATE_UNINSTALLING) !== 0
+  if (uninstalling) {
+    if (poll) poll.seenUninstalling = true
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: appId,
+      runner: 'steam',
+      status: 'uninstalling'
+    })
+  }
+}
+
+/**
+ * Starts an ACF polling loop for an in-progress uninstall. Idempotent.
+ *
+ * Stops automatically when:
+ *   - the manifest disappears (uninstall complete) via pollUninstallOnce
+ *   - the game is still installed and no active uninstall was ever observed
+ *     after GRACE_TICKS (user likely cancelled Steam's confirm dialog) — clears
+ *     any transient status, leaving the badge installed
+ *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
+ *
+ * Exported for unit testing.
+ */
+export function startUninstallPolling(appId: string, intervalMs = 3000): void {
+  if (activeUninstallPolls.has(appId)) return // idempotent
+
+  logInfo(
+    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms)`,
+    LogPrefix.Steam
+  )
+
+  const entry = {
+    timer: null as unknown as NodeJS.Timeout,
+    ticks: 0,
+    seenUninstalling: false
+  }
+
+  const timer = setInterval(async () => {
+    entry.ticks++
+
+    // Absolute safety cap — stop after MAX_TICKS and rely on the D-01 focus backstop
+    if (entry.ticks >= MAX_TICKS) {
+      logWarning(
+        `Steam: uninstall polling for appId ${appId} hit safety cap (${MAX_TICKS} ticks); relying on D-01 focus backstop`,
+        LogPrefix.Steam
+      )
+      stopUninstallPolling(appId)
+      return
+    }
+
+    await pollUninstallOnce(appId)
+
+    // pollUninstallOnce may have stopped the poll (manifest absent = complete)
+    if (!activeUninstallPolls.has(appId)) return
+
+    // Cancellation/timeout: if no active uninstall was ever observed after the
+    // grace window, the user probably cancelled Steam's confirm dialog — clear
+    // any transient status and stop (badge stays installed).
+    if (!entry.seenUninstalling && entry.ticks >= GRACE_TICKS) {
+      logWarning(
+        `Steam: uninstall polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no uninstall detected; user may have cancelled`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      stopUninstallPolling(appId)
+    }
+  }, intervalMs)
+
+  entry.timer = timer
+  activeUninstallPolls.set(appId, entry)
+}
+
+/**
+ * Stops the active uninstall polling loop for appId (clears the interval and
+ * removes the registry entry). Safe to call when no poll is active (no-op).
+ *
+ * Exported for unit testing.
+ */
+export function stopUninstallPolling(appId: string): void {
+  const poll = activeUninstallPolls.get(appId)
+  if (!poll) return
+  clearInterval(poll.timer)
+  activeUninstallPolls.delete(appId)
+  logInfo(
+    `Steam: stopped uninstall polling for appId ${appId}`,
+    LogPrefix.Steam
+  )
 }
 
 /**
