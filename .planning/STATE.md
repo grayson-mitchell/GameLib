@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: 02 (steam-library) — EXECUTING
 Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-06-28 - Completed quick task 260628-kzf: Fix blank Steam icon on Manage Accounts login page
+Last activity: 2026-06-28 - Completed quick task 260628-pi7: Steam last-played on game details page
 
 Progress: [█████████░] 89%
 
@@ -90,6 +90,7 @@ None yet.
 |---|-------------|------|-----------|
 | 260627-vq1 | Fix QR login hang: set qrSessionState done immediately after credential storage, fire CM connection in background, add 15s timeout | 2026-06-27 | [260627-vq1-fix-qr-login-hang-set-qrsessionstate-don](.planning/quick/260627-vq1-fix-qr-login-hang-set-qrsessionstate-don/) |
 | 260628-kzf | Fix blank Steam icon on Manage Accounts login page: replace FontAwesome faSteam with inline SteamLogo SVG to match other store runners | 2026-06-28 | [260628-kzf-fix-blank-steam-icon-on-manage-accounts-](.planning/quick/260628-kzf-fix-blank-steam-icon-on-manage-accounts-/) |
+| 260628-pi7 | Show Steam last-played + total time on game details page (rtime_last_played) | 2026-06-28 | [260628-pi7-show-steam-last-played-on-game-details-p](.planning/quick/260628-pi7-show-steam-last-played-on-game-details-p/) |
 
 ## Deferred Items
 
