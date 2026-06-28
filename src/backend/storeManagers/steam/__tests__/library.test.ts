@@ -24,6 +24,7 @@ import {
 } from '../electronStores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { join } from 'path'
+import { library } from '../state'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -347,6 +348,144 @@ describe('SteamLibraryManager', () => {
         .mocked(steamLibraryStore.set)
         .mock.calls.filter(([key]) => key === 'games')
       expect(setGames).toHaveLength(0)
+    })
+  })
+
+  // ── refreshInstallState() — D-01/D-02 focus-driven ACF re-read ───────────────
+
+  describe('SteamLibraryManager.refreshInstallState()', () => {
+    beforeEach(() => {
+      library.clear()
+      // Default: getSteamLibraries returns empty → buildInstalledMap returns empty Map
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+    })
+
+    it('refreshInstallState() calls buildInstalledMap and pushes update when is_installed changes false→true', async () => {
+      // Seed library with a game that is NOT installed
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      // buildInstalledMap will now report it as installed
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+      ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+      ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+      ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
+      })
+
+      await manager.refreshInstallState()
+
+      // Should have pushed updated GameInfo with is_installed: true
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '570', is_installed: true })
+      )
+    })
+
+    it('refreshInstallState() sets install_path and install_size when game becomes installed', async () => {
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+      ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
+      ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+      ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
+      })
+
+      await manager.refreshInstallState()
+
+      const updatedGame = library.get('570')!
+      expect(updatedGame.is_installed).toBe(true)
+      expect(updatedGame.install).toEqual(
+        expect.objectContaining({
+          install_path: join('/steam', 'steamapps', 'common', 'dota2'),
+          install_size: '50000',
+          platform: 'Windows'
+        })
+      )
+    })
+
+    it('refreshInstallState() pushes update when is_installed changes true→false', async () => {
+      // Seed library with a game that IS installed
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: true,
+        install: { install_path: '/steam/steamapps/common/dota2', install_size: '50000', platform: 'Windows' },
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      // buildInstalledMap returns empty — game is no longer installed
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+
+      await manager.refreshInstallState()
+
+      // Should push with is_installed: false and empty install object
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({ app_name: '570', is_installed: false })
+      )
+      const updatedGame = library.get('570')!
+      expect(updatedGame.install).toEqual({})
+    })
+
+    it('refreshInstallState() does NOT call sendFrontendMessage when install state did not change', async () => {
+      // Game is NOT installed and buildInstalledMap returns empty — no change
+      library.set('570', {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      // buildInstalledMap returns empty — still not installed
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+
+      await manager.refreshInstallState()
+
+      // No change → no push to avoid flooding frontend
+      expect(sendFrontendMessage).not.toHaveBeenCalled()
+    })
+
+    it('installState() is a no-op (install state is ACF-derived, not boolean-driven)', () => {
+      // installState must exist and not throw; it should do nothing
+      expect(() => manager.installState('570', true)).not.toThrow()
+      // No side effects
+      expect(sendFrontendMessage).not.toHaveBeenCalled()
     })
   })
 })
