@@ -456,6 +456,34 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     library.clear()
     pendingFetches.clear()
     existsSyncMock = jest.requireMock('graceful-fs').existsSync as jest.Mock
+    // Re-establish GameConfig mock (resetMocks: true clears return values between tests)
+    const mockSettings = {
+      autoSyncSaves: false,
+      savesPath: '',
+      gogSaves: [],
+      wineVersion: { name: 'Wine', type: 'wine', bin: '' },
+      winePrefix: '',
+      wineCrossoverBottle: '',
+      autoInstallDxvk: false,
+      autoInstallDxvkNvapi: false,
+      autoInstallVkd3d: false,
+      preferSystemLibs: false,
+      enableEsync: false,
+      enableFsync: false,
+      enableFsrSharpening: false,
+      maxSharpening: false,
+      enableDXVKFpsLimit: false,
+      DXVKFpsCap: '0',
+      targetExe: '',
+      verboseLogs: false,
+      launcherArgs: '',
+      enviromentOptions: [],
+      wrapperOptions: []
+    }
+    ;(jest.requireMock('backend/game_config').GameConfig.get as jest.Mock).mockReturnValue({
+      config: undefined,
+      getSettings: jest.fn().mockResolvedValue(mockSettings)
+    })
     library.set(APP_ID, makeEntry())
   })
 
