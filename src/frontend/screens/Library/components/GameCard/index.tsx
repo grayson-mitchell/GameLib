@@ -535,19 +535,6 @@ const GameCard = ({
             >
               {getStoreName(runner, t2('Other'))}
             </span>
-            {runner === 'steam' &&
-              gameInfo.extra?.steamPlaytimeMinutes !== undefined && (
-                <span className="steamPlaytime">
-                  {gameInfo.extra.steamPlaytimeMinutes === 0
-                    ? t2('game.steam.neverPlayed', 'Never played')
-                    : `${Math.round(gameInfo.extra.steamPlaytimeMinutes / 60)} ${
-                        Math.round(gameInfo.extra.steamPlaytimeMinutes / 60) ===
-                        1
-                          ? t2('game.hour', 'hour')
-                          : t2('game.hours', 'hours')
-                      }`}
-                </span>
-              )}
           </Link>
           <>
             <span className="icons">

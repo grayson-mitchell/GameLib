@@ -469,9 +469,3 @@
     opacity: 1;
   }
 }
-
-.steamPlaytime {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  font-weight: var(--regular);
-}
