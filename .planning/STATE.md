@@ -104,3 +104,4 @@ Stopped at: Completed 02-04-PLAN.md — frontend library integration
 Resume file: None
 | 2026-06-28 | fast | Change app icon to GameLibSticker1.png | ✅ |
 | 2026-06-28 | fast | Rebrand Clear Cache/Reset to GameLib + error-screen tooltips | ✅ |
+| 2026-06-28 | fast | Show Steam total playtime on game details page | ✅ |
