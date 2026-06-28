@@ -3,14 +3,12 @@ import './index.scss'
 import Runner from './components/Runner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSteam } from '@fortawesome/free-brands-svg-icons'
-
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import AmazonLogo from 'frontend/assets/amazon-logo.svg?react'
 import ZoomLogo from 'frontend/assets/zoom-logo.svg?react'
+import SteamLogo from 'frontend/assets/steam-logo.svg?react'
 
 import { LanguageSelector, UpdateComponent } from '../../components/UI'
 import { FlagPosition } from '../../components/UI/LanguageSelector'
@@ -172,7 +170,7 @@ export default React.memo(function NewLogin() {
             <Runner
               class="steam"
               buttonText={t('login.steam', 'Steam Login')}
-              icon={() => <FontAwesomeIcon icon={faSteam} />}
+              icon={() => <SteamLogo />}
               loginUrl={steamLoginPath}
               isLoggedIn={isSteamLoggedIn}
               user={steam?.username ?? undefined}
