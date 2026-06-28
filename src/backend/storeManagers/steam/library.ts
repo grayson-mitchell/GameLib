@@ -228,8 +228,57 @@ export default class SteamLibraryManager implements LibraryManager {
     // Phase 3: install operations
   }
 
+  /**
+   * Steam install state is always derived from ACF on disk (D-10).
+   * This method is intentionally a no-op — callers that need to reconcile
+   * install badges should use refreshInstallState() instead.
+   * The LibraryManager interface requires this method, but for Steam the
+   * source of truth is always the ACF StateFlags bit 4, never a boolean flag.
+   */
   installState(_appName: string, _state: boolean): void {
-    // Phase 3: install operations
+    // Intentional no-op: Steam install state derives from ACF (D-10).
+    // Use refreshInstallState() to reconcile badges from live ACF data.
+  }
+
+  /**
+   * Re-reads ACF manifests from disk via buildInstalledMap() and pushes
+   * updated install badges to the frontend for any game whose is_installed
+   * state actually changed since the last read.
+   *
+   * This is the D-01/D-02 reconciliation path:
+   *  - D-01: triggered by BrowserWindow 'focus' (main.ts), not by polling.
+   *  - D-02: badges flip only after confirmed ACF data; never optimistically
+   *    from a click.
+   *
+   * Only games whose state changed are pushed (avoids flooding the frontend).
+   * The GameInfo install shape matches refresh() when installed:
+   *   install_path, install_size, platform: 'Windows'
+   * and is set to {} when not installed.
+   */
+  async refreshInstallState(): Promise<void> {
+    const installedMap = await buildInstalledMap()
+
+    for (const [appIdStr, gameInfo] of library.entries()) {
+      const appId = parseInt(appIdStr, 10)
+      const installedData = installedMap.get(appId)
+      const isNowInstalled = !!installedData
+
+      if (gameInfo.is_installed !== isNowInstalled) {
+        const updated: GameInfo = {
+          ...gameInfo,
+          is_installed: isNowInstalled,
+          install: isNowInstalled
+            ? {
+                install_path: installedData!.installPath,
+                install_size: installedData!.sizeOnDisk,
+                platform: 'Windows' as const
+              }
+            : {}
+        }
+        library.set(appIdStr, updated)
+        sendFrontendMessage('pushGameToLibrary', updated)
+      }
+    }
   }
 
   getLaunchOptions(_appName: string): LaunchOption[] {
