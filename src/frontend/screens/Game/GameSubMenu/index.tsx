@@ -86,6 +86,7 @@ export default function GamesSubmenu({
   )
   const { t } = useTranslation('gamepage')
   const isSideloaded = runner === 'sideload'
+  const isSteam = runner === 'steam'
   const isThirdPartyManaged = !!gameInfo.thirdPartyManagedApp
 
   async function onMoveInstallYesClick() {
@@ -318,14 +319,21 @@ export default function GamesSubmenu({
                   : t('submenu.addShortcut', 'Add shortcut')}
               </button>
               <button
-                onClick={async () => setShowUninstallModal(true)}
+                onClick={async () => {
+                  if (isSteam) {
+                    // D-05: delegate straight to Steam's own uninstall dialog — no GamerLib confirm
+                    window.api.uninstall(appName, runner, false, false)
+                  } else {
+                    setShowUninstallModal(true)
+                  }
+                }}
                 className="link button is-text is-link buttonWithIcon"
                 disabled={is.playing}
               >
                 <DeleteIcon />
                 {t('button.uninstall', 'Uninstall')}
               </button>{' '}
-              {!isSideloaded && !isThirdPartyManaged && (
+              {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleUpdate()}
                   className="link button is-text is-link buttonWithIcon"
@@ -335,7 +343,7 @@ export default function GamesSubmenu({
                   {t('button.force_update', 'Force Update if Available')}
                 </button>
               )}{' '}
-              {!isSideloaded && !isThirdPartyManaged && (
+              {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleMoveInstall()}
                   className="link button is-text is-link buttonWithIcon"
@@ -344,7 +352,7 @@ export default function GamesSubmenu({
                   {t('submenu.move', 'Move Game')}
                 </button>
               )}{' '}
-              {!isSideloaded && !isThirdPartyManaged && (
+              {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleChangeInstall()}
                   className="link button is-text is-link buttonWithIcon"
@@ -353,7 +361,7 @@ export default function GamesSubmenu({
                   {t('submenu.change', 'Change Install Location')}
                 </button>
               )}{' '}
-              {!isSideloaded && !isThirdPartyManaged && (
+              {!isSideloaded && !isSteam && !isThirdPartyManaged && (
                 <button
                   onClick={async () => handleRepair(appName)}
                   className="link button is-text is-link buttonWithIcon"
