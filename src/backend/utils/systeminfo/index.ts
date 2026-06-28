@@ -17,6 +17,7 @@ import {
   getLegendaryVersion,
   getNileVersion
 } from '../helperBinaries'
+import { APP_DISPLAY_NAME } from 'backend/constants/others'
 
 type GPUInfo = {
   // The PCI device ID of the graphics card (hexadecimal)
@@ -147,7 +148,7 @@ We are${info.isAppImage ? '' : ' not'} running from an AppImage
     : ''
 }
 Software Versions:
-  Heroic: ${info.softwareInUse.heroicVersion}
+  ${APP_DISPLAY_NAME}: ${info.softwareInUse.heroicVersion}
   Legendary: ${info.softwareInUse.legendaryVersion}
   gogdl: ${info.softwareInUse.gogdlVersion}
   comet: ${info.softwareInUse.cometVersion}
