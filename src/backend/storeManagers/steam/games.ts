@@ -17,6 +17,7 @@ import { GameConfig } from 'backend/game_config'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
 import { library, pendingFetches } from './state'
+import { startInstallPolling } from './library'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
@@ -208,6 +209,14 @@ export default class SteamGame implements Game {
       LogPrefix.Steam
     )
     await shell.openExternal(url)
+
+    // Start ACF polling so the install progress and completion are surfaced
+    // in GamerLib without requiring a focus round-trip (D-07). The poller
+    // sends 'installing' / 'done' status updates to the frontend and flips
+    // the badge when StateFlags bit 4 is set. Install state is never
+    // optimistically flipped here (D-02) — only ACF confirms.
+    startInstallPolling(this.appId)
+
     return { status: 'done' }
   }
 
