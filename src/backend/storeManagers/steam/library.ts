@@ -115,6 +115,8 @@ export default class SteamLibraryManager implements LibraryManager {
       name: string
       playtime_forever: number
       img_icon_url?: string
+      /** Unix seconds — exists at runtime in CPlayer_GetOwnedGames_Response_Game but omitted from @types/steam-user */
+      rtime_last_played?: number
     }> = []
     try {
       const result = await client.getUserOwnedApps(client.steamID!, {
@@ -157,8 +159,12 @@ export default class SteamLibraryManager implements LibraryManager {
           : {},
         extra: {
           reqs: [],
+          // cachedMeta.extra preserves about/genres/art metadata from prior fetches.
+          // Playtime and last-played must reflect the latest sync (fresh wins over stale),
+          // so dynamic Steam fields are placed AFTER the spread to override any cached values.
+          ...(cachedMeta?.extra ?? {}),
           steamPlaytimeMinutes: app.playtime_forever,
-          ...(cachedMeta?.extra ?? {})
+          steamLastPlayed: app.rtime_last_played ?? 0
         },
         canRunOffline: true,
         installable: true,

@@ -61,24 +61,43 @@ function TimeContainer({ gameInfo }: Props) {
     return `${hours} ${hours === 1 ? t('game.hour', 'hour') : t('game.hours', 'hours')}`
   }
 
-  const steamTotalPlaytime = steamPlaytimeMinutes !== undefined && (
-    <p className="timeContainerLabel">
-      <AvTimer />
-      {`${t('game.totalTimePlayed', 'Total Time Played')}:`} {` `}
-      {formatSteamPlaytime(steamPlaytimeMinutes)}
-    </p>
-  )
+  // Steam launches games itself, so GamerLib never records local timestamps for
+  // Steam titles. Render a dedicated branch using Steam's own rtime_last_played
+  // and playtime data sourced from the synced library (extra.steamLastPlayed /
+  // extra.steamPlaytimeMinutes). Non-Steam games fall through to the tsInfo path.
+  if (runner === 'steam') {
+    const steamLastPlayed = gameInfo.extra?.steamLastPlayed
+    const lastPlayedDisplay = steamLastPlayed
+      ? new Intl.DateTimeFormat(undefined, {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric'
+        }).format(new Date(steamLastPlayed * 1000))
+      : t('game.neverPlayed', 'Never')
 
-  if (!tsInfo) {
     return (
       <>
         <p className="timeContainerLabel">
           <AvTimer />
           {`${t('game.lastPlayed', 'Last Played')}:`} {` `}
-          {`${t('game.neverPlayed', 'Never')}`}
+          {lastPlayedDisplay}
         </p>
-        {steamTotalPlaytime}
+        <p className="timeContainerLabel">
+          <AvTimer />
+          {`${t('game.totalTimePlayed', 'Total Time Played')}:`} {` `}
+          {formatSteamPlaytime(steamPlaytimeMinutes ?? 0)}
+        </p>
       </>
+    )
+  }
+
+  if (!tsInfo) {
+    return (
+      <p className="timeContainerLabel">
+        <AvTimer />
+        {`${t('game.lastPlayed', 'Last Played')}:`} {` `}
+        {`${t('game.neverPlayed', 'Never')}`}
+      </p>
     )
   }
 
