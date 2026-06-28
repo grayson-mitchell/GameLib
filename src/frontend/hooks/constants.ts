@@ -25,9 +25,13 @@ export function getStatusLabel({
     queued: `${t('gamepage:status.queued', 'Queued')}`,
     uninstalling: t('gamepage:status.uninstalling', 'Uninstalling'),
     updating: `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
-    installing: `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
-      percent || 0
-    )}%`,
+    // Steam installs have no progress percentage (Steam owns the download) — D-07
+    installing:
+      runner === 'steam'
+        ? t('gamepage:status.steamInstalling', 'Steam installing')
+        : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
+            percent || 0
+          )}%`,
     extracting: t('gamepage:status.extracting', 'Extracting'),
     'syncing-saves': t('gamepage:status.syncingSaves', 'Syncing Saves'),
     moving: t('gamepage:gamecard.moving', 'Moving'),

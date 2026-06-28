@@ -3,7 +3,7 @@ import './index.css'
 import { useContext, CSSProperties, useMemo, useState, useEffect } from 'react'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faRepeat, faBan } from '@fortawesome/free-solid-svg-icons'
+import { faRepeat, faBan, faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 
 import DownIcon from 'frontend/assets/down-icon.svg?react'
 import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
@@ -237,6 +237,15 @@ const GameCard = ({
         </SvgButton>
       )
     }
+    // Steam installs cannot be cancelled from GamerLib — show spinner only (D-07)
+    if (isInstalling && isSteam) {
+      return (
+        <button className="svg-button iconDisabled" disabled>
+          <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
+        </button>
+      )
+    }
+
     if (isInstalling || isQueued) {
       return (
         <SvgButton
@@ -292,6 +301,7 @@ const GameCard = ({
   }
 
   const isSideloaded = runner === 'sideload'
+  const isSteam = runner === 'steam'
 
   const handleEdit = () => {
     if (isSideloaded) {
@@ -348,10 +358,10 @@ const GameCard = ({
       icon: <Download />
     },
     {
-      // cancel installation/update
+      // cancel installation/update — hidden for Steam (GamerLib cannot cancel Steam's download)
       label: t('button.cancel'),
       onclick: async () => handlePlay(runner),
-      show: isInstalling || isUpdating,
+      show: (isInstalling || isUpdating) && !isSteam,
       icon: <Cancel />
     },
     {

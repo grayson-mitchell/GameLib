@@ -13,6 +13,8 @@ import {
   Stop,
   Warning
 } from '@mui/icons-material'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import useSetting from 'frontend/hooks/useSetting'
@@ -49,7 +51,9 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.uninstalling ||
     is.notSupportedGame ||
     is.notInstallable ||
-    is.importing
+    is.importing ||
+    // Steam installs cannot be cancelled from GamerLib — disable the button while polling (D-07)
+    (gameInfo.runner === 'steam' && is.installing)
 
   function getPlayLabel(): React.ReactNode {
     if (is.syncing) {
@@ -145,6 +149,16 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="buttonWithIcon">
           <Cancel />
           {t('button.queue.remove', 'Remove from Queue')}
+        </span>
+      )
+    }
+
+    // Steam installs are controlled by the Steam client — no pause/cancel surface (D-07)
+    if (is.installing && gameInfo.runner === 'steam') {
+      return (
+        <span className="buttonWithIcon">
+          <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
+          {t('status.steamInstalling', 'Steam installing')}
         </span>
       )
     }
