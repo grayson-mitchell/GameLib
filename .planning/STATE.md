@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: 02 (steam-library) — EXECUTING
 Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-06-27
+Last activity: 2026-06-28 - Completed quick task 260628-kzf: Fix blank Steam icon on Manage Accounts login page
 
 Progress: [█████████░] 89%
 
@@ -84,6 +84,13 @@ None yet.
 
 - Steam authentication approach not yet decided — must resolve before Phase 1 implementation begins
 
+### Quick Tasks Completed
+
+| # | Description | Date | Directory |
+|---|-------------|------|-----------|
+| 260627-vq1 | Fix QR login hang: set qrSessionState done immediately after credential storage, fire CM connection in background, add 15s timeout | 2026-06-27 | [260627-vq1-fix-qr-login-hang-set-qrsessionstate-don](.planning/quick/260627-vq1-fix-qr-login-hang-set-qrsessionstate-don/) |
+| 260628-kzf | Fix blank Steam icon on Manage Accounts login page: replace FontAwesome faSteam with inline SteamLogo SVG to match other store runners | 2026-06-28 | [260628-kzf-fix-blank-steam-icon-on-manage-accounts-](.planning/quick/260628-kzf-fix-blank-steam-icon-on-manage-accounts-/) |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
@@ -95,3 +102,4 @@ None yet.
 Last session: 2026-06-27T08:25:57.089Z
 Stopped at: Completed 02-04-PLAN.md — frontend library integration
 Resume file: None
+| 2026-06-28 | fast | Change app icon to GameLibSticker1.png | ✅ |
