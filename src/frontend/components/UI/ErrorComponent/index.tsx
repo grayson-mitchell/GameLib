@@ -18,6 +18,10 @@ export default function ErrorComponent({ message }: { message: string }) {
       <span className="buttonsWrapper">
         <button
           className="button is-footer"
+          title={t(
+            'generic.library.refresh-tooltip',
+            'Re-scans your game libraries from each connected store.'
+          )}
           onClick={async () =>
             refreshLibrary({
               checkForUpdates: true,
@@ -37,6 +41,10 @@ export default function ErrorComponent({ message }: { message: string }) {
 
         <button
           className="button is-footer is-danger"
+          title={t(
+            'settings.clear-cache-tooltip',
+            'Clears the cached game library and metadata to fix display issues. Your store logins, installed games, and settings are kept.'
+          )}
           onClick={() => window.api.clearCache(true)}
         >
           <div className="button-icontext-flex">
@@ -44,13 +52,17 @@ export default function ErrorComponent({ message }: { message: string }) {
               <CleaningServicesOutlined />
             </div>
             <span className="button-icon-text">
-              {t('settings.clear-cache', 'Clear Heroic Cache')}
+              {t('settings.clear-cache', 'Clear GameLib Cache')}
             </span>
           </div>
         </button>
 
         <button
           className="button is-footer is-danger"
+          title={t(
+            'settings.reset-heroic-tooltip',
+            'Removes all GameLib settings and cached data, but keeps your installed games and store credentials.'
+          )}
           onClick={showResetDialog}
         >
           <div className="button-icontext-flex">
@@ -58,7 +70,7 @@ export default function ErrorComponent({ message }: { message: string }) {
               <DeleteOutline />
             </div>
             <span className="button-icon-text">
-              {t('settings.reset-heroic', 'Reset Heroic')}
+              {t('settings.reset-heroic', 'Reset GameLib')}
             </span>
           </div>
         </button>

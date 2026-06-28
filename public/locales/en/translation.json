@@ -131,8 +131,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Are you sure you want to reset Heroic? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of Heroic needs to be restarted manually afterwards.",
-                "title": "Reset Heroic"
+                "message": "Are you sure you want to reset GameLib? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards.",
+                "title": "Reset GameLib"
             }
         },
         "runexe": {
@@ -428,7 +428,8 @@
         },
         "install": "Install",
         "library": {
-            "refresh": "Refresh Library"
+            "refresh": "Refresh Library",
+            "refresh-tooltip": "Re-scans your game libraries from each connected store."
         },
         "uninstall": "Uninstall"
     },
@@ -956,7 +957,7 @@
         "advanced": {
             "clearCache": {
                 "help1": "This action will clear the following caches:",
-                "help10": "Heroic configuration",
+                "help10": "GameLib configuration",
                 "help2": "Third-party game info (scores, steam compatibility, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help3": "Legendary library info (list of games, install dialog info, game info)",
                 "help4": "GOG library info (list of games, install dialog info, api info -i.e: requirements-)",
@@ -968,18 +969,19 @@
             },
             "details": "Details",
             "resetHeroic": {
-                "help": "This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of Heroic needs to be restarted manually afterwards."
+                "help": "This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards."
             },
             "title": {
                 "clearCache": "Clear Cache",
-                "resetHeroic": "Reset Heroic"
+                "resetHeroic": "Reset GameLib"
             }
         },
         "battlEyeRuntime": {
             "installing": "Installing BattlEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "Clear Heroic Cache",
+        "clear-cache": "Clear GameLib Cache",
+        "clear-cache-tooltip": "Clears the cached game library and metadata to fix display issues. Your store logins, installed games, and settings are kept.",
         "copiedToClipboard": "Copied to Clipboard!",
         "copyToClipboard": "Copy All Settings to Clipboard",
         "custom_css": {
@@ -1026,7 +1028,8 @@
             "warning": "This game does not explicitly allow offline mode, turn this on at your own risk. The game may not work."
         },
         "open-config-file": "Open Config File",
-        "reset-heroic": "Reset Heroic",
+        "reset-heroic": "Reset GameLib",
+        "reset-heroic-tooltip": "Removes all GameLib settings and cached data, but keeps your installed games and store credentials.",
         "saves": {
             "gog_linux_native_warning": "Linux native games do not support GOG's Cloud Saves feature. Use the Windows version instead.",
             "not_supported": "This game does not support Cloud Saves.",

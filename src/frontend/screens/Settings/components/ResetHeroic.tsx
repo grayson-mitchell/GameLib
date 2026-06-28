@@ -11,12 +11,12 @@ const ResetHeroic = () => {
   return (
     <>
       <h3 className="settingSubheader">
-        {t('settings.advanced.title.resetHeroic', 'Reset Heroic')}
+        {t('settings.advanced.title.resetHeroic', 'Reset GameLib')}
       </h3>
       <InfoBox text={t('settings.advanced.details', 'Details')}>
         {t(
           'settings.advanced.resetHeroic.help',
-          "This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of Heroic needs to be restarted manually afterwards."
+          "This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards."
         )}
       </InfoBox>
       <button className="button is-footer is-danger" onClick={showResetDialog}>
@@ -25,7 +25,7 @@ const ResetHeroic = () => {
             <DeleteOutline />
           </div>
           <span className="button-icon-text">
-            {t('settings.reset-heroic', 'Reset Heroic')}
+            {t('settings.reset-heroic', 'Reset GameLib')}
           </span>
         </div>
       </button>

@@ -57,7 +57,7 @@ const ClearCache = () => {
           <li>{t('settings.advanced.clearCache.help8', 'Installed games')}</li>
           <li>{t('settings.advanced.clearCache.help9', 'Games settings')}</li>
           <li>
-            {t('settings.advanced.clearCache.help10', 'Heroic configuration')}
+            {t('settings.advanced.clearCache.help10', 'GameLib configuration')}
           </li>
         </ul>
       </InfoBox>
@@ -70,7 +70,7 @@ const ClearCache = () => {
             <CleaningServicesOutlined />
           </div>
           <span className="button-icon-text">
-            {t('settings.clear-cache', 'Clear Heroic Cache')}
+            {t('settings.clear-cache', 'Clear GameLib Cache')}
           </span>
         </div>
       </button>
