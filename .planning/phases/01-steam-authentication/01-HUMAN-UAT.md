@@ -19,17 +19,15 @@ note: "User confirmed library appeared without reload (validates quick task 2606
 
 ### 2. Username/password + SteamGuard login
 expected: Credentials tab accepts username/password → triggers SteamGuard prompt for code → submitting 5-character (alphanumeric email OR numeric authenticator) code completes login and shows logged-in Runner tile
-result: pending-retest
-reported: "steam guard code is not being recognised"
-detail: "Error message says 'invalid code'. Guard type: EMAIL SteamGuard code."
-severity: major
-resolution: |
-  Three-pass fix:
+result: pass
+note: |
+  Three-pass fix history (for accurate record):
   Pass 1 (01-04, merged 3e4863d) — INSUFFICIENT: Added trim().toUpperCase() normalization (frontend + backend). Confirmed live on a fresh build (input uppercases). Error unchanged.
   Pass 2 (debug session, first round) — loginTimeout=180000 fix applied. Human rebuilt and re-tested (2026-06-29 ~20:56). SAME error. loginTimeout was INSUFFICIENT.
-  Pass 3 (debug session, [DIAG2] capture + confirmed root cause, 2026-06-29) — PENDING human re-test.
-  CONFIRMED ROOT CAUSE: Account has DeviceConfirmation (type 4) + DeviceCode (type 3), NOT email (type 2). Steam-session auto-starts DeviceConfirmation polling when type 4 is present. Polling fires 'authenticated' (phone push), then cancelLoginAttempt() sets _pollingCanceled=true. No 'authenticated' listener was attached in the guard_required branch so finishAuth() never ran and submitSteamGuardCode() threw "Login attempt has been canceled". NOT casing, NOT idle loginTimeout, NOT a QR session race.
-  Fix applied: attach session.once('authenticated'/'error'/'timeout') in guard_required branch of startCredentialLogin; submitSteamGuardCode waits on _waitForCredSession() instead of registering duplicate listeners; added pollCredentialLogin() + frontend steamPollCredential polling for out-of-band phone-approval completion. Pending final human re-test.
+  Pass 3 (debug session email-steamguard-still-invalid, [DIAG2] capture + confirmed root cause, 2026-06-29) — HUMAN VERIFIED PASS.
+  TRUE ROOT CAUSE: Account has DeviceConfirmation (type 4) + DeviceCode (type 3). Steam-session auto-starts DeviceConfirmation polling (setImmediate(_doPoll)) when type 4 is in allowedConfirmations. Polling fires 'authenticated' (phone push), cancelLoginAttempt() sets _pollingCanceled=true. No 'authenticated' listener was attached in the guard_required branch so finishAuth() never ran and submitSteamGuardCode() threw "Login attempt has been canceled". NOT casing, NOT idle loginTimeout, NOT a QR session race.
+  Fix (commit 9ae8625): attach session.once('authenticated'/'error'/'timeout') in guard_required branch of startCredentialLogin; submitSteamGuardCode waits on _waitForCredSession(); added pollCredentialLogin() + frontend steamPollCredential 2s poll for out-of-band phone-approval completion.
+  Human verified 2026-06-29: Path A (typed DeviceCode) completes credential login — Runner tile shows persona.
 
 ### 3. Logout flow
 expected: Clicking Log Out on the Steam Runner tile calls steamLogout, clears session, and returns to the unauthenticated tile state
@@ -46,32 +44,20 @@ result: pass
 ## Summary
 
 total: 5
-passed: 4
-issues: 1
+passed: 5
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Submitting a valid 5-digit SteamGuard code completes credential login and shows the logged-in Runner tile"
-  status: failed
-  reason: "User reported: steam guard code is not being recognised. Error message displays 'invalid code'. Guard type is EMAIL SteamGuard (not mobile authenticator)."
-  severity: major
+- truth: "Submitting a valid 5-character SteamGuard code completes credential login and shows the logged-in Runner tile"
+  status: resolved
   test: 2
-  root_cause: "Email SteamGuard codes are 5-character ALPHANUMERIC (uppercase letters + digits), but the guard input assumes numeric TOTP-style codes. SteamLogin/index.tsx uses inputMode='numeric', '5-digit' framing, and performs NO trim()/toUpperCase() normalization before submit. The alphanumeric email code is forwarded verbatim (transport + steam-session are provably correct — steam-session auto-selects EAuthSessionGuardType.EmailCode and sends the code unmodified) and Steam rejects it as InvalidLoginAuthCode (65), surfaced as the generic 'invalid code'. The email path was never implemented for alphanumeric input nor tested (all fixtures use numeric '12345')."
-  artifacts:
-    - path: "src/frontend/screens/Login/components/SteamLogin/index.tsx"
-      issue: "Guard input (lines ~387-401) uses inputMode='numeric' + '5-digit' framing; no case/whitespace normalization before steamSubmitGuard; error message (~199-213) is authenticator-specific, not guard-type aware"
-    - path: "src/backend/storeManagers/steam/user.ts"
-      issue: "submitSteamGuardCode (~387-425) is correct but is the natural place for defense-in-depth normalization (trim + uppercase)"
-    - path: "src/backend/storeManagers/steam/__tests__/user.test.ts"
-      issue: "Guard fixtures (~541-578) are numeric-only ('12345'/'99999'); no alphanumeric email-code coverage masked the gap"
-  missing:
-    - "Treat guard code as alphanumeric: drop inputMode='numeric' and '5-digit' framing in the input"
-    - "Normalize code with .trim().toUpperCase() (in the onChange/submit handler and/or backend submitSteamGuardCode as defense-in-depth)"
-    - "Make the SteamGuard error message guard-type aware ('email or authenticator code')"
-    - "Add a regression test exercising an alphanumeric email code (e.g. 'KQM4F') through the EmailCode path"
-  debug_session: .planning/debug/email-steamguard-code-rejected.md
-  specialist_hint: react
-  status_resolved: "SUPERSEDED — fix 01-04 did NOT resolve it. Human re-tested 2026-06-29 on a fresh build (confirmed: input now uppercases) and still gets the same 'invalid code' error. Normalization was the WRONG root cause (static-only diagnosis). REOPENED for real-environment debugging — need the actual steam-session EResult from backend logs (user.ts:428/417) + whether guard type is EmailCode vs DeviceCode + whether startCredentialLogin is invoked more than once (session-lifecycle race emailing a code bound to a superseded session)."
+  root_cause: "startCredentialLogin returned guard_required without attaching an 'authenticated' listener. For accounts with DeviceConfirmation (type 4) + DeviceCode (type 3), steam-session auto-starts DeviceConfirmation polling (setImmediate(_doPoll)). Polling fires 'authenticated' silently → cancelLoginAttempt() → _pollingCanceled=true. submitSteamGuardCode then threw 'Login attempt has been canceled' from _verifyStarted(). Confirmed via [DIAG2] log capture (2026-06-29 21:13). NOT casing, NOT idle loginTimeout, NOT a QR session race."
+  fix: "Attach session.once('authenticated'/'error'/'timeout') in guard_required branch before returning to frontend. submitSteamGuardCode uses _waitForCredSession() (shared settle). Added pollCredentialLogin() + frontend 2s credPollInterval for out-of-band DeviceConfirmation phone-approval path."
+  debug_session: .planning/debug/resolved/email-steamguard-still-invalid.md
+  commits:
+    - "9ae8625 — guard-time listener fix (the real fix)"
+    - "3e4863d — normalization fix 01-04 (confirmed insufficient, retained as defense-in-depth)"

@@ -1,9 +1,9 @@
 ---
-status: fixing
+status: resolved
 slug: email-steamguard-still-invalid
 trigger: "Email Steam Guard credential login still fails with 'invalid code' after the 01-04 normalization fix — confirmed on a fresh build (input visibly uppercases) by real human re-test on 2026-06-29."
 created: 2026-06-29
-updated: 2026-06-29T23:00:00Z
+updated: 2026-06-29T23:59:00Z
 supersedes: email-steamguard-code-rejected.md
 ---
 
@@ -80,20 +80,22 @@ supersedes: email-steamguard-code-rejected.md
     (7) submitSteamGuardCode → _verifyStarted() → _pollingCanceled===true → throws "Login attempt has been canceled".
   ROOT CAUSE: The credential session has no 'authenticated' listener registered during the guard-waiting period. When DeviceConfirmation polling fires 'authenticated' (either via phone approval or future polls), the session is marked done+canceled but finishAuth is never called, and _pollingCanceled prevents subsequent submitSteamGuardCode. The fix: register 'authenticated'/'error'/'timeout' on the credential session in the guard_required branch (BEFORE returning to frontend), mirroring the QR flow.
 
+- timestamp: 2026-06-29 — HUMAN VERIFIED: Path A (typed DeviceCode) completes credential login successfully — Runner tile shows persona. Guard-time listener fix (commit 9ae8625) confirmed working.
+
 ## Current Focus
 
-hypothesis: "CONFIRMED: DeviceConfirmation auto-polling fires 'authenticated' during the 34-second guard-code waiting period. No 'authenticated' listener is attached in the guard_required path → finishAuth not called → _pollingCanceled=true → submitSteamGuardCode throws 'Login attempt has been canceled'."
-test: "Fix implemented: attach persistent 'authenticated'/'error'/'timeout' listeners in guard_required branch + add pollCredentialLogin() for out-of-band frontend coordination."
-expecting: "After fix, DeviceCode submission (typed code) works because session is not prematurely canceled. DeviceConfirmation phone approval also completes login out-of-band via the new 'authenticated' listener."
-next_action: "CHECKPOINT — ask human to rebuild, reproduce credential login, and confirm login completes via either typed code OR phone approval."
+hypothesis: "CONFIRMED AND RESOLVED: DeviceConfirmation auto-polling fires 'authenticated' during the 34-second guard-code waiting period. No 'authenticated' listener was attached in the guard_required path → finishAuth not called → _pollingCanceled=true → submitSteamGuardCode threw 'Login attempt has been canceled'."
+test: "Fix implemented and human-verified: attach persistent 'authenticated'/'error'/'timeout' listeners in guard_required branch + pollCredentialLogin() for out-of-band frontend coordination. [DIAG3] diagnostics stripped in cleanup commit."
+expecting: "CONFIRMED: DeviceCode submission (typed code) works. DeviceConfirmation phone approval also completes login out-of-band via the 'authenticated' listener."
+next_action: "RESOLVED — archived."
 
 ## Resolution
 
-root_cause: "startCredentialLogin returns { status: 'guard_required' } early for accounts with DeviceConfirmation (type 4) + DeviceCode (type 3) without attaching an 'authenticated' listener. steam-session auto-starts DeviceConfirmation polling (setImmediate(_doPoll)) when type 4 is in allowedConfirmations. When polling fires 'authenticated' (phone approves), cancelLoginAttempt() is called internally — _pollingCanceled=true, finishAuth never runs. submitSteamGuardCode then throws 'Login attempt has been canceled' from _verifyStarted(). Confirmed from [DIAG2] logs: no 'error' event (rules out poll-error), no second QR session (rules out orphaned-QR), DeviceConfirmation present, 34s silence then synchronous throw."
+root_cause: "startCredentialLogin returns { status: 'guard_required' } early for accounts with DeviceConfirmation (type 4) + DeviceCode (type 3) without attaching an 'authenticated' listener. steam-session auto-starts DeviceConfirmation polling (setImmediate(_doPoll)) when type 4 is in allowedConfirmations. When polling fires 'authenticated' (phone approves), cancelLoginAttempt() is called internally — _pollingCanceled=true, finishAuth never runs. submitSteamGuardCode then throws 'Login attempt has been canceled' from _verifyStarted(). Confirmed from [DIAG2] logs: no 'error' event (rules out poll-error), no second QR session (rules out orphaned-QR), DeviceConfirmation present, 34s silence then synchronous throw. NOTE: Two SUPERSEDED wrong fixes shipped before root cause was found: (1) casing/whitespace normalization (quick task 01-04, commit 3e4863d) — confirmed insufficient; (2) loginTimeout=180000 — confirmed insufficient."
 
-fix: "Attach session.once('authenticated', ...) in startCredentialLogin guard_required branch that calls finishAuth and settles credSessionState. Attach 'error' and 'timeout' with [DIAG3] logging. Remove duplicate listener registration from submitSteamGuardCode; replace with _waitForCredSession(). Add pollCredentialLogin() for frontend out-of-band completion (DeviceConfirmation phone approval path). Frontend polls steamPollCredential while on credentials-2 step."
+fix: "Attach session.once('authenticated', ...) in startCredentialLogin guard_required branch that calls finishAuth and settles credSessionState. Attach 'error'/'timeout' listeners with real EResult logging (permanent — not diagnostic). submitSteamGuardCode uses _waitForCredSession() instead of duplicate listener registration. Added pollCredentialLogin() backend method + frontend steamPollCredential 2s poll for out-of-band DeviceConfirmation phone-approval completion. [DIAG3] probes (nonces, ENTRY markers, validActions dumps, elapsedMs counters) stripped in cleanup commit; permanent improvements retained."
 
-verification: "PENDING human re-test"
+verification: "Human-confirmed 2026-06-29: Path A (typed DeviceCode) completes credential login — Runner tile shows persona. codecheck passes (tsc --noEmit). Full test suite: 262 tests, 24 suites, all green, including regression tests for guard_required listener registration and DeviceConfirmation out-of-band completion."
 
 files_changed:
   - src/backend/storeManagers/steam/user.ts

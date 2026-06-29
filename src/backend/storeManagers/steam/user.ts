@@ -74,11 +74,6 @@ export class SteamUser {
     (result: { status: 'done' | 'error' }) => void
   > = []
 
-  // [DIAG3] monotonic nonce incremented on every session creation; wall-clock
-  // ms at credential session creation used to compute elapsed time at events.
-  private static _sessionNonce = 0
-  private static _credSessionCreatedAt = 0
-
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
   static isSteamClientInstalled(): boolean {
@@ -308,12 +303,6 @@ export class SteamUser {
     challengeUrl?: string
   }> {
     try {
-      const qrNonce = ++SteamUser._sessionNonce
-      logInfo(
-        `[DIAG3] startQRLogin ENTRY nonce=${qrNonce} replacingSession=${this.session ? 'yes' : 'none'}`,
-        LogPrefix.Steam
-      )
-
       // Tear down previous session before replacing it
       if (this.session) {
         this.session.cancelLoginAttempt()
@@ -414,13 +403,6 @@ export class SteamUser {
     password: string
   ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
     try {
-      const credNonce = ++SteamUser._sessionNonce
-      SteamUser._credSessionCreatedAt = Date.now()
-      logInfo(
-        `[DIAG3] startCredentialLogin ENTRY nonce=${credNonce} replacingSession=${this.session ? 'yes' : 'none'}`,
-        LogPrefix.Steam
-      )
-
       // Drain any pending callbacks from a previous guard_required attempt
       // (e.g. user pressed "Back to Credentials" and is starting a new login).
       const staleCallbacks = SteamUser._credSettleCallbacks
@@ -440,23 +422,12 @@ export class SteamUser {
       // time for email retrieval. Mirrors the QR path's 120 s setting.
       session.loginTimeout = 180000
       this.session = session
-      // [DIAG3] Tag the session object with the nonce so we can verify at
-      // submitSteamGuardCode time that this.session is still the expected session.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(session as any)._diagNonce = credNonce
 
       const response = await session.startWithCredentials({
         accountName: username,
         password
         // NOTE: password is passed to steam-session but never written to configStore
       })
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const responseAny = response as any
-      logInfo(
-        `[DIAG3] startWithCredentials response: actionRequired=${response.actionRequired} validActions=${JSON.stringify(responseAny.validActions)} allowedConfirmations=${JSON.stringify(responseAny.allowedConfirmations)}`,
-        LogPrefix.Steam
-      )
 
       if (response.actionRequired) {
         // Attach persistent listeners BEFORE returning guard_required.
@@ -477,11 +448,6 @@ export class SteamUser {
         //      _waitForCredSession() inside submitSteamGuardCode without needing
         //      a second set of duplicate listeners on the same session object.
         session.once('authenticated', async () => {
-          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
-          logInfo(
-            `[DIAG3] credential session 'authenticated' nonce=${credNonce} elapsedMs=${elapsed}`,
-            LogPrefix.Steam
-          )
           try {
             const personaName = await SteamUser.finishAuth(session.refreshToken)
             SteamUser._settleCredSession('done', personaName)
@@ -495,23 +461,18 @@ export class SteamUser {
         })
 
         session.once('error', (err: Error) => {
-          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const errAny = err as any
           const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
           logError(
-            `[DIAG3] credential session 'error' nonce=${credNonce} elapsedMs=${elapsed} EResult=${eresult} msg=${err.message}`,
+            [`Steam credential session error: EResult=${eresult} msg=${err.message}`],
             LogPrefix.Steam
           )
           SteamUser._settleCredSession('error')
         })
 
         session.once('timeout', () => {
-          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
-          logWarning(
-            `[DIAG3] credential session 'timeout' nonce=${credNonce} elapsedMs=${elapsed}`,
-            LogPrefix.Steam
-          )
+          logWarning('Steam credential session timed out', LogPrefix.Steam)
           SteamUser._settleCredSession('error')
         })
 
@@ -558,17 +519,6 @@ export class SteamUser {
     }
 
     const session = this.session
-
-    // [DIAG3] Log the session nonce and elapsed time so we can verify:
-    // - sessionNonce matches the nonce from startCredentialLogin (no session replacement)
-    // - elapsedMs shows how long the session was open before code submission
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sessionNonce = (session as any)?._diagNonce ?? 'unknown'
-    const elapsedMs = Date.now() - SteamUser._credSessionCreatedAt
-    logInfo(
-      `[DIAG3] submitSteamGuardCode sessionNonce=${sessionNonce} elapsedMs=${elapsedMs}`,
-      LogPrefix.Steam
-    )
 
     // Defense-in-depth: normalize to uppercase and strip whitespace so that
     // 5-character alphanumeric EMAIL guard codes (e.g. kqm4f → KQM4F) are
