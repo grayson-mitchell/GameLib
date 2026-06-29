@@ -576,6 +576,65 @@ describe('SteamUser', () => {
       const result = await SteamUser.submitSteamGuardCode('12345')
       expect(result.status).toBe('error')
     })
+
+    // ── Alphanumeric EmailCode path + normalization regression tests ──────────
+
+    test('alphanumeric EmailCode: submits normalized KQM4F to session and resolves done', async () => {
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      mockSessionInstance.submitSteamGuardCode.mockImplementation(async () => {
+        setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
+      })
+
+      const result = await SteamUser.submitSteamGuardCode('KQM4F')
+      expect(result.status).toBe('done')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+    })
+
+    test('normalization: lowercase kqm4f is uppercased to KQM4F before reaching session', async () => {
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      mockSessionInstance.submitSteamGuardCode.mockImplementation(async () => {
+        setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
+      })
+
+      await SteamUser.submitSteamGuardCode('kqm4f')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+    })
+
+    test('normalization: padded "  kqm4f  " is trimmed+uppercased to KQM4F before reaching session', async () => {
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      mockSessionInstance.submitSteamGuardCode.mockImplementation(async () => {
+        setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
+      })
+
+      await SteamUser.submitSteamGuardCode('  kqm4f  ')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+    })
+
+    test('numeric TOTP code 12345 passes through unchanged (normalization is no-op for digits)', async () => {
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      mockSessionInstance.submitSteamGuardCode.mockImplementation(async () => {
+        setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
+      })
+
+      await SteamUser.submitSteamGuardCode('12345')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('12345')
+    })
   })
 
   // ── QR race fix (260629-9ly): connectingPromise dedupe + username gating ─────
