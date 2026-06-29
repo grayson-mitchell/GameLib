@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 01-steam-authentication
 source: [01-VERIFICATION.md, quick/260629-9ly-fix-qr-login-library-race]
 started: 2026-06-27T00:00:00.000Z
@@ -52,5 +52,18 @@ blocked: 0
   reason: "User reported: steam guard code is not being recognised. Error message displays 'invalid code'. Guard type is EMAIL SteamGuard (not mobile authenticator)."
   severity: major
   test: 2
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  root_cause: "Email SteamGuard codes are 5-character ALPHANUMERIC (uppercase letters + digits), but the guard input assumes numeric TOTP-style codes. SteamLogin/index.tsx uses inputMode='numeric', '5-digit' framing, and performs NO trim()/toUpperCase() normalization before submit. The alphanumeric email code is forwarded verbatim (transport + steam-session are provably correct — steam-session auto-selects EAuthSessionGuardType.EmailCode and sends the code unmodified) and Steam rejects it as InvalidLoginAuthCode (65), surfaced as the generic 'invalid code'. The email path was never implemented for alphanumeric input nor tested (all fixtures use numeric '12345')."
+  artifacts:
+    - path: "src/frontend/screens/Login/components/SteamLogin/index.tsx"
+      issue: "Guard input (lines ~387-401) uses inputMode='numeric' + '5-digit' framing; no case/whitespace normalization before steamSubmitGuard; error message (~199-213) is authenticator-specific, not guard-type aware"
+    - path: "src/backend/storeManagers/steam/user.ts"
+      issue: "submitSteamGuardCode (~387-425) is correct but is the natural place for defense-in-depth normalization (trim + uppercase)"
+    - path: "src/backend/storeManagers/steam/__tests__/user.test.ts"
+      issue: "Guard fixtures (~541-578) are numeric-only ('12345'/'99999'); no alphanumeric email-code coverage masked the gap"
+  missing:
+    - "Treat guard code as alphanumeric: drop inputMode='numeric' and '5-digit' framing in the input"
+    - "Normalize code with .trim().toUpperCase() (in the onChange/submit handler and/or backend submitSteamGuardCode as defense-in-depth)"
+    - "Make the SteamGuard error message guard-type aware ('email or authenticator code')"
+    - "Add a regression test exercising an alphanumeric email code (e.g. 'KQM4F') through the EmailCode path"
+  debug_session: .planning/debug/email-steamguard-code-rejected.md
+  specialist_hint: react
