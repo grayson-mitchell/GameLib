@@ -12,6 +12,8 @@ import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
+import { notify } from '../../dialog/dialog'
+import i18next from 'i18next'
 import { SteamUser } from './user'
 import {
   steamLibraryStore,
@@ -459,6 +461,13 @@ export async function pollInstallOnce(appId: string): Promise<void> {
       runner: 'steam',
       status: 'done'
     })
+    // GAME-02: fire the confirmed completion toast here (ACF state verified) so
+    // the user gets exactly one "Installation Finished" notification per install.
+    // The DM pipeline toast is suppressed for steam — this is the sole source.
+    notify({
+      title: existing?.title ?? '',
+      body: i18next.t('notify.install.finished', 'Installation Finished')
+    })
     stopInstallPolling(appId)
     logInfo(
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
@@ -584,6 +593,13 @@ export async function pollUninstallOnce(appId: string): Promise<void> {
       appName: appId,
       runner: 'steam',
       status: 'done'
+    })
+    // GAME-03: fire the confirmed completion toast here (manifest confirmed absent) so
+    // the user gets exactly one "Game Uninstalled" notification per uninstall.
+    // The uninstaller callback toast is suppressed for steam — this is the sole source.
+    notify({
+      title: existing?.title ?? '',
+      body: i18next.t('notify.uninstalled', 'Game Uninstalled')
     })
     stopUninstallPolling(appId)
     logInfo(

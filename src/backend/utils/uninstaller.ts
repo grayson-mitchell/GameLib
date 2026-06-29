@@ -129,13 +129,22 @@ export const uninstallGameCallback = async (
     }
     removeFixFile(appName, runner)
 
-    notify({ title, body: i18next.t('notify.uninstalled') })
+    // GAME-03: Steam uninstall is confirmed by the ACF poller (pollUninstallOnce),
+    // which fires the "Game Uninstalled" toast when the manifest disappears.
+    // Suppress the success notify here for steam to avoid a duplicate/premature toast.
+    if (runner !== 'steam') {
+      notify({ title, body: i18next.t('notify.uninstalled') })
+    }
     logInfo('Finished uninstalling', LogPrefix.Backend)
   }
 
-  sendGameStatusUpdate({
-    appName,
-    runner,
-    status: 'done'
-  })
+  // Steam: ACF poller emits the real done signal — suppress it here to prevent
+  // the badge flash caused by uninstallGameCallback resolving instantly (GAME-03).
+  if (runner !== 'steam') {
+    sendGameStatusUpdate({
+      appName,
+      runner,
+      status: 'done'
+    })
+  }
 }

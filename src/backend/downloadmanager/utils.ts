@@ -69,10 +69,14 @@ async function installQueueElement(params: InstallParams): Promise<{
     folder: path
   })
 
-  notify({
-    title,
-    body: i18next.t('notify.install.startInstall', 'Installation Started')
-  })
+  // Steam install is fire-and-forget via steam:// — the ACF poller owns all status
+  // transitions. Suppress premature "Installation Started" toast for steam runners.
+  if (runner !== 'steam') {
+    notify({
+      title,
+      body: i18next.t('notify.install.startInstall', 'Installation Started')
+    })
+  }
 
   const errorMessage = (error: string) => {
     logError(
@@ -105,11 +109,15 @@ async function installQueueElement(params: InstallParams): Promise<{
     errorMessage(`${error}`)
     return { status: 'error' }
   } finally {
-    sendGameStatusUpdate({
-      appName,
-      runner,
-      status: 'done'
-    })
+    // Steam: ACF poller emits the real done — suppress it here to prevent
+    // the installing→done→installing badge flash (GAME-02).
+    if (runner !== 'steam') {
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'done'
+      })
+    }
   }
 }
 

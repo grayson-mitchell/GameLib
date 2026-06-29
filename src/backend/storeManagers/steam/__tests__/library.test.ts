@@ -26,6 +26,7 @@ import * as gfs from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
+import { notify } from '../../../dialog/dialog'
 import { SteamUser } from '../user'
 import {
   steamLibraryStore,
@@ -61,6 +62,19 @@ jest.mock('@node-steam/vdf')
 // ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
 jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
+}))
+
+// ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
+jest.mock('../../../dialog/dialog', () => ({
+  notify: jest.fn()
+}))
+
+// ── i18next mock — returns the fallback string for body assertions ────────────
+jest.mock('i18next', () => ({
+  __esModule: true,
+  default: {
+    t: (_key: string, fallback = '') => fallback
+  }
 }))
 
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
@@ -645,6 +659,29 @@ describe('pollInstallOnce()', () => {
       expect.objectContaining({ appName: '730', runner: 'steam', status: 'done' })
     )
   })
+
+  // ── GAME-02: poller fires confirmed completion toast (RED gate) ────────────
+
+  it('GAME-02: fires notify with Installation Finished on the "installed" branch (confirmed ACF state)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    startInstallPolling('730', 60000) // register entry so stopInstallPolling has something to clear
+    await pollInstallOnce('730')
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Installation Finished'
+    })
+  })
+
+  it('GAME-02: does NOT fire notify on the "downloading" branch (interim tick, no toast)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+    })
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalled()
+  })
 })
 
 // ── D-07: startInstallPolling / stopInstallPolling ────────────────────────────
@@ -756,6 +793,29 @@ describe('pollUninstallOnce()', () => {
       'pushGameToLibrary',
       expect.anything()
     )
+  })
+
+  // ── GAME-03: poller fires confirmed uninstall toast (RED gate) ─────────────
+
+  it('GAME-03: fires notify with Game Uninstalled on the "absent" branch (confirmed ACF removal)', async () => {
+    ;(gfs.existsSync as jest.Mock).mockReturnValue(false) // manifest gone = uninstall complete
+    startUninstallPolling('730', 60000) // register entry so stop has something to clear
+    await pollUninstallOnce('730')
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Game Uninstalled'
+    })
+  })
+
+  it('GAME-03: does NOT fire notify while the manifest is still present (interim uninstalling tick)', async () => {
+    // 4 (installed) | 2048 (uninstalling) = 2052
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '730', StateFlags: '2052', installdir: 'csgo', SizeOnDisk: '50000' }
+    })
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730')
+    expect(notify).not.toHaveBeenCalled()
   })
 })
 

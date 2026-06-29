@@ -201,16 +201,23 @@ function removeFromQueue(appName: string) {
     const index = elements.findIndex(
       (queueElement) => queueElement?.params.appName === appName
     )
+    // Capture runner BEFORE splice so the steam guard below can reference it.
+    // splice/delete/set and changedDMQueueInformation MUST remain unconditional
+    // so the queue always clears (cancel path included) — GAME-02.
+    const removedRunner = index !== -1 ? elements[index]?.params.runner : undefined
     if (index !== -1) {
       elements.splice(index, 1)
       downloadManager.delete('queue')
       downloadManager.set('queue', elements)
     }
 
-    sendGameStatusUpdate({
-      appName,
-      status: 'done'
-    })
+    // Steam: ACF poller emits the real done — suppress it here to prevent badge flash.
+    if (removedRunner !== 'steam') {
+      sendGameStatusUpdate({
+        appName,
+        status: 'done'
+      })
+    }
 
     logInfo(
       [appName, 'removed from download manager.'],
@@ -318,12 +325,16 @@ function processNotification(element: DMQueueElement, status: DMStatus) {
     // i18next.t('notify.install.failed', 'Installation Failed')
     notify({ title, body: i18next.t(`notify.${element.type}.failed`) })
   } else if (status === 'done') {
-    // i18next.t('notify.update.finished', 'Update Finished')
-    // i18next.t('notify.install.finished', 'Installation Finished')
-    notify({
-      title,
-      body: i18next.t(`notify.${element.type}.finished`)
-    })
+    // Steam: ACF poller owns the confirmed-completion toast — suppress the DM one
+    // (mirrors the gog-redist early-return guard above). Epic/GOG/Amazon unchanged.
+    if (element.params.runner !== 'steam') {
+      // i18next.t('notify.update.finished', 'Update Finished')
+      // i18next.t('notify.install.finished', 'Installation Finished')
+      notify({
+        title,
+        body: i18next.t(`notify.${element.type}.finished`)
+      })
+    }
 
     logInfo(
       ['Finished', action, 'of', element.params.appName],
