@@ -19,11 +19,14 @@ note: "User confirmed library appeared without reload (validates quick task 2606
 
 ### 2. Username/password + SteamGuard login
 expected: Credentials tab accepts username/password → triggers SteamGuard prompt for code → submitting 5-character (alphanumeric email OR numeric authenticator) code completes login and shows logged-in Runner tile
-result: issue
+result: pending-retest
 reported: "steam guard code is not being recognised"
 detail: "Error message says 'invalid code'. Guard type: EMAIL SteamGuard code."
 severity: major
-resolution: "Fixed in plan 01-04 (commits febb573, 2c642a2, e90536d, merged 3e4863d). Email codes are 5-char alphanumeric; guard input no longer assumes numeric, code is normalized (trim + uppercase + whitespace strip) on the frontend and as defense-in-depth in backend submitSteamGuardCode; messaging now guard-type aware. 136/136 steam tests pass. NEEDS HUMAN RE-TEST with a real email SteamGuard code to confirm end-to-end."
+resolution: |
+  Two-pass fix:
+  Pass 1 (01-04, merged 3e4863d) — INSUFFICIENT: Added trim().toUpperCase() normalization (frontend + backend). Confirmed live on a fresh build (input uppercases). Error unchanged.
+  Pass 2 (debug session email-steamguard-still-invalid) — ROOT CAUSE: The credential LoginSession never had loginTimeout set, so it inherited steam-session's 30 s default. Email SteamGuard retrieval reliably exceeds 30 s. steam-session auto-cancels polling at that threshold; submitSteamGuardCode then throws synchronously "Login attempt has been canceled" — surfaced as "invalid code". The QR path already had loginTimeout = 120000 but the credential path was missing it. Fix: session.loginTimeout = 180000 added to startCredentialLogin() before startWithCredentials(), mirroring the QR path. All [DIAG] instrumentation removed. Regression test added (47/47 pass). NEEDS HUMAN RE-TEST with a real email SteamGuard code to confirm login completes end-to-end.
 
 ### 3. Logout flow
 expected: Clicking Log Out on the Steam Runner tile calls steamLogout, clears session, and returns to the unauthenticated tile state
