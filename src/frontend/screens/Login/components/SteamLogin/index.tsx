@@ -295,7 +295,7 @@ export default function SteamLogin() {
               marginBottom: 'var(--space-lg)'
             }}
           >
-            GamerLib requires the Steam client to authenticate and launch games.
+            GameLib requires the Steam client to authenticate and launch games.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
             <button
