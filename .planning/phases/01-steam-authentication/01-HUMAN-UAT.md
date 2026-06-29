@@ -1,5 +1,5 @@
 ---
-status: resolved
+status: reopened
 phase: 01-steam-authentication
 source: [01-VERIFICATION.md, quick/260629-9ly-fix-qr-login-library-race]
 started: 2026-06-27T00:00:00.000Z
@@ -68,4 +68,4 @@ blocked: 0
     - "Add a regression test exercising an alphanumeric email code (e.g. 'KQM4F') through the EmailCode path"
   debug_session: .planning/debug/email-steamguard-code-rejected.md
   specialist_hint: react
-  status_resolved: "Fixed in plan 01-04 (merge 3e4863d). Frontend + backend normalization, guard-type-aware messaging, alphanumeric EmailCode regression tests. 136/136 steam tests pass. Pending human re-test with a real email code."
+  status_resolved: "SUPERSEDED — fix 01-04 did NOT resolve it. Human re-tested 2026-06-29 on a fresh build (confirmed: input now uppercases) and still gets the same 'invalid code' error. Normalization was the WRONG root cause (static-only diagnosis). REOPENED for real-environment debugging — need the actual steam-session EResult from backend logs (user.ts:428/417) + whether guard type is EmailCode vs DeviceCode + whether startCredentialLogin is invoked more than once (session-lifecycle race emailing a code bound to a superseded session)."
