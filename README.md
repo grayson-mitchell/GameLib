@@ -1,4 +1,6 @@
-# Heroic Games Launcher
+# GameLib
+
+GameLib is a derivitive of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher)
 
 [![GitHub release](https://img.shields.io/github/v/release/Heroic-Games-Launcher/HeroicGamesLauncher?style=for-the-badge)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest)
 [![GitHub all releases](https://img.shields.io/github/downloads/Heroic-Games-Launcher/HeroicGamesLauncher/total?style=for-the-badge&color=00B000)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/)
