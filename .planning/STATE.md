@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: 04
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-06-29 - Quick task 260629-rbn: fixed premature Steam install/uninstall notifications + badge flash (GAME-02/03, merge c183c08)
+Last activity: 2026-06-29 - Phase 1 UAT complete (5/5 pass); fixed credential SteamGuard DeviceConfirmation login bug (commit 9ae8625, debug session email-steamguard-still-invalid)
 
 Progress: [██████████] 100% (Phase 2)
 
