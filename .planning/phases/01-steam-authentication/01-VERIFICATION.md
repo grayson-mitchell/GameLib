@@ -1,8 +1,9 @@
 ---
 phase: 01-steam-authentication
-verified: 2026-06-27T00:00:00Z
-status: human_needed
+verified: 2026-06-29T00:00:00Z
+status: passed
 score: 5/5 must-haves verified
+human_verification_status: "COMPLETED 2026-06-29 via 01-HUMAN-UAT.md — all 5 human scenarios tested 5/5 pass (credential/SteamGuard required two fixes: 01-04 + the DeviceConfirmation listener fix, commit 9ae8625). See 01-HUMAN-UAT.md."
 overrides_applied: 0
 human_verification:
   - test: "QR code login end-to-end"

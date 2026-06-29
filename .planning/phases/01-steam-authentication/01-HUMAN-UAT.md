@@ -1,5 +1,5 @@
 ---
-status: reopened
+status: complete
 phase: 01-steam-authentication
 source: [01-VERIFICATION.md, quick/260629-9ly-fix-qr-login-library-race]
 started: 2026-06-27T00:00:00.000Z
