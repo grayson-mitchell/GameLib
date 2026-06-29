@@ -394,8 +394,14 @@ export class SteamUser {
 
     const session = this.session
 
+    // Defense-in-depth: normalize to uppercase and strip whitespace so that
+    // 5-character alphanumeric EMAIL guard codes (e.g. kqm4f → KQM4F) are
+    // accepted regardless of how the frontend formatted them. .toUpperCase()
+    // is a no-op for purely numeric TOTP/authenticator codes (e.g. 12345).
+    const normalized = code.trim().toUpperCase()
+
     try {
-      await session.submitSteamGuardCode(code)
+      await session.submitSteamGuardCode(normalized)
 
       return new Promise<{ status: 'done' | 'error' }>((resolve) => {
         session.once('authenticated', async () => {

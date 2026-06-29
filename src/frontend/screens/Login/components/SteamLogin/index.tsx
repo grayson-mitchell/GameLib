@@ -200,7 +200,7 @@ export default function SteamLogin() {
   async function handleGuardSubmit() {
     setLoading(true)
     setError(null)
-    const result = await window.api.steamSubmitGuard(guardCode)
+    const result = await window.api.steamSubmitGuard(guardCode.trim().toUpperCase())
     setLoading(false)
 
     if (result.status === 'done') {
@@ -208,7 +208,7 @@ export default function SteamLogin() {
       await steam.login({ status: 'done', username: userInfo?.username })
       navigate('/login')
     } else {
-      showError('Incorrect code. Check your authenticator and try again.')
+      showError('Incorrect code. Check your email or authenticator app and try again.')
     }
   }
 
@@ -368,7 +368,7 @@ export default function SteamLogin() {
             id="steamguard-instructions"
             style={{ fontSize: 'var(--text-md)', color: 'var(--text-default)', marginBottom: 'var(--space-md)' }}
           >
-            Check your authenticator app or email for a Steam Guard code.
+            Check your email or authenticator app for a Steam Guard code.
           </p>
 
           <div style={{ marginBottom: 'var(--space-md)' }}>
@@ -389,13 +389,15 @@ export default function SteamLogin() {
               ref={guardInputRef}
               type="text"
               className="sid-input"
-              inputMode="numeric"
+              inputMode="text"
               maxLength={5}
               value={guardCode}
-              aria-label="Steam Guard code"
+              aria-label="Steam Guard code (letters or digits)"
               aria-describedby="steamguard-instructions"
+              autoCapitalize="characters"
+              style={{ textTransform: 'uppercase' }}
               onChange={(e) => {
-                setGuardCode(e.target.value)
+                setGuardCode(e.target.value.replace(/\s/g, '').toUpperCase())
                 if (error) setError(null)
               }}
             />
