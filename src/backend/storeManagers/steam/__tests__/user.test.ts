@@ -534,6 +534,29 @@ describe('SteamUser', () => {
         }
       }
     })
+
+    // ── loginTimeout regression (email-steamguard-still-invalid) ─────────────
+    // Root cause: credential session inherited steam-session's 30 s default polling
+    // timeout. Email SteamGuard retrieval reliably exceeds 30 s, so the session was
+    // auto-canceled before the user could submit the code. Fix: set loginTimeout to
+    // 180 000 ms before startWithCredentials() so polling runs long enough.
+    test('sets loginTimeout >= 120000 on the credential session before startWithCredentials is called', async () => {
+      let loginTimeoutAtCallTime: number | undefined
+
+      mockSessionInstance.startWithCredentials.mockImplementation(async () => {
+        // Capture whatever loginTimeout was assigned to the session instance at
+        // the moment startWithCredentials() is invoked. This verifies ORDER —
+        // the timeout must be set before polling begins (steam-session throws
+        // if loginTimeout is changed after polling starts, LoginSession.js:107).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        loginTimeoutAtCallTime = (mockSessionInstance as any).loginTimeout
+        return { actionRequired: true }
+      })
+
+      await SteamUser.startCredentialLogin('testuser', 'password123')
+
+      expect(loginTimeoutAtCallTime).toBeGreaterThanOrEqual(120000)
+    })
   })
 
   // ── AUTH-02: SteamGuard submit ─────────────────────────────────────────────

@@ -340,6 +340,12 @@ export class SteamUser {
       }
 
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
+      // Email SteamGuard retrieval typically takes longer than the default 30 s.
+      // Set a generous timeout so steam-session does not auto-cancel the polling
+      // loop before the user has time to receive and submit their email code.
+      // Must be set before startWithCredentials() — steam-session throws if set
+      // after polling starts (LoginSession.js:107). Mirrors the QR path above.
+      session.loginTimeout = 180000
       this.session = session
 
       const response = await session.startWithCredentials({
@@ -415,7 +421,13 @@ export class SteamUser {
         })
 
         session.once('error', (err: Error) => {
-          logError(['Steam guard submit session error:', err], LogPrefix.Steam)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errAny = err as any
+          const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
+          logError(
+            [`Steam guard session error: EResult=${eresult}, message=${err.message ?? 'none'}`],
+            LogPrefix.Steam
+          )
           resolve({ status: 'error' })
         })
 
@@ -425,7 +437,13 @@ export class SteamUser {
         })
       })
     } catch (err) {
-      logError(['Steam submitSteamGuardCode failed:', err], LogPrefix.Steam)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errAny = err as any
+      const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
+      logError(
+        [`Steam guard code submission failed: EResult=${eresult}, message=${errAny?.message ?? 'none'}`],
+        LogPrefix.Steam
+      )
       return { status: 'error' }
     }
   }
