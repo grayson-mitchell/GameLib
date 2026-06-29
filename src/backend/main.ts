@@ -845,6 +845,7 @@ addHandler('getZoomUserInfo', async () => ZoomUser.getUserDetails())
 
 addHandler('steamStartQR', async () => SteamUser.startQRLogin())
 addHandler('steamPollQR', async () => SteamUser.pollQRLogin())
+addHandler('steamPollCredential', async () => SteamUser.pollCredentialLogin())
 addHandler(
   'steamStartCredentials',
   async (event, { username, password }) =>

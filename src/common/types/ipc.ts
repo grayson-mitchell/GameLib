@@ -216,6 +216,10 @@ interface AsyncIPCFunctions {
     status: 'done' | 'waiting' | 'error'
     username?: string
   }>
+  steamPollCredential: () => Promise<{
+    status: 'done' | 'waiting' | 'error'
+    username?: string
+  }>
   steamStartCredentials: (credentials: {
     username: string
     password: string

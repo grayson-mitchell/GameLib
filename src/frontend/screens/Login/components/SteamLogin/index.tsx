@@ -37,6 +37,7 @@ export default function SteamLogin() {
   const [loading, setLoading] = useState(false)
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const credPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const guardInputRef = useRef<HTMLInputElement>(null)
   const qrRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -46,6 +47,13 @@ export default function SteamLogin() {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
       pollIntervalRef.current = null
+    }
+  }
+
+  function clearCredPollInterval() {
+    if (credPollIntervalRef.current) {
+      clearInterval(credPollIntervalRef.current)
+      credPollIntervalRef.current = null
     }
   }
 
@@ -69,6 +77,32 @@ export default function SteamLogin() {
     errorTimerRef.current = setTimeout(() => {
       setError(null)
     }, 3000)
+  }
+
+  // --- Credential poll (out-of-band DeviceConfirmation / phone-approval path) ---
+  // Mirrors the QR poll: polls steamPollCredential every 2 s so that if the user
+  // approves the login on their phone (DeviceConfirmation) before typing the
+  // authenticator code, the frontend learns and navigates away automatically.
+  function startCredPoll() {
+    clearCredPollInterval()
+    credPollIntervalRef.current = setInterval(async () => {
+      const poll = await window.api.steamPollCredential()
+      if (poll.status === 'done' && poll.username) {
+        clearCredPollInterval()
+        setStep('qr-confirmed') // reuse the "completing sign-in" UI
+        await steam.login({ status: 'done', username: poll.username })
+        navigate('/login')
+      } else if (poll.status === 'done') {
+        // Authenticated but CM connect still in flight — keep polling for username.
+        setStep('qr-confirmed')
+      } else if (poll.status === 'error') {
+        // Session errored (e.g. poll failure, phone denied).
+        // Stop polling; the guard-code input remains so the user can retry
+        // or press "Back to Credentials" to start a fresh session.
+        clearCredPollInterval()
+      }
+      // 'waiting' — keep polling
+    }, 2000)
   }
 
   // --- QR flow ---
@@ -142,6 +176,7 @@ export default function SteamLogin() {
     return () => {
       mounted = false
       clearPollInterval()
+      clearCredPollInterval()
       clearErrorTimer()
       clearQrRefreshTimer()
     }
@@ -190,6 +225,11 @@ export default function SteamLogin() {
       await steam.login({ status: 'done', username: userInfo?.username })
       navigate('/login')
     } else if (result.status === 'guard_required') {
+      // Start polling for out-of-band completion (DeviceConfirmation phone-approval path).
+      // If the user approves on their phone before typing a code, the poll fires
+      // authenticated → pollCredentialLogin returns 'done' → we navigate away.
+      // Also covers the case where the session errors mid-wait (e.g. phone denied).
+      startCredPoll()
       setStep('credentials-2')
     } else {
       showError('Incorrect username or password. Check your credentials and try again.')
@@ -198,6 +238,10 @@ export default function SteamLogin() {
 
   // --- SteamGuard submit (step 2) ---
   async function handleGuardSubmit() {
+    // Stop the out-of-band poll before submitting: if phone approval already
+    // settled credSessionState='done', the poll would navigate while we're
+    // mid-await — clearing it avoids a double-navigation race.
+    clearCredPollInterval()
     setLoading(true)
     setError(null)
     const result = await window.api.steamSubmitGuard(guardCode.trim().toUpperCase())
@@ -215,6 +259,7 @@ export default function SteamLogin() {
   // --- Tab change ---
   function handleTabChange(_e: React.SyntheticEvent, val: 'qr' | 'credentials') {
     clearPollInterval()
+    clearCredPollInterval()
     clearQrRefreshTimer()
     setError(null)
     setActiveTab(val)
@@ -429,6 +474,7 @@ export default function SteamLogin() {
             <button
               className="button is-tertiary"
               onClick={() => {
+                clearCredPollInterval()
                 setStep('credentials-1')
                 setUsername('')
                 setPassword('')

@@ -58,6 +58,27 @@ export class SteamUser {
     username?: string
   } = { status: 'waiting' }
 
+  // Credential session completion state — parallel to qrSessionState.
+  // Settled by the 'authenticated'/'error'/'timeout' listeners registered in
+  // startCredentialLogin's guard_required branch. Allows:
+  //  (a) DeviceConfirmation phone-approval path to complete login out-of-band
+  //      (frontend polls pollCredentialLogin(), like pollQRLogin() for QR).
+  //  (b) submitSteamGuardCode to wait for the same settlement instead of
+  //      registering a second set of duplicate listeners.
+  private static credSessionState: {
+    status: 'waiting' | 'done' | 'error'
+    username?: string
+  } = { status: 'waiting' }
+  // Resolve callbacks waiting for credSessionState to change from 'waiting'.
+  private static _credSettleCallbacks: Array<
+    (result: { status: 'done' | 'error' }) => void
+  > = []
+
+  // [DIAG3] monotonic nonce incremented on every session creation; wall-clock
+  // ms at credential session creation used to compute elapsed time at events.
+  private static _sessionNonce = 0
+  private static _credSessionCreatedAt = 0
+
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
   static isSteamClientInstalled(): boolean {
@@ -128,6 +149,12 @@ export class SteamUser {
     this.connectingPromise = null
     this.session = null
     this.qrSessionState = { status: 'waiting' }
+    // Drain any pending credential session callbacks so callers don't hang
+    // indefinitely if logout occurs while waiting for a guard code.
+    const pendingCbs = SteamUser._credSettleCallbacks
+    SteamUser._credSettleCallbacks = []
+    SteamUser.credSessionState = { status: 'error' }
+    for (const cb of pendingCbs) cb({ status: 'error' })
     configStore.clear()
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
@@ -226,6 +253,54 @@ export class SteamUser {
     })
   }
 
+  // ── Credential session settlement helpers ──────────────────────────────────
+
+  /**
+   * Called when the credential session authenticates, errors, or times out.
+   * Stores the final state and drains any _waitForCredSession() callers.
+   */
+  private static _settleCredSession(
+    status: 'done' | 'error',
+    username?: string
+  ): void {
+    SteamUser.credSessionState = { status, username }
+    const callbacks = SteamUser._credSettleCallbacks
+    SteamUser._credSettleCallbacks = []
+    for (const cb of callbacks) cb({ status })
+  }
+
+  /**
+   * Returns a Promise that resolves once credSessionState leaves 'waiting'.
+   * If already settled, resolves immediately. Used by submitSteamGuardCode
+   * so it can share the same authenticated/error/timeout listeners registered
+   * in startCredentialLogin without attaching duplicate handlers.
+   */
+  private static _waitForCredSession(): Promise<{ status: 'done' | 'error' }> {
+    const state = SteamUser.credSessionState
+    if (state.status !== 'waiting') {
+      return Promise.resolve({ status: state.status as 'done' | 'error' })
+    }
+    return new Promise<{ status: 'done' | 'error' }>((resolve) => {
+      SteamUser._credSettleCallbacks.push(resolve)
+    })
+  }
+
+  // ── AUTH-02: Credential login status poll ─────────────────────────────────
+
+  /**
+   * Returns the current credential session authentication state, mirroring
+   * pollQRLogin() for the credential+guard flow. Used by the frontend to
+   * detect out-of-band completion (e.g. DeviceConfirmation phone approval)
+   * while the user is on the guard-code entry screen.
+   */
+  static async pollCredentialLogin(): Promise<{
+    status: 'done' | 'waiting' | 'error'
+    username?: string
+  }> {
+    const state = this.credSessionState
+    return { status: state.status, username: state.username }
+  }
+
   // ── AUTH-01: QR Login ──────────────────────────────────────────────────────
 
   static async startQRLogin(): Promise<{
@@ -233,6 +308,12 @@ export class SteamUser {
     challengeUrl?: string
   }> {
     try {
+      const qrNonce = ++SteamUser._sessionNonce
+      logInfo(
+        `[DIAG3] startQRLogin ENTRY nonce=${qrNonce} replacingSession=${this.session ? 'yes' : 'none'}`,
+        LogPrefix.Steam
+      )
+
       // Tear down previous session before replacing it
       if (this.session) {
         this.session.cancelLoginAttempt()
@@ -333,6 +414,20 @@ export class SteamUser {
     password: string
   ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
     try {
+      const credNonce = ++SteamUser._sessionNonce
+      SteamUser._credSessionCreatedAt = Date.now()
+      logInfo(
+        `[DIAG3] startCredentialLogin ENTRY nonce=${credNonce} replacingSession=${this.session ? 'yes' : 'none'}`,
+        LogPrefix.Steam
+      )
+
+      // Drain any pending callbacks from a previous guard_required attempt
+      // (e.g. user pressed "Back to Credentials" and is starting a new login).
+      const staleCallbacks = SteamUser._credSettleCallbacks
+      SteamUser._credSettleCallbacks = []
+      SteamUser.credSessionState = { status: 'waiting' }
+      for (const cb of staleCallbacks) cb({ status: 'error' })
+
       // Tear down previous session before replacing it
       if (this.session) {
         this.session.cancelLoginAttempt()
@@ -340,13 +435,15 @@ export class SteamUser {
       }
 
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
-      // Email SteamGuard retrieval typically takes longer than the default 30 s.
-      // Set a generous timeout so steam-session does not auto-cancel the polling
-      // loop before the user has time to receive and submit their email code.
-      // Must be set before startWithCredentials() — steam-session throws if set
-      // after polling starts (LoginSession.js:107). Mirrors the QR path above.
+      // Set loginTimeout before startWithCredentials (steam-session throws if
+      // changed after polling starts, LoginSession.js:107). 180 s gives ample
+      // time for email retrieval. Mirrors the QR path's 120 s setting.
       session.loginTimeout = 180000
       this.session = session
+      // [DIAG3] Tag the session object with the nonce so we can verify at
+      // submitSteamGuardCode time that this.session is still the expected session.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(session as any)._diagNonce = credNonce
 
       const response = await session.startWithCredentials({
         accountName: username,
@@ -354,8 +451,70 @@ export class SteamUser {
         // NOTE: password is passed to steam-session but never written to configStore
       })
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const responseAny = response as any
+      logInfo(
+        `[DIAG3] startWithCredentials response: actionRequired=${response.actionRequired} validActions=${JSON.stringify(responseAny.validActions)} allowedConfirmations=${JSON.stringify(responseAny.allowedConfirmations)}`,
+        LogPrefix.Steam
+      )
+
       if (response.actionRequired) {
-        // SteamGuard is required — UI will call submitSteamGuardCode next
+        // Attach persistent listeners BEFORE returning guard_required.
+        //
+        // When DeviceConfirmation (type 4) is in validActions, steam-session
+        // calls setImmediate(_doPoll) inside _processStartSessionResponse before
+        // returning. That setImmediate is queued but has NOT run yet — we are in
+        // the microtask checkpoint immediately after the await resolved. Registering
+        // here guarantees our handlers are in place before the first poll executes.
+        //
+        // Two purposes:
+        //  (a) DeviceConfirmation / phone-approval path: 'authenticated' fires
+        //      when the user approves on their phone. finishAuth stores the token
+        //      and the frontend picks up the done state via pollCredentialLogin().
+        //  (b) DeviceCode / typed-authenticator path: after submitSteamGuardCode()
+        //      resolves, steam-session triggers a poll that returns a refreshToken
+        //      and fires 'authenticated' here. _settleCredSession resolves
+        //      _waitForCredSession() inside submitSteamGuardCode without needing
+        //      a second set of duplicate listeners on the same session object.
+        session.once('authenticated', async () => {
+          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
+          logInfo(
+            `[DIAG3] credential session 'authenticated' nonce=${credNonce} elapsedMs=${elapsed}`,
+            LogPrefix.Steam
+          )
+          try {
+            const personaName = await SteamUser.finishAuth(session.refreshToken)
+            SteamUser._settleCredSession('done', personaName)
+          } catch (err) {
+            logError(
+              ['Steam credential auth finalization failed:', err],
+              LogPrefix.Steam
+            )
+            SteamUser._settleCredSession('error')
+          }
+        })
+
+        session.once('error', (err: Error) => {
+          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errAny = err as any
+          const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
+          logError(
+            `[DIAG3] credential session 'error' nonce=${credNonce} elapsedMs=${elapsed} EResult=${eresult} msg=${err.message}`,
+            LogPrefix.Steam
+          )
+          SteamUser._settleCredSession('error')
+        })
+
+        session.once('timeout', () => {
+          const elapsed = Date.now() - SteamUser._credSessionCreatedAt
+          logWarning(
+            `[DIAG3] credential session 'timeout' nonce=${credNonce} elapsedMs=${elapsed}`,
+            LogPrefix.Steam
+          )
+          SteamUser._settleCredSession('error')
+        })
+
         logInfo('Steam Guard required for credential login', LogPrefix.Steam)
         return { status: 'guard_required' }
       }
@@ -400,6 +559,17 @@ export class SteamUser {
 
     const session = this.session
 
+    // [DIAG3] Log the session nonce and elapsed time so we can verify:
+    // - sessionNonce matches the nonce from startCredentialLogin (no session replacement)
+    // - elapsedMs shows how long the session was open before code submission
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionNonce = (session as any)?._diagNonce ?? 'unknown'
+    const elapsedMs = Date.now() - SteamUser._credSessionCreatedAt
+    logInfo(
+      `[DIAG3] submitSteamGuardCode sessionNonce=${sessionNonce} elapsedMs=${elapsedMs}`,
+      LogPrefix.Steam
+    )
+
     // Defense-in-depth: normalize to uppercase and strip whitespace so that
     // 5-character alphanumeric EMAIL guard codes (e.g. kqm4f → KQM4F) are
     // accepted regardless of how the frontend formatted them. .toUpperCase()
@@ -409,33 +579,12 @@ export class SteamUser {
     try {
       await session.submitSteamGuardCode(normalized)
 
-      return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-        session.once('authenticated', async () => {
-          try {
-            await this.finishAuth(session.refreshToken)
-            resolve({ status: 'done' })
-          } catch (err) {
-            logError(['Steam guard submit auth finalization failed:', err], LogPrefix.Steam)
-            resolve({ status: 'error' })
-          }
-        })
-
-        session.once('error', (err: Error) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errAny = err as any
-          const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
-          logError(
-            [`Steam guard session error: EResult=${eresult}, message=${err.message ?? 'none'}`],
-            LogPrefix.Steam
-          )
-          resolve({ status: 'error' })
-        })
-
-        session.once('timeout', () => {
-          logWarning('Steam guard session timed out', LogPrefix.Steam)
-          resolve({ status: 'error' })
-        })
-      })
+      // The 'authenticated'/'error'/'timeout' listeners on this session were
+      // registered in startCredentialLogin (guard_required branch). Do NOT
+      // register duplicate listeners here — instead wait for _settleCredSession
+      // to be called by the already-registered handlers. This prevents double
+      // finishAuth calls and avoids listener leaks.
+      return await SteamUser._waitForCredSession()
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errAny = err as any

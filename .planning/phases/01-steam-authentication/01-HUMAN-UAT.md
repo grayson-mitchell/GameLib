@@ -24,9 +24,12 @@ reported: "steam guard code is not being recognised"
 detail: "Error message says 'invalid code'. Guard type: EMAIL SteamGuard code."
 severity: major
 resolution: |
-  Two-pass fix:
+  Three-pass fix:
   Pass 1 (01-04, merged 3e4863d) — INSUFFICIENT: Added trim().toUpperCase() normalization (frontend + backend). Confirmed live on a fresh build (input uppercases). Error unchanged.
-  Pass 2 (debug session email-steamguard-still-invalid) — ROOT CAUSE: The credential LoginSession never had loginTimeout set, so it inherited steam-session's 30 s default. Email SteamGuard retrieval reliably exceeds 30 s. steam-session auto-cancels polling at that threshold; submitSteamGuardCode then throws synchronously "Login attempt has been canceled" — surfaced as "invalid code". The QR path already had loginTimeout = 120000 but the credential path was missing it. Fix: session.loginTimeout = 180000 added to startCredentialLogin() before startWithCredentials(), mirroring the QR path. All [DIAG] instrumentation removed. Regression test added (47/47 pass). NEEDS HUMAN RE-TEST with a real email SteamGuard code to confirm login completes end-to-end.
+  Pass 2 (debug session, first round) — loginTimeout=180000 fix applied. Human rebuilt and re-tested (2026-06-29 ~20:56). SAME error. loginTimeout was INSUFFICIENT.
+  Pass 3 (debug session, [DIAG2] capture + confirmed root cause, 2026-06-29) — PENDING human re-test.
+  CONFIRMED ROOT CAUSE: Account has DeviceConfirmation (type 4) + DeviceCode (type 3), NOT email (type 2). Steam-session auto-starts DeviceConfirmation polling when type 4 is present. Polling fires 'authenticated' (phone push), then cancelLoginAttempt() sets _pollingCanceled=true. No 'authenticated' listener was attached in the guard_required branch so finishAuth() never ran and submitSteamGuardCode() threw "Login attempt has been canceled". NOT casing, NOT idle loginTimeout, NOT a QR session race.
+  Fix applied: attach session.once('authenticated'/'error'/'timeout') in guard_required branch of startCredentialLogin; submitSteamGuardCode waits on _waitForCredSession() instead of registering duplicate listeners; added pollCredentialLogin() + frontend steamPollCredential polling for out-of-band phone-approval completion. Pending final human re-test.
 
 ### 3. Logout flow
 expected: Clicking Log Out on the Steam Runner tile calls steamLogout, clears session, and returns to the unauthenticated tile state

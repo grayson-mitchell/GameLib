@@ -557,6 +557,64 @@ describe('SteamUser', () => {
 
       expect(loginTimeoutAtCallTime).toBeGreaterThanOrEqual(120000)
     })
+
+    // ── DeviceConfirmation listener fix (email-steamguard-still-invalid) ──────
+    // Root cause: when actionRequired=true + DeviceConfirmation (type 4) is in
+    // validActions, steam-session auto-starts polling via setImmediate(_doPoll).
+    // If 'authenticated' fires during the guard-waiting period (phone approval)
+    // and no listener is attached, cancelLoginAttempt() sets _pollingCanceled=true
+    // silently. submitSteamGuardCode then throws "Login attempt has been canceled".
+    // Fix: attach 'authenticated'/'error'/'timeout' listeners BEFORE returning
+    // guard_required, via the new persistent listener pattern.
+
+    test('guard_required: registers authenticated/error/timeout listeners on the credential session', async () => {
+      mockSessionInstance.startWithCredentials.mockResolvedValue({
+        actionRequired: true,
+        validActions: [{ type: 3 }, { type: 4 }] // DeviceCode + DeviceConfirmation
+      })
+
+      await SteamUser.startCredentialLogin('testuser', 'password123')
+
+      // All three listeners must be registered so the session is handled for
+      // its full lifetime — DeviceConfirmation polling starts automatically
+      // (setImmediate in steam-session) and can fire any of these events.
+      expect(sessionOnHandlers['authenticated']).toBeDefined()
+      expect(sessionOnHandlers['error']).toBeDefined()
+      expect(sessionOnHandlers['timeout']).toBeDefined()
+    })
+
+    test('guard_required: authenticated event before submitSteamGuardCode calls finishAuth and settles pollCredentialLogin as done', async () => {
+      mockSessionInstance.startWithCredentials.mockResolvedValue({
+        actionRequired: true,
+        validActions: [{ type: 3 }, { type: 4 }] // DeviceCode + DeviceConfirmation
+      })
+      // logOn triggers loggedOn (persona name resolution for finishAuth)
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      // Start the credential login — returns guard_required
+      const result = await SteamUser.startCredentialLogin('testuser', 'password123')
+      expect(result.status).toBe('guard_required')
+
+      // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
+      // the session BEFORE the user calls submitSteamGuardCode.
+      expect(sessionOnHandlers['authenticated']).toBeDefined()
+      await sessionOnHandlers['authenticated']!()
+
+      // finishAuth must have been called: token stored and isLoggedIn set
+      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+
+      // pollCredentialLogin must reflect the done state so the frontend can
+      // navigate away (out-of-band completion — no submitSteamGuardCode needed)
+      const poll = await SteamUser.pollCredentialLogin()
+      expect(poll.status).toBe('done')
+
+      // submitSteamGuardCode was NOT called — this is the phone-approval path
+      expect(mockSessionInstance.submitSteamGuardCode).not.toHaveBeenCalled()
+    })
   })
 
   // ── AUTH-02: SteamGuard submit ─────────────────────────────────────────────
