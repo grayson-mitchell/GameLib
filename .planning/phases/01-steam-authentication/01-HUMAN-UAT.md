@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 phase: 01-steam-authentication
 source: [01-VERIFICATION.md, quick/260629-9ly-fix-qr-login-library-race]
 started: 2026-06-27T00:00:00.000Z
@@ -18,11 +18,12 @@ result: pass
 note: "User confirmed library appeared without reload (validates quick task 260629-9ly QR-login library race fix)"
 
 ### 2. Username/password + SteamGuard login
-expected: Credentials tab accepts username/password → triggers SteamGuard prompt for code → submitting 5-digit code completes login and shows logged-in Runner tile
+expected: Credentials tab accepts username/password → triggers SteamGuard prompt for code → submitting 5-character (alphanumeric email OR numeric authenticator) code completes login and shows logged-in Runner tile
 result: issue
 reported: "steam guard code is not being recognised"
 detail: "Error message says 'invalid code'. Guard type: EMAIL SteamGuard code."
 severity: major
+resolution: "Fixed in plan 01-04 (commits febb573, 2c642a2, e90536d, merged 3e4863d). Email codes are 5-char alphanumeric; guard input no longer assumes numeric, code is normalized (trim + uppercase + whitespace strip) on the frontend and as defense-in-depth in backend submitSteamGuardCode; messaging now guard-type aware. 136/136 steam tests pass. NEEDS HUMAN RE-TEST with a real email SteamGuard code to confirm end-to-end."
 
 ### 3. Logout flow
 expected: Clicking Log Out on the Steam Runner tile calls steamLogout, clears session, and returns to the unauthenticated tile state
@@ -67,3 +68,4 @@ blocked: 0
     - "Add a regression test exercising an alphanumeric email code (e.g. 'KQM4F') through the EmailCode path"
   debug_session: .planning/debug/email-steamguard-code-rejected.md
   specialist_hint: react
+  status_resolved: "Fixed in plan 01-04 (merge 3e4863d). Frontend + backend normalization, guard-type-aware messaging, alphanumeric EmailCode regression tests. 136/136 steam tests pass. Pending human re-test with a real email code."

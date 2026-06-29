@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 Phase: 04
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-06-29 - Completed quick task 260629-9ly: Fix QR-login library race
+Last activity: 2026-06-29 - Phase 1 UAT (4/5 pass); fixed email SteamGuard alphanumeric bug (plan 01-04, merge 3e4863d)
 
 Progress: [██████████] 100% (Phase 2)
 
