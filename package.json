@@ -1,9 +1,15 @@
 {
   "name": "gamelib",
-  "version": "2.22.0",
+  "version": "1.0.0",
   "versionNames": {
     "stable": "Hajrudin",
     "beta": "Caesar Clown"
+  },
+  "upstream": {
+    "project": "HeroicGamesLauncher",
+    "repository": "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher",
+    "baseVersion": "2.22.0",
+    "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e"
   },
   "private": false,
   "main": "build/main/main.js",
