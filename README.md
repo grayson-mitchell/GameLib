@@ -23,7 +23,7 @@ gameLib is built with Web Technologies:
 
 ## Index
 
-- [Heroic Games Launcher](#heroic-games-launcher)
+- [GameLib Games Launcher](#heroic-games-launcher)
   - [Index](#index)
   - [Features available right now](#features-available-right-now)
   - [Planned features](#planned-features)
