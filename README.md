@@ -2,17 +2,12 @@
 
 GameLib is a derivitive of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher)
 
-[![GitHub release](https://img.shields.io/github/v/release/Heroic-Games-Launcher/HeroicGamesLauncher?style=for-the-badge)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest)
-[![GitHub all releases](https://img.shields.io/github/downloads/Heroic-Games-Launcher/HeroicGamesLauncher/total?style=for-the-badge&color=00B000)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/)
-[![Flathub](https://img.shields.io/flathub/downloads/com.heroicgameslauncher.hgl?label=flathub&logo=flathub&logoColor=white&style=for-the-badge&color=00B000)](https://flathub.org/apps/details/com.heroicgameslauncher.hgl)
-[![GPLv3 license](https://img.shields.io/github/license/Heroic-Games-Launcher/HeroicGamesLauncher?style=for-the-badge&color=blue)](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/blob/main/COPYING)  
-[![Discord](https://img.shields.io/discord/812703221789097985?label=Discord%20Server&logo=discord&color=5865F2&style=for-the-badge)](https://discord.gg/rHJ2uqdquK)
-[![Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dheroicgameslauncher%26type%3Dpatrons&style=for-the-badge)](https://patreon.com/heroicgameslauncher)
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?style=for-the-badge&logo=paypal)](https://www.paypal.me/heroiclauncher)
-[![kofi](https://img.shields.io/badge/Ko--Fi-Donate-orange?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/heroicgames)
-
-Heroic is an Open Source Game Launcher for Linux, Windows and macOS.  
-Right now it supports launching games from the Epic Games Store using [Legendary](https://github.com/derrod/legendary), GOG Games using our custom implementation with [gogdl](https://github.com/Heroic-Games-Launcher/heroic-gogdl) and Amazon Games using [Nile](https://github.com/imLinguin/nile).
+GameLib is an Open Source Game Library Manager for Linux, Windows and macOS.  
+It supports games from: 
+* Epic Games Store
+* GOG Games 
+* Amazon Games
+* Steam 
 
 Heroic is built with Web Technologies:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)
