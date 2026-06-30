@@ -1,6 +1,8 @@
 # GameLib
 
-GameLib is a derivitive of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher)
+GameLib is a derivitive of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).  Key Differntiators from Heroic are:
+* Support for Steam Games
+* Stronger CrossOver integration (Playing Games on MacOS
 
 GameLib is an Open Source Game Library Manager for Linux, Windows and macOS.  
 It supports games from: 
@@ -9,7 +11,7 @@ It supports games from:
 * Amazon Games
 * Steam 
 
-Heroic is built with Web Technologies:  
+gameLib is built with Web Technologies:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-5fd9fb?style=for-the-badge&logo=react&labelColor=gray)](https://reactjs.org/)
 [![MUI](https://img.shields.io/badge/MUI-66b2ff?style=for-the-badge&logo=mui&labelColor=gray&logoColor=66b2ff)](https://mui.com/)
@@ -50,7 +52,7 @@ Heroic is built with Web Technologies:
 
 ## Features available right now
 
-- Login with an existing Epic Games, GOG or Amazon account
+- Login with an existing Epic Games, GOG, Steam or Amazon account
 - Install, uninstall, update, repair and move Games
 - Import an already installed game
 - Play Epic games online [AntiCheat on macOS and on Linux depends on the game]
