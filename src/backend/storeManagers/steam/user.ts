@@ -134,7 +134,10 @@ export class SteamUser {
       try {
         this.client.logOff()
       } catch (err) {
-        logWarning(['Steam client logOff error during logout:', err], LogPrefix.Steam)
+        logWarning(
+          ['Steam client logOff error during logout:', err],
+          LogPrefix.Steam
+        )
       }
       this.client = null
     }
@@ -188,7 +191,10 @@ export class SteamUser {
       steamId: this.client?.steamID?.getSteamID64() ?? ''
     })
 
-    logInfo(`Steam auth complete — logged in as ${personaName}`, LogPrefix.Steam)
+    logInfo(
+      `Steam auth complete — logged in as ${personaName}`,
+      LogPrefix.Steam
+    )
     return personaName
   }
 
@@ -226,9 +232,13 @@ export class SteamUser {
 
           try {
             const result = await client.getPersonas([client.steamID])
-            personaName = result.personas[steamId64]?.player_name ?? 'Steam User'
+            personaName =
+              result.personas[steamId64]?.player_name ?? 'Steam User'
           } catch (err) {
-            logWarning(['getPersonas failed, using fallback username:', err], LogPrefix.Steam)
+            logWarning(
+              ['getPersonas failed, using fallback username:', err],
+              LogPrefix.Steam
+            )
           }
 
           resolve(personaName)
@@ -240,7 +250,10 @@ export class SteamUser {
 
       client.once('error', (err: Error) => {
         clearTimeout(timeout)
-        logWarning(['Steam client error, username unavailable:', err], LogPrefix.Steam)
+        logWarning(
+          ['Steam client error, username unavailable:', err],
+          LogPrefix.Steam
+        )
         resolve('Steam User')
       })
 
@@ -336,7 +349,9 @@ export class SteamUser {
           // connectSteamUserClient — which would logOff this client and resolve
           // the first with the 'Steam User' fallback, overwriting the real name.
           // .finally() mirrors the ensureConnected dedupe pattern (clears on settle).
-          const connectPromise = this.connectSteamUserClient(session.refreshToken)
+          const connectPromise = this.connectSteamUserClient(
+            session.refreshToken
+          )
           this.connectingPromise = connectPromise.finally(() => {
             this.connectingPromise = null
           })
@@ -465,7 +480,9 @@ export class SteamUser {
           const errAny = err as any
           const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
           logError(
-            [`Steam credential session error: EResult=${eresult} msg=${err.message}`],
+            [
+              `Steam credential session error: EResult=${eresult} msg=${err.message}`
+            ],
             LogPrefix.Steam
           )
           SteamUser._settleCredSession('error')
@@ -487,7 +504,10 @@ export class SteamUser {
             await this.finishAuth(session.refreshToken)
             resolve({ status: 'done' })
           } catch (err) {
-            logError(['Steam credential auth finalization failed:', err], LogPrefix.Steam)
+            logError(
+              ['Steam credential auth finalization failed:', err],
+              LogPrefix.Steam
+            )
             resolve({ status: 'error' })
           }
         })
@@ -514,7 +534,10 @@ export class SteamUser {
     code: string
   ): Promise<{ status: 'done' | 'error' }> {
     if (!this.session) {
-      logWarning('submitSteamGuardCode called but no active session', LogPrefix.Steam)
+      logWarning(
+        'submitSteamGuardCode called but no active session',
+        LogPrefix.Steam
+      )
       return { status: 'error' }
     }
 
@@ -540,7 +563,9 @@ export class SteamUser {
       const errAny = err as any
       const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
       logError(
-        [`Steam guard code submission failed: EResult=${eresult}, message=${errAny?.message ?? 'none'}`],
+        [
+          `Steam guard code submission failed: EResult=${eresult}, message=${errAny?.message ?? 'none'}`
+        ],
         LogPrefix.Steam
       )
       return { status: 'error' }

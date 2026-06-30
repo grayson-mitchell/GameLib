@@ -140,23 +140,31 @@ describe('SteamUser', () => {
     MockLoginSession.mockImplementation(() => mockSessionInstance)
 
     // session.on/once() captures handlers into sessionOnHandlers
-    mockSessionInstance.on.mockImplementation((event: string, cb: (...args: any[]) => any) => {
-      sessionOnHandlers[event] = cb
-    })
-    mockSessionInstance.once.mockImplementation((event: string, cb: (...args: any[]) => any) => {
-      sessionOnHandlers[event] = cb
-    })
+    mockSessionInstance.on.mockImplementation(
+      (event: string, cb: (...args: any[]) => any) => {
+        sessionOnHandlers[event] = cb
+      }
+    )
+    mockSessionInstance.once.mockImplementation(
+      (event: string, cb: (...args: any[]) => any) => {
+        sessionOnHandlers[event] = cb
+      }
+    )
 
     // SteamUserLib mock — re-set constructor to return mockSteamUserInstance
     MockSteamUserLib.mockImplementation(() => mockSteamUserInstance)
 
     // steam-user instance mocks
-    mockSteamUserInstance.on.mockImplementation((event: string, cb: (...args: any[]) => any) => {
-      steamUserOnHandlers[event] = cb
-    })
-    mockSteamUserInstance.once.mockImplementation((event: string, cb: (...args: any[]) => any) => {
-      steamUserOnHandlers[event] = cb
-    })
+    mockSteamUserInstance.on.mockImplementation(
+      (event: string, cb: (...args: any[]) => any) => {
+        steamUserOnHandlers[event] = cb
+      }
+    )
+    mockSteamUserInstance.once.mockImplementation(
+      (event: string, cb: (...args: any[]) => any) => {
+        steamUserOnHandlers[event] = cb
+      }
+    )
     mockSteamUserInstance.getPersonas.mockResolvedValue({
       personas: { '76561197900000000': { player_name: 'TestUser' } }
     })
@@ -179,22 +187,34 @@ describe('SteamUser', () => {
 
     test('returns false on unknown platform (no paths)', () => {
       const original = process.platform
-      Object.defineProperty(process, 'platform', { value: 'freebsd', configurable: true })
+      Object.defineProperty(process, 'platform', {
+        value: 'freebsd',
+        configurable: true
+      })
       mockExistsSync.mockReturnValue(false)
       expect(SteamUser.isSteamClientInstalled()).toBe(false)
-      Object.defineProperty(process, 'platform', { value: original, configurable: true })
+      Object.defineProperty(process, 'platform', {
+        value: original,
+        configurable: true
+      })
     })
 
     test('calls existsSync with platform-specific paths', () => {
       mockExistsSync.mockReturnValue(false)
       const savedPlatform = process.platform
-      Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        configurable: true
+      })
 
       SteamUser.isSteamClientInstalled()
       const calledPaths = (existsSync as jest.Mock).mock.calls.map(([p]) => p)
       expect(calledPaths).toContain('/Applications/Steam.app')
 
-      Object.defineProperty(process, 'platform', { value: savedPlatform, configurable: true })
+      Object.defineProperty(process, 'platform', {
+        value: savedPlatform,
+        configurable: true
+      })
     })
   })
 
@@ -344,7 +364,9 @@ describe('SteamUser', () => {
     })
 
     test('returns { status: "error" } when startWithQR throws', async () => {
-      mockSessionInstance.startWithQR.mockRejectedValue(new Error('network error'))
+      mockSessionInstance.startWithQR.mockRejectedValue(
+        new Error('network error')
+      )
       const result = await SteamUser.startQRLogin()
       expect(result.status).toBe('error')
     })
@@ -386,7 +408,9 @@ describe('SteamUser', () => {
 
     test('after auth: encrypts and stores token (safeStorage.encryptString called)', async () => {
       await sessionOnHandlers['authenticated']()
-      expect(safeStorage.encryptString).toHaveBeenCalledWith('mock-refresh-token')
+      expect(safeStorage.encryptString).toHaveBeenCalledWith(
+        'mock-refresh-token'
+      )
     })
 
     test('after auth: isLoggedIn becomes true in configStore', async () => {
@@ -480,7 +504,10 @@ describe('SteamUser', () => {
         validActions: [{ type: 2 }] // EmailCode = 2
       })
 
-      const result = await SteamUser.startCredentialLogin('testuser', 'password123')
+      const result = await SteamUser.startCredentialLogin(
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('guard_required')
     })
 
@@ -507,21 +534,33 @@ describe('SteamUser', () => {
         return { actionRequired: false }
       })
 
-      const result = await SteamUser.startCredentialLogin('testuser', 'password123')
+      const result = await SteamUser.startCredentialLogin(
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('done')
 
       // Restore
-      mockSessionInstance.startWithCredentials.mockImplementation(originalStartCredentials)
+      mockSessionInstance.startWithCredentials.mockImplementation(
+        originalStartCredentials
+      )
     })
 
     test('returns { status: "error" } when startWithCredentials throws', async () => {
-      mockSessionInstance.startWithCredentials.mockRejectedValue(new Error('InvalidPassword'))
-      const result = await SteamUser.startCredentialLogin('testuser', 'wrongpass')
+      mockSessionInstance.startWithCredentials.mockRejectedValue(
+        new Error('InvalidPassword')
+      )
+      const result = await SteamUser.startCredentialLogin(
+        'testuser',
+        'wrongpass'
+      )
       expect(result.status).toBe('error')
     })
 
     test('never stores the password in configStore', async () => {
-      mockSessionInstance.startWithCredentials.mockResolvedValue({ actionRequired: true })
+      mockSessionInstance.startWithCredentials.mockResolvedValue({
+        actionRequired: true
+      })
       await SteamUser.startCredentialLogin('testuser', 'mysecretpassword')
 
       for (const [key, value] of mockConfigStore.set.mock.calls) {
@@ -548,7 +587,7 @@ describe('SteamUser', () => {
         // the moment startWithCredentials() is invoked. This verifies ORDER —
         // the timeout must be set before polling begins (steam-session throws
         // if loginTimeout is changed after polling starts, LoginSession.js:107).
-         
+
         loginTimeoutAtCallTime = (mockSessionInstance as any).loginTimeout
         return { actionRequired: true }
       })
@@ -596,7 +635,10 @@ describe('SteamUser', () => {
       })
 
       // Start the credential login — returns guard_required
-      const result = await SteamUser.startCredentialLogin('testuser', 'password123')
+      const result = await SteamUser.startCredentialLogin(
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('guard_required')
 
       // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
@@ -622,7 +664,9 @@ describe('SteamUser', () => {
   describe('submitSteamGuardCode()', () => {
     beforeEach(async () => {
       // Start a credential session first so this.session is set
-      mockSessionInstance.startWithCredentials.mockResolvedValue({ actionRequired: true })
+      mockSessionInstance.startWithCredentials.mockResolvedValue({
+        actionRequired: true
+      })
       await SteamUser.startCredentialLogin('testuser', 'pass')
     })
 
@@ -672,7 +716,9 @@ describe('SteamUser', () => {
 
       const result = await SteamUser.submitSteamGuardCode('KQM4F')
       expect(result.status).toBe('done')
-      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
+        'KQM4F'
+      )
     })
 
     test('normalization: lowercase kqm4f is uppercased to KQM4F before reaching session', async () => {
@@ -686,7 +732,9 @@ describe('SteamUser', () => {
       })
 
       await SteamUser.submitSteamGuardCode('kqm4f')
-      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
+        'KQM4F'
+      )
     })
 
     test('normalization: padded "  kqm4f  " is trimmed+uppercased to KQM4F before reaching session', async () => {
@@ -700,7 +748,9 @@ describe('SteamUser', () => {
       })
 
       await SteamUser.submitSteamGuardCode('  kqm4f  ')
-      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('KQM4F')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
+        'KQM4F'
+      )
     })
 
     test('numeric TOTP code 12345 passes through unchanged (normalization is no-op for digits)', async () => {
@@ -714,7 +764,9 @@ describe('SteamUser', () => {
       })
 
       await SteamUser.submitSteamGuardCode('12345')
-      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith('12345')
+      expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
+        '12345'
+      )
     })
   })
 
@@ -759,7 +811,9 @@ describe('SteamUser', () => {
       expect(poll2.username).toBe('TestUser')
 
       // configStore.set('userData', ...) must have been called with the real name
-      const userDataCall = mockConfigStore.set.mock.calls.find(([key]) => key === 'userData')
+      const userDataCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'userData'
+      )
       expect(userDataCall).toBeDefined()
       expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
     })
@@ -822,7 +876,9 @@ describe('SteamUser', () => {
 
       // ── No 'Steam User' overwrite assertion ───────────────────────────────
       // userData was written with the real persona name, not the fallback.
-      const userDataCall = mockConfigStore.set.mock.calls.find(([key]) => key === 'userData')
+      const userDataCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'userData'
+      )
       expect(userDataCall).toBeDefined()
       expect(userDataCall![1]).toMatchObject({ username: 'TestUser' })
 

@@ -125,7 +125,9 @@ const makeOwnedApp = (
 
 const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
   steamID: 'STEAMID_TEST',
-  getUserOwnedApps: jest.fn().mockResolvedValue({ app_count: apps.length, apps })
+  getUserOwnedApps: jest
+    .fn()
+    .mockResolvedValue({ app_count: apps.length, apps })
 })
 
 // ── Describe block ────────────────────────────────────────────────────────────
@@ -160,13 +162,28 @@ describe('SteamLibraryManager', () => {
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock)
       .mockReturnValueOnce({
-        AppState: { appid: '570', StateFlags: '4', installdir: 'game1', SizeOnDisk: '100' }
+        AppState: {
+          appid: '570',
+          StateFlags: '4',
+          installdir: 'game1',
+          SizeOnDisk: '100'
+        }
       })
       .mockReturnValueOnce({
-        AppState: { appid: '440', StateFlags: '6', installdir: 'game2', SizeOnDisk: '200' }
+        AppState: {
+          appid: '440',
+          StateFlags: '6',
+          installdir: 'game2',
+          SizeOnDisk: '200'
+        }
       })
       .mockReturnValueOnce({
-        AppState: { appid: '730', StateFlags: '516', installdir: 'game3', SizeOnDisk: '300' }
+        AppState: {
+          appid: '730',
+          StateFlags: '516',
+          installdir: 'game3',
+          SizeOnDisk: '300'
+        }
       })
 
     const result = await buildInstalledMap()
@@ -186,7 +203,12 @@ describe('SteamLibraryManager', () => {
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '570', StateFlags: '2', installdir: 'game1', SizeOnDisk: '100' }
+      AppState: {
+        appid: '570',
+        StateFlags: '2',
+        installdir: 'game1',
+        SizeOnDisk: '100'
+      }
     })
 
     const result = await buildInstalledMap()
@@ -208,7 +230,12 @@ describe('SteamLibraryManager', () => {
         throw new Error('parse error')
       })
       .mockReturnValueOnce({
-        AppState: { appid: '440', StateFlags: '4', installdir: 'game2', SizeOnDisk: '200' }
+        AppState: {
+          appid: '440',
+          StateFlags: '4',
+          installdir: 'game2',
+          SizeOnDisk: '200'
+        }
       })
 
     // Should not throw
@@ -252,15 +279,29 @@ describe('SteamLibraryManager', () => {
     expect(sendFrontendMessage).toHaveBeenCalledTimes(2)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
-      expect.objectContaining({ runner: 'steam', app_name: '570', title: 'Dota 2' })
+      expect.objectContaining({
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2'
+      })
     )
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
-      expect.objectContaining({ runner: 'steam', app_name: '440', title: 'Team Fortress 2' })
+      expect.objectContaining({
+        runner: 'steam',
+        app_name: '440',
+        title: 'Team Fortress 2'
+      })
     )
     // steamLibraryStore and steamSyncStore are written after the loop
-    expect(steamLibraryStore.set).toHaveBeenCalledWith('games', expect.any(Array))
-    expect(steamSyncStore.set).toHaveBeenCalledWith('syncedAt', expect.any(Number))
+    expect(steamLibraryStore.set).toHaveBeenCalledWith(
+      'games',
+      expect.any(Array)
+    )
+    expect(steamSyncStore.set).toHaveBeenCalledWith(
+      'syncedAt',
+      expect.any(Number)
+    )
   })
 
   // ── LIB-03: playtime mapping ───────────────────────────────────────────────
@@ -302,7 +343,12 @@ describe('SteamLibraryManager', () => {
 
   it('refresh() serves cached library from steamLibraryStore when getUserOwnedApps throws', async () => {
     const cachedGames = [
-      { runner: 'steam', app_name: '570', title: 'Dota 2', is_installed: false } as any
+      {
+        runner: 'steam',
+        app_name: '570',
+        title: 'Dota 2',
+        is_installed: false
+      } as any
     ]
     const fakeClient = {
       steamID: 'STEAMID_TEST',
@@ -328,8 +374,10 @@ describe('SteamLibraryManager', () => {
   // ── Art URL migration (capsule_616x353 → library_600x900) ──────────────────
 
   describe('init() migrates stale cover art URLs', () => {
-    const OLD = 'https://cdn.cloudflare.steamstatic.com/steam/apps/570/capsule_616x353.jpg'
-    const NEW = 'https://cdn.cloudflare.steamstatic.com/steam/apps/570/library_600x900.jpg'
+    const OLD =
+      'https://cdn.cloudflare.steamstatic.com/steam/apps/570/capsule_616x353.jpg'
+    const NEW =
+      'https://cdn.cloudflare.steamstatic.com/steam/apps/570/library_600x900.jpg'
 
     it('rewrites the landscape capsule URL in the metadata cache', async () => {
       ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([
@@ -346,8 +394,18 @@ describe('SteamLibraryManager', () => {
 
     it('rewrites the landscape capsule URL in the persisted library list', async () => {
       jest.mocked(steamLibraryStore.get).mockReturnValue([
-        { runner: 'steam', app_name: '570', title: 'Dota 2', art_square: OLD } as any,
-        { runner: 'steam', app_name: '440', title: 'TF2', art_square: '' } as any
+        {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          art_square: OLD
+        } as any,
+        {
+          runner: 'steam',
+          app_name: '440',
+          title: 'TF2',
+          art_square: ''
+        } as any
       ])
 
       await manager.init()
@@ -356,13 +414,21 @@ describe('SteamLibraryManager', () => {
         .mocked(steamLibraryStore.set)
         .mock.calls.find(([key]) => key === 'games')
       expect(setCall).toBeDefined()
-      const savedGames = setCall![1] as Array<{ app_name: string; art_square: string }>
+      const savedGames = setCall![1] as Array<{
+        app_name: string
+        art_square: string
+      }>
       expect(savedGames.find((g) => g.app_name === '570')?.art_square).toBe(NEW)
     })
 
     it('does not rewrite the library list when no stale URLs are present', async () => {
       jest.mocked(steamLibraryStore.get).mockReturnValue([
-        { runner: 'steam', app_name: '570', title: 'Dota 2', art_square: NEW } as any
+        {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          art_square: NEW
+        } as any
       ])
 
       await manager.init()
@@ -404,7 +470,12 @@ describe('SteamLibraryManager', () => {
       ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
       ;(readFileSync as jest.Mock).mockReturnValue('content')
       ;(vdf.parse as jest.Mock).mockReturnValue({
-        AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
+        AppState: {
+          appid: '570',
+          StateFlags: '4',
+          installdir: 'dota2',
+          SizeOnDisk: '50000'
+        }
       })
 
       await manager.refreshInstallState()
@@ -435,7 +506,12 @@ describe('SteamLibraryManager', () => {
       ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
       ;(readFileSync as jest.Mock).mockReturnValue('content')
       ;(vdf.parse as jest.Mock).mockReturnValue({
-        AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
+        AppState: {
+          appid: '570',
+          StateFlags: '4',
+          installdir: 'dota2',
+          SizeOnDisk: '50000'
+        }
       })
 
       await manager.refreshInstallState()
@@ -458,7 +534,11 @@ describe('SteamLibraryManager', () => {
         app_name: '570',
         title: 'Dota 2',
         is_installed: true,
-        install: { install_path: '/steam/steamapps/common/dota2', install_size: '50000', platform: 'Windows' },
+        install: {
+          install_path: '/steam/steamapps/common/dota2',
+          install_size: '50000',
+          platform: 'Windows'
+        },
         art_cover: '',
         art_square: '',
         extra: { reqs: [] },
@@ -569,11 +649,18 @@ describe('readAcfState()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '9000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
     })
     const result = await readAcfState('730')
     expect(result.state).toBe('installed')
-    expect(result.installPath).toBe(join('/steam', 'steamapps', 'common', 'csgo'))
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
     expect(result.sizeOnDisk).toBe('9000')
   })
 
@@ -581,7 +668,12 @@ describe('readAcfState()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
     })
     const result = await readAcfState('730')
     expect(result.state).toBe('downloading')
@@ -634,18 +726,32 @@ describe('pollInstallOnce()', () => {
 
   it('sends gameStatusUpdate { status:"installing" } when state is "downloading"', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
     })
     await pollInstallOnce('730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
-      expect.objectContaining({ appName: '730', runner: 'steam', status: 'installing' })
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'installing'
+      })
     )
   })
 
   it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     startInstallPolling('730', 60000) // register entry so stopInstallPolling has something to clear
     await pollInstallOnce('730')
@@ -655,7 +761,11 @@ describe('pollInstallOnce()', () => {
     )
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
-      expect.objectContaining({ appName: '730', runner: 'steam', status: 'done' })
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'done'
+      })
     )
   })
 
@@ -663,7 +773,12 @@ describe('pollInstallOnce()', () => {
 
   it('GAME-02: fires notify with Installation Finished on the "installed" branch (confirmed ACF state)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     startInstallPolling('730', 60000) // register entry so stopInstallPolling has something to clear
     await pollInstallOnce('730')
@@ -676,7 +791,12 @@ describe('pollInstallOnce()', () => {
 
   it('GAME-02: does NOT fire notify on the "downloading" branch (interim tick, no toast)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
     })
     await pollInstallOnce('730')
     expect(notify).not.toHaveBeenCalled()
@@ -738,7 +858,10 @@ describe('pollUninstallOnce()', () => {
       app_name: '730',
       title: 'CS:GO',
       is_installed: true,
-      install: { install_path: '/steam/steamapps/common/csgo', platform: 'Windows' },
+      install: {
+        install_path: '/steam/steamapps/common/csgo',
+        platform: 'Windows'
+      },
       art_cover: '',
       art_square: '',
       extra: { reqs: [] },
@@ -765,26 +888,44 @@ describe('pollUninstallOnce()', () => {
     )
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
-      expect.objectContaining({ appName: '730', runner: 'steam', status: 'done' })
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'done'
+      })
     )
   })
 
   it('sends gameStatusUpdate { status:"uninstalling" } while StateFlags bit 0x800 is set', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2052', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2052',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     startUninstallPolling('730', 60000)
     await pollUninstallOnce('730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
-      expect.objectContaining({ appName: '730', runner: 'steam', status: 'uninstalling' })
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'uninstalling'
+      })
     )
   })
 
   it('does NOT flip the badge while the game is still fully installed (no uninstalling bit)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     startUninstallPolling('730', 60000)
     await pollUninstallOnce('730')
@@ -810,7 +951,12 @@ describe('pollUninstallOnce()', () => {
   it('GAME-03: does NOT fire notify while the manifest is still present (interim uninstalling tick)', async () => {
     // 4 (installed) | 2048 (uninstalling) = 2052
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2052', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2052',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     startUninstallPolling('730', 60000)
     await pollUninstallOnce('730')
@@ -876,7 +1022,12 @@ describe('scanDownloadingAppIds()', () => {
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
     })
     const result = await scanDownloadingAppIds()
     expect(result).toContain('730')
@@ -898,7 +1049,12 @@ describe('scanDownloadingAppIds()', () => {
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
     })
     const result = await scanDownloadingAppIds()
     expect(result).not.toContain('730')
@@ -909,7 +1065,12 @@ describe('scanDownloadingAppIds()', () => {
     ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
     })
     const result = await scanDownloadingAppIds()
     expect(result).not.toContain('730')

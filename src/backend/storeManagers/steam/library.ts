@@ -43,7 +43,10 @@ export default class SteamLibraryManager implements LibraryManager {
         library.set(g.app_name, g)
         sendFrontendMessage('pushGameToLibrary', g)
       })
-      logInfo(`Steam: loaded ${cached.length} games from cache`, LogPrefix.Steam)
+      logInfo(
+        `Steam: loaded ${cached.length} games from cache`,
+        LogPrefix.Steam
+      )
     }
 
     // Resume polling for any in-progress downloads detected on disk (D-07).
@@ -59,7 +62,10 @@ export default class SteamLibraryManager implements LibraryManager {
       }
     } catch (err) {
       logWarning(
-        ['Steam: scanDownloadingAppIds failed during init, skipping resume:', err],
+        [
+          'Steam: scanDownloadingAppIds failed during init, skipping resume:',
+          err
+        ],
         LogPrefix.Steam
       )
     }
@@ -102,7 +108,10 @@ export default class SteamLibraryManager implements LibraryManager {
     const migrated = games.map((game) => {
       if (game.art_square?.includes(OLD_ART)) {
         changed = true
-        return { ...game, art_square: game.art_square.replace(OLD_ART, NEW_ART) }
+        return {
+          ...game,
+          art_square: game.art_square.replace(OLD_ART, NEW_ART)
+        }
       }
       return game
     })
@@ -126,7 +135,10 @@ export default class SteamLibraryManager implements LibraryManager {
     const connected = await SteamUser.ensureConnected()
     const client = SteamUser.getClient()
     if (!connected || !client || !client.steamID) {
-      logWarning('Steam client not ready, skipping library refresh', LogPrefix.Steam)
+      logWarning(
+        'Steam client not ready, skipping library refresh',
+        LogPrefix.Steam
+      )
       return null
     }
 
@@ -199,7 +211,10 @@ export default class SteamLibraryManager implements LibraryManager {
     // ── Step 4: persist library list and sync timestamp ───────────────────
     steamLibraryStore.set('games', Array.from(library.values()))
     steamSyncStore.set('syncedAt', Date.now())
-    logInfo(`Steam library sync complete: ${library.size} games`, LogPrefix.Steam)
+    logInfo(
+      `Steam library sync complete: ${library.size} games`,
+      LogPrefix.Steam
+    )
     return { stdout: `${library.size} games synced`, stderr: '' }
   }
 
@@ -318,7 +333,10 @@ export default class SteamLibraryManager implements LibraryManager {
 export async function buildInstalledMap(): Promise<
   Map<number, { installPath: string; sizeOnDisk: string }>
 > {
-  const installed = new Map<number, { installPath: string; sizeOnDisk: string }>()
+  const installed = new Map<
+    number,
+    { installPath: string; sizeOnDisk: string }
+  >()
   const libraryPaths = await getSteamLibraries()
 
   for (const libPath of libraryPaths) {
@@ -742,7 +760,11 @@ export async function scanDownloadingAppIds(): Promise<string[]> {
         const appIdStr = String(appid)
         const stateFlags = parseInt(state.StateFlags, 10)
         // Bit 4 unset = not fully installed (download in progress or other non-installed state)
-        if (!isNaN(stateFlags) && (stateFlags & 4) === 0 && library.has(appIdStr)) {
+        if (
+          !isNaN(stateFlags) &&
+          (stateFlags & 4) === 0 &&
+          library.has(appIdStr)
+        ) {
           downloadingIds.push(appIdStr)
         }
       } catch {

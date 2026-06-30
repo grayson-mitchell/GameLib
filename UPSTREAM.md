@@ -9,9 +9,9 @@ which version we are built on.
 
 Two versions are tracked separately:
 
-| Version | Where | Meaning |
-|---------|-------|---------|
-| **GameLib version** | `package.json` → `version` | Our own release line (starts at `1.0.0`). |
+| Version                 | Where                                   | Meaning                                             |
+| ----------------------- | --------------------------------------- | --------------------------------------------------- |
+| **GameLib version**     | `package.json` → `version`              | Our own release line (starts at `1.0.0`).           |
 | **Heroic base version** | `package.json` → `upstream.baseVersion` | The Heroic release this fork is currently built on. |
 
 `package.json` → `upstream.baseCommit` pins the exact upstream commit of the last
@@ -31,10 +31,10 @@ every time upstream is merged.
 
 ## Remotes
 
-| Remote | Points at | Use |
-|--------|-----------|-----|
-| `origin` | `Heroic-Games-Launcher/HeroicGamesLauncher` | Read-only upstream — fetch to sync. |
-| `gamelib` | `grayson-mitchell/GameLib` | Our fork — push here. |
+| Remote    | Points at                                   | Use                                 |
+| --------- | ------------------------------------------- | ----------------------------------- |
+| `origin`  | `Heroic-Games-Launcher/HeroicGamesLauncher` | Read-only upstream — fetch to sync. |
+| `gamelib` | `grayson-mitchell/GameLib`                  | Our fork — push here.               |
 
 ## Tag namespacing
 
