@@ -55,7 +55,10 @@ const CompatibilityInfo = ({ gameInfo }: Props) => {
   ]
 
   let protonDBurl = `https://www.protondb.com/search?q=${gameInfo.title}`
-  if (wikiInfo.pcgamingwiki?.steamID) {
+  if (gameInfo.runner === 'steam') {
+    // For native Steam games, app_name IS the Steam AppID — link directly.
+    protonDBurl = `https://www.protondb.com/app/${gameInfo.app_name}`
+  } else if (wikiInfo.pcgamingwiki?.steamID) {
     protonDBurl = `https://www.protondb.com/app/${wikiInfo.pcgamingwiki?.steamID}`
   }
 

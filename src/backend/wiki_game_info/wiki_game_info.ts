@@ -47,9 +47,12 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
 
     let steamInfo = null
     if (isLinux) {
-      // gamesdb is more accurate since we always query by appName
-      // pcgamingwiki is queried by title in most cases
-      const steamID = gamesdb?.steamID || pcgamingwiki?.steamID
+      // For native Steam games, app_name IS the Steam AppID — use it directly
+      // and skip the wiki round-trip. Otherwise fall back to wiki resolution:
+      // gamesdb is more accurate since we always query by appName,
+      // pcgamingwiki is queried by title in most cases.
+      const steamID =
+        runner === 'steam' ? appName : gamesdb?.steamID || pcgamingwiki?.steamID
       const [protondb, steamdeck] = await Promise.all([
         getInfoFromProtonDB(steamID),
         getSteamDeckComp(steamID)

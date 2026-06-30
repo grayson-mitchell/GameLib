@@ -248,7 +248,13 @@ export default function GamesSubmenu({
   }, [isInstalled])
 
   useEffect(() => {
-    // Get steam id and set direct proton db link
+    // For native Steam games, app_name IS the Steam AppID — link directly
+    // without the wiki round-trip.
+    if (isSteam) {
+      setProtonDBurl(`https://www.protondb.com/app/${appName}`)
+      return
+    }
+    // Otherwise resolve the steam id from wiki sources and set direct link
     window.api.getWikiGameInfo(title, appName, runner).then((info) => {
       const steamID = info?.pcgamingwiki?.steamID ?? info?.gamesdb?.steamID
       if (steamID) {
