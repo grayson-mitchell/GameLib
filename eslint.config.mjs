@@ -22,6 +22,18 @@ export default tseslint.config(
       // React hooks rules
       'react-hooks/rules-of-hooks': 'warn',
 
+      // Honor the leading-underscore convention for intentionally-unused
+      // bindings (e.g. positional params required by an interface signature
+      // that a given implementation doesn't use). Matches TS noUnusedParameters.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
+
       // FIXME: All of these rules should be errors instead
       '@typescript-eslint/no-base-to-string': 'warn',
       '@typescript-eslint/no-floating-promises': 'warn',

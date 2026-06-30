@@ -22,7 +22,7 @@ import SteamLibraryManager, {
   stopUninstallPolling,
   scanDownloadingAppIds
 } from '../library'
-import * as gfs from 'graceful-fs'
+import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
@@ -33,7 +33,6 @@ import {
   steamMetadataStore,
   steamSyncStore
 } from '../electronStores'
-import { runOnceWhenOnline } from 'backend/online_monitor'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -152,13 +151,13 @@ describe('SteamLibraryManager', () => {
 
   it('LIB-02: buildInstalledMap marks is_installed true when StateFlags bit 4 is set (e.g. 4, 6, 516)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue([
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
       'appmanifest_570.acf',
       'appmanifest_440.acf',
       'appmanifest_730.acf'
     ])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock)
       .mockReturnValueOnce({
         AppState: { appid: '570', StateFlags: '4', installdir: 'game1', SizeOnDisk: '100' }
@@ -183,9 +182,9 @@ describe('SteamLibraryManager', () => {
 
   it('LIB-02: buildInstalledMap marks is_installed false when StateFlags bit 4 is clear', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '570', StateFlags: '2', installdir: 'game1', SizeOnDisk: '100' }
     })
@@ -198,12 +197,12 @@ describe('SteamLibraryManager', () => {
 
   it('LIB-02: a corrupt/unparseable ACF file is skipped without throwing', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue([
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
       'appmanifest_570.acf',
       'appmanifest_440.acf'
     ])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock)
       .mockImplementationOnce(() => {
         throw new Error('parse error')
@@ -401,9 +400,9 @@ describe('SteamLibraryManager', () => {
 
       // buildInstalledMap will now report it as installed
       jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-      ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-      ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
-      ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
       ;(vdf.parse as jest.Mock).mockReturnValue({
         AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
       })
@@ -432,9 +431,9 @@ describe('SteamLibraryManager', () => {
       } as any)
 
       jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-      ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-      ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
-      ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
       ;(vdf.parse as jest.Mock).mockReturnValue({
         AppState: { appid: '570', StateFlags: '4', installdir: 'dota2', SizeOnDisk: '50000' }
       })
@@ -533,9 +532,9 @@ describe('SteamLibraryManager', () => {
 
     // Set up ACF mocks so scanDownloadingAppIds finds '730' downloading
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -563,12 +562,12 @@ describe('SteamLibraryManager', () => {
 describe('readAcfState()', () => {
   beforeEach(() => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(false)
+    ;(existsSync as jest.Mock).mockReturnValue(false)
   })
 
   it('returns state:"installed" with installPath/sizeOnDisk when StateFlags bit 4 is set', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '9000' }
     })
@@ -579,8 +578,8 @@ describe('readAcfState()', () => {
   })
 
   it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
     })
@@ -590,14 +589,14 @@ describe('readAcfState()', () => {
   })
 
   it('returns state:"absent" when no manifest file is found for the appId', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(false)
+    ;(existsSync as jest.Mock).mockReturnValue(false)
     const result = await readAcfState('730')
     expect(result.state).toBe('absent')
   })
 
   it('skips a corrupt ACF and returns state:"absent" (T-2-01)', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readFileSync as jest.Mock).mockImplementation(() => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
       throw new Error('corrupt file')
     })
     const result = await readAcfState('730')
@@ -624,8 +623,8 @@ describe('pollInstallOnce()', () => {
       installable: true
     } as any)
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
   })
 
   afterEach(() => {
@@ -747,8 +746,8 @@ describe('pollUninstallOnce()', () => {
       installable: true
     } as any)
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
   })
 
   afterEach(() => {
@@ -757,7 +756,7 @@ describe('pollUninstallOnce()', () => {
   })
 
   it('flips the badge to not-installed + sends done when the manifest is absent (uninstall complete)', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
     startUninstallPolling('730', 60000) // register entry so stop has something to clear
     await pollUninstallOnce('730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -798,7 +797,7 @@ describe('pollUninstallOnce()', () => {
   // ── GAME-03: poller fires confirmed uninstall toast (RED gate) ─────────────
 
   it('GAME-03: fires notify with Game Uninstalled on the "absent" branch (confirmed ACF removal)', async () => {
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(false) // manifest gone = uninstall complete
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone = uninstall complete
     startUninstallPolling('730', 60000) // register entry so stop has something to clear
     await pollUninstallOnce('730')
     expect(notify).toHaveBeenCalledTimes(1)
@@ -857,8 +856,8 @@ describe('scanDownloadingAppIds()', () => {
   beforeEach(() => {
     library.clear()
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(gfs.existsSync as jest.Mock).mockReturnValue(true)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue([])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
   })
 
   it('returns appIds whose manifest has bit 4 unset AND the appId is in the library', async () => {
@@ -874,8 +873,8 @@ describe('scanDownloadingAppIds()', () => {
       canRunOffline: true,
       installable: true
     } as any)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
     })
@@ -896,8 +895,8 @@ describe('scanDownloadingAppIds()', () => {
       canRunOffline: true,
       installable: true
     } as any)
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '730', StateFlags: '4', installdir: 'csgo', SizeOnDisk: '50000' }
     })
@@ -907,8 +906,8 @@ describe('scanDownloadingAppIds()', () => {
 
   it('does NOT return appIds not present in the in-memory library Map', async () => {
     // library is empty — no '730' entry
-    ;(gfs.readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
-    ;(gfs.readFileSync as jest.Mock).mockReturnValue('content')
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: { appid: '730', StateFlags: '2', installdir: 'csgo', SizeOnDisk: '0' }
     })

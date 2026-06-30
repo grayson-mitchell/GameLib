@@ -158,7 +158,7 @@ export class SteamUser {
 
   static async getUserDetails(): Promise<SteamUserData | undefined> {
     const userData = configStore.get_nodefault('userData')
-    return userData as SteamUserData | undefined
+    return userData
   }
 
   // ── Credentials ────────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ export class SteamUser {
   private static _waitForCredSession(): Promise<{ status: 'done' | 'error' }> {
     const state = SteamUser.credSessionState
     if (state.status !== 'waiting') {
-      return Promise.resolve({ status: state.status as 'done' | 'error' })
+      return Promise.resolve({ status: state.status })
     }
     return new Promise<{ status: 'done' | 'error' }>((resolve) => {
       SteamUser._credSettleCallbacks.push(resolve)

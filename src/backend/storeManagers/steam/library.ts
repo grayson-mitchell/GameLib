@@ -140,7 +140,7 @@ export default class SteamLibraryManager implements LibraryManager {
       rtime_last_played?: number
     }> = []
     try {
-      const result = await client.getUserOwnedApps(client.steamID!, {
+      const result = await client.getUserOwnedApps(client.steamID, {
         includePlayedFreeGames: true
       })
       ownedApps = result.apps
@@ -290,8 +290,8 @@ export default class SteamLibraryManager implements LibraryManager {
           is_installed: isNowInstalled,
           install: isNowInstalled
             ? {
-                install_path: installedData!.installPath,
-                install_size: installedData!.sizeOnDisk,
+                install_path: installedData.installPath,
+                install_size: installedData.sizeOnDisk,
                 platform: 'Windows' as const
               }
             : {}
@@ -327,7 +327,7 @@ export async function buildInstalledMap(): Promise<
 
     let files: string[]
     try {
-      files = readdirSync(steamappsDir) as string[]
+      files = readdirSync(steamappsDir)
     } catch {
       continue
     }
@@ -337,7 +337,7 @@ export async function buildInstalledMap(): Promise<
 
       try {
         const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content as string)
+        const parsed = parse(content)
         const state = parsed?.AppState
         if (!state) continue
 
@@ -399,7 +399,7 @@ export async function readAcfState(appId: string): Promise<{
 
     try {
       const content = readFileSync(manifestFile, 'utf-8')
-      const parsed = parse(content as string)
+      const parsed = parse(content)
       const state = parsed?.AppState
       if (!state) continue
 
@@ -722,7 +722,7 @@ export async function scanDownloadingAppIds(): Promise<string[]> {
 
     let files: string[]
     try {
-      files = readdirSync(steamappsDir) as string[]
+      files = readdirSync(steamappsDir)
     } catch {
       continue
     }
@@ -732,7 +732,7 @@ export async function scanDownloadingAppIds(): Promise<string[]> {
 
       try {
         const content = readFileSync(join(steamappsDir, file), 'utf-8')
-        const parsed = parse(content as string)
+        const parsed = parse(content)
         const state = parsed?.AppState
         if (!state) continue
 

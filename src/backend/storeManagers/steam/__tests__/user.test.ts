@@ -60,16 +60,16 @@ jest.mock('../electronStores', () => ({
 
 // ── steam-session mock ────────────────────────────────────────────────────────
 // Capture on() handlers so tests can trigger events manually
-let sessionOnHandlers: Record<string, Function> = {}
+let sessionOnHandlers: Record<string, (...args: any[]) => any> = {}
 const mockSessionInstance = {
   startWithQR: jest.fn(),
   startWithCredentials: jest.fn(),
   submitSteamGuardCode: jest.fn(),
   cancelLoginAttempt: jest.fn(),
-  on: jest.fn((event: string, cb: Function) => {
+  on: jest.fn((event: string, cb: (...args: any[]) => any) => {
     sessionOnHandlers[event] = cb
   }),
-  once: jest.fn((event: string, cb: Function) => {
+  once: jest.fn((event: string, cb: (...args: any[]) => any) => {
     sessionOnHandlers[event] = cb
   }),
   get refreshToken() {
@@ -88,7 +88,7 @@ jest.mock('steam-session', () => ({
 
 // ── steam-user mock ───────────────────────────────────────────────────────────
 // Capture on() handlers so tests can trigger loggedOn manually
-let steamUserOnHandlers: Record<string, Function> = {}
+let steamUserOnHandlers: Record<string, (...args: any[]) => any> = {}
 const mockSteamUserInstance = {
   logOn: jest.fn(),
   logOff: jest.fn(),
@@ -96,10 +96,10 @@ const mockSteamUserInstance = {
   getPersonas: jest.fn().mockResolvedValue({
     personas: { '76561197900000000': { player_name: 'TestUser' } }
   }),
-  on: jest.fn((event: string, cb: Function) => {
+  on: jest.fn((event: string, cb: (...args: any[]) => any) => {
     steamUserOnHandlers[event] = cb
   }),
-  once: jest.fn((event: string, cb: Function) => {
+  once: jest.fn((event: string, cb: (...args: any[]) => any) => {
     steamUserOnHandlers[event] = cb
   })
 }
@@ -140,10 +140,10 @@ describe('SteamUser', () => {
     MockLoginSession.mockImplementation(() => mockSessionInstance)
 
     // session.on/once() captures handlers into sessionOnHandlers
-    mockSessionInstance.on.mockImplementation((event: string, cb: Function) => {
+    mockSessionInstance.on.mockImplementation((event: string, cb: (...args: any[]) => any) => {
       sessionOnHandlers[event] = cb
     })
-    mockSessionInstance.once.mockImplementation((event: string, cb: Function) => {
+    mockSessionInstance.once.mockImplementation((event: string, cb: (...args: any[]) => any) => {
       sessionOnHandlers[event] = cb
     })
 
@@ -151,10 +151,10 @@ describe('SteamUser', () => {
     MockSteamUserLib.mockImplementation(() => mockSteamUserInstance)
 
     // steam-user instance mocks
-    mockSteamUserInstance.on.mockImplementation((event: string, cb: Function) => {
+    mockSteamUserInstance.on.mockImplementation((event: string, cb: (...args: any[]) => any) => {
       steamUserOnHandlers[event] = cb
     })
-    mockSteamUserInstance.once.mockImplementation((event: string, cb: Function) => {
+    mockSteamUserInstance.once.mockImplementation((event: string, cb: (...args: any[]) => any) => {
       steamUserOnHandlers[event] = cb
     })
     mockSteamUserInstance.getPersonas.mockResolvedValue({
@@ -377,7 +377,7 @@ describe('SteamUser', () => {
       // After the fix, qrSessionState is set to done synchronously (before the CM
       // connection resolves), so username is undefined at poll time.
       expect(sessionOnHandlers['authenticated']).toBeDefined()
-      await sessionOnHandlers['authenticated']!()
+      await sessionOnHandlers['authenticated']()
 
       const result = await SteamUser.pollQRLogin()
       expect(result.status).toBe('done')
@@ -385,12 +385,12 @@ describe('SteamUser', () => {
     })
 
     test('after auth: encrypts and stores token (safeStorage.encryptString called)', async () => {
-      await sessionOnHandlers['authenticated']!()
+      await sessionOnHandlers['authenticated']()
       expect(safeStorage.encryptString).toHaveBeenCalledWith('mock-refresh-token')
     })
 
     test('after auth: isLoggedIn becomes true in configStore', async () => {
-      await sessionOnHandlers['authenticated']!()
+      await sessionOnHandlers['authenticated']()
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
     })
 
@@ -548,7 +548,7 @@ describe('SteamUser', () => {
         // the moment startWithCredentials() is invoked. This verifies ORDER —
         // the timeout must be set before polling begins (steam-session throws
         // if loginTimeout is changed after polling starts, LoginSession.js:107).
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         loginTimeoutAtCallTime = (mockSessionInstance as any).loginTimeout
         return { actionRequired: true }
       })
@@ -602,7 +602,7 @@ describe('SteamUser', () => {
       // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
       // the session BEFORE the user calls submitSteamGuardCode.
       expect(sessionOnHandlers['authenticated']).toBeDefined()
-      await sessionOnHandlers['authenticated']!()
+      await sessionOnHandlers['authenticated']()
 
       // finishAuth must have been called: token stored and isLoggedIn set
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
