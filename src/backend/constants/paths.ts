@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { mkdirSync } from 'graceful-fs'
+import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
 import { homedir } from 'os'
 import { join, resolve } from 'path'
 import { env } from 'process'
@@ -15,13 +15,33 @@ if (process.env.CI === 'e2e') {
     `CI is set to "e2e", storing Heroic config files in ${temp_dir.name}`
   )
   configFolder = temp_dir.name
-  mkdirSync(join(configFolder, 'heroic'))
+  mkdirSync(join(configFolder, 'GameLib'))
 }
 
 export const flatpakHome = env.XDG_DATA_HOME?.replace('/data', '') || homedir()
 export const userHome = isSnap ? env.SNAP_REAL_HOME! : homedir()
 
-export const appFolder = join(configFolder, 'heroic')
+export const appFolder = join(configFolder, 'GameLib')
+
+// One-time migration from the upstream Heroic config dir. GameLib is a fork of
+// Heroic, which stored its config in `<appData>/heroic`. On first launch after
+// the rebrand, move that folder to `<appData>/GameLib` so existing settings and
+// library data carry over. Runs at module load — before any store reads
+// appFolder. Skipped under e2e (isolated temp dir); non-fatal on failure (worst
+// case the app starts with a fresh config).
+if (process.env.CI !== 'e2e') {
+  const legacyAppFolder = join(configFolder, 'heroic')
+  if (existsSync(legacyAppFolder) && !existsSync(appFolder)) {
+    try {
+      renameSync(legacyAppFolder, appFolder)
+    } catch (error) {
+      console.error(
+        `Failed to migrate legacy Heroic config folder to GameLib: ${error}`
+      )
+    }
+  }
+}
+
 export const userDataPath = app.getPath('userData')
 export const toolsPath = join(appFolder, 'tools')
 export const runtimePath = join(toolsPath, 'runtimes')
