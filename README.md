@@ -23,7 +23,7 @@ gameLib is built with Web Technologies:
 
 ## Index
 
-- [GameLib Games Launcher](#heroic-games-launcher)
+- [GameLib](#gamelib)
   - [Index](#index)
   - [Features available right now](#features-available-right-now)
   - [Planned features](#planned-features)
@@ -31,17 +31,11 @@ gameLib is built with Web Technologies:
   - [Language Support](#language-support)
     - [Help with Translations Here](#help-with-translations-here)
   - [Installation](#installation)
+    - [Prerequisites](#prerequisites)
     - [Linux](#linux)
-      - [Flatpak](#flatpak)
-      - [Debian, Ubuntu and Derivatives](#debian-ubuntu-and-derivatives)
-      - [Arch (AUR)](#arch-aur)
-      - [Fedora](#fedora)
-      - [Nix(OS)](#nixos)
-      - [Other Distributions (AppImage and TAR.XZ)](#other-distributions-appimage-and-tarxz)
-    - [Windows](#windows)
-    - [macOS](#macos)
+    - [Windows / macOS](#windows--macos)
   - [Development environment](#development-environment)
-    - [Building Heroic Binaries](#building-heroic-binaries)
+    - [Building GameLib Binaries](#building-gamelib-binaries)
     - [Building with VS Code](#building-with-vs-code)
     - [Quickly testing/debugging Heroic on your own system](#quickly-testingdebugging-heroic-on-your-own-system)
     - [Testing with Docker](#testing-with-docker)
@@ -138,95 +132,48 @@ Thanks to the community, Heroic was translated to almost 40 different languages 
 
 ## Installation
 
+GameLib does not publish prebuilt binaries yet, so you install it by **building
+from source**. (Upstream Heroic ships Flatpak/AUR/WinGet/Homebrew packages — but
+those install Heroic, not GameLib.) The steps below are a quickstart; see
+[Development environment](#development-environment) for full details.
+
+### Prerequisites
+
+- **Git**, **Node.js ≥ 22**, and **pnpm 10** — `corepack enable` gives you the pinned version
+- The **Steam client** installed — GameLib launches Steam games via `steam://`
+- On Linux, **FUSE** to run the AppImage (install `libfuse2` if your distro doesn't ship it)
+
 ### Linux
 
-#### Flatpak
+```bash
+# Clone the repo (with submodules) and enter it
+git clone https://github.com/grayson-mitchell/GameLib.git --recurse-submodules
+cd GameLib
 
-[<img src="https://flathub.org/assets/badges/flathub-badge-en.png" alt="Flathub Badge" width="10%" />](https://flathub.org/apps/details/com.heroicgameslauncher.hgl)
+# Install dependencies and helper binaries
+pnpm install
+pnpm download-helper-binaries
 
-Heroic is available on Flathub, so you should be able to easily install it on most distros with Software Centers (Pop!\_Shop, Discover, etc.)
+# Build an installable package — AppImage by default
+# (or specify: deb, rpm, pacman, tar.xz)
+pnpm dist:linux
 
-#### Distribution-specific instructions
+# Run the result from ./dist/
+chmod +x dist/GameLib-*.AppImage
+./dist/GameLib-*.AppImage
+```
 
-If you're not using the Flatpak version, keep GE-Proton as your Wine runner. With umu enabled by default, no additional Wine dependencies are required.
+To just run it without building an installer, use `pnpm start` (dev mode).
 
-#### Debian, Ubuntu and Derivatives
+### Windows / macOS
 
-Download the file ending in .deb from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest).  
-Double-click it to open it up in your Software Manager, or run `sudo dpkg -i Heroic*amd64.deb` to install it directly.
-
-#### Arch (AUR)
-
-We currently only support one AUR package: `heroic-games-launcher-bin`. Although you might find other packages there, do not ask support for them on this GitHub or on our Discord, ask their maintainers directly.
-
-- [![Stable version badge](https://img.shields.io/aur/version/heroic-games-launcher-bin?style=flat&label=heroic-games-launcher-bin)](https://aur.archlinux.org/packages/heroic-games-launcher-bin)  
-  (stable release, recommended)
-
-Please see [the Arch Wiki](https://wiki.archlinux.org/title/Arch_User_Repository#Installing_and_upgrading_packages) on how to install them
-
-#### Fedora
-
-You can download the file ending in .rpm from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest) and install it with `sudo dnf install ./heroic-*.x86_64.rpm`.
-
-Alternatively, you can use the Flatpak package.
-
-#### Nix(OS)
-
-Two community-maintained versions are available in [nixpkgs](https://search.nixos.org/packages?type=packages&query=heroic), named [heroic](https://github.com/NixOS/nixpkgs/blob/nixos-25.05/pkgs/by-name/he/heroic-unwrapped/package.nix#L110) (with an [FHS environment](https://nixos.org/manual/nixpkgs/stable/#sec-fhs-environments)) and [heroic-unwrapped](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/he/heroic-unwrapped/package.nix) (without FHS).
-
-- Nix shell: `nix-shell -p heroic`
-- NixOS:
-
-  ```nixos
-  # /etc/nixos/configuration.nix
-  { config, pkgs, ... }:
-
-  {
-    users.users.example = {
-      isNormalUser = true;
-      description = "Example user";
-      packages = with pkgs; [
-        heroic
-      ];
-    };
-  }
-  ```
-
-#### Other Distributions (AppImage and TAR.XZ)
-
-Since these two distribution formats don't have a form of dependency management, make sure the `curl` command is available. You might run into weird issues if it's not.
-
-##### AppImage
-
-- Download the file ending in .AppImage from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest)
-- Make it executable (`chmod +x Heroic*.AppImage`)
-- Run it (double-click in most file managers, or run `./Heroic*.AppImage`)
-
-##### .tar.xz
-
-- Download the file ending in .tar.xz from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest)
-- Extract it anywhere
-- Run the `heroic` file in the folder you extracted it to (double-click in most file managers, or run `./heroic`)
-
-### Windows
-
-#### WinGet
-
-If you use WinGet (installed by default on Windows 11 and modern versions of 10), you can run `winget install Heroic` in a terminal to install Heroic.
-
-#### Manual installl
-
-Download the Heroic Installer (`Heroic-x.x.x-Setup.exe`) or the portable version (`Heroic-x.x.x-Portable.exe`) from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest). Run the executable you downloaded to install/run Heroic.  
-The Setup will create shortcuts to Heroic on your Desktop and in your Start Menu.
-
-### macOS
-
-If you use Homebrew, you can run `brew install --cask --no-quarantine heroic` to install Heroic.  
-Otherwise, download the file ending in .dmg from the [latest release](https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/latest), double-click it to mount it, and drag the "Heroic" application into the "Applications" folder.
+Follow the same clone → `pnpm install` → `pnpm download-helper-binaries` steps,
+then build with `pnpm dist:win` or `pnpm dist:mac`. See
+[Building GameLib Binaries](#building-gamelib-binaries) for details.
 
 ## Development environment
 
-This part will walk you through setting up a development environment so you can build Heroic binaries yourself or make changes to the code.
+This part will walk you through setting up a development environment so you can build GameLib binaries yourself or make changes to the code.
 
 1. Make sure Git, NodeJS, and pnpm 10 are installed  
    **NOTE**: On Windows, due to an issue with electron-builder, you'll need the standalone version of pnpm (`@pnpm/exe`)
@@ -234,14 +181,14 @@ This part will walk you through setting up a development environment so you can 
 2. Clone the repo and enter the cloned folder, for example with these commands:
 
    ```bash
-   git clone https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher.git --recurse-submodules
-   cd HeroicGamesLauncher
+   git clone https://github.com/grayson-mitchell/GameLib.git --recurse-submodules
+   cd GameLib
    ```
 
 3. Make sure all dependencies are installed by running `pnpm install`
 4. Download all helper binaries using `pnpm download-helper-binaries`
 
-### Building Heroic Binaries
+### Building GameLib Binaries
 
 Run the appropriate command for your OS:
 
