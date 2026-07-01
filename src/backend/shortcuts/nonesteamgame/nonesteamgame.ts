@@ -296,7 +296,7 @@ async function addNonSteamGame(game: Game): Promise<boolean> {
 
     const { runner, app_name } = gameInfo
 
-    args.push(`"heroic://launch?appName=${app_name}&runner=${runner}"`)
+    args.push(`"gamelib://launch?appName=${app_name}&runner=${runner}"`)
     newEntry.LaunchOptions = args.join(' ')
     if (isFlatpak) {
       newEntry.LaunchOptions = `run com.heroicgameslauncher.hgl ${newEntry.LaunchOptions}`

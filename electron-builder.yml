@@ -17,9 +17,9 @@ asarUnpack:
   - '!build/bin/legendary.LICENSE'
 
 protocols:
-  - name: heroic
+  - name: gamelib
     schemes:
-      - heroic
+      - gamelib
 
 win:
   artifactName: ${productName}-${version}-Setup-${arch}.${ext}

@@ -18,7 +18,7 @@ const HideWindowOnProtocolLaunch = () => {
         }
         title={t(
           'setting.hide-window-on-protocol-launch',
-          'Hide Heroic window when launching games from heroic:// links'
+          'Hide GameLib window when launching games from gamelib:// links'
         )}
       />
       <InfoIcon

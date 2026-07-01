@@ -163,8 +163,8 @@ async function initializeWindow(): Promise<BrowserWindow> {
     logInfo(
       [
         isSteamDeckGameMode
-          ? 'Heroic started via Steam-Deck gamemode.'
-          : 'Heroic started with --fullscreen',
+          ? 'GameLib started via Steam-Deck gamemode.'
+          : 'GameLib started with --fullscreen',
         'Switching to fullscreen'
       ],
       LogPrefix.Backend
@@ -319,7 +319,7 @@ const processZoomForScreen = (zoomFactor: number) => {
 }
 
 if (!gotTheLock) {
-  console.log('Heroic is already running, quitting this instance')
+  console.log('GameLib is already running, quitting this instance')
   app.quit()
 } else {
   app.on('second-instance', (event, argv) => {
@@ -408,12 +408,12 @@ if (!gotTheLock) {
 
     const mainWindow = await initializeWindow()
 
-    protocol.handle('heroic', (request) => {
+    protocol.handle('gamelib', (request) => {
       handleProtocol([request.url])
       return new Response('Operation initiated.', { status: 201 })
     })
-    if (process.env.CI !== 'e2e' && !app.isDefaultProtocolClient('heroic')) {
-      if (app.setAsDefaultProtocolClient('heroic')) {
+    if (process.env.CI !== 'e2e' && !app.isDefaultProtocolClient('gamelib')) {
+      if (app.setAsDefaultProtocolClient('gamelib')) {
         logInfo('Registered protocol with OS.', LogPrefix.Backend)
       } else {
         logWarning('Failed to register protocol with OS.', LogPrefix.Backend)
@@ -482,10 +482,10 @@ addOneTimeListener('frontendReady', () => {
 
   if (isSnap) {
     const snapWarning: Electron.MessageBoxOptions = {
-      title: i18next.t('box.warning.snap.title', 'Heroic is running as a Snap'),
+      title: i18next.t('box.warning.snap.title', 'GameLib is running as a Snap'),
       message: i18next.t('box.warning.snap.message', {
         defaultValue:
-          'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}Heroic will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since Heroic cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install Heroic as a Flatpak, DEB or from the AppImage.',
+          'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}GameLib will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since GameLib cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install GameLib as a Flatpak, DEB or from the AppImage.',
         newLine: '\n'
       }),
       checkboxLabel: i18next.t('box.warning.snap.checkbox', {
@@ -714,7 +714,7 @@ addListener('clearCache', (event, showDialog, fromVersionChange = false) => {
       title: i18next.t('box.cache-cleared.title', 'Cache Cleared'),
       message: i18next.t(
         'box.cache-cleared.message',
-        'Heroic Cache Was Cleared!'
+        'GameLib Cache Was Cleared!'
       ),
       type: 'MESSAGE',
       buttons: [{ text: i18next.t('box.ok', 'Ok') }]
