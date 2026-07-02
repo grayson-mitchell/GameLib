@@ -39,11 +39,12 @@ describe('TrayIcon', () => {
     GlobalConfig.setConfigValue('noTrayIcon', false)
     setRecentGames([])
 
-    const appIcon = (await initTrayIcon(
-      mainWindow
-    )) as Electron.CrossProcessExports.Tray
+    const appIcon = await initTrayIcon(mainWindow)
 
-    expect(appIcon.tooltip).toEqual('GameLib')
+    // Access mock Tray's tooltip property (set by setToolTip in the mock)
+    expect((appIcon as unknown as { tooltip: string }).tooltip).toEqual(
+      'GameLib'
+    )
   })
 
   describe('content', () => {

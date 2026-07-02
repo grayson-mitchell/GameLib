@@ -40,7 +40,7 @@ async function setPresence() {
     }
 
     const payload: PresencePayload = {
-      application_type: 'Heroic Games Launcher',
+      application_type: 'GameLib',
       force_update: false,
       presence: 'online',
       version: app.getVersion(),
