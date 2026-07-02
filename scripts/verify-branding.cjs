@@ -96,9 +96,41 @@ check(
 )
 
 check(
-  'electron-builder.yml protocols block still registers heroic scheme',
-  builderYml.includes('schemes:') && builderYml.includes('heroic')
+  'electron-builder.yml protocols block registers gamelib scheme',
+  builderYml.includes('schemes:') && builderYml.includes('gamelib')
 )
+
+// ---------------------------------------------------------------------------
+// Section 5: Phase 5 surfaces (BRAND-02, BRAND-03, BRAND-04, APP-01)
+// ---------------------------------------------------------------------------
+console.log('\n--- Phase 5: tray, log paths, config paths, presence, changelog ---')
+
+const trayTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'tray_icon', 'tray_icon.ts'), 'utf8')
+check("tray_icon.ts setToolTip('GameLib')", trayTs.includes("setToolTip('GameLib')"))
+check("tray_icon.ts no setToolTip('Heroic')", !trayTs.includes("setToolTip('Heroic')"))
+
+const loggerPathsTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'logger', 'paths.ts'), 'utf8')
+check("logger/paths.ts no 'Heroic' in path strings", !loggerPathsTs.includes("'Heroic'") && !loggerPathsTs.includes("'Heroic Games Launcher'"))
+
+check("constants/paths.ts heroicInstallPath uses 'GameLib'", pathsTs.includes("join(userHome, 'Games', 'GameLib')"))
+check("constants/paths.ts no 'Games', 'Heroic' path", !pathsTs.includes("'Games', 'Heroic'"))
+
+const configTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'config.ts'), 'utf8')
+check("config.ts wineCrossoverBottle default is 'GameLib'", configTs.includes("wineCrossoverBottle: 'GameLib'"))
+
+const presenceTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'storeManagers', 'gog', 'presence.ts'), 'utf8')
+check("presence.ts application_type is 'GameLib' not 'Heroic Games Launcher'", !presenceTs.includes("'Heroic Games Launcher'"))
+
+check("utils.ts no 'via Heroic on'", !utilsTs.includes("'via Heroic on '"))
+check("utils.ts Discord versionText uses GameLib", utilsTs.includes('`GameLib ${app.getVersion()}`'))
+
+check("utils.ts no D-05 Rosetta 'Heroic will maybe not work probably!'", !utilsTs.includes("'Heroic will maybe not work probably!'"))
+check("utils.ts no D-05 Rosetta 'restart Heroic.'", !utilsTs.includes('restart Heroic.'))
+check("utils.ts no D-05 writeConfig \"? 'Heroic' :\"", !utilsTs.includes("? 'Heroic' :"))
+
+const changelogPath = path.join(ROOT, 'public', 'changelog.json')
+check("public/changelog.json exists", fs.existsSync(changelogPath))
+check("getCurrentChangelog reads local file not GitHub API", utilsTs.includes("readFileSync") && !utilsTs.includes("GITHUB_API/tags/"))
 
 // ---------------------------------------------------------------------------
 // Summary
