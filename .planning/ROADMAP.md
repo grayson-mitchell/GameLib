@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.1 — Polish & Enhancements
 
-- [ ] **Phase 5: Branding & About Polish** - GameLib presents complete, accurate identity across tray, backend logs, docs, and the release notes link
+- [x] **Phase 5: Branding & About Polish** - GameLib presents complete, accurate identity across tray, backend logs, docs, and the release notes link (completed 2026-07-02)
 - [ ] **Phase 6: Library & Game Status UX** - Library grid surfaces real playtime and install size; a "Playing" badge tracks active Steam sessions
 - [ ] **Phase 7: Game Details Enrichment** - Game details page shows supported platforms and, on macOS, an AppleGamingWiki compatibility rating
 - [ ] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode
@@ -175,7 +175,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 05-01-PLAN.md — utils.ts rebrand + bundled changelog + update-check suppression + tray tooltip + Discord presence (APP-01, BRAND-02, BRAND-03)
   - [x] 05-02-PLAN.md — remaining backend dialog/error strings + filesystem path constants clean cutover (BRAND-03)
   - [x] 05-03-PLAN.md — README accuracy/fork-clarity pass + VS Code launch-config rename (BRAND-04)
-  - [ ] 05-04-PLAN.md — extend verify-branding.cjs with Phase 5 Section 5 gate (BRAND-02, BRAND-03, APP-01)
+  - [x] 05-04-PLAN.md — extend verify-branding.cjs with Phase 5 Section 5 gate (BRAND-02, BRAND-03, APP-01)
 **UI hint**: yes
 
 ### Phase 6: Library & Game Status UX
@@ -234,7 +234,7 @@ v1.1: 5 → 6 → 7 → 8 → 9
 | 2. Steam Library | 6/6 | Complete   | 2026-06-28 |
 | 3. Game Operations | 4/4 | Complete   | 2026-06-28 |
 | 4. Branding | 2/2 | Complete   | 2026-06-28 |
-| 5. Branding & About Polish | 3/4 | In Progress|  |
+| 5. Branding & About Polish | 4/4 | Complete   | 2026-07-02 |
 | 6. Library & Game Status UX | 0/? | Not started | - |
 | 7. Game Details Enrichment | 0/? | Not started | - |
 | 8. New Steam Surfaces | 0/? | Not started | - |
