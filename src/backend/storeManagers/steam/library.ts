@@ -77,6 +77,12 @@ export default class SteamLibraryManager implements LibraryManager {
     if (SteamUser.isLoggedIn()) {
       runOnceWhenOnline(() => this.refresh())
     }
+
+    // Start the running-game poller (GAME-05 / D-06). Idempotent, so a re-init
+    // is safe. Stopped on app quit from main.ts. Because the Electron main
+    // process only runs while the app is open, this satisfies "poll only while
+    // the app window is open" without per-window tracking.
+    startRunningPoll()
   }
 
   getGame(id: string): SteamGame {
