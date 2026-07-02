@@ -859,23 +859,13 @@ async init(): Promise<void> {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Steam store API rate limit on metadata fetch**
-   - What we know: No official published rate limit. Community reports suggest ~200 requests per 5 minutes per IP.
-   - What's unclear: Whether Electron app IP or user home IP is used (likely user home IP via direct HTTP call).
-   - Recommendation: Rely on lazy per-card fetch + `pendingFetches` dedup + indefinite metadata cache (D-05). A library of 500 games visible on first render would need 500 API calls in quick succession — consider adding a minimum 50ms delay between metadata fetches if rate limiting becomes a problem in practice. For MVP, no throttle needed.
-   - Confidence: LOW on rate limit number [ASSUMED]
+1. **Steam store API rate limit on metadata fetch** — RESOLVED: No throttle for MVP. `pendingFetches` Set deduplicates concurrent requests (02-03). If rate limiting becomes a problem in practice, add a 50ms minimum delay between per-card fetches as a follow-up. Confidence: LOW on exact rate limit number [ASSUMED ~200/5min].
 
-2. **`SteamUser.getClient()` accessor — does Phase 1 expose it?**
-   - What we know: Phase 1 creates a steam-user client in `SteamUser` static class (`private static client: SteamUserLib | null`).
-   - What's unclear: Phase 1 RESEARCH.md shows the field as `private`. The executor must add a `public static getClient(): SteamUserLib | null` accessor to `SteamUser` in Phase 2, or `SteamLibraryManager` must be co-located in the same file/module as `SteamUser`.
-   - Recommendation: Add `public static getClient(): SteamUserLib | null { return this.client }` to `SteamUser` class. This is a one-line change to the Phase 1 implementation.
+2. **`SteamUser.getClient()` accessor — does Phase 1 expose it?** — RESOLVED: Add `public static getClient(): SteamUserLib | null { return this.client }` to `SteamUser` class in Phase 2 Wave 0 (02-01 Task 2). One-line change to Phase 1 file.
 
-3. **`tsStore` for playtime — backend store name and import path**
-   - What we know: `TimeContainer` reads from `timestampStore` (frontend TypeCheckedStoreFrontend). The backend writes to `tsStore` during game launch in `launcher.ts`.
-   - What's unclear: The exact import path for the backend `tsStore` and whether writing to it during `refresh()` is the right approach.
-   - Recommendation: For Phase 2, store playtime in `GameInfo.extra.steamPlaytimeMinutes` only. This is sufficient for GameCard display. The `TimeContainer` component (for GamePage) can read `extra.steamPlaytimeMinutes` too, or the executor can also write to `tsStore` using the same pattern as `launcher.ts:273-279`. The planner should include a task for `TimeContainer` compatibility.
+3. **`tsStore` for playtime — backend store name and import path** — RESOLVED: Store playtime in `GameInfo.extra.steamPlaytimeMinutes` only (02-01 + 02-02). Sufficient for GameCard display. `TimeContainer` (GamePage detail page) is a known deferred gap — not a LIB-03 blocker since LIB-03 is satisfied by the library browse view display.
 
 ---
 
