@@ -20,10 +20,15 @@ import SteamLibraryManager, {
   pollUninstallOnce,
   startUninstallPolling,
   stopUninstallPolling,
-  scanDownloadingAppIds
+  scanDownloadingAppIds,
+  readRunningAppId,
+  pollRunningOnce,
+  startRunningPoll,
+  stopRunningPoll
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
+import { spawnSync, execFileSync } from 'child_process'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
@@ -83,6 +88,19 @@ jest.mock('../user')
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
+}))
+
+// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps) ─
+jest.mock('child_process', () => ({
+  spawnSync: jest.fn(),
+  execFileSync: jest.fn()
+}))
+
+// ── backend/constants/environment mock — platform-switching for reader tests ──
+jest.mock('backend/constants/environment', () => ({
+  isWindows: false,
+  isMac: false,
+  isLinux: true
 }))
 
 // ── electronStores mock — steamLibraryStore, steamMetadataStore, etc. ────────
@@ -1074,5 +1092,278 @@ describe('scanDownloadingAppIds()', () => {
     })
     const result = await scanDownloadingAppIds()
     expect(result).not.toContain('730')
+  })
+})
+
+// ── GAME-05: readRunningAppId() — per-platform dispatch ───────────────────────
+
+describe('readRunningAppId() — per-platform dispatch', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    envMock = jest.requireMock('backend/constants/environment')
+    // Default: Linux
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+  })
+
+  describe('Windows platform', () => {
+    beforeEach(() => {
+      envMock.isWindows = true
+      envMock.isMac = false
+    })
+
+    it('windowsRunningAppId: parses REG_DWORD 0x1b58 → 7000', () => {
+      ;(spawnSync as jest.Mock).mockReturnValue({
+        status: 0,
+        stdout: 'RunningAppID    REG_DWORD    0x1b58'
+      })
+      expect(readRunningAppId()).toBe(7000)
+    })
+
+    it('windowsRunningAppId: returns 0 when reg.exe exits with non-zero status', () => {
+      ;(spawnSync as jest.Mock).mockReturnValue({ status: 1, stdout: '' })
+      expect(readRunningAppId()).toBe(0)
+    })
+
+    it('windowsRunningAppId: returns 0 when spawnSync throws', () => {
+      ;(spawnSync as jest.Mock).mockImplementation(() => {
+        throw new Error('reg.exe not available')
+      })
+      expect(readRunningAppId()).toBe(0)
+    })
+
+    it('windowsRunningAppId: returns 0 when RunningAppID not present in output', () => {
+      ;(spawnSync as jest.Mock).mockReturnValue({
+        status: 0,
+        stdout: 'ERROR: The system was unable to find the specified registry key'
+      })
+      expect(readRunningAppId()).toBe(0)
+    })
+  })
+
+  describe('macOS platform', () => {
+    beforeEach(() => {
+      envMock.isWindows = false
+      envMock.isMac = true
+      envMock.isLinux = false
+    })
+
+    it('macOsRunningAppId: parses registry.vdf and returns numeric RunningAppID', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('vdf-content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        Registry: {
+          HKCU: { Software: { Valve: { Steam: { RunningAppID: '440' } } } }
+        }
+      })
+      expect(readRunningAppId()).toBe(440)
+    })
+
+    it('macOsRunningAppId: returns 0 when registry.vdf does not exist', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(false)
+      expect(readRunningAppId()).toBe(0)
+    })
+
+    it('macOsRunningAppId: returns 0 when vdf.parse throws', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockImplementation(() => {
+        throw new Error('parse error')
+      })
+      expect(readRunningAppId()).toBe(0)
+    })
+
+    it('macOsRunningAppId: returns 0 when RunningAppID key is missing in VDF', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({ Registry: {} })
+      expect(readRunningAppId()).toBe(0)
+    })
+  })
+
+  describe('Linux platform', () => {
+    it('linuxRegistryVdfRunningAppId: returns VDF RunningAppID when non-zero', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        Registry: {
+          HKCU: { Software: { Valve: { Steam: { RunningAppID: '570' } } } }
+        }
+      })
+      expect(readRunningAppId()).toBe(570)
+    })
+
+    it('linuxFallbackRunningAppId: falls back to reaper process scan when VDF RunningAppID is 0', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        Registry: {
+          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
+        }
+      })
+      ;(execFileSync as jest.Mock).mockReturnValue(
+        'reaper SteamLaunch --AppId 440 -- /path/to/game'
+      )
+      expect(readRunningAppId()).toBe(440)
+    })
+
+    it('linuxFallbackRunningAppId: returns 0 when VDF is 0 and reaper scan finds nothing', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        Registry: {
+          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
+        }
+      })
+      ;(execFileSync as jest.Mock).mockReturnValue('no reaper here')
+      expect(readRunningAppId()).toBe(0)
+    })
+
+    it('linuxFallbackRunningAppId: returns 0 when execFileSync throws', () => {
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        Registry: {
+          HKCU: { Software: { Valve: { Steam: { RunningAppID: '0' } } } }
+        }
+      })
+      ;(execFileSync as jest.Mock).mockImplementation(() => {
+        throw new Error('ps not available')
+      })
+      expect(readRunningAppId()).toBe(0)
+    })
+  })
+})
+
+// ── GAME-05: pollRunningOnce() ────────────────────────────────────────────────
+
+describe('pollRunningOnce()', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  // Helper: configure vdf.parse to return a specific RunningAppID value
+  const mockRunningAppId = (appId: number): void => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      Registry: {
+        HKCU: {
+          Software: { Valve: { Steam: { RunningAppID: String(appId) } } }
+        }
+      }
+    })
+  }
+
+  beforeEach(() => {
+    envMock = jest.requireMock('backend/constants/environment')
+    // Use macOS path for simple VDF-based control
+    envMock.isWindows = false
+    envMock.isMac = true
+    envMock.isLinux = false
+    // Reset lastKnownRunningAppId to 0 between tests
+    stopRunningPoll()
+  })
+
+  it('sends gameStatusUpdate { status: "playing" } when RunningAppID goes 0→X', () => {
+    mockRunningAppId(440)
+    pollRunningOnce()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: '440',
+      runner: 'steam',
+      status: 'playing'
+    })
+  })
+
+  it('does NOT send a "done" message on 0→X transition (no prior game)', () => {
+    mockRunningAppId(440)
+    pollRunningOnce()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ status: 'done' })
+    )
+  })
+
+  it('sends gameStatusUpdate { status: "done" } when RunningAppID goes X→0', () => {
+    // Establish X=440 as the known running game
+    mockRunningAppId(440)
+    pollRunningOnce()
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+
+    mockRunningAppId(0)
+    pollRunningOnce()
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: '440',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ status: 'playing' })
+    )
+  })
+
+  it('sends no message when RunningAppID is unchanged', () => {
+    mockRunningAppId(440)
+    pollRunningOnce() // 0→440
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+
+    // Same value — no delta
+    pollRunningOnce()
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  it('sends done for old ID and playing for new ID on X→Y transition', () => {
+    mockRunningAppId(440)
+    pollRunningOnce() // 0→440
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+
+    mockRunningAppId(570)
+    pollRunningOnce() // 440→570
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: '440',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: '570',
+      runner: 'steam',
+      status: 'playing'
+    })
+  })
+})
+
+// ── GAME-05: startRunningPoll() / stopRunningPoll() lifecycle ─────────────────
+
+describe('startRunningPoll() and stopRunningPoll()', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    stopRunningPoll() // reset state (clears timer + lastKnownRunningAppId)
+  })
+
+  afterEach(() => {
+    stopRunningPoll()
+    jest.useRealTimers()
+  })
+
+  it('startRunningPoll is idempotent — second call does not create a second timer', () => {
+    const spy = jest.spyOn(global, 'setInterval')
+    startRunningPoll(5000)
+    startRunningPoll(5000) // second call is a no-op
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
+  })
+
+  it('stopRunningPoll clears the timer so a subsequent startRunningPoll creates a new one', () => {
+    const spy = jest.spyOn(global, 'setInterval')
+    startRunningPoll(5000)
+    stopRunningPoll()
+    startRunningPoll(5000) // new registration after stop
+    expect(spy).toHaveBeenCalledTimes(2)
+    spy.mockRestore()
   })
 })

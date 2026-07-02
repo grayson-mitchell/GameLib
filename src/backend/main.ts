@@ -38,6 +38,7 @@ import gogPresence from './storeManagers/gog/presence'
 import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
+import { stopRunningPoll } from './storeManagers/steam/library'
 import { steamSyncStore } from './storeManagers/steam/electronStores'
 import {
   clearCache,
@@ -612,6 +613,13 @@ app.on('window-all-closed', () => {
   if (!isMac) {
     app.quit()
   }
+})
+
+// Stop the Steam running-game poller on quit so the 5s interval does not dangle
+// (GAME-05 / D-06). before-quit fires on every platform, including macOS where
+// window-all-closed does not quit.
+app.on('before-quit', () => {
+  stopRunningPoll()
 })
 
 app.on('open-url', (event, url) => {
