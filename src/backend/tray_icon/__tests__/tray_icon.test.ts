@@ -35,6 +35,17 @@ describe('TrayIcon', () => {
     expect(appIcon).not.toBeNull()
   })
 
+  it('sets tooltip to GameLib', async () => {
+    GlobalConfig.setConfigValue('noTrayIcon', false)
+    setRecentGames([])
+
+    const appIcon = (await initTrayIcon(
+      mainWindow
+    )) as Electron.CrossProcessExports.Tray
+
+    expect(appIcon.tooltip).toEqual('GameLib')
+  })
+
   describe('content', () => {
     describe('contextMenu', () => {
       beforeEach(() => {
