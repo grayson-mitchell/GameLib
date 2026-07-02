@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Heroic (HMR & HR)",
+      "name": "Launch GameLib (HMR & HR)",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -27,7 +27,7 @@
   "compounds": [
     {
       "name": "Debug All",
-      "configurations": ["Launch Heroic (HMR & HR)", "Debug Frontend Process"],
+      "configurations": ["Launch GameLib (HMR & HR)", "Debug Frontend Process"],
       "presentation": {
         "order": 1
       }
