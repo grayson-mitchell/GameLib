@@ -226,7 +226,10 @@ const GameCard = ({
         </SvgButton>
       )
     }
-    if (isPlaying) {
+    // D-08: hide the Stop button for Steam while Playing (observe-only) — GameLib
+    // never owns the Steam process, so Stop cannot work. Falls through to the
+    // installed-game play icon; the Playing badge still shows via gameCardStatus.
+    if (isPlaying && !isSteam) {
       return (
         <SvgButton
           className="cancelIcon"
@@ -330,10 +333,11 @@ const GameCard = ({
       icon: <Cancel />
     },
     {
-      // stop if running
+      // stop if running — hidden for Steam (D-08: observe-only, GameLib does not
+      // own the Steam process, so Stop cannot work)
       label: t('label.playing.stop'),
       onclick: async () => handlePlay(runner),
-      show: isPlaying,
+      show: isPlaying && !isSteam,
       icon: <Cancel />
     },
     {
