@@ -194,7 +194,7 @@ async function isEpicServiceOffline(
     title: `${type} ${t('epic.offline-notification-title', 'offline')}`,
     body: t(
       'epic.offline-notification-body',
-      'Heroic will maybe not work probably!'
+      'GameLib will maybe not work probably!'
     ),
     urgency: 'normal',
     timeoutType: 'default',
@@ -611,7 +611,7 @@ function constructAndUpdateRPC(gameInfo: GameInfo): RpcClient {
     clientId: '852942976564723722'
   })
 
-  const versionText = `Heroic ${app.getVersion()}`
+  const versionText = `GameLib ${app.getVersion()}`
 
   const image = gameInfo.art_icon || gameInfo.art_square
   const title = gameInfo.title
@@ -633,7 +633,7 @@ function constructAndUpdateRPC(gameInfo: GameInfo): RpcClient {
       name: title,
       type: 0,
       startTimestamp: Date.now(),
-      state: 'via Heroic on ' + getFormattedOsName(),
+      state: 'via GameLib on ' + getFormattedOsName(),
       statusDisplayType: 0, // Use game title for name plate
       ...overrides
     })
@@ -784,67 +784,23 @@ function detectVCRedist(mainWindow: BrowserWindow) {
 }
 
 const getLatestReleases = async (): Promise<Release[]> => {
-  if (process.env.CI === 'e2e') return []
-
-  const newReleases: Release[] = []
-  logInfo('Checking for new Heroic Updates', LogPrefix.Backend)
-
-  try {
-    const { data: releases } = await axiosClient.get<Release[]>(GITHUB_API)
-    const latestStable = releases
-      .filter((rel) => rel.prerelease === false)
-      .at(0)
-    const latestBeta = releases.filter((rel) => rel.prerelease === true).at(0)
-
-    const current = app.getVersion()
-
-    const thereIsNewStable =
-      latestStable && semverGt(latestStable.tag_name, current)
-    const thereIsNewBeta = latestBeta && semverGt(latestBeta.tag_name, current)
-
-    if (thereIsNewStable) {
-      newReleases.push({ ...latestStable, type: 'stable' })
-    }
-    if (thereIsNewBeta) {
-      newReleases.push({ ...latestBeta, type: 'beta' })
-    }
-
-    if (newReleases.length) {
-      notify({
-        title: t('Update Available!'),
-        body: t(
-          'notify.new-heroic-version',
-          'A new Heroic version was released!'
-        )
-      })
-    }
-
-    return newReleases
-  } catch (error) {
-    logError(
-      ['Error when checking for Heroic updates', error],
-      LogPrefix.Backend
-    )
-    return []
-  }
+  // Suppressed: GameLib at 1.0.0 vs Heroic 2.22+ always triggers the update
+  // notice and points users at Heroic downloads, not GameLib. Re-enable when
+  // the GameLib release pipeline ships and this function is repointed at
+  // GameLib's own GitHub releases.
+  return []
 }
 
 const getCurrentChangelog = async (): Promise<Release | null> => {
   if (process.env.CI === 'e2e') return null
 
-  logInfo('Checking for current version changelog', LogPrefix.Backend)
-
   try {
-    const current = app.getVersion()
-
-    const { data: release } = await axiosClient.get(
-      `${GITHUB_API}/tags/v${current}`
-    )
-
-    return release as Release
+    const changelogPath = join(publicDir, 'changelog.json')
+    const content = readFileSync(changelogPath, 'utf-8')
+    return JSON.parse(content) as Release
   } catch (error) {
     logError(
-      ['Error when checking for current Heroic changelog:', error],
+      ['Error reading local GameLib changelog:', error],
       LogPrefix.Backend
     )
     return null
@@ -1346,7 +1302,7 @@ export async function checkRosettaInstall() {
       title: i18next.t('box.warning.rosetta.title', 'Rosetta not found'),
       message: i18next.t(
         'box.warning.rosetta.message',
-        'Heroic requires Rosetta to run correctly on macOS with Apple Silicon chips. Please install it from the macOS terminal using the following command: "softwareupdate --install-rosetta" and restart Heroic. '
+        'GameLib requires Rosetta to run correctly on macOS with Apple Silicon chips. Please install it from the macOS terminal using the following command: "softwareupdate --install-rosetta" and restart GameLib. '
       ),
       buttons: ['OK'],
       icon: windowIcon
@@ -1635,7 +1591,7 @@ const axiosClient = axios.create({
 
 export const writeConfig = (appName: string, config: Partial<AppSettings>) => {
   logInfo(
-    `Writing config for ${appName === 'default' ? 'Heroic' : appName}`,
+    `Writing config for ${appName === 'default' ? 'GameLib' : appName}`,
     LogPrefix.Backend
   )
   const oldConfig =

@@ -35,6 +35,18 @@ describe('TrayIcon', () => {
     expect(appIcon).not.toBeNull()
   })
 
+  it('sets tooltip to GameLib', async () => {
+    GlobalConfig.setConfigValue('noTrayIcon', false)
+    setRecentGames([])
+
+    const appIcon = await initTrayIcon(mainWindow)
+
+    // Access mock Tray's tooltip property (set by setToolTip in the mock)
+    expect((appIcon as unknown as { tooltip: string }).tooltip).toEqual(
+      'GameLib'
+    )
+  })
+
   describe('content', () => {
     describe('contextMenu', () => {
       beforeEach(() => {
