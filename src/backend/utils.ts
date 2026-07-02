@@ -832,19 +832,13 @@ const getLatestReleases = async (): Promise<Release[]> => {
 const getCurrentChangelog = async (): Promise<Release | null> => {
   if (process.env.CI === 'e2e') return null
 
-  logInfo('Checking for current version changelog', LogPrefix.Backend)
-
   try {
-    const current = app.getVersion()
-
-    const { data: release } = await axiosClient.get(
-      `${GITHUB_API}/tags/v${current}`
-    )
-
-    return release as Release
+    const changelogPath = join(publicDir, 'changelog.json')
+    const content = readFileSync(changelogPath, 'utf-8')
+    return JSON.parse(content) as Release
   } catch (error) {
     logError(
-      ['Error when checking for current Heroic changelog:', error],
+      ['Error reading local GameLib changelog:', error],
       LogPrefix.Backend
     )
     return null
