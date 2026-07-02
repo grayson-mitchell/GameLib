@@ -1,9 +1,9 @@
 ---
 phase: 6
 slug: library-game-status-ux
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-02
 ---
 
@@ -36,9 +36,14 @@ created: 2026-07-02
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| _TBD by planner_ | | | LIB-06 / GAME-05 | | | unit | `pnpm test -- <path>` | ❌ W0 | ⬜ pending |
+| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
+|---------|------|------|-------------|-----------|-------------------|--------|
+| 06-01 T1 | 06-01 | 1 | LIB-06 | unit (tdd) | `pnpm test -- --testPathPattern="steam/games" -t "SteamInstallSize\|parseSteamStorageRequirement"` | ⬜ pending |
+| 06-01 T2 | 06-01 | 1 | LIB-06 | source/tsc | `pnpm exec tsc --noEmit … \| grep -c "downloadqueue" \| grep -q '^0$'` | ⬜ pending |
+| 06-01 T3 | 06-01 | 1 | LIB-06 | source/codecheck | `grep -c '\.\.\.steam\.library' … \| grep -q '^1$' && pnpm run codecheck` | ⬜ pending |
+| 06-02 T1 | 06-02 | 1 | GAME-05 | unit (tdd) | `pnpm test -- --testPathPattern="steam/library" -t "RunningAppId\|pollRunningOnce\|RunningPoll"` | ⬜ pending |
+| 06-02 T2 | 06-02 | 1 | GAME-05 | source/codecheck | `grep -q "startRunningPoll" … && grep -q "stopRunningPoll" … && pnpm run codecheck` | ⬜ pending |
+| 06-02 T3 | 06-02 | 1 | GAME-05 | source/codecheck | `grep -c 'isPlaying && !isSteam' … \| grep -q '^2$' && pnpm run codecheck` | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

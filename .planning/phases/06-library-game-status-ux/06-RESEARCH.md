@@ -787,22 +787,22 @@ function windowsRunningAppId(): number {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **macOS registry.vdf — confirmed functional?**
    - What we know: The ValveSoftware/steam-for-linux#9672 issue is in the Linux-specific repo; no macOS report found.
    - What's unclear: Whether the new Steam UI update also broke registry.vdf on macOS.
-   - Recommendation: Implement the macOS path as designed (A1 assumption). If the Playing badge never shows on macOS after implementation, apply the same `ps`-based fallback as Linux.
+   - **RESOLVED:** Implement the macOS path as designed (A1 assumption). If the Playing badge never shows on macOS after implementation, apply the same `ps`-based fallback as Linux. (Planned in 06-02 T1 with the reaper fallback available cross-platform.)
 
 2. **`SteamInstallInfo` type for Option A `getInstallInfo`**
    - What we know: `InstallInfo` is a union; adding `SteamInstallInfo` requires touching `common/types.ts`.
    - What's unclear: Whether the team prefers touching the shared type or keeping the fix local to `downloadqueue.ts` (Option B).
-   - Recommendation: Option B (Steam-specific block in `addToQueue`) avoids this; plan should use Option B.
+   - **RESOLVED:** Use Option B (Steam-specific block in `addToQueue`) — avoids touching the shared union. Adopted by 06-01 T2.
 
 3. **DM finished-list truth-up**
    - What we know: The ACF `SizeOnDisk` becomes available when Steam finishes downloading, but the DM element is already in "finished".
    - What's unclear: Whether the team wants the more accurate post-install size to retroactively update the finished entry.
-   - Recommendation: Skip for this phase per D-03 (best-effort). The store API estimate is shown; ACF size appears in the game card's installed label.
+   - **RESOLVED:** Skip for this phase per D-03 (best-effort). The store API estimate is shown; ACF size appears in the game card's installed label. 06-01 T2 explicitly forbids the truth-up.
 
 ---
 
