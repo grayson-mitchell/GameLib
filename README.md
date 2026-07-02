@@ -1,8 +1,8 @@
 # GameLib
 
-GameLib is a derivitive of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).  Key Differntiators from Heroic are:
+GameLib is a derivative of Heroic Games Launcher (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher).  Key Differentiators are:
 * Support for Steam Games
-* Stronger CrossOver integration (Playing Games on MacOS
+* Stronger CrossOver integration (Playing Games on macOS)
 
 GameLib is an Open Source Game Library Manager for Linux, Windows and macOS.  
 It supports games from: 
@@ -11,7 +11,7 @@ It supports games from:
 * Amazon Games
 * Steam 
 
-gameLib is built with Web Technologies:  
+GameLib is built with Web Technologies:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-5fd9fb?style=for-the-badge&logo=react&labelColor=gray)](https://reactjs.org/)
 [![MUI](https://img.shields.io/badge/MUI-66b2ff?style=for-the-badge&logo=mui&labelColor=gray&logoColor=66b2ff)](https://mui.com/)
@@ -37,7 +37,7 @@ gameLib is built with Web Technologies:
   - [Development environment](#development-environment)
     - [Building GameLib Binaries](#building-gamelib-binaries)
     - [Building with VS Code](#building-with-vs-code)
-    - [Quickly testing/debugging Heroic on your own system](#quickly-testingdebugging-heroic-on-your-own-system)
+    - [Quickly testing/debugging GameLib on your own system](#quickly-testingdebugging-gamelib-on-your-own-system)
     - [Testing with Docker](#testing-with-docker)
     - [Development on nix](#development-on-nix)
   - [Sponsors](#sponsors)
@@ -53,7 +53,7 @@ gameLib is built with Web Technologies:
 - Play games using Wine or Proton [Linux]
 - Play games using Crossover [macOS]
 - Download custom Wine and Proton versions [Linux]
-- Access to Epic, GOG and Amazon Games stores directly from Heroic
+- Access to Epic, GOG and Amazon Games stores directly from GameLib
 - Search for the game on ProtonDB for compatibility information [Linux]
 - Show ProtonDB and Steam Deck compatibility information [Linux]
 - Sync installed games with an existing Epic Games Store installation
@@ -73,7 +73,7 @@ gameLib is built with Web Technologies:
   - Ubuntu (latest 2 LTS versions)
   - Fedora (latest 2 versions)
   - Arch Linux & derivatives (Manjaro, Garuda, EndeavourOS)
-  - Heroic will still _work_ on most distros, but it is up to you to _get_ it to work
+  - GameLib will still _work_ on most distros, but it is up to you to _get_ it to work
     Chances are though that someone on our [Discord](https://discord.gg/rHJ2uqdquK) can help you
 - SteamOS (downloading using Discover only)
 - Windows 10 & 11
@@ -84,7 +84,7 @@ gameLib is built with Web Technologies:
 <details>
   <summary>Expand</summary>
 
-Thanks to the community, Heroic was translated to almost 40 different languages so far:
+Thanks to the community, GameLib has been translated to almost 40 different languages so far:
 
 - English
 - Azerbaijani
@@ -211,13 +211,13 @@ Run the appropriate command for your OS:
 
 ### Building with VS Code
 
-Instead of using the above commands to build Heroic, you can also use the Tasks in VSCode to build.
+Instead of using the above commands to build GameLib, you can also use the Tasks in VSCode to build.
 To do that, open up the command palette (Ctrl + P), type in "task" and press Space. You will then see 3 build tasks, "Build for Linux", "Build for Windows", and "Build for MacOS". Click the one you want to run.
 
-### Quickly testing/debugging Heroic on your own system
+### Quickly testing/debugging GameLib on your own system
 
 If you want to quickly test a change, or you're implementing features that require a lot of restarts, you can use Vite's development server to speed up the process:  
-Go to the "Run and Debug" tab of VSCode and start the "Launch Heroic (HMR & HR)" task (alternatively, if you're not using VSCode or just prefer the terminal, run `pnpm start`). Heroic will start up after a short while, and once you make any change to the code, it'll reload/restart.
+Go to the "Run and Debug" tab of VSCode and start the "Launch GameLib (HMR & HR)" task (alternatively, if you're not using VSCode or just prefer the terminal, run `pnpm start`). GameLib will start up after a short while, and once you make any change to the code, it'll reload/restart.
 
 ### Development on Nix
 
