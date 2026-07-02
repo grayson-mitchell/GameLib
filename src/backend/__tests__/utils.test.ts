@@ -3,10 +3,15 @@ import { app } from 'electron'
 import { logError } from '../logger'
 import * as utils from '../utils'
 import { test_data } from './test_data/github-api-heroic-test-data.json'
+import { readFileSync } from 'graceful-fs'
 
 jest.mock('electron')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
+jest.mock('graceful-fs', () => ({
+  ...jest.requireActual('graceful-fs'),
+  readFileSync: jest.fn()
+}))
 
 describe('backend/utils.ts', () => {
   test('quoteIfNeccessary', () => {
@@ -128,6 +133,45 @@ describe('backend/utils.ts', () => {
         'Backend'
       )
       expect(releases).toMatchInlineSnapshot(`[]`)
+    })
+  })
+
+  describe('getCurrentChangelog', () => {
+    it('returns null in e2e CI mode', async () => {
+      const originalCI = process.env.CI
+      process.env.CI = 'e2e'
+      const result = await utils.getCurrentChangelog()
+      expect(result).toBeNull()
+      process.env.CI = originalCI
+    })
+
+    it('reads Release from local bundled file (not GitHub API)', async () => {
+      const mockRelease = {
+        id: 1,
+        type: 'stable',
+        tag_name: 'gamelib-v1.0.0',
+        name: 'GameLib 1.0.0',
+        html_url:
+          'https://github.com/grayson-mitchell/GameLib/releases/tag/gamelib-v1.0.0',
+        published_at: '2026-06-30T00:00:00Z',
+        prerelease: false,
+        body: '## GameLib 1.0.0\n\nTest changelog body'
+      }
+      ;(readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockRelease))
+
+      const result = await utils.getCurrentChangelog()
+
+      expect(result).toEqual(mockRelease)
+    })
+
+    it('returns null on file read failure', async () => {
+      ;(readFileSync as jest.Mock).mockImplementation(() => {
+        throw new Error('ENOENT: no such file or directory')
+      })
+
+      const result = await utils.getCurrentChangelog()
+
+      expect(result).toBeNull()
     })
   })
 })
