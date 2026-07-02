@@ -43,7 +43,7 @@ import {
 } from './storeManagers/nile/electronStores'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
-import { notify, showDialogBoxModalAuto } from './dialog/dialog'
+import { showDialogBoxModalAuto } from './dialog/dialog'
 import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
@@ -69,7 +69,6 @@ import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported } from './utils/compatibility_layers'
 import { getSystemInfo } from './utils/systeminfo'
 import { configStore } from './constants/key_value_stores'
-import { GITHUB_API } from './constants/urls'
 import { isLinux, isMac, isIntelMac, isWindows } from './constants/environment'
 import {
   configPath,
@@ -234,7 +233,7 @@ const showAboutWindow = () => {
     applicationVersion: getHeroicVersion(),
     copyright: 'GPL V3',
     iconPath: windowIcon,
-    website: 'https://heroicgameslauncher.com'
+    website: 'https://github.com/grayson-mitchell/GameLib'
   })
   return app.showAboutPanel()
 }

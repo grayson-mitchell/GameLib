@@ -28,13 +28,25 @@ function check(name, result) {
   }
 }
 
+// Read a file as UTF-8, but record a clean FAIL (instead of throwing an
+// uncaught stack trace) if the file is missing — a missing surface should
+// register as a branding failure, not crash the gate. (WR-03)
+function readText(absPath, label) {
+  try {
+    return fs.readFileSync(absPath, 'utf8')
+  } catch {
+    check(`readable: ${label || absPath}`, false)
+    return ''
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Load files
 // ---------------------------------------------------------------------------
 const pkg = require(path.join(ROOT, 'package.json'))
 const translation = require(path.join(ROOT, 'public', 'locales', 'en', 'translation.json'))
-const builderYml = fs.readFileSync(path.join(ROOT, 'electron-builder.yml'), 'utf8')
-const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
+const builderYml = readText(path.join(ROOT, 'electron-builder.yml'), 'electron-builder.yml')
+const indexHtml = readText(path.join(ROOT, 'index.html'), 'index.html')
 
 // ---------------------------------------------------------------------------
 // Section 1: Package / distribution identity
@@ -83,13 +95,13 @@ check(
   builderYml.includes('productName: GameLib')
 )
 
-const utilsTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'utils.ts'), 'utf8')
+const utilsTs = readText(path.join(ROOT, 'src', 'backend', 'utils.ts'), 'src/backend/utils.ts')
 check(
   "src/backend/utils.ts showAboutWindow applicationName: 'GameLib'",
   utilsTs.includes("applicationName: 'GameLib'")
 )
 
-const pathsTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'constants', 'paths.ts'), 'utf8')
+const pathsTs = readText(path.join(ROOT, 'src', 'backend', 'constants', 'paths.ts'), 'src/backend/constants/paths.ts')
 check(
   "src/backend/constants/paths.ts appFolder join(configFolder, 'heroic') UNCHANGED",
   pathsTs.includes("join(configFolder, 'heroic')")
@@ -105,20 +117,20 @@ check(
 // ---------------------------------------------------------------------------
 console.log('\n--- Phase 5: tray, log paths, config paths, presence, changelog ---')
 
-const trayTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'tray_icon', 'tray_icon.ts'), 'utf8')
+const trayTs = readText(path.join(ROOT, 'src', 'backend', 'tray_icon', 'tray_icon.ts'), 'src/backend/tray_icon/tray_icon.ts')
 check("tray_icon.ts setToolTip('GameLib')", trayTs.includes("setToolTip('GameLib')"))
 check("tray_icon.ts no setToolTip('Heroic')", !trayTs.includes("setToolTip('Heroic')"))
 
-const loggerPathsTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'logger', 'paths.ts'), 'utf8')
+const loggerPathsTs = readText(path.join(ROOT, 'src', 'backend', 'logger', 'paths.ts'), 'src/backend/logger/paths.ts')
 check("logger/paths.ts no 'Heroic' in path strings", !loggerPathsTs.includes("'Heroic'") && !loggerPathsTs.includes("'Heroic Games Launcher'"))
 
 check("constants/paths.ts heroicInstallPath uses 'GameLib'", pathsTs.includes("join(userHome, 'Games', 'GameLib')"))
 check("constants/paths.ts no 'Games', 'Heroic' path", !pathsTs.includes("'Games', 'Heroic'"))
 
-const configTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'config.ts'), 'utf8')
+const configTs = readText(path.join(ROOT, 'src', 'backend', 'config.ts'), 'src/backend/config.ts')
 check("config.ts wineCrossoverBottle default is 'GameLib'", configTs.includes("wineCrossoverBottle: 'GameLib'"))
 
-const presenceTs = fs.readFileSync(path.join(ROOT, 'src', 'backend', 'storeManagers', 'gog', 'presence.ts'), 'utf8')
+const presenceTs = readText(path.join(ROOT, 'src', 'backend', 'storeManagers', 'gog', 'presence.ts'), 'src/backend/storeManagers/gog/presence.ts')
 check("presence.ts application_type is 'GameLib' not 'Heroic Games Launcher'", !presenceTs.includes("'Heroic Games Launcher'"))
 
 check("utils.ts no 'via Heroic on'", !utilsTs.includes("'via Heroic on '"))
@@ -131,6 +143,14 @@ check("utils.ts no D-05 writeConfig \"? 'Heroic' :\"", !utilsTs.includes("? 'Her
 const changelogPath = path.join(ROOT, 'public', 'changelog.json')
 check("public/changelog.json exists", fs.existsSync(changelogPath))
 check("getCurrentChangelog reads local file not GitHub API", utilsTs.includes("readFileSync") && !utilsTs.includes("GITHUB_API/tags/"))
+
+// About panel website + updater changelog link must point at GameLib, not Heroic
+check("utils.ts About website is GameLib repo", utilsTs.includes("website: 'https://github.com/grayson-mitchell/GameLib'"))
+check("utils.ts About website not heroicgameslauncher.com", !utilsTs.includes('heroicgameslauncher.com'))
+
+const updaterTs = readText(path.join(ROOT, 'src', 'backend', 'updater.ts'), 'src/backend/updater.ts')
+check("updater.ts changelog link points at GameLib releases", updaterTs.includes('grayson-mitchell/GameLib/releases'))
+check("updater.ts changelog link not Heroic releases", !updaterTs.includes('Heroic-Games-Launcher/HeroicGamesLauncher/releases'))
 
 // ---------------------------------------------------------------------------
 // Summary

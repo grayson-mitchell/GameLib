@@ -50,7 +50,7 @@ async function showAutoupdateDialog() {
   }
   if (response === 2) {
     shell.openExternal(
-      'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases'
+      'https://github.com/grayson-mitchell/GameLib/releases'
     )
     showAutoupdateDialog()
   }
