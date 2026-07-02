@@ -171,7 +171,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Backend log output and dialog strings use "GameLib" where they previously showed "Heroic"
   3. The README accurately documents GameLib as a fork of Heroic with Steam support and includes build/install steps
   4. Clicking the version number in the app opens a GameLib release notes view describing what changed, with a link to the corresponding upstream Heroic release
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 05-01-PLAN.md — utils.ts rebrand + bundled changelog + update-check suppression + tray tooltip + Discord presence (APP-01, BRAND-02, BRAND-03)
+  - [ ] 05-02-PLAN.md — remaining backend dialog/error strings + filesystem path constants clean cutover (BRAND-03)
+  - [ ] 05-03-PLAN.md — README accuracy/fork-clarity pass + VS Code launch-config rename (BRAND-04)
+  - [ ] 05-04-PLAN.md — extend verify-branding.cjs with Phase 5 Section 5 gate (BRAND-02, BRAND-03, APP-01)
 **UI hint**: yes
 
 ### Phase 6: Library & Game Status UX
