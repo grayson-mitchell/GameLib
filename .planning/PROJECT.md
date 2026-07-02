@@ -8,6 +8,24 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 
 One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
 
+## Current Milestone: v1.1 Polish & Enhancements
+
+**Goal:** Close out UAT feedback and known v1.0 tech debt — sharper GameLib branding, richer game metadata, Steam-store browsing, and quality hardening.
+
+**Target features:**
+- macOS menu-bar tooltip reads "GameLib" (BUG-001)
+- Steam as a browsable storefront in the sidebar Stores section (ENH-002)
+- GameLib release notes on the version link, with a link to the upstream Heroic release (ENH-003)
+- Supported platforms shown in game details (ENH-004)
+- Compatibility rating overlay on game art — macOS via AppleGamingWiki now, Linux via ProtonDB later (ENH-005)
+- Steam games available in Console mode (ENH-006)
+- Updated README (ENH-007)
+- "Playing" status badge during a Steam session
+- Real install size in the download-manager queue (replace `'?? MB'`)
+- Playtime on library-grid tiles (currently details page only)
+- Residual backend "Heroic" log/dialog strings → GameLib
+- Formal Nyquist validation pass for shipped phases
+
 ## Requirements
 
 ### Validated
@@ -21,13 +39,25 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ Steam install state, playtime, and store metadata in the library — v1.0
 - ✓ GameLib branding (Heroic → GameLib) — v1.0
 
-### Active (v1.1 candidates — polish)
+### Active (v1.1 — in scope)
 
+- [ ] macOS menu-bar tooltip reads "GameLib" (BUG-001)
+- [ ] Steam as a browsable storefront in the sidebar Stores section (ENH-002)
+- [ ] GameLib release notes on the version link, linking to the upstream Heroic release (ENH-003)
+- [ ] Supported platforms shown in game details (ENH-004)
+- [ ] macOS compatibility rating overlay on game art via AppleGamingWiki (ENH-005)
+- [ ] Steam games available in Console mode (ENH-006)
+- [ ] Updated README (ENH-007)
 - [ ] "Playing" status badge during a Steam session (launch returns immediately today)
 - [ ] Real install size in the download-manager queue (replace `'?? MB'`)
 - [ ] Playtime on library-grid tiles (currently game-details page only)
 - [ ] Residual backend "Heroic" log/dialog strings → GameLib
 - [ ] Formal Nyquist validation pass for shipped phases
+
+### Future
+
+- [ ] Linux compatibility rating overlay on game art via ProtonDB (follow-up to ENH-005)
+- [ ] Copy-to-clipboard on the API key field (ENH-001 — deferred, dropped from v1.1)
 
 ### Out of Scope
 
@@ -77,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-29 after v1.0 Steam Platform milestone*
+*Last updated: 2026-07-02 — started v1.1 Polish & Enhancements milestone*

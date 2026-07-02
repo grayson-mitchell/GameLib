@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Awaiting next milestone
-stopped_at: Phase 4 context gathered
-last_updated: "2026-06-29T10:33:34.249Z"
-last_activity: 2026-06-29 — Milestone v1.0 completed and archived
+milestone: v1.1
+milestone_name: Polish & Enhancements
+status: planning
+last_updated: "2026-07-02T07:25:42.651Z"
+last_activity: 2026-07-02
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-01 — Completed quick task 260701-ufx: rebrand Heroic→GameLib (user-facing strings, config-dir migration, gamelib:// protocol)
+Status: Defining requirements
+Last activity: 2026-07-02 — Milestone v1.1 started
 
 ## Performance Metrics
 
