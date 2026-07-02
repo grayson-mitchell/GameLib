@@ -179,14 +179,18 @@ Decimal phases appear between their surrounding integers in numeric order.
 **UI hint**: yes
 
 ### Phase 6: Library & Game Status UX
-**Goal**: Library grid and download manager surface accurate, real-time data — playtime on tiles, real install size, and a "Playing" badge during active Steam sessions
+**Goal**: Library grid and download manager surface accurate, real-time data — real install size in the DM queue, and a "Playing" badge during active Steam sessions (LIB-05 playtime met via existing details page, D-01)
 **Depends on**: Phase 4
 **Requirements**: LIB-05, LIB-06, GAME-05
 **Success Criteria** (what must be TRUE):
-  1. Steam playtime is visible on each game's tile in the library grid (not only on the game details page)
+  1. Steam playtime is visible on the game details page (LIB-05 met via existing TimeContainer per D-01; grid-tile display descoped)
   2. The download-manager queue shows the real install size for Steam games instead of "?? MB"
   3. While a Steam game is actively running, the game shows a "Playing" status badge in the library
-**Plans**: TBD
+**Plans**: 2 plans
+
+**Wave 1** — two independent slices (no file overlap, run in parallel):
+- [ ] `06-01-PLAN.md` — LIB-06 install size: getSteamInstallSize/parse helpers (store appdetails), DM runner-gate, DownloadManagerItem render fix. (LIB-06; LIB-05 met-via-existing)
+- [ ] `06-02-PLAN.md` — GAME-05 Playing badge: per-platform RunningAppID readers + ~5s poller, lifecycle wiring, GameCard Stop-button hide (D-08). (GAME-05)
 **UI hint**: yes
 
 ### Phase 7: Game Details Enrichment
