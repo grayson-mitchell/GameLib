@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Enhancements
 status: planning
-last_updated: "2026-07-02T07:25:42.651Z"
+last_updated: "2026-07-02T00:00:00.000Z"
 last_activity: 2026-07-02
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,44 +17,60 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-26)
+See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Milestone complete
+**Current focus:** v1.1 Polish & Enhancements — roadmap defined, ready to plan Phase 5
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 5 (next up)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-02 — Milestone v1.1 started
+Status: Roadmap created; awaiting phase planning
+Last activity: 2026-07-02 — v1.1 roadmap created (Phases 5-9)
+
+## v1.1 Phase Map
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 5 | Branding & About Polish | BRAND-02, BRAND-03, BRAND-04, APP-01 | Not started |
+| 6 | Library & Game Status UX | LIB-05, LIB-06, GAME-05 | Not started |
+| 7 | Game Details Enrichment | DETAIL-01, DETAIL-02 | Not started |
+| 8 | New Steam Surfaces | STORE-01, CONSOLE-01 | Not started |
+| 9 | Quality Gate | QA-01 | Not started |
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.0):**
 
-- Total plans completed: 2
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 15 (phases 1-4)
+- Average duration: ~5-15 min/plan
+- Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
-**By Phase:**
+**By Phase (v1.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
+| 01 | 3 | - | - |
+| 02 | 6 | - | - |
+| 03 | 4 | - | - |
 | 04 | 2 | - | - |
 
-**Recent Trend:**
+**v1.0 Detail Log:**
 
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
 | Phase 01 P03 | 8min | 3 tasks | 8 files |
 | Phase 02-steam-library P01 | 4min | 3 tasks | 5 files |
 | Phase 02-steam-library P02 | 15min | 2 tasks | 3 files |
 | Phase 02-steam-library P03 | 5min | 2 tasks | 3 files |
 | Phase 02-steam-library P04 | 2min | 2 tasks | 4 files |
 | Phase 02-steam-library P05 | 5min | 3 tasks | 9 files |
+
+**v1.1 Trend:**
+
+- Plans completed: 0
+- Trend: —
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -72,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase ?]: pendingFetches.add() before await in fetchMetadataIfNeeded (T-2-03 dedup)
 - [Phase 02-04]: Gate makeLibrary steam inclusion on steam?.username (not library length) for correct D-02 first-sync empty state
 - [Phase 02-04]: steamLogin uses refreshLibrary({ runInBackground: true, library: 'steam' }) per D-01; blocking handleSuccessfulLogin removed
+- [v1.1 DETAIL-02]: AppleGamingWiki integration is macOS-only and Mac-games-only; ProtonDB/Linux follow-up is DETAIL-03, explicitly deferred to post-v1.1
+- [v1.1 STORE-01]: Steam storefront tab is browse-only; purchasing stays in Steam's own client/web flow
 
 ### Pending Todos
 
@@ -79,7 +97,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Steam authentication approach not yet decided — must resolve before Phase 1 implementation begins
+None — v1.0 complete, v1.1 roadmap defined, ready to execute.
 
 ### Quick Tasks Completed
 
@@ -101,18 +119,11 @@ None yet.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Game Details | DETAIL-03: Linux ProtonDB compat overlay | Post-v1.1 | v1.1 requirements |
+| Settings | API-01: Copy-to-clipboard on API key field | Post-v1.1 | v1.1 requirements |
 
 ## Session Continuity
 
-Last session: 2026-06-28T09:59:32.920Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-branding/04-CONTEXT.md
-| 2026-06-28 | fast | Change app icon to GameLibSticker1.png | ✅ |
-| 2026-06-28 | fast | Rebrand Clear Cache/Reset to GameLib + error-screen tooltips | ✅ |
-| 2026-06-28 | fast | Show Steam total playtime on game details page | ✅ |
-| 2026-06-28 | fast | Brand sidebar Library item as GameLib (yellow bold Lib) | ✅ |
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+Last session: 2026-07-02
+Stopped at: v1.1 roadmap created (Phases 5-9)
+Next: `/gsd:plan-phase 5` to plan Branding & About Polish

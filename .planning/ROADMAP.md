@@ -13,10 +13,20 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 
 Decimal phases appear between their surrounding integers in numeric order.
 
+### v1.0 — Steam Platform (Shipped 2026-06-29)
+
 - [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GameLib (completed 2026-06-27)
 - [x] **Phase 2: Steam Library** - Steam games appear in the unified library with metadata and install state (completed 2026-06-28)
 - [x] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GameLib (completed 2026-06-28)
 - [x] **Phase 4: Branding** - App is identified and distributed as GameLib, not Heroic (completed 2026-06-28)
+
+### v1.1 — Polish & Enhancements
+
+- [ ] **Phase 5: Branding & About Polish** - GameLib presents complete, accurate identity across tray, backend logs, docs, and the release notes link
+- [ ] **Phase 6: Library & Game Status UX** - Library grid surfaces real playtime and install size; a "Playing" badge tracks active Steam sessions
+- [ ] **Phase 7: Game Details Enrichment** - Game details page shows supported platforms and, on macOS, an AppleGamingWiki compatibility rating
+- [ ] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode
+- [ ] **Phase 9: Quality Gate** - All v1.0 and v1.1 shipped phases pass a formal Nyquist validation pass
 
 ## Phase Details
 
@@ -148,10 +158,71 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **UI hint**: yes
 
+---
+
+## v1.1 Phase Details
+
+### Phase 5: Branding & About Polish
+**Goal**: GameLib presents complete, accurate identity across tray tooltip, backend logs, documentation, and the in-app release notes link
+**Depends on**: Phase 4
+**Requirements**: BRAND-02, BRAND-03, BRAND-04, APP-01
+**Success Criteria** (what must be TRUE):
+  1. The macOS menu-bar (tray) tooltip reads "GameLib" instead of "Heroic"
+  2. Backend log output and dialog strings use "GameLib" where they previously showed "Heroic"
+  3. The README accurately documents GameLib as a fork of Heroic with Steam support and includes build/install steps
+  4. Clicking the version number in the app opens a GameLib release notes view describing what changed, with a link to the corresponding upstream Heroic release
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Library & Game Status UX
+**Goal**: Library grid and download manager surface accurate, real-time data — playtime on tiles, real install size, and a "Playing" badge during active Steam sessions
+**Depends on**: Phase 4
+**Requirements**: LIB-05, LIB-06, GAME-05
+**Success Criteria** (what must be TRUE):
+  1. Steam playtime is visible on each game's tile in the library grid (not only on the game details page)
+  2. The download-manager queue shows the real install size for Steam games instead of "?? MB"
+  3. While a Steam game is actively running, the game shows a "Playing" status badge in the library
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 7: Game Details Enrichment
+**Goal**: The game details page shows supported platforms and, on macOS, a compatibility rating from AppleGamingWiki for Mac-supported games
+**Depends on**: Phase 4
+**Requirements**: DETAIL-01, DETAIL-02
+**Success Criteria** (what must be TRUE):
+  1. The game details page shows which platforms a game supports (Windows, macOS, Linux)
+  2. On macOS, Mac-supported Steam games show an AppleGamingWiki compatibility rating overlaid on the game art
+  3. The compatibility overlay only appears on macOS and only for games that have a Mac platform listing
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 8: New Steam Surfaces
+**Goal**: Steam content is accessible in the Stores sidebar tab and Steam games are available in Console mode
+**Depends on**: Phase 4
+**Requirements**: STORE-01, CONSOLE-01
+**Success Criteria** (what must be TRUE):
+  1. A Steam tab appears in the sidebar Stores section alongside the existing Epic and GOG store tabs
+  2. The Steam store tab lets the user browse the Steam storefront from within GameLib (browse-only; purchasing remains in Steam's own flow)
+  3. Steam games appear in Console mode
+  4. A Steam game can be launched from Console mode
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 9: Quality Gate
+**Goal**: All v1.0 and v1.1 shipped phases are formally validated and any regressions are documented
+**Depends on**: Phases 5, 6, 7, 8
+**Requirements**: QA-01
+**Success Criteria** (what must be TRUE):
+  1. A recorded Nyquist validation pass exists covering all v1.0 phases (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01)
+  2. All v1.1 requirements are spot-checked as part of the validation pass
+  3. Any regressions discovered during the pass are documented as issues or resolved before completion
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+v1.0: 1 → 2 → 3 → 4 (complete)
+v1.1: 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -159,3 +230,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Steam Library | 6/6 | Complete   | 2026-06-28 |
 | 3. Game Operations | 4/4 | Complete   | 2026-06-28 |
 | 4. Branding | 2/2 | Complete   | 2026-06-28 |
+| 5. Branding & About Polish | 0/? | Not started | - |
+| 6. Library & Game Status UX | 0/? | Not started | - |
+| 7. Game Details Enrichment | 0/? | Not started | - |
+| 8. New Steam Surfaces | 0/? | Not started | - |
+| 9. Quality Gate | 0/? | Not started | - |

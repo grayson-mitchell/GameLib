@@ -73,24 +73,24 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BRAND-02 | TBD | Pending |
-| BRAND-03 | TBD | Pending |
-| BRAND-04 | TBD | Pending |
-| STORE-01 | TBD | Pending |
-| DETAIL-01 | TBD | Pending |
-| DETAIL-02 | TBD | Pending |
-| APP-01 | TBD | Pending |
-| LIB-05 | TBD | Pending |
-| LIB-06 | TBD | Pending |
-| GAME-05 | TBD | Pending |
-| CONSOLE-01 | TBD | Pending |
-| QA-01 | TBD | Pending |
+| BRAND-02 | Phase 5 | Pending |
+| BRAND-03 | Phase 5 | Pending |
+| BRAND-04 | Phase 5 | Pending |
+| APP-01 | Phase 5 | Pending |
+| LIB-05 | Phase 6 | Pending |
+| LIB-06 | Phase 6 | Pending |
+| GAME-05 | Phase 6 | Pending |
+| DETAIL-01 | Phase 7 | Pending |
+| DETAIL-02 | Phase 7 | Pending |
+| STORE-01 | Phase 8 | Pending |
+| CONSOLE-01 | Phase 8 | Pending |
+| QA-01 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 12 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12 (Phases 5-9)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-02 after v1.1 milestone definition*
+*Last updated: 2026-07-02 — traceability filled during v1.1 roadmap creation*
