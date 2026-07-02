@@ -1,9 +1,9 @@
 ---
 phase: 5
 slug: branding-about-polish
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: ready
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-02
 ---
 
@@ -53,11 +53,11 @@ created: 2026-07-02
 
 ## Wave 0 Requirements
 
-- [ ] Add tooltip assertion to `src/backend/tray_icon/__tests__/tray_icon.test.ts` — asserts tooltip equals `'GameLib'` (BRAND-02)
-- [ ] Add `getLatestReleases` suppression test in `src/backend/**/__tests__/` — asserts it returns `[]` under normal conditions (APP-01, D-04)
-- [ ] Extend `scripts/verify-branding.cjs` with a new section asserting: rebranded backend strings say "GameLib", tray tooltip literal, and `public/changelog.json` exists + parses as a valid `Release` (BRAND-03, APP-01)
+- [x] Add tooltip assertion to `src/backend/tray_icon/__tests__/tray_icon.test.ts` — asserts tooltip equals `'GameLib'` (BRAND-02) — *covered inline by plan 05-01 Task 3*
+- [x] Add `getLatestReleases` suppression test in `src/backend/**/__tests__/` — asserts it returns `[]` under normal conditions (APP-01, D-04) — *covered inline by plan 05-01 Task 2*
+- [x] Extend `scripts/verify-branding.cjs` with a new section asserting: rebranded backend strings say "GameLib", tray tooltip literal, and `public/changelog.json` exists + parses as a valid `Release` (BRAND-03, APP-01) — *covered inline by plan 05-04 Task 1*
 
-*Existing test infrastructure covers the majority of this phase; the above are additions, not rewrites.*
+*Existing test infrastructure covers the majority of this phase; the above are additions, not rewrites. All Wave 0 items are covered inline by phase plans — no separate Wave 0 plan is required.*
 
 ---
 
@@ -73,11 +73,11 @@ created: 2026-07-02
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (tray assertion, getLatestReleases test, verify-branding extension)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (tray assertion, getLatestReleases test, verify-branding extension)
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** ready for execution

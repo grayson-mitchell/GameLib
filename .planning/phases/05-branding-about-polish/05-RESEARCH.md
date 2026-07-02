@@ -582,17 +582,19 @@ No new trust boundaries are created in this phase.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Changelog body content (D-02)**
    - What we know: Must describe Steam platform support, CrossOver/Proton integration, Heroic→GameLib rebrand; must include upstream link.
    - What's unclear: Exact wording and level of detail — concise vs comprehensive.
    - Recommendation: Executor authors it during implementation; 3-5 bullet points is sufficient.
+   - RESOLVED: Body content is at executor's discretion — author 3–5 bullets covering Steam, CrossOver/Proton, and the Heroic→GameLib rebrand, plus the D-03 upstream link line, per plan 05-01 Task 1 action.
 
 2. **`relativeFilePath = 'heroic'` (logger/paths.ts:L49)**
    - What we know: This sets the filename of the main app log to `heroic.log` inside the rebranded log directory.
    - What's unclear: D-08 says "log dir label" — does this include the log filename itself?
    - Recommendation: Change to `'gamelib'` for completeness and internal consistency. If overturned, it's a one-character-string revert.
+   - RESOLVED: Change to `'gamelib'` for D-08 completeness — implemented in plan 05-02 Task 2.
 
 ---
 
