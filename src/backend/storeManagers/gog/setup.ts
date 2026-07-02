@@ -234,7 +234,7 @@ async function setup(
           [
             "Script interpreter couldn't be found",
             isiPath,
-            'to try again restart Heroic and',
+            'to try again restart GameLib and',
             isWindows ? 'reinstall the game' : 'delete wine prefix of the game'
           ],
           {

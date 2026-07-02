@@ -62,7 +62,7 @@ autoUpdater.on('update-downloaded', async () => {
     title: t('box.info.update.title-finished', 'Update Finished'),
     message: t(
       'box.info.update.message-finished',
-      'Do you want to restart Heroic now?'
+      'Do you want to restart GameLib now?'
     ),
     buttons: [t('box.no'), t('box.yes')]
   })
