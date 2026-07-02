@@ -38,20 +38,20 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ Uninstall Steam games from GameLib — v1.0
 - ✓ Steam install state, playtime, and store metadata in the library — v1.0
 - ✓ GameLib branding (Heroic → GameLib) — v1.0
+- ✓ macOS menu-bar tooltip reads "GameLib" (BUG-001) — v1.1 Phase 5
+- ✓ GameLib release notes on the version link, linking to the upstream Heroic release (ENH-003) — v1.1 Phase 5
+- ✓ Updated README (ENH-007) — v1.1 Phase 5
+- ✓ Residual backend "Heroic" log/dialog strings → GameLib — v1.1 Phase 5
 
 ### Active (v1.1 — in scope)
 
-- [ ] macOS menu-bar tooltip reads "GameLib" (BUG-001)
 - [ ] Steam as a browsable storefront in the sidebar Stores section (ENH-002)
-- [ ] GameLib release notes on the version link, linking to the upstream Heroic release (ENH-003)
 - [ ] Supported platforms shown in game details (ENH-004)
 - [ ] macOS compatibility rating overlay on game art via AppleGamingWiki (ENH-005)
 - [ ] Steam games available in Console mode (ENH-006)
-- [ ] Updated README (ENH-007)
 - [ ] "Playing" status badge during a Steam session (launch returns immediately today)
 - [ ] Real install size in the download-manager queue (replace `'?? MB'`)
 - [ ] Playtime on library-grid tiles (currently game-details page only)
-- [ ] Residual backend "Heroic" log/dialog strings → GameLib
 - [ ] Formal Nyquist validation pass for shipped phases
 
 ### Future
@@ -107,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 — started v1.1 Polish & Enhancements milestone*
+*Last updated: 2026-07-02 — Phase 5 (Branding & About Polish) complete; BUG-001, ENH-003, ENH-007, residual-strings validated*
