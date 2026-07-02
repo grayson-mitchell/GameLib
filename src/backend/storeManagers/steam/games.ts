@@ -12,6 +12,7 @@ import {
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
 import { sendFrontendMessage } from '../../ipc'
@@ -44,6 +45,84 @@ export function buildSteamProtocolUrl(
     return null
   }
   return `steam://${verb}/${appId}`
+}
+
+/**
+ * Parse a storage size from the Steam store appdetails `pc_requirements.minimum`
+ * HTML string (e.g. "<li><strong>Storage:</strong> 15 GB available space</li>").
+ *
+ * The raw HTML is never eval'd or rendered to the DOM — a bounded regex extracts
+ * only the numeric size and unit (T-06-02 mitigation).
+ *
+ * Returns the byte count (Math.round) or undefined when no figure is found.
+ */
+export function parseSteamStorageRequirement(
+  htmlText: string | undefined
+): number | undefined {
+  if (!htmlText || typeof htmlText !== 'string') return undefined
+  // Matches: "15 GB available space", "512 MB available space", "1.5 TB available space"
+  const match = htmlText.match(
+    /(\d+(?:\.\d+)?)\s*(TB|GB|MB|KB)\s+available\s+space/i
+  )
+  if (!match) return undefined
+  const value = parseFloat(match[1])
+  const unit = match[2].toUpperCase()
+  const multipliers: Record<string, number> = {
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4
+  }
+  return Math.round(value * (multipliers[unit] ?? 1))
+}
+
+/**
+ * Returns a human-readable install size string for a Steam game.
+ *
+ * Fast path (no network): if the game is already installed and `install_size`
+ * is present in GameInfo, parse and return it via getFileSize.
+ *
+ * Pre-install estimate: call the public Steam store appdetails API, parse
+ * the `pc_requirements.minimum` HTML for a storage figure, and return it via
+ * getFileSize. Falls back to '?? MB' when no figure is obtainable (D-03).
+ *
+ * appId is guarded with /^\d+$/ before any network request (T-06-01).
+ */
+export async function getSteamInstallSize(
+  appId: string,
+  gameInfo?: GameInfo
+): Promise<string> {
+  // Fast path: already installed — use the ACF-verified size, no network needed
+  if (gameInfo?.is_installed && gameInfo?.install?.install_size) {
+    const bytes = parseInt(gameInfo.install.install_size, 10)
+    if (!isNaN(bytes) && bytes > 0) return getFileSize(bytes)
+  }
+
+  // Guard: non-numeric appId rejected before constructing any URL (T-06-01)
+  if (!/^\d+$/.test(appId)) {
+    logWarning(
+      `getSteamInstallSize: rejected non-numeric appId "${appId}" (T-06-01)`,
+      LogPrefix.Steam
+    )
+    return '?? MB'
+  }
+
+  // Pre-install estimate: parse storage requirement from store API
+  try {
+    const resp = await axios.get(`${STEAM_STORE_API}?appids=${appId}`)
+    const data = resp.data?.[appId]?.data
+    // Guard: pc_requirements may be [] for F2P/DLC/tool apps (Pitfall 5)
+    const minHtml = data?.pc_requirements?.minimum
+    const bytes = parseSteamStorageRequirement(minHtml)
+    if (bytes && bytes > 0) return getFileSize(bytes)
+  } catch (err) {
+    logWarning(
+      [`getSteamInstallSize: store API fetch failed for appId ${appId}:`, err],
+      LogPrefix.Steam
+    )
+  }
+
+  return '?? MB'
 }
 
 export default class SteamGame implements Game {

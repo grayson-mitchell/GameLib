@@ -12,7 +12,7 @@
 import axios from 'axios'
 import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore } from '../electronStores'
-import SteamGame from '../games'
+import SteamGame, { parseSteamStorageRequirement, getSteamInstallSize } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 import { library, pendingFetches } from '../state'
@@ -114,7 +114,7 @@ jest.mock('graceful-fs', () => ({
   readFileSync: jest.fn()
 }))
 jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
-jest.mock('backend/utils', () => ({ getSteamLibraries: jest.fn() }))
+jest.mock('backend/utils', () => ({ getSteamLibraries: jest.fn(), getFileSize: jest.fn() }))
 jest.mock('../user', () => ({
   SteamUser: { isLoggedIn: jest.fn(), getClient: jest.fn() }
 }))
@@ -602,6 +602,89 @@ describe('SteamGame.uninstall() — GAME-03', () => {
 
     // Badge state is reconciled only after the focus ACF re-read, never assumed from click
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── LIB-06: parseSteamStorageRequirement ─────────────────────────────────────
+
+describe('parseSteamStorageRequirement', () => {
+  it('LIB-06: returns bytes for "15 GB available space" HTML (15 * 1024^3)', () => {
+    const html = '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
+    expect(parseSteamStorageRequirement(html)).toBe(15 * 1024 ** 3) // 16106127360
+  })
+
+  it('LIB-06: returns bytes for plain "512 MB available space" (512 * 1024^2)', () => {
+    expect(parseSteamStorageRequirement('512 MB available space')).toBe(512 * 1024 ** 2) // 536870912
+  })
+
+  it('LIB-06: returns undefined for undefined input', () => {
+    expect(parseSteamStorageRequirement(undefined)).toBeUndefined()
+  })
+
+  it('LIB-06: returns undefined when string contains no size pattern', () => {
+    expect(parseSteamStorageRequirement('no size here')).toBeUndefined()
+  })
+
+  it('LIB-06: returns undefined for non-string input (array cast — typeof guard)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(parseSteamStorageRequirement([] as any)).toBeUndefined()
+  })
+})
+
+// ── LIB-06: getSteamInstallSize ───────────────────────────────────────────────
+
+describe('getSteamInstallSize', () => {
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    // getFileSize is mocked in backend/utils — set a stable return value per test
+    ;(jest.requireMock('backend/utils').getFileSize as jest.Mock).mockReturnValue('15.00 GiB')
+  })
+
+  it('LIB-06: returns installed game size from install_size without calling axios.get', async () => {
+    const gameInfo = makeEntry({
+      is_installed: true,
+      install: { install_size: '16106127360', install_path: '/games/tf2' }
+    })
+    const result = await getSteamInstallSize('440', gameInfo)
+    expect(jest.mocked(axios.get)).not.toHaveBeenCalled()
+    expect(result).toBe('15.00 GiB')
+  })
+
+  it('LIB-06: calls store API for uninstalled game and returns parsed size string', async () => {
+    jest.mocked(axios.get).mockResolvedValue({
+      data: {
+        '440': {
+          success: true,
+          data: {
+            name: 'Team Fortress 2',
+            pc_requirements: {
+              minimum: '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
+            }
+          }
+        }
+      }
+    })
+    const gameInfo = makeEntry({ is_installed: false, install: {} })
+    const result = await getSteamInstallSize('440', gameInfo)
+    expect(jest.mocked(axios.get)).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(axios.get)).toHaveBeenCalledWith(
+      'https://store.steampowered.com/api/appdetails?appids=440'
+    )
+    expect(result).not.toBe('?? MB')
+  })
+
+  it('LIB-06: returns "?? MB" when axios.get rejects', async () => {
+    jest.mocked(axios.get).mockRejectedValue(new Error('Network error'))
+    const gameInfo = makeEntry({ is_installed: false, install: {} })
+    const result = await getSteamInstallSize('440', gameInfo)
+    expect(result).toBe('?? MB')
+  })
+
+  it('T-06-01: returns "?? MB" for non-numeric appId without calling axios.get', async () => {
+    const result = await getSteamInstallSize('not-an-id')
+    expect(result).toBe('?? MB')
+    expect(jest.mocked(axios.get)).not.toHaveBeenCalled()
   })
 })
 

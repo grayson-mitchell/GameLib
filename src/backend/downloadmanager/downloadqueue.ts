@@ -9,6 +9,7 @@ import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { notify } from '../dialog/dialog'
 import i18next from 'i18next'
 import { createRedistDMQueueElement } from 'backend/storeManagers/gog/redist'
+import { getSteamInstallSize } from 'backend/storeManagers/steam/games'
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
 import { onConnectivityChange } from 'backend/online_monitor'
@@ -146,34 +147,44 @@ async function addToQueue(element: DMQueueElement) {
       element.params.appName
     )
     if (!gameInfo?.isEAManaged && !gameInfo?.isUbisoftManaged) {
-      const installInfo = await libraryManagerMap[
-        element.params.runner
-      ].getInstallInfo(
-        element.params.appName,
-        element.params.platformToInstall,
-        {
-          branch: element.params.branch,
-          build: element.params.build
-        }
-      )
+      // Steam-specific size path (D-04): fetch via store appdetails API at enqueue
+      // time so the DM queue shows a real GB/MB figure instead of '?? MB'.
+      // GOG/Epic/Amazon continue to use getInstallInfo unchanged.
+      if (element.params.runner === 'steam') {
+        element.params.size = await getSteamInstallSize(
+          element.params.appName,
+          element.params.gameInfo
+        )
+      } else {
+        const installInfo = await libraryManagerMap[
+          element.params.runner
+        ].getInstallInfo(
+          element.params.appName,
+          element.params.platformToInstall,
+          {
+            branch: element.params.branch,
+            build: element.params.build
+          }
+        )
 
-      element.params.size = installInfo?.manifest?.download_size
-        ? getFileSize(installInfo?.manifest?.download_size)
-        : '?? MB'
+        element.params.size = installInfo?.manifest?.download_size
+          ? getFileSize(installInfo?.manifest?.download_size)
+          : '?? MB'
 
-      if (
-        element.params.runner === 'gog' &&
-        element.params.platformToInstall.toLowerCase() === 'windows' &&
-        installInfo &&
-        installInfo.manifest &&
-        'dependencies' in installInfo.manifest
-      ) {
-        const newDependencies = installInfo.manifest.dependencies || []
-        if (newDependencies?.length || !existsSync(gogRedistPath)) {
-          // create redist element
-          const redistElement = createRedistDMQueueElement()
-          redistElement.params.dependencies = newDependencies
-          elements.push(redistElement)
+        if (
+          element.params.runner === 'gog' &&
+          element.params.platformToInstall.toLowerCase() === 'windows' &&
+          installInfo &&
+          installInfo.manifest &&
+          'dependencies' in installInfo.manifest
+        ) {
+          const newDependencies = installInfo.manifest.dependencies || []
+          if (newDependencies?.length || !existsSync(gogRedistPath)) {
+            // create redist element
+            const redistElement = createRedistDMQueueElement()
+            redistElement.params.dependencies = newDependencies
+            elements.push(redistElement)
+          }
         }
       }
     } else {
