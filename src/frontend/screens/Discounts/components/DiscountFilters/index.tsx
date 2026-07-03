@@ -56,6 +56,7 @@ interface Props {
   wishlistOnly: boolean
   onWishlistOnlyChange: (value: boolean) => void
   isGogLoggedIn: boolean
+  canHideOwned: boolean
   pageSize: number
   onPageSizeChange: (value: number) => void
   onReset: () => void
@@ -186,6 +187,7 @@ const DiscountFilters = ({
   wishlistOnly,
   onWishlistOnlyChange,
   isGogLoggedIn,
+  canHideOwned,
   pageSize,
   onPageSizeChange,
   onReset,
@@ -286,30 +288,30 @@ const DiscountFilters = ({
           placeholder={t('search', 'Search for Games')}
         />
         {isGogLoggedIn && (
-          <>
-            <FormControlLabel
-              className="discountFilters__wishlistOnly"
-              control={
-                <Checkbox
-                  size="small"
-                  checked={wishlistOnly}
-                  onChange={(e) => onWishlistOnlyChange(e.target.checked)}
-                />
-              }
-              label={t('discounts.filters.wishlistOnly', 'Wishlist Only')}
-            />
-            <FormControlLabel
-              className="discountFilters__hideOwned"
-              control={
-                <Checkbox
-                  size="small"
-                  checked={hideOwned}
-                  onChange={(e) => onHideOwnedChange(e.target.checked)}
-                />
-              }
-              label={t('discounts.filters.hideOwned', 'Hide Owned')}
-            />
-          </>
+          <FormControlLabel
+            className="discountFilters__wishlistOnly"
+            control={
+              <Checkbox
+                size="small"
+                checked={wishlistOnly}
+                onChange={(e) => onWishlistOnlyChange(e.target.checked)}
+              />
+            }
+            label={t('discounts.filters.wishlistOnly', 'Wishlist Only')}
+          />
+        )}
+        {canHideOwned && (
+          <FormControlLabel
+            className="discountFilters__hideOwned"
+            control={
+              <Checkbox
+                size="small"
+                checked={hideOwned}
+                onChange={(e) => onHideOwnedChange(e.target.checked)}
+              />
+            }
+            label={t('discounts.filters.hideOwned', 'Hide Owned')}
+          />
         )}
         <FormControlLabel
           className="discountFilters__hideDlcs"

@@ -41,8 +41,36 @@ export default function Discounts() {
     () => getLocaleSettings(i18n.language, regionOverride),
     [i18n.language, regionOverride]
   )
-  const { gog } = useContext(ContextProvider)
+  const { epic, gog, amazon, steam, zoom } = useContext(ContextProvider)
   const isGogLoggedIn: boolean = !!gog?.username
+
+  // Build a normalized-title set of games owned in ANY store (Epic, GOG,
+  // Amazon, Steam, Zoom). Deals catalog products and library games do not
+  // share appName across stores, so match by trimmed/lowercased title.
+  const ownedTitles = useMemo(() => {
+    const set = new Set<string>()
+    for (const game of [
+      ...epic.library,
+      ...gog.library,
+      ...amazon.library,
+      ...steam.library,
+      ...zoom.library
+    ]) {
+      const key = game.title?.trim().toLowerCase()
+      if (key) set.add(key)
+    }
+    return set
+  }, [
+    epic.library,
+    gog.library,
+    amazon.library,
+    steam.library,
+    zoom.library
+  ])
+
+  // The Hide Owned toggle is available whenever the user owns games in any
+  // store, independent of GOG login.
+  const canHideOwned = ownedTitles.size > 0
 
   const handleRegionChange = (countryCode: string | null) => {
     setRegionOverride(countryCode)
@@ -277,6 +305,9 @@ export default function Discounts() {
 
       if (hideDlcs && p.productType === 'dlc') return false
 
+      if (hideOwned && ownedTitles.has(p.title.trim().toLowerCase()))
+        return false
+
       const amount = parsePriceAmount(p.price.finalMoney?.amount)
       if (amount < minPrice || amount > maxPrice) return false
 
@@ -393,6 +424,8 @@ export default function Discounts() {
     selectedOS,
     searchQuery,
     hideDlcs,
+    hideOwned,
+    ownedTitles,
     sortBy
   ])
 
@@ -581,6 +614,7 @@ export default function Discounts() {
             wishlistOnly={wishlistOnly}
             onWishlistOnlyChange={setWishlistOnly}
             isGogLoggedIn={isGogLoggedIn}
+            canHideOwned={canHideOwned}
             pageSize={pageSize}
             onPageSizeChange={setPageSize}
             onReset={handleReset}
