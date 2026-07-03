@@ -98,3 +98,25 @@ note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/e
   artifacts: []
   missing: []
   class: enhancement-limitation
+
+## Diagnosis
+<!-- Root-cause anchors for the 4 ACTIVE gaps (A-D). E is deferred to backlog. -->
+
+### A — Blank / no art for existing Steam games (bug)
+- `src/frontend/screens/ConsoleMode/components/ConsoleCard/index.tsx:67` — `src={getImageFormatting(game.art_square, game.runner) || fallBackImage}`. When `art_square` is a **broken/404 URL** (not empty), the `||` fallback does NOT trigger — the `<img>` just fails to render → blank. No `onError` handler.
+- `src/backend/storeManagers/steam/library.ts:192-193` — `art_cover`/`art_square` default to `''`; a migration rewrites `capsule_616x353.jpg → library_600x900.jpg`. Games lacking a `library_600x900` capsule get a 404 URL.
+- Fix direction: add an `<img onError>` fallback (to the placeholder) so broken art URLs never render blank; optionally validate/repair migrated URLs. Shared with Library `GameCard` — likely fixes the grid too.
+
+### B — Delisted games should not appear in Console (behavior)
+- `src/backend/storeManagers/steam/games.ts:185` — already has a "Game may be delisted or API temporarily unavailable" branch (appdetails `success:false`).
+- `src/backend/storeManagers/steam/library.ts` — library build/refresh.
+- Fix direction: persist a `is_delisted`/unavailable flag from appdetails `success:false`, filter those games out of the Console grid (and prevent install activation). Confirm it doesn't wrongly hide games during transient API failures.
+
+### C — GameLib-branded placeholder + greyed "art not found" variant (branding + enhancement, APP-WIDE)
+- `src/frontend/assets/heroic_card.jpg` — the current Heroic default fallback.
+- Referenced by 7 components: `ConsoleMode/components/ConsoleCard`, `Library/components/GameCard` (+ `constants.ts`), `Discounts/components/DiscountCard`, `Game/GamePicture`, `Library/.../InstallModal/SideloadDialog`, `components/UI/EditGameDialog`.
+- Fix direction: add a GameLib-branded fallback asset + updated alt text, swap all references, and add a distinct greyed variant used when art could not be found.
+
+### D — Console launch overlay dismisses too early (enhancement)
+- `src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx` — Steam branch uses `setTimeout(onDismiss, 1500)`.
+- Fix direction: dismiss on window blur / foreground loss (game took over) instead of a fixed 1500ms timer, with a max-timeout safety net so it can't hang if focus never changes.
