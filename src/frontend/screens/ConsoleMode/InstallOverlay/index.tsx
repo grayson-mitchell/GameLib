@@ -89,6 +89,33 @@ export default function InstallOverlay({
     return () => document.body.classList.remove('console-modal-open')
   }, [])
 
+  // Steam install handoff: fire the runner-agnostic install() helper (which
+  // routes to the validated backend steam/games.ts → the install protocol),
+  // then auto-dismiss after 1500ms. Escape still dismisses immediately via the
+  // existing keydown handler. No raw Steam protocol URL is constructed here.
+  useEffect(() => {
+    if (game.runner !== 'steam') return
+    let cancelled = false
+    void install({
+      gameInfo: game,
+      previousProgress: null,
+      progress,
+      installPath: 'default',
+      isInstalling: false,
+      platformToInstall: 'Windows',
+      t,
+      showDialogModal: () => null
+    })
+    const timer = setTimeout(() => {
+      if (!cancelled) onDismiss()
+    }, 1500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (!hasWine) return
     let cancelled = false
@@ -249,68 +276,79 @@ export default function InstallOverlay({
   return (
     <div className="consoleInstallOverlay" role="dialog" aria-live="polite">
       <div className="consoleModal">
-        <div className="consoleModalTitle">
-          {t('console.install.title', 'Install game')}
-        </div>
-        <div className="consoleModalGameTitle">{game.title}</div>
+        {game.runner === 'steam' ? (
+          <>
+            <div className="consoleModalTitle">
+              {t('console.steam.installing', 'Opening Steam to install…')}
+            </div>
+            <div className="consoleModalGameTitle">{game.title}</div>
+          </>
+        ) : (
+          <>
+            <div className="consoleModalTitle">
+              {t('console.install.title', 'Install game')}
+            </div>
+            <div className="consoleModalGameTitle">{game.title}</div>
 
-        <div className="consoleInstallFields">
-          {showPlatform && (
-            <SelectorRow
-              focused={focused === 'platform'}
-              onFocus={() => setFocused('platform')}
-              label={t('console.install.platform', 'Platform')}
-              value={availablePlatforms[platformIndex]?.label ?? ''}
-              onPrev={() => cyclePlatform(-1)}
-              onNext={() => cyclePlatform(1)}
-            />
-          )}
-          {hasWine && (
-            <SelectorRow
-              focused={focused === 'wine'}
-              onFocus={() => setFocused('wine')}
-              label={t('console.install.wine', 'Wine')}
-              value={wineLabel}
-              onPrev={() => cycleWine(-1)}
-              onNext={() => cycleWine(1)}
-              disabled={wineList.length <= 1}
-            />
-          )}
-          <div className="consoleInstallRow">
-            <span className="consoleInstallLabel">
-              {t('console.install.path', 'Install to')}
-            </span>
-            <span className="consoleInstallPath" title={installPath}>
-              {installPath || '…'}
-            </span>
-          </div>
-        </div>
+            <div className="consoleInstallFields">
+              {showPlatform && (
+                <SelectorRow
+                  focused={focused === 'platform'}
+                  onFocus={() => setFocused('platform')}
+                  label={t('console.install.platform', 'Platform')}
+                  value={availablePlatforms[platformIndex]?.label ?? ''}
+                  onPrev={() => cyclePlatform(-1)}
+                  onNext={() => cyclePlatform(1)}
+                />
+              )}
+              {hasWine && (
+                <SelectorRow
+                  focused={focused === 'wine'}
+                  onFocus={() => setFocused('wine')}
+                  label={t('console.install.wine', 'Wine')}
+                  value={wineLabel}
+                  onPrev={() => cycleWine(-1)}
+                  onNext={() => cycleWine(1)}
+                  disabled={wineList.length <= 1}
+                />
+              )}
+              <div className="consoleInstallRow">
+                <span className="consoleInstallLabel">
+                  {t('console.install.path', 'Install to')}
+                </span>
+                <span className="consoleInstallPath" title={installPath}>
+                  {installPath || '…'}
+                </span>
+              </div>
+            </div>
 
-        <div className="consoleInstallButtons">
-          <button
-            ref={cancelButtonRef}
-            className={classNames('consoleChip', {
-              active: focused === 'cancel'
-            })}
-            onClick={onDismiss}
-            onMouseEnter={() => setFocused('cancel')}
-            onFocus={() => setFocused('cancel')}
-          >
-            {t('button.cancel', 'Cancel')}
-          </button>
-          <button
-            ref={installButtonRef}
-            className={classNames('consoleChip', {
-              active: focused === 'install'
-            })}
-            onClick={() => void installGame()}
-            onMouseEnter={() => setFocused('install')}
-            onFocus={() => setFocused('install')}
-            disabled={hasWine && !wineVersion}
-          >
-            {t('generic.install', 'Install')}
-          </button>
-        </div>
+            <div className="consoleInstallButtons">
+              <button
+                ref={cancelButtonRef}
+                className={classNames('consoleChip', {
+                  active: focused === 'cancel'
+                })}
+                onClick={onDismiss}
+                onMouseEnter={() => setFocused('cancel')}
+                onFocus={() => setFocused('cancel')}
+              >
+                {t('button.cancel', 'Cancel')}
+              </button>
+              <button
+                ref={installButtonRef}
+                className={classNames('consoleChip', {
+                  active: focused === 'install'
+                })}
+                onClick={() => void installGame()}
+                onMouseEnter={() => setFocused('install')}
+                onFocus={() => setFocused('install')}
+                disabled={hasWine && !wineVersion}
+              >
+                {t('generic.install', 'Install')}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
