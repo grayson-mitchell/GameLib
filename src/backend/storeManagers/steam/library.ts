@@ -549,12 +549,21 @@ export function startInstallPolling(appId: string, intervalMs = 3000): void {
     if (!activePolls.has(appId)) return
 
     // Grace window: if no manifest ever appeared after GRACE_TICKS, the user
-    // probably cancelled Steam's install dialog — stop to avoid endless polling
+    // probably cancelled Steam's install dialog — stop to avoid endless polling.
+    // Emit a terminal 'done' so the DM queue badge clears (removeFromQueue
+    // suppresses 'done' for steam and relies on this poller — symmetric to the
+    // uninstall grace path). Without this, a cancelled install leaves a stuck
+    // 'queued'/'installing' badge until restart (CR-01).
     if (!entry.seenDownloading && entry.ticks >= GRACE_TICKS) {
       logWarning(
         `Steam: install polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no manifest detected; user may have cancelled`,
         LogPrefix.Steam
       )
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: appId,
+        runner: 'steam',
+        status: 'done'
+      })
       stopInstallPolling(appId)
     }
   }, intervalMs)

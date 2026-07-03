@@ -863,6 +863,27 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })
+
+  // CR-01 regression: cancelling Steam's install dialog (no manifest ever
+  // appears) must emit a terminal 'done' after the grace window so the DM queue
+  // badge clears — removeFromQueue suppresses 'done' for steam and relies on
+  // this poller. Symmetric to the uninstall grace path.
+  it('emits gameStatusUpdate { status:"done" } after the grace window when no manifest ever appears (CR-01)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest never appears
+    jest.mocked(sendFrontendMessage).mockClear()
+    const interval = 10
+    startInstallPolling('730', interval)
+    // GRACE_TICKS (20) + 1 ticks so the grace branch fires
+    await jest.advanceTimersByTimeAsync(interval * 21)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+  })
 })
 
 // ── D-07: pollUninstallOnce() ────────────────────────────────────────────────
