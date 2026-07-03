@@ -31,6 +31,9 @@ export interface SteamMetadataCacheEntry {
   // baseline (no flag); absent means "not known native".
   is_mac_native?: boolean
   is_linux_native?: boolean
+  // GAP-B: persists the delisted verdict (appdetails success:false) across restarts.
+  // Absent / false means "not known delisted"; true means confirmed unavailable on Steam.
+  is_delisted?: boolean
 }
 
 export { configStore, steamLibraryStore, steamMetadataStore, steamSyncStore }
