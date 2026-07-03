@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Enhancements
-status: Executed — committed `9912e206`, pushed to `gamelib/main`; automated gates pass (tsc 0, lint clean, 294 tests). Manual macOS UAT pending.
+status: executing
 stopped_at: Phase 8 planned (2 plans verified)
-last_updated: "2026-07-03T10:54:03.800Z"
+last_updated: "2026-07-03T11:08:38.792Z"
 last_activity: 2026-07-03
 progress:
   total_phases: 9
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 22
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 7 executed (UAT pending) → next: Phase 8 — New Steam Surfaces
+**Current focus:** Phase 08 — new-steam-surfaces
 
 ## Current Position
 
-Phase: 7
-Plan: Complete (single plan, DETAIL-01 + DETAIL-02)
-Status: Executed — committed `9912e206`, pushed to `gamelib/main`; automated gates pass (tsc 0, lint clean, 294 tests). Manual macOS UAT pending.
+Phase: 08 (new-steam-surfaces) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-03
 
 ## v1.1 Phase Map
@@ -78,6 +78,7 @@ Last activity: 2026-07-03
 | Phase 07 P01 | — | 4 tasks | 21 files (3 new components) |
 
 *Updated after each plan completion*
+| Phase 08-new-steam-surfaces P01 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-03T10:54:03.789Z
+Last session: 2026-07-03T11:08:38.788Z
 Stopped at: Phase 8 planned (2 plans verified)
 Next: verify Phase 7 on macOS (`/gsd:verify-work`), then `/gsd:plan-phase 8` for New Steam Surfaces

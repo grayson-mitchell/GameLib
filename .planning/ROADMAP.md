@@ -241,5 +241,5 @@ v1.1: 5 → 6 → 7 → 8 → 9
 | 5. Branding & About Polish | 4/4 | Complete   | 2026-07-02 |
 | 6. Library & Game Status UX | 2/2 | Complete   | 2026-07-03 |
 | 7. Game Details Enrichment | 0/? | Not started | - |
-| 8. New Steam Surfaces | 0/? | Not started | - |
+| 8. New Steam Surfaces | 1/2 | In Progress|  |
 | 9. Quality Gate | 0/? | Not started | - |

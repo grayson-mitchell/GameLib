@@ -17,7 +17,7 @@ Requirements for the v1.1 milestone. Each maps to exactly one roadmap phase.
 
 ### Stores
 
-- [ ] **STORE-01**: User can browse the Steam storefront from the sidebar Stores section, alongside the Epic and GOG store tabs (ENH-002)
+- [x] **STORE-01**: User can browse the Steam storefront from the sidebar Stores section, alongside the Epic and GOG store tabs (ENH-002)
 
 ### Game Details
 
@@ -82,7 +82,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | GAME-05 | Phase 6 | Pending |
 | DETAIL-01 | Phase 7 | Pending |
 | DETAIL-02 | Phase 7 | Pending |
-| STORE-01 | Phase 8 | Pending |
+| STORE-01 | Phase 8 | Complete |
 | CONSOLE-01 | Phase 8 | Pending |
 | QA-01 | Phase 9 | Pending |
 
