@@ -124,7 +124,11 @@ export default function ConsoleMode() {
       ...zoom.library,
       ...sideloadedLibrary
     ]
-    return all.filter((g) => !g.install?.is_dlc && !g.thirdPartyManagedApp)
+    // GAP-B: exclude delisted Steam games from the grid (and, transitively, from
+    // storesWithGames/storeFilters — the Steam chip hides if all Steam games are delisted).
+    return all.filter(
+      (g) => !g.install?.is_dlc && !g.thirdPartyManagedApp && !g.is_delisted
+    )
   }, [
     epic.library,
     gog.library,
@@ -241,6 +245,9 @@ export default function ConsoleMode() {
   const activateGame = useCallback(
     (game: GameInfo) => {
       if (!idle) return
+      // GAP-B: a delisted game must never fire an install/launch handoff, even if
+      // it somehow gets focused. Delisted games are already filtered from the grid.
+      if (game.is_delisted) return
       const status = libraryStatus.find(
         (g) => g.appName === game.app_name
       )?.status

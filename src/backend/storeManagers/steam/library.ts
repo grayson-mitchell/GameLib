@@ -195,6 +195,8 @@ export default class SteamLibraryManager implements LibraryManager {
         // platform icons survive a resync (fetchMetadataIfNeeded populates these)
         is_mac_native: cachedMeta?.is_mac_native ?? false,
         is_linux_native: cachedMeta?.is_linux_native ?? false,
+        // GAP-B: seed the persisted delisted verdict so it survives a library resync
+        is_delisted: cachedMeta?.is_delisted ?? false,
         is_installed: !!installedData,
         install: installedData
           ? {

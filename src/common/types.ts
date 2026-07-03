@@ -218,6 +218,9 @@ export interface GameInfo {
   isUbisoftManaged?: boolean
   is_mac_native?: boolean
   is_linux_native?: boolean
+  /** Delisted = confirmed unavailable on Steam (appdetails success:false).
+   * When true the game is hidden from Console and not activatable. */
+  is_delisted?: boolean
   browserUrl?: string
   description?: string
   //used for store release versions. if remote !== local, then update
