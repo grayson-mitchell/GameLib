@@ -13,7 +13,8 @@ files_reviewed_list:
   - src/frontend/screens/DownloadManager/components/DownloadManagerItem/index.tsx
   - src/frontend/screens/Library/components/GameCard/index.tsx
 findings:
-  critical: 1
+  critical: 0
+  critical_resolved: 1
   warning: 3
   info: 2
   total: 6
@@ -47,6 +48,8 @@ Three additional robustness/UX issues and two minor items follow.
 ## Critical Issues
 
 ### CR-01: Steam install cancel leaves a permanently stuck status badge
+
+**RESOLVED** (commit `fix(06): emit gameStatusUpdate done on Steam install cancel`) — the install grace/cancel branch now emits a terminal `done` (symmetric to the uninstall grace path) and a regression test was added.
 
 **File:** `src/backend/storeManagers/steam/library.ts:551-559` (and `src/backend/downloadmanager/downloadqueue.ts:225-231`)
 **Issue:**
