@@ -63,10 +63,11 @@ export default function LaunchOverlay({
   }, [startHold, stopHold])
 
   // Fire the launch exactly once on mount. Steam is fire-and-forget:
-  // steam://rungameid resolves immediately; the overlay holds for 1500ms then
+  // rungameid resolves immediately; the overlay holds for 1500ms then
   // auto-dismisses. Non-Steam closes via onDismiss in the finally block.
   // Intentionally not depending on the launch inputs.
   useEffect(() => {
+    let cleanup: (() => void) | undefined
     if (game.runner === 'steam') {
       void launch({
         appName: game.app_name,
@@ -76,7 +77,7 @@ export default function LaunchOverlay({
         showDialogModal
       })
       const timer = setTimeout(onDismiss, 1500)
-      return () => clearTimeout(timer)
+      cleanup = () => clearTimeout(timer)
     } else {
       void launch({
         appName: game.app_name,
@@ -88,6 +89,7 @@ export default function LaunchOverlay({
         onDismiss()
       })
     }
+    return cleanup
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
