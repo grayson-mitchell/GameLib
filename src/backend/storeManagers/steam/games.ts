@@ -180,9 +180,27 @@ export default class SteamGame implements Game {
     try {
       const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`)
 
-      const data = resp.data?.[this.appId]?.data
+      const entry = resp.data?.[this.appId]
+      const data = entry?.data
+
+      if (entry?.success === false) {
+        // GAP-B: Definitive verdict — Steam says this app no longer exists (delisted).
+        // Persist the flag without wiping cached art/extra so the entry can be reverted
+        // if Steam re-lists the app. Push the updated GameInfo so the frontend drops it live.
+        const delistedInfo: GameInfo = { ...current, is_delisted: true }
+        const existing = steamMetadataStore.get(this.appId)
+        steamMetadataStore.set(this.appId, {
+          ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+          is_delisted: delistedInfo.is_delisted
+        })
+        library.set(this.appId, delistedInfo)
+        sendFrontendMessage('pushGameToLibrary', delistedInfo)
+        return
+      }
+
       if (!data) {
-        // Game may be delisted or API temporarily unavailable
+        // Ambiguous / empty envelope — treat as transient (network, rate-limit).
+        // MUST NOT set is_delisted here; a network blip must not hide owned games.
         return
       }
 
@@ -219,6 +237,8 @@ export default class SteamGame implements Game {
         art_square,
         is_mac_native,
         is_linux_native,
+        // GAP-B: clear any stale delisted flag — the app is available again.
+        is_delisted: false,
         extra
       }
 
@@ -228,7 +248,8 @@ export default class SteamGame implements Game {
         art_square,
         extra,
         is_mac_native,
-        is_linux_native
+        is_linux_native,
+        is_delisted: false
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
