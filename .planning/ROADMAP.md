@@ -213,7 +213,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The Steam store tab lets the user browse the Steam storefront from within GameLib (browse-only; purchasing remains in Steam's own flow)
   3. Steam games appear in Console mode
   4. A Steam game can be launched from Console mode
-**Plans**: TBD
+**Plans**: 6 plans (2 shipped + 4 gap-closure from UAT)
+  - [x] 08-01-PLAN.md — Steam storefront tab (STORE-01)
+  - [x] 08-02-PLAN.md — Steam in Console mode + launch/install handoff (CONSOLE-01)
+  - [ ] 08-03-PLAN.md — Gap A+C: GameLib-branded fallback art + greyed variant + broken-art onError fallback
+  - [ ] 08-04-PLAN.md — Gap B: filter delisted Steam games from Console + block activation
+  - [ ] 08-05-PLAN.md — Gap D: Console launch overlay dismisses on window blur (not fixed 1500ms)
+  - [ ] 08-06-PLAN.md — Gap F: Deals "Hide Owned" accounts for all stores (not GOG only)
 **UI hint**: yes
 
 ### Phase 9: Quality Gate
