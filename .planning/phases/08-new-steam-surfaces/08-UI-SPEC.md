@@ -61,12 +61,14 @@ Exceptions: none beyond existing hard-coded layout values inherited from Console
 
 All values are inherited from existing ConsoleMode SCSS. This phase adds no new type roles.
 
-| Role | Size | Weight | Transform | Usage |
-|------|------|--------|-----------|-------|
-| Overlay status label | `1rem` | 400 | `uppercase`, `letter-spacing: 0.2em` | "LAUNCHED IN STEAM" / "OPENING STEAM TO INSTALL…" in `.consoleLaunchText` / `.consoleModalTitle` |
-| Overlay game title | `clamp(1.6rem, 2.4vw, 2.4rem)` | 700 | none | Game title in `.consoleLaunchGameTitle` / `.consoleModalGameTitle` |
-| Filter chip | `0.9rem` | 500 | none | Store filter chips via `.consoleChip` |
-| Sidebar sub-item | inherits SidebarItem default | 400 | none | "Steam Store" sub-item in `.SidebarLinks__subItem` |
+**Declared weights for this phase: 2 — regular (400) and bold (700).** The filter chip weight (500) is pre-existing in `.consoleChip` SCSS and is not a new declaration for this phase; it is noted below for executor reference only.
+
+| Role | Size | Weight | Line-height | Transform | Usage |
+|------|------|--------|-------------|-----------|-------|
+| Overlay status label | `1rem` | 400 | 1.4 | `uppercase`, `letter-spacing: 0.2em` | "LAUNCHED IN STEAM" / "OPENING STEAM TO INSTALL…" in `.consoleLaunchText` / `.consoleModalTitle` |
+| Overlay game title | `clamp(1.6rem, 2.4vw, 2.4rem)` | 700 | 1.2 | none | Game title in `.consoleLaunchGameTitle` / `.consoleModalGameTitle` |
+| Filter chip | `0.9rem` | inherits existing `.consoleChip` SCSS (500) — not a new declaration for this phase | 1 | none | Store filter chips via `.consoleChip` |
+| Sidebar sub-item | inherits SidebarItem default | 400 | inherits | none | "Steam Store" sub-item in `.SidebarLinks__subItem` |
 
 **Source:** `src/frontend/screens/ConsoleMode/index.scss`, `src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.scss`, `src/frontend/screens/ConsoleMode/InstallOverlay/index.scss`
 
