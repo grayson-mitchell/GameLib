@@ -91,8 +91,8 @@ note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/e
   class: enhancement
 
 - truth: "When a Steam game needs an update before launch, GameLib should give the user feedback (rather than showing 'Launched in Steam' and dismissing while Steam silently updates)."
-  status: failed
-  reason: "User observation (test 5): no update feedback in GameLib; user must open Steam to discover the game is updating."
+  status: deferred
+  reason: "User observation (test 5): no update feedback in GameLib; user must open Steam to discover the game is updating. DEFERRED to backlog (post-v1.1) — new capability, and Steam does not report update state back to GameLib, so this needs its own design. NOT part of Phase 8 gap closure."
   severity: minor
   test: 5
   artifacts: []
