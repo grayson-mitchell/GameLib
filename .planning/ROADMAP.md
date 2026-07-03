@@ -216,10 +216,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 6 plans (2 shipped + 4 gap-closure from UAT)
   - [x] 08-01-PLAN.md — Steam storefront tab (STORE-01)
   - [x] 08-02-PLAN.md — Steam in Console mode + launch/install handoff (CONSOLE-01)
-  - [ ] 08-03-PLAN.md — Gap A+C: GameLib-branded fallback art + greyed variant + broken-art onError fallback
-  - [ ] 08-04-PLAN.md — Gap B: filter delisted Steam games from Console + block activation
-  - [ ] 08-05-PLAN.md — Gap D: Console launch overlay dismisses on window blur (not fixed 1500ms)
-  - [ ] 08-06-PLAN.md — Gap F: Deals "Hide Owned" accounts for all stores (not GOG only)
+  - [x] 08-03-PLAN.md — Gap A+C: GameLib-branded fallback art + greyed variant + broken-art onError fallback
+  - [x] 08-04-PLAN.md — Gap B: filter delisted Steam games from Console + block activation
+  - [x] 08-05-PLAN.md — Gap D: Console launch overlay dismisses on window blur (not fixed 1500ms)
+  - [x] 08-06-PLAN.md — Gap F: Deals "Hide Owned" accounts for all stores (not GOG only)
 **UI hint**: yes
 
 ### Phase 9: Quality Gate
@@ -247,5 +247,5 @@ v1.1: 5 → 6 → 7 → 8 → 9
 | 5. Branding & About Polish | 4/4 | Complete   | 2026-07-02 |
 | 6. Library & Game Status UX | 2/2 | Complete   | 2026-07-03 |
 | 7. Game Details Enrichment | 0/? | Not started | - |
-| 8. New Steam Surfaces | 2/2 | Complete   | 2026-07-03 |
+| 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
