@@ -63,8 +63,11 @@ export default function LaunchOverlay({
   }, [startHold, stopHold])
 
   // Fire the launch exactly once on mount. Steam is fire-and-forget:
-  // rungameid resolves immediately; the overlay holds for 1500ms then
-  // auto-dismisses. Non-Steam closes via onDismiss in the finally block.
+  // rungameid resolves immediately; the overlay holds until GameLib loses
+  // focus (the game took the foreground), then auto-dismisses. A bounded
+  // safety-net timeout ensures the overlay always dismisses even if blur
+  // never fires (game failed to launch, unusual window manager, etc.).
+  // Non-Steam closes via onDismiss in the finally block.
   // Intentionally not depending on the launch inputs.
   useEffect(() => {
     let cleanup: (() => void) | undefined
@@ -76,8 +79,23 @@ export default function LaunchOverlay({
         hasUpdate: false,
         showDialogModal
       })
-      const timer = setTimeout(onDismiss, 1500)
-      cleanup = () => clearTimeout(timer)
+      // Dismiss when GameLib loses focus (the game took the foreground).
+      // A one-shot guard prevents double-dismiss if both signals fire.
+      let dismissed = false
+      const doDismiss = () => {
+        if (dismissed) return
+        dismissed = true
+        onDismiss()
+      }
+      const onBlur = () => doDismiss()
+      window.addEventListener('blur', onBlur)
+      // Safety net: always dismiss at 8s so the overlay cannot hang if
+      // blur never fires. This is the ceiling, not the expected dismiss path.
+      const safety = setTimeout(doDismiss, 8000)
+      cleanup = () => {
+        window.removeEventListener('blur', onBlur)
+        clearTimeout(safety)
+      }
     } else {
       void launch({
         appName: game.app_name,
