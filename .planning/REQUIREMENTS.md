@@ -39,7 +39,7 @@ Requirements for the v1.1 milestone. Each maps to exactly one roadmap phase.
 
 ### Console Mode
 
-- [ ] **CONSOLE-01**: Steam games appear in Console mode and can be launched from it (ENH-006)
+- [x] **CONSOLE-01**: Steam games appear in Console mode and can be launched from it (ENH-006)
 
 ### Quality
 
@@ -83,7 +83,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DETAIL-01 | Phase 7 | Pending |
 | DETAIL-02 | Phase 7 | Pending |
 | STORE-01 | Phase 8 | Complete |
-| CONSOLE-01 | Phase 8 | Pending |
+| CONSOLE-01 | Phase 8 | Complete |
 | QA-01 | Phase 9 | Pending |
 
 **Coverage:**

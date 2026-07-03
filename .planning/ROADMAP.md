@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Branding & About Polish** - GameLib presents complete, accurate identity across tray, backend logs, docs, and the release notes link (completed 2026-07-02)
 - [x] **Phase 6: Library & Game Status UX** - Library grid surfaces real playtime and install size; a "Playing" badge tracks active Steam sessions (completed 2026-07-03)
 - [x] **Phase 7: Game Details Enrichment** - Game details page shows supported platforms and, on macOS, an AppleGamingWiki compatibility rating (completed 2026-07-03, manual UAT pending)
-- [ ] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode
+- [x] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode (completed 2026-07-03)
 - [ ] **Phase 9: Quality Gate** - All v1.0 and v1.1 shipped phases pass a formal Nyquist validation pass
 
 ## Phase Details
@@ -241,5 +241,5 @@ v1.1: 5 → 6 → 7 → 8 → 9
 | 5. Branding & About Polish | 4/4 | Complete   | 2026-07-02 |
 | 6. Library & Game Status UX | 2/2 | Complete   | 2026-07-03 |
 | 7. Game Details Enrichment | 0/? | Not started | - |
-| 8. New Steam Surfaces | 1/2 | In Progress|  |
+| 8. New Steam Surfaces | 2/2 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
