@@ -50,7 +50,7 @@ issues: 1
 pending: 0
 skipped: 0
 
-note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/enhancements and one artwork bug — none block Phase 8's stated contract.
+note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/enhancements, one artwork bug, and one cross-surface Deals-page bug (F) — none block Phase 8's stated contract. Active for fixing: A, B, C, D, F. Deferred to backlog: E (CONSOLE-02).
 
 ## Gaps
 
@@ -99,6 +99,15 @@ note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/e
   missing: []
   class: enhancement-limitation
 
+- truth: "On the Deals/Discounts page, 'Hide Owned' should hide games owned in ANY store (Epic, GOG, Amazon, Steam, Zoom), not just GOG."
+  status: failed
+  reason: "User reported (ad-hoc, outside the 6 scripted tests): the Deals page 'Hide Owned' toggle appears to hide only GOG-owned games. Separate surface from Phase 8's Steam tab/Console — a pre-existing cross-store ownership bug surfaced during this UAT session."
+  severity: major
+  test: adhoc
+  artifacts: []
+  missing: []
+  class: bug-cross-surface
+
 ## Diagnosis
 <!-- Root-cause anchors for the 4 ACTIVE gaps (A-D). E is deferred to backlog. -->
 
@@ -120,3 +129,8 @@ note: All 4 ROADMAP success criteria PASS. The gaps below are follow-on polish/e
 ### D — Console launch overlay dismisses too early (enhancement)
 - `src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx` — Steam branch uses `setTimeout(onDismiss, 1500)`.
 - Fix direction: dismiss on window blur / foreground loss (game took over) instead of a fixed 1500ms timer, with a max-timeout safety net so it can't hang if focus never changes.
+
+### F — Deals page "Hide Owned" only hides GOG games (bug, separate surface)
+- `src/frontend/screens/Discounts/index.tsx:44` — `const { gog } = useContext(ContextProvider)`. Only the GOG library is pulled from context; the hide-owned filter checks GOG ownership only.
+- `src/frontend/screens/Discounts/index.tsx:45` — `isGogLoggedIn`; hide-owned logic downstream keys off the GOG library alone.
+- Fix direction: also pull `epic`, `amazon`, `steam`, `zoom` from ContextProvider and build the owned set from ALL store libraries (match by title/appName as the current GOG check does). NOTE: this is a pre-existing Deals-page bug, NOT a Phase 8 Steam-surface gap — decide whether to batch it with A-D or handle as a standalone quick fix.
