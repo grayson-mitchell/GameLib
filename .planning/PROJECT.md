@@ -42,6 +42,9 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ GameLib release notes on the version link, linking to the upstream Heroic release (ENH-003) — v1.1 Phase 5
 - ✓ Updated README (ENH-007) — v1.1 Phase 5
 - ✓ Residual backend "Heroic" log/dialog strings → GameLib — v1.1 Phase 5
+- ✓ "Playing" status badge during a Steam session (GAME-05) — v1.1 Phase 6
+- ✓ Real install size in the download-manager queue (LIB-06, replaces `'?? MB'`) — v1.1 Phase 6
+- ✓ Playtime visible for Steam games (LIB-05, met via game-details page per D-01; grid-tile display descoped) — v1.1 Phase 6
 
 ### Active (v1.1 — in scope)
 
@@ -49,9 +52,6 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - [ ] Supported platforms shown in game details (ENH-004)
 - [ ] macOS compatibility rating overlay on game art via AppleGamingWiki (ENH-005)
 - [ ] Steam games available in Console mode (ENH-006)
-- [ ] "Playing" status badge during a Steam session (launch returns immediately today)
-- [ ] Real install size in the download-manager queue (replace `'?? MB'`)
-- [ ] Playtime on library-grid tiles (currently game-details page only)
 - [ ] Formal Nyquist validation pass for shipped phases
 
 ### Future
@@ -107,4 +107,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-02 — Phase 5 (Branding & About Polish) complete; BUG-001, ENH-003, ENH-007, residual-strings validated*
+*Last updated: 2026-07-03 — Phase 6 (Library & Game Status UX) complete; GAME-05, LIB-06 validated, LIB-05 met-via-existing (D-01). Human-UAT + CR-01 fix tracked.*
