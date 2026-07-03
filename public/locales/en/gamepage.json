@@ -187,6 +187,7 @@
         "protondb-compatibility-info": "Proton Compatibility Tier",
         "size": "Size",
         "steamdeck-compatibility-info": "SteamDeck Compatibility",
+        "supportedPlatforms": "Supported platforms",
         "syncsaves": "Sync Saves",
         "third-party-app": "Third-Party Manager",
         "version": "Version"

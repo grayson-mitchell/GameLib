@@ -764,4 +764,11 @@
     width: 1rem;
     height: 1rem;
   }
+
+  /* DETAIL-01: OS platform glyphs in the Install-info tab */
+  .platformSupport__icons {
+    display: inline-flex;
+    gap: var(--space-sm);
+    align-items: center;
+  }
 }

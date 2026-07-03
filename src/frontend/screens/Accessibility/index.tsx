@@ -18,17 +18,21 @@ import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
+import { AppleRatingSource } from 'common/types'
 
 const Accessibility = React.memo(function Accessibility() {
   const { t } = useTranslation()
   const {
     isRTL,
+    platform,
     zoomPercent,
     setZoomPercent,
     allTilesInColor,
     setAllTilesInColor,
     titlesAlwaysVisible,
     setTitlesAlwaysVisible,
+    appleRatingSource,
+    setAppleRatingSource,
     setPrimaryFontFamily,
     setSecondaryFontFamily,
     disableDialogBackdropClose,
@@ -93,6 +97,10 @@ const Accessibility = React.memo(function Accessibility() {
   const handleActionsFontFamily = (event: SelectChangeEvent) => {
     setPrimaryFontFamily(event.target.value)
     setActionFont(event.target.value)
+  }
+
+  const handleAppleRatingSource = (event: SelectChangeEvent) => {
+    setAppleRatingSource(event.target.value as AppleRatingSource)
   }
 
   const options = useMemo(() => {
@@ -173,6 +181,25 @@ const Accessibility = React.memo(function Accessibility() {
         </SelectField>
 
         <ThemeSelector />
+
+        {platform === 'darwin' && (
+          <SelectField
+            htmlId="apple-rating-source"
+            value={appleRatingSource}
+            onChange={handleAppleRatingSource}
+            label={t(
+              'accessibility.apple_rating_source',
+              'Mac compatibility rating source'
+            )}
+          >
+            <MenuItem value="crossover">
+              {t('accessibility.apple_rating_source_crossover', 'CrossOver')}
+            </MenuItem>
+            <MenuItem value="wine">
+              {t('accessibility.apple_rating_source_wine', 'Wine')}
+            </MenuItem>
+          </SelectField>
+        )}
 
         <span className="setting">
           <label className={classNames('toggleWrapper', { isRTL: isRTL })}>

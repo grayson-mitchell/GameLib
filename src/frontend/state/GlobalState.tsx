@@ -11,7 +11,8 @@ import {
   WineVersionInfo,
   LibraryTopSectionOptions,
   ExperimentalFeatures,
-  Status
+  Status,
+  AppleRatingSource
 } from 'common/types'
 import {
   DialogModalOptions,
@@ -101,6 +102,7 @@ interface StateProps {
   secondaryFontFamily: string
   allTilesInColor: boolean
   titlesAlwaysVisible: boolean
+  appleRatingSource: AppleRatingSource
   sidebarCollapsed: boolean
   activeController: string
   connectivity: { status: ConnectivityStatus; retryIn: number }
@@ -253,6 +255,7 @@ class GlobalState extends PureComponent<Props> {
       ),
     allTilesInColor: configStore.get('allTilesInColor', false),
     titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
+    appleRatingSource: configStore.get('appleRatingSource', 'crossover'),
     activeController: '',
     connectivity: { status: 'offline', retryIn: 0 },
     showInstallModal: {
@@ -335,6 +338,11 @@ class GlobalState extends PureComponent<Props> {
   setTitlesAlwaysVisible = (value: boolean) => {
     configStore.set('titlesAlwaysVisible', value)
     this.setState({ titlesAlwaysVisible: value })
+  }
+
+  setAppleRatingSource = (value: AppleRatingSource) => {
+    configStore.set('appleRatingSource', value)
+    this.setState({ appleRatingSource: value })
   }
 
   setDisableDialogBackdropClose = (value: boolean) => {
@@ -1241,6 +1249,7 @@ class GlobalState extends PureComponent<Props> {
           setZoomPercent: this.setZoomPercent,
           setAllTilesInColor: this.setAllTilesInColor,
           setTitlesAlwaysVisible: this.setTitlesAlwaysVisible,
+          setAppleRatingSource: this.setAppleRatingSource,
           setSideBarCollapsed: this.setSideBarCollapsed,
           setPrimaryFontFamily: this.setPrimaryFontFamily,
           setSecondaryFontFamily: this.setSecondaryFontFamily,

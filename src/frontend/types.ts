@@ -14,7 +14,8 @@ import {
   WikiInfo,
   ExtraInfo,
   Status,
-  InstallInfo
+  InstallInfo,
+  AppleRatingSource
 } from 'common/types'
 import { NileLoginData, NileRegisterData } from 'common/types/nile'
 
@@ -107,6 +108,8 @@ export interface ContextType {
   setAllTilesInColor: (value: boolean) => void
   titlesAlwaysVisible: boolean
   setTitlesAlwaysVisible: (value: boolean) => void
+  appleRatingSource: AppleRatingSource
+  setAppleRatingSource: (value: AppleRatingSource) => void
   setSideBarCollapsed: (value: boolean) => void
   sidebarCollapsed: boolean
   activeController: string

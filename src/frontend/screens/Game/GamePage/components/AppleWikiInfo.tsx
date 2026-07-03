@@ -1,9 +1,11 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
+import ContextProvider from 'frontend/state/ContextProvider'
 import { WineBar } from '@mui/icons-material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
+import { pickRating, ratingTier } from './appleRating'
 
 interface Props {
   gameInfo: GameInfo
@@ -12,6 +14,7 @@ interface Props {
 const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { wikiInfo } = useContext(GameContext)
+  const { appleRatingSource } = useContext(ContextProvider)
 
   if (!wikiInfo) {
     return null
@@ -23,9 +26,12 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  const hasAppleInfo = applegamingwiki?.crossoverRating
+  // D-11: the tab row honors the app-wide rating-source setting so it never
+  // disagrees with the art overlay. Keeps its current behavior of hiding when
+  // the selected rating is empty (D-12 mandates "Unrated" for the overlay only).
+  const rating = pickRating(applegamingwiki, appleRatingSource)
 
-  if (!hasAppleInfo) {
+  if (!rating) {
     return null
   }
 
@@ -48,8 +54,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     >
       <WineBar />
       <b>{t('info.apple-gaming-wiki', 'AppleGamingWiki Rating')}:</b>
-      {applegamingwiki.crossoverRating.charAt(0).toUpperCase() +
-        applegamingwiki.crossoverRating.slice(1)}
+      {ratingTier(rating).label}
     </a>
   )
 }

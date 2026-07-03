@@ -12,7 +12,10 @@
 import axios from 'axios'
 import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore } from '../electronStores'
-import SteamGame, { parseSteamStorageRequirement, getSteamInstallSize } from '../games'
+import SteamGame, {
+  parseSteamStorageRequirement,
+  getSteamInstallSize
+} from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 import { library, pendingFetches } from '../state'
@@ -114,7 +117,10 @@ jest.mock('graceful-fs', () => ({
   readFileSync: jest.fn()
 }))
 jest.mock('@node-steam/vdf', () => ({ parse: jest.fn() }))
-jest.mock('backend/utils', () => ({ getSteamLibraries: jest.fn(), getFileSize: jest.fn() }))
+jest.mock('backend/utils', () => ({
+  getSteamLibraries: jest.fn(),
+  getFileSize: jest.fn()
+}))
 jest.mock('../user', () => ({
   SteamUser: { isLoggedIn: jest.fn(), getClient: jest.fn() }
 }))
@@ -135,6 +141,7 @@ const fixtureApiResponse = {
       data: {
         name: 'Dota 2',
         short_description: 'A multiplayer online battle arena game.',
+        platforms: { windows: true, mac: true, linux: false },
         genres: [
           { id: '1', description: 'Action' },
           { id: '2', description: 'Strategy' }
@@ -175,7 +182,10 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
   // ── LIB-04: synchronous return from in-memory library ────────────────────
 
   it('LIB-04: getGameInfo returns the existing library entry synchronously', () => {
-    const entry = makeEntry({ title: 'Dota 2', art_cover: 'https://example.com/art.jpg' })
+    const entry = makeEntry({
+      title: 'Dota 2',
+      art_cover: 'https://example.com/art.jpg'
+    })
     library.set(APP_ID, entry)
 
     const result = new SteamGame(APP_ID).getGameInfo()
@@ -216,7 +226,39 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     )
     expect(updated.title).toBe('Dota 2')
     expect(updated.extra?.genres).toEqual(['Action', 'Strategy'])
-    expect(updated.extra?.about?.description).toBe('A multiplayer online battle arena game.')
+    expect(updated.extra?.about?.description).toBe(
+      'A multiplayer online battle arena game.'
+    )
+  })
+
+  // ── DETAIL-01: native platform capture ───────────────────────────────────
+
+  it('DETAIL-01: appdetails platforms map onto is_mac_native / is_linux_native', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    const updated = library.get(APP_ID)!
+    expect(updated.is_mac_native).toBe(true)
+    expect(updated.is_linux_native).toBe(false)
+  })
+
+  it('DETAIL-01: native platform flags are persisted to steamMetadataStore', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        is_mac_native: true,
+        is_linux_native: false
+      })
+    )
   })
 
   // ── LIB-04: cache persistence ─────────────────────────────────────────────
@@ -356,7 +398,9 @@ describe('SteamGame.launch() — GAME-01', () => {
     await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
-    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://rungameid/${APP_ID}`)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`
+    )
   })
 
   it('GAME-01: launch() resolves true for a valid numeric appId', async () => {
@@ -407,7 +451,10 @@ describe('SteamGame.launch() — GAME-01', () => {
 
   it('T-03-01: launch() logs a warning when appId is invalid', async () => {
     const badGame = new SteamGame('not-a-number')
-    library.set('not-a-number', makeEntry({ app_name: 'not-a-number', title: 'BadGame' }))
+    library.set(
+      'not-a-number',
+      makeEntry({ app_name: 'not-a-number', title: 'BadGame' })
+    )
 
     await badGame.launch({} as any)
 
@@ -558,7 +605,9 @@ describe('SteamGame.uninstall() — GAME-03', () => {
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
-    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://uninstall/${APP_ID}`)
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
   })
 
   it('GAME-03: uninstall() resolves an ExecResult { stdout, stderr }', async () => {
@@ -576,7 +625,10 @@ describe('SteamGame.uninstall() — GAME-03', () => {
 
   it('D-07: uninstall() does NOT call startUninstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
     const badGame = new SteamGame('abc')
-    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame', is_installed: true }))
+    library.set(
+      'abc',
+      makeEntry({ app_name: 'abc', title: 'BadGame', is_installed: true })
+    )
     await badGame.uninstall({} as any)
     expect(startUninstallPollingSpy).not.toHaveBeenCalled()
   })
@@ -609,12 +661,15 @@ describe('SteamGame.uninstall() — GAME-03', () => {
 
 describe('parseSteamStorageRequirement', () => {
   it('LIB-06: returns bytes for "15 GB available space" HTML (15 * 1024^3)', () => {
-    const html = '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
+    const html =
+      '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
     expect(parseSteamStorageRequirement(html)).toBe(15 * 1024 ** 3) // 16106127360
   })
 
   it('LIB-06: returns bytes for plain "512 MB available space" (512 * 1024^2)', () => {
-    expect(parseSteamStorageRequirement('512 MB available space')).toBe(512 * 1024 ** 2) // 536870912
+    expect(parseSteamStorageRequirement('512 MB available space')).toBe(
+      512 * 1024 ** 2
+    ) // 536870912
   })
 
   it('LIB-06: returns undefined for undefined input', () => {
@@ -638,7 +693,9 @@ describe('getSteamInstallSize', () => {
     library.clear()
     pendingFetches.clear()
     // getFileSize is mocked in backend/utils — set a stable return value per test
-    ;(jest.requireMock('backend/utils').getFileSize as jest.Mock).mockReturnValue('15.00 GiB')
+    ;(
+      jest.requireMock('backend/utils').getFileSize as jest.Mock
+    ).mockReturnValue('15.00 GiB')
   })
 
   it('LIB-06: returns installed game size from install_size without calling axios.get', async () => {
@@ -659,7 +716,8 @@ describe('getSteamInstallSize', () => {
           data: {
             name: 'Team Fortress 2',
             pc_requirements: {
-              minimum: '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
+              minimum:
+                '<ul><li><strong>Storage:</strong> 15 GB available space</li></ul>'
             }
           }
         }
@@ -750,7 +808,9 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       enviromentOptions: [],
       wrapperOptions: []
     }
-    ;(jest.requireMock('backend/game_config').GameConfig.get as jest.Mock).mockReturnValue({
+    ;(
+      jest.requireMock('backend/game_config').GameConfig.get as jest.Mock
+    ).mockReturnValue({
       config: undefined,
       getSettings: jest.fn().mockResolvedValue(mockSettings)
     })

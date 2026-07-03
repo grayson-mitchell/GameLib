@@ -20,7 +20,13 @@ import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtob
 import type { Path } from 'backend/schemas'
 import type LogWriter from 'backend/logger/log_writer'
 
-export type Runner = 'legendary' | 'gog' | 'sideload' | 'nile' | 'zoom' | 'steam'
+export type Runner =
+  | 'legendary'
+  | 'gog'
+  | 'sideload'
+  | 'nile'
+  | 'zoom'
+  | 'steam'
 
 // NOTE: Do not put enum's in this module or it will break imports
 
@@ -724,6 +730,12 @@ export interface AppleGamingWikiInfo {
   wineRating: string
   crossoverLink: string
 }
+
+/**
+ * DETAIL-02: which AppleGamingWiki rating drives the compatibility surfaces
+ * (art overlay + Extra-info tab row). App-wide setting, default 'crossover'.
+ */
+export type AppleRatingSource = 'crossover' | 'wine'
 
 export interface GamesDBInfo {
   steamID: string

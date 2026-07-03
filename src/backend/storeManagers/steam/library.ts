@@ -191,6 +191,10 @@ export default class SteamLibraryManager implements LibraryManager {
         // Seed artwork from metadata cache so previously fetched art survives resync
         art_cover: cachedMeta?.art_cover ?? '',
         art_square: cachedMeta?.art_square ?? '',
+        // DETAIL-01: seed native platform flags from the metadata cache so the
+        // platform icons survive a resync (fetchMetadataIfNeeded populates these)
+        is_mac_native: cachedMeta?.is_mac_native ?? false,
+        is_linux_native: cachedMeta?.is_linux_native ?? false,
         is_installed: !!installedData,
         install: installedData
           ? {
@@ -841,8 +845,7 @@ function macOsRunningAppId(): number {
   try {
     const content = readFileSync(regPath, 'utf-8')
     const parsed = parse(content)
-    const raw =
-      parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
+    const raw = parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
     return raw ? parseInt(raw, 10) : 0
   } catch {
     return 0
@@ -860,8 +863,7 @@ function linuxRegistryVdfRunningAppId(): number {
   try {
     const content = readFileSync(regPath, 'utf-8')
     const parsed = parse(content)
-    const raw =
-      parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
+    const raw = parsed?.Registry?.HKCU?.Software?.Valve?.Steam?.RunningAppID
     return raw ? parseInt(raw, 10) : 0
   } catch {
     return 0

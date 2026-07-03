@@ -178,9 +178,7 @@ export default class SteamGame implements Game {
     pendingFetches.add(this.appId)
 
     try {
-      const resp = await axios.get(
-        `${STEAM_STORE_API}?appids=${this.appId}`
-      )
+      const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`)
 
       const data = resp.data?.[this.appId]?.data
       if (!data) {
@@ -208,16 +206,30 @@ export default class SteamGame implements Game {
         )
       }
 
+      // DETAIL-01: capture native platform support from appdetails.
+      // Windows is the implicit baseline (no GameInfo flag); only mac/linux
+      // native support is recorded onto the generic platform flags.
+      const is_mac_native = !!data.platforms?.mac
+      const is_linux_native = !!data.platforms?.linux
+
       const updated: GameInfo = {
         ...current,
         title: data.name ?? current.title,
         art_cover,
         art_square,
+        is_mac_native,
+        is_linux_native,
         extra
       }
 
       // Persist metadata for next session (D-05, indefinite cache)
-      steamMetadataStore.set(this.appId, { art_cover, art_square, extra })
+      steamMetadataStore.set(this.appId, {
+        art_cover,
+        art_square,
+        extra,
+        is_mac_native,
+        is_linux_native
+      })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
       library.set(this.appId, updated)
@@ -352,7 +364,10 @@ export default class SteamGame implements Game {
       `SteamGame.moveInstall not implemented until Phase 2 (appId: ${this.appId})`,
       LogPrefix.Steam
     )
-    return { status: 'error', error: 'Steam library not implemented until Phase 2' }
+    return {
+      status: 'error',
+      error: 'Steam library not implemented until Phase 2'
+    }
   }
 
   async repair(): Promise<ExecResult> {
@@ -410,7 +425,10 @@ export default class SteamGame implements Game {
       `SteamGame.update not implemented until Phase 2 (appId: ${this.appId})`,
       LogPrefix.Steam
     )
-    return { status: 'error', error: 'Steam library not implemented until Phase 2' }
+    return {
+      status: 'error',
+      error: 'Steam library not implemented until Phase 2'
+    }
   }
 
   /**
@@ -453,8 +471,8 @@ export default class SteamGame implements Game {
       resolve(
         Boolean(
           info?.is_installed &&
-            info.install?.install_path &&
-            existsSync(info.install.install_path)
+          info.install?.install_path &&
+          existsSync(info.install.install_path)
         )
       )
     })

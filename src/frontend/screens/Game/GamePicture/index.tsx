@@ -8,6 +8,8 @@ interface Props extends React.ImgHTMLAttributes<HTMLImageElement> {
   art_square: string
   art_logo?: string | undefined
   store: string
+  /** Optional node rendered over the cover art (e.g. DETAIL-02 rating pill). */
+  overlay?: React.ReactNode
 }
 
 function GamePicture({
@@ -15,6 +17,7 @@ function GamePicture({
   art_logo,
   store,
   className,
+  overlay,
   ...props
 }: Props) {
   function getImageFormatting() {
@@ -48,6 +51,7 @@ function GamePicture({
           className={`gameLogo`}
         />
       )}
+      {overlay}
     </div>
   )
 }
