@@ -33,7 +33,8 @@ import StoreLogos from 'frontend/components/UI/StoreLogos'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { getCardStatus, getImageFormatting } from './constants'
 import { hasStatus } from 'frontend/hooks/hasStatus'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
+import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
+import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
 import LibraryContext from '../../LibraryContext'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import {
@@ -506,12 +507,14 @@ const GameCard = ({
             {justPlayed ? (
               <CachedImage
                 src={art_cover || fallBackImage}
+                fallback={fallBackImageMissing}
                 className="justPlayedImg"
                 alt={title}
               />
             ) : (
               <CachedImage
                 src={getImageFormatting(cover, runner)}
+                fallback={fallBackImageMissing}
                 className={imgClasses}
                 alt="cover"
               />

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CachedImage } from 'frontend/components/UI'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
+import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import type { CatalogProduct } from 'common/types/discounts'
 import {
   normalizeRating,

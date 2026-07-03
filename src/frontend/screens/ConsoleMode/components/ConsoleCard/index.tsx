@@ -7,7 +7,7 @@ import { hasStatus } from 'frontend/hooks/hasStatus'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import { getProgress } from 'frontend/helpers'
 import { getImageFormatting } from 'frontend/screens/Library/components/GameCard/constants'
-import fallBackImage from 'frontend/assets/heroic_card.jpg'
+import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
 
 import type { GameInfo, Status } from 'common/types'
 
@@ -64,7 +64,8 @@ const ConsoleCard = forwardRef<HTMLButtonElement, Props>(function ConsoleCard(
       onFocus={onFocus}
     >
       <CachedImage
-        src={getImageFormatting(game.art_square, game.runner) || fallBackImage}
+        src={getImageFormatting(game.art_square, game.runner)}
+        fallback={fallBackImageMissing}
         alt={game.title}
         className="consoleCardArt"
       />
