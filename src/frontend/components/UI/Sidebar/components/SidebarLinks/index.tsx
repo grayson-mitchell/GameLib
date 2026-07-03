@@ -156,6 +156,11 @@ export default function SidebarLinks() {
               url="/store/amazon"
               label={t('amazon-luna', 'Amazon Luna')}
             />
+            <SidebarItem
+              className="SidebarLinks__subItem"
+              url="/store/steam"
+              label={t('steam-store', 'Steam Store')}
+            />
             {zoom.enabled && (
               <SidebarItem
                 className="SidebarLinks__subItem"
