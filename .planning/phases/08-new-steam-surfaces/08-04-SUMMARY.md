@@ -99,3 +99,7 @@ No new security surface introduced beyond the plan's threat model.
 ## Known Stubs
 
 None. All added fields are wired to real data sources (appdetails verdict → metadata store → library → Console grid + activation guard).
+
+## Self-Check: PASSED
+
+All 5 modified source files present; all 4 commits (8b605961, ac510f3c, 26f1d6d3, 033f904f) present in git log.
