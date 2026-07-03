@@ -267,7 +267,11 @@
         "removeFromQueue": {
             "message": "This game is queued for download. Remove it from the queue?"
         },
-        "sort": "Sort"
+        "sort": "Sort",
+        "steam": {
+            "launched": "Launched in Steam",
+            "installing": "Opening Steam to install…"
+        }
     },
     "controller": {
         "hints": {

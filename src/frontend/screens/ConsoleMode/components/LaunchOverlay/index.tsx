@@ -31,8 +31,9 @@ export default function LaunchOverlay({
 
   // Hold-to-cancel for in-flight launches. Triggered by Escape (keyboard) or
   // the back button (gamepad); fires `sendKill` after CANCEL_HOLD_MS.
+  // Disabled for Steam (fire-and-forget — no in-flight operation to cancel).
   const { holdStart, startHold, stopHold } = useCancelOnHold({
-    active: !!game,
+    active: !!game && game.runner !== 'steam',
     holdMs: CANCEL_HOLD_MS,
     onCancel: () => {
       if (game) void sendKill(game.app_name, game.runner)
@@ -61,18 +62,32 @@ export default function LaunchOverlay({
     }
   }, [startHold, stopHold])
 
-  // Fire the launch exactly once on mount; the overlay closes via onDismiss
-  // in the finally block. Intentionally not depending on the launch inputs.
+  // Fire the launch exactly once on mount. Steam is fire-and-forget:
+  // steam://rungameid resolves immediately; the overlay holds for 1500ms then
+  // auto-dismisses. Non-Steam closes via onDismiss in the finally block.
+  // Intentionally not depending on the launch inputs.
   useEffect(() => {
-    void launch({
-      appName: game.app_name,
-      t,
-      runner: game.runner as Runner,
-      hasUpdate: false,
-      showDialogModal
-    }).finally(() => {
-      onDismiss()
-    })
+    if (game.runner === 'steam') {
+      void launch({
+        appName: game.app_name,
+        t,
+        runner: game.runner as Runner,
+        hasUpdate: false,
+        showDialogModal
+      })
+      const timer = setTimeout(onDismiss, 1500)
+      return () => clearTimeout(timer)
+    } else {
+      void launch({
+        appName: game.app_name,
+        t,
+        runner: game.runner as Runner,
+        hasUpdate: false,
+        showDialogModal
+      }).finally(() => {
+        onDismiss()
+      })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -108,20 +123,24 @@ export default function LaunchOverlay({
     <div className="consoleLaunchOverlay" role="status" aria-live="polite">
       <div
         className={classNames('consoleLaunchSpinner', {
-          idle: status === 'playing'
+          idle: status === 'playing' || game.runner === 'steam'
         })}
       />
       <div className="consoleLaunchText">
-        {label || t('console.launching', 'Launching')}
+        {game.runner === 'steam'
+          ? t('console.steam.launched', 'Launched in Steam')
+          : label || t('console.launching', 'Launching')}
       </div>
       <div className="consoleLaunchGameTitle">
         {game.overrides?.title || game.title}
       </div>
-      <BackHint
-        prefix={t('console.cancel.hintPrefix', 'Hold')}
-        suffix={t('console.cancel.hintSuffix', 'for 3s to cancel')}
-        active={holdStart != null}
-      />
+      {game.runner !== 'steam' && (
+        <BackHint
+          prefix={t('console.cancel.hintPrefix', 'Hold')}
+          suffix={t('console.cancel.hintSuffix', 'for 3s to cancel')}
+          active={holdStart != null}
+        />
+      )}
     </div>
   )
 }
