@@ -33,11 +33,15 @@ const AppleRatingOverlay = ({ gameInfo }: Props) => {
   const onClick = () => {
     if (applegamingwiki?.crossoverLink) {
       createNewWindow(
-        `https://www.codeweavers.com/compatibility/crossover/${applegamingwiki.crossoverLink}`
+        `https://www.codeweavers.com/compatibility/crossover/${encodeURIComponent(
+          applegamingwiki.crossoverLink
+        )}`
       )
     } else {
       createNewWindow(
-        `https://www.codeweavers.com/compatibility?browse=&app_desc=&company=&rating=&platform=&date_start=&date_end=&name=${gameInfo.title}&search=app#results`
+        `https://www.codeweavers.com/compatibility?browse=&app_desc=&company=&rating=&platform=&date_start=&date_end=&name=${encodeURIComponent(
+          gameInfo.title
+        )}&search=app#results`
       )
     }
   }

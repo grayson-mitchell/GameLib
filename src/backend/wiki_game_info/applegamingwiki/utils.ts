@@ -64,9 +64,8 @@ export async function getInfoFromAppleGamingWiki(
 
 async function getPageID(title: string): Promise<string> {
   const { data } = await axiosClient.get(
-    `https://www.applegamingwiki.com/w/api.php?action=query&list=search&srsearch=${title.replaceAll(
-      ' ',
-      '%20'
+    `https://www.applegamingwiki.com/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+      title
     )}&format=json`,
     { headers: { 'User-Agent': BROWSER_USER_AGENT } }
   )
