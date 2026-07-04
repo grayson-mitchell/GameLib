@@ -8,10 +8,10 @@ updated: 2026-07-04T04:25:00Z
 
 ## Current Test
 
-number: 9
-name: Gap D re-fix (v2) — overlay stays until the game takes focus
+number: 10
+name: Silent Steam handoff — no desktop-Space flash in Console mode
 expected: |
-  Activating an installed Steam game shows 'Launched in Steam' + spinner immediately, stays visible for the whole several-second launch while GameLib holds focus, then disappears when the game takes the foreground. Requires a rebuild with commit 8f0862f5.
+  Launch an installed Steam game from CONSOLE MODE: no 'view of the desktop' detour — activate:false keeps GameLib in its fullscreen Space and the only transition is straight to the game. Swipe/Space controls unchanged. Library launch still works. Requires a rebuild with commit a6e3c645. (Test 9 — overlay message — is also still pending.)
 awaiting: user response
 
 ## Tests
@@ -58,20 +58,24 @@ superseded_by: 9
 expected: Activating an installed Steam game shows 'Launched in Steam' + spinner immediately, and it STAYS visible for the whole several-second launch while GameLib holds focus, then disappears exactly when the game takes the foreground. No 0s flash, no missing message, no indefinite hang (8s safety ceiling). Requires a rebuild with commit 8f0862f5.
 result: [pending]
 
+### 10. Silent Steam handoff — no desktop-Space flash in Console mode
+expected: Launch an installed Steam game FROM CONSOLE MODE (macOS native fullscreen). No 'view of the desktop' detour between GameLib and the game — Steam is no longer brought to the foreground (activate:false), so GameLib stays in its fullscreen Space and the only transition is directly to the game's own window. Console-mode swipe/Space controls are unchanged (still native fullscreen). Also sanity-check a Library launch still starts the game normally. Requires a rebuild with commit a6e3c645.
+result: [pending]
+
 ### 8. Test 1 enhancement — GameLib icon on artwork placeholders
 expected: A Steam game with unavailable art in the Console grid shows the GameLib icon ABOVE the text, rendered in greyscale ('Artwork unavailable' variant). A game using the default 'No artwork' placeholder shows the same icon in full color. Icon sits above the wordmark, layout looks balanced.
 result: [pending]
 
 ## Summary
 
-total: 9
+total: 10
 passed: 5
 issues: 2
-pending: 2
+pending: 3
 skipped: 0
 blocked: 0
 
-note: Tests 7-9 are the 260704-mig re-test wave. Test 7 (first Gap D re-fix) failed — superseded by test 9 (corrected fix, commit 8f0862f5). Test 8 (placeholder icon) and test 9 (overlay v2) await re-test on a rebuild.
+note: Tests 7-10 are the 260704-mig re-test wave. Test 7 (first Gap D re-fix) failed — superseded by test 9 (corrected fix, commit 8f0862f5). Investigating test-7 root cause revealed the real Console-mode desktop-flash cause = macOS native-fullscreen Space switch on Steam activation; addressed by test 10 (activate:false, commit a6e3c645). Pending re-test on a rebuild: 8 (placeholder icon), 9 (overlay message), 10 (silent handoff).
 
 ## Gaps
 

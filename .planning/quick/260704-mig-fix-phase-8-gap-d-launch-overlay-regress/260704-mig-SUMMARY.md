@@ -8,6 +8,7 @@ commits:
   - a2a7e032 fix(08): floor Steam launch-overlay visible time (superseded)
   - 1d7426c1 feat(08): GameLib icon above text on artwork placeholders
   - 8f0862f5 fix(08): keep Steam launch overlay up until the game takes focus (corrects a2a7e032)
+  - a6e3c645 fix(08): launch Steam games without activating Steam (activate:false) — kills Console-mode desktop-Space flash
 ---
 
 # Summary: 260704-mig
@@ -32,6 +33,20 @@ The Steam branch dismissed the overlay on window `blur`. Two iterations:
 
 Net effect: "Launched in Steam" + spinner show immediately and stay visible for
 the whole several-second launch, disappearing exactly when the game appears.
+
+### 3. Silent Steam handoff — no Console-mode desktop-Space flash (a6e3c645)
+`src/backend/storeManagers/steam/games.ts` (+ GAME-01 test)
+
+UAT investigation traced the Console-mode "view of the desktop" flash to macOS
+native fullscreen: Console mode enters `setFullScreen(true)` (a dedicated Space),
+and `shell.openExternal(url)` defaults to `activate:true`, foregrounding the
+Steam client — which forces macOS to leave GameLib's fullscreen Space, showing
+the desktop before the game appears. Library launch (a normal window) never had
+this. Fix: pass `{ activate: false }` on the `rungameid` handoff so Steam
+processes the launch in the background and the only Space switch is directly to
+the game's own window. macOS/Windows only; ignored on Linux (no Steam Deck
+game-mode impact). Install/uninstall handoffs left as-is. Native fullscreen is
+retained, so Console-mode swipe/Space controls are unchanged.
 
 ### 2. GameLib icon on artwork placeholders (test 1 enhancement)
 `src/frontend/assets/gamelib_card.svg`, `src/frontend/assets/gamelib_card_missing.svg`
