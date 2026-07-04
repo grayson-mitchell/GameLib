@@ -201,7 +201,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. The game details page shows which platforms a game supports (Windows, macOS, Linux)
   2. On macOS, Mac-supported Steam games show an AppleGamingWiki compatibility rating overlaid on the game art
   3. The compatibility overlay only appears on macOS and only for games that have a Mac platform listing
-**Plans**: TBD
+**Plans**: 1 gap-closure plan (07-02)
+- [ ] `07-02-PLAN.md` — Fix Steam platform data: self-healing supported-platform re-fetch (GAP 1), host-derived installed platform (GAP 2), icon spacing (GAP 3)
 **UI hint**: yes
 
 ### Phase 8: New Steam Surfaces
