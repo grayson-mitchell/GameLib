@@ -1,19 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 07-game-details-enrichment
 source: [ROADMAP.md success criteria, PROJECT.md Phase 07 decisions, STATE.md pending todo]
 started: 2026-07-04T07:10:00Z
-updated: 2026-07-04T09:00:00Z
+updated: 2026-07-04T10:30:00Z
 ---
 
 ## Current Test
 
-number: 7
-name: Pill click-through (DETAIL-02)
-expected: |
-  Clicking the compatibility pill opens the corresponding AppleGamingWiki /
-  CodeWeavers CrossOver page for the game (click-through works).
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -58,15 +53,16 @@ observations: "Rating-source toggle relocated from Accessibility screen to Setti
 
 ### 7. Pill click-through (DETAIL-02)
 expected: Clicking the compatibility pill opens the corresponding AppleGamingWiki page / rating source for the game (click-through works).
-result: [pending]
-reason: "Unblocked — pill renders now (test 3)."
+result: pass
+reported: "Clicking the pill opens the CodeWeavers CrossOver page for the game."
+history: "Originally issue (click did nothing): pill was rendered INSIDE .gamePicture (z-index:-1), so foreground .mainInfo content swallowed the click though the pill was visible. Fixed by rendering AppleRatingOverlay as a sibling of .gamePicture (like .store-icon) and moving its CSS to .mainInfo; removed the now-unused GamePicture overlay prop."
 
 ## Summary
 
 total: 7
-passed: 6
+passed: 7
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
