@@ -34,8 +34,14 @@ describe('getInfoFromAppleGamingWiki', () => {
       data: { query: { search: [{ pageid: undefined }] } }
     })
 
+    // No wiki page => "checked, none found" marker (cacheable), not null.
+    // null is reserved for genuine fetch errors so those retry.
     const result = await getInfoFromAppleGamingWiki('The Witcher 3')
-    expect(result).toBeNull()
+    expect(result).toStrictEqual({
+      crossoverLink: '',
+      wineRating: '',
+      crossoverRating: ''
+    })
   })
 
   test('does not find wikitext', async () => {

@@ -22,7 +22,13 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
 
     // check if we have a cached response
     const cachedResponse = wikiGameInfoStore.get(title)
-    if (cachedResponse) {
+    // Self-heal stale caches: entries populated before AppleGamingWiki data was
+    // captured (or on a non-Mac session) hold applegamingwiki=null. On macOS the
+    // DETAIL-02 compat pill needs that data, so treat a null-applegamingwiki hit
+    // as a miss and re-fetch. Once re-fetched it caches a non-null value (real
+    // ratings or the "checked, none found" marker) and refreshes on TTL expiry.
+    const staleAppleData = isMac && !cachedResponse?.applegamingwiki
+    if (cachedResponse && !staleAppleData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
