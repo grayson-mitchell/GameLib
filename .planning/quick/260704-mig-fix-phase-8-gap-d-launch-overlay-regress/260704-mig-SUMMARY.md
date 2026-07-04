@@ -9,7 +9,9 @@ commits:
   - 1d7426c1 feat(08): GameLib icon above text on artwork placeholders
   - 8f0862f5 fix(08): keep Steam launch overlay up until the game takes focus (corrects a2a7e032)
   - a6e3c645 fix(08): launch Steam games without activating Steam (activate:false) — kept (didn't fix flash, but cleaner)
-  - c314269c prototype(08): setSimpleFullScreen for Console mode on macOS — flash-vs-swipe tradeoff, pending UAT
+  - c314269c prototype(08): setSimpleFullScreen for Console mode on macOS — REVERTED
+  - 2237817e prototype(08): re-assert window focus after setSimpleFullScreen — REVERTED
+  - (revert) prototype backed out; native fullscreen retained, flash documented as known macOS limitation
 ---
 
 # Summary: 260704-mig
@@ -63,7 +65,15 @@ the desktop flash on Steam launch — at the cost of Console mode no longer bein
 its own swipe-able macOS Space. Prototype for the user to evaluate the
 flash-vs-swipe tradeoff (UAT test 11). Caveat: native enter/leave-full-screen
 events don't fire with simple fullscreen, so the global `isFullscreen` state
-(CLI/Deck-oriented) won't toggle — watch for window-chrome differences. Native fullscreen is
+(CLI/Deck-oriented) won't toggle — watch for window-chrome differences.
+
+**UAT result (test 11): REJECTED and reverted.** Simple fullscreen removed the
+desktop flash but (a) lost Console mode's swipe-able macOS Space and (b) broke
+Console key-driven card navigation (needed a focus re-assert patch, 2237817e).
+Decision: keep native fullscreen + swipe controls, and accept the launch
+desktop-Space animation as a **known macOS limitation** (recorded in STATE.md
+Deferred Items). `setFullscreen` restored to native `setFullScreen`. `activate:
+false` (a6e3c645) is KEPT (harmless, cleaner focus behavior). Native fullscreen is
 retained, so Console-mode swipe/Space controls are unchanged.
 
 ### 2. GameLib icon on artwork placeholders (test 1 enhancement)

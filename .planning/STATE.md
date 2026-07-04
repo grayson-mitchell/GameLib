@@ -141,6 +141,7 @@ Recent decisions affecting current work:
 | Game Details | DETAIL-03: Linux ProtonDB compat overlay | Post-v1.1 | v1.1 requirements |
 | Settings | API-01: Copy-to-clipboard on API key field | Post-v1.1 | v1.1 requirements |
 | Console / Steam | CONSOLE-02: Steam update feedback in Console launch — when a Steam game needs an update, GameLib shows "Launched in Steam" and dismisses while Steam silently updates; user has no in-app signal. Needs own design (Steam does not report update state back). From Phase 8 UAT (finding E). | Post-v1.1 | Phase 8 UAT (2026-07-04) |
+| Console / macOS | KNOWN LIMITATION — Launching a Steam game from Console mode on macOS shows a brief desktop-Space animation before the game appears. Cause: Console mode uses native fullscreen (its own macOS Space) so swipe-to-Space works; macOS must leave that Space when the game's window appears elsewhere. Not fixable from Electron without setSimpleFullScreen, which removes the swipe-able Space and has focus/chrome rough edges (prototyped + rejected in Phase 8 UAT test 11). `activate:false` on the steam:// handoff was tried and kept but does not remove the flash. Accepted as-is. | Accepted (won't fix) | Phase 8 UAT (2026-07-04) |
 
 ## Session Continuity
 

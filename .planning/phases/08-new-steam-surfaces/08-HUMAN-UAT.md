@@ -8,11 +8,7 @@ updated: 2026-07-04T04:25:00Z
 
 ## Current Test
 
-number: 11
-name: Simple-fullscreen prototype — flash vs swipe tradeoff (macOS)
-expected: |
-  Rebuild with commit c314269c. In Console mode on macOS: launching a Steam game has NO desktop-Space flash (goes straight to the game). Console mode no longer occupies its own swipe-able Space (three/four-finger swipe won't reach it as a dedicated fullscreen Space). Watch for any window-chrome regressions (title bar / traffic-light buttons showing, menu bar behavior). Report which tradeoff you prefer vs the native-fullscreen behavior.
-awaiting: user response
+[re-test wave complete — Gap D overlay fixed (test 9 pass); simple-fullscreen prototype rejected (test 11), native fullscreen retained + flash documented as known macOS limitation. Remaining test-8 delisted-game work tracked as Phase 08.1.]
 
 ## Tests
 
@@ -76,8 +72,8 @@ analysis: "Icon-above-text layout is fine, but the two-variant model (full-color
 
 total: 11
 passed: 6
-issues: 3
-pending: 1
+issues: 4
+pending: 0
 skipped: 0
 blocked: 0
 
@@ -111,4 +107,7 @@ note: Tests 7-10 are the 260704-mig re-test wave. Test 7 (first Gap D re-fix) fa
 
 ### 11. Simple-fullscreen prototype — flash vs swipe tradeoff (macOS)
 expected: In Console mode on macOS, launching a Steam game has NO desktop-Space flash; Console mode is no longer its own swipe-able Space. Evaluate the tradeoff vs native fullscreen. Watch for window-chrome regressions. Requires rebuild with commit c314269c.
-result: [pending]
+result: issue
+reported: "simple fullscreen also broke Console-mode highlight navigation (could click but not move highlight between games — patched in 2237817e). Decision: REVERT to native fullscreen and document the flash as a known macOS limitation."
+severity: minor
+resolution: "Reverted simple-fullscreen prototype (c314269c + 2237817e backed out). Native fullscreen retained (swipe controls intact). Desktop-Space flash on Console launch accepted as a known macOS limitation — recorded in STATE.md Deferred Items. activate:false handoff KEPT."

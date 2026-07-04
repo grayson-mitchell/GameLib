@@ -601,29 +601,15 @@ addListener('minimizeWindow', () => getMainWindow()?.minimize())
 addListener('maximizeWindow', () => getMainWindow()?.maximize())
 addListener('unmaximizeWindow', () => getMainWindow()?.unmaximize())
 addListener('closeWindow', () => getMainWindow()?.close())
-addListener('setFullscreen', (_e, enabled) => {
-  const window = getMainWindow()
-  if (!window) return
-  // On macOS, native setFullScreen(true) moves the window into its own Space.
-  // Launching an external app (a Steam game) from Console mode then forces macOS
-  // to animate out of that Space to the desktop — a visible flash before the
-  // game appears. setSimpleFullScreen keeps the window borderless on the CURRENT
-  // Space, avoiding the flash (tradeoff: Console mode is no longer its own
-  // swipe-able Space). Other platforms keep native fullscreen.
-  if (isMac) {
-    window.setSimpleFullScreen(enabled)
-    if (enabled) {
-      // setSimpleFullScreen does not reliably keep the window as the key window,
-      // so Console mode's key-driven card navigation receives no keydown events
-      // (mouse clicks still work because a click focuses the window directly).
-      // Re-assert OS keyboard focus so arrow/gamepad navigation works.
-      window.focus()
-      window.webContents.focus()
-    }
-  } else {
-    window.setFullScreen(enabled)
-  }
-})
+// Native fullscreen. On macOS this puts Console mode in its own Space, which
+// keeps swipe-to-Space navigation working but causes a brief desktop-Space
+// animation when a Steam game is launched (the game's window appears on another
+// Space). setSimpleFullScreen avoids the flash but loses the swipe-able Space
+// and has focus/chrome rough edges — evaluated in Phase 8 UAT (test 11) and
+// rejected. The launch transition is an accepted macOS limitation.
+addListener('setFullscreen', (_e, enabled) =>
+  getMainWindow()?.setFullScreen(enabled)
+)
 addListener('quit', async () => handleExit())
 
 // Quit when all windows are closed, except on macOS. There, it's common
