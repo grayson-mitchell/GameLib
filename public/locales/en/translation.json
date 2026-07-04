@@ -266,8 +266,8 @@
         },
         "sort": "Sort",
         "steam": {
-            "launched": "Launched in Steam",
-            "installing": "Opening Steam to install…"
+            "installing": "Opening Steam to install…",
+            "launched": "Launched in Steam"
         }
     },
     "controller": {
@@ -575,7 +575,10 @@
         "options": "Launch Options..."
     },
     "library": {
+        "delisted": "Game no longer available",
         "hideAlphabetFilter": "Hide Alphabet Filter",
+        "no_hidden_games": "No hidden games in your library",
+        "no_non_available_games": "No non-available games in your library",
         "showAlphabetFilter": "Show Alphabet Filter",
         "sortAscending": "Sort Ascending",
         "sortByStatus": "Sort by Status",
@@ -585,7 +588,6 @@
             "list": "Toggle to a list layout"
         }
     },
-    "Library": "Library",
     "loading": {
         "default": "Loading",
         "website": "Loading Website"
@@ -597,6 +599,7 @@
         "gog": "GOG Login",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "old-mac": "Your macOS version is {{version}}. macOS 12 or newer is required to log in.",
+        "steam": "Steam Login",
         "zoom": "Zoom Login"
     },
     "message": {
@@ -640,7 +643,6 @@
         },
         "moved": "Finished Moving",
         "moving": "Moving Game",
-        "new-heroic-version": "A new Heroic version was released!",
         "refresh": {
             "error": "Couldn't fetch releases from upstream, maybe because of Github API restrictions! Try again later."
         },
@@ -752,9 +754,6 @@
         "addgamestosteam": "Add games to Steam automatically",
         "advertiseAvxForRosetta": "Advertise AVX for Rosetta",
         "after-launch-script-path": "Select a script to run after the game exits",
-        "apple_rating_source": "Mac compatibility rating source",
-        "apple_rating_source_crossover": "CrossOver",
-        "apple_rating_source_wine": "Wine",
         "allow_installation_broken_anticheat": {
             "confirmation": {
                 "message": "Games with broken or denied anticheat may run, but multiplayer features won't work. Do not ask for support if you install them knowing this.",
@@ -767,6 +766,9 @@
         "alt-legendary-bin": "Choose an Alternative Legendary Binary",
         "alt-nile-bin": "Choose an Alternative Nile Binary",
         "analyticsOptIn": "Send anonymous data to help Heroic development",
+        "apple_rating_source": "Mac compatibility rating source",
+        "apple_rating_source_crossover": "CrossOver",
+        "apple_rating_source_wine": "Wine",
         "autodxvk": "Auto Install/Update DXVK on Prefix",
         "autodxvknvapi": "Auto Install/Update DXVK-NVAPI on Prefix",
         "autosync": "Autosync Saves",
@@ -1082,6 +1084,12 @@
         "preparing_login": "Preparing Login... ",
         "processing": "Processing files, please wait"
     },
+    "steam": {
+        "lastSynced": "Steam library last synced {{time}} ago",
+        "refresh": "Refresh Steam Library",
+        "syncing": "Syncing your Steam library…"
+    },
+    "steam-store": "Steam Store",
     "steamgriddb": {
         "error": {
             "grids": "Failed to fetch grids",
@@ -1164,7 +1172,6 @@
     "two_col_table": {
         "save_hint": "Changes in this table are not saved automatically. Click the + button"
     },
-    "Update Available!": "Update Available!",
     "userselector": {
         "cancel": "Cancel",
         "discord": "Discord",
@@ -1226,12 +1233,5 @@
         "openGUI": "Open Winetricks GUI",
         "search": "Search fonts or components"
     },
-    "zoom-store": "Zoom Store",
-    "steam-store": "Steam Store",
-    "steam": {
-        "syncing": "Syncing your Steam library…",
-        "syncingBody": "Your games will appear here once the sync completes.",
-        "lastSynced": "Steam library last synced {{time}} ago",
-        "refresh": "Refresh Steam Library"
-    }
+    "zoom-store": "Zoom Store"
 }
