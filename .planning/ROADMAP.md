@@ -28,6 +28,15 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode (completed 2026-07-03)
 - [ ] **Phase 9: Quality Gate** - All v1.0 and v1.1 shipped phases pass a formal Nyquist validation pass
 
+### v1.2 — Humble Bundle Integration
+
+- [ ] **Phase 10: Humble Auth + Adapter Scaffold** - Users can connect a Humble Bundle account from Manage Accounts with encrypted session persistence and a validated C5 API boundary
+- [ ] **Phase 11: Library Sync + 5-State Key Model** - Full Humble key inventory synced, classified into the 5-state model, and reliably cached with fail-soft behavior
+- [ ] **Phase 12: Ownership Dedup** - Every Humble key cross-referenced against the Steam library; redeemed Steam keys collapse onto their existing Steam library entries
+- [ ] **Phase 13: Keys-Waiting + Giftable-Spares Views** - Users can see claimable keys sorted by expiration urgency and surface gift links for owned-elsewhere spares
+- [ ] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout
+- [ ] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications
+
 ## Phase Details
 
 ### Phase 1: Steam Authentication
@@ -258,11 +267,85 @@ Plans:
   3. Any regressions discovered during the pass are documented as issues or resolved before completion
 **Plans**: TBD
 
+---
+
+## v1.2 Phase Details
+
+### Phase 10: Humble Auth + Adapter Scaffold
+**Goal**: Users can connect a Humble Bundle account from Manage Accounts with encrypted session persistence; the C5 adapter boundary is in place and empirically validated against the live Humble API before any feature work proceeds
+**Depends on**: Phase 4
+**Requirements**: HACCT-01, HACCT-02, HACCT-03
+**Success Criteria** (what must be TRUE):
+  1. User can log in to Humble Bundle via an in-app browser window (email/password + Humble Guard emailed code) from Manage Accounts — reCAPTCHA and Humble Guard are completed in the browser with no app-side CAPTCHA logic required
+  2. The Humble session persists encrypted across app restarts; no re-login is required until the session expires (~2-3 day TTL)
+  3. When the session expires, a non-disruptive reconnect prompt appears without hiding or breaking the cached library view
+  4. User can disconnect their Humble account and remove all session data from the app
+  5. On Linux without a system keyring, the app warns about reduced encryption rather than storing the session cookie silently in plaintext
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: Library Sync + 5-State Key Model
+**Goal**: A connected Humble account's full key inventory is synced into GameLib, classified into exactly one of five states, and reliably available even when the Humble API is unreachable
+**Depends on**: Phase 10
+**Requirements**: HSYNC-01, HSYNC-02, HSYNC-03, HSYNC-04
+**Success Criteria** (what must be TRUE):
+  1. After connecting a Humble account, all order keys appear in GameLib classified as exactly one of UNPICKED / UNREVEALED / REVEALED / REDEEMED / UNREDEEMABLE
+  2. A key revealed through the launcher retains its REVEALED classification across app restarts and re-syncs (write-ahead flag persisted to disk before the reveal API call, not held in React state)
+  3. A key that gains a retroactive expiration between syncs is reclassified UNREDEEMABLE on the next sync — no manual refresh required
+  4. If a Humble sync fails, the previously cached library is displayed with a clear "couldn't refresh" indicator rather than a blank or error state
+**Plans**: TBD
+
+### Phase 12: Ownership Dedup
+**Goal**: Every Humble key is cross-referenced against the Steam library so already-owned games are identified before any user action, and Humble Steam keys already redeemed appear on their existing Steam entry rather than as duplicates
+**Depends on**: Phase 11
+**Requirements**: HDEDUP-01, HDEDUP-02
+**Success Criteria** (what must be TRUE):
+  1. A Humble Steam key for a game already in the Steam library is marked owned_elsewhere and does not appear as a claimable key in "Keys waiting"
+  2. A Humble Steam key already redeemed into Steam appears as an annotation on the existing Steam library entry rather than as a separate Humble entry
+  3. Ownership matching uses AppID as the primary key (exact match via `steam_app_id`) with an 85%+ fuzzy-name fallback — DLC titles do not false-positive match their base game entries
+**Plans**: TBD
+
+### Phase 13: Keys-Waiting + Giftable-Spares Views
+**Goal**: Users can see at a glance which Humble keys are available to claim and which can be gifted, sorted by expiration urgency; these views must exist before the claim flow since the C2 guard routes to Giftable Spares
+**Depends on**: Phase 12
+**Requirements**: HVIEW-01, HVIEW-02
+**Success Criteria** (what must be TRUE):
+  1. A "Keys waiting" view lists all unowned, unredeemed Humble keys with keys expiring soonest at the top
+  2. Keys expiring within 30 days display an expiration urgency badge showing the time remaining
+  3. A "Giftable spares" view lists owned-elsewhere, UNREVEALED keys and allows copying the Humble gift link with one click, with an irreversibility warning
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 14: Guided Claim Flow
+**Goal**: Users can safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and Steam activation rate-limit lockout
+**Depends on**: Phase 13
+**Requirements**: HCLAIM-01, HCLAIM-02, HCLAIM-03, HCLAIM-04, HCLAIM-05
+**Success Criteria** (what must be TRUE):
+  1. Revealing a key requires explicit per-key user confirmation with a clear irreversibility warning — no auto-reveal and no "reveal all" option exists anywhere in the UI
+  2. Attempting to reveal a key for an already-owned game intercepts the action and routes to the Giftable Spares view instead of proceeding (C2 hard block, not an advisory)
+  3. After reveal, the key is copied to clipboard and the browser opens store.steampowered.com/account/registerkey?key= pre-filled; a "Mark as redeemed" button records activation completion
+  4. Every reveal and redeem action is recorded in a local audit log with key identity, timestamp, and outcome — the audit record is written before the reveal API call
+  5. Non-Steam Humble keys (Epic, GOG, Ubisoft, etc.) show a "Redeem on {platform}" link-out with a copy-key button — no one-click activation is offered
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 15: Store Overlay + Expiration Alerts
+**Goal**: Store browsing surfaces show Humble ownership context as additive badges and users are alerted when keys gain new expiration deadlines detected on sync
+**Depends on**: Phase 12
+**Requirements**: HSTORE-01, HSTORE-03
+**Success Criteria** (what must be TRUE):
+  1. With a connected Humble account, each title on store surfaces shows an ownership badge: Owned, Unclaimed-key-available, or New
+  2. An "expiring soon" surface lists keys nearing expiration sorted by urgency
+  3. When a previously non-expiring key gains an expiration on sync, an OS notification alerts the user — the notification does not repeat on subsequent syncs for the same key
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
 v1.0: 1 → 2 → 3 → 4 (complete)
 v1.1: 5 → 6 → 7 → 8 → 9
+v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -275,3 +358,9 @@ v1.1: 5 → 6 → 7 → 8 → 9
 | 7. Game Details Enrichment | 0/? | Not started | - |
 | 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
+| 10. Humble Auth + Adapter Scaffold | 0/? | Not started | - |
+| 11. Library Sync + 5-State Key Model | 0/? | Not started | - |
+| 12. Ownership Dedup | 0/? | Not started | - |
+| 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
+| 14. Guided Claim Flow | 0/? | Not started | - |
+| 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |

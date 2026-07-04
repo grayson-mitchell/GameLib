@@ -140,12 +140,34 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LIB-08 | Phase 08.1 | Complete |
 | LIB-09 | Phase 08.1 | Complete |
 | QA-01 | Phase 9 | Pending |
+| HACCT-01 | Phase 10 | Pending |
+| HACCT-02 | Phase 10 | Pending |
+| HACCT-03 | Phase 10 | Pending |
+| HSYNC-01 | Phase 11 | Pending |
+| HSYNC-02 | Phase 11 | Pending |
+| HSYNC-03 | Phase 11 | Pending |
+| HSYNC-04 | Phase 11 | Pending |
+| HDEDUP-01 | Phase 12 | Pending |
+| HDEDUP-02 | Phase 12 | Pending |
+| HVIEW-01 | Phase 13 | Pending |
+| HVIEW-02 | Phase 13 | Pending |
+| HCLAIM-01 | Phase 14 | Pending |
+| HCLAIM-02 | Phase 14 | Pending |
+| HCLAIM-03 | Phase 14 | Pending |
+| HCLAIM-04 | Phase 14 | Pending |
+| HCLAIM-05 | Phase 14 | Pending |
+| HSTORE-01 | Phase 15 | Pending |
+| HSTORE-03 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
-- Mapped to phases: 15 (Phases 5-9)
+- Mapped to phases: 15 (Phases 5–9)
+- Unmapped: 0 ✓
+
+- v1.2 requirements: 18 total (HSTORE-02 deferred to Future)
+- Mapped to phases: 18 (Phases 10–15)
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-02 — traceability filled during v1.1 roadmap creation*
+*Last updated: 2026-07-05 — v1.2 traceability appended during roadmap creation (Phases 10–15)*

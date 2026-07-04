@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
 status: planning
-last_updated: "2026-07-04T20:21:47.886Z"
-last_activity: 2026-07-04
+last_updated: "2026-07-05T00:00:00.000Z"
+last_activity: 2026-07-05
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-02)
+See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 9 — quality gate
+**Current focus:** v1.2 roadmap defined — Phase 10 (Humble Auth + Adapter Scaffold) is next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap created, planning next)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-04 — Milestone v1.2 started
+Status: Roadmap created; ready for `/gsd:plan-phase 10`
+Last activity: 2026-07-05 — v1.2 roadmap written (Phases 10–15, 18 requirements mapped)
 
 ## v1.1 Phase Map
 
@@ -38,6 +38,17 @@ Last activity: 2026-07-04 — Milestone v1.2 started
 | 7 | Game Details Enrichment | DETAIL-01, DETAIL-02 | Executed (UAT pending) |
 | 8 | New Steam Surfaces | STORE-01, CONSOLE-01 | Not started |
 | 9 | Quality Gate | QA-01 | Not started |
+
+## v1.2 Phase Map
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 10 | Humble Auth + Adapter Scaffold | HACCT-01, HACCT-02, HACCT-03 | Not started |
+| 11 | Library Sync + 5-State Key Model | HSYNC-01, HSYNC-02, HSYNC-03, HSYNC-04 | Not started |
+| 12 | Ownership Dedup | HDEDUP-01, HDEDUP-02 | Not started |
+| 13 | Keys-Waiting + Giftable-Spares Views | HVIEW-01, HVIEW-02 | Not started |
+| 14 | Guided Claim Flow | HCLAIM-01, HCLAIM-02, HCLAIM-03, HCLAIM-04, HCLAIM-05 | Not started |
+| 15 | Store Overlay + Expiration Alerts | HSTORE-01, HSTORE-03 | Not started |
 
 ## Performance Metrics
 
@@ -86,6 +97,7 @@ Last activity: 2026-07-04 — Milestone v1.2 started
 ### Roadmap Evolution
 
 - Phase 08.1 inserted after Phase 8: Steam Delisted Games & Library Filters — delisted availability signal, 'Game no longer available' + install-disable, only-show filter modes (from Phase 8 UAT) (URGENT)
+- v1.2 roadmap created 2026-07-05: Phases 10–15, 18 requirements mapped. Dependency chain is non-negotiable (auth → sync → dedup → views → claim flow → store overlay). Phase 10 carries highest validation risk (live API confirmation of axios + cookie + X-Requested-By header reaching api/v1/user/order).
 
 ### Decisions
 
@@ -108,10 +120,16 @@ Recent decisions affecting current work:
 - [Phase 07 DETAIL-02]: rating-source setting (`appleRatingSource`: crossover|wine, default crossover) uses the `configStore` + `ContextProvider` pattern — NOT `useSetting`/`SettingsContext`, which isn't populated outside the Settings tree where GamePage/AppleWikiInfo render. Toggle lives in the Accessibility screen, gated to macOS
 - [Phase 07 DETAIL-02]: ~~overlay gate is `platform==='darwin' && gameInfo.is_mac_native` (D-13)~~ **SUPERSEDED by Phase 7 UAT (2026-07-04):** the AppleGamingWiki CrossOver/Wine rating measures how a WINDOWS game runs on macOS via a translation layer — Mac-native games need no such rating. Gate is now `platform==='darwin' && !gameInfo.is_mac_native` (show on Windows games on macOS). Overlay still always shows an "Unrated" pill when no rating (D-12, user-confirmed); `GamePicture`'s generic `overlay` prop unchanged
 - [Phase 07 tier→color]: rating tiers mapped to `_colors.scss` `--status-*` tokens (Perfect/Playable→success, Runs/Borderline→warning, Unplayable→danger, empty→default); vocabulary is free-form upstream so unknown values fall back to neutral
+- [v1.2 Humble auth]: BrowserWindow + session.cookies is the only viable auth path — Humble's /processlogin requires reCAPTCHA; programmatic login is impossible. Zero new npm packages required.
+- [v1.2 Humble adapter]: C5 adapter isolation is non-negotiable — all Humble HTTP calls through adapter.ts; X-Requested-By: hb_android_app header required on every request (omitting this is the likely cause of all three Lutris integration failures)
+- [v1.2 claim flow]: Primary activation URL is store.steampowered.com/account/registerkey?key= NOT steam://open/activateproduct (does not pre-fill key; unreliable on Linux Flatpak/Snap)
+- [v1.2 dedup threshold]: Fuzzy-name fallback at 85%+ threshold (not community-norm 70%) — DLC titles false-positive match base games at lower thresholds and false positives waste gift links
+- [v1.2 Humble not a Runner]: 'humble' is NOT added to the Runner union type — keys domain is not a game platform; no LibraryManager methods required
 
 ### Pending Todos
 
 - Phase 7 manual UAT on macOS (real Steam account): overlay visibility on Mac/Windows-only games, "Unrated" pill, CrossOver↔Wine toggle drives both surfaces, pill click-through, runner-agnostic platform icons.
+- Phase 10 live validation gate (before Phase 11 begins): empirically confirm axios + Cookie: _simpleauth_sess + X-Requested-By: hb_android_app reaches api/v1/user/order from Electron main process. Fallback = BrowserWindow webRequest proxy.
 
 ### Blockers/Concerns
 
@@ -142,9 +160,10 @@ Recent decisions affecting current work:
 | Settings | API-01: Copy-to-clipboard on API key field | Post-v1.1 | v1.1 requirements |
 | Console / Steam | CONSOLE-02: Steam update feedback in Console launch — when a Steam game needs an update, GameLib shows "Launched in Steam" and dismisses while Steam silently updates; user has no in-app signal. Needs own design (Steam does not report update state back). From Phase 8 UAT (finding E). | Post-v1.1 | Phase 8 UAT (2026-07-04) |
 | Console / macOS | KNOWN LIMITATION — Launching a Steam game from Console mode on macOS shows a brief desktop-Space animation before the game appears. Cause: Console mode uses native fullscreen (its own macOS Space) so swipe-to-Space works; macOS must leave that Space when the game's window appears elsewhere. Not fixable from Electron without setSimpleFullScreen, which removes the swipe-able Space and has focus/chrome rough edges (prototyped + rejected in Phase 8 UAT test 11). `activate:false` on the steam:// handoff was tried and kept but does not remove the flash. Accepted as-is. | Accepted (won't fix) | Phase 8 UAT (2026-07-04) |
+| Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v1.2 | v1.2 requirements (separate data source; key management prioritized) |
 
 ## Session Continuity
 
-Last session: 2026-07-04T10:32:32.290Z
-Stopped at: Phase 08.1 UI-SPEC approved
-Next: verify Phase 7 on macOS (`/gsd:verify-work`), then `/gsd:plan-phase 8` for New Steam Surfaces
+Last session: 2026-07-05T00:00:00.000Z
+Stopped at: v1.2 roadmap created (Phases 10–15 defined, 18 requirements mapped)
+Next: `/gsd:plan-phase 10` — Humble Auth + Adapter Scaffold (highest-risk phase; requires live API validation gate before Phase 11 proceeds)
