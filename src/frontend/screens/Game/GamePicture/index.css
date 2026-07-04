@@ -43,25 +43,3 @@
   width: 50%;
   z-index: 2;
 }
-
-/* DETAIL-02: AppleGamingWiki compatibility pill on the cover art */
-.gamePicture > .appleRatingPill {
-  position: absolute;
-  top: var(--space-xs);
-  /* Right-justified: the store logo occupies the top-left corner
-     (.store-icon left: 0.5rem) and would overlap the pill. */
-  right: var(--space-xs);
-  z-index: 3;
-  padding: var(--space-3xs) var(--space-xs);
-  border: none;
-  border-radius: var(--space-lg);
-  font-size: 0.8em;
-  font-weight: 600;
-  color: var(--neutral-01);
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-.gamePicture > .appleRatingPill:hover {
-  filter: brightness(1.1);
-}

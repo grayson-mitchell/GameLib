@@ -167,6 +167,29 @@
         top: 0.5rem;
       }
 
+      /* DETAIL-02: AppleGamingWiki compatibility pill, overlaid on the cover
+         art. Rendered as a sibling of .gamePicture (not inside it) because
+         .gamePicture is z-index:-1 and would swallow the pill's click. Sits in
+         the free top-right corner (.store-icon owns top-left). */
+      .appleRatingPill {
+        position: absolute;
+        top: var(--space-xs);
+        right: var(--space-xs);
+        z-index: 1;
+        padding: var(--space-3xs) var(--space-xs);
+        border: none;
+        border-radius: var(--space-lg);
+        font-size: 0.8em;
+        font-weight: 600;
+        color: var(--neutral-01);
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      }
+
+      .appleRatingPill:hover {
+        filter: brightness(1.1);
+      }
+
       .gamePicture {
         position: absolute;
         left: 2px;
