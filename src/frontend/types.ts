@@ -232,6 +232,8 @@ export interface PlatformsFilters {
   browser: boolean
 }
 
+export type FilterMode = 'off' | 'show' | 'only'
+
 export interface LibraryContextType {
   storesFilters: StoresFilters
   platformsFilters: PlatformsFilters
@@ -241,14 +243,14 @@ export interface LibraryContextType {
   handleLayout: (value: string) => void
   handleSearch: (input: string) => void
   layout: string
-  showHidden: boolean
-  setShowHidden: (value: boolean) => void
+  showHidden: FilterMode
+  setShowHidden: (value: FilterMode) => void
   showFavourites: boolean
   setShowFavourites: (value: boolean) => void
   showInstalledOnly: boolean
   setShowInstalledOnly: (value: boolean) => void
-  showNonAvailable: boolean
-  setShowNonAvailable: (value: boolean) => void
+  showNonAvailable: FilterMode
+  setShowNonAvailable: (value: FilterMode) => void
   sortDescending: boolean
   setSortDescending: (value: boolean) => void
   sortInstalled: boolean

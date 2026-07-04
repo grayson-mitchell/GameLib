@@ -4,11 +4,12 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { GameInfo, Runner } from 'common/types'
 import GamesList from '../GamesList'
 import { configStore } from 'frontend/helpers/electronStores'
+import { FilterMode } from 'frontend/types'
 
 interface Props {
   handleModal: (appName: string, runner: Runner, gameInfo: GameInfo) => void
   onlyInstalled: boolean
-  showHidden: boolean
+  showHidden: FilterMode
 }
 
 function getRecentGames(
@@ -59,7 +60,7 @@ export default React.memo(function RecentlyPlayed({
       maxRecentGames,
       onlyInstalled
     )
-    if (!showHidden) {
+    if (showHidden === 'off') {
       newRecentGames = newRecentGames.filter(
         (game: GameInfo) => !hiddenAppNames.includes(game.app_name)
       )
