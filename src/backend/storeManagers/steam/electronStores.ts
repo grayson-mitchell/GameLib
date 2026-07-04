@@ -34,6 +34,11 @@ export interface SteamMetadataCacheEntry {
   // GAP-B: persists the delisted verdict (appdetails success:false) across restarts.
   // Absent / false means "not known delisted"; true means confirmed unavailable on Steam.
   is_delisted?: boolean
+  // DETAIL-01 gap-fix: set true once a metadata fetch has recorded the appdetails
+  // `platforms` object. Undefined on pre-Phase-7 entries — lets getGameInfo
+  // distinguish "platform support never captured" from a genuine Windows-only
+  // (is_mac_native/is_linux_native === false) verdict, so it can self-heal exactly once.
+  platformsCaptured?: boolean
 }
 
 export { configStore, steamLibraryStore, steamMetadataStore, steamSyncStore }

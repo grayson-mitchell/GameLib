@@ -153,8 +153,17 @@ export default class SteamGame implements Game {
     const existing = library.get(this.appId)
     if (!existing) return {} as GameInfo
 
-    // Trigger lazy metadata fetch as fire-and-forget side effect (D-04)
-    if (!existing.art_cover) {
+    // Trigger lazy metadata fetch as fire-and-forget side effect (D-04).
+    // Also self-heal games cached before DETAIL-01 shipped: their art_cover is
+    // populated (so the original guard skipped the fetch) but their platform
+    // support was never captured. Re-fetch once when platformsCaptured is not yet
+    // true — excluding delisted games, whose terminal branch returns before
+    // capturing platforms (avoids a re-fetch loop). fetchMetadataIfNeeded's
+    // pendingFetches dedup (T-2-03) absorbs repeated calls while a fetch is in flight.
+    const cached = steamMetadataStore.get(this.appId)
+    const platformsNeverCaptured =
+      !existing.is_delisted && cached?.platformsCaptured !== true
+    if (!existing.art_cover || platformsNeverCaptured) {
       void this.fetchMetadataIfNeeded(existing)
     }
 
@@ -242,14 +251,17 @@ export default class SteamGame implements Game {
         extra
       }
 
-      // Persist metadata for next session (D-05, indefinite cache)
+      // Persist metadata for next session (D-05, indefinite cache).
+      // platformsCaptured:true records that appdetails `platforms` was read, so
+      // getGameInfo won't re-fetch this game again for platform data (self-heal once).
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
         extra,
         is_mac_native,
         is_linux_native,
-        is_delisted: false
+        is_delisted: false,
+        platformsCaptured: true
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data

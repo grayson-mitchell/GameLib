@@ -187,11 +187,50 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       art_cover: 'https://example.com/art.jpg'
     })
     library.set(APP_ID, entry)
+    // A fully-enriched cache entry has platforms already captured (DETAIL-01
+    // gap-fix), so getGameInfo must NOT trigger a self-heal re-fetch.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true
+    })
 
     const result = new SteamGame(APP_ID).getGameInfo()
 
     expect(result).toBe(entry)
     // Synchronous return — axios must NOT have been called yet
+    expect(axios.get).not.toHaveBeenCalled()
+  })
+
+  // ── DETAIL-01 gap-fix: self-healing platform re-fetch ────────────────────
+
+  it('DETAIL-01 self-heal: getGameInfo re-fetches a cached game (art present) whose platforms were never captured', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    // Pre-Phase-7 cache: art is present (old guard would skip) but platforms
+    // were never captured — the self-heal guard must still fire the fetch once.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(axios.get).toHaveBeenCalledTimes(1)
+  })
+
+  it('DETAIL-01 self-heal: getGameInfo does NOT re-fetch a delisted cached game (avoids loop)', async () => {
+    // Delisted games return before capturing platforms; gating on !is_delisted
+    // prevents a re-fetch loop.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: undefined
+    })
+    library.set(
+      APP_ID,
+      makeEntry({ art_cover: 'https://example.com/art.jpg', is_delisted: true })
+    )
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
     expect(axios.get).not.toHaveBeenCalled()
   })
 
