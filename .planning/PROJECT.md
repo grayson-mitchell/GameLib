@@ -8,23 +8,23 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 
 One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
 
-## Current Milestone: v1.1 Polish & Enhancements
+## Current Milestone: v1.2 Humble Bundle Integration
 
-**Goal:** Close out UAT feedback and known v1.0 tech debt — sharper GameLib branding, richer game metadata, Steam-store browsing, and quality hardening.
+**Goal:** Add Humble Bundle as an integrated source in GameLib, focused on key management — never re-buy or lose a Humble key — with ownership-aware dedup against the existing Steam library.
 
 **Target features:**
-- macOS menu-bar tooltip reads "GameLib" (BUG-001)
-- Steam as a browsable storefront in the sidebar Stores section (ENH-002)
-- GameLib release notes on the version link, with a link to the upstream Heroic release (ENH-003)
-- Supported platforms shown in game details (ENH-004)
-- Compatibility rating overlay on game art — macOS via AppleGamingWiki now, Linux via ProtonDB later (ENH-005)
-- Steam games available in Console mode (ENH-006)
-- Updated README (ENH-007)
-- "Playing" status badge during a Steam session
-- Real install size in the download-manager queue (replace `'?? MB'`)
-- Playtime on library-grid tiles (currently details page only)
-- Residual backend "Heroic" log/dialog strings → GameLib
-- Formal Nyquist validation pass for shipped phases
+- Humble auth — email/password + "Humble Guard" emailed one-time code; persisted, encrypted session (no OAuth)
+- Library sync — fetch orders, enumerate keys, normalize into the 5-state key lifecycle model, aggressively cached
+- Claim-status classification — UNPICKED / UNREVEALED / REVEALED / REDEEMED / UNREDEEMABLE, with a locally-persisted REVEALED flag
+- Ownership-aware dedup — cross-reference keys against the unified library (Steam first); collapse already-redeemed Steam keys onto their existing entry
+- "Keys waiting" view — unowned + unredeemed keys, sorted by expiration urgency
+- Guided claim flow — explicit per-key reveal → deep-link to Steam activation → mark redeemed, with an audit record
+- Giftable-spares view — owned-elsewhere + unrevealed keys, surface/copy the Humble gift link
+- Store overlay — Owned / Unclaimed-key / New badges; read-only bundle listing; "Buy on Humble" deep-links
+- Expiration & urgency alerts — recomputed each sync
+- Non-Steam key handling — link out to the target platform; out of scope for one-click claim in v1
+
+> **v1.1 (Polish & Enhancements) remains open** — Phase 9 (Quality Gate / Nyquist validation) and Phase 7 manual UAT are still outstanding, plus active v1.1 requirements below. v1.2 was started alongside v1.1 by explicit choice; v1.1 phase artifacts are preserved in `.planning/phases/`.
 
 ## Requirements
 
@@ -66,6 +66,10 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 - Other new platforms (Ubisoft Connect, itch.io, Xbox) — Steam first, others later
 - Replacing Steam client functionality (friends, community, overlay) — launcher use only
+- Humble in-app checkout / purchasing — store surface is read-only + deep-links (v1.2)
+- One-click activation for non-Steam Humble key types (Epic/Ubisoft/GOG/…) — link out instead (v1.2)
+- Automated/unattended bulk redemption of Humble keys — user-initiated + throttled only (v1.2)
+- Managing DRM-free Humble downloads (Humble-hosted installers) — key-focused for now, later phase (v1.2)
 
 ## Context
 
@@ -110,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-04 — Phase 08.1 (Steam Delisted Games & Library Filters) complete; LIB-07, LIB-08, LIB-09 validated (human-UAT approved). Code-review WR-01/02/04 tracked as advisory follow-ups in 08.1-REVIEW.md.*
+*Last updated: 2026-07-05 — Milestone v1.2 (Humble Bundle Integration) started; v1.1 kept open (Phase 9 + Phase 7 UAT outstanding) by explicit choice.*
