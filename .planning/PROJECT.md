@@ -45,6 +45,9 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ "Playing" status badge during a Steam session (GAME-05) — v1.1 Phase 6
 - ✓ Real install size in the download-manager queue (LIB-06, replaces `'?? MB'`) — v1.1 Phase 6
 - ✓ Playtime visible for Steam games (LIB-05, met via game-details page per D-01; grid-tile display descoped) — v1.1 Phase 6
+- ✓ Delisted Steam games wired into the frontend availability path so the "non-available" filter works (LIB-07) — v1.1 Phase 08.1
+- ✓ Delisted game renders a greyed "Game no longer available" tile with install disabled (LIB-08) — v1.1 Phase 08.1
+- ✓ Tri-state Hidden / Non-available Library filters with "only-show" modes (LIB-09) — v1.1 Phase 08.1
 
 ### Active (v1.1 — in scope)
 
@@ -107,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 — Phase 6 (Library & Game Status UX) complete; GAME-05, LIB-06 validated, LIB-05 met-via-existing (D-01). Human-UAT + CR-01 fix tracked.*
+*Last updated: 2026-07-04 — Phase 08.1 (Steam Delisted Games & Library Filters) complete; LIB-07, LIB-08, LIB-09 validated (human-UAT approved). Code-review WR-01/02/04 tracked as advisory follow-ups in 08.1-REVIEW.md.*
