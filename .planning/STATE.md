@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Enhancements
 status: executing
-stopped_at: Phase 8 executed & verified (4/4 code-verified; 3 runtime UAT pending)
-last_updated: "2026-07-04T06:23:50.146Z"
-last_activity: 2026-07-03 -- Phase 08 execution started
+stopped_at: Phase 7 gap closure executed (07-02) — Steam platform-data bugs fixed; macOS re-UAT pending
+last_updated: "2026-07-04T08:00:00.000Z"
+last_activity: 2026-07-04 -- Phase 07 gap closure (07-02) executed: self-heal platform re-fetch + install-platform derivation + icon spacing
 progress:
   total_phases: 10
   completed_phases: 3
