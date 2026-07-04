@@ -771,4 +771,11 @@
     gap: var(--space-sm);
     align-items: center;
   }
+
+  /* Deterministic inter-icon spacing: the flex `gap` above did not render a
+     visible separation between the brand glyphs (they crowded — UAT test 2), so
+     add an explicit horizontal margin between adjacent icons. Token-based (~8px). */
+  .platformSupport__icons > svg:not(:last-child) {
+    margin-inline-end: var(--space-xs);
+  }
 }
