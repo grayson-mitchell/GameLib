@@ -222,6 +222,25 @@ Decimal phases appear between their surrounding integers in numeric order.
   - [x] 08-06-PLAN.md — Gap F: Deals "Hide Owned" accounts for all stores (not GOG only)
 **UI hint**: yes
 
+### Phase 08.1: Steam Delisted Games & Library Filters (INSERTED)
+
+**Goal:** Delisted / no-longer-available Steam games are handled correctly in the Library, and the library availability filters work and gain "only-show" modes.
+**Requirements**: LIB-07, LIB-08, LIB-09 (new — from Phase 8 UAT)
+**Depends on:** Phase 8 (Gap B added the Steam `is_delisted` signal this phase consumes)
+**Plans:** 0 plans
+
+**Scope (from Phase 8 UAT 2026-07-04):**
+- **LIB-07** — Wire Steam's delisted signal (`is_delisted`, from appdetails `success:false`, added in Phase 8 Gap B) into the frontend `isGameAvailable` / `nonAvailableGames` path so the existing "show non-available games" Library filter actually works for Steam. Reconcile with Steam's current install-state-based `isGameAvailable()` so "non-available" means *delisted*, not merely *not-installed*.
+- **LIB-08** — A delisted game renders a greyed **"Game no longer available"** placeholder and its **install option is disabled** (no `steam://install` handoff that can't succeed).
+- **LIB-09** — Add **"only show hidden"** and **"only show non-available games"** filter modes (today `showHidden` / `showNonAvailable` are additive-only; there is no "only" mode).
+
+**Notes:**
+- Spans frontend Library filters (`screens/Library/index.tsx`, `components/UI/LibraryFilters`, `LibraryContext`) + Steam backend availability (`storeManagers/steam`) + placeholder UI/messaging.
+- Delisted games are already excluded from Console (Gap B); this phase is the **Library** treatment.
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 08.1 to break down)
+
 ### Phase 9: Quality Gate
 **Goal**: All v1.0 and v1.1 shipped phases are formally validated and any regressions are documented
 **Depends on**: Phases 5, 6, 7, 8

@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: Polish & Enhancements
 status: executing
 stopped_at: Phase 8 executed & verified (4/4 code-verified; 3 runtime UAT pending)
-last_updated: "2026-07-04T04:20:00.000Z"
-last_activity: 2026-07-04 -- Completed quick task 260704-mig (Gap D overlay fix + placeholder icon)
+last_updated: "2026-07-04T06:23:50.146Z"
+last_activity: 2026-07-03 -- Phase 08 execution started
 progress:
-  total_phases: 9
-  completed_phases: 2
+  total_phases: 10
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 8
-  percent: 22
+  completed_plans: 12
+  percent: 30
 ---
 
 # Project State
@@ -82,6 +82,10 @@ Last activity: 2026-07-03 -- Phase 08 execution started
 | Phase 08-new-steam-surfaces P02 | 5min | 3 tasks | 4 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 08.1 inserted after Phase 8: Steam Delisted Games & Library Filters — delisted availability signal, 'Game no longer available' + install-disable, only-show filter modes (from Phase 8 UAT) (URGENT)
 
 ### Decisions
 
