@@ -954,6 +954,35 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
 
     expect(available).toBe(false)
   })
+
+  it('isGameAvailable() resolves false when game is delisted and installed (LIB-07)', async () => {
+    existsSyncMock.mockReturnValue(true)
+    library.set(
+      APP_ID,
+      makeEntry({
+        is_installed: true,
+        is_delisted: true,
+        install: { install_path: '/games/dota2' }
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(false)
+  })
+
+  it('isGameAvailable() resolves false when game is delisted and not installed (LIB-07)', async () => {
+    library.set(
+      APP_ID,
+      makeEntry({ is_installed: false, is_delisted: true, install: {} })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const available = await game.isGameAvailable()
+
+    expect(available).toBe(false)
+  })
 })
 
 // ── CONSOLE-01 Gap B: is_delisted detection in fetchMetadataIfNeeded ──────────
