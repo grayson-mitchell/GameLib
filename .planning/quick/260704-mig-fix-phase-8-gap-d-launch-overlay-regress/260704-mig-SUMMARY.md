@@ -8,7 +8,8 @@ commits:
   - a2a7e032 fix(08): floor Steam launch-overlay visible time (superseded)
   - 1d7426c1 feat(08): GameLib icon above text on artwork placeholders
   - 8f0862f5 fix(08): keep Steam launch overlay up until the game takes focus (corrects a2a7e032)
-  - a6e3c645 fix(08): launch Steam games without activating Steam (activate:false) — kills Console-mode desktop-Space flash
+  - a6e3c645 fix(08): launch Steam games without activating Steam (activate:false) — kept (didn't fix flash, but cleaner)
+  - c314269c prototype(08): setSimpleFullScreen for Console mode on macOS — flash-vs-swipe tradeoff, pending UAT
 ---
 
 # Summary: 260704-mig
@@ -45,7 +46,24 @@ the desktop before the game appears. Library launch (a normal window) never had
 this. Fix: pass `{ activate: false }` on the `rungameid` handoff so Steam
 processes the launch in the background and the only Space switch is directly to
 the game's own window. macOS/Windows only; ignored on Linux (no Steam Deck
-game-mode impact). Install/uninstall handoffs left as-is. Native fullscreen is
+game-mode impact). Install/uninstall handoffs left as-is.
+
+**UAT result (test 10): did NOT fix the flash — "same behavior".** Conclusion:
+the desktop-Space flash is macOS leaving GameLib's native-fullscreen Space when
+the GAME window appears on another Space (a separate process activating itself),
+which Electron can't suppress. activate:false is KEPT anyway (per decision) — it's
+harmless and arguably cleaner (Steam no longer steals focus; overlay test 9
+passed with it).
+
+### 4. Simple-fullscreen prototype for Console mode on macOS (c314269c)
+`src/backend/main.ts` — the `setFullscreen` IPC listener now uses
+`setSimpleFullScreen` on darwin (native `setFullScreen` retained elsewhere).
+Simple fullscreen keeps the window borderless on the CURRENT Space, eliminating
+the desktop flash on Steam launch — at the cost of Console mode no longer being
+its own swipe-able macOS Space. Prototype for the user to evaluate the
+flash-vs-swipe tradeoff (UAT test 11). Caveat: native enter/leave-full-screen
+events don't fire with simple fullscreen, so the global `isFullscreen` state
+(CLI/Deck-oriented) won't toggle — watch for window-chrome differences. Native fullscreen is
 retained, so Console-mode swipe/Space controls are unchanged.
 
 ### 2. GameLib icon on artwork placeholders (test 1 enhancement)
