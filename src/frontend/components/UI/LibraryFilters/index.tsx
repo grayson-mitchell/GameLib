@@ -40,12 +40,25 @@ export default function LibraryFilters() {
     setShowUpdatesOnly
   } = useContext(LibraryContext)
 
+  // Cycle: Off→Show (toggle-switch click), Show→Off, Only→Show
   const toggleShowHidden = () => {
-    setShowHidden(!showHidden)
+    if (showHidden === 'off') setShowHidden('show')
+    else if (showHidden === 'show') setShowHidden('off')
+    else setShowHidden('show')  // 'only' → 'show' on toggle-switch click
+  }
+  const setHiddenOnly = () => {
+    if (showHidden === 'only') setShowHidden('off')  // re-click 'only' → off
+    else setShowHidden('only')
   }
 
   const toggleShowNonAvailable = () => {
-    setShowNonAvailable(!showNonAvailable)
+    if (showNonAvailable === 'off') setShowNonAvailable('show')
+    else if (showNonAvailable === 'show') setShowNonAvailable('off')
+    else setShowNonAvailable('show')
+  }
+  const setNonAvailableOnly = () => {
+    if (showNonAvailable === 'only') setShowNonAvailable('off')
+    else setShowNonAvailable('only')
   }
 
   const toggleOnlyFavorites = () => {
@@ -98,11 +111,19 @@ export default function LibraryFilters() {
     setStoresFilters(newFilters)
   }
 
-  const toggleWithOnly = (toggle: JSX.Element, onOnlyClicked: () => void) => {
+  const toggleWithOnly = (
+    toggle: JSX.Element,
+    onOnlyClicked: () => void,
+    isOnly?: boolean
+  ) => {
     return (
       <div className="toggleWithOnly">
         {toggle}
-        <button className="only" onClick={() => onOnlyClicked()}>
+        <button
+          className="only"
+          onClick={() => onOnlyClicked()}
+          aria-pressed={isOnly ?? false}
+        >
           {t('header.only', 'only')}
         </button>
       </div>
@@ -166,8 +187,8 @@ export default function LibraryFilters() {
       mac: true,
       browser: true
     })
-    setShowHidden(true)
-    setShowNonAvailable(true)
+    setShowHidden('off')
+    setShowNonAvailable('off')
     setShowFavourites(false)
     setShowInstalledOnly(false)
     setShowSupportOfflineOnly(false)
@@ -195,20 +216,28 @@ export default function LibraryFilters() {
       {platform === 'darwin' && platformToggle('mac')}
       {platformToggle('browser')}
       <hr />
-      <ToggleSwitch
-        key="show-hidden"
-        htmlId="show-hidden"
-        handleChange={() => toggleShowHidden()}
-        value={showHidden}
-        title={t('header.show_hidden', 'Show Hidden')}
-      />
-      <ToggleSwitch
-        key="show-non-available"
-        htmlId="show-non-available"
-        handleChange={() => toggleShowNonAvailable()}
-        value={showNonAvailable}
-        title={t('header.show_available_games', 'Show non-Available games')}
-      />
+      {toggleWithOnly(
+        <ToggleSwitch
+          key="show-hidden"
+          htmlId="show-hidden"
+          handleChange={toggleShowHidden}
+          value={showHidden !== 'off'}
+          title={t('header.show_hidden', 'Show Hidden')}
+        />,
+        setHiddenOnly,
+        showHidden === 'only'
+      )}
+      {toggleWithOnly(
+        <ToggleSwitch
+          key="show-non-available"
+          htmlId="show-non-available"
+          handleChange={toggleShowNonAvailable}
+          value={showNonAvailable !== 'off'}
+          title={t('header.show_available_games', 'Show non-Available games')}
+        />,
+        setNonAvailableOnly,
+        showNonAvailable === 'only'
+      )}
       <ToggleSwitch
         key="only-favorites"
         htmlId="only-favorites"
