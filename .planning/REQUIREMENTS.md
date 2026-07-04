@@ -32,9 +32,9 @@ Requirements for the v1.1 milestone. Each maps to exactly one roadmap phase.
 
 - [ ] **LIB-05**: Steam playtime is shown on library-grid tiles, not only on the game details page
 - [ ] **LIB-06**: The download-manager queue shows the real install size instead of `'?? MB'`
-- [ ] **LIB-07**: Steam's delisted signal (is_delisted) drives the Library "show non-available" filter — non-available means delisted, not merely not-installed
-- [ ] **LIB-08**: A delisted Steam game renders a greyed "Game no longer available" placeholder with its install option disabled
-- [ ] **LIB-09**: Library "Show Hidden" and "Show non-Available" filters gain tri-state Off/Show/Only modes
+- [x] **LIB-07**: Steam's delisted signal (is_delisted) drives the Library "show non-available" filter — non-available means delisted, not merely not-installed
+- [x] **LIB-08**: A delisted Steam game renders a greyed "Game no longer available" placeholder with its install option disabled
+- [x] **LIB-09**: Library "Show Hidden" and "Show non-Available" filters gain tri-state Off/Show/Only modes
 
 ### Game Operations
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DETAIL-02 | Phase 7 | Pending |
 | STORE-01 | Phase 8 | Complete |
 | CONSOLE-01 | Phase 8 | Complete |
-| LIB-07 | Phase 08.1 | Pending |
-| LIB-08 | Phase 08.1 | Pending |
-| LIB-09 | Phase 08.1 | Pending |
+| LIB-07 | Phase 08.1 | Complete |
+| LIB-08 | Phase 08.1 | Complete |
+| LIB-09 | Phase 08.1 | Complete |
 | QA-01 | Phase 9 | Pending |
 
 **Coverage:**

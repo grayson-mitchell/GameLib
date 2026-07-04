@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Polish & Enhancements
-status: executing
-stopped_at: Phase 08.1 UI-SPEC approved
-last_updated: "2026-07-04T11:14:47.969Z"
+status: ready_to_plan
+stopped_at: Phase 08.1 complete (4/4) — ready to discuss Phase 9
+last_updated: 2026-07-04T11:53:51.032Z
 last_activity: 2026-07-04 -- Phase 08.1 execution started
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 17
   percent: 40
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 08.1 — steam-delisted-games-library-filters
+**Current focus:** Phase 9 — quality gate
 
 ## Current Position
 
-Phase: 08.1 (steam-delisted-games-library-filters) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 08.1
-Last activity: 2026-07-04 -- Phase 08.1 execution started
+Phase: 9
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-04
 
 ## v1.1 Phase Map
 
@@ -44,7 +44,7 @@ Last activity: 2026-07-04 -- Phase 08.1 execution started
 
 **Velocity (v1.0):**
 
-- Total plans completed: 21 (phases 1-4)
+- Total plans completed: 25 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -58,6 +58,7 @@ Last activity: 2026-07-04 -- Phase 08.1 execution started
 | 04 | 2 | - | - |
 | 05 | 4 | - | - |
 | 06 | 2 | - | - |
+| 08.1 | 4 | - | - |
 
 **v1.0 Detail Log:**
 
