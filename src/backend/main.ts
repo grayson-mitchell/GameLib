@@ -612,6 +612,14 @@ addListener('setFullscreen', (_e, enabled) => {
   // swipe-able Space). Other platforms keep native fullscreen.
   if (isMac) {
     window.setSimpleFullScreen(enabled)
+    if (enabled) {
+      // setSimpleFullScreen does not reliably keep the window as the key window,
+      // so Console mode's key-driven card navigation receives no keydown events
+      // (mouse clicks still work because a click focuses the window directly).
+      // Re-assert OS keyboard focus so arrow/gamepad navigation works.
+      window.focus()
+      window.webContents.focus()
+    }
   } else {
     window.setFullScreen(enabled)
   }
