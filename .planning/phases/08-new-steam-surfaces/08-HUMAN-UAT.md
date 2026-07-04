@@ -8,11 +8,7 @@ updated: 2026-07-04T04:25:00Z
 
 ## Current Test
 
-number: 10
-name: Silent Steam handoff — no desktop-Space flash in Console mode
-expected: |
-  Launch an installed Steam game from CONSOLE MODE: no 'view of the desktop' detour — activate:false keeps GameLib in its fullscreen Space and the only transition is straight to the game. Swipe/Space controls unchanged. Library launch still works. Requires a rebuild with commit a6e3c645. (Test 9 — overlay message — is also still pending.)
-awaiting: user response
+[re-test wave complete — test 9 pass; tests 8 (delisted-game semantics) + 10 (macOS Space flash) need scope decisions before further work]
 
 ## Tests
 
@@ -56,22 +52,28 @@ superseded_by: 9
 
 ### 9. Gap D re-fix (v2) — overlay stays until the game takes focus
 expected: Activating an installed Steam game shows 'Launched in Steam' + spinner immediately, and it STAYS visible for the whole several-second launch while GameLib holds focus, then disappears exactly when the game takes the foreground. No 0s flash, no missing message, no indefinite hang (8s safety ceiling). Requires a rebuild with commit 8f0862f5.
-result: [pending]
+result: pass
 
 ### 10. Silent Steam handoff — no desktop-Space flash in Console mode
 expected: Launch an installed Steam game FROM CONSOLE MODE (macOS native fullscreen). No 'view of the desktop' detour between GameLib and the game — Steam is no longer brought to the foreground (activate:false), so GameLib stays in its fullscreen Space and the only transition is directly to the game's own window. Console-mode swipe/Space controls are unchanged (still native fullscreen). Also sanity-check a Library launch still starts the game normally. Requires a rebuild with commit a6e3c645.
-result: [pending]
+result: issue
+reported: "same behavior"
+severity: minor
+analysis: "activate:false did NOT remove the desktop-Space flash. Conclusion: the flash is not caused (only) by Steam being foregrounded — it's macOS leaving GameLib's native-fullscreen Space when the GAME window appears on a different Space, which we cannot control from Electron (the game is a separate process that activates itself). Confirms the earlier binary tradeoff: native fullscreen Space (swipe-able) inherently costs the exit animation; the only flash-free option is simple fullscreen (loses the swipe-able Space). activate:false is harmless (arguably cleaner — Steam no longer steals focus; test 9 still passed) but did not achieve its goal → decide keep vs revert."
 
 ### 8. Test 1 enhancement — GameLib icon on artwork placeholders
 expected: A Steam game with unavailable art in the Console grid shows the GameLib icon ABOVE the text, rendered in greyscale ('Artwork unavailable' variant). A game using the default 'No artwork' placeholder shows the same icon in full color. Icon sits above the wordmark, layout looks balanced.
-result: [pending]
+result: issue
+reported: "for the 'no artwork', no reason why this should not be greyed out as well. Also this is not the correct error message — 'Game no longer available' is actually the issue. So in that case the install option should not be available."
+severity: major
+analysis: "Icon-above-text layout is fine, but the two-variant model (full-color 'No artwork' vs greyed 'Artwork unavailable') doesn't map to a real user-meaningful state. The games showing these placeholders are DELISTED / no longer available on Steam. Desired: (a) greyed placeholder in this case too, (b) message should read 'Game no longer available', (c) install option must NOT be offered for a no-longer-available game. Overlaps Gap B (delisted filtering) — needs a scope decision: hide delisted vs show-as-unavailable-with-install-disabled, and WHERE (Library vs Console)."
 
 ## Summary
 
 total: 10
-passed: 5
-issues: 2
-pending: 3
+passed: 6
+issues: 3
+pending: 0
 skipped: 0
 blocked: 0
 
