@@ -955,3 +955,106 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     expect(available).toBe(false)
   })
 })
+
+// ── CONSOLE-01 Gap B: is_delisted detection in fetchMetadataIfNeeded ──────────
+//
+// These tests verify all three behavioural branches of the delisted-detection
+// logic in fetchMetadataIfNeeded. The gap was previously grep-verified only.
+//
+// Branch 1 — DEFINITIVE DELISTED: success:false → is_delisted:true written.
+// Branch 2 — AVAILABLE / CLEARED:  success:true with data → is_delisted:false.
+// Branch 3 — TRANSIENT (ambiguous empty envelope): no is_delisted write.
+// Branch 4 — TRANSIENT (network throw / catch block): no is_delisted write.
+
+describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 Gap B)', () => {
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+  })
+
+  it('CONSOLE-01/B1: success:false response sets is_delisted:true on steamMetadataStore, library entry, and pushGameToLibrary', async () => {
+    // Arrange: Steam appdetails returns a definitive "no such app" envelope.
+    ;(axios.get as jest.Mock).mockResolvedValue({
+      data: { [APP_ID]: { success: false } }
+    })
+    // Seed the metadata store with existing art so the merge preserves it.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: 'https://example.com/old-art.jpg',
+      art_square: 'https://example.com/old-sq.jpg',
+      extra: { reqs: [] }
+    })
+    library.set(APP_ID, makeEntry())
+
+    // Act: fire getGameInfo → triggers fetchMetadataIfNeeded as fire-and-forget.
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    // Assert 1: steamMetadataStore persists the delisted flag.
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ is_delisted: true })
+    )
+    // Assert 2: in-memory library entry carries is_delisted:true.
+    expect(library.get(APP_ID)?.is_delisted).toBe(true)
+    // Assert 3: frontend receives the updated GameInfo with is_delisted:true.
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, is_delisted: true })
+    )
+  })
+
+  it('CONSOLE-01/B2: success:true response clears is_delisted to false on steamMetadataStore, library entry, and pushGameToLibrary', async () => {
+    // Arrange: a normal successful appdetails response (existing fixture).
+    ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
+    library.set(APP_ID, makeEntry())
+
+    // Act
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    // Assert 1: steamMetadataStore carries is_delisted:false (stale flag cleared).
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ is_delisted: false })
+    )
+    // Assert 2: in-memory library entry has is_delisted:false.
+    expect(library.get(APP_ID)?.is_delisted).toBe(false)
+    // Assert 3: frontend push carries is_delisted:false.
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ is_delisted: false })
+    )
+  })
+
+  it('CONSOLE-01/B3: ambiguous empty envelope (no success, no data) does NOT write is_delisted — transient failure must not hide owned games', async () => {
+    // Arrange: envelope present but both success and data are absent.
+    // This represents a rate-limit or partial API response — NOT a delisted verdict.
+    ;(axios.get as jest.Mock).mockResolvedValue({
+      data: { [APP_ID]: {} }
+    })
+    library.set(APP_ID, makeEntry())
+
+    // Act
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    // Assert: no persistence write whatsoever — transient branch returns early.
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+    // Assert: no frontend push — owned game must remain visible.
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  it('CONSOLE-01/B4: network error (axios throw) does NOT write is_delisted — catch block must never mark owned games delisted', async () => {
+    // Arrange: axios rejects — simulates offline / network timeout.
+    ;(axios.get as jest.Mock).mockRejectedValue(new Error('Network timeout'))
+    library.set(APP_ID, makeEntry())
+
+    // Act — must not throw synchronously or cause an unhandled rejection.
+    expect(() => new SteamGame(APP_ID).getGameInfo()).not.toThrow()
+    await flushAsync()
+
+    // Assert: catch block only logs; no store write, no frontend push.
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
