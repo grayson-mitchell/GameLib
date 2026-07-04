@@ -1389,3 +1389,96 @@ describe('startRunningPoll() and stopRunningPoll()', () => {
     spy.mockRestore()
   })
 })
+
+// ── DETAIL-01 GAP2: hostInstallPlatform() — install.platform reflects host OS ──
+//
+// Verifies that the module-private hostInstallPlatform() helper in library.ts
+// returns the correct InstallPlatform for each OS, observable through
+// refreshInstallState() → install.platform on the resulting library entry.
+// Pattern: same envMock flipping used by readRunningAppId() describe (L1122-1261).
+
+describe('hostInstallPlatform() via refreshInstallState() — install.platform reflects host OS (DETAIL-01 GAP2)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+  let manager: SteamLibraryManager
+
+  // Seed library with an uninstalled game, set up ACF mocks, call refreshInstallState.
+  // Uses the same ACF/vdf mock setup as the L508 refreshInstallState test.
+  const installGame570 = async (): Promise<void> => {
+    library.clear()
+    library.set('570', {
+      runner: 'steam',
+      app_name: '570',
+      title: 'Dota 2',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '570',
+        StateFlags: '4',
+        installdir: 'dota2',
+        SizeOnDisk: '50000'
+      }
+    })
+
+    await manager.refreshInstallState()
+  }
+
+  beforeEach(() => {
+    manager = new SteamLibraryManager()
+    envMock = jest.requireMock('backend/constants/environment')
+    // Default to Linux (matches the top-level module mock declaration at L99-104)
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+    // Provide empty caches so init()/migrateStaleArtUrls() are no-ops if called
+    ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+  })
+
+  afterEach(() => {
+    // Restore Linux defaults to prevent cross-test bleed
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+    library.clear()
+  })
+
+  it('install.platform resolves to "Mac" when host OS is macOS', async () => {
+    envMock.isWindows = false
+    envMock.isMac = true
+    envMock.isLinux = false
+
+    await installGame570()
+
+    expect(library.get('570')!.install.platform).toBe('Mac')
+  })
+
+  it('install.platform resolves to "linux" when host OS is Linux', async () => {
+    // envMock already set to Linux in beforeEach — no override needed
+    await installGame570()
+
+    expect(library.get('570')!.install.platform).toBe('linux')
+  })
+
+  it('install.platform resolves to "Windows" when host OS is Windows', async () => {
+    envMock.isWindows = true
+    envMock.isMac = false
+    envMock.isLinux = false
+
+    await installGame570()
+
+    expect(library.get('570')!.install.platform).toBe('Windows')
+  })
+})
