@@ -8,21 +8,12 @@ updated: 2026-07-04T09:00:00Z
 
 ## Current Test
 
-number: 6
-name: CrossOver ↔ Wine rating-source toggle (DETAIL-02)
+number: 7
+name: Pill click-through (DETAIL-02)
 expected: |
-  In Accessibility settings (macOS), the CrossOver/Wine rating-source toggle is
-  present; switching it changes the rating shown on BOTH the art pill and the
-  game-details compat row to that source's value.
+  Clicking the compatibility pill opens the corresponding AppleGamingWiki /
+  CodeWeavers CrossOver page for the game (click-through works).
 awaiting: user response
-fix: |
-  Applied (fix now), THREE parts: (1) PRIMARY — browser User-Agent on both
-  AppleGamingWiki requests (applegamingwiki/utils.ts); without it Cloudflare 403s the
-  axios default UA, which is why every game was 'Unrated'. (2) getWikiGameInfo treats
-  a null-applegamingwiki cache hit as a miss on macOS so the 26 stale entries
-  self-heal (wiki_game_info.ts). (3) getInfoFromAppleGamingWiki returns an empty
-  'checked, none found' marker instead of null when no page exists. 30-day TTL remains
-  the refresh path for rating changes. Tests pass (5/5), tsc clean.
 
 ## Tests
 
@@ -61,8 +52,9 @@ analysis: "The narrow 'Unrated fallback' behavior works, but the underlying rati
 
 ### 6. CrossOver ↔ Wine rating-source toggle (DETAIL-02)
 expected: In the Accessibility settings screen (macOS only), the rating-source toggle (appleRatingSource: CrossOver default / Wine) is present. Switching it changes the rating shown on BOTH surfaces (the art overlay pill and the game-details compat row) to that source's rating.
-result: [pending]
-reason: "Unblocked — overlay renders now (test 3)."
+result: pass
+reported: "Works — toggling CrossOver/Wine updates both the art pill and the details compat row. Follow-up: toggle was in the WRONG place (Accessibility); moved to Settings › General per user."
+observations: "Rating-source toggle relocated from Accessibility screen to Settings › General (macOS-only, global settings). New i18n keys under setting.apple_rating_source*; old accessibility.* keys removed. tsc + lint clean."
 
 ### 7. Pill click-through (DETAIL-02)
 expected: Clicking the compatibility pill opens the corresponding AppleGamingWiki page / rating source for the game (click-through works).
@@ -72,9 +64,9 @@ reason: "Unblocked — pill renders now (test 3)."
 ## Summary
 
 total: 7
-passed: 5
+passed: 6
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
