@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Polish & Enhancements
 status: executing
 stopped_at: Phase 08.1 UI-SPEC approved
-last_updated: "2026-07-04T11:12:12.544Z"
-last_activity: 2026-07-04 -- Phase 08.1 planning complete
+last_updated: "2026-07-04T11:14:47.969Z"
+last_activity: 2026-07-04 -- Phase 08.1 execution started
 progress:
   total_phases: 10
   completed_phases: 4
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 08 — new-steam-surfaces
+**Current focus:** Phase 08.1 — steam-delisted-games-library-filters
 
 ## Current Position
 
-Phase: 08 (new-steam-surfaces) — EXECUTING
-Plan: 1 of 6
-Status: Ready to execute
-Last activity: 2026-07-04 -- Phase 08.1 planning complete
+Phase: 08.1 (steam-delisted-games-library-filters) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 08.1
+Last activity: 2026-07-04 -- Phase 08.1 execution started
 
 ## v1.1 Phase Map
 
