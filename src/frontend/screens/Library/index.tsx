@@ -31,7 +31,7 @@ import {
 } from 'frontend/helpers/library'
 import RecentlyPlayed from './components/RecentlyPlayed'
 import LibraryContext from './LibraryContext'
-import { Category, PlatformsFilters, StoresFilters } from 'frontend/types'
+import { Category, FilterMode, PlatformsFilters, StoresFilters } from 'frontend/types'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
@@ -138,11 +138,18 @@ export default React.memo(function Library(): JSX.Element {
 
   const [filterText, setFilterText] = useState('')
 
-  const [showHidden, setShowHidden] = useState(
-    JSON.parse(storage.getItem('show_hidden') || 'false')
+  // Migration helper: maps legacy 'true'/'false'/null to FilterMode
+  const migrateFilterMode = (key: string, defaultValue: FilterMode): FilterMode => {
+    const stored = storage.getItem(key)
+    if (stored === 'show' || stored === 'only' || stored === 'off') return stored
+    return defaultValue  // handles 'true', 'false', null, undefined
+  }
+
+  const [showHidden, setShowHidden] = useState<FilterMode>(
+    migrateFilterMode('show_hidden', 'off')
   )
-  const handleShowHidden = (value: boolean) => {
-    storage.setItem('show_hidden', JSON.stringify(value))
+  const handleShowHidden = (value: FilterMode) => {
+    storage.setItem('show_hidden', value)
     setShowHidden(value)
   }
 
@@ -162,11 +169,11 @@ export default React.memo(function Library(): JSX.Element {
     setShowInstalledOnly(value)
   }
 
-  const [showNonAvailable, setShowNonAvailable] = useState(
-    JSON.parse(storage.getItem('show_non_available') || 'true')
+  const [showNonAvailable, setShowNonAvailable] = useState<FilterMode>(
+    migrateFilterMode('show_non_available', 'off')
   )
-  const handleShowNonAvailable = (value: boolean) => {
-    storage.setItem('show_non_available', JSON.stringify(value))
+  const handleShowNonAvailable = (value: FilterMode) => {
+    storage.setItem('show_non_available', value)
     setShowNonAvailable(value)
   }
 
@@ -340,7 +347,7 @@ export default React.memo(function Library(): JSX.Element {
   const showRecentGames = libraryTopSection.startsWith('recently_played')
 
   const favouriteGamesList = useMemo(() => {
-    if (showHidden) {
+    if (showHidden !== 'off') {
       return favouriteGames.list
     }
 
@@ -508,24 +515,8 @@ export default React.memo(function Library(): JSX.Element {
         library = library.filter((game) => gameUpdates.includes(game.app_name))
       }
 
-      if (!showNonAvailable) {
-        const nonAvailbleGames = storage.getItem('nonAvailableGames') || '[]'
-        const nonAvailbleGamesArray = JSON.parse(nonAvailbleGames)
-        library = library.filter(
-          (game) => !nonAvailbleGamesArray.includes(game.app_name)
-        )
-      }
-
       if (showInstalledOnly) {
         library = library.filter((game) => game.is_installed)
-      }
-
-      if (!showNonAvailable) {
-        const nonAvailbleGames = storage.getItem('nonAvailableGames') || '[]'
-        const nonAvailbleGamesArray = JSON.parse(nonAvailbleGames)
-        library = library.filter(
-          (game) => !nonAvailbleGamesArray.includes(game.app_name)
-        )
       }
     }
 
@@ -568,10 +559,34 @@ export default React.memo(function Library(): JSX.Element {
       (hidden: HiddenGame) => hidden?.appName
     )
 
-    if (!showHidden) {
-      library = library.filter(
-        (game) => !hiddenGamesAppNames.includes(game?.app_name)
+    // Helper: non-available means in nonAvailableGames localStorage OR is a delisted Steam game
+    const isNonAvailable = (game: GameInfo): boolean => {
+      const nonAvailableGames = storage.getItem('nonAvailableGames') || '[]'
+      const nonAvailableGamesArray: string[] = JSON.parse(nonAvailableGames)
+      return (
+        nonAvailableGamesArray.includes(game.app_name) ||
+        (game.runner === 'steam' && !!game.is_delisted)
       )
+    }
+
+    const isHidden = (game: GameInfo): boolean =>
+      hiddenGamesAppNames.includes(game.app_name)
+
+    // Tri-state filter logic (D-08/D-09)
+    if (showHidden === 'only' && showNonAvailable === 'only') {
+      // D-09: both 'only' → union
+      library = library.filter((game) => isNonAvailable(game) || isHidden(game))
+    } else if (showHidden === 'only') {
+      library = library.filter(isHidden)
+    } else if (showNonAvailable === 'only') {
+      library = library.filter(isNonAvailable)
+    } else {
+      if (showNonAvailable === 'off') {
+        library = library.filter((game) => !isNonAvailable(game))
+      }
+      if (showHidden === 'off') {
+        library = library.filter((game) => !isHidden(game))
+      }
     }
 
     return library
