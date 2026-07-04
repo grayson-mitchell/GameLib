@@ -601,9 +601,21 @@ addListener('minimizeWindow', () => getMainWindow()?.minimize())
 addListener('maximizeWindow', () => getMainWindow()?.maximize())
 addListener('unmaximizeWindow', () => getMainWindow()?.unmaximize())
 addListener('closeWindow', () => getMainWindow()?.close())
-addListener('setFullscreen', (_e, enabled) =>
-  getMainWindow()?.setFullScreen(enabled)
-)
+addListener('setFullscreen', (_e, enabled) => {
+  const window = getMainWindow()
+  if (!window) return
+  // On macOS, native setFullScreen(true) moves the window into its own Space.
+  // Launching an external app (a Steam game) from Console mode then forces macOS
+  // to animate out of that Space to the desktop — a visible flash before the
+  // game appears. setSimpleFullScreen keeps the window borderless on the CURRENT
+  // Space, avoiding the flash (tradeoff: Console mode is no longer its own
+  // swipe-able Space). Other platforms keep native fullscreen.
+  if (isMac) {
+    window.setSimpleFullScreen(enabled)
+  } else {
+    window.setFullScreen(enabled)
+  }
+})
 addListener('quit', async () => handleExit())
 
 // Quit when all windows are closed, except on macOS. There, it's common
