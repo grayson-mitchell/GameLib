@@ -199,8 +199,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: DETAIL-01, DETAIL-02
 **Success Criteria** (what must be TRUE):
   1. The game details page shows which platforms a game supports (Windows, macOS, Linux)
-  2. On macOS, Mac-supported Steam games show an AppleGamingWiki compatibility rating overlaid on the game art
-  3. The compatibility overlay only appears on macOS and only for games that have a Mac platform listing
+  2. On macOS, Windows-only Steam games (no native Mac build) show an AppleGamingWiki CrossOver/Wine compatibility rating overlaid on the game art — measuring how well the Windows game runs on macOS via a translation layer (design corrected during Phase 7 UAT, superseding D-13; gate = `darwin && !is_mac_native`)
+  3. The compatibility overlay only appears on macOS and only for games WITHOUT a native Mac build (Mac-native games run natively and need no translation-layer rating)
 **Plans**: 1 gap-closure plan (07-02)
 - [ ] `07-02-PLAN.md` — Fix Steam platform data: self-healing supported-platform re-fetch (GAP 1), host-derived installed platform (GAP 2), icon spacing (GAP 3)
 **UI hint**: yes
