@@ -193,6 +193,27 @@
   opacity: 0.7;
 }
 
+/* LIB-08: non-installed delisted game — full desaturation (distinct from hidden opacity:0.2) */
+.gameCard.notAvailable .gameImg:not(.installed) {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* LIB-08: delisted badge — same visual chrome as gameCardUpdateBadge but different semantic/color */
+.gameCard .gameCardDelistedBadge {
+  position: absolute;
+  z-index: 3;
+  top: 5px;
+  left: 5px;
+  font-weight: var(--semibold);
+  background: var(--status-default);
+  color: var(--neutral-01);
+  font-size: var(--text-sm);
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+  pointer-events: none;
+}
+
 .gameCard .runner {
   display: none;
 }

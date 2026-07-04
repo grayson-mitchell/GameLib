@@ -276,6 +276,8 @@ const GameCard = ({
         </SvgButton>
       )
     } else {
+      // D-05: no install for delisted games — steam://install returns silent error
+      if (isDelisted) return null
       return (
         <SvgButton
           className="downIcon"
@@ -306,6 +308,7 @@ const GameCard = ({
 
   const isSideloaded = runner === 'sideload'
   const isSteam = runner === 'steam'
+  const isDelisted = !!gameInfoFromProps.is_delisted
 
   const handleEdit = () => {
     if (isSideloaded) {
@@ -359,7 +362,7 @@ const GameCard = ({
       // install
       label: t('button.install'),
       onclick: () => buttonClick(),
-      show: !isInstalled && !isQueued && isInstallable,
+      show: !isInstalled && !isQueued && isInstallable && !isDelisted,
       icon: <Download />
     },
     {
@@ -448,7 +451,7 @@ const GameCard = ({
   const wrapperClasses = classNames(grid ? 'gameCard' : 'gameListItem', {
     installed: isInstalled,
     hidden: isHiddenGame,
-    notAvailable: notAvailable,
+    notAvailable: notAvailable || isDelisted,  // LIB-08: Pitfall 4 fix
     gamepad: activeController,
     justPlayed: justPlayed
   })
@@ -494,6 +497,16 @@ const GameCard = ({
           {showUpdateBadge && (
             <span className="gameCardUpdateBadge">
               {t('status.hasUpdates')}
+            </span>
+          )}
+          {isDelisted && (
+            <span
+              className="gameCardDelistedBadge"
+              aria-label={t2('library.delisted', 'Game no longer available')}
+              aria-hidden={false}
+              style={{ pointerEvents: 'none' }}
+            >
+              {t2('library.delisted', 'Game no longer available')}
             </span>
           )}
           <Link
