@@ -228,7 +228,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal:** Delisted / no-longer-available Steam games are handled correctly in the Library, and the library availability filters work and gain "only-show" modes.
 **Requirements**: LIB-07, LIB-08, LIB-09 (new — from Phase 8 UAT)
 **Depends on:** Phase 8 (Gap B added the Steam `is_delisted` signal this phase consumes)
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 **Scope (from Phase 8 UAT 2026-07-04):**
 - **LIB-07** — Wire Steam's delisted signal (`is_delisted`, from appdetails `success:false`, added in Phase 8 Gap B) into the frontend `isGameAvailable` / `nonAvailableGames` path so the existing "show non-available games" Library filter actually works for Steam. Reconcile with Steam's current install-state-based `isGameAvailable()` so "non-available" means *delisted*, not merely *not-installed*.
@@ -240,7 +240,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - Delisted games are already excluded from Console (Gap B); this phase is the **Library** treatment.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 08.1 to break down)
+- [ ] 08.1-01-PLAN.md — Backend `isGameAvailable()` delisted guard + tests + REQUIREMENTS.md traceability (LIB-07)
+- [ ] 08.1-02-PLAN.md — LIB-08 GameCard delisted tile (badge, greyed art, install hidden) + 3 i18n keys (LIB-08)
+- [ ] 08.1-03-PLAN.md — LIB-09 tri-state filter migration core + LIB-07 frontend is_delisted non-available check (LIB-07, LIB-09)
+- [ ] 08.1-04-PLAN.md — LIB-09 'only'-mode empty-state messaging + active 'only' button CSS (LIB-09)
+
+**Wave 1** (parallel — zero file overlap): 08.1-01, 08.1-02, 08.1-03
+**Wave 2** (blocked on 08.1-02 + 08.1-03): 08.1-04
 
 ### Phase 9: Quality Gate
 **Goal**: All v1.0 and v1.1 shipped phases are formally validated and any regressions are documented
