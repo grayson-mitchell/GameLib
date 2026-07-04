@@ -1,5 +1,6 @@
 import { useContext } from 'react'
 import ContextProvider from 'frontend/state/ContextProvider'
+import LibraryContext from 'frontend/screens/Library/LibraryContext'
 import { Trans, useTranslation } from 'react-i18next'
 import './index.css'
 import { NavLink } from 'react-router-dom'
@@ -8,7 +9,8 @@ import AddGameButton from '../AddGameButton'
 function EmptyLibraryMessage() {
   const { epic, gog, amazon, zoom, sideloadedLibrary } =
     useContext(ContextProvider)
-  const { i18n } = useTranslation()
+  const { showHidden, showNonAvailable } = useContext(LibraryContext)
+  const { t, i18n } = useTranslation()
 
   let message = (
     <Trans i18n={i18n} i18nKey="emptyLibrary.noGames">
@@ -37,6 +39,22 @@ function EmptyLibraryMessage() {
       <Trans i18n={i18n} i18nKey="emptyLibrary.noResults">
         The current filters produced no results.
       </Trans>
+    )
+  }
+
+  // LIB-09: context-aware messages for 'only' modes
+  if (showHidden === 'only' && showNonAvailable !== 'only') {
+    message = (
+      <>{t('library.no_hidden_games', 'No hidden games in your library')}</>
+    )
+  } else if (showNonAvailable === 'only' && showHidden !== 'only') {
+    message = (
+      <>
+        {t(
+          'library.no_non_available_games',
+          'No non-available games in your library'
+        )}
+      </>
     )
   }
 
