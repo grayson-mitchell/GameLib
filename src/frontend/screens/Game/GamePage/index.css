@@ -771,11 +771,18 @@
     gap: var(--space-sm);
     align-items: center;
   }
+}
 
-  /* Deterministic inter-icon spacing: the flex `gap` above did not render a
-     visible separation between the brand glyphs (they crowded — UAT test 2), so
-     add an explicit horizontal margin between adjacent icons. Token-based (~8px). */
-  .platformSupport__icons > svg:not(:last-child) {
-    margin-inline-end: var(--space-xs);
-  }
+/* DETAIL-01 (UAT test 2): guarantee visible spacing between the OS platform
+   glyphs. Kept at TOP LEVEL (not nested under .extraInfoTabs) so it applies
+   regardless of the nested-context flex/gap rendering that failed to separate
+   the icons. Adjacent-sibling margin works even if the container is inline. */
+.platformSupport__icons {
+  display: inline-flex;
+  align-items: center;
+}
+
+.platformSupport__icons > svg + svg {
+  /* fallback em keeps spacing even if the token is out of scope here */
+  margin-inline-start: var(--space-xs, 0.5em);
 }
