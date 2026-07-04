@@ -1,22 +1,22 @@
 ---
-status: partial
+status: testing
 phase: 07-game-details-enrichment
 source: [ROADMAP.md success criteria, PROJECT.md Phase 07 decisions, STATE.md pending todo]
 started: 2026-07-04T07:10:00Z
-updated: 2026-07-04T07:30:00Z
+updated: 2026-07-04T08:15:00Z
 ---
 
 ## Current Test
 
-[paused — 2 root-cause Steam platform-data bugs found (supported-platform refetch guard + hardcoded install platform). Tests 4-7 blocked on the fix. Resume after fixing.]
+[paused for rebuild — two fixes committed since last build: (1) top-level icon-spacing rule, (2) DETAIL-02 gate inversion (pill shows on Windows games on macOS). After rebuild, re-run: test 2 (icon spacing), test 3 (pill on a WINDOWS game), test 4 (no pill on Mac-native / non-macOS), test 5 (Unrated pill), test 6 (CrossOver↔Wine toggle), test 7 (pill click-through).]
 
 ## Tests
 
 ### 1. Platform support icons on the game details page (DETAIL-01)
 expected: On a Steam game's details page, the Install-info panel shows platform icons reflecting supported platforms (Windows / macOS / Linux). Windows-only shows just Windows; Mac-native adds the Apple glyph; Linux-native adds the Tux glyph.
-result: issue
-reported: "For steam games does not seem to work — multiplatform games on Steam only seem to have the Windows icon."
-severity: major
+result: pass
+reported: "Re-test after GAP 1/2 fix: macOS glyph now shows on 7 Days to Die, and installed platform reads Mac. (Icon spacing still not visible — see test 2; GAP 3 re-fixed at top level, pending one more rebuild.)"
+history: "Originally issue (Windows-only) — fixed by self-healing platform re-fetch (51a1c08e) + install-platform derivation (c9dd267a)."
 
 ### 2. Runner-agnostic platform icons (DETAIL-01)
 expected: The same platform icons render on a NON-Steam game (Epic / GOG / Amazon) details page — the icons are runner-agnostic FontAwesome brand glyphs, not Steam-only.
@@ -26,9 +26,10 @@ observations: "Works for GOG games. Cosmetic: platform icons are almost on top o
 ### 3. Compatibility overlay on a Mac-native game (DETAIL-02, macOS)
 expected: On macOS, open a Mac-supported Steam game. An AppleGamingWiki compatibility rating pill is overlaid on the game art. The pill's color reflects the tier (Perfect/Playable → success/green, Runs/Borderline → warning/yellow, Unplayable → danger/red).
 result: issue
-reported: "7 Days to Die installed on macOS: supported platforms shows Windows only, and 'installed platform: Windows' (both incorrect — it's the Mac build and the game supports Mac)."
+reported: "The compatibility pill does not show. It SHOULD show on WINDOWS games — the rating is about using Wine/CrossOver to play the game on Mac. Not working in either case."
 severity: major
-analysis: "Confirms + extends test 1. is_mac_native is false for a genuinely Mac-native Steam game, so (a) platform icons show Windows only and (b) the DETAIL-02 overlay gate (platform==='darwin' && is_mac_native) fails → no compat overlay. NEW symptom: the 'installed platform' field also reports Windows for a Mac install — Steam install-platform detection is wrong too. Root Steam platform-data bug blocks tests 1, 3, 4, 5."
+analysis: "DESIGN CORRECTION (supersedes D-13). The DETAIL-02 overlay gate is semantically BACKWARDS. AppleGamingWiki CrossOver/Wine ratings measure how well a WINDOWS game runs on macOS via a translation layer; a Mac-NATIVE game runs natively and needs no such rating. Gate `platform==='darwin' && is_mac_native` should instead show for NON-Mac-native (Windows) games on macOS — i.e. `platform==='darwin' && !is_mac_native`. Currently shows on neither. Earlier 'installed platform: Windows' + Windows-only icons were separate bugs now fixed by GAP 1/GAP 2."
+resolution: "GATE INVERTED (commit d… — see git log) to `platform==='darwin' && !gameInfo.is_mac_native`; AppleRatingOverlay doc comment updated; D-13 marked superseded in STATE.md. User chose always-show (Unrated when no rating). Needs re-verify after rebuild — the pill should now appear on WINDOWS games on macOS."
 
 ### 4. Overlay gating — hidden on Windows-only / non-macOS (DETAIL-02)
 expected: The compatibility overlay does NOT appear on a Windows-only Steam game (no Mac platform listing), and does NOT appear at all when not on macOS. Gate is platform==='darwin' && is_mac_native.
