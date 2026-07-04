@@ -29,7 +29,7 @@ function GamePicture({
         fallback: `${art_square}?h=400&resize=1&w=300`
       }
     } else {
-      return { src: art_square, fallback: 'fallback' }
+      return { src: art_square, fallback: fallbackImage }
     }
   }
 
