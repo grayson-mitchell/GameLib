@@ -1,497 +1,359 @@
-# Feature Landscape: Steam Store Manager
+# Feature Research: Humble Bundle Key Management (v1.2)
 
-**Domain:** Steam integration in a multi-store game launcher (Heroic fork)
-**Researched:** 2026-06-26
+**Domain:** Third-party key management integration in a multi-store game launcher
+**Researched:** 2026-07-05
+**Confidence:** HIGH (ecosystem well-studied; multiple community tool implementations examined)
 
----
-
-## Interface Contract
-
-Before categorizing features, the `Game` and `LibraryManager` interfaces in
-`src/common/types/game_manager.ts` define what every store manager **must** implement.
-The Steam manager is not exempt. Understanding which methods are trivial stubs vs.
-real implementations shapes the work.
-
-### `LibraryManager` — required methods
-
-| Method | Steam Implementation Approach | Complexity |
-|--------|-------------------------------|------------|
-| `init()` | Auth check + initial library sync | MEDIUM |
-| `getGame(id)` | Return cached `SteamGame` instance by appID | LOW |
-| `refresh()` | Fetch owned games via steam-user `getOwnedApps()` or Web API `GetOwnedGames` | MEDIUM |
-| `getGameInfo(appName)` | Return from in-memory Map, optionally hit store.steampowered.com/api/appdetails | LOW |
-| `getInstallInfo(appName, platform)` | Return download size from ACF or stub | MEDIUM |
-| `listUpdateableGames()` | Scan ACF files for StateFlags != 4 | MEDIUM |
-| `changeGameInstallPath(appName, newPath)` | Update internal store only — Steam still owns the path | LOW |
-| `changeVersionPinnedStatus(appName, status)` | Store setting, Steam ignores it — stub | LOW |
-| `installState(appName, state)` | Update in-memory Map and Electron store | LOW |
-| `getLaunchOptions(appName)` | Return empty array or Steam-specific DLC/beta options | LOW |
-
-### `Game` — required methods
-
-| Method | Steam Implementation | Complexity |
-|--------|---------------------|------------|
-| `getSettings()` | Delegate to shared `GameConfig` | LOW |
-| `getGameInfo()` | Return from library Map | LOW |
-| `getExtraInfo()` | Call store.steampowered.com/api/appdetails | LOW |
-| `importGame(path)` | Detect ACF at path, register in internal store | LOW |
-| `onInstallOrUpdateOutput()` | Progress callback — poll ACF StateFlags | MEDIUM |
-| `install(args)` | Open `steam://install/<appid>` + poll ACF for completion | MEDIUM |
-| `isNative()` | Read `is_linux_native` / `is_mac_native` from GameInfo | LOW |
-| `addShortcuts()` | Delegate to existing `addShortcutsUtil` | LOW |
-| `removeShortcuts()` | Delegate to existing `removeShortcutsUtil` | LOW |
-| `launch()` | `steam://rungameid/<appid>` via `openUrlOrFile` | LOW |
-| `moveInstall(newPath)` | STUB — Steam owns the file layout | LOW (stub) |
-| `repair()` | Open `steam://validate/<appid>` | LOW |
-| `syncSaves()` | STUB — Steam Cloud is automatic | LOW (stub) |
-| `uninstall(args)` | Open `steam://uninstall/<appid>` + poll ACF absence | MEDIUM |
-| `update()` | Open `steam://checksiteupdate/<appid>` or delegate to Steam | MEDIUM |
-| `forceUninstall()` | Delete ACF + game folder — last resort | MEDIUM |
-| `stop()` | `sendKill` on the game process if trackable | MEDIUM |
-| `isGameAvailable()` | Check ACF exists and StateFlags == 4 | LOW |
-| `getAchievements?(lang)` | Steam Web API `ISteamUserStats/GetPlayerAchievements` | MEDIUM |
-
-**Observation:** Most `Game` methods are LOW complexity because they delegate to Steam
-client via `steam://` protocol URIs, which Steam handles. The hard work is auth and
-library sync.
+> This file replaces the v1.0 Steam Store Manager FEATURES.md. The v1.0 Steam feature
+> analysis is preserved in the Phase 1–5 planning artifacts. This document covers
+> Humble Bundle key management only.
 
 ---
 
-## Table Stakes
+## Research Scope: 5 Specific Questions
 
-Features users expect. Missing = product feels incomplete or broken.
+### Q1 — Key Lifecycle & Claim-Status Detection
 
-### 1. 'steam' Runner Type Registration
+**Finding: The REVEALED state with a local flag is the right design, but no reference implementations exist.**
 
-**Why expected:** Every store manager registers a runner key. Without it, Steam games
-cannot appear in the library at all. This is the foundational wiring that touches:
-- `Runner` union type in `src/common/types.ts` (currently `'legendary' | 'gog' | 'sideload' | 'nile' | 'zoom'`)
-- `GameInfo.runner` union type (same union, defined separately on line 183)
-- `libraryManagerMap` in `src/backend/storeManagers/index.ts`
-- `StoreLogos` component — currently has no 'steam' case, falls to default (Heroic icon)
-- `getStoreName` helper — currently returns 'Other' for unknown runners
-- All switch/case patterns on `runner` throughout the codebase
+Every community tool examined (Playnite HumbleKeysLibrary, FailSpy humble-steam-key-redeemer,
+castanley humble-steam-redeem) uses a binary model:
 
-**Complexity:** LOW
-**Notes:** No logic, only type and registration changes. Must be done first — everything
-downstream depends on the 'steam' runner key existing.
+- `redeemed_key_val` present → key revealed/redeemed ("Key: Redeemed" in Playnite)
+- `redeemed_key_val` absent → key not yet touched ("Key: Unredeemed" in Playnite)
 
----
+None of them distinguish "revealed but not yet activated" from "unrevealed." They conflate
+the two because the Humble API gives no way to distinguish them without local state.
 
-### 2. Steam Account Authentication
+**The spec's local-REVEALED-flag approach is correct and is the standard one in theory, but
+no existing tool implements it in practice.** This is a complexity driver: there are no
+reference implementations to draw from for the three-way split.
 
-**Why expected:** Without auth, `getOwnedApps()` returns nothing for private libraries.
-Users expect to log in and see their library. This gates all other features.
+**Edge case the spec must accept:** If a user reveals a key on Humble's website (outside the
+launcher), the local REVEALED flag won't be set. That key will appear as UNREVEALED in the
+launcher until the user actually activates it (at which point `redeemed_key_val` becomes
+present → transitions to REDEEMED automatically on next sync). This is the accepted
+limitation of a locally-tracked state. The spec should document this.
 
-**Approach options (evaluated):**
+**UNREDEEMABLE detection** is straightforward via the `is_expired` field in the Humble API.
+Note: expirations are being retroactively applied (see Q3) — the `is_expired` flag must be
+recomputed on every sync, not cached.
 
-| Option | Mechanism | Pros | Cons |
-|--------|-----------|------|------|
-| steam-user npm | Steam CM protocol (TCP) | Rich API, gets ownership/achievements directly | Complex — handles Steam Guard, 2FA, machine tokens; heavy dependency |
-| steam-session npm | Auth token generation | Lightweight, generates tokens for Web API use | Still requires handling 2FA/Steam Guard |
-| Steam Web API key | User creates key at steamcommunity.com/dev | Simpler, no credentials stored | Requires user to manually generate key; no library sync for private profiles |
-| Browser-based OAuth | Steam as OpenID provider | No credentials stored, familiar flow | Web API key still needed for GetOwnedGames; limited API scope |
-
-**Recommendation:** steam-session for token generation + Steam Web API for library data.
-Stores refresh token (not password). Handles Steam Guard / 2FA in a dedicated auth flow
-in Manage Accounts screen.
-
-**Complexity:** HIGH — Steam Guard email codes, TOTP 2FA, machine auth tokens, and
-token refresh must all be handled gracefully.
-
-**Dependency:** Everything else depends on this.
+**UNPICKED detection** via `product.category == 'subscriptioncontent'` + `choice_url` is
+reliable and unambiguous.
 
 ---
 
-### 3. Library Sync (`refresh()`)
+### Q2 — Ownership-Aware Dedup
 
-**Why expected:** Users open GamerLib to see all their games. If Steam games don't
-appear, the integration is useless.
+**Finding: AppID-first is the standard approach, and `steam_app_id` IS in the Humble API data.**
 
-**Mechanism:** Steam Web API `IPlayerService/GetOwnedGames` with `include_appinfo=1`
-and `include_played_free_games=1`. Returns: `appid`, `name`, `playtime_forever`,
-`playtime_2weeks`, `img_icon_url`. Map each entry to a `GameInfo` object and store
-in an Electron store (same pattern as `gog/library.ts` and `legendary/library.ts`).
+The FailSpy humble-steam-key-redeemer reads `steam_app_id` directly from the Humble order
+API (`tpkd_dict.all_tpks[n].steam_app_id`). This means for Steam-type keys, AppID-based
+matching is both available and authoritative. The matching hierarchy used in practice:
 
-**Edge cases to handle:**
-- Private Steam profiles block `GetOwnedGames` — show helpful error, not crash
-- Users with thousands of games (1000+ is common) — paginated handling
-- Free-to-play games in library vs. owned games distinction
+1. **AppID primary** — check `steam_app_id` field in Humble key against `getOwnedApps()`
+   (already fetched by the existing Steam integration from v1.0). This is exact, no ambiguity.
+2. **Fuzzy name fallback** — used when `steam_app_id` is absent (can happen with older
+   bundles). Community norm: fuzzywuzzy `token_set_ratio` / `token_sort_ratio` at ~70%
+   similarity threshold.
 
-**Complexity:** MEDIUM
+**DLC/edition false-match risk is real.** At 70% similarity, "Vampire Survivors: Operation
+Tides of the Foscari DLC" can match "Vampire Survivors" and flag ownership incorrectly.
+This wastes a gift opportunity: the user sees "you own this" (via the DLC), doesn't reveal
+the full-game key, and then can't easily recover.
 
----
+**Recommendation for the spec:** Raise the fuzzy threshold to 85%+ for the `owned_elsewhere`
+determination. False negatives (saying you don't own something you actually do) are safe
+(you'll see the key in "Keys waiting" and can decide). False positives (saying you own
+something you don't) waste the gift link opportunity.
 
-### 4. Game Metadata Population (GameInfo fields)
-
-**Why expected:** Game cards in `GameCard/index.tsx` display `art_cover`, `art_square`,
-title, and runner badge. Without artwork, the library looks broken.
-
-**Data sources:**
-- Artwork: Steam CDN at `https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/`
-  - `header.jpg` → `art_cover`
-  - `library_600x900_2x.jpg` → `art_square`
-  - `library_hero.jpg` → `art_background`
-  - `logo.png` → `art_logo`
-- Store details: `https://store.steampowered.com/api/appdetails?appids={appid}` →
-  `description`, `genres`, `release_date`, `developers`, system requirements for `extra`
-- Native platform flags: `platforms.linux` → `is_linux_native`, `platforms.mac` → `is_mac_native`
-
-**Note:** The `store.steampowered.com/api/appdetails` endpoint is undocumented but
-widely used. It is rate-limited (~200 requests/5 min). Fetch lazily (on game page
-open), not during bulk library sync.
-
-**Complexity:** MEDIUM (bulk sync is fast; per-game detail fetch needs rate-limit care)
+**Dedup collapse (F3) is a genuine gap in the ecosystem.** Playnite's HumbleKeysLibrary
+does NOT dedup — it imports Humble keys as separate library entries even for keys already
+redeemed to Steam, causing visible duplicates. GameLib's dedup (collapsing redeemed Steam
+keys onto their existing Steam library entry with a "Humble source" annotation) is
+materially better than any existing tool.
 
 ---
 
-### 5. Installed State Detection
+### Q3 — "Keys Waiting" / Expiration-Urgency Surfacing
 
-**Why expected:** Users who already have Steam games installed expect them to show
-"Play" not "Install". This is the difference between a useful integration and a broken one.
+**Finding: Table stakes, not differentiator — the expiration crisis makes this urgent.**
 
-**Mechanism:** The codebase already has `getSteamLibraries()` in `src/backend/utils.ts`
-which parses `libraryfolders.vdf` from `defaultSteamPath`. Scan each library for
-`steamapps/appmanifest_<appid>.acf` files. Parse ACF key `StateFlags`:
-- `4` = fully installed
-- `2` = update pending / partially installed
-- Other values = installing or broken state
+Humble Bundle altered its TOS in December 2024 to impose a 3-year expiration on unrevealed
+keys, applied retroactively to all prior purchases — without email notice. The AlexanderTheGrey
+GitHub repository tracks 400+ title-specific expiration issues through early 2027. Expirations
+are being retroactively shortened without warning, and Humble's own interface does not surface
+expiring keys prominently.
 
-Extract from ACF: `installdir`, `buildid`, `LastUpdated`, `SizeOnDisk`.
+Community users on SteamGifts have been manually maintaining shared expiration lists. The
+explicit user request in community threads is: "a filter/dedicated page that lists expiring
+keys from purchases."
 
-**Complexity:** LOW-MEDIUM — ACF parsing is straightforward; `getSteamLibraries()` is
-already implemented. The main work is wiring the scan into `refresh()` and merging
-with owned games list.
+**The "Keys waiting" view (F4) is now table stakes.** Users who install a Humble integration
+without this will immediately notice they can't find expiring keys. The pain is real and
+current.
 
----
+**Sort by expiration urgency** is the essential complement — without sorting, a large Humble
+library (hundreds of orders) buries the urgent keys.
 
-### 6. Game Launch (`launch()`)
-
-**Why expected:** Launching games is the primary action in any launcher.
-
-**Mechanism:** `steam://rungameid/<appid>` via Electron's `shell.openExternal()` (same
-path as `openUrlOrFile` already used in the codebase). This delegates to the Steam
-client, which handles DRM authentication, Proton selection, the Steam overlay, and
-cloud save sync before launch.
-
-**Why not direct executable launch:** Steam games with DRM (the majority) require
-Steam client running to authenticate. Direct executable launch works for DRM-free
-Steam games but is an edge case. Delegating to Steam client is correct for 95%+ of games.
-
-**Steam client must be running:** If Steam is not running, `steam://` URIs launch it
-automatically before running the game. This is expected behavior.
-
-**Complexity:** LOW
+**Notification** (optional in the spec) would be differentiating on top of the mandatory view.
 
 ---
 
-### 7. `isNative()` Implementation
+### Q4 — Giftable-Spares Handling
 
-**Why expected:** Heroic's `prepareLaunch()` uses `isNative()` to decide whether to
-invoke Wine/Proton. Returning the wrong value breaks game launching on Linux.
+**Finding: Gift links are real, destructive-if-missed, and no launcher surfaces them proactively.**
 
-**For Steam games on Linux specifically:** A Steam game with `is_linux_native: true`
-should return `isNative() = true`. A Windows-only Steam game on Linux should return
-`false` — but Steam itself will manage Proton for it, so Heroic should NOT layer its
-own Wine on top. The `thirdPartyManagedApp` field or a new `isSteamManaged` flag may
-be needed to signal "Proton is Steam's responsibility."
+Gift link mechanics confirmed from community discussions:
+- Gift links exist only for UNREVEALED keys. Once a key is revealed (you see the key string),
+  the gift link is consumed/void. This is the mechanism that makes revealing irreversible.
+- Sending a gift link delivers a secondary link to the recipient via email; the recipient visits
+  it and receives the key. The original owner never sees the key value.
+- The gift link URL is in the Humble API data for unrevealed keys.
 
-**Complexity:** MEDIUM — the naive implementation is one line; the correct interaction
-with Heroic's Wine/Proton selection for Windows-only games on Linux needs design.
+**No existing launcher surfaces "you own this elsewhere — here's the gift link" proactively.**
+The castanley humble-steam-redeem tool preserves unrevealed keys when it detects ownership
+(doesn't reveal them), but it doesn't present a "giftable spares" view — it just skips those
+keys during bulk processing.
 
----
+**F6 (giftable-spares view) is a genuine differentiator.** The combination of:
+- `owned_elsewhere == true` (Steam ownership detected)
+- `state == UNREVEALED` (gift link still available)
+- Proactive surface of the gift link + 1-click copy
 
-### 8. Game Import (`importGame()`)
+...is not implemented by any existing tool in a launcher context.
 
-**Why expected:** Power users may have Steam games installed and want to register them
-in GamerLib without reinstalling. Standard pattern across all store managers.
-
-**Mechanism:** Accept the install path, locate the ACF manifest, extract metadata,
-register in the internal installed games store. Effectively the first step of
-installed state detection applied to a user-selected path.
-
-**Complexity:** LOW — reuses ACF parsing logic from installed state detection.
-
----
-
-## Differentiators
-
-Features that differentiate GamerLib from a plain Steam shortcut. Not expected at
-launch, but high value for engagement.
-
-### 1. Install via Steam Client (`install()`)
-
-**Value:** Users can install Steam games from within GamerLib rather than switching
-to the Steam client.
-
-**Mechanism:** Open `steam://install/<appid>`. Steam client shows its own install
-dialog (install path selection, DLC selection). GamerLib polls ACF file appearance to
-detect when install completes and updates game status. Progress display is limited to
-"installing" status while polling.
-
-**Limitation:** Steam's install dialog is shown in Steam's UI, not GamerLib's. The
-install path is Steam's, not freely configurable from GamerLib's install modal. This
-is an acceptable v1 trade-off.
-
-**Complexity:** MEDIUM — fire-and-poll pattern; the `InstallModal` in GamerLib may
-need a "opening Steam..." interstitial rather than the standard download progress bar.
+**Presentation norm**: "You already own [Game] on Steam. Gift this key to a friend →
+[Copy gift link]" with a warning that reveals cannot be undone if they choose to reveal
+instead.
 
 ---
 
-### 2. Uninstall via Steam Client (`uninstall()`)
+### Q5 — Guided Claim Flow: Steam Activation Deep-Link
 
-**Value:** Complete install lifecycle within GamerLib.
+**Finding: `steam://open/activateproduct` does NOT pre-fill the key. Use the web URL.**
 
-**Mechanism:** Open `steam://uninstall/<appid>`. Steam shows a confirmation dialog.
-Poll for ACF absence to confirm removal. Fall back to `forceUninstall()` (delete ACF
-+ game folder) only when Steam client is unavailable.
+Confirmed from multiple Steam community discussions: `steam://open/activateproduct` opens
+Steam's activation dialog but the key field is blank. The user must manually paste the key.
+Some users report the protocol stopped working entirely in newer Steam client versions.
 
-**Complexity:** MEDIUM
+**The web URL `https://store.steampowered.com/account/registerkey?key=XXXXX` CAN pre-fill the
+key via the `?key=` query parameter.** The user lands on the page with the key pre-filled and
+just clicks "Continue." This works in any browser on Windows, macOS, and Linux.
 
----
+**Recommended claim flow for F5:**
 
-### 3. Playtime Display
+1. User clicks "Reveal & Claim" on an UNREVEALED Steam key (with warning shown).
+2. Launcher calls Humble API to reveal the key (gets `redeemed_key_val`).
+3. Launcher immediately copies the key to clipboard.
+4. Launcher opens `https://store.steampowered.com/account/registerkey?key=[KEY_VALUE]` in
+   the default browser. (Pre-filled; user just clicks Continue.)
+5. Toast: "Key copied to clipboard — browser opened with key pre-filled."
+6. UI shows a "Mark as redeemed" button. User clicks after activation.
+7. Launcher sets local state to REDEEMED + writes audit record.
 
-**Value:** Users care about playtime. It is already in the `GetOwnedGames` response
-(`playtime_forever` in minutes, `playtime_2weeks` in minutes). Zero extra API calls —
-just populate during library sync.
+**Why not `steam://open/activateproduct`:**
+- Does NOT pre-fill the key (user must paste manually)
+- Unreliable on some Steam installations, especially Linux Flatpak/Snap installs
+- Some users report it stopped working in recent Steam client versions
 
-**Fields:** Store `playtime_forever` in `GameInfo.extra` or a Steam-specific metadata
-store. Display on game page alongside other metadata.
+**Spec adjustment needed:** F5 currently lists `steam://open/activateproduct` as the primary
+with the web URL as parenthetical fallback. This should be reversed. The spec's approach is
+correct in principle (user-initiated, explicit, auditable) but the implementation detail
+needs updating.
 
-**Complexity:** LOW — data is free from the library sync call.
-
----
-
-### 4. Achievement Display (`getAchievements()`)
-
-**Value:** Heroic already shows GOG achievements. Steam achievements are more prominent
-in gaming culture. This is a visible feature differentiator.
-
-**Mechanism:** Steam Web API `ISteamUserStats/GetPlayerAchievements/v1/` with `appid`
-and `steamid`. Returns: `apiname`, `achieved` (0/1), `unlocktime`. Map to the existing
-`GOGAchievement` shape (the `GameAchievement` type alias in `common/types.ts` already
-points to `GOGAchievement` — field names need mapping).
-
-**Limitation:** Only works if the user's Steam profile is set to public or the auth
-token has the correct scope. Show a "make your Steam profile public to see achievements"
-message when the API returns an error.
-
-**Complexity:** MEDIUM — API call is standard; the UI for achievement display already
-exists via GOG achievements; the work is the field mapping and auth scope.
+**Cross-platform reliability:** Web URL works on all three platforms. `steam://` reliability
+varies especially on Linux where Steam may be installed via Flatpak/Snap (different protocol
+handler registration). Web URL is the safe default.
 
 ---
 
-### 5. Store Extra Info / Game Details (`getExtraInfo()`)
+## Feature Landscape
 
-**Value:** Game page shows description, genres, system requirements, release date —
-same richness as GOG/Epic games.
+### Table Stakes (Users Expect These)
 
-**Mechanism:** `store.steampowered.com/api/appdetails?appids={appid}` returns full
-store page data. Fetch lazily on game page open, cache in Electron store.
+Features that must exist for the Humble integration to feel complete. Missing = product
+feels broken or unfinished.
 
-**Complexity:** LOW — simple HTTP fetch and field mapping.
-
----
-
-### 6. Update Detection (`listUpdateableGames()`)
-
-**Value:** Users see which Steam games have pending updates, matching the experience
-for Epic/GOG games.
-
-**Mechanism:** ACF `StateFlags` includes an "update pending" state. Additionally,
-compare ACF `buildid` against Steam's content servers (requires steam-user or an
-undocumented API call). Simple approach: flag games with StateFlags != 4 as
-"update available."
-
-**Complexity:** MEDIUM — simple ACF check gives approximate results; accurate build
-comparison requires more auth complexity.
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Library sync (F1) | Nothing works without it | MEDIUM | Humble auth (email+OTP) + order API pagination + aggressive caching behind adapter (C5) |
+| Claim-status classification (F2) | Users need to know what's claimable vs. already gone | MEDIUM | Binary API detection is easy; local REVEALED flag + persistence adds complexity; no reference implementations for 3-way split |
+| "Keys waiting" view (F4) | Retroactive expirations make this urgent; Humble's own UI is inadequate | LOW | Filter + sort on existing data model; depends on F2 + F3 |
+| Expiration urgency sort (F8) | 400+ documented titles with expiration issues; community explicitly requests this | LOW-MEDIUM | Recompute on each sync (retroactive expirations mean cached dates can change) |
+| Guided claim flow (F5) | Users need a path to actually claim keys | MEDIUM | Web URL pre-fill preferred over steam://; clipboard copy mandatory; user-confirms REDEEMED (can't auto-detect) |
+| Non-Steam key handling (F9) | Non-Steam keys are "dark matter" without this; confusing UX | LOW | Display key_type, show key, link out to platform; no activation logic |
+| Owned-elsewhere dedup (F3) | Without dedup, the unified library gains noise duplicates — counter to core value prop | MEDIUM-HIGH | AppID-first (steam_app_id available in API); fuzzy fallback; collapse onto Steam entry |
+| Auth persistence (F1 dependency) | Users expect to log in once | MEDIUM | Email + OTP flow; persist session encrypted (C4); no OAuth available |
 
 ---
 
-### 7. Proton-Transparent Launch (Linux)
+### Differentiators (Competitive Advantage)
 
-**Value:** On Linux, Steam games using Proton work correctly without GamerLib trying
-to inject its own Wine layer.
+Features that set GameLib apart from Playnite plugins and CLI tools. Not expected, but
+valued and visibly better than alternatives.
 
-**Mechanism:** For Windows-only Steam games on Linux, `isNative()` should return
-`false` but the launch path must use `steam://rungameid` rather than calling
-`prepareLaunch()` with Wine wrappers. The `thirdPartyManagedApp` field or a
-`isSteamManaged` extension on `GameInfo` signals to the launch pipeline to skip
-Heroic's Wine selection entirely.
-
-**Complexity:** MEDIUM — requires careful review of `prepareLaunch()` code path to
-identify where to short-circuit for Steam-launched games.
-
----
-
-## Anti-Features
-
-Things to explicitly NOT build in v1. Building them costs more than the value returned
-and some violate boundaries.
-
-### 1. Friends List / Social Features
-
-**Why avoid:** PROJECT.md explicitly states "Replacing Steam client functionality
-(friends, community, overlay) is out of scope." The steam-user library can access
-friend data, but implementing UI for it is a feature unto itself. Valve's own client
-does this better.
-
-**What to do instead:** Steam client handles all social features. GamerLib is a
-launcher, not a Steam replacement.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Local REVEALED flag tracking (F2 enhancement) | Prevents revealed-but-unactivated from regressing to UNREVEALED; no tool does this | MEDIUM | Local-only; edge case: keys revealed on Humble's site appear UNREVEALED until activated |
+| Giftable-spares view (F6) | Turns duplicates into value (gift links); no launcher does this proactively | LOW-MEDIUM | owned_elsewhere + UNREVEALED → surface gift link + copy; warn about irreversibility |
+| Dedup collapse onto Steam library entry (F3 advanced) | Redeemed keys appear as annotations on Steam entries, not as duplicates; Playnite doesn't do this | HIGH | Requires careful data model — Steam entry carries "Humble origin" metadata; UI for annotated entries |
+| Reveal/redeem audit record (C6) | Accountability; helps users who want to review actions | LOW | Local timestamped log; what key, when, what platform, outcome |
+| Store overlay with ownership badges (F7) | "Owned / Unclaimed key / New" badges while browsing — saves re-buy mistakes | HIGH | Requires cross-referencing unified library in real-time as user browses; badge rendering on existing store surface |
+| owned_elsewhere intercept on claim path (C2) | Intercepts potentially wasteful reveal with "you own this — gift instead?" | LOW | Guard in the guided claim flow; routes to F6 instead of proceeding |
+| Expiration notifications (F8 extension) | Proactive alert before keys expire; no tool provides this in a launcher context | MEDIUM | Optional notification; requires OS notification API integration |
 
 ---
 
-### 2. Steam Overlay
+### Anti-Features (Explicitly Avoid)
 
-**Why avoid:** The Steam overlay (`steam_api.dll` / `libsteam_api.so`) requires
-Steamworks SDK integration as a native module. It must inject into the game process.
-This is beyond Electron's capabilities without complex native code. When games are
-launched via `steam://rungameid`, Steam's overlay activates automatically.
-
-**What to do instead:** Launch via `steam://rungameid` and get the overlay for free.
-
----
-
-### 3. Independent Download Manager (SteamCMD path)
-
-**Why avoid:** SteamCMD provides a CLI interface for downloads, and npm wrappers exist
-(`steamcmd-interface`). However: (a) SteamCMD requires its own separate auth flow
-independent of Steam client; (b) Steam games often need the Steam client running at
-runtime for DRM even if installed via SteamCMD; (c) Heroic's download manager queue
-(`downloadmanager/downloadqueue`) doesn't map cleanly to SteamCMD's text-output
-progress model; (d) SteamCMD is a server tool, not designed for consumer game
-installation UX.
-
-**What to do instead:** Delegate installs to Steam client via `steam://install/<appid>`.
-Users who own 500 Steam games expect Steam's install dialog with DLC selection, drive
-selection, etc.
-
----
-
-### 4. Cloud Save Sync Management (`syncSaves()`)
-
-**Why avoid:** Steam Cloud is fully automatic and opaque. It syncs before launch and
-after exit via the Steam client. There is no public API to manually trigger a Steam
-Cloud sync. The `syncSaves()` method should stub with a log message: "Steam Cloud
-sync is managed automatically by the Steam client."
-
-**What to do instead:** Show a note on the game page that cloud saves are automatic.
-Document where local save files are stored (Steam's `userdata/<steamid>/<appid>/`).
-
----
-
-### 5. `moveInstall()` Implementation
-
-**Why avoid:** Steam's library structure (`steamapps/common/<gamedir>/`) is managed
-by Steam. Moving game files to another path breaks Steam's ability to locate and
-update them unless `libraryfolders.vdf` is also updated and Steam is told about it.
-This is Steam's `Move Install Folder` feature — implementing it independently is
-fragile and can corrupt Steam's library state.
-
-**What to do instead:** Stub `moveInstall()` with a log warning. Direct users to
-Steam's own "Move Install Folder" in Steam client → Properties → Local Files.
-
----
-
-### 6. Custom Wine/Proton Override for Steam Games
-
-**Why avoid:** Heroic already manages Wine/Proton versions for Epic/GOG/Amazon games.
-Steam manages Proton separately for its games (per-game Proton version selection in
-Steam's game Properties). If GamerLib forces its own Wine layer onto a Steam game
-that expects Steam's Proton environment (including the Steam Linux Runtime container),
-the game will break.
-
-**What to do instead:** Mark Steam games as "Proton managed by Steam" in the launch
-pipeline. Do not show Wine version selector for Steam runner games in game settings.
-
----
-
-### 7. Workshop / UGC Integration
-
-**Why avoid:** Steam Workshop is a content distribution system for mods and user
-content. Implementing it requires Steamworks SDK and significant scope beyond a launcher.
-
-**What to do instead:** Out of scope. Launch the game, which has its own Workshop UI.
-
----
-
-### 8. Trading Cards, Badges, Market
-
-**Why avoid:** Not launcher features. Zero user expectation that a game launcher
-handles Steam's commerce layer.
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Auto-reveal / "reveal all" | Users want to quickly see all keys | Forfeits gift links permanently; sacrifices giftable-spares path; can start expiration clocks | Per-key explicit reveal only (C1); "Keys waiting" view makes individual reveals easy |
+| Automated/unattended bulk redemption | Saves time for users with hundreds of keys | Steam rate-limits at ~50 successful/~10 failed keys per hour; bulk automation triggers flagging; ToS grey zone (C3) | User-initiated, per-key flow with clipboard + browser; satisfies the same goal safely |
+| `steam://open/activateproduct` as primary activation | Familiar Steam protocol; seems natural for a launcher | Does NOT pre-fill the key; unreliable on Linux (Flatpak/Snap Steam installs); some users report it broken in recent Steam versions | Web URL `registerkey?key=` as primary; clipboard copy as mandatory companion |
+| DRM-free Humble download management | Some Humble purchases are DRM-free installers | Separate download manager with version tracking, platform detection, delta updates — full feature scope; audience overlap unclear | Out of scope v1; if needed later, implement as a separate phase with its own research |
+| In-app Humble checkout / purchasing | Single interface for discovery + purchase | Requires Humble partnership or purchase-flow reverse-engineering; ToS risk; read-only store surface is defensible | Read-only bundle listing + "Buy on Humble" deep-link (F7) |
+| One-click activation for non-Steam key types | Convenience for GOG/Epic/Ubisoft keys | Each platform has its own auth flow, activation API, and ToS; scope of 4–5 platform integrations is enormous | "Redeem on {platform}" link-out (F9); copy key to clipboard; user completes in their own client |
+| Automated REDEEMED state detection | Launcher knows automatically when you activated a key | Steam provides no callback; polling `redeemed_key_value` only changes after Humble's server updates (can lag hours); creates false confidence | User-initiated "Mark as redeemed" button after they complete activation in browser |
 
 ---
 
 ## Feature Dependencies
 
 ```
-'steam' runner type registration
-  └── LibraryManager registration in libraryManagerMap
-      └── init() / refresh()
-          └── Steam Account Authentication
-              └── Library Sync (getOwnedApps / GetOwnedGames)
-                  └── GameInfo population (title, artwork)
-                      └── GameCard renders correctly
-                  └── Playtime Display (free from same API call)
-          └── Achievement Display (needs auth token)
+F1 — Library sync + Humble auth
+  └── everything below depends on F1
 
-Installed State Detection (ACF scan via getSteamLibraries())
-  └── GameInfo.is_installed
-      └── GameCard shows Play vs Install
-      └── listUpdateableGames()
+F2 — Claim-status classification
+  └── requires: F1 (order data)
+  └── requires: local state store (REVEALED flag, audit log)
+  └── blocks: F4, F5, F6, F9
 
-isNative() detection
-  └── Correct launch behavior on Linux (skip Heroic Wine)
+F3 — Ownership-aware dedup
+  └── requires: F1 (Humble library data, including steam_app_id field)
+  └── requires: existing Steam library (getOwnedApps() from v1.0 Steam integration)
+  └── blocks: F4 (owned_elsewhere filter), F6 (owned_elsewhere + UNREVEALED), F7 (owned badge)
 
-Game Launch (steam://rungameid)
-  └── Requires: GameInfo populated + 'steam' runner type registered
-  └── Requires: Steam client installed on user's machine
+F4 — "Keys waiting" view
+  └── requires: F2 (state), F3 (owned_elsewhere)
+  └── enhances: F8 (expiration sort on the same view)
 
-Game Install (steam://install delegation)
-  └── Requires: Auth (to validate ownership before opening install)
-  └── Leads to: Installed State Detection picks up new ACF
+F5 — Guided claim flow
+  └── requires: F2 (UNREVEALED state detection)
+  └── requires: C2 guard (check owned_elsewhere before proceeding → routes to F6)
+  └── depends on: web URL activation (registerkey?key=) + clipboard copy
 
-Achievement Display
-  └── Requires: Auth token with correct scope
-  └── Requires: User profile public OR access token (not just API key)
+F6 — Giftable-spares view
+  └── requires: F2 (UNREVEALED state), F3 (owned_elsewhere)
+  └── enhances: F5 (intercept path from claim flow)
+
+F7 — Store overlay / ownership badges
+  └── requires: F3 (owned_elsewhere for any game in any store context)
+  └── requires: Humble public bundle-listing API (separate from order API)
+  └── independent of F4, F5, F6
+
+F8 — Expiration & urgency alerts
+  └── requires: F1 (expiration field from Humble API, recomputed on each sync)
+  └── enhances: F4 (sort dimension on "Keys waiting" view)
+  └── optional extension: OS notification (Electron notification API)
+
+F9 — Non-Steam key handling
+  └── requires: F2 (key_type classification)
+  └── no dependency on F3 (ownership dedup only covers Steam keys in v1)
 ```
+
+### Key Dependency Notes
+
+- **F3 depends on v1.0 Steam integration**: The `owned_elsewhere` flag uses `getOwnedApps()`
+  from the existing Steam store manager. If the Steam account is not connected, `owned_elsewhere`
+  falls back to name-match-only or degrades gracefully to `false` (keys appear as unowned).
+- **F5 cannot auto-confirm REDEEMED**: Steam provides no callback. The "mark as redeemed"
+  step is a deliberate user action, not an automated detection. This is correct per C6.
+- **F7 is the most isolated feature**: Store overlay does not require the key lifecycle model;
+  it only needs the `owned_elsewhere` cross-reference. But it has its own data source dependency
+  (Humble's public bundle-listing endpoint, separate from the order/key API).
 
 ---
 
-## MVP Recommendation
+## Spec Model Validation / Adjustment Flags
 
-Prioritize in this order to ship a functional integration:
+### Validated
 
-1. 'steam' runner type registration — zero logic, unblocks everything
-2. Steam account authentication — gates library sync
-3. Library sync + GameInfo population — makes games visible in library
-4. Installed state detection — shows correct Play/Install state
-5. Game launch via `steam://rungameid` — the core value
-6. `isNative()` + Proton-transparent launch on Linux — correctness for Linux users
-7. `getExtraInfo()` — game page shows content, not blanks
+| Spec Element | Verdict | Basis |
+|---|---|---|
+| 5-state model (UNPICKED/UNREVEALED/REVEALED/REDEEMED/UNREDEEMABLE) | VALID | More complete than any existing tool; necessary for correctness |
+| Local REVEALED flag (no API backing) | VALID | Confirmed: no tool has found a better approach; API simply does not distinguish revealed-but-unactivated |
+| C1 (never auto-reveal) | VALID | Gift link loss is real and permanent; all careful tools preserve unrevealed keys |
+| C3 (no bulk unattended redeem) | VALID | Steam rate-limit confirmed at ~50 successful/~10 failed keys/hour |
+| owned_elsewhere overlay (orthogonal to state) | VALID | Correct model; community tools implement a weaker version of this |
+| AppID-first matching | VALID | `steam_app_id` IS in the Humble API response (confirmed from FailSpy source code) |
+| Fuzzy name fallback with DLC/edition guard | VALID (threshold too low) | 70% threshold too permissive; recommend 85%+ for owned_elsewhere determination |
+| Expiration recomputed on each sync | VALID | Retroactive expiration policy makes cached dates stale |
 
-**Defer to follow-on:**
-- Install delegation (MEDIUM — usable without it: users install in Steam, GamerLib detects)
-- Achievement display (MEDIUM — nice to have, not a launch blocker)
-- Playtime display (LOW effort but not critical)
-- Update detection (MEDIUM — users can update in Steam client)
+### Needs Adjustment
+
+| Spec Element | Issue | Recommendation |
+|---|---|---|
+| F5: `steam://open/activateproduct` as primary | Does NOT pre-fill the key; unreliable on Linux | Flip to web URL `registerkey?key=` as primary; clipboard copy mandatory; `steam://` removed or listed as secondary only |
+| F5: REDEEMED marking after "user confirms activation" | Correct intent, but needs explicit UI | Add a prominent "I activated it" confirmation button in the post-reveal flow; do not auto-detect |
+| §5 Matching: "guarding against DLC/edition false-matches" | Fuzzy threshold unspecified | Define threshold explicitly at 85%+ for ownership determination; document that false negatives are safe, false positives waste gift links |
+| §2.1 REVEALED state edge case | Not acknowledged | Add explicit note: keys revealed outside the launcher appear as UNREVEALED until activated (when `redeemed_key_val` becomes present). This is an accepted limitation, not a bug. |
+| Appendix A: API reference | Missing `steam_app_id` field | Add `tpkd_dict.all_tpks[n].steam_app_id` — this is the primary match key for Steam-type keys, available directly in the order response |
+
+---
+
+## Prioritization Matrix
+
+| Feature | User Value | Impl Cost | Priority | Phase Candidate |
+|---------|------------|-----------|----------|-----------------|
+| Humble auth + library sync (F1) | HIGH | MEDIUM | P1 | Phase 1 |
+| Claim-status classification (F2) | HIGH | MEDIUM | P1 | Phase 1 |
+| Owned-elsewhere dedup — AppID path (F3) | HIGH | LOW-MEDIUM | P1 | Phase 2 |
+| "Keys waiting" view (F4) | HIGH | LOW | P1 | Phase 2 |
+| Expiration urgency sort (F8) | HIGH | LOW | P1 | Phase 2 |
+| Guided claim flow — web URL path (F5) | HIGH | MEDIUM | P1 | Phase 3 |
+| Non-Steam key link-out (F9) | MEDIUM | LOW | P1 | Phase 3 |
+| Giftable-spares view (F6) | MEDIUM | LOW-MEDIUM | P2 | Phase 3 |
+| Local REVEALED flag + audit record (C6) | MEDIUM | LOW | P1 (correctness) | Phase 1 (with F2) |
+| Dedup collapse onto Steam entry (F3 full) | MEDIUM | HIGH | P2 | Phase 4 |
+| Store overlay / ownership badges (F7) | MEDIUM | HIGH | P2 | Phase 4 |
+| Expiration notifications (F8 extension) | LOW-MEDIUM | MEDIUM | P3 | Phase 4+ |
+| Owned_elsewhere intercept (C2 guard) | HIGH (safety) | LOW | P1 (in F5) | Phase 3 (in claim flow) |
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | Playnite HumbleKeysLibrary | castanley humble-steam-redeem | FailSpy humble-steam-key-redeemer | GameLib Target |
+|---------|----------------------------|---------------------------------|-----------------------------------|----------------|
+| Key state model | Binary (Redeemed/Unredeemed/Unredeemable) | Binary (redeemed/skipped/failed) | Binary (revealed/unrevealed) | 5-state with local REVEALED flag |
+| Ownership detection | None (duplicates are known issue) | Fuzzy name match (Steam Web API key required) | AppID + fuzzy (70%) | AppID-first (from Humble API) + fuzzy (85%+) |
+| Dedup collapse | No (duplicates appear) | N/A (CLI tool, not launcher) | N/A | Yes — collapse onto Steam library entry |
+| "Keys waiting" view | No (tag-based filter in Playnite) | No | No | Yes — dedicated view, sorted by expiration |
+| Gift link surfacing | No | Preserves (doesn't reveal) but no view | Preserves (doesn't reveal) but no view | Yes — giftable-spares view with copy button |
+| Activation deep-link | Not implemented | N/A | steam://open/activateproduct | Web URL registerkey?key= (pre-filled) |
+| Audit record | No | CSV output | No | Yes — local reveal/redeem log |
+| Expiration urgency | No | No | No | Yes — sort + optional notification |
+| REVEALED state persistence | No | No | No | Yes — local flag (novel in ecosystem) |
 
 ---
 
 ## Sources
 
-- `src/common/types/game_manager.ts` — Game and LibraryManager interface contracts
-- `src/common/types.ts` — GameInfo, GameSettings, Runner, SteamRuntime, thirdPartyManagedApp
-- `src/backend/storeManagers/index.ts` — libraryManagerMap registration pattern
-- `src/backend/utils.ts:533` — `getSteamLibraries()`, existing ACF/VDF parsing
-- `src/backend/storeManagers/zoom/games.ts` — reference stub pattern for new runner
-- `src/frontend/components/UI/StoreLogos/index.tsx` — frontend runner wiring
-- `src/frontend/helpers/index.ts:124` — `getStoreName` switch (needs 'steam' case)
-- `src/frontend/screens/Game/GamePage/index.tsx:163` — `thirdPartyManagedApp` rendering logic
-- [node-steam-user GitHub](https://github.com/DoctorMcKay/node-steam-user) — CM protocol auth, getOwnedApps — HIGH confidence
-- [node-steam-session GitHub](https://github.com/DoctorMcKay/node-steam-session) — token generation — HIGH confidence
-- [IPlayerService/GetOwnedGames](https://partner.steamgames.com/doc/webapi/IPlayerService) — official Steamworks Web API — HIGH confidence
-- [ISteamUserStats/GetPlayerAchievements](https://partner.steamgames.com/doc/webapi/isteamuserstats) — official Steamworks Web API — HIGH confidence
-- [Steam browser protocol](https://developer.valvesoftware.com/wiki/Talk:Steam_browser_protocol) — steam:// URI scheme — MEDIUM confidence (some URI variants have cross-platform issues)
-- [SteamCMD](https://developer.valvesoftware.com/wiki/SteamCMD) — official CLI tool, evaluated and rejected for v1 — HIGH confidence
+- [Playnite HumbleKeysLibrary GitHub](https://github.com/Dasmius007/HumbleKeysLibrary) — tag model, binary state detection confirmed — HIGH confidence
+- [HumbleKeysLibrary source (JustinHardage fork)](https://github.com/JustinHardage/HumbleKeysLibrary/blob/master/HumbleKeysLibrary.cs) — `GetOrderRedemptionTagState()` implementation; no REVEALED state — HIGH confidence
+- [FailSpy humble-steam-key-redeemer](https://github.com/FailSpy/humble-steam-key-redeemer) — confirmed `steam_app_id` field in Humble API; 70% fuzzy threshold — HIGH confidence
+- [castanley humble-steam-redeem](https://github.com/castanley/humble-steam-redeem) — ownership detection, giftable-spares preservation, rate-limit handling — HIGH confidence
+- [AlexanderTheGrey/humble-bundle-redemption-issues](https://github.com/AlexanderTheGrey/humble-bundle-redemption-issues) — 400+ documented expiration issues; retroactive policy — HIGH confidence
+- [Steam Community: steam://open/activateproduct reliability discussion](https://steamcommunity.com/discussions/forum/1/4362375983952654017/) — confirmed does not pre-fill key — HIGH confidence
+- [Steam Community: registerkey web activation](https://steamcommunity.com/discussions/forum/1/3729575905262032515/) — confirmed `?key=` parameter pre-fills field — HIGH confidence
+- [SteamGifts: Humble Bundle expiration warning](https://www.steamgifts.com/discussion/QbyR5/warning-humble-bundle-shortens-key-expiry-without-warning) — community expiration crisis evidence — MEDIUM confidence
+- [ResetEra: Humble Bundle 3-year expiration policy](https://www.resetera.com/threads/humble-bundle-unused-not-revealed-game-codes-expire-after-3-yrs-now-humble-is-not-obligated-to-provide-keys-in-case-of-them-being-out-of-stock.1112754/) — TOS change December 2024 — HIGH confidence
+- [SteamGifts: Humble gift link discussion](https://www.steamgifts.com/discussion/sYPGI/humble-bundle-key-or-gift-link) — gift link mechanics confirmed — MEDIUM confidence
+
+---
+
+*Feature research for: Humble Bundle key management integration (GameLib v1.2)*
+*Researched: 2026-07-05*
