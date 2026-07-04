@@ -48,7 +48,9 @@
 .gamePicture > .appleRatingPill {
   position: absolute;
   top: var(--space-xs);
-  left: var(--space-xs);
+  /* Right-justified: the store logo occupies the top-left corner
+     (.store-icon left: 0.5rem) and would overlap the pill. */
+  right: var(--space-xs);
   z-index: 3;
   padding: var(--space-3xs) var(--space-xs);
   border: none;
