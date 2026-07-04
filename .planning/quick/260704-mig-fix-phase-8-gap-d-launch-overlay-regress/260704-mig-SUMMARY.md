@@ -5,8 +5,9 @@ slug: fix-phase-8-gap-d-launch-overlay-regress
 description: Fix Phase 8 Gap D launch-overlay regression + greyscale placeholder icon
 date: 2026-07-04
 commits:
-  - a2a7e032 fix(08): floor Steam launch-overlay visible time
+  - a2a7e032 fix(08): floor Steam launch-overlay visible time (superseded)
   - 1d7426c1 feat(08): GameLib icon above text on artwork placeholders
+  - 8f0862f5 fix(08): keep Steam launch overlay up until the game takes focus (corrects a2a7e032)
 ---
 
 # Summary: 260704-mig
@@ -16,16 +17,21 @@ commits:
 ### 1. Steam launch-overlay minimum-visible floor (Gap D regression fix)
 `src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx`
 
-The Steam branch dismissed the overlay on window `blur`, but `steam://rungameid`
-hands focus to the Steam client within milliseconds — so `blur` fired almost
-immediately and "Launched in Steam" was never visible (~0s). Introduced a
-`STEAM_MIN_VISIBLE_MS` (1500ms) floor: an early blur is recorded but does not
-dismiss; when the floor elapses the overlay dismisses if focus was already lost
-(the common case), otherwise it waits for a later blur. The 8s safety-net ceiling
-(`STEAM_SAFETY_MS`) is retained so the overlay can never hang.
+The Steam branch dismissed the overlay on window `blur`. Two iterations:
 
-Net effect: "Launched in Steam" is readable for ≥1.5s, then dismisses on focus
-loss — no more 0s flash, no indefinite "Launching" state.
+- **a2a7e032 (superseded):** added a "minimum-visible floor" that *remembered*
+  the early blur and dismissed at the 1.5s mark. This was wrong — re-UAT (test 7)
+  showed the message still didn't appear.
+- **8f0862f5 (final):** the early blur is the *spurious* one that
+  `shell.openExternal('steam://')` fires when spinning up the protocol handler;
+  GameLib actually keeps focus for several seconds until the game itself
+  foregrounds. Now any blur during a startup window
+  (`STEAM_STARTUP_IGNORE_BLUR_MS = 1500`) is **ignored**, and only a blur *after*
+  it (the game genuinely taking focus) dismisses the overlay. The 8s safety
+  ceiling (`STEAM_SAFETY_MS`) is retained.
+
+Net effect: "Launched in Steam" + spinner show immediately and stay visible for
+the whole several-second launch, disappearing exactly when the game appears.
 
 ### 2. GameLib icon on artwork placeholders (test 1 enhancement)
 `src/frontend/assets/gamelib_card.svg`, `src/frontend/assets/gamelib_card_missing.svg`

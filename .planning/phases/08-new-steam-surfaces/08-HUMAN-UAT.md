@@ -1,14 +1,18 @@
 ---
-status: complete
+status: testing
 phase: 08-new-steam-surfaces
 source: [08-VERIFICATION.md]
 started: 2026-07-04T00:00:00Z
-updated: 2026-07-04T12:00:00Z
+updated: 2026-07-04T04:25:00Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 9
+name: Gap D re-fix (v2) — overlay stays until the game takes focus
+expected: |
+  Activating an installed Steam game shows 'Launched in Steam' + spinner immediately, stays visible for the whole several-second launch while GameLib holds focus, then disappears when the game takes the foreground. Requires a rebuild with commit 8f0862f5.
+awaiting: user response
 
 ## Tests
 
@@ -40,14 +44,34 @@ result: pass
 expected: Steam Store tab still loads store.steampowered.com in the WebView with no LoginWarning and last-URL persistence. Steam games appear in Console with the Steam chip. Launch and install handoffs still work.
 result: pass
 
+<!-- Re-test wave: fixes from quick task 260704-mig (commits a2a7e032 + 1d7426c1) -->
+
+### 7. Gap D re-fix — Steam launch overlay minimum-visible floor
+expected: Activating an installed Steam game shows 'Launched in Steam' for at least ~1.5s (readable, no 0s flash), then dismisses when GameLib loses focus. Still auto-dismisses within ~8s if the game never foregrounds. No indefinite 'Launching' hang.
+result: issue
+reported: "transition is good (does not go to desktop and then to game — goes direct to game), however no longer getting the transition in gamelib (message + spinner)"
+severity: minor
+analysis: "First re-fix (a2a7e032) was wrong: it REMEMBERED the spurious blur that shell.openExternal('steam://') fires when spinning up the protocol handler and dismissed at the 1.5s floor. User clarified GameLib actually keeps focus for several seconds until the game foregrounds — so the overlay should stay the whole time. Real fix (8f0862f5): ignore any blur during a startup window and only dismiss on a blur AFTER it (the game genuinely taking focus). See test 9 for re-test."
+superseded_by: 9
+
+### 9. Gap D re-fix (v2) — overlay stays until the game takes focus
+expected: Activating an installed Steam game shows 'Launched in Steam' + spinner immediately, and it STAYS visible for the whole several-second launch while GameLib holds focus, then disappears exactly when the game takes the foreground. No 0s flash, no missing message, no indefinite hang (8s safety ceiling). Requires a rebuild with commit 8f0862f5.
+result: [pending]
+
+### 8. Test 1 enhancement — GameLib icon on artwork placeholders
+expected: A Steam game with unavailable art in the Console grid shows the GameLib icon ABOVE the text, rendered in greyscale ('Artwork unavailable' variant). A game using the default 'No artwork' placeholder shows the same icon in full color. Icon sits above the wordmark, layout looks balanced.
+result: [pending]
+
 ## Summary
 
-total: 6
+total: 9
 passed: 5
-issues: 1
-pending: 0
+issues: 2
+pending: 2
 skipped: 0
 blocked: 0
+
+note: Tests 7-9 are the 260704-mig re-test wave. Test 7 (first Gap D re-fix) failed — superseded by test 9 (corrected fix, commit 8f0862f5). Test 8 (placeholder icon) and test 9 (overlay v2) await re-test on a rebuild.
 
 ## Gaps
 
