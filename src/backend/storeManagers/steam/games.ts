@@ -507,6 +507,10 @@ export default class SteamGame implements Game {
   async isGameAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
       const info = this.getGameInfo()
+      // LIB-07: delisted game is non-available regardless of install state
+      if (info?.is_delisted) {
+        return resolve(false)
+      }
       resolve(
         Boolean(
           info?.is_installed &&
