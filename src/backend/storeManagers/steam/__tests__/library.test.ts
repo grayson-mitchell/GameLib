@@ -539,8 +539,9 @@ describe('SteamLibraryManager', () => {
       expect(updatedGame.install).toEqual(
         expect.objectContaining({
           install_path: join('/steam', 'steamapps', 'common', 'dota2'),
-          install_size: '50000',
-          platform: 'Windows'
+          install_size: '50000'
+          // platform is host-derived (GAP 2 fix — no longer hardcoded 'Windows');
+          // not asserted here since this test covers install_path/size detection.
         })
       )
     })

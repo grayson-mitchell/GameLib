@@ -11,7 +11,7 @@ import { join } from 'path'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
-import { isWindows, isMac } from 'backend/constants/environment'
+import { isWindows, isMac, isLinux } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
@@ -26,6 +26,17 @@ import {
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame from './games'
+
+// DETAIL-01 gap-fix: Steam installs the depot for the host OS, so the installed
+// build reflects the platform GameLib is running on. Report that instead of a
+// hardcoded 'Windows' (which made a Mac install read "Windows"). 'Mac'/'linux'/
+// 'Windows' are all valid InstallPlatform members matched by the frontend's
+// platform detection (['osx','Mac'] / ['linux','Linux']).
+function hostInstallPlatform(): InstallPlatform {
+  if (isMac) return 'Mac'
+  if (isLinux) return 'linux'
+  return 'Windows'
+}
 
 export default class SteamLibraryManager implements LibraryManager {
   /**
@@ -202,7 +213,7 @@ export default class SteamLibraryManager implements LibraryManager {
           ? {
               install_path: installedData.installPath,
               install_size: installedData.sizeOnDisk,
-              platform: 'Windows' as const
+              platform: hostInstallPlatform()
             }
           : {},
         extra: {
@@ -322,7 +333,7 @@ export default class SteamLibraryManager implements LibraryManager {
             ? {
                 install_path: installedData.installPath,
                 install_size: installedData.sizeOnDisk,
-                platform: 'Windows' as const
+                platform: hostInstallPlatform()
               }
             : {}
         }
@@ -483,7 +494,7 @@ export async function pollInstallOnce(appId: string): Promise<void> {
         install: {
           install_path: result.installPath!,
           install_size: result.sizeOnDisk!,
-          platform: 'Windows' as const
+          platform: hostInstallPlatform()
         }
       }
       library.set(appId, updated)
