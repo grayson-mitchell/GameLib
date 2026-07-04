@@ -398,8 +398,11 @@ describe('SteamGame.launch() — GAME-01', () => {
     await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+    // activate:false so the Steam handoff does not steal foreground / force a
+    // macOS fullscreen-Space switch from Console mode.
     expect(shellOpenExternal).toHaveBeenCalledWith(
-      `steam://rungameid/${APP_ID}`
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
     )
   })
 

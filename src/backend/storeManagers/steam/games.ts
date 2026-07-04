@@ -376,7 +376,13 @@ export default class SteamGame implements Game {
       `SteamGame: launching appId ${this.appId} via ${url}`,
       LogPrefix.Steam
     )
-    await shell.openExternal(url)
+    // Hand the steam:// URL to the Steam client WITHOUT bringing it to the
+    // foreground (macOS/Windows). Activating Steam is what forces macOS to leave
+    // GameLib's fullscreen Space (Console mode), causing a visible desktop-Space
+    // flash before the game appears. With activate:false, Steam processes
+    // rungameid in the background and the only Space switch is directly to the
+    // game's own window. Ignored on Linux (no effect on Steam Deck game mode).
+    await shell.openExternal(url, { activate: false })
     return true
   }
 
