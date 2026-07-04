@@ -13,9 +13,11 @@ interface Props {
 /**
  * DETAIL-02: color-coded, clickable AppleGamingWiki compatibility pill overlaid
  * on the portrait cover art. Mounted only when the gate passes (macOS + a
- * Mac-supported game) — so this always renders a pill, showing "Unrated" when
- * there is no rating (D-12). The displayed rating follows the app-wide
- * rating-source setting (D-10/D-11), shared with the Extra-info tab row.
+ * NON-Mac-native / Windows game — the CrossOver/Wine rating measures translation-
+ * layer compatibility, which doesn't apply to native Mac builds) — so this always
+ * renders a pill, showing "Unrated" when there is no rating (D-12). The displayed
+ * rating follows the app-wide rating-source setting (D-10/D-11), shared with the
+ * Extra-info tab row.
  */
 const AppleRatingOverlay = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
