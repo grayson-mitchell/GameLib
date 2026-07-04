@@ -15,6 +15,14 @@ import { launch, sendKill } from 'frontend/helpers'
 import ContextProvider from 'frontend/state/ContextProvider'
 
 const CANCEL_HOLD_MS = 3000
+// Steam launch is fire-and-forget: `steam://rungameid` hands focus to the Steam
+// client within milliseconds, firing `blur` almost immediately. Hold the overlay
+// for at least this long so "Launched in Steam" is actually readable before the
+// blur-driven dismiss can run.
+const STEAM_MIN_VISIBLE_MS = 1500
+// Ceiling: always dismiss by this point even if blur never fires (game failed to
+// launch, unusual window manager, etc.).
+const STEAM_SAFETY_MS = 8000
 
 export default function LaunchOverlay({
   game,
@@ -64,9 +72,11 @@ export default function LaunchOverlay({
 
   // Fire the launch exactly once on mount. Steam is fire-and-forget:
   // rungameid resolves immediately; the overlay holds until GameLib loses
-  // focus (the game took the foreground), then auto-dismisses. A bounded
-  // safety-net timeout ensures the overlay always dismisses even if blur
-  // never fires (game failed to launch, unusual window manager, etc.).
+  // focus (the game took the foreground), then auto-dismisses. A minimum
+  // visible floor keeps "Launched in Steam" readable despite the near-instant
+  // blur from the steam:// handoff, and a bounded safety-net timeout ensures
+  // the overlay always dismisses even if blur never fires (game failed to
+  // launch, unusual window manager, etc.).
   // Non-Steam closes via onDismiss in the finally block.
   // Intentionally not depending on the launch inputs.
   useEffect(() => {
@@ -79,21 +89,35 @@ export default function LaunchOverlay({
         hasUpdate: false,
         showDialogModal
       })
-      // Dismiss when GameLib loses focus (the game took the foreground).
-      // A one-shot guard prevents double-dismiss if both signals fire.
+      // Dismiss when GameLib loses focus (the game took the foreground) — but
+      // only once the minimum-visible floor has elapsed. The steam:// handoff
+      // steals focus almost immediately, so an un-gated blur would dismiss the
+      // overlay at ~0s (regression). A one-shot guard prevents double-dismiss.
       let dismissed = false
+      let floorElapsed = false
+      let blurredEarly = false
       const doDismiss = () => {
         if (dismissed) return
         dismissed = true
         onDismiss()
       }
-      const onBlur = () => doDismiss()
+      const onBlur = () => {
+        if (floorElapsed) doDismiss()
+        else blurredEarly = true
+      }
       window.addEventListener('blur', onBlur)
-      // Safety net: always dismiss at 8s so the overlay cannot hang if
-      // blur never fires. This is the ceiling, not the expected dismiss path.
-      const safety = setTimeout(doDismiss, 8000)
+      // Minimum-visible floor: once elapsed, dismiss immediately if focus was
+      // already lost (the common steam:// case), otherwise wait for blur.
+      const floor = setTimeout(() => {
+        floorElapsed = true
+        if (blurredEarly) doDismiss()
+      }, STEAM_MIN_VISIBLE_MS)
+      // Safety net: always dismiss so the overlay cannot hang if blur never
+      // fires. This is the ceiling, not the expected dismiss path.
+      const safety = setTimeout(doDismiss, STEAM_SAFETY_MS)
       cleanup = () => {
         window.removeEventListener('blur', onBlur)
+        clearTimeout(floor)
         clearTimeout(safety)
       }
     } else {
