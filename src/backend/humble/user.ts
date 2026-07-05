@@ -262,7 +262,11 @@ export class HumbleUser {
 
           validationInFlight = true
           try {
-            const outcome = await HumbleUser.finishLogin(cookieValue, settle)
+            const outcome = await HumbleUser.finishLogin(
+              cookieValue,
+              settle,
+              () => settled
+            )
             if (outcome === 'rejected') {
               lastRejectedValue = cookieValue
               lastRejectedAt = Date.now()
@@ -296,7 +300,8 @@ export class HumbleUser {
 
   private static async finishLogin(
     cookieValue: string,
-    settle: (result: LoginResult) => void
+    settle: (result: LoginResult) => void,
+    isSettled: () => boolean
   ): Promise<'done' | 'rejected' | 'transient'> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
@@ -334,6 +339,13 @@ export class HumbleUser {
       )
       return 'rejected'
     }
+
+    // WR-03 / D-06: stopLogin() may have settled the watch ({ status:
+    // 'waiting' }) WHILE the gamekeys validation above was in flight. A
+    // silent cancel means NO store writes — the frontend already believes
+    // the login was cancelled, so committing state here would leave the
+    // backend logged-in while the tile shows disconnected until restart.
+    if (isSettled()) return 'transient'
 
     const encrypted = encryptCookie(cookieValue)
     configStore.set(HUMBLE_TOKEN_STORE_KEY, encrypted)

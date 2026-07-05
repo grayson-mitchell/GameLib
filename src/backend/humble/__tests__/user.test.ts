@@ -170,6 +170,31 @@ describe('HumbleUser', () => {
     test('stopLogin() is a no-op when no watch is active', () => {
       expect(() => HumbleUser.stopLogin()).not.toThrow()
     })
+
+    test('WR-03: stopLogin() DURING an in-flight validation prevents ALL store writes even when the validation then succeeds (D-06 cancel race)', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      let resolveGamekeys!: (v: unknown) => void
+      mockGetGamekeys.mockImplementation(
+        async () => new Promise((r) => (resolveGamekeys = r))
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
+
+      // User cancels while getGamekeys is still pending...
+      HumbleUser.stopLogin()
+      await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+
+      // ...and the in-flight validation then succeeds. NOTHING may be
+      // stored — the D-06 contract is 'silent cancel, no store writes'.
+      resolveGamekeys({ status: 'ok', data: [] })
+      await flushAsync()
+
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
+      expect(mockGetAccountIdentity).not.toHaveBeenCalled()
+    })
   })
 
   // ── HACCT-01: startLogin() — cookie capture + encryption (D-16 gamekeys) ─
