@@ -259,6 +259,10 @@ async function sync(): Promise<SyncOutcome> {
       const outcome = await fetchAndCommitOrder(cookie, gamekey, now)
       done += 1
       sendFrontendMessage('humbleSyncProgress', { done, total })
+      // D-26 progressive fill: push the updated key inventory as each order
+      // commits, not just once at the end — the renderer's keys list fills
+      // in live during a multi-order sync.
+      sendFrontendMessage('humbleKeysUpdated', getKeys())
       return outcome
     }
   )

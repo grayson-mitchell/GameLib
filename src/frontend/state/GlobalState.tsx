@@ -43,6 +43,7 @@ import {
 } from '../helpers/electronStores'
 import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
+import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import useGlobalState from './GlobalStateV2'
 
 const storage: Storage = window.localStorage
@@ -86,6 +87,10 @@ interface StateProps {
     username?: string | null
     expired?: boolean
     encryptionDegraded?: boolean
+    keys?: HumbleKey[]
+    syncedAt?: number | null
+    syncError?: HumbleSyncState['syncError']
+    syncing?: boolean
   }
   wineVersions: WineVersionInfo[]
   error: boolean
@@ -242,7 +247,15 @@ class GlobalState extends PureComponent<Props> {
       // reconnect state immediately (and even when offline), instead of
       // showing a stale 'Connected' until the network round-trip completes.
       expired: humbleConfigStore.get_nodefault('expired') ?? false,
-      encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded')
+      encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded'),
+      // Phase 11 (Plan 03): keys/sync-state live in humbleLibraryStore /
+      // humbleSyncStore (backend), NOT humbleConfigStore — they arrive via
+      // IPC (initial fetch on mount + push listeners), never read from a
+      // config store at init time.
+      keys: [],
+      syncedAt: null,
+      syncError: 'none',
+      syncing: false
     },
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
     error: false,
@@ -749,6 +762,8 @@ class GlobalState extends PureComponent<Props> {
           expired: false
         }
       })
+      // D-23: a successful login/reconnect triggers a sync.
+      void window.api.humbleSync()
     }
     return result.status
   }
@@ -769,7 +784,18 @@ class GlobalState extends PureComponent<Props> {
           onClick: () => {
             window.api.humbleDisconnect()
             this.setState({
-              humble: { isLoggedIn: false, username: null, expired: false }
+              // HumbleUser.disconnect() wipes humbleLibraryStore/humbleSyncStore
+              // (Plan 02) — mirror that here so the renderer never shows a
+              // stale key inventory for a disconnected account.
+              humble: {
+                isLoggedIn: false,
+                username: null,
+                expired: false,
+                keys: [],
+                syncedAt: null,
+                syncError: 'none',
+                syncing: false
+              }
             })
           }
         },
@@ -1053,15 +1079,54 @@ class GlobalState extends PureComponent<Props> {
       }))
     })
 
-    // D-08: this is the ONLY expiry-detection trigger in Phase 10 (no
-    // library sync exists yet to piggyback a 401 check on). Fire-and-forget —
-    // the backend pushes humbleAuthState when it resolves, so we don't block
-    // mount waiting on it. Gated on `isLoggedIn` (the connected flag), NOT
-    // `username` — a connected-but-anonymous account (identity fetch failed)
-    // must still get the startup health check.
+    // Phase 11 (Plan 03): pushed by HumbleLibrary.sync()/loadCached() with
+    // the display-safe key inventory — never the generic storeGet bridge
+    // (WR-09). `syncing` flips false here too since a keys push always
+    // accompanies the terminal state of a sync/cache-load.
+    window.api.handleHumbleKeysUpdated((e, keys) => {
+      this.setState((prevState: StateProps) => ({
+        humble: { ...prevState.humble, keys, syncing: false }
+      }))
+    })
+
+    // Phase 11 (Plan 03): progressive-fill sync progress (D-26) — counts
+    // only, no cookie/key values.
+    window.api.handleHumbleSyncProgress((e, { done, total }) => {
+      this.setState((prevState: StateProps) => ({
+        humble: { ...prevState.humble, syncing: done < total }
+      }))
+    })
+
+    // D-08/D-23: this is the expiry-detection trigger, now chained into a
+    // sync (Phase 11) so an already-expired session never syncs — the health
+    // check must resolve first. Fire-and-forget — the backend pushes
+    // humbleAuthState/humbleKeysUpdated/humbleSyncProgress as each stage
+    // resolves, so we don't block mount waiting on it. Gated on `isLoggedIn`
+    // (the connected flag), NOT `username` — a connected-but-anonymous
+    // account (identity fetch failed) must still get the startup health
+    // check + sync.
     if (this.state.humble.isLoggedIn) {
-      void window.api.humbleCheckHealth()
+      void window.api.humbleCheckHealth().then(() => window.api.humbleSync())
     }
+
+    // Phase 11 (Plan 03): cache-then-sync (D-23) — render whatever is
+    // already on disk immediately on mount, independent of whether a sync
+    // ever runs (e.g. an expired session still shows its last-known-good
+    // cache per HSYNC-04).
+    void window.api.humbleGetKeys().then((keys) => {
+      this.setState((prevState: StateProps) => ({
+        humble: { ...prevState.humble, keys }
+      }))
+    })
+    void window.api.humbleGetSyncState().then((syncState) => {
+      this.setState((prevState: StateProps) => ({
+        humble: {
+          ...prevState.humble,
+          syncedAt: syncState.syncedAt,
+          syncError: syncState.syncError
+        }
+      }))
+    })
 
     window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
       if (!args.app_name) return
@@ -1318,6 +1383,10 @@ class GlobalState extends PureComponent<Props> {
             username: humble.username,
             expired: humble.expired,
             encryptionDegraded: humble.encryptionDegraded,
+            keys: humble.keys,
+            syncedAt: humble.syncedAt,
+            syncError: humble.syncError,
+            syncing: humble.syncing,
             login: this.humbleLogin,
             logout: this.humbleDisconnect
           },

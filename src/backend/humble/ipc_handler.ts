@@ -2,6 +2,7 @@ import { addHandler, addListener } from 'backend/ipc'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 import { HumbleUser, standardBrowserUserAgent } from './user'
+import { HumbleLibrary } from './library'
 
 /**
  * Registers all Humble IPC channels (typed in common/types/ipc.ts) against
@@ -22,6 +23,13 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
   addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
   addHandler('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
+  // Phase 11 (library.ts, Plan 02): sync IPC surface. These delegate to
+  // HumbleLibrary and return ONLY the display-safe HumbleKey[]/HumbleSyncState
+  // projections — never register humbleLibraryStore/humbleRevealedStore on
+  // any generic frontend storeGet bridge (WR-09, T-11-02).
+  addHandler('humbleSync', async () => HumbleLibrary.sync())
+  addHandler('humbleGetKeys', () => HumbleLibrary.getKeys())
+  addHandler('humbleGetSyncState', () => HumbleLibrary.getSyncState())
   // WR-02: never discard the disconnect promise silently — a rejection here
   // (e.g. session.fromPartition throwing) must not become an unhandled
   // rejection in the main process. The credential wipe itself runs first

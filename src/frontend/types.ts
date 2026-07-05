@@ -18,6 +18,7 @@ import {
   AppleRatingSource
 } from 'common/types'
 import { NileLoginData, NileRegisterData } from 'common/types/nile'
+import { HumbleKey } from 'common/types/humble'
 
 export type Category =
   | 'all'
@@ -108,6 +109,10 @@ export interface ContextType {
     username?: string | null
     expired?: boolean
     encryptionDegraded?: boolean
+    keys?: HumbleKey[]
+    syncedAt?: number | null
+    syncError?: 'none' | 'denied' | 'network' | 'partial'
+    syncing?: boolean
     login: (result: { status: string; username?: string }) => Promise<string>
     logout: () => Promise<void>
   }
