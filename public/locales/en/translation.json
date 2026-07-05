@@ -197,6 +197,7 @@
     "button": {
         "cancel": "Cancel",
         "continue": "Continue",
+        "dismiss": "Dismiss",
         "go_to_library": "Go to Library",
         "login": "Log in"
     },
@@ -597,6 +598,13 @@
         "amazon": "Amazon Login",
         "epic": "Epic Games Login",
         "gog": "GOG Login",
+        "humble": "Humble Bundle Login",
+        "humble_connecting": "Waiting for Humble Bundle login...",
+        "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
+        "humble_disconnect_title": "Disconnect Humble Bundle?",
+        "humble_encryption_degraded": "Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption.",
+        "humble_expired_toast": "Your Humble Bundle session expired. Reconnect to keep your keys in sync.",
+        "humble_reconnect": "Session expired — Reconnect",
         "message": "Login with your platform. You can login to more than one platform at the same time.",
         "old-mac": "Your macOS version is {{version}}. macOS 12 or newer is required to log in.",
         "steam": "Steam Login",
