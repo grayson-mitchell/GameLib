@@ -92,8 +92,34 @@ export const storeSet = (storeName: string, key: string, value?: unknown) => sto
 
 export const storeHas = (storeName: string, key: string) => stores[storeName].has(key)
 
-export const storeGet = (storeName: string, key: string, defaultValue?: unknown) =>
-  stores[storeName].get(key, defaultValue)
+// T-10-12 / WR-09: stored credentials must never be readable from renderer
+// code. This bridge is generic and key-unfiltered by design, which would let
+// any renderer script (e.g. XSS via themes/custom CSS) exfiltrate a stored
+// session with one call — `storeGet('humbleConfigStore', 'sessionCookie')`
+// returns the raw stored value, plaintext when encryption is degraded.
+// Deny-list known credential keys here in the preload, so the block holds for
+// every renderer caller, not just our own typed store wrappers. The UI only
+// needs isLoggedIn/userData/expired/encryptionDegraded — never the secrets.
+const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
+  humbleConfigStore: ['sessionCookie'],
+  steamConfigStore: ['refreshToken']
+}
+
+const isSecretStoreKey = (storeName: string, key: string) =>
+  (SECRET_STORE_KEYS[storeName] ?? []).some(
+    // electron-store supports dot-notation paths — block subpath reads too.
+    (secret) => key === secret || key.startsWith(`${secret}.`)
+  )
+
+export const storeGet = (storeName: string, key: string, defaultValue?: unknown) => {
+  if (isSecretStoreKey(storeName, key)) {
+    console.warn(
+      `storeGet: blocked read of credential key "${key}" from "${storeName}"`
+    )
+    return undefined
+  }
+  return stores[storeName].get(key, defaultValue)
+}
 
 export const storeDelete = (storeName: string, key: string) => stores[storeName].delete(key)
 
