@@ -12,10 +12,8 @@ import { HumbleUser } from './user'
  */
 export function registerHumbleIpcHandlers(): void {
   addHandler('humbleStartLogin', async () => HumbleUser.startLogin())
-  addHandler('humbleGetUserInfo', async () => HumbleUser.getUserDetails())
+  addHandler('humbleGetUserInfo', () => HumbleUser.getUserDetails())
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
-  addHandler('humbleCheckHealth', async () =>
-    HumbleUser.checkHealthAndFlagExpiry()
-  )
+  addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
   addListener('humbleDisconnect', () => void HumbleUser.disconnect())
 }

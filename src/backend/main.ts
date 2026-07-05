@@ -40,6 +40,7 @@ import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
 import { steamSyncStore } from './storeManagers/steam/electronStores'
+import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import {
   clearCache,
   isEpicServiceOffline,
@@ -872,6 +873,8 @@ addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
 addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled())
 addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
 addListener('logoutSteam', () => SteamUser.logout())
+
+registerHumbleIpcHandlers()
 
 addHandler('getAlternativeWine', async () =>
   GlobalConfig.get().getAlternativeWine()
