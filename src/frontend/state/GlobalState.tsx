@@ -237,7 +237,11 @@ class GlobalState extends PureComponent<Props> {
       // anonymous account must still show the tile as connected.
       isLoggedIn: humbleConfigStore.get_nodefault('isLoggedIn'),
       username: humbleConfigStore.get_nodefault('userData')?.username,
-      expired: false,
+      // WR-05/D-08: the backend persists `expired` on a 401 health check —
+      // read it back so a restart with a known-expired session shows the
+      // reconnect state immediately (and even when offline), instead of
+      // showing a stale 'Connected' until the network round-trip completes.
+      expired: humbleConfigStore.get_nodefault('expired') ?? false,
       encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded')
     },
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
