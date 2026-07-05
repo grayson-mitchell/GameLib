@@ -161,6 +161,25 @@ describe('getGamekeys', () => {
     expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
   })
 
+  test('WR-04: sets a finite request timeout so a hung transport cannot stall validation indefinitely', async () => {
+    mockGet.mockResolvedValue({ data: [] })
+    await getGamekeys(COOKIE)
+    const [, config] = mockGet.mock.calls[0]
+    expect(config.timeout).toBeGreaterThan(0)
+    expect(config.timeout).toBeLessThanOrEqual(30_000)
+  })
+
+  test('WR-04: an axios timeout error (ECONNABORTED, no response) rethrows as a transient error rather than mapping to expired/denied', async () => {
+    const err = new Error('timeout of 15000ms exceeded') as Error & {
+      code: string
+      isAxiosError: true
+    }
+    err.code = 'ECONNABORTED'
+    err.isAxiosError = true
+    mockGet.mockRejectedValue(err)
+    await expect(getGamekeys(COOKIE)).rejects.toThrow('timeout')
+  })
+
   test('never logs the raw cookie value', async () => {
     mockGet.mockResolvedValue({ data: [] })
     await getGamekeys(COOKIE)

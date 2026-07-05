@@ -77,12 +77,20 @@ interface HumbleRawResponse {
  * implementation behind the same signature — call sites in
  * getGamekeys/getOrderDetail/getAccountIdentity never change.
  */
+// WR-04: axios's default timeout is 0 (unlimited). A hung transport (stalled
+// TCP, captive portal, Humble blackholing the request) would otherwise pin
+// user.ts's `validationInFlight` flag for minutes — silently dropping every
+// poll tick and forced revalidation — until the OS-level TCP timeout fires.
+// A hung request must become a transient error, not a stall.
+const REQUEST_TIMEOUT_MS = 15_000
+
 async function humbleRequest(
   path: string,
   cookie: string
 ): Promise<HumbleRawResponse> {
   const res = await axios.get(`${HUMBLE_BASE_URL}${path}`, {
-    headers: buildHeaders(cookie)
+    headers: buildHeaders(cookie),
+    timeout: REQUEST_TIMEOUT_MS
   })
   const contentTypeHeader = res.headers?.['content-type']
   return {
