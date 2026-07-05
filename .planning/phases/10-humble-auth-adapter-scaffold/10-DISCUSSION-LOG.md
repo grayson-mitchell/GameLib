@@ -185,3 +185,121 @@
 ## Deferred Ideas
 
 None — discussion stayed within phase scope.
+
+---
+
+# Revision Session — 2026-07-05 (mid-execution)
+
+**Trigger:** Phase parked at the 10-05 live-validation checkpoint. Login window never
+auto-closed (identity endpoint `/api/v1/user/info` kept rejecting candidate cookies)
+and the user questioned the popup BrowserWindow vs the embedded WebView used by
+Epic/GOG/Amazon.
+**Areas discussed:** Login surface, Login-success detection, Transport posture (D-14), Partition persistence (D-11)
+
+---
+
+## Login surface
+
+### Popup BrowserWindow or embedded Stores WebView?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Embedded WebView | Add `/loginweb/humble` route reusing the WebView screen; consistent with Epic/GOG/Amazon; main process still captures cookies via `session.fromPartition()` | ✓ |
+| Keep BrowserWindow | Keep the popup as built (matches Steam's pattern in this fork) | |
+| Let Claude decide | Planner weighs rework cost vs consistency | |
+
+**User's choice:** Embedded WebView (revises D-05/D-07)
+**Notes:** Framing fact stated up front: the surface switch does not itself fix the auto-close bug — that lives in the validation step.
+
+### Post-validation behavior (auto-close equivalent)?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Auto-return to accounts | Navigate back to Manage Accounts on validation (translation of D-05 auto-close) | |
+| Stay + success toast | Remain on Humble page, user navigates back | |
+| Let Claude decide | Match existing Epic/GOG post-login behavior | ✓ |
+
+**User's choice:** Let Claude decide
+
+---
+
+## Login-success detection
+
+### Authoritative login-success signal?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Gamekeys endpoint (Recommended) | `GET /api/v1/user/order` 200 + zod parse = logged in; shares one proven call with D-13 gate criterion #1 | ✓ |
+| Diagnose user/info first | Run the parked rejection-log diagnostic before deciding | |
+| Page/URL signal | Detect authenticated navigation; brittle, proves nothing about API access | |
+
+**User's choice:** Gamekeys endpoint (new D-16)
+
+### Connected tile when identity fetch fails?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Generic "Connected" (Recommended) | No name shown; retry identity on later startups; login never blocks on flaky endpoint | ✓ |
+| Scrape from page | Extract account email from the logged-in page DOM | |
+| Let Claude decide | Planner picks during replanning | |
+
+**User's choice:** Generic "Connected" (D-02 softened to best-effort)
+
+### D-13 gate criterion #4 (identity endpoint) still blocking?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Demote to advisory (Recommended) | Gate = gamekeys 200 + order detail 200 + zod parse incl. steam_app_id; identity recorded but non-blocking | ✓ |
+| Keep it blocking | Phase can't complete until an identity source works | |
+
+**User's choice:** Demote to advisory (D-13 revised)
+
+---
+
+## Transport posture (D-14)
+
+### Transport prioritization after the rejections?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Axios first, retest (Recommended) | Axios stays primary; gamekeys-based login validation doubles as the transport retest | ✓ |
+| Session transport primary | Route all adapter calls through `ses.fetch()` now | |
+| Build both in-phase | Both transports behind the adapter interface up front | |
+
+**User's choice:** Axios first, retest
+**Notes:** The earlier rejections may have been the assumed `/api/v1/user/info` URL, not the transport.
+
+### Fallback mechanism if axios fails?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| ses.fetch (Recommended) | `ses.fetch()` on the Humble partition; browser-equivalent requests, no hidden window; same adapter signatures | ✓ |
+| Keep webRequest proxy | Original D-14 hidden-BrowserWindow mechanism | |
+| Let Claude decide | Pick when/if the gate fails | |
+
+**User's choice:** ses.fetch (D-14 revised)
+
+---
+
+## Partition persistence (D-11)
+
+### Should the login partition persist across restarts?
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| persist:humble (Recommended) | Matches WebView convention; D-11's Humble-Guard-skip works across restarts; enables ses.fetch fallback after restart | ✓ |
+| Keep in-memory | Only the encrypted store survives; every reconnect is a from-scratch login | |
+
+**User's choice:** persist:humble (new D-18; discovered during scout that `humble-login` had no `persist:` prefix and was silently in-memory)
+
+---
+
+## Claude's Discretion (revision session)
+
+- Post-validation navigation in the WebView flow (match Epic/GOG)
+- Cookie-detection wiring for the WebView surface (poll vs relayed navigation events)
+- Disposition of the retired BrowserWindow login code (preserve the validation state machine per D-17)
+
+## Deferred Ideas (revision session)
+
+None — discussion stayed within phase scope.
