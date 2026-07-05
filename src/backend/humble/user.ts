@@ -381,6 +381,16 @@ export class HumbleUser {
       )
     }
 
+    // WR-06: push the authoritative state so the renderer converges even if
+    // the /loginweb/humble route unmounted before the login promise's
+    // callback ran (GlobalState's handleHumbleAuthState listener absorbs
+    // this regardless of route lifecycle). Cookie-free by type (T-10-09).
+    sendFrontendMessage('humbleAuthState', {
+      isLoggedIn: true,
+      username,
+      expired: false
+    })
+
     settle({ status: 'done', username })
     return 'done'
   }

@@ -228,6 +228,20 @@ describe('HumbleUser', () => {
         username: 'tester'
       })
     })
+
+    test('WR-06: a successful login pushes the authoritative humbleAuthState so the renderer converges even if the login route already unmounted', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await loginPromise
+
+      expect(mockSendFrontendMessage).toHaveBeenCalledWith('humbleAuthState', {
+        isLoggedIn: true,
+        username: 'tester',
+        expired: false
+      })
+    })
   })
 
   // ── D-16: gamekeys 'ok' but identity fails/throws — best-effort (D-02) ──
