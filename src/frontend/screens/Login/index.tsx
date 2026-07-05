@@ -58,8 +58,13 @@ export default React.memo(function NewLogin() {
   // not-logged-in branch, so when the session has expired we present the
   // tile as "not logged in" (D-09: tile flips to Session expired — Reconnect)
   // even though a username is still cached in state.
+  //
+  // D-02/D-16: connected state is driven by `isLoggedIn` (set once the
+  // gamekeys endpoint validates a session), NOT `username` — identity is a
+  // best-effort fetch and is frequently absent (e.g. a 404), but the tile
+  // must still show connected via the generic "Connected" fallback below.
   const [isHumbleLoggedIn, setIsHumbleLoggedIn] = useState(
-    Boolean(humble?.username) && !humble?.expired
+    Boolean(humble?.isLoggedIn) && !humble?.expired
   )
 
   const systemInfo = useAwaited(window.api.systemInfo.get)
@@ -93,14 +98,14 @@ export default React.memo(function NewLogin() {
     setIsAmazonLoggedIn(Boolean(amazon.user_id))
     setIsZoomLoggedIn(Boolean(zoom.username))
     setIsSteamLoggedIn(Boolean(steam?.username))
-    setIsHumbleLoggedIn(Boolean(humble?.username) && !humble?.expired)
+    setIsHumbleLoggedIn(Boolean(humble?.isLoggedIn) && !humble?.expired)
   }, [
     epic.username,
     gog.username,
     amazon.user_id,
     zoom.username,
     steam?.username,
-    humble?.username,
+    humble?.isLoggedIn,
     humble?.expired,
     t
   ])
@@ -214,7 +219,10 @@ export default React.memo(function NewLogin() {
               icon={() => <HumbleLogo />}
               loginUrl={humbleLoginPath}
               isLoggedIn={isHumbleLoggedIn}
-              user={humble?.username ?? undefined}
+              user={
+                humble?.username ??
+                t('login.humble_connected', 'Connected')
+              }
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
               disabled={oldMac}
             />

@@ -104,6 +104,7 @@ export interface ContextType {
     logout: () => Promise<void>
   }
   humble: {
+    isLoggedIn?: boolean
     username?: string | null
     expired?: boolean
     encryptionDegraded?: boolean

@@ -82,6 +82,7 @@ interface StateProps {
     username?: string | null
   }
   humble: {
+    isLoggedIn?: boolean
     username?: string | null
     expired?: boolean
     encryptionDegraded?: boolean
@@ -229,6 +230,12 @@ class GlobalState extends PureComponent<Props> {
       username: steamConfigStore.get_nodefault('userData')?.username
     },
     humble: {
+      // D-02/D-16: the backend's `isLoggedIn` flag is the connected-state
+      // signal (set once the gamekeys endpoint validates a session) — NOT
+      // `username`, which only reflects the best-effort identity fetch and
+      // is frequently absent (e.g. an identity 404). A connected-but-
+      // anonymous account must still show the tile as connected.
+      isLoggedIn: humbleConfigStore.get_nodefault('isLoggedIn'),
       username: humbleConfigStore.get_nodefault('userData')?.username,
       expired: false,
       encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded')
@@ -729,6 +736,11 @@ class GlobalState extends PureComponent<Props> {
       this.setState({
         humble: {
           ...this.state.humble,
+          // D-02/D-16: 'done' means the gamekeys endpoint already validated
+          // the session — that is the connected flag. `username` stays
+          // display-only and may legitimately be undefined (identity is
+          // best-effort).
+          isLoggedIn: true,
           username: result.username,
           expired: false
         }
@@ -753,7 +765,7 @@ class GlobalState extends PureComponent<Props> {
           onClick: () => {
             window.api.humbleDisconnect()
             this.setState({
-              humble: { username: null, expired: false }
+              humble: { isLoggedIn: false, username: null, expired: false }
             })
           }
         },
@@ -1030,6 +1042,7 @@ class GlobalState extends PureComponent<Props> {
       this.setState((prevState: StateProps) => ({
         humble: {
           ...prevState.humble,
+          isLoggedIn: humbleState.isLoggedIn,
           username: humbleState.username ?? prevState.humble.username,
           expired: !!humbleState.expired
         }
@@ -1039,8 +1052,10 @@ class GlobalState extends PureComponent<Props> {
     // D-08: this is the ONLY expiry-detection trigger in Phase 10 (no
     // library sync exists yet to piggyback a 401 check on). Fire-and-forget —
     // the backend pushes humbleAuthState when it resolves, so we don't block
-    // mount waiting on it.
-    if (this.state.humble.username) {
+    // mount waiting on it. Gated on `isLoggedIn` (the connected flag), NOT
+    // `username` — a connected-but-anonymous account (identity fetch failed)
+    // must still get the startup health check.
+    if (this.state.humble.isLoggedIn) {
       void window.api.humbleCheckHealth()
     }
 
@@ -1295,6 +1310,7 @@ class GlobalState extends PureComponent<Props> {
             logout: this.steamLogout
           },
           humble: {
+            isLoggedIn: humble.isLoggedIn,
             username: humble.username,
             expired: humble.expired,
             encryptionDegraded: humble.encryptionDegraded,

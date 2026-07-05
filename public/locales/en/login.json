@@ -19,6 +19,7 @@
     },
     "welcome": "Welcome!",
     "humble": "Humble Bundle Login",
+    "humble_connected": "Connected",
     "humble_reconnect": "Session expired — Reconnect",
     "humble_disconnect_title": "Disconnect Humble Bundle?",
     "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
