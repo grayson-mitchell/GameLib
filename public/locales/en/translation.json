@@ -540,6 +540,17 @@
         "wine-wayland": "The Wine-Wayland experimental driver allows games to run natively under the Wayland display protocol. Enabling might break some games.",
         "WoW64": "The Wine WoW64 mode allows 32-bit Windows games to be run on 64-bit Wine. Enabling may improve performance, but could also break older 32-bit games."
     },
+    "humbleKeys": {
+        "cooldown": "Temporarily unavailable — retry in {{minutes}}m",
+        "emptyBody": "Your synced key inventory will appear here once your account has orders.",
+        "emptyTitle": "No Humble keys yet",
+        "lastSynced": "Last synced {{time}} ago",
+        "refresh": "Refresh Humble Keys",
+        "syncError": "Couldn't refresh — showing data from {{time}}",
+        "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
+        "syncing": "Syncing… {{done}}/{{total}} orders",
+        "title": "Humble Keys"
+    },
     "info": {
         "heroic": {
             "beta": "Beta",
@@ -1083,7 +1094,8 @@
     },
     "Settings": "Settings",
     "sidebar": {
-        "console": "Console Mode"
+        "console": "Console Mode",
+        "humbleKeys": "Humble Keys"
     },
     "status": {
         "installed": "Installed",

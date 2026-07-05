@@ -10,7 +10,8 @@ import {
   faWineGlass,
   faBarsProgress,
   faTv,
-  faTags
+  faTags,
+  faKey
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocation } from 'react-router-dom'
 import { useContext } from 'react'
@@ -39,6 +40,7 @@ export default function SidebarLinks() {
     epic,
     gog,
     zoom,
+    humble,
     platform,
     refreshLibrary,
     handleExternalLinkDialog
@@ -171,6 +173,14 @@ export default function SidebarLinks() {
           </div>
         )}
       </div>
+      {humble?.isLoggedIn && (
+        <SidebarItem
+          url="/humble-keys"
+          icon={faKey}
+          label={t('sidebar.humbleKeys', 'Humble Keys')}
+          dataTour="sidebar-humble-keys"
+        />
+      )}
       <SidebarItem
         url="/discounts"
         icon={faTags}
