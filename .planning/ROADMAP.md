@@ -281,12 +281,13 @@ Plans:
   3. When the session expires, a non-disruptive reconnect prompt appears without hiding or breaking the cached library view
   4. User can disconnect their Humble account and remove all session data from the app
   5. On Linux without a system keyring, the app warns about reduced encryption rather than storing the session cookie silently in plaintext
-**Plans**: 5 plans (5 waves — strict dependency chain: contracts → adapter → auth → IPC → frontend → validation gate)
+**Plans**: 6 plans (replan after 10-05 parked: login surface moved from popup BrowserWindow to the embedded WebView; validation gate criteria revised)
 - [x] 10-01-PLAN.md — Backend foundation: humble types/contracts, constants, config store, C5 adapter + adapter tests
-- [x] 10-02-PLAN.md — HumbleUser auth service: BrowserWindow login, cookie encryption, health check, reconnect, disconnect + tests
+- [x] 10-02-PLAN.md — HumbleUser auth service: cookie encryption, health check, reconnect, disconnect + tests
 - [x] 10-03-PLAN.md — IPC channels + ipc_handler + preload bridge + main.ts registration
-- [x] 10-04-PLAN.md — Frontend: humble context slice, Manage Accounts tile (connected/expired/disconnected), /humble-connect route, i18n
-- [ ] 10-05-PLAN.md — D-12 live validation gate: dev-only trigger, D-14 fallback, real-account UAT, 10-VALIDATION.md
+- [x] 10-04-PLAN.md — Frontend: humble context slice, Manage Accounts tile (connected/expired/disconnected), i18n
+- [ ] 10-05-PLAN.md — Re-point login to the embedded /loginweb/humble WebView (persist:humble, gamekeys acceptance D-16, best-effort identity, retire popup/HumbleConnect)
+- [ ] 10-06-PLAN.md — Live validation gate: identity-advisory D-13, ses.fetch D-14 fallback, real-account UAT, 10-VALIDATION.md
 **UI hint**: yes
 
 ### Phase 11: Library Sync + 5-State Key Model
