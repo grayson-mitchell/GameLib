@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
 status: paused
-stopped_at: Plan 10-06 Task 2 checkpoint UAT step 1 FAILED (schema_error on gamekeys) — fixed in c782983b; re-verification pending
-last_updated: "2026-07-05T05:53:14.087Z"
-last_activity: 2026-07-05 -- Fixed gamekeys schema (order-summary object array, not bare strings) causing repeating schema_error / login never accepted (c782983b)
+stopped_at: Plan 10-06 Task 2 checkpoint UAT re-run — login now accepted, but the tile never flipped to connected (frontend connected-check was gated on `username`, which is undefined because the identity endpoint 404s) — fixed in e2236bc1; re-verification pending
+last_updated: "2026-07-05T06:15:00.000Z"
+last_activity: 2026-07-05 -- Wired `isLoggedIn` through the frontend as the Humble connected flag (GlobalState initial state/humbleLogin/handleHumbleAuthState/humbleDisconnect/startup health-check gate, Login screen's isHumbleLoggedIn + Connected fallback) so the tile flips to connected independent of the best-effort identity fetch (e2236bc1)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 10 (humble-auth-adapter-scaffold) — EXECUTING
 Plan: 6 of 6 (10-06)
-Status: PAUSED at checkpoint — Plan 10-06 Task 2 live UAT step 1 FAILED (login never accepted: adapter GamekeysSchema expected a bare string[] but the real /api/v1/user/order endpoint returns an array of order-summary objects, e.g. `[{gamekey: "..."}]`, so every valid response failed schema validation and D-16 acceptance could never fire). Fixed in c782983b (schema corrected to the real shape + self-diagnosing redacted schema_error logging + adapter tests updated). Task 2 checkpoint re-issued; awaiting the user to re-run the six UAT steps and the live validation gate on a real Humble account — still cannot be automated.
-Last activity: 2026-07-05 -- Fixed gamekeys schema defect blocking Humble login acceptance (c782983b)
+Status: PAUSED at checkpoint — Plan 10-06 Task 2 live UAT re-run: login is now accepted (WebView flow works, cookie validates, app auto-returns to Manage Accounts), but the Humble tile still showed "Humble Bundle Login" instead of connected. Root cause: the identity advisory endpoint (`/api/v1/user/info`) hard-404s, so `username` is always undefined, and the frontend's connected-state check (GlobalState/Login screen) was gated on `username` instead of the backend's `isLoggedIn` flag — the D-02 generic-"Connected" fallback was never wired. Fixed in e2236bc1 (isLoggedIn threaded through GlobalState initial state, humbleLogin, handleHumbleAuthState, humbleDisconnect, the startup health-check gate, and Login screen's isHumbleLoggedIn/tile user prop with a "Connected" i18n fallback). Task 2 checkpoint re-issued; awaiting the user to re-run the UAT — expected result now: tile shows "Connected" (no username) once the stored session is present, and the rest of the HACCT UX (silent cancel, persistence across relaunch, expiry/reconnect, disconnect) still needs confirmation.
+Last activity: 2026-07-05 -- Wired isLoggedIn as the Humble connected flag so the D-02 fallback works (e2236bc1)
 
 ## v1.1 Phase Map
 
