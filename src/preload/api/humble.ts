@@ -21,3 +21,6 @@ export const humbleGetKeys = makeHandlerInvoker('humbleGetKeys')
 export const humbleGetSyncState = makeHandlerInvoker('humbleGetSyncState')
 export const handleHumbleKeysUpdated = frontendListenerSlot('humbleKeysUpdated')
 export const handleHumbleSyncProgress = frontendListenerSlot('humbleSyncProgress')
+export const handleHumbleSyncStateChanged = frontendListenerSlot(
+  'humbleSyncStateChanged'
+)

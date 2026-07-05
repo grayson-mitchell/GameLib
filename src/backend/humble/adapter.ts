@@ -19,10 +19,15 @@ import { HUMBLE_BASE_URL, HUMBLE_REQUIRED_HEADERS } from './constants'
 // carrying at minimum a `gamekey` string (HUMBLE-SPEC-SOURCE.md Appendix A:
 // "Order list: returns the user's gamekeys" — confirmed empirically live in
 // Plan 06 to be `[{ gamekey: string, ... }]`, NOT bare strings).
-// .passthrough() on the entry — only `gamekey` is consumed here; the rest of
-// the summary object (human_name, created, product, ...) is Phase 11 scope.
+// Per-entry tolerance (Pitfall 5, live-UAT round 2): ONE malformed summary
+// entry must never fail the whole list — the array shape is validated
+// wholesale, then entries are extracted individually and malformed ones are
+// skipped (with a redacted count-only warning). A non-array body, or an
+// array where EVERY entry is malformed, is still a schema_error — that is
+// wholesale shape drift and must stay loudly self-diagnosing rather than
+// silently becoming "0 orders".
 const GamekeyEntrySchema = z.object({ gamekey: z.string() }).passthrough()
-const GamekeysSchema = z.array(GamekeyEntrySchema)
+const GamekeysArraySchema = z.array(z.unknown())
 
 // Phase 11 (Task 2): tightened to the fields classify.ts consumes.
 // `redeemed_key_value` uses `.nullish()` per Open Question 2 — Humble's real
@@ -122,8 +127,22 @@ async function humbleRequest(
     timeout: REQUEST_TIMEOUT_MS
   })
   const contentTypeHeader = res.headers?.['content-type']
+  let data: unknown = res.data
+  // Live-payload tolerance (UAT round 2): if the body arrives as a raw
+  // string but IS valid JSON (mislabeled content-type, an interceptor
+  // disabling axios's silent JSON parsing, or a double-encoded body),
+  // coerce it once. A genuinely non-JSON body (HTML interstitial /
+  // challenge page) stays a string and surfaces as a self-diagnosing
+  // schema_error with bodyIsString=true.
+  if (typeof data === 'string' && data.length > 0) {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      // keep the raw string — describeSchemaFailure flags it
+    }
+  }
   return {
-    data: res.data,
+    data,
     contentType: typeof contentTypeHeader === 'string' ? contentTypeHeader : null
   }
 }
@@ -199,12 +218,56 @@ export async function getGamekeys(
 ): Promise<AdapterResult<string[]>> {
   try {
     const response = await humbleRequest('/api/v1/user/order', cookie)
-    const parsed = GamekeysSchema.safeParse(response.data)
+    const parsed = GamekeysArraySchema.safeParse(response.data)
     if (!parsed.success) {
       describeSchemaFailure('/api/v1/user/order', response, parsed.error)
       return { status: 'schema_error', raw: response.data }
     }
-    return { status: 'ok', data: parsed.data.map((entry) => entry.gamekey) }
+
+    // Per-entry extraction: skip malformed entries instead of failing the
+    // whole list (Pitfall 5). Wholesale drift (a non-empty array with ZERO
+    // valid entries) is still a schema_error — see comment on the schema.
+    const gamekeys: string[] = []
+    const entryIssues: string[] = []
+    for (const [index, rawEntry] of parsed.data.entries()) {
+      const entry = GamekeyEntrySchema.safeParse(rawEntry)
+      if (entry.success) {
+        gamekeys.push(entry.data.gamekey)
+      } else if (entryIssues.length < MAX_LOGGED_SCHEMA_ISSUES) {
+        // Structural paths + messages only — never entry values (T-10-01).
+        const first = entry.error.issues[0]
+        entryIssues.push(
+          `[${index}].${first?.path.join('.') || '<root>'}: ${first?.message}`
+        )
+      }
+    }
+
+    if (parsed.data.length > 0 && gamekeys.length === 0) {
+      describeSchemaFailure(
+        '/api/v1/user/order',
+        response,
+        new z.ZodError([
+          {
+            code: z.ZodIssueCode.custom,
+            path: [],
+            message: `no entry carried a string gamekey (${parsed.data.length} entries)`
+          }
+        ])
+      )
+      return { status: 'schema_error', raw: response.data }
+    }
+
+    if (entryIssues.length > 0) {
+      logWarning(
+        [
+          `Humble adapter: /api/v1/user/order skipped ${parsed.data.length - gamekeys.length} malformed order-summary entries (kept ${gamekeys.length})`,
+          `issues=${JSON.stringify(entryIssues)}`
+        ],
+        LogPrefix.Backend
+      )
+    }
+
+    return { status: 'ok', data: gamekeys }
   } catch (err) {
     return mapAxiosError<string[]>(err)
   }

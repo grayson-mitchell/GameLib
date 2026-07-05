@@ -522,4 +522,191 @@ describe('HumbleLibrary', () => {
       expect(state.syncError).toBe('partial')
     })
   })
+
+  // ── Live-UAT round 2 (debug: humble-keys-empty-list-flashing-sync) ──────
+
+  describe('sync() — terminal humbleSyncStateChanged push (D-31/D-32, round 2)', () => {
+    function syncStateEvents() {
+      return mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncStateChanged'
+      )
+    }
+
+    test('clean completion: pushes the fresh HumbleSyncState AFTER the final progress event', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1')
+      })
+
+      await HumbleLibrary.sync()
+
+      const events = syncStateEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({
+          syncedAt: expect.any(Number),
+          syncError: 'none'
+        })
+      )
+
+      // Ordering: the terminal state push is the LAST humble event — the
+      // renderer relies on it as the single authoritative end-of-sync signal.
+      const calls = mockSendFrontendMessage.mock.calls
+      expect(calls[calls.length - 1][0]).toBe('humbleSyncStateChanged')
+    })
+
+    test('partial completion (one order schema_error): pushed state carries syncError=partial AND a fresh syncedAt', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['bad-gk'] })
+      mockGetOrderDetail.mockResolvedValue({ status: 'schema_error', raw: {} })
+
+      await HumbleLibrary.sync()
+
+      const events = syncStateEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({
+          syncedAt: expect.any(Number),
+          syncError: 'partial'
+        })
+      )
+    })
+
+    test('gamekeys access_denied: pushed state carries syncError=denied + cooldownUntil', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
+
+      await HumbleLibrary.sync()
+
+      const events = syncStateEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({
+          syncError: 'denied',
+          cooldownUntil: expect.any(Number)
+        })
+      )
+    })
+
+    test('gamekeys thrown (network): pushed state carries syncError=network', async () => {
+      mockGetGamekeys.mockRejectedValue(new Error('ECONNRESET'))
+
+      await HumbleLibrary.sync()
+
+      const events = syncStateEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({ syncError: 'network' })
+      )
+    })
+
+    test('session_expired at gamekeys: state push STILL emitted (renderer must always converge), syncError untouched', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+      await HumbleLibrary.sync()
+
+      const events = syncStateEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({ syncError: 'none' })
+      )
+    })
+
+    test('no stored credentials: state push still emitted', async () => {
+      mockGetCredentials.mockReturnValue(undefined as unknown as string)
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+
+      expect(syncStateEvents()).toHaveLength(1)
+    })
+  })
+
+  describe('sync() — backend D-33 cooldown guard (round 2)', () => {
+    test('an active denial cooldown skips the sync entirely: no network call, failed outcome, state still pushed', async () => {
+      syncData.set('state', {
+        syncedAt: 12345,
+        syncError: 'denied',
+        cooldownUntil: Date.now() + 60_000
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+
+      expect(mockGetGamekeys).not.toHaveBeenCalled()
+      expect(mockGetOrderDetail).not.toHaveBeenCalled()
+      const events = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncStateChanged'
+      )
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toEqual(
+        expect.objectContaining({ syncedAt: 12345, syncError: 'denied' })
+      )
+    })
+
+    test('an ELAPSED cooldown does not gate the sync', async () => {
+      syncData.set('state', {
+        syncedAt: 12345,
+        syncError: 'denied',
+        cooldownUntil: Date.now() - 1
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('sync() — single-flight guard (round 2)', () => {
+    test('a second sync() while one is in flight joins it: getGamekeys called once, both resolve to the same outcome', async () => {
+      let resolveGamekeys!: (v: unknown) => void
+      mockGetGamekeys.mockImplementation(
+        () =>
+          new Promise((r) => {
+            resolveGamekeys = r
+          })
+      )
+
+      const first = HumbleLibrary.sync()
+      const second = HumbleLibrary.sync()
+
+      resolveGamekeys({ status: 'ok', data: [] })
+
+      await expect(first).resolves.toEqual({ status: 'ok' })
+      await expect(second).resolves.toEqual({ status: 'ok' })
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
+
+      // The guard clears after settle: a THIRD sync runs fresh.
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+      await HumbleLibrary.sync()
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('sync() — redacted outcome summary log (round 2)', () => {
+    test('a completed sync logs per-outcome counts (counts only — never key values)', async () => {
+      mockGetGamekeys.mockResolvedValue({
+        status: 'ok',
+        data: ['ok-gk', 'bad-gk']
+      })
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) => {
+          if (gamekey === 'bad-gk') {
+            return Promise.resolve({ status: 'schema_error', raw: {} })
+          }
+          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
+        }
+      )
+
+      await HumbleLibrary.sync()
+
+      const summary = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('Humble sync finished')
+      )
+      expect(summary).toBeDefined()
+      const logged = JSON.stringify(summary)
+      expect(logged).toContain('ok=1')
+      expect(logged).toContain('schema_error=1')
+      expect(logged).toContain('keysCached=1')
+      expect(logged).not.toContain('cookie-value')
+    })
+  })
 })

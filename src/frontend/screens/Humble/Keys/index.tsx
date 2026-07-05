@@ -96,6 +96,9 @@ export default function HumbleKeys() {
     return () => removeListener()
   }, [])
 
+  // Refetch on sync end AND on a syncError change: a denied sync now pushes
+  // its fresh syncError via humbleSyncStateChanged (live-UAT round 2), and
+  // the cooldown gate below needs the matching cooldownUntil from the store.
   useEffect(() => {
     if (!humble?.syncing) {
       void window.api
@@ -103,7 +106,7 @@ export default function HumbleKeys() {
         .then((state) => setCooldownUntil(state.cooldownUntil))
       setProgress(null)
     }
-  }, [humble?.syncing])
+  }, [humble?.syncing, humble?.syncError])
 
   // D-20: route guard — a disconnected user never sees this page rendered
   // disconnected; deep links / back-button bounce to the login route.

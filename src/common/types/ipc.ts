@@ -483,6 +483,12 @@ interface FrontendMessages {
   // Phase 11 (library.ts, Plan 02): progressive-fill sync progress (D-26).
   // No cookie, no raw key/gamekey values — counts only.
   humbleSyncProgress: (progress: { done: number; total: number }) => void
+  // Live-UAT round 2 (D-31/D-32): terminal sync-state push, emitted on EVERY
+  // HumbleLibrary.sync() exit path. The single authoritative end-of-sync
+  // signal — carries syncedAt/syncError/cooldownUntil so the freshness line
+  // and the fail-soft banner update in-session. Display-safe by type: no
+  // cookie, no key values.
+  humbleSyncStateChanged: (state: HumbleSyncState) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here
   message: (...params: unknown[]) => void

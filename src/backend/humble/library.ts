@@ -1,4 +1,4 @@
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 
@@ -132,7 +132,17 @@ async function fetchAndCommitOrder(
   }
 
   // access_denied (incl. 429, D-25) or session_expired — bubble the signal
-  // up so the pool stops dispatching new work.
+  // up so the pool stops dispatching new work. Logged (gamekey + status
+  // only, never a cookie/key value) — live-UAT round 2 showed a denied
+  // abort was otherwise COMPLETELY silent in the log file.
+  logWarning(
+    [
+      'Humble sync: order-detail fetch denied, aborting remaining fetches:',
+      gamekey,
+      result.status
+    ],
+    LogPrefix.Backend
+  )
   return { gamekey, outcome: result.status }
 }
 
@@ -196,9 +206,59 @@ function loadCached(): void {
   sendFrontendMessage('humbleKeysUpdated', getKeys())
 }
 
+/**
+ * Terminal sync-state push (D-31/D-32, live-UAT round 2): the renderer's
+ * syncedAt/syncError were previously populated ONLY by a mount-time fetch, so
+ * a completed sync's fresh timestamp — and a partial/denied sync's banner —
+ * never reached the UI in-session. Every sync() exit path now pushes the
+ * authoritative HumbleSyncState; GlobalState treats this event as the single
+ * end-of-sync signal (it also clears `syncing`, covering aborted syncs whose
+ * last humbleSyncProgress had done < total).
+ */
+function emitSyncState(): void {
+  sendFrontendMessage('humbleSyncStateChanged', getSyncState())
+}
+
+// Single-flight guard: startup (health-check chain), login, and the manual
+// refresh button can all trigger sync() — concurrent syncs would double the
+// request pressure on Humble (C5) and interleave progress counters in the
+// renderer. A second call while one is running joins the in-flight promise.
+let syncInFlight: Promise<SyncOutcome> | null = null
+
 async function sync(): Promise<SyncOutcome> {
+  if (syncInFlight) {
+    return syncInFlight
+  }
+  // The terminal state push happens on EVERY exit path — success, fail-soft
+  // AND an unexpected rejection (so the renderer's `syncing` can never get
+  // stuck true again; cf. debug session humble-sync-spinner-never-ends).
+  syncInFlight = runSync().finally(() => {
+    syncInFlight = null
+    emitSyncState()
+  })
+  return syncInFlight
+}
+
+async function runSync(): Promise<SyncOutcome> {
   const cookie = HumbleUser.getCredentials()
   if (!cookie) {
+    return { status: 'failed' }
+  }
+
+  // D-33: a 403/429 denial gates EVERY sync — including manual refresh —
+  // until the cooldown elapses. Enforced here in the backend, not just via
+  // the renderer's (possibly stale) disabled-button state: live-UAT round 2
+  // showed the renderer's stale syncError left the refresh button enabled
+  // during a backend cooldown, hammering Humble on every click.
+  const currentState = getSyncState()
+  if (currentState.cooldownUntil && currentState.cooldownUntil > Date.now()) {
+    logWarning(
+      [
+        'Humble sync: skipped — denial cooldown active until',
+        new Date(currentState.cooldownUntil).toISOString()
+      ],
+      LogPrefix.Backend
+    )
     return { status: 'failed' }
   }
 
@@ -265,6 +325,31 @@ async function sync(): Promise<SyncOutcome> {
       sendFrontendMessage('humbleKeysUpdated', getKeys())
       return outcome
     }
+  )
+
+  // Redacted per-sync outcome summary (live-UAT round 2 diagnosability):
+  // counts only — never cookie/key values. THE line to look for in
+  // gamelib.log when keys don't appear: any non-zero schema_error /
+  // access_denied / transient count names the per-order failure mode.
+  const outcomeCounts: Record<OrderFetchOutcome, number> = {
+    ok: 0,
+    schema_error: 0,
+    access_denied: 0,
+    session_expired: 0,
+    transient: 0
+  }
+  for (const r of results) {
+    outcomeCounts[r.outcome] += 1
+  }
+  logInfo(
+    [
+      `Humble sync finished: gamekeys=${gamekeysResult.data.length}`,
+      `fetched=${results.length}/${total} frozen=${gamekeysResult.data.length - total}`,
+      `ok=${outcomeCounts.ok} schema_error=${outcomeCounts.schema_error}`,
+      `denied=${outcomeCounts.access_denied} expired=${outcomeCounts.session_expired}`,
+      `transient=${outcomeCounts.transient} keysCached=${getKeys().length}`
+    ],
+    LogPrefix.Backend
   )
 
   const sawSessionExpired = results.some(
