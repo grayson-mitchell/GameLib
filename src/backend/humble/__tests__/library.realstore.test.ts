@@ -132,6 +132,75 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     })
   })
 
+  // ── Live-UAT round 2 (debug: humble-keys-empty-list-flashing-sync) ──────
+  // Event-payload shape contract: the renderer derives the freshness line +
+  // fail-soft banner from humbleSyncStateChanged and `syncing` from
+  // humbleSyncProgress; humbleKeysUpdated carries keys ONLY. These assertions
+  // run against the REAL file-backed stores.
+
+  test('round 2: a clean sync ends with a humbleSyncStateChanged push carrying a fresh syncedAt and syncError=none, AFTER the last keys push', async () => {
+    mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1', 'gk2'] })
+    mockGetOrderDetail.mockImplementation((_cookie: string, gk: string) =>
+      Promise.resolve({ status: 'ok', data: makeRawOrder(gk) })
+    )
+    const before = Date.now()
+
+    await HumbleLibrary.sync()
+
+    const calls = mockSendFrontendMessage.mock.calls
+    // Terminal event is the LAST event of the sync.
+    expect(calls[calls.length - 1][0]).toBe('humbleSyncStateChanged')
+    const state = calls[calls.length - 1][1] as {
+      syncedAt: number | null
+      syncError: string
+    }
+    expect(state.syncError).toBe('none')
+    expect(state.syncedAt).toBeGreaterThanOrEqual(before)
+
+    // humbleKeysUpdated payloads are pure HumbleKey[] — never carry
+    // sync-state fields (the renderer must not derive syncing/syncedAt from
+    // them).
+    const keysPushes = calls.filter((c) => c[0] === 'humbleKeysUpdated')
+    expect(keysPushes.length).toBeGreaterThan(0)
+    for (const [, payload] of keysPushes) {
+      expect(Array.isArray(payload)).toBe(true)
+      for (const key of payload as Array<Record<string, unknown>>) {
+        expect(key).toEqual(
+          expect.objectContaining({
+            gamekey: expect.any(String),
+            machineName: expect.any(String),
+            state: expect.any(String),
+            platform: expect.any(String)
+          })
+        )
+        expect(key).not.toHaveProperty('redeemed_key_value')
+        expect(key).not.toHaveProperty('syncedAt')
+      }
+    }
+  })
+
+  test('round 2: a sync where EVERY order fails schema parse commits nothing but pushes syncError=partial (empty list is never a silent success)', async () => {
+    mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['drifted-gk'] })
+    mockGetOrderDetail.mockResolvedValue({
+      status: 'schema_error',
+      raw: '<html>challenge</html>'
+    })
+
+    await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'partial' })
+
+    expect(HumbleLibrary.getKeys()).toEqual([])
+    const stateEvents = mockSendFrontendMessage.mock.calls.filter(
+      (c) => c[0] === 'humbleSyncStateChanged'
+    )
+    expect(stateEvents).toHaveLength(1)
+    expect(stateEvents[0][1]).toEqual(
+      expect.objectContaining({
+        syncError: 'partial',
+        syncedAt: expect.any(Number)
+      })
+    )
+  })
+
   test('loadCached() pushes only real cached keys from the file-backed store', async () => {
     mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
     mockGetOrderDetail.mockResolvedValue({

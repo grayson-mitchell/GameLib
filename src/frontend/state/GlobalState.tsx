@@ -1081,11 +1081,14 @@ class GlobalState extends PureComponent<Props> {
 
     // Phase 11 (Plan 03): pushed by HumbleLibrary.sync()/loadCached() with
     // the display-safe key inventory — never the generic storeGet bridge
-    // (WR-09). `syncing` flips false here too since a keys push always
-    // accompanies the terminal state of a sync/cache-load.
+    // (WR-09). Keys ONLY: this event fires after EVERY committed order
+    // (D-26 progressive fill), so it must NOT touch `syncing` — doing so
+    // made the Keys header thrash between "Syncing…" and the freshness line
+    // once per order (live-UAT round 2). End-of-sync is signalled solely by
+    // humbleSyncStateChanged below.
     window.api.handleHumbleKeysUpdated((e, keys) => {
       this.setState((prevState: StateProps) => ({
-        humble: { ...prevState.humble, keys, syncing: false }
+        humble: { ...prevState.humble, keys }
       }))
     })
 
@@ -1094,6 +1097,22 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleHumbleSyncProgress((e, { done, total }) => {
       this.setState((prevState: StateProps) => ({
         humble: { ...prevState.humble, syncing: done < total }
+      }))
+    })
+
+    // Live-UAT round 2 (D-31/D-32): terminal sync-state push, emitted on
+    // EVERY sync() exit path. The single authoritative end-of-sync signal:
+    // updates the freshness timestamp + fail-soft banner in-session (they
+    // were previously stale from the one mount-time fetch) and force-clears
+    // `syncing` (covers aborted syncs whose last progress had done < total).
+    window.api.handleHumbleSyncStateChanged((e, syncState) => {
+      this.setState((prevState: StateProps) => ({
+        humble: {
+          ...prevState.humble,
+          syncedAt: syncState.syncedAt,
+          syncError: syncState.syncError,
+          syncing: false
+        }
       }))
     })
 

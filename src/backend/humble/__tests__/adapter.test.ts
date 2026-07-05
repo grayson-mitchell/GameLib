@@ -301,3 +301,138 @@ describe('getAccountIdentity', () => {
     }
   })
 })
+
+// ── Live-UAT round 2 regressions (debug: humble-keys-empty-list-flashing-sync)
+
+describe('getGamekeys — per-entry tolerance (round 2)', () => {
+  test('one malformed summary entry is SKIPPED, valid gamekeys still returned, redacted count warning logged', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { gamekey: 'abc123', human_name: 'Good Bundle' },
+        { gamekey: 12345, human_name: 'Numeric Gamekey Drift' },
+        null,
+        { gamekey: 'def456' }
+      ],
+      headers: { 'content-type': 'application/json' }
+    })
+    const result = await getGamekeys(COOKIE)
+    expect(result).toEqual({ status: 'ok', data: ['abc123', 'def456'] })
+
+    const warnCall = mockLogWarning.mock.calls.find((call) =>
+      JSON.stringify(call).includes('skipped 2 malformed order-summary')
+    )
+    expect(warnCall).toBeDefined()
+    // Redaction: structural issue paths only — never entry values.
+    const logged = JSON.stringify(warnCall)
+    expect(logged).not.toContain('12345')
+    expect(logged).not.toContain('Numeric Gamekey Drift')
+    expect(logged).not.toContain(COOKIE)
+  })
+
+  test('non-empty array where EVERY entry is malformed is still schema_error (wholesale drift must not become a silent empty library)', async () => {
+    mockGet.mockResolvedValue({
+      data: [{ no_gamekey: true }, { gamekey: 42 }],
+      headers: { 'content-type': 'application/json' }
+    })
+    const result = await getGamekeys(COOKIE)
+    expect(result.status).toBe('schema_error')
+    const warnCall = mockLogWarning.mock.calls.find((call) =>
+      JSON.stringify(call).includes('schema validation')
+    )
+    expect(warnCall).toBeDefined()
+    expect(JSON.stringify(warnCall)).toContain('no entry carried a string gamekey')
+  })
+})
+
+describe('humbleRequest — string-body JSON coercion (round 2)', () => {
+  test('valid JSON delivered as a raw string (mislabeled content-type) is coerced and parses ok', async () => {
+    mockGet.mockResolvedValue({
+      data: JSON.stringify([{ gamekey: 'abc123' }]),
+      headers: { 'content-type': 'text/plain' }
+    })
+    const result = await getGamekeys(COOKIE)
+    expect(result).toEqual({ status: 'ok', data: ['abc123'] })
+  })
+
+  test('a genuine HTML body still fails with bodyIsString=true diagnostics', async () => {
+    mockGet.mockResolvedValue({
+      data: '<html><body>challenge</body></html>',
+      headers: { 'content-type': 'text/html' }
+    })
+    const result = await getOrderDetail(COOKIE, 'gk')
+    expect(result.status).toBe('schema_error')
+    const logged = JSON.stringify(mockLogWarning.mock.calls)
+    expect(logged).toContain('bodyIsString=true')
+    expect(logged).not.toContain('challenge')
+  })
+})
+
+describe('getOrderDetail — realistic plain store-purchase payload (round 2, spec Appendix A + 10-VALIDATION.md)', () => {
+  // Field set grounded in HUMBLE-SPEC-SOURCE.md Appendix A and the Phase 10
+  // live gate (tpkd_dict.all_tpks[n].steam_app_id present;
+  // redeemed_key_value ABSENT — not null — for an unredeemed key).
+  const realisticOrder = {
+    amount_spent: 4.99,
+    product: {
+      category: 'storefront',
+      machine_name: 'greatgame_storefront',
+      human_name: 'Great Game'
+    },
+    gamekey: 'AbCdEfGh12345678',
+    uid: 'ABCDEF123456',
+    created: '2026-06-20T18:12:33.123456',
+    missed_credit: null,
+    subproducts: [{ machine_name: 'greatgame', human_name: 'Great Game' }],
+    currency: 'USD',
+    is_giftee: false,
+    claimed: true,
+    total: 4.99,
+    tpkd_dict: {
+      all_tpks: [
+        {
+          machine_name: 'greatgame_steam',
+          gamekey: 'AbCdEfGh12345678',
+          exclusive_countries: [],
+          key_type: 'steam',
+          disallowed_countries: [],
+          human_name: 'Great Game',
+          steam_app_id: 123456,
+          is_gift: false,
+          num_days_until_expired: 0,
+          sold_out: false,
+          is_expired: false,
+          keyindex: 1
+          // no redeemed_key_value at all (unredeemed), no expiration
+        }
+      ]
+    },
+    path_ids: ['12345abc']
+  }
+
+  test('parses ok and the parsed data retains tpkd_dict.all_tpks for classification', async () => {
+    mockGet.mockResolvedValue({
+      data: realisticOrder,
+      headers: { 'content-type': 'application/json' }
+    })
+    const result = await getOrderDetail(COOKIE, 'AbCdEfGh12345678')
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    expect(result.data.tpkd_dict?.all_tpks).toHaveLength(1)
+
+    // End-to-end into the real classifier: a plain purchased Steam key must
+    // classify to exactly one UNREVEALED steam entry — never an empty order.
+    const { classifyOrder } = jest.requireActual<
+      typeof import('../classify')
+    >('../classify')
+    const entry = classifyOrder(result.data, () => false)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0]).toMatchObject({
+      gamekey: 'AbCdEfGh12345678',
+      machineName: 'greatgame_steam',
+      state: 'UNREVEALED',
+      platform: 'steam',
+      title: 'Great Game'
+    })
+    expect(entry.allTerminal).toBe(false)
+  })
+})
