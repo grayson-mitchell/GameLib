@@ -364,7 +364,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 7. Game Details Enrichment | 0/? | Not started | - |
 | 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
-| 10. Humble Auth + Adapter Scaffold | 6/6 | Complete   | 2026-07-05 |
+| 10. Humble Auth + Adapter Scaffold | 6/6 | Complete    | 2026-07-05 |
 | 11. Library Sync + 5-State Key Model | 0/? | Not started | - |
 | 12. Ownership Dedup | 0/? | Not started | - |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
