@@ -24,18 +24,46 @@ import { HUMBLE_BASE_URL, HUMBLE_REQUIRED_HEADERS } from './constants'
 const GamekeyEntrySchema = z.object({ gamekey: z.string() }).passthrough()
 const GamekeysSchema = z.array(GamekeyEntrySchema)
 
-// Permissive on purpose — Plan 05's live validation gate needs to assert
-// tpkd_dict.all_tpks[n].steam_app_id presence against the real API before
-// this schema is tightened. .passthrough() keeps unknown fields intact.
+// Phase 11 (Task 2): tightened to the fields classify.ts consumes.
+// `redeemed_key_value` uses `.nullish()` per Open Question 2 — Humble's real
+// field-shape for a not-yet-revealed key (absent vs. null vs. empty string)
+// is unconfirmed, so any falsy value is treated uniformly as "absent" by the
+// classifier rather than trusting strict absence alone. `.passthrough()` at
+// every level keeps a shape drift from failing the whole order (Pitfall 5).
+const OrderDetailTpkSchema = z
+  .object({
+    redeemed_key_value: z.string().nullish(),
+    expiration: z.string().nullish(),
+    key_type: z.string().nullish(),
+    human_name: z.string().nullish(),
+    machine_name: z.string().nullish()
+  })
+  .passthrough()
+
 const OrderDetailSchema = z
   .object({
     gamekey: z.string().optional(),
     tpkd_dict: z
       .object({
-        all_tpks: z.array(z.unknown()).optional()
+        // T-11-05: unioned with z.unknown() so a single malformed element
+        // (wrong type, null, non-object) never fails validation of the
+        // WHOLE order — classify.ts's per-tpk try/skip loop is the layer
+        // that actually discards a malformed entry, not schema rejection.
+        all_tpks: z.array(z.union([OrderDetailTpkSchema, z.unknown()])).optional()
       })
       .passthrough()
-      .optional()
+      .optional(),
+    // D-27: unpicked Humble Choice month detection fields (UNPICKED
+    // pseudo-entry branch in classify.ts) — Assumption A1, unconfirmed by
+    // live validation; defensive/optional throughout.
+    product: z
+      .object({
+        category: z.string().nullish(),
+        choice_url: z.string().nullish(),
+        human_name: z.string().nullish()
+      })
+      .passthrough()
+      .nullish()
   })
   .passthrough()
 
@@ -47,6 +75,7 @@ const AccountIdentitySchema = z
   .passthrough()
 
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
+export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
 
 function buildHeaders(cookie: string) {
   return {
@@ -108,6 +137,10 @@ function mapAxiosError<T>(err: unknown): AdapterResult<T> {
   if (axios.isAxiosError(err)) {
     if (err.response?.status === 401) return { status: 'session_expired' }
     if (err.response?.status === 403) return { status: 'access_denied' }
+    // D-25: Humble rate-limit (429) is a backoff-inducing denial — routed
+    // through the same access_denied abort+cooldown path as 403; never
+    // hammered (C5).
+    if (err.response?.status === 429) return { status: 'access_denied' }
   }
   logError(
     [

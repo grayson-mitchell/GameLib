@@ -1,7 +1,4 @@
-// Humble domain contracts (Phase 10 scaffold).
-//
-// Scope note: HumbleKey/HumbleOrder library types are Phase 11 scope and are
-// intentionally NOT defined here.
+// Humble domain contracts (Phase 10 scaffold, extended in Phase 11).
 
 /**
  * Discriminated-union result shape returned by every Humble adapter call
@@ -71,4 +68,66 @@ export interface HumbleValidationReport {
   endpoints: HumbleValidationEndpointResult[]
   gamekeyCount: number
   steamAppIdPresent: boolean
+}
+
+/**
+ * The 5-state classification model (D-30, Phase 11). Precedence, in order:
+ * expiration in the past beats everything → UNREDEEMABLE; a present raw
+ * redeemed-key value (source field kept out of this file — see classify.ts)
+ * beats the local flag → REDEEMED; the locally-persisted REVEALED flag beats
+ * the default → REVEALED; otherwise → UNREVEALED.
+ * UNPICKED is structurally distinct — it represents an un-picked Humble
+ * Choice month pseudo-entry (D-27), not a classified tpk.
+ */
+export type HumbleKeyState =
+  | 'UNPICKED'
+  | 'UNREVEALED'
+  | 'REVEALED'
+  | 'REDEEMED'
+  | 'UNREDEEMABLE'
+
+/**
+ * Display-safe, per-row shape rendered on the Phase 11 Humble Keys page
+ * (D-19/D-21/D-22). Deliberately has NO raw key-value field — only the
+ * derived state is ever exposed (C4 / T-11-01); the raw redeemed-key value
+ * from the Humble API must never reach this type or the renderer.
+ */
+export interface HumbleKey {
+  gamekey: string
+  /** Stable per-tpk identity (machine_name) — used as the REVEALED-flag key
+   * and for de-duplication. */
+  machineName: string
+  state: HumbleKeyState
+  title: string
+  /** Platform label derived from key_type (D-28) — Steam, GOG, Epic, etc. */
+  platform: string
+  expiration: string | null
+  /** Bundle/order label shown as a secondary line per row (D-21). */
+  origin: string
+}
+
+/**
+ * `humbleLibraryStore` value shape, keyed by gamekey. `allTerminal` is true
+ * iff every key in this order is REDEEMED or UNREDEEMABLE (never true for an
+ * UNPICKED pseudo-entry) — read by the D-24 skip-terminal sync partitioning
+ * (Plan 02) to freeze fully-terminal orders instead of re-fetching them.
+ */
+export interface HumbleOrderCacheEntry {
+  gamekey: string
+  keys: HumbleKey[]
+  allTerminal: boolean
+}
+
+/**
+ * `humbleSyncStore` value shape (D-31/D-32). `syncError` distinguishes a
+ * clean sync ('none') from the two fail-soft causes: a network/timeout/5xx
+ * throw caught in Plan 02's library.ts ('network'), and an access_denied/429
+ * abort ('denied') — the latter also sets `cooldownUntil` (D-33) so even a
+ * manual refresh is gated until the cooldown elapses. 'partial' covers a
+ * mid-sync abort that still committed some orders (D-34).
+ */
+export interface HumbleSyncState {
+  syncedAt: number | null
+  syncError: 'none' | 'denied' | 'network' | 'partial'
+  cooldownUntil?: number
 }

@@ -53,6 +53,8 @@ import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { SteamUserData } from './steam'
 import type {
   HumbleAuthState,
+  HumbleKey,
+  HumbleSyncState,
   HumbleUserData,
   HumbleValidationReport
 } from './humble'
@@ -264,6 +266,14 @@ interface AsyncIPCFunctions {
   // exercises the real adapter with the real stored cookie and returns a
   // redacted HumbleValidationReport (D-15, no cookie/gamekey values).
   humbleRunValidation: () => Promise<HumbleValidationReport>
+  // Phase 11 (library.ts, Plan 02): triggers a bounded-concurrency sync
+  // (D-23/D-25). Returns the overall outcome — never throws; failures are
+  // fail-soft (D-31), surfaced via humbleGetSyncState instead.
+  humbleSync: () => Promise<{ status: 'ok' | 'partial' | 'failed' }>
+  // Returns the current display-safe key inventory from humbleLibraryStore
+  // (never the generic storeGet bridge — WR-09 finding, T-11 store isolation).
+  humbleGetKeys: () => Promise<HumbleKey[]>
+  humbleGetSyncState: () => Promise<HumbleSyncState>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
@@ -466,6 +476,13 @@ interface FrontendMessages {
   // startup/401 expiry detection. MUST NOT include the session cookie
   // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.
   humbleAuthState: (state: HumbleAuthState) => void
+  // Phase 11 (library.ts, Plan 02): pushed after each sync commits fresh
+  // data. Carries the display-safe HumbleKey[] only — no cookie, no raw
+  // key value (C4 / T-11-01).
+  humbleKeysUpdated: (keys: HumbleKey[]) => void
+  // Phase 11 (library.ts, Plan 02): progressive-fill sync progress (D-26).
+  // No cookie, no raw key/gamekey values — counts only.
+  humbleSyncProgress: (progress: { done: number; total: number }) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here
   message: (...params: unknown[]) => void

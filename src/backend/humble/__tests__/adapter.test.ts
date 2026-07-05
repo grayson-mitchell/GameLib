@@ -146,6 +146,14 @@ describe('getGamekeys', () => {
     expect(result).toEqual({ status: 'access_denied' })
   })
 
+  // D-25: Humble rate-limit (429) is a backoff-inducing denial — routed
+  // through the same access_denied abort+cooldown path as 403.
+  test('axios 429 -> access_denied', async () => {
+    mockGet.mockRejectedValue(makeAxiosError(429))
+    const result = await getGamekeys(COOKIE)
+    expect(result).toEqual({ status: 'access_denied' })
+  })
+
   test('non-axios / unmapped-status error rethrows', async () => {
     mockGet.mockRejectedValue(makeAxiosError(500))
     await expect(getGamekeys(COOKIE)).rejects.toThrow()
@@ -224,6 +232,13 @@ describe('getOrderDetail', () => {
 
   test('axios 403 -> access_denied', async () => {
     mockGet.mockRejectedValue(makeAxiosError(403))
+    const result = await getOrderDetail(COOKIE, GAMEKEY)
+    expect(result).toEqual({ status: 'access_denied' })
+  })
+
+  // D-25: same abort+cooldown path as 403.
+  test('axios 429 -> access_denied', async () => {
+    mockGet.mockRejectedValue(makeAxiosError(429))
     const result = await getOrderDetail(COOKIE, GAMEKEY)
     expect(result).toEqual({ status: 'access_denied' })
   })
