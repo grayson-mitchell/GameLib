@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
-status: paused
-stopped_at: Plan 10-06 Task 2 checkpoint UAT re-run — login now accepted, but the tile never flipped to connected (frontend connected-check was gated on `username`, which is undefined because the identity endpoint 404s) — fixed in e2236bc1; re-verification pending
-last_updated: "2026-07-05T06:15:00.000Z"
-last_activity: 2026-07-05 -- Wired `isLoggedIn` through the frontend as the Humble connected flag (GlobalState initial state/humbleLogin/handleHumbleAuthState/humbleDisconnect/startup health-check gate, Login screen's isHumbleLoggedIn + Connected fallback) so the tile flips to connected independent of the best-effort identity fetch (e2236bc1)
+status: verifying
+stopped_at: Phase 10 complete — Plan 10-06 approved (live validation gate PASS on axios); all six HACCT UAT steps confirmed
+last_updated: "2026-07-05T06:30:07.342Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 4
   completed_phases: 0
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 10 (humble-auth-adapter-scaffold) — EXECUTING
 Plan: 6 of 6 (10-06)
-Status: PAUSED at checkpoint — Plan 10-06 Task 2 live UAT re-run: login is now accepted (WebView flow works, cookie validates, app auto-returns to Manage Accounts), but the Humble tile still showed "Humble Bundle Login" instead of connected. Root cause: the identity advisory endpoint (`/api/v1/user/info`) hard-404s, so `username` is always undefined, and the frontend's connected-state check (GlobalState/Login screen) was gated on `username` instead of the backend's `isLoggedIn` flag — the D-02 generic-"Connected" fallback was never wired. Fixed in e2236bc1 (isLoggedIn threaded through GlobalState initial state, humbleLogin, handleHumbleAuthState, humbleDisconnect, the startup health-check gate, and Login screen's isHumbleLoggedIn/tile user prop with a "Connected" i18n fallback). Task 2 checkpoint re-issued; awaiting the user to re-run the UAT — expected result now: tile shows "Connected" (no username) once the stored session is present, and the rest of the HACCT UX (silent cancel, persistence across relaunch, expiry/reconnect, disconnect) still needs confirmation.
-Last activity: 2026-07-05 -- Wired isLoggedIn as the Humble connected flag so the D-02 fallback works (e2236bc1)
+Status: Phase complete — ready for verification
+Last activity: 2026-07-05
 
 ## v1.1 Phase Map
 
@@ -92,6 +92,7 @@ Last activity: 2026-07-05 -- Wired isLoggedIn as the Humble connected flag so th
 *Updated after each plan completion*
 | Phase 08-new-steam-surfaces P01 | 5min | 2 tasks | 3 files |
 | Phase 08-new-steam-surfaces P02 | 5min | 3 tasks | 4 files |
+| Phase 10 P06 | ~55min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,9 @@ Recent decisions affecting current work:
 - [v1.2 claim flow]: Primary activation URL is store.steampowered.com/account/registerkey?key= NOT steam://open/activateproduct (does not pre-fill key; unreliable on Linux Flatpak/Snap)
 - [v1.2 dedup threshold]: Fuzzy-name fallback at 85%+ threshold (not community-norm 70%) — DLC titles false-positive match base games at lower thresholds and false positives waste gift links
 - [v1.2 Humble not a Runner]: 'humble' is NOT added to the Runner union type — keys domain is not a game platform; no LibraryManager methods required
+- [Phase 10]: D-13 revised confirmed correct in practice: Humble identity endpoint (/api/v1/user/info) hard-404s on the real account tested; had identity remained a hard gate criterion, Phase 10 would never have passed
+- [Phase 10]: D-14 ses.fetch() fallback on persist:humble prepared but not activated — axios reached the live Humble API successfully on first clean run after schema fix; fallback seam stays dormant
+- [Phase 10]: Frontend connected-state must be gated on an explicit isLoggedIn boolean, never on optional profile fields like username — root cause of the Task 2 UAT tile-never-flips bug (e2236bc1)
 
 ### Pending Todos
 
@@ -165,6 +169,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-05T05:53:14.084Z
-Stopped at: Plan 10-06 Task 1 complete; paused at Task 2 checkpoint (live validation gate + full HACCT UX UAT) awaiting real Humble account testing
-Next: Resume `/gsd:execute-phase 10` continuation for plan 10-06 Task 2 once the user has run the live validation gate on a real Humble account and 10-VALIDATION.md's appended live-gate section records a PASS verdict
+Last session: 2026-07-05T06:30:07.338Z
+Stopped at: Phase 10 complete — Plan 10-06 approved (live validation gate PASS on axios); all six HACCT UAT steps confirmed
+Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning

@@ -55,9 +55,9 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 
 ### Humble Account
 
-- [ ] **HACCT-01**: User can connect a Humble Bundle account via an in-app browser login (email/password + "Humble Guard" emailed one-time code) from Manage Accounts
-- [ ] **HACCT-02**: The Humble session persists encrypted (login once); when it expires (~2–3 day TTL) a non-disruptive reconnect prompt appears without breaking library browsing
-- [ ] **HACCT-03**: User can disconnect and remove their Humble account
+- [x] **HACCT-01**: User can connect a Humble Bundle account via an in-app browser login (email/password + "Humble Guard" emailed one-time code) from Manage Accounts
+- [x] **HACCT-02**: The Humble session persists encrypted (login once); when it expires (~2–3 day TTL) a non-disruptive reconnect prompt appears without breaking library browsing
+- [x] **HACCT-03**: User can disconnect and remove their Humble account
 
 ### Humble Library Sync
 
@@ -140,9 +140,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | LIB-08 | Phase 08.1 | Complete |
 | LIB-09 | Phase 08.1 | Complete |
 | QA-01 | Phase 9 | Pending |
-| HACCT-01 | Phase 10 | Pending |
-| HACCT-02 | Phase 10 | Pending |
-| HACCT-03 | Phase 10 | Pending |
+| HACCT-01 | Phase 10 | Complete |
+| HACCT-02 | Phase 10 | Complete |
+| HACCT-03 | Phase 10 | Complete |
 | HSYNC-01 | Phase 11 | Pending |
 | HSYNC-02 | Phase 11 | Pending |
 | HSYNC-03 | Phase 11 | Pending |
