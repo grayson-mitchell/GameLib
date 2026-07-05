@@ -8,6 +8,11 @@ export const humbleStartLogin = makeHandlerInvoker('humbleStartLogin')
 export const humbleGetUserInfo = makeHandlerInvoker('humbleGetUserInfo')
 export const humbleReconnect = makeHandlerInvoker('humbleReconnect')
 export const humbleCheckHealth = makeHandlerInvoker('humbleCheckHealth')
+export const humbleGetLoginUserAgent = makeHandlerInvoker(
+  'humbleGetLoginUserAgent'
+)
 export const humbleRunValidation = makeHandlerInvoker('humbleRunValidation')
 export const humbleDisconnect = makeListenerCaller('humbleDisconnect')
+export const humbleStopLogin = makeListenerCaller('humbleStopLogin')
+export const humbleLoginNavigated = makeListenerCaller('humbleLoginNavigated')
 export const handleHumbleAuthState = frontendListenerSlot('humbleAuthState')

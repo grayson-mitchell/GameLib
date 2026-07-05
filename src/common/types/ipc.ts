@@ -132,6 +132,13 @@ interface SyncIPCFunctions {
   logoutZoom: () => void
   logoutSteam: () => void
   humbleDisconnect: () => void
+  // D-06 silent cancel: fired when the /loginweb/humble route unmounts
+  // before a candidate cookie is accepted.
+  humbleStopLogin: () => void
+  // D-17: relayed from the /loginweb/humble webview's did-navigate /
+  // did-navigate-in-page events to force an immediate re-validation,
+  // bypassing the poll-path throttle.
+  humbleLoginNavigated: () => void
   setGameMetadataOverride: (args: {
     appName: string
     title?: string
@@ -247,6 +254,11 @@ interface AsyncIPCFunctions {
     username?: string
   }>
   humbleCheckHealth: () => Promise<void>
+  // D-05/D-07/UA note: standard-Chrome UA applied to the /loginweb/humble
+  // webview's `useragent` attribute so Google SSO offers its normal
+  // password / "Try another way" flows instead of embedded-browser
+  // restrictions.
+  humbleGetLoginUserAgent: () => Promise<string>
   // Plan 05 (Phase 10): dev-only D-12 validation trigger. Wired only behind a
   // dev-flag guard in backend/main.ts (never in packaged builds, T-10-16) —
   // exercises the real adapter with the real stored cookie and returns a
