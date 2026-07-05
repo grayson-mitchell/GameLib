@@ -9,13 +9,19 @@ import GameLibIcon from 'frontend/assets/gamelib-icon.png'
 import AmazonLogo from 'frontend/assets/amazon-logo.svg?react'
 import ZoomLogo from 'frontend/assets/zoom-logo.svg?react'
 import SteamLogo from 'frontend/assets/steam-logo.svg?react'
+import HumbleLogo from 'frontend/assets/humble-logo.svg?react'
 
-import { LanguageSelector, UpdateComponent } from '../../components/UI'
+import {
+  LanguageSelector,
+  UpdateComponent,
+  WarningMessage
+} from '../../components/UI'
 import { FlagPosition } from '../../components/UI/LanguageSelector'
 import SIDLogin from './components/SIDLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
+import { humbleLoginPath } from './components/HumbleConnect'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
@@ -24,7 +30,7 @@ export const zoomLoginPath = '/loginweb/zoom'
 export const steamLoginPath = '/loginweb/steam'
 
 export default React.memo(function NewLogin() {
-  const { epic, gog, amazon, zoom, steam, refreshLibrary } =
+  const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
     useContext(ContextProvider)
   const { t } = useTranslation()
 
@@ -44,6 +50,13 @@ export default React.memo(function NewLogin() {
   )
   const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
   const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(Boolean(steam?.username))
+  // Runner only shows `buttonText` (the reconnect prompt) in its
+  // not-logged-in branch, so when the session has expired we present the
+  // tile as "not logged in" (D-09: tile flips to Session expired — Reconnect)
+  // even though a username is still cached in state.
+  const [isHumbleLoggedIn, setIsHumbleLoggedIn] = useState(
+    Boolean(humble?.username) && !humble?.expired
+  )
 
   const systemInfo = useAwaited(window.api.systemInfo.get)
 
@@ -76,7 +89,17 @@ export default React.memo(function NewLogin() {
     setIsAmazonLoggedIn(Boolean(amazon.user_id))
     setIsZoomLoggedIn(Boolean(zoom.username))
     setIsSteamLoggedIn(Boolean(steam?.username))
-  }, [epic.username, gog.username, amazon.user_id, zoom.username, steam?.username, t])
+    setIsHumbleLoggedIn(Boolean(humble?.username) && !humble?.expired)
+  }, [
+    epic.username,
+    gog.username,
+    amazon.user_id,
+    zoom.username,
+    steam?.username,
+    humble?.username,
+    humble?.expired,
+    t
+  ])
 
   async function handleLibraryClick() {
     await refreshLibrary({ runInBackground: false })
@@ -177,7 +200,29 @@ export default React.memo(function NewLogin() {
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
               disabled={oldMac}
             />
+            <Runner
+              class="humble"
+              buttonText={
+                humble?.expired
+                  ? t('login.humble_reconnect', 'Session expired — Reconnect')
+                  : t('login.humble', 'Humble Bundle Login')
+              }
+              icon={() => <HumbleLogo />}
+              loginUrl={humbleLoginPath}
+              isLoggedIn={isHumbleLoggedIn}
+              user={humble?.username ?? undefined}
+              logoutAction={humble?.logout ?? (() => Promise.resolve())}
+              disabled={oldMac}
+            />
           </div>
+          {humble?.encryptionDegraded && (
+            <WarningMessage className="humbleEncryptionWarning">
+              {t(
+                'login.humble_encryption_degraded',
+                'Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption.'
+              )}
+            </WarningMessage>
+          )}
         </div>
         <button
           onClick={async () => handleLibraryClick()}

@@ -157,6 +157,10 @@ const steamConfigStore = new TypeCheckedStoreFrontend('steamConfigStore', {
   cwd: 'steam_store'
 })
 
+const humbleConfigStore = new TypeCheckedStoreFrontend('humbleConfigStore', {
+  cwd: 'humble_store'
+})
+
 const nileLibraryStore = new CacheStore<GameInfo[], 'library'>(
   'nile_library',
   null
@@ -201,5 +205,6 @@ export {
   zoomInstalledGamesStore,
   zoomConfigStore,
   steamConfigStore,
+  humbleConfigStore,
   gameOverridesStore
 }

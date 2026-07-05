@@ -17,5 +17,11 @@
         "part7": "authorization code number",
         "part8": "in the input box below and click on the login button."
     },
-    "welcome": "Welcome!"
+    "welcome": "Welcome!",
+    "humble": "Humble Bundle Login",
+    "humble_reconnect": "Session expired — Reconnect",
+    "humble_disconnect_title": "Disconnect Humble Bundle?",
+    "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
+    "humble_expired_toast": "Your Humble Bundle session expired. Reconnect to keep your keys in sync.",
+    "humble_encryption_degraded": "Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption."
 }
