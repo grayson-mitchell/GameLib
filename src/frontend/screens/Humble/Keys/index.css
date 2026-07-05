@@ -1,0 +1,200 @@
+.humbleKeysScreen {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: var(--space-md-fixed);
+  color: var(--text-default);
+}
+
+.humbleKeysHeader {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--space-md);
+}
+
+.humbleKeysHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.humbleKeysTitle {
+  margin: 0;
+}
+
+.humbleKeysRefreshButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--action-icon);
+  padding: var(--space-3xs);
+  border-radius: var(--space-3xs);
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.humbleKeysRefreshButton:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.humbleKeysRefreshButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.humbleKeysRefreshButton.spinning {
+  animation: refreshing 1.5s infinite;
+}
+
+.humbleKeysSyncIndicator {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  padding-block-start: var(--space-3xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.humbleKeysSyncSpinner {
+  color: var(--text-secondary);
+  animation: refreshing 1.5s infinite;
+}
+
+/* D-31: fail-soft banner reuses WarningMessage but overrides its default
+   red to orange (a background failure isn't as severe as a session expiry).
+   Compound selector guarantees the override regardless of CSS load order. */
+.WarningMessage.humbleSyncBanner {
+  background: var(--status-warning);
+  color: var(--neutral-01);
+  margin-bottom: var(--space-md);
+}
+
+.humbleKeysGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.humbleKeysEmptyState {
+  padding: var(--space-xl) 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.humbleKeysEmptyState h5 {
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  margin: 0 0 var(--space-xs);
+}
+
+.humbleKeysEmptyState p {
+  font-size: var(--text-sm);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.humbleKeyGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.humbleKeyGroupHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  margin: 0;
+}
+
+.humbleKeyGroupCount {
+  font-size: var(--text-sm);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  background: var(--input-background, var(--background));
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+}
+
+.humbleKeyGroupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.humbleKeyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+}
+
+.humbleKeyRow:last-child {
+  border-bottom: none;
+}
+
+.humbleKeyRowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.humbleKeyRowTitle {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  color: var(--text-default);
+}
+
+.humbleKeyRowCaption {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+}
+
+.humbleKeyRowExpiration {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Reuses .gameCardUpdateBadge's exact chrome (padding/border-radius/font)
+   per the UI-SPEC Component Inventory. */
+.humbleKeyStateBadge {
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  color: var(--neutral-01);
+  white-space: nowrap;
+}
+
+.humbleKeyStateBadge--UNPICKED {
+  background: var(--status-default);
+}
+
+.humbleKeyStateBadge--UNREVEALED {
+  background: var(--status-info);
+}
+
+.humbleKeyStateBadge--REVEALED {
+  background: var(--status-warning);
+}
+
+.humbleKeyStateBadge--REDEEMED {
+  background: var(--status-success);
+}
+
+.humbleKeyStateBadge--UNREDEEMABLE {
+  background: var(--status-danger);
+}

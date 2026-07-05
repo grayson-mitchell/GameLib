@@ -175,6 +175,10 @@ const router = createHashRouter([
         lazy: makeLazyFunc(import('./screens/WineManager'))
       },
       {
+        path: 'humble-keys',
+        lazy: makeLazyFunc(import('./screens/Humble/Keys'))
+      },
+      {
         path: 'download-manager',
         lazy: makeLazyFunc(import('./screens/DownloadManager'))
       },
