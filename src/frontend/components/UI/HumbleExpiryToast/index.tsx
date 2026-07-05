@@ -8,7 +8,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
-import { humbleLoginPath } from 'frontend/screens/Login/components/HumbleConnect'
+import { humbleLoginPath } from 'frontend/screens/Login'
 import './index.scss'
 
 // D-09: the ONLY correct surface for the reconnect prompt is a non-blocking,

@@ -21,13 +21,17 @@ import SIDLogin from './components/SIDLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
-import { humbleLoginPath } from './components/HumbleConnect'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
 export const amazonLoginPath = '/loginweb/nile'
 export const zoomLoginPath = '/loginweb/zoom'
 export const steamLoginPath = '/loginweb/steam'
+// D-05: Humble now logs in through the embedded Stores WebView, matching the
+// other runners above, instead of the retired popup BrowserWindow. This is
+// the single source of truth for the Humble login route — the D-09 reconnect
+// toast (HumbleExpiryToast) imports it from here too.
+export const humbleLoginPath = '/loginweb/humble'
 
 export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =

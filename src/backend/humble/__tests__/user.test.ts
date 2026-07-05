@@ -4,8 +4,15 @@
  * HACCT-03 (disconnect), and the Pitfall 4/5 secrecy + degraded-encryption
  * requirements (T-10-04/T-10-05).
  *
+ * Login is now a main-process WATCH over the shared `persist:humble`
+ * partition (D-05/D-17) rather than a BrowserWindow — tests drive the watch
+ * via `HumbleUser.notifyLoginNavigated()` (the D-17 forced-revalidation
+ * relay, analogous to the retired did-navigate handler) and
+ * `HumbleUser.stopLogin()` (the D-06 silent-cancel relay, analogous to the
+ * retired window 'closed' handler).
+ *
  * Mock boundaries:
- *  - electron       → safeStorage, BrowserWindow, session.fromPartition
+ *  - electron       → safeStorage, session.fromPartition
  *  - backend/logger  → logInfo/logError/logWarning
  *  - backend/ipc     → sendFrontendMessage
  *  - ../electronStores → configStore
@@ -17,32 +24,13 @@ const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
 const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
-let windowHandlers: Record<string, (...args: any[]) => any> = {}
-let webContentsHandlers: Record<string, (...args: any[]) => any> = {}
-
-const mockWindowClose = jest.fn()
-const mockWindowLoadURL = jest.fn()
-const mockWindowInstance = {
-  loadURL: mockWindowLoadURL,
-  close: mockWindowClose,
-  webContents: {
-    userAgent: '',
-    on: jest.fn((event: string, cb: (...args: any[]) => any) => {
-      webContentsHandlers[event] = cb
-    })
-  },
-  on: jest.fn((event: string, cb: (...args: any[]) => any) => {
-    windowHandlers[event] = cb
-  })
-}
-const MockBrowserWindow = jest.fn(() => mockWindowInstance)
-
 // Typical Electron default UA shape: platform + Chrome version + the
 // Electron-/app-identifying tokens standardBrowserUserAgent() must strip.
 const mockUserAgentFallback =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
 const mockCookiesGet = jest.fn()
+const mockSetUserAgent = jest.fn()
 const mockClearStorageData = jest.fn()
 const mockClearCache = jest.fn()
 const mockClearAuthCache = jest.fn()
@@ -50,6 +38,7 @@ const mockClearHostResolverCache = jest.fn()
 const mockClearData = jest.fn()
 const mockSessionInstance = {
   cookies: { get: mockCookiesGet },
+  setUserAgent: mockSetUserAgent,
   clearStorageData: mockClearStorageData,
   clearCache: mockClearCache,
   clearAuthCache: mockClearAuthCache,
@@ -65,7 +54,6 @@ jest.mock('electron', () => ({
     encryptString: mockEncryptString,
     decryptString: mockDecryptString
   },
-  BrowserWindow: MockBrowserWindow,
   session: { fromPartition: mockFromPartition }
 }))
 
@@ -108,13 +96,12 @@ jest.mock('../adapter', () => ({
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { HumbleUser, standardBrowserUserAgent } from '../user'
 
+const flushAsync = async () => new Promise((r) => setImmediate(r))
+
 // ─────────────────────────────────────────────────────────────────────────────
 describe('HumbleUser', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-
-    windowHandlers = {}
-    webContentsHandlers = {}
 
     // ── Re-establish mock implementations (resetMocks: true clears them) ────
 
@@ -126,26 +113,14 @@ describe('HumbleUser', () => {
     mockConfigStore.set.mockImplementation(() => {})
     mockConfigStore.clear.mockImplementation(() => {})
 
-    MockBrowserWindow.mockImplementation(() => mockWindowInstance)
-    mockWindowInstance.on.mockImplementation(
-      (event: string, cb: (...args: any[]) => any) => {
-        windowHandlers[event] = cb
-      }
-    )
-    mockWindowInstance.webContents.on.mockImplementation(
-      (event: string, cb: (...args: any[]) => any) => {
-        webContentsHandlers[event] = cb
-      }
-    )
-
     mockFromPartition.mockImplementation(() => mockSessionInstance)
     mockCookiesGet.mockResolvedValue([])
 
+    mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
     mockGetAccountIdentity.mockResolvedValue({
       status: 'ok',
       data: { username: 'tester' }
     })
-    mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
   })
 
   // ── isLoggedIn / getUserDetails ───────────────────────────────────────────
@@ -170,44 +145,50 @@ describe('HumbleUser', () => {
     })
   })
 
-  // ── HACCT-01: startLogin() — D-06 silent cancel ──────────────────────────
+  // ── HACCT-01: startLogin() — D-06 silent cancel via stopLogin() ──────────
 
   describe('startLogin() — D-06 silent cancel', () => {
-    test('resolves { status: "waiting" } and stays disconnected when the window closes before any cookie appears', async () => {
+    test('stopLogin() resolves { status: "waiting" } and stays disconnected when no cookie was ever accepted', async () => {
       mockCookiesGet.mockResolvedValue([])
 
       const loginPromise = HumbleUser.startLogin()
-      windowHandlers['closed']()
+      HumbleUser.stopLogin()
       const result = await loginPromise
 
-      expect(result.status).toBe('waiting')
-      expect(mockConfigStore.set).not.toHaveBeenCalledWith('isLoggedIn', true)
+      expect(result).toEqual({ status: 'waiting' })
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
     })
 
     test('does not throw and does not log an error for a plain cancel', async () => {
       const loginPromise = HumbleUser.startLogin()
-      windowHandlers['closed']()
+      HumbleUser.stopLogin()
 
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
       expect(mockLogError).not.toHaveBeenCalled()
     })
+
+    test('stopLogin() is a no-op when no watch is active', () => {
+      expect(() => HumbleUser.stopLogin()).not.toThrow()
+    })
   })
 
-  // ── HACCT-01: startLogin() — cookie capture + encryption ─────────────────
+  // ── HACCT-01: startLogin() — cookie capture + encryption (D-16 gamekeys) ─
 
   describe('startLogin() — cookie capture + encryption', () => {
-    test('captures a cookie, validates it via getAccountIdentity, encrypts it, and stores it under HUMBLE_TOKEN_STORE_KEY with the HUMBLE_TOKEN_PREFIX (not raw plaintext) when encryption is available', async () => {
+    test('accepts on gamekeys "ok", encrypts the cookie, and stores it under HUMBLE_TOKEN_STORE_KEY with the HUMBLE_TOKEN_PREFIX (not raw plaintext) when encryption is available', async () => {
       mockIsEncryptionAvailable.mockReturnValue(true)
       mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
       expect(result.username).toBe('tester')
 
-      // Login completion must be gated on identity validation
+      // Login completion must be gated on the gamekeys endpoint (D-16), not
+      // identity.
+      expect(mockGetGamekeys).toHaveBeenCalledWith('raw-cookie-value')
       expect(mockGetAccountIdentity).toHaveBeenCalledWith('raw-cookie-value')
 
       const sessionCookieCall = mockConfigStore.set.mock.calls.find(
@@ -217,14 +198,50 @@ describe('HumbleUser', () => {
       expect(sessionCookieCall![1]).toMatch(/^humble:v1:/)
       expect(sessionCookieCall![1]).not.toBe('raw-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+      expect(mockConfigStore.set).toHaveBeenCalledWith('expired', false)
       expect(mockConfigStore.set).toHaveBeenCalledWith('userData', {
         username: 'tester'
       })
-      expect(mockWindowClose).toHaveBeenCalled()
     })
   })
 
-  // ── HACCT-01: login window user agent (SSO compatibility) ────────────────
+  // ── D-16: gamekeys 'ok' but identity fails/throws — best-effort (D-02) ──
+
+  describe('startLogin() — best-effort identity after gamekeys acceptance (D-02/D-16)', () => {
+    test('gamekeys "ok" but getAccountIdentity resolves non-ok: login still resolves done with no username and NO userData written', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockGetAccountIdentity.mockResolvedValue({ status: 'schema_error' })
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      const result = await loginPromise
+
+      expect(result).toEqual({ status: 'done', username: undefined })
+      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+        'userData',
+        expect.anything()
+      )
+    })
+
+    test('gamekeys "ok" but getAccountIdentity throws: login still resolves done with no username and NO userData written', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockGetAccountIdentity.mockRejectedValue(new Error('network down'))
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      const result = await loginPromise
+
+      expect(result).toEqual({ status: 'done', username: undefined })
+      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+        'userData',
+        expect.anything()
+      )
+    })
+  })
+
+  // ── HACCT-01: standard-Chrome UA reinforcement on the partition session ──
   // Google SSO restricts embedded browsers detected via Electron/app UA
   // tokens (forcing uncompletable passkey prompts or disallowed_useragent).
 
@@ -238,18 +255,13 @@ describe('HumbleUser', () => {
       expect(ua).not.toContain('GameLib')
     })
 
-    test('login window webContents receives the standard UA before loadURL', async () => {
+    test('the persist:humble partition session receives the standard UA when the watch starts', async () => {
       const loginPromise = HumbleUser.startLogin()
 
-      expect(mockWindowInstance.webContents.userAgent).toBe(
-        standardBrowserUserAgent()
-      )
-      expect(mockWindowInstance.webContents.userAgent).not.toContain(
-        'Electron'
-      )
-      expect(mockWindowLoadURL).toHaveBeenCalled()
+      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
+      expect(mockSetUserAgent).toHaveBeenCalledWith(standardBrowserUserAgent())
 
-      windowHandlers['closed']()
+      HumbleUser.stopLogin()
       await loginPromise
     })
   })
@@ -260,87 +272,77 @@ describe('HumbleUser', () => {
   // never be treated as a successful login (UAT failure 2026-07-05: the login
   // window closed after ~1s having stored an anonymous cookie).
 
-  describe('startLogin() — anonymous-cookie validation (HACCT-01)', () => {
-    const flushAsync = async () => new Promise((r) => setImmediate(r))
-
-    test('anonymous cookie on first navigation does NOT complete login: nothing stored, window stays open', async () => {
+  describe('startLogin() — anonymous-cookie validation (HACCT-01/D-16)', () => {
+    test('anonymous cookie on first forced revalidation does NOT complete login: nothing stored, watch stays active', async () => {
       mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
-      mockGetAccountIdentity.mockResolvedValue({ status: 'session_expired' })
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await flushAsync()
 
-      // Identity validation ran, but NOTHING was stored and the window was
-      // NOT closed — the user still needs to complete the real login.
-      expect(mockGetAccountIdentity).toHaveBeenCalledWith('anon-cookie-value')
+      // Gamekeys validation ran, but NOTHING was stored — the user still
+      // needs to complete the real login.
+      expect(mockGetGamekeys).toHaveBeenCalledWith('anon-cookie-value')
       expect(mockConfigStore.set).not.toHaveBeenCalled()
-      expect(mockWindowClose).not.toHaveBeenCalled()
 
       // User gives up → still the D-06 silent-cancel path.
-      windowHandlers['closed']()
+      HumbleUser.stopLogin()
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
 
-    test('REGRESSION: the SAME cookie value rejected once is re-validated on a later did-navigate and login completes (anonymous → authenticated with an UNCHANGED value)', async () => {
+    test('REGRESSION: the SAME cookie value rejected once is re-validated on a later forced revalidation and login completes (anonymous → authenticated with an UNCHANGED value)', async () => {
       // Humble may keep the identical _simpleauth_sess value across the
       // anonymous → authenticated transition. A permanent value-blacklist
       // made the login window never close (UAT failure 2026-07-05 #3).
       mockCookiesGet.mockResolvedValue([{ value: 'same-cookie-value' }])
-      mockGetAccountIdentity.mockResolvedValueOnce({
-        status: 'session_expired'
-      })
+      mockGetGamekeys.mockResolvedValueOnce({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalled()
-      expect(mockWindowClose).not.toHaveBeenCalled()
 
       // User completes the real login; the SSO redirect back to
-      // humblebundle.com fires did-navigate. Same cookie VALUE, but the
-      // server-side session is now authenticated.
-      mockGetAccountIdentity.mockResolvedValue({
-        status: 'ok',
-        data: { username: 'tester' }
-      })
-      await webContentsHandlers['did-navigate']()
+      // humblebundle.com fires did-navigate → relayed via
+      // notifyLoginNavigated(). Same cookie VALUE, but the server-side
+      // session is now authenticated.
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+      HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
       expect(result.username).toBe('tester')
-      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
-      expect(mockGetAccountIdentity).toHaveBeenLastCalledWith(
-        'same-cookie-value'
-      )
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
+      expect(mockGetGamekeys).toHaveBeenLastCalledWith('same-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
-      expect(mockWindowClose).toHaveBeenCalled()
     })
 
     test('poll ticks within the throttle window do NOT re-validate an unchanged rejected value; a later tick outside the window does', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
       try {
         mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
-        mockGetAccountIdentity.mockResolvedValue({ status: 'session_expired' })
+        mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
         const loginPromise = HumbleUser.startLogin()
 
-        // Forced validation via navigation → rejected, throttle starts.
-        await webContentsHandlers['did-navigate']()
+        // Forced validation via navigation relay → rejected, throttle
+        // starts.
+        HumbleUser.notifyLoginNavigated()
         await flushAsync()
-        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+        expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
         // Poll tick at t=1500ms: same value, inside the 3000ms throttle.
         jest.advanceTimersByTime(1500)
         await flushAsync()
-        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+        expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
         // Poll tick at t=3000ms: outside the throttle window → re-validated.
         jest.advanceTimersByTime(1500)
         await flushAsync()
-        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
+        expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
 
-        windowHandlers['closed']()
+        HumbleUser.stopLogin()
         await loginPromise
       } finally {
         jest.useRealTimers()
@@ -349,76 +351,66 @@ describe('HumbleUser', () => {
 
     test('overlapping checks are deduped while a validation is in flight', async () => {
       mockCookiesGet.mockResolvedValue([{ value: 'cookie-value' }])
-      let resolveIdentity!: (v: unknown) => void
-      mockGetAccountIdentity.mockImplementation(
-        async () => new Promise((r) => (resolveIdentity = r))
+      let resolveGamekeys!: (v: unknown) => void
+      mockGetGamekeys.mockImplementation(
+        async () => new Promise((r) => (resolveGamekeys = r))
       )
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
-      await webContentsHandlers['did-navigate-in-page']()
+      HumbleUser.notifyLoginNavigated()
+      HumbleUser.notifyLoginNavigated()
       await flushAsync()
 
       // Second check bailed on the in-flight flag — one validation only.
-      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
 
-      resolveIdentity({ status: 'ok', data: { username: 'tester' } })
+      resolveGamekeys({ status: 'ok', data: [] })
       const result = await loginPromise
       expect(result.status).toBe('done')
-      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
     })
 
-    test('a CHANGED cookie value (anonymous → authenticated) is re-checked and completes login when identity is ok', async () => {
+    test('a CHANGED cookie value (anonymous → authenticated) is re-checked and completes login when gamekeys is ok', async () => {
       // First tick: anonymous value, rejected.
       mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
-      mockGetAccountIdentity.mockResolvedValue({ status: 'session_expired' })
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalledWith('isLoggedIn', true)
 
-      // User logs in for real: cookie VALUE changes, identity now validates.
+      // User logs in for real: cookie VALUE changes, gamekeys now validates.
       mockCookiesGet.mockResolvedValue([{ value: 'authed-cookie-value' }])
-      mockGetAccountIdentity.mockResolvedValue({
-        status: 'ok',
-        data: { username: 'tester' }
-      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
 
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
       expect(result.username).toBe('tester')
-      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
-      expect(mockGetAccountIdentity).toHaveBeenLastCalledWith(
-        'authed-cookie-value'
-      )
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
+      expect(mockGetGamekeys).toHaveBeenLastCalledWith('authed-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
-      expect(mockWindowClose).toHaveBeenCalled()
     })
 
-    test('a thrown identity validation error is transient: nothing stored, same value retried on the next check', async () => {
+    test('a thrown gamekeys validation error is transient: nothing stored, same value retried on the next check', async () => {
       mockCookiesGet.mockResolvedValue([{ value: 'cookie-value-x' }])
-      mockGetAccountIdentity.mockRejectedValueOnce(new Error('network down'))
+      mockGetGamekeys.mockRejectedValueOnce(new Error('network down'))
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await flushAsync()
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
-      expect(mockWindowClose).not.toHaveBeenCalled()
 
       // Retry with the SAME value succeeds (not permanently blacklisted).
-      mockGetAccountIdentity.mockResolvedValue({
-        status: 'ok',
-        data: { username: 'tester' }
-      })
-      await webContentsHandlers['did-navigate']()
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+      HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
       expect(result.status).toBe('done')
-      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
     })
   })
@@ -431,7 +423,7 @@ describe('HumbleUser', () => {
       mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await loginPromise
 
       expect(mockConfigStore.set).toHaveBeenCalledWith(
@@ -495,14 +487,14 @@ describe('HumbleUser', () => {
   // ── HACCT-02: reconnect() — D-11 partition kept ──────────────────────────
 
   describe('reconnect() — D-11 partition kept', () => {
-    test('reopens the login window against the humble-login partition WITHOUT clearing it', async () => {
+    test('watches the persist:humble partition WITHOUT clearing it', async () => {
       mockCookiesGet.mockResolvedValue([])
 
       const reconnectPromise = HumbleUser.reconnect()
-      windowHandlers['closed']()
+      HumbleUser.stopLogin()
       await reconnectPromise
 
-      expect(mockFromPartition).toHaveBeenCalledWith('humble-login')
+      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
       expect(mockClearStorageData).not.toHaveBeenCalled()
       expect(mockClearCache).not.toHaveBeenCalled()
       expect(mockClearAuthCache).not.toHaveBeenCalled()
@@ -517,7 +509,7 @@ describe('HumbleUser', () => {
     test('clears all five partition caches and clears configStore', async () => {
       await HumbleUser.disconnect()
 
-      expect(mockFromPartition).toHaveBeenCalledWith('humble-login')
+      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
       expect(mockClearStorageData).toHaveBeenCalled()
       expect(mockClearCache).toHaveBeenCalled()
       expect(mockClearAuthCache).toHaveBeenCalled()
@@ -535,7 +527,7 @@ describe('HumbleUser', () => {
       mockCookiesGet.mockResolvedValue([{ value: SECRET }])
 
       const loginPromise = HumbleUser.startLogin()
-      await webContentsHandlers['did-navigate']()
+      HumbleUser.notifyLoginNavigated()
       await loginPromise
 
       const loggerCalls = [

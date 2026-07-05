@@ -1,6 +1,6 @@
 import { addHandler, addListener } from 'backend/ipc'
 
-import { HumbleUser } from './user'
+import { HumbleUser, standardBrowserUserAgent } from './user'
 
 /**
  * Registers all Humble IPC channels (typed in common/types/ipc.ts) against
@@ -20,5 +20,8 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleGetUserInfo', () => HumbleUser.getUserDetails())
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
   addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
+  addHandler('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
   addListener('humbleDisconnect', () => void HumbleUser.disconnect())
+  addListener('humbleStopLogin', () => HumbleUser.stopLogin())
+  addListener('humbleLoginNavigated', () => HumbleUser.notifyLoginNavigated())
 }
