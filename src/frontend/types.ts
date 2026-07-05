@@ -103,6 +103,13 @@ export interface ContextType {
     login: (result: { status: string; username?: string }) => Promise<string>
     logout: () => Promise<void>
   }
+  humble: {
+    username?: string | null
+    expired?: boolean
+    encryptionDegraded?: boolean
+    login: (result: { status: string; username?: string }) => Promise<string>
+    logout: () => Promise<void>
+  }
   installingEpicGame: boolean
   allTilesInColor: boolean
   setAllTilesInColor: (value: boolean) => void

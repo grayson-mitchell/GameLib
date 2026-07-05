@@ -38,7 +38,8 @@ import {
   zoomConfigStore,
   zoomInstalledGamesStore,
   zoomLibraryStore,
-  steamConfigStore
+  steamConfigStore,
+  humbleConfigStore
 } from '../helpers/electronStores'
 import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
@@ -79,6 +80,11 @@ interface StateProps {
   steam: {
     library: GameInfo[]
     username?: string | null
+  }
+  humble: {
+    username?: string | null
+    expired?: boolean
+    encryptionDegraded?: boolean
   }
   wineVersions: WineVersionInfo[]
   error: boolean
@@ -221,6 +227,11 @@ class GlobalState extends PureComponent<Props> {
     steam: {
       library: [],
       username: steamConfigStore.get_nodefault('userData')?.username
+    },
+    humble: {
+      username: humbleConfigStore.get_nodefault('userData')?.username,
+      expired: false,
+      encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded')
     },
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
     error: false,
@@ -709,6 +720,48 @@ class GlobalState extends PureComponent<Props> {
     window.location.reload()
   }
 
+  // Humble is not a Runner (v1.2 locked decision) — no library, no
+  // refreshLibrary() call. humbleLogin covers both a fresh login and a
+  // reconnect-after-expiry (both resolve to the same { status, username }
+  // shape from window.api.humbleStartLogin/humbleReconnect).
+  humbleLogin = async (result: { status: string; username?: string }) => {
+    if (result.status === 'done') {
+      this.setState({
+        humble: {
+          ...this.state.humble,
+          username: result.username,
+          expired: false
+        }
+      })
+    }
+    return result.status
+  }
+
+  // D-03: disconnect is confirmation-gated (blocking modal — correct for a
+  // destructive action). The actual wipe (window.api.humbleDisconnect() +
+  // clearing local state) only runs if the user confirms.
+  humbleDisconnect = async (): Promise<void> => {
+    this.handleShowDialogModal({
+      title: t('login.humble_disconnect_title', 'Disconnect Humble Bundle?'),
+      message: t(
+        'login.humble_disconnect_message',
+        'This removes your Humble Bundle session from GameLib. You can reconnect at any time.'
+      ),
+      buttons: [
+        {
+          text: t('box.yes'),
+          onClick: () => {
+            window.api.humbleDisconnect()
+            this.setState({
+              humble: { username: null, expired: false }
+            })
+          }
+        },
+        { text: t('box.no') }
+      ]
+    })
+  }
+
   updateGameOverrides = (overrides: Record<string, GameOverride>) => {
     useGlobalState.getState().setGameOverrides(overrides)
     this.setState({
@@ -970,6 +1023,27 @@ class GlobalState extends PureComponent<Props> {
       this.updateGameOverrides(overrides)
     })
 
+    // D-09: state-only listener — never opens a dialog/modal directly. The
+    // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting
+    // `expired` state transition on its own.
+    window.api.handleHumbleAuthState((e, humbleState) => {
+      this.setState((prevState: StateProps) => ({
+        humble: {
+          ...prevState.humble,
+          username: humbleState.username ?? prevState.humble.username,
+          expired: !!humbleState.expired
+        }
+      }))
+    })
+
+    // D-08: this is the ONLY expiry-detection trigger in Phase 10 (no
+    // library sync exists yet to piggyback a 401 check on). Fire-and-forget —
+    // the backend pushes humbleAuthState when it resolves, so we don't block
+    // mount waiting on it.
+    if (this.state.humble.username) {
+      void window.api.humbleCheckHealth()
+    }
+
     window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
       if (!args.app_name) return
       if (args.runner === 'gog') {
@@ -1169,6 +1243,7 @@ class GlobalState extends PureComponent<Props> {
       amazon,
       zoom,
       steam,
+      humble,
       favouriteGames,
       customCategories,
       hiddenGames,
@@ -1218,6 +1293,13 @@ class GlobalState extends PureComponent<Props> {
             username: steam.username,
             login: this.steamLogin,
             logout: this.steamLogout
+          },
+          humble: {
+            username: humble.username,
+            expired: humble.expired,
+            encryptionDegraded: humble.encryptionDegraded,
+            login: this.humbleLogin,
+            logout: this.humbleDisconnect
           },
           installingEpicGame,
           setLanguage: this.setLanguage,
