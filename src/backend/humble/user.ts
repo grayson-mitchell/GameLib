@@ -3,7 +3,7 @@ import { app, safeStorage, session } from 'electron'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import { configStore } from './electronStores'
+import { configStore, humbleLibraryStore, humbleSyncStore } from './electronStores'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_PARTITION,
@@ -444,6 +444,12 @@ export class HumbleUser {
     // disconnect (WR-02 / T-10-07).
     configStore.clear()
 
+    // Phase 11 (HSYNC-02/D-04): the library cache + sync-state are fully
+    // reconstructible from a re-sync, so they are wiped alongside the
+    // credential — a stale key inventory must never survive a disconnect.
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+
     // Best-effort partition wipe: each step guarded individually so one
     // rejected Electron session API call does not abort the rest. Partial
     // failures are logged (never thrown) — the disconnect itself already
@@ -466,7 +472,12 @@ export class HumbleUser {
         )
       }
     }
-    // D-04: does NOT touch any audit-log/REVEALED-flag store — none exists
-    // yet in Phase 10; this is forward policy for Phase 11/14.
+    // D-04/D-30: deliberately does NOT touch humbleRevealedStore (or the
+    // future audit log). That store now exists (Phase 11) and MUST survive
+    // a disconnect/reconnect cycle — clearing it here would regress a
+    // previously-revealed key back to UNREVEALED (Pitfall 1), permanently
+    // forfeiting its gift-link opportunity for no reason tied to the actual
+    // disconnect action. Extend this policy for Phase 14's audit log the
+    // same way; never delete this exclusion.
   }
 }
