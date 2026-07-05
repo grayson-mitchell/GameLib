@@ -148,6 +148,19 @@ export class HumbleUser {
     return new Promise<LoginResult>((resolve) => {
       let settled = false
 
+      // Humble sets a `_simpleauth_sess` cookie for ANONYMOUS visitors too —
+      // the login page's very first navigation already carries one. A cookie
+      // value is therefore only a login CANDIDATE; finishLogin() validates it
+      // against the identity endpoint before anything is stored. Values that
+      // failed validation are remembered here so the 1.5s poll doesn't hammer
+      // the identity endpoint with the same anonymous value — but ONLY that
+      // exact value is skipped: when the cookie value CHANGES (anonymous →
+      // authenticated after the real login), the new value is checked fresh.
+      const rejectedCookieValues = new Set<string>()
+      // Overlapping did-navigate events + poll ticks must not race concurrent
+      // validations (they could double-store or double-settle).
+      let validationInFlight = false
+
       // Hoisted function declarations so `settle`/`checkCookie` can reference
       // each other regardless of textual order — both only ever run
       // asynchronously (event/interval callbacks), well after this
@@ -160,14 +173,28 @@ export class HumbleUser {
       }
 
       async function checkCookie() {
-        if (settled) return
+        if (settled || validationInFlight) return
         try {
           const cookies = await ses.cookies.get({
             url: HUMBLE_BASE_URL,
             name: '_simpleauth_sess'
           })
-          if (cookies.length > 0) {
-            await HumbleUser.finishLogin(cookies[0].value, win, settle)
+          if (settled || validationInFlight) return
+          if (cookies.length === 0) return
+
+          const cookieValue = cookies[0].value
+          if (rejectedCookieValues.has(cookieValue)) return
+
+          validationInFlight = true
+          try {
+            await HumbleUser.finishLogin(
+              cookieValue,
+              win,
+              settle,
+              rejectedCookieValues
+            )
+          } finally {
+            validationInFlight = false
           }
         } catch (err) {
           logWarning(
@@ -196,28 +223,45 @@ export class HumbleUser {
   private static async finishLogin(
     cookieValue: string,
     win: BrowserWindow,
-    settle: (result: LoginResult) => void
+    settle: (result: LoginResult) => void,
+    rejectedCookieValues: Set<string>
   ): Promise<void> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
+    // Passing the raw value to getAccountIdentity is fine — the adapter
+    // already receives it on every call and never logs it.
+
+    // Validate BEFORE storing anything: Humble hands `_simpleauth_sess` to
+    // anonymous visitors, so an unvalidated cookie here is most likely NOT an
+    // authenticated session. Only an identity-endpoint 'ok' proves login.
+    let identity: Awaited<ReturnType<typeof getAccountIdentity>>
+    try {
+      identity = await getAccountIdentity(cookieValue)
+    } catch (err) {
+      // Transient/unexpected failure (network etc.) — do NOT reject the
+      // value permanently; the next poll tick retries the same cookie.
+      logWarning(
+        ['Humble identity validation during login failed:', err],
+        LogPrefix.Backend
+      )
+      return
+    }
+
+    if (identity.status !== 'ok') {
+      // Anonymous/unauthenticated cookie value: store NOTHING, keep the
+      // window open so the user can complete the real login. Remember this
+      // exact value so the poll doesn't re-validate it every 1.5s — a later
+      // value change (post-login) is still checked fresh.
+      rejectedCookieValues.add(cookieValue)
+      return
+    }
+
     const encrypted = encryptCookie(cookieValue)
     configStore.set(HUMBLE_TOKEN_STORE_KEY, encrypted)
     configStore.set('isLoggedIn', true)
     configStore.set('expired', false)
-
-    let username: string | undefined
-    try {
-      const identity = await getAccountIdentity(cookieValue)
-      if (identity.status === 'ok') {
-        configStore.set('userData', identity.data)
-        username = identity.data.username
-      }
-    } catch (err) {
-      logWarning(
-        ['Humble getAccountIdentity failed after login:', err],
-        LogPrefix.Backend
-      )
-    }
+    configStore.set('userData', identity.data)
+    const username = identity.data.username
 
     HumbleUser.loginWindow = null
     // Settle before closing the window — closing fires the 'closed' handler,
