@@ -286,7 +286,7 @@ Plans:
 - [x] 10-02-PLAN.md — HumbleUser auth service: cookie encryption, health check, reconnect, disconnect + tests
 - [x] 10-03-PLAN.md — IPC channels + ipc_handler + preload bridge + main.ts registration
 - [x] 10-04-PLAN.md — Frontend: humble context slice, Manage Accounts tile (connected/expired/disconnected), i18n
-- [ ] 10-05-PLAN.md — Re-point login to the embedded /loginweb/humble WebView (persist:humble, gamekeys acceptance D-16, best-effort identity, retire popup/HumbleConnect)
+- [x] 10-05-PLAN.md — Re-point login to the embedded /loginweb/humble WebView (persist:humble, gamekeys acceptance D-16, best-effort identity, retire popup/HumbleConnect)
 - [ ] 10-06-PLAN.md — Live validation gate: identity-advisory D-13, ses.fetch D-14 fallback, real-account UAT, 10-VALIDATION.md
 **UI hint**: yes
 
@@ -364,7 +364,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 7. Game Details Enrichment | 0/? | Not started | - |
 | 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
-| 10. Humble Auth + Adapter Scaffold | 4/5 | In Progress|  |
+| 10. Humble Auth + Adapter Scaffold | 5/6 | In Progress|  |
 | 11. Library Sync + 5-State Key Model | 0/? | Not started | - |
 | 12. Ownership Dedup | 0/? | Not started | - |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
