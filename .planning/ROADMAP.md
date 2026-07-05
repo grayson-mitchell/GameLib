@@ -283,7 +283,7 @@ Plans:
   5. On Linux without a system keyring, the app warns about reduced encryption rather than storing the session cookie silently in plaintext
 **Plans**: 5 plans (5 waves — strict dependency chain: contracts → adapter → auth → IPC → frontend → validation gate)
 - [x] 10-01-PLAN.md — Backend foundation: humble types/contracts, constants, config store, C5 adapter + adapter tests
-- [ ] 10-02-PLAN.md — HumbleUser auth service: BrowserWindow login, cookie encryption, health check, reconnect, disconnect + tests
+- [x] 10-02-PLAN.md — HumbleUser auth service: BrowserWindow login, cookie encryption, health check, reconnect, disconnect + tests
 - [ ] 10-03-PLAN.md — IPC channels + ipc_handler + preload bridge + main.ts registration
 - [ ] 10-04-PLAN.md — Frontend: humble context slice, Manage Accounts tile (connected/expired/disconnected), /humble-connect route, i18n
 - [ ] 10-05-PLAN.md — D-12 live validation gate: dev-only trigger, D-14 fallback, real-account UAT, 10-VALIDATION.md
@@ -363,7 +363,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 7. Game Details Enrichment | 0/? | Not started | - |
 | 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
-| 10. Humble Auth + Adapter Scaffold | 1/5 | In Progress|  |
+| 10. Humble Auth + Adapter Scaffold | 2/5 | In Progress|  |
 | 11. Library Sync + 5-State Key Model | 0/? | Not started | - |
 | 12. Ownership Dedup | 0/? | Not started | - |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
