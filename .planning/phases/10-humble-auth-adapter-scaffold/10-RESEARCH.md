@@ -471,17 +471,19 @@ export { configStore }
 
 ## Open Questions
 
-1. **Does the Linux no-keyring warning refuse to store the session, or warn-and-store-plaintext?**
+> **Resolution status (updated during planning, 2026-07-05):** Q1 RESOLVED — warn-and-store (see Plans 02/04). Q2 DEFERRED to the D-12/D-13 live validation gate (Plan 05) by design. Q3 RESOLVED — navigation-hook primary + ~1.5s cookie poll backstop (Plan 02).
+
+1. **[RESOLVED — warn-and-store]** **Does the Linux no-keyring warning refuse to store the session, or warn-and-store-plaintext?** Resolved by Plans 02/04: warn-and-store — `HumbleUser` calls `logWarning` AND sets a user-visible `encryptionDegraded` flag that the Manage Accounts tile renders (success criterion 5), then proceeds to store. Does not refuse.
    - What we know: Steam's existing `encryptToken()` warns via `logWarning` (dev log only) and proceeds to store plaintext. PITFALLS.md's C4 mitigation recommends refusing to persist and prompting re-login every session instead. Success criterion 5 says "the app warns about reduced encryption rather than storing the session cookie silently in plaintext" — this reads as "warn, then still store" (the word "silently" is the operative constraint), not "refuse to store."
    - What's unclear: The exact warning surface (toast? banner in Manage Accounts? blocking modal?) and whether storage proceeds after the warning is acknowledged.
    - Recommendation: Treat success criterion 5's wording as authoritative — implement warn-then-store (not refuse), with the warning rendered wherever the Manage Accounts Humble tile lives, and log it as `logWarning` (dev) + a distinct renderer-facing signal (new behavior, not copied from Steam). The planner should make this an explicit task, not an inherited side effect of copying `steam/user.ts`.
 
-2. **What exact endpoint/response shape does the account-identifier lookup (D-02/D-13 point 4) use?**
+2. **[DEFERRED — resolved empirically at the D-12/D-13 live gate, Plan 05]** **What exact endpoint/response shape does the account-identifier lookup (D-02/D-13 point 4) use?** Intentionally not fixed at plan time: Plan 05's validation task probes for the identity source against the real API and records the confirmed endpoint in 10-VALIDATION.md before Phase 11 relies on it.
    - What we know: D-02 requires "an account-identifier endpoint" works; D-13 requires it as pass criterion 4. HUMBLE-SPEC-SOURCE.md documents gamekeys and order endpoints in detail but does not name a distinct user-identity endpoint.
    - What's unclear: Whether this is a dedicated endpoint (e.g. some `/api/v1/user` profile endpoint) or whether identity must be derived from a field already present in the order-list response, or from parsing the logged-in Humble page's HTML/JS state after the BrowserWindow login completes (before closing it).
    - Recommendation: This must be resolved empirically during the D-12 validation run — the planner should scope a validation task that explicitly probes for this endpoint (or confirms deriving identity from the BrowserWindow's own post-login page) before committing to an adapter interface signature for it.
 
-3. **Exact cookie-detection mechanism cadence (navigation hook vs. polling)?**
+3. **[RESOLVED — nav-hook + poll backstop]** **Exact cookie-detection mechanism cadence (navigation hook vs. polling)?** Resolved by Plan 02: `did-navigate`/`did-navigate-in-page` as the primary trigger plus a ~1.5s `session.cookies.get` poll as a backstop, satisfying D-05's no-manual-step requirement even if navigation events do not fire.
    - What we know: CONTEXT.md leaves this to Claude's discretion.
    - What's unclear: Whether Humble's login flow reliably fires `did-navigate`/`did-navigate-in-page` at the moment the cookie is set, or whether a supplementary poll (checked against `session.cookies.get()` every 1-2s) is required for robustness.
    - Recommendation: Implement both — the navigation hook as the primary trigger, a low-frequency poll (e.g. every 1.5s, capped at a reasonable timeout) as a backstop, matching the "no manual I'm-done step" requirement of D-05 even in edge cases where navigation events don't fire as expected.
