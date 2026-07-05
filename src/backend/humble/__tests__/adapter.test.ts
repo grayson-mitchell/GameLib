@@ -65,10 +65,30 @@ function allLoggedStrings(): string[] {
 }
 
 describe('getGamekeys', () => {
-  test('200 + array body -> ok with data', async () => {
-    mockGet.mockResolvedValue({ data: ['abc123', 'def456'] })
+  // Real /api/v1/user/order shape (confirmed live, HUMBLE-SPEC-SOURCE.md
+  // Appendix A): an array of order-summary objects, each carrying a
+  // `gamekey` string — NOT bare strings.
+  test('200 + realistic order-summary array -> ok with gamekey strings extracted', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { gamekey: 'abc123', human_name: 'Some Bundle' },
+        { gamekey: 'def456', human_name: 'Another Bundle' }
+      ]
+    })
     const result = await getGamekeys(COOKIE)
     expect(result).toEqual({ status: 'ok', data: ['abc123', 'def456'] })
+  })
+
+  test('200 + empty array -> ok with empty data', async () => {
+    mockGet.mockResolvedValue({ data: [] })
+    const result = await getGamekeys(COOKIE)
+    expect(result).toEqual({ status: 'ok', data: [] })
+  })
+
+  test('200 + legacy bare-string array shape -> schema_error (regression guard)', async () => {
+    mockGet.mockResolvedValue({ data: ['abc123', 'def456'] })
+    const result = await getGamekeys(COOKIE)
+    expect(result.status).toBe('schema_error')
   })
 
   test('200 + non-array body -> schema_error', async () => {
@@ -78,6 +98,40 @@ describe('getGamekeys', () => {
       status: 'schema_error',
       raw: { unexpected: true }
     })
+  })
+
+  test('200 + non-array body -> logs redacted, self-diagnosing schema_error details', async () => {
+    mockGet.mockResolvedValue({
+      data: { unexpected: true },
+      headers: { 'content-type': 'application/json' }
+    })
+    await getGamekeys(COOKIE)
+    const warnCall = mockLogWarning.mock.calls.find((call) =>
+      JSON.stringify(call).includes('schema validation')
+    )
+    expect(warnCall).toBeDefined()
+    const logged = JSON.stringify(warnCall)
+    expect(logged).toContain('contentType=application/json')
+    expect(logged).toContain('bodyIsString=false')
+    expect(logged).not.toContain(COOKIE)
+  })
+
+  test('200 + HTML/interstitial string body -> schema_error diagnostics flag non-JSON transport issue', async () => {
+    mockGet.mockResolvedValue({
+      data: '<html><body>Please log in</body></html>',
+      headers: { 'content-type': 'text/html; charset=utf-8' }
+    })
+    const result = await getGamekeys(COOKIE)
+    expect(result.status).toBe('schema_error')
+    const warnCall = mockLogWarning.mock.calls.find((call) =>
+      JSON.stringify(call).includes('schema validation')
+    )
+    expect(warnCall).toBeDefined()
+    const logged = JSON.stringify(warnCall)
+    expect(logged).toContain('bodyIsString=true')
+    expect(logged).toContain('contentType=text/html')
+    // Redaction: the HTML body content itself must never be logged.
+    expect(logged).not.toContain('Please log in')
   })
 
   test('axios 401 -> session_expired', async () => {
