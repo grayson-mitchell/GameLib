@@ -41,6 +41,7 @@ import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
 import { steamSyncStore } from './storeManagers/steam/electronStores'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
+import { runHumbleValidation } from './humble/validation'
 import {
   clearCache,
   isEpicServiceOffline,
@@ -875,6 +876,14 @@ addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
 addListener('logoutSteam', () => SteamUser.logout())
 
 registerHumbleIpcHandlers()
+
+// D-12/T-10-16: dev-only in-app validation trigger. Exercises the real
+// Humble adapter with the real stored encrypted cookie from Electron main
+// (never a standalone Node script). Registered ONLY when the app is not
+// packaged, so this channel does not exist at all in production builds.
+if (!app.isPackaged) {
+  addHandler('humbleRunValidation', async () => runHumbleValidation())
+}
 
 addHandler('getAlternativeWine', async () =>
   GlobalConfig.get().getAlternativeWine()

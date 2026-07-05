@@ -8,6 +8,11 @@ import { HumbleUser } from './user'
  * (lines ~860-874), but grouped into its own function per the phase's
  * pattern map (10-PATTERNS.md) given Humble's larger IPC surface.
  *
+ * The dev-only D-12 `humbleRunValidation` trigger is NOT registered here —
+ * it is wired directly in backend/main.ts behind an explicit
+ * `!app.isPackaged` guard (T-10-16), kept out of this always-on function so
+ * it can never be accidentally exposed in a packaged build.
+ *
  * Called exactly once from backend/main.ts during startup.
  */
 export function registerHumbleIpcHandlers(): void {

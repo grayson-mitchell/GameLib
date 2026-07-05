@@ -33,3 +33,36 @@ export interface HumbleAuthState {
   username?: string
   expired?: boolean
 }
+
+/**
+ * Redacted per-endpoint result recorded by the D-12/D-13 live validation gate
+ * (src/backend/humble/validation.ts). NEVER carries a cookie value or a raw
+ * gamekey/key value (D-15 / T-10-15) — only status + schema-parse outcome.
+ */
+export interface HumbleValidationEndpointResult {
+  path: string
+  status:
+    | 'ok'
+    | 'session_expired'
+    | 'access_denied'
+    | 'schema_error'
+    | 'not_attempted'
+  schemaValid: boolean
+}
+
+/**
+ * Redacted structured report returned by `runHumbleValidation()` (D-12/D-15).
+ * The dev-only trigger surfaces this to the human checkpoint, who transcribes
+ * it (still redacted) into `10-VALIDATION.md`. This shape is pushed over IPC
+ * to the renderer — it MUST NEVER include the session cookie or a raw
+ * gamekey/key value; `gamekeyCount` and `steamAppIdPresent` are booleans/counts
+ * only, never the underlying values (D-13 point 3, T-10-15).
+ */
+export interface HumbleValidationReport {
+  transport: 'axios' | 'browserwindow-proxy'
+  timestamp: string
+  overall: 'pass' | 'fail'
+  endpoints: HumbleValidationEndpointResult[]
+  gamekeyCount: number
+  steamAppIdPresent: boolean
+}

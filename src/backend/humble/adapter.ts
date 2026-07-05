@@ -49,6 +49,20 @@ function buildHeaders(cookie: string) {
 }
 
 /**
+ * Single transport seam (D-14): every adapter function routes its HTTP call
+ * through this one function. If the live validation gate (Plan 05) shows the
+ * bare-axios transport is blocked by Humble, this is the ONLY function that
+ * needs to be swapped for a BrowserWindow webRequest-proxy transport — call
+ * sites in getGamekeys/getOrderDetail/getAccountIdentity never change.
+ */
+async function humbleRequest(path: string, cookie: string): Promise<unknown> {
+  const res = await axios.get(`${HUMBLE_BASE_URL}${path}`, {
+    headers: buildHeaders(cookie)
+  })
+  return res.data
+}
+
+/**
  * Maps a caught error to the 401/403 split. Rethrows anything else — callers
  * are expected to let genuinely unexpected errors surface rather than be
  * swallowed into a misleading AdapterResult.
@@ -71,11 +85,9 @@ export async function getGamekeys(
   cookie: string
 ): Promise<AdapterResult<string[]>> {
   try {
-    const res = await axios.get(`${HUMBLE_BASE_URL}/api/v1/user/order`, {
-      headers: buildHeaders(cookie)
-    })
-    const parsed = GamekeysSchema.safeParse(res.data)
-    if (!parsed.success) return { status: 'schema_error', raw: res.data }
+    const data = await humbleRequest('/api/v1/user/order', cookie)
+    const parsed = GamekeysSchema.safeParse(data)
+    if (!parsed.success) return { status: 'schema_error', raw: data }
     return { status: 'ok', data: parsed.data }
   } catch (err) {
     return mapAxiosError<string[]>(err)
@@ -87,11 +99,9 @@ export async function getOrderDetail(
   gamekey: string
 ): Promise<AdapterResult<OrderDetail>> {
   try {
-    const res = await axios.get(`${HUMBLE_BASE_URL}/api/v1/order/${gamekey}`, {
-      headers: buildHeaders(cookie)
-    })
-    const parsed = OrderDetailSchema.safeParse(res.data)
-    if (!parsed.success) return { status: 'schema_error', raw: res.data }
+    const data = await humbleRequest(`/api/v1/order/${gamekey}`, cookie)
+    const parsed = OrderDetailSchema.safeParse(data)
+    if (!parsed.success) return { status: 'schema_error', raw: data }
     return { status: 'ok', data: parsed.data }
   } catch (err) {
     return mapAxiosError<OrderDetail>(err)
@@ -103,11 +113,9 @@ export async function getAccountIdentity(
 ): Promise<AdapterResult<HumbleUserData>> {
   try {
     // D-02/D-13 point 4: endpoint confirmed empirically in Plan 05 (10-VALIDATION.md)
-    const res = await axios.get(`${HUMBLE_BASE_URL}/api/v1/user/info`, {
-      headers: buildHeaders(cookie)
-    })
-    const parsed = AccountIdentitySchema.safeParse(res.data)
-    if (!parsed.success) return { status: 'schema_error', raw: res.data }
+    const data = await humbleRequest('/api/v1/user/info', cookie)
+    const parsed = AccountIdentitySchema.safeParse(data)
+    if (!parsed.success) return { status: 'schema_error', raw: data }
     return { status: 'ok', data: parsed.data }
   } catch (err) {
     return mapAxiosError<HumbleUserData>(err)

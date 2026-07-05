@@ -51,7 +51,11 @@ import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { SteamUserData } from './steam'
-import type { HumbleAuthState, HumbleUserData } from './humble'
+import type {
+  HumbleAuthState,
+  HumbleUserData,
+  HumbleValidationReport
+} from './humble'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -243,6 +247,11 @@ interface AsyncIPCFunctions {
     username?: string
   }>
   humbleCheckHealth: () => Promise<void>
+  // Plan 05 (Phase 10): dev-only D-12 validation trigger. Wired only behind a
+  // dev-flag guard in backend/main.ts (never in packaged builds, T-10-16) —
+  // exercises the real adapter with the real stored cookie and returns a
+  // redacted HumbleValidationReport (D-15, no cookie/gamekey values).
+  humbleRunValidation: () => Promise<HumbleValidationReport>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
