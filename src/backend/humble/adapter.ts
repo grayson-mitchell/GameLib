@@ -49,11 +49,14 @@ function buildHeaders(cookie: string) {
 }
 
 /**
- * Single transport seam (D-14): every adapter function routes its HTTP call
- * through this one function. If the live validation gate (Plan 05) shows the
- * bare-axios transport is blocked by Humble, this is the ONLY function that
- * needs to be swapped for a BrowserWindow webRequest-proxy transport — call
- * sites in getGamekeys/getOrderDetail/getAccountIdentity never change.
+ * Single transport seam (D-14 revised): every adapter function routes its
+ * HTTP call through this one function, with the identical signature
+ * `humbleRequest(path, cookie): Promise<unknown>`. Axios stays the primary
+ * transport. If the live validation gate (Plan 06) shows the bare-axios
+ * transport is blocked by Humble, this is the ONLY function that needs to be
+ * swapped for a `session.fromPartition('persist:humble').fetch()`
+ * implementation behind the same signature — call sites in
+ * getGamekeys/getOrderDetail/getAccountIdentity never change.
  */
 async function humbleRequest(path: string, cookie: string): Promise<unknown> {
   const res = await axios.get(`${HUMBLE_BASE_URL}${path}`, {

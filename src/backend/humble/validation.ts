@@ -29,7 +29,12 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
       timestamp,
       overall: 'fail',
       endpoints: [
-        { path: '/api/v1/user/info', status: 'not_attempted', schemaValid: false },
+        {
+          path: '/api/v1/user/info',
+          status: 'not_attempted',
+          schemaValid: false,
+          advisory: true
+        },
         { path: '/api/v1/user/order', status: 'not_attempted', schemaValid: false },
         {
           path: '/api/v1/order/{gamekey}',
@@ -44,9 +49,12 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
 
   const endpoints: HumbleValidationEndpointResult[] = []
 
-  // D-13 point 4: account-identifier endpoint (D-02)
+  // D-13 revised: the account-identifier endpoint is ADVISORY ONLY (D-02).
+  // It is still called and recorded, but can never fail the overall verdict.
   const identity = await getAccountIdentity(cookie)
-  endpoints.push(toEndpointResult('/api/v1/user/info', identity))
+  endpoints.push(
+    toEndpointResult('/api/v1/user/info', identity, { advisory: true })
+  )
 
   // D-13 point 1: gamekeys list
   const gamekeys = await getGamekeys(cookie)
@@ -54,6 +62,7 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
 
   let gamekeyCount = 0
   let steamAppIdPresent = false
+  let orderDetailOk = false
 
   if (gamekeys.status === 'ok') {
     gamekeyCount = gamekeys.data.length
@@ -63,6 +72,7 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
       // D-13 point 2: at least one order-detail fetch
       const orderDetail = await getOrderDetail(cookie, firstGamekey)
       endpoints.push(toEndpointResult('/api/v1/order/{gamekey}', orderDetail))
+      orderDetailOk = orderDetail.status === 'ok'
 
       // D-13 point 3: tpkd_dict.all_tpks[n].steam_app_id presence
       if (orderDetail.status === 'ok') {
@@ -89,7 +99,13 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
     })
   }
 
-  const overall = endpoints.every((e) => e.status === 'ok') ? 'pass' : 'fail'
+  // D-13 revised: overall depends ONLY on gamekeys + order-detail +
+  // steamAppIdPresent. The advisory identity result above can never flip
+  // this verdict (D-02).
+  const overall: 'pass' | 'fail' =
+    gamekeys.status === 'ok' && orderDetailOk && steamAppIdPresent
+      ? 'pass'
+      : 'fail'
 
   return {
     transport: 'axios',
@@ -103,11 +119,13 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
 
 function toEndpointResult(
   path: string,
-  result: AdapterResult<unknown>
+  result: AdapterResult<unknown>,
+  opts?: { advisory?: boolean }
 ): HumbleValidationEndpointResult {
   return {
     path,
     status: result.status,
-    schemaValid: result.status === 'ok'
+    schemaValid: result.status === 'ok',
+    ...(opts?.advisory ? { advisory: true } : {})
   }
 }

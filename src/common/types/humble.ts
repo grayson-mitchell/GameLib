@@ -48,6 +48,12 @@ export interface HumbleValidationEndpointResult {
     | 'schema_error'
     | 'not_attempted'
   schemaValid: boolean
+  /**
+   * D-13 revised: true for the account-identifier endpoint only. Advisory
+   * results are recorded in the report but can NEVER affect the overall
+   * pass/fail verdict (D-02 generic-"Connected" fallback).
+   */
+  advisory?: boolean
 }
 
 /**
@@ -59,7 +65,7 @@ export interface HumbleValidationEndpointResult {
  * only, never the underlying values (D-13 point 3, T-10-15).
  */
 export interface HumbleValidationReport {
-  transport: 'axios' | 'browserwindow-proxy'
+  transport: 'axios' | 'session-fetch'
   timestamp: string
   overall: 'pass' | 'fail'
   endpoints: HumbleValidationEndpointResult[]
