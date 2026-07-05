@@ -38,19 +38,34 @@ created: 2026-07-05
 
 ## Spacing Scale
 
-Existing em/px-hybrid tokens from `_spacing.scss`. No new spacing values are introduced.
+Existing em/px-hybrid tokens from `_spacing.scss`. This phase adds zero new spacing constants;
+row vertical padding has been moved onto an on-grid token (see Exceptions below) so that only
+one legacy off-grid value remains in the contract, and that one is explicitly justified.
 
 | Token | Computed Value | Usage in this phase |
 |-------|-----------------|----------------------|
 | `--space-3xs` | ~4px (0.25em) | Badge border-radius; row internal icon gaps |
-| `--space-2xs` | ~6px (0.375em) | State badge padding (vertical/horizontal, matches `.gameCardUpdateBadge` pattern) |
+| `--space-2xs` | ~6px (0.375em) | State badge padding (vertical/horizontal, matches `.gameCardUpdateBadge` pattern) — **documented exception, see below** |
 | `--space-xs` | ~8px (0.5em) | Gap between row title and secondary caption line; freshness-indicator/refresh-button gap |
-| `--space-sm` | ~12px (0.75em) | Row vertical padding |
-| `--space-md` | 16px (1em) | Group-section padding; page content horizontal padding; banner padding (via `WarningMessage`) |
+| `--space-md` | 16px (1em) | Group-section padding; page content horizontal padding; banner padding (via `WarningMessage`); **row vertical padding** |
 | `--space-lg` | 24px (1.5em) | Gap between state groups |
 | `--space-xl` | 48px (3em) | Empty-state vertical centering padding |
 
-Exceptions: none. All values are pre-existing tokens; this phase adds zero new spacing constants.
+**Exceptions:** `--space-2xs` (~6px) is the sole off-grid value in this contract — it is not a
+new invention. It is the exact padding value already shipping in production on
+`.gameCardUpdateBadge` (`padding: var(--space-3xs) var(--space-2xs);` in
+`GameCard/index.css`), which this phase's state badge deliberately reuses byte-for-byte per the
+Component Inventory's "Reuses `.gameCardUpdateBadge` visual chrome (padding/border-radius/font)"
+directive. Approved as a documented exception because: (1) it is pre-existing project debt this
+phase does not own — substituting a different padding value here would break the "identical
+visual chrome" contract this spec sets for badge reuse, producing two near-identical badge
+components (Library `GameCard` vs. Humble Keys) with visibly inconsistent proportions on
+adjacent screens; (2) it is a single legacy token, not a new off-grid pattern — every other
+value in this contract is on the standard 4/8/16/24/32/48/64 grid. `--space-sm` (~12px), which
+had no existing-codebase precedent justifying its use (no `.css` file in the project references
+it), has been removed from this contract entirely and replaced with `--space-md` (16px,
+on-grid) for row vertical padding — that substitution had no reuse fidelity to preserve, so it
+is fixed outright rather than exempted.
 
 **Source:** `src/frontend/styles/_spacing.scss` (detected); `.gameCardUpdateBadge` / `.steamStaleIndicator` / `.WarningMessage` existing padding patterns (detected).
 
