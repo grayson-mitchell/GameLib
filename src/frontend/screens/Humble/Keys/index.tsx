@@ -117,7 +117,8 @@ export default function HumbleKeys() {
 
   const now = Date.now()
   const syncedAt = humble.syncedAt ?? null
-  const relativeTime = syncedAt !== null ? formatRelativeTime(now - syncedAt) : null
+  const relativeTime =
+    syncedAt !== null ? formatRelativeTime(now - syncedAt) : null
 
   const inCooldown =
     humble.syncError === 'denied' && !!cooldownUntil && cooldownUntil > now
@@ -162,7 +163,10 @@ export default function HumbleKeys() {
         </div>
         {showProgress ? (
           <span className="humbleKeysSyncIndicator">
-            <FontAwesomeIcon icon={faSyncAlt} className="humbleKeysSyncSpinner" />
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              className="humbleKeysSyncSpinner"
+            />
             {t('humbleKeys.syncing', 'Syncing… {{done}}/{{total}} orders', {
               done: progress?.done ?? 0,
               total: progress?.total ?? 0
@@ -201,9 +205,7 @@ export default function HumbleKeys() {
             if (!groupKeys?.length) {
               return null
             }
-            return (
-              <HumbleKeyGroup key={state} state={state} keys={groupKeys} />
-            )
+            return <HumbleKeyGroup key={state} state={state} keys={groupKeys} />
           })}
         </div>
       ) : (
