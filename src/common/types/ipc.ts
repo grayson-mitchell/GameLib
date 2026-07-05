@@ -51,7 +51,7 @@ import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { SteamUserData } from './steam'
-import type { HumbleAuthState } from './humble'
+import type { HumbleAuthState, HumbleUserData } from './humble'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -127,6 +127,7 @@ interface SyncIPCFunctions {
   ) => void
   logoutZoom: () => void
   logoutSteam: () => void
+  humbleDisconnect: () => void
   setGameMetadataOverride: (args: {
     appName: string
     title?: string
@@ -232,6 +233,16 @@ interface AsyncIPCFunctions {
   getSteamUserInfo: () => Promise<SteamUserData | undefined>
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>
+  humbleStartLogin: () => Promise<{
+    status: 'done' | 'waiting' | 'error'
+    username?: string
+  }>
+  humbleGetUserInfo: () => Promise<HumbleUserData | undefined>
+  humbleReconnect: () => Promise<{
+    status: 'done' | 'waiting' | 'error'
+    username?: string
+  }>
+  humbleCheckHealth: () => Promise<void>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
