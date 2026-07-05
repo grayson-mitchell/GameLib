@@ -3,7 +3,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 
 import { getGamekeys, getOrderDetail } from './adapter'
-import { classifyOrder } from './classify'
+import { classifyOrder, describeZeroKeyOrder } from './classify'
 import {
   humbleLibraryStore,
   humbleRevealedStore,
@@ -79,6 +79,8 @@ type OrderFetchOutcome =
 interface OrderFetchResult {
   gamekey: string
   outcome: OrderFetchOutcome
+  /** true when an 'ok' fetch classified to ZERO HumbleKeys (diagnosed). */
+  zeroKeys?: boolean
 }
 
 /**
@@ -120,6 +122,28 @@ async function fetchAndCommitOrder(
     )
     // Committed immediately per resolve, never batched (D-34).
     humbleLibraryStore.set(gamekey, entry)
+
+    if (entry.keys.length === 0) {
+      // Live-UAT round 3 diagnosability (debug session:
+      // humble-zero-keys-from-valid-orders): an order that parses ok but
+      // yields ZERO keys must be structurally self-diagnosing in
+      // gamelib.log — field NAMES/types/skip reasons only, never values
+      // (C5/T-11-04). Anomalous shapes (tpkd_dict/all_tpks absent, or a
+      // non-empty tpk array that still produced nothing) log as warnings;
+      // the one legitimate shape (explicit empty all_tpks — DRM-free,
+      // D-29) logs as info.
+      const diagnosis = describeZeroKeyOrder(result.data)
+      const log = diagnosis.anomalous ? logWarning : logInfo
+      log(
+        [
+          'Humble sync: order classified to zero keys:',
+          gamekey,
+          diagnosis.detail
+        ],
+        LogPrefix.Backend
+      )
+      return { gamekey, outcome: 'ok', zeroKeys: true }
+    }
     return { gamekey, outcome: 'ok' }
   }
 
@@ -338,8 +362,10 @@ async function runSync(): Promise<SyncOutcome> {
     session_expired: 0,
     transient: 0
   }
+  let zeroKeyOrders = 0
   for (const r of results) {
     outcomeCounts[r.outcome] += 1
+    if (r.zeroKeys) zeroKeyOrders += 1
   }
   logInfo(
     [
@@ -347,7 +373,8 @@ async function runSync(): Promise<SyncOutcome> {
       `fetched=${results.length}/${total} frozen=${gamekeysResult.data.length - total}`,
       `ok=${outcomeCounts.ok} schema_error=${outcomeCounts.schema_error}`,
       `denied=${outcomeCounts.access_denied} expired=${outcomeCounts.session_expired}`,
-      `transient=${outcomeCounts.transient} keysCached=${getKeys().length}`
+      `transient=${outcomeCounts.transient} zeroKeyOrders=${zeroKeyOrders}`,
+      `keysCached=${getKeys().length}`
     ],
     LogPrefix.Backend
   )

@@ -3,7 +3,7 @@
  * No axios/electron-store mocking needed — classifyTpk/classifyOrder are pure.
  */
 
-import { classifyTpk, classifyOrder } from '../classify'
+import { classifyTpk, classifyOrder, describeZeroKeyOrder } from '../classify'
 import {
   unpickedChoiceMonthOrder,
   unpickedChoiceMonthMissingUrlOrder,
@@ -15,7 +15,13 @@ import {
   resyncTpkFirstSync,
   resyncTpkSecondSync,
   nonSteamPlatformOrder,
-  drmFreeOnlyOrder
+  drmFreeOnlyOrder,
+  realWorldUnrevealedPurchaseOrder,
+  realWorldRedeemedKeyValOrder,
+  realWorldExpiredFlagOrder,
+  realWorldGiftKeyOrder,
+  minimalTpkOrder,
+  strippedNoTpkdDictOrder
 } from './fixtures/tpks'
 
 const NEVER_REVEALED = () => false
@@ -145,5 +151,129 @@ describe('classifyOrder', () => {
     const entry = classifyOrder(drmFreeOnlyOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(0)
     expect(entry.allTerminal).toBe(false)
+  })
+})
+
+// ── Real-world payload shapes (live-UAT round 3) ──────────────────────────
+// Field names verified against Playnite HumbleKeysLibrary's Tpk model and
+// FailSpy's humble-steam-key-redeemer: `redeemed_key_val` (not the spec's
+// `redeemed_key_value`) and `is_expired` (bool, not an `expiration` string).
+
+describe('classifyTpk — real-world is_expired flag', () => {
+  test('isExpired true -> UNREDEEMABLE, beats redeemed and local reveal (D-30 precedence)', () => {
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: true, expiration: null, isExpired: true },
+      true,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('UNREDEEMABLE')
+  })
+
+  test('isExpired false with no expiration does not classify UNREDEEMABLE', () => {
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: false, expiration: null, isExpired: false },
+      false,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('UNREVEALED')
+  })
+})
+
+describe('classifyOrder — real-world payload shapes', () => {
+  test('direct purchase (real field set, no redeemed_key_val) -> 1 UNREVEALED steam key', () => {
+    const entry = classifyOrder(realWorldUnrevealedPurchaseOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(entry.keys[0].platform).toBe('steam')
+    expect(entry.keys[0].machineName).toBe('directgame_steam')
+  })
+
+  test('real `redeemed_key_val` field (not redeemed_key_value) -> REDEEMED', () => {
+    const entry = classifyOrder(realWorldRedeemedKeyValOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('REDEEMED')
+    expect(entry.allTerminal).toBe(true)
+  })
+
+  test('real `is_expired: true` flag (no expiration timestamp) -> UNREDEEMABLE even when redeemed_key_val present', () => {
+    const entry = classifyOrder(realWorldExpiredFlagOrder, ALWAYS_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+  })
+
+  test('gift key (is_gift: true, no redeemed_key_val) classifies UNREVEALED — never skipped (D-28)', () => {
+    const entry = classifyOrder(realWorldGiftKeyOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(entry.keys[0].platform).toBe('steam')
+  })
+
+  test('shape-tolerance floor: a bare {} tpk still classifies with fallback identity', () => {
+    const entry = classifyOrder(minimalTpkOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(entry.keys[0].machineName).toBe('order-minimal:0')
+    expect(entry.keys[0].platform).toBe('unknown')
+  })
+})
+
+describe('describeZeroKeyOrder — redacted structural diagnosis (round 3)', () => {
+  test('order with no tpkd_dict at all -> anomalous, names the absence and the top-level field names', () => {
+    const diagnosis = describeZeroKeyOrder(strippedNoTpkdDictOrder)
+    expect(diagnosis.anomalous).toBe(true)
+    expect(diagnosis.detail).toContain('tpkd_dict=absent')
+    expect(diagnosis.detail).toContain('order_fields=')
+    expect(diagnosis.detail).toContain('gamekey')
+    expect(diagnosis.detail).toContain('subproducts')
+  })
+
+  test('tpkd_dict null -> anomalous, reported as null', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: null
+    })
+    expect(diagnosis.anomalous).toBe(true)
+    expect(diagnosis.detail).toContain('tpkd_dict=null')
+  })
+
+  test('tpkd_dict present but all_tpks absent -> anomalous, names tpkd_dict field names', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: { some_other_key_group: [] } as never
+    })
+    expect(diagnosis.anomalous).toBe(true)
+    expect(diagnosis.detail).toContain('tpkd_dict.all_tpks=absent')
+    expect(diagnosis.detail).toContain('some_other_key_group')
+  })
+
+  test('explicit empty all_tpks array -> NOT anomalous (legit DRM-free shape, D-29)', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: { all_tpks: [] }
+    })
+    expect(diagnosis.anomalous).toBe(false)
+    expect(diagnosis.detail).toContain('all_tpks=array(0)')
+  })
+
+  test('non-empty all_tpks of non-object elements -> anomalous, per-element skip reasons', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: { all_tpks: [null, 'a-string', 42] }
+    })
+    expect(diagnosis.anomalous).toBe(true)
+    expect(diagnosis.detail).toContain('all_tpks=array(3)')
+    expect(diagnosis.detail).toContain('[0]:non-object(null)')
+    expect(diagnosis.detail).toContain('[1]:non-object(string)')
+    expect(diagnosis.detail).toContain('[2]:non-object(number)')
+  })
+
+  test('C5 redaction: diagnosis carries field NAMES only, never field values', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      secret_field: 'SECRET-VALUE-MUST-NOT-LEAK',
+      tpkd_dict: null
+    } as never)
+    expect(diagnosis.detail).toContain('secret_field')
+    expect(diagnosis.detail).not.toContain('SECRET-VALUE-MUST-NOT-LEAK')
   })
 })
