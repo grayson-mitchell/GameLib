@@ -106,6 +106,11 @@ function encryptCookie(plain: string): string {
     return plain
   }
   const ciphertext = safeStorage.encryptString(plain).toString('base64')
+  // WR-07: the healthy path clears the flag — a user who once logged in with
+  // safeStorage unavailable and later re-logs in on a fixed system (keychain
+  // unlocked, kwallet installed) must not keep seeing the stale
+  // reduced-encryption warning.
+  configStore.set('encryptionDegraded', false)
   return `${HUMBLE_TOKEN_PREFIX}${ciphertext}`
 }
 

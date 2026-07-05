@@ -471,6 +471,20 @@ describe('HumbleUser', () => {
       )
       expect(mockLogWarning).toHaveBeenCalled()
     })
+
+    test('WR-07: a later login with encryption available clears the sticky encryptionDegraded flag', async () => {
+      mockIsEncryptionAvailable.mockReturnValue(true)
+      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await loginPromise
+
+      expect(mockConfigStore.set).toHaveBeenCalledWith(
+        'encryptionDegraded',
+        false
+      )
+    })
   })
 
   // ── HACCT-02: checkHealthAndFlagExpiry() — D-08 401 vs 403 ───────────────
