@@ -163,14 +163,6 @@ const router = createHashRouter([
         lazy: makeLazyFunc(import('./screens/Login/components/SteamLogin'))
       },
       {
-        // Specific route placed before the loginweb/:runner catch-all
-        // (mirrors the Steam-route ordering precedent) to prevent WebView
-        // capture. Humble deviates by design (D-05/D-07): this triggers a
-        // main-process BrowserWindow login, not a /loginweb/:runner WebView.
-        path: 'humble-connect',
-        lazy: makeLazyFunc(import('./screens/Login/components/HumbleConnect'))
-      },
-      {
         path: 'loginweb/:runner',
         lazy: makeLazyFunc(import('./screens/WebView'))
       },

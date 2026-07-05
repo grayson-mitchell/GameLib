@@ -35,7 +35,8 @@ export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
   const { t } = useTranslation()
-  const { epic, gog, amazon, zoom, connectivity } = useContext(ContextProvider)
+  const { epic, gog, amazon, zoom, humble, connectivity } =
+    useContext(ContextProvider)
   const [loading, setLoading] = useState<{
     refresh: boolean
     message: string
@@ -73,6 +74,7 @@ export default function WebView() {
     'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
   const zoomLoginUrl =
     'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
+  const humbleLoginUrl = 'https://www.humblebundle.com/login'
 
   const trueAsStr = 'true' as unknown as boolean | undefined
 
@@ -88,7 +90,8 @@ export default function WebView() {
     '/loginweb/legendary': epicLoginUrl,
     '/loginweb/gog': gogLoginUrl,
     '/loginweb/nile': amazonLoginData ? amazonLoginData.url : '',
-    '/loginweb/zoom': zoomLoginUrl
+    '/loginweb/zoom': zoomLoginUrl,
+    '/loginweb/humble': humbleLoginUrl
   }
   let startUrl = urls[pathname]
 
@@ -161,17 +164,74 @@ export default function WebView() {
     void fetchWebviewPreloadPath()
   }, [])
 
+  // D-05/D-07/UA note: the /loginweb/humble webview needs a standard-Chrome
+  // user agent (not the fake 'Chrome/200.0' applied to other login runners
+  // below) so Google SSO offers its normal password / "Try another way"
+  // flows. Fetched once per mount of the humble login route.
+  const [humbleLoginUserAgent, setHumbleLoginUserAgent] = useState('')
+  useEffect(() => {
+    if (runner !== 'humble') return
+
+    const fetchHumbleLoginUserAgent = async () => {
+      const userAgent = await window.api.humbleGetLoginUserAgent()
+      setHumbleLoginUserAgent(userAgent)
+    }
+
+    void fetchHumbleLoginUserAgent()
+  }, [runner])
+
+  // Drives the main-process login watch (D-05/D-06/D-16) from the humble
+  // route: starts it exactly once on mount (reconnect() instead of
+  // startLogin() when arriving with an expired session), applies the
+  // resulting login state on acceptance, and issues the D-06 silent-cancel
+  // signal on unmount / navigating away.
+  useEffect(() => {
+    if (runner !== 'humble') return
+
+    let mounted = true
+
+    async function runHumbleLoginWatch() {
+      const result = humble.expired
+        ? await window.api.humbleReconnect()
+        : await window.api.humbleStartLogin()
+      // A late resolution after the route unmounted must not navigate —
+      // the user already left the login surface (D-06 silent cancel).
+      if (!mounted) return
+      if (result.status === 'done') {
+        await humble.login(result)
+        navigate('/login')
+      }
+    }
+
+    void runHumbleLoginWatch()
+
+    return () => {
+      mounted = false
+      window.api.humbleStopLogin()
+    }
+    // Only ever run once per mount of the humble login route — re-running on
+    // every `humble` context update would restart the login watch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner])
+
   useLayoutEffect(() => {
     const webview = webviewRef.current
     if (webview) {
       const loadstop = async () => {
         setLoading({ ...loading, refresh: false })
-        const userAgent =
-          startUrl === epicLoginUrl
-            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
-            : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
-        if (webview.getUserAgent() != userAgent) {
-          webview.setUserAgent(userAgent)
+        // The humble login surface keeps its fetched standard-Chrome UA
+        // (applied via the webview's `useragent` attribute) — the generic
+        // fake 'Chrome/200.0' UA used by the other login runners is itself
+        // an embedded-browser signal that would defeat the SSO fix (UA
+        // note).
+        if (runner !== 'humble') {
+          const userAgent =
+            startUrl === epicLoginUrl
+              ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
+              : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+          if (webview.getUserAgent() != userAgent) {
+            webview.setUserAgent(userAgent)
+          }
         }
         // Ignore the login handling if not on login page
         if (!runner) {
@@ -283,16 +343,33 @@ export default function WebView() {
         }
       }
 
+      // D-17: relays the webview's navigation events to the main-process
+      // login watch so a rejected candidate cookie is force-revalidated
+      // (bypassing the poll-path throttle) — e.g. the SSO redirect landing
+      // back on humblebundle.com.
+      const onHumbleLoginNavigate = () => {
+        if (runner === 'humble') {
+          window.api.humbleLoginNavigated()
+        }
+      }
+
       // this one is needed for gog/amazon
       webview.addEventListener('did-navigate', onNavigate)
       // this one is needed for epic
       webview.addEventListener('did-navigate-in-page', onNavigate)
       webview.addEventListener('did-navigate', onLoginNavigate)
+      webview.addEventListener('did-navigate', onHumbleLoginNavigate)
+      webview.addEventListener('did-navigate-in-page', onHumbleLoginNavigate)
 
       return () => {
         webview.removeEventListener('did-navigate', onNavigate)
         webview.removeEventListener('did-navigate-in-page', onNavigate)
         webview.removeEventListener('did-navigate', onLoginNavigate)
+        webview.removeEventListener('did-navigate', onHumbleLoginNavigate)
+        webview.removeEventListener(
+          'did-navigate-in-page',
+          onHumbleLoginNavigate
+        )
       }
     }
 
@@ -370,6 +447,13 @@ export default function WebView() {
     return <></>
   }
 
+  // The humble login surface must not render until its standard-Chrome UA
+  // has been fetched — applying it late (after the webview's first request)
+  // would defeat the SSO fix (UA note).
+  if (runner === 'humble' && !humbleLoginUserAgent) {
+    return <></>
+  }
+
   return (
     <div className="WebView">
       {webviewRef.current && (
@@ -384,10 +468,17 @@ export default function WebView() {
         key={store}
         ref={webviewRef}
         className="WebView__webview"
-        partition={`persist:${startUrl === epicLoginUrl ? 'epicstore' : store}`}
+        partition={`persist:${
+          runner === 'humble'
+            ? 'humble'
+            : startUrl === epicLoginUrl
+              ? 'epicstore'
+              : store
+        }`}
         src={startUrl}
         allowpopups={trueAsStr}
         preload={webviewPreloadPath}
+        useragent={runner === 'humble' ? humbleLoginUserAgent : undefined}
       />
       {showLoginWarningFor && (
         <LoginWarning
