@@ -58,4 +58,32 @@ describe('backend/cache.ts', () => {
     jest.setSystemTime(now)
     expect(testStore2.get('foo')).toBe('bar')
   })
+
+  // Regression (debug: humble-sync-spinner-never-ends): electron-store's
+  // dot-notation nests `__timestamp.foo` under a TOP-LEVEL `__timestamp`
+  // object on the file-backed path. entries() must exclude that group too —
+  // leaking it as a ['__timestamp', {…}] pseudo-entry crashed
+  // HumbleLibrary.getKeys() (spread of `entry.keys` on the timestamp object).
+  test('entries() excludes timestamp bookkeeping on the file-backed store', () => {
+    testStore.set('foo', 'bar')
+    testStore.set('baz', 'qux')
+
+    // The nested bookkeeping group really is on disk…
+    expect(internalStore.has('__timestamp')).toBe(true)
+    // …but never leaks through entries().
+    expect(testStore.entries()).toEqual([
+      ['foo', 'bar'],
+      ['baz', 'qux']
+    ])
+  })
+
+  test('entries() excludes timestamp bookkeeping on the in-memory store', () => {
+    const memStore = new CacheStore<string>('test_store_mem')
+    memStore.use_in_memory()
+    memStore.set('foo', 'bar')
+
+    expect(memStore.entries()).toEqual([['foo', 'bar']])
+
+    memStore.commit()
+  })
 })
