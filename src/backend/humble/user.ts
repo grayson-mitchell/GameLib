@@ -379,7 +379,22 @@ export class HumbleUser {
     const cookie = HumbleUser.getCredentials()
     if (!cookie) return
 
-    const result = await getGamekeys(cookie)
+    let result: Awaited<ReturnType<typeof getGamekeys>>
+    try {
+      result = await getGamekeys(cookie)
+    } catch (err) {
+      // Transient/network failure (e.g. offline app start) — health is
+      // UNKNOWN, so do not flag expiry and do not push any state. Without
+      // this catch the rejection propagates through the humbleCheckHealth
+      // IPC handler to the renderer's fire-and-forget call as an unhandled
+      // rejection on every offline start. Message/status only — never the
+      // cookie.
+      logWarning(
+        ['Humble startup health check failed (transient, health unknown):', err],
+        LogPrefix.Backend
+      )
+      return
+    }
     if (result.status === 'session_expired') {
       configStore.set('expired', true)
       const userData = configStore.get_nodefault('userData')

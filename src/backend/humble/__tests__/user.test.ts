@@ -482,6 +482,27 @@ describe('HumbleUser', () => {
       await HumbleUser.checkHealthAndFlagExpiry()
       expect(mockGetGamekeys).not.toHaveBeenCalled()
     })
+
+    test('WR-01: a thrown adapter error (offline start) resolves without state change instead of rejecting', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'sessionCookie') {
+          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+        }
+        return undefined
+      })
+      mockDecryptString.mockReturnValue('secret-health-cookie-xyz')
+      mockGetGamekeys.mockRejectedValue(new Error('ECONNREFUSED'))
+
+      // Must NOT reject — health is unknown, not expired.
+      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBeUndefined()
+
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
+      expect(mockSendFrontendMessage).not.toHaveBeenCalled()
+      // Redaction: the warning must never carry the cookie value.
+      for (const call of mockLogWarning.mock.calls) {
+        expect(JSON.stringify(call)).not.toContain('secret-health-cookie-xyz')
+      }
+    })
   })
 
   // ── HACCT-02: reconnect() — D-11 partition kept ──────────────────────────
