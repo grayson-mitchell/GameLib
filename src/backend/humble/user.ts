@@ -1,4 +1,4 @@
-import { BrowserWindow, safeStorage, session } from 'electron'
+import { app, BrowserWindow, safeStorage, session } from 'electron'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
@@ -32,6 +32,33 @@ import { HumbleUserData } from 'common/types/humble'
 // did-navigate/did-navigate-in-page hooks, which may not fire on every
 // SPA-style post-login state change on humblebundle.com [ASSUMED].
 const COOKIE_POLL_INTERVAL_MS = 1500
+
+/**
+ * Standard (non-Electron) browser user agent for the login window.
+ *
+ * Google's SSO detects embedded browsers via the `Electron/x.y.z` and
+ * app-name UA tokens and then restricts auth options — forcing passkey-only
+ * verification (WebAuthn platform authenticators are unavailable inside a
+ * BrowserWindow, so that prompt can never complete) or blocking outright
+ * with `disallowed_useragent`. Presenting a plain Chrome UA restores the
+ * password / "Try another way" flows.
+ *
+ * Derived from Electron's own `app.userAgentFallback` (NOT hardcoded) so the
+ * platform token and Chrome version stay in parity with the actual runtime
+ * Chromium — a stale hardcoded Chrome version is itself an embedded-browser
+ * signal. Exported for unit testing.
+ */
+export function standardBrowserUserAgent(): string {
+  const fallback = app.userAgentFallback
+  const platform = /^Mozilla\/5\.0 \(([^)]+)\)/.exec(fallback)?.[1]
+  const chromeVersion = /Chrome\/(\S+)/.exec(fallback)?.[1]
+  if (!platform || !chromeVersion) {
+    // Defensive: the fallback shape is stable across Electron versions, but
+    // if it ever changes, at least strip the Electron-identifying token.
+    return fallback.replace(/ Electron\/\S+/, '')
+  }
+  return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
+}
 
 type LoginResult = {
   status: 'done' | 'waiting' | 'error'
@@ -143,6 +170,11 @@ export class HumbleUser {
       webPreferences: { session: ses, contextIsolation: true }
     })
     HumbleUser.loginWindow = win
+    // Present a standard Chrome UA so third-party SSO (Google) offers its
+    // normal password/"Try another way" flows instead of embedded-browser
+    // restrictions (passkey-only / disallowed_useragent). Must be set before
+    // loadURL so the very first request already carries it.
+    win.webContents.userAgent = standardBrowserUserAgent()
     void win.loadURL(HUMBLE_LOGIN_URL)
 
     return new Promise<LoginResult>((resolve) => {

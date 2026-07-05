@@ -26,6 +26,7 @@ const mockWindowInstance = {
   loadURL: mockWindowLoadURL,
   close: mockWindowClose,
   webContents: {
+    userAgent: '',
     on: jest.fn((event: string, cb: (...args: any[]) => any) => {
       webContentsHandlers[event] = cb
     })
@@ -35,6 +36,11 @@ const mockWindowInstance = {
   })
 }
 const MockBrowserWindow = jest.fn(() => mockWindowInstance)
+
+// Typical Electron default UA shape: platform + Chrome version + the
+// Electron-/app-identifying tokens standardBrowserUserAgent() must strip.
+const mockUserAgentFallback =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
 
 const mockCookiesGet = jest.fn()
 const mockClearStorageData = jest.fn()
@@ -53,6 +59,7 @@ const mockSessionInstance = {
 const mockFromPartition = jest.fn(() => mockSessionInstance)
 
 jest.mock('electron', () => ({
+  app: { userAgentFallback: mockUserAgentFallback },
   safeStorage: {
     isEncryptionAvailable: mockIsEncryptionAvailable,
     encryptString: mockEncryptString,
@@ -99,7 +106,7 @@ jest.mock('../adapter', () => ({
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { HumbleUser } from '../user'
+import { HumbleUser, standardBrowserUserAgent } from '../user'
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('HumbleUser', () => {
@@ -214,6 +221,36 @@ describe('HumbleUser', () => {
         username: 'tester'
       })
       expect(mockWindowClose).toHaveBeenCalled()
+    })
+  })
+
+  // ── HACCT-01: login window user agent (SSO compatibility) ────────────────
+  // Google SSO restricts embedded browsers detected via Electron/app UA
+  // tokens (forcing uncompletable passkey prompts or disallowed_useragent).
+
+  describe('standardBrowserUserAgent()', () => {
+    test('derives a plain Chrome UA from the runtime fallback: platform + Chrome version kept, Electron/app tokens stripped', () => {
+      const ua = standardBrowserUserAgent()
+      expect(ua).toBe(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.52 Safari/537.36'
+      )
+      expect(ua).not.toContain('Electron')
+      expect(ua).not.toContain('GameLib')
+    })
+
+    test('login window webContents receives the standard UA before loadURL', async () => {
+      const loginPromise = HumbleUser.startLogin()
+
+      expect(mockWindowInstance.webContents.userAgent).toBe(
+        standardBrowserUserAgent()
+      )
+      expect(mockWindowInstance.webContents.userAgent).not.toContain(
+        'Electron'
+      )
+      expect(mockWindowLoadURL).toHaveBeenCalled()
+
+      windowHandlers['closed']()
+      await loginPromise
     })
   })
 
