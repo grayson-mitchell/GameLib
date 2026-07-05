@@ -33,6 +33,13 @@ import { HumbleUserData } from 'common/types/humble'
 // SPA-style post-login state change on humblebundle.com [ASSUMED].
 const COOKIE_POLL_INTERVAL_MS = 1500
 
+// Poll-path identity-validation throttle: a cookie VALUE that was just
+// rejected is not re-validated by the poll more often than this. Deliberately
+// NOT a permanent blacklist — Humble may keep the same value across the
+// anonymous → authenticated transition — and top-level navigations bypass
+// the throttle entirely (see openLoginWindow).
+const VALIDATION_THROTTLE_MS = 3000
+
 /**
  * Standard (non-Electron) browser user agent for the login window.
  *
@@ -183,12 +190,18 @@ export class HumbleUser {
       // Humble sets a `_simpleauth_sess` cookie for ANONYMOUS visitors too —
       // the login page's very first navigation already carries one. A cookie
       // value is therefore only a login CANDIDATE; finishLogin() validates it
-      // against the identity endpoint before anything is stored. Values that
-      // failed validation are remembered here so the 1.5s poll doesn't hammer
-      // the identity endpoint with the same anonymous value — but ONLY that
-      // exact value is skipped: when the cookie value CHANGES (anonymous →
-      // authenticated after the real login), the new value is checked fresh.
-      const rejectedCookieValues = new Set<string>()
+      // against the identity endpoint before anything is stored.
+      //
+      // IMPORTANT: Humble may keep the SAME cookie value across the
+      // anonymous → authenticated transition (the session id stays, only the
+      // server-side state elevates). A rejected value therefore must NEVER be
+      // permanently skipped — it is only THROTTLED on the poll path (so the
+      // 1.5s poll doesn't hammer the identity endpoint), and a top-level
+      // navigation (did-navigate / did-navigate-in-page — e.g. the SSO
+      // redirect landing back on humblebundle.com) ALWAYS forces a fresh
+      // validation regardless of value match or throttle.
+      let lastRejectedValue: string | null = null
+      let lastRejectedAt = 0
       // Overlapping did-navigate events + poll ticks must not race concurrent
       // validations (they could double-store or double-settle).
       let validationInFlight = false
@@ -204,7 +217,7 @@ export class HumbleUser {
         resolve(result)
       }
 
-      async function checkCookie() {
+      async function checkCookie(forceValidation: boolean) {
         if (settled || validationInFlight) return
         try {
           const cookies = await ses.cookies.get({
@@ -215,16 +228,30 @@ export class HumbleUser {
           if (cookies.length === 0) return
 
           const cookieValue = cookies[0].value
-          if (rejectedCookieValues.has(cookieValue)) return
+
+          // Poll-path throttle only: skip when the SAME value was rejected
+          // within the throttle window. Navigations bypass this entirely.
+          if (
+            !forceValidation &&
+            cookieValue === lastRejectedValue &&
+            Date.now() - lastRejectedAt < VALIDATION_THROTTLE_MS
+          ) {
+            return
+          }
 
           validationInFlight = true
           try {
-            await HumbleUser.finishLogin(
+            const outcome = await HumbleUser.finishLogin(
               cookieValue,
               win,
-              settle,
-              rejectedCookieValues
+              settle
             )
+            if (outcome === 'rejected') {
+              lastRejectedValue = cookieValue
+              lastRejectedAt = Date.now()
+            }
+            // 'transient' records no throttle state — the next tick retries
+            // the same value immediately.
           } finally {
             validationInFlight = false
           }
@@ -236,10 +263,10 @@ export class HumbleUser {
         }
       }
 
-      win.webContents.on('did-navigate', () => void checkCookie())
-      win.webContents.on('did-navigate-in-page', () => void checkCookie())
+      win.webContents.on('did-navigate', () => void checkCookie(true))
+      win.webContents.on('did-navigate-in-page', () => void checkCookie(true))
       const pollInterval = setInterval(
-        () => void checkCookie(),
+        () => void checkCookie(false),
         COOKIE_POLL_INTERVAL_MS
       )
 
@@ -255,9 +282,8 @@ export class HumbleUser {
   private static async finishLogin(
     cookieValue: string,
     win: BrowserWindow,
-    settle: (result: LoginResult) => void,
-    rejectedCookieValues: Set<string>
-  ): Promise<void> {
+    settle: (result: LoginResult) => void
+  ): Promise<'done' | 'rejected' | 'transient'> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
     // Passing the raw value to getAccountIdentity is fine — the adapter
@@ -270,22 +296,32 @@ export class HumbleUser {
     try {
       identity = await getAccountIdentity(cookieValue)
     } catch (err) {
-      // Transient/unexpected failure (network etc.) — do NOT reject the
-      // value permanently; the next poll tick retries the same cookie.
+      // Transient/unexpected failure (network etc.) — do NOT record a
+      // rejection; the next tick retries the same cookie immediately.
       logWarning(
         ['Humble identity validation during login failed:', err],
         LogPrefix.Backend
       )
-      return
+      return 'transient'
     }
 
     if (identity.status !== 'ok') {
       // Anonymous/unauthenticated cookie value: store NOTHING, keep the
-      // window open so the user can complete the real login. Remember this
-      // exact value so the poll doesn't re-validate it every 1.5s — a later
-      // value change (post-login) is still checked fresh.
-      rejectedCookieValues.add(cookieValue)
-      return
+      // window open so the user can complete the real login. The caller
+      // throttles poll-path re-validation of this value; navigations always
+      // re-check it (the value may stay IDENTICAL across anonymous →
+      // authenticated). Status-only log (never the cookie value) — if this
+      // warning keeps firing AFTER a successful login, the identity endpoint
+      // itself is failing for authenticated sessions: D-14 fallback evidence.
+      logWarning(
+        [
+          'Humble identity check rejected candidate session:',
+          identity.status,
+          '(endpoint: /api/v1/user/info)'
+        ],
+        LogPrefix.Backend
+      )
+      return 'rejected'
     }
 
     const encrypted = encryptCookie(cookieValue)
@@ -300,6 +336,7 @@ export class HumbleUser {
     // which would otherwise race to also settle this same promise.
     settle({ status: 'done', username })
     win.close()
+    return 'done'
   }
 
   // ── HACCT-02: Startup/401 expiry health check (D-08/D-09) ────────────────

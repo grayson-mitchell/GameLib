@@ -282,22 +282,90 @@ describe('HumbleUser', () => {
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
 
-    test('a rejected cookie value is not re-validated on subsequent checks (no identity-endpoint hammering)', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
-      mockGetAccountIdentity.mockResolvedValue({ status: 'session_expired' })
+    test('REGRESSION: the SAME cookie value rejected once is re-validated on a later did-navigate and login completes (anonymous → authenticated with an UNCHANGED value)', async () => {
+      // Humble may keep the identical _simpleauth_sess value across the
+      // anonymous → authenticated transition. A permanent value-blacklist
+      // made the login window never close (UAT failure 2026-07-05 #3).
+      mockCookiesGet.mockResolvedValue([{ value: 'same-cookie-value' }])
+      mockGetAccountIdentity.mockResolvedValueOnce({
+        status: 'session_expired'
+      })
 
       const loginPromise = HumbleUser.startLogin()
       await webContentsHandlers['did-navigate']()
       await flushAsync()
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
+      expect(mockWindowClose).not.toHaveBeenCalled()
+
+      // User completes the real login; the SSO redirect back to
+      // humblebundle.com fires did-navigate. Same cookie VALUE, but the
+      // server-side session is now authenticated.
+      mockGetAccountIdentity.mockResolvedValue({
+        status: 'ok',
+        data: { username: 'tester' }
+      })
+      await webContentsHandlers['did-navigate']()
+      const result = await loginPromise
+
+      expect(result.status).toBe('done')
+      expect(result.username).toBe('tester')
+      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
+      expect(mockGetAccountIdentity).toHaveBeenLastCalledWith(
+        'same-cookie-value'
+      )
+      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+      expect(mockWindowClose).toHaveBeenCalled()
+    })
+
+    test('poll ticks within the throttle window do NOT re-validate an unchanged rejected value; a later tick outside the window does', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+      try {
+        mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+        mockGetAccountIdentity.mockResolvedValue({ status: 'session_expired' })
+
+        const loginPromise = HumbleUser.startLogin()
+
+        // Forced validation via navigation → rejected, throttle starts.
+        await webContentsHandlers['did-navigate']()
+        await flushAsync()
+        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+
+        // Poll tick at t=1500ms: same value, inside the 3000ms throttle.
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
+
+        // Poll tick at t=3000ms: outside the throttle window → re-validated.
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        expect(mockGetAccountIdentity).toHaveBeenCalledTimes(2)
+
+        windowHandlers['closed']()
+        await loginPromise
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('overlapping checks are deduped while a validation is in flight', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'cookie-value' }])
+      let resolveIdentity!: (v: unknown) => void
+      mockGetAccountIdentity.mockImplementation(
+        async () => new Promise((r) => (resolveIdentity = r))
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      await webContentsHandlers['did-navigate']()
       await webContentsHandlers['did-navigate-in-page']()
       await flushAsync()
-      await webContentsHandlers['did-navigate']()
-      await flushAsync()
 
+      // Second check bailed on the in-flight flag — one validation only.
       expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
 
-      windowHandlers['closed']()
-      await loginPromise
+      resolveIdentity({ status: 'ok', data: { username: 'tester' } })
+      const result = await loginPromise
+      expect(result.status).toBe('done')
+      expect(mockGetAccountIdentity).toHaveBeenCalledTimes(1)
     })
 
     test('a CHANGED cookie value (anonymous → authenticated) is re-checked and completes login when identity is ok', async () => {
