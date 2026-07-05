@@ -96,6 +96,16 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   /**
    * Returns all cached entries as [key, value] pairs, excluding internal
    * `__timestamp.*` bookkeeping keys. Useful for one-off cache migrations.
+   *
+   * The bookkeeping exclusion must cover BOTH on-disk shapes:
+   * - The file-backed path: electron-store (conf) defaults
+   *   `accessPropertiesByDotNotation: true`, so `set('__timestamp.foo', …)`
+   *   nests the timestamps under a single TOP-LEVEL `__timestamp` object —
+   *   the literal-prefix filter alone misses it, leaking a
+   *   `['__timestamp', {…}]` pseudo-entry to callers (this broke
+   *   HumbleLibrary.getKeys(), which spreads `entry.keys` of every entry).
+   * - The in-memory path (use_in_memory): Map.set stores the literal
+   *   `__timestamp.foo` key, which the prefix filter catches.
    */
   public entries(): Array<[KeyType, ValueType]> {
     const source =
@@ -103,7 +113,9 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
         ? Object.fromEntries(this.current_store)
         : this.store.store
     return Object.entries(source)
-      .filter(([key]) => !key.startsWith('__timestamp.'))
+      .filter(
+        ([key]) => key !== '__timestamp' && !key.startsWith('__timestamp.')
+      )
       .map(([key, value]) => [key as KeyType, value as ValueType])
   }
 
