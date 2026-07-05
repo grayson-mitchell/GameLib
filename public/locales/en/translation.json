@@ -599,7 +599,7 @@
         "epic": "Epic Games Login",
         "gog": "GOG Login",
         "humble": "Humble Bundle Login",
-        "humble_connecting": "Waiting for Humble Bundle login...",
+        "humble_connected": "Connected",
         "humble_disconnect_message": "This removes your Humble Bundle session from GameLib. You can reconnect at any time.",
         "humble_disconnect_title": "Disconnect Humble Bundle?",
         "humble_encryption_degraded": "Your system does not support secure credential storage. The Humble Bundle session is stored with reduced encryption.",
