@@ -1,6 +1,6 @@
 import { TypeCheckedStoreBackend } from '../electron_store'
 import CacheStore from '../cache'
-import { HumbleOrderCacheEntry } from 'common/types/humble'
+import { HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
 
 const configStore = new TypeCheckedStoreBackend('humbleConfigStore', {
   cwd: 'humble_store'
@@ -15,8 +15,12 @@ const humbleLibraryStore = new CacheStore<HumbleOrderCacheEntry, string>(
 )
 
 // Last-synced timestamp / fail-soft state (D-31/D-32). Also wiped by
-// disconnect() alongside humbleLibraryStore.
-const humbleSyncStore = new CacheStore<number, 'syncedAt'>(
+// disconnect() alongside humbleLibraryStore. The whole HumbleSyncState is
+// stored as a single record under the 'state' key (rather than one CacheStore
+// key per field) so library.ts's setSyncState() can atomically merge a patch
+// (syncedAt/syncError/cooldownUntil) without juggling three differently-typed
+// keys on one store instance.
+const humbleSyncStore = new CacheStore<HumbleSyncState, 'state'>(
   'humble_sync',
   null
 )

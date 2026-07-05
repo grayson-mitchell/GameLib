@@ -21,37 +21,63 @@
 import type { HumbleKey, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
 
 // ── electronStores mock (in-memory Map/Set-backed CacheStore doubles) ──────
+// NOTE: jest.config's `resetMocks: true` strips mock implementations before
+// EVERY test, so the has/get/set/entries/clear implementations below are
+// re-established in beforeEach() (resetStoreMocks()), not just once here —
+// only the plain jest.fn() shells are declared at module scope.
 
 const libraryData = new Map<string, HumbleOrderCacheEntry>()
 const mockLibraryStore = {
-  has: jest.fn((k: string) => libraryData.has(k)),
-  get: jest.fn((k: string) => libraryData.get(k)),
-  set: jest.fn((k: string, v: HumbleOrderCacheEntry) => {
-    libraryData.set(k, v)
-  }),
-  entries: jest.fn(() => Array.from(libraryData.entries())),
-  clear: jest.fn(() => libraryData.clear())
+  has: jest.fn(),
+  get: jest.fn(),
+  set: jest.fn(),
+  entries: jest.fn(),
+  clear: jest.fn()
 }
 
 const syncData = new Map<string, HumbleSyncState>()
 const mockSyncStore = {
-  get: jest.fn((k: string, fallback?: HumbleSyncState) =>
-    syncData.has(k) ? syncData.get(k) : fallback
-  ),
-  set: jest.fn((k: string, v: HumbleSyncState) => {
-    syncData.set(k, v)
-  }),
-  has: jest.fn((k: string) => syncData.has(k)),
-  clear: jest.fn(() => syncData.clear())
+  get: jest.fn(),
+  set: jest.fn(),
+  has: jest.fn(),
+  clear: jest.fn()
 }
 
 const revealedData = new Set<string>()
 const mockRevealedStore = {
-  has: jest.fn((k: string) => revealedData.has(k)),
-  set: jest.fn((k: string) => {
+  has: jest.fn(),
+  set: jest.fn(),
+  clear: jest.fn()
+}
+
+function resetStoreMocks() {
+  mockLibraryStore.has.mockImplementation((k: string) => libraryData.has(k))
+  mockLibraryStore.get.mockImplementation((k: string) => libraryData.get(k))
+  mockLibraryStore.set.mockImplementation(
+    (k: string, v: HumbleOrderCacheEntry) => {
+      libraryData.set(k, v)
+    }
+  )
+  mockLibraryStore.entries.mockImplementation(() =>
+    Array.from(libraryData.entries())
+  )
+  mockLibraryStore.clear.mockImplementation(() => libraryData.clear())
+
+  mockSyncStore.get.mockImplementation(
+    (k: string, fallback?: HumbleSyncState) =>
+      syncData.has(k) ? syncData.get(k) : fallback
+  )
+  mockSyncStore.set.mockImplementation((k: string, v: HumbleSyncState) => {
+    syncData.set(k, v)
+  })
+  mockSyncStore.has.mockImplementation((k: string) => syncData.has(k))
+  mockSyncStore.clear.mockImplementation(() => syncData.clear())
+
+  mockRevealedStore.has.mockImplementation((k: string) => revealedData.has(k))
+  mockRevealedStore.set.mockImplementation((k: string) => {
     revealedData.add(k)
-  }),
-  clear: jest.fn(() => revealedData.clear())
+  })
+  mockRevealedStore.clear.mockImplementation(() => revealedData.clear())
 }
 
 jest.mock('../electronStores', () => ({
@@ -74,7 +100,7 @@ jest.mock('../adapter', () => ({
 const mockGetCredentials = jest.fn(() => 'cookie-value')
 jest.mock('../user', () => ({
   HumbleUser: {
-    getCredentials: (...args: unknown[]) => mockGetCredentials(...args)
+    getCredentials: () => mockGetCredentials()
   }
 }))
 
@@ -155,10 +181,10 @@ function makeNonTerminalEntry(gamekey: string): HumbleOrderCacheEntry {
 
 describe('HumbleLibrary', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
     libraryData.clear()
     syncData.clear()
     revealedData.clear()
+    resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
   })
 
