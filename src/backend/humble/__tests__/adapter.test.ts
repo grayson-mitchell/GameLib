@@ -251,6 +251,66 @@ describe('getOrderDetail', () => {
     expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
   })
 
+  // Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): without
+  // `?all_tpkds=true` Humble does not reliably include tpkd_dict.all_tpks —
+  // 25/25 orders parsed ok with ZERO extractable keys. Every working
+  // integration (Playnite HumbleKeysLibrary, FailSpy redeemer) sends it.
+  test('requests the order detail with ?all_tpkds=true (round 3 regression)', async () => {
+    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
+    await getOrderDetail(COOKIE, GAMEKEY)
+    const [url] = mockGet.mock.calls[0]
+    expect(url).toBe(
+      `https://www.humblebundle.com/api/v1/order/${GAMEKEY}?all_tpkds=true`
+    )
+  })
+
+  // Shape tolerance (round 3): a live `"tpkd_dict": null` or
+  // `"all_tpks": null` must degrade to "no tpks" (diagnosed downstream by
+  // library.ts's zero-key logging), never fail the whole order parse.
+  test('tpkd_dict: null -> ok, never schema_error', async () => {
+    mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY, tpkd_dict: null } })
+    const result = await getOrderDetail(COOKIE, GAMEKEY)
+    expect(result.status).toBe('ok')
+  })
+
+  test('all_tpks: null -> ok, never schema_error', async () => {
+    mockGet.mockResolvedValue({
+      data: { gamekey: GAMEKEY, tpkd_dict: { all_tpks: null } }
+    })
+    const result = await getOrderDetail(COOKIE, GAMEKEY)
+    expect(result.status).toBe('ok')
+  })
+
+  // Real-world tpk field set (Playnite Tpk model / FailSpy): parses ok and
+  // RETAINS the fields classify.ts consumes (redeemed_key_val, is_expired).
+  test('real-world tpk shape parses ok and retains redeemed_key_val/is_expired', async () => {
+    const body = {
+      gamekey: GAMEKEY,
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'realgame_steam',
+            gamekey: GAMEKEY,
+            key_type: 'steam',
+            key_type_human_name: 'Steam',
+            human_name: 'Real Game',
+            steam_app_id: '220',
+            is_expired: false,
+            redeemed_key_val: 'redeemed-value-string'
+          }
+        ]
+      }
+    }
+    mockGet.mockResolvedValue({ data: body })
+    const result = await getOrderDetail(COOKIE, GAMEKEY)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    const tpk = result.data.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
+    expect(tpk.redeemed_key_val).toBe('redeemed-value-string')
+    expect(tpk.is_expired).toBe(false)
+    expect(tpk.steam_app_id).toBe('220')
+  })
+
   test('never logs the raw cookie value', async () => {
     mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
     await getOrderDetail(COOKIE, GAMEKEY)

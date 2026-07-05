@@ -29,15 +29,22 @@ import { HUMBLE_BASE_URL, HUMBLE_REQUIRED_HEADERS } from './constants'
 const GamekeyEntrySchema = z.object({ gamekey: z.string() }).passthrough()
 const GamekeysArraySchema = z.array(z.unknown())
 
-// Phase 11 (Task 2): tightened to the fields classify.ts consumes.
-// `redeemed_key_value` uses `.nullish()` per Open Question 2 — Humble's real
-// field-shape for a not-yet-revealed key (absent vs. null vs. empty string)
-// is unconfirmed, so any falsy value is treated uniformly as "absent" by the
-// classifier rather than trusting strict absence alone. `.passthrough()` at
-// every level keeps a shape drift from failing the whole order (Pitfall 5).
+// Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): field names
+// verified against two WORKING integrations (Playnite HumbleKeysLibrary
+// Models/Order.cs Tpk model; FailSpy humble-steam-key-redeemer) — the real
+// API's redeemed field is `redeemed_key_val` (any JSON type, e.g. an object
+// for some non-Steam key types) and the real expiry signal is `is_expired`
+// (bool). The spec's `redeemed_key_value`/`expiration` names are kept as
+// tolerated fallbacks in case some order types still carry them. Every field
+// is optional — a tpk needs NOTHING beyond being an object to classify
+// (minimal structural requirement; classify.ts does its own guarded reads).
+// `.passthrough()` at every level keeps a shape drift from failing the whole
+// order (Pitfall 5).
 const OrderDetailTpkSchema = z
   .object({
+    redeemed_key_val: z.unknown().nullish(),
     redeemed_key_value: z.string().nullish(),
+    is_expired: z.boolean().nullish(),
     expiration: z.string().nullish(),
     key_type: z.string().nullish(),
     human_name: z.string().nullish(),
@@ -47,17 +54,21 @@ const OrderDetailTpkSchema = z
 
 const OrderDetailSchema = z
   .object({
-    gamekey: z.string().optional(),
+    gamekey: z.string().nullish(),
     tpkd_dict: z
       .object({
         // T-11-05: unioned with z.unknown() so a single malformed element
         // (wrong type, null, non-object) never fails validation of the
         // WHOLE order — classify.ts's per-tpk try/skip loop is the layer
         // that actually discards a malformed entry, not schema rejection.
-        all_tpks: z.array(z.union([OrderDetailTpkSchema, z.unknown()])).optional()
+        // `.nullish()` (not `.optional()`) throughout: a live
+        // `"tpkd_dict": null` / `"all_tpks": null` must degrade to "no
+        // tpks" (diagnosed by library.ts's zero-key logging), never fail
+        // the whole order parse into a schema_error.
+        all_tpks: z.array(z.union([OrderDetailTpkSchema, z.unknown()])).nullish()
       })
       .passthrough()
-      .optional(),
+      .nullish(),
     // D-27: unpicked Humble Choice month detection fields (UNPICKED
     // pseudo-entry branch in classify.ts) — Assumption A1, unconfirmed by
     // live validation; defensive/optional throughout.
@@ -278,7 +289,17 @@ export async function getOrderDetail(
   gamekey: string
 ): Promise<AdapterResult<OrderDetail>> {
   try {
-    const response = await humbleRequest(`/api/v1/order/${gamekey}`, cookie)
+    // `?all_tpkds=true` (note the spelling — tpkDs) is REQUIRED to get the
+    // full third-party-key allocation in `tpkd_dict.all_tpks`. Without it
+    // Humble does not reliably include the tpk data — live-UAT round 3 saw
+    // 25/25 orders parse ok with ZERO extractable keys (debug session:
+    // humble-zero-keys-from-valid-orders). Every working integration sends
+    // it: Playnite HumbleKeysLibrary (`api/v1/order/{0}?all_tpkds=true`) and
+    // FailSpy humble-steam-key-redeemer use this exact param.
+    const response = await humbleRequest(
+      `/api/v1/order/${gamekey}?all_tpkds=true`,
+      cookie
+    )
     const parsed = OrderDetailSchema.safeParse(response.data)
     if (!parsed.success) {
       describeSchemaFailure(`/api/v1/order/${gamekey}`, response, parsed.error)

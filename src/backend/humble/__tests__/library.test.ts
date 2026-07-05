@@ -709,4 +709,149 @@ describe('HumbleLibrary', () => {
       expect(logged).not.toContain('cookie-value')
     })
   })
+
+  // Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): 25/25
+  // orders parsed ok yet keysCached=0 with NOTHING in the logs saying why.
+  // Any order that classifies to zero keys must now be structurally
+  // self-diagnosing (field names/types/skip reasons only — never values).
+  describe('sync() — zero-key order diagnostics (round 3)', () => {
+    test('an ok order with NO tpkd_dict logs an anomalous zero-key warning naming the absence', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['stripped-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'stripped-gk',
+          uid: 'uid-1',
+          product: { category: 'bundle', human_name: 'Stripped' },
+          subproducts: []
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeDefined()
+      const logged = JSON.stringify(zeroKeyWarning)
+      expect(logged).toContain('stripped-gk')
+      expect(logged).toContain('tpkd_dict=absent')
+      expect(logged).toContain('order_fields=')
+      expect(logged).not.toContain('cookie-value')
+    })
+
+    test('an ok order with a non-empty all_tpks of non-object elements logs per-element skip reasons', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['weird-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'weird-gk',
+          tpkd_dict: { all_tpks: ['not-an-object'] }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeDefined()
+      const logged = JSON.stringify(zeroKeyWarning)
+      expect(logged).toContain('all_tpks=array(1)')
+      expect(logged).toContain('[0]:non-object(string)')
+    })
+
+    test('a legitimately empty all_tpks array (DRM-free, D-29) logs info — not a warning', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['drmfree-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'drmfree-gk',
+          tpkd_dict: { all_tpks: [] },
+          product: { category: 'bundle', human_name: 'DRM Free' }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const zeroKeyInfo = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyInfo).toBeDefined()
+      expect(JSON.stringify(zeroKeyInfo)).toContain('all_tpks=array(0)')
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeUndefined()
+    })
+
+    test('the sync summary line carries a zeroKeyOrders count', async () => {
+      mockGetGamekeys.mockResolvedValue({
+        status: 'ok',
+        data: ['stripped-gk', 'good-gk']
+      })
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) => {
+          if (gamekey === 'stripped-gk') {
+            return Promise.resolve({
+              status: 'ok',
+              data: { gamekey: 'stripped-gk' }
+            })
+          }
+          return Promise.resolve({ status: 'ok', data: makeRawOrder(gamekey) })
+        }
+      )
+
+      await HumbleLibrary.sync()
+
+      const summary = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('Humble sync finished')
+      )
+      expect(summary).toBeDefined()
+      const logged = JSON.stringify(summary)
+      expect(logged).toContain('zeroKeyOrders=1')
+      expect(logged).toContain('keysCached=1')
+    })
+
+    test('real-world tpk field names (redeemed_key_val + is_expired) commit keys — never a zero-key order', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['real-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'real-gk',
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'realgame_steam',
+                gamekey: 'real-gk',
+                key_type: 'steam',
+                human_name: 'Real Game',
+                steam_app_id: '220',
+                is_expired: false,
+                redeemed_key_val: 'redeemed-value-string'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].state).toBe('REDEEMED')
+      const summary = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('Humble sync finished')
+      )
+      expect(JSON.stringify(summary)).toContain('zeroKeyOrders=0')
+      // C5: the redeemed key value must never reach a log line.
+      for (const call of [
+        ...mockLogInfo.mock.calls,
+        ...mockLogWarning.mock.calls,
+        ...mockLogError.mock.calls
+      ]) {
+        expect(JSON.stringify(call)).not.toContain('redeemed-value-string')
+      }
+    })
+  })
 })

@@ -189,3 +189,122 @@ export const drmFreeOnlyOrder = {
     human_name: 'DRM Free Bundle'
   }
 }
+
+// ─── Real-world payload shapes (live-UAT round 3) ─────────────────────────
+// Field set verified against two WORKING integrations' models of the live
+// API (Playnite HumbleKeysLibrary Models/Order.cs Tpk; FailSpy
+// humble-steam-key-redeemer): the redeemed field is `redeemed_key_val`
+// (any JSON type — NOT the spec's `redeemed_key_value`) and the expiry
+// signal is `is_expired` (bool — NOT an `expiration` timestamp string).
+// The earlier fixtures above (spec-shaped) are kept: both shapes must
+// classify (shape-tolerant extraction).
+
+// Direct store purchase, key not yet revealed: no redeemed_key_val at all.
+export const realWorldUnrevealedPurchaseOrder = {
+  gamekey: 'order-real-direct',
+  uid: 'uid-real-direct',
+  product: {
+    category: 'storefront',
+    machine_name: 'directgame_storefront',
+    human_name: 'Direct Purchase'
+  },
+  subproducts: [],
+  path_ids: ['12345'],
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'directgame_steam',
+        gamekey: 'order-real-direct',
+        key_type: 'steam',
+        visible: true,
+        key_type_human_name: 'Steam',
+        human_name: 'Direct Game',
+        class: 'holiday',
+        library_family_name: 'directgame',
+        steam_app_id: '123450',
+        is_expired: false
+      }
+    ]
+  }
+}
+
+// Already-redeemed key: real `redeemed_key_val` field carries the value.
+export const realWorldRedeemedKeyValOrder = {
+  gamekey: 'order-real-redeemed',
+  product: { category: 'bundle', human_name: 'Real Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'realredeemed_steam',
+        gamekey: 'order-real-redeemed',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Real Redeemed Game',
+        steam_app_id: '54321',
+        is_expired: false,
+        redeemed_key_val: 'redeemed-value-string'
+      }
+    ]
+  }
+}
+
+// Expired key: real `is_expired: true` flag, no expiration timestamp —
+// must classify UNREDEEMABLE even though redeemed_key_val is present
+// (D-30 precedence: expiry beats redeemed).
+export const realWorldExpiredFlagOrder = {
+  gamekey: 'order-real-expired',
+  product: { category: 'bundle', human_name: 'Expired Real Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'realexpired_steam',
+        gamekey: 'order-real-expired',
+        key_type: 'steam',
+        human_name: 'Real Expired Game',
+        is_expired: true,
+        redeemed_key_val: 'redeemed-value-string'
+      }
+    ]
+  }
+}
+
+// Gift key (HUMBLE-SPEC-SOURCE §gift fields / D-28): carries gift-specific
+// fields, no redeemed_key_val — must classify UNREVEALED (giftable state
+// maps into the 5-state model), never be skipped.
+export const realWorldGiftKeyOrder = {
+  gamekey: 'order-real-gift',
+  product: { category: 'bundle', human_name: 'Gifted Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'giftgame_steam',
+        gamekey: 'order-real-gift',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Gifted Game',
+        is_gift: true,
+        is_expired: false,
+        steam_app_id: '99999'
+      }
+    ]
+  }
+}
+
+// Minimal structural requirement: a bare object tpk with NO fields at all
+// must still classify (fallback identity + 'unknown' platform) — the
+// shape-tolerance floor.
+export const minimalTpkOrder = {
+  gamekey: 'order-minimal',
+  tpkd_dict: {
+    all_tpks: [{}]
+  }
+}
+
+// Stripped order: parses ok but carries NO tpkd_dict at all — the shape the
+// round-3 zero-keys diagnosis must make self-evident in the logs.
+export const strippedNoTpkdDictOrder = {
+  gamekey: 'order-stripped',
+  uid: 'uid-stripped',
+  product: { category: 'bundle', human_name: 'Stripped Order' },
+  subproducts: []
+}
