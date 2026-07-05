@@ -683,7 +683,10 @@ corrected against the real API during Phase 11 execution, ideally via a dev-only
 check similar to Phase 10's `humbleRunValidation()` pattern before the classify function is
 considered final.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three questions below now have a concrete resolution path in the Phase 11 plans.
+> Each is annotated inline with where it is addressed — no further planning is blocked on them.
 
 1. **Does an un-picked Humble Choice month even appear in `/api/v1/user/order` at all, and if so, in what shape?**
    - What we know: Phase 10's live validation gate confirmed the gamekeys-list and
@@ -699,6 +702,7 @@ considered final.
      throw, never block sync) but flag the feature as unverified against live data in the
      phase's own VALIDATION.md, the same way Phase 10 flagged the identity endpoint as
      advisory.
+   - **Resolution (Plan 11-01 Task 2 + Plan 11-05 Task 2):** The UNPICKED pseudo-entry is implemented defensively in `classifyOrder` (Plan 11-01 Task 2) — it omits the pseudo-entry rather than throwing when `choice_url`/deadline are absent. Live confirmation of the un-picked-month shape (Assumption A1) is resolved in Plan 11-05 Task 2 (Real-account UAT), which records the finding in `11-VALIDATION.md` or flags it "unverified — defensive path only".
 
 2. **Is `redeemed_key_value` truly absent (not merely empty-string/null) for a not-yet-revealed key, and present with a real value for a REDEEMED one?**
    - What we know: This is the documented (but unofficial) detection field per
@@ -711,6 +715,7 @@ considered final.
    - Recommendation: The zod schema for this field should accept `string | null | undefined`
      and treat any falsy value as "absent," rather than assuming strict field absence via
      `.optional()` alone — safer against a `null`-vs-`undefined` surprise.
+   - **Resolution (Plan 11-01 Task 2):** The `OrderDetailSchema` element uses `redeemed_key_value: z.string().nullish()` and `classifyOrder` derives `redeemedKeyValuePresent` from a truthy check — null, undefined, and empty-string are all treated uniformly as "absent". The live field shape (Assumption A3) is additionally confirmed against a real redeemed key in Plan 11-05 Task 2.
 
 3. **Should a REDEEMED key that later gains a retroactive expiration actually reclassify to UNREDEEMABLE (per D-30's literal precedence), or is this an edge case Humble's real API never produces?**
    - What we know: D-30 explicitly states "expiration ⇒ UNREDEEMABLE beats both" (both
@@ -724,6 +729,7 @@ considered final.
      handle the case even if it's rare/theoretical. Flag this in code comments so a future
      phase doesn't "fix" it by reordering the precedence without checking back with this
      decision.
+   - **Resolution (Plan 11-01 Task 2):** The literal D-30 precedence (expiration → UNREDEEMABLE beats `redeemed_key_value` → REDEEMED beats the local flag) is implemented in `classifyTpk` with an explicit code comment referencing this question that warns against reordering; a unit test asserts past-expiration → UNREDEEMABLE even when `redeemedKeyValuePresent` is true.
 
 ## Environment Availability
 
