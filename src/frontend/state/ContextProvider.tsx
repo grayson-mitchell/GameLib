@@ -37,6 +37,10 @@ const initialContext: ContextType = {
     logout: async () => Promise.resolve()
   },
   humble: {
+    keys: [],
+    syncedAt: null,
+    syncError: 'none',
+    syncing: false,
     login: async () => Promise.resolve(''),
     logout: async () => Promise.resolve()
   },
