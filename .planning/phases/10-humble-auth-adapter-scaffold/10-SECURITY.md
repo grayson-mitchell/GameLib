@@ -5,9 +5,9 @@ auditor: gsd-security-auditor
 asvs_level: 1
 block_on: high
 threats_total: 23
-threats_closed: 22
-threats_open: 1
-status: OPEN_THREATS
+threats_closed: 23
+threats_open: 0
+status: SECURED
 ---
 
 # Phase 10 — Security Audit: Humble Auth Adapter Scaffold
@@ -67,9 +67,18 @@ as the accepted-risk record required to close them:
 
 ## Open Threats (BLOCKER)
 
-| Threat ID | Category | Mitigation Expected | Files Searched | Gap |
-|-----------|----------|----------------------|-----------------|-----|
-| T-10-12 | Information Disclosure | "Slice holds only username/expired/encryptionDegraded — the cookie never reaches the renderer" | `src/frontend/state/GlobalState.tsx`, `src/frontend/helpers/electronStores.ts`, `src/preload/api/misc.ts`, `src/common/types/electron_store.ts` | The typed `humble` context slice is cookie-free, but `humbleConfigStore` is separately exposed to the renderer as a whole via the generic, key-unfiltered `storeGet` IPC bridge. `window.api.storeGet('humbleConfigStore', 'sessionCookie')` is callable by any renderer script today and returns the raw stored value (plaintext when `encryptionDegraded`). The declared "cookie never reaches the renderer" mitigation is not delivered as stated. |
+None — T-10-12 was remediated post-audit (see Security Audit 2026-07-05 (remediation) below).
+
+**T-10-12 original finding (resolved by commit `73228a68`):** the typed `humble` context slice was
+cookie-free, but `humbleConfigStore` was exposed to the renderer as a whole via the generic,
+key-unfiltered `storeGet` IPC bridge — `window.api.storeGet('humbleConfigStore', 'sessionCookie')`
+returned the raw stored value (plaintext when `encryptionDegraded`). **Remediation:** a
+credential-key deny-list at the preload bridge (`src/preload/api/misc.ts`, `SECRET_STORE_KEYS`)
+now blocks `humbleConfigStore/sessionCookie` and the analogous pre-existing
+`steamConfigStore/refreshToken`, including dot-notation subpath reads; blocked reads return
+`undefined` with a console warning. Verified: no frontend/preload code legitimately reads those
+keys; `tsc --noEmit` exit 0; the declared "cookie never reaches the renderer" mitigation now
+holds for every renderer caller. T-10-12 status: **CLOSED**.
 
 ## Unregistered Attack Surface (WARNING — not a blocker)
 
@@ -95,9 +104,37 @@ all, and it reports "None"):
 - **WR-02 / WR-09** are covered above as residual notes on T-10-07 and the T-10-12 BLOCKER,
   respectively, rather than listed again here.
 
+## Security Audit 2026-07-05 (remediation)
+
+| Metric | Count |
+|--------|-------|
+| Threats found | 23 |
+| Closed | 23 |
+| Open | 0 |
+
+Post-audit remediation pass (same day) resolved the T-10-12 BLOCKER and both WARNING-level
+unregistered-surface items, closing all residual notes:
+
+- **T-10-12 / WR-09** → CLOSED by `73228a68` (preload `storeGet` credential-key deny-list, also
+  covers the pre-existing Steam `refreshToken` exposure).
+- **WR-02 residual on T-10-07** → fixed by `fb16db3e` (`disconnect()` clears the canonical
+  `configStore` credential FIRST; each partition-clear step individually guarded; IPC listener no
+  longer discards the promise). Regression test added.
+- **WR-03 (unregistered, Repudiation-adjacent)** → fixed by `c977fb61` (`finishLogin` re-checks
+  settled/stopped state before any store write; a cancelled login can no longer silently
+  authenticate). Regression test added.
+- **WR-04 (unregistered, availability)** → fixed by `43b73e00` (15s axios timeout in
+  `humbleRequest`, mapped to the existing transient path). Regression tests added.
+- Additional hardening from the same pass: WR-01 offline-startup catch (`a8e036ef`), WR-05 expired
+  flag hydration (`24b9e95f`), WR-06 auth-state push (`dece7226`), WR-07 `encryptionDegraded`
+  cleared on healthy re-login (`d14b6946`), WR-08 i18n namespace fix (`7dbfbb99`).
+
+Verification after remediation: humble suites 55/55, full jest 362/362, `tsc --noEmit` exit 0,
+eslint 0 errors on modified files.
+
 ## Summary
 
-**Closed:** 22/23 | **Open:** 1/23 (BLOCKER)
+**Closed:** 23/23 | **Open:** 0 (post-remediation; original audit found 1 BLOCKER, resolved same day)
 
 The Humble auth adapter scaffold's core security discipline (C5 adapter isolation, zod
 validation, 401/403 split, cookie encryption at rest, isolated login partition, dev-gate-only
