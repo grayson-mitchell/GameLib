@@ -96,6 +96,13 @@ export interface StoreStructure {
     isLoggedIn: boolean
     sessionCookie?: string // safeStorage-encrypted base64 string with 'humble:v1:' prefix
     userData?: HumbleUserData
+    // Success criterion 5 / Pitfall 5 (Plan 02): set when safeStorage is
+    // unavailable so the Manage Accounts tile can surface a user-visible
+    // degraded-encryption warning instead of silently storing plaintext.
+    encryptionDegraded?: boolean
+    // D-08 (Plan 02): set by the startup/401 health check; cleared on a
+    // successful reconnect/re-login.
+    expired?: boolean
   }
   sideloadedStore: {
     games: GameInfo[]

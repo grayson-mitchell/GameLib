@@ -17,9 +17,7 @@ const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
 const mockDecryptString = jest.fn((b: Buffer) => b.toString())
 const mockIsEncryptionAvailable = jest.fn(() => true)
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let windowHandlers: Record<string, (...args: any[]) => any> = {}
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let webContentsHandlers: Record<string, (...args: any[]) => any> = {}
 
 const mockWindowClose = jest.fn()
@@ -28,12 +26,10 @@ const mockWindowInstance = {
   loadURL: mockWindowLoadURL,
   close: mockWindowClose,
   webContents: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on: jest.fn((event: string, cb: (...args: any[]) => any) => {
       webContentsHandlers[event] = cb
     })
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on: jest.fn((event: string, cb: (...args: any[]) => any) => {
     windowHandlers[event] = cb
   })
@@ -125,13 +121,11 @@ describe('HumbleUser', () => {
 
     MockBrowserWindow.mockImplementation(() => mockWindowInstance)
     mockWindowInstance.on.mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (event: string, cb: (...args: any[]) => any) => {
         windowHandlers[event] = cb
       }
     )
     mockWindowInstance.webContents.on.mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (event: string, cb: (...args: any[]) => any) => {
         webContentsHandlers[event] = cb
       }
@@ -228,7 +222,10 @@ describe('HumbleUser', () => {
       await webContentsHandlers['did-navigate']()
       await loginPromise
 
-      expect(mockConfigStore.set).toHaveBeenCalledWith('encryptionDegraded', true)
+      expect(mockConfigStore.set).toHaveBeenCalledWith(
+        'encryptionDegraded',
+        true
+      )
       expect(mockLogWarning).toHaveBeenCalled()
     })
   })

@@ -51,6 +51,7 @@ import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { SteamUserData } from './steam'
+import type { HumbleAuthState } from './humble'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -211,7 +212,10 @@ interface AsyncIPCFunctions {
     user: NileUserData | undefined
   }>
   authZoom: (url: string) => Promise<{ status: 'done' | 'error' }>
-  steamStartQR: () => Promise<{ status: 'done' | 'error'; challengeUrl?: string }>
+  steamStartQR: () => Promise<{
+    status: 'done' | 'error'
+    challengeUrl?: string
+  }>
   steamPollQR: () => Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
@@ -426,6 +430,10 @@ interface FrontendMessages {
       { title?: string; art_cover?: string; art_square?: string }
     >
   ) => void
+  // Plan 02 (Phase 10): pushed by HumbleUser.checkHealthAndFlagExpiry() on a
+  // startup/401 expiry detection. MUST NOT include the session cookie
+  // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.
+  humbleAuthState: (state: HumbleAuthState) => void
 
   // Used inside tests, so we can be a bit lenient with the type checking here
   message: (...params: unknown[]) => void
