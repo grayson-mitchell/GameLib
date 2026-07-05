@@ -97,7 +97,7 @@ async function fetchAndCommitOrder(
   let result: Awaited<ReturnType<typeof getOrderDetail>>
   try {
     result = await getOrderDetail(cookie, gamekey)
-  } catch (err) {
+  } catch (_err) {
     // Transient/unexpected failure (network unreachable, DNS, timeout,
     // 5xx) — the adapter still rethrows this class (T-11-08). Caught here so
     // it never escapes as an unhandled rejection; the prior cache entry (if

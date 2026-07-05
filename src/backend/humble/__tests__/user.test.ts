@@ -81,8 +81,17 @@ const mockConfigStore = {
   set: jest.fn(),
   clear: jest.fn()
 }
+// Phase 11 (HSYNC-02/D-04/D-30): disconnect() must clear these two but never
+// humbleRevealedStore (Pitfall 1 — a disconnect must not regress a
+// previously-revealed key back to UNREVEALED).
+const mockHumbleLibraryStore = { clear: jest.fn() }
+const mockHumbleSyncStore = { clear: jest.fn() }
+const mockHumbleRevealedStore = { clear: jest.fn() }
 jest.mock('../electronStores', () => ({
-  configStore: mockConfigStore
+  configStore: mockConfigStore,
+  humbleLibraryStore: mockHumbleLibraryStore,
+  humbleSyncStore: mockHumbleSyncStore,
+  humbleRevealedStore: mockHumbleRevealedStore
 }))
 
 // ── adapter mock ───────────────────────────────────────────────────────────
@@ -112,6 +121,9 @@ describe('HumbleUser', () => {
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
     mockConfigStore.set.mockImplementation(() => {})
     mockConfigStore.clear.mockImplementation(() => {})
+    mockHumbleLibraryStore.clear.mockImplementation(() => {})
+    mockHumbleSyncStore.clear.mockImplementation(() => {})
+    mockHumbleRevealedStore.clear.mockImplementation(() => {})
 
     mockFromPartition.mockImplementation(() => mockSessionInstance)
     mockCookiesGet.mockResolvedValue([])
@@ -616,6 +628,14 @@ describe('HumbleUser', () => {
       expect(mockClearData).toHaveBeenCalled()
       // Partial failure is logged, not thrown.
       expect(mockLogWarning).toHaveBeenCalled()
+    })
+
+    test('HSYNC-02/D-04/D-30: clears humbleLibraryStore + humbleSyncStore but NEVER humbleRevealedStore', async () => {
+      await HumbleUser.disconnect()
+
+      expect(mockHumbleLibraryStore.clear).toHaveBeenCalled()
+      expect(mockHumbleSyncStore.clear).toHaveBeenCalled()
+      expect(mockHumbleRevealedStore.clear).not.toHaveBeenCalled()
     })
   })
 
