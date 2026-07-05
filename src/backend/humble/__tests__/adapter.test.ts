@@ -31,16 +31,14 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-import {
-  getGamekeys,
-  getOrderDetail,
-  getAccountIdentity
-} from '../adapter'
+import { getGamekeys, getOrderDetail, getAccountIdentity } from '../adapter'
 
 const COOKIE = 'super-secret-cookie-value'
 
 function makeAxiosError(status: number) {
-  const err = new Error(`Request failed with status code ${status}`) as Error & {
+  const err = new Error(
+    `Request failed with status code ${status}`
+  ) as Error & {
     response?: { status: number }
     isAxiosError: true
   }
