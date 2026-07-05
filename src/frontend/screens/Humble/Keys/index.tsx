@@ -1,6 +1,6 @@
 import './index.css'
 
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -11,6 +11,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import WarningMessage from 'frontend/components/UI/WarningMessage'
 import { humbleLoginPath } from 'frontend/screens/Login'
 import { HumbleKey, HumbleKeyState } from 'common/types/humble'
+import HumbleKeyGroup from './components/HumbleKeyGroup'
 
 // D-21: fixed group order, urgency-first (action-needed states before
 // terminal ones). Never reordered by data — only non-empty groups render.
@@ -83,7 +84,7 @@ export default function HumbleKeys() {
   // Cooldown lives in humbleSyncStore (D-33), not the context slice — fetch
   // it directly on mount and again whenever a sync just finished.
   useEffect(() => {
-    window.api
+    void window.api
       .humbleGetSyncState()
       .then((state) => setCooldownUntil(state.cooldownUntil))
   }, [])
@@ -97,7 +98,7 @@ export default function HumbleKeys() {
 
   useEffect(() => {
     if (!humble?.syncing) {
-      window.api
+      void window.api
         .humbleGetSyncState()
         .then((state) => setCooldownUntil(state.cooldownUntil))
       setProgress(null)
@@ -200,25 +201,8 @@ export default function HumbleKeys() {
             if (!groupKeys?.length) {
               return null
             }
-            // Task 2 replaces this inline placeholder with the dedicated
-            // HumbleKeyGroup/HumbleKeyRow components (state-colored badge,
-            // read-only row contract).
             return (
-              <section key={state} className="humbleKeyGroup">
-                <h5 className="humbleKeyGroupHeading">
-                  {state}
-                  <span className="humbleKeyGroupCount">
-                    {groupKeys.length}
-                  </span>
-                </h5>
-                <ul className="humbleKeyGroupList">
-                  {groupKeys.map((key) => (
-                    <li key={key.machineName} className="humbleKeyRow">
-                      <span className="humbleKeyRowTitle">{key.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <HumbleKeyGroup key={state} state={state} keys={groupKeys} />
             )
           })}
         </div>

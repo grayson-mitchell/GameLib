@@ -141,8 +141,60 @@
   border-bottom: none;
 }
 
+.humbleKeyRowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex-grow: 1;
+  min-width: 0;
+}
+
 .humbleKeyRowTitle {
   font-size: var(--text-md);
   font-weight: var(--regular);
   color: var(--text-default);
+}
+
+.humbleKeyRowCaption {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+}
+
+.humbleKeyRowExpiration {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Reuses .gameCardUpdateBadge's exact chrome (padding/border-radius/font)
+   per the UI-SPEC Component Inventory. */
+.humbleKeyStateBadge {
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  color: var(--neutral-01);
+  white-space: nowrap;
+}
+
+.humbleKeyStateBadge--UNPICKED {
+  background: var(--status-default);
+}
+
+.humbleKeyStateBadge--UNREVEALED {
+  background: var(--status-info);
+}
+
+.humbleKeyStateBadge--REVEALED {
+  background: var(--status-warning);
+}
+
+.humbleKeyStateBadge--REDEEMED {
+  background: var(--status-success);
+}
+
+.humbleKeyStateBadge--UNREDEEMABLE {
+  background: var(--status-danger);
 }

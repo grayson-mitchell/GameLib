@@ -544,12 +544,24 @@
         "cooldown": "Temporarily unavailable — retry in {{minutes}}m",
         "emptyBody": "Your synced key inventory will appear here once your account has orders.",
         "emptyTitle": "No Humble keys yet",
+        "expiresOn": "Expires {{date}}",
         "lastSynced": "Last synced {{time}} ago",
+        "noDeadline": "No pick deadline available",
+        "noExpiration": "No expiration",
         "refresh": "Refresh Humble Keys",
+        "rowCaption": "{{platform}} · {{origin}}",
+        "state": {
+            "redeemed": "Redeemed",
+            "revealed": "Revealed",
+            "unpicked": "Unpicked",
+            "unredeemable": "Unredeemable",
+            "unrevealed": "Unrevealed"
+        },
         "syncError": "Couldn't refresh — showing data from {{time}}",
         "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
         "syncing": "Syncing… {{done}}/{{total}} orders",
-        "title": "Humble Keys"
+        "title": "Humble Keys",
+        "unpickedTitle": "{{title}} · games not picked"
     },
     "info": {
         "heroic": {
