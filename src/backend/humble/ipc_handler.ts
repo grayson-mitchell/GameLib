@@ -1,4 +1,5 @@
 import { addHandler, addListener } from 'backend/ipc'
+import { logWarning, LogPrefix } from 'backend/logger'
 
 import { HumbleUser, standardBrowserUserAgent } from './user'
 
@@ -21,7 +22,15 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
   addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
   addHandler('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
-  addListener('humbleDisconnect', () => void HumbleUser.disconnect())
+  // WR-02: never discard the disconnect promise silently — a rejection here
+  // (e.g. session.fromPartition throwing) must not become an unhandled
+  // rejection in the main process. The credential wipe itself runs first
+  // inside disconnect() and is synchronous.
+  addListener('humbleDisconnect', () => {
+    HumbleUser.disconnect().catch((err) =>
+      logWarning(['Humble disconnect failed:', err], LogPrefix.Backend)
+    )
+  })
   addListener('humbleStopLogin', () => HumbleUser.stopLogin())
   addListener('humbleLoginNavigated', () => HumbleUser.notifyLoginNavigated())
 }

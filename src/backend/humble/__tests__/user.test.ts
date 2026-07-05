@@ -538,6 +538,32 @@ describe('HumbleUser', () => {
       expect(mockClearData).toHaveBeenCalled()
       expect(mockConfigStore.clear).toHaveBeenCalled()
     })
+
+    test('WR-02: credential store is cleared FIRST, and a rejected partition-clear step neither aborts the remaining steps nor rejects disconnect()', async () => {
+      const callOrder: string[] = []
+      mockConfigStore.clear.mockImplementation(() => {
+        callOrder.push('configStore.clear')
+      })
+      mockClearStorageData.mockImplementation(async () => {
+        callOrder.push('clearStorageData')
+        throw new Error('session API failure')
+      })
+      mockClearCache.mockImplementation(async () => {
+        callOrder.push('clearCache')
+      })
+
+      await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+      // Credential wipe cannot be skipped: it runs before any partition step.
+      expect(callOrder[0]).toBe('configStore.clear')
+      // The failed step did not abort the rest of the wipe.
+      expect(mockClearCache).toHaveBeenCalled()
+      expect(mockClearAuthCache).toHaveBeenCalled()
+      expect(mockClearHostResolverCache).toHaveBeenCalled()
+      expect(mockClearData).toHaveBeenCalled()
+      // Partial failure is logged, not thrown.
+      expect(mockLogWarning).toHaveBeenCalled()
+    })
   })
 
   // ── Pitfall 4: cookie is never logged or stored in the clear ─────────────

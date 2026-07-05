@@ -411,14 +411,35 @@ export class HumbleUser {
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
 
   static async disconnect(): Promise<void> {
+    // The stored credential is the canonical secret — remove it FIRST, so a
+    // failed partition-clear step can never leave the (possibly
+    // plaintext-degraded) sessionCookie on disk after a user-confirmed
+    // disconnect (WR-02 / T-10-07).
+    configStore.clear()
+
+    // Best-effort partition wipe: each step guarded individually so one
+    // rejected Electron session API call does not abort the rest. Partial
+    // failures are logged (never thrown) — the disconnect itself already
+    // succeeded once the credential store is cleared.
     const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-    await ses.clearStorageData()
-    await ses.clearCache()
-    await ses.clearAuthCache()
-    await ses.clearHostResolverCache()
-    await ses.clearData()
+    const wipeSteps: Array<[string, () => Promise<unknown>]> = [
+      ['clearStorageData', async () => ses.clearStorageData()],
+      ['clearCache', async () => ses.clearCache()],
+      ['clearAuthCache', async () => ses.clearAuthCache()],
+      ['clearHostResolverCache', async () => ses.clearHostResolverCache()],
+      ['clearData', async () => ses.clearData()]
+    ]
+    for (const [name, step] of wipeSteps) {
+      try {
+        await step()
+      } catch (err) {
+        logWarning(
+          [`Humble partition wipe step ${name} failed (continuing):`, err],
+          LogPrefix.Backend
+        )
+      }
+    }
     // D-04: does NOT touch any audit-log/REVEALED-flag store — none exists
     // yet in Phase 10; this is forward policy for Phase 11/14.
-    configStore.clear()
   }
 }
