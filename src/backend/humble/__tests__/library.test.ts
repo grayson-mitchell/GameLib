@@ -884,6 +884,105 @@ describe('HumbleLibrary', () => {
       expect(logged).toContain('no-key_type')
     })
 
+    test('a direct-redeem download entitlement WITH key_type commits zero rows, logs the type VALUES, and never logs its redeemed value (D-29 v2, round 6)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['pdf-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'pdf-gk',
+          product: { category: 'bundle', human_name: 'PDF Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'bigbook_pdf_download',
+                key_type: 'download',
+                key_type_human_name: 'Download',
+                human_name: 'Big Book (PDF)',
+                is_expired: false,
+                direct_redeem: true,
+                custom_instructions_html: '<p>In your library.</p>',
+                show_custom_instructions_in_user_libraries: true,
+                redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(HumbleLibrary.getKeys()).toHaveLength(0)
+      // Legitimate D-29 exclusion shape — informational, never a warning.
+      const zeroKeyInfo = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyInfo).toBeDefined()
+      const logged = JSON.stringify(zeroKeyInfo)
+      expect(logged).toContain('pdf-gk')
+      expect(logged).toContain('direct-redeem-entitlement')
+      // C5 permits the type-label VALUES (they make round 7 conclusive)...
+      expect(logged).toContain('key_type=download')
+      expect(logged).toContain('key_type_human_name=Download')
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeUndefined()
+      // ...but NEVER the redeemed key value of the skipped entitlement.
+      for (const call of [
+        ...mockLogInfo.mock.calls,
+        ...mockLogWarning.mock.calls,
+        ...mockLogError.mock.calls
+      ]) {
+        expect(JSON.stringify(call)).not.toContain(
+          'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+        )
+      }
+    })
+
+    test('a mixed order (1 steam key + 1 direct-redeem entitlement) commits exactly 1 row and logs the skipped-entitlement type VALUES (round 6)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['mixed-dr-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'mixed-dr-gk',
+          product: { category: 'bundle', human_name: 'Mixed PDF Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'actualgame2_steam',
+                key_type: 'steam',
+                human_name: 'Actual Game 2',
+                is_expired: false
+              },
+              {
+                machine_name: 'artbook2_pdf_download',
+                key_type: 'download',
+                key_type_human_name: 'Download',
+                human_name: 'Art Book 2 (PDF)',
+                direct_redeem: true,
+                redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].machineName).toBe('actualgame2_steam')
+      const skipDiag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('skippedDirectRedeem')
+      )
+      expect(skipDiag).toBeDefined()
+      const logged = JSON.stringify(skipDiag)
+      expect(logged).toContain('mixed-dr-gk')
+      expect(logged).toContain('skippedDirectRedeem=1')
+      expect(logged).toContain('key_type=download')
+      expect(logged).not.toContain('ENTITLEMENT-VALUE-MUST-NOT-LEAK')
+    })
+
     test('real-world tpk field names (redeemed_key_val + is_expired) commit keys — never a zero-key order', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['real-gk'] })
       mockGetOrderDetail.mockResolvedValue({

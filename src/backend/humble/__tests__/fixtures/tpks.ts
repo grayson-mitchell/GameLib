@@ -442,6 +442,144 @@ export const mixedKeyAndEntitlementOrder = {
   }
 }
 
+// ─── Direct-redeem entitlement filtering (live-UAT round 6, D-29 v2) ──────
+// Round 5's key_type presence check did NOT remove the tester's PDF-bundle
+// rows: the live diagnostic shows those tpks DO carry `key_type` (plus
+// `direct_redeem`, `key_type_human_name`, `custom_instructions_html`/
+// `instructions_html`, `show_custom_instructions_in_user_libraries`).
+// Evidence for the v2 discriminator:
+//  - Galaxy integration real capture (tests/data/orders_keys.json): a REAL
+//    uplay game key (Rayman Legends) carries `direct_redeem: true` WITH a
+//    redeemed key value — so `direct_redeem === true` ALONE would drop a real
+//    game key (D-28 violation).
+//  - Galaxy origin_bundle_order.json: REAL origin game keys (Sims 3 Late
+//    Night, Populous) carry `custom_instructions_html` — presence-based
+//    exclusion also violates D-28.
+//  - Playnite HumbleKeysLibrary keyTypeWhitelist + Galaxy KEY_TYPE enum give
+//    the evidenced game-store key_type set (union): steam, gog, origin,
+//    origin_keyless, uplay, epic, epic_keyless, battlenet, nintendo_direct.
+// Therefore: exclude ONLY `direct_redeem === true` entries whose key_type is
+// NOT an evidenced game-store platform. Any-platform keys without
+// direct_redeem always survive (D-28 intact).
+
+// The tester's PDF-bundle shape: an auto-redeemed download entitlement WITH a
+// key_type. The exact live key_type VALUE is unknown (the round-6 diagnostic
+// logs it); 'download' is a stand-in non-platform value — the filter keys off
+// direct_redeem + not-a-known-platform, not this specific string.
+export const directRedeemEntitlementOrder = {
+  gamekey: 'order-direct-redeem-ent',
+  product: { category: 'bundle', human_name: 'PDF Book Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'bigbook_pdf_download',
+        gamekey: 'order-direct-redeem-ent',
+        key_type: 'download',
+        key_type_human_name: 'Download',
+        human_name: 'Big Book (PDF)',
+        is_expired: false,
+        direct_redeem: true,
+        custom_instructions_html:
+          '<p>Your download is available in your Humble library.</p>',
+        show_custom_instructions_in_user_libraries: true,
+        visible: true,
+        sold_out: false,
+        display_separately: false,
+        exclusive_countries: [],
+        disallowed_countries: [],
+        keyindex: 0,
+        // Auto-redeemed entitlements can carry a redeemed value — it must
+        // NEVER reach a log line (C5) even while being skipped.
+        redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+      }
+    ]
+  }
+}
+
+// Rayman Legends shape from Galaxy's REAL capture (orders_keys.json): a real
+// uplay game key with `direct_redeem: true` and a redeemed key value. The
+// known-platform override MUST retain it (D-28) — this is the fixture that
+// forbids a bare `direct_redeem === true` exclusion.
+export const realWorldDirectRedeemUplayKeyOrder = {
+  gamekey: 'order-real-uplay-direct',
+  product: { category: 'bundle', human_name: 'Ubisoft Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'raymanlegends_uplay',
+        gamekey: 'order-real-uplay-direct',
+        key_type: 'uplay',
+        key_type_human_name: 'Uplay',
+        human_name: 'Rayman Legends',
+        direct_redeem: true,
+        instructions_html:
+          "<a href='https://support.humblebundle.com/'>Uplay Key Instructions</a>",
+        preinstruction_text: 'Copy this key into the uPlay client.',
+        class: 'uplaybutton',
+        keyindex: 0,
+        visible: true,
+        sold_out: false,
+        exclusive_countries: [],
+        disallowed_countries: [],
+        show_custom_instructions_in_user_libraries: false,
+        redeemed_key_val: 'uplay-key-value-string'
+      }
+    ]
+  }
+}
+
+// Unknown/non-whitelisted key_type WITHOUT direct_redeem — a real key of a
+// platform we have never seen must survive (D-28: prefer positive entitlement
+// evidence over a platform whitelist; no direct_redeem signal -> keep).
+export const unknownPlatformKeyOrder = {
+  gamekey: 'order-unknown-platform',
+  product: { category: 'bundle', human_name: 'Indie Store Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'indiegame_weirdstore',
+        gamekey: 'order-unknown-platform',
+        key_type: 'weirdstore',
+        key_type_human_name: 'Weird Store',
+        human_name: 'Indie Game',
+        is_expired: false
+      }
+    ]
+  }
+}
+
+// Mixed order: one real steam key + one direct-redeem download entitlement —
+// must yield exactly ONE row, with the entitlement counted (and its type
+// VALUES surfaced) in the redacted skip diagnostic.
+export const mixedKeyAndDirectRedeemEntitlementOrder = {
+  gamekey: 'order-mixed-direct-redeem',
+  product: { category: 'bundle', human_name: 'Mixed PDF Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'actualgame2_steam',
+        gamekey: 'order-mixed-direct-redeem',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Actual Game 2',
+        is_expired: false
+      },
+      {
+        machine_name: 'artbook2_pdf_download',
+        gamekey: 'order-mixed-direct-redeem',
+        key_type: 'download',
+        key_type_human_name: 'Download',
+        human_name: 'Art Book 2 (PDF)',
+        is_expired: false,
+        direct_redeem: true,
+        custom_instructions_html: '<p>Available in your library.</p>',
+        show_custom_instructions_in_user_libraries: true,
+        redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+      }
+    ]
+  }
+}
+
 // Active key with NO recognized date field and is_expired:false — the shape the
 // round-4 expiration diagnostic must surface (candidate field names, redacted)
 // so the true date field can be identified on the next live run.
