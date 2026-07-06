@@ -10,18 +10,8 @@ import classNames from 'classnames'
 import ContextProvider from 'frontend/state/ContextProvider'
 import WarningMessage from 'frontend/components/UI/WarningMessage'
 import { humbleLoginPath } from 'frontend/screens/Login'
-import { HumbleKey, HumbleKeyState } from 'common/types/humble'
+import { GROUP_ORDER, groupAndSortKeys } from 'common/humble/groupKeys'
 import HumbleKeyGroup from './components/HumbleKeyGroup'
-
-// D-21: fixed group order, urgency-first (action-needed states before
-// terminal ones). Never reordered by data — only non-empty groups render.
-const GROUP_ORDER: HumbleKeyState[] = [
-  'UNPICKED',
-  'UNREVEALED',
-  'REVEALED',
-  'REDEEMED',
-  'UNREDEEMABLE'
-]
 
 // Local formatRelativeTime (mirrors LibraryHeader's, returns the bare
 // duration phrase — the "ago"/"showing data from" wrapper lives in the
@@ -42,32 +32,9 @@ function formatRelativeTime(ms: number): string {
   return `${days} ${days === 1 ? 'day' : 'days'}`
 }
 
-// D-21: group by state, expiring-soonest first within each group; keys with
-// no expiration sort last. Sorting/grouping happens once here — child
-// components render in the order they receive.
-function groupAndSortKeys(
-  keys: HumbleKey[]
-): Partial<Record<HumbleKeyState, HumbleKey[]>> {
-  const groups: Partial<Record<HumbleKeyState, HumbleKey[]>> = {}
-
-  for (const key of keys) {
-    if (!groups[key.state]) {
-      groups[key.state] = []
-    }
-    groups[key.state]!.push(key)
-  }
-
-  for (const state of GROUP_ORDER) {
-    groups[state]?.sort((a, b) => {
-      if (a.expiration === null && b.expiration === null) return 0
-      if (a.expiration === null) return 1
-      if (b.expiration === null) return -1
-      return new Date(a.expiration).getTime() - new Date(b.expiration).getTime()
-    })
-  }
-
-  return groups
-}
+// D-21 grouping + round-7 generic->Other partition live in the pure
+// common/humble/groupKeys helper (unit-tested from the backend jest
+// project) — this screen only renders the groups it receives, in order.
 
 export default function HumbleKeys() {
   const { t } = useTranslation()
@@ -203,12 +170,12 @@ export default function HumbleKeys() {
 
       {hasKeys ? (
         <div className="humbleKeysGroupList">
-          {GROUP_ORDER.map((state) => {
-            const groupKeys = groups[state]
+          {GROUP_ORDER.map((group) => {
+            const groupKeys = groups[group]
             if (!groupKeys?.length) {
               return null
             }
-            return <HumbleKeyGroup key={state} state={state} keys={groupKeys} />
+            return <HumbleKeyGroup key={group} group={group} keys={groupKeys} />
           })}
         </div>
       ) : (

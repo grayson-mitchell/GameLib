@@ -5,10 +5,12 @@ import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 
 import { HumbleKey, HumbleKeyState } from 'common/types/humble'
+import { HumbleKeyGroupId } from 'common/humble/groupKeys'
 import HumbleKeyRow from '../HumbleKeyRow'
 
 type Props = {
-  state: HumbleKeyState
+  /** One of the 5 states (D-30) or the round-7 'other' display bucket. */
+  group: HumbleKeyGroupId
   keys: HumbleKey[]
 }
 
@@ -24,18 +26,26 @@ export const STATE_LABEL_KEYS: Record<HumbleKeyState, [string, string]> = {
   UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Expired']
 }
 
-// Only the terminal "Expired" group starts collapsed (its key count stays
-// visible in the always-rendered heading so users know it exists). Every other
-// group starts expanded. Collapse state is per-mount only — nothing persisted
-// (Phase 13 owns real saved views).
-function defaultExpanded(state: HumbleKeyState): boolean {
-  return state !== 'UNREDEEMABLE'
+// Group headings: the 5 state groups reuse the badge labels above; the
+// round-7 'other' bucket (generic-platform entries) has its own heading key
+// in the same consumed `humbleKeys` namespace (WR-08).
+const GROUP_LABEL_KEYS: Record<HumbleKeyGroupId, [string, string]> = {
+  ...STATE_LABEL_KEYS,
+  other: ['humbleKeys.group.other', 'Other']
 }
 
-export default function HumbleKeyGroup({ state, keys }: Props) {
+// The terminal "Expired" group and the round-7 "Other" bucket start collapsed
+// (their key counts stay visible in the always-rendered heading so users know
+// they exist). Every other group starts expanded. Collapse state is per-mount
+// only — nothing persisted (Phase 13 owns real saved views).
+function defaultExpanded(group: HumbleKeyGroupId): boolean {
+  return group !== 'UNREDEEMABLE' && group !== 'other'
+}
+
+export default function HumbleKeyGroup({ group, keys }: Props) {
   const { t } = useTranslation()
   const listId = useId()
-  const [expanded, setExpanded] = useState(() => defaultExpanded(state))
+  const [expanded, setExpanded] = useState(() => defaultExpanded(group))
 
   // Parent already filters empty groups out before rendering; this guard is
   // defensive only (never rely solely on the caller).
@@ -43,7 +53,7 @@ export default function HumbleKeyGroup({ state, keys }: Props) {
     return null
   }
 
-  const [labelKey, labelDefault] = STATE_LABEL_KEYS[state]
+  const [labelKey, labelDefault] = GROUP_LABEL_KEYS[group]
 
   return (
     <section className="humbleKeyGroup">
