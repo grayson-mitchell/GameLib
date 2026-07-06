@@ -19,6 +19,7 @@ import {
   HUMBLE_COOLDOWN_MS,
   HUMBLE_CLASSIFIER_VERSION
 } from './constants'
+import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
 
 /**
@@ -103,8 +104,16 @@ interface OrderFetchResult {
 async function fetchAndCommitOrder(
   cookie: string,
   gamekey: string,
-  now: Date
+  now: Date,
+  isStale: () => boolean
 ): Promise<OrderFetchResult> {
+  // CR-01: disconnect() bumped the generation — the credential was revoked
+  // and the stores wiped. Issue NO further authenticated requests; the
+  // in-flight pool drains without touching the network again.
+  if (isStale()) {
+    return { gamekey, outcome: 'transient' }
+  }
+
   let result: Awaited<ReturnType<typeof getOrderDetail>>
   try {
     result = await getOrderDetail(cookie, gamekey)
@@ -124,6 +133,12 @@ async function fetchAndCommitOrder(
   }
 
   if (result.status === 'ok') {
+    // CR-01: re-check AFTER the await — a disconnect that landed while this
+    // fetch was in flight already wiped humbleLibraryStore; committing now
+    // would silently repopulate it with the pre-disconnect account's data.
+    if (isStale()) {
+      return { gamekey, outcome: 'transient' }
+    }
     const entry = classifyOrder(
       result.data,
       (machineName) => humbleRevealedStore.has(machineName),
@@ -309,6 +324,13 @@ async function sync(): Promise<SyncOutcome> {
 }
 
 async function runSync(): Promise<SyncOutcome> {
+  // CR-01 disconnect fence: capture the store generation at sync start.
+  // HumbleUser.disconnect() bumps it BEFORE wiping the stores — any mismatch
+  // from that point on marks this sync stale: no store commit, no sync-state
+  // write, no renderer push, and no further authenticated requests.
+  const generation = currentSyncGeneration()
+  const isStale = () => generation !== currentSyncGeneration()
+
   const cookie = HumbleUser.getCredentials()
   if (!cookie) {
     return { status: 'failed' }
@@ -344,7 +366,10 @@ async function runSync(): Promise<SyncOutcome> {
       ['Humble sync: getGamekeys threw (transient), cache untouched:', err],
       LogPrefix.Backend
     )
-    setSyncState({ syncError: 'network' })
+    // CR-01: never write into a store a mid-sync disconnect just wiped.
+    if (!isStale()) {
+      setSyncState({ syncError: 'network' })
+    }
     return { status: 'failed' }
   }
 
@@ -358,10 +383,13 @@ async function runSync(): Promise<SyncOutcome> {
       ['Humble sync: getGamekeys access_denied, cache untouched:', gamekeysResult.status],
       LogPrefix.Backend
     )
-    setSyncState({
-      syncError: 'denied',
-      cooldownUntil: Date.now() + HUMBLE_COOLDOWN_MS
-    })
+    // CR-01: never write into a store a mid-sync disconnect just wiped.
+    if (!isStale()) {
+      setSyncState({
+        syncError: 'denied',
+        cooldownUntil: Date.now() + HUMBLE_COOLDOWN_MS
+      })
+    }
     return { status: 'failed' }
   }
 
@@ -370,7 +398,10 @@ async function runSync(): Promise<SyncOutcome> {
       ['Humble sync: getGamekeys schema_error, cache untouched'],
       LogPrefix.Backend
     )
-    setSyncState({ syncError: 'network' })
+    // CR-01: never write into a store a mid-sync disconnect just wiped.
+    if (!isStale()) {
+      setSyncState({ syncError: 'network' })
+    }
     return { status: 'failed' }
   }
 
@@ -406,7 +437,13 @@ async function runSync(): Promise<SyncOutcome> {
     toFetch,
     HUMBLE_SYNC_CONCURRENCY,
     async (gamekey) => {
-      const outcome = await fetchAndCommitOrder(cookie, gamekey, now)
+      const outcome = await fetchAndCommitOrder(cookie, gamekey, now, isStale)
+      // CR-01: a fenced-off sync must never push to the renderer — each
+      // humbleKeysUpdated would overwrite the `keys: []` the renderer just
+      // set on disconnect.
+      if (isStale()) {
+        return outcome
+      }
       done += 1
       sendFrontendMessage('humbleSyncProgress', { done, total })
       // D-26 progressive fill: push the updated key inventory as each order
@@ -461,6 +498,12 @@ async function runSync(): Promise<SyncOutcome> {
       r.outcome === 'transient' ||
       r.outcome === 'access_denied'
   )
+
+  // CR-01: a disconnect landed mid-sync — the terminal setSyncState below
+  // would repopulate the humbleSyncStore the disconnect just wiped.
+  if (isStale()) {
+    return { status: 'failed' }
+  }
 
   setSyncState({
     syncedAt: Date.now(),

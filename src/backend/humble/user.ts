@@ -11,6 +11,7 @@ import {
   HUMBLE_TOKEN_STORE_KEY
 } from './constants'
 import { getAccountIdentity, getGamekeys } from './adapter'
+import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 
 /**
@@ -438,6 +439,14 @@ export class HumbleUser {
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
 
   static async disconnect(): Promise<void> {
+    // CR-01: fence off any IN-FLIGHT sync before the wipes. A running
+    // HumbleLibrary sync captured the cookie at start and would otherwise
+    // keep making authenticated requests, silently repopulate the
+    // library/sync stores cleared below, and push the pre-disconnect key
+    // inventory back over the renderer's cleared state — stale/cross-account
+    // inventory bleed (HSYNC-02/D-04).
+    invalidateSyncGeneration()
+
     // The stored credential is the canonical secret — remove it FIRST, so a
     // failed partition-clear step can never leave the (possibly
     // plaintext-degraded) sessionCookie on disk after a user-confirmed

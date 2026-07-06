@@ -102,6 +102,14 @@ jest.mock('../adapter', () => ({
   getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args)
 }))
 
+// ── syncFence mock (CR-01: disconnect must fence the in-flight sync) ───────
+const mockInvalidateSyncGeneration = jest.fn()
+jest.mock('../syncFence', () => ({
+  currentSyncGeneration: () => 0,
+  invalidateSyncGeneration: (...args: unknown[]) =>
+    mockInvalidateSyncGeneration(...args)
+}))
+
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { HumbleUser, standardBrowserUserAgent } from '../user'
 
@@ -636,6 +644,33 @@ describe('HumbleUser', () => {
       expect(mockHumbleLibraryStore.clear).toHaveBeenCalled()
       expect(mockHumbleSyncStore.clear).toHaveBeenCalled()
       expect(mockHumbleRevealedStore.clear).not.toHaveBeenCalled()
+    })
+
+    test('CR-01: bumps the sync-generation fence BEFORE any store wipe (an in-flight sync must never repopulate the wiped stores)', async () => {
+      const callOrder: string[] = []
+      mockInvalidateSyncGeneration.mockImplementation(() => {
+        callOrder.push('invalidateSyncGeneration')
+      })
+      mockConfigStore.clear.mockImplementation(() => {
+        callOrder.push('configStore.clear')
+      })
+      mockHumbleLibraryStore.clear.mockImplementation(() => {
+        callOrder.push('humbleLibraryStore.clear')
+      })
+      mockHumbleSyncStore.clear.mockImplementation(() => {
+        callOrder.push('humbleSyncStore.clear')
+      })
+
+      await HumbleUser.disconnect()
+
+      expect(callOrder[0]).toBe('invalidateSyncGeneration')
+      expect(callOrder).toEqual(
+        expect.arrayContaining([
+          'configStore.clear',
+          'humbleLibraryStore.clear',
+          'humbleSyncStore.clear'
+        ])
+      )
     })
   })
 

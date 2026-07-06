@@ -124,6 +124,7 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────
 
 import { HumbleLibrary } from '../library'
+import { invalidateSyncGeneration } from '../syncFence'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_CLASSIFIER_VERSION
@@ -535,6 +536,112 @@ describe('HumbleLibrary', () => {
 
       const state = HumbleLibrary.getSyncState()
       expect(state.syncError).toBe('partial')
+    })
+  })
+
+  // CR-01: disconnect must fence the in-flight sync. HumbleUser.disconnect()
+  // bumps the sync generation BEFORE wiping the stores; a sync started under
+  // the old generation must never commit to the (wiped) library store, never
+  // write the (wiped) sync store, never push keys/progress to the renderer,
+  // and must stop issuing authenticated requests at its next dispatch.
+  describe('sync() — CR-01 disconnect fence', () => {
+    // Simulates exactly what HumbleUser.disconnect() does to library state:
+    // bump the generation FIRST, then wipe the stores.
+    function simulateDisconnect() {
+      invalidateSyncGeneration()
+      libraryData.clear()
+      syncData.clear()
+    }
+
+    test('disconnect mid-sync: wiped stores stay wiped — no store commits, no sync-state write, no keys/progress pushes after the fence', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1', 'gk2'] })
+      const resolvers = new Map<string, (v: unknown) => void>()
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) =>
+          new Promise((r) => {
+            resolvers.set(gamekey, r)
+          })
+      )
+
+      const syncPromise = HumbleLibrary.sync()
+      await flushAsync()
+      expect(resolvers.size).toBe(2) // both orders in flight pre-disconnect
+
+      simulateDisconnect()
+      mockSendFrontendMessage.mockClear()
+      mockLibraryStore.set.mockClear()
+      mockSyncStore.set.mockClear()
+
+      // The pre-disconnect fetches now settle successfully — none of their
+      // results may survive the wipe.
+      resolvers.get('gk1')!({ status: 'ok', data: makeRawOrder('gk1') })
+      resolvers.get('gk2')!({ status: 'ok', data: makeRawOrder('gk2') })
+      await flushAsync()
+      const result = await syncPromise
+
+      expect(result).toEqual({ status: 'failed' })
+      expect(mockLibraryStore.set).not.toHaveBeenCalled()
+      expect(mockSyncStore.set).not.toHaveBeenCalled()
+      expect(libraryData.size).toBe(0)
+      expect(syncData.size).toBe(0)
+      expect(HumbleLibrary.getKeys()).toEqual([])
+
+      // No humbleKeysUpdated/humbleSyncProgress push may overwrite the
+      // renderer's cleared state. The terminal humbleSyncStateChanged push
+      // still fires (from sync()'s finally) but reads the WIPED store —
+      // never pre-disconnect data.
+      const staleEvents = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated' || c[0] === 'humbleSyncProgress'
+      )
+      expect(staleEvents).toEqual([])
+      const terminal = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncStateChanged'
+      )
+      expect(terminal).toHaveLength(1)
+      expect(terminal[0][1]).toEqual({ syncedAt: null, syncError: 'none' })
+    })
+
+    test('disconnect mid-sync: still-to-be-dispatched workers stop issuing authenticated requests', async () => {
+      const gamekeys = ['gk1', 'gk2', 'gk3', 'gk4', 'gk5']
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: gamekeys })
+      const resolvers: Array<(v: unknown) => void> = []
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) =>
+          new Promise((r) => {
+            resolvers.push(() =>
+              r({ status: 'ok', data: makeRawOrder(gamekey) })
+            )
+          })
+      )
+
+      const syncPromise = HumbleLibrary.sync()
+      await flushAsync()
+      // Only the initial concurrency-bound wave is in flight.
+      expect(mockGetOrderDetail).toHaveBeenCalledTimes(HUMBLE_SYNC_CONCURRENCY)
+
+      simulateDisconnect()
+
+      // Drain the in-flight wave — the pool would normally dispatch gk4/gk5
+      // next, but the fence must prevent any further authenticated request.
+      resolvers.forEach((r) => r(undefined))
+      await flushAsync()
+      await syncPromise
+
+      expect(mockGetOrderDetail).toHaveBeenCalledTimes(HUMBLE_SYNC_CONCURRENCY)
+    })
+
+    test('a sync started AFTER the disconnect (new generation) commits normally', async () => {
+      simulateDisconnect()
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['fresh-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('fresh-gk')
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      expect(libraryData.has('fresh-gk')).toBe(true)
+      expect(HumbleLibrary.getSyncState().syncedAt).toEqual(expect.any(Number))
     })
   })
 
