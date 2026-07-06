@@ -35,9 +35,23 @@ const humbleRevealedStore = new CacheStore<{ revealedAt: number }, string>(
   null
 )
 
+// D-42/D-43: a user's "Not the same game" ownership-match correction, keyed
+// by `machine_name`. Like humbleRevealedStore above, this store is NEVER
+// cleared by HumbleUser.disconnect() — a correction must survive a
+// disconnect/reconnect cycle so it cannot silently regress and re-block a
+// future claim (e.g. Phase 14's C2 protection) for no reason tied to the
+// actual disconnect action. Kept as its own electron-store file on disk for
+// the same isolation reason as humbleRevealedStore — do not merge this into
+// humbleLibraryStore.
+const humbleOwnershipOverrideStore = new CacheStore<
+  { overriddenAt: number },
+  string
+>('humble_ownership_override', null)
+
 export {
   configStore,
   humbleLibraryStore,
   humbleSyncStore,
-  humbleRevealedStore
+  humbleRevealedStore,
+  humbleOwnershipOverrideStore
 }

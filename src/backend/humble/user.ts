@@ -511,12 +511,15 @@ export class HumbleUser {
         )
       }
     }
-    // D-04/D-30: deliberately does NOT touch humbleRevealedStore (or the
-    // future audit log). That store now exists (Phase 11) and MUST survive
-    // a disconnect/reconnect cycle — clearing it here would regress a
-    // previously-revealed key back to UNREVEALED (Pitfall 1), permanently
-    // forfeiting its gift-link opportunity for no reason tied to the actual
-    // disconnect action. Extend this policy for Phase 14's audit log the
-    // same way; never delete this exclusion.
+    // D-04/D-30/D-42/D-43: deliberately does NOT touch humbleRevealedStore
+    // or humbleOwnershipOverrideStore (or the future audit log). Both stores
+    // now exist (Phase 11/12) and MUST survive a disconnect/reconnect cycle
+    // — clearing humbleRevealedStore here would regress a previously-revealed
+    // key back to UNREVEALED (Pitfall 1), permanently forfeiting its
+    // gift-link opportunity, and clearing humbleOwnershipOverrideStore would
+    // silently drop a user's "Not the same game" correction, re-blocking a
+    // future claim (e.g. Phase 14's C2 protection) — neither is tied to the
+    // actual disconnect action. Extend this policy for Phase 14's audit log
+    // the same way; never delete this exclusion.
   }
 }

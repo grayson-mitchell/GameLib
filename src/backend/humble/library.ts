@@ -9,8 +9,10 @@ import {
   describeMissingExpirationTpks,
   describeSkippedEntitlements
 } from './classify'
+import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import {
   humbleLibraryStore,
+  humbleOwnershipOverrideStore,
   humbleRevealedStore,
   humbleSyncStore
 } from './electronStores'
@@ -21,6 +23,8 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
+import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
+import { SteamUser } from 'backend/storeManagers/steam/user'
 
 /**
  * HumbleLibrary — HSYNC-01/02/03/04 sync orchestration.
@@ -279,6 +283,70 @@ function getKeys(): HumbleKey[] {
     keys.push(...entry.keys)
   }
   return keys
+}
+
+/**
+ * HDEDUP-01 (D-44/D-45/D-48): recomputes the ownership overlay
+ * (`ownedElsewhere`/`matchConfidence`) for every cached Humble key against
+ * the current Steam owned-apps snapshot, then re-pushes the merged key
+ * inventory to the renderer.
+ *
+ * Double-gated (T-12-02, Pitfall 3 / Assumption A3): if Steam is not
+ * connected OR its cached library is empty, this is a COMPLETE no-op — no
+ * store write, no renderer push — so a Steam hiccup (disconnect, empty
+ * cache mid-refresh) can never zero out a previously-computed
+ * `ownedElsewhere: true` (D-48 keep-last-known). The pure `dedup.ts` module
+ * has its own empty-array floor as a second, defense-in-depth safeguard —
+ * the authoritative connectivity decision lives here.
+ *
+ * Called as the final step of runSync() (after every order commits) and as
+ * the exported entrypoint the Steam-refresh trigger (Plan 04) invokes
+ * directly, so a Steam library sync can refresh Humble's ownership flags
+ * without waiting for the next Humble sync.
+ */
+function recomputeOwnership(): void {
+  if (!SteamUser.isLoggedIn()) {
+    return
+  }
+  const steamGames = steamLibraryStore.get('games', [])
+  if (steamGames.length === 0) {
+    return
+  }
+
+  for (const [gamekey, entry] of humbleLibraryStore.entries()) {
+    const mutatedKeys = dedupRecomputeOwnership(
+      entry.keys,
+      steamGames,
+      (machineName) => humbleOwnershipOverrideStore.has(machineName)
+    )
+    humbleLibraryStore.set(gamekey, { ...entry, keys: mutatedKeys })
+  }
+
+  // Pitfall 5: this is a DISTINCT final push, not covered by the per-order
+  // progressive push inside runSync's fetch loop (that loop only runs
+  // during a Humble sync; this function is also called standalone from the
+  // Steam-refresh entrypoint with no Humble fetch loop at all).
+  sendFrontendMessage('humbleKeysUpdated', getKeys())
+}
+
+/**
+ * D-42: records a user's "Not the same game" correction for a fuzzy match,
+ * then immediately recomputes so the renderer reflects the cleared flag.
+ * Ground-truth exact AppID matches are never overridable (enforced by
+ * dedup.ts, not here).
+ */
+function setOwnershipOverride(machineName: string): void {
+  humbleOwnershipOverrideStore.set(machineName, { overriddenAt: Date.now() })
+  recomputeOwnership()
+}
+
+/**
+ * D-42: clears a previously-recorded override, then recomputes so a
+ * still-valid fuzzy match is restored.
+ */
+function clearOwnershipOverride(machineName: string): void {
+  humbleOwnershipOverrideStore.delete(machineName)
+  recomputeOwnership()
 }
 
 /**
@@ -549,6 +617,15 @@ async function runSync(): Promise<SyncOutcome> {
     ...(sawFailure ? {} : { classifierVersion: HUMBLE_CLASSIFIER_VERSION })
   })
 
+  // HDEDUP-01: recompute the ownership overlay against the current Steam
+  // library at the end of EVERY sync (not just clean ones — a partial sync
+  // still committed whatever orders it could, and those newly-captured
+  // steamAppIds deserve an immediate match attempt). Placed after the
+  // isStale() fence above, so a disconnect mid-sync never re-populates the
+  // wiped humbleLibraryStore here either. Itself a no-op when Steam is
+  // disconnected/empty (D-48, see recomputeOwnership's own double-gate).
+  recomputeOwnership()
+
   return { status: sawFailure ? 'partial' : 'ok' }
 }
 
@@ -556,5 +633,8 @@ export const HumbleLibrary = {
   loadCached,
   sync,
   getKeys,
-  getSyncState
+  getSyncState,
+  recomputeOwnership,
+  setOwnershipOverride,
+  clearOwnershipOverride
 }

@@ -9,13 +9,17 @@
  * Mock boundaries:
  *  - ../adapter        -> getGamekeys, getOrderDetail
  *  - ../user           -> HumbleUser.getCredentials
- *  - ../electronStores -> humbleLibraryStore, humbleSyncStore, humbleRevealedStore
+ *  - ../electronStores -> humbleLibraryStore, humbleSyncStore, humbleRevealedStore,
+ *                         humbleOwnershipOverrideStore
+ *  - backend/storeManagers/steam/electronStores -> steamLibraryStore
+ *  - backend/storeManagers/steam/user -> SteamUser.isLoggedIn
  *  - backend/ipc       -> sendFrontendMessage
  *  - backend/logger    -> logInfo/logError/logWarning
  *
  * classify.ts is NOT mocked — real classification runs against small
  * fixture-shaped raw orders so partition/commit assertions exercise the real
- * 5-state precedence rather than a stub.
+ * 5-state precedence rather than a stub. dedup.ts is likewise NOT mocked —
+ * the Phase 12 ownership-recompute tests exercise the real two-tier matcher.
  */
 
 import type { HumbleKey, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
@@ -50,6 +54,15 @@ const mockRevealedStore = {
   clear: jest.fn()
 }
 
+// D-42/D-43 override store: keyed by machine_name.
+const overrideData = new Set<string>()
+const mockOverrideStore = {
+  has: jest.fn(),
+  set: jest.fn(),
+  delete: jest.fn(),
+  clear: jest.fn()
+}
+
 function resetStoreMocks() {
   mockLibraryStore.has.mockImplementation((k: string) => libraryData.has(k))
   mockLibraryStore.get.mockImplementation((k: string) => libraryData.get(k))
@@ -78,12 +91,34 @@ function resetStoreMocks() {
     revealedData.add(k)
   })
   mockRevealedStore.clear.mockImplementation(() => revealedData.clear())
+
+  mockOverrideStore.has.mockImplementation((k: string) => overrideData.has(k))
+  mockOverrideStore.set.mockImplementation((k: string) => {
+    overrideData.add(k)
+  })
+  mockOverrideStore.delete.mockImplementation((k: string) => {
+    overrideData.delete(k)
+  })
+  mockOverrideStore.clear.mockImplementation(() => overrideData.clear())
 }
 
 jest.mock('../electronStores', () => ({
   humbleLibraryStore: mockLibraryStore,
   humbleSyncStore: mockSyncStore,
-  humbleRevealedStore: mockRevealedStore
+  humbleRevealedStore: mockRevealedStore,
+  humbleOwnershipOverrideStore: mockOverrideStore
+}))
+
+// ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
+
+const mockSteamLibraryStoreGet = jest.fn()
+jest.mock('backend/storeManagers/steam/electronStores', () => ({
+  steamLibraryStore: { get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args) }
+}))
+
+const mockSteamIsLoggedIn = jest.fn()
+jest.mock('backend/storeManagers/steam/user', () => ({
+  SteamUser: { isLoggedIn: () => mockSteamIsLoggedIn() }
 }))
 
 // ── adapter mock ─────────────────────────────────────────────────────────
@@ -138,6 +173,8 @@ function makeRawOrder(
     machineName?: string
     redeemed?: boolean
     expiration?: string | null
+    title?: string
+    steamAppId?: string | number
   } = {}
 ) {
   return {
@@ -147,10 +184,13 @@ function makeRawOrder(
       all_tpks: [
         {
           machine_name: opts.machineName ?? `${gamekey}_key`,
-          human_name: `Key for ${gamekey}`,
+          human_name: opts.title ?? `Key for ${gamekey}`,
           key_type: 'steam',
           redeemed_key_value: opts.redeemed ? 'REDEEMED-VALUE' : null,
-          expiration: opts.expiration ?? null
+          expiration: opts.expiration ?? null,
+          ...(opts.steamAppId !== undefined
+            ? { steam_app_id: opts.steamAppId }
+            : {})
         }
       ]
     }
@@ -192,8 +232,13 @@ describe('HumbleLibrary', () => {
     libraryData.clear()
     syncData.clear()
     revealedData.clear()
+    overrideData.clear()
     resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
+    // Default: Steam disconnected / no owned games — existing (pre-Phase-12)
+    // tests must see zero ownership-recompute activity unless a test opts in.
+    mockSteamIsLoggedIn.mockReturnValue(false)
+    mockSteamLibraryStoreGet.mockReturnValue([])
   })
 
   // ── loadCached() / getKeys() / getSyncState() ───────────────────────────
@@ -1550,6 +1595,194 @@ describe('HumbleLibrary', () => {
         JSON.stringify(call).includes('no extractable expiration')
       )
       expect(diag).toBeUndefined()
+    })
+  })
+
+  // ── Phase 12 (HDEDUP-01/02): ownership recompute wiring ─────────────────
+
+  function makeSteamGame(appId: string, title: string) {
+    return {
+      runner: 'steam' as const,
+      app_name: appId,
+      title,
+      art_cover: '',
+      art_square: '',
+      install: {},
+      is_installed: false,
+      canRunOffline: false
+    }
+  }
+
+  function makeLegacyEntry(gamekey: string): HumbleOrderCacheEntry {
+    // Pre-Phase-12 shape: an already-frozen (allTerminal) order committed by
+    // the OLD classifier — no steamAppId was ever captured (the field did
+    // not exist yet).
+    const key: HumbleKey = {
+      gamekey,
+      machineName: `${gamekey}_key`,
+      state: 'REDEEMED',
+      title: `Key for ${gamekey}`,
+      platform: 'steam',
+      expiration: null,
+      origin: `Order ${gamekey}`,
+      ownedElsewhere: false,
+      matchConfidence: 'none'
+    }
+    return { gamekey, keys: [key], allTerminal: true }
+  }
+
+  function makeOwnedEntry(gamekey: string): HumbleOrderCacheEntry {
+    const key: HumbleKey = {
+      gamekey,
+      machineName: `${gamekey}_key`,
+      state: 'REDEEMED',
+      title: `Key for ${gamekey}`,
+      platform: 'steam',
+      expiration: null,
+      origin: `Order ${gamekey}`,
+      steamAppId: '440',
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    }
+    return { gamekey, keys: [key], allTerminal: true }
+  }
+
+  function makeFuzzyMatchableEntry(
+    gamekey: string,
+    title: string
+  ): HumbleOrderCacheEntry {
+    // No steamAppId — must be matched via the fuzzy tier, and cross-platform
+    // (D-45) so a GOG key is a valid override target.
+    const key: HumbleKey = {
+      gamekey,
+      machineName: `${gamekey}_key`,
+      state: 'REDEEMED',
+      title,
+      platform: 'gog',
+      expiration: null,
+      origin: `Order ${gamekey}`,
+      ownedElsewhere: false,
+      matchConfidence: 'none'
+    }
+    return { gamekey, keys: [key], allTerminal: true }
+  }
+
+  describe('sync() — Phase 12 ownership-overlay backfill (classifier v3)', () => {
+    test('a pre-Phase-12 frozen order (no steamAppId, no stored classifierVersion) is re-fetched once, steamAppId backfilled, and classifierVersion stamps to 3', async () => {
+      libraryData.set('legacy-gk', makeLegacyEntry('legacy-gk'))
+      // syncData deliberately left empty — pre-versioning caches never
+      // stored a version (read as 1 per round-6 semantics).
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['legacy-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('legacy-gk', { steamAppId: '440' })
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).toHaveBeenCalledWith(
+        'cookie-value',
+        'legacy-gk'
+      )
+      const key = libraryData.get('legacy-gk')?.keys[0]
+      expect(key?.steamAppId).toBe('440')
+      expect(HumbleLibrary.getSyncState().classifierVersion).toBe(
+        HUMBLE_CLASSIFIER_VERSION
+      )
+    })
+  })
+
+  describe('sync() — ownership recompute at sync end (HDEDUP-01)', () => {
+    test('Steam owns a matching AppID: the committed key is flagged ownedElsewhere/exact, and humbleKeysUpdated re-pushes the mutated key AFTER the dedup pass', async () => {
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { steamAppId: '440' })
+      })
+
+      await HumbleLibrary.sync()
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.ownedElsewhere).toBe(true)
+      expect(key?.matchConfidence).toBe('exact')
+
+      const keysUpdatedCalls = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      expect(keysUpdatedCalls.length).toBeGreaterThan(0)
+      const lastPushed = keysUpdatedCalls[
+        keysUpdatedCalls.length - 1
+      ][1] as HumbleKey[]
+      expect(lastPushed.find((k) => k.gamekey === 'gk1')?.ownedElsewhere).toBe(
+        true
+      )
+    })
+  })
+
+  describe('HumbleLibrary.recomputeOwnership() — keep-last-known (D-48)', () => {
+    test('no-ops (no store write) when Steam is disconnected', () => {
+      libraryData.set('gk1', makeOwnedEntry('gk1'))
+      mockSteamIsLoggedIn.mockReturnValue(false)
+      mockLibraryStore.set.mockClear()
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(mockLibraryStore.set).not.toHaveBeenCalled()
+      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+    })
+
+    test('no-ops (no store write) when Steam is connected but the owned-games array is empty', () => {
+      libraryData.set('gk1', makeOwnedEntry('gk1'))
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([])
+      mockLibraryStore.set.mockClear()
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(mockLibraryStore.set).not.toHaveBeenCalled()
+      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+    })
+
+    test('recomputes normally once Steam is connected with a non-empty library', () => {
+      libraryData.set('gk1', makeOwnedEntry('gk1'))
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(mockLibraryStore.set).toHaveBeenCalled()
+      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('exact')
+    })
+  })
+
+  describe('HumbleLibrary.setOwnershipOverride() / clearOwnershipOverride() (D-42)', () => {
+    test('an override clears a fuzzy match; clearing the override restores the computed match', () => {
+      const entry = makeFuzzyMatchableEntry('gk1', 'Team Fortress 2')
+      libraryData.set('gk1', entry)
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+
+      HumbleLibrary.recomputeOwnership()
+      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
+
+      HumbleLibrary.setOwnershipOverride(entry.keys[0].machineName)
+      expect(overrideData.has(entry.keys[0].machineName)).toBe(true)
+      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('none')
+
+      HumbleLibrary.clearOwnershipOverride(entry.keys[0].machineName)
+      expect(overrideData.has(entry.keys[0].machineName)).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
+      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
     })
   })
 })
