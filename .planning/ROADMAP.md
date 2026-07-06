@@ -327,7 +327,7 @@ Plans:
 **Plans**: 5 plans (5 waves — inherently linear dependency chain: types → matcher → wiring → IPC → UI)
 - [x] 12-01-PLAN.md — HumbleKey type + constants (classifier v3, fuzzy threshold) + steam_app_id capture in classify (HDEDUP-01, HDEDUP-02)
 - [x] 12-02-PLAN.md — Pure dedup.ts matcher (exact-AppID-final + fuzzy-85%+DLC-guard) behind fastest-levenshtein legitimacy gate (HDEDUP-01)
-- [ ] 12-03-PLAN.md — Override store + disconnect exemption + library.ts recompute wiring, backfill, keep-last-known connectivity gate (HDEDUP-01, HDEDUP-02)
+- [x] 12-03-PLAN.md — Override store + disconnect exemption + library.ts recompute wiring, backfill, keep-last-known connectivity gate (HDEDUP-01, HDEDUP-02)
 - [ ] 12-04-PLAN.md — Override IPC channels + server-side fuzzy validation + main.ts Steam-refresh recompute trigger (HDEDUP-01)
 - [ ] 12-05-PLAN.md — Owned badge + fuzzy-only override on Keys page + redeemed-only Humble-origin annotation on Steam GamePage + human-verify (HDEDUP-01, HDEDUP-02)
 
@@ -388,7 +388,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 9. Quality Gate | 0/? | Not started | - |
 | 10. Humble Auth + Adapter Scaffold | 6/6 | Complete    | 2026-07-05 |
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
-| 12. Ownership Dedup | 2/5 | In Progress|  |
+| 12. Ownership Dedup | 3/5 | In Progress|  |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
 | 14. Guided Claim Flow | 0/? | Not started | - |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |
