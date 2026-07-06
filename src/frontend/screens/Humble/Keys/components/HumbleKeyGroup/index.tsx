@@ -79,8 +79,15 @@ export default function HumbleKeyGroup({ group, keys }: Props) {
       </button>
       {expanded && (
         <ul id={listId} className="humbleKeyGroupList">
+          {/* WR-08: machine_name is per-PRODUCT, not per-order — the same
+              game key type owned via two bundles yields two rows with the
+              same machineName in one group. The gamekey:machineName pair is
+              the guaranteed-unique identity for a rendered row. */}
           {keys.map((key) => (
-            <HumbleKeyRow key={key.machineName} humbleKey={key} />
+            <HumbleKeyRow
+              key={`${key.gamekey}:${key.machineName}`}
+              humbleKey={key}
+            />
           ))}
         </ul>
       )}
