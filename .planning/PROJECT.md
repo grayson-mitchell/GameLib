@@ -50,6 +50,7 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ Tri-state Hidden / Non-available Library filters with "only-show" modes (LIB-09) — v1.1 Phase 08.1
 - ✓ Humble Bundle account connect/disconnect from Manage Accounts via embedded WebView login, encrypted session persistence + expiry reconnect (HACCT-01/02/03) — v1.2 Phase 10
 - ✓ Humble C5 adapter boundary empirically validated against the live API (axios transport; gamekeys + order-detail + steam_app_id schema PASS; identity endpoint 404 → advisory) — v1.2 Phase 10
+- ✓ Humble key inventory synced + classified into the 5-state model with fail-soft caching and a read-only Humble Keys page (HSYNC-01/02/03/04; live UAT on a real 25-gamekey account) — v1.2 Phase 11
 
 ### Active (v1.1 — in scope)
 
@@ -116,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-05 — v1.2 Phase 10 (Humble Auth + Adapter Scaffold) complete: WebView login, encrypted session, live-validated C5 adapter. v1.1 kept open (Phase 9 + Phase 7 UAT outstanding) by explicit choice.*
+*Last updated: 2026-07-06 — v1.2 Phase 11 (Library Sync + 5-State Key Model) complete: full key inventory sync, 5-state classification, fail-soft caching, read-only Humble Keys page; approved via live UAT after 7 fix rounds + post-review hardening (CR-01 disconnect fence). v1.1 kept open (Phase 9 + Phase 7 UAT outstanding) by explicit choice.*
