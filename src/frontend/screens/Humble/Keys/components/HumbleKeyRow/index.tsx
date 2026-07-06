@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { HumbleKey } from 'common/types/humble'
+import { getExpirationDisplay } from 'common/humble/expirationDisplay'
 import { STATE_LABEL_KEYS } from '../HumbleKeyGroup'
 
 type Props = {
@@ -26,13 +27,22 @@ export default function HumbleKeyRow({ humbleKey }: Props) {
       })
     : humbleKey.title
 
-  const expirationLabel = humbleKey.expiration
-    ? t('humbleKeys.expiresOn', 'Expires {{date}}', {
-        date: new Date(humbleKey.expiration).toLocaleDateString()
-      })
-    : isUnpicked
-      ? t('humbleKeys.noDeadline', 'No pick deadline available')
-      : t('humbleKeys.noExpiration', 'No expiration')
+  // Per-state expiration text (live-UAT round 5): REDEEMED always renders
+  // blank (a redeemed key's expiration is irrelevant); UNREDEEMABLE shows the
+  // date when known, blank otherwise (the "Expired" badge already says it) —
+  // never the "No expiration" placeholder. The decision itself is the pure,
+  // unit-tested getExpirationDisplay; only the i18n mapping lives here.
+  const display = getExpirationDisplay(humbleKey.state, humbleKey.expiration)
+  const expirationLabel =
+    display.kind === 'date'
+      ? t('humbleKeys.expiresOn', 'Expires {{date}}', {
+          date: new Date(display.iso).toLocaleDateString()
+        })
+      : display.kind === 'no-deadline'
+        ? t('humbleKeys.noDeadline', 'No pick deadline available')
+        : display.kind === 'no-expiration'
+          ? t('humbleKeys.noExpiration', 'No expiration')
+          : null // 'blank' — render nothing, not placeholder text
 
   return (
     <li className="humbleKeyRow">
@@ -52,7 +62,9 @@ export default function HumbleKeyRow({ humbleKey }: Props) {
           </span>
         )}
       </div>
-      <span className="humbleKeyRowExpiration">{expirationLabel}</span>
+      {expirationLabel !== null && (
+        <span className="humbleKeyRowExpiration">{expirationLabel}</span>
+      )}
     </li>
   )
 }
