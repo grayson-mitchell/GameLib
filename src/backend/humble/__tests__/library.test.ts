@@ -777,6 +777,67 @@ describe('HumbleLibrary', () => {
     })
   })
 
+  // WR-05: the renderer derives `syncing` from done < total, and per-order
+  // progress only fired AFTER each order resolved — so 0/1-order syncs never
+  // showed as syncing, and multi-order syncs gave no feedback until the
+  // first order completed (up to the 15s request timeout).
+  describe('sync() — WR-05 initial progress push', () => {
+    function progressEvents() {
+      return mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncProgress'
+      )
+    }
+
+    test('an initial { done: 0, total } event fires before any order resolves', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      let resolveOrder!: (v: unknown) => void
+      mockGetOrderDetail.mockImplementation(
+        () =>
+          new Promise((r) => {
+            resolveOrder = r
+          })
+      )
+
+      const syncPromise = HumbleLibrary.sync()
+      await flushAsync()
+
+      // The order is still in flight, yet progress already reads 0/1 —
+      // done < total, so the renderer's `syncing` engages immediately.
+      expect(progressEvents()).toEqual([
+        ['humbleSyncProgress', { done: 0, total: 1 }]
+      ])
+
+      resolveOrder({ status: 'ok', data: makeRawOrder('gk1') })
+      await expect(syncPromise).resolves.toEqual({ status: 'ok' })
+
+      const events = progressEvents()
+      expect(events[events.length - 1]).toEqual([
+        'humbleSyncProgress',
+        { done: 1, total: 1 }
+      ])
+    })
+
+    test('an all-frozen sync (total 0) still emits { done: 0, total: 0 } and the terminal state push', async () => {
+      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      expect(progressEvents()).toEqual([
+        ['humbleSyncProgress', { done: 0, total: 0 }]
+      ])
+      const terminal = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncStateChanged'
+      )
+      expect(terminal).toHaveLength(1)
+    })
+  })
+
   // WR-01: the humbleSync IPC contract says "never throws", and every
   // renderer call site is fire-and-forget with no .catch — an escaped
   // rejection would surface as an unhandled promise rejection in the

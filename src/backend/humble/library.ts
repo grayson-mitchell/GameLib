@@ -450,6 +450,17 @@ async function runSync(): Promise<SyncOutcome> {
   const total = toFetch.length
   let done = 0
 
+  // WR-05: initial progress push BEFORE any order resolves. The renderer
+  // derives `syncing` from done < total, and per-order events only fire
+  // AFTER each order settles — so without this, 0/1-order syncs never show
+  // as syncing at all, and multi-order syncs leave the refresh button
+  // enabled/un-spinning until the first order completes (up to the full
+  // request timeout). CR-01: skip when a disconnect landed during the
+  // gamekeys fetch.
+  if (!isStale()) {
+    sendFrontendMessage('humbleSyncProgress', { done: 0, total })
+  }
+
   const results = await runBounded(
     toFetch,
     HUMBLE_SYNC_CONCURRENCY,
