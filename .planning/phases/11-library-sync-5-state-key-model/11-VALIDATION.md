@@ -49,9 +49,9 @@ created: 2026-07-05
 | 11-02-06 | 02 | 2 | HSYNC-04 | T-11-05, T-11-08 | `access_denied`/`schema_error` on `getGamekeys` leaves the existing cache untouched and sets a `syncError`/cooldown state; a thrown network/timeout/5xx error is caught (never an unhandled rejection) | unit | `npx jest src/backend/humble/__tests__/library.test.ts --no-coverage` | ✅ | ✅ green |
 | 11-02-07 | 02 | 2 | HSYNC-04 | T-11-06 | Mid-sync abort (403/429 on order N of M) commits orders 1..N-1's fresh results and leaves N+1..M at their prior cached state (D-34); one order's rejection/schema_error keeps its cached entry, the pool finishes the others | unit | `npx jest src/backend/humble/__tests__/library.test.ts --no-coverage` | ✅ | ✅ green |
 | 11-03-01 | 03 | 3 | HSYNC-01, HSYNC-02 | T-11-02 | `humbleSync`/`humbleGetKeys`/`humbleGetSyncState` IPC handlers delegate straight to `HumbleLibrary`; no generic `storeGet` exposure of `humbleLibraryStore`/`humbleRevealedStore` | static/grep | verified in 11-03-SUMMARY.md (grep-checked, no dedicated test file — IPC wiring, not business logic) | ✅ | ✅ green |
-| 11-04-01 | 04 | 4 | HSYNC-01, HSYNC-02, HSYNC-03 | T-11-09 | Humble Keys screen renders the 5-state inventory, fixed group order, empty groups hidden, expiring-soonest-first sort; rows are structurally read-only (`<div>`/`<li>`, no reveal/copy/link-out) | manual | — (visual UAT, see Manual-Only Verifications below) | — | 📋 manual — see Task 2 |
-| 11-04-02 | 04 | 4 | HSYNC-04 | — | Fail-soft banner ("Couldn't refresh — showing data from [last-synced timestamp]") and "Last synced X ago" freshness indicator render from context state; progressive-fill "Syncing... N of M orders" indicator during manual refresh | manual | — (visual UAT, no headless DOM test infra exists for this screen) | — | 📋 manual — see Task 2 |
-| 11-05-01 | 05 | 5 | HSYNC-01, HSYNC-02, HSYNC-03, HSYNC-04 | T-11-10 | Full jest suite green; live-account 5-state rendering + fail-soft + [ASSUMED] resolution (A1 UNPICKED, A3 redeemed_key_value) | unit + manual | `pnpm test` | ✅ | ✅ green (unit) / 📋 manual — see Task 2 |
+| 11-04-01 | 04 | 4 | HSYNC-01, HSYNC-02, HSYNC-03 | T-11-09 | Humble Keys screen renders the 5-state inventory, fixed group order, empty groups hidden, expiring-soonest-first sort; rows are structurally read-only (`<div>`/`<li>`, no reveal/copy/link-out) | manual | — (visual UAT, see Manual-Only Verifications below) | — | ✅ live UAT PASS (2026-07-06) |
+| 11-04-02 | 04 | 4 | HSYNC-04 | — | Fail-soft banner ("Couldn't refresh — showing data from [last-synced timestamp]") and "Last synced X ago" freshness indicator render from context state; progressive-fill "Syncing... N of M orders" indicator during manual refresh | manual | — (visual UAT, no headless DOM test infra exists for this screen) | — | ✅ live UAT PASS (2026-07-06) |
+| 11-05-01 | 05 | 5 | HSYNC-01, HSYNC-02, HSYNC-03, HSYNC-04 | T-11-10 | Full jest suite green; live-account 5-state rendering + fail-soft + [ASSUMED] resolution (A1 UNPICKED, A3 redeemed_key_value) | unit + manual | `pnpm test` | ✅ | ✅ green (unit) / ✅ live UAT APPROVED (2026-07-06) — A1 UNPICKED live check deferred (see findings) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · 📋 manual*
 
@@ -89,7 +89,7 @@ automatable Phase 11 requirements.
 - [x] Feedback latency < 5s (full suite: ~5.173s for 28 suites / 396 tests)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** approved 2026-07-05 (Task 1 — automated suite). Task 2 (live UAT) is `autonomous: false` and pending human sign-off — see checkpoint return.
+**Approval:** approved 2026-07-05 (Task 1 — automated suite). Task 2 (live UAT) **APPROVED by tester 2026-07-06** after 7 live fix rounds — see Live UAT Findings below. Full suite at approval: 31 suites / 514 tests, exit 0; codecheck clean.
 
 ---
 
@@ -109,14 +109,43 @@ No regressions in any other suite (Steam, wine, wiki, filesystem, protocol, etc.
 
 ---
 
-## Live UAT Findings (Task 2 — pending)
+## Live UAT Findings (Task 2)
 
-To be appended by the human-verify checkpoint per `11-05-PLAN.md` Task 2's `<how-to-verify>`.
-Findings will record (redacted — counts/states/pass-fail only, never a cookie or raw key value):
+**Final verdict: APPROVED by tester (2026-07-06) after 7 live fix rounds.**
+All findings redacted per T-11-10 / D-15 — counts/states/pass-fail only, never a cookie or raw key value.
 
-- 5-state inventory rendering (grouping, ordering, empty-group hiding, expiring-soonest-first)
-- Read-only row confirmation (no reveal/copy/expand/link-out)
-- Progressive-fill sync indicator behavior on a multi-order account
-- Fail-soft banner behavior on an unreachable API
-- A1 (UNPICKED pseudo-entry) resolution — present/absent on the tested account, deadline rendering if present
-- A3 (`redeemed_key_value` presence) resolution — REDEEMED and UNREVEALED classification confirmed on real data
+Tested against a real Humble account with **25 gamekeys** (dev build, `pnpm dev`).
+
+### Verified PASS on live data
+
+| Check | Requirement | Result |
+|-------|-------------|--------|
+| Sidebar gating: "Humble Keys" visible only while connected, hidden after Disconnect | HSYNC-01 | ✅ PASS |
+| Empty state message correct when no keys | HSYNC-01 | ✅ PASS |
+| 5-state inventory renders grouped and ordered (UNPICKED / UNREVEALED / REVEALED / REDEEMED / Expired), state badges correct — tester's purchased Steam-key game + several gift keys appear UNREVEALED; redeemed keys in REDEEMED | HSYNC-01, HSYNC-02 | ✅ PASS |
+| Rows strictly read-only — no reveal/copy/expand/link-out affordance | T-11-09 | ✅ PASS (confirmed across rounds; no affordances present) |
+| Progressive fill "Syncing… N/M orders" indicator observed during sync | HSYNC-01 | ✅ PASS (after round-2 fix removed indicator flicker) |
+| "Last synced X ago" renders steadily and advances on manual refresh | HSYNC-04 | ✅ PASS (after round-2 fixes) |
+| Fail-soft: with no network connection at app start, cached list displayed with orange "Couldn't refresh" banner — no toast, no blank, no error | HSYNC-04 | ✅ PASS — HSYNC-04 confirmed live |
+| Expiration dates render (e.g. a key expiring 2026-08-03) and expiring-soonest sort works; one key legitimately has no expiry window (correct); REDEEMED rows show blank expiration slot | HSYNC-03 | ✅ PASS (after rounds 4-5) |
+
+### [ASSUMED] Resolutions
+
+- **A3 (redeemed-key field presence semantics): RESOLVED-CONFIRMED.** Redeemed keys classify REDEEMED via the live `redeemed_key_val` field; unrevealed keys classify UNREVEALED. Note the live field name is `redeemed_key_val`, **not** the spec's `redeemed_key_value` — see spec-inaccuracy note below.
+- **A1 (un-picked Humble Choice month / UNPICKED pseudo-entry): DEFERRED.** The tested account has no un-picked month — the UNPICKED path is **unverified on live data, defensive code path only** (same precedent as Phase 10's identity-advisory). Deferred to a future live check when an account with an un-picked Choice month is available.
+
+### Live defects found by UAT and fixed during the checkpoint
+
+All fixes merged to main; 514/514 tests green at approval.
+
+1. **Round 1** — `CacheStore.entries()` leaked electron-store's nested `__timestamp` bookkeeping group → sync rejected mid-flight, spinner stuck, keys unreadable. Fix `cfd5cafe`. Debug: `.planning/debug/humble-sync-spinner-never-ends.md`.
+2. **Round 2** — per-order keys push wrongly cleared `syncing` (indicator flicker); sync end-state never propagated to renderer (stale syncedAt, banner impossible). Added terminal `humbleSyncStateChanged` event, single-flight + cooldown guards, per-sync redacted summary log. Fix `366e7ef9`. Debug: `.planning/debug/humble-keys-empty-list-flashing-sync.md`.
+3. **Round 3** — adapter never sent `?all_tpkds=true` so orders returned key-less; spec field names wrong: live fields are `redeemed_key_val` (not `redeemed_key_value`) and `is_expired` bool. Fix `379b8f42`. Debug: `.planning/debug/humble-zero-keys-from-valid-orders.md`. **NOTE:** `.planning/research/HUMBLE-SPEC-SOURCE.md` §2.1/Appendix A is inaccurate on these field names.
+4. **Round 4** — expiration extraction: live payloads use `expiry_date` (absolute) / `num_days_until_expired` (relative, 0 = no window), not `expiration`. Fixes `a1f36fd1`, `581be6d4`, `1c869532` — also relabeled UNREDEEMABLE as "Expired" in UI and added collapsible groups with Expired collapsed by default (both user-requested).
+5. **Round 5** — D-29: entries without `key_type` excluded; REDEEMED/Expired rows show blank instead of "No expiration". Fixes `34c763a9`, `3199f2ee`.
+6. **Round 6** — entitlement filter v2 (`direct_redeem: true` + non-game key_type excluded, grounded in Playnite/Galaxy real captures) + classifier-version cache re-classification so classifier fixes reach frozen orders. Fixes `f34fc0d2`, `11a0c515`.
+7. **Round 7** — **user product decision at checkpoint:** `key_type: "generic"` entries (e.g. PDF/ebook bundles) stay in inventory but display in a separate collapsed "Other" group rendered last — never lose a key, but out of the game-key groups. Fix `2964fcf9`. This refines D-28's display semantics by explicit user choice.
+
+### Full-suite status at approval
+
+31 suites / 514 tests, exit 0 (`pnpm test`); codecheck clean.
