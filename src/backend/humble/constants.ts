@@ -38,4 +38,10 @@ export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
 // classification semantics change (filters, precedence, field extraction):
 //   1 = rounds 1-5 (implicit — pre-versioning caches read as 1)
 //   2 = round 6: D-29 v2 direct-redeem entitlement exclusion
-export const HUMBLE_CLASSIFIER_VERSION = 2
+//   3 = Phase 12: steam_app_id capture added to classifyOrder
+export const HUMBLE_CLASSIFIER_VERSION = 3
+
+// HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
+// locked at 85%+, NOT the community-norm 70% — DLC titles false-positive
+// match base games at lower thresholds and false positives waste gift links.
+export const HUMBLE_FUZZY_MATCH_THRESHOLD = 0.85

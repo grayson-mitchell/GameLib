@@ -165,7 +165,9 @@ function makeTerminalEntry(gamekey: string): HumbleOrderCacheEntry {
     title: `Key for ${gamekey}`,
     platform: 'steam',
     expiration: null,
-    origin: `Order ${gamekey}`
+    origin: `Order ${gamekey}`,
+    ownedElsewhere: false,
+    matchConfidence: 'none'
   }
   return { gamekey, keys: [key], allTerminal: true }
 }
@@ -178,7 +180,9 @@ function makeNonTerminalEntry(gamekey: string): HumbleOrderCacheEntry {
     title: `Key for ${gamekey}`,
     platform: 'steam',
     expiration: null,
-    origin: `Order ${gamekey}`
+    origin: `Order ${gamekey}`,
+    ownedElsewhere: false,
+    matchConfidence: 'none'
   }
   return { gamekey, keys: [key], allTerminal: false }
 }
@@ -1264,7 +1268,9 @@ describe('HumbleLibrary', () => {
             title: 'Big Book (PDF)',
             platform: 'download',
             expiration: null,
-            origin: 'PDF Bundle'
+            origin: 'PDF Bundle',
+            ownedElsewhere: false,
+            matchConfidence: 'none'
           }
         ],
         allTerminal: true
