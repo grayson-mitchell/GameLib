@@ -68,8 +68,8 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 
 ### Humble Ownership Dedup
 
-- [ ] **HDEDUP-01**: Every key is cross-referenced against the Steam library (AppID-first via `steam_app_id`, 85%+ fuzzy-name fallback) to set `owned_elsewhere`
-- [ ] **HDEDUP-02**: A Humble Steam key already redeemed into Steam collapses onto the existing Steam library entry (annotated with its Humble origin) instead of appearing as a duplicate
+- [x] **HDEDUP-01**: Every key is cross-referenced against the Steam library (AppID-first via `steam_app_id`, 85%+ fuzzy-name fallback) to set `owned_elsewhere`
+- [x] **HDEDUP-02**: A Humble Steam key already redeemed into Steam collapses onto the existing Steam library entry (annotated with its Humble origin) instead of appearing as a duplicate
 
 ### Humble Key Views
 
@@ -147,8 +147,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HSYNC-02 | Phase 11 | Complete |
 | HSYNC-03 | Phase 11 | Complete |
 | HSYNC-04 | Phase 11 | Complete |
-| HDEDUP-01 | Phase 12 | Pending |
-| HDEDUP-02 | Phase 12 | Pending |
+| HDEDUP-01 | Phase 12 | Complete (2026-07-07) |
+| HDEDUP-02 | Phase 12 | Complete (2026-07-07) |
 | HVIEW-01 | Phase 13 | Pending |
 | HVIEW-02 | Phase 13 | Pending |
 | HCLAIM-01 | Phase 14 | Pending |
