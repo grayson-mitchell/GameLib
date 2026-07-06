@@ -118,3 +118,15 @@ None - no external service configuration required.
 ---
 *Phase: 12-ownership-dedup*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+- FOUND: .planning/phases/12-ownership-dedup/12-04-SUMMARY.md
+- FOUND commit d377c9fe (feat(12-04): expose D-42 ownership-override IPC channels)
+- FOUND commit c8324ccb (feat(12-04): trigger Humble ownership recompute on Steam-inclusive refresh)
+- FOUND commit 3fbea703 (docs(12-04): complete ownership-override IPC + Steam-refresh recompute plan)
+- grep: humbleSetOwnershipOverride present in ipc.ts (1), ipc_handler.ts (2), preload/api/humble.ts (2)
+- grep: recomputeOwnership present in main.ts (2)
+- tsc --noEmit: clean
+- jest src/backend/humble + src/backend/storeManagers/steam: 424/424 passed (12 suites)
+- eslint on all 4 touched files: 0 new errors (67 pre-existing-pattern warnings, unchanged in kind)
