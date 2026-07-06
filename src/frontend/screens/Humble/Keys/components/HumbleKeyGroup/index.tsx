@@ -4,9 +4,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 
-import { HumbleKey, HumbleKeyState } from 'common/types/humble'
+import { HumbleKey } from 'common/types/humble'
 import { HumbleKeyGroupId } from 'common/humble/groupKeys'
 import HumbleKeyRow from '../HumbleKeyRow'
+// WR-09: STATE_LABEL_KEYS lives in a leaf module — HumbleKeyRow used to
+// import it back from THIS module while this module imports the row
+// component, a circular import one module-scope read away from an ES-module
+// TDZ failure.
+import { STATE_LABEL_KEYS } from '../../stateLabels'
 
 type Props = {
   /** One of the 5 states (D-30) or the round-7 'other' display bucket. */
@@ -14,19 +19,7 @@ type Props = {
   keys: HumbleKey[]
 }
 
-// Shared with HumbleKeyRow (badge text reuses the same label). The internal
-// 5-state name UNREDEEMABLE is locked (D-30 precedence), but its user-visible
-// label is "Expired" — matching Humble's own UI copy ("This key has expired and
-// can no longer be redeemed"); the i18n key stays `state.unredeemable`.
-export const STATE_LABEL_KEYS: Record<HumbleKeyState, [string, string]> = {
-  UNPICKED: ['humbleKeys.state.unpicked', 'Unpicked'],
-  UNREVEALED: ['humbleKeys.state.unrevealed', 'Unrevealed'],
-  REVEALED: ['humbleKeys.state.revealed', 'Revealed'],
-  REDEEMED: ['humbleKeys.state.redeemed', 'Redeemed'],
-  UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Expired']
-}
-
-// Group headings: the 5 state groups reuse the badge labels above; the
+// Group headings: the 5 state groups reuse the badge labels (stateLabels.ts); the
 // round-7 'other' bucket (generic-platform entries) has its own heading key
 // in the same consumed `humbleKeys` namespace (WR-08).
 const GROUP_LABEL_KEYS: Record<HumbleKeyGroupId, [string, string]> = {

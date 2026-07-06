@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { HumbleKey } from 'common/types/humble'
 import { getExpirationDisplay } from 'common/humble/expirationDisplay'
-import { STATE_LABEL_KEYS } from '../HumbleKeyGroup'
+import { STATE_LABEL_KEYS } from '../../stateLabels'
 
 type Props = {
   humbleKey: HumbleKey
