@@ -545,6 +545,9 @@
         "emptyBody": "Your synced key inventory will appear here once your account has orders.",
         "emptyTitle": "No Humble keys yet",
         "expiresOn": "Expires {{date}}",
+        "group": {
+            "other": "Other"
+        },
         "lastSynced": "Last synced {{time}} ago",
         "noDeadline": "No pick deadline available",
         "noExpiration": "No expiration",
