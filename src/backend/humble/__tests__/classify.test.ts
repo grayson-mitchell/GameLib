@@ -587,6 +587,20 @@ describe('extractExpiration — real-world field tolerance', () => {
   test('unparseable date string -> null, never throws', () => {
     expect(extractExpiration({ expiry_date: 'not-a-date' }, NOW)).toBe(null)
   })
+
+  // WR-02: days > ~1e8 overflows the ECMAScript time range; the invalid
+  // Date's .toISOString() used to throw RangeError, violating the "never
+  // throws" contract (and crashing the whole sync via the unguarded
+  // describeMissingExpirationTpks call path).
+  test('WR-02: overflowing num_days_until_expired (beyond the Date range) -> null, never throws', () => {
+    expect(() =>
+      extractExpiration({ num_days_until_expired: 1e12 }, NOW)
+    ).not.toThrow()
+    expect(extractExpiration({ num_days_until_expired: 1e12 }, NOW)).toBe(null)
+    expect(
+      extractExpiration({ num_days_until_expired: Number.MAX_VALUE }, NOW)
+    ).toBe(null)
+  })
 })
 
 describe('classifyOrder — real-world expiration wiring (round 4)', () => {

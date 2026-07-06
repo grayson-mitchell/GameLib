@@ -1415,6 +1415,44 @@ describe('HumbleLibrary', () => {
       expect(logged).not.toContain('SECRET-DATE-MUST-NOT-LEAK')
     })
 
+    // WR-02: extractExpiration's relative-days branch used to throw
+    // RangeError on a drifted num_days_until_expired beyond the ECMAScript
+    // time range; describeMissingExpirationTpks calls it OUTSIDE
+    // fetchAndCommitOrder's try block, so one hostile tpk value rejected the
+    // worker, the pool, and the whole sync() promise.
+    test('WR-02: a drifted num_days_until_expired beyond the Date range never rejects the sync — the key commits with expiration null', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['drift-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'drift-gk',
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'drifted_steam',
+                key_type: 'steam',
+                human_name: 'Drifted Game',
+                is_expired: false,
+                num_days_until_expired: 1e12
+              }
+            ]
+          }
+        }
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].expiration).toBe(null)
+      // The undatable active key still surfaces in the round-4 discovery
+      // diagnostic instead of crashing it.
+      const diag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('no extractable expiration')
+      )
+      expect(diag).toBeDefined()
+    })
+
     test('a key with an extractable expiry_date does NOT trigger the discovery diagnostic', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['dated-gk'] })
       mockGetOrderDetail.mockResolvedValue({

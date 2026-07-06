@@ -204,7 +204,15 @@ export function extractExpiration(
   }
   const days = tpk[RELATIVE_EXPIRATION_DAYS_FIELD]
   if (typeof days === 'number' && Number.isFinite(days) && days > 0) {
-    return new Date(now.getTime() + days * MS_PER_DAY).toISOString()
+    // WR-02: a drifted/hostile day count > ~1e8 overflows the ECMAScript
+    // time range — the resulting invalid Date's .toISOString() THROWS
+    // RangeError, breaking this function's "never throws" contract (and,
+    // unguarded via describeMissingExpirationTpks, previously rejected the
+    // whole sync). Validate the candidate before serializing.
+    const candidate = new Date(now.getTime() + days * MS_PER_DAY)
+    if (!Number.isNaN(candidate.getTime())) {
+      return candidate.toISOString()
+    }
   }
   return null
 }
