@@ -111,7 +111,11 @@ jest.mock('../syncFence', () => ({
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { HumbleUser, standardBrowserUserAgent } from '../user'
+import {
+  HumbleUser,
+  standardBrowserUserAgent,
+  LOGIN_WATCH_TIMEOUT_MS
+} from '../user'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -214,6 +218,58 @@ describe('HumbleUser', () => {
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
       expect(mockGetAccountIdentity).not.toHaveBeenCalled()
+    })
+
+    // Phase 11 WR-03: the only external teardown is the renderer's
+    // humbleStopLogin — which never fires across window.location.reload() or
+    // a renderer crash, previously orphaning the watch into an INDEFINITE
+    // cookie poll + Humble validation loop (C5).
+    test('WR-03 (Phase 11): the watch deadline settles { status: "waiting" } with no store writes when the login never completes', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockCookiesGet.mockResolvedValue([])
+
+        const loginPromise = HumbleUser.startLogin()
+        jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS)
+
+        await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+        expect(mockConfigStore.set).not.toHaveBeenCalled()
+
+        // The watch is fully torn down — no further poll ticks fire.
+        mockCookiesGet.mockClear()
+        jest.advanceTimersByTime(60_000)
+        expect(mockCookiesGet).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('WR-03 (Phase 11): notifyLoginNavigated() re-arms the deadline so an actively-navigating user is never cut off', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockCookiesGet.mockResolvedValue([])
+
+        const loginPromise = HumbleUser.startLogin()
+
+        // Just before the deadline, the user navigates (SSO redirect etc.).
+        jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS - 1000)
+        HumbleUser.notifyLoginNavigated()
+
+        // The original deadline instant passes without settling…
+        jest.advanceTimersByTime(2000)
+        let settled = false
+        void loginPromise.then(() => {
+          settled = true
+        })
+        await flushAsync()
+        expect(settled).toBe(false)
+
+        // …and the RE-ARMED deadline settles the watch later.
+        jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS)
+        await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+      } finally {
+        jest.useRealTimers()
+      }
     })
   })
 

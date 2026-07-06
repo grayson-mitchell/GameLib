@@ -44,6 +44,17 @@ const COOKIE_POLL_INTERVAL_MS = 1500
 // entirely (see watchForLogin).
 const VALIDATION_THROTTLE_MS = 3000
 
+// WR-03: hard deadline on the login watch. The only external teardown signal
+// is the renderer's humbleStopLogin on route unmount — which never fires
+// across window.location.reload() (epic/gog/amazon/zoom/steam logout paths)
+// or a renderer crash, orphaning the watch into an INDEFINITE cookie poll +
+// Humble validation loop (C5 never-hammer violation once an anonymous
+// _simpleauth_sess exists). The deadline settles { status: 'waiting' }
+// (silent cancel, no store writes) and is RE-ARMED on every
+// notifyLoginNavigated() relay so an actively-navigating user is never cut
+// off mid-login.
+export const LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000
+
 /**
  * Standard (non-Electron) browser user agent for the login surface.
  *
@@ -239,6 +250,7 @@ export class HumbleUser {
         if (settled) return
         settled = true
         clearInterval(pollInterval)
+        clearTimeout(watchDeadline)
         HumbleUser.activeWatch = null
         resolve(result)
       }
@@ -295,11 +307,29 @@ export class HumbleUser {
         COOKIE_POLL_INTERVAL_MS
       )
 
+      // WR-03: watch deadline — a watch orphaned by a renderer reload/crash
+      // must never poll + re-validate against Humble indefinitely. Settling
+      // { status: 'waiting' } is the same silent cancel as stopLogin().
+      let watchDeadline: ReturnType<typeof setTimeout>
+      function armDeadline() {
+        clearTimeout(watchDeadline)
+        watchDeadline = setTimeout(
+          () => settle({ status: 'waiting' }),
+          LOGIN_WATCH_TIMEOUT_MS
+        )
+      }
+      armDeadline()
+
       HumbleUser.activeWatch = {
         // D-06: stopping before any cookie is accepted is a silent cancel —
         // no error, no toast, the tile just stays disconnected.
         stop: () => settle({ status: 'waiting' }),
-        forceRevalidate: () => void checkCookie(true)
+        forceRevalidate: () => {
+          // A navigation relay proves the user is still actively logging in
+          // — re-arm the deadline so they are never cut off mid-flow.
+          armDeadline()
+          void checkCookie(true)
+        }
       }
     })
   }
