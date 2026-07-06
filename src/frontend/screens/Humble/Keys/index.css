@@ -103,6 +103,10 @@
   gap: var(--space-xs);
 }
 
+/* Collapsible group header: a real <button> so it is keyboard operable, but
+   styled to read as the section heading (--text-lg / --semibold, matching the
+   UI-SPEC group-heading role). Button chrome is reset; the default focus ring
+   is intentionally preserved for keyboard users. */
 .humbleKeyGroupHeading {
   display: flex;
   align-items: center;
@@ -110,6 +114,27 @@
   font-size: var(--text-lg);
   font-weight: var(--semibold);
   margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  width: 100%;
+}
+
+.humbleKeyGroupLabel {
+  color: var(--text-default);
+}
+
+.humbleKeyGroupChevron {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transition: transform 0.2s ease;
+}
+
+.humbleKeyGroupChevron--open {
+  transform: rotate(90deg);
 }
 
 .humbleKeyGroupCount {
