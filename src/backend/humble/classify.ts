@@ -46,6 +46,69 @@ function isTerminal(state: HumbleKeyState): boolean {
   return state === 'REDEEMED' || state === 'UNREDEEMABLE'
 }
 
+// Candidate field names for an ABSOLUTE expiration date on a tpk. The real
+// Humble field name is NOT conclusively documented in any public source
+// (live-UAT round 4): Playnite HumbleKeysLibrary + official PlayniteExtensions
+// HumbleLibrary, FailSpy humble-steam-key-redeemer, Hayden Schiff's API docs
+// and saik0's client all model ONLY the `is_expired` boolean, never a tpk-level
+// date. The single concrete code reference to a tpk date field is FailSpy fork
+// DIASILEDU/humble-steam-key-redeemer (`tpk.get("expiry_date")`), and Humble's
+// own web UI verifiably renders a date (GreasyFork "Humble Bundle Expiration
+// CSV Exporter" scrapes `.expiration-messaging strong`) — so a date exists in
+// the payload under an as-yet-unconfirmed name. We read a small tolerant
+// candidate set (best-evidence `expiry_date` first) so a live payload populates
+// `HumbleKey.expiration` regardless of the exact name, and diagnose (field
+// NAMES only, C5) via describeMissingExpirationTpks when none match, so the
+// next live run confirms the true field.
+const ABSOLUTE_EXPIRATION_FIELDS = [
+  'expiry_date',
+  'expiration_date',
+  'expiration',
+  'expires'
+] as const
+
+// Relative form CONFIRMED present in real Humble payloads (the round-2 realistic
+// order fixture, authored from a real capture, carries `num_days_until_expired`
+// alongside `is_expired`): a count of days until the key expires. Converted to
+// an absolute ISO timestamp anchored on the sync time so the row display +
+// expiring-soonest sort stay meaningful and HSYNC-03 retroactive-expiry keeps
+// working. IMPORTANT: a value of 0 (or negative) means "no expiry window", NOT
+// "expires today" — real non-expiring keys carry `num_days_until_expired: 0`
+// with `is_expired: false`, so only a strictly-positive count yields a date.
+const RELATIVE_EXPIRATION_DAYS_FIELD = 'num_days_until_expired'
+
+const MS_PER_DAY = 86_400_000
+
+/**
+ * Pure, tolerant expiration extraction. Reads whichever recognized field a live
+ * tpk carries and normalizes it to an ISO-8601 string:
+ *  - an absolute date string (any of ABSOLUTE_EXPIRATION_FIELDS) -> parsed and
+ *    re-emitted as ISO (an unparseable string is ignored, never thrown on);
+ *  - a relative, strictly-positive `num_days_until_expired` number -> `now + N
+ *    days` as ISO (0/negative means "no expiry window" — see the field note).
+ * Returns null when no recognized, parseable expiration is present. Never
+ * throws — a malformed value simply yields null (Pitfall 2 / T-11-05).
+ */
+export function extractExpiration(
+  tpk: Record<string, unknown>,
+  now: Date = new Date()
+): string | null {
+  for (const field of ABSOLUTE_EXPIRATION_FIELDS) {
+    const value = tpk[field]
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = new Date(value)
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString()
+      }
+    }
+  }
+  const days = tpk[RELATIVE_EXPIRATION_DAYS_FIELD]
+  if (typeof days === 'number' && Number.isFinite(days) && days > 0) {
+    return new Date(now.getTime() + days * MS_PER_DAY).toISOString()
+  }
+  return null
+}
+
 /**
  * Classifies an entire fresh order-detail response into a cache-ready entry.
  *
@@ -93,8 +156,13 @@ export function classifyOrder(
       const redeemedKeyValuePresent = Boolean(
         tpk.redeemed_key_val ?? tpk.redeemed_key_value
       )
-      const expiration =
-        typeof tpk.expiration === 'string' ? tpk.expiration : null
+      // Tolerant multi-candidate extraction (live-UAT round 4): the spec's
+      // single `expiration` string name never matched the live payload, so
+      // every row showed "No expiration". extractExpiration reads the real
+      // absolute/relative field (see ABSOLUTE_EXPIRATION_FIELDS) and normalizes
+      // to ISO so (a) rows display the date, (b) the expiring-soonest sort is
+      // meaningful, (c) a PAST date still classifies UNREDEEMABLE below.
+      const expiration = extractExpiration(tpk, now)
       // Real API expiry signal is `is_expired: bool` (same sources); the
       // spec's `expiration` timestamp is kept as a fallback. Strict === true
       // so a mistyped value never expires a live key by accident.
@@ -248,4 +316,55 @@ export function describeZeroKeyOrder(rawOrder: OrderDetail): ZeroKeyDiagnosis {
     anomalous: true,
     detail: `tpkd_dict.all_tpks=array(${rawAllTpks.length}) skipped=[${skipped.join(' ')}]`
   }
+}
+
+/**
+ * Redacted expiration-field discovery diagnosis (live-UAT round 4). Because the
+ * real Humble expiration field name is not conclusively documented anywhere
+ * (see ABSOLUTE_EXPIRATION_FIELDS), extractExpiration reads a best-evidence
+ * candidate set — this pure helper surfaces, for tpks where we still could NOT
+ * date the key AND `is_expired` is not already `true` (i.e. a live/active key
+ * that ought to show a future expiration but rendered "No expiration"), the
+ * DISTINCT field NAMES present on those tpks. Names only, never values
+ * (C5/T-11-04) — so the next live run reveals the true date field to add to the
+ * candidate set. Returns null when every tpk was datable or already expired
+ * (nothing to diagnose). No I/O and no logging here (module discipline) —
+ * library.ts logs the returned detail.
+ */
+export function describeMissingExpirationTpks(
+  rawOrder: OrderDetail,
+  now: Date = new Date()
+): string | null {
+  const rawTpks = rawOrder.tpkd_dict?.all_tpks ?? []
+  const names = new Set<string>()
+  let missing = 0
+
+  for (const rawTpk of rawTpks) {
+    if (!rawTpk || typeof rawTpk !== 'object') {
+      continue
+    }
+    const tpk = rawTpk as Record<string, unknown>
+    // Already-expired keys (is_expired === true) classify correctly without a
+    // date, so they are not the "No expiration" bug we are hunting — skip them.
+    if (tpk.is_expired === true) {
+      continue
+    }
+    if (extractExpiration(tpk, now) !== null) {
+      continue
+    }
+    missing += 1
+    for (const name of Object.keys(tpk)) {
+      names.add(name)
+    }
+  }
+
+  if (missing === 0) {
+    return null
+  }
+  const shown = [...names].slice(0, MAX_DIAGNOSED_FIELDS).join(',')
+  const suffix =
+    names.size > MAX_DIAGNOSED_FIELDS
+      ? `,+${names.size - MAX_DIAGNOSED_FIELDS} more`
+      : ''
+  return `tpksMissingExpiration=${missing} candidateFields=[${shown}${suffix}]`
 }

@@ -3,7 +3,13 @@
  * No axios/electron-store mocking needed — classifyTpk/classifyOrder are pure.
  */
 
-import { classifyTpk, classifyOrder, describeZeroKeyOrder } from '../classify'
+import {
+  classifyTpk,
+  classifyOrder,
+  describeZeroKeyOrder,
+  describeMissingExpirationTpks,
+  extractExpiration
+} from '../classify'
 import {
   unpickedChoiceMonthOrder,
   unpickedChoiceMonthMissingUrlOrder,
@@ -21,7 +27,11 @@ import {
   realWorldExpiredFlagOrder,
   realWorldGiftKeyOrder,
   minimalTpkOrder,
-  strippedNoTpkdDictOrder
+  strippedNoTpkdDictOrder,
+  realWorldFutureExpiryDateOrder,
+  realWorldPastExpiryDateOrder,
+  realWorldRelativeExpiryOrder,
+  realWorldUndatableActiveOrder
 } from './fixtures/tpks'
 
 const NEVER_REVEALED = () => false
@@ -214,6 +224,114 @@ describe('classifyOrder — real-world payload shapes', () => {
     expect(entry.keys[0].state).toBe('UNREVEALED')
     expect(entry.keys[0].machineName).toBe('order-minimal:0')
     expect(entry.keys[0].platform).toBe('unknown')
+  })
+})
+
+// ── Real-world expiration extraction (live-UAT round 4) ───────────────────
+// The real Humble tpk date field name is not conclusively documented; best-
+// evidence candidate is `expiry_date` (FailSpy fork DIASILEDU). extractExpiration
+// reads a tolerant candidate set and normalizes absolute dates to ISO and a
+// relative `num_days_until_expired` count to an absolute ISO from sync time.
+
+describe('extractExpiration — real-world field tolerance', () => {
+  const NOW = new Date('2026-07-06T00:00:00Z')
+
+  test('absolute `expiry_date` string -> ISO-normalized', () => {
+    const out = extractExpiration({ expiry_date: '2026-08-03T00:00:00Z' }, NOW)
+    expect(out).toBe('2026-08-03T00:00:00.000Z')
+  })
+
+  test('spec `expiration` string still honored (fallback candidate)', () => {
+    const out = extractExpiration({ expiration: '2026-08-03T00:00:00Z' }, NOW)
+    expect(out).toBe('2026-08-03T00:00:00.000Z')
+  })
+
+  test('relative `num_days_until_expired` -> now + N days as ISO', () => {
+    const out = extractExpiration({ num_days_until_expired: 30 }, NOW)
+    expect(out).toBe('2026-08-05T00:00:00.000Z')
+  })
+
+  test('num_days_until_expired: 0 means "no expiry window", NOT "expires today" -> null', () => {
+    expect(extractExpiration({ num_days_until_expired: 0 }, NOW)).toBe(null)
+  })
+
+  test('negative num_days_until_expired -> null (no expiry window)', () => {
+    expect(extractExpiration({ num_days_until_expired: -5 }, NOW)).toBe(null)
+  })
+
+  test('no recognized field -> null', () => {
+    expect(extractExpiration({ some_unknown_date_field: '2027-01-01' }, NOW)).toBe(
+      null
+    )
+  })
+
+  test('unparseable date string -> null, never throws', () => {
+    expect(extractExpiration({ expiry_date: 'not-a-date' }, NOW)).toBe(null)
+  })
+})
+
+describe('classifyOrder — real-world expiration wiring (round 4)', () => {
+  const NOW = new Date('2026-07-06T00:00:00Z')
+
+  test('future `expiry_date` -> UNREVEALED with a populated ISO expiration (row display + sort)', () => {
+    const entry = classifyOrder(realWorldFutureExpiryDateOrder, NEVER_REVEALED, NOW)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(entry.keys[0].expiration).toBe('2026-08-03T00:00:00.000Z')
+  })
+
+  test('past `expiry_date` (no is_expired flag) -> UNREDEEMABLE via the date alone', () => {
+    const entry = classifyOrder(realWorldPastExpiryDateOrder, NEVER_REVEALED, NOW)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+    expect(entry.keys[0].expiration).toBe('2020-01-01T00:00:00.000Z')
+  })
+
+  test('relative `num_days_until_expired` -> absolute expiration from sync time', () => {
+    const entry = classifyOrder(realWorldRelativeExpiryOrder, NEVER_REVEALED, NOW)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].expiration).toBe('2026-08-05T00:00:00.000Z')
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+  })
+})
+
+describe('describeMissingExpirationTpks — round 4 date-field discovery', () => {
+  const NOW = new Date('2026-07-06T00:00:00Z')
+
+  test('active key with no recognized date field -> surfaces its candidate field names', () => {
+    const detail = describeMissingExpirationTpks(realWorldUndatableActiveOrder, NOW)
+    expect(detail).not.toBeNull()
+    expect(detail).toContain('tpksMissingExpiration=1')
+    expect(detail).toContain('some_unknown_date_field')
+    expect(detail).toContain('machine_name')
+  })
+
+  test('key with an extractable expiry_date -> nothing to diagnose (null)', () => {
+    expect(
+      describeMissingExpirationTpks(realWorldFutureExpiryDateOrder, NOW)
+    ).toBeNull()
+  })
+
+  test('already-expired key (is_expired true) is not diagnosed', () => {
+    expect(
+      describeMissingExpirationTpks(realWorldExpiredFlagOrder, NOW)
+    ).toBeNull()
+  })
+
+  test('C5 redaction: diagnosis carries field NAMES only, never field values', () => {
+    const detail = describeMissingExpirationTpks(
+      {
+        gamekey: 'gk',
+        tpkd_dict: {
+          all_tpks: [
+            { machine_name: 'g', is_expired: false, secret: 'SECRET-MUST-NOT-LEAK' }
+          ]
+        }
+      },
+      NOW
+    )
+    expect(detail).toContain('secret')
+    expect(detail).not.toContain('SECRET-MUST-NOT-LEAK')
   })
 })
 

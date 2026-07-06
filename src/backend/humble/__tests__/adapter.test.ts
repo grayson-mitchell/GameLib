@@ -311,6 +311,33 @@ describe('getOrderDetail', () => {
     expect(tpk.steam_app_id).toBe('220')
   })
 
+  // Round 4: the real expiration date field (best-evidence `expiry_date`) is
+  // not declared on the schema but MUST survive .passthrough() so classify.ts's
+  // extractExpiration can read it — a regression guard against a future
+  // schema tightening silently stripping the date field.
+  test('an unlisted expiry_date field survives .passthrough() for classify to read', async () => {
+    const body = {
+      gamekey: GAMEKEY,
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'expiring_steam',
+            key_type: 'steam',
+            human_name: 'Expiring Game',
+            is_expired: false,
+            expiry_date: '2026-08-03T00:00:00Z'
+          }
+        ]
+      }
+    }
+    mockGet.mockResolvedValue({ data: body })
+    const result = await getOrderDetail(COOKIE, GAMEKEY)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') return
+    const tpk = result.data.tpkd_dict?.all_tpks?.[0] as Record<string, unknown>
+    expect(tpk.expiry_date).toBe('2026-08-03T00:00:00Z')
+  })
+
   test('never logs the raw cookie value', async () => {
     mockGet.mockResolvedValue({ data: { gamekey: GAMEKEY } })
     await getOrderDetail(COOKIE, GAMEKEY)

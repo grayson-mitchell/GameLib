@@ -3,7 +3,11 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 
 import { getGamekeys, getOrderDetail } from './adapter'
-import { classifyOrder, describeZeroKeyOrder } from './classify'
+import {
+  classifyOrder,
+  describeZeroKeyOrder,
+  describeMissingExpirationTpks
+} from './classify'
 import {
   humbleLibraryStore,
   humbleRevealedStore,
@@ -143,6 +147,23 @@ async function fetchAndCommitOrder(
         LogPrefix.Backend
       )
       return { gamekey, outcome: 'ok', zeroKeys: true }
+    }
+
+    // Live-UAT round 4 expiration-field discovery: keys extracted, but if any
+    // active key still could not be dated (the "every row shows No expiration"
+    // bug), log the redacted candidate field NAMES only (C5) so the next live
+    // run confirms the real Humble date field. logInfo — a key with no
+    // expiration is often legitimate; this is a discovery aid, not a failure.
+    const missingExpiration = describeMissingExpirationTpks(result.data, now)
+    if (missingExpiration) {
+      logInfo(
+        [
+          'Humble sync: order has keys with no extractable expiration:',
+          gamekey,
+          missingExpiration
+        ],
+        LogPrefix.Backend
+      )
     }
     return { gamekey, outcome: 'ok' }
   }
