@@ -130,4 +130,14 @@ export interface HumbleSyncState {
   syncedAt: number | null
   syncError: 'none' | 'denied' | 'network' | 'partial'
   cooldownUntil?: number
+  /**
+   * Version stamp of the classification logic that produced the cached
+   * library entries (live-UAT round 6). Absent on pre-versioning caches
+   * (read as 1). When it differs from HUMBLE_CLASSIFIER_VERSION at sync
+   * start, the D-24 frozen-order skip is bypassed once so classifier fixes
+   * reach every cached row; stamped to the current version only after a
+   * clean full pass (a partial sync keeps the old version so the next sync
+   * retries the full re-classification).
+   */
+  classifierVersion?: number
 }

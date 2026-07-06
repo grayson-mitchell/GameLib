@@ -14,7 +14,11 @@ import {
   humbleRevealedStore,
   humbleSyncStore
 } from './electronStores'
-import { HUMBLE_SYNC_CONCURRENCY, HUMBLE_COOLDOWN_MS } from './constants'
+import {
+  HUMBLE_SYNC_CONCURRENCY,
+  HUMBLE_COOLDOWN_MS,
+  HUMBLE_CLASSIFIER_VERSION
+} from './constants'
 import { HumbleUser } from './user'
 
 /**
@@ -370,10 +374,31 @@ async function runSync(): Promise<SyncOutcome> {
     return { status: 'failed' }
   }
 
+  // Live-UAT round 6 (propagation bug): D-24 freezes fully-terminal cached
+  // orders — they are never re-fetched, so a classifier fix can never reach
+  // their cached rows (the tester's stale PDF-entitlement rows survived the
+  // round-5 filter exactly this way, 19/25 orders frozen). When the stored
+  // classifier version differs from HUMBLE_CLASSIFIER_VERSION, bypass the
+  // frozen-order skip ONCE: re-fetch and re-classify EVERY order. Version-
+  // matched syncs keep full D-24 semantics. Pre-versioning caches (rounds
+  // 1-5) never stored a version — read them as 1.
+  const storedClassifierVersion = currentState.classifierVersion ?? 1
+  const reclassifyAll = storedClassifierVersion !== HUMBLE_CLASSIFIER_VERSION
+  if (reclassifyAll) {
+    logInfo(
+      [
+        `Humble sync: classifier version changed (${storedClassifierVersion} -> ${HUMBLE_CLASSIFIER_VERSION}), full re-classification sync`
+      ],
+      LogPrefix.Backend
+    )
+  }
+
   const { newGamekeys, nonTerminalGamekeys } = partitionGamekeys(
     gamekeysResult.data
   )
-  const toFetch = [...newGamekeys, ...nonTerminalGamekeys]
+  const toFetch = reclassifyAll
+    ? [...gamekeysResult.data]
+    : [...newGamekeys, ...nonTerminalGamekeys]
   const total = toFetch.length
   let done = 0
 
@@ -442,7 +467,15 @@ async function runSync(): Promise<SyncOutcome> {
     syncError: sawFailure ? 'partial' : 'none',
     cooldownUntil: sawAccessDenied
       ? Date.now() + HUMBLE_COOLDOWN_MS
-      : undefined
+      : undefined,
+    // Round 6: stamp the classifier version only after a CLEAN pass. A
+    // partial sync keeps the old version — a failed order retains its PRIOR
+    // (possibly stale-classified, all-terminal) cache entry, and stamping
+    // now would re-freeze it forever; the next sync retries the full
+    // re-classification instead. (!sawFailure implies every order fetched
+    // ok: the only mid-sync aborts, denied/expired, set sawFailure or
+    // return early above.)
+    ...(sawFailure ? {} : { classifierVersion: HUMBLE_CLASSIFIER_VERSION })
   })
 
   return { status: sawFailure ? 'partial' : 'ok' }
