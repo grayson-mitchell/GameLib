@@ -6,7 +6,8 @@ import { getGamekeys, getOrderDetail } from './adapter'
 import {
   classifyOrder,
   describeZeroKeyOrder,
-  describeMissingExpirationTpks
+  describeMissingExpirationTpks,
+  describeSkippedEntitlements
 } from './classify'
 import {
   humbleLibraryStore,
@@ -133,9 +134,10 @@ async function fetchAndCommitOrder(
       // yields ZERO keys must be structurally self-diagnosing in
       // gamelib.log — field NAMES/types/skip reasons only, never values
       // (C5/T-11-04). Anomalous shapes (tpkd_dict/all_tpks absent, or a
-      // non-empty tpk array that still produced nothing) log as warnings;
-      // the one legitimate shape (explicit empty all_tpks — DRM-free,
-      // D-29) logs as info.
+      // non-empty tpk array whose entries should have classified) log as
+      // warnings; the legitimate D-29 shapes (explicit empty all_tpks, or
+      // — round 5 — an array of download entitlements only, e.g. a
+      // PDF/ebook bundle) log as info.
       const diagnosis = describeZeroKeyOrder(result.data)
       const log = diagnosis.anomalous ? logWarning : logInfo
       log(
@@ -147,6 +149,24 @@ async function fetchAndCommitOrder(
         LogPrefix.Backend
       )
       return { gamekey, outcome: 'ok', zeroKeys: true }
+    }
+
+    // Live-UAT round 5 (D-29): a MIXED order (keys + download entitlements)
+    // bypasses the zero-key diagnosis above, so the skipped no-key_type
+    // entries are logged here instead — field NAMES only (C5) — keeping a
+    // legitimate key with a weird shape (missing key_type) discoverable on
+    // the next live run. logInfo — skipping entitlements is expected D-29
+    // behavior, not a failure.
+    const skippedEntitlements = describeSkippedEntitlements(result.data)
+    if (skippedEntitlements) {
+      logInfo(
+        [
+          'Humble sync: order had download entitlements excluded (D-29):',
+          gamekey,
+          skippedEntitlements
+        ],
+        LogPrefix.Backend
+      )
     }
 
     // Live-UAT round 4 expiration-field discovery: keys extracted, but if any

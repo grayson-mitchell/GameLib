@@ -813,6 +813,77 @@ describe('HumbleLibrary', () => {
       expect(logged).toContain('keysCached=1')
     })
 
+    test('a pure ebook/PDF bundle (entries without key_type) commits zero rows and logs the skip diagnostic as info (D-29, round 5)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['ebook-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'ebook-gk',
+          product: { category: 'bundle', human_name: 'Book Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              { machine_name: 'cookbook_pdf', human_name: 'Cook Book (PDF)' },
+              { machine_name: 'novel_epub', human_name: 'Novel (EPUB)' }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(HumbleLibrary.getKeys()).toHaveLength(0)
+      // Legitimate D-29 exclusion shape — informational, never a warning.
+      const zeroKeyInfo = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyInfo).toBeDefined()
+      const logged = JSON.stringify(zeroKeyInfo)
+      expect(logged).toContain('ebook-gk')
+      expect(logged).toContain('no-key_type')
+      expect(logged).toContain('machine_name')
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeUndefined()
+    })
+
+    test('a mixed order (1 steam key + 2 download entitlements) commits exactly 1 row and logs the skipped-entitlement diagnostic', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['mixed-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'mixed-gk',
+          product: { category: 'bundle', human_name: 'Mixed Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'actualgame_steam',
+                key_type: 'steam',
+                human_name: 'Actual Game',
+                is_expired: false
+              },
+              { machine_name: 'artbook_pdf', human_name: 'Art Book (PDF)' },
+              { machine_name: 'soundtrack_flac', human_name: 'Soundtrack' }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].machineName).toBe('actualgame_steam')
+      const skipDiag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('skippedNoKeyType')
+      )
+      expect(skipDiag).toBeDefined()
+      const logged = JSON.stringify(skipDiag)
+      expect(logged).toContain('mixed-gk')
+      expect(logged).toContain('skippedNoKeyType=2')
+      expect(logged).toContain('no-key_type')
+    })
+
     test('real-world tpk field names (redeemed_key_val + is_expired) commit keys — never a zero-key order', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['real-gk'] })
       mockGetOrderDetail.mockResolvedValue({

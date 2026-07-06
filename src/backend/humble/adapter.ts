@@ -36,8 +36,11 @@ const GamekeysArraySchema = z.array(z.unknown())
 // for some non-Steam key types) and the real expiry signal is `is_expired`
 // (bool). The spec's `redeemed_key_value`/`expiration` names are kept as
 // tolerated fallbacks in case some order types still carry them. Every field
-// is optional — a tpk needs NOTHING beyond being an object to classify
-// (minimal structural requirement; classify.ts does its own guarded reads).
+// is optional at the SCHEMA level — but classification requires `key_type`
+// (a string) as key evidence: entries without it are download entitlements
+// (PDF/ebook bundle contents), excluded per D-29 (live-UAT round 5;
+// classify.ts hasKeyEvidence does its own guarded read, so the schema stays
+// maximally tolerant here).
 // `.passthrough()` at every level keeps a shape drift from failing the whole
 // order (Pitfall 5).
 const OrderDetailTpkSchema = z
