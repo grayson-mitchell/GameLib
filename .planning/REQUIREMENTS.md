@@ -61,10 +61,10 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 
 ### Humble Library Sync
 
-- [ ] **HSYNC-01**: A connected user's Humble keys sync into GameLib, normalized into the 5-state key model (UNPICKED / UNREVEALED / REVEALED / REDEEMED / UNREDEEMABLE), cached locally with concurrency-bounded, cache-aggressive fetching
-- [ ] **HSYNC-02**: Every key is classified into exactly one state, with the locally-tracked REVEALED flag written before the reveal API call (write-ahead) so it survives re-sync
-- [ ] **HSYNC-03**: Expiration / UNREDEEMABLE status is recomputed on every sync (Humble applies expirations retroactively)
-- [ ] **HSYNC-04**: If a Humble refresh fails, the launcher shows the cached library with a clear "couldn't refresh" state rather than erroring (fail-soft)
+- [x] **HSYNC-01**: A connected user's Humble keys sync into GameLib, normalized into the 5-state key model (UNPICKED / UNREVEALED / REVEALED / REDEEMED / UNREDEEMABLE), cached locally with concurrency-bounded, cache-aggressive fetching
+- [x] **HSYNC-02**: Every key is classified into exactly one state, with the locally-tracked REVEALED flag written before the reveal API call (write-ahead) so it survives re-sync
+- [x] **HSYNC-03**: Expiration / UNREDEEMABLE status is recomputed on every sync (Humble applies expirations retroactively)
+- [x] **HSYNC-04**: If a Humble refresh fails, the launcher shows the cached library with a clear "couldn't refresh" state rather than erroring (fail-soft)
 
 ### Humble Ownership Dedup
 
@@ -143,10 +143,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HACCT-01 | Phase 10 | Complete |
 | HACCT-02 | Phase 10 | Complete |
 | HACCT-03 | Phase 10 | Complete |
-| HSYNC-01 | Phase 11 | Pending |
-| HSYNC-02 | Phase 11 | Pending |
-| HSYNC-03 | Phase 11 | Pending |
-| HSYNC-04 | Phase 11 | Pending |
+| HSYNC-01 | Phase 11 | Complete |
+| HSYNC-02 | Phase 11 | Complete |
+| HSYNC-03 | Phase 11 | Complete |
+| HSYNC-04 | Phase 11 | Complete |
 | HDEDUP-01 | Phase 12 | Pending |
 | HDEDUP-02 | Phase 12 | Pending |
 | HVIEW-01 | Phase 13 | Pending |
