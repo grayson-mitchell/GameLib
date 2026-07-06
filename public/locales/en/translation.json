@@ -549,8 +549,11 @@
             "other": "Other"
         },
         "lastSynced": "Last synced {{time}} ago",
+        "likelyOwnedOnSteam": "Likely owned on Steam",
         "noDeadline": "No pick deadline available",
         "noExpiration": "No expiration",
+        "notTheSameGame": "Not the same game",
+        "ownedOnSteam": "Owned on Steam",
         "refresh": "Refresh Humble Keys",
         "rowCaption": "{{platform}} · {{origin}}",
         "state": {

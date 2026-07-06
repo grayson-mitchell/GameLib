@@ -58,6 +58,7 @@ import {
   DownloadSizeInfo,
   GameStatus,
   HLTB,
+  HumbleOriginInfo,
   InstalledInfo,
   MainButton,
   PlatformSupport,
@@ -564,6 +565,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <DownloadSizeInfo gameInfo={gameInfo} />
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
+                          <HumbleOriginInfo gameInfo={gameInfo} />
                         </TabPanel>
 
                         <TabPanel
