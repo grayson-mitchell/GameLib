@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### v1.2 — Humble Bundle Integration
 
 - [x] **Phase 10: Humble Auth + Adapter Scaffold** - Users can connect a Humble Bundle account from Manage Accounts with encrypted session persistence and a validated C5 API boundary (completed 2026-07-05)
-- [ ] **Phase 11: Library Sync + 5-State Key Model** - Full Humble key inventory synced, classified into the 5-state model, and reliably cached with fail-soft behavior
+- [x] **Phase 11: Library Sync + 5-State Key Model** - Full Humble key inventory synced, classified into the 5-state model, and reliably cached with fail-soft behavior (completed 2026-07-06)
 - [ ] **Phase 12: Ownership Dedup** - Every Humble key cross-referenced against the Steam library; redeemed Steam keys collapse onto their existing Steam library entries
 - [ ] **Phase 13: Keys-Waiting + Giftable-Spares Views** - Users can see claimable keys sorted by expiration urgency and surface gift links for owned-elsewhere spares
 - [ ] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout
@@ -380,7 +380,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 8. New Steam Surfaces | 6/6 | Complete   | 2026-07-03 |
 | 9. Quality Gate | 0/? | Not started | - |
 | 10. Humble Auth + Adapter Scaffold | 6/6 | Complete    | 2026-07-05 |
-| 11. Library Sync + 5-State Key Model | 4/5 | In Progress|  |
+| 11. Library Sync + 5-State Key Model | 5/5 | Complete   | 2026-07-06 |
 | 12. Ownership Dedup | 0/? | Not started | - |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
 | 14. Guided Claim Flow | 0/? | Not started | - |
