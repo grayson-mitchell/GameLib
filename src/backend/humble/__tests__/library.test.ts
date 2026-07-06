@@ -124,7 +124,10 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────
 
 import { HumbleLibrary } from '../library'
-import { HUMBLE_SYNC_CONCURRENCY } from '../constants'
+import {
+  HUMBLE_SYNC_CONCURRENCY,
+  HUMBLE_CLASSIFIER_VERSION
+} from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -249,6 +252,13 @@ describe('HumbleLibrary', () => {
 
     test('an all-terminal cached gamekey is never re-fetched', async () => {
       libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
+      // Freezing requires a version-matched cache (round 6): a mismatch
+      // triggers the one-off full re-classification instead.
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
 
       const result = await HumbleLibrary.sync()
@@ -277,6 +287,11 @@ describe('HumbleLibrary', () => {
     test('mixed new/non-terminal/frozen: fetches only the union of new+non-terminal', async () => {
       libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
       libraryData.set('pending-gk', makeNonTerminalEntry('pending-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
       mockGetGamekeys.mockResolvedValue({
         status: 'ok',
         data: ['frozen-gk', 'pending-gk', 'new-gk']
@@ -884,6 +899,105 @@ describe('HumbleLibrary', () => {
       expect(logged).toContain('no-key_type')
     })
 
+    test('a direct-redeem download entitlement WITH key_type commits zero rows, logs the type VALUES, and never logs its redeemed value (D-29 v2, round 6)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['pdf-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'pdf-gk',
+          product: { category: 'bundle', human_name: 'PDF Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'bigbook_pdf_download',
+                key_type: 'download',
+                key_type_human_name: 'Download',
+                human_name: 'Big Book (PDF)',
+                is_expired: false,
+                direct_redeem: true,
+                custom_instructions_html: '<p>In your library.</p>',
+                show_custom_instructions_in_user_libraries: true,
+                redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(HumbleLibrary.getKeys()).toHaveLength(0)
+      // Legitimate D-29 exclusion shape — informational, never a warning.
+      const zeroKeyInfo = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyInfo).toBeDefined()
+      const logged = JSON.stringify(zeroKeyInfo)
+      expect(logged).toContain('pdf-gk')
+      expect(logged).toContain('direct-redeem-entitlement')
+      // C5 permits the type-label VALUES (they make round 7 conclusive)...
+      expect(logged).toContain('key_type=download')
+      expect(logged).toContain('key_type_human_name=Download')
+      const zeroKeyWarning = mockLogWarning.mock.calls.find((call) =>
+        JSON.stringify(call).includes('zero keys')
+      )
+      expect(zeroKeyWarning).toBeUndefined()
+      // ...but NEVER the redeemed key value of the skipped entitlement.
+      for (const call of [
+        ...mockLogInfo.mock.calls,
+        ...mockLogWarning.mock.calls,
+        ...mockLogError.mock.calls
+      ]) {
+        expect(JSON.stringify(call)).not.toContain(
+          'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+        )
+      }
+    })
+
+    test('a mixed order (1 steam key + 1 direct-redeem entitlement) commits exactly 1 row and logs the skipped-entitlement type VALUES (round 6)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['mixed-dr-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'mixed-dr-gk',
+          product: { category: 'bundle', human_name: 'Mixed PDF Bundle' },
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'actualgame2_steam',
+                key_type: 'steam',
+                human_name: 'Actual Game 2',
+                is_expired: false
+              },
+              {
+                machine_name: 'artbook2_pdf_download',
+                key_type: 'download',
+                key_type_human_name: 'Download',
+                human_name: 'Art Book 2 (PDF)',
+                direct_redeem: true,
+                redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].machineName).toBe('actualgame2_steam')
+      const skipDiag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('skippedDirectRedeem')
+      )
+      expect(skipDiag).toBeDefined()
+      const logged = JSON.stringify(skipDiag)
+      expect(logged).toContain('mixed-dr-gk')
+      expect(logged).toContain('skippedDirectRedeem=1')
+      expect(logged).toContain('key_type=download')
+      expect(logged).not.toContain('ENTITLEMENT-VALUE-MUST-NOT-LEAK')
+    })
+
     test('real-world tpk field names (redeemed_key_val + is_expired) commit keys — never a zero-key order', async () => {
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['real-gk'] })
       mockGetOrderDetail.mockResolvedValue({
@@ -923,6 +1037,200 @@ describe('HumbleLibrary', () => {
       ]) {
         expect(JSON.stringify(call)).not.toContain('redeemed-value-string')
       }
+    })
+  })
+
+  // Live-UAT round 6 (propagation bug): D-24 freezes fully-terminal cached
+  // orders — they are never re-fetched, so classifier fixes (like round 5/6's
+  // entitlement filters) could NEVER reach their cached rows. The tester's 19
+  // frozen orders kept serving stale PDF-entitlement rows. A classifier
+  // version stamp in humbleSyncStore forces ONE full re-classification sync
+  // whenever the classification logic version changes.
+  describe('sync() — classifier-version cache re-classification (round 6)', () => {
+    // A stale cached entry the OLD classifier produced from a direct-redeem
+    // PDF entitlement: auto-redeemed -> REDEEMED -> allTerminal -> frozen
+    // forever under D-24.
+    function makeStaleEntitlementEntry(gamekey: string): HumbleOrderCacheEntry {
+      return {
+        gamekey,
+        keys: [
+          {
+            gamekey,
+            machineName: 'bigbook_pdf_download',
+            state: 'REDEEMED',
+            title: 'Big Book (PDF)',
+            platform: 'download',
+            expiration: null,
+            origin: 'PDF Bundle'
+          }
+        ],
+        allTerminal: true
+      }
+    }
+
+    const directRedeemEntitlementResponse = {
+      gamekey: 'stale-gk',
+      product: { category: 'bundle', human_name: 'PDF Bundle' },
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'bigbook_pdf_download',
+            key_type: 'download',
+            key_type_human_name: 'Download',
+            human_name: 'Big Book (PDF)',
+            direct_redeem: true,
+            redeemed_key_val: 'ENTITLEMENT-VALUE-MUST-NOT-LEAK'
+          }
+        ]
+      }
+    }
+
+    test('stored version ≠ current: frozen all-terminal orders ARE re-fetched, stale entitlement rows removed, and the re-classification log fires', async () => {
+      libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: 1
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['stale-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: directRedeemEntitlementResponse
+      })
+
+      await HumbleLibrary.sync()
+
+      // The frozen order WAS re-fetched and its stale rows re-classified away.
+      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'stale-gk')
+      expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
+      expect(HumbleLibrary.getKeys()).toHaveLength(0)
+
+      const versionLog = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('classifier version changed')
+      )
+      expect(versionLog).toBeDefined()
+      expect(JSON.stringify(versionLog)).toContain(
+        `classifier version changed (1 -> ${HUMBLE_CLASSIFIER_VERSION}), full re-classification sync`
+      )
+    })
+
+    test('a pre-versioning cache (no stored classifierVersion) also triggers the full re-classification', async () => {
+      libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
+      // syncData deliberately left empty — rounds 1-5 never stored a version.
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['stale-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: directRedeemEntitlementResponse
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'stale-gk')
+      expect(libraryData.get('stale-gk')?.keys).toHaveLength(0)
+    })
+
+    test('a clean full re-classification persists the new version; the NEXT sync freezes terminal orders again', async () => {
+      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: 1
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('frozen-gk', { redeemed: true })
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
+      expect(syncData.get('state')?.classifierVersion).toBe(
+        HUMBLE_CLASSIFIER_VERSION
+      )
+
+      // Second sync: version now matches — D-24 freeze semantics restored.
+      mockGetOrderDetail.mockClear()
+      mockLogInfo.mockClear()
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).not.toHaveBeenCalled()
+      const versionLog = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('classifier version changed')
+      )
+      expect(versionLog).toBeUndefined()
+    })
+
+    test('a PARTIAL re-classification sync does NOT persist the new version (the next sync retries the full pass)', async () => {
+      libraryData.set('stale-gk', makeStaleEntitlementEntry('stale-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: 1
+      })
+      mockGetGamekeys.mockResolvedValue({
+        status: 'ok',
+        data: ['stale-gk', 'flaky-gk']
+      })
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) => {
+          if (gamekey === 'flaky-gk') {
+            return Promise.reject(new Error('timeout'))
+          }
+          return Promise.resolve({
+            status: 'ok',
+            data: directRedeemEntitlementResponse
+          })
+        }
+      )
+
+      const result = await HumbleLibrary.sync()
+
+      expect(result).toEqual({ status: 'partial' })
+      // flaky-gk kept whatever (absent) cache it had; version must stay old
+      // so the NEXT sync bypasses the freeze again and reaches it.
+      expect(syncData.get('state')?.classifierVersion).not.toBe(
+        HUMBLE_CLASSIFIER_VERSION
+      )
+    })
+
+    test('version match: frozen orders stay frozen and no re-classification log fires', async () => {
+      libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['frozen-gk'] })
+
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).not.toHaveBeenCalled()
+      const versionLog = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('classifier version changed')
+      )
+      expect(versionLog).toBeUndefined()
+    })
+
+    test('non-terminal orders still re-fetch on a version-matched sync (HSYNC-03 untouched)', async () => {
+      libraryData.set('pending-gk', makeNonTerminalEntry('pending-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['pending-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('pending-gk')
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockGetOrderDetail).toHaveBeenCalledWith(
+        'cookie-value',
+        'pending-gk'
+      )
     })
   })
 

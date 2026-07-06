@@ -67,6 +67,85 @@ function hasKeyEvidence(tpk: Record<string, unknown>): boolean {
   return typeof tpk.key_type === 'string'
 }
 
+/**
+ * Evidenced game-store key_type values (live-UAT round 6, D-29 v2). Union of
+ * the two working integrations' key-type models:
+ *  - Playnite HumbleKeysLibrary keyTypeWhitelist (Models + Settings): gog,
+ *    nintendo_direct, origin, origin_keyless, steam (+ epic/epic_keyless
+ *    noted in-source as valid key types);
+ *  - UncleGoogle/galaxy-integration-humblebundle KEY_TYPE enum
+ *    (src/model/types.py): steam, origin, uplay, epic, battlenet, gog.
+ *
+ * IMPORTANT: this is NOT a required whitelist (that would break D-28 for
+ * future/unknown platforms) — it is a protective override so the
+ * direct_redeem entitlement signal below can never drop a key whose key_type
+ * attests a known store. Galaxy's REAL capture (tests/data/orders_keys.json)
+ * proves the need: Rayman Legends is a real uplay key carrying
+ * `direct_redeem: true` WITH a redeemed key value.
+ */
+const KNOWN_GAME_KEY_TYPES = new Set([
+  'steam',
+  'gog',
+  'origin',
+  'origin_keyless',
+  'uplay',
+  'epic',
+  'epic_keyless',
+  'battlenet',
+  'nintendo_direct'
+])
+
+/**
+ * D-29 v2 (live-UAT round 6): the tester's PDF-bundle tpks DO carry
+ * `key_type`, so round 5's presence check passed them. Their live signature —
+ * `direct_redeem`, `custom_instructions_html`/`instructions_html`,
+ * `show_custom_instructions_in_user_libraries` — marks auto-redeemed
+ * download/custom entitlements. Evidence rules out the simpler candidates:
+ *  - `direct_redeem === true` ALONE drops a real uplay game key (Rayman
+ *    Legends, Galaxy real capture) — D-28 violation;
+ *  - `custom_instructions_html` presence drops real origin game keys (Sims 3
+ *    Late Night / Populous, Galaxy origin_bundle_order.json) — D-28 violation.
+ * Therefore: exclude ONLY when `direct_redeem === true` (strict — a mistyped
+ * truthy value never excludes) AND key_type is NOT an evidenced game-store
+ * platform. Any-platform keys without the positive entitlement signal always
+ * survive (D-28 intact). If the live discriminator is still wrong, the
+ * round-6 diagnostics log the skipped entries' key_type /
+ * key_type_human_name VALUES (C5-permitted type labels) so the next run is
+ * conclusive.
+ */
+function isDirectRedeemEntitlement(tpk: Record<string, unknown>): boolean {
+  return (
+    tpk.direct_redeem === true &&
+    !(
+      typeof tpk.key_type === 'string' && KNOWN_GAME_KEY_TYPES.has(tpk.key_type)
+    )
+  )
+}
+
+/**
+ * A tpk becomes an inventory key ROW iff it carries key evidence (round 5)
+ * AND is not a direct-redeem entitlement (round 6). Shared by classifyOrder
+ * and every diagnostic so "is a key" can never diverge between them.
+ */
+function isInventoryKeyTpk(tpk: Record<string, unknown>): boolean {
+  return hasKeyEvidence(tpk) && !isDirectRedeemEntitlement(tpk)
+}
+
+/**
+ * Redacted `key_type=<v> key_type_human_name=<v>` label pair for diagnostics.
+ * These VALUES are platform/type labels ("steam", "Download") — explicitly
+ * C5-permitted, unlike key values (redeemed_key_val), which must NEVER be
+ * logged.
+ */
+function tpkTypeLabels(tpk: Record<string, unknown>): string {
+  const keyType = typeof tpk.key_type === 'string' ? tpk.key_type : 'absent'
+  const humanName =
+    typeof tpk.key_type_human_name === 'string'
+      ? tpk.key_type_human_name
+      : 'absent'
+  return `key_type=${keyType} key_type_human_name=${humanName}`
+}
+
 // Candidate field names for an ABSOLUTE expiration date on a tpk. The real
 // Humble field name is NOT conclusively documented in any public source
 // (live-UAT round 4): Playnite HumbleKeysLibrary + official PlayniteExtensions
@@ -165,10 +244,12 @@ export function classifyOrder(
     }
     try {
       const tpk = rawTpk as Record<string, unknown>
-      // D-29 (round 5): skip download entitlements — no key_type, no row.
-      // Skipped entries stay discoverable via the redacted diagnostics
-      // (describeZeroKeyOrder / describeSkippedEntitlements in library.ts).
-      if (!hasKeyEvidence(tpk)) {
+      // D-29 (rounds 5+6): skip download entitlements — no key_type
+      // (round 5) or a direct-redeem entitlement signature (round 6) means
+      // no row. Skipped entries stay discoverable via the redacted
+      // diagnostics (describeZeroKeyOrder / describeSkippedEntitlements in
+      // library.ts), which log the type-label VALUES for round-6 skips.
+      if (!isInventoryKeyTpk(tpk)) {
         continue
       }
       const machineName =
@@ -331,9 +412,11 @@ export function describeZeroKeyOrder(rawOrder: OrderDetail): ZeroKeyDiagnosis {
 
   // Non-empty tpk array that still yielded zero keys: name the structural
   // check each element failed. classifyOrder skips falsy/non-object elements
-  // and (round 5, D-29) objects without a string key_type — download
-  // entitlements. Field NAMES only, never values (C5), so a legitimate key
-  // with a weird shape is still discoverable on the next live run.
+  // and (D-29 rounds 5+6) download entitlements — objects without a string
+  // key_type, or direct-redeem entitlements. Field NAMES only for shapes
+  // (C5); the round-6 branch additionally carries the key_type /
+  // key_type_human_name VALUES (C5-permitted type labels) so a wrong
+  // discriminator is conclusively visible on the next live run.
   const skipped = rawAllTpks
     .slice(0, MAX_DIAGNOSED_FIELDS)
     .map((element, index) => {
@@ -344,21 +427,25 @@ export function describeZeroKeyOrder(rawOrder: OrderDetail): ZeroKeyDiagnosis {
       if (typeof tpk.key_type !== 'string') {
         return `[${index}]:no-key_type(fields=${fieldNames(tpk)})`
       }
-      // A key-evidenced object element should have classified — if we are
+      if (isDirectRedeemEntitlement(tpk)) {
+        return `[${index}]:direct-redeem-entitlement(${tpkTypeLabels(tpk)})`
+      }
+      // An inventory-key object element should have classified — if we are
       // here anyway, the guarded loop's defensive catch fired (e.g.
       // isRevealed threw).
       return `[${index}]:object-skipped-by-defensive-catch fields=${fieldNames(tpk)}`
     })
   // A non-empty array whose entries are ALL download entitlements (objects
-  // without key_type) is the round-5 LEGITIMATE zero-key shape — a PDF/ebook
-  // bundle excluded per D-29. Anything else (non-object elements, or a
-  // key-evidenced entry that still got skipped) is anomalous. Checked over
-  // the FULL array, not the capped detail slice.
+  // without key_type — round 5 — or direct-redeem entitlements — round 6) is
+  // the LEGITIMATE zero-key shape: a PDF/ebook bundle excluded per D-29.
+  // Anything else (non-object elements, or an inventory-key entry that still
+  // got skipped) is anomalous. Checked over the FULL array, not the capped
+  // detail slice.
   const allDownloadEntitlements = rawAllTpks.every(
     (element) =>
       element !== null &&
       typeof element === 'object' &&
-      typeof (element as Record<string, unknown>).key_type !== 'string'
+      !isInventoryKeyTpk(element as Record<string, unknown>)
   )
   return {
     anomalous: !allDownloadEntitlements,
@@ -368,40 +455,50 @@ export function describeZeroKeyOrder(rawOrder: OrderDetail): ZeroKeyDiagnosis {
 
 /**
  * Redacted skipped-entitlement diagnosis for orders that DID produce keys
- * (live-UAT round 5). classifyOrder skips all_tpks entries without a string
- * `key_type` (download entitlements, D-29); for a MIXED order (keys +
- * entitlements) the zero-key diagnosis above never runs, so this helper keeps
- * those skips discoverable — if a legitimate key ever arrives with a weird
- * shape (missing key_type), its field NAMES show up in the log and the filter
- * can be adjusted on the next live run. Names only, never values (C5/T-11-04).
- * Returns null when every entry carried key evidence (nothing skipped). No
- * I/O and no logging here (module discipline) — library.ts logs the detail.
+ * (live-UAT rounds 5+6). classifyOrder skips all_tpks entries without a
+ * string `key_type` (round 5) and direct-redeem entitlements (round 6, D-29
+ * v2); for a MIXED order (keys + entitlements) the zero-key diagnosis above
+ * never runs, so this helper keeps those skips discoverable. no-key_type
+ * skips carry field NAMES only; direct-redeem skips carry the key_type /
+ * key_type_human_name VALUES (C5-permitted type labels — never a key value)
+ * so a wrong round-6 discriminator is conclusively visible on the next live
+ * run. Returns null when nothing was skipped. No I/O and no logging here
+ * (module discipline) — library.ts logs the detail.
  */
 export function describeSkippedEntitlements(
   rawOrder: OrderDetail
 ): string | null {
   const rawTpks = rawOrder.tpkd_dict?.all_tpks ?? []
   const skipped: string[] = []
-  let count = 0
+  let noKeyType = 0
+  let directRedeem = 0
 
   for (const [index, rawTpk] of rawTpks.entries()) {
     if (!rawTpk || typeof rawTpk !== 'object') {
       continue
     }
     const tpk = rawTpk as Record<string, unknown>
-    if (typeof tpk.key_type === 'string') {
+    if (typeof tpk.key_type !== 'string') {
+      noKeyType += 1
+      if (skipped.length < MAX_DIAGNOSED_FIELDS) {
+        skipped.push(`[${index}]:no-key_type(fields=${fieldNames(tpk)})`)
+      }
       continue
     }
-    count += 1
-    if (skipped.length < MAX_DIAGNOSED_FIELDS) {
-      skipped.push(`[${index}]:no-key_type(fields=${fieldNames(tpk)})`)
+    if (isDirectRedeemEntitlement(tpk)) {
+      directRedeem += 1
+      if (skipped.length < MAX_DIAGNOSED_FIELDS) {
+        skipped.push(
+          `[${index}]:direct-redeem-entitlement(${tpkTypeLabels(tpk)})`
+        )
+      }
     }
   }
 
-  if (count === 0) {
+  if (noKeyType + directRedeem === 0) {
     return null
   }
-  return `skippedNoKeyType=${count} skipped=[${skipped.join(' ')}]`
+  return `skippedNoKeyType=${noKeyType} skippedDirectRedeem=${directRedeem} skipped=[${skipped.join(' ')}]`
 }
 
 /**
@@ -430,9 +527,10 @@ export function describeMissingExpirationTpks(
       continue
     }
     const tpk = rawTpk as Record<string, unknown>
-    // Download entitlements (no key_type, D-29 round 5) are not keys — they
-    // never become rows, so an undatable one is not a "No expiration" bug.
-    if (!hasKeyEvidence(tpk)) {
+    // Download entitlements (no key_type — round 5 — or direct-redeem
+    // entitlements — round 6, D-29 v2) are not keys — they never become
+    // rows, so an undatable one is not a "No expiration" bug.
+    if (!isInventoryKeyTpk(tpk)) {
       continue
     }
     // Already-expired keys (is_expired === true) classify correctly without a

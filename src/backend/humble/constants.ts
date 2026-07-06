@@ -27,3 +27,15 @@ export const HUMBLE_SYNC_CONCURRENCY = 3
 // D-33: duration a 403/429 denial gates even the manual refresh button
 // (library.ts, Plan 02). 15 minutes — Claude's discretion per CONTEXT.md.
 export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
+
+// Live-UAT round 6: version stamp of the classification logic (classify.ts).
+// D-24 freezes fully-terminal cached orders (never re-fetched), so a
+// classifier fix can never reach their cached rows — the tester's stale
+// PDF-entitlement rows survived round 5's filter exactly this way. When the
+// version stored in humbleSyncStore differs from this constant, library.ts
+// bypasses the frozen-order skip ONCE (full re-fetch + re-classification),
+// then stamps the new version after a clean pass. BUMP THIS whenever
+// classification semantics change (filters, precedence, field extraction):
+//   1 = rounds 1-5 (implicit — pre-versioning caches read as 1)
+//   2 = round 6: D-29 v2 direct-redeem entitlement exclusion
+export const HUMBLE_CLASSIFIER_VERSION = 2

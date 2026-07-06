@@ -34,7 +34,11 @@ import {
   realWorldRelativeExpiryOrder,
   realWorldUndatableActiveOrder,
   ebookBundleOrder,
-  mixedKeyAndEntitlementOrder
+  mixedKeyAndEntitlementOrder,
+  directRedeemEntitlementOrder,
+  realWorldDirectRedeemUplayKeyOrder,
+  unknownPlatformKeyOrder,
+  mixedKeyAndDirectRedeemEntitlementOrder
 } from './fixtures/tpks'
 
 const NEVER_REVEALED = () => false
@@ -303,6 +307,174 @@ describe('classifyOrder — download entitlements without key_type (D-29)', () =
     )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].state).toBe('UNPICKED')
+  })
+})
+
+// ── Direct-redeem entitlement filtering (live-UAT round 6, D-29 v2) ────────
+// Round 5's presence check failed live: the tester's PDF-bundle tpks DO carry
+// key_type. Evidence-based v2 discriminator (see fixtures/tpks.ts for source
+// citations): exclude ONLY `direct_redeem === true` entries whose key_type is
+// NOT an evidenced game-store platform. Bare direct_redeem exclusion is
+// forbidden (real uplay key carries it); custom_instructions_html presence is
+// forbidden (real origin keys carry it); D-28 stays intact.
+
+describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () => {
+  test('a direct-redeem download entitlement WITH key_type yields ZERO rows', () => {
+    const entry = classifyOrder(directRedeemEntitlementOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(0)
+    expect(entry.allTerminal).toBe(false)
+  })
+
+  test('D-28: a REAL uplay key with direct_redeem:true (Rayman Legends shape) is RETAINED — known platform overrides the entitlement signal', () => {
+    const entry = classifyOrder(
+      realWorldDirectRedeemUplayKeyOrder,
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].platform).toBe('uplay')
+    // redeemed_key_val present -> REDEEMED (real capture shape)
+    expect(entry.keys[0].state).toBe('REDEEMED')
+  })
+
+  test('D-28: an unknown-platform key WITHOUT direct_redeem is retained (no positive entitlement evidence)', () => {
+    const entry = classifyOrder(unknownPlatformKeyOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].platform).toBe('weirdstore')
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+  })
+
+  test('D-28: every evidenced game-store key_type survives even with direct_redeem:true', () => {
+    const platforms = [
+      'steam',
+      'gog',
+      'origin',
+      'origin_keyless',
+      'uplay',
+      'epic',
+      'epic_keyless',
+      'battlenet',
+      'nintendo_direct'
+    ]
+    const entry = classifyOrder(
+      {
+        gamekey: 'order-all-platforms-direct',
+        tpkd_dict: {
+          all_tpks: platforms.map((p, i) => ({
+            machine_name: `game${i}_${p}`,
+            key_type: p,
+            direct_redeem: true
+          }))
+        }
+      },
+      NEVER_REVEALED
+    )
+    expect(entry.keys.map((k) => k.platform)).toEqual(platforms)
+  })
+
+  test('direct_redeem must be literally true — a truthy non-boolean never excludes', () => {
+    const entry = classifyOrder(
+      {
+        gamekey: 'order-truthy-direct',
+        tpkd_dict: {
+          all_tpks: [
+            {
+              machine_name: 'oddgame_odd',
+              key_type: 'oddstore',
+              direct_redeem: 'yes'
+            }
+          ]
+        }
+      },
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(1)
+  })
+
+  test('mixed order (1 steam key + 1 direct-redeem entitlement) yields exactly 1 row', () => {
+    const entry = classifyOrder(
+      mixedKeyAndDirectRedeemEntitlementOrder,
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].machineName).toBe('actualgame2_steam')
+  })
+
+  test('D-27 unaffected: the UNPICKED pseudo-entry still fires when all tpks are direct-redeem entitlements', () => {
+    const entry = classifyOrder(
+      {
+        gamekey: 'choice-direct-redeem',
+        product: {
+          category: 'subscriptioncontent',
+          choice_url: 'home/june-2026',
+          human_name: 'Humble Choice — June 2026'
+        },
+        tpkd_dict: {
+          all_tpks: [
+            {
+              machine_name: 'bonus_wallpapers',
+              key_type: 'download',
+              direct_redeem: true
+            }
+          ]
+        }
+      },
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNPICKED')
+  })
+})
+
+describe('describeZeroKeyOrder — direct-redeem skip reasons with type VALUES (round 6)', () => {
+  test('a pure direct-redeem entitlement order is a LEGITIMATE zero-key shape and surfaces key_type/key_type_human_name VALUES', () => {
+    const diagnosis = describeZeroKeyOrder(directRedeemEntitlementOrder)
+    expect(diagnosis.anomalous).toBe(false)
+    expect(diagnosis.detail).toContain('direct-redeem-entitlement')
+    // C5 explicitly permits these VALUES — they are platform/type labels,
+    // not secrets — and they make the next live run conclusive.
+    expect(diagnosis.detail).toContain('key_type=download')
+    expect(diagnosis.detail).toContain('key_type_human_name=Download')
+  })
+
+  test('C5: the zero-key diagnosis NEVER carries the redeemed key value of a skipped entitlement', () => {
+    const diagnosis = describeZeroKeyOrder(directRedeemEntitlementOrder)
+    expect(diagnosis.detail).not.toContain('ENTITLEMENT-VALUE-MUST-NOT-LEAK')
+  })
+})
+
+describe('describeSkippedEntitlements — direct-redeem VALUES in the mixed-order diagnostic (round 6)', () => {
+  test('a mixed order reports the skipped direct-redeem count with key_type/key_type_human_name VALUES', () => {
+    const detail = describeSkippedEntitlements(
+      mixedKeyAndDirectRedeemEntitlementOrder
+    )
+    expect(detail).not.toBeNull()
+    expect(detail).toContain('skippedDirectRedeem=1')
+    expect(detail).toContain('key_type=download')
+    expect(detail).toContain('key_type_human_name=Download')
+  })
+
+  test('C5: the skip diagnostic NEVER carries the redeemed key value of a skipped entitlement', () => {
+    const detail = describeSkippedEntitlements(
+      mixedKeyAndDirectRedeemEntitlementOrder
+    )
+    expect(detail).not.toContain('ENTITLEMENT-VALUE-MUST-NOT-LEAK')
+  })
+
+  test('a retained direct-redeem KEY (known platform) is not reported as skipped', () => {
+    expect(
+      describeSkippedEntitlements(realWorldDirectRedeemUplayKeyOrder)
+    ).toBeNull()
+  })
+})
+
+describe('describeMissingExpirationTpks — direct-redeem entitlements are not keys (round 6)', () => {
+  test('an undatable direct-redeem entitlement is never diagnosed as a key missing a date', () => {
+    expect(
+      describeMissingExpirationTpks(
+        directRedeemEntitlementOrder,
+        new Date('2026-07-06T00:00:00Z')
+      )
+    ).toBeNull()
   })
 })
 
