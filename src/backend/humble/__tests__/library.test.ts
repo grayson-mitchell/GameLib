@@ -777,6 +777,41 @@ describe('HumbleLibrary', () => {
     })
   })
 
+  // WR-01: the humbleSync IPC contract says "never throws", and every
+  // renderer call site is fire-and-forget with no .catch — an escaped
+  // rejection would surface as an unhandled promise rejection in the
+  // renderer with the sync outcome never recorded.
+  describe('sync() — WR-01 never-throws boundary', () => {
+    test('an unexpected throw OUTSIDE the guarded adapter calls resolves { status: failed }, records syncError=network, and still pushes the terminal state', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1')
+      })
+      // The per-order worker also runs sendFrontendMessage — a throw there
+      // previously rejected the whole pool and escaped sync() unhandled.
+      mockSendFrontendMessage.mockImplementation((event: string) => {
+        if (event === 'humbleSyncProgress') {
+          throw new Error('renderer channel gone')
+        }
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'failed' })
+
+      expect(mockLogError).toHaveBeenCalled()
+      expect(HumbleLibrary.getSyncState().syncError).toBe('network')
+      // Terminal humbleSyncStateChanged still fires (spinner can never stick).
+      const terminal = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleSyncStateChanged'
+      )
+      expect(terminal).toHaveLength(1)
+
+      // The single-flight guard cleared: a follow-up sync runs fresh.
+      mockSendFrontendMessage.mockImplementation(() => {})
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+    })
+  })
+
   describe('sync() — single-flight guard (round 2)', () => {
     test('a second sync() while one is in flight joins it: getGamekeys called once, both resolve to the same outcome', async () => {
       let resolveGamekeys!: (v: unknown) => void

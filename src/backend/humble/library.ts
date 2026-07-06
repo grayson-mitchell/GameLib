@@ -1,4 +1,4 @@
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 
@@ -313,13 +313,30 @@ async function sync(): Promise<SyncOutcome> {
   if (syncInFlight) {
     return syncInFlight
   }
+  // WR-01: the humbleSync IPC contract is "returns the overall outcome —
+  // never throws" (common/types/ipc.ts), and every renderer call site is
+  // fire-and-forget with no .catch. runSync() guards the adapter calls, but
+  // an unexpected throw anywhere else (getKeys, setSyncState disk I/O,
+  // sendFrontendMessage) would otherwise reject this promise straight into
+  // the renderer as an unhandled rejection with the outcome never recorded.
+  // Enforce the contract at the boundary: catch, log, record, resolve failed.
+  const generation = currentSyncGeneration()
   // The terminal state push happens on EVERY exit path — success, fail-soft
   // AND an unexpected rejection (so the renderer's `syncing` can never get
   // stuck true again; cf. debug session humble-sync-spinner-never-ends).
-  syncInFlight = runSync().finally(() => {
-    syncInFlight = null
-    emitSyncState()
-  })
+  syncInFlight = runSync()
+    .catch((err) => {
+      logError(['Humble sync: unexpected failure:', err], LogPrefix.Backend)
+      // CR-01: never write into a store a mid-sync disconnect just wiped.
+      if (generation === currentSyncGeneration()) {
+        setSyncState({ syncError: 'network' })
+      }
+      return { status: 'failed' as const }
+    })
+    .finally(() => {
+      syncInFlight = null
+      emitSyncState()
+    })
   return syncInFlight
 }
 
