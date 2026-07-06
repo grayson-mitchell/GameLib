@@ -75,6 +75,22 @@ export default function HumbleKeys() {
     }
   }, [humble?.syncing, humble?.syncError])
 
+  // WR-06: `inCooldown` is computed from Date.now() at render time, and
+  // during a denial cooldown no sync events arrive to trigger a re-render —
+  // on an idle Keys screen the refresh button stayed disabled (with a frozen
+  // remaining-minutes tooltip) past the cooldown's actual expiry. Arm a
+  // timer to clear the local cooldown state exactly when it elapses.
+  useEffect(() => {
+    if (!cooldownUntil || cooldownUntil <= Date.now()) {
+      return
+    }
+    const id = setTimeout(
+      () => setCooldownUntil(undefined),
+      cooldownUntil - Date.now()
+    )
+    return () => clearTimeout(id)
+  }, [cooldownUntil])
+
   // D-20: route guard — a disconnected user never sees this page rendered
   // disconnected; deep links / back-button bounce to the login route.
   if (!humble?.isLoggedIn) {
