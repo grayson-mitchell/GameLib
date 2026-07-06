@@ -580,6 +580,71 @@ export const mixedKeyAndDirectRedeemEntitlementOrder = {
   }
 }
 
+// ─── Steam AppID capture (Phase 12, HDEDUP-01/02) ─────────────────────────
+// The live order-detail tpk carries `steam_app_id` as either a number or a
+// string (validation.ts confirms both shapes are seen live). classifyOrder
+// must stringify it (only for platform === 'steam') so it matches
+// GameInfo.app_name for the later dedup match.
+
+// steam_app_id as a NUMBER (Half-Life 2's real AppID) — must stringify to '620'.
+export const steamKeyWithNumericAppIdOrder = {
+  gamekey: 'order-steam-appid-numeric',
+  product: { category: 'bundle', human_name: 'Numeric AppID Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'halflife2_steam',
+        gamekey: 'order-steam-appid-numeric',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Half-Life 2',
+        is_expired: false,
+        steam_app_id: 620
+      }
+    ]
+  }
+}
+
+// steam_app_id as a STRING — must pass through unchanged as '620'.
+export const steamKeyWithStringAppIdOrder = {
+  gamekey: 'order-steam-appid-string',
+  product: { category: 'bundle', human_name: 'String AppID Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'halflife2b_steam',
+        gamekey: 'order-steam-appid-string',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Half-Life 2',
+        is_expired: false,
+        steam_app_id: '620'
+      }
+    ]
+  }
+}
+
+// Malformed steam_app_id (an object, not string/number) on a Steam tpk — must
+// never throw; the per-tpk try/catch keeps the order classifiable with
+// steamAppId === undefined (T-12-01a).
+export const steamKeyWithMalformedAppIdOrder = {
+  gamekey: 'order-steam-appid-malformed',
+  product: { category: 'bundle', human_name: 'Malformed AppID Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'weirdgame_steam',
+        gamekey: 'order-steam-appid-malformed',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Weird Game',
+        is_expired: false,
+        steam_app_id: { nested: 'object' }
+      }
+    ]
+  }
+}
+
 // Active key with NO recognized date field and is_expired:false — the shape the
 // round-4 expiration diagnostic must surface (candidate field names, redacted)
 // so the true date field can be identified on the next live run.
