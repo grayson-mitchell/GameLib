@@ -274,6 +274,13 @@ interface AsyncIPCFunctions {
   // (never the generic storeGet bridge — WR-09 finding, T-11 store isolation).
   humbleGetKeys: () => Promise<HumbleKey[]>
   humbleGetSyncState: () => Promise<HumbleSyncState>
+  // Phase 12 (Plan 04, D-42): "Not the same game" override for a
+  // fuzzy-matched ownership row. Only ever meaningful for
+  // matchConfidence === 'fuzzy' keys — the backend validates this
+  // server-side (never trust renderer-only gating) and no-ops for an
+  // exact-match machineName.
+  humbleSetOwnershipOverride: (machineName: string) => Promise<void>
+  humbleClearOwnershipOverride: (machineName: string) => Promise<void>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>

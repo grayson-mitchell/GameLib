@@ -19,6 +19,12 @@ export const handleHumbleAuthState = frontendListenerSlot('humbleAuthState')
 export const humbleSync = makeHandlerInvoker('humbleSync')
 export const humbleGetKeys = makeHandlerInvoker('humbleGetKeys')
 export const humbleGetSyncState = makeHandlerInvoker('humbleGetSyncState')
+export const humbleSetOwnershipOverride = makeHandlerInvoker(
+  'humbleSetOwnershipOverride'
+)
+export const humbleClearOwnershipOverride = makeHandlerInvoker(
+  'humbleClearOwnershipOverride'
+)
 export const handleHumbleKeysUpdated = frontendListenerSlot('humbleKeysUpdated')
 export const handleHumbleSyncProgress = frontendListenerSlot('humbleSyncProgress')
 export const handleHumbleSyncStateChanged = frontendListenerSlot(
