@@ -51,6 +51,7 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 - ✓ Humble Bundle account connect/disconnect from Manage Accounts via embedded WebView login, encrypted session persistence + expiry reconnect (HACCT-01/02/03) — v1.2 Phase 10
 - ✓ Humble C5 adapter boundary empirically validated against the live API (axios transport; gamekeys + order-detail + steam_app_id schema PASS; identity endpoint 404 → advisory) — v1.2 Phase 10
 - ✓ Humble key inventory synced + classified into the 5-state model with fail-soft caching and a read-only Humble Keys page (HSYNC-01/02/03/04; live UAT on a real 25-gamekey account) — v1.2 Phase 11
+- ✓ Humble keys cross-referenced against Steam ownership (exact AppID + 85% fuzzy fallback with DLC guard), owned-badges with fuzzy-only user override, and redeemed matched keys annotated with Humble origin on the Steam game-details page (HDEDUP-01/02; human-verified in live app) — v1.2 Phase 12
 
 ### Active (v1.1 — in scope)
 
@@ -117,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — v1.2 Phase 11 (Library Sync + 5-State Key Model) complete: full key inventory sync, 5-state classification, fail-soft caching, read-only Humble Keys page; approved via live UAT after 7 fix rounds + post-review hardening (CR-01 disconnect fence). v1.1 kept open (Phase 9 + Phase 7 UAT outstanding) by explicit choice.*
+*Last updated: 2026-07-07 — v1.2 Phase 12 (Ownership Dedup) complete: two-tier Steam ownership matching (exact AppID / 85%+ fuzzy with DLC guard), disconnect-exempt override store, recompute on Humble sync + Steam refresh, owned-badges + fuzzy-only override UI, redeemed-only Humble-origin annotation on GamePage; verification passed 22/22, human-verified live. 4 code-review warnings (WR-01..04) documented in 12-REVIEW.md need an accept-or-remediate decision before Phase 14 consumes `ownedElsewhere`. v1.1 kept open (Phase 9 + Phase 7 UAT outstanding) by explicit choice.*
