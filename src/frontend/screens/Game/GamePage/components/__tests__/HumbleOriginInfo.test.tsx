@@ -16,7 +16,7 @@ import { HumbleKey } from 'common/types/humble'
 const mockKeys: HumbleKey[] = []
 
 jest.mock('react', () => ({
-  ...jest.requireActual('react'),
+  ...jest.requireActual<typeof import('react')>('react'),
   useContext: () => ({ humble: { keys: mockKeys } })
 }))
 
@@ -26,15 +26,14 @@ jest.mock('react-i18next', () => ({
       _key: string,
       defaultValue: string,
       params?: Record<string, unknown>
-    ) =>
+    ): string =>
       Object.entries(params ?? {}).reduce(
-        (str, [k, v]) => str.replace(`{{${k}}}`, String(v)),
+        (str: string, [k, v]) => str.replace(`{{${k}}}`, String(v)),
         defaultValue
       )
   })
 }))
 
-// eslint-disable-next-line import/first
 import HumbleOriginInfo from '../HumbleOriginInfo'
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {

@@ -181,6 +181,7 @@
         "canRunOffline": "Online Required",
         "clickToOpen": "Click to open",
         "game-scores": "Game Scores",
+        "humbleOrigin": "Includes a key from Humble Bundle: {{origin}}",
         "installedInfo": "Installed Information",
         "installedPlatform": "Installed Platform",
         "path": "Install Path",
