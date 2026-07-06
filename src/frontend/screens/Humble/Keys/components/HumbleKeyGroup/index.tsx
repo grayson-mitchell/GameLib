@@ -8,13 +8,16 @@ type Props = {
   keys: HumbleKey[]
 }
 
-// Shared with HumbleKeyRow (badge text reuses the same label).
+// Shared with HumbleKeyRow (badge text reuses the same label). The internal
+// 5-state name UNREDEEMABLE is locked (D-30 precedence), but its user-visible
+// label is "Expired" — matching Humble's own UI copy ("This key has expired and
+// can no longer be redeemed"); the i18n key stays `state.unredeemable`.
 export const STATE_LABEL_KEYS: Record<HumbleKeyState, [string, string]> = {
   UNPICKED: ['humbleKeys.state.unpicked', 'Unpicked'],
   UNREVEALED: ['humbleKeys.state.unrevealed', 'Unrevealed'],
   REVEALED: ['humbleKeys.state.revealed', 'Revealed'],
   REDEEMED: ['humbleKeys.state.redeemed', 'Redeemed'],
-  UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Unredeemable']
+  UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Expired']
 }
 
 export default function HumbleKeyGroup({ state, keys }: Props) {

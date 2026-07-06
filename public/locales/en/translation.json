@@ -554,7 +554,7 @@
             "redeemed": "Redeemed",
             "revealed": "Revealed",
             "unpicked": "Unpicked",
-            "unredeemable": "Unredeemable",
+            "unredeemable": "Expired",
             "unrevealed": "Unrevealed"
         },
         "syncError": "Couldn't refresh — showing data from {{time}}",
