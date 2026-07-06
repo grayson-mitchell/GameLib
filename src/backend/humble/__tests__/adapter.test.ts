@@ -264,6 +264,26 @@ describe('getOrderDetail', () => {
     )
   })
 
+  // WR-04: gamekey is schema-validated only as z.string() — a drifted or
+  // hostile value with URL metacharacters must not change the request target
+  // or truncate the required all_tpkds=true query (the exact parameter whose
+  // absence caused the round-3 zero-keys failure).
+  test('WR-04: a gamekey with URL metacharacters is percent-encoded into the path — target and query survive intact', async () => {
+    mockGet.mockResolvedValue({ data: { gamekey: 'weird' } })
+    const hostileGamekey = 'abc/../../user?x=1#frag key'
+    await getOrderDetail(COOKIE, hostileGamekey)
+    const [url] = mockGet.mock.calls[0]
+    expect(url).toBe(
+      `https://www.humblebundle.com/api/v1/order/${encodeURIComponent(
+        hostileGamekey
+      )}?all_tpkds=true`
+    )
+    // The encoded path segment carries none of the raw metacharacters.
+    expect(url).not.toContain('/../')
+    expect(url).not.toContain('#')
+    expect(url.endsWith('?all_tpkds=true')).toBe(true)
+  })
+
   // Shape tolerance (round 3): a live `"tpkd_dict": null` or
   // `"all_tpks": null` must degrade to "no tpks" (diagnosed downstream by
   // library.ts's zero-key logging), never fail the whole order parse.

@@ -299,8 +299,13 @@ export async function getOrderDetail(
     // humble-zero-keys-from-valid-orders). Every working integration sends
     // it: Playnite HumbleKeysLibrary (`api/v1/order/{0}?all_tpkds=true`) and
     // FailSpy humble-steam-key-redeemer use this exact param.
+    // WR-04: `gamekey` is only schema-validated as z.string() from the
+    // order-list response — a drifted/hostile value containing '/', '?', '#'
+    // or whitespace would silently change the request target or truncate the
+    // required all_tpkds=true query. The adapter is the C5 isolation wall:
+    // never forward an untrusted string into the URL structure verbatim.
     const response = await humbleRequest(
-      `/api/v1/order/${gamekey}?all_tpkds=true`,
+      `/api/v1/order/${encodeURIComponent(gamekey)}?all_tpkds=true`,
       cookie
     )
     const parsed = OrderDetailSchema.safeParse(response.data)
