@@ -42,6 +42,7 @@ import { stopRunningPoll } from './storeManagers/steam/library'
 import { steamSyncStore } from './storeManagers/steam/electronStores'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
+import { HumbleLibrary } from './humble/library'
 import {
   clearCache,
   isEpicServiceOffline,
@@ -965,6 +966,25 @@ addHandler('refreshLibrary', async (e, library?) => {
       allRefreshPromises.push(manager.refresh())
     }
     await Promise.allSettled(allRefreshPromises)
+  }
+
+  // Phase 12 (Plan 04, D-47): a Steam-inclusive refresh (steam | all |
+  // undefined — undefined/all both include Steam via libraryManagerMap)
+  // triggers the Humble ownership recompute from this composition root, so
+  // storeManagers/steam/library.ts stays completely Humble-unaware (the
+  // one-way Humble→Steam dependency direction is preserved). recomputeOwnership()
+  // self-gates on Steam connectivity + a non-empty cached library (D-48), so
+  // calling it here unconditionally is safe even when the Steam refresh
+  // failed or produced no games — it is simply a no-op in that case.
+  if (library === undefined || library === 'all' || library === 'steam') {
+    try {
+      HumbleLibrary.recomputeOwnership()
+    } catch (err) {
+      logWarning(
+        ['Humble ownership recompute after Steam refresh failed:', err],
+        LogPrefix.Backend
+      )
+    }
   }
 })
 
