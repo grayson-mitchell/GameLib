@@ -104,6 +104,27 @@ export interface HumbleKey {
   expiration: string | null
   /** Bundle/order label shown as a secondary line per row (D-21). */
   origin: string
+  /**
+   * Steam AppID carried directly by the order-detail API's `steam_app_id`
+   * field, captured only for `platform === 'steam'` tpks (Phase 12,
+   * classify.ts). Optional — absent for non-Steam keys, and absent on
+   * pre-Phase-12 cached rows until the HUMBLE_CLASSIFIER_VERSION bump
+   * triggers a one-time backfill re-fetch.
+   */
+  steamAppId?: string
+  /**
+   * Ownership-overlay flag (Phase 12, spec §2.3): true when this key's game
+   * is already owned on another platform (Steam first). Orthogonal to
+   * `state` — it NEVER influences classification precedence and is NEVER
+   * read by classify.ts; computed and filled in by dedup.ts (later plan).
+   */
+  ownedElsewhere: boolean
+  /**
+   * D-41 provenance for the ownership match: 'exact' AppID match, 'fuzzy'
+   * name-similarity match, or 'none' when not owned (or not yet computed).
+   * Lets Phase 14's C2 guard treat fuzzy matches more gently than exact ones.
+   */
+  matchConfidence: 'exact' | 'fuzzy' | 'none'
 }
 
 /**
@@ -111,6 +132,9 @@ export interface HumbleKey {
  * iff every key in this order is REDEEMED or UNREDEEMABLE (never true for an
  * UNPICKED pseudo-entry) — read by the D-24 skip-terminal sync partitioning
  * (Plan 02) to freeze fully-terminal orders instead of re-fetching them.
+ * `keys` rows now also carry the Phase 12 ownership-overlay fields
+ * (steamAppId/ownedElsewhere/matchConfidence) — no change to this
+ * `allTerminal` semantic.
  */
 export interface HumbleOrderCacheEntry {
   gamekey: string

@@ -295,6 +295,21 @@ export function classifyOrder(
       const title =
         typeof tpk.human_name === 'string' ? tpk.human_name : orderLabel
 
+      // Phase 12 (HDEDUP-02 linchpin): capture the Steam AppID directly
+      // carried by the live tpk. Only for platform === 'steam' — other
+      // platforms never carry a meaningful steam_app_id. Stringified to
+      // match GameInfo.app_name; tolerant of the field arriving as either a
+      // number or a string (validation.ts confirms both are seen live). Any
+      // other shape (object, boolean, missing) yields undefined rather than
+      // throwing — this read stays inside the existing per-tpk try/catch
+      // (T-11-05 precedent).
+      const rawAppId = tpk.steam_app_id
+      const steamAppId =
+        platform === 'steam' &&
+        (typeof rawAppId === 'string' || typeof rawAppId === 'number')
+          ? String(rawAppId)
+          : undefined
+
       keys.push({
         gamekey,
         machineName,
@@ -302,7 +317,11 @@ export function classifyOrder(
         title,
         platform,
         expiration,
-        origin: orderLabel
+        origin: orderLabel,
+        steamAppId,
+        // Overlay fields default here; dedup.ts (later plan) fills them in.
+        ownedElsewhere: false,
+        matchConfidence: 'none'
       })
     } catch {
       // Defensive net for any unexpected shape not caught by the guards
@@ -334,7 +353,9 @@ export function classifyOrder(
         title: rawProduct.human_name ?? orderLabel,
         platform: 'humble-choice',
         expiration: deadline,
-        origin: orderLabel
+        origin: orderLabel,
+        ownedElsewhere: false,
+        matchConfidence: 'none'
       })
     }
   }

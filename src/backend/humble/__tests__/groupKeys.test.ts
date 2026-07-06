@@ -21,6 +21,8 @@ function makeKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
     platform: 'steam',
     expiration: null,
     origin: 'Some Bundle',
+    ownedElsewhere: false,
+    matchConfidence: 'none',
     ...overrides
   }
 }

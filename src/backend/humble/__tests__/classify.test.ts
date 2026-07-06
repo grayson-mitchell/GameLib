@@ -38,7 +38,10 @@ import {
   directRedeemEntitlementOrder,
   realWorldDirectRedeemUplayKeyOrder,
   unknownPlatformKeyOrder,
-  mixedKeyAndDirectRedeemEntitlementOrder
+  mixedKeyAndDirectRedeemEntitlementOrder,
+  steamKeyWithNumericAppIdOrder,
+  steamKeyWithStringAppIdOrder,
+  steamKeyWithMalformedAppIdOrder
 } from './fixtures/tpks'
 
 const NEVER_REVEALED = () => false
@@ -697,6 +700,47 @@ describe('describeMissingExpirationTpks — round 4 date-field discovery', () =>
     )
     expect(detail).toContain('secret')
     expect(detail).not.toContain('SECRET-MUST-NOT-LEAK')
+  })
+})
+
+// ── Steam AppID capture (Phase 12, HDEDUP-01/02) ──────────────────────────
+// classifyOrder must capture steam_app_id into HumbleKey.steamAppId
+// (stringified) ONLY for platform === 'steam' tpks; default the two
+// ownership-overlay fields for every classified key; tolerate a malformed
+// steam_app_id without throwing.
+
+describe('classifyOrder — steamAppId capture (Phase 12)', () => {
+  test('a numeric steam_app_id (620) stringifies to steamAppId === "620"', () => {
+    const entry = classifyOrder(steamKeyWithNumericAppIdOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].steamAppId).toBe('620')
+  })
+
+  test('a string steam_app_id ("620") yields steamAppId === "620"', () => {
+    const entry = classifyOrder(steamKeyWithStringAppIdOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].steamAppId).toBe('620')
+  })
+
+  test('a non-Steam tpk (key_type: gog) yields steamAppId === undefined', () => {
+    const entry = classifyOrder(nonSteamPlatformOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].steamAppId).toBeUndefined()
+  })
+
+  test('every classified key defaults ownedElsewhere: false and matchConfidence: "none"', () => {
+    const entry = classifyOrder(steamKeyWithNumericAppIdOrder, NEVER_REVEALED)
+    expect(entry.keys[0].ownedElsewhere).toBe(false)
+    expect(entry.keys[0].matchConfidence).toBe('none')
+  })
+
+  test('T-12-01a: a malformed steam_app_id (an object) does not throw; order still classifies with steamAppId undefined', () => {
+    expect(() =>
+      classifyOrder(steamKeyWithMalformedAppIdOrder, NEVER_REVEALED)
+    ).not.toThrow()
+    const entry = classifyOrder(steamKeyWithMalformedAppIdOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].steamAppId).toBeUndefined()
   })
 })
 
