@@ -290,13 +290,15 @@ export const realWorldGiftKeyOrder = {
   }
 }
 
-// Minimal structural requirement: a bare object tpk with NO fields at all
-// must still classify (fallback identity + 'unknown' platform) — the
-// shape-tolerance floor.
+// Minimal structural requirement (live-UAT round 5): a tpk carrying ONLY the
+// key-evidence field (`key_type`, any string — D-28 platform-agnostic) must
+// still classify with fallback identity — the shape-tolerance floor. A bare
+// `{}` no longer classifies: without `key_type` an entry is a download
+// entitlement, not a key (D-29 — see ebookBundleOrder below).
 export const minimalTpkOrder = {
   gamekey: 'order-minimal',
   tpkd_dict: {
-    all_tpks: [{}]
+    all_tpks: [{ key_type: 'steam' }]
   }
 }
 
@@ -369,6 +371,72 @@ export const realWorldRelativeExpiryOrder = {
         human_name: 'Relative Game',
         is_expired: false,
         num_days_until_expired: 30
+      }
+    ]
+  }
+}
+
+// ─── Download-entitlement filtering (live-UAT round 5, D-29) ──────────────
+// The tester's real PDF/ebook bundle produced key ROWS ("No expiration",
+// platform 'unknown') because round 3 made tpk handling maximally tolerant —
+// any object in all_tpks classified. Ground truth from the two working
+// integrations: Playnite HumbleKeysLibrary only surfaces tpks whose `key_type`
+// matches its platform whitelist (Tpk.key_type is the discriminator), and
+// UncleGoogle/galaxy-integration-humblebundle's Key model reads
+// `data['key_type']` unconditionally — an entry without it is not a key.
+// DRM-free/ebook content normally lives in `subproducts[].downloads`, but when
+// entries DO surface in all_tpks they carry name/identity fields and no
+// `key_type`. The D-29 filter is key-vs-download-entitlement, NOT
+// platform-based: any string key_type still classifies (D-28).
+
+// Pure ebook/PDF bundle: entries in all_tpks with NO key_type at all — must
+// yield ZERO rows and be discoverable via the redacted skip diagnostic.
+export const ebookBundleOrder = {
+  gamekey: 'order-ebooks',
+  product: { category: 'bundle', human_name: 'Book Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'cookbook_pdf',
+        gamekey: 'order-ebooks',
+        human_name: 'Cook Book (PDF)',
+        visible: true
+      },
+      {
+        machine_name: 'novel_epub',
+        gamekey: 'order-ebooks',
+        human_name: 'Novel (EPUB)',
+        visible: true
+      }
+    ]
+  }
+}
+
+// Mixed order: one real steam key + two download entitlements — must yield
+// exactly ONE row (the key), with the entitlements counted in the redacted
+// skip diagnostic.
+export const mixedKeyAndEntitlementOrder = {
+  gamekey: 'order-mixed',
+  product: { category: 'bundle', human_name: 'Mixed Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'actualgame_steam',
+        gamekey: 'order-mixed',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Actual Game',
+        is_expired: false
+      },
+      {
+        machine_name: 'artbook_pdf',
+        gamekey: 'order-mixed',
+        human_name: 'Art Book (PDF)'
+      },
+      {
+        machine_name: 'soundtrack_flac',
+        gamekey: 'order-mixed',
+        human_name: 'Soundtrack (FLAC)'
       }
     ]
   }

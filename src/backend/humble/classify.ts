@@ -46,6 +46,27 @@ function isTerminal(state: HumbleKeyState): boolean {
   return state === 'REDEEMED' || state === 'UNREDEEMABLE'
 }
 
+/**
+ * D-29 key-evidence gate (live-UAT round 5): a tpk becomes a key ROW only when
+ * it carries a `key_type` field with a string value. Both working integrations
+ * gate on exactly this field — Playnite HumbleKeysLibrary only surfaces tpks
+ * whose `Tpk.key_type` matches its platform whitelist, and
+ * UncleGoogle/galaxy-integration-humblebundle's Key model reads
+ * `data['key_type']` unconditionally. Entries WITHOUT it are DRM-free download
+ * entitlements (the tester's PDF/ebook bundle contents), which D-29 excludes
+ * from the inventory entirely.
+ *
+ * IMPORTANT (D-28): this is a key-vs-download-entitlement filter, NOT a
+ * platform whitelist — ANY string key_type (steam, gog, epic, ubisoft, origin,
+ * generic, ...) still classifies. This is the ONE minimal requirement
+ * deliberately added back on top of round 3's "a tpk needs nothing beyond
+ * being an object" tolerance (debug: humble-zero-keys-from-valid-orders);
+ * everything else stays maximally tolerant.
+ */
+function hasKeyEvidence(tpk: Record<string, unknown>): boolean {
+  return typeof tpk.key_type === 'string'
+}
+
 // Candidate field names for an ABSOLUTE expiration date on a tpk. The real
 // Humble field name is NOT conclusively documented in any public source
 // (live-UAT round 4): Playnite HumbleKeysLibrary + official PlayniteExtensions
@@ -144,6 +165,12 @@ export function classifyOrder(
     }
     try {
       const tpk = rawTpk as Record<string, unknown>
+      // D-29 (round 5): skip download entitlements — no key_type, no row.
+      // Skipped entries stay discoverable via the redacted diagnostics
+      // (describeZeroKeyOrder / describeSkippedEntitlements in library.ts).
+      if (!hasKeyEvidence(tpk)) {
+        continue
+      }
       const machineName =
         typeof tpk.machine_name === 'string'
           ? tpk.machine_name
@@ -173,9 +200,9 @@ export function classifyOrder(
         now
       )
       // D-28: platform label is derived from key_type for ANY platform —
-      // classification itself is fully platform-agnostic.
-      const platform =
-        typeof tpk.key_type === 'string' ? tpk.key_type : 'unknown'
+      // classification itself is fully platform-agnostic. Guaranteed a
+      // string here by the hasKeyEvidence gate above.
+      const platform = tpk.key_type as string
       const title =
         typeof tpk.human_name === 'string' ? tpk.human_name : orderLabel
 
@@ -217,9 +244,10 @@ export function classifyOrder(
       })
     }
   }
-  // D-29: no tpks and no subscriptioncontent product (a DRM-free-only
-  // entitlement) -> keys stays empty. DRM-free downloads are excluded from
-  // the inventory entirely.
+  // D-29: no key-evidenced tpks and no subscriptioncontent product (a
+  // DRM-free-only entitlement order — empty all_tpks OR all entries lacking
+  // key_type) -> keys stays empty. DRM-free downloads are excluded from the
+  // inventory entirely.
 
   const allTerminal =
     keys.length > 0 && keys.every((key) => isTerminal(key.state))
@@ -235,9 +263,11 @@ const MAX_DIAGNOSED_FIELDS = 15
 export interface ZeroKeyDiagnosis {
   /**
    * true when the structure is UNEXPECTED for a zero-key order: tpkd_dict or
-   * all_tpks absent/null/mistyped, or a NON-EMPTY all_tpks that still
-   * produced zero keys. false only for the one legitimate shape — an
-   * explicit empty all_tpks array (e.g. a DRM-free order, D-29).
+   * all_tpks absent/null/mistyped, or a NON-EMPTY all_tpks with entries that
+   * should have classified but didn't. false only for the legitimate D-29
+   * exclusion shapes — an explicit empty all_tpks array (DRM-free order) or
+   * a non-empty array whose entries are ALL download entitlements (objects
+   * without key_type, e.g. a PDF/ebook bundle — round 5).
    */
   anomalous: boolean
   /** Structural summary: field NAMES/paths, types and skip reasons only. */
@@ -300,22 +330,78 @@ export function describeZeroKeyOrder(rawOrder: OrderDetail): ZeroKeyDiagnosis {
   }
 
   // Non-empty tpk array that still yielded zero keys: name the structural
-  // check each element failed. classifyOrder only ever skips falsy or
-  // non-object elements, so that is what gets reported per element.
+  // check each element failed. classifyOrder skips falsy/non-object elements
+  // and (round 5, D-29) objects without a string key_type — download
+  // entitlements. Field NAMES only, never values (C5), so a legitimate key
+  // with a weird shape is still discoverable on the next live run.
   const skipped = rawAllTpks
     .slice(0, MAX_DIAGNOSED_FIELDS)
     .map((element, index) => {
       if (!element || typeof element !== 'object') {
         return `[${index}]:non-object(${element === null ? 'null' : typeof element})`
       }
-      // An object element should have classified — if we are here anyway,
-      // the guarded loop's defensive catch fired (e.g. isRevealed threw).
-      return `[${index}]:object-skipped-by-defensive-catch fields=${fieldNames(element)}`
+      const tpk = element as Record<string, unknown>
+      if (typeof tpk.key_type !== 'string') {
+        return `[${index}]:no-key_type(fields=${fieldNames(tpk)})`
+      }
+      // A key-evidenced object element should have classified — if we are
+      // here anyway, the guarded loop's defensive catch fired (e.g.
+      // isRevealed threw).
+      return `[${index}]:object-skipped-by-defensive-catch fields=${fieldNames(tpk)}`
     })
+  // A non-empty array whose entries are ALL download entitlements (objects
+  // without key_type) is the round-5 LEGITIMATE zero-key shape — a PDF/ebook
+  // bundle excluded per D-29. Anything else (non-object elements, or a
+  // key-evidenced entry that still got skipped) is anomalous. Checked over
+  // the FULL array, not the capped detail slice.
+  const allDownloadEntitlements = rawAllTpks.every(
+    (element) =>
+      element !== null &&
+      typeof element === 'object' &&
+      typeof (element as Record<string, unknown>).key_type !== 'string'
+  )
   return {
-    anomalous: true,
+    anomalous: !allDownloadEntitlements,
     detail: `tpkd_dict.all_tpks=array(${rawAllTpks.length}) skipped=[${skipped.join(' ')}]`
   }
+}
+
+/**
+ * Redacted skipped-entitlement diagnosis for orders that DID produce keys
+ * (live-UAT round 5). classifyOrder skips all_tpks entries without a string
+ * `key_type` (download entitlements, D-29); for a MIXED order (keys +
+ * entitlements) the zero-key diagnosis above never runs, so this helper keeps
+ * those skips discoverable — if a legitimate key ever arrives with a weird
+ * shape (missing key_type), its field NAMES show up in the log and the filter
+ * can be adjusted on the next live run. Names only, never values (C5/T-11-04).
+ * Returns null when every entry carried key evidence (nothing skipped). No
+ * I/O and no logging here (module discipline) — library.ts logs the detail.
+ */
+export function describeSkippedEntitlements(
+  rawOrder: OrderDetail
+): string | null {
+  const rawTpks = rawOrder.tpkd_dict?.all_tpks ?? []
+  const skipped: string[] = []
+  let count = 0
+
+  for (const [index, rawTpk] of rawTpks.entries()) {
+    if (!rawTpk || typeof rawTpk !== 'object') {
+      continue
+    }
+    const tpk = rawTpk as Record<string, unknown>
+    if (typeof tpk.key_type === 'string') {
+      continue
+    }
+    count += 1
+    if (skipped.length < MAX_DIAGNOSED_FIELDS) {
+      skipped.push(`[${index}]:no-key_type(fields=${fieldNames(tpk)})`)
+    }
+  }
+
+  if (count === 0) {
+    return null
+  }
+  return `skippedNoKeyType=${count} skipped=[${skipped.join(' ')}]`
 }
 
 /**
@@ -344,6 +430,11 @@ export function describeMissingExpirationTpks(
       continue
     }
     const tpk = rawTpk as Record<string, unknown>
+    // Download entitlements (no key_type, D-29 round 5) are not keys — they
+    // never become rows, so an undatable one is not a "No expiration" bug.
+    if (!hasKeyEvidence(tpk)) {
+      continue
+    }
     // Already-expired keys (is_expired === true) classify correctly without a
     // date, so they are not the "No expiration" bug we are hunting — skip them.
     if (tpk.is_expired === true) {

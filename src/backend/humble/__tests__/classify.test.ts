@@ -8,6 +8,7 @@ import {
   classifyOrder,
   describeZeroKeyOrder,
   describeMissingExpirationTpks,
+  describeSkippedEntitlements,
   extractExpiration
 } from '../classify'
 import {
@@ -31,7 +32,9 @@ import {
   realWorldFutureExpiryDateOrder,
   realWorldPastExpiryDateOrder,
   realWorldRelativeExpiryOrder,
-  realWorldUndatableActiveOrder
+  realWorldUndatableActiveOrder,
+  ebookBundleOrder,
+  mixedKeyAndEntitlementOrder
 } from './fixtures/tpks'
 
 const NEVER_REVEALED = () => false
@@ -218,12 +221,156 @@ describe('classifyOrder — real-world payload shapes', () => {
     expect(entry.keys[0].platform).toBe('steam')
   })
 
-  test('shape-tolerance floor: a bare {} tpk still classifies with fallback identity', () => {
+  test('shape-tolerance floor: a tpk carrying ONLY key_type still classifies with fallback identity', () => {
     const entry = classifyOrder(minimalTpkOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].state).toBe('UNREVEALED')
     expect(entry.keys[0].machineName).toBe('order-minimal:0')
-    expect(entry.keys[0].platform).toBe('unknown')
+    expect(entry.keys[0].platform).toBe('steam')
+  })
+})
+
+// ── Download-entitlement filtering (live-UAT round 5, D-29) ───────────────
+// A row requires actual key evidence: a `key_type` field with a string value
+// (any platform — the filter is key-vs-download-entitlement, never
+// platform-based, so D-28 is untouched). Entries without key_type are
+// DRM-free download entitlements (the tester's PDF/ebook bundle) and are
+// excluded from the inventory entirely.
+
+describe('classifyOrder — download entitlements without key_type (D-29)', () => {
+  test('a pure ebook/PDF bundle (entries without key_type) yields ZERO rows', () => {
+    const entry = classifyOrder(ebookBundleOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(0)
+    expect(entry.allTerminal).toBe(false)
+  })
+
+  test('a bare {} tpk (no key evidence) is skipped, not classified', () => {
+    const entry = classifyOrder(
+      { gamekey: 'order-bare', tpkd_dict: { all_tpks: [{}] } },
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(0)
+  })
+
+  test('mixed order (1 steam key + 2 download entitlements) yields exactly 1 row', () => {
+    const entry = classifyOrder(mixedKeyAndEntitlementOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].machineName).toBe('actualgame_steam')
+    expect(entry.keys[0].platform).toBe('steam')
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+  })
+
+  test('D-28 untouched: any string key_type still classifies (generic/origin/ubisoft)', () => {
+    const entry = classifyOrder(
+      {
+        gamekey: 'order-platforms',
+        tpkd_dict: {
+          all_tpks: [
+            { machine_name: 'a_generic', key_type: 'generic' },
+            { machine_name: 'b_origin', key_type: 'origin' },
+            { machine_name: 'c_ubisoft', key_type: 'ubisoft' }
+          ]
+        }
+      },
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(3)
+    expect(entry.keys.map((k) => k.platform)).toEqual([
+      'generic',
+      'origin',
+      'ubisoft'
+    ])
+  })
+
+  test('D-27 unaffected: the UNPICKED pseudo-entry path still fires when all tpks are entitlements', () => {
+    // A subscriptioncontent order whose all_tpks carries ONLY no-key_type
+    // entries ends with zero classified keys — the unpicked Choice month
+    // pseudo-entry (which intentionally has no tpk/key_type) must still be
+    // produced.
+    const entry = classifyOrder(
+      {
+        gamekey: 'choice-entitlements',
+        product: {
+          category: 'subscriptioncontent',
+          choice_url: 'home/may-2026',
+          human_name: 'Humble Choice — May 2026'
+        },
+        tpkd_dict: {
+          all_tpks: [{ machine_name: 'wallpaper_pack', human_name: 'Wallpapers' }]
+        }
+      },
+      NEVER_REVEALED
+    )
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNPICKED')
+  })
+})
+
+describe('describeZeroKeyOrder — no-key_type skip reasons (round 5)', () => {
+  test('a pure ebook bundle diagnoses each entry as no-key_type with field NAMES', () => {
+    const diagnosis = describeZeroKeyOrder(ebookBundleOrder)
+    // A download-entitlement-only order is the LEGITIMATE D-29 exclusion
+    // shape — informational, not anomalous.
+    expect(diagnosis.anomalous).toBe(false)
+    expect(diagnosis.detail).toContain('all_tpks=array(2)')
+    expect(diagnosis.detail).toContain('[0]:no-key_type(fields=[')
+    expect(diagnosis.detail).toContain('[1]:no-key_type(fields=[')
+    expect(diagnosis.detail).toContain('machine_name')
+    expect(diagnosis.detail).toContain('human_name')
+  })
+
+  test('a mix of non-object and no-key_type entries is still anomalous', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: {
+        all_tpks: ['not-an-object', { machine_name: 'thing_pdf' }]
+      }
+    })
+    expect(diagnosis.anomalous).toBe(true)
+    expect(diagnosis.detail).toContain('[0]:non-object(string)')
+    expect(diagnosis.detail).toContain('[1]:no-key_type(fields=[')
+  })
+
+  test('C5 redaction: no-key_type skip reasons carry field NAMES only, never values', () => {
+    const diagnosis = describeZeroKeyOrder({
+      gamekey: 'gk',
+      tpkd_dict: {
+        all_tpks: [{ machine_name: 'SECRET-NAME-MUST-NOT-LEAK-AS-VALUE', secret: 'SECRET-VALUE' }]
+      }
+    })
+    expect(diagnosis.detail).toContain('machine_name')
+    expect(diagnosis.detail).toContain('secret')
+    expect(diagnosis.detail).not.toContain('SECRET-VALUE')
+    expect(diagnosis.detail).not.toContain('SECRET-NAME-MUST-NOT-LEAK-AS-VALUE')
+  })
+})
+
+describe('describeSkippedEntitlements — mixed-order discoverability (round 5)', () => {
+  test('a mixed order reports the skipped entitlement count + per-entry field names', () => {
+    const detail = describeSkippedEntitlements(mixedKeyAndEntitlementOrder)
+    expect(detail).not.toBeNull()
+    expect(detail).toContain('skippedNoKeyType=2')
+    expect(detail).toContain('[1]:no-key_type(fields=[')
+    expect(detail).toContain('[2]:no-key_type(fields=[')
+    expect(detail).toContain('machine_name')
+  })
+
+  test('an order whose tpks are ALL keys reports nothing (null)', () => {
+    expect(describeSkippedEntitlements(realWorldUnrevealedPurchaseOrder)).toBeNull()
+  })
+
+  test('C5 redaction: field NAMES only, never field values', () => {
+    const detail = describeSkippedEntitlements({
+      gamekey: 'gk',
+      tpkd_dict: {
+        all_tpks: [
+          { key_type: 'steam', machine_name: 'real_key' },
+          { machine_name: 'g', secret: 'SECRET-MUST-NOT-LEAK' }
+        ]
+      }
+    })
+    expect(detail).toContain('secret')
+    expect(detail).not.toContain('SECRET-MUST-NOT-LEAK')
   })
 })
 
@@ -318,13 +465,22 @@ describe('describeMissingExpirationTpks — round 4 date-field discovery', () =>
     ).toBeNull()
   })
 
+  test('download entitlements (no key_type) are not keys — never diagnosed as missing a date', () => {
+    expect(describeMissingExpirationTpks(ebookBundleOrder, NOW)).toBeNull()
+  })
+
   test('C5 redaction: diagnosis carries field NAMES only, never field values', () => {
     const detail = describeMissingExpirationTpks(
       {
         gamekey: 'gk',
         tpkd_dict: {
           all_tpks: [
-            { machine_name: 'g', is_expired: false, secret: 'SECRET-MUST-NOT-LEAK' }
+            {
+              machine_name: 'g',
+              key_type: 'steam',
+              is_expired: false,
+              secret: 'SECRET-MUST-NOT-LEAK'
+            }
           ]
         }
       },
