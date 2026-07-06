@@ -308,3 +308,88 @@ export const strippedNoTpkdDictOrder = {
   product: { category: 'bundle', human_name: 'Stripped Order' },
   subproducts: []
 }
+
+// ─── Real-world expiration shapes (live-UAT round 4) ──────────────────────
+// The spec's single `expiration` string name never matched the live payload,
+// so every row showed "No expiration". The real absolute date field is not
+// conclusively documented; best-evidence candidate is `expiry_date` (FailSpy
+// fork DIASILEDU reads `tpk.get("expiry_date")`). These fixtures cover the
+// absolute-date and relative-days shapes extractExpiration must handle.
+
+// Active key with a FUTURE absolute expiry_date (the tester's "Settlement
+// Survival expires Aug 3rd 2026" case): is_expired:false, must classify
+// UNREVEALED and carry a populated, ISO-normalized expiration for display+sort.
+export const realWorldFutureExpiryDateOrder = {
+  gamekey: 'order-future-expiry',
+  product: { category: 'bundle', human_name: 'Expiring Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'settlementsurvival_steam',
+        gamekey: 'order-future-expiry',
+        key_type: 'steam',
+        key_type_human_name: 'Steam',
+        human_name: 'Settlement Survival',
+        is_expired: false,
+        expiry_date: '2026-08-03T00:00:00Z'
+      }
+    ]
+  }
+}
+
+// Key with a PAST absolute expiry_date but NO is_expired flag — the date alone
+// must classify UNREDEEMABLE (extractExpiration -> classifyTpk past-date tier).
+export const realWorldPastExpiryDateOrder = {
+  gamekey: 'order-past-expiry',
+  product: { category: 'bundle', human_name: 'Lapsed Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'lapsedgame_steam',
+        gamekey: 'order-past-expiry',
+        key_type: 'steam',
+        human_name: 'Lapsed Game',
+        expiry_date: '2020-01-01T00:00:00Z'
+      }
+    ]
+  }
+}
+
+// Relative-days shape: `num_days_until_expired` -> extractExpiration computes
+// syncTime + N days as the absolute expiration.
+export const realWorldRelativeExpiryOrder = {
+  gamekey: 'order-relative-expiry',
+  product: { category: 'bundle', human_name: 'Relative Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'relativegame_steam',
+        gamekey: 'order-relative-expiry',
+        key_type: 'steam',
+        human_name: 'Relative Game',
+        is_expired: false,
+        num_days_until_expired: 30
+      }
+    ]
+  }
+}
+
+// Active key with NO recognized date field and is_expired:false — the shape the
+// round-4 expiration diagnostic must surface (candidate field names, redacted)
+// so the true date field can be identified on the next live run.
+export const realWorldUndatableActiveOrder = {
+  gamekey: 'order-undatable',
+  product: { category: 'bundle', human_name: 'Undatable Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'undatablegame_steam',
+        gamekey: 'order-undatable',
+        key_type: 'steam',
+        human_name: 'Undatable Game',
+        is_expired: false,
+        some_unknown_date_field: '2027-01-01T00:00:00Z'
+      }
+    ]
+  }
+}

@@ -854,4 +854,76 @@ describe('HumbleLibrary', () => {
       }
     })
   })
+
+  // Live-UAT round 4: every key row showed "No expiration" because the real
+  // Humble date field name was not extracted. The expiration-field discovery
+  // diagnostic logs (field NAMES only, C5) the candidate fields on active keys
+  // we could not date, so the true field is confirmable from the next run.
+  describe('sync() — expiration-field discovery diagnostic (round 4)', () => {
+    test('an active key with no extractable expiration logs its candidate field names (info, redacted)', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['undatable-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'undatable-gk',
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'undatable_steam',
+                gamekey: 'undatable-gk',
+                key_type: 'steam',
+                human_name: 'Undatable Game',
+                is_expired: false,
+                mystery_date_field: 'SECRET-DATE-MUST-NOT-LEAK'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const diag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('no extractable expiration')
+      )
+      expect(diag).toBeDefined()
+      const logged = JSON.stringify(diag)
+      expect(logged).toContain('undatable-gk')
+      expect(logged).toContain('mystery_date_field')
+      // C5: field NAMES only — never the field VALUE.
+      expect(logged).not.toContain('SECRET-DATE-MUST-NOT-LEAK')
+    })
+
+    test('a key with an extractable expiry_date does NOT trigger the discovery diagnostic', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['dated-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: {
+          gamekey: 'dated-gk',
+          tpkd_dict: {
+            all_tpks: [
+              {
+                machine_name: 'dated_steam',
+                gamekey: 'dated-gk',
+                key_type: 'steam',
+                human_name: 'Dated Game',
+                is_expired: false,
+                expiry_date: '2026-08-03T00:00:00Z'
+              }
+            ]
+          }
+        }
+      })
+
+      await HumbleLibrary.sync()
+
+      const keys = HumbleLibrary.getKeys()
+      expect(keys).toHaveLength(1)
+      expect(keys[0].expiration).toBe('2026-08-03T00:00:00.000Z')
+      const diag = mockLogInfo.mock.calls.find((call) =>
+        JSON.stringify(call).includes('no extractable expiration')
+      )
+      expect(diag).toBeUndefined()
+    })
+  })
 })
