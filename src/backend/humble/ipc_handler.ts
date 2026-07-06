@@ -30,6 +30,31 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleSync', async () => HumbleLibrary.sync())
   addHandler('humbleGetKeys', () => HumbleLibrary.getKeys())
   addHandler('humbleGetSyncState', () => HumbleLibrary.getSyncState())
+  // Phase 12 (Plan 04, D-42/T-12-03): "Not the same game" override. This is
+  // the ONE authoritative server-side check that an override target is
+  // actually a fuzzy match — the renderer must never be trusted to have
+  // gated its own button. A compromised/buggy renderer calling this on an
+  // exact-match machineName is rejected + logged, never persisted (an exact
+  // AppID match is ground truth per D-44 and is never overridable).
+  addHandler('humbleSetOwnershipOverride', async (e, machineName) => {
+    const targetKey = HumbleLibrary.getKeys().find(
+      (key) => key.machineName === machineName
+    )
+    if (!targetKey || targetKey.matchConfidence !== 'fuzzy') {
+      logWarning(
+        [
+          'Rejected humbleSetOwnershipOverride for non-fuzzy machineName:',
+          machineName
+        ],
+        LogPrefix.Backend
+      )
+      return
+    }
+    HumbleLibrary.setOwnershipOverride(machineName)
+  })
+  addHandler('humbleClearOwnershipOverride', async (e, machineName) =>
+    HumbleLibrary.clearOwnershipOverride(machineName)
+  )
   // WR-02: never discard the disconnect promise silently — a rejection here
   // (e.g. session.fromPartition throwing) must not become an unhandled
   // rejection in the main process. The credential wipe itself runs first
