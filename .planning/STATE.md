@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
-status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-07-06T20:16:06.727Z"
+status: ready_to_plan
+stopped_at: Phase 12 complete (5/5) — ready to discuss Phase 13
+last_updated: 2026-07-06T21:23:05.717Z
 last_activity: 2026-07-06 -- Phase 12 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 0
-  completed_plans: 0
+  completed_plans: 33
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 12 — ownership-dedup
+**Current focus:** Phase 13 — keys waiting + giftable spares views
 
 ## Current Position
 
-Phase: 12 (ownership-dedup) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 12
-Last activity: 2026-07-06 -- Phase 12 execution started
+Phase: 13
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-06
 
 ## v1.1 Phase Map
 
@@ -55,7 +55,7 @@ Last activity: 2026-07-06 -- Phase 12 execution started
 
 **Velocity (v1.0):**
 
-- Total plans completed: 36 (phases 1-4)
+- Total plans completed: 41 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -72,6 +72,7 @@ Last activity: 2026-07-06 -- Phase 12 execution started
 | 08.1 | 4 | - | - |
 | 10 | 6 | - | - |
 | 11 | 5 | - | - |
+| 12 | 5 | - | - |
 
 **v1.0 Detail Log:**
 
