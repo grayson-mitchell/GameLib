@@ -42,6 +42,12 @@ findings:
   info: 7
   total: 18
 status: issues_found
+fix_pass:
+  fixed_at: 2026-07-06
+  scope: critical_warning
+  fixed: 11
+  skipped: 0
+  info_deferred: 7
 ---
 
 # Phase 11: Code Review Report
@@ -66,6 +72,8 @@ The remaining findings are robustness gaps (a documented "never throws" contract
 ## Critical Issues
 
 ### CR-01: Disconnect does not fence the in-flight sync — wiped library/sync stores are silently repopulated, enabling stale/cross-account key inventory
+
+**Status:** FIXED — commit `14badb78`. Generation fence in new leaf module `src/backend/humble/syncFence.ts`; `disconnect()` bumps it before the wipes; `runSync()` skips all store commits, sync-state writes, renderer pushes and further authenticated requests once stale. Regression tests: disconnect mid-sync keeps stores wiped, blocks post-fence pushes/dispatches.
 
 **File:** `src/backend/humble/user.ts:440-482` (disconnect), `src/backend/humble/library.ts:126-133, 465-479` (commits)
 
@@ -111,6 +119,8 @@ Also skip the `humbleKeysUpdated`/`humbleSyncStateChanged` pushes when the gener
 
 ### WR-01: `humbleSync` violates its "never throws" IPC contract — unexpected rejections reach fire-and-forget renderer callers as unhandled promise rejections
 
+**Status:** FIXED — commit `d20de0fd`. `sync()` now catches any unexpected rejection at the boundary, logs it, records `syncError: network` (CR-01 generation-fenced) and resolves `{ status: 'failed' }`. Regression test covers a worker-side throw.
+
 **File:** `src/backend/humble/library.ts:297-309, 405-418`; `src/common/types/ipc.ts:269-272`; `src/frontend/state/GlobalState.tsx:766, 1128`; `src/frontend/screens/Humble/Keys/index.tsx:126`
 
 **Issue:** `common/types/ipc.ts` documents `humbleSync: ... Returns the overall outcome — never throws`. But `runSync()` only guards the two adapter calls. The `runBounded` worker callback (`library.ts:408-417`) also runs `sendFrontendMessage`, `getKeys()` (which has already thrown in production once — the `__timestamp` pseudo-entry bug), and `setSyncState` (electron-store disk write, can throw on I/O errors). Any throw there rejects `Promise.all` → `runSync()` rejects → `sync()` returns the rejected promise (the `.finally` does not swallow it). Every renderer call site is fire-and-forget with no `.catch`: `void window.api.humbleSync()` (GlobalState:766), `.then(() => window.api.humbleSync())` (GlobalState:1128), `onClick={() => window.api.humbleSync()}` (Keys screen:126). Result: an unhandled rejection in the renderer and a sync whose outcome is never recorded (`syncError` untouched). WR-02 below is a concrete payload-triggerable instance.
@@ -136,6 +146,8 @@ async function sync(): Promise<SyncOutcome> {
 
 ### WR-02: `extractExpiration` can throw despite its "Never throws" contract — a drifted `num_days_until_expired` crashes the whole sync
 
+**Status:** FIXED — commit `9612448e`. The relative-days candidate Date is validated (`Number.isNaN(candidate.getTime())`) before `.toISOString()`. Regression tests: unit (1e12 days, `Number.MAX_VALUE`) and sync-level (drifted order commits with `expiration: null`).
+
 **File:** `src/backend/humble/classify.ts:205-208`, reached unguarded via `describeMissingExpirationTpks` at `classify.ts:541` from `library.ts:181`
 
 **Issue:** The doc comment states "Never throws — a malformed value simply yields null." But the relative-days branch does `new Date(now.getTime() + days * MS_PER_DAY).toISOString()` with only `Number.isFinite(days) && days > 0` as a guard. Any `days > ~1e8` overflows the ECMAScript time range, producing an invalid Date whose `.toISOString()` throws `RangeError: Invalid time value` (verified). Inside `classifyOrder` the per-tpk `try/catch` silently swallows it (dropping the key), but `describeMissingExpirationTpks` calls `extractExpiration` with **no** try/catch, and `library.ts:181` calls it outside `fetchAndCommitOrder`'s try block — so a single hostile/drifted tpk value rejects the worker, the pool, and the entire `sync()` promise (the WR-01 path). This directly contradicts the module's shape-drift-tolerance design (Pitfall 2 / T-11-05).
@@ -154,6 +166,8 @@ return null
 
 ### WR-03: Login watch has no timeout and survives renderer reloads — indefinite cookie poll + Humble validation loop (C5 pressure)
 
+**Status:** FIXED — commit `a06ae493`. `LOGIN_WATCH_TIMEOUT_MS` (10 min) deadline settles `{ status: 'waiting' }` and tears the watch down; re-armed on every `notifyLoginNavigated()` relay. Tests cover expiry teardown and the re-arm path.
+
 **File:** `src/backend/humble/user.ts:197-304`
 
 **Issue:** `watchForLogin()` polls the partition cookie every 1.5s forever until `stopLogin()` or a successful validation. The only teardown signal is the renderer sending `humbleStopLogin` on route unmount. Several in-app flows call `window.location.reload()` (epic/gog/amazon/zoom/steam logout in `GlobalState.tsx`), and a renderer crash/reload is always possible — in those cases the unmount cleanup never fires and the main-process watch is orphaned. Once the anonymous `_simpleauth_sess` cookie exists, the orphaned watch re-validates it against the gamekeys endpoint roughly every 3s (the throttle window) **indefinitely** — a sustained, unbounded request loop against Humble that contradicts the C5 never-hammer discipline (a resulting 429 maps to `access_denied` → 'rejected' → 3s throttle → retry, forever). It also keeps the promise from `humbleStartLogin` pending forever.
@@ -170,6 +184,8 @@ Optionally re-arm the deadline on `notifyLoginNavigated()` so an actively-naviga
 
 ### WR-04: `gamekey` interpolated into the request path without URL encoding
 
+**Status:** FIXED — commit `6eeffd43`. `encodeURIComponent(gamekey)` in the order-detail path. Test asserts a metacharacter-laden gamekey is percent-encoded with `?all_tpkds=true` intact.
+
 **File:** `src/backend/humble/adapter.ts:302-304`
 
 **Issue:** `getOrderDetail` builds `` `/api/v1/order/${gamekey}?all_tpkds=true` ``. `gamekey` is schema-validated only as `z.string()` from the order-list response. A drifted/hostile value containing `/`, `?`, `#`, or whitespace silently changes the request target or truncates the `all_tpkds=true` query (the exact parameter whose absence caused the round-3 zero-keys failure). The adapter is the designated C5 isolation wall; it should not forward an untrusted string into the URL structure verbatim.
@@ -185,6 +201,8 @@ const response = await humbleRequest(
 
 ### WR-05: `syncing` is derived only from progress events — never true for 0/1-order syncs and false until the first order resolves
 
+**Status:** FIXED — commit `be99e51e`. Initial `{ done: 0, total }` push before the pool dispatches (CR-01-fenced). Tests cover the 1-order and all-frozen (total 0) cases.
+
 **File:** `src/frontend/state/GlobalState.tsx:1097-1101`; `src/backend/humble/library.ts:405-417`
 
 **Issue:** The renderer computes `syncing: done < total` from `humbleSyncProgress`, and the backend emits progress only *after* each order resolves (`done += 1` before send). Consequences: (a) for `total === 1`, the single event is `{done:1, total:1}` → `syncing` is never true; (b) for `total === 0` (all frozen), no event fires at all; (c) for multi-order syncs, the spinner and the refresh button's `disabled` state engage only after the first order completes (up to 15s with the request timeout). During that window the refresh button stays enabled and un-spinning, inviting repeat clicks (harmless only because of the backend single-flight guard) and giving no feedback that the click did anything.
@@ -192,6 +210,8 @@ const response = await humbleRequest(
 **Fix:** Emit an initial `humbleSyncProgress` `{ done: 0, total }` in `runSync()` before `runBounded` (covers b and c), or push an explicit `syncing: true` via a state event at sync start.
 
 ### WR-06: Refresh-button cooldown never re-enables without an external re-render
+
+**Status:** FIXED — commit `9bf1a218`. Timeout keyed on `cooldownUntil` clears the local cooldown state at its exact expiry, re-enabling the button without an external re-render.
 
 **File:** `src/frontend/screens/Humble/Keys/index.tsx:88-100, 125`
 
@@ -209,6 +229,8 @@ useEffect(() => {
 
 ### WR-07: UNPICKED `deadline_date` is used unvalidated — an unparseable value renders "Expires Invalid Date" and produces NaN sort comparisons
 
+**Status:** FIXED — commit `1d36fc9c`. `deadline_date` now normalized through `extractExpiration({ expiry_date: rawDeadline }, now)`; unparseable values degrade to null (no-deadline display). Tests cover normalization and drifted-value degradation.
+
 **File:** `src/backend/humble/classify.ts:311-326`; `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx:38-39`; `src/common/humble/groupKeys.ts:45`
 
 **Issue:** The UNPICKED pseudo-entry branch copies `product.deadline_date` into `HumbleKey.expiration` after only a `typeof === 'string'` check — unlike every tpk expiration, which goes through `extractExpiration`'s parse-and-ISO-normalize with an isNaN guard. The field name itself is flagged as speculative (Assumption A2). If the live value is a non-ISO or unparseable string: `HumbleKeyRow` renders `new Date(display.iso).toLocaleDateString()` → the literal string "Invalid Date" in the UI, and `byExpiringSoonest` compares `NaN` (comparator returns NaN → unspecified sort order). This is exactly the class of tolerance bug rounds 4-5 fixed for tpk dates, left open on the D-27 branch.
@@ -225,6 +247,8 @@ const deadline =
 
 ### WR-08: `machineName` used as React key can collide across orders — duplicate keys in one group list
 
+**Status:** FIXED — commit `e81a3624`. Rows keyed by `${key.gamekey}:${key.machineName}`. REVEALED-flag semantics (machineName-keyed) intentionally unchanged; display de-duplication left as a product decision.
+
 **File:** `src/frontend/screens/Humble/Keys/components/HumbleKeyGroup/index.tsx:83`; `src/common/types/humble.ts:96-99`
 
 **Issue:** `getKeys()` flattens all cached orders with no de-duplication, and `HumbleKeyGroup` renders `key={key.machineName}`. Humble tpk `machine_name` values are per-product, not per-order — the same game key type appearing in two owned bundles (a well-known Humble occurrence; it is *why* Playnite dedupes on machine_name) yields two rows with the same `machineName`. When both land in the same state group (likely — same product, same state), React duplicate-key behavior kicks in: reconciliation errors/dropped rows in dev, subtle mis-rendering on updates. Separately, the REVEALED flag keyed by `machineName` conflates the two copies (revealing one marks both) — possibly intended per the "de-duplication" comment on the type, but the rendered list is not actually de-duplicated to match that assumption.
@@ -233,6 +257,8 @@ const deadline =
 
 ### WR-09: Circular import between HumbleKeyGroup and HumbleKeyRow
 
+**Status:** FIXED — commit `e5139cdc`. `STATE_LABEL_KEYS` moved to leaf module `src/frontend/screens/Humble/Keys/stateLabels.ts`, imported by both components.
+
 **File:** `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx:5`; `src/frontend/screens/Humble/Keys/components/HumbleKeyGroup/index.tsx:9`
 
 **Issue:** `HumbleKeyGroup` imports `HumbleKeyRow` (component) while `HumbleKeyRow` imports `STATE_LABEL_KEYS` back from `HumbleKeyGroup`. This works today only because the row accesses the binding at render time (after both modules finish evaluating); any refactor that reads `STATE_LABEL_KEYS` at module scope in the row (e.g. deriving a lookup table) hits the ES-module TDZ and fails at runtime with a non-obvious "cannot access before initialization" error. Shared constants inside a component module are the classic seed of this failure.
@@ -240,6 +266,8 @@ const deadline =
 **Fix:** Move `STATE_LABEL_KEYS` to a leaf module both components import, e.g. `src/frontend/screens/Humble/Keys/stateLabels.ts` (or alongside the other pure helpers in `common/humble/`).
 
 ### WR-10: Pre-existing: `handleExperimentalFeatures` writes the whole features object into `zoom.enabled`
+
+**Status:** FIXED — commit `85c2c184`. `zoom: { ...this.state.zoom, enabled: !!value.zoomPlatform }`.
 
 **File:** `src/frontend/state/GlobalState.tsx:574-579`
 
@@ -262,11 +290,15 @@ handleExperimentalFeatures = (value: ExperimentalFeatures) => {
 
 ### IN-01: `partitionGamekeys` computes a `frozenGamekeys` bucket nobody consumes
 
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
+
 **File:** `src/backend/humble/library.ts:47-51, 63, 71-78, 396`
 **Issue:** `runSync` destructures only `newGamekeys`/`nonTerminalGamekeys`; the frozen count in the summary log is recomputed as `data.length - total`. The third bucket is dead weight.
 **Fix:** Drop `frozenGamekeys` from the return shape, or use it for the summary-log count.
 
 ### IN-02: `formatRelativeTime` is hardcoded English and the freshness line never ticks
+
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
 
 **File:** `src/frontend/screens/Humble/Keys/index.tsx:19-33, 88-91`
 **Issue:** "less than a minute" / "minutes" / "hours" / "days" bypass i18n (interpolated into translated strings), and the "Last synced X ago" value is frozen at render time. Mirrors an existing LibraryHeader pattern, so flagged informationally.
@@ -274,11 +306,15 @@ handleExperimentalFeatures = (value: ExperimentalFeatures) => {
 
 ### IN-03: Sync never prunes cache entries for gamekeys no longer in the account's order list
 
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
+
 **File:** `src/backend/humble/library.ts:261-267, 396-401`
 **Issue:** `getKeys()` flattens every cached order; orders removed server-side (refunds, revoked gifts) persist in the inventory forever since only fetched entries are written and nothing is deleted.
 **Fix:** After a clean gamekeys fetch, delete cached entries whose gamekey is absent from `gamekeysResult.data`.
 
 ### IN-04: `frontend/types.ts` duplicates the `syncError` literal union
+
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
 
 **File:** `src/frontend/types.ts:114`
 **Issue:** `syncError?: 'none' | 'denied' | 'network' | 'partial'` restates `HumbleSyncState['syncError']` (which `GlobalState.tsx:92` references properly). A future variant added to the backend type will silently drift.
@@ -286,17 +322,23 @@ handleExperimentalFeatures = (value: ExperimentalFeatures) => {
 
 ### IN-05: `schema_error` results carry the full raw untrusted body, including `redeemed_key_val`
 
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
+
 **File:** `src/common/types/humble.ts:13`; `src/backend/humble/adapter.ts:238, 271, 309`
 **Issue:** No in-scope consumer logs or forwards `raw`, but the discriminant hands every caller a payload that can contain raw key values — a standing hazard for the invariant the rest of the phase enforces so carefully. One future `logWarning(result.raw)` defeats C4/T-11-01.
 **Fix:** Drop `raw` from the public result (the redacted `describeSchemaFailure` log already serves diagnosis), or replace it with the redacted diagnosis string.
 
 ### IN-06: Startup chain still fires a sync (one guaranteed-401 request) after the health check flags expiry
 
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
+
 **File:** `src/frontend/state/GlobalState.tsx:1127-1129`
 **Issue:** The comment says "an already-expired session never syncs", but `humbleCheckHealth().then(() => window.api.humbleSync())` runs the sync unconditionally; on an expired session `runSync`'s `getGamekeys` makes one more 401 round-trip before failing. Harmless but contradicts the comment and adds avoidable C5 noise.
 **Fix:** Have `humbleCheckHealth` resolve a boolean (healthy/expired) and gate the sync, or have the backend chain health→sync itself.
 
 ### IN-07: Pre-existing: `CacheStore.set` stores a locale-dependent `Date()` string as the timestamp
+
+**Status:** DEFERRED — Info findings were out of scope for the 2026-07-06 fix pass (scope: Critical + Warnings).
 
 **File:** `src/backend/cache.ts:82`
 **Issue:** `Date()` yields a human-readable local-time string later re-parsed with `new Date(string)` — implementation/locale-dependent parsing. Harmless for the Phase 11 stores (lifespan `null`, timestamps unused), noted since the file was touched this phase for `entries()`.
