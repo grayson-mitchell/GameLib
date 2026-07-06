@@ -99,6 +99,29 @@ describe('classifyOrder', () => {
     expect(entry.allTerminal).toBe(false)
   })
 
+  // WR-07: deadline_date is a speculative field name (Assumption A2) — it
+  // must go through the same parse-and-normalize as every tpk expiration,
+  // never be copied raw into HumbleKey.expiration.
+  test('WR-07: a parseable deadline_date is ISO-normalized on the UNPICKED pseudo-entry', () => {
+    const entry = classifyOrder(unpickedChoiceMonthOrder, NEVER_REVEALED)
+    expect(entry.keys[0].expiration).toBe('2026-03-31T23:59:59.000Z')
+  })
+
+  test('WR-07: an unparseable deadline_date degrades to null (no "Invalid Date" render, no NaN sort), never throws', () => {
+    const drifted = {
+      ...unpickedChoiceMonthOrder,
+      product: {
+        ...unpickedChoiceMonthOrder.product,
+        deadline_date: 'March 31st, whenever'
+      }
+    }
+    expect(() => classifyOrder(drifted, NEVER_REVEALED)).not.toThrow()
+    const entry = classifyOrder(drifted, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(entry.keys[0].expiration).toBe(null)
+  })
+
   test('D-27: unpicked Choice month missing choice_url -> never throws, omits pseudo-entry', () => {
     expect(() =>
       classifyOrder(unpickedChoiceMonthMissingUrlOrder, NEVER_REVEALED)

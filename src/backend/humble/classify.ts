@@ -317,10 +317,15 @@ export function classifyOrder(
   // pseudo-entry (Pitfall 2 defensive handling, Assumption A1/A2).
   if (keys.length === 0 && rawProduct) {
     if (rawProduct.category === 'subscriptioncontent' && rawProduct.choice_url) {
+      // WR-07: normalize the deadline through the SAME tolerant helper as
+      // every tpk expiration. The field name is speculative (Assumption A2),
+      // so an unparseable live value must degrade to null (-> the
+      // no-deadline display) — a raw copy previously rendered the literal
+      // "Invalid Date" and produced NaN comparisons in byExpiringSoonest.
+      const rawDeadline = (rawProduct as Record<string, unknown>).deadline_date
       const deadline =
-        typeof (rawProduct as Record<string, unknown>).deadline_date ===
-        'string'
-          ? ((rawProduct as Record<string, unknown>).deadline_date as string)
+        typeof rawDeadline === 'string'
+          ? extractExpiration({ expiry_date: rawDeadline }, now)
           : null
       keys.push({
         gamekey,
