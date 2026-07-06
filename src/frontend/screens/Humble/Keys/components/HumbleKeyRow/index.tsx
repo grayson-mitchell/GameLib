@@ -8,9 +8,12 @@ type Props = {
   humbleKey: HumbleKey
 }
 
-// D-22: strictly read-only. No click handler, no button/link element, no
-// cursor:pointer, no reveal/copy/expand affordance — Phase 14 owns claim
-// actions, not this row. Do not "improve" this into an interactive element.
+// D-22: strictly read-only, with ONE sanctioned exception. No click handler,
+// no button/link element, no cursor:pointer, no reveal/copy/expand affordance
+// — Phase 14 owns claim actions, not this row. The D-42 "Not the same game"
+// override below is the single carve-out (fuzzy-matched rows only); every
+// other interaction remains forbidden. Do not "improve" this row further into
+// a generally-interactive element.
 export default function HumbleKeyRow({ humbleKey }: Props) {
   const { t } = useTranslation()
 
@@ -59,6 +62,27 @@ export default function HumbleKeyRow({ humbleKey }: Props) {
               platform: humbleKey.platform,
               origin: humbleKey.origin
             })}
+          </span>
+        )}
+        {humbleKey.ownedElsewhere && (
+          <span className="humbleKeyOwnedBadge">
+            {humbleKey.matchConfidence === 'exact'
+              ? t('humbleKeys.ownedOnSteam', 'Owned on Steam')
+              : t('humbleKeys.likelyOwnedOnSteam', 'Likely owned on Steam')}
+            {/* D-42 sanctioned exception: the ONLY interactive affordance on
+                this otherwise read-only row (D-22), and only for fuzzy
+                matches — exact AppID matches are trusted, no override. */}
+            {humbleKey.matchConfidence === 'fuzzy' && (
+              <button
+                type="button"
+                className="humbleKeyOwnedOverride"
+                onClick={() =>
+                  window.api.humbleSetOwnershipOverride(humbleKey.machineName)
+                }
+              >
+                {t('humbleKeys.notTheSameGame', 'Not the same game')}
+              </button>
+            )}
           </span>
         )}
       </div>

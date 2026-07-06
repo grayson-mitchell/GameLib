@@ -223,3 +223,33 @@
 .humbleKeyStateBadge--UNREDEEMABLE {
   background: var(--status-danger);
 }
+
+/* Phase 12 (D-38/D-39/D-41): purely additive fact-only ownership badge — does
+   not participate in D-21 layout ordering (no dimming, no re-sort). Reuses
+   the same typography as .humbleKeyRowCaption so it reads as a secondary
+   line rather than a competing state badge. */
+.humbleKeyOwnedBadge {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--status-success);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+/* D-42 sanctioned exception: the single interactive affordance on an
+   otherwise read-only row (D-22), rendered only on fuzzy-matched rows. */
+.humbleKeyOwnedOverride {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.humbleKeyOwnedOverride:hover {
+  color: var(--accent);
+}
