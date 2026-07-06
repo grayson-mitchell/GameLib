@@ -325,7 +325,7 @@ Plans:
   2. A Humble Steam key already redeemed into Steam appears as an annotation on the existing Steam library entry rather than as a separate Humble entry
   3. Ownership matching uses AppID as the primary key (exact match via `steam_app_id`) with an 85%+ fuzzy-name fallback — DLC titles do not false-positive match their base game entries
 **Plans**: 5 plans (5 waves — inherently linear dependency chain: types → matcher → wiring → IPC → UI)
-- [ ] 12-01-PLAN.md — HumbleKey type + constants (classifier v3, fuzzy threshold) + steam_app_id capture in classify (HDEDUP-01, HDEDUP-02)
+- [x] 12-01-PLAN.md — HumbleKey type + constants (classifier v3, fuzzy threshold) + steam_app_id capture in classify (HDEDUP-01, HDEDUP-02)
 - [ ] 12-02-PLAN.md — Pure dedup.ts matcher (exact-AppID-final + fuzzy-85%+DLC-guard) behind fastest-levenshtein legitimacy gate (HDEDUP-01)
 - [ ] 12-03-PLAN.md — Override store + disconnect exemption + library.ts recompute wiring, backfill, keep-last-known connectivity gate (HDEDUP-01, HDEDUP-02)
 - [ ] 12-04-PLAN.md — Override IPC channels + server-side fuzzy validation + main.ts Steam-refresh recompute trigger (HDEDUP-01)
@@ -388,7 +388,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 9. Quality Gate | 0/? | Not started | - |
 | 10. Humble Auth + Adapter Scaffold | 6/6 | Complete    | 2026-07-05 |
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
-| 12. Ownership Dedup | 0/? | Not started | - |
+| 12. Ownership Dedup | 1/5 | In Progress|  |
 | 13. Keys-Waiting + Giftable-Spares Views | 0/? | Not started | - |
 | 14. Guided Claim Flow | 0/? | Not started | - |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |
