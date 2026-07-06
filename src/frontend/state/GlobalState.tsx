@@ -574,7 +574,10 @@ class GlobalState extends PureComponent<Props> {
   handleExperimentalFeatures = (value: ExperimentalFeatures) => {
     this.setState({
       experimentalFeatures: value,
-      zoom: { ...this.state.zoom, enabled: value }
+      // WR-10 (pre-existing): `enabled` was assigned the whole (always
+      // truthy) ExperimentalFeatures object, so toggling the Zoom feature
+      // OFF left zoom.enabled truthy until restart.
+      zoom: { ...this.state.zoom, enabled: !!value.zoomPlatform }
     })
   }
 
