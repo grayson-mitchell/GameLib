@@ -86,16 +86,16 @@ Multi-theme app — **all colors below are semantic custom properties, never hex
 
 | Element | Copy |
 |---------|------|
-| Row action, primary CTA (Keys-waiting tab, UNREVEALED key) | **"Claim"** |
+| Row action, primary CTA (Keys-waiting tab, UNREVEALED key) | **"Claim"** — single-word label is locked user wording (D-65: "a 'Claim' button on the key row"; D-66 references the literal swap "Claim" → "Finish activation"); not expanded to "Claim key" to preserve the locked decision text |
 | Row action, resume CTA (Keys-waiting tab, REVEALED-unredeemed key, D-66) | **"Finish activation"** |
 | Wizard Step 1 title (C1 warning) | **"Reveal this key?"** |
 | Wizard Step 1 body (C1 warning, locked irreversibility framing — matches D-58's dialog-copy pattern) | **"Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo."** |
-| Wizard Step 1 buttons | Cancel: **"Cancel"** · Confirm (danger-styled): **"Reveal key"** |
+| Wizard Step 1 buttons | Dismiss: **"Don't reveal yet"** — reinforces what not confirming preserves (the key stays UNREVEALED and gift-able); deliberately not the generic "Cancel", and not "Keep as spare" (Keys-waiting keys are unowned, so they are not spares — that label would misdescribe the key's actual state) · Confirm (danger-styled): **"Reveal key"** |
 | C2 owned-block interstitial title (D-69, hard block) | **"You already own this on Steam"** |
 | C2 owned-block interstitial body | **"This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead."** |
 | C2 owned-block interstitial button | **"Go to Giftable spares"** (navigates to `/humble-keys/spares`, closes wizard) |
 | Wizard Step 2 title (post-reveal, key shown) | **"Your key"** |
-| Wizard Step 2 body (D-73 plaintext + re-copy) | Key shown in plaintext with a **"Copy"** button beside it (re-copy, alongside the automatic copy-on-reveal) |
+| Wizard Step 2 body (D-73 plaintext + re-copy) | Key shown in plaintext with a **"Copy key"** button beside it (re-copy, alongside the automatic copy-on-reveal; label matches the `humbleKeys.copyKey` default already sketched in 14-RESEARCH.md). **The revealed key string is the primary visual anchor of Step 2** — rendered `--semibold`, visually dominant above the action row; the "Open Steam" / "Redeem on {{platform}}" link is the secondary element beneath it. |
 | Wizard Step 2 primary action (Steam keys, HCLAIM-03) | **"Open Steam"** — opens `store.steampowered.com/account/registerkey?key=` pre-filled |
 | Wizard Step 2 primary action (non-Steam keys, HCLAIM-05) | **"Redeem on {{platform}}"** — link-out only, no one-click activation |
 | Wizard Step 2 confirm action | **"Mark as redeemed"** |
@@ -129,6 +129,10 @@ Multi-theme app — **all colors below are semantic custom properties, never hex
 - `UNPICKED` pseudo-entries (D-27, Choice-month rows with no key to reveal) never render a `claimAction` — no entry point into the wizard exists for them this phase (per CONTEXT's Claude's Discretion resolution).
 - A key whose cached `keyindex` is unresolved (Pitfall C — pre-Phase-14 cache, not yet re-synced) shows a disabled/no-op "Claim" state rather than opening a wizard that would fail — label unchanged, but disabled with a tooltip-equivalent caption: **"Sync to enable claiming"**.
 
+### Step 2 visual hierarchy (post-reveal)
+
+The revealed key string is the **primary visual anchor** of the post-reveal step: it renders at `--text-xs`/`--semibold` inside a visually distinct value container (subtle `var(--input-background, var(--background))` fill, `--space-3xs` radius — same pill chrome family as `.humbleKeyGroupCount`) with the "Copy key" button directly beside it. The "Open Steam" / "Redeem on {{platform}}" accent link and the "Mark as redeemed" button sit **below** the key as secondary elements — the user's eye lands on the key first, actions second. Rationale: the key IS the payload the whole flow exists to deliver (D-73), and clipboard auto-copy can silently fail, so the manual-read path must be the most prominent element on the step.
+
 ### Step-state visual mapping
 
 | Wizard state | Primary color treatment | Icon |
@@ -145,7 +149,7 @@ Multi-theme app — **all colors below are semantic custom properties, never hex
 ### Icons
 
 - `faExternalLinkAlt` — reused verbatim from the Gift button precedent, for both "Open Steam" and "Redeem on {{platform}}."
-- No new icon package. If a distinct "copy" glyph is desired for the re-copy-key button, use FontAwesome's existing `faCopy` (already available in `@fortawesome/free-solid-svg-icons`, confirm at implementation time rather than adding a new import surface) — otherwise a text-only "Copy" button is acceptable and simpler.
+- No new icon package. If a distinct "copy" glyph is desired for the "Copy key" button, use FontAwesome's existing `faCopy` (already available in `@fortawesome/free-solid-svg-icons`, confirm at implementation time rather than adding a new import surface) — otherwise a text-only "Copy key" button is acceptable and simpler.
 
 ---
 
