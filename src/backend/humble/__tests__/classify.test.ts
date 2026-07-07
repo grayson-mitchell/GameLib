@@ -52,6 +52,7 @@ describe('classifyTpk', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: true, expiration: '2020-01-01T00:00:00Z' },
       true,
+      false,
       new Date('2026-01-01T00:00:00Z')
     )
     expect(state).toBe('UNREDEEMABLE')
@@ -61,6 +62,7 @@ describe('classifyTpk', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: true, expiration: null },
       true,
+      false,
       new Date('2026-01-01T00:00:00Z')
     )
     expect(state).toBe('REDEEMED')
@@ -70,6 +72,7 @@ describe('classifyTpk', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: false, expiration: null },
       true,
+      false,
       new Date('2026-01-01T00:00:00Z')
     )
     expect(state).toBe('REVEALED')
@@ -78,6 +81,7 @@ describe('classifyTpk', () => {
   test('none of the above -> UNREVEALED (default)', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: false, expiration: null },
+      false,
       false,
       new Date('2026-01-01T00:00:00Z')
     )
@@ -88,9 +92,54 @@ describe('classifyTpk', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: false, expiration: '2099-01-01T00:00:00Z' },
       false,
+      false,
       new Date('2026-01-01T00:00:00Z')
     )
     expect(state).toBe('UNREVEALED')
+  })
+
+  // Phase 14 (D-77): the new local-redeemed precedence tier.
+  test('D-77: isLocallyRedeemed true, not server-redeemed, not expired -> REDEEMED', () => {
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: false, expiration: null },
+      false,
+      true,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('REDEEMED')
+  })
+
+  test('D-77: server redeemedKeyValuePresent beats isLocallyRedeemed (server truth wins)', () => {
+    // Both signals present: this asserts precedence order, not just the
+    // final state — redeemedKeyValuePresent must be checked BEFORE
+    // isLocallyRedeemed, exactly as it beats isLocallyRevealed above.
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: true, expiration: null },
+      false,
+      true,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('REDEEMED')
+  })
+
+  test('D-77: expiry beats isLocallyRedeemed (a retroactively-expired local mark reclassifies UNREDEEMABLE)', () => {
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: false, expiration: '2020-01-01T00:00:00Z' },
+      false,
+      true,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('UNREDEEMABLE')
+  })
+
+  test('D-77: isLocallyRedeemed beats isLocallyRevealed (both true -> REDEEMED, not REVEALED)', () => {
+    const state = classifyTpk(
+      { redeemedKeyValuePresent: false, expiration: null },
+      true,
+      true,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(state).toBe('REDEEMED')
   })
 })
 
@@ -207,6 +256,7 @@ describe('classifyTpk — real-world is_expired flag', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: true, expiration: null, isExpired: true },
       true,
+      false,
       new Date('2026-01-01T00:00:00Z')
     )
     expect(state).toBe('UNREDEEMABLE')
@@ -215,6 +265,7 @@ describe('classifyTpk — real-world is_expired flag', () => {
   test('isExpired false with no expiration does not classify UNREDEEMABLE', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: false, expiration: null, isExpired: false },
+      false,
       false,
       new Date('2026-01-01T00:00:00Z')
     )
@@ -700,6 +751,155 @@ describe('describeMissingExpirationTpks — round 4 date-field discovery', () =>
     )
     expect(detail).toContain('secret')
     expect(detail).not.toContain('SECRET-MUST-NOT-LEAK')
+  })
+})
+
+// ── keyindex side-channel + isLocallyRedeemed tier (Phase 14, HCLAIM-01) ──
+// classifyOrder must extract each tpk's keyindex into a backend-only
+// composite-keyed (`gamekey:machineName`) side-channel — NEVER onto the
+// broadcast HumbleKey — and thread a second, composite-keyed predicate
+// (isLocallyRedeemed) through to classifyTpk's new precedence tier.
+
+describe('classifyOrder — keyIndexByComposite side-channel (Phase 14)', () => {
+  const orderWithKeyindex = {
+    gamekey: 'order-keyindex',
+    tpkd_dict: {
+      all_tpks: [
+        {
+          machine_name: 'keyindexgame_steam',
+          key_type: 'steam',
+          human_name: 'Keyindex Game',
+          is_expired: false,
+          keyindex: 3
+        }
+      ]
+    }
+  }
+
+  test('a tpk carrying a numeric keyindex is recorded under the gamekey:machineName composite key', () => {
+    const entry = classifyOrder(orderWithKeyindex, NEVER_REVEALED)
+    expect(entry.keyIndexByComposite).toEqual({
+      'order-keyindex:keyindexgame_steam': 3
+    })
+  })
+
+  test('a tpk carrying a string keyindex is also recorded (tolerant union)', () => {
+    const order = {
+      gamekey: 'order-keyindex-str',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'stringidx_steam',
+            key_type: 'steam',
+            is_expired: false,
+            keyindex: '5'
+          }
+        ]
+      }
+    }
+    const entry = classifyOrder(order, NEVER_REVEALED)
+    expect(entry.keyIndexByComposite).toEqual({
+      'order-keyindex-str:stringidx_steam': '5'
+    })
+  })
+
+  test('a tpk with no keyindex field is simply absent from the map (no throw)', () => {
+    const entry = classifyOrder(unrevealedOrder, NEVER_REVEALED)
+    expect(entry.keyIndexByComposite).toEqual({})
+  })
+
+  test('keyindex NEVER appears on any returned HumbleKey', () => {
+    const entry = classifyOrder(orderWithKeyindex, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0]).not.toHaveProperty('keyindex')
+  })
+
+  test('a malformed keyindex (object) is tolerated — omitted from the map, order still classifies', () => {
+    const order = {
+      gamekey: 'order-keyindex-bad',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'badidx_steam',
+            key_type: 'steam',
+            is_expired: false,
+            keyindex: { nested: true }
+          }
+        ]
+      }
+    }
+    expect(() => classifyOrder(order, NEVER_REVEALED)).not.toThrow()
+    const entry = classifyOrder(order, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keyIndexByComposite).toEqual({})
+  })
+
+  test('backward compatibility: existing 2-arg / 3-arg call sites still work (isLocallyRedeemed defaults to always-false)', () => {
+    const entry = classifyOrder(
+      orderWithKeyindex,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+  })
+})
+
+describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () => {
+  const order = {
+    gamekey: 'order-local-redeem',
+    tpkd_dict: {
+      all_tpks: [
+        {
+          machine_name: 'localredeem_steam',
+          key_type: 'steam',
+          is_expired: false
+        }
+      ]
+    }
+  }
+
+  test('isLocallyRedeemed(gamekey, machineName) true -> classifies REDEEMED', () => {
+    const isLocallyRedeemed = (gamekey: string, machineName: string) =>
+      gamekey === 'order-local-redeem' && machineName === 'localredeem_steam'
+    const entry = classifyOrder(
+      order,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z'),
+      isLocallyRedeemed
+    )
+    expect(entry.keys[0].state).toBe('REDEEMED')
+  })
+
+  test('isLocallyRedeemed false (default) -> classifies UNREVEALED, unaffected', () => {
+    const entry = classifyOrder(
+      order,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+  })
+
+  test('server redeemedKeyValuePresent beats isLocallyRedeemed at the classifyOrder level too', () => {
+    const redeemedOrderLocal = {
+      gamekey: 'order-local-redeem-2',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'localredeem2_steam',
+            key_type: 'steam',
+            is_expired: false,
+            redeemed_key_val: 'server-value'
+          }
+        ]
+      }
+    }
+    const entry = classifyOrder(
+      redeemedOrderLocal,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z'),
+      () => true
+    )
+    expect(entry.keys[0].state).toBe('REDEEMED')
   })
 })
 
