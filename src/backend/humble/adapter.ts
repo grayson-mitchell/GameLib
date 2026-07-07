@@ -3,7 +3,11 @@ import { z } from 'zod'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult, HumbleUserData } from 'common/types/humble'
-import { HUMBLE_BASE_URL, HUMBLE_REQUIRED_HEADERS } from './constants'
+import {
+  HUMBLE_BASE_URL,
+  HUMBLE_REDEEM_PATH,
+  HUMBLE_REQUIRED_HEADERS
+} from './constants'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -51,7 +55,24 @@ const OrderDetailTpkSchema = z
     expiration: z.string().nullish(),
     key_type: z.string().nullish(),
     human_name: z.string().nullish(),
-    machine_name: z.string().nullish()
+    machine_name: z.string().nullish(),
+    // Phase 14 (HCLAIM-01): the reveal endpoint's third form field. Real type
+    // is unconfirmed (likely numeric) — tolerant union, same .passthrough()
+    // convention as every sibling field. Never placed on the public
+    // HumbleKey type (classify.ts keeps it in a backend-only side-channel).
+    keyindex: z.union([z.string(), z.number()]).nullish()
+  })
+  .passthrough()
+
+// Phase 14 (HCLAIM-01): the reveal endpoint's response shape, cross-verified
+// against two independent community implementations (14-RESEARCH.md "Reveal
+// Endpoint Contract"). `error_msg` is intentionally never logged/forwarded
+// verbatim by revealKey() below — it may echo a key value (C4).
+const RevealResponseSchema = z
+  .object({
+    success: z.boolean().nullish(),
+    key: z.string().nullish(),
+    error_msg: z.string().nullish()
   })
   .passthrough()
 
@@ -148,6 +169,46 @@ async function humbleRequest(
   // coerce it once. A genuinely non-JSON body (HTML interstitial /
   // challenge page) stays a string and surfaces as a self-diagnosing
   // schema_error with bodyIsString=true.
+  if (typeof data === 'string' && data.length > 0) {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      // keep the raw string — describeSchemaFailure flags it
+    }
+  }
+  return {
+    data,
+    contentType: typeof contentTypeHeader === 'string' ? contentTypeHeader : null
+  }
+}
+
+/**
+ * POST transport sibling to `humbleRequest` (D-14 revised): the first
+ * write-style Humble call (Phase 14 HCLAIM-01) routes through this single
+ * function, mirroring humbleRequest's shape/discipline (finite timeout,
+ * string-body JSON coercion tolerance) so a future transport swap (see
+ * humbleRequest's own doc comment) only needs to touch these two functions.
+ * `csrfToken`, when present, is sent as `csrf-prevention-token` — the
+ * reveal endpoint's CSRF requirement is unconfirmed (RESEARCH.md Pitfall A),
+ * so this header is opportunistic, never required at the type level.
+ */
+async function humblePostRequest(
+  path: string,
+  cookie: string,
+  body: string,
+  csrfToken?: string
+): Promise<HumbleRawResponse> {
+  const res = await axios.post(`${HUMBLE_BASE_URL}${path}`, body, {
+    headers: {
+      ...HUMBLE_REQUIRED_HEADERS,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Cookie: `_simpleauth_sess=${cookie}`,
+      ...(csrfToken ? { 'csrf-prevention-token': csrfToken } : {})
+    },
+    timeout: REQUEST_TIMEOUT_MS
+  })
+  const contentTypeHeader = res.headers?.['content-type']
+  let data: unknown = res.data
   if (typeof data === 'string' && data.length > 0) {
     try {
       data = JSON.parse(data)
@@ -333,5 +394,58 @@ export async function getAccountIdentity(
     return { status: 'ok', data: parsed.data }
   } catch (err) {
     return mapAxiosError<HumbleUserData>(err)
+  }
+}
+
+/**
+ * The codebase's FIRST write-style Humble adapter call (Phase 14, HCLAIM-01).
+ * Contract researched + cross-verified against two independent community
+ * implementations (14-RESEARCH.md "Reveal Endpoint Contract") — MEDIUM
+ * confidence, validated live before shipping to any UI button (D-71/Plan 06).
+ *
+ * NAMING TRAP (load-bearing, do not "fix"): the POST field literally named
+ * `keytype` carries `params.machineName` (HumbleKey.machineName), NOT the
+ * platform label (`key_type`/`platform` elsewhere in this codebase).
+ *
+ * T-14-01/T-14-05: never a blind cast, never a logged key/error_msg/body —
+ * only status/length, matching describeSchemaFailure's redaction discipline.
+ */
+export async function revealKey(
+  cookie: string,
+  csrfToken: string | undefined,
+  params: { gamekey: string; machineName: string; keyindex: string | number }
+): Promise<AdapterResult<{ key: string }>> {
+  try {
+    const body = new URLSearchParams({
+      keytype: params.machineName,
+      key: params.gamekey,
+      keyindex: String(params.keyindex)
+    }).toString()
+    const response = await humblePostRequest(
+      HUMBLE_REDEEM_PATH,
+      cookie,
+      body,
+      csrfToken
+    )
+    const parsed = RevealResponseSchema.safeParse(response.data)
+    if (!parsed.success) {
+      describeSchemaFailure(HUMBLE_REDEEM_PATH, response, parsed.error)
+      return { status: 'schema_error', raw: response.data }
+    }
+    if (parsed.data.success !== true || !parsed.data.key) {
+      // C4: error_msg may echo a key value — never logged/forwarded
+      // verbatim. Presence/length only, mirroring describeSchemaFailure.
+      logWarning(
+        [
+          `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal did not succeed`,
+          `success=${parsed.data.success ?? 'absent'} keyPresent=${Boolean(parsed.data.key)} errorMsgLength=${parsed.data.error_msg?.length ?? 0}`
+        ],
+        LogPrefix.Backend
+      )
+      return { status: 'schema_error', raw: undefined }
+    }
+    return { status: 'ok', data: { key: parsed.data.key } }
+  } catch (err) {
+    return mapAxiosError<{ key: string }>(err)
   }
 }

@@ -25,6 +25,7 @@ export function classifyTpk(
     isExpired?: boolean
   },
   isLocallyRevealed: boolean,
+  isLocallyRedeemed: boolean,
   now: Date = new Date()
 ): HumbleKeyState {
   if (
@@ -34,6 +35,13 @@ export function classifyTpk(
     return 'UNREDEEMABLE'
   }
   if (tpk.redeemedKeyValuePresent) {
+    return 'REDEEMED'
+  }
+  // D-77 (Phase 14): a local "Mark as redeemed" classifies the same as a
+  // server-confirmed redeem — server truth (above) always wins; the renderer
+  // distinguishes the two REDEEMED origins via HumbleKey.locallyRedeemedPending
+  // (set by the caller, not this function) to drive the Undo affordance.
+  if (isLocallyRedeemed) {
     return 'REDEEMED'
   }
   if (isLocallyRevealed) {
@@ -225,13 +233,34 @@ export function extractExpiration(
  * locally-carried-forward state is the `isRevealed` lookup, which reads a
  * separate keyed store (humbleRevealedStore, injected by the caller) rather
  * than being embedded in this order data.
+ *
+ * Phase 14 (HCLAIM-01/D-77): `isLocallyRedeemed` is a SECOND injected
+ * predicate, composite-keyed by `(gamekey, machineName)` (unlike
+ * `isRevealed`'s machineName-only lookup — Pattern 3, learning from
+ * 13-REVIEW's WR-01 machineName collision). Defaulted to "never redeemed" so
+ * every pre-Phase-14 caller (library.ts's sync orchestration, existing
+ * fixtures/tests) keeps compiling and behaving identically without an update
+ * — library.ts's own local-redeemed-store wiring lands in Plan 03.
+ *
+ * The return value is widened (via intersection, not a breaking reshape) to
+ * also carry `keyIndexByComposite` — a backend-only side-channel lookup of
+ * each tpk's `keyindex` field, composite-keyed the same way. `keyindex` is
+ * NEVER placed on the public `HumbleKey` type broadcast over
+ * `humbleKeysUpdated` (14-RESEARCH.md: no display purpose, needlessly widens
+ * the IPC surface) — callers that need it (the Phase 14 reveal IPC handler)
+ * read this side-channel directly instead.
  */
 export function classifyOrder(
   rawOrder: OrderDetail,
   isRevealed: (machineName: string) => boolean,
-  now: Date = new Date()
-): HumbleOrderCacheEntry {
+  now: Date = new Date(),
+  isLocallyRedeemed: (gamekey: string, machineName: string) => boolean = () =>
+    false
+): HumbleOrderCacheEntry & {
+  keyIndexByComposite: Record<string, string | number>
+} {
   const gamekey = rawOrder.gamekey ?? ''
+  const keyIndexByComposite: Record<string, string | number> = {}
   const rawProduct = rawOrder.product as
     | { category?: string | null; choice_url?: string | null; human_name?: string | null }
     | null
@@ -286,8 +315,17 @@ export function classifyOrder(
       const state = classifyTpk(
         { redeemedKeyValuePresent, expiration, isExpired },
         isRevealed(machineName),
+        isLocallyRedeemed(gamekey, machineName),
         now
       )
+      // Phase 14 (HCLAIM-01): capture the reveal endpoint's third form field
+      // into the backend-only side-channel — NEVER onto HumbleKey (see the
+      // function-level doc comment). Tolerant of the field arriving as
+      // either a number or string; any other shape is simply omitted.
+      const rawKeyIndex = tpk.keyindex
+      if (typeof rawKeyIndex === 'string' || typeof rawKeyIndex === 'number') {
+        keyIndexByComposite[`${gamekey}:${machineName}`] = rawKeyIndex
+      }
       // D-28: platform label is derived from key_type for ANY platform —
       // classification itself is fully platform-agnostic. Guaranteed a
       // string here by the hasKeyEvidence gate above.
@@ -367,7 +405,7 @@ export function classifyOrder(
   const allTerminal =
     keys.length > 0 && keys.every((key) => isTerminal(key.state))
 
-  return { gamekey, keys, allTerminal }
+  return { gamekey, keys, allTerminal, keyIndexByComposite }
 }
 
 // Cap on field-name lists in the zero-key diagnosis — enough to recognize a

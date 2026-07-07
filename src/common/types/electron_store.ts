@@ -103,6 +103,12 @@ export interface StoreStructure {
     // D-08 (Plan 02): set by the startup/401 health check; cleared on a
     // successful reconnect/re-login.
     expired?: boolean
+    // T-14-04 (Phase 14 Plan 02): optional CSRF token captured alongside
+    // sessionCookie at login, same safeStorage-encrypted 'humble:v1:'
+    // prefix convention. Main-process-only — never included in any
+    // sendFrontendMessage payload or HumbleAuthState. Absent when the
+    // csrf_cookie was never observed at login (non-fatal, optional).
+    csrfToken?: string
   }
   sideloadedStore: {
     games: GameInfo[]
