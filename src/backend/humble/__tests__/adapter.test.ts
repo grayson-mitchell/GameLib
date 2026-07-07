@@ -9,11 +9,13 @@
 
 // ── axios mock (factory — must be first, jest.mock is hoisted) ──────────────
 const mockGet = jest.fn()
+const mockPost = jest.fn()
 const mockIsAxiosError = jest.fn()
 jest.mock('axios', () => ({
   __esModule: true,
   default: {
     get: (...args: unknown[]) => mockGet(...args),
+    post: (...args: unknown[]) => mockPost(...args),
     isAxiosError: (...args: unknown[]) => mockIsAxiosError(...args)
   }
 }))
@@ -31,7 +33,12 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-import { getGamekeys, getOrderDetail, getAccountIdentity } from '../adapter'
+import {
+  getGamekeys,
+  getOrderDetail,
+  getAccountIdentity,
+  revealKey
+} from '../adapter'
 
 const COOKIE = 'super-secret-cookie-value'
 
@@ -541,5 +548,140 @@ describe('getOrderDetail — realistic plain store-purchase payload (round 2, sp
       title: 'Great Game'
     })
     expect(entry.allTerminal).toBe(false)
+  })
+})
+
+// ── Phase 14 (HCLAIM-01): revealKey — the first write-style Humble call ────
+
+describe('revealKey', () => {
+  const GAMEKEY = 'gamekey-reveal-xyz'
+  const MACHINE_NAME = 'somegame_steam'
+  const FAKE_KEY = 'AAAAA-BBBBB-CCCCC'
+
+  function params(keyindex: string | number = 1) {
+    return { gamekey: GAMEKEY, machineName: MACHINE_NAME, keyindex }
+  }
+
+  test('{success:true, key} -> ok with the key value', async () => {
+    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
+  })
+
+  test('{success:false, error_msg} -> schema_error, raw is undefined (error_msg may echo a key value, C4)', async () => {
+    mockPost.mockResolvedValue({
+      data: { success: false, error_msg: 'already redeemed' }
+    })
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'schema_error', raw: undefined })
+  })
+
+  test('success true but key missing -> schema_error, raw is undefined', async () => {
+    mockPost.mockResolvedValue({ data: { success: true } })
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'schema_error', raw: undefined })
+  })
+
+  test('body shape drift (non-object) -> schema_error carrying the raw body', async () => {
+    mockPost.mockResolvedValue({ data: 'not-an-object' })
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'schema_error', raw: 'not-an-object' })
+  })
+
+  test('axios 401 -> session_expired', async () => {
+    mockPost.mockRejectedValue(makeAxiosError(401))
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'session_expired' })
+  })
+
+  test('axios 403 -> access_denied (D-78: definitive failure)', async () => {
+    mockPost.mockRejectedValue(makeAxiosError(403))
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'access_denied' })
+  })
+
+  test('axios 429 -> access_denied', async () => {
+    mockPost.mockRejectedValue(makeAxiosError(429))
+    const result = await revealKey(COOKIE, undefined, params())
+    expect(result).toEqual({ status: 'access_denied' })
+  })
+
+  test('a thrown network error (no response) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
+    const err = new Error('timeout of 15000ms exceeded') as Error & {
+      code: string
+      isAxiosError: true
+    }
+    err.code = 'ECONNABORTED'
+    err.isAxiosError = true
+    mockPost.mockRejectedValue(err)
+    await expect(revealKey(COOKIE, undefined, params())).rejects.toThrow(
+      'timeout'
+    )
+  })
+
+  test('sends keytype=machineName (naming trap), key=gamekey, keyindex as form-encoded body', async () => {
+    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
+    await revealKey(COOKIE, undefined, params(7))
+    expect(mockPost).toHaveBeenCalledTimes(1)
+    const [url, body] = mockPost.mock.calls[0]
+    expect(url).toBe('https://www.humblebundle.com/humbler/redeemkey')
+    const parsedBody = new URLSearchParams(body)
+    expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
+    expect(parsedBody.get('key')).toBe(GAMEKEY)
+    expect(parsedBody.get('keyindex')).toBe('7')
+  })
+
+  test('sends X-Requested-By, Content-Type and Cookie headers; omits csrf header when csrfToken is undefined', async () => {
+    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
+    await revealKey(COOKIE, undefined, params())
+    const [, , config] = mockPost.mock.calls[0]
+    expect(config.headers['X-Requested-By']).toBe('hb_android_app')
+    expect(config.headers['Content-Type']).toBe(
+      'application/x-www-form-urlencoded'
+    )
+    expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
+    expect(config.headers['csrf-prevention-token']).toBeUndefined()
+  })
+
+  test('T-14-04: sends csrf-prevention-token header when a csrfToken is provided', async () => {
+    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
+    await revealKey(COOKIE, 'csrf-token-value', params())
+    const [, , config] = mockPost.mock.calls[0]
+    expect(config.headers['csrf-prevention-token']).toBe('csrf-token-value')
+  })
+
+  test('WR-04: sets a finite request timeout', async () => {
+    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
+    await revealKey(COOKIE, undefined, params())
+    const [, , config] = mockPost.mock.calls[0]
+    expect(config.timeout).toBeGreaterThan(0)
+    expect(config.timeout).toBeLessThanOrEqual(30_000)
+  })
+
+  // C4 redaction: no logged call may ever contain the cookie, the revealed
+  // key value, or the error_msg content — across every outcome branch.
+  test('never logs the cookie, the key value, or an error_msg containing a key-shaped string', async () => {
+    const SNEAKY_ERROR_MSG = 'key was DDDDD-EEEEE-FFFFF already used'
+    mockPost.mockResolvedValueOnce({ data: { success: true, key: FAKE_KEY } })
+    await revealKey(COOKIE, undefined, params())
+    mockPost.mockResolvedValueOnce({
+      data: { success: false, error_msg: SNEAKY_ERROR_MSG }
+    })
+    await revealKey(COOKIE, undefined, params())
+
+    for (const logged of allLoggedStrings()) {
+      expect(logged).not.toContain(COOKIE)
+      expect(logged).not.toContain(FAKE_KEY)
+      expect(logged).not.toContain(SNEAKY_ERROR_MSG)
+      expect(logged).not.toContain('DDDDD-EEEEE-FFFFF')
+    }
+  })
+
+  test('never logs the cookie on axios error paths either', async () => {
+    mockPost.mockRejectedValue(makeAxiosError(401))
+    await revealKey(COOKIE, undefined, params())
+    for (const logged of allLoggedStrings()) {
+      expect(logged).not.toContain(COOKIE)
+    }
   })
 })
