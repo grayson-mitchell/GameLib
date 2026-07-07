@@ -341,7 +341,17 @@ Plans:
   1. A "Keys waiting" view lists all unowned, unredeemed Humble keys with keys expiring soonest at the top
   2. Keys expiring within 30 days display an expiration urgency badge showing the time remaining
   3. A "Giftable spares" view lists owned-elsewhere, UNREVEALED keys and allows copying the Humble gift link with one click, with an irreversibility warning
-**Plans**: TBD
+**Plans**: 5 plans
+  - [ ] 13-01-PLAN.md — Pure view helpers: selectKeysWaiting/selectGiftableSpares + urgency tier/countdown (HVIEW-01, HVIEW-02)
+  - [ ] 13-02-PLAN.md — Backend gift-open persistence: humbleGiftedAtStore + disconnect carve-out + validated IPC (HVIEW-02)
+  - [ ] 13-03-PLAN.md — Tab router refactor + Keys-waiting view + UrgencyBadge + All-keys verbatim move (HVIEW-01)
+  - [ ] 13-04-PLAN.md — Giftable-spares view + confirm-gated "Gift on Humble" deep-link + gifted annotation (HVIEW-02)
+  - [ ] 13-05-PLAN.md — Human-verify checkpoint: routing, urgency badges, gift dialog, All-keys no-regression (HVIEW-01, HVIEW-02)
+
+**Wave 1** (parallel — zero file overlap): 13-01, 13-02
+**Wave 2** (blocked on 13-01): 13-03
+**Wave 3** (blocked on 13-01/02/03): 13-04
+**Wave 4** (blocked on 13-03/04 — checkpoint): 13-05
 **UI hint**: yes
 
 ### Phase 14: Guided Claim Flow
