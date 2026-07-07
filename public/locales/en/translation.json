@@ -545,6 +545,11 @@
         "emptyBody": "Your synced key inventory will appear here once your account has orders.",
         "emptyTitle": "No Humble keys yet",
         "expiresOn": "Expires {{date}}",
+        "giftConfirmAction": "Open Humble",
+        "giftConfirmBody": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+        "giftConfirmTitle": "Gift this key?",
+        "giftOnHumble": "Gift on Humble",
+        "giftedAnnotation": "Opened Humble gift page {{date}}",
         "group": {
             "other": "Other"
         },
