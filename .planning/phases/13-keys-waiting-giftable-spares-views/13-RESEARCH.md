@@ -560,10 +560,13 @@ deprecate; this is greenfield within an established page.
 
 **If this table is empty:** N/A — see rows above.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three questions were resolved during planning (2026-07-07) and their resolutions are adopted by the Phase 13 plans; inline RESOLVED markers below.
 
 1. **Does `https://www.humblebundle.com/downloads?key={gamekey}` reliably deep-link to a
    specific order's Keys & Entitlements row (vs. the generic `/home/keys` list)?**
+   - **RESOLVED (planning):** Plans ship the safe, confirmed static `https://www.humblebundle.com/home/keys` as the only deep-link target (13-04 acceptance criteria forbid interpolating key/machineName into the URL); the per-order `?key=` variant is not used in v1.2.
    - What we know: Two independent, non-authoritative WebSearch results reference this URL
      shape in the context of Humble order/download pages; it is architecturally plausible
      (matches the `?key=` query-param convention Humble uses elsewhere, e.g. the gift-token
@@ -578,6 +581,7 @@ deprecate; this is greenfield within an established page.
      rather than trusting it silently.
 2. **Should the sync-status header (refresh button, last-synced text, error banner) be shared
    across all three tabs, or per-tab?**
+   - **RESOLVED (planning):** Shared — rendered once in the parent route above the tab bar (13-03 Task 1; also locked by 13-UI-SPEC.md's Tab bar section).
    - What we know: The data (`humble.syncing`, `humble.syncedAt`, `humble.syncError`) is
      view-independent — it describes the whole library, not a specific tab's contents.
    - What's unclear: Whether CONTEXT.md's "Claude's Discretion" for "tab component
@@ -587,6 +591,7 @@ deprecate; this is greenfield within an established page.
      for `handleHumbleSyncProgress`/`handleHumbleSyncStateChanged`.
 3. **Does the existing `showDialogModal`/`DialogModalOptions` global pattern support the "no
    'don't ask again'" requirement (D-58) out of the box?**
+   - **RESOLVED (planning):** Yes — it is a stateless show-now call with no persisted-preference field; 13-04's acceptance criteria explicitly assert the dialog contains no "don't ask again" affordance.
    - What we know: `DialogModalOptions` has no persisted-preference field visible in
      `types.ts`; it's a stateless "show now" call each time.
    - What's unclear: Whether any wrapping component elsewhere in the codebase adds a
