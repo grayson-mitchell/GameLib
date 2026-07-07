@@ -1,4 +1,5 @@
 import { HumbleKey, HumbleKeyState } from '../types/humble'
+import { GENERIC_KEY_PLATFORM } from './groupKeys'
 
 /**
  * Pure view-membership + sort helpers for the Keys-waiting and Giftable-
@@ -32,15 +33,24 @@ function compareWaiting(a: HumbleKey, b: HumbleKey): number {
 }
 
 /**
- * D-53: keys the user does not yet own elsewhere AND are in a waiting state.
- * `ownedElsewhere` is the sole owner signal, consumed as-is regardless of
- * `matchConfidence` (D-54) — Plan 03/04 preserve the D-42 override safety
- * valve so a corrected fuzzy match moves back here via the existing
- * recompute path, not a new mechanism in this file.
+ * D-53: game keys the user does not yet own elsewhere AND are in a waiting
+ * state. Scoped to game keys only — generic-platform entries (PDF/ebook/
+ * publisher-redemption items, `GENERIC_KEY_PLATFORM` from groupKeys.ts) are
+ * excluded here regardless of state; they still surface via the All tab's
+ * "Other" bucket (round-7 decision), never in Keys waiting. `ownedElsewhere`
+ * is the sole owner signal, consumed as-is regardless of `matchConfidence`
+ * (D-54) — Plan 03/04 preserve the D-42 override safety valve so a corrected
+ * fuzzy match moves back here via the existing recompute path, not a new
+ * mechanism in this file.
  */
 export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
   return keys
-    .filter((k) => !k.ownedElsewhere && WAITING_STATES.has(k.state))
+    .filter(
+      (k) =>
+        !k.ownedElsewhere &&
+        k.platform !== GENERIC_KEY_PLATFORM &&
+        WAITING_STATES.has(k.state)
+    )
     .sort(compareWaiting)
 }
 

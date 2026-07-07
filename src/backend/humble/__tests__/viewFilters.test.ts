@@ -66,6 +66,27 @@ describe('selectKeysWaiting', () => {
     expect(selectKeysWaiting([key])).toEqual([])
   })
 
+  test.each<HumbleKeyState>(['UNPICKED', 'UNREVEALED', 'REVEALED'])(
+    'D-53: excludes a generic-platform key in waiting state %s (checkpoint feedback — game keys only)',
+    (state) => {
+      const key = makeKey({
+        state,
+        ownedElsewhere: false,
+        platform: 'generic'
+      })
+      expect(selectKeysWaiting([key])).toEqual([])
+    }
+  )
+
+  test('D-53: a non-generic-platform key in a waiting state is unaffected', () => {
+    const key = makeKey({
+      state: 'UNREVEALED',
+      ownedElsewhere: false,
+      platform: 'steam'
+    })
+    expect(selectKeysWaiting([key])).toEqual([key])
+  })
+
   test('D-56: a dated key always precedes an undated key', () => {
     const dated = makeKey({
       title: 'Z Game',
