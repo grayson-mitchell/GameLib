@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Humble Auth + Adapter Scaffold** - Users can connect a Humble Bundle account from Manage Accounts with encrypted session persistence and a validated C5 API boundary (completed 2026-07-05)
 - [x] **Phase 11: Library Sync + 5-State Key Model** - Full Humble key inventory synced, classified into the 5-state model, and reliably cached with fail-soft behavior (completed 2026-07-06)
 - [x] **Phase 12: Ownership Dedup** - Every Humble key cross-referenced against the Steam library; redeemed Steam keys collapse onto their existing Steam library entries (completed 2026-07-06)
-- [ ] **Phase 13: Keys-Waiting + Giftable-Spares Views** - Users can see claimable keys sorted by expiration urgency and surface gift links for owned-elsewhere spares
+- [x] **Phase 13: Keys-Waiting + Giftable-Spares Views** - Users can see claimable keys sorted by expiration urgency and surface gift links for owned-elsewhere spares (completed 2026-07-07)
 - [ ] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout
 - [ ] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications
 
@@ -346,7 +346,7 @@ Plans:
   - [x] 13-02-PLAN.md — Backend gift-open persistence: humbleGiftedAtStore + disconnect carve-out + validated IPC (HVIEW-02)
   - [x] 13-03-PLAN.md — Tab router refactor + Keys-waiting view + UrgencyBadge + All-keys verbatim move (HVIEW-01)
   - [x] 13-04-PLAN.md — Giftable-spares view + confirm-gated "Gift on Humble" deep-link + gifted annotation (HVIEW-02)
-  - [ ] 13-05-PLAN.md — Human-verify checkpoint: routing, urgency badges, gift dialog, All-keys no-regression (HVIEW-01, HVIEW-02)
+  - [x] 13-05-PLAN.md — Human-verify checkpoint: routing, urgency badges, gift dialog, All-keys no-regression (HVIEW-01, HVIEW-02)
 
 **Wave 1** (parallel — zero file overlap): 13-01, 13-02
 **Wave 2** (blocked on 13-01): 13-03
@@ -399,6 +399,6 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 10. Humble Auth + Adapter Scaffold | 6/6 | Complete    | 2026-07-05 |
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
 | 12. Ownership Dedup | 5/5 | Complete    | 2026-07-06 |
-| 13. Keys-Waiting + Giftable-Spares Views | 4/5 | In Progress|  |
+| 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Complete   | 2026-07-07 |
 | 14. Guided Claim Flow | 0/? | Not started | - |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |
