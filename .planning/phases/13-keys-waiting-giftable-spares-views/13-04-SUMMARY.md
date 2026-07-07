@@ -122,3 +122,12 @@ None - no external service configuration required.
 ---
 *Phase: 13-keys-waiting-giftable-spares-views*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+- FOUND: src/frontend/screens/Humble/Keys/Spares/index.tsx
+- FOUND: src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
+- FOUND: src/preload/api/humble.ts
+- FOUND: .planning/phases/13-keys-waiting-giftable-spares-views/13-04-SUMMARY.md
+- FOUND: 4bcdb83b (Task 1 commit)
+- FOUND: ed667441 (Summary commit)
