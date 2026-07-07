@@ -128,3 +128,7 @@ None — no external service configuration required.
 ---
 *Phase: 14-guided-claim-flow*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+All 7 modified source/test files and this SUMMARY.md verified present on disk; all 4 task/docs commits (`bbb2a4bc`, `33abb392`, `ff3c18fc`, `8380a2a0`) verified present in git log.
