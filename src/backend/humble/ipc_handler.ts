@@ -55,6 +55,33 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleClearOwnershipOverride', async (e, machineName) =>
     HumbleLibrary.clearOwnershipOverride(machineName)
   )
+  // Phase 13 (Plan 02, D-59/D-57): giftable-spares gift-action confirmation.
+  // Mirrors humbleSetOwnershipOverride's non-fuzzy rejection shape — the
+  // renderer must never be trusted to have only shown the gift button on an
+  // eligible row. Re-validates ownedElsewhere && state === UNREVEALED
+  // server-side against the live key set; reject + log (machineName only,
+  // never a URL/token per C4) and no-op otherwise.
+  addHandler('humbleRecordGiftLinkOpened', async (e, machineName) => {
+    const targetKey = HumbleLibrary.getKeys().find(
+      (key) => key.machineName === machineName
+    )
+    if (
+      !targetKey ||
+      !targetKey.ownedElsewhere ||
+      targetKey.state !== 'UNREVEALED'
+    ) {
+      logWarning(
+        [
+          'Rejected humbleRecordGiftLinkOpened for ineligible machineName:',
+          machineName
+        ],
+        LogPrefix.Backend
+      )
+      return
+    }
+    HumbleLibrary.recordGiftLinkOpened(machineName)
+  })
+  addHandler('humbleGetGiftedAt', () => HumbleLibrary.getAllGiftedAt())
   // WR-02: never discard the disconnect promise silently — a rejection here
   // (e.g. session.fromPartition throwing) must not become an unhandled
   // rejection in the main process. The credential wipe itself runs first

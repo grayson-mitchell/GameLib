@@ -281,6 +281,17 @@ interface AsyncIPCFunctions {
   // exact-match machineName.
   humbleSetOwnershipOverride: (machineName: string) => Promise<void>
   humbleClearOwnershipOverride: (machineName: string) => Promise<void>
+  // Phase 13 (Plan 02, D-59/D-57 resolution): confirms the user completed the
+  // "Open Humble" gift action for a giftable-spares key (an
+  // ownedElsewhere && state === 'UNREVEALED' key). The backend re-validates
+  // both conditions server-side (never trust renderer-only gating) and
+  // no-ops for an ineligible machineName. No gift-link value ever crosses
+  // this channel — D-57 resolved to a static deep-link GameLib never
+  // possesses.
+  humbleRecordGiftLinkOpened: (machineName: string) => Promise<void>
+  // Returns the machineName->giftedAt (ms) map from humbleGiftedAtStore so
+  // the Spares view can disable/label an already-gifted key (D-59).
+  humbleGetGiftedAt: () => Promise<Record<string, number>>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
