@@ -125,6 +125,14 @@ export interface HumbleKey {
    * Lets Phase 14's C2 guard treat fuzzy matches more gently than exact ones.
    */
   matchConfidence: 'exact' | 'fuzzy' | 'none'
+  /**
+   * D-77 local-redeem flag (Phase 14 guided claim flow): true ONLY when this
+   * key's REDEEMED classification came from the local "Mark as redeemed"
+   * action (humbleMarkRedeemed) rather than a server-confirmed redeem seen in
+   * the Humble order data. Drives the Undo affordance in the claim flow UI —
+   * never set for a server-confirmed redeem.
+   */
+  locallyRedeemedPending?: boolean
 }
 
 /**
@@ -164,4 +172,43 @@ export interface HumbleSyncState {
    * retries the full re-classification).
    */
   classifierVersion?: number
+}
+
+/**
+ * Result of a guided-claim-flow "Reveal key" action (HCLAIM-01/02, Phase 14).
+ * Discriminated on `status`, mirroring AdapterResult's status-literal
+ * convention — never a boolean flag. `revealed` carries the redeemed key
+ * value (kept off HumbleKey itself — C4/T-14-02, see PITFALLS.md B); `cooldown`
+ * carries the throttle deadline so the UI can show a countdown instead of a
+ * bare disabled state.
+ */
+export type RevealOutcome =
+  | { status: 'revealed'; key: string }
+  | { status: 'owned_blocked' } // C2 guard: key's game is already owned elsewhere
+  | { status: 'failed' }
+  | { status: 'ambiguous' }
+  | { status: 'ineligible' } // e.g. UNPICKED/UNREDEEMABLE — reveal not applicable
+  | { status: 'cooldown'; retryAtMs: number }
+
+/**
+ * Result of a guided-claim-flow "Mark as redeemed" action (HCLAIM-04, D-77).
+ * `ok` sets the local-redeem flag (HumbleKey.locallyRedeemedPending);
+ * `ineligible` covers a key that is not in a state where local redemption
+ * applies (e.g. it has not been revealed yet).
+ */
+export type RedeemOutcome = { status: 'ok' } | { status: 'ineligible' }
+
+/**
+ * Per-key row annotation for the guided claim flow (Phase 14 IPC). The
+ * caller (renderer) keys the returned map by the composite
+ * `gamekey:machineName` string (Pattern 3 composite-key discipline).
+ * `keyindexResolved` lets the renderer proactively show the Pitfall C
+ * disabled "Sync to enable claiming" state for pre-Phase-14 cached rows that
+ * have not yet been backfilled with a keyindex (HUMBLE_CLASSIFIER_VERSION
+ * bump to 4 forces the one-time backfill).
+ */
+export interface ClaimAnnotation {
+  revealedAt?: number
+  redeemedAt?: number
+  keyindexResolved: boolean
 }

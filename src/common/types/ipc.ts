@@ -52,11 +52,14 @@ import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type { SteamUserData } from './steam'
 import type {
+  ClaimAnnotation,
   HumbleAuthState,
   HumbleKey,
   HumbleSyncState,
   HumbleUserData,
-  HumbleValidationReport
+  HumbleValidationReport,
+  RedeemOutcome,
+  RevealOutcome
 } from './humble'
 
 // ts-prune-ignore-next
@@ -292,6 +295,36 @@ interface AsyncIPCFunctions {
   // Returns the machineName->giftedAt (ms) map from humbleGiftedAtStore so
   // the Spares view can disable/label an already-gifted key (D-59).
   humbleGetGiftedAt: () => Promise<Record<string, number>>
+  // Phase 14 guided claim flow (HCLAIM-01/02). Both gamekey AND machineName
+  // are required (composite-key discipline, Pattern 3) — unlike the older
+  // machineName-only channels above. Returns the revealed key value directly
+  // (never persisted to a broadcast type — C4/T-14-02).
+  humbleRevealKey: (params: {
+    gamekey: string
+    machineName: string
+  }) => Promise<RevealOutcome>
+  // Phase 14 (HCLAIM-04, D-77): marks a key as locally redeemed. Backend
+  // re-validates eligibility server-side (never trust renderer-only gating).
+  humbleMarkRedeemed: (params: {
+    gamekey: string
+    machineName: string
+  }) => Promise<RedeemOutcome>
+  // Phase 14: reverses a local-only "Mark as redeemed" action (Undo
+  // affordance) — never applicable to a server-confirmed redeem.
+  humbleUndoRedeemed: (params: {
+    gamekey: string
+    machineName: string
+  }) => Promise<void>
+  // Phase 14: returns the previously-revealed key value for a key that was
+  // already revealed in an earlier session, or null if not yet revealed
+  // (Pitfall B — REVEALED flag set but no confirmed key value stored yet).
+  humbleGetRevealedKeyValue: (params: {
+    gamekey: string
+    machineName: string
+  }) => Promise<string | null>
+  // Phase 14: per-key reveal/redeem annotations, keyed by the composite
+  // `gamekey:machineName` string, for the claim-flow wizard/list UI.
+  humbleGetClaimAnnotations: () => Promise<Record<string, ClaimAnnotation>>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
