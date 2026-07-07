@@ -25,6 +25,10 @@ export const humbleSetOwnershipOverride = makeHandlerInvoker(
 export const humbleClearOwnershipOverride = makeHandlerInvoker(
   'humbleClearOwnershipOverride'
 )
+export const humbleRecordGiftLinkOpened = makeHandlerInvoker(
+  'humbleRecordGiftLinkOpened'
+)
+export const humbleGetGiftedAt = makeHandlerInvoker('humbleGetGiftedAt')
 export const handleHumbleKeysUpdated = frontendListenerSlot('humbleKeysUpdated')
 export const handleHumbleSyncProgress = frontendListenerSlot('humbleSyncProgress')
 export const handleHumbleSyncStateChanged = frontendListenerSlot(

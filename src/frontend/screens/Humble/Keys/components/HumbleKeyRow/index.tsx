@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { HumbleKey } from 'common/types/humble'
 import { getExpirationDisplay } from 'common/humble/expirationDisplay'
@@ -21,7 +23,11 @@ type Props = {
 // `giftAction` prop (Giftable Spares tab only, Plan 04) is the other. Every
 // other interaction remains forbidden. Do not "improve" this row further into
 // a generally-interactive element.
-export default function HumbleKeyRow({ humbleKey, urgencyTier }: Props) {
+export default function HumbleKeyRow({
+  humbleKey,
+  urgencyTier,
+  giftAction
+}: Props) {
   const { t } = useTranslation()
 
   const isUnpicked = humbleKey.state === 'UNPICKED'
@@ -100,6 +106,29 @@ export default function HumbleKeyRow({ humbleKey, urgencyTier }: Props) {
       {expirationLabel !== null && (
         <span className="humbleKeyRowExpiration">{expirationLabel}</span>
       )}
+      {/* D-60 sanctioned exception: the second (and only other) interactive
+          affordance on this otherwise read-only row (D-22), rendered ONLY
+          when the caller supplies a `giftAction` prop — the Giftable Spares
+          tab is the sole caller that does. D-59 double-gift guard: once a
+          gift has been confirmed for this key, show the annotation instead
+          of re-rendering the button. */}
+      {giftAction &&
+        (giftAction.giftedAt !== null ? (
+          <span className="humbleKeyGiftedAnnotation">
+            {t('humbleKeys.giftedAnnotation', 'Opened Humble gift page {{date}}', {
+              date: new Date(giftAction.giftedAt).toLocaleDateString()
+            })}
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="humbleKeyGiftButton"
+            onClick={giftAction.onGift}
+          >
+            {t('humbleKeys.giftOnHumble', 'Gift on Humble')}
+            <FontAwesomeIcon icon={faExternalLinkAlt} />
+          </button>
+        ))}
     </li>
   )
 }
