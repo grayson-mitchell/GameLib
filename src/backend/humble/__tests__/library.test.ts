@@ -22,7 +22,8 @@
  * the Phase 12 ownership-recompute tests exercise the real two-tier matcher.
  */
 
-import type { HumbleKey, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
+import type { HumbleKey, HumbleKeyState, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
+import type { HumbleKeyInternal } from '../electronStores'
 
 // ── electronStores mock (in-memory Map/Set-backed CacheStore doubles) ──────
 // NOTE: jest.config's `resetMocks: true` strips mock implementations before
@@ -47,10 +48,12 @@ const mockSyncStore = {
   clear: jest.fn()
 }
 
-const revealedData = new Set<string>()
+const revealedData = new Map<string, { revealedAt: number }>()
 const mockRevealedStore = {
   has: jest.fn(),
+  get: jest.fn(),
   set: jest.fn(),
+  delete: jest.fn(),
   clear: jest.fn()
 }
 
@@ -60,6 +63,25 @@ const mockOverrideStore = {
   has: jest.fn(),
   set: jest.fn(),
   delete: jest.fn(),
+  clear: jest.fn()
+}
+
+// Phase 14 (D-77): local-redeemed store, composite-keyed `gamekey:machineName`.
+const localRedeemedData = new Map<string, { redeemedAt: number }>()
+const mockLocalRedeemedStore = {
+  has: jest.fn(),
+  get: jest.fn(),
+  set: jest.fn(),
+  delete: jest.fn(),
+  clear: jest.fn()
+}
+
+// Phase 14 (D-76): audit trail store, composite-keyed `gamekey:machineName`,
+// value is an append-only array of AuditRecord.
+const auditData = new Map<string, Array<Record<string, unknown>>>()
+const mockAuditStore = {
+  get: jest.fn(),
+  set: jest.fn(),
   clear: jest.fn()
 }
 
@@ -87,8 +109,14 @@ function resetStoreMocks() {
   mockSyncStore.clear.mockImplementation(() => syncData.clear())
 
   mockRevealedStore.has.mockImplementation((k: string) => revealedData.has(k))
-  mockRevealedStore.set.mockImplementation((k: string) => {
-    revealedData.add(k)
+  mockRevealedStore.get.mockImplementation((k: string) => revealedData.get(k))
+  mockRevealedStore.set.mockImplementation(
+    (k: string, v: { revealedAt: number }) => {
+      revealedData.set(k, v)
+    }
+  )
+  mockRevealedStore.delete.mockImplementation((k: string) => {
+    revealedData.delete(k)
   })
   mockRevealedStore.clear.mockImplementation(() => revealedData.clear())
 
@@ -100,13 +128,44 @@ function resetStoreMocks() {
     overrideData.delete(k)
   })
   mockOverrideStore.clear.mockImplementation(() => overrideData.clear())
+
+  mockLocalRedeemedStore.has.mockImplementation((k: string) =>
+    localRedeemedData.has(k)
+  )
+  mockLocalRedeemedStore.get.mockImplementation((k: string) =>
+    localRedeemedData.get(k)
+  )
+  mockLocalRedeemedStore.set.mockImplementation(
+    (k: string, v: { redeemedAt: number }) => {
+      localRedeemedData.set(k, v)
+    }
+  )
+  mockLocalRedeemedStore.delete.mockImplementation((k: string) => {
+    localRedeemedData.delete(k)
+  })
+  mockLocalRedeemedStore.clear.mockImplementation(() =>
+    localRedeemedData.clear()
+  )
+
+  mockAuditStore.get.mockImplementation(
+    (k: string, fallback?: Array<Record<string, unknown>>) =>
+      auditData.has(k) ? auditData.get(k) : fallback
+  )
+  mockAuditStore.set.mockImplementation(
+    (k: string, v: Array<Record<string, unknown>>) => {
+      auditData.set(k, v)
+    }
+  )
+  mockAuditStore.clear.mockImplementation(() => auditData.clear())
 }
 
 jest.mock('../electronStores', () => ({
   humbleLibraryStore: mockLibraryStore,
   humbleSyncStore: mockSyncStore,
   humbleRevealedStore: mockRevealedStore,
-  humbleOwnershipOverrideStore: mockOverrideStore
+  humbleOwnershipOverrideStore: mockOverrideStore,
+  humbleLocalRedeemedStore: mockLocalRedeemedStore,
+  humbleAuditStore: mockAuditStore
 }))
 
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
@@ -125,17 +184,21 @@ jest.mock('backend/storeManagers/steam/user', () => ({
 
 const mockGetGamekeys = jest.fn()
 const mockGetOrderDetail = jest.fn()
+const mockAdapterRevealKey = jest.fn()
 jest.mock('../adapter', () => ({
   getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args),
-  getOrderDetail: (...args: unknown[]) => mockGetOrderDetail(...args)
+  getOrderDetail: (...args: unknown[]) => mockGetOrderDetail(...args),
+  revealKey: (...args: unknown[]) => mockAdapterRevealKey(...args)
 }))
 
-// ── user mock (credentials only — auth flows are Plan 02's caller, not owner) ─
+// ── user mock (credentials/csrf only — auth flows are Plan 02's caller) ─────
 
 const mockGetCredentials = jest.fn(() => 'cookie-value')
+const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
 jest.mock('../user', () => ({
   HumbleUser: {
-    getCredentials: () => mockGetCredentials()
+    getCredentials: () => mockGetCredentials(),
+    getCsrfToken: () => mockGetCsrfToken()
   }
 }))
 
@@ -227,14 +290,54 @@ function makeNonTerminalEntry(gamekey: string): HumbleOrderCacheEntry {
   return { gamekey, keys: [key], allTerminal: false }
 }
 
+// Phase 14 guided claim flow: a cached entry carrying the internal-only
+// `keyindex` field (D-74) — the shape a real sync would have produced after
+// classifyOrder's keyIndexByComposite merge (library.ts, Task 1).
+function makeRevealableEntry(
+  gamekey: string,
+  opts: {
+    machineName?: string
+    keyindex?: string | number
+    ownedElsewhere?: boolean
+    matchConfidence?: 'exact' | 'fuzzy' | 'none'
+    state?: HumbleKeyState
+    locallyRedeemedPending?: boolean
+    revealedKeyValue?: string
+  } = {}
+): HumbleOrderCacheEntry {
+  const key: HumbleKeyInternal = {
+    gamekey,
+    machineName: opts.machineName ?? `${gamekey}_key`,
+    state: opts.state ?? 'UNREVEALED',
+    title: `Key for ${gamekey}`,
+    platform: 'steam',
+    expiration: null,
+    origin: `Order ${gamekey}`,
+    ownedElsewhere: opts.ownedElsewhere ?? false,
+    matchConfidence: opts.matchConfidence ?? 'none',
+    ...(opts.keyindex !== undefined ? { keyindex: opts.keyindex } : {}),
+    ...(opts.locallyRedeemedPending !== undefined
+      ? { locallyRedeemedPending: opts.locallyRedeemedPending }
+      : {}),
+    ...(opts.revealedKeyValue !== undefined
+      ? { revealedKeyValue: opts.revealedKeyValue }
+      : {})
+  }
+  return { gamekey, keys: [key], allTerminal: false }
+}
+
 describe('HumbleLibrary', () => {
   beforeEach(() => {
     libraryData.clear()
     syncData.clear()
     revealedData.clear()
     overrideData.clear()
+    localRedeemedData.clear()
+    auditData.clear()
     resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
+    mockGetCsrfToken.mockReturnValue('csrf-token-value')
+    mockAdapterRevealKey.mockReset()
     // Default: Steam disconnected / no owned games — existing (pre-Phase-12)
     // tests must see zero ownership-recompute activity unless a test opts in.
     mockSteamIsLoggedIn.mockReturnValue(false)
@@ -1783,6 +1886,277 @@ describe('HumbleLibrary', () => {
       expect(overrideData.has(entry.keys[0].machineName)).toBe(false)
       expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
       expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+    })
+  })
+
+  // ── Phase 14 guided claim flow: revealKey/markRedeemed/undoRedeemed ────────
+  // C1 (single call site), C2 (backend hard block, D-69/D-70), SC4
+  // (write-ahead audit ordering), D-78 (rollback split), D-79 (cooldown
+  // reuse), D-77 (undoable local redeem).
+
+  describe('HumbleLibrary.revealKey()', () => {
+    test('ineligible: unknown gamekey/machineName', async () => {
+      const outcome = await HumbleLibrary.revealKey('no-such-gk', 'no-such-key')
+      expect(outcome).toEqual({ status: 'ineligible' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('ineligible: a non-UNREVEALED key (e.g. already REDEEMED) is rejected', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { state: 'REDEEMED' }))
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ineligible' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('C2 (D-69): an EXACT ownedElsewhere match is hard-blocked, audits c2_block, makes no adapter call, sets no REVEALED flag', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          ownedElsewhere: true,
+          matchConfidence: 'exact',
+          keyindex: 'idx-1'
+        })
+      )
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'owned_blocked' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+      expect(revealedData.has('gk1_key')).toBe(false)
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit).toHaveLength(1)
+      expect(audit?.[0].event).toBe('c2_block')
+    })
+
+    test('C2 (D-70): a FUZZY ownedElsewhere match blocks exactly like an exact match', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          ownedElsewhere: true,
+          matchConfidence: 'fuzzy',
+          keyindex: 'idx-1'
+        })
+      )
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'owned_blocked' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('cooldown: an active denial cooldown short-circuits before any adapter call', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'denied',
+        cooldownUntil: Date.now() + 60_000
+      })
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual(
+        expect.objectContaining({ status: 'cooldown' })
+      )
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('Pitfall C: an eligible key with NO resolved keyindex is ineligible, never reaches the adapter', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1')) // no keyindex
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ineligible' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('no stored credentials: returns failed, no adapter call, no write-ahead', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockGetCredentials.mockReturnValue(undefined as unknown as string)
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'failed' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+      expect(revealedData.has('gk1_key')).toBe(false)
+    })
+
+    test('SC4 write-ahead: the REVEALED flag and reveal_attempt audit exist BEFORE the adapter call resolves', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      let flagSeenDuringCall = false
+      let auditSeenDuringCall = false
+      mockAdapterRevealKey.mockImplementation(async () => {
+        flagSeenDuringCall = revealedData.has('gk1_key')
+        auditSeenDuringCall = Boolean(auditData.get('gk1:gk1_key')?.length)
+        return { status: 'ok', data: { key: 'REAL-KEY-VALUE' } }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(flagSeenDuringCall).toBe(true)
+      expect(auditSeenDuringCall).toBe(true)
+    })
+
+    test('happy path (ok): persists the key value internally, marks REVEALED, audits reveal_success, returns the key — never logs the raw value', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'REAL-KEY-VALUE' }
+      })
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'revealed', key: 'REAL-KEY-VALUE' })
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
+        'cookie-value',
+        'csrf-token-value',
+        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
+      )
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
+        'REAL-KEY-VALUE'
+      )
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual([
+        'reveal_attempt',
+        'reveal_success'
+      ])
+      // C4: never a raw key value in a display-safe HumbleKey / broadcast.
+      const pushedKeys = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      for (const call of pushedKeys) {
+        expect(JSON.stringify(call)).not.toContain('REAL-KEY-VALUE')
+      }
+    })
+
+    test('D-78 definitive failure (schema_error): rolls back the write-ahead REVEALED flag, audits reveal_failed, returns failed', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'schema_error',
+        raw: {}
+      })
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'failed' })
+      expect(revealedData.has('gk1_key')).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('UNREVEALED')
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual([
+        'reveal_attempt',
+        'reveal_failed'
+      ])
+    })
+
+    test('D-78/D-79 definitive failure (access_denied): rolls back the flag AND sets the shared D-33 cooldown', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({ status: 'access_denied' })
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'failed' })
+      expect(revealedData.has('gk1_key')).toBe(false)
+      const state = HumbleLibrary.getSyncState()
+      expect(state.syncError).toBe('denied')
+      expect(state.cooldownUntil).toBeGreaterThan(Date.now())
+    })
+
+    test('D-78 ambiguous (adapter throws): KEEPS the write-ahead REVEALED flag, persists no key value, audits reveal_ambiguous', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockRejectedValue(new Error('ECONNRESET'))
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ambiguous' })
+      expect(revealedData.has('gk1_key')).toBe(true)
+      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBeNull()
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual([
+        'reveal_attempt',
+        'reveal_ambiguous'
+      ])
+    })
+
+    test('single call site (C1): exactly one adapter call per revealKey() invocation, never a loop/retry', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('HumbleLibrary.markRedeemed() / undoRedeemed() (D-77)', () => {
+    test('markRedeemed on a REVEALED key sets the local-redeemed mark, audits mark_redeemed, patches to REDEEMED with locallyRedeemedPending', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ok' })
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(true)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+      expect(
+        libraryData.get('gk1')?.keys[0].locallyRedeemedPending
+      ).toBe(true)
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual(['mark_redeemed'])
+    })
+
+    test('markRedeemed on a non-REVEALED key is ineligible, no store writes', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { state: 'UNREVEALED' }))
+
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ineligible' })
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
+    })
+
+    test('undoRedeemed on a locally-pending REDEEMED key clears the mark, audits undo_redeemed, reverts to REVEALED', async () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: Date.now() })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          locallyRedeemedPending: true,
+          keyindex: 'idx-1'
+        })
+      )
+
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        libraryData.get('gk1')?.keys[0].locallyRedeemedPending
+      ).toBe(false)
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual(['undo_redeemed'])
+    })
+
+    test('D-77 server truth wins: undoRedeemed is a no-op when REDEEMED did NOT come from a local mark (no locallyRedeemedPending)', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          keyindex: 'idx-1'
+          // locallyRedeemedPending intentionally absent — server-confirmed.
+        })
+      )
+
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+      expect(auditData.get('gk1:gk1_key')).toBeUndefined()
     })
   })
 })

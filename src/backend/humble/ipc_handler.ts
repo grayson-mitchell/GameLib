@@ -82,6 +82,30 @@ export function registerHumbleIpcHandlers(): void {
     HumbleLibrary.recordGiftLinkOpened(machineName)
   })
   addHandler('humbleGetGiftedAt', () => HumbleLibrary.getAllGiftedAt())
+  // Phase 14 guided claim flow (HCLAIM-01/02/03/04). Each handler is a thin
+  // typed delegate to HumbleLibrary — revealKey/markRedeemed/undoRedeemed
+  // already perform the authoritative server-side eligibility + C2
+  // re-validation internally (T-14-03: the renderer's view is never
+  // trusted). humbleGetRevealedKeyValue is the C4 narrow-exposure channel
+  // (T-14-02) — the ONLY channel that ever transmits a raw key value, and
+  // only on explicit on-demand read while the wizard is open, never
+  // broadcast. None of these are registered on any generic frontend
+  // storeGet bridge (WR-09, T-11-02 precedent).
+  addHandler('humbleRevealKey', async (e, params) =>
+    HumbleLibrary.revealKey(params.gamekey, params.machineName)
+  )
+  addHandler('humbleMarkRedeemed', async (e, params) =>
+    HumbleLibrary.markRedeemed(params.gamekey, params.machineName)
+  )
+  addHandler('humbleUndoRedeemed', async (e, params) =>
+    HumbleLibrary.undoRedeemed(params.gamekey, params.machineName)
+  )
+  addHandler('humbleGetRevealedKeyValue', (e, params) =>
+    HumbleLibrary.getRevealedKeyValue(params.gamekey, params.machineName)
+  )
+  addHandler('humbleGetClaimAnnotations', () =>
+    HumbleLibrary.getClaimAnnotations()
+  )
   // WR-02: never discard the disconnect promise silently — a rejection here
   // (e.g. session.fromPartition throwing) must not become an unhandled
   // rejection in the main process. The credential wipe itself runs first
