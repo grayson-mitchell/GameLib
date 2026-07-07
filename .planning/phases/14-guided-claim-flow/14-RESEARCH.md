@@ -543,27 +543,33 @@ Note: `platformRedeemUrl` (mapping `platform` → a redemption page per non-Stea
 
 **None of these are HIGH-confidence-verified facts** — every one should be treated as needing a live-validation checkpoint (A1-A3) or an explicit planning decision (A4-A5), not assumed true at plan time.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All four questions were resolved during planning (2026-07-07) — see the inline `RESOLVED:` note under each.
 
 1. **What exactly should "Finish activation" show for an ambiguous-outcome REVEALED key with no locally-known key value?** (Pitfall B)
    - What we know: D-78 keeps the REVEALED flag on ambiguous outcomes; D-66 assumes the key value is always locally available for "Finish activation."
    - What's unclear: these two decisions conflict in exactly this one case, which CONTEXT does not explicitly resolve.
    - Recommendation: track "key value known" as a distinct piece of state from "REVEALED flag set"; show a "confirming with Humble — sync now" affordance instead of either a blank field or a forbidden second reveal call. This should be resolved explicitly during planning, not left to implementation-time improvisation.
+   - **RESOLVED (planning):** "key value known" = the internal `revealedKeyValue` field on the cached entry (D-74-compliant, Plans 14-01/14-03); `getRevealedKeyValue` returning null IS the unconfirmed signal, and the wizard renders the "We couldn't confirm this finished — sync to check" state with a sync action, never a second reveal (Plan 14-04).
 
 2. **Does the `humbler/redeemkey` endpoint actually require CSRF, and under what exact cookie/header names, in 2026?**
    - What we know: one 2021-era tool demonstrates it; a separate in-page userscript doesn't need it (different execution context).
    - What's unclear: whether Humble still enforces this at all, whether the cookie name is still `csrf_cookie`, and whether the header name is still `csrf-prevention-token`.
    - Recommendation: mandatory live-validation checkpoint (`checkpoint:human-verify`) with a real account and a disposable UNREVEALED key before the reveal button is wired to any production UI path. Budget a fallback: if the plain `_simpleauth_sess`-only request works without CSRF, drop the extra capture entirely rather than carrying dead code.
+   - **RESOLVED (planning):** csrf_cookie captured optionally + encrypted at login (Plan 14-02 Task 3); the actual requirement is decided at Plan 14-06's blocking live checkpoint, which records the disposition (and flags the capture as droppable dead code if unneeded).
 
 3. **What should the non-Steam "Redeem on {platform}" link-out actually link to?**
    - What we know: HCLAIM-05 requires a link-out + copy-key, no one-click activation.
    - What's unclear: no source (spec docs, PITFALLS.md, or this research) enumerates a Humble `key_type` → redemption-URL table for Epic/GOG/Ubisoft/Battle.net/etc.
    - Recommendation: default to generic copy ("Copy this key and redeem it on {{platform}}'s site") without a guessed deep-link, or link to a neutral "how to redeem a {{platform}} key" help concept, rather than fabricating platform URLs this research cannot verify.
+   - **RESOLVED (planning):** per 14-UI-SPEC's scope note — generic copy-key-first link-out, no fabricated per-platform deep-links (Plan 14-04 Task 1 enforces this; threat T-14-09).
 
 4. **Should the pre-existing `humbleRevealedStore`/`humbleOwnershipOverrideStore` (machineName-only keying) be migrated to composite keys in this phase, given Phase 14 is the first phase where a machineName collision could cause real, expensive harm (a wasted key)?**
    - What we know: 13-REVIEW's WR-01 documents the exact collision risk; CONTEXT's Discretion section explicitly defers this decision to the researcher/planner.
    - What's unclear: how common duplicate-order-for-the-same-game actually is among real users (no telemetry), and whether a migration is cheap enough to justify in this phase vs. accepted as a documented limitation.
    - Recommendation: accept as a documented limitation for `humbleRevealedStore` in this phase (matches 13-REVIEW's own disposition for its WR-01/02/03), but ensure ALL new Phase 14 stores use composite keys so the collision surface does not grow.
+   - **RESOLVED (planning):** accepted as documented — pre-existing machineName-keyed stores are NOT migrated; all new Phase 14 persistence (audit, local-redeemed, and the internal cache-record fields) is composite-keyed / composite-addressed from day one (Plans 14-01/14-03).
 
 ## Environment Availability
 
