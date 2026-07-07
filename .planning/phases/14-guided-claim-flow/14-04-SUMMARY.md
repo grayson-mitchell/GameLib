@@ -116,3 +116,7 @@ None — no external service configuration required. The reveal endpoint's live 
 ---
 *Phase: 14-guided-claim-flow*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+All 3 created files (`index.tsx`, `index.css`, `__tests__/index.test.tsx`) and this SUMMARY.md verified present on disk; all 3 commits (`930fa7d9`, `93f73141`, `399e147c`) verified present in git log.
