@@ -1,10 +1,11 @@
 ---
 phase: 14
 slug: guided-claim-flow
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-07
+reviewed_at: 2026-07-07
 ---
 
 # Phase 14 — UI Design Contract
@@ -166,11 +167,11 @@ Not applicable — no shadcn, no component registry of any kind in this project.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: FLAG (accepted — em-based token scale is the project's shipped, 13-phase-deep design system; deviation documented in Spacing Scale section)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (gsd-ui-checker, 2026-07-07)
