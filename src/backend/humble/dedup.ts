@@ -145,7 +145,17 @@ export function recomputeOwnership(
     }
     let ownedElsewhere = false
     let matchConfidence: HumbleKey['matchConfidence'] = 'none'
-    if (key.steamAppId !== undefined) {
+    // D-71 / WR-01 fix: a falsy-but-present steamAppId ('' or '0') must not
+    // shadow the fuzzy tier. `!== undefined` alone let '' / '0' satisfy the
+    // AppID branch, find no match, and never fall through to fuzzy. Note: a
+    // plain JS truthiness check (`if (key.steamAppId)`) is NOT sufficient
+    // here — the string '0' is truthy in JavaScript — so '0' is excluded
+    // explicitly alongside '' and undefined.
+    const hasUsableSteamAppId =
+      key.steamAppId !== undefined &&
+      key.steamAppId !== '' &&
+      key.steamAppId !== '0'
+    if (hasUsableSteamAppId) {
       if (steamGames.some((g) => g.app_name === key.steamAppId)) {
         ownedElsewhere = true
         matchConfidence = 'exact'
