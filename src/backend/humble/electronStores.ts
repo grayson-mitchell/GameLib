@@ -48,10 +48,27 @@ const humbleOwnershipOverrideStore = new CacheStore<
   string
 >('humble_ownership_override', null)
 
+// D-59 (reinterpreted per D-57 research — the gift-link is a static
+// deep-link GameLib never possesses, so this store does NOT hold a URL):
+// records when the user confirmed the "Open Humble" gift action for a
+// giftable-spares key, keyed by `machine_name`. Guards against
+// double-gifting the same key. Like humbleRevealedStore and
+// humbleOwnershipOverrideStore above, this store is NEVER cleared by
+// HumbleUser.disconnect() — a gift confirmation must survive a
+// disconnect/reconnect cycle so the double-gift guard is never silently
+// dropped. Kept as its own electron-store file on disk for the same
+// isolation reason as the two stores above — do not merge this into
+// humbleLibraryStore.
+const humbleGiftedAtStore = new CacheStore<{ giftedAt: number }, string>(
+  'humble_gifted_at',
+  null
+)
+
 export {
   configStore,
   humbleLibraryStore,
   humbleSyncStore,
   humbleRevealedStore,
-  humbleOwnershipOverrideStore
+  humbleOwnershipOverrideStore,
+  humbleGiftedAtStore
 }

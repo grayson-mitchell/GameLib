@@ -17,7 +17,8 @@ import {
   configStore,
   humbleLibraryStore,
   humbleSyncStore,
-  humbleOwnershipOverrideStore
+  humbleOwnershipOverrideStore,
+  humbleGiftedAtStore
 } from '../electronStores'
 
 describe('humbleOwnershipOverrideStore', () => {
@@ -50,5 +51,36 @@ describe('humbleOwnershipOverrideStore', () => {
     expect(humbleOwnershipOverrideStore.get(machineName)).toEqual({
       overriddenAt
     })
+  })
+})
+
+describe('humbleGiftedAtStore', () => {
+  beforeEach(() => {
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+    humbleGiftedAtStore.clear()
+  })
+
+  test('is created under the store name humble_gifted_at, keyed by machine_name', () => {
+    const machineName = 'sometitle_steam'
+    humbleGiftedAtStore.set(machineName, { giftedAt: Date.now() })
+
+    expect(humbleGiftedAtStore.has(machineName)).toBe(true)
+  })
+
+  test('D-59: a gifted-at record survives a disconnect-style wipe of configStore/humbleLibraryStore/humbleSyncStore', () => {
+    const machineName = 'anothertitle_steam'
+    const giftedAt = Date.now()
+    humbleGiftedAtStore.set(machineName, { giftedAt })
+
+    // Simulates exactly what HumbleUser.disconnect() clears (D-07/D-04/D-30)
+    // — deliberately NOT humbleGiftedAtStore, per D-59.
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+
+    expect(humbleGiftedAtStore.has(machineName)).toBe(true)
+    expect(humbleGiftedAtStore.get(machineName)).toEqual({ giftedAt })
   })
 })
