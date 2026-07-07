@@ -369,7 +369,7 @@ Plans:
 Plans:
 - [x] 14-01-PLAN.md — Foundation: reveal/redeem types + IPC signatures, classifier-version bump, 3 composite-keyed disconnect-surviving stores, WR-01 dedup fix
 - [x] 14-02-PLAN.md — Adapter revealKey() write call + keyindex schema, classify local-redeemed tier + keyindex side-channel, csrf_cookie capture
-- [ ] 14-03-PLAN.md — library reveal/mark/undo orchestration (write-ahead audit, C2 hard block, D-78 rollback, cache-patch) + IPC handlers + preload invokers
+- [x] 14-03-PLAN.md — library reveal/mark/undo orchestration (write-ahead audit, C2 hard block, D-78 rollback, cache-patch) + IPC handlers + preload invokers
 - [ ] 14-04-PLAN.md — HumbleClaimWizard modal component (warning → reveal → key + open Steam / redeem link-out → mark redeemed) + tests
 - [ ] 14-05-PLAN.md — HumbleKeyRow claimAction + Keys-waiting wizard mount + Spares WR-04 undo-override + i18n
 - [ ] 14-06-PLAN.md — Live reveal-endpoint validation checkpoint (disposable key) + full-suite gate + 14-VALIDATION.md
@@ -410,5 +410,5 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
 | 12. Ownership Dedup | 5/5 | Complete    | 2026-07-06 |
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
-| 14. Guided Claim Flow | 2/6 | In Progress|  |
+| 14. Guided Claim Flow | 3/6 | In Progress|  |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |
