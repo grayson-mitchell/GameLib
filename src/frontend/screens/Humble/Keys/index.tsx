@@ -2,7 +2,7 @@ import './index.css'
 
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate } from 'react-router-dom'
+import { Navigate, NavLink, Outlet } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
@@ -10,8 +10,10 @@ import classNames from 'classnames'
 import ContextProvider from 'frontend/state/ContextProvider'
 import WarningMessage from 'frontend/components/UI/WarningMessage'
 import { humbleLoginPath } from 'frontend/screens/Login'
-import { GROUP_ORDER, groupAndSortKeys } from 'common/humble/groupKeys'
-import HumbleKeyGroup from './components/HumbleKeyGroup'
+import {
+  selectGiftableSpares,
+  selectKeysWaiting
+} from 'common/humble/viewFilters'
 
 // Local formatRelativeTime (mirrors LibraryHeader's, returns the bare
 // duration phrase — the "ago"/"showing data from" wrapper lives in the
@@ -32,9 +34,11 @@ function formatRelativeTime(ms: number): string {
   return `${days} ${days === 1 ? 'day' : 'days'}`
 }
 
-// D-21 grouping + round-7 generic->Other partition live in the pure
-// common/humble/groupKeys helper (unit-tested from the backend jest
-// project) — this screen only renders the groups it receives, in order.
+// Parent route shell (D-49): renders the D-20 route guard + the sync-status
+// header (refresh/last-synced/fail-soft banner, unchanged) ONCE, above a tab
+// bar of three real sub-routes (D-51), followed by <Outlet/>. The D-21
+// grouped-list render body now lives in ./All (moved verbatim); this file no
+// longer imports groupKeys/HumbleKeyGroup directly.
 
 export default function HumbleKeys() {
   const { t } = useTranslation()
@@ -97,9 +101,12 @@ export default function HumbleKeys() {
     return <Navigate to={humbleLoginPath} replace />
   }
 
+  // D-52: live counts for the two actionable tabs only; All keys stays
+  // uncounted. Derived directly from `humble.keys` — not pushed through
+  // context, same tier as the (now-moved) groupAndSortKeys call site.
   const keys = humble.keys ?? []
-  const groups = groupAndSortKeys(keys)
-  const hasKeys = keys.length > 0
+  const keysWaitingCount = selectKeysWaiting(keys).length
+  const giftableSparesCount = selectGiftableSpares(keys).length
 
   const now = Date.now()
   const syncedAt = humble.syncedAt ?? null
@@ -184,27 +191,38 @@ export default function HumbleKeys() {
         </WarningMessage>
       )}
 
-      {hasKeys ? (
-        <div className="humbleKeysGroupList">
-          {GROUP_ORDER.map((group) => {
-            const groupKeys = groups[group]
-            if (!groupKeys?.length) {
-              return null
-            }
-            return <HumbleKeyGroup key={group} group={group} keys={groupKeys} />
+      <nav className="humbleKeysTabBar">
+        <NavLink
+          className={({ isActive }) =>
+            classNames('humbleKeysTab', { active: isActive })
+          }
+          to="waiting"
+        >
+          {t('humbleKeys.tabWaiting', 'Keys waiting ({{count}})', {
+            count: keysWaitingCount
           })}
-        </div>
-      ) : (
-        <div className="humbleKeysEmptyState">
-          <h5>{t('humbleKeys.emptyTitle', 'No Humble keys yet')}</h5>
-          <p>
-            {t(
-              'humbleKeys.emptyBody',
-              'Your synced key inventory will appear here once your account has orders.'
-            )}
-          </p>
-        </div>
-      )}
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            classNames('humbleKeysTab', { active: isActive })
+          }
+          to="spares"
+        >
+          {t('humbleKeys.tabSpares', 'Giftable spares ({{count}})', {
+            count: giftableSparesCount
+          })}
+        </NavLink>
+        <NavLink
+          className={({ isActive }) =>
+            classNames('humbleKeysTab', { active: isActive })
+          }
+          to="all"
+        >
+          {t('humbleKeys.tabAll', 'All keys')}
+        </NavLink>
+      </nav>
+
+      <Outlet />
     </div>
   )
 }

@@ -176,7 +176,24 @@ const router = createHashRouter([
       },
       {
         path: 'humble-keys',
-        lazy: makeLazyFunc(import('./screens/Humble/Keys'))
+        // Parent: shared route guard + sync header + tab nav + <Outlet/>.
+        lazy: makeLazyFunc(import('./screens/Humble/Keys')),
+        children: [
+          // D-50: default tab is Keys waiting.
+          { index: true, element: <Navigate to="waiting" replace /> },
+          {
+            path: 'waiting',
+            lazy: makeLazyFunc(import('./screens/Humble/Keys/Waiting'))
+          },
+          {
+            path: 'spares',
+            lazy: makeLazyFunc(import('./screens/Humble/Keys/Spares'))
+          },
+          {
+            path: 'all',
+            lazy: makeLazyFunc(import('./screens/Humble/Keys/All'))
+          }
+        ]
       },
       {
         path: 'download-manager',
