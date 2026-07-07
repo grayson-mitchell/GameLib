@@ -29,6 +29,15 @@ export const humbleRecordGiftLinkOpened = makeHandlerInvoker(
   'humbleRecordGiftLinkOpened'
 )
 export const humbleGetGiftedAt = makeHandlerInvoker('humbleGetGiftedAt')
+export const humbleRevealKey = makeHandlerInvoker('humbleRevealKey')
+export const humbleMarkRedeemed = makeHandlerInvoker('humbleMarkRedeemed')
+export const humbleUndoRedeemed = makeHandlerInvoker('humbleUndoRedeemed')
+export const humbleGetRevealedKeyValue = makeHandlerInvoker(
+  'humbleGetRevealedKeyValue'
+)
+export const humbleGetClaimAnnotations = makeHandlerInvoker(
+  'humbleGetClaimAnnotations'
+)
 export const handleHumbleKeysUpdated = frontendListenerSlot('humbleKeysUpdated')
 export const handleHumbleSyncProgress = frontendListenerSlot('humbleSyncProgress')
 export const handleHumbleSyncStateChanged = frontendListenerSlot(
