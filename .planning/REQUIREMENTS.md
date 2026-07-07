@@ -78,10 +78,10 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 
 ### Humble Guided Claim
 
-- [ ] **HCLAIM-01**: User can reveal a single UNREVEALED key only on explicit per-key action, behind a clear irreversibility warning — never auto-reveal, no "reveal all"
-- [ ] **HCLAIM-02**: Revealing a key for an already-owned game is intercepted and routed to the giftable-spare path instead of proceeding (C2 guard)
-- [ ] **HCLAIM-03**: On reveal, the key is copied to clipboard and the browser opens `store.steampowered.com/account/registerkey?key=` pre-filled; the user confirms activation via a "Mark as redeemed" button
-- [ ] **HCLAIM-04**: Every reveal and redeem is recorded in a local audit log (what key, when, outcome)
+- [x] **HCLAIM-01**: User can reveal a single UNREVEALED key only on explicit per-key action, behind a clear irreversibility warning — never auto-reveal, no "reveal all"
+- [x] **HCLAIM-02**: Revealing a key for an already-owned game is intercepted and routed to the giftable-spare path instead of proceeding (C2 guard)
+- [x] **HCLAIM-03**: On reveal, the key is copied to clipboard and the browser opens `store.steampowered.com/account/registerkey?key=` pre-filled; the user confirms activation via a "Mark as redeemed" button
+- [x] **HCLAIM-04**: Every reveal and redeem is recorded in a local audit log (what key, when, outcome)
 - [ ] **HCLAIM-05**: Non-Steam keys (Epic/Ubisoft/GOG/…) show a "redeem on {platform}" link-out and copy-key, with no one-click activation
 
 ### Humble Store & Alerts
@@ -151,10 +151,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HDEDUP-02 | Phase 12 | Complete (2026-07-07) |
 | HVIEW-01 | Phase 13 | Pending |
 | HVIEW-02 | Phase 13 | Pending |
-| HCLAIM-01 | Phase 14 | Pending |
-| HCLAIM-02 | Phase 14 | Pending |
-| HCLAIM-03 | Phase 14 | Pending |
-| HCLAIM-04 | Phase 14 | Pending |
+| HCLAIM-01 | Phase 14 | Complete |
+| HCLAIM-02 | Phase 14 | Complete |
+| HCLAIM-03 | Phase 14 | Complete |
+| HCLAIM-04 | Phase 14 | Complete |
 | HCLAIM-05 | Phase 14 | Pending |
 | HSTORE-01 | Phase 15 | Pending |
 | HSTORE-03 | Phase 15 | Pending |
