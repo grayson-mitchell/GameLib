@@ -111,3 +111,7 @@ None — no external service configuration required. The reveal endpoint's live 
 ---
 *Phase: 14-guided-claim-flow*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+All 4 modified source/test files and the SUMMARY.md itself verified present on disk; all 5 task/GREEN/RED/docs commits (`49d13bda`, `df7a9763`, `33df5ebf`, `0a5f53a2`, `1336a85c`) verified present in git log.
