@@ -6,6 +6,7 @@ import classNames from 'classnames'
 
 import { HumbleKey } from 'common/types/humble'
 import { HumbleKeyGroupId } from 'common/humble/groupKeys'
+import { getUrgencyTier } from 'common/humble/urgencyBadge'
 import HumbleKeyRow from '../HumbleKeyRow'
 // WR-09: STATE_LABEL_KEYS lives in a leaf module — HumbleKeyRow used to
 // import it back from THIS module while this module imports the row
@@ -80,6 +81,7 @@ export default function HumbleKeyGroup({ group, keys }: Props) {
             <HumbleKeyRow
               key={`${key.gamekey}:${key.machineName}`}
               humbleKey={key}
+              urgencyTier={getUrgencyTier(key.state, key.expiration)}
             />
           ))}
         </ul>

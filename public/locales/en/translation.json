@@ -556,6 +556,9 @@
         "ownedOnSteam": "Owned on Steam",
         "refresh": "Refresh Humble Keys",
         "rowCaption": "{{platform}} · {{origin}}",
+        "sparesBlurb": "You already own these games — keep the keys unrevealed and gift them instead.",
+        "sparesEmptyBody": "Keys show up here once they're confirmed owned elsewhere and haven't been revealed yet.",
+        "sparesEmptyTitle": "No giftable spares",
         "state": {
             "redeemed": "Redeemed",
             "revealed": "Revealed",
@@ -566,8 +569,17 @@
         "syncError": "Couldn't refresh — showing data from {{time}}",
         "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
         "syncing": "Syncing… {{done}}/{{total}} orders",
+        "tabAll": "All keys",
+        "tabSpares": "Giftable spares ({{count}})",
+        "tabWaiting": "Keys waiting ({{count}})",
         "title": "Humble Keys",
-        "unpickedTitle": "{{title}} · games not picked"
+        "unpickedTitle": "{{title}} · games not picked",
+        "urgencyDaysLeft": "{{N}} days left",
+        "urgencyHoursLeft": "{{H}}h left",
+        "urgencyOneDayLeft": "1 day left",
+        "waitingBlurb": "Keys you don't own yet — claim them before they expire.",
+        "waitingEmptyBody": "No keys are waiting to be claimed. Check the All keys tab to see your full inventory.",
+        "waitingEmptyTitle": "You're all caught up"
     },
     "info": {
         "heroic": {
