@@ -2,19 +2,26 @@ import { useTranslation } from 'react-i18next'
 
 import { HumbleKey } from 'common/types/humble'
 import { getExpirationDisplay } from 'common/humble/expirationDisplay'
+import { UrgencyTier } from 'common/humble/urgencyBadge'
 import { STATE_LABEL_KEYS } from '../../stateLabels'
+import UrgencyBadge from '../UrgencyBadge'
 
 type Props = {
   humbleKey: HumbleKey
+  /** D-63: renders in all 3 tabs, computed by the caller via getUrgencyTier. */
+  urgencyTier?: UrgencyTier
+  /** D-60: Giftable Spares only — omitted (undefined) everywhere else. */
+  giftAction?: { giftedAt: number | null; onGift: () => void }
 }
 
-// D-22: strictly read-only, with ONE sanctioned exception. No click handler,
+// D-22: strictly read-only, with TWO sanctioned exceptions. No click handler,
 // no button/link element, no cursor:pointer, no reveal/copy/expand affordance
 // — Phase 14 owns claim actions, not this row. The D-42 "Not the same game"
-// override below is the single carve-out (fuzzy-matched rows only); every
+// override below is one carve-out (fuzzy-matched rows only); the optional
+// `giftAction` prop (Giftable Spares tab only, Plan 04) is the other. Every
 // other interaction remains forbidden. Do not "improve" this row further into
 // a generally-interactive element.
-export default function HumbleKeyRow({ humbleKey }: Props) {
+export default function HumbleKeyRow({ humbleKey, urgencyTier }: Props) {
   const { t } = useTranslation()
 
   const isUnpicked = humbleKey.state === 'UNPICKED'
@@ -54,6 +61,10 @@ export default function HumbleKeyRow({ humbleKey }: Props) {
       >
         {t(labelKey, labelDefault)}
       </span>
+      <UrgencyBadge
+        tier={urgencyTier ?? null}
+        expiration={humbleKey.expiration}
+      />
       <div className="humbleKeyRowInfo">
         <span className="humbleKeyRowTitle">{displayTitle}</span>
         {!isUnpicked && (
