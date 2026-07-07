@@ -48,10 +48,12 @@ const mockSyncStore = {
   clear: jest.fn()
 }
 
-const revealedData = new Set<string>()
+const revealedData = new Map<string, { revealedAt: number }>()
 const mockRevealedStore = {
   has: jest.fn(),
+  get: jest.fn(),
   set: jest.fn(),
+  delete: jest.fn(),
   clear: jest.fn()
 }
 
@@ -107,8 +109,14 @@ function resetStoreMocks() {
   mockSyncStore.clear.mockImplementation(() => syncData.clear())
 
   mockRevealedStore.has.mockImplementation((k: string) => revealedData.has(k))
-  mockRevealedStore.set.mockImplementation((k: string) => {
-    revealedData.add(k)
+  mockRevealedStore.get.mockImplementation((k: string) => revealedData.get(k))
+  mockRevealedStore.set.mockImplementation(
+    (k: string, v: { revealedAt: number }) => {
+      revealedData.set(k, v)
+    }
+  )
+  mockRevealedStore.delete.mockImplementation((k: string) => {
+    revealedData.delete(k)
   })
   mockRevealedStore.clear.mockImplementation(() => revealedData.clear())
 

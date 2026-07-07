@@ -4,10 +4,12 @@ import {
   ClaimAnnotation,
   HumbleKey,
   HumbleKeyState,
+  RedeemOutcome,
+  RevealOutcome,
   HumbleSyncState
 } from 'common/types/humble'
 
-import { getGamekeys, getOrderDetail } from './adapter'
+import { getGamekeys, getOrderDetail, revealKey as adapterRevealKey } from './adapter'
 import {
   classifyOrder,
   describeZeroKeyOrder,
@@ -842,6 +844,203 @@ async function runSync(): Promise<SyncOutcome> {
   return { status: sawFailure ? 'partial' : 'ok' }
 }
 
+// ── Phase 14 guided claim flow: reveal / mark-redeemed / undo orchestration ─
+
+/**
+ * The ONLY function in the entire backend that calls the adapter's reveal
+ * write (C1/T-14-05) — no loop, no retry wrapper. Exact step order below is
+ * load-bearing, not stylistic:
+ *
+ * 1. eligibility (must be a known UNREVEALED key)
+ * 2. C2 re-check (D-69/D-70): backend re-reads ownedElsewhere from the LIVE
+ *    key set — a fuzzy match blocks exactly like an exact match, the only
+ *    escape hatch is the existing D-42 override (which clears ownedElsewhere
+ *    itself, upstream of this check)
+ * 3. D-79 cooldown gate (reused from D-33 — no separate reveal-specific timer)
+ * 4. keyindex resolution (Pitfall C: never call the adapter with a missing
+ *    keyindex — an un-backfilled pre-Phase-14 cached row is ineligible)
+ * 5. credentials
+ * 6. WRITE-AHEAD (SC4): the audit record AND the REVEALED flag are persisted
+ *    BEFORE the network call — a crash/unexpected termination right after the
+ *    call leaves the flag set rather than silently losing that the key may
+ *    already have been redeemed server-side.
+ * 7. the single adapter call
+ * 8. outcome reconciliation (D-78): a definitive failure (schema_error /
+ *    access_denied / session_expired) rolls the write-ahead flag BACK; an
+ *    ambiguous (thrown/transient) outcome KEEPS it and never auto-resubmits.
+ */
+async function revealKey(
+  gamekey: string,
+  machineName: string
+): Promise<RevealOutcome> {
+  const target = getKeys().find(
+    (key) => key.gamekey === gamekey && key.machineName === machineName
+  )
+  if (!target || target.state !== 'UNREVEALED') {
+    return { status: 'ineligible' }
+  }
+
+  // C2 (D-69/D-70): the backend is the sole authority — a fuzzy match blocks
+  // exactly like an exact match. The renderer's view of ownedElsewhere is
+  // never trusted (adversarial "renderer says unowned" case, T-14-03).
+  if (target.ownedElsewhere === true) {
+    appendAudit(gamekey, machineName, 'c2_block', {
+      title: target.title,
+      platform: target.platform
+    })
+    return { status: 'owned_blocked' }
+  }
+
+  const syncState = getSyncState()
+  if (syncState.cooldownUntil && syncState.cooldownUntil > Date.now()) {
+    return { status: 'cooldown', retryAtMs: syncState.cooldownUntil }
+  }
+
+  const keyindex = lookupKeyindex(gamekey, machineName)
+  if (keyindex === undefined) {
+    // Pitfall C: a pre-Phase-14 cached row not yet backfilled with a
+    // keyindex (the HUMBLE_CLASSIFIER_VERSION bump forces this on next sync)
+    // must never reach the adapter call — surfaced as ineligible so the
+    // wizard can show "Sync to enable claiming".
+    return { status: 'ineligible' }
+  }
+
+  const cookie = HumbleUser.getCredentials()
+  if (!cookie) {
+    return { status: 'failed' }
+  }
+  const csrfToken = HumbleUser.getCsrfToken()
+
+  // WRITE-AHEAD (SC4): both the audit record and the REVEALED flag are
+  // persisted BEFORE the adapter call — never after.
+  appendAudit(gamekey, machineName, 'reveal_attempt', {
+    title: target.title,
+    platform: target.platform
+  })
+  humbleRevealedStore.set(machineName, { revealedAt: Date.now() })
+
+  try {
+    const result = await adapterRevealKey(cookie, csrfToken, {
+      gamekey,
+      machineName,
+      keyindex
+    })
+
+    if (result.status === 'ok') {
+      // D-74: persist the plaintext value onto the existing cache entry's
+      // internal field — no new secret-surface store.
+      patchCachedState(gamekey, machineName, 'REVEALED', {
+        revealedKeyValue: result.data.key
+      })
+      appendAudit(gamekey, machineName, 'reveal_success', {
+        title: target.title,
+        platform: target.platform,
+        outcome: 'ok'
+      })
+      return { status: 'revealed', key: result.data.key }
+    }
+
+    // Definitive failure (D-78): roll back the write-ahead REVEALED flag —
+    // this key was never actually revealed server-side.
+    humbleRevealedStore.delete(machineName)
+    appendAudit(gamekey, machineName, 'reveal_failed', {
+      title: target.title,
+      platform: target.platform,
+      outcome: result.status
+    })
+    if (result.status === 'access_denied') {
+      // D-79: reuse the existing D-33 shared cooldown — no separate
+      // reveal-specific timer.
+      setSyncState({
+        syncError: 'denied',
+        cooldownUntil: Date.now() + HUMBLE_COOLDOWN_MS
+      })
+    }
+    return { status: 'failed' }
+  } catch (err) {
+    // Ambiguous (D-78): the adapter threw (network/timeout/5xx class, same
+    // as getGamekeys/getOrderDetail's D-31 throw contract) — we genuinely do
+    // not know whether Humble processed the reveal. KEEP the write-ahead
+    // flag and persist NO key value (getRevealedKeyValue stays null — the
+    // Pitfall B signal the wizard surfaces as "unconfirmed"). Never
+    // auto-resubmit (T-14-05) — only an explicit user retry may call
+    // revealKey again.
+    logWarning(
+      [
+        'Humble reveal: adapter threw (ambiguous), keeping REVEALED flag:',
+        gamekey,
+        machineName,
+        err
+      ],
+      LogPrefix.Backend
+    )
+    appendAudit(gamekey, machineName, 'reveal_ambiguous', {
+      title: target.title,
+      platform: target.platform
+    })
+    return { status: 'ambiguous' }
+  }
+}
+
+/**
+ * D-77: marks a REVEALED key as locally redeemed ahead of any server
+ * confirmation. Sets `locallyRedeemedPending: true` on the cache-projected
+ * key so the renderer can offer the Undo affordance — a server-confirmed
+ * redeem (seen in a later sync's order data) never carries this flag.
+ */
+async function markRedeemed(
+  gamekey: string,
+  machineName: string
+): Promise<RedeemOutcome> {
+  const target = getKeys().find(
+    (key) => key.gamekey === gamekey && key.machineName === machineName
+  )
+  if (!target || target.state !== 'REVEALED') {
+    return { status: 'ineligible' }
+  }
+
+  humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
+    redeemedAt: Date.now()
+  })
+  appendAudit(gamekey, machineName, 'mark_redeemed', {
+    title: target.title,
+    platform: target.platform
+  })
+  patchCachedState(gamekey, machineName, 'REDEEMED', {
+    locallyRedeemedPending: true
+  })
+  return { status: 'ok' }
+}
+
+/**
+ * D-77: undoes a local "Mark as redeemed" action, reverting the key back to
+ * REVEALED. Server truth always wins — a no-op when the key's current
+ * REDEEMED state was NOT produced by the local mark (i.e. a server-confirmed
+ * redeemed value has since landed via sync, which never carries
+ * `locallyRedeemedPending`), and likewise a no-op when there is nothing to
+ * undo (key missing or not currently locally-redeemed).
+ */
+async function undoRedeemed(
+  gamekey: string,
+  machineName: string
+): Promise<void> {
+  const target = getKeys().find(
+    (key) => key.gamekey === gamekey && key.machineName === machineName
+  )
+  if (!target || target.state !== 'REDEEMED' || !target.locallyRedeemedPending) {
+    return
+  }
+
+  humbleLocalRedeemedStore.delete(compositeKey(gamekey, machineName))
+  appendAudit(gamekey, machineName, 'undo_redeemed', {
+    title: target.title,
+    platform: target.platform
+  })
+  patchCachedState(gamekey, machineName, 'REVEALED', {
+    locallyRedeemedPending: false
+  })
+}
+
 export const HumbleLibrary = {
   loadCached,
   sync,
@@ -852,6 +1051,9 @@ export const HumbleLibrary = {
   clearOwnershipOverride,
   recordGiftLinkOpened,
   getAllGiftedAt,
+  revealKey,
+  markRedeemed,
+  undoRedeemed,
   getRevealedKeyValue,
   getClaimAnnotations
 }
