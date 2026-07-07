@@ -137,6 +137,52 @@ describe('recomputeOwnership — dlc guard (success criterion 3)', () => {
   })
 })
 
+describe('recomputeOwnership — WR-01 falsy steamAppId fix (D-71)', () => {
+  it("falsy steamAppId '' falls through to the fuzzy tier instead of skipping both", () => {
+    const key = makeKey({ steamAppId: '', title: 'Stardew Valley' })
+    const [result] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('fuzzy')
+  })
+
+  it("falsy steamAppId '0' falls through to the fuzzy tier instead of skipping both", () => {
+    const key = makeKey({ steamAppId: '0', title: 'Stardew Valley' })
+    const [result] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('fuzzy')
+  })
+
+  it('regression: a real exact-matching steamAppId still returns exact (no regression)', () => {
+    const key = makeKey({ steamAppId: '620', title: 'Portal 2' })
+    const [result] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('exact')
+  })
+
+  it('regression: steamAppId undefined still fuzzy-matches (no regression)', () => {
+    const key = makeKey({ steamAppId: undefined, title: 'Stardew Valley' })
+    const [result] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      NEVER_OVERRIDDEN
+    )
+    expect(result.ownedElsewhere).toBe(true)
+    expect(result.matchConfidence).toBe('fuzzy')
+  })
+})
+
 describe('recomputeOwnership — unpicked exclusion (D-27)', () => {
   it('unpicked: an UNPICKED pseudo-entry is never matched, returned unchanged', () => {
     // Title deliberately identical to an owned game — must still be skipped.

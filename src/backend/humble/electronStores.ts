@@ -1,18 +1,47 @@
 import { TypeCheckedStoreBackend } from '../electron_store'
 import CacheStore from '../cache'
-import { HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
+import { HumbleKey, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
 
 const configStore = new TypeCheckedStoreBackend('humbleConfigStore', {
   cwd: 'humble_store'
 })
 
+/**
+ * D-74 (locked: "no new secret-surface class"): the revealed key value and
+ * the keyindex do NOT get their own store. Instead they ride the EXISTING
+ * humbleLibraryStore cache entries as internal-only fields, never exposed on
+ * the broadcast HumbleKey type (C4/T-14-02). library.ts's getKeys() display
+ * projection strips these two fields before any IPC broadcast (Plan 03).
+ *
+ * Pitfall B falls out naturally from this typing: REVEALED flag set + no
+ * revealedKeyValue on the cached record = "revealed, key value unconfirmed"
+ * (humbleGetRevealedKeyValue returns null) — no separate confirmed flag
+ * needed.
+ */
+export type HumbleKeyInternal = HumbleKey & {
+  keyindex?: string | number
+  revealedKeyValue?: string
+}
+
+export type HumbleOrderCacheEntryInternal = Omit<
+  HumbleOrderCacheEntry,
+  'keys'
+> & {
+  keys: HumbleKeyInternal[]
+}
+
 // Phase 11 scope. Wiped by HumbleUser.disconnect() alongside configStore
 // (D-03/D-04) — safe to lose since it is fully reconstructible from a
 // re-sync. Indefinite lifespan: cache-aggressive per HSYNC-01/D-24.
-const humbleLibraryStore = new CacheStore<HumbleOrderCacheEntry, string>(
-  'humble_library',
-  null
-)
+// Re-typed to HumbleOrderCacheEntryInternal (Phase 14, D-74) so entries can
+// carry the internal-only revealedKeyValue/keyindex fields on their keys —
+// the REVEALED flag itself still gets wiped by disconnect() (a wiped
+// revealedKeyValue is reconstructible from the next sync per D-74's own
+// rationale).
+const humbleLibraryStore = new CacheStore<
+  HumbleOrderCacheEntryInternal,
+  string
+>('humble_library', null)
 
 // Last-synced timestamp / fail-soft state (D-31/D-32). Also wiped by
 // disconnect() alongside humbleLibraryStore. The whole HumbleSyncState is
@@ -64,11 +93,53 @@ const humbleGiftedAtStore = new CacheStore<{ giftedAt: number }, string>(
   null
 )
 
+// D-76: identity + outcome record for the guided claim flow's audit trail.
+// NEVER carries the raw key value (C4/D-76) — only what happened, to what
+// title/platform, and when. Value is an append-only array per composite key.
+export interface AuditRecord {
+  event: string
+  at: number
+  outcome?: string
+  title: string
+  platform: string
+}
+
+// Phase 14 guided claim flow. Keyed by a composite `gamekey:machineName`
+// string constructed by the caller (library.ts, later plan) — two different
+// gamekeys sharing the same machineName must never collide (WR-01). Like
+// humbleRevealedStore/humbleOwnershipOverrideStore/humbleGiftedAtStore above,
+// this store is NEVER cleared by HumbleUser.disconnect() (D-04/D-76
+// exemption) — an audit trail must survive a disconnect/reconnect cycle.
+// Kept as its own electron-store file on disk for the same isolation reason
+// as the stores above — do not merge this into humbleLibraryStore.
+const humbleAuditStore = new CacheStore<AuditRecord[], string>(
+  'humble_audit',
+  null
+)
+
+// Phase 14 guided claim flow (HCLAIM-04, D-77): marks a key as locally
+// redeemed (the user confirmed "Mark as redeemed" in the wizard, ahead of any
+// server confirmation). Keyed by a composite `gamekey:machineName` string
+// constructed by the caller (library.ts, later plan) — same WR-01
+// non-collision requirement as humbleAuditStore above. Like the other
+// disconnect-exempt stores above, this store is NEVER cleared by
+// HumbleUser.disconnect() (D-04 exemption) — a local redeem mark must
+// survive a disconnect/reconnect cycle so it cannot silently regress and
+// re-offer a key the user already redeemed. Kept as its own electron-store
+// file on disk for the same isolation reason as the stores above — do not
+// merge this into humbleLibraryStore.
+const humbleLocalRedeemedStore = new CacheStore<
+  { redeemedAt: number },
+  string
+>('humble_local_redeemed', null)
+
 export {
   configStore,
   humbleLibraryStore,
   humbleSyncStore,
   humbleRevealedStore,
   humbleOwnershipOverrideStore,
-  humbleGiftedAtStore
+  humbleGiftedAtStore,
+  humbleAuditStore,
+  humbleLocalRedeemedStore
 }

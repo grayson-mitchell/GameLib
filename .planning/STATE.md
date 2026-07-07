@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Humble Bundle Integration
 status: executing
 stopped_at: Phase 14 UI-SPEC approved
-last_updated: "2026-07-07T11:04:01.631Z"
-last_activity: 2026-07-07 -- Phase 14 planning complete
+last_updated: "2026-07-07T19:49:01.984Z"
+last_activity: 2026-07-07 -- Phase 14 execution started
 progress:
   total_phases: 4
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 13 — keys-waiting-giftable-spares-views
+**Current focus:** Phase 14 — guided-claim-flow
 
 ## Current Position
 
-Phase: 13 (keys-waiting-giftable-spares-views) — EXECUTING
-Plan: 1 of 5
-Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 14 planning complete
+Phase: 14 (guided-claim-flow) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 14
+Last activity: 2026-07-07 -- Phase 14 execution started
 
 ## v1.1 Phase Map
 
