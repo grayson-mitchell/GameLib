@@ -730,6 +730,105 @@ describe('HumbleUser', () => {
     })
   })
 
+  // ── Phase 14 (T-14-04): csrf_cookie capture + getCsrfToken() ─────────────
+
+  describe('csrf_cookie capture + getCsrfToken() (Phase 14)', () => {
+    test('captures csrf_cookie at the same login moment as _simpleauth_sess, encrypted under a new csrfToken key', async () => {
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') {
+            return [{ value: 'raw-csrf-value' }]
+          }
+          return [{ value: 'raw-cookie-value' }]
+        }
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      const result = await loginPromise
+      expect(result.status).toBe('done')
+
+      const csrfCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'csrfToken'
+      )
+      expect(csrfCall).toBeDefined()
+      expect(csrfCall![1]).toMatch(/^humble:v1:/)
+      expect(csrfCall![1]).not.toBe('raw-csrf-value')
+
+      // Round-trip through getCsrfToken(): configStore is mocked, so wire
+      // get_nodefault to return exactly what was set() above.
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? csrfCall![1] : undefined
+      )
+      expect(HumbleUser.getCsrfToken()).toBe('raw-csrf-value')
+    })
+
+    test('csrf_cookie absent at login: nothing stored, login still completes, getCsrfToken() returns undefined (no crash)', async () => {
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') return []
+          return [{ value: 'raw-cookie-value' }]
+        }
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      const result = await loginPromise
+      expect(result.status).toBe('done')
+
+      const csrfCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'csrfToken'
+      )
+      expect(csrfCall).toBeUndefined()
+
+      // configStore never had a csrfToken written — get_nodefault's default
+      // beforeEach() wiring (returns undefined) models this correctly.
+      expect(HumbleUser.getCsrfToken()).toBeUndefined()
+    })
+
+    test('getCsrfToken() returns undefined when configStore has never seen a csrfToken key at all', () => {
+      mockConfigStore.get_nodefault.mockReturnValue(undefined)
+      expect(() => HumbleUser.getCsrfToken()).not.toThrow()
+      expect(HumbleUser.getCsrfToken()).toBeUndefined()
+    })
+
+    test('csrfToken lives on configStore and is wiped by disconnect() alongside the session cookie', async () => {
+      await HumbleUser.disconnect()
+      // csrfToken is not a separate CacheStore (Pitfall 1 exclusion list is
+      // for humbleRevealedStore/humbleOwnershipOverrideStore/
+      // humbleGiftedAtStore — none of which apply here) — it is a
+      // session-scoped secret on configStore, which disconnect() already
+      // clears wholesale.
+      expect(mockConfigStore.clear).toHaveBeenCalled()
+    })
+
+    test('never logs the raw csrf cookie value', async () => {
+      const CSRF_SECRET = 'super-secret-csrf-value-xyz'
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') return [{ value: CSRF_SECRET }]
+          return [{ value: 'raw-cookie-value' }]
+        }
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await loginPromise
+
+      const loggerCalls = [
+        ...mockLogInfo.mock.calls,
+        ...mockLogError.mock.calls,
+        ...mockLogWarning.mock.calls
+      ]
+      for (const call of loggerCalls) {
+        expect(JSON.stringify(call)).not.toContain(CSRF_SECRET)
+      }
+      for (const call of mockSendFrontendMessage.mock.calls) {
+        expect(JSON.stringify(call)).not.toContain(CSRF_SECRET)
+      }
+    })
+  })
+
   // ── Pitfall 4: cookie is never logged or stored in the clear ─────────────
 
   describe('cookie secrecy (Pitfall 4)', () => {

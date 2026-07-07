@@ -178,6 +178,20 @@ export class HumbleUser {
     return cookie
   }
 
+  // ── Phase 14 (T-14-04): optional CSRF token for the reveal endpoint ──────
+  // Mirrors getCredentials() exactly — same encrypted-configStore-key
+  // pattern. Main-process-only: this value must NEVER be included in any
+  // sendFrontendMessage payload or HumbleAuthState (see finishLogin's
+  // capture site and the class-level doc comment above).
+  static getCsrfToken(): string | undefined {
+    const stored = configStore.get_nodefault('csrfToken')
+    if (!stored || typeof stored !== 'string') return undefined
+
+    const token = decryptCookie(stored)
+    if (!token) return undefined
+    return token
+  }
+
   // ── HACCT-01: Login (D-05/D-06/D-07) ─────────────────────────────────────
 
   static async startLogin(): Promise<LoginResult> {
@@ -387,6 +401,29 @@ export class HumbleUser {
     configStore.set(HUMBLE_TOKEN_STORE_KEY, encrypted)
     configStore.set('isLoggedIn', true)
     configStore.set('expired', false)
+
+    // Phase 14 (T-14-04, RESEARCH.md Pitfall A): opportunistically capture
+    // the csrf_cookie value at the SAME login moment as _simpleauth_sess.
+    // The reveal endpoint's CSRF requirement is unconfirmed — absence is
+    // NON-FATAL (no error, nothing stored) and never blocks login
+    // completion; the Plan 06 live checkpoint decides whether it is
+    // actually required. Same encryption treatment as the session cookie.
+    // Main-process-only: NEVER included in sendFrontendMessage/HumbleAuthState.
+    try {
+      const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+      const csrfCookies = await csrfSes.cookies.get({
+        url: HUMBLE_BASE_URL,
+        name: 'csrf_cookie'
+      })
+      if (csrfCookies.length > 0 && csrfCookies[0].value) {
+        configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+      }
+    } catch (err) {
+      logWarning(
+        ['Humble csrf_cookie capture failed (non-fatal, optional):', err],
+        LogPrefix.Backend
+      )
+    }
 
     // D-02: identity is fetched BEST-EFFORT after acceptance. A failed
     // identity fetch (or a thrown error) must NEVER block login completion —
