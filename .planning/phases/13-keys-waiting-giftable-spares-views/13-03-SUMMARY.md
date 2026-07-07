@@ -136,3 +136,10 @@ None - no external service configuration required.
 ---
 *Phase: 13-keys-waiting-giftable-spares-views*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+- FOUND: all 10 created/modified source files
+- FOUND: 740aa933 (Task 1 commit)
+- FOUND: a7472aa8 (Task 2 commit)
+- FOUND: .planning/phases/13-keys-waiting-giftable-spares-views/13-03-SUMMARY.md
