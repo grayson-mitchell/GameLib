@@ -11,6 +11,7 @@ import {
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import {
+  humbleGiftedAtStore,
   humbleLibraryStore,
   humbleOwnershipOverrideStore,
   humbleRevealedStore,
@@ -350,6 +351,31 @@ function clearOwnershipOverride(machineName: string): void {
 }
 
 /**
+ * D-59 (reinterpreted per D-57 research — GameLib never possesses a
+ * gift-link value; the deep-link is static): records that the user
+ * confirmed the "Open Humble" gift action for a giftable-spares key, keyed
+ * by machineName. No recomputeOwnership call — gifting does not affect
+ * ownership/classification, only the double-gift guard the Spares view
+ * reads via getAllGiftedAt().
+ */
+function recordGiftLinkOpened(machineName: string): void {
+  humbleGiftedAtStore.set(machineName, { giftedAt: Date.now() })
+}
+
+/**
+ * D-59: returns every gifted-at record as a plain machineName->timestamp
+ * (ms) map for the Spares view to read. Returns {} when no key has been
+ * gifted yet.
+ */
+function getAllGiftedAt(): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const [machineName, entry] of humbleGiftedAtStore.entries()) {
+    result[machineName] = entry.giftedAt
+  }
+  return result
+}
+
+/**
  * Cache-then-render (mirrors SteamLibraryManager.init()'s cache load): reads
  * whatever is already on disk and pushes it to the renderer. No network call
  * — sync() is triggered separately per D-23.
@@ -636,5 +662,7 @@ export const HumbleLibrary = {
   getSyncState,
   recomputeOwnership,
   setOwnershipOverride,
-  clearOwnershipOverride
+  clearOwnershipOverride,
+  recordGiftLinkOpened,
+  getAllGiftedAt
 }
