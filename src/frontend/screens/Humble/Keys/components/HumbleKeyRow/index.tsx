@@ -8,25 +8,51 @@ import { UrgencyTier } from 'common/humble/urgencyBadge'
 import { STATE_LABEL_KEYS } from '../../stateLabels'
 import UrgencyBadge from '../UrgencyBadge'
 
+type ClaimAction = {
+  revealedAt: number | null
+  redeemedAt: number | null
+  keyindexResolved: boolean
+  onClaim: () => void
+  onFinish: () => void
+  onUndoRedeem: () => void
+}
+
 type Props = {
   humbleKey: HumbleKey
   /** D-63: renders in all 3 tabs, computed by the caller via getUrgencyTier. */
   urgencyTier?: UrgencyTier
   /** D-60: Giftable Spares only — omitted (undefined) everywhere else. */
   giftAction?: { giftedAt: number | null; onGift: () => void }
+  /** D-67: Keys-waiting ONLY — omitted (undefined) everywhere else. Drives
+   * the Claim/Finish activation button, the revealed/redeemed annotations,
+   * and the Pitfall-C disabled "Sync to enable claiming" state. */
+  claimAction?: ClaimAction
+  /** WR-04 (D-71): Giftable Spares only — opts a fuzzy-owned row into the
+   * reversal counterpart of the "Not the same game" override below. This
+   * row calls window.api.humbleClearOwnershipOverride directly (mirroring
+   * the override button's own direct-call pattern) rather than taking a
+   * caller-supplied callback. */
+  undoOverride?: boolean
 }
 
-// D-22: strictly read-only, with TWO sanctioned exceptions. No click handler,
-// no button/link element, no cursor:pointer, no reveal/copy/expand affordance
-// — Phase 14 owns claim actions, not this row. The D-42 "Not the same game"
-// override below is one carve-out (fuzzy-matched rows only); the optional
-// `giftAction` prop (Giftable Spares tab only, Plan 04) is the other. Every
-// other interaction remains forbidden. Do not "improve" this row further into
-// a generally-interactive element.
+// D-22: strictly read-only, with THREE sanctioned exceptions. No click
+// handler, no button/link element, no cursor:pointer, no reveal/copy/expand
+// affordance beyond these — Phase 14 owns the claim UX via the wizard it
+// mounts elsewhere, not general interactivity added here. Exception 1: the
+// D-42 "Not the same game" override (fuzzy-matched rows only), paired with
+// its WR-04 (D-71) undo-override counterpart (`undoOverride` prop, Giftable
+// Spares only). Exception 2: the optional `giftAction` prop (Giftable
+// Spares tab only, Phase 13). Exception 3: the optional `claimAction` prop
+// (Keys-waiting tab only, D-67, Phase 14) — opens the claim wizard via the
+// caller-supplied onClaim/onFinish/onUndoRedeem handlers. Every other
+// interaction remains forbidden. Do not "improve" this row further into a
+// generally-interactive element.
 export default function HumbleKeyRow({
   humbleKey,
   urgencyTier,
-  giftAction
+  giftAction,
+  claimAction,
+  undoOverride
 }: Props) {
   const { t } = useTranslation()
 
@@ -100,18 +126,36 @@ export default function HumbleKeyRow({
                 {t('humbleKeys.notTheSameGame', 'Not the same game')}
               </button>
             )}
+            {/* WR-04 (D-71) sanctioned exception: reversal counterpart of
+                the override above, rendered only when the caller (Giftable
+                Spares) opts a fuzzy row into it — a mistaken override must
+                stay reversible. */}
+            {humbleKey.matchConfidence === 'fuzzy' && undoOverride && (
+              <button
+                type="button"
+                className="humbleKeyOwnedOverride"
+                onClick={() =>
+                  window.api.humbleClearOwnershipOverride(
+                    humbleKey.machineName
+                  )
+                }
+              >
+                {t(
+                  'humbleKeys.undoOwnershipOverride',
+                  'Undo — this game is not owned'
+                )}
+              </button>
+            )}
           </span>
         )}
       </div>
       {expirationLabel !== null && (
         <span className="humbleKeyRowExpiration">{expirationLabel}</span>
       )}
-      {/* D-60 sanctioned exception: the second (and only other) interactive
-          affordance on this otherwise read-only row (D-22), rendered ONLY
-          when the caller supplies a `giftAction` prop — the Giftable Spares
-          tab is the sole caller that does. D-59 double-gift guard: once a
-          gift has been confirmed for this key, show the annotation instead
-          of re-rendering the button. */}
+      {/* D-60 sanctioned exception: rendered ONLY when the caller supplies a
+          `giftAction` prop — the Giftable Spares tab is the sole caller that
+          does. D-59 double-gift guard: once a gift has been confirmed for
+          this key, show the annotation instead of re-rendering the button. */}
       {giftAction &&
         (giftAction.giftedAt !== null ? (
           <span className="humbleKeyGiftedAnnotation">
@@ -128,6 +172,60 @@ export default function HumbleKeyRow({
             {t('humbleKeys.giftOnHumble', 'Gift on Humble')}
             <FontAwesomeIcon icon={faExternalLinkAlt} />
           </button>
+        ))}
+      {/* D-67 sanctioned exception: rendered ONLY when the caller supplies a
+          `claimAction` prop — the Keys-waiting tab is the sole caller that
+          does (C2 guard is the authoritative backstop; this is first-line
+          UI restriction only, T-14-03). D-77 Undo affordance appears only
+          while redeemedAt reflects a local-only mark (the caller's
+          annotations source already guarantees this — see
+          HumbleLibrary.getClaimAnnotations). Pitfall C: an UNREVEALED key
+          whose keyindex has not been resolved by a sync renders a
+          non-interactive "Sync to enable claiming" caption instead of a
+          button, so no wizard ever opens against a key it cannot reveal. */}
+      {claimAction &&
+        (claimAction.redeemedAt !== null ? (
+          <span className="humbleKeyClaimGroup">
+            <span className="humbleKeyClaimAnnotation">
+              {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
+                date: new Date(claimAction.redeemedAt).toLocaleDateString()
+              })}
+            </span>
+            <button
+              type="button"
+              className="humbleKeyUndoButton"
+              onClick={claimAction.onUndoRedeem}
+            >
+              {t('humbleKeys.undo', 'Undo')}
+            </button>
+          </span>
+        ) : claimAction.revealedAt !== null ? (
+          <span className="humbleKeyClaimGroup">
+            <span className="humbleKeyClaimAnnotation">
+              {t('humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
+                date: new Date(claimAction.revealedAt).toLocaleDateString()
+              })}
+            </span>
+            <button
+              type="button"
+              className="humbleKeyGiftButton"
+              onClick={claimAction.onFinish}
+            >
+              {t('humbleKeys.finishActivation', 'Finish activation')}
+            </button>
+          </span>
+        ) : claimAction.keyindexResolved ? (
+          <button
+            type="button"
+            className="humbleKeyGiftButton"
+            onClick={claimAction.onClaim}
+          >
+            {t('humbleKeys.claim', 'Claim')}
+          </button>
+        ) : (
+          <span className="humbleKeyClaimDisabledCaption">
+            {t('humbleKeys.syncToEnableClaiming', 'Sync to enable claiming')}
+          </span>
         ))}
     </li>
   )

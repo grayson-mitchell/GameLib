@@ -42,6 +42,15 @@ function compareWaiting(a: HumbleKey, b: HumbleKey): number {
  * (D-54) — Plan 03/04 preserve the D-42 override safety valve so a corrected
  * fuzzy match moves back here via the existing recompute path, not a new
  * mechanism in this file.
+ *
+ * Phase 14 (D-75/D-77) addition: a key locally marked REDEEMED
+ * (`locallyRedeemedPending`) stays in this view rather than being treated as
+ * terminal — its row renders the "Redeemed {{date}}" annotation + Undo
+ * affordance (HumbleKeyRow's claimAction). Without this, `markRedeemed`
+ * flipping the state to REDEEMED would drop the row out of Keys-waiting
+ * before the Undo affordance could ever be seen, since REDEEMED is
+ * otherwise terminal-and-excluded. A server-confirmed redeem never carries
+ * `locallyRedeemedPending`, so it remains excluded as before.
  */
 export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
   return keys
@@ -49,7 +58,8 @@ export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
       (k) =>
         !k.ownedElsewhere &&
         k.platform !== GENERIC_KEY_PLATFORM &&
-        WAITING_STATES.has(k.state)
+        (WAITING_STATES.has(k.state) ||
+          (k.state === 'REDEEMED' && k.locallyRedeemedPending === true))
     )
     .sort(compareWaiting)
 }
