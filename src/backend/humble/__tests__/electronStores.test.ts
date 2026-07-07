@@ -18,7 +18,9 @@ import {
   humbleLibraryStore,
   humbleSyncStore,
   humbleOwnershipOverrideStore,
-  humbleGiftedAtStore
+  humbleGiftedAtStore,
+  humbleAuditStore,
+  humbleLocalRedeemedStore
 } from '../electronStores'
 
 describe('humbleOwnershipOverrideStore', () => {
@@ -82,5 +84,156 @@ describe('humbleGiftedAtStore', () => {
 
     expect(humbleGiftedAtStore.has(machineName)).toBe(true)
     expect(humbleGiftedAtStore.get(machineName)).toEqual({ giftedAt })
+  })
+})
+
+/**
+ * Phase 14 guided claim flow (Task 2, D-74/D-76): two new composite-keyed
+ * (`gamekey:machineName`) disconnect-surviving stores. The composite key is
+ * constructed by the caller (library.ts, later plan) — these stores just
+ * treat the key as an opaque string.
+ */
+describe('humbleAuditStore', () => {
+  beforeEach(() => {
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+    humbleAuditStore.clear()
+  })
+
+  test('composite-key round-trip: gamekey:machineName round-trips an append-only audit record array', () => {
+    const compositeKey = 'order-1:sometitle_steam'
+    const records = [
+      {
+        event: 'revealed',
+        at: Date.now(),
+        title: 'Some Title',
+        platform: 'steam'
+      }
+    ]
+    humbleAuditStore.set(compositeKey, records)
+
+    expect(humbleAuditStore.has(compositeKey)).toBe(true)
+    expect(humbleAuditStore.get(compositeKey)).toEqual(records)
+  })
+
+  test('WR-01 collision safety: two distinct gamekeys sharing the same machineName do not collide', () => {
+    const machineName = 'sharedname_steam'
+    const keyA = `order-a:${machineName}`
+    const keyB = `order-b:${machineName}`
+    const recordsA = [
+      { event: 'revealed', at: 1000, title: 'Game A', platform: 'steam' }
+    ]
+    const recordsB = [
+      { event: 'redeemed', at: 2000, title: 'Game B', platform: 'steam' }
+    ]
+
+    humbleAuditStore.set(keyA, recordsA)
+    humbleAuditStore.set(keyB, recordsB)
+
+    expect(humbleAuditStore.get(keyA)).toEqual(recordsA)
+    expect(humbleAuditStore.get(keyB)).toEqual(recordsB)
+  })
+
+  test('D-76: an audit record survives a disconnect-style wipe of configStore/humbleLibraryStore/humbleSyncStore', () => {
+    const compositeKey = 'order-2:anothertitle_steam'
+    const records = [
+      { event: 'revealed', at: Date.now(), title: 'Another', platform: 'steam' }
+    ]
+    humbleAuditStore.set(compositeKey, records)
+
+    // Simulates exactly what HumbleUser.disconnect() clears (D-07/D-04/D-30)
+    // — deliberately NOT humbleAuditStore, per D-76.
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+
+    expect(humbleAuditStore.has(compositeKey)).toBe(true)
+    expect(humbleAuditStore.get(compositeKey)).toEqual(records)
+  })
+})
+
+describe('humbleLocalRedeemedStore', () => {
+  beforeEach(() => {
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+    humbleLocalRedeemedStore.clear()
+  })
+
+  test('composite-key round-trip: gamekey:machineName round-trips a redeemedAt record', () => {
+    const compositeKey = 'order-1:sometitle_steam'
+    const redeemedAt = Date.now()
+    humbleLocalRedeemedStore.set(compositeKey, { redeemedAt })
+
+    expect(humbleLocalRedeemedStore.has(compositeKey)).toBe(true)
+    expect(humbleLocalRedeemedStore.get(compositeKey)).toEqual({ redeemedAt })
+  })
+
+  test('WR-01 collision safety: two distinct gamekeys sharing the same machineName do not collide', () => {
+    const machineName = 'sharedname_steam'
+    const keyA = `order-a:${machineName}`
+    const keyB = `order-b:${machineName}`
+
+    humbleLocalRedeemedStore.set(keyA, { redeemedAt: 1000 })
+    humbleLocalRedeemedStore.set(keyB, { redeemedAt: 2000 })
+
+    expect(humbleLocalRedeemedStore.get(keyA)).toEqual({ redeemedAt: 1000 })
+    expect(humbleLocalRedeemedStore.get(keyB)).toEqual({ redeemedAt: 2000 })
+  })
+
+  test('a local-redeem record survives a disconnect-style wipe of configStore/humbleLibraryStore/humbleSyncStore', () => {
+    const compositeKey = 'order-2:anothertitle_steam'
+    const redeemedAt = Date.now()
+    humbleLocalRedeemedStore.set(compositeKey, { redeemedAt })
+
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+
+    expect(humbleLocalRedeemedStore.has(compositeKey)).toBe(true)
+    expect(humbleLocalRedeemedStore.get(compositeKey)).toEqual({ redeemedAt })
+  })
+})
+
+/**
+ * D-74: no new secret-surface class for the revealed key value — it rides
+ * the EXISTING humbleLibraryStore cache entry as an internal-only field
+ * (HumbleKeyInternal). This proves the typing works end-to-end: a stored
+ * entry whose keys carry revealedKeyValue/keyindex round-trips intact.
+ */
+describe('humbleLibraryStore — D-74 internal cache-record typing', () => {
+  beforeEach(() => {
+    humbleLibraryStore.clear()
+  })
+
+  test('an entry whose keys carry revealedKeyValue/keyindex round-trips intact', () => {
+    const gamekey = 'order-3'
+    const entry = {
+      gamekey,
+      allTerminal: false,
+      keys: [
+        {
+          gamekey,
+          machineName: 'internaltest_steam',
+          state: 'REVEALED' as const,
+          title: 'Internal Test',
+          platform: 'steam',
+          expiration: null,
+          origin: 'Some Bundle',
+          ownedElsewhere: false,
+          matchConfidence: 'none' as const,
+          keyindex: 3,
+          revealedKeyValue: 'ABCD1-EFGH2-IJKL3'
+        }
+      ]
+    }
+
+    humbleLibraryStore.set(gamekey, entry)
+
+    const stored = humbleLibraryStore.get(gamekey)
+    expect(stored).toEqual(entry)
+    expect(stored?.keys[0].keyindex).toBe(3)
+    expect(stored?.keys[0].revealedKeyValue).toBe('ABCD1-EFGH2-IJKL3')
   })
 })
