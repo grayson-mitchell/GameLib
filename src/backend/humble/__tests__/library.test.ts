@@ -63,6 +63,25 @@ const mockOverrideStore = {
   clear: jest.fn()
 }
 
+// Phase 14 (D-77): local-redeemed store, composite-keyed `gamekey:machineName`.
+const localRedeemedData = new Map<string, { redeemedAt: number }>()
+const mockLocalRedeemedStore = {
+  has: jest.fn(),
+  get: jest.fn(),
+  set: jest.fn(),
+  delete: jest.fn(),
+  clear: jest.fn()
+}
+
+// Phase 14 (D-76): audit trail store, composite-keyed `gamekey:machineName`,
+// value is an append-only array of AuditRecord.
+const auditData = new Map<string, Array<Record<string, unknown>>>()
+const mockAuditStore = {
+  get: jest.fn(),
+  set: jest.fn(),
+  clear: jest.fn()
+}
+
 function resetStoreMocks() {
   mockLibraryStore.has.mockImplementation((k: string) => libraryData.has(k))
   mockLibraryStore.get.mockImplementation((k: string) => libraryData.get(k))
@@ -100,13 +119,44 @@ function resetStoreMocks() {
     overrideData.delete(k)
   })
   mockOverrideStore.clear.mockImplementation(() => overrideData.clear())
+
+  mockLocalRedeemedStore.has.mockImplementation((k: string) =>
+    localRedeemedData.has(k)
+  )
+  mockLocalRedeemedStore.get.mockImplementation((k: string) =>
+    localRedeemedData.get(k)
+  )
+  mockLocalRedeemedStore.set.mockImplementation(
+    (k: string, v: { redeemedAt: number }) => {
+      localRedeemedData.set(k, v)
+    }
+  )
+  mockLocalRedeemedStore.delete.mockImplementation((k: string) => {
+    localRedeemedData.delete(k)
+  })
+  mockLocalRedeemedStore.clear.mockImplementation(() =>
+    localRedeemedData.clear()
+  )
+
+  mockAuditStore.get.mockImplementation(
+    (k: string, fallback?: Array<Record<string, unknown>>) =>
+      auditData.has(k) ? auditData.get(k) : fallback
+  )
+  mockAuditStore.set.mockImplementation(
+    (k: string, v: Array<Record<string, unknown>>) => {
+      auditData.set(k, v)
+    }
+  )
+  mockAuditStore.clear.mockImplementation(() => auditData.clear())
 }
 
 jest.mock('../electronStores', () => ({
   humbleLibraryStore: mockLibraryStore,
   humbleSyncStore: mockSyncStore,
   humbleRevealedStore: mockRevealedStore,
-  humbleOwnershipOverrideStore: mockOverrideStore
+  humbleOwnershipOverrideStore: mockOverrideStore,
+  humbleLocalRedeemedStore: mockLocalRedeemedStore,
+  humbleAuditStore: mockAuditStore
 }))
 
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
@@ -233,6 +283,8 @@ describe('HumbleLibrary', () => {
     syncData.clear()
     revealedData.clear()
     overrideData.clear()
+    localRedeemedData.clear()
+    auditData.clear()
     resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
     // Default: Steam disconnected / no owned games — existing (pre-Phase-12)
