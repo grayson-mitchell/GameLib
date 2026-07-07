@@ -346,3 +346,52 @@
   color: var(--text-secondary);
   white-space: nowrap;
 }
+
+/* D-67/D-77 (Phase 14): the claim-flow's revealed/redeemed annotation pair,
+   rendered on Keys-waiting rows via the `claimAction` prop. Groups the
+   caption with its adjoining Finish-activation/Undo button. */
+.humbleKeyClaimGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
+/* Same secondary-caption chrome as .humbleKeyGiftedAnnotation — reused
+   verbatim rather than introducing a parallel token set. */
+.humbleKeyClaimAnnotation {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* D-77: the local-redeem Undo affordance — same link-style chrome as
+   .humbleKeyOwnedOverride (the only other small text-button on this row
+   family), since it is a corrective action, not a primary CTA. */
+.humbleKeyUndoButton {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.humbleKeyUndoButton:hover {
+  color: var(--accent);
+}
+
+/* Pitfall C (Phase 14): the non-interactive "Sync to enable claiming"
+   caption shown in place of the Claim button when a pre-Phase-14 cached row
+   has not yet been backfilled with a keyindex — no button, no cursor, no
+   click handler (never opens a wizard that would fail). */
+.humbleKeyClaimDisabledCaption {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  font-style: italic;
+  white-space: nowrap;
+}

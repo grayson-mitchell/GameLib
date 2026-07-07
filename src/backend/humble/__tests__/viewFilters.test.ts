@@ -43,6 +43,24 @@ describe('selectKeysWaiting', () => {
     }
   )
 
+  test('Phase 14 (D-75/D-77): includes an unowned, locally-redeemed-pending REDEEMED key (Undo affordance must stay reachable)', () => {
+    const key = makeKey({
+      state: 'REDEEMED',
+      ownedElsewhere: false,
+      locallyRedeemedPending: true
+    })
+    expect(selectKeysWaiting([key])).toEqual([key])
+  })
+
+  test('excludes a server-confirmed REDEEMED key (no locallyRedeemedPending flag)', () => {
+    const key = makeKey({
+      state: 'REDEEMED',
+      ownedElsewhere: false,
+      locallyRedeemedPending: false
+    })
+    expect(selectKeysWaiting([key])).toEqual([])
+  })
+
   test.each<HumbleKeyState>([
     'UNPICKED',
     'UNREVEALED',
