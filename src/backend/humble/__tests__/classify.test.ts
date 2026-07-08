@@ -901,6 +901,55 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
     )
     expect(entry.keys[0].state).toBe('REDEEMED')
   })
+
+  // CR-01 (14-REVIEW): the REDEEMED-via-local-mark verdict must carry the
+  // D-77 locallyRedeemedPending flag on the classified key itself, so a
+  // re-sync of the order preserves the Undo affordance rather than silently
+  // laundering the local mark into a server-confirmed-looking REDEEMED.
+  test('CR-01: a REDEEMED verdict from the local-mark tier carries locallyRedeemedPending: true', () => {
+    const entry = classifyOrder(
+      order,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z'),
+      () => true
+    )
+    expect(entry.keys[0].state).toBe('REDEEMED')
+    expect(entry.keys[0].locallyRedeemedPending).toBe(true)
+  })
+
+  test('CR-01: a server-confirmed REDEEMED never carries locallyRedeemedPending, even with a stale local mark', () => {
+    const redeemedOrderLocal = {
+      gamekey: 'order-local-redeem-3',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'localredeem3_steam',
+            key_type: 'steam',
+            is_expired: false,
+            redeemed_key_val: 'server-value'
+          }
+        ]
+      }
+    }
+    const entry = classifyOrder(
+      redeemedOrderLocal,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z'),
+      () => true
+    )
+    expect(entry.keys[0].state).toBe('REDEEMED')
+    expect(entry.keys[0].locallyRedeemedPending).toBeUndefined()
+  })
+
+  test('CR-01: a non-REDEEMED key never carries locallyRedeemedPending', () => {
+    const entry = classifyOrder(
+      order,
+      NEVER_REVEALED,
+      new Date('2026-01-01T00:00:00Z')
+    )
+    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(entry.keys[0].locallyRedeemedPending).toBeUndefined()
+  })
 })
 
 // ── Steam AppID capture (Phase 12, HDEDUP-01/02) ──────────────────────────

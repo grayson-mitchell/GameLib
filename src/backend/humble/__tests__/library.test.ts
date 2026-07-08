@@ -2340,4 +2340,69 @@ describe('HumbleLibrary', () => {
       expect(auditData.get('gk1:gk1_key')).toBeUndefined()
     })
   })
+
+  // CR-01 (14-REVIEW): a sync running while humbleLocalRedeemedStore holds a
+  // mark previously re-classified the key REDEEMED but dropped the
+  // locallyRedeemedPending flag on commit — indistinguishable from a
+  // server-confirmed redeem, so the row vanished from Keys-waiting and
+  // undoRedeemed became a permanent no-op (the mark could never be cleared).
+  describe('sync() — CR-01: local-redeem mark survives a re-sync', () => {
+    test('re-syncing a locally-marked order (no server redeemed value) keeps locallyRedeemedPending and Undo stays reachable', async () => {
+      // The user marked this key redeemed locally (D-77): store mark set by
+      // markRedeemed, cache patched to REDEEMED + pending.
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: Date.now() })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          locallyRedeemedPending: true,
+          keyindex: 'idx-1'
+        })
+      )
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      // Server still shows NO redeemed value — the redeem is local-only.
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1')
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.state).toBe('REDEEMED')
+      expect(key?.locallyRedeemedPending).toBe(true)
+
+      // The D-77 Undo path is still reachable AFTER the sync.
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+    })
+
+    test('a sync that finds a SERVER-confirmed redeem does not carry locallyRedeemedPending (server truth wins, Undo correctly unreachable)', async () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: Date.now() })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          locallyRedeemedPending: true,
+          keyindex: 'idx-1'
+        })
+      )
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { redeemed: true })
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.state).toBe('REDEEMED')
+      expect(key?.locallyRedeemedPending).toBeUndefined()
+
+      // undoRedeemed is a no-op for server truth (D-77).
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+    })
+  })
 })

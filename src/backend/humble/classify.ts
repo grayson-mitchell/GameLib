@@ -40,7 +40,8 @@ export function classifyTpk(
   // D-77 (Phase 14): a local "Mark as redeemed" classifies the same as a
   // server-confirmed redeem — server truth (above) always wins; the renderer
   // distinguishes the two REDEEMED origins via HumbleKey.locallyRedeemedPending
-  // (set by the caller, not this function) to drive the Undo affordance.
+  // (set by classifyOrder — CR-01, 14-REVIEW — when THIS tier, not server
+  // truth, produced the REDEEMED verdict) to drive the Undo affordance.
   if (isLocallyRedeemed) {
     return 'REDEEMED'
   }
@@ -312,10 +313,11 @@ export function classifyOrder(
       // spec's `expiration` timestamp is kept as a fallback. Strict === true
       // so a mistyped value never expires a live key by accident.
       const isExpired = tpk.is_expired === true
+      const locallyRedeemed = isLocallyRedeemed(gamekey, machineName)
       const state = classifyTpk(
         { redeemedKeyValuePresent, expiration, isExpired },
         isRevealed(machineName),
-        isLocallyRedeemed(gamekey, machineName),
+        locallyRedeemed,
         now
       )
       // Phase 14 (HCLAIM-01): capture the reveal endpoint's third form field
@@ -359,7 +361,18 @@ export function classifyOrder(
         steamAppId,
         // Overlay fields default here; dedup.ts (later plan) fills them in.
         ownedElsewhere: false,
-        matchConfidence: 'none'
+        matchConfidence: 'none',
+        // CR-01 (14-REVIEW): a REDEEMED verdict produced by the LOCAL-mark
+        // tier (no server redeemed_key_val) must carry the D-77 pending flag
+        // so it survives every re-sync of this order — without it, the next
+        // sync silently laundered a local-only mark into a server-confirmed-
+        // looking REDEEMED: the row dropped out of Keys-waiting and
+        // undoRedeemed became a permanent no-op. A server-confirmed redeem
+        // (redeemedKeyValuePresent) never carries this flag, so Undo stays
+        // correctly unreachable for server truth.
+        ...(state === 'REDEEMED' && !redeemedKeyValuePresent && locallyRedeemed
+          ? { locallyRedeemedPending: true }
+          : {})
       })
     } catch {
       // Defensive net for any unexpected shape not caught by the guards
