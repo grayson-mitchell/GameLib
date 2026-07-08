@@ -614,7 +614,7 @@
         "title": "Humble Keys",
         "tryAgain": "Try again",
         "undo": "Undo",
-        "undoOwnershipOverride": "Undo — this game is not owned",
+        "undoOwnershipOverride": "Undo — I do own this game",
         "unpickedTitle": "{{title}} · games not picked",
         "urgencyDaysLeft": "{{N}} days left",
         "urgencyHoursLeft": "{{H}}h left",

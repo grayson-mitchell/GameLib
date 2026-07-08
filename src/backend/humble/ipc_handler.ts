@@ -55,6 +55,14 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleClearOwnershipOverride', async (e, machineName) =>
     HumbleLibrary.clearOwnershipOverride(machineName)
   )
+  // WR-04 (14-REVIEW): machineName->overriddenAt map so views can render the
+  // undo-override affordance wherever the OVERRIDDEN key now appears
+  // (Keys-waiting) — the current fuzzy/owned flags can never identify an
+  // overridden row (the override itself cleared them). Timestamps only,
+  // never a key value.
+  addHandler('humbleGetOwnershipOverrides', () =>
+    HumbleLibrary.getAllOwnershipOverrides()
+  )
   // Phase 13 (Plan 02, D-59/D-57): giftable-spares gift-action confirmation.
   // Mirrors humbleSetOwnershipOverride's non-fuzzy rejection shape — the
   // renderer must never be trusted to have only shown the gift button on an

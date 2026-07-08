@@ -27,10 +27,15 @@ type Props = {
    * the Claim/Finish activation button, the revealed/redeemed annotations,
    * and the Pitfall-C disabled "Sync to enable claiming" state. */
   claimAction?: ClaimAction
-  /** WR-04 (D-71): Giftable Spares only — opts a fuzzy-owned row into the
-   * reversal counterpart of the "Not the same game" override below. This
-   * row calls window.api.humbleClearOwnershipOverride directly (mirroring
-   * the override button's own direct-call pattern) rather than taking a
+  /** WR-04 (D-71, 14-REVIEW): set by the caller when an ownership-override
+   * record EXISTS for this key (source: humbleGetOwnershipOverrides) —
+   * renders the reversal counterpart of the "Not the same game" override.
+   * Keyed off the override record, never the current fuzzy/owned flags: an
+   * overridden key recomputes to `ownedElsewhere: false, matchConfidence:
+   * 'none'`, so flag-based gating could never show this control on the one
+   * row that actually needs it (it now lives in Keys-waiting). This row
+   * calls window.api.humbleClearOwnershipOverride directly (mirroring the
+   * override button's own direct-call pattern) rather than taking a
    * caller-supplied callback. */
   undoOverride?: boolean
 }
@@ -40,13 +45,15 @@ type Props = {
 // affordance beyond these — Phase 14 owns the claim UX via the wizard it
 // mounts elsewhere, not general interactivity added here. Exception 1: the
 // D-42 "Not the same game" override (fuzzy-matched rows only), paired with
-// its WR-04 (D-71) undo-override counterpart (`undoOverride` prop, Giftable
-// Spares only). Exception 2: the optional `giftAction` prop (Giftable
-// Spares tab only, Phase 13). Exception 3: the optional `claimAction` prop
-// (Keys-waiting tab only, D-67, Phase 14) — opens the claim wizard via the
-// caller-supplied onClaim/onFinish/onUndoRedeem handlers. Every other
-// interaction remains forbidden. Do not "improve" this row further into a
-// generally-interactive element.
+// its WR-04 (D-71, 14-REVIEW) undo-override counterpart (`undoOverride`
+// prop — rendered wherever the OVERRIDDEN key now appears, i.e.
+// Keys-waiting, keyed off the override record existing). Exception 2: the
+// optional `giftAction` prop (Giftable Spares tab only, Phase 13).
+// Exception 3: the optional `claimAction` prop (Keys-waiting tab only,
+// D-67, Phase 14) — opens the claim wizard via the caller-supplied
+// onClaim/onFinish/onUndoRedeem handlers. Every other interaction remains
+// forbidden. Do not "improve" this row further into a generally-interactive
+// element.
 export default function HumbleKeyRow({
   humbleKey,
   urgencyTier,
@@ -126,26 +133,29 @@ export default function HumbleKeyRow({
                 {t('humbleKeys.notTheSameGame', 'Not the same game')}
               </button>
             )}
-            {/* WR-04 (D-71) sanctioned exception: reversal counterpart of
-                the override above, rendered only when the caller (Giftable
-                Spares) opts a fuzzy row into it — a mistaken override must
-                stay reversible. */}
-            {humbleKey.matchConfidence === 'fuzzy' && undoOverride && (
-              <button
-                type="button"
-                className="humbleKeyOwnedOverride"
-                onClick={() =>
-                  window.api.humbleClearOwnershipOverride(
-                    humbleKey.machineName
-                  )
-                }
-              >
-                {t(
-                  'humbleKeys.undoOwnershipOverride',
-                  'Undo — this game is not owned'
-                )}
-              </button>
-            )}
+          </span>
+        )}
+        {/* WR-04 (D-71, 14-REVIEW) sanctioned exception: reversal
+            counterpart of the "Not the same game" override above. Rendered
+            when the caller says an override RECORD exists — never gated on
+            ownedElsewhere/fuzzy, which the override itself cleared (the
+            overridden key now reads unowned/none and lives in Keys-waiting).
+            A mistaken override must stay reversible from wherever the key
+            actually appears. */}
+        {undoOverride && (
+          <span className="humbleKeyOwnedBadge">
+            <button
+              type="button"
+              className="humbleKeyOwnedOverride"
+              onClick={() =>
+                window.api.humbleClearOwnershipOverride(humbleKey.machineName)
+              }
+            >
+              {t(
+                'humbleKeys.undoOwnershipOverride',
+                'Undo — I do own this game'
+              )}
+            </button>
           </span>
         )}
       </div>

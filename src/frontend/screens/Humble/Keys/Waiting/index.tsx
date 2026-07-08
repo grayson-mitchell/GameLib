@@ -19,6 +19,11 @@ export default function HumbleKeysWaiting() {
   const [annotations, setAnnotations] = useState<
     Record<string, ClaimAnnotation>
   >({})
+  // WR-04 (14-REVIEW): machineName->overriddenAt map — an overridden key
+  // (D-42 "Not the same game") recomputes to unowned and lands on THIS tab,
+  // so the reversal affordance must render here, keyed off the override
+  // record (the fuzzy/owned flags were cleared by the override itself).
+  const [overrides, setOverrides] = useState<Record<string, number>>({})
 
   // WR-02 (14-REVIEW): annotations participate in view membership — a key
   // revealed through GameLib that a later sync classified REDEEMED (server
@@ -45,6 +50,9 @@ export default function HumbleKeysWaiting() {
     void window.api.humbleGetClaimAnnotations().then((map) => {
       setAnnotations(map)
     })
+    void window.api.humbleGetOwnershipOverrides().then((map) => {
+      setOverrides(map)
+    })
   }
 
   useEffect(() => {
@@ -52,6 +60,11 @@ export default function HumbleKeysWaiting() {
     void window.api.humbleGetClaimAnnotations().then((map) => {
       if (!cancelled) {
         setAnnotations(map)
+      }
+    })
+    void window.api.humbleGetOwnershipOverrides().then((map) => {
+      if (!cancelled) {
+        setOverrides(map)
       }
     })
     return () => {
@@ -110,6 +123,10 @@ export default function HumbleKeysWaiting() {
                 key={composite}
                 humbleKey={key}
                 urgencyTier={getUrgencyTier(key.state, key.expiration)}
+                // WR-04: render the undo-override reversal wherever the
+                // overridden key now appears — keyed off the override
+                // record, not the (cleared) fuzzy/owned flags.
+                undoOverride={overrides[key.machineName] !== undefined}
                 claimAction={{
                   revealedAt: annotation?.revealedAt ?? null,
                   redeemedAt: annotation?.redeemedAt ?? null,

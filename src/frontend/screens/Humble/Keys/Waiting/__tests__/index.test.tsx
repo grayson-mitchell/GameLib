@@ -90,6 +90,9 @@ jest.mock('react', () => {
 
 const mockApi = {
   humbleGetClaimAnnotations: jest.fn(),
+  // WR-04 (14-REVIEW): overrides map fetched alongside annotations so the
+  // undo-override affordance can render on the overridden key's row here.
+  humbleGetOwnershipOverrides: jest.fn(),
   humbleUndoRedeemed: jest.fn(),
   humbleSync: jest.fn(),
   openExternalUrl: jest.fn(),
@@ -178,9 +181,9 @@ function collectElements(
 
 function findHumbleKeyRowProps(
   tree: ReactElement
-): { claimAction: ClaimAction } | undefined {
+): { claimAction: ClaimAction; undoOverride?: boolean } | undefined {
   const row = collectElements(tree).find((el) => el.type === HumbleKeyRow) as
-    | ReactElement<{ claimAction: ClaimAction }>
+    | ReactElement<{ claimAction: ClaimAction; undoOverride?: boolean }>
     | undefined
   return row?.props
 }
@@ -192,6 +195,7 @@ describe('HumbleKeysWaiting', () => {
       showDialogModal: jest.fn()
     }
     mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+    mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
   })
 
   it('fetches claim annotations once on mount', () => {
@@ -282,5 +286,41 @@ describe('HumbleKeysWaiting', () => {
 
     await flushPromises()
     expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(2)
+  })
+
+  // WR-04 (14-REVIEW): an overridden key (D-42 "Not the same game")
+  // recomputes to unowned and appears on THIS tab — the reversal affordance
+  // must render on its row, keyed off the override record.
+  it('WR-04: passes undoOverride=true to the row when an override record exists for its machineName', async () => {
+    const key = makeHumbleKey()
+    contextValue = {
+      humble: { keys: [key] },
+      showDialogModal: jest.fn()
+    }
+    mockApi.humbleGetOwnershipOverrides.mockResolvedValue({
+      'mn-1': 1720000000000
+    })
+
+    mount()
+    await flushPromises()
+
+    const props = findHumbleKeyRowProps(rerender())
+    expect(props).toBeDefined()
+    expect(props?.undoOverride).toBe(true)
+  })
+
+  it('WR-04: passes undoOverride=false when no override record exists', async () => {
+    contextValue = {
+      humble: { keys: [makeHumbleKey()] },
+      showDialogModal: jest.fn()
+    }
+    mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
+
+    mount()
+    await flushPromises()
+
+    const props = findHumbleKeyRowProps(rerender())
+    expect(props).toBeDefined()
+    expect(props?.undoOverride).toBe(false)
   })
 })

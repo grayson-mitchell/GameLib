@@ -57,13 +57,15 @@ const mockRevealedStore = {
   clear: jest.fn()
 }
 
-// D-42/D-43 override store: keyed by machine_name.
-const overrideData = new Set<string>()
+// D-42/D-43 override store: keyed by machine_name. Map-backed (WR-04) so
+// getAllOwnershipOverrides can read the overriddenAt timestamps.
+const overrideData = new Map<string, { overriddenAt: number }>()
 const mockOverrideStore = {
   has: jest.fn(),
   set: jest.fn(),
   delete: jest.fn(),
-  clear: jest.fn()
+  clear: jest.fn(),
+  entries: jest.fn()
 }
 
 // Phase 14 (D-77): local-redeemed store, composite-keyed `gamekey:machineName`.
@@ -121,13 +123,18 @@ function resetStoreMocks() {
   mockRevealedStore.clear.mockImplementation(() => revealedData.clear())
 
   mockOverrideStore.has.mockImplementation((k: string) => overrideData.has(k))
-  mockOverrideStore.set.mockImplementation((k: string) => {
-    overrideData.add(k)
-  })
+  mockOverrideStore.set.mockImplementation(
+    (k: string, v: { overriddenAt: number }) => {
+      overrideData.set(k, v)
+    }
+  )
   mockOverrideStore.delete.mockImplementation((k: string) => {
     overrideData.delete(k)
   })
   mockOverrideStore.clear.mockImplementation(() => overrideData.clear())
+  mockOverrideStore.entries.mockImplementation(() =>
+    Array.from(overrideData.entries())
+  )
 
   mockLocalRedeemedStore.has.mockImplementation((k: string) =>
     localRedeemedData.has(k)
@@ -1894,6 +1901,29 @@ describe('HumbleLibrary', () => {
       expect(overrideData.has(entry.keys[0].machineName)).toBe(false)
       expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
       expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+    })
+
+    // WR-04 (14-REVIEW): the undo affordance must key off "an override
+    // record exists" — the flags themselves are cleared by the override, so
+    // the renderer needs this map to find the overridden row.
+    test('WR-04: getAllOwnershipOverrides returns the machineName->overriddenAt map, {} when empty', () => {
+      expect(HumbleLibrary.getAllOwnershipOverrides()).toEqual({})
+
+      const entry = makeFuzzyMatchableEntry('gk1', 'Team Fortress 2')
+      libraryData.set('gk1', entry)
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      HumbleLibrary.recomputeOwnership()
+      HumbleLibrary.setOwnershipOverride(entry.keys[0].machineName)
+
+      const overrides = HumbleLibrary.getAllOwnershipOverrides()
+      expect(Object.keys(overrides)).toEqual([entry.keys[0].machineName])
+      expect(overrides[entry.keys[0].machineName]).toEqual(expect.any(Number))
+
+      HumbleLibrary.clearOwnershipOverride(entry.keys[0].machineName)
+      expect(HumbleLibrary.getAllOwnershipOverrides()).toEqual({})
     })
   })
 

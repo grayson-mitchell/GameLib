@@ -25,6 +25,9 @@ export const humbleSetOwnershipOverride = makeHandlerInvoker(
 export const humbleClearOwnershipOverride = makeHandlerInvoker(
   'humbleClearOwnershipOverride'
 )
+export const humbleGetOwnershipOverrides = makeHandlerInvoker(
+  'humbleGetOwnershipOverrides'
+)
 export const humbleRecordGiftLinkOpened = makeHandlerInvoker(
   'humbleRecordGiftLinkOpened'
 )

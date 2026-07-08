@@ -417,6 +417,23 @@ function clearOwnershipOverride(machineName: string): void {
 }
 
 /**
+ * WR-04 (14-REVIEW): returns every "Not the same game" override record as a
+ * plain machineName->overriddenAt (ms) map (mirrors getAllGiftedAt). The
+ * undo-override affordance must key off "an override RECORD exists" — an
+ * overridden key recomputes to `ownedElsewhere: false, matchConfidence:
+ * 'none'`, so any renderer gating on the current fuzzy/owned flags can never
+ * show the undo control on the one row that actually needs it. Returns {}
+ * when nothing is overridden.
+ */
+function getAllOwnershipOverrides(): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const [machineName, entry] of humbleOwnershipOverrideStore.entries()) {
+    result[machineName] = entry.overriddenAt
+  }
+  return result
+}
+
+/**
  * D-59 (reinterpreted per D-57 research — GameLib never possesses a
  * gift-link value; the deep-link is static): records that the user
  * confirmed the "Open Humble" gift action for a giftable-spares key, keyed
@@ -1184,6 +1201,7 @@ export const HumbleLibrary = {
   recomputeOwnership,
   setOwnershipOverride,
   clearOwnershipOverride,
+  getAllOwnershipOverrides,
   recordGiftLinkOpened,
   getAllGiftedAt,
   revealKey,

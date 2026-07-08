@@ -284,6 +284,11 @@ interface AsyncIPCFunctions {
   // exact-match machineName.
   humbleSetOwnershipOverride: (machineName: string) => Promise<void>
   humbleClearOwnershipOverride: (machineName: string) => Promise<void>
+  // WR-04 (14-REVIEW): machineName->overriddenAt (ms) map of every recorded
+  // "Not the same game" override, so the undo affordance can key off "an
+  // override record exists" rather than the (cleared-by-the-override)
+  // fuzzy/owned flags.
+  humbleGetOwnershipOverrides: () => Promise<Record<string, number>>
   // Phase 13 (Plan 02, D-59/D-57 resolution): confirms the user completed the
   // "Open Humble" gift action for a giftable-spares key (an
   // ownedElsewhere && state === 'UNREVEALED' key). The backend re-validates

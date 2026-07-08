@@ -86,15 +86,12 @@ export default function HumbleKeysSpares() {
                 giftedAt: giftedMap[key.machineName] ?? null,
                 onGift: () => openGiftDialog(key)
               }}
-              // WR-04 (D-71): fuzzy-owned rows on this tab get the reversal
-              // counterpart of the "Not the same game" override — a
-              // mistaken override must stay reversible before it becomes
-              // permanently claimable elsewhere. HumbleKeyRow itself calls
-              // window.api.humbleClearOwnershipOverride(machineName)
-              // directly when this control is clicked (same direct-call
-              // pattern as the existing override button); this tab only
-              // opts fuzzy rows into rendering it.
-              undoOverride={key.matchConfidence === 'fuzzy'}
+              // WR-04 (14-REVIEW): no undoOverride here — a key on this tab
+              // is by definition NOT overridden (an override clears
+              // ownedElsewhere, moving the key out of Giftable Spares
+              // entirely). The reversal affordance renders in Keys-waiting,
+              // where the overridden key actually appears, keyed off the
+              // override record (humbleGetOwnershipOverrides).
             />
           ))}
         </ul>
