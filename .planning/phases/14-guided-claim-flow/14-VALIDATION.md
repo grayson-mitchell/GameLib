@@ -1,7 +1,7 @@
 ---
 phase: 14
 slug: guided-claim-flow
-status: draft
+status: approved
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-07
@@ -46,7 +46,7 @@ created: 2026-07-07
 | 14-01..05 | 01-05 | 1-5 | D-78 (write-ahead rollback) | T-14-07 | Definitive failure rolls back REVEALED flag; ambiguous failure keeps it | unit | `pnpm jest src/backend/humble/__tests__/library.test.ts -t "rollback"` | ✅ | ✅ green |
 | 14-01..05 | 01-05 | 1-5 | D-77 (undo redeem) | — | Undo works pre-sync-confirmation, disappears post-sync-confirmation | unit | `pnpm jest src/backend/humble/__tests__/classify.test.ts -t "isLocallyRedeemed"` | ✅ | ✅ green |
 | 14-06-01 | 06 | 6 | HCLAIM-01/03/04 | T-14-01, T-14-07 | Full backend+frontend suite green; codecheck clean before verify-work | unit (full suite) | `pnpm test && pnpm codecheck` | ✅ | ✅ green (706/706, tsc clean) |
-| 14-06-02 | 06 | 6 | HCLAIM-01..05 (live) | T-14-07 | Live reveal/redeem contract confirmed with one disposable key; C2 block, undo cycle, non-Steam link-out verified end-to-end | manual (checkpoint:human-verify) | N/A — real Humble account + disposable key required | N/A | ⬜ pending (see Manual-Only Verifications) |
+| 14-06-02 | 06 | 6 | HCLAIM-01..05 (live) | T-14-07 | Live reveal/redeem contract confirmed with one disposable key; C2 block, undo cycle, non-Steam link-out verified end-to-end | manual (checkpoint:human-verify) | N/A — real Humble account + disposable key required | N/A | ✅ approved (2026-07-08) |
 
 Supporting frontend/component coverage referenced above also includes `src/frontend/screens/Humble/Keys/Waiting/__tests__/index.test.tsx` (row state — Claim/Finish-activation/Redeemed transitions, annotation refresh) and `src/backend/humble/__tests__/user.test.ts` (csrf_cookie capture/backfill), both part of the same 706/706 green run.
 
@@ -71,6 +71,17 @@ Existing infrastructure covers all phase requirements. All Wave 0 gaps identifie
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|--------------------|
 | Live reveal/redeem HTTP contract (URL, form fields, response shape, CSRF disposition, transport requirement); C2 hard-block on owned key; mark-redeemed/undo cycle with no second reveal; non-Steam link-out with no one-click activation | HCLAIM-01, HCLAIM-02, HCLAIM-03, HCLAIM-05 | Requires a real, connected Humble account and consumes one disposable UNREVEALED key (C1 irreversibility) — cannot be simulated in unit tests without a live Cloudflare-fronted endpoint | Plan 14-06 Task 2 checkpoint script: (1) reveal on a disposable UNREVEALED Steam key, confirm key shown + clipboard + "Revealed {date}"; (2) "Open Steam" opens `store.steampowered.com/account/registerkey` with key pre-filled; (3) mark-redeemed → undo → re-run Finish-activation with NO second reveal call (verify via log); (4) Claim on an owned/likely-owned key routes to Spares with no reveal; (5) Claim on a non-Steam key shows link-out + copy, no one-click activation |
+
+### Task 2 — Human Checkpoint Outcome: APPROVED (2026-07-08)
+
+The human executed the full checkpoint script from the row above and replied "approved". Outcome, by step:
+
+- **Steps 1-2 (live reveal + Open Steam registerkey deep-link + successful Steam activation):** verified live by the human today, corroborating the prior live reveal + Steam redemption already confirmed during the resolved debug session `humble-reveal-key-fails` (CSRF token present, reveal POST routed via Electron `net.request` on `persist:humble`, succeeded).
+- **Steps 3-6 (Finish-activation reopening WITHOUT a second `revealKey` call; Mark-as-redeemed → "Redeemed {date}" + Undo; Undo → back to "Finish activation"; C2 owned-key block routing to Giftable spares; non-Steam link-out):** the human walked the full undo-cycle click path and confirmed each behaved as expected.
+- **CSRF disposition:** confirmed REQUIRED (resolved during the debug session, recorded above under "Reveal Endpoint — CONFIRMED contract"). This checkpoint reconfirms it must **not** be dropped as dead code.
+- **No key value, cookie value, or other secret was recorded anywhere in this validation file or in chat**, per C4/D-15 discipline.
+
+**Conclusion:** The reveal/redeem HTTP contract, C2 hard block, mark-redeemed/undo cycle, and non-Steam link-out are all empirically confirmed against the live Humble API. Plan 14-06 Task 2 is complete.
 
 ### Reveal Endpoint — CONFIRMED contract (empirical, 2026-07-08)
 
@@ -97,4 +108,4 @@ This section records the **empirically confirmed** reveal/redeem HTTP contract, 
 - [x] Feedback latency < 8s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending (Task 2 live checkpoint outstanding — see Manual-Only Verifications)
+**Approval:** approved (2026-07-08) — Task 2 live checkpoint confirmed by human; see "Task 2 — Human Checkpoint Outcome" above
