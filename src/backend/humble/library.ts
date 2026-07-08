@@ -868,8 +868,42 @@ async function runSync(): Promise<SyncOutcome> {
  * 8. outcome reconciliation (D-78): a definitive failure (schema_error /
  *    access_denied / session_expired) rolls the write-ahead flag BACK; an
  *    ambiguous (thrown/transient) outcome KEEPS it and never auto-resubmits.
+ *
+ * WR-01 (14-REVIEW): the eligibility check alone (state !== 'UNREVEALED')
+ * cannot stop a SECOND revealKey call that arrives while the first is still
+ * in flight — the cached state only flips to REVEALED after the adapter call
+ * resolves. The renderer's `busy` flag is renderer-side and untrusted
+ * (T-14-03), so the backend keeps its own composite-keyed in-flight set:
+ * a concurrent duplicate returns `failed` without ever reaching the adapter,
+ * guaranteeing the irreversible reveal POST can never double-fire.
  */
+const revealsInFlight = new Set<string>()
+
 async function revealKey(
+  gamekey: string,
+  machineName: string
+): Promise<RevealOutcome> {
+  const composite = compositeKey(gamekey, machineName)
+  if (revealsInFlight.has(composite)) {
+    logWarning(
+      [
+        'Humble reveal: rejected concurrent duplicate (reveal already in flight):',
+        gamekey,
+        machineName
+      ],
+      LogPrefix.Backend
+    )
+    return { status: 'failed' }
+  }
+  revealsInFlight.add(composite)
+  try {
+    return await doRevealKey(gamekey, machineName)
+  } finally {
+    revealsInFlight.delete(composite)
+  }
+}
+
+async function doRevealKey(
   gamekey: string,
   machineName: string
 ): Promise<RevealOutcome> {

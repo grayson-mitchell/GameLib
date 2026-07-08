@@ -2097,6 +2097,98 @@ describe('HumbleLibrary', () => {
 
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
     })
+
+    // WR-01 (14-REVIEW): the cached state only flips to REVEALED after the
+    // adapter call resolves, so the state-based eligibility check cannot
+    // stop a concurrent duplicate — the backend's own in-flight set must.
+    test('WR-01: a second revealKey while one is in flight returns failed and NEVER double-fires the adapter', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      let resolveAdapter!: (v: unknown) => void
+      mockAdapterRevealKey.mockImplementation(
+        () =>
+          new Promise((r) => {
+            resolveAdapter = r
+          })
+      )
+
+      const first = HumbleLibrary.revealKey('gk1', 'gk1_key')
+      await flushAsync()
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
+
+      const second = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+      expect(second).toEqual({ status: 'failed' })
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
+
+      resolveAdapter({ status: 'ok', data: { key: 'K' } })
+      await expect(first).resolves.toEqual({ status: 'revealed', key: 'K' })
+    })
+
+    test('WR-01: the in-flight guard is per-composite-key — a different key reveals concurrently', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      libraryData.set(
+        'gk2',
+        makeRevealableEntry('gk2', { machineName: 'gk2_key', keyindex: 'idx-2' })
+      )
+      const resolvers: Array<(v: unknown) => void> = []
+      mockAdapterRevealKey.mockImplementation(
+        () =>
+          new Promise((r) => {
+            resolvers.push(r)
+          })
+      )
+
+      const first = HumbleLibrary.revealKey('gk1', 'gk1_key')
+      const second = HumbleLibrary.revealKey('gk2', 'gk2_key')
+      await flushAsync()
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(2)
+
+      resolvers.forEach((r) => r({ status: 'ok', data: { key: 'K' } }))
+      await expect(first).resolves.toEqual({ status: 'revealed', key: 'K' })
+      await expect(second).resolves.toEqual({ status: 'revealed', key: 'K' })
+    })
+
+    test('WR-01: the guard releases after settle — a retry after a definitive failure reaches the adapter again', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValueOnce({
+        status: 'schema_error',
+        raw: {}
+      })
+
+      await expect(HumbleLibrary.revealKey('gk1', 'gk1_key')).resolves.toEqual({
+        status: 'failed'
+      })
+
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+      await expect(HumbleLibrary.revealKey('gk1', 'gk1_key')).resolves.toEqual({
+        status: 'revealed',
+        key: 'K'
+      })
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(2)
+    })
+
+    test('WR-01: the guard releases even when the adapter throws (ambiguous path)', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockRejectedValue(new Error('ECONNRESET'))
+
+      await expect(HumbleLibrary.revealKey('gk1', 'gk1_key')).resolves.toEqual({
+        status: 'ambiguous'
+      })
+
+      // A follow-up EXPLICIT user retry is not blocked by a stuck guard
+      // (state is still UNREVEALED in the cache — the ambiguous path never
+      // patched it — so eligibility passes and the adapter is reached).
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+      await expect(HumbleLibrary.revealKey('gk1', 'gk1_key')).resolves.toEqual({
+        status: 'revealed',
+        key: 'K'
+      })
+    })
   })
 
   // Debug session humble-reveal-key-fails (round 2): every early-return
