@@ -2394,6 +2394,52 @@ describe('HumbleLibrary', () => {
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
     })
 
+    // WR-02 (14-REVIEW): a key revealed through GameLib that a later sync
+    // classified REDEEMED (server truth) needs an acknowledgment path so
+    // the "Finish activation" row can be dropped — markRedeemed records the
+    // redeemedAt mark WITHOUT the pending flag (server truth has no Undo).
+    test('WR-02: markRedeemed acknowledges a server-confirmed REDEEMED key — sets the mark, never the pending flag', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          keyindex: 'idx-1',
+          revealedKeyValue: 'REAL-KEY-VALUE'
+          // locallyRedeemedPending intentionally absent — server-confirmed.
+        })
+      )
+
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ok' })
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(true)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+      expect(
+        libraryData.get('gk1')?.keys[0].locallyRedeemedPending
+      ).toBeUndefined()
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual(['mark_redeemed'])
+      expect(audit?.[0].outcome).toBe('server_confirmed_ack')
+    })
+
+    test('WR-02: markRedeemed on an already-locally-pending REDEEMED key stays ineligible (nothing to acknowledge — Undo is the affordance)', async () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: 111 })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          locallyRedeemedPending: true,
+          keyindex: 'idx-1'
+        })
+      )
+
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ineligible' })
+      // The pre-existing mark is untouched.
+      expect(localRedeemedData.get('gk1:gk1_key')).toEqual({ redeemedAt: 111 })
+    })
+
     test('undoRedeemed on a locally-pending REDEEMED key clears the mark, audits undo_redeemed, reverts to REVEALED', async () => {
       localRedeemedData.set('gk1:gk1_key', { redeemedAt: Date.now() })
       libraryData.set(

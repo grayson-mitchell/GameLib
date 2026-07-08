@@ -61,6 +61,72 @@ describe('selectKeysWaiting', () => {
     expect(selectKeysWaiting([key])).toEqual([])
   })
 
+  // WR-02 (14-REVIEW): a key revealed through GameLib that a later sync
+  // classified REDEEMED (server truth — Humble's reveal endpoint populates
+  // redeemed_key_val) must keep its "Finish activation" resume until the
+  // user explicitly marks it redeemed.
+  describe('WR-02: revealed-but-unacknowledged REDEEMED keys (annotations)', () => {
+    test('keeps a REDEEMED key with a reveal annotation and no redeemedAt (Finish activation resume)', () => {
+      const key = makeKey({ state: 'REDEEMED', machineName: 'mn-1' })
+      const annotations = {
+        [`${key.gamekey}:${key.machineName}`]: {
+          revealedAt: 1720000000000,
+          keyindexResolved: true
+        }
+      }
+      expect(selectKeysWaiting([key], annotations)).toEqual([key])
+    })
+
+    test('drops the REDEEMED key once the user marked it redeemed (redeemedAt set)', () => {
+      const key = makeKey({ state: 'REDEEMED', machineName: 'mn-1' })
+      const annotations = {
+        [`${key.gamekey}:${key.machineName}`]: {
+          revealedAt: 1720000000000,
+          redeemedAt: 1720000100000,
+          keyindexResolved: true
+        }
+      }
+      expect(selectKeysWaiting([key], annotations)).toEqual([])
+    })
+
+    test('drops a REDEEMED key with NO reveal annotation (redeemed outside GameLib — unchanged behavior)', () => {
+      const key = makeKey({ state: 'REDEEMED', machineName: 'mn-1' })
+      expect(selectKeysWaiting([key], {})).toEqual([])
+      expect(selectKeysWaiting([key])).toEqual([])
+    })
+
+    test('an ownedElsewhere REDEEMED key stays excluded even with a reveal annotation', () => {
+      const key = makeKey({
+        state: 'REDEEMED',
+        machineName: 'mn-1',
+        ownedElsewhere: true
+      })
+      const annotations = {
+        [`${key.gamekey}:${key.machineName}`]: {
+          revealedAt: 1720000000000,
+          keyindexResolved: true
+        }
+      }
+      expect(selectKeysWaiting([key], annotations)).toEqual([])
+    })
+
+    test('a locally-pending REDEEMED key stays included regardless of annotations (D-77 Undo)', () => {
+      const key = makeKey({
+        state: 'REDEEMED',
+        machineName: 'mn-1',
+        locallyRedeemedPending: true
+      })
+      const annotations = {
+        [`${key.gamekey}:${key.machineName}`]: {
+          revealedAt: 1720000000000,
+          redeemedAt: 1720000100000,
+          keyindexResolved: true
+        }
+      }
+      expect(selectKeysWaiting([key], annotations)).toEqual([key])
+    })
+  })
+
   test.each<HumbleKeyState>([
     'UNPICKED',
     'UNREVEALED',

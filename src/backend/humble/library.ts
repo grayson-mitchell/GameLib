@@ -1090,6 +1090,14 @@ async function doRevealKey(
  * confirmation. Sets `locallyRedeemedPending: true` on the cache-projected
  * key so the renderer can offer the Undo affordance — a server-confirmed
  * redeem (seen in a later sync's order data) never carries this flag.
+ *
+ * WR-02 (14-REVIEW) second eligibility tier: a key revealed through GameLib
+ * whose next sync saw the server-populated `redeemed_key_val` classifies
+ * REDEEMED (server truth) BEFORE the user activated it on the target
+ * platform. selectKeysWaiting keeps that row visible ("Finish activation")
+ * until the user acknowledges it — this function records that
+ * acknowledgment: the composite `redeemedAt` mark is set so the row drops,
+ * but `locallyRedeemedPending` is NOT set (server truth needs no Undo).
  */
 async function markRedeemed(
   gamekey: string,
@@ -1098,21 +1106,40 @@ async function markRedeemed(
   const target = getKeys().find(
     (key) => key.gamekey === gamekey && key.machineName === machineName
   )
-  if (!target || target.state !== 'REVEALED') {
+  if (!target) {
     return { status: 'ineligible' }
   }
 
-  humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
-    redeemedAt: Date.now()
-  })
-  appendAudit(gamekey, machineName, 'mark_redeemed', {
-    title: target.title,
-    platform: target.platform
-  })
-  patchCachedState(gamekey, machineName, 'REDEEMED', {
-    locallyRedeemedPending: true
-  })
-  return { status: 'ok' }
+  if (target.state === 'REVEALED') {
+    humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
+      redeemedAt: Date.now()
+    })
+    appendAudit(gamekey, machineName, 'mark_redeemed', {
+      title: target.title,
+      platform: target.platform
+    })
+    patchCachedState(gamekey, machineName, 'REDEEMED', {
+      locallyRedeemedPending: true
+    })
+    return { status: 'ok' }
+  }
+
+  // WR-02: acknowledge a server-confirmed redeem (the "Finish activation"
+  // resume path). No state patch (already REDEEMED), no pending flag (a
+  // server-confirmed redeem is never undoable, D-77).
+  if (target.state === 'REDEEMED' && !target.locallyRedeemedPending) {
+    humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
+      redeemedAt: Date.now()
+    })
+    appendAudit(gamekey, machineName, 'mark_redeemed', {
+      title: target.title,
+      platform: target.platform,
+      outcome: 'server_confirmed_ack'
+    })
+    return { status: 'ok' }
+  }
+
+  return { status: 'ineligible' }
 }
 
 /**

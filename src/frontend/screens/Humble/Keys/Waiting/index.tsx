@@ -20,7 +20,11 @@ export default function HumbleKeysWaiting() {
     Record<string, ClaimAnnotation>
   >({})
 
-  const keys = selectKeysWaiting(humble?.keys ?? [])
+  // WR-02 (14-REVIEW): annotations participate in view membership — a key
+  // revealed through GameLib that a later sync classified REDEEMED (server
+  // truth) keeps its "Finish activation" row here until the user marks it
+  // redeemed. See selectKeysWaiting's doc comment.
+  const keys = selectKeysWaiting(humble?.keys ?? [], annotations)
 
   // D-67/Plan 03: per-key reveal/redeem annotations + the Pitfall-C
   // keyindexResolved disabled-state signal, mirroring Spares' giftedMap

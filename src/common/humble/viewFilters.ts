@@ -1,4 +1,4 @@
-import { HumbleKey, HumbleKeyState } from '../types/humble'
+import { ClaimAnnotation, HumbleKey, HumbleKeyState } from '../types/humble'
 import { GENERIC_KEY_PLATFORM } from './groupKeys'
 
 /**
@@ -51,16 +51,46 @@ function compareWaiting(a: HumbleKey, b: HumbleKey): number {
  * before the Undo affordance could ever be seen, since REDEEMED is
  * otherwise terminal-and-excluded. A server-confirmed redeem never carries
  * `locallyRedeemedPending`, so it remains excluded as before.
+ *
+ * WR-02 (14-REVIEW) addition: Humble's reveal endpoint populates
+ * `redeemed_key_val` SERVER-side, so the next sync after a wizard reveal
+ * classifies the key REDEEMED (server truth, no `locallyRedeemedPending`).
+ * Without special handling that sync silently dropped the D-66 "Finish
+ * activation" resume for any reveal not finished in one sitting — the
+ * persisted key value was still on disk but unreachable from every view.
+ * The optional `annotations` map (composite `gamekey:machineName` keys, the
+ * same shape `humbleGetClaimAnnotations` returns) keeps a REDEEMED key
+ * visible while it carries a reveal annotation (`revealedAt` set) and the
+ * user has NOT yet marked it redeemed (`redeemedAt` unset) — the row drops
+ * only after the explicit "Mark as redeemed" acknowledgment.
  */
-export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
+export function selectKeysWaiting(
+  keys: HumbleKey[],
+  annotations?: Record<string, ClaimAnnotation>
+): HumbleKey[] {
   return keys
-    .filter(
-      (k) =>
-        !k.ownedElsewhere &&
-        k.platform !== GENERIC_KEY_PLATFORM &&
-        (WAITING_STATES.has(k.state) ||
-          (k.state === 'REDEEMED' && k.locallyRedeemedPending === true))
-    )
+    .filter((k) => {
+      if (k.ownedElsewhere || k.platform === GENERIC_KEY_PLATFORM) {
+        return false
+      }
+      if (WAITING_STATES.has(k.state)) {
+        return true
+      }
+      if (k.state !== 'REDEEMED') {
+        return false
+      }
+      // D-77: a local-only mark keeps the row for its Undo affordance.
+      if (k.locallyRedeemedPending === true) {
+        return true
+      }
+      // WR-02: revealed through GameLib, later server-classified REDEEMED,
+      // never acknowledged by the user — keep the "Finish activation" resume.
+      const annotation = annotations?.[`${k.gamekey}:${k.machineName}`]
+      return (
+        annotation?.revealedAt !== undefined &&
+        annotation?.redeemedAt === undefined
+      )
+    })
     .sort(compareWaiting)
 }
 
