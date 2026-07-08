@@ -192,6 +192,9 @@ jest.mock('../adapter', () => ({
 }))
 
 // ── user mock (credentials/csrf only — auth flows are Plan 02's caller) ─────
+// Round 6 (debug session humble-reveal-key-fails): getFullCookieHeader() was
+// removed from HumbleUser — the reveal POST's electron-net transport now
+// sources the live partition's cookie jar natively (see adapter.ts).
 
 const mockGetCredentials = jest.fn(() => 'cookie-value')
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
@@ -2009,11 +2012,14 @@ describe('HumbleLibrary', () => {
 
       expect(outcome).toEqual({ status: 'revealed', key: 'REAL-KEY-VALUE' })
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
-      expect(mockAdapterRevealKey).toHaveBeenCalledWith(
-        'cookie-value',
-        'csrf-token-value',
-        { gamekey: 'gk1', machineName: 'gk1_key', keyindex: 'idx-1' }
-      )
+      // Round 6: no cookie/fullCookieHeader argument — the reveal POST's
+      // electron-net transport sources the live partition's cookie jar
+      // natively (see adapter.ts).
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith('csrf-token-value', {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'idx-1'
+      })
       expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
         'REAL-KEY-VALUE'
@@ -2090,6 +2096,181 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // Debug session humble-reveal-key-fails (round 2): every early-return
+  // branch of revealKey() was previously COMPLETELY silent in gamelib.log —
+  // indistinguishable from a live Humble 401/403/429 denial (mapAxiosError's
+  // own silent mapping for those statuses) once the wizard collapses both
+  // into the same generic 'failed' step text. Each branch now logs a
+  // status-only line (gamekey/machineName/state — never a key VALUE) so a
+  // future reveal failure is self-diagnosing without another live-UAT round.
+  describe('HumbleLibrary.revealKey() — self-diagnosing silent gaps (debug session humble-reveal-key-fails)', () => {
+    test('ineligible (unknown gamekey/machineName) logs a status-only warning', async () => {
+      await HumbleLibrary.revealKey('no-such-gk', 'no-such-key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: ineligible (target missing or not UNREVEALED)')
+      )
+      expect(call).toBeDefined()
+      expect(JSON.stringify(call)).toContain('no-such-gk')
+      expect(JSON.stringify(call)).toContain('state=not_found')
+    })
+
+    test('ineligible (non-UNREVEALED state) logs the actual state', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { state: 'REDEEMED' }))
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: ineligible (target missing or not UNREVEALED)')
+      )
+      expect(call).toBeDefined()
+      expect(JSON.stringify(call)).toContain('state=REDEEMED')
+    })
+
+    test('cooldown short-circuit logs the retry timestamp before returning', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      const retryAt = Date.now() + 60_000
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'denied',
+        cooldownUntil: retryAt
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: blocked by cooldown until')
+      )
+      expect(call).toBeDefined()
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+    })
+
+    test('ineligible (unresolved keyindex) logs distinctly from the general ineligible branch', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1')) // no keyindex
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: ineligible (keyindex unresolved)')
+      )
+      expect(call).toBeDefined()
+    })
+
+    test('logs csrfTokenPresent=true right before the adapter call when a token is cached', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogInfo.mock.calls.find((c) =>
+        String(c[0][0]).includes('csrfTokenPresent=true')
+      )
+      expect(call).toBeDefined()
+    })
+
+    test('logs csrfTokenPresent=false when no token is cached — never blocks the call (opportunistic header)', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockGetCsrfToken.mockReturnValue(undefined as unknown as string)
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogInfo.mock.calls.find((c) =>
+        String(c[0][0]).includes('csrfTokenPresent=false')
+      )
+      expect(call).toBeDefined()
+      // Round 6: no cookie/fullCookieHeader argument — see adapter.ts.
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith(undefined, {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'idx-1'
+      })
+    })
+
+    // Round 6 (debug session humble-reveal-key-fails): round 5's
+    // fullCookieJarPresent log field and HumbleUser.getFullCookieHeader()
+    // mechanism were both removed — the reveal POST's electron-net transport
+    // sources the live partition's cookie jar natively (see adapter.ts's
+    // humblePostRequest doc comment). This asserts the log line's new,
+    // simpler shape and that the adapter call no longer carries a 3rd/4th
+    // cookie-shaped argument.
+    test('round 6: calling-adapter log line names the electron-net transport and carries no fullCookieJarPresent field', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogInfo.mock.calls.find((c) =>
+        String(c[0][0]).includes('electron-net transport')
+      )
+      expect(call).toBeDefined()
+      expect(String(call?.[0][0])).not.toContain('fullCookieJarPresent')
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith('csrf-token-value', {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'idx-1'
+      })
+    })
+
+    test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({ status: 'access_denied' })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: definitive failure, status=access_denied')
+      )
+      expect(call).toBeDefined()
+    })
+
+    test('definitive failure (schema_error) logs the exact adapter status', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({ status: 'schema_error', raw: {} })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: definitive failure, status=schema_error')
+      )
+      expect(call).toBeDefined()
+    })
+
+    test('ambiguous outcome (adapter throws) does NOT log a "definitive failure" line — the D-78 distinction is preserved', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockRejectedValue(new Error('ECONNRESET'))
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: definitive failure')
+      )
+      expect(call).toBeUndefined()
+    })
+
+    test('no stored credentials logs a status-only warning, never the adapter call', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockGetCredentials.mockReturnValue(undefined as unknown as string)
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogWarning.mock.calls.find((c) =>
+        String(c[0][0]).includes('Humble reveal: failed (no stored credentials)')
+      )
+      expect(call).toBeDefined()
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
     })
   })
 

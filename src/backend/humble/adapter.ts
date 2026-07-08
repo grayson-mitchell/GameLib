@@ -1,13 +1,16 @@
 import axios from 'axios'
+import { net } from 'electron'
 import { z } from 'zod'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult, HumbleUserData } from 'common/types/humble'
 import {
   HUMBLE_BASE_URL,
+  HUMBLE_LOGIN_PARTITION,
   HUMBLE_REDEEM_PATH,
   HUMBLE_REQUIRED_HEADERS
 } from './constants'
+import { standardBrowserUserAgent } from './userAgent'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -183,58 +186,245 @@ async function humbleRequest(
 }
 
 /**
- * POST transport sibling to `humbleRequest` (D-14 revised): the first
- * write-style Humble call (Phase 14 HCLAIM-01) routes through this single
- * function, mirroring humbleRequest's shape/discipline (finite timeout,
- * string-body JSON coercion tolerance) so a future transport swap (see
- * humbleRequest's own doc comment) only needs to touch these two functions.
- * `csrfToken`, when present, is sent as `csrf-prevention-token` — the
- * reveal endpoint's CSRF requirement is unconfirmed (RESEARCH.md Pitfall A),
- * so this header is opportunistic, never required at the type level.
+ * Debug session humble-reveal-key-fails (round 6): thrown by
+ * `humblePostRequest` for any non-2xx HTTP response. `net.request` (unlike
+ * axios) never rejects on a non-2xx status — it always resolves a response,
+ * status code and all — so this class exists purely to give `mapAxiosError`
+ * a single, transport-agnostic shape (`.response.{status,headers,data}`) to
+ * pattern-match against, alongside axios's own `AxiosError`.
  */
-async function humblePostRequest(
+class HumbleTransportHttpError extends Error {
+  response: {
+    status: number
+    headers: Record<string, unknown> | undefined
+    data: unknown
+  }
+  constructor(response: {
+    status: number
+    headers: Record<string, unknown> | undefined
+    data: unknown
+  }) {
+    super(`Humble transport HTTP error ${response.status}`)
+    this.name = 'HumbleTransportHttpError'
+    this.response = response
+  }
+}
+
+function coerceJsonBody(raw: string): unknown {
+  if (raw.length === 0) return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    // keep the raw string — describeSchemaFailure/summarizeErrorBody flag it
+    return raw
+  }
+}
+
+function firstHeaderValue(value: string | string[] | undefined): string | null {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value[0] ?? null
+  return null
+}
+
+/**
+ * POST transport sibling to `humbleRequest` (D-14 revised, TRANSPORT SWAPPED
+ * round 6): the codebase's one write-style Humble call (Phase 14 HCLAIM-01,
+ * reveal/redeem) routes through this single function.
+ *
+ * Debug session humble-reveal-key-fails, round 6: rounds 1-5 iterated on the
+ * request's CONTENT (CSRF header, csrf_cookie double-submit, dropping
+ * X-Requested-By, hand-building the full cookie jar) while staying on axios.
+ * Round 5's checkpoint evidence proved content was never the problem:
+ * fullCookieJarPresent=true (every fix live) still got a live 403 whose body
+ * was `contentType=text/html`, `looksLikeHtml=true`, `bodyLength=4552` — the
+ * unmistakable shape of a Cloudflare Bot-Management/WAF challenge PAGE, not
+ * a Humble JSON denial (Humble's own denials are always JSON; this endpoint
+ * was never reached). Cloudflare fingerprints the TRANSPORT itself (TLS/JA3,
+ * HTTP/1.1 vs HTTP/2, cipher/extension order, header casing/ordering) —
+ * no header or cookie content, however correct, can fix a transport-level
+ * fingerprint mismatch from inside axios's plain Node.js HTTPS stack.
+ *
+ * Fix: route this ONE call through Electron's own Chromium network stack
+ * (`net.request`) on the same `persist:humble` partition the login flow
+ * already uses — a genuine Chromium TLS/HTTP2 fingerprint, indistinguishable
+ * from a real browser tab, because it IS the same network stack a real
+ * browser tab uses. `partition` + `useSessionCookies: true` +
+ * `credentials: 'include'` make Chromium attach the partition's live cookie
+ * jar NATIVELY (superseding round 5's hand-built
+ * HumbleUser.getFullCookieHeader — see that removal's comment in user.ts) —
+ * no manual Cookie header is set here at all. `csrf-prevention-token`
+ * remains a manually-set header (round 1/3, LIVE-CONFIRMED CORRECT by round
+ * 5's csrfTokenPresent=true evidence) since real Humble page JS also derives
+ * it from `document.cookie` and sets it explicitly, rather than relying on
+ * it being an automatically-attached header. GET paths (`humbleRequest`,
+ * still axios) are UNCHANGED — round 4/5 evidence shows Cloudflare scores
+ * this write endpoint far more aggressively than the read endpoints, so only
+ * the one endpoint that has ever failed needs the swap.
+ */
+function humblePostRequest(
   path: string,
-  cookie: string,
   body: string,
   csrfToken?: string
 ): Promise<HumbleRawResponse> {
-  const res = await axios.post(`${HUMBLE_BASE_URL}${path}`, body, {
-    headers: {
-      ...HUMBLE_REQUIRED_HEADERS,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Cookie: `_simpleauth_sess=${cookie}`,
-      ...(csrfToken ? { 'csrf-prevention-token': csrfToken } : {})
-    },
-    timeout: REQUEST_TIMEOUT_MS
+  return new Promise((resolve, reject) => {
+    const request = net.request({
+      method: 'POST',
+      url: `${HUMBLE_BASE_URL}${path}`,
+      partition: HUMBLE_LOGIN_PARTITION,
+      credentials: 'include',
+      useSessionCookies: true
+    })
+
+    // WR-04 parity: humbleRequest's axios timeout applies per-call; net's
+    // ClientRequest has no built-in timeout option, so it is armed manually
+    // and tears the request down explicitly on expiry — a hung transport
+    // must become a transient (rethrown) error, never a silent stall.
+    const timeoutHandle = setTimeout(() => {
+      request.abort()
+      reject(
+        new Error(`Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+      )
+    }, REQUEST_TIMEOUT_MS)
+    const clearRequestTimeout = () => clearTimeout(timeoutHandle)
+
+    request.setHeader('Accept', HUMBLE_REQUIRED_HEADERS.Accept)
+    request.setHeader('Content-Type', 'application/x-www-form-urlencoded')
+    // Presents the same Chrome-shaped UA as the login window/partition
+    // (user.ts's watchForLogin already calls ses.setUserAgent with this
+    // exact value) — Cloudflare correlates UA against TLS fingerprint, so a
+    // mismatched UA on an otherwise-genuine Chromium connection is itself a
+    // signal worth avoiding, even though this transport's TLS fingerprint is
+    // already self-consistent by construction.
+    request.setHeader('User-Agent', standardBrowserUserAgent())
+    if (csrfToken) {
+      request.setHeader('csrf-prevention-token', csrfToken)
+    }
+
+    request.on('response', (response) => {
+      const chunks: Buffer[] = []
+      response.on('data', (chunk: Buffer) => chunks.push(chunk))
+      response.on('end', () => {
+        clearRequestTimeout()
+        const data = coerceJsonBody(Buffer.concat(chunks).toString('utf8'))
+        const contentType = firstHeaderValue(response.headers?.['content-type'])
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          resolve({ data, contentType })
+          return
+        }
+        reject(
+          new HumbleTransportHttpError({
+            status: response.statusCode,
+            headers: response.headers,
+            data
+          })
+        )
+      })
+      response.on('error', (err: Error) => {
+        clearRequestTimeout()
+        reject(err)
+      })
+    })
+
+    request.on('error', (err: Error) => {
+      clearRequestTimeout()
+      reject(err)
+    })
+
+    request.end(body)
   })
-  const contentTypeHeader = res.headers?.['content-type']
-  let data: unknown = res.data
-  if (typeof data === 'string' && data.length > 0) {
-    try {
-      data = JSON.parse(data)
-    } catch {
-      // keep the raw string — describeSchemaFailure flags it
+}
+
+// Debug session humble-reveal-key-fails (round 5): access_denied currently
+// collapses TWO very different failure shapes into one status — a genuine
+// Humble JSON denial (real, correctly-authenticated 403) and a Cloudflare
+// Bot Management challenge page (HTML, __cf_bm-gated — round 4 evidence
+// confirmed Humble sits behind Cloudflare). These have completely different
+// root causes and completely different fixes, but were previously
+// indistinguishable because mapAxiosError never logged anything for a caught
+// HTTP error. This is STRUCTURAL-ONLY (mirrors describeSchemaFailure's own
+// redaction discipline, T-10-01/C4): never the response body's contents,
+// only its shape (string vs parsed, HTML-looking or not) and length.
+function summarizeErrorBody(data: unknown): {
+  bodyIsString: boolean
+  looksLikeHtml: boolean
+  bodyLength: number
+} {
+  const bodyIsString = typeof data === 'string'
+  let bodyLength: number
+  try {
+    bodyLength =
+      typeof data === 'string'
+        ? data.length
+        : JSON.stringify(data ?? null).length
+  } catch {
+    bodyLength = -1
+  }
+  const looksLikeHtml =
+    typeof data === 'string' && /^\s*<(!doctype|html)/i.test(data)
+  return { bodyIsString, looksLikeHtml, bodyLength }
+}
+
+/**
+ * Extracts a transport-agnostic `{status, headers, data}` shape from a
+ * caught error, whichever of the two transports this adapter uses produced
+ * it — axios's `AxiosError` (GET paths, humbleRequest) or this module's own
+ * `HumbleTransportHttpError` (the reveal POST, humblePostRequest — round 6).
+ * Returns undefined for anything else (network errors, thrown non-HTTP
+ * errors), which mapAxiosError treats as "genuinely unexpected" below.
+ */
+function extractHttpErrorResponse(err: unknown):
+  | {
+      status: number
+      headers: Record<string, unknown> | undefined
+      data: unknown
+    }
+  | undefined {
+  if (axios.isAxiosError(err) && err.response) {
+    return {
+      status: err.response.status,
+      headers: err.response.headers as Record<string, unknown> | undefined,
+      data: err.response.data
     }
   }
-  return {
-    data,
-    contentType: typeof contentTypeHeader === 'string' ? contentTypeHeader : null
+  if (err instanceof HumbleTransportHttpError) {
+    return err.response
   }
+  return undefined
 }
 
 /**
  * Maps a caught error to the 401/403 split. Rethrows anything else — callers
  * are expected to let genuinely unexpected errors surface rather than be
  * swallowed into a misleading AdapterResult.
+ *
+ * `context`, when provided, additionally logs a redacted HTTP-failure
+ * diagnostic (status/content-type/body-shape, never body content) for any
+ * caught HTTP error response — opt-in per call site so the existing silent
+ * behavior of getGamekeys/getOrderDetail/getAccountIdentity is unchanged.
  */
-function mapAxiosError<T>(err: unknown): AdapterResult<T> {
-  if (axios.isAxiosError(err)) {
-    if (err.response?.status === 401) return { status: 'session_expired' }
-    if (err.response?.status === 403) return { status: 'access_denied' }
+function mapAxiosError<T>(err: unknown, context?: string): AdapterResult<T> {
+  const httpResponse = extractHttpErrorResponse(err)
+  if (httpResponse) {
+    if (context) {
+      const contentType = httpResponse.headers?.['content-type']
+      const { bodyIsString, looksLikeHtml, bodyLength } = summarizeErrorBody(
+        httpResponse.data
+      )
+      logWarning(
+        [
+          `Humble adapter: ${context} HTTP failure diagnostic`,
+          `status=${httpResponse.status} contentType=${typeof contentType === 'string' ? contentType : 'unknown'}`,
+          `bodyIsString=${bodyIsString} looksLikeHtml=${looksLikeHtml} bodyLength=${bodyLength}`
+        ],
+        LogPrefix.Backend
+      )
+    }
+    if (httpResponse.status === 401) return { status: 'session_expired' }
+    if (httpResponse.status === 403) return { status: 'access_denied' }
     // D-25: Humble rate-limit (429) is a backoff-inducing denial — routed
     // through the same access_denied abort+cooldown path as 403; never
     // hammered (C5).
-    if (err.response?.status === 429) return { status: 'access_denied' }
+    if (httpResponse.status === 429) return { status: 'access_denied' }
   }
   logError(
     [
@@ -409,9 +599,17 @@ export async function getAccountIdentity(
  *
  * T-14-01/T-14-05: never a blind cast, never a logged key/error_msg/body —
  * only status/length, matching describeSchemaFailure's redaction discipline.
+ *
+ * Debug session humble-reveal-key-fails (round 6): no longer takes a `cookie`
+ * or `fullCookieHeader` argument — humblePostRequest's electron-net transport
+ * sources the live `persist:humble` partition's cookie jar NATIVELY
+ * (`useSessionCookies`/`credentials: 'include'`), so a hand-passed session
+ * cookie value has nothing left to do here. The caller (library.ts) still
+ * independently gates on `HumbleUser.getCredentials()` being present before
+ * ever reaching this function — that "are we logged in at all" precondition
+ * is unrelated to what this function sends on the wire.
  */
 export async function revealKey(
-  cookie: string,
   csrfToken: string | undefined,
   params: { gamekey: string; machineName: string; keyindex: string | number }
 ): Promise<AdapterResult<{ key: string }>> {
@@ -421,12 +619,7 @@ export async function revealKey(
       key: params.gamekey,
       keyindex: String(params.keyindex)
     }).toString()
-    const response = await humblePostRequest(
-      HUMBLE_REDEEM_PATH,
-      cookie,
-      body,
-      csrfToken
-    )
+    const response = await humblePostRequest(HUMBLE_REDEEM_PATH, body, csrfToken)
     const parsed = RevealResponseSchema.safeParse(response.data)
     if (!parsed.success) {
       describeSchemaFailure(HUMBLE_REDEEM_PATH, response, parsed.error)
@@ -446,6 +639,6 @@ export async function revealKey(
     }
     return { status: 'ok', data: { key: parsed.data.key } }
   } catch (err) {
-    return mapAxiosError<{ key: string }>(err)
+    return mapAxiosError<{ key: string }>(err, 'reveal')
   }
 }

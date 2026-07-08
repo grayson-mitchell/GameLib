@@ -24,7 +24,25 @@ export default function HumbleKeysWaiting() {
 
   // D-67/Plan 03: per-key reveal/redeem annotations + the Pitfall-C
   // keyindexResolved disabled-state signal, mirroring Spares' giftedMap
-  // mount-time fetch pattern.
+  // mount-time fetch pattern. Debug session humble-reveal-key-fails (round
+  // 7): unlike Spares' giftedMap (which is updated optimistically in-place
+  // by openGiftDialog itself), this map was previously fetched ONLY once at
+  // mount and never refreshed — a successful reveal/mark-redeemed/undo
+  // updates `humble.keys` (via the backend's humbleKeysUpdated push) but
+  // left this annotations map stale, so HumbleKeyRow kept reading a
+  // revealedAt/redeemedAt of `null` and rendered the original "Claim"
+  // button (or the pre-undo "Redeemed" annotation) even after the
+  // underlying key's `state` had already advanced. `refreshAnnotations` is
+  // re-invoked after every claim-flow mutation exits (wizard close covers
+  // reveal + mark-redeemed; the standalone undo action below covers the
+  // row's direct IPC call) so the two sources of truth (`humble.keys` and
+  // this map) never diverge for longer than one IPC round trip.
+  function refreshAnnotations() {
+    void window.api.humbleGetClaimAnnotations().then((map) => {
+      setAnnotations(map)
+    })
+  }
+
   useEffect(() => {
     let cancelled = false
     void window.api.humbleGetClaimAnnotations().then((map) => {
@@ -39,6 +57,11 @@ export default function HumbleKeysWaiting() {
 
   function closeWizard() {
     showDialogModal({ showDialog: false })
+    // The wizard's onDone fires on EVERY exit path (dismiss-without-reveal,
+    // successful reveal, mark-redeemed, sync-now) — refetching unconditionally
+    // is a single cheap IPC call and guarantees no exit path is missed,
+    // rather than threading an outcome flag back through every wizard step.
+    refreshAnnotations()
   }
 
   // D-65: one stateful wizard mount per open, entryMode drives where it
@@ -93,10 +116,12 @@ export default function HumbleKeysWaiting() {
                   onClaim: () => openWizard(key, 'claim'),
                   onFinish: () => openWizard(key, 'finish'),
                   onUndoRedeem: () =>
-                    void window.api.humbleUndoRedeemed({
-                      gamekey: key.gamekey,
-                      machineName: key.machineName
-                    })
+                    void window.api
+                      .humbleUndoRedeemed({
+                        gamekey: key.gamekey,
+                        machineName: key.machineName
+                      })
+                      .then(() => refreshAnnotations())
                 }}
               />
             )

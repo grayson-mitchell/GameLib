@@ -3,22 +3,138 @@
  * Covers HACCT-01 (identity fetch), HACCT-02 (401/403 split), T-10-01/02/03.
  *
  * Mock boundaries:
- *  - axios       → get, isAxiosError
+ *  - axios       → get, isAxiosError (GET paths: getGamekeys/getOrderDetail/
+ *                  getAccountIdentity)
+ *  - electron    → net.request (round 6: the reveal POST's transport —
+ *                  see FakeClientRequest/FakeIncomingMessage below)
  *  - backend/logger → logInfo/logError/logWarning (asserted never to receive the cookie)
  */
 
 // ── axios mock (factory — must be first, jest.mock is hoisted) ──────────────
 const mockGet = jest.fn()
-const mockPost = jest.fn()
 const mockIsAxiosError = jest.fn()
 jest.mock('axios', () => ({
   __esModule: true,
   default: {
     get: (...args: unknown[]) => mockGet(...args),
-    post: (...args: unknown[]) => mockPost(...args),
     isAxiosError: (...args: unknown[]) => mockIsAxiosError(...args)
   }
 }))
+
+// ── electron net mock (round 6: the reveal POST's electron-net transport) ───
+// Minimal fake of Electron's ClientRequest/IncomingMessage event-emitter
+// shape — just enough to drive humblePostRequest's promise wrapper
+// (setHeader/end/on('response'|'error'), response.on('data'|'end'|'error'),
+// response.statusCode/headers). Queue a response OR an error via
+// queueNetResponse()/queueNetError() before calling revealKey(); the fake
+// resolves/rejects on the next tick after request.end() is called, mirroring
+// a real async I/O round-trip closely enough for these tests.
+import { EventEmitter } from 'node:events'
+
+class FakeIncomingMessage extends EventEmitter {
+  statusCode: number
+  headers: Record<string, string>
+  constructor(statusCode: number, headers: Record<string, string>) {
+    super()
+    this.statusCode = statusCode
+    this.headers = headers
+  }
+}
+
+type QueuedNetBehavior =
+  | { type: 'response'; status: number; body: string; headers: Record<string, string> }
+  | { type: 'error'; error: Error }
+
+let nextNetBehavior: QueuedNetBehavior | undefined
+
+class FakeClientRequest extends EventEmitter {
+  headers: Record<string, string> = {}
+  body = ''
+  aborted = false
+  setHeader(name: string, value: string) {
+    this.headers[name] = value
+  }
+  getHeader(name: string) {
+    return this.headers[name]
+  }
+  abort() {
+    this.aborted = true
+    this.emit('abort')
+  }
+  end(chunk?: string) {
+    this.body = chunk ?? ''
+    const behavior = nextNetBehavior
+    nextNetBehavior = undefined
+    if (!behavior) {
+      // No response queued: simulates a stalled/hung connection — used by
+      // the WR-04 timeout test below, which advances fake timers to trigger
+      // humblePostRequest's own manually-armed timeout/abort instead of
+      // waiting for a response that will never come.
+      return
+    }
+    process.nextTick(() => {
+      if (behavior.type === 'error') {
+        this.emit('error', behavior.error)
+        return
+      }
+      const response = new FakeIncomingMessage(behavior.status, behavior.headers)
+      this.emit('response', response)
+      process.nextTick(() => {
+        if (behavior.body.length > 0) {
+          response.emit('data', Buffer.from(behavior.body))
+        }
+        response.emit('end')
+      })
+    })
+  }
+}
+
+const createdNetRequests: FakeClientRequest[] = []
+const netRequestOptions: Record<string, unknown>[] = []
+// jest.config's `resetMocks: true` strips any implementation given at
+// `jest.fn(impl)` construction time before EVERY test — the implementation
+// is re-established in beforeEach below (mirrors mockIsAxiosError's own
+// re-established mockImplementation just below it).
+const mockNetRequest = jest.fn()
+
+// Typical Electron default UA shape (mirrors user.test.ts's own fixture) —
+// standardBrowserUserAgent() (userAgent.ts) reads app.userAgentFallback to
+// build the reveal POST's User-Agent header.
+const MOCK_USER_AGENT_FALLBACK =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
+
+jest.mock('electron', () => ({
+  app: { userAgentFallback: MOCK_USER_AGENT_FALLBACK },
+  net: { request: (options: unknown) => mockNetRequest(options) }
+}))
+
+/** Queues the next FakeClientRequest.end() call to resolve with an HTTP response. */
+function queueNetResponse(
+  status: number,
+  body?: unknown,
+  headers: Record<string, string> = { 'content-type': 'application/json' }
+) {
+  const bodyStr =
+    typeof body === 'string'
+      ? body
+      : body === undefined
+        ? ''
+        : JSON.stringify(body)
+  nextNetBehavior = { type: 'response', status, body: bodyStr, headers }
+}
+
+/** Queues the next FakeClientRequest.end() call to reject (network-level failure, no response). */
+function queueNetError(error: Error) {
+  nextNetBehavior = { type: 'error', error }
+}
+
+function lastNetRequestOptions(): Record<string, unknown> {
+  return netRequestOptions[netRequestOptions.length - 1]
+}
+
+function lastNetRequestHeaders(): Record<string, string> {
+  return createdNetRequests[createdNetRequests.length - 1].headers
+}
 
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
@@ -42,14 +158,21 @@ import {
 
 const COOKIE = 'super-secret-cookie-value'
 
-function makeAxiosError(status: number) {
+function makeAxiosError(
+  status: number,
+  responseExtra?: { data?: unknown; headers?: Record<string, unknown> }
+) {
   const err = new Error(
     `Request failed with status code ${status}`
   ) as Error & {
-    response?: { status: number }
+    response?: {
+      status: number
+      data?: unknown
+      headers?: Record<string, unknown>
+    }
     isAxiosError: true
   }
-  err.response = { status }
+  err.response = { status, ...responseExtra }
   err.isAxiosError = true
   return err
 }
@@ -60,6 +183,15 @@ beforeEach(() => {
     (err: unknown): err is { response?: { status: number } } =>
       Boolean(err && typeof err === 'object' && 'isAxiosError' in err)
   )
+  createdNetRequests.length = 0
+  netRequestOptions.length = 0
+  nextNetBehavior = undefined
+  mockNetRequest.mockImplementation((options: unknown) => {
+    const req = new FakeClientRequest()
+    createdNetRequests.push(req)
+    netRequestOptions.push(options as Record<string, unknown>)
+    return req
+  })
 })
 
 function allLoggedStrings(): string[] {
@@ -557,131 +689,225 @@ describe('revealKey', () => {
   const GAMEKEY = 'gamekey-reveal-xyz'
   const MACHINE_NAME = 'somegame_steam'
   const FAKE_KEY = 'AAAAA-BBBBB-CCCCC'
+  const CSRF_TOKEN = 'csrf-token-value'
 
   function params(keyindex: string | number = 1) {
     return { gamekey: GAMEKEY, machineName: MACHINE_NAME, keyindex }
   }
 
   test('{success:true, key} -> ok with the key value', async () => {
-    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
-    const result = await revealKey(COOKIE, undefined, params())
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
   })
 
   test('{success:false, error_msg} -> schema_error, raw is undefined (error_msg may echo a key value, C4)', async () => {
-    mockPost.mockResolvedValue({
-      data: { success: false, error_msg: 'already redeemed' }
-    })
-    const result = await revealKey(COOKIE, undefined, params())
+    queueNetResponse(200, { success: false, error_msg: 'already redeemed' })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('success true but key missing -> schema_error, raw is undefined', async () => {
-    mockPost.mockResolvedValue({ data: { success: true } })
-    const result = await revealKey(COOKIE, undefined, params())
+    queueNetResponse(200, { success: true })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('body shape drift (non-object) -> schema_error carrying the raw body', async () => {
-    mockPost.mockResolvedValue({ data: 'not-an-object' })
-    const result = await revealKey(COOKIE, undefined, params())
+    queueNetResponse(200, 'not-an-object')
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: 'not-an-object' })
   })
 
-  test('axios 401 -> session_expired', async () => {
-    mockPost.mockRejectedValue(makeAxiosError(401))
-    const result = await revealKey(COOKIE, undefined, params())
+  test('HTTP 401 -> session_expired', async () => {
+    queueNetResponse(401, { error_msg: 'expired' })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'session_expired' })
   })
 
-  test('axios 403 -> access_denied (D-78: definitive failure)', async () => {
-    mockPost.mockRejectedValue(makeAxiosError(403))
-    const result = await revealKey(COOKIE, undefined, params())
+  test('HTTP 403 -> access_denied (D-78: definitive failure)', async () => {
+    queueNetResponse(403, { error_msg: 'forbidden' })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
 
-  test('axios 429 -> access_denied', async () => {
-    mockPost.mockRejectedValue(makeAxiosError(429))
-    const result = await revealKey(COOKIE, undefined, params())
+  test('HTTP 429 -> access_denied', async () => {
+    queueNetResponse(429, { error_msg: 'rate limited' })
+    const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
 
-  test('a thrown network error (no response) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
-    const err = new Error('timeout of 15000ms exceeded') as Error & {
-      code: string
-      isAxiosError: true
-    }
-    err.code = 'ECONNABORTED'
-    err.isAxiosError = true
-    mockPost.mockRejectedValue(err)
-    await expect(revealKey(COOKIE, undefined, params())).rejects.toThrow(
-      'timeout'
+  // Round 5 (debug session humble-reveal-key-fails): access_denied
+  // previously collapsed a genuine Humble JSON denial and a Cloudflare Bot
+  // Management HTML challenge page into an identical, silent status. revealKey
+  // is the ONE call site that opts into mapAxiosError's diagnostic context —
+  // structural-only (never body content, mirrors describeSchemaFailure's own
+  // redaction discipline). Round 6: this diagnostic is exactly what
+  // DECISIVELY confirmed the transport-fingerprint hypothesis live — see
+  // adapter.ts's humblePostRequest doc comment.
+  test('round 5: a 403 with a Cloudflare-shaped HTML body logs a structural (never content) diagnostic', async () => {
+    queueNetResponse(
+      403,
+      '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>',
+      { 'content-type': 'text/html; charset=UTF-8' }
+    )
+    await revealKey(undefined, params())
+    const call = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('reveal HTTP failure diagnostic')
+    )
+    expect(call).toBeDefined()
+    const logged = JSON.stringify(call)
+    expect(logged).toContain('status=403')
+    expect(logged).toContain('contentType=text/html')
+    expect(logged).toContain('bodyIsString=true')
+    expect(logged).toContain('looksLikeHtml=true')
+    // Redaction: the actual HTML content must never be logged.
+    expect(logged).not.toContain('Cloudflare')
+    expect(logged).not.toContain('Attention Required')
+  })
+
+  test('round 5: a 403 with a genuine Humble JSON body logs looksLikeHtml=false (distinguishes real denial from a WAF challenge)', async () => {
+    queueNetResponse(
+      403,
+      { success: false, error_msg: 'forbidden' },
+      { 'content-type': 'application/json' }
+    )
+    await revealKey(undefined, params())
+    const call = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('reveal HTTP failure diagnostic')
+    )
+    expect(call).toBeDefined()
+    const logged = JSON.stringify(call)
+    expect(logged).toContain('status=403')
+    expect(logged).toContain('contentType=application/json')
+    expect(logged).toContain('bodyIsString=false')
+    expect(logged).toContain('looksLikeHtml=false')
+    expect(logged).not.toContain('forbidden')
+  })
+
+  test('round 5: getGamekeys (no diagnostic context) does NOT log an HTTP failure diagnostic on a 403 (opt-in only, unchanged behavior)', async () => {
+    mockGet.mockRejectedValue(
+      makeAxiosError(403, { data: '<html></html>' })
+    )
+    await getGamekeys(COOKIE)
+    const call = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('HTTP failure diagnostic')
+    )
+    expect(call).toBeUndefined()
+  })
+
+  test('a network-level error (no HTTP response at all) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
+    queueNetError(new Error('net::ERR_CONNECTION_RESET'))
+    await expect(revealKey(undefined, params())).rejects.toThrow(
+      'ERR_CONNECTION_RESET'
     )
   })
 
+  // WR-04 (round 6): net.request has no built-in timeout option (unlike
+  // axios's `timeout` config) — humblePostRequest arms one manually and
+  // must abort()+reject() a stalled connection rather than hang forever.
+  test('WR-04: a hung connection (no response ever received) is aborted and rejected once the timeout fires', async () => {
+    jest.useFakeTimers()
+    try {
+      // Attach the rejection assertion SYNCHRONOUSLY, before advancing
+      // timers — otherwise the promise can reject (during the timer
+      // advance's internal microtask flush) before anything is listening,
+      // which Node reports as an unhandled rejection instead of letting this
+      // assertion observe it.
+      const assertion = expect(revealKey(undefined, params())).rejects.toThrow(
+        'timed out'
+      )
+      // Deliberately never queueNetResponse/queueNetError — simulates a
+      // stalled TCP connection. Advance past REQUEST_TIMEOUT_MS (15s).
+      await jest.advanceTimersByTimeAsync(15_000)
+      await assertion
+      expect(createdNetRequests[0].aborted).toBe(true)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   test('sends keytype=machineName (naming trap), key=gamekey, keyindex as form-encoded body', async () => {
-    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
-    await revealKey(COOKIE, undefined, params(7))
-    expect(mockPost).toHaveBeenCalledTimes(1)
-    const [url, body] = mockPost.mock.calls[0]
-    expect(url).toBe('https://www.humblebundle.com/humbler/redeemkey')
-    const parsedBody = new URLSearchParams(body)
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params(7))
+    expect(mockNetRequest).toHaveBeenCalledTimes(1)
+    expect(lastNetRequestOptions().url).toBe(
+      'https://www.humblebundle.com/humbler/redeemkey'
+    )
+    const parsedBody = new URLSearchParams(createdNetRequests[0].body)
     expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
     expect(parsedBody.get('key')).toBe(GAMEKEY)
     expect(parsedBody.get('keyindex')).toBe('7')
   })
 
-  test('sends X-Requested-By, Content-Type and Cookie headers; omits csrf header when csrfToken is undefined', async () => {
-    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
-    await revealKey(COOKIE, undefined, params())
-    const [, , config] = mockPost.mock.calls[0]
-    expect(config.headers['X-Requested-By']).toBe('hb_android_app')
-    expect(config.headers['Content-Type']).toBe(
-      'application/x-www-form-urlencoded'
-    )
-    expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
-    expect(config.headers['csrf-prevention-token']).toBeUndefined()
+  test('routes the reveal POST through the live persist:humble partition, with native session cookie attachment (round 6)', async () => {
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params())
+    const options = lastNetRequestOptions()
+    expect(options.method).toBe('POST')
+    expect(options.partition).toBe('persist:humble')
+    expect(options.credentials).toBe('include')
+    expect(options.useSessionCookies).toBe(true)
+    // No manual Cookie header — Chromium attaches the partition's cookie
+    // jar natively via useSessionCookies/credentials above (superseding
+    // round 5's hand-built HumbleUser.getFullCookieHeader).
+    expect(lastNetRequestHeaders().Cookie).toBeUndefined()
+  })
+
+  test('sends Accept, Content-Type and User-Agent headers; omits csrf header when csrfToken is undefined', async () => {
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params())
+    const headers = lastNetRequestHeaders()
+    expect(headers.Accept).toBe('application/json')
+    expect(headers['Content-Type']).toBe('application/x-www-form-urlencoded')
+    expect(headers['User-Agent']).toEqual(expect.any(String))
+    expect(headers['User-Agent'].length).toBeGreaterThan(0)
+    expect(headers['csrf-prevention-token']).toBeUndefined()
+  })
+
+  // Round 5 (debug session humble-reveal-key-fails): neither proven-working
+  // reference implementation for this endpoint sends X-Requested-By on the
+  // redeemkey call — GameLib previously spread the FULL
+  // HUMBLE_REQUIRED_HEADERS (shared with the GET paths) onto every POST.
+  // GET calls are untouched (still send it — see getGamekeys/getOrderDetail/
+  // getAccountIdentity tests above). Still true post-round-6 transport swap.
+  test('round 5: does NOT send X-Requested-By on the reveal POST (neither working reference sends it)', async () => {
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(undefined, params())
+    expect(lastNetRequestHeaders()['X-Requested-By']).toBeUndefined()
   })
 
   test('T-14-04: sends csrf-prevention-token header when a csrfToken is provided', async () => {
-    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
-    await revealKey(COOKIE, 'csrf-token-value', params())
-    const [, , config] = mockPost.mock.calls[0]
-    expect(config.headers['csrf-prevention-token']).toBe('csrf-token-value')
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(CSRF_TOKEN, params())
+    expect(lastNetRequestHeaders()['csrf-prevention-token']).toBe(CSRF_TOKEN)
   })
 
-  test('WR-04: sets a finite request timeout', async () => {
-    mockPost.mockResolvedValue({ data: { success: true, key: FAKE_KEY } })
-    await revealKey(COOKIE, undefined, params())
-    const [, , config] = mockPost.mock.calls[0]
-    expect(config.timeout).toBeGreaterThan(0)
-    expect(config.timeout).toBeLessThanOrEqual(30_000)
-  })
-
-  // C4 redaction: no logged call may ever contain the cookie, the revealed
-  // key value, or the error_msg content — across every outcome branch.
-  test('never logs the cookie, the key value, or an error_msg containing a key-shaped string', async () => {
+  // C4 redaction: no logged call may ever contain the csrf token, the
+  // revealed key value, or the error_msg content — across every outcome
+  // branch. (Round 6: revealKey no longer receives a session cookie value at
+  // all, so there is nothing left to assert never leaks on that front — see
+  // adapter.ts's revealKey doc comment.)
+  test('never logs the csrf token, the key value, or an error_msg containing a key-shaped string', async () => {
     const SNEAKY_ERROR_MSG = 'key was DDDDD-EEEEE-FFFFF already used'
-    mockPost.mockResolvedValueOnce({ data: { success: true, key: FAKE_KEY } })
-    await revealKey(COOKIE, undefined, params())
-    mockPost.mockResolvedValueOnce({
-      data: { success: false, error_msg: SNEAKY_ERROR_MSG }
-    })
-    await revealKey(COOKIE, undefined, params())
+    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    await revealKey(CSRF_TOKEN, params())
+    queueNetResponse(200, { success: false, error_msg: SNEAKY_ERROR_MSG })
+    await revealKey(CSRF_TOKEN, params())
 
     for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
+      expect(logged).not.toContain(CSRF_TOKEN)
       expect(logged).not.toContain(FAKE_KEY)
       expect(logged).not.toContain(SNEAKY_ERROR_MSG)
       expect(logged).not.toContain('DDDDD-EEEEE-FFFFF')
     }
   })
 
-  test('never logs the cookie on axios error paths either', async () => {
-    mockPost.mockRejectedValue(makeAxiosError(401))
-    await revealKey(COOKIE, undefined, params())
+  test('never logs the csrf token on HTTP error paths either', async () => {
+    queueNetResponse(401, { error_msg: 'expired' })
+    await revealKey(CSRF_TOKEN, params())
     for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
+      expect(logged).not.toContain(CSRF_TOKEN)
     }
   })
 })

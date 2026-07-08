@@ -1,0 +1,286 @@
+/**
+ * Unit tests for HumbleKeysWaiting (D-53/D-67, debug session
+ * humble-reveal-key-fails round 7).
+ *
+ * No jsdom / react-test-renderer is installed in this project (see
+ * src/frontend/jest.config.js docstring) — 'react' (useState/useEffect/
+ * useContext) and 'react-i18next' (useTranslation) are mocked at the module
+ * level, mirroring HumbleClaimWizard's test harness (slot-based useState +
+ * synchronous useEffect) combined with HumbleOriginInfo's useContext-mock
+ * pattern, so the component can be invoked directly as a plain function.
+ *
+ * This suite exists specifically to lock in the round-7 fix: previously the
+ * `annotations` map (revealedAt/redeemedAt per key) was fetched ONLY once at
+ * mount and never refreshed, so after a successful reveal (which DOES update
+ * `humble.keys` live via the backend's humbleKeysUpdated push) the row kept
+ * reading a stale `revealedAt: null` from this component's own local state
+ * and rendered the original "Claim" button instead of "Finish activation".
+ */
+import type { ReactElement, ReactNode } from 'react'
+
+import { HumbleKey } from 'common/types/humble'
+import HumbleKeyRow from '../../components/HumbleKeyRow'
+
+// HumbleClaimWizard (rendered via JSX only, never invoked, by this
+// component) side-effect-imports its colocated CSS — stub it the same way
+// its own test suite does (no CSS transform is configured for this jest
+// project).
+jest.mock('../../components/HumbleClaimWizard/index.css', () => ({}))
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (
+      _key: string,
+      defaultValue: string,
+      params?: Record<string, unknown>
+    ): string =>
+      Object.entries(params ?? {}).reduce(
+        (str: string, [k, v]) => str.replace(`{{${k}}}`, String(v)),
+        defaultValue
+      )
+  })
+}))
+
+type MockContextValue = {
+  humble: { keys: HumbleKey[] }
+  showDialogModal: jest.Mock
+}
+
+let contextValue: MockContextValue = {
+  humble: { keys: [] },
+  showDialogModal: jest.fn()
+}
+
+jest.mock('react', () => {
+  const actualReact = jest.requireActual<typeof import('react')>('react')
+  let slots: unknown[] = []
+  let cursor = 0
+
+  return {
+    ...actualReact,
+    useState: (initial: unknown) => {
+      const idx = cursor++
+      if (idx >= slots.length) {
+        slots[idx] =
+          typeof initial === 'function'
+            ? (initial as () => unknown)()
+            : initial
+      }
+      const setState = (updater: unknown) => {
+        slots[idx] =
+          typeof updater === 'function'
+            ? (updater as (prev: unknown) => unknown)(slots[idx])
+            : updater
+      }
+      return [slots[idx], setState]
+    },
+    useEffect: (effect: () => void | (() => void)) => {
+      effect()
+    },
+    useContext: () => contextValue,
+    __beginRender: () => {
+      cursor = 0
+    },
+    __resetMount: () => {
+      slots = []
+      cursor = 0
+    }
+  }
+})
+
+const mockApi = {
+  humbleGetClaimAnnotations: jest.fn(),
+  humbleUndoRedeemed: jest.fn(),
+  humbleSync: jest.fn(),
+  openExternalUrl: jest.fn(),
+  clipboardWriteText: jest.fn()
+}
+
+;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
+  api: mockApi
+}
+
+// Imported after the mocks above (textual order — this project's ts-jest
+// setup does not hoist jest.mock like babel-jest).
+import HumbleKeysWaiting from '../index'
+
+type HookHarness = { __beginRender: () => void; __resetMount: () => void }
+
+function harness(): HookHarness {
+  return jest.requireMock('react') as unknown as HookHarness
+}
+
+function mount(): ReactElement {
+  harness().__resetMount()
+  harness().__beginRender()
+  return HumbleKeysWaiting() as unknown as ReactElement
+}
+
+function rerender(): ReactElement {
+  harness().__beginRender()
+  return HumbleKeysWaiting() as unknown as ReactElement
+}
+
+function flushPromises(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+function makeHumbleKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
+  return {
+    gamekey: 'gk-1',
+    machineName: 'mn-1',
+    state: 'UNREVEALED',
+    title: 'Some Game',
+    platform: 'steam',
+    expiration: null,
+    origin: 'Humble RPG Bundle',
+    ownedElsewhere: false,
+    matchConfidence: 'none',
+    ...overrides
+  }
+}
+
+// HumbleKeyRow is rendered via JSX (never invoked directly), so its element
+// props (in particular `claimAction`) are inspected straight off the tree —
+// mirroring HumbleClaimWizard test's own collectElements/findByClassNamePart
+// recursive-descent pattern, but keyed on element `type` instead of
+// className since HumbleKeyRow itself (not one of its own DOM nodes) is the
+// target here.
+type ClaimAction = {
+  onClaim: () => void
+  onFinish: () => void
+  onUndoRedeem: () => void
+}
+
+type PropsWithChildren = { children?: ReactNode }
+
+function collectElements(
+  node: ReactNode,
+  out: ReactElement<PropsWithChildren>[] = []
+): ReactElement<PropsWithChildren>[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return out
+  }
+  if (Array.isArray(node)) {
+    node.forEach((child) => collectElements(child as ReactNode, out))
+    return out
+  }
+  if (typeof node === 'object' && 'type' in node) {
+    const element = node as ReactElement<PropsWithChildren>
+    out.push(element)
+    if (element.props?.children !== undefined) {
+      collectElements(element.props.children, out)
+    }
+    return out
+  }
+  return out
+}
+
+function findHumbleKeyRowProps(
+  tree: ReactElement
+): { claimAction: ClaimAction } | undefined {
+  const row = collectElements(tree).find((el) => el.type === HumbleKeyRow) as
+    | ReactElement<{ claimAction: ClaimAction }>
+    | undefined
+  return row?.props
+}
+
+describe('HumbleKeysWaiting', () => {
+  beforeEach(() => {
+    contextValue = {
+      humble: { keys: [] },
+      showDialogModal: jest.fn()
+    }
+    mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+  })
+
+  it('fetches claim annotations once on mount', () => {
+    contextValue = {
+      humble: { keys: [makeHumbleKey()] },
+      showDialogModal: jest.fn()
+    }
+    mount()
+
+    expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(1)
+  })
+
+  it('refetches claim annotations after the claim wizard closes (round-7 fix)', async () => {
+    const key = makeHumbleKey()
+    const showDialogModal = jest.fn<
+      void,
+      [{ message?: ReactElement<{ onDone: () => void }> }]
+    >()
+    contextValue = { humble: { keys: [key] }, showDialogModal }
+
+    // Mount-time fetch resolves with the key still un-annotated (never
+    // revealed) — matches the state right before a reveal attempt. This is
+    // the ONLY call expected to come through the mount-time useEffect —
+    // every subsequent `mount()`/`rerender()` in this harness re-runs
+    // useEffect unconditionally (it has no dependency-array semantics), so
+    // the call count is asserted BEFORE any further render, and the
+    // post-refresh render is inspected afterward without re-asserting count.
+    mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+    const initial = mount()
+    await flushPromises()
+
+    const props = findHumbleKeyRowProps(initial)
+    expect(props).toBeDefined()
+    expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(1)
+
+    // Simulate clicking "Claim" — opens the wizard via showDialogModal.
+    props!.claimAction.onClaim()
+    expect(showDialogModal).toHaveBeenCalledTimes(1)
+    const dialogOptions = showDialogModal.mock.calls[0][0]
+    const onDone = dialogOptions.message?.props.onDone
+
+    // By the time the wizard's onDone fires, the reveal already succeeded
+    // server-side (patchCachedState + humbleKeysUpdated) — the NEXT
+    // annotations fetch reflects it.
+    mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+      'gk-1:mn-1': { revealedAt: 12345, keyindexResolved: true }
+    })
+    onDone?.()
+
+    // closeWizard's refreshAnnotations() is a plain function call, not an
+    // effect — it fires exactly once per onDone(), independent of renders.
+    expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(2)
+    await flushPromises()
+
+    const updatedProps = findHumbleKeyRowProps(rerender())
+    expect(updatedProps).toBeDefined()
+  })
+
+  it('refetches claim annotations after an undo-redeem action resolves', async () => {
+    // D-77: a locally-redeemed (Undo-eligible) key stays in Keys-waiting via
+    // `locallyRedeemedPending` — a server-confirmed REDEEMED key would be
+    // excluded by selectKeysWaiting and never reach this row at all.
+    const key = makeHumbleKey({
+      state: 'REDEEMED',
+      locallyRedeemedPending: true
+    })
+    contextValue = {
+      humble: { keys: [key] },
+      showDialogModal: jest.fn()
+    }
+    mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+      'gk-1:mn-1': { redeemedAt: 999, keyindexResolved: true }
+    })
+    mockApi.humbleUndoRedeemed.mockResolvedValue(undefined)
+
+    const initial = mount()
+    await flushPromises()
+
+    const props = findHumbleKeyRowProps(initial)
+    expect(props).toBeDefined()
+    expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(1)
+
+    props!.claimAction.onUndoRedeem()
+    expect(mockApi.humbleUndoRedeemed).toHaveBeenCalledWith({
+      gamekey: 'gk-1',
+      machineName: 'mn-1'
+    })
+
+    await flushPromises()
+    expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(2)
+  })
+})

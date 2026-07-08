@@ -877,6 +877,22 @@ async function revealKey(
     (key) => key.gamekey === gamekey && key.machineName === machineName
   )
   if (!target || target.state !== 'UNREVEALED') {
+    // Debug session humble-reveal-key-fails: every early-return branch below
+    // used to be COMPLETELY silent in gamelib.log — indistinguishable from a
+    // live network 403/401 (mapAxiosError's own silent mapping) once the
+    // wizard collapses both into the same generic 'failed' step text.
+    // Status-only (gamekey/machineName/state — never a key VALUE) mirrors the
+    // exact redaction discipline already used for the sync-side silent-abort
+    // gap fixed at fetchAndCommitOrder's access_denied/session_expired log.
+    logWarning(
+      [
+        'Humble reveal: ineligible (target missing or not UNREVEALED):',
+        gamekey,
+        machineName,
+        `state=${target?.state ?? 'not_found'}`
+      ],
+      LogPrefix.Backend
+    )
     return { status: 'ineligible' }
   }
 
@@ -893,6 +909,20 @@ async function revealKey(
 
   const syncState = getSyncState()
   if (syncState.cooldownUntil && syncState.cooldownUntil > Date.now()) {
+    // Same silent-shortcircuit gap as above — this branch never reaches the
+    // adapter at all, yet the wizard's 'failed'-vs-'cooldown' distinction
+    // depends on the renderer actually receiving 'cooldown' (T-14 wizard
+    // switch). Logging here removes all doubt about whether a reveal attempt
+    // was locally gated vs actually sent to Humble.
+    logWarning(
+      [
+        'Humble reveal: blocked by cooldown until',
+        new Date(syncState.cooldownUntil).toISOString(),
+        gamekey,
+        machineName
+      ],
+      LogPrefix.Backend
+    )
     return { status: 'cooldown', retryAtMs: syncState.cooldownUntil }
   }
 
@@ -902,11 +932,23 @@ async function revealKey(
     // keyindex (the HUMBLE_CLASSIFIER_VERSION bump forces this on next sync)
     // must never reach the adapter call — surfaced as ineligible so the
     // wizard can show "Sync to enable claiming".
+    logWarning(
+      ['Humble reveal: ineligible (keyindex unresolved):', gamekey, machineName],
+      LogPrefix.Backend
+    )
     return { status: 'ineligible' }
   }
 
-  const cookie = HumbleUser.getCredentials()
-  if (!cookie) {
+  // Debug session humble-reveal-key-fails: this gate only asks "did we ever
+  // successfully log in / do we have a stored session at all" — the actual
+  // cookie VALUE is no longer threaded into the adapter call (round 6: the
+  // reveal POST's electron-net transport sources the live `persist:humble`
+  // partition's cookie jar natively; see adapterRevealKey/humblePostRequest).
+  if (!HumbleUser.getCredentials()) {
+    logWarning(
+      ['Humble reveal: failed (no stored credentials):', gamekey, machineName],
+      LogPrefix.Backend
+    )
     return { status: 'failed' }
   }
   const csrfToken = HumbleUser.getCsrfToken()
@@ -919,8 +961,26 @@ async function revealKey(
   })
   humbleRevealedStore.set(machineName, { revealedAt: Date.now() })
 
+  // Debug session humble-reveal-key-fails: presence-only (never the token
+  // value) — the open question of whether a given reveal attempt actually
+  // carried the csrf-prevention-token header can otherwise only be answered
+  // by re-deriving it from unrelated config.json timestamps. Round 6:
+  // "electron-net transport" is stamped into this line so the NEXT gamelib.log
+  // capture is unambiguous about which round's fix actually ran (round 5's
+  // fullCookieJarPresent field is retired along with getFullCookieHeader —
+  // superseded by the transport's native cookie attachment, see user.ts).
+  logInfo(
+    [
+      'Humble reveal: calling adapter (electron-net transport), csrfTokenPresent=' +
+        String(csrfToken !== undefined),
+      gamekey,
+      machineName
+    ],
+    LogPrefix.Backend
+  )
+
   try {
-    const result = await adapterRevealKey(cookie, csrfToken, {
+    const result = await adapterRevealKey(csrfToken, {
       gamekey,
       machineName,
       keyindex
@@ -948,6 +1008,15 @@ async function revealKey(
       platform: target.platform,
       outcome: result.status
     })
+    // Debug session humble-reveal-key-fails: mapAxiosError is SILENT for
+    // 401/403/429 (access_denied/session_expired never log a line on their
+    // own) — this was the reason "no reveal log lines" could not previously
+    // distinguish a live Humble denial from any of the local silent
+    // shortcircuits above. Status only (never a body/cookie/key value).
+    logWarning(
+      ['Humble reveal: definitive failure, status=' + result.status, gamekey, machineName],
+      LogPrefix.Backend
+    )
     if (result.status === 'access_denied') {
       // D-79: reuse the existing D-33 shared cooldown — no separate
       // reveal-specific timer.

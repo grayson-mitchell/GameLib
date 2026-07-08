@@ -632,6 +632,90 @@ describe('HumbleUser', () => {
         expect(JSON.stringify(call)).not.toContain('secret-health-cookie-xyz')
       }
     })
+
+    // Debug session humble-reveal-key-fails: csrf_cookie was previously only
+    // ever captured inside finishLogin() — an account already connected
+    // before that capture code existed would permanently have no csrfToken.
+    // checkHealthAndFlagExpiry() now backfills it opportunistically on a
+    // confirmed-healthy ('ok') session.
+    test('backfills a missing csrfToken from the partition when the session is healthy (ok)', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'sessionCookie') {
+          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+        }
+        // csrfToken never seen — models a pre-Phase-14 account.
+        return undefined
+      })
+      mockDecryptString.mockReturnValue('cookie')
+      mockGetGamekeys.mockResolvedValue({ status: 'ok' })
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') {
+            return [{ value: 'backfilled-csrf-value' }]
+          }
+          return []
+        }
+      )
+
+      await HumbleUser.checkHealthAndFlagExpiry()
+
+      const csrfCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'csrfToken'
+      )
+      expect(csrfCall).toBeDefined()
+      expect(csrfCall![1]).toMatch(/^humble:v1:/)
+      expect(csrfCall![1]).not.toBe('backfilled-csrf-value')
+
+      // Redaction: the raw token value must never reach a log call.
+      for (const call of [...mockLogWarning.mock.calls, ...mockLogInfo.mock.calls]) {
+        expect(JSON.stringify(call)).not.toContain('backfilled-csrf-value')
+      }
+    })
+
+    test('does NOT re-fetch/overwrite csrfToken when one is already cached', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'sessionCookie') {
+          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+        }
+        if (key === 'csrfToken') {
+          return 'humble:v1:' + Buffer.from('already-cached').toString('base64')
+        }
+        return undefined
+      })
+      mockDecryptString.mockReturnValue('cookie')
+      mockGetGamekeys.mockResolvedValue({ status: 'ok' })
+
+      await HumbleUser.checkHealthAndFlagExpiry()
+
+      const csrfCookieCalls = mockCookiesGet.mock.calls.filter(
+        ([opts]) => opts?.name === 'csrf_cookie'
+      )
+      expect(csrfCookieCalls).toHaveLength(0)
+      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+        'csrfToken',
+        expect.anything()
+      )
+    })
+
+    test('backfill is non-fatal when the partition has no csrf_cookie or the read throws', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'sessionCookie') {
+          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+        }
+        return undefined
+      })
+      mockDecryptString.mockReturnValue('cookie')
+      mockGetGamekeys.mockResolvedValue({ status: 'ok' })
+      mockCookiesGet.mockRejectedValue(new Error('partition unavailable'))
+
+      await expect(
+        HumbleUser.checkHealthAndFlagExpiry()
+      ).resolves.toBeUndefined()
+      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+        'csrfToken',
+        expect.anything()
+      )
+    })
   })
 
   // ── HACCT-02: reconnect() — D-11 partition kept ──────────────────────────
@@ -828,6 +912,16 @@ describe('HumbleUser', () => {
       }
     })
   })
+
+  // Round 5 added getFullCookieHeader() (a main-process read of the live
+  // persist:humble partition's full cookie jar) here. Round 6 (debug session
+  // humble-reveal-key-fails) removed it: round 5's checkpoint evidence
+  // (fullCookieJarPresent=true, still a live Cloudflare HTML 403) falsified
+  // the mechanism as sufficient — the reveal POST now routes through
+  // Electron's own net.request transport, which sources the partition's
+  // cookies NATIVELY (see adapter.ts's humblePostRequest), making a
+  // hand-built mirror of the jar redundant. Its test coverage was removed
+  // alongside it rather than left exercising dead code.
 
   // ── Pitfall 4: cookie is never logged or stored in the clear ─────────────
 

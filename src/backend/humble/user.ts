@@ -1,4 +1,4 @@
-import { app, safeStorage, session } from 'electron'
+import { safeStorage, session } from 'electron'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
@@ -13,6 +13,12 @@ import {
 import { getAccountIdentity, getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
+import { standardBrowserUserAgent } from './userAgent'
+
+// Re-exported so existing callers (ipc_handler.ts's humbleGetLoginUserAgent
+// handler, user.test.ts) are unaffected by the round-6 move into its own
+// module (see userAgent.ts's doc comment for why the move was needed).
+export { standardBrowserUserAgent }
 
 /**
  * HumbleUser — the HACCT-01/02/03 auth service.
@@ -54,35 +60,6 @@ const VALIDATION_THROTTLE_MS = 3000
 // notifyLoginNavigated() relay so an actively-navigating user is never cut
 // off mid-login.
 export const LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000
-
-/**
- * Standard (non-Electron) browser user agent for the login surface.
- *
- * Google's SSO detects embedded browsers via the `Electron/x.y.z` and
- * app-name UA tokens and then restricts auth options — forcing passkey-only
- * verification (WebAuthn platform authenticators are unavailable inside an
- * embedded browser, so that prompt can never complete) or blocking outright
- * with `disallowed_useragent`. Presenting a plain Chrome UA restores the
- * password / "Try another way" flows.
- *
- * Derived from Electron's own `app.userAgentFallback` (NOT hardcoded) so the
- * platform token and Chrome version stay in parity with the actual runtime
- * Chromium — a stale hardcoded Chrome version is itself an embedded-browser
- * signal. Exported for unit testing and for the `humbleGetLoginUserAgent` IPC
- * handler (the webview's `useragent` attribute is the primary application
- * point; setting it on the partition session here is reinforcement).
- */
-export function standardBrowserUserAgent(): string {
-  const fallback = app.userAgentFallback
-  const platform = /^Mozilla\/5\.0 \(([^)]+)\)/.exec(fallback)?.[1]
-  const chromeVersion = /Chrome\/(\S+)/.exec(fallback)?.[1]
-  if (!platform || !chromeVersion) {
-    // Defensive: the fallback shape is stable across Electron versions, but
-    // if it ever changes, at least strip the Electron-identifying token.
-    return fallback.replace(/ Electron\/\S+/, '')
-  }
-  return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
-}
 
 type LoginResult = {
   status: 'done' | 'waiting' | 'error'
@@ -191,6 +168,22 @@ export class HumbleUser {
     if (!token) return undefined
     return token
   }
+
+  // Debug session humble-reveal-key-fails: round 5 added getFullCookieHeader()
+  // here (a main-process read of the live `persist:humble` partition's full
+  // cookie jar, hand-joined into a Cookie header string) to mirror what a
+  // real browser auto-attaches. Round 6's checkpoint evidence (status=403,
+  // contentType=text/html, looksLikeHtml=true — a Cloudflare Bot Management
+  // challenge page) FALSIFIED that mechanism as sufficient: it was live in
+  // the running build (fullCookieJarPresent=true) and Cloudflare still
+  // blocked the request. The root cause was never the cookie CONTENTS — it
+  // was axios's non-browser TLS/HTTP transport fingerprint, which no amount
+  // of header/cookie fidelity can fix. Round 6 routes the reveal POST
+  // through Electron's own Chromium network stack instead (see adapter.ts's
+  // humblePostRequest), which sources the partition's cookies NATIVELY via
+  // `useSessionCookies`/`credentials: 'include'` — making this hand-built
+  // mirror redundant. Removed rather than left as dead code so a future
+  // debugging round does not mistake it for a still-active fix.
 
   // ── HACCT-01: Login (D-05/D-06/D-07) ─────────────────────────────────────
 
@@ -501,6 +494,39 @@ export class HumbleUser {
     }
     // access_denied (403) is a Humble-side C5 backoff signal, NOT a re-login
     // trigger (D-08) — intentionally no state change on that path.
+
+    // Debug session humble-reveal-key-fails / T-14-04 gap fix: csrf_cookie
+    // was previously ONLY ever captured inside finishLogin() (an active
+    // login/reconnect flow) — an account that was already connected before
+    // that capture code shipped (or any session where the opportunistic
+    // capture missed) would NEVER get a csrfToken, silently sending every
+    // reveal POST without the 'csrf-prevention-token' header (RESEARCH.md
+    // Pitfall A). This confirmed-healthy ('ok') session is exactly the
+    // moment the csrf_cookie is known to be readable from the SAME partition
+    // finishLogin reads — so opportunistically backfill it here too,
+    // self-healing the gap without requiring the user to disconnect/
+    // reconnect. Best-effort/non-fatal, mirrors finishLogin's own capture
+    // exactly (never blocks the health check, never logs the value).
+    if (result.status === 'ok' && !HumbleUser.getCsrfToken()) {
+      try {
+        const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+        const csrfCookies = await csrfSes.cookies.get({
+          url: HUMBLE_BASE_URL,
+          name: 'csrf_cookie'
+        })
+        if (csrfCookies.length > 0 && csrfCookies[0].value) {
+          configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+        }
+      } catch (err) {
+        logWarning(
+          [
+            'Humble csrf_cookie backfill failed (non-fatal, optional):',
+            err
+          ],
+          LogPrefix.Backend
+        )
+      }
+    }
   }
 
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
