@@ -985,7 +985,12 @@ async function doRevealKey(
     )
     return { status: 'failed' }
   }
-  const csrfToken = HumbleUser.getCsrfToken()
+  // WR-03 (14-REVIEW): source the csrf-prevention-token from the LIVE
+  // `persist:humble` partition cookie (the same jar humblePostRequest
+  // attaches natively) so header and cookie can never diverge after a
+  // csrf_cookie rotation; the stored login-time snapshot is only the
+  // fallback inside getLiveCsrfToken().
+  const csrfToken = await HumbleUser.getLiveCsrfToken()
 
   // WRITE-AHEAD (SC4): both the audit record and the REVEALED flag are
   // persisted BEFORE the adapter call — never after.

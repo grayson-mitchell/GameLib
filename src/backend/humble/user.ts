@@ -169,6 +169,38 @@ export class HumbleUser {
     return token
   }
 
+  // WR-03 (14-REVIEW): the stored csrfToken is a SNAPSHOT (login capture /
+  // health-check backfill, both gated on absence) while humblePostRequest
+  // attaches the LIVE `persist:humble` cookie jar natively. If Humble
+  // rotates `csrf_cookie`, every reveal thereafter sends a header that no
+  // longer matches the cookie — a genuine 403 → 15-minute cooldown that
+  // never self-heals. This reads the live partition cookie at reveal time so
+  // header and cookie agree by construction; the stored snapshot is only a
+  // fallback cache for when the partition read fails/finds nothing.
+  // Main-process-only, same secrecy discipline as getCsrfToken(): the value
+  // must NEVER be logged or included in any sendFrontendMessage payload.
+  static async getLiveCsrfToken(): Promise<string | undefined> {
+    try {
+      const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+      const cookies = await ses.cookies.get({
+        url: HUMBLE_BASE_URL,
+        name: 'csrf_cookie'
+      })
+      if (cookies.length > 0 && cookies[0].value) {
+        return cookies[0].value
+      }
+    } catch (err) {
+      logWarning(
+        [
+          'Humble live csrf_cookie read failed (falling back to stored snapshot):',
+          err
+        ],
+        LogPrefix.Backend
+      )
+    }
+    return HumbleUser.getCsrfToken()
+  }
+
   // Debug session humble-reveal-key-fails: round 5 added getFullCookieHeader()
   // here (a main-process read of the live `persist:humble` partition's full
   // cookie jar, hand-joined into a Cookie header string) to mirror what a

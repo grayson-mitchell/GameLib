@@ -913,6 +913,87 @@ describe('HumbleUser', () => {
     })
   })
 
+  // ── WR-03 (14-REVIEW): live csrf_cookie read at reveal time ──────────────
+  // The stored csrfToken snapshot can go stale after a csrf_cookie rotation
+  // while humblePostRequest attaches the LIVE partition jar natively — the
+  // reveal path must therefore read the live cookie, with the stored
+  // snapshot only as a fallback.
+
+  describe('getLiveCsrfToken() (WR-03)', () => {
+    test('returns the live partition csrf_cookie value when present (never the stored snapshot)', async () => {
+      // A stale stored snapshot exists...
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? 'stale-stored-token' : undefined
+      )
+      // ...but the live partition carries a rotated value.
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') {
+            return [{ value: 'live-rotated-value' }]
+          }
+          return []
+        }
+      )
+
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+        'live-rotated-value'
+      )
+    })
+
+    test('falls back to the stored snapshot when the partition has no csrf_cookie', async () => {
+      mockCookiesGet.mockResolvedValue([])
+      // Stored snapshot round-trips through decryptCookie's plaintext
+      // fallback (no humble:v1: prefix).
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? 'stored-snapshot-token' : undefined
+      )
+
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+        'stored-snapshot-token'
+      )
+    })
+
+    test('falls back to the stored snapshot when the partition read throws (non-fatal)', async () => {
+      mockCookiesGet.mockRejectedValue(new Error('partition gone'))
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? 'stored-snapshot-token' : undefined
+      )
+
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+        'stored-snapshot-token'
+      )
+      expect(mockLogWarning).toHaveBeenCalled()
+    })
+
+    test('returns undefined when neither a live cookie nor a stored snapshot exists', async () => {
+      mockCookiesGet.mockResolvedValue([])
+      mockConfigStore.get_nodefault.mockReturnValue(undefined)
+
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBeUndefined()
+    })
+
+    test('never logs the live csrf value — even on the throwing fallback path', async () => {
+      const LIVE_SECRET = 'live-csrf-secret-abc'
+      mockCookiesGet.mockImplementation(
+        async (opts: { name: string; url: string }) => {
+          if (opts.name === 'csrf_cookie') return [{ value: LIVE_SECRET }]
+          return []
+        }
+      )
+
+      await HumbleUser.getLiveCsrfToken()
+
+      const loggerCalls = [
+        ...mockLogInfo.mock.calls,
+        ...mockLogError.mock.calls,
+        ...mockLogWarning.mock.calls
+      ]
+      for (const call of loggerCalls) {
+        expect(JSON.stringify(call)).not.toContain(LIVE_SECRET)
+      }
+    })
+  })
+
   // Round 5 added getFullCookieHeader() (a main-process read of the live
   // persist:humble partition's full cookie jar) here. Round 6 (debug session
   // humble-reveal-key-fails) removed it: round 5's checkpoint evidence

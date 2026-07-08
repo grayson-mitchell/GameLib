@@ -198,10 +198,14 @@ jest.mock('../adapter', () => ({
 
 const mockGetCredentials = jest.fn(() => 'cookie-value')
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
+// WR-03: revealKey now sources the csrf token from the LIVE partition cookie
+// (getLiveCsrfToken) rather than the stored login-time snapshot.
+const mockGetLiveCsrfToken = jest.fn(async () => 'csrf-token-value')
 jest.mock('../user', () => ({
   HumbleUser: {
     getCredentials: () => mockGetCredentials(),
-    getCsrfToken: () => mockGetCsrfToken()
+    getCsrfToken: () => mockGetCsrfToken(),
+    getLiveCsrfToken: () => mockGetLiveCsrfToken()
   }
 }))
 
@@ -340,6 +344,7 @@ describe('HumbleLibrary', () => {
     resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
     mockGetCsrfToken.mockReturnValue('csrf-token-value')
+    mockGetLiveCsrfToken.mockResolvedValue('csrf-token-value')
     mockAdapterRevealKey.mockReset()
     // Default: Steam disconnected / no owned games — existing (pre-Phase-12)
     // tests must see zero ownership-recompute activity unless a test opts in.
@@ -2266,9 +2271,9 @@ describe('HumbleLibrary', () => {
       expect(call).toBeDefined()
     })
 
-    test('logs csrfTokenPresent=false when no token is cached — never blocks the call (opportunistic header)', async () => {
+    test('logs csrfTokenPresent=false when no token is available — never blocks the call (opportunistic header)', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockGetCsrfToken.mockReturnValue(undefined as unknown as string)
+      mockGetLiveCsrfToken.mockResolvedValue(undefined as unknown as string)
       mockAdapterRevealKey.mockResolvedValue({
         status: 'ok',
         data: { key: 'K' }
@@ -2295,6 +2300,24 @@ describe('HumbleLibrary', () => {
     // humblePostRequest doc comment). This asserts the log line's new,
     // simpler shape and that the adapter call no longer carries a 3rd/4th
     // cookie-shaped argument.
+    test('WR-03: the adapter receives the LIVE partition csrf token, never the stale stored snapshot', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockGetCsrfToken.mockReturnValue('stale-stored-token')
+      mockGetLiveCsrfToken.mockResolvedValue('live-rotated-token')
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(mockAdapterRevealKey).toHaveBeenCalledWith('live-rotated-token', {
+        gamekey: 'gk1',
+        machineName: 'gk1_key',
+        keyindex: 'idx-1'
+      })
+    })
+
     test('round 6: calling-adapter log line names the electron-net transport and carries no fullCookieJarPresent field', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockResolvedValue({
