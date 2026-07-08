@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
-status: executing
-stopped_at: Phase 14 UI-SPEC approved
-last_updated: "2026-07-07T19:49:01.984Z"
-last_activity: 2026-07-07 -- Phase 14 execution started
+status: verifying
+stopped_at: Phase 14 complete (14-06 live checkpoint approved), ready for verify-work
+last_updated: "2026-07-08T10:35:24.084Z"
+last_activity: 2026-07-08
 progress:
   total_phases: 4
   completed_phases: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 14 (guided-claim-flow) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 14
-Last activity: 2026-07-07 -- Phase 14 execution started
+Phase: 14 (guided-claim-flow) — READY FOR VERIFICATION
+Plan: 6 of 6
+Status: Phase complete — ready for verification
+Last activity: 2026-07-08
 
 ## v1.1 Phase Map
 
@@ -96,6 +96,7 @@ Last activity: 2026-07-07 -- Phase 14 execution started
 | Phase 08-new-steam-surfaces P01 | 5min | 2 tasks | 3 files |
 | Phase 08-new-steam-surfaces P02 | 5min | 3 tasks | 4 files |
 | Phase 10 P06 | ~55min | 2 tasks | 5 files |
+| Phase 14 P06 | 30min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,8 @@ Recent decisions affecting current work:
 - [Phase 10]: D-13 revised confirmed correct in practice: Humble identity endpoint (/api/v1/user/info) hard-404s on the real account tested; had identity remained a hard gate criterion, Phase 10 would never have passed
 - [Phase 10]: D-14 ses.fetch() fallback on persist:humble prepared but not activated — axios reached the live Humble API successfully on first clean run after schema fix; fallback seam stays dormant
 - [Phase 10]: Frontend connected-state must be gated on an explicit isLoggedIn boolean, never on optional profile fields like username — root cause of the Task 2 UAT tile-never-flips bug (e2236bc1)
+- [Phase 14]: CSRF disposition for Humble reveal/redeem confirmed REQUIRED (csrf-prevention-token header + matching csrf_cookie both necessary) — csrf-capture code must not be dropped as dead code
+- [Phase 14]: Reveal/redeem POST must route through Electron net.request on persist:humble session partition, not axios — Cloudflare Bot Management blocks axios's non-browser TLS fingerprint before Humble's app code inspects the request
 
 ### Pending Todos
 
@@ -172,6 +175,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-07T10:26:11.041Z
-Stopped at: Phase 14 UI-SPEC approved
+Last session: 2026-07-08T10:35:24.078Z
+Stopped at: Phase 14 complete (14-06 live checkpoint approved), ready for verify-work
 Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning
