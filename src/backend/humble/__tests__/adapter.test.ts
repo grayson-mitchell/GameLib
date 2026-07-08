@@ -701,14 +701,39 @@ describe('revealKey', () => {
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
   })
 
-  test('{success:false, error_msg} -> schema_error, raw is undefined (error_msg may echo a key value, C4)', async () => {
+  // WR-06 (14-REVIEW): a well-formed {success:false} body is a definitive
+  // SERVER verdict (e.g. "already redeemed"/"expired" denial), NOT schema
+  // drift — previously misreported as schema_error, which downstream rolled
+  // back the write-ahead REVEALED flag and rendered false "nothing was used
+  // up" copy inviting an endless retry loop against a consumed key.
+  test('{success:false, error_msg} -> rejected_by_server (definitive server denial, never schema_error)', async () => {
     queueNetResponse(200, { success: false, error_msg: 'already redeemed' })
     const result = await revealKey(undefined, params())
-    expect(result).toEqual({ status: 'schema_error', raw: undefined })
+    expect(result).toEqual({ status: 'rejected_by_server' })
+  })
+
+  test('WR-06: rejected_by_server logs presence/length only — never the error_msg content (C4)', async () => {
+    queueNetResponse(200, {
+      success: false,
+      error_msg: 'already redeemed by SNEAKY-KEY-VALUE'
+    })
+    await revealKey(undefined, params())
+    const rejectedLog = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('rejected by server')
+    )
+    expect(rejectedLog).toBeDefined()
+    expect(JSON.stringify(rejectedLog)).not.toContain('SNEAKY-KEY-VALUE')
+    expect(JSON.stringify(rejectedLog)).toContain('errorMsgLength=')
   })
 
   test('success true but key missing -> schema_error, raw is undefined', async () => {
     queueNetResponse(200, { success: true })
+    const result = await revealKey(undefined, params())
+    expect(result).toEqual({ status: 'schema_error', raw: undefined })
+  })
+
+  test('success absent (nullish) -> schema_error, raw is undefined (genuine shape drift, not a server verdict)', async () => {
+    queueNetResponse(200, { key: FAKE_KEY })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })

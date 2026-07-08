@@ -1056,6 +1056,31 @@ async function doRevealKey(
       return { status: 'revealed', key: result.data.key }
     }
 
+    if (result.status === 'rejected_by_server') {
+      // WR-06 (14-REVIEW): a definitive server DENIAL (e.g. already
+      // redeemed / expired) is not a transport failure — the request reached
+      // Humble and was processed. KEEP the write-ahead REVEALED flag (the
+      // truthful local state is "unconfirmed — sync to check", same as the
+      // ambiguous path): an "already redeemed" denial means the key IS
+      // consumed server-side, so rolling back to UNREVEALED would misreport
+      // "nothing was used up" and invite an endless retry loop against a
+      // consumed key. Never auto-resubmit (T-14-05).
+      appendAudit(gamekey, machineName, 'reveal_rejected', {
+        title: target.title,
+        platform: target.platform,
+        outcome: 'rejected_by_server'
+      })
+      logWarning(
+        [
+          'Humble reveal: rejected by server (definitive denial, keeping REVEALED flag):',
+          gamekey,
+          machineName
+        ],
+        LogPrefix.Backend
+      )
+      return { status: 'rejected_by_server' }
+    }
+
     // Definitive failure (D-78): roll back the write-ahead REVEALED flag —
     // this key was never actually revealed server-side.
     humbleRevealedStore.delete(machineName)

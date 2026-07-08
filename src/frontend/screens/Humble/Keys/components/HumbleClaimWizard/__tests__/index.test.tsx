@@ -316,6 +316,39 @@ describe('HumbleClaimWizard', () => {
     expect(mockApi.humbleRevealKey).not.toHaveBeenCalled()
   })
 
+  // WR-06 (14-REVIEW): a definitive server denial (already redeemed /
+  // expired) must render honest terminal copy — never the retryable
+  // "nothing was used up" failed step.
+  it('WR-06: a rejected_by_server outcome lands on the rejected step — sync-to-check recovery, no retry button', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey()
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'rejected_by_server'
+    } satisfies RevealOutcome)
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    const tree = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const content = textContent(tree)
+    expect(content).toContain('Humble declined to reveal this key')
+    // Never the false "nothing was used up" claim, never a retry button.
+    expect(content).not.toContain('nothing was used up')
+    expect(
+      findByClassNamePart(tree, 'humbleClaimWizardRetryButton')
+    ).toBeUndefined()
+    // Sync-to-check is the only recovery action.
+    const syncButton = findByClassNamePart(tree, 'humbleClaimWizardSyncButton')
+    expect(syncButton).toBeDefined()
+    syncButton!.props.onClick?.()
+    expect(mockApi.humbleSync).toHaveBeenCalled()
+    expect(onDone).toHaveBeenCalled()
+  })
+
   // WR-05 (14-REVIEW): IPC promise rejections were previously unhandled —
   // a rejected finish-mode read left the wizard on "Loading…" forever, and a
   // rejected reveal/mark-redeemed call escaped as an unhandled rejection.

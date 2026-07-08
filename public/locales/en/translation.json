@@ -590,6 +590,7 @@
         "revealDismiss": "Don't reveal yet",
         "revealFailed": "Couldn't reveal this key — nothing was used up. You can try again.",
         "revealFailedBody": "Couldn't reveal this key — nothing was used up. You can try again.",
+        "revealRejectedBody": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
         "revealTitle": "Reveal this key?",
         "revealedAnnotation": "Revealed {{date}}",
         "rowCaption": "{{platform}} · {{origin}}",

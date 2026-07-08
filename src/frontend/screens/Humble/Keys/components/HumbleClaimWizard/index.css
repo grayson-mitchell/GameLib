@@ -123,6 +123,15 @@
   margin: 0;
 }
 
+/* WR-06: definitive server denial (already redeemed / expired) — danger
+   tone like the failed note, but its step offers sync-to-check, no retry. */
+.humbleClaimWizardRejectedNote {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  color: var(--status-danger);
+  margin: 0;
+}
+
 .humbleClaimWizardCooldownNote {
   font-size: var(--text-md);
   font-weight: var(--regular);

@@ -187,6 +187,11 @@ export type RevealOutcome =
   | { status: 'owned_blocked' } // C2 guard: key's game is already owned elsewhere
   | { status: 'failed' }
   | { status: 'ambiguous' }
+  // WR-06 (14-REVIEW): a well-formed {success:false} response is a
+  // definitive SERVER denial (e.g. already redeemed / expired) — distinct
+  // from 'failed' ("nothing was used up") because the request WAS processed
+  // by Humble; the truthful local state is "unconfirmed — sync to check".
+  | { status: 'rejected_by_server' }
   | { status: 'ineligible' } // e.g. UNPICKED/UNREDEEMABLE — reveal not applicable
   | { status: 'cooldown'; retryAtMs: number }
 

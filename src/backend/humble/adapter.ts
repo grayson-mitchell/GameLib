@@ -612,7 +612,7 @@ export async function getAccountIdentity(
 export async function revealKey(
   csrfToken: string | undefined,
   params: { gamekey: string; machineName: string; keyindex: string | number }
-): Promise<AdapterResult<{ key: string }>> {
+): Promise<AdapterResult<{ key: string }> | { status: 'rejected_by_server' }> {
   try {
     const body = new URLSearchParams({
       keytype: params.machineName,
@@ -625,9 +625,25 @@ export async function revealKey(
       describeSchemaFailure(HUMBLE_REDEEM_PATH, response, parsed.error)
       return { status: 'schema_error', raw: response.data }
     }
-    if (parsed.data.success !== true || !parsed.data.key) {
+    if (parsed.data.success === false) {
+      // WR-06 (14-REVIEW): a well-formed body carrying an EXPLICIT denial
+      // (e.g. Humble's "already redeemed"/"expired") is a definitive SERVER
+      // verdict, not schema drift — it must never pollute the schema_error
+      // diagnostic meaning nor let the caller claim "nothing was used up".
       // C4: error_msg may echo a key value — never logged/forwarded
       // verbatim. Presence/length only, mirroring describeSchemaFailure.
+      logWarning(
+        [
+          `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal rejected by server`,
+          `success=false keyPresent=${Boolean(parsed.data.key)} errorMsgLength=${parsed.data.error_msg?.length ?? 0}`
+        ],
+        LogPrefix.Backend
+      )
+      return { status: 'rejected_by_server' }
+    }
+    if (parsed.data.success !== true || !parsed.data.key) {
+      // success absent/mistyped, or success:true without a key — genuine
+      // shape drift. Same redaction discipline as above.
       logWarning(
         [
           `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal did not succeed`,

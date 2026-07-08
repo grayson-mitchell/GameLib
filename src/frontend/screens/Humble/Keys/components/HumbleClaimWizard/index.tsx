@@ -20,6 +20,9 @@ type Step =
   | 'keyShown'
   | 'ambiguous'
   | 'failed'
+  // WR-06 (14-REVIEW): a definitive server denial (already redeemed /
+  // expired) — terminal, no retry button, sync-to-check recovery only.
+  | 'rejected'
   | 'cooldown'
 
 type Props = {
@@ -124,6 +127,11 @@ export default function HumbleClaimWizard({
           break
         case 'ambiguous':
           setStep('ambiguous')
+          break
+        case 'rejected_by_server':
+          // WR-06: Humble processed and DENIED the reveal — honest terminal
+          // copy, never the retryable "nothing was used up" failed step.
+          setStep('rejected')
           break
         case 'cooldown':
           setCooldownRetryAt(outcome.retryAtMs)
@@ -254,6 +262,32 @@ export default function HumbleClaimWizard({
           {t(
             'humbleKeys.revealAmbiguousBody',
             "We couldn't confirm this finished — sync to check"
+          )}
+        </p>
+        <div className="humbleClaimWizardActions">
+          <button
+            type="button"
+            className="button is-secondary outline humbleClaimWizardSyncButton"
+            onClick={handleSyncNow}
+          >
+            {t('humbleKeys.syncNow', 'Sync now')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (step === 'rejected') {
+    // WR-06 (14-REVIEW): definitive server denial — the key may already be
+    // redeemed or expired server-side, so there is deliberately NO retry
+    // button (retrying a consumed key can never succeed); "Sync now"
+    // reconciles the local state with server truth instead.
+    return (
+      <div className="humbleClaimWizard">
+        <p className="humbleClaimWizardRejectedNote">
+          {t(
+            'humbleKeys.revealRejectedBody',
+            'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
           )}
         </p>
         <div className="humbleClaimWizardActions">

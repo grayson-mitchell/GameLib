@@ -2105,6 +2105,29 @@ describe('HumbleLibrary', () => {
       expect(state.cooldownUntil).toBeGreaterThan(Date.now())
     })
 
+    test('WR-06 rejected_by_server: KEEPS the write-ahead REVEALED flag, audits reveal_rejected, no cooldown, returns rejected_by_server', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({ status: 'rejected_by_server' })
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'rejected_by_server' })
+      // Truthful state is "unconfirmed — sync to check": an already-redeemed
+      // denial means the key IS consumed server-side, so the write-ahead
+      // flag must NOT roll back (rolling back would misreport "nothing was
+      // used up" and invite retries against a consumed key).
+      expect(revealedData.has('gk1_key')).toBe(true)
+      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBeNull()
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual([
+        'reveal_attempt',
+        'reveal_rejected'
+      ])
+      expect(audit?.[1].outcome).toBe('rejected_by_server')
+      // Not an access_denied — the shared D-33 cooldown must NOT engage.
+      expect(HumbleLibrary.getSyncState().cooldownUntil).toBeUndefined()
+    })
+
     test('D-78 ambiguous (adapter throws): KEEPS the write-ahead REVEALED flag, persists no key value, audits reveal_ambiguous', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockRejectedValue(new Error('ECONNRESET'))
