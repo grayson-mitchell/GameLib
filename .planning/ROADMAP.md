@@ -410,5 +410,5 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
 | 12. Ownership Dedup | 5/5 | Complete    | 2026-07-06 |
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
-| 14. Guided Claim Flow | 6/6 | Complete   | 2026-07-08 |
+| 14. Guided Claim Flow | 6/6 | Complete    | 2026-07-08 |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |

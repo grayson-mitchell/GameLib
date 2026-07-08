@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
-status: verifying
-stopped_at: Phase 14 complete (14-06 live checkpoint approved), ready for verify-work
-last_updated: "2026-07-08T10:35:24.084Z"
+status: ready_to_plan
+stopped_at: Phase 14 complete (6/6) — ready to discuss Phase 15
+last_updated: 2026-07-08T10:53:14.552Z
 last_activity: 2026-07-08
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 0
-  completed_plans: 0
+  completed_plans: 44
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 14 — guided-claim-flow
+**Current focus:** Phase 15 — store overlay + expiration alerts
 
 ## Current Position
 
-Phase: 14 (guided-claim-flow) — READY FOR VERIFICATION
-Plan: 6 of 6
-Status: Phase complete — ready for verification
+Phase: 15
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-08
 
 ## v1.1 Phase Map
@@ -55,7 +55,7 @@ Last activity: 2026-07-08
 
 **Velocity (v1.0):**
 
-- Total plans completed: 41 (phases 1-4)
+- Total plans completed: 47 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -73,6 +73,7 @@ Last activity: 2026-07-08
 | 10 | 6 | - | - |
 | 11 | 5 | - | - |
 | 12 | 5 | - | - |
+| 14 | 6 | - | - |
 
 **v1.0 Detail Log:**
 
