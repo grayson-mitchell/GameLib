@@ -316,6 +316,86 @@ describe('HumbleClaimWizard', () => {
     expect(mockApi.humbleRevealKey).not.toHaveBeenCalled()
   })
 
+  // WR-05 (14-REVIEW): IPC promise rejections were previously unhandled —
+  // a rejected finish-mode read left the wizard on "Loading…" forever, and a
+  // rejected reveal/mark-redeemed call escaped as an unhandled rejection.
+  it('WR-05: a rejected humbleGetRevealedKeyValue in finish mode lands on the ambiguous step, never a stuck "Loading…"', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ state: 'REVEALED' })
+    mockApi.humbleGetRevealedKeyValue.mockRejectedValue(
+      new Error('ipc channel gone')
+    )
+
+    mount({ humbleKey, entryMode: 'finish', onDone })
+    await flushPromises()
+
+    const tree = rerender({ humbleKey, entryMode: 'finish', onDone })
+    expect(textContent(tree)).toContain("couldn't confirm")
+    expect(textContent(tree)).not.toContain('Loading')
+    // 'finish' mode invariant: still no reveal call on the recovery path.
+    expect(mockApi.humbleRevealKey).not.toHaveBeenCalled()
+  })
+
+  it('WR-05: a rejected humbleRevealKey lands on the ambiguous step (outcome unknown — never the retryable failed copy)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey()
+    mockApi.humbleRevealKey.mockRejectedValue(new Error('ipc channel gone'))
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    const revealButton = findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!
+    revealButton.props.onClick?.()
+    await flushPromises()
+
+    const tree = rerender({ humbleKey, entryMode: 'claim', onDone })
+    // The honest copy for an unknown outcome — the backend may have fired
+    // the irreversible POST, so "nothing was used up… try again" would be
+    // false and its retry button would invite re-firing.
+    expect(textContent(tree)).toContain("couldn't confirm")
+    expect(textContent(tree)).not.toContain('try again')
+    // The Sync-now recovery action is offered instead of a retry.
+    const syncButton = findByClassNamePart(tree, 'humbleClaimWizardSyncButton')
+    expect(syncButton).toBeDefined()
+  })
+
+  it('WR-05: a rejected humbleMarkRedeemed stays on the key step (retryable) and never calls onDone', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'steam' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'MARK-ME'
+    } satisfies RevealOutcome)
+    mockApi.humbleMarkRedeemed.mockRejectedValue(new Error('ipc channel gone'))
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      revealed,
+      'humbleClaimWizardMarkRedeemedButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    expect(onDone).not.toHaveBeenCalled()
+    // Still on the key step, button re-enabled — the user can retry.
+    const after = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const retryable = findByClassNamePart(
+      after,
+      'humbleClaimWizardMarkRedeemedButton'
+    )
+    expect(retryable).toBeDefined()
+    expect(
+      (retryable?.props as { disabled?: boolean } | undefined)?.disabled
+    ).toBe(false)
+  })
+
   it('marks a revealed key as redeemed and calls onDone (HCLAIM-04)', async () => {
     const onDone = jest.fn()
     const humbleKey = makeHumbleKey({ platform: 'steam' })

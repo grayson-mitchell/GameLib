@@ -80,6 +80,16 @@ export default function HumbleClaimWizard({
           setRevealedKey(value)
         }
       })
+      .catch(() => {
+        // WR-05 (14-REVIEW): an IPC rejection previously left revealedKey
+        // null on 'keyShown' — a permanent "Loading…" with no action buttons
+        // plus an unhandled rejection. The ambiguous step is the correct
+        // recovery: it offers "Sync now" and (critically for 'finish' mode)
+        // NEVER re-fires the reveal call.
+        if (!cancelled) {
+          setStep('ambiguous')
+        }
+      })
     return () => {
       cancelled = true
     }
@@ -125,6 +135,17 @@ export default function HumbleClaimWizard({
           setStep('failed')
           break
       }
+    } catch {
+      // WR-05 (14-REVIEW): an IPC-level rejection (as opposed to a typed
+      // RevealOutcome) previously escaped `void handleReveal()` as an
+      // unhandled rejection with the wizard silently stuck on the warning
+      // step. Deliberately routed to 'ambiguous' rather than the reviewer's
+      // suggested 'failed': a rejection means the outcome is UNKNOWN — the
+      // backend may have sent the irreversible reveal POST — so the 'failed'
+      // copy ("nothing was used up… try again") could be false and its
+      // retry button would invite re-firing. 'ambiguous' is the honest
+      // terminal: "couldn't confirm — sync to check", never a second reveal.
+      setStep('ambiguous')
     } finally {
       setBusy(false)
     }
@@ -147,6 +168,12 @@ export default function HumbleClaimWizard({
         machineName: humbleKey.machineName
       })
       onDone()
+    } catch {
+      // WR-05 (14-REVIEW): swallow an IPC rejection instead of letting it
+      // escape unhandled. Marking redeemed is a local, idempotent action —
+      // staying on 'keyShown' (busy cleared by finally) lets the user simply
+      // click "Mark as redeemed" again; the 'failed' step's reveal-failure
+      // copy would be the wrong context here.
     } finally {
       setBusy(false)
     }
