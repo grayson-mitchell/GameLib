@@ -32,6 +32,15 @@ export default function HumbleKeysWaiting() {
   // revealedAt/redeemedAt/keyindexResolved display + button wiring.
   const keys = selectKeysWaiting(humble?.keys ?? [])
 
+  // WR-02 (14-REVIEW re-review): component-lifetime mounted flag shared by
+  // every refreshAnnotations() call site (not just the mount effect's old
+  // per-effect `cancelled` local) so a late IPC resolution after the user
+  // navigates away never calls setAnnotations/setOverrides on an unmounted
+  // component. A stable mutable box via useState — object identity survives
+  // re-renders exactly like a ref, and the mount effect's cleanup is the
+  // single writer that flips it.
+  const [mountedRef] = useState({ current: true })
+
   // D-67/Plan 03: per-key reveal/redeem annotations + the Pitfall-C
   // keyindexResolved disabled-state signal, mirroring Spares' giftedMap
   // mount-time fetch pattern. Debug session humble-reveal-key-fails (round
@@ -47,30 +56,42 @@ export default function HumbleKeysWaiting() {
   // reveal + mark-redeemed; the standalone undo action below covers the
   // row's direct IPC call) so the two sources of truth (`humble.keys` and
   // this map) never diverge for longer than one IPC round trip.
+  //
+  // WR-02: both fetches carry a .catch — an IPC rejection (renderer channel
+  // torn down, backend error) must never escape as an unhandled promise
+  // rejection. Annotations are advisory display state, so the honest
+  // recovery is keeping the last-known map; `humble.keys` (the authoritative
+  // state) still updates via the humbleKeysUpdated push. Same discipline as
+  // HumbleClaimWizard's WR-05 fix.
   function refreshAnnotations() {
-    void window.api.humbleGetClaimAnnotations().then((map) => {
-      setAnnotations(map)
-    })
-    void window.api.humbleGetOwnershipOverrides().then((map) => {
-      setOverrides(map)
-    })
+    window.api
+      .humbleGetClaimAnnotations()
+      .then((map) => {
+        if (mountedRef.current) {
+          setAnnotations(map)
+        }
+      })
+      .catch(() => {
+        // Keep the last-known annotations map — advisory only.
+      })
+    window.api
+      .humbleGetOwnershipOverrides()
+      .then((map) => {
+        if (mountedRef.current) {
+          setOverrides(map)
+        }
+      })
+      .catch(() => {
+        // Keep the last-known overrides map — advisory only.
+      })
   }
 
   useEffect(() => {
-    let cancelled = false
-    void window.api.humbleGetClaimAnnotations().then((map) => {
-      if (!cancelled) {
-        setAnnotations(map)
-      }
-    })
-    void window.api.humbleGetOwnershipOverrides().then((map) => {
-      if (!cancelled) {
-        setOverrides(map)
-      }
-    })
+    refreshAnnotations()
     return () => {
-      cancelled = true
+      mountedRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function closeWizard() {
@@ -137,6 +158,11 @@ export default function HumbleKeysWaiting() {
                   keyindexResolved: annotation?.keyindexResolved ?? false,
                   onClaim: () => openWizard(key, 'claim'),
                   onFinish: () => openWizard(key, 'finish'),
+                  // WR-02: a rejected undo IPC call must neither escape as
+                  // an unhandled rejection nor leave the row silently stale
+                  // ("Redeemed + Undo" showing although nothing changed) —
+                  // refresh on BOTH settle paths so the row re-reads the
+                  // backend's actual truth either way.
                   onUndoRedeem: () =>
                     void window.api
                       .humbleUndoRedeemed({
@@ -144,6 +170,7 @@ export default function HumbleKeysWaiting() {
                         machineName: key.machineName
                       })
                       .then(() => refreshAnnotations())
+                      .catch(() => refreshAnnotations())
                 }}
               />
             )

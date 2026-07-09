@@ -324,6 +324,66 @@ describe('HumbleKeysWaiting', () => {
     expect(props?.undoOverride).toBe(false)
   })
 
+  // WR-02 (14-REVIEW re-review): refreshAnnotations/onUndoRedeem previously
+  // had no rejection handling — an IPC rejection escaped as an unhandled
+  // promise rejection and (for undo) left the row silently stale. Same
+  // failure class HumbleClaimWizard's WR-05 fix covered.
+  describe('WR-02: IPC rejection handling', () => {
+    it('rejected mount-time annotation fetches do not escape and the tab still renders', async () => {
+      contextValue = {
+        humble: { keys: [makeHumbleKey()] },
+        showDialogModal: jest.fn()
+      }
+      mockApi.humbleGetClaimAnnotations.mockRejectedValue(
+        new Error('ipc channel gone')
+      )
+      mockApi.humbleGetOwnershipOverrides.mockRejectedValue(
+        new Error('ipc channel gone')
+      )
+
+      const tree = mount()
+      // If either rejection escaped .catch, this flush would surface it as
+      // an unhandled rejection and fail the test run.
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(rerender())
+      expect(props).toBeDefined()
+      // Last-known (initial) maps kept: no annotation data, Pitfall-C
+      // default stands.
+      expect(props?.claimAction.revealedAt).toBeNull()
+      expect(props?.claimAction.keyindexResolved).toBe(false)
+      expect(tree).toBeDefined()
+    })
+
+    it('a rejected humbleUndoRedeemed still refreshes annotations (row re-reads backend truth, never stays silently stale)', async () => {
+      const key = makeHumbleKey({ state: 'REDEEMED' })
+      contextValue = {
+        humble: { keys: [key] },
+        showDialogModal: jest.fn()
+      }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { redeemedAt: 999, keyindexResolved: true }
+      })
+      mockApi.humbleUndoRedeemed.mockRejectedValue(
+        new Error('ipc channel gone')
+      )
+
+      const initial = mount()
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(initial)
+      expect(props).toBeDefined()
+      expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(1)
+
+      props!.claimAction.onUndoRedeem()
+      await flushPromises()
+
+      // The .catch path refreshes too — the annotations map is re-read so
+      // the row reflects whatever actually happened backend-side.
+      expect(mockApi.humbleGetClaimAnnotations).toHaveBeenCalledTimes(2)
+    })
+  })
+
   // CR-01 (14-REVIEW re-review): a key that is REVEALED by SERVER truth alone
   // (revealed on Humble's website — no local reveal annotation) must render
   // "Finish activation", never a dead-end "Claim": the backend refuses to
