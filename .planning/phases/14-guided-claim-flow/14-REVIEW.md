@@ -1,196 +1,162 @@
 ---
 phase: 14-guided-claim-flow
-reviewed: 2026-07-08T10:46:20Z
+reviewed: 2026-07-09T00:46:48Z
 depth: standard
-files_reviewed: 28
+files_reviewed: 10
 files_reviewed_list:
-  - public/locales/en/translation.json
-  - src/backend/humble/__tests__/adapter.test.ts
-  - src/backend/humble/__tests__/classify.test.ts
-  - src/backend/humble/__tests__/dedup.test.ts
-  - src/backend/humble/__tests__/electronStores.test.ts
-  - src/backend/humble/__tests__/library.test.ts
-  - src/backend/humble/__tests__/user.test.ts
-  - src/backend/humble/__tests__/viewFilters.test.ts
-  - src/backend/humble/adapter.ts
   - src/backend/humble/classify.ts
   - src/backend/humble/constants.ts
-  - src/backend/humble/dedup.ts
-  - src/backend/humble/electronStores.ts
-  - src/backend/humble/ipc_handler.ts
-  - src/backend/humble/library.ts
-  - src/backend/humble/user.ts
   - src/common/humble/viewFilters.ts
-  - src/common/types/electron_store.ts
+  - src/backend/humble/library.ts
   - src/common/types/humble.ts
-  - src/common/types/ipc.ts
-  - src/frontend/screens/Humble/Keys/Spares/index.tsx
   - src/frontend/screens/Humble/Keys/Waiting/index.tsx
-  - src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/__tests__/index.test.tsx
-  - src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.css
-  - src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx
-  - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
-  - src/frontend/screens/Humble/Keys/index.css
-  - src/preload/api/humble.ts
+  - src/backend/humble/__tests__/classify.test.ts
+  - src/backend/humble/__tests__/library.test.ts
+  - src/backend/humble/__tests__/viewFilters.test.ts
+  - src/frontend/screens/Humble/Keys/Waiting/__tests__/index.test.tsx
 findings:
   critical: 1
-  warning: 6
-  info: 7
-  total: 14
+  warning: 2
+  info: 4
+  total: 7
 status: issues_found
 ---
 
-# Phase 14: Code Review Report
+# Phase 14: Code Review Report — 14-07 Gap-Closure Re-Review
 
-**Reviewed:** 2026-07-08T10:46:20Z
+**Reviewed:** 2026-07-09T00:46:48Z
 **Depth:** standard
-**Files Reviewed:** 28
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 14 guided-claim-flow surface end to end: the reveal POST transport (`adapter.ts` `humblePostRequest`/`revealKey`), the orchestration and write-ahead/rollback logic (`library.ts`), the new stores (`electronStores.ts`), the IPC surface, the wizard and Keys-waiting/Spares views, and the associated tests.
+This report covers the **14-07 gap-closure re-review scope** (commits `c55db55a`, `7ee9a234`, `7b14d5c2`; diff base `ba42c500`) and supersedes the prior full-phase review state: the Humble key-state realignment where server `redeemed_key_val` now classifies REVEALED, REDEEMED is exclusively the local Mark-as-redeemed overlay, `locallyRedeemedPending` / the WR-02 keep-visible branch / the `server_confirmed_ack` tier were deleted, and `HUMBLE_CLASSIFIER_VERSION` was bumped 4→5.
 
-**Security invariants verified as holding on the reviewed paths:**
+**Invariant verification results:**
 
-- Key values are never logged: `adapter.ts` redacts `error_msg`/bodies to structure-only diagnostics; `library.ts` logs status/gamekey/machineName only; adapter tests assert no csrf token / key value / error_msg content ever reaches a logger.
-- Key values persist only in the sanctioned place (`revealedKeyValue` on `humbleLibraryStore` internal records, D-74); `toDisplayKey()` strips `keyindex`/`revealedKeyValue` before every `humbleKeysUpdated` broadcast, and `humbleGetRevealedKeyValue` is the single on-demand read channel.
-- CSRF header handling is intact on the happy path (opportunistic header, login capture + health-check backfill) — but see WR-03 for a rotation/staleness gap.
-- Clipboard writes occur only inside click handlers (the D-73 auto-copy fires from the user's explicit danger-button click).
-- The wizard never re-fires reveal for already-revealed keys ('finish' mode never calls `humbleRevealKey`; backend rejects `state !== 'UNREVEALED'`) — but see WR-01 for a concurrency hole in that same invariant.
+- **D-66 never-re-reveal: PASS.** `HumbleClaimWizard` finish mode starts at `keyShown`, its mount effect only reads `humbleGetRevealedKeyValue` and routes a null/rejected read to the `ambiguous` step; `handleReveal` is only reachable from the warning/failed steps. Backend `doRevealKey` rejects any non-UNREVEALED target as `ineligible` before the adapter (`library.ts:927`), and the composite-keyed `revealsInFlight` set blocks concurrent duplicates (`library.ts:894-918`).
+- **Expiry precedence (UNREDEEMABLE beats all): PASS.** `classifyTpk` checks `isExpired`/past-`expiration` first (`classify.ts:40-45`), before both the local-redeemed and revealed tiers; locked-in by tests (`classify.test.ts:51,125,255`).
+- **No key/cookie/csrf values in logs: PASS.** Every log line in the changed backend files carries gamekey/machineName/status/type-labels only; the csrf token is logged presence-only (`library.ts:1027`); test suites assert `REAL-KEY-VALUE`, `redeemed-value-string`, `ENTITLEMENT-VALUE-MUST-NOT-LEAK` and `cookie-value` never appear in log calls or broadcasts.
+- **Undo survives arbitrarily many syncs: PASS at the state level** — `isLocallyRedeemed` wins over `redeemedKeyValuePresent` in `classifyTpk`, `undoRedeemed` deletes the store mark and re-patches REVEALED, and `library.test.ts:2561-2639` exercises mark→sync→undo including the server-value-present case. However, see WR-01 for a stale `allTerminal` freeze after the undo that degrades HSYNC-03 for that order.
+- **No orphaned references to deleted mechanisms: PASS with doc residue.** Repo-wide grep finds no live code referencing `locallyRedeemedPending`, the WR-02 annotations parameter of `selectKeysWaiting` (all call sites are 1-arg: `Waiting/index.tsx:33`, `Keys/index.tsx:108`), or a server-confirmed ack path. Remaining mentions are historical "superseded" comments plus stale doc comments that now assert the wrong model (IN-01, IN-02, IN-03).
 
-However, the local-redeem (`locallyRedeemedPending`) lifecycle has a genuine correctness defect that survives any sync (CR-01), and several robustness gaps degrade the claim flow (WR-01 through WR-06).
+The realignment itself is implemented correctly and consistently across classify/viewFilters/library. The one serious defect is downstream of the reclassification: the renderer's claim affordance was not realigned for keys that are REVEALED by **server truth alone** (revealed on Humble's website, no local annotation) — exactly the population the v5 classifier bump will flood into Keys waiting (CR-01).
 
 ## Critical Issues
 
-### CR-01: Sync re-classification silently drops `locallyRedeemedPending`, making Undo permanently impossible after any sync
+### CR-01: Server-revealed keys (no local reveal record) render a dead-end "Claim" button instead of "Finish activation"
 
-**File:** `src/backend/humble/library.ts:186-201` (with `src/backend/humble/classify.ts:44-49`)
-**Issue:** `classifyOrder` classifies a locally-marked key as `REDEEMED` via the injected `isLocallyRedeemed` predicate, but per its own doc comment ("set by the caller, not this function") it never sets `locallyRedeemedPending`. The caller — `fetchAndCommitOrder`'s `keysWithInternalFields` map — carries forward only `keyindex` and `revealedKeyValue`. So after the **next sync** of that order, the cached key is `state: 'REDEEMED'` with `locallyRedeemedPending` undefined, which is indistinguishable from a server-confirmed redeem. Consequences:
+**File:** `src/frontend/screens/Humble/Keys/Waiting/index.tsx:131-139` (claimAction wiring), interacting with `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx:196-239` (affordance gating) and `src/backend/humble/library.ts:927` (eligibility check)
 
-1. `selectKeysWaiting` (`src/common/humble/viewFilters.ts:55-65`) drops the row from Keys-waiting (it requires `locallyRedeemedPending === true` for REDEEMED keys) — the D-77 Undo affordance disappears.
-2. `undoRedeemed` (`library.ts:1099`) checks `!target.locallyRedeemedPending` and becomes a permanent no-op — the `humbleLocalRedeemedStore` mark can never be cleared through any path.
-3. Because the store mark persists (disconnect-exempt) and feeds `isLocallyRedeemed` on every future sync, the key is irreversibly REDEEMED locally with **no server confirmation ever obtained** — exactly the state D-77's Undo exists to reverse.
+**Issue:** After the v5 reclassification, every key the user ever revealed on Humble's website carries `redeemed_key_val` and now classifies **REVEALED** — so it enters Keys waiting. But the row's affordance is chosen from `claimAction.revealedAt`, which is sourced from `humbleRevealedStore` (`getClaimAnnotations`, `library.ts:580`) — a store populated **only** by GameLib's own `revealKey` write-ahead. A website-revealed key has no record there, so `revealedAt` is `null`, `redeemedAt` is `null`, and `keyindexResolved` is `true` (keyindex was extracted during the same sync). HumbleKeyRow therefore falls through to the **"Claim"** branch.
 
-No test covers a sync running while `humbleLocalRedeemedStore` has a mark (`localRedeemedData.set` appears only in the undo unit test), which is why this escaped.
-**Fix:**
-```ts
-// library.ts, fetchAndCommitOrder — when building keysWithInternalFields:
-const isLocalMark = humbleLocalRedeemedStore.has(
-  compositeKey(gamekey, key.machineName)
-)
-return {
-  ...key,
-  // A REDEEMED classification that came from the local mark (no server
-  // redeemed_key_val) must keep the pending flag so Undo stays reachable.
-  ...(key.state === 'REDEEMED' && isLocalMark && !serverRedeemed(key)
-    ? { locallyRedeemedPending: true }
-    : {}),
-  ...(keyindex !== undefined ? { keyindex } : {}),
-  ...(priorKey?.revealedKeyValue !== undefined
-    ? { revealedKeyValue: priorKey.revealedKeyValue }
-    : {})
-}
+Clicking Claim opens the wizard in `claim` mode → warning step ("there's no undo") → `humbleRevealKey` → backend `doRevealKey` rejects it: `target.state !== 'UNREVEALED'` → `ineligible` → the wizard maps `ineligible` to the `failed` step, whose copy ("nothing was used up… try again") invites a retry that fails identically, forever. The key's Mark-as-redeemed affordance is also unreachable (it only renders behind `revealedAt !== null`), so the row is permanently stuck in Keys waiting with a misleading, always-failing button.
+
+This directly contradicts 14-07-SUMMARY's documented consequence #2, which states these keys "will (re)surface as REVEALED / **'Finish activation'**". They do not — they resurface as REVEALED / "Claim". The backend guard prevents any harmful reveal POST, but the primary flow this phase ships is functionally broken for what is likely the largest key class in a real veteran library.
+
+**Fix:** Gate the Finish/Claim decision on server truth (`key.state`), not solely on the local annotation. Minimal change in `HumbleKeyRow` (or pass state-derived values from `Waiting/index.tsx`):
+
+```tsx
+// HumbleKeyRow claim-affordance selection: a key whose STATE is already
+// REVEALED must never render "Claim" — the backend will reject the reveal.
+) : claimAction.revealedAt !== null || humbleKey.state === 'REVEALED' ? (
+  <span className="humbleKeyClaimGroup">
+    {claimAction.revealedAt !== null && (
+      <span className="humbleKeyClaimAnnotation">…Revealed {{date}}…</span>
+    )}
+    <button … onClick={claimAction.onFinish}>
+      {t('humbleKeys.finishActivation', 'Finish activation')}
+    </button>
+  </span>
+) : claimAction.keyindexResolved ? (
 ```
-The cleanest source for `serverRedeemed` is having `classifyOrder` also emit a per-composite "server-redeemed" signal (it already computes `redeemedKeyValuePresent`), or having `classifyOrder` set `locallyRedeemedPending` itself when the REDEEMED verdict came from the `isLocallyRedeemed` tier rather than server truth. Add a library test: mark redeemed → sync the order → assert the key still carries `locallyRedeemedPending: true` and `undoRedeemed` still works.
+
+Finish mode then honors D-66 (never re-reveals): `humbleGetRevealedKeyValue` returns null for a website-revealed key and the wizard shows the honest `ambiguous` state with the D-72 owned-note path, matching the summary's documented expectation. Add a Waiting-tab test with a `state: 'REVEALED'` key and an empty annotations map asserting `onFinish` (not `onClaim`) is the rendered action.
 
 ## Warnings
 
-### WR-01: No in-flight guard on `revealKey` — concurrent calls can double-fire the irreversible reveal POST
+### WR-01: `patchCachedState` never recomputes `allTerminal` — undo leaves a non-terminal key frozen under D-24
 
-**File:** `src/backend/humble/library.ts:872-897`
-**Issue:** The stated invariant is that the reveal call must never be re-fired for an already-revealed key, and T-14-03 says the renderer is never trusted. But the backend's only re-fire protection is the eligibility check `target.state !== 'UNREVEALED'`, which reads the cached state — and the cached state is only flipped to REVEALED by `patchCachedState` **after** the adapter call succeeds. The write-ahead `humbleRevealedStore` flag set at line 962 is never consulted by the eligibility check. Two `humbleRevealKey` IPC invocations arriving before the first resolves (double IPC delivery, a second window, or any renderer bug — the frontend `busy` flag is renderer-side and untrusted by the project's own threat model) both pass eligibility and both send the POST. The sole guard against duplicate submission of the one irreversible write in the codebase is client-side.
-**Fix:** Add a module-level in-flight set keyed by the composite key:
+**File:** `src/backend/humble/library.ts:481-504` (patchCachedState), `src/backend/humble/library.ts:1169-1186` (undoRedeemed)
+
+**Issue:** Sequence: user marks a key redeemed → next sync re-classifies the order REDEEMED via `isLocallyRedeemed` and commits `allTerminal: true` → the order is now frozen (D-24, `partitionGamekeys` skips it). User then clicks **Undo**: `undoRedeemed` deletes the mark and `patchCachedState` flips the key back to REVEALED — but spreads `{ ...entry, keys: newKeys }`, leaving `allTerminal: true` on an entry whose only key is now non-terminal. Every subsequent sync skips the order, so:
+
+- HSYNC-03 retroactive-expiry recompute never runs for it (a key that has since expired keeps showing REVEALED instead of UNREDEEMABLE — violating the expiry-beats-all invariant at the sync layer, even though `classifyTpk` itself is correct);
+- expiration refreshes and any server-side changes never reach it until the next `HUMBLE_CLASSIFIER_VERSION` bump.
+
+The 14-07 realignment makes this path central: REDEEMED is now always-undoable by design, so mark→sync→undo is an expected flow, not an edge case. Existing tests (`library.test.ts:2561-2639`) cover mark→sync→undo but never run a **second** sync after the undo, which is where the stale freeze bites.
+
+**Fix:** Recompute `allTerminal` from the patched key set:
+
 ```ts
-const revealsInFlight = new Set<string>()
-async function revealKey(gamekey: string, machineName: string) {
-  const composite = compositeKey(gamekey, machineName)
-  if (revealsInFlight.has(composite)) return { status: 'failed' as const }
-  revealsInFlight.add(composite)
-  try { /* existing body */ } finally { revealsInFlight.delete(composite) }
-}
+const newKeys = [...entry.keys]
+newKeys[index] = patchedKey
+const allTerminal =
+  newKeys.length > 0 &&
+  newKeys.every((k) => k.state === 'REDEEMED' || k.state === 'UNREDEEMABLE')
+humbleLibraryStore.set(gamekey, { ...entry, keys: newKeys, allTerminal })
 ```
 
-### WR-02: A successfully revealed key loses its "Finish activation" resume after the next sync
+(Consider exporting `isTerminal` from `classify.ts` so the predicate cannot drift.) Add a test: mark → sync → undo → sync again asserts `getOrderDetail` IS called for that gamekey.
 
-**File:** `src/backend/humble/library.ts:186-201`, `src/common/humble/viewFilters.ts:55-65`, `src/backend/humble/classify.ts:37-39`
-**Issue:** Humble's reveal endpoint populates `redeemed_key_val` server-side (that is what the POST does). On the next sync, `classifyTpk` sees `redeemedKeyValuePresent` and classifies the key `REDEEMED` — server truth, no `locallyRedeemedPending`. `selectKeysWaiting` then drops the row from Keys-waiting. Result: a user who reveals a key in the wizard but closes it before activating on Steam loses the D-66 "Finish activation" affordance as soon as any sync runs (startup health-check chain, manual refresh, the wizard's own "Sync now" button on the ambiguous path). The persisted `revealedKeyValue` is still on disk but is no longer reachable from any view — the key silently reads as "done" even though it was never activated on the target platform. This directly undermines D-66's purpose ("REVEALED-but-unredeemed resume") for any reveal not finished in one sitting. The D-30 precedence itself is documented as locked; the fix therefore belongs in the view/annotation layer, not the classifier.
-**Fix:** In `selectKeysWaiting`, keep a `REDEEMED` key visible while it has a reveal annotation but no local/explicit redeem mark — e.g. have `getClaimAnnotations`/the view treat `revealedAt set && redeemedAt unset && state === 'REDEEMED'` as still-waiting ("Finish activation"), and only drop the row once the user marks redeemed (or an explicit "server-confirmed-and-acknowledged" signal exists). At minimum, document/decide this behavior explicitly — it is currently an unstated data-access loss.
+### WR-02: `refreshAnnotations` and `onUndoRedeem` have no rejection handling and no unmount guard
 
-### WR-03: Stored CSRF token can go stale and then permanently mismatch the live cookie jar
+**File:** `src/frontend/screens/Humble/Keys/Waiting/index.tsx:50-57,140-146`
 
-**File:** `src/backend/humble/user.ts:398-419, 510-529`; `src/backend/humble/adapter.ts:299-301`
-**Issue:** The `csrf-prevention-token` header is sourced from a snapshot captured at login (or backfilled by the health check **only when absent**: `if (result.status === 'ok' && !HumbleUser.getCsrfToken())`). Meanwhile `humblePostRequest` attaches the **live** partition cookie jar natively (`useSessionCookies`) — including the current `csrf_cookie`. If Humble rotates `csrf_cookie` (typical for CSRF double-submit schemes), every reveal thereafter sends a header that no longer matches the cookie: a genuine Humble 403 → `access_denied` → 15-minute shared cooldown (D-79) on every attempt, and the stale token never self-heals because the backfill is gated on absence, not staleness. The user's only recovery is disconnect/reconnect, which nothing tells them to do.
-**Fix:** Read `csrf_cookie` from the `persist:humble` partition at reveal time (the same `session.fromPartition(...).cookies.get(...)` call the login capture already uses) and pass that live value to `adapterRevealKey`, falling back to the stored snapshot only if the partition read fails. This guarantees header/cookie agreement by construction and makes the stored copy a cache, not the source of truth.
+**Issue:** The mount-time effect guards `cancelled`, but `refreshAnnotations()` (invoked from `closeWizard` and after undo) does not — `void promise.then(setState)` with no `.catch`. An IPC rejection (renderer channel torn down, backend error) becomes an unhandled promise rejection, and a late resolution after the user navigates away calls `setAnnotations`/`setOverrides` on an unmounted component. `onUndoRedeem`'s chain (`humbleUndoRedeemed(...).then(() => refreshAnnotations())`) has the same gap: a rejected undo IPC call surfaces as an unhandled rejection and the annotations silently stay stale (the row keeps showing "Redeemed + Undo" although nothing changed). This is exactly the failure class 14-REVIEW's earlier WR-05 fixed inside `HumbleClaimWizard`; the same discipline was not applied here.
 
-### WR-04: Ownership-override Undo affordance is unreachable when needed and misleading when shown
+**Fix:**
 
-**File:** `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx:110-149`; `src/frontend/screens/Humble/Keys/Spares/index.tsx:97`; `src/backend/humble/dedup.ts:167-170`
-**Issue:** `humbleSetOwnershipOverride` triggers a recompute that sets `ownedElsewhere: false, matchConfidence: 'none'` on the overridden key. But the "Undo — this game is not owned" button renders only inside the `{humbleKey.ownedElsewhere && ...}` block and only for `matchConfidence === 'fuzzy'` — conditions an overridden key can never satisfy again. Two concrete defects:
-1. An actually-overridden key (now in Keys-waiting with no owned badge) has **no UI path anywhere** to reverse the override — contradicting the component's own comment that "a mistaken override must stay reversible."
-2. On Giftable Spares, every not-yet-overridden fuzzy row renders **both** "Not the same game" and "Undo — this game is not owned" simultaneously; clicking Undo there calls `humbleClearOwnershipOverride` for an override that does not exist (a confusing no-op).
+```ts
+function refreshAnnotations() {
+  window.api
+    .humbleGetClaimAnnotations()
+    .then((map) => setAnnotations(map))
+    .catch(() => {/* keep last-known map; annotations are advisory */})
+  window.api
+    .humbleGetOwnershipOverrides()
+    .then((map) => setOverrides(map))
+    .catch(() => {})
+}
+// onUndoRedeem:
+onUndoRedeem: () =>
+  void window.api
+    .humbleUndoRedeemed({ gamekey: key.gamekey, machineName: key.machineName })
+    .then(() => refreshAnnotations())
+    .catch(() => refreshAnnotations())
+```
 
-(Also note the Undo button's translated label says "this game is not owned" while its action *restores* the owned flag — the copy states the opposite of the effect.)
-**Fix:** The undo affordance must key off "an override record exists," not off the current fuzzy/owned flags. E.g. expose the override map (like `humbleGetGiftedAt`) or an `overridden` flag on `HumbleKey`, and render the undo control on the row wherever the overridden key now appears (Keys-waiting), removing it from non-overridden Spares rows.
-
-### WR-05: Wizard IPC promise rejections are unhandled — 'finish' mode can hang on "Loading…" forever
-
-**File:** `src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx:60-87, 93-131, 139-153`
-**Issue:** The finish-mode effect calls `window.api.humbleGetRevealedKeyValue(...).then(...)` with no `.catch` — an IPC rejection leaves `revealedKey === null` and `step === 'keyShown'` permanently, so the wizard shows "Loading…" with no action buttons and no recovery, plus an unhandled promise rejection. Similarly, `handleReveal` and `handleMarkRedeemed` use `try { await ... } finally { ... }` with no `catch`: an IPC-level rejection (as opposed to a typed outcome) escapes `void handleReveal()` as an unhandled rejection and the wizard silently stays on the warning step with no feedback.
-**Fix:** Add `.catch(() => setStep('failed'))` (or 'ambiguous' for the finish read) to the mount effect, and a `catch { setStep('failed') }` clause in `handleReveal`/`handleMarkRedeemed`.
-
-### WR-06: A well-formed `{success: false}` server denial is misreported as `schema_error` → "nothing was used up" copy can be false
-
-**File:** `src/backend/humble/adapter.ts:628-639`; `src/backend/humble/library.ts:1003-1028`; wizard 'failed' step
-**Issue:** `revealKey` returns `{ status: 'schema_error', raw: undefined }` for a response that parsed perfectly but carried `success: false` — e.g. Humble's "already redeemed"/"expired" denial. That is not a schema drift; it is a definitive server verdict. Downstream, `library.ts` treats it as a definitive failure: it rolls back the write-ahead REVEALED flag ("this key was never actually revealed server-side" — false for an already-redeemed denial) and the wizard renders "Couldn't reveal this key — nothing was used up. You can try again," inviting an endless retry loop against a key the server considers consumed. It also pollutes the `schema_error` diagnostic meaning (`describeSchemaFailure` never ran for this case, yet the audit outcome records `schema_error`).
-**Fix:** Introduce a distinct status for this branch, e.g. `{ status: 'rejected_by_server' }` on `AdapterResult`/`RevealOutcome` (still carrying no `error_msg` content, presence/length logging unchanged), let `library.ts` keep the REVEALED write-ahead flag for it (the truthful state is "unconfirmed — sync to check"), and give the wizard honest copy for that branch instead of "nothing was used up."
+(If unmount-safety is wanted too, hoist a `mountedRef` and check it in the `.then`s.)
 
 ## Info
 
-### IN-01: Dead duplicate i18n keys in translation.json
+### IN-01: `WAITING_STATES` doc comment now contradicts the code it annotates
 
-**File:** `public/locales/en/translation.json` (`humbleKeys.*`)
-**Issue:** `revealTitle`, `revealBody`, `revealConfirm`, `revealFailed`, `ambiguousOutcome`, `cooldownRetry`, `ownedBlockTitle`, `ownedBlockBody`, `ownedBlockGoto`, `ownedPassiveNote`, `yourKey` duplicate the strings the wizard actually uses (`revealConfirmTitle/-Body/-Action`, `revealFailedBody`, `revealAmbiguousBody`, `revealCooldownBody`, `c2Title/Body/Action`, `finishOwnedNote`, `keyShownTitle`) and are referenced nowhere in `src/` (only `humbleKeys.cooldown` is used, by Keys/index.tsx). Looks like an earlier naming pass that was superseded.
-**Fix:** Delete the unused key set (translators would otherwise translate both).
+**File:** `src/common/humble/viewFilters.ts:12-15,64`
+**Issue:** The comment above `WAITING_STATES` still reads "REDEEMED/UNREDEEMABLE are terminal and never appear here", but `selectKeysWaiting` deliberately includes every unowned REDEEMED key (`… || k.state === 'REDEEMED'`). Related UX consequence worth a deliberate UAT check: because REDEEMED rows now stay in the view permanently, the tab badge (`Keys/index.tsx:108`) counts already-redeemed keys, the blurb "Keys you don't own yet — claim them before they expire" describes rows that need no claiming, and the "You're all caught up" empty state becomes unreachable once any key is marked redeemed.
+**Fix:** Update the comment ("UNREDEEMABLE is terminal and never appears here; REDEEMED is a local, undoable overlay and stays visible for its Undo affordance"), and confirm with the design owner that the badge/blurb/empty-state implications are intended.
 
-### IN-02: Definitive-failure rollback deletes a machineName-keyed flag that another gamekey may own
+### IN-02: Stale IPC doc comment references the deleted server-confirmed redeem tier
 
-**File:** `src/backend/humble/library.ts:1005`
-**Issue:** `humbleRevealedStore.delete(machineName)` on definitive failure can erase the REVEALED flag of a *different* gamekey's key sharing the same machineName (the store is machineName-keyed; Open Q4 acknowledges the read-side limitation, but this extends it to a destructive write, regressing that other key to UNREVEALED on next sync — Pitfall 1 territory).
-**Fix:** When migrating this store to composite keys eventually, prioritize this delete path; short-term, only delete if the flag's `revealedAt` matches the timestamp written by this same invocation.
+**File:** `src/common/types/ipc.ts:317-318`
+**Issue:** `humbleUndoRedeemed`'s comment says "never applicable to a server-confirmed redeem" — that tier was deleted by 14-07; every REDEEMED mark is now undoable.
+**Fix:** Reword to "reverses the local-only 'Mark as redeemed' overlay (every REDEEMED mark is local and undoable, 14-07)".
 
-### IN-03: `revealKey`'s cooldown write is not generation-fenced
+### IN-03: `ClaimAnnotation` doc cites classifier version 4 as the backfill trigger
 
-**File:** `src/backend/humble/library.ts:1020-1027`
-**Issue:** The sync path guards every `setSyncState` with the CR-01 `isStale()` fence, but `revealKey`'s `access_denied` branch writes `setSyncState({ syncError: 'denied', cooldownUntil: ... })` unconditionally — a disconnect landing while the reveal POST is in flight repopulates the just-wiped `humbleSyncStore` with a 15-minute cooldown that gates the next account's first sync.
-**Fix:** Capture the generation at `revealKey` entry and skip the `setSyncState` when stale (audit/revealed-store writes are disconnect-exempt and correct as-is).
+**File:** `src/common/types/humble.ts:209-210`
+**Issue:** "HUMBLE_CLASSIFIER_VERSION bump to 4 forces the one-time backfill" is stale — the constant is now 5, and 5 is what forces the re-classification pass that also backfills keyindex.
+**Fix:** Drop the hardcoded number ("the HUMBLE_CLASSIFIER_VERSION bump forces the one-time backfill") so the comment cannot rot again.
 
-### IN-04: Cooldown step renders a static countdown and "0m" edge case
+### IN-04: `HumbleClaimWizard.handleMarkRedeemed` discards the `RedeemOutcome` — an `ineligible` result closes the wizard as if it succeeded
 
-**File:** `src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx:268-284`
-**Issue:** `minutes` is computed once per render with no ticking re-render, and when `cooldownRetryAt` is `null` the copy renders "retry in 0m" (the `Math.max(1, …)` floor applies only to the non-null branch). The step also has no dismiss button — only the dialog chrome closes it.
-**Fix:** Treat `cooldownRetryAt === null` the same as the minimum ("retry in 1m" or generic copy); optionally add an interval to refresh the countdown.
-
-### IN-05: Prior `keyindex` is not carried forward when a fresh order response omits it
-
-**File:** `src/backend/humble/library.ts:186-201`
-**Issue:** The commit path carries `revealedKeyValue` forward from the prior cache entry but not `keyindex`; if a live payload drifts and drops the `keyindex` field, an already-claimable row regresses to the Pitfall-C "Sync to enable claiming" dead-end (and a further sync cannot fix it).
-**Fix:** Mirror the `revealedKeyValue` carry-forward: `...(keyindex !== undefined ? { keyindex } : priorKey?.keyindex !== undefined ? { keyindex: priorKey.keyindex } : {})`.
-
-### IN-06: `refreshAnnotations` lacks the unmount guard its sibling effect has
-
-**File:** `src/frontend/screens/Humble/Keys/Waiting/index.tsx:40-44`
-**Issue:** The mount effect guards `setAnnotations` with a `cancelled` flag, but `refreshAnnotations` (called from `closeWizard`/undo) does not — a route change while the IPC round-trip is in flight calls `setAnnotations` on an unmounted component (harmless no-op in React 18, but inconsistent with the file's own pattern).
-**Fix:** Route both through one guarded helper, or ignore results after unmount via a ref.
-
-### IN-07: `ineligible` reveal outcome collapses into the retryable 'failed' step
-
-**File:** `src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx:122-126`
-**Issue:** `case 'failed': case 'ineligible': default:` all land on the 'failed' step whose copy says "You can try again" — but `ineligible` (e.g. keyindex unresolved, or state advanced under the wizard) will fail identically on every retry.
-**Fix:** Give `ineligible` its own terminal copy (e.g. reuse the "Sync to enable claiming" language) without a retry button.
+**File:** `src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx:168-188` (cross-file consumer of the realigned `markRedeemed` contract)
+**Issue:** `markRedeemed` now returns `{ status: 'ineligible' }` whenever the cached state is not currently REVEALED (e.g. the key expired to UNREDEEMABLE between reveal and mark, or an ambiguous reveal left the cached state UNREVEALED). The wizard `await`s the call and unconditionally invokes `onDone()`, so the user sees the wizard close normally while no mark was recorded; only the subsequent annotations refresh hints that nothing happened. Rare paths, but the outcome type exists precisely so the renderer can react.
+**Fix:** `const outcome = await window.api.humbleMarkRedeemed(...); if (outcome.status === 'ineligible') { setStep('ambiguous'); return } onDone()` (or a dedicated notice), keeping the current catch/finally behavior.
 
 ---
 
-_Reviewed: 2026-07-08T10:46:20Z_
+_Reviewed: 2026-07-09T00:46:48Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
