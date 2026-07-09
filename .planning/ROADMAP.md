@@ -387,7 +387,14 @@ Plans:
   1. With a connected Humble account, each title on store surfaces shows an ownership badge: Owned, Unclaimed-key-available, or New
   2. An "expiring soon" surface lists keys nearing expiration sorted by urgency
   3. When a previously non-expiring key gains an expiration on sync, an OS notification alerts the user — the notification does not repeat on subsequent syncs for the same key
-**Plans**: TBD
+**Plans**: 4 plans
+  - [ ] 15-01-PLAN.md — Store overlay ownership badges on Discounts (exact-match pure helper + DiscountCard pill) (HSTORE-01)
+  - [ ] 15-02-PLAN.md — Notification foundation: default-ON Settings toggle + disconnect-exempt notified-state store (HSTORE-03)
+  - [ ] 15-03-PLAN.md — Expiration-transition detection + digest OS notification + runSync hook (dedup + first-sync baseline) (HSTORE-03)
+  - [ ] 15-04-PLAN.md — Pinned "Expiring soon" section on Keys-waiting (pure partition helper + static section) (HSTORE-03)
+
+**Wave 1** (parallel — zero code-file overlap): 15-01, 15-02, 15-04
+**Wave 2** (blocked on 15-02 — reads notified-state store + notify setting): 15-03
 **UI hint**: yes
 
 ## Progress
