@@ -127,3 +127,7 @@ Two permanent, user-visible behavior changes result from this realignment — fl
 ---
 *Phase: 14-guided-claim-flow*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+All modified/created files confirmed present on disk; all task commits (`c55db55a`, `7ee9a234`, `7b14d5c2`) and the summary commit (`5e463367`) confirmed present in git log.
