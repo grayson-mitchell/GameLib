@@ -55,14 +55,16 @@ jest.mock('electron', () => ({
 
 // ── ../main_window mock ─────────────────────────────────────────────────────
 const mockShow = jest.fn()
-const mockGetMainWindow = jest.fn(() => ({ show: mockShow }))
-jest.mock('../main_window', () => ({
+const mockGetMainWindow = jest.fn((..._args: unknown[]) => ({
+  show: mockShow
+}))
+jest.mock('../../main_window', () => ({
   getMainWindow: (...args: unknown[]) => mockGetMainWindow(...args)
 }))
 
 // ── ../ipc mock ──────────────────────────────────────────────────────────────
 const mockSendFrontendMessage = jest.fn()
-jest.mock('../ipc', () => ({
+jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 jest.mock('backend/ipc', () => ({
@@ -96,6 +98,26 @@ jest.mock('backend/config', () => ({
 const mockEnvironment = { isSteamDeckGameMode: false }
 jest.mock('backend/constants/environment', () => mockEnvironment)
 
+// ── i18next mock — interpolates {{placeholder}} tokens into the fallback
+// string, mirroring real i18next's un-configured-language fallback behavior
+// closely enough for body/title assertions (precedent:
+// storeManagers/steam/__tests__/library.test.ts).
+jest.mock('i18next', () => ({
+  __esModule: true,
+  default: {
+    t: (
+      _key: string,
+      fallback: string,
+      options?: Record<string, unknown>
+    ) => {
+      if (!options) return fallback
+      return fallback.replace(/{{(\w+)}}/g, (_match, token: string) =>
+        String(options[token] ?? '')
+      )
+    }
+  }
+}))
+
 // ── Imports (after mocks) ───────────────────────────────────────────────────
 import { detectAndNotifyExpirationTransitions } from '../expirationAlerts'
 
@@ -122,6 +144,28 @@ describe('detectAndNotifyExpirationTransitions', () => {
     mockEnvironment.isSteamDeckGameMode = false
     mockNotifyHumbleExpirations = true
     lastClickHandler = undefined
+
+    // jest.config's `resetMocks: true` strips mock implementations before
+    // EVERY test — re-establish them here (mirrors library.test.ts's
+    // resetStoreMocks() pattern).
+    mockGetSettings.mockImplementation(() => ({
+      notifyHumbleExpirations: mockNotifyHumbleExpirations
+    }))
+    mockNotifiedExpirationStore.get.mockImplementation((key: string) =>
+      notifiedExpirationData.get(key)
+    )
+    mockNotifiedExpirationStore.set.mockImplementation(
+      (key: string, value: { expiration: string }) => {
+        notifiedExpirationData.set(key, value)
+      }
+    )
+    mockNotifiedExpirationStore.has.mockImplementation((key: string) =>
+      notifiedExpirationData.has(key)
+    )
+    mockNotifiedExpirationStore.clear.mockImplementation(() =>
+      notifiedExpirationData.clear()
+    )
+    mockGetMainWindow.mockImplementation(() => ({ show: mockShow }))
   })
 
   test('null -> date on a non-baseline sync: pushed to newlyExpiring, store updated, one notification fires', () => {
