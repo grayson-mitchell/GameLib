@@ -10,6 +10,7 @@ import {
   describeMissingExpirationTpks,
   describeSkippedEntitlements,
   extractExpiration,
+  isTerminal,
   isServerTerminal,
   isFreezeEligible
 } from '../classify'
@@ -1118,10 +1119,18 @@ describe('isServerTerminal (14-08 gap closure)', () => {
   })
 
   test('isTerminal (user-journey terminality) is UNCHANGED — still REDEEMED/UNREDEEMABLE only', () => {
-    // Re-import guard: isServerTerminal must never be conflated with (or
-    // replace) isTerminal — REVEALED is server-terminal but NOT
-    // user-journey terminal.
+    // WR-02 (14-08 re-review): this guard must actually exercise isTerminal
+    // — the one regression it exists to catch (someone "simplifying"
+    // isTerminal to include REVEALED, which would freeze REVEALED orders
+    // under allTerminal and break patchCachedState's recompute) is only
+    // caught by asserting isTerminal's OWN outputs. REVEALED is
+    // server-terminal but NOT user-journey terminal.
+    expect(isTerminal('REVEALED')).toBe(false)
     expect(isServerTerminal('REVEALED')).toBe(true)
+    expect(isTerminal('REDEEMED')).toBe(true)
+    expect(isTerminal('UNREDEEMABLE')).toBe(true)
+    expect(isTerminal('UNREVEALED')).toBe(false)
+    expect(isTerminal('UNPICKED')).toBe(false)
   })
 })
 
