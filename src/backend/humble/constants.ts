@@ -40,7 +40,11 @@ export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
 //   2 = round 6: D-29 v2 direct-redeem entitlement exclusion
 //   3 = Phase 12: steam_app_id capture added to classifyOrder
 //   4 = Phase 14: keyindex extraction added to classifyOrder
-export const HUMBLE_CLASSIFIER_VERSION = 4
+//   5 = Phase 14 gap closure (14-07): redeemed_key_val now means REVEALED,
+//       not REDEEMED (REDEEMED is local-only via isLocallyRedeemed) — forces
+//       reclassification of every cached row that was misclassified REDEEMED
+//       under the old (wrong) precedence.
+export const HUMBLE_CLASSIFIER_VERSION = 5
 
 // HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
 // locked at 85%+, NOT the community-norm 70% — DLC titles false-positive

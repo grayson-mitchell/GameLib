@@ -58,14 +58,14 @@ describe('classifyTpk', () => {
     expect(state).toBe('UNREDEEMABLE')
   })
 
-  test('redeemedKeyValuePresent true, no past expiration -> REDEEMED, beats local flag', () => {
+  test('14-07 gap closure: redeemedKeyValuePresent true, no past expiration, not locally redeemed -> REVEALED (server redeemed_key_val means revealed, not redeemed)', () => {
     const state = classifyTpk(
       { redeemedKeyValuePresent: true, expiration: null },
       true,
       false,
       new Date('2026-01-01T00:00:00Z')
     )
-    expect(state).toBe('REDEEMED')
+    expect(state).toBe('REVEALED')
   })
 
   test('isLocallyRevealed true, not redeemed, not expired -> REVEALED', () => {
@@ -109,10 +109,10 @@ describe('classifyTpk', () => {
     expect(state).toBe('REDEEMED')
   })
 
-  test('D-77: server redeemedKeyValuePresent beats isLocallyRedeemed (server truth wins)', () => {
+  test('14-07 gap closure: isLocallyRedeemed beats redeemedKeyValuePresent (local mark wins over server-revealed value)', () => {
     // Both signals present: this asserts precedence order, not just the
-    // final state — redeemedKeyValuePresent must be checked BEFORE
-    // isLocallyRedeemed, exactly as it beats isLocallyRevealed above.
+    // final state — isLocallyRedeemed must be checked BEFORE
+    // redeemedKeyValuePresent, the reverse of the old (wrong) precedence.
     const state = classifyTpk(
       { redeemedKeyValuePresent: true, expiration: null },
       false,
@@ -200,11 +200,11 @@ describe('classifyOrder', () => {
     expect(entry.keys[0].state).toBe('REVEALED')
   })
 
-  test('redeemed_key_value present -> REDEEMED', () => {
+  test('14-07 gap closure: redeemed_key_value present -> REVEALED, not REDEEMED (server truth means revealed only)', () => {
     const entry = classifyOrder(redeemedOrder, ALWAYS_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REDEEMED')
-    expect(entry.allTerminal).toBe(true)
+    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(entry.allTerminal).toBe(false)
   })
 
   test('past expiration -> UNREDEEMABLE even when redeemedKeyValuePresent is true', () => {
@@ -282,11 +282,11 @@ describe('classifyOrder — real-world payload shapes', () => {
     expect(entry.keys[0].machineName).toBe('directgame_steam')
   })
 
-  test('real `redeemed_key_val` field (not redeemed_key_value) -> REDEEMED', () => {
+  test('14-07 gap closure: real `redeemed_key_val` field (not redeemed_key_value) -> REVEALED, not REDEEMED', () => {
     const entry = classifyOrder(realWorldRedeemedKeyValOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REDEEMED')
-    expect(entry.allTerminal).toBe(true)
+    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(entry.allTerminal).toBe(false)
   })
 
   test('real `is_expired: true` flag (no expiration timestamp) -> UNREDEEMABLE even when redeemed_key_val present', () => {
@@ -409,8 +409,9 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
     )
     expect(entry.keys).toHaveLength(1)
     expect(entry.keys[0].platform).toBe('uplay')
-    // redeemed_key_val present -> REDEEMED (real capture shape)
-    expect(entry.keys[0].state).toBe('REDEEMED')
+    // 14-07 gap closure: redeemed_key_val present -> REVEALED (server truth
+    // means revealed only, never REDEEMED without a local mark)
+    expect(entry.keys[0].state).toBe('REVEALED')
   })
 
   test('D-28: an unknown-platform key WITHOUT direct_redeem is retained (no positive entitlement evidence)', () => {
@@ -879,7 +880,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
     expect(entry.keys[0].state).toBe('UNREVEALED')
   })
 
-  test('server redeemedKeyValuePresent beats isLocallyRedeemed at the classifyOrder level too', () => {
+  test('14-07 gap closure: isLocallyRedeemed wins over server redeemedKeyValuePresent at the classifyOrder level too', () => {
     const redeemedOrderLocal = {
       gamekey: 'order-local-redeem-2',
       tpkd_dict: {
@@ -902,22 +903,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
     expect(entry.keys[0].state).toBe('REDEEMED')
   })
 
-  // CR-01 (14-REVIEW): the REDEEMED-via-local-mark verdict must carry the
-  // D-77 locallyRedeemedPending flag on the classified key itself, so a
-  // re-sync of the order preserves the Undo affordance rather than silently
-  // laundering the local mark into a server-confirmed-looking REDEEMED.
-  test('CR-01: a REDEEMED verdict from the local-mark tier carries locallyRedeemedPending: true', () => {
-    const entry = classifyOrder(
-      order,
-      NEVER_REVEALED,
-      new Date('2026-01-01T00:00:00Z'),
-      () => true
-    )
-    expect(entry.keys[0].state).toBe('REDEEMED')
-    expect(entry.keys[0].locallyRedeemedPending).toBe(true)
-  })
-
-  test('CR-01: a server-confirmed REDEEMED never carries locallyRedeemedPending, even with a stale local mark', () => {
+  test('14-07 gap closure: a server-revealed key with NO local mark classifies REVEALED, never REDEEMED', () => {
     const redeemedOrderLocal = {
       gamekey: 'order-local-redeem-3',
       tpkd_dict: {
@@ -934,21 +920,9 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
     const entry = classifyOrder(
       redeemedOrderLocal,
       NEVER_REVEALED,
-      new Date('2026-01-01T00:00:00Z'),
-      () => true
-    )
-    expect(entry.keys[0].state).toBe('REDEEMED')
-    expect(entry.keys[0].locallyRedeemedPending).toBeUndefined()
-  })
-
-  test('CR-01: a non-REDEEMED key never carries locallyRedeemedPending', () => {
-    const entry = classifyOrder(
-      order,
-      NEVER_REVEALED,
       new Date('2026-01-01T00:00:00Z')
     )
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].locallyRedeemedPending).toBeUndefined()
+    expect(entry.keys[0].state).toBe('REVEALED')
   })
 })
 

@@ -11,12 +11,21 @@ import { OrderDetail } from './adapter'
  * Classifies a single tpk's already-derived signals into exactly one of the
  * five states.
  *
- * Precedence is literal and intentional (D-30 / Open Question 3): an expiry
- * signal (a past `expiration` OR the real API's `is_expired` boolean — see
- * classifyOrder) beats BOTH `redeemedKeyValuePresent` and the local REVEALED
- * flag — even a retroactively-expired already-redeemed entitlement
- * reclassifies UNREDEEMABLE. Do not "fix" this by reordering the checks;
- * it is a locked user decision, not an oversight.
+ * Precedence is literal and intentional. Expiry (D-30, unchanged — a past
+ * `expiration` OR the real API's `is_expired` boolean, see classifyOrder)
+ * beats every other signal — even a retroactively-expired local-redeemed
+ * mark reclassifies UNREDEEMABLE. Do not "fix" this by reordering the
+ * expiry check; it is a locked user decision, not an oversight.
+ *
+ * Phase 14 gap closure (14-07, UAT tests 2/3): `redeemedKeyValuePresent`
+ * means REVEALED, NOT REDEEMED. Humble's reveal endpoint is literally
+ * `/humbler/redeemkey` — populating this field only means the key value has
+ * been revealed to the user; Humble has no knowledge of whether the key was
+ * ever activated on Steam (or any other platform). REDEEMED is therefore a
+ * LOCAL-ONLY overlay, produced solely by the user's explicit "Mark as
+ * redeemed" action (`isLocallyRedeemed`) and always undoable — it can never
+ * be derived from server data. This supersedes the prior D-30/D-77 reading
+ * (see PROJECT.md's amended D-30 decision record).
  */
 export function classifyTpk(
   tpk: {
@@ -34,18 +43,15 @@ export function classifyTpk(
   ) {
     return 'UNREDEEMABLE'
   }
-  if (tpk.redeemedKeyValuePresent) {
-    return 'REDEEMED'
-  }
-  // D-77 (Phase 14): a local "Mark as redeemed" classifies the same as a
-  // server-confirmed redeem — server truth (above) always wins; the renderer
-  // distinguishes the two REDEEMED origins via HumbleKey.locallyRedeemedPending
-  // (set by classifyOrder — CR-01, 14-REVIEW — when THIS tier, not server
-  // truth, produced the REDEEMED verdict) to drive the Undo affordance.
+  // Local overlay wins over mere revealed-ness: once the user has explicitly
+  // marked a key redeemed, that local fact takes precedence for display even
+  // if the server also happens to carry a revealed key value.
   if (isLocallyRedeemed) {
     return 'REDEEMED'
   }
-  if (isLocallyRevealed) {
+  // Server truth: a present redeemed_key_val OR our own locally-persisted
+  // REVEALED flag both mean the key has been revealed — never redeemed.
+  if (tpk.redeemedKeyValuePresent || isLocallyRevealed) {
     return 'REVEALED'
   }
   return 'UNREVEALED'
@@ -361,18 +367,7 @@ export function classifyOrder(
         steamAppId,
         // Overlay fields default here; dedup.ts (later plan) fills them in.
         ownedElsewhere: false,
-        matchConfidence: 'none',
-        // CR-01 (14-REVIEW): a REDEEMED verdict produced by the LOCAL-mark
-        // tier (no server redeemed_key_val) must carry the D-77 pending flag
-        // so it survives every re-sync of this order — without it, the next
-        // sync silently laundered a local-only mark into a server-confirmed-
-        // looking REDEEMED: the row dropped out of Keys-waiting and
-        // undoRedeemed became a permanent no-op. A server-confirmed redeem
-        // (redeemedKeyValuePresent) never carries this flag, so Undo stays
-        // correctly unreachable for server truth.
-        ...(state === 'REDEEMED' && !redeemedKeyValuePresent && locallyRedeemed
-          ? { locallyRedeemedPending: true }
-          : {})
+        matchConfidence: 'none'
       })
     } catch {
       // Defensive net for any unexpected shape not caught by the guards
