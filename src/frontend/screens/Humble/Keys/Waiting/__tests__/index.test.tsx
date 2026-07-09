@@ -255,13 +255,10 @@ describe('HumbleKeysWaiting', () => {
   })
 
   it('refetches claim annotations after an undo-redeem action resolves', async () => {
-    // D-77: a locally-redeemed (Undo-eligible) key stays in Keys-waiting via
-    // `locallyRedeemedPending` — a server-confirmed REDEEMED key would be
-    // excluded by selectKeysWaiting and never reach this row at all.
-    const key = makeHumbleKey({
-      state: 'REDEEMED',
-      locallyRedeemedPending: true
-    })
+    // 14-07 gap closure: REDEEMED is now always a local, undoable overlay —
+    // selectKeysWaiting includes every REDEEMED key unconditionally, so this
+    // row is reachable with no special flag.
+    const key = makeHumbleKey({ state: 'REDEEMED' })
     contextValue = {
       humble: { keys: [key] },
       showDialogModal: jest.fn()

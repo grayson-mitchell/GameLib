@@ -71,11 +71,15 @@ export interface HumbleValidationReport {
 }
 
 /**
- * The 5-state classification model (D-30, Phase 11). Precedence, in order:
- * expiration in the past beats everything → UNREDEEMABLE; a present raw
- * redeemed-key value (source field kept out of this file — see classify.ts)
- * beats the local flag → REDEEMED; the locally-persisted REVEALED flag beats
- * the default → REVEALED; otherwise → UNREVEALED.
+ * The 5-state classification model (D-30, Phase 11; realigned by the Phase
+ * 14 gap closure, 14-07). Precedence, in order: expiration in the past beats
+ * everything → UNREDEEMABLE (D-30, unchanged); a LOCAL "Mark as redeemed"
+ * mark (`isLocallyRedeemed`) → REDEEMED — this is the ONLY source of
+ * REDEEMED, always undoable; a present raw redeemed-key value (source field
+ * kept out of this file — see classify.ts) OR the locally-persisted REVEALED
+ * flag → REVEALED (Humble's reveal endpoint is `/humbler/redeemkey` — a
+ * populated key value means revealed, not Steam-activated); otherwise →
+ * UNREVEALED.
  * UNPICKED is structurally distinct — it represents an un-picked Humble
  * Choice month pseudo-entry (D-27), not a classified tpk.
  */
@@ -125,14 +129,6 @@ export interface HumbleKey {
    * Lets Phase 14's C2 guard treat fuzzy matches more gently than exact ones.
    */
   matchConfidence: 'exact' | 'fuzzy' | 'none'
-  /**
-   * D-77 local-redeem flag (Phase 14 guided claim flow): true ONLY when this
-   * key's REDEEMED classification came from the local "Mark as redeemed"
-   * action (humbleMarkRedeemed) rather than a server-confirmed redeem seen in
-   * the Humble order data. Drives the Undo affordance in the claim flow UI —
-   * never set for a server-confirmed redeem.
-   */
-  locallyRedeemedPending?: boolean
 }
 
 /**
@@ -196,10 +192,11 @@ export type RevealOutcome =
   | { status: 'cooldown'; retryAtMs: number }
 
 /**
- * Result of a guided-claim-flow "Mark as redeemed" action (HCLAIM-04, D-77).
- * `ok` sets the local-redeem flag (HumbleKey.locallyRedeemedPending);
- * `ineligible` covers a key that is not in a state where local redemption
- * applies (e.g. it has not been revealed yet).
+ * Result of a guided-claim-flow "Mark as redeemed" action (HCLAIM-04, D-77;
+ * realigned by the Phase 14 gap closure, 14-07). `ok` records the local
+ * redeem mark, which is the SOLE source of the REDEEMED state and is always
+ * undoable; `ineligible` covers a key that is not in a state where local
+ * redemption applies (i.e. it is not currently REVEALED).
  */
 export type RedeemOutcome = { status: 'ok' } | { status: 'ineligible' }
 

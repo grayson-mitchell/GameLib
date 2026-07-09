@@ -1,4 +1,4 @@
-import { ClaimAnnotation, HumbleKey, HumbleKeyState } from '../types/humble'
+import { HumbleKey, HumbleKeyState } from '../types/humble'
 import { GENERIC_KEY_PLATFORM } from './groupKeys'
 
 /**
@@ -43,53 +43,25 @@ function compareWaiting(a: HumbleKey, b: HumbleKey): number {
  * fuzzy match moves back here via the existing recompute path, not a new
  * mechanism in this file.
  *
- * Phase 14 (D-75/D-77) addition: a key locally marked REDEEMED
- * (`locallyRedeemedPending`) stays in this view rather than being treated as
- * terminal — its row renders the "Redeemed {{date}}" annotation + Undo
- * affordance (HumbleKeyRow's claimAction). Without this, `markRedeemed`
- * flipping the state to REDEEMED would drop the row out of Keys-waiting
- * before the Undo affordance could ever be seen, since REDEEMED is
- * otherwise terminal-and-excluded. A server-confirmed redeem never carries
- * `locallyRedeemedPending`, so it remains excluded as before.
- *
- * WR-02 (14-REVIEW) addition: Humble's reveal endpoint populates
- * `redeemed_key_val` SERVER-side, so the next sync after a wizard reveal
- * classifies the key REDEEMED (server truth, no `locallyRedeemedPending`).
- * Without special handling that sync silently dropped the D-66 "Finish
- * activation" resume for any reveal not finished in one sitting — the
- * persisted key value was still on disk but unreachable from every view.
- * The optional `annotations` map (composite `gamekey:machineName` keys, the
- * same shape `humbleGetClaimAnnotations` returns) keeps a REDEEMED key
- * visible while it carries a reveal annotation (`revealedAt` set) and the
- * user has NOT yet marked it redeemed (`redeemedAt` unset) — the row drops
- * only after the explicit "Mark as redeemed" acknowledgment.
+ * Phase 14 gap closure (14-07) realignment: `redeemed_key_val` presence now
+ * classifies REVEALED (Humble's reveal endpoint is literally
+ * `/humbler/redeemkey` — it never means Steam-activated), so a key revealed
+ * through GameLib naturally stays REVEALED — and therefore in
+ * `WAITING_STATES` — across every subsequent sync, with no annotation
+ * cross-reference needed (this superseded the WR-02 keep-visible
+ * workaround). REDEEMED is now produced ONLY by the user's explicit "Mark as
+ * redeemed" action and is ALWAYS a local, undoable overlay — every REDEEMED
+ * key is therefore included here too, so its "Redeemed {{date}}" + Undo row
+ * stays visible and survives sync (this superseded the CR-01
+ * `locallyRedeemedPending` special-casing).
  */
-export function selectKeysWaiting(
-  keys: HumbleKey[],
-  annotations?: Record<string, ClaimAnnotation>
-): HumbleKey[] {
+export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
   return keys
     .filter((k) => {
       if (k.ownedElsewhere || k.platform === GENERIC_KEY_PLATFORM) {
         return false
       }
-      if (WAITING_STATES.has(k.state)) {
-        return true
-      }
-      if (k.state !== 'REDEEMED') {
-        return false
-      }
-      // D-77: a local-only mark keeps the row for its Undo affordance.
-      if (k.locallyRedeemedPending === true) {
-        return true
-      }
-      // WR-02: revealed through GameLib, later server-classified REDEEMED,
-      // never acknowledged by the user — keep the "Finish activation" resume.
-      const annotation = annotations?.[`${k.gamekey}:${k.machineName}`]
-      return (
-        annotation?.revealedAt !== undefined &&
-        annotation?.redeemedAt === undefined
-      )
+      return WAITING_STATES.has(k.state) || k.state === 'REDEEMED'
     })
     .sort(compareWaiting)
 }

@@ -25,11 +25,12 @@ export default function HumbleKeysWaiting() {
   // record (the fuzzy/owned flags were cleared by the override itself).
   const [overrides, setOverrides] = useState<Record<string, number>>({})
 
-  // WR-02 (14-REVIEW): annotations participate in view membership — a key
-  // revealed through GameLib that a later sync classified REDEEMED (server
-  // truth) keeps its "Finish activation" row here until the user marks it
-  // redeemed. See selectKeysWaiting's doc comment.
-  const keys = selectKeysWaiting(humble?.keys ?? [], annotations)
+  // 14-07 gap closure: membership no longer depends on annotations — a
+  // GameLib-revealed key naturally stays REVEALED (not REDEEMED) across
+  // sync, and every REDEEMED key is now a local, undoable overlay that stays
+  // visible on its own. Annotations are still fetched below for the row's
+  // revealedAt/redeemedAt/keyindexResolved display + button wiring.
+  const keys = selectKeysWaiting(humble?.keys ?? [])
 
   // D-67/Plan 03: per-key reveal/redeem annotations + the Pitfall-C
   // keyindexResolved disabled-state signal, mirroring Spares' giftedMap

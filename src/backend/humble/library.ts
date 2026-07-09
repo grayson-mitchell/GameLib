@@ -472,17 +472,17 @@ function loadCached(): void {
 /**
  * Direct cache-projection patch (mirrors recomputeOwnership's
  * read-modify-write-then-push shape, Pattern 4): patches exactly ONE key's
- * `state` (plus optional `locallyRedeemedPending`/`revealedKeyValue`
- * internal-only fields, D-74) on the cached entry, then re-pushes the
- * display-safe `humbleKeysUpdated` broadcast so the renderer reflects the
- * reveal/redeem/undo outcome immediately, without waiting for the next sync.
- * A no-op if the gamekey/machineName is not found in the cache.
+ * `state` (plus an optional `revealedKeyValue` internal-only field, D-74) on
+ * the cached entry, then re-pushes the display-safe `humbleKeysUpdated`
+ * broadcast so the renderer reflects the reveal/redeem/undo outcome
+ * immediately, without waiting for the next sync. A no-op if the
+ * gamekey/machineName is not found in the cache.
  */
 function patchCachedState(
   gamekey: string,
   machineName: string,
   newState: HumbleKeyState,
-  extra?: { locallyRedeemedPending?: boolean; revealedKeyValue?: string }
+  extra?: { revealedKeyValue?: string }
 ): void {
   const entry = humbleLibraryStore.get(gamekey)
   if (!entry) return
@@ -493,9 +493,6 @@ function patchCachedState(
   const patchedKey: HumbleKeyInternal = {
     ...priorKey,
     state: newState,
-    ...(extra?.locallyRedeemedPending !== undefined
-      ? { locallyRedeemedPending: extra.locallyRedeemedPending }
-      : {}),
     ...(extra?.revealedKeyValue !== undefined
       ? { revealedKeyValue: extra.revealedKeyValue }
       : {})
@@ -1133,18 +1130,12 @@ async function doRevealKey(
 }
 
 /**
- * D-77: marks a REVEALED key as locally redeemed ahead of any server
- * confirmation. Sets `locallyRedeemedPending: true` on the cache-projected
- * key so the renderer can offer the Undo affordance — a server-confirmed
- * redeem (seen in a later sync's order data) never carries this flag.
- *
- * WR-02 (14-REVIEW) second eligibility tier: a key revealed through GameLib
- * whose next sync saw the server-populated `redeemed_key_val` classifies
- * REDEEMED (server truth) BEFORE the user activated it on the target
- * platform. selectKeysWaiting keeps that row visible ("Finish activation")
- * until the user acknowledges it — this function records that
- * acknowledgment: the composite `redeemedAt` mark is set so the row drops,
- * but `locallyRedeemedPending` is NOT set (server truth needs no Undo).
+ * D-77, realigned by the Phase 14 gap closure (14-07): marks a REVEALED key
+ * as locally redeemed. This is the SOLE source of the REDEEMED state — the
+ * server has no knowledge of Steam activation, so REDEEMED can never be
+ * derived from sync data (see classify.ts). Every mark made here is
+ * therefore always undoable; there is no second, non-undoable
+ * "server-confirmed" tier.
  */
 async function markRedeemed(
   gamekey: string,
@@ -1153,49 +1144,27 @@ async function markRedeemed(
   const target = getKeys().find(
     (key) => key.gamekey === gamekey && key.machineName === machineName
   )
-  if (!target) {
+  if (!target || target.state !== 'REVEALED') {
     return { status: 'ineligible' }
   }
 
-  if (target.state === 'REVEALED') {
-    humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
-      redeemedAt: Date.now()
-    })
-    appendAudit(gamekey, machineName, 'mark_redeemed', {
-      title: target.title,
-      platform: target.platform
-    })
-    patchCachedState(gamekey, machineName, 'REDEEMED', {
-      locallyRedeemedPending: true
-    })
-    return { status: 'ok' }
-  }
-
-  // WR-02: acknowledge a server-confirmed redeem (the "Finish activation"
-  // resume path). No state patch (already REDEEMED), no pending flag (a
-  // server-confirmed redeem is never undoable, D-77).
-  if (target.state === 'REDEEMED' && !target.locallyRedeemedPending) {
-    humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
-      redeemedAt: Date.now()
-    })
-    appendAudit(gamekey, machineName, 'mark_redeemed', {
-      title: target.title,
-      platform: target.platform,
-      outcome: 'server_confirmed_ack'
-    })
-    return { status: 'ok' }
-  }
-
-  return { status: 'ineligible' }
+  humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
+    redeemedAt: Date.now()
+  })
+  appendAudit(gamekey, machineName, 'mark_redeemed', {
+    title: target.title,
+    platform: target.platform
+  })
+  patchCachedState(gamekey, machineName, 'REDEEMED')
+  return { status: 'ok' }
 }
 
 /**
- * D-77: undoes a local "Mark as redeemed" action, reverting the key back to
- * REVEALED. Server truth always wins — a no-op when the key's current
- * REDEEMED state was NOT produced by the local mark (i.e. a server-confirmed
- * redeemed value has since landed via sync, which never carries
- * `locallyRedeemedPending`), and likewise a no-op when there is nothing to
- * undo (key missing or not currently locally-redeemed).
+ * D-77, realigned by the Phase 14 gap closure (14-07): undoes a local "Mark
+ * as redeemed" action, reverting the key back to REVEALED. Every REDEEMED
+ * key is local-only (there is no server-confirmed tier to protect), so this
+ * is a no-op only when there is nothing to undo (key missing or not
+ * currently REDEEMED).
  */
 async function undoRedeemed(
   gamekey: string,
@@ -1204,7 +1173,7 @@ async function undoRedeemed(
   const target = getKeys().find(
     (key) => key.gamekey === gamekey && key.machineName === machineName
   )
-  if (!target || target.state !== 'REDEEMED' || !target.locallyRedeemedPending) {
+  if (!target || target.state !== 'REDEEMED') {
     return
   }
 
@@ -1213,9 +1182,7 @@ async function undoRedeemed(
     title: target.title,
     platform: target.platform
   })
-  patchCachedState(gamekey, machineName, 'REVEALED', {
-    locallyRedeemedPending: false
-  })
+  patchCachedState(gamekey, machineName, 'REVEALED')
 }
 
 export const HumbleLibrary = {
