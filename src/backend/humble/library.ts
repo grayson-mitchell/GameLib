@@ -19,6 +19,7 @@ import {
   isFreezeEligible
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
+import { detectAndNotifyExpirationTransitions } from './expirationAlerts'
 import {
   AuditRecord,
   HumbleKeyInternal,
@@ -797,6 +798,17 @@ async function runSync(): Promise<SyncOutcome> {
   // showed the renderer's stale syncError left the refresh button enabled
   // during a backend cooldown, hammering Humble on every click.
   const currentState = getSyncState()
+
+  // HSTORE-03 (locked decision 3): captured NOW, before any per-order fetch
+  // mutates humbleSyncStore below — a null `syncedAt` means this is the
+  // first-ever sync for this connection (or the first since a disconnect
+  // wiped humbleSyncStore, D-04/D-07). Passed to
+  // detectAndNotifyExpirationTransitions()'s `suppressNotifications` at the
+  // very end of this function so a fresh connect seeds the notified-state
+  // baseline silently instead of firing a notification storm for every key
+  // that already has an expiration.
+  const hadPriorSyncSnapshot = currentState.syncedAt !== null
+
   if (currentState.cooldownUntil && currentState.cooldownUntil > Date.now()) {
     logWarning(
       [
@@ -995,6 +1007,18 @@ async function runSync(): Promise<SyncOutcome> {
   // wiped humbleLibraryStore here either. Itself a no-op when Steam is
   // disconnected/empty (D-48, see recomputeOwnership's own double-gate).
   recomputeOwnership()
+
+  // HSTORE-03 (D-90/D-91/D-92): detect expiration transitions AFTER
+  // recomputeOwnership() and AFTER the isStale() fence above — so a
+  // disconnect landing mid-sync never fires a notification for a cache
+  // state that was just wiped. `suppressNotifications` uses the
+  // `hadPriorSyncSnapshot` captured at the TOP of this function (before any
+  // per-order fetch mutated humbleSyncStore): a first-ever sync silently
+  // seeds every current expiration into humbleNotifiedExpirationStore
+  // instead of firing a notification storm (locked decision 3).
+  detectAndNotifyExpirationTransitions(getKeys(), {
+    suppressNotifications: !hadPriorSyncSnapshot
+  })
 
   return { status: sawFailure ? 'partial' : 'ok' }
 }
