@@ -233,6 +233,19 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
+// ── expirationAlerts mock (HSTORE-03, Plan 03) ──────────────────────────────
+// Mocked wholesale rather than exercised for real: the real module imports
+// `backend/config` (GlobalConfig), which pulls in a large unrelated module
+// graph (storeManagers/gog etc.) that this suite does not otherwise mock.
+// The wiring itself (called after recomputeOwnership, with the correct
+// suppressNotifications value) is asserted below; digest/dedup/notification
+// behavior is fully covered by expirationAlerts.test.ts.
+const mockDetectAndNotifyExpirationTransitions = jest.fn()
+jest.mock('../expirationAlerts', () => ({
+  detectAndNotifyExpirationTransitions: (...args: unknown[]) =>
+    mockDetectAndNotifyExpirationTransitions(...args)
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────
 
 import { HumbleLibrary } from '../library'
@@ -470,6 +483,56 @@ describe('HumbleLibrary', () => {
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(2)
       const fetched = mockGetOrderDetail.mock.calls.map((c) => c[1]).sort()
       expect(fetched).toEqual(['new-gk', 'pending-gk'])
+    })
+  })
+
+  // ── sync(): HSTORE-03 expiration-transition-detection wiring ────────────
+
+  describe('sync() — expiration transition detection wiring (HSTORE-03)', () => {
+    test('calls detectAndNotifyExpirationTransitions after a clean sync, with suppressNotifications=false when a prior sync snapshot exists', async () => {
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: HUMBLE_CLASSIFIER_VERSION
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['new-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('new-gk')
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledTimes(1)
+      expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
+        HumbleLibrary.getKeys(),
+        { suppressNotifications: false }
+      )
+    })
+
+    test('suppressNotifications=true on a first-ever sync (no prior syncedAt)', async () => {
+      // syncData starts empty in beforeEach -> getSyncState() falls back to
+      // { syncedAt: null, syncError: 'none' } (first-ever sync/connection).
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['new-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('new-gk')
+      })
+
+      await HumbleLibrary.sync()
+
+      expect(mockDetectAndNotifyExpirationTransitions).toHaveBeenCalledWith(
+        expect.anything(),
+        { suppressNotifications: true }
+      )
+    })
+
+    test('a fully-failed sync (getGamekeys denied) never calls detectAndNotifyExpirationTransitions', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
+
+      await HumbleLibrary.sync()
+
+      expect(mockDetectAndNotifyExpirationTransitions).not.toHaveBeenCalled()
     })
   })
 

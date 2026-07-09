@@ -48,6 +48,15 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
+// ── expirationAlerts mock (HSTORE-03, Plan 03) ──────────────────────────────
+// Mocked wholesale — the real module imports `backend/config` (GlobalConfig),
+// which pulls in a large unrelated module graph (storeManagers/gog etc.) that
+// this suite does not mock. Wiring/behavior are covered by library.test.ts
+// and expirationAlerts.test.ts respectively.
+jest.mock('../expirationAlerts', () => ({
+  detectAndNotifyExpirationTransitions: jest.fn()
+}))
+
 // ── Imports (after mocks) — REAL electronStores/CacheStore ──────────────
 
 import { HumbleLibrary } from '../library'
