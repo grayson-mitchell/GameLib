@@ -8,7 +8,8 @@
 import { HumbleKey, HumbleKeyState } from 'common/types/humble'
 import {
   selectKeysWaiting,
-  selectGiftableSpares
+  selectGiftableSpares,
+  partitionWaitingByUrgency
 } from 'common/humble/viewFilters'
 
 function makeKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
@@ -145,6 +146,118 @@ describe('selectKeysWaiting', () => {
     const result = selectKeysWaiting([a, b, c])
     expect(Array.isArray(result)).toBe(true)
     expect(result).toHaveLength(3)
+  })
+})
+
+// D-86/D-87/D-88/D-89: pinned "Expiring soon" section membership for the
+// Keys-waiting view. partitionWaitingByUrgency does not accept an injectable
+// `now` (unlike getUrgencyTier) — it delegates entirely to getUrgencyTier's
+// own `new Date()` default, so these tests compute offsets from the real
+// wall-clock at run time (same approach as Phase 13's within-window tests
+// would need without a `now` parameter on this helper).
+function daysFromRealNow(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString()
+}
+
+describe('partitionWaitingByUrgency', () => {
+  test('D-87: a key within the urgency window (getUrgencyTier !== null) lands in pinned', () => {
+    const urgent = makeKey({
+      title: 'Urgent Game',
+      state: 'UNREVEALED',
+      expiration: daysFromRealNow(5)
+    })
+    const { pinned, rest } = partitionWaitingByUrgency([urgent])
+    expect(pinned).toEqual([urgent])
+    expect(rest).toEqual([])
+  })
+
+  test('a key outside the urgency window (getUrgencyTier === null) lands in rest', () => {
+    const safe = makeKey({
+      title: 'Safe Game',
+      state: 'UNREVEALED',
+      expiration: daysFromRealNow(60)
+    })
+    const { pinned, rest } = partitionWaitingByUrgency([safe])
+    expect(pinned).toEqual([])
+    expect(rest).toEqual([safe])
+  })
+
+  test('an undated key (expiration null, never badge-eligible) lands in rest', () => {
+    const undated = makeKey({ title: 'Undated Game', expiration: null })
+    const { pinned, rest } = partitionWaitingByUrgency([undated])
+    expect(pinned).toEqual([])
+    expect(rest).toEqual([undated])
+  })
+
+  test('D-88: pinned and rest are disjoint and their union equals the input, order preserved', () => {
+    const urgent = makeKey({
+      title: 'Urgent Game',
+      machineName: 'mn-urgent',
+      expiration: daysFromRealNow(3)
+    })
+    const warning = makeKey({
+      title: 'Warning Game',
+      machineName: 'mn-warning',
+      expiration: daysFromRealNow(20)
+    })
+    const safe = makeKey({
+      title: 'Safe Game',
+      machineName: 'mn-safe',
+      expiration: daysFromRealNow(90)
+    })
+    const undated = makeKey({
+      title: 'Undated Game',
+      machineName: 'mn-undated',
+      expiration: null
+    })
+    const input = [urgent, warning, safe, undated]
+    const { pinned, rest } = partitionWaitingByUrgency(input)
+
+    // Union equals input, membership preserved, no key in both.
+    expect([...pinned, ...rest].sort()).not.toBe(input) // sanity: distinct arrays
+    expect(pinned.length + rest.length).toBe(input.length)
+    const pinnedSet = new Set(pinned)
+    const restSet = new Set(rest)
+    for (const key of input) {
+      const inPinned = pinnedSet.has(key)
+      const inRest = restSet.has(key)
+      expect(inPinned !== inRest).toBe(true) // exactly one of the two, never both/neither
+    }
+
+    // Order preserved within each output (soonest-first inherited from
+    // selectKeysWaiting's input ordering — this input is already ordered).
+    expect(pinned).toEqual([urgent, warning])
+    expect(rest).toEqual([safe, undated])
+  })
+
+  test('D-89: when no key is within the urgency window, pinned is empty', () => {
+    const safe1 = makeKey({
+      title: 'Safe One',
+      machineName: 'mn-safe1',
+      expiration: daysFromRealNow(45)
+    })
+    const safe2 = makeKey({ title: 'Safe Two', expiration: null })
+    const { pinned, rest } = partitionWaitingByUrgency([safe1, safe2])
+    expect(pinned).toEqual([])
+    expect(rest).toEqual([safe1, safe2])
+  })
+
+  test('D-87: a key exactly at the 30-day boundary lands in pinned (reused threshold)', () => {
+    const boundary30 = makeKey({
+      title: 'Boundary 30',
+      expiration: daysFromRealNow(30)
+    })
+    const { pinned } = partitionWaitingByUrgency([boundary30])
+    expect(pinned).toEqual([boundary30])
+  })
+
+  test('D-87: a key exactly at the 7-day boundary lands in pinned (reused threshold)', () => {
+    const boundary7 = makeKey({
+      title: 'Boundary 7',
+      expiration: daysFromRealNow(7)
+    })
+    const { pinned } = partitionWaitingByUrgency([boundary7])
+    expect(pinned).toEqual([boundary7])
   })
 })
 
