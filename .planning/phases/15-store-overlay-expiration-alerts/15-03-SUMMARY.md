@@ -120,3 +120,5 @@ None - no external service configuration required. No new npm packages (Electron
 ---
 *Phase: 15-store-overlay-expiration-alerts*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
