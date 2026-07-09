@@ -18,15 +18,13 @@ result: pass
 
 ### 2. Redeemed + Undo survives a sync (CR-01 fix)
 expected: With a key showing "Redeemed {date}" + "Undo" (from Mark as redeemed), trigger a Humble sync. After the sync finishes, the row STILL shows "Redeemed {date}" + "Undo" — it does not vanish from Keys waiting, and Undo still works.
-result: issue
-reported: "fail, after sync changes to redeemed. Resident Evil Village"
-severity: major
+result: pass
+retest: "2026-07-09 after 14-07 gap closure + fix commits: Resident Evil Village keeps 'Redeemed {date}' + Undo through sync. Original failure: 'fail, after sync changes to redeemed'."
 
 ### 3. Revealed key keeps "Finish activation" after sync (WR-02 fix)
 expected: A key that has been revealed but NOT marked redeemed (row shows "Revealed {date}" + "Finish activation") stays visible in Keys waiting with the same button after a Humble sync — the server seeing the revealed key must not silently drop the row.
-result: issue
-reported: "Californium, revealed not redeem, refresh changed to redeemed. Likely cause is sync back with Humble — process misalignment: Humble's model is unrevealed -> reveal -> redeem, and Humble does not know the Steam library, so you can keep redeeming. User requests full process-flow comparison and simplification/alignment."
-severity: major
+result: pass
+retest: "2026-07-09 after 14-07 gap closure + fix commits: Californium keeps 'Revealed {date}' + Finish activation through sync. Original failure diagnosed as classifier misalignment (redeemed_key_val treated as Steam-REDEEMED); fixed by 14-07."
 
 ### 4. Undo a mistaken ownership override (WR-04 fix)
 expected: On a fuzzy "Likely owned" row in Giftable spares, click "Not the same game". The key moves to Keys waiting, and THERE it now shows an "Undo — I do own this game" control. Clicking it returns the key to Giftable spares. (Non-overridden fuzzy Spares rows no longer show a confusing pre-emptive Undo button.)
@@ -51,11 +49,17 @@ result: blocked
 blocked_by: other
 reason: "Deferred — no unrevealed keys remaining. Was verified live during the approved 14-06 checkpoint (2026-07-08)."
 
+### 8. Sync does not churn Keys waiting through intermediate states
+expected: A Humble sync/refresh updates key rows to their final categorization without visibly loading ALL keys into Keys waiting first and then progressively removing/recategorizing them.
+result: issue
+reported: "issue 1, now refresh loads all the keys into key waiting and then removes / categorises and you end up at the expected state."
+severity: minor
+
 ## Summary
 
-total: 7
-passed: 1
-issues: 2
+total: 8
+passed: 3
+issues: 1
 pending: 0
 skipped: 1
 blocked: 3
@@ -63,7 +67,8 @@ blocked: 3
 ## Gaps
 
 - truth: "A locally-marked redeemed key keeps its 'Redeemed {date}' + 'Undo' affordance in Keys waiting after a Humble sync (CR-01 fix)"
-  status: failed
+  status: resolved
+  resolved_by: "14-07 gap closure (c55db55a..d0258912) + fix commits 5d111070/e4fc3b3a/88f53fd5; human-retested pass 2026-07-09"
   reason: "User reported: fail, after sync changes to redeemed. Resident Evil Village"
   severity: major
   test: 2
@@ -72,7 +77,8 @@ blocked: 3
   missing: ["Semantic realignment: server redeemed_key_val presence means REVEALED in Humble's model (the reveal endpoint is literally /humbler/redeemkey), not Steam-activated. REDEEMED must be a local-only overlay (Mark as redeemed / Undo), never derivable from server data."]
 
 - truth: "A revealed-but-unredeemed key keeps 'Revealed {date}' + 'Finish activation' in Keys waiting after a Humble sync (WR-02 fix)"
-  status: failed
+  status: resolved
+  resolved_by: "14-07 gap closure + fix commits; human-retested pass 2026-07-09"
   reason: "User reported: Californium, revealed not redeemed, refresh changed to redeemed."
   severity: major
   test: 3
@@ -87,3 +93,12 @@ Both gaps share ONE root cause, diagnosed conversationally during this UAT sessi
 - Humble's real model: UNREVEALED --(POST /humbler/redeemkey — Humble names reveal "redeem")--> key value visible (redeemed_key_val populated). Humble has no knowledge of Steam activation; "redeemed on Steam" exists only as GameLib-local knowledge.
 - GameLib's classifyTpk treats redeemed_key_val presence as REDEEMED (Steam-activated) — a category error baked into Phase 11's D-30 precedence before the reveal endpoint had ever been called live.
 - Fix direction (user-approved): remap tier 2 to REVEALED; make REDEEMED local-only and permanently undoable; delete the now-unnecessary CR-01/WR-02 compensation code; amend D-30's rationale.
+
+- truth: "A Humble sync updates Keys waiting to final categorization without visible intermediate churn (all keys appearing then progressively removing/recategorizing)"
+  status: failed
+  reason: "User reported: refresh loads all the keys into Keys waiting and then removes/categorises until the expected state is reached. End state correct; churn is transient."
+  severity: minor
+  test: 8
+  root_cause: "Hypothesis (code-evidenced, not yet confirmed): library.ts broadcasts humbleKeysUpdated after EVERY committed order (D-26 progressive fill - library.ts:798), and the classifier v4->v5 bump forced reclassifyAll over every cached order, so the renderer receives many intermediate snapshots where later orders are still unclassified/stale and ownership dedup has not yet recomputed - keys transit Keys waiting before settling. Related: .planning/debug/humble-keys-empty-list-flashing-sync.md (awaiting_human_verify) documents the same D-26 progressive-fill broadcast causing sync flicker (S2). May be largely a one-time migration artifact: normal syncs skip frozen orders (D-24), so churn should be far smaller after the v5 reclassification completes."
+  artifacts: ["src/backend/humble/library.ts:779-798 (per-order humbleKeysUpdated broadcast during sync)", ".planning/debug/humble-keys-empty-list-flashing-sync.md"]
+  missing: ["Decision: accept as one-time migration artifact (verify by re-running a normal sync) vs. batch/defer humbleKeysUpdated broadcasts until sync completes (or debounce), trading progressive fill (D-26) for a stable list."]
