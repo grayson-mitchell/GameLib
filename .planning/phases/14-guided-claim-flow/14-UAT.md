@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: partial
 phase: 14-guided-claim-flow
 source: [14-01-SUMMARY.md, 14-02-SUMMARY.md, 14-03-SUMMARY.md, 14-04-SUMMARY.md, 14-05-SUMMARY.md, 14-06-SUMMARY.md, 14-REVIEW-FIX.md]
 started: 2026-07-09T00:00:00Z
@@ -51,15 +51,14 @@ reason: "Deferred — no unrevealed keys remaining. Was verified live during the
 
 ### 8. Sync does not churn Keys waiting through intermediate states
 expected: A Humble sync/refresh updates key rows to their final categorization without visibly loading ALL keys into Keys waiting first and then progressively removing/recategorizing them.
-result: issue
-reported: "issue 1, now refresh loads all the keys into key waiting and then removes / categorises and you end up at the expected state. RETEST on second (normal, post-migration) sync: ran again, same behavior, list fills and then empties — RECURRING, not a one-time migration artifact."
-severity: minor
+result: pass
+retest: "2026-07-09 after 14-08 gap closure (3e3a4606/01e9260d) + fix commits (d57b6f23/4bce6a3a/602d7ec9): user ran v6 migration sync + second normal sync — 'stable', no fill-then-empty churn. Original reports preserved in git history (4ca11a2a)."
 
 ## Summary
 
 total: 8
-passed: 3
-issues: 1
+passed: 4
+issues: 0
 pending: 0
 skipped: 1
 blocked: 3
@@ -95,7 +94,8 @@ Both gaps share ONE root cause, diagnosed conversationally during this UAT sessi
 - Fix direction (user-approved): remap tier 2 to REVEALED; make REDEEMED local-only and permanently undoable; delete the now-unnecessary CR-01/WR-02 compensation code; amend D-30's rationale.
 
 - truth: "A Humble sync updates Keys waiting to final categorization without visible intermediate churn (all keys appearing then progressively removing/recategorizing)"
-  status: failed
+  status: resolved
+  resolved_by: "14-08 gap closure + iteration-3 fix commits; human-retested 'stable' on post-migration sync 2026-07-09. Also closed: T-14-03 C2 mid-sync bypass window, permanent D-24 freeze loss (WAF exposure), and the write-ahead-REVEALED strand hazard (CR-01 iter 3)."
   reason: "User reported: refresh loads all the keys into Keys waiting and then removes/categorises until the expected state is reached. End state correct; churn is transient."
   severity: minor
   test: 8

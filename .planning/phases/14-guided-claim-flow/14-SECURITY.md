@@ -68,3 +68,11 @@ None. `14-05-SUMMARY.md`'s `## Threat Flags` entry (`incomplete-mitigation` agai
 
 ---
 SECURITY.md: `.planning/phases/14-guided-claim-flow/14-SECURITY.md`
+
+## Security Audit Addendum — 2026-07-09 (post-gap-closure)
+
+Gap-closure work after the 2026-07-09 audit briefly introduced, then closed, a T-14-03 regression:
+14-07's per-order commit path reset `ownedElsewhere` mid-sync, opening a window where `revealKey`'s
+C2 owned-elsewhere block could read a transiently-false flag. Closed by 14-08 (commit-time ownership
+recompute with D-48 carry-forward when Steam is gated off; commits 3e3a4606 + d57b6f23/4bce6a3a) with
+dedicated mid-sync C2 tests. threats_open remains 0.
