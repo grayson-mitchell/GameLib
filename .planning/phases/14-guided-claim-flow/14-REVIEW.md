@@ -1,162 +1,151 @@
 ---
 phase: 14-guided-claim-flow
-reviewed: 2026-07-09T00:46:48Z
+reviewed: 2026-07-09T03:21:47Z
 depth: standard
-files_reviewed: 10
+files_reviewed: 6
 files_reviewed_list:
-  - src/backend/humble/classify.ts
-  - src/backend/humble/constants.ts
-  - src/common/humble/viewFilters.ts
   - src/backend/humble/library.ts
+  - src/backend/humble/classify.ts
   - src/common/types/humble.ts
-  - src/frontend/screens/Humble/Keys/Waiting/index.tsx
-  - src/backend/humble/__tests__/classify.test.ts
+  - src/backend/humble/constants.ts
   - src/backend/humble/__tests__/library.test.ts
-  - src/backend/humble/__tests__/viewFilters.test.ts
-  - src/frontend/screens/Humble/Keys/Waiting/__tests__/index.test.tsx
+  - src/backend/humble/__tests__/classify.test.ts
 findings:
   critical: 1
   warning: 2
-  info: 4
-  total: 7
+  info: 3
+  total: 6
 status: issues_found
 ---
 
-# Phase 14: Code Review Report — 14-07 Gap-Closure Re-Review
+# Phase 14: Code Review Report — 14-08 Gap-Closure Re-Review
 
-**Reviewed:** 2026-07-09T00:46:48Z
+**Reviewed:** 2026-07-09T03:21:47Z
 **Depth:** standard
-**Files Reviewed:** 10
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-This report covers the **14-07 gap-closure re-review scope** (commits `c55db55a`, `7ee9a234`, `7b14d5c2`; diff base `ba42c500`) and supersedes the prior full-phase review state: the Humble key-state realignment where server `redeemed_key_val` now classifies REVEALED, REDEEMED is exclusively the local Mark-as-redeemed overlay, `locallyRedeemedPending` / the WR-02 keep-visible branch / the `server_confirmed_ack` tier were deleted, and `HUMBLE_CLASSIFIER_VERSION` was bumped 4→5.
+This report covers the **14-08 gap-closure re-review scope** (commits `3e3a4606` + `01e9260d`; diff base `5ede3a0e`) and supersedes the prior 14-07 re-review state of this file. Scope: Fix 1 (two-branch ownership-overlay strategy at per-order commit time — Steam gate passes → `dedupRecomputeOwnership` at commit; gate fails → per-key carry-forward of prior `ownedElsewhere`/`matchConfidence`), and Fix 2 (single-sourced `isServerTerminal`/`isFreezeEligible` predicates, new optional `HumbleOrderCacheEntry.freezeEligible`, `partitionGamekeys` reading `freezeEligible ?? allTerminal`, classifier v5→6 bump). Both test suites pass (215/215).
 
 **Invariant verification results:**
 
-- **D-66 never-re-reveal: PASS.** `HumbleClaimWizard` finish mode starts at `keyShown`, its mount effect only reads `humbleGetRevealedKeyValue` and routes a null/rejected read to the `ambiguous` step; `handleReveal` is only reachable from the warning/failed steps. Backend `doRevealKey` rejects any non-UNREVEALED target as `ineligible` before the adapter (`library.ts:927`), and the composite-keyed `revealsInFlight` set blocks concurrent duplicates (`library.ts:894-918`).
-- **Expiry precedence (UNREDEEMABLE beats all): PASS.** `classifyTpk` checks `isExpired`/past-`expiration` first (`classify.ts:40-45`), before both the local-redeemed and revealed tiers; locked-in by tests (`classify.test.ts:51,125,255`).
-- **No key/cookie/csrf values in logs: PASS.** Every log line in the changed backend files carries gamekey/machineName/status/type-labels only; the csrf token is logged presence-only (`library.ts:1027`); test suites assert `REAL-KEY-VALUE`, `redeemed-value-string`, `ENTITLEMENT-VALUE-MUST-NOT-LEAK` and `cookie-value` never appear in log calls or broadcasts.
-- **Undo survives arbitrarily many syncs: PASS at the state level** — `isLocallyRedeemed` wins over `redeemedKeyValuePresent` in `classifyTpk`, `undoRedeemed` deletes the store mark and re-patches REVEALED, and `library.test.ts:2561-2639` exercises mark→sync→undo including the server-value-present case. However, see WR-01 for a stale `allTerminal` freeze after the undo that degrades HSYNC-03 for that order.
-- **No orphaned references to deleted mechanisms: PASS with doc residue.** Repo-wide grep finds no live code referencing `locallyRedeemedPending`, the WR-02 annotations parameter of `selectKeysWaiting` (all call sites are 1-arg: `Waiting/index.tsx:33`, `Keys/index.tsx:108`), or a server-confirmed ack path. Remaining mentions are historical "superseded" comments plus stale doc comments that now assert the wrong model (IN-01, IN-02, IN-03).
-
-The realignment itself is implemented correctly and consistently across classify/viewFilters/library. The one serious defect is downstream of the reclassification: the renderer's claim affordance was not realigned for keys that are REVEALED by **server truth alone** (revealed on Humble's website, no local annotation) — exactly the population the v5 classifier bump will flood into Keys waiting (CR-01).
+1. **Gate-expression parity (commit-time vs end-of-sync): PASS with a drift hazard.** `fetchAndCommitOrder`'s gate (`SteamUser.isLoggedIn() && steamGames.length > 0`, `library.ts:205-206`) is semantically identical to `recomputeOwnership`'s double-gate (`library.ts:442-448`) today — but it is a duplicated inline re-implementation, not a shared helper. See WR-01.
+2. **Steam hiccup can never zero a prior `ownedElsewhere:true`: PASS.** Branch B carries forward per-key via `priorKey?.ownedElsewhere ?? key.ownedElsewhere` (`library.ts:223-230`); `ownedElsewhere` is a required boolean, so `??` preserves both prior `true` and prior `false` and only falls back to classify's hard-reset when no prior key exists. End-of-sync `recomputeOwnership` retains its D-48 no-op double-gate. Locked by the two gated-off carry-forward tests (`library.test.ts:2011-2053`).
+3. **C2 mid-sync window closed: PASS.** Branch A overlays ownership BEFORE `humbleLibraryStore.set` (the entry is committed atomically with ownership already applied), so `doRevealKey`'s live re-read can never observe classify's transient `ownedElsewhere:false`. Verified by the mid-sync `owned_blocked` test (`library.test.ts:1972-2009`). Branch B keeps stale-but-safe carry-forward. (A brand-new never-cached owned key with the gate closed commits `false` — unavoidable: no Steam data exists; end-of-sync recompute catches up when the gate reopens, verified `library.test.ts:2079-2101`.)
+4. **`freezeEligible` computed identically at all write sites: PASS.** `classifyOrder` (`classify.ts:491-492`) and `patchCachedState` (`library.ts:583-584`) both use `keys.length > 0 && keys.every(isFreezeEligible)` over the same exported predicate; `fetchAndCommitOrder` persists `classified.freezeEligible`. The ownership overlay never touches `state`/`expiration`, so computing over pre-overlay `classified.keys` cannot diverge. WR-01 (prior review) undo consistency verified by the mark→sync→undo→sync tests (`library.test.ts:2902-2990`).
+5. **REVEALED with live future expiration is never frozen: PASS** — `isFreezeEligible` excludes `state === 'REVEALED' && expiration !== null` (`classify.ts:107-110`), verified at predicate, classifyOrder, sync-partition, and undo-cycle levels. **However, the inverse case is broken:** a flag-only REVEALED key (local write-ahead flag, NO server key value) with `expiration: null` freezes, permanently stranding the D-78 ambiguous-outcome reconciliation and D-66 website-reveal value pickup. See CR-01 — this is the one genuine defect found.
+6. **D-26 per-order broadcasts untouched: PASS.** `sendFrontendMessage('humbleKeysUpdated', getKeys())` still fires after every per-order commit (`library.ts:865`); the churn test asserts ≥2 intermediate pushes, each carrying `ownedElsewhere:true` (`library.test.ts:1935-1971`).
+7. **No key/cookie/csrf values in logs: PASS.** The 14-08 diff adds no new log lines; existing lines remain gamekey/status/count-only; the outcome-summary test still asserts `cookie-value` never appears.
+8. **D-66 never-re-reveal untouched: PASS (code).** `revealKey`/`doRevealKey` are unchanged in this diff; the `revealsInFlight` set and the UNREVEALED-only eligibility gate are intact. (CR-01 degrades D-66's *value-pickup* path for one key class, but never causes a re-reveal POST.)
+9. **Test coverage of replaced tests: PASS.** The 14-07 "never frozen" test was superseded intentionally (documented in-test) and its retroactive-expiry intent is preserved by the new future-expiration variant (`library.test.ts:1573-1600`); the old WR-01 "undo unfreezes" intent is preserved by the new future-exp mark→undo→thaw→re-mark cycle test (`library.test.ts:2941-2990`). No silent coverage loss found — except the vacuous guard in WR-02 below.
 
 ## Critical Issues
 
-### CR-01: Server-revealed keys (no local reveal record) render a dead-end "Claim" button instead of "Finish activation"
+### CR-01: `freezeEligible` freezes flag-only REVEALED keys (no server value), permanently stranding D-78 ambiguous-reveal reconciliation and D-66 website-reveal pickup
 
-**File:** `src/frontend/screens/Humble/Keys/Waiting/index.tsx:131-139` (claimAction wiring), interacting with `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx:196-239` (affordance gating) and `src/backend/humble/library.ts:927` (eligibility check)
+**File:** `src/backend/humble/classify.ts:103-111` (predicate), `src/backend/humble/library.ts:266-273` (persisted at commit)
 
-**Issue:** After the v5 reclassification, every key the user ever revealed on Humble's website carries `redeemed_key_val` and now classifies **REVEALED** — so it enters Keys waiting. But the row's affordance is chosen from `claimAction.revealedAt`, which is sourced from `humbleRevealedStore` (`getClaimAnnotations`, `library.ts:580`) — a store populated **only** by GameLib's own `revealKey` write-ahead. A website-revealed key has no record there, so `revealedAt` is `null`, `redeemedAt` is `null`, and `keyindexResolved` is `true` (keyindex was extracted during the same sync). HumbleKeyRow therefore falls through to the **"Claim"** branch.
+**Issue:** `isFreezeEligible` treats every REVEALED key with `expiration: null` as server-final, justified by "once Humble populates `redeemed_key_val` it never un-populates it." That premise only holds when the server value is actually present. A key can classify REVEALED purely from the **local write-ahead flag** (`humbleRevealedStore`) with no server value at all — exactly the state produced by the two designed-for reveal outcomes that deliberately KEEP the flag without patching the cache:
 
-Clicking Claim opens the wizard in `claim` mode → warning step ("there's no undo") → `humbleRevealKey` → backend `doRevealKey` rejects it: `target.state !== 'UNREVEALED'` → `ineligible` → the wizard maps `ineligible` to the `failed` step, whose copy ("nothing was used up… try again") invites a retry that fails identically, forever. The key's Mark-as-redeemed affordance is also unreachable (it only renders behind `revealedAt !== null`), so the row is permanently stuck in Keys waiting with a misleading, always-failing button.
+- **`ambiguous`** (adapter threw — `library.ts:1195-1217`): we genuinely don't know whether Humble processed the reveal; the wizard shows "unconfirmed — sync to check."
+- **`rejected_by_server`** (WR-06 — `library.ts:1144-1167`): definitive denial, flag kept.
 
-This directly contradicts 14-07-SUMMARY's documented consequence #2, which states these keys "will (re)surface as REVEALED / **'Finish activation'**". They do not — they resurface as REVEALED / "Claim". The backend guard prevents any harmful reveal POST, but the primary flow this phase ships is functionally broken for what is likely the largest key class in a real veteran library.
+Trace of the strand (expiration `null` throughout):
+1. Reveal ends `ambiguous`. Cached state still UNREVEALED, `freezeEligible: false` — fine so far.
+2. Next sync re-fetches the order. Humble never actually processed the reveal, so the payload carries no `redeemed_key_val`. `classifyTpk` reads `isLocallyRevealed → REVEALED`; `revealedKeyValueByComposite` is empty; no prior `revealedKeyValue` to carry. Entry commits with `state: 'REVEALED'`, `revealedKeyValue` absent, and — the bug — `freezeEligible: true`.
+3. Every subsequent sync skips the order (frozen). `getRevealedKeyValue` returns `null` forever ("unconfirmed"). An explicit user retry of `revealKey` returns `ineligible` (state is REVEALED, not UNREVEALED — `library.ts:1015`). If the user reveals the key on Humble's **website**, the frozen order never re-fetches, so the server value is never picked up either — the wizard's D-66 finish mode can never show the key.
 
-**Fix:** Gate the Finish/Claim decision on server truth (`key.state`), not solely on the local annotation. Minimal change in `HumbleKeyRow` (or pass state-derived values from `Waiting/index.tsx`):
+There is no thaw path: `patchCachedState` only runs on reveal/mark/undo, none of which is reachable for this key. The only recovery is a future `HUMBLE_CLASSIFIER_VERSION` bump or a destructive disconnect/reconnect. Pre-14-08, this reconciliation worked precisely because REVEALED orders were re-fetched every sync — Fix 2 removed that without distinguishing value-backed REVEALED from flag-only REVEALED. Note the new freeze tests only exercise the value-backed case (`makeRawOrder(..., { redeemed: true })` sets `redeemed_key_value`), which is why this was missed.
 
-```tsx
-// HumbleKeyRow claim-affordance selection: a key whose STATE is already
-// REVEALED must never render "Claim" — the backend will reject the reveal.
-) : claimAction.revealedAt !== null || humbleKey.state === 'REVEALED' ? (
-  <span className="humbleKeyClaimGroup">
-    {claimAction.revealedAt !== null && (
-      <span className="humbleKeyClaimAnnotation">…Revealed {{date}}…</span>
-    )}
-    <button … onClick={claimAction.onFinish}>
-      {t('humbleKeys.finishActivation', 'Finish activation')}
-    </button>
-  </span>
-) : claimAction.keyindexResolved ? (
+**Fix:** Make REVEALED freeze-eligibility additionally require a present key value, keeping the predicate single-sourced. Sketch:
+
+```ts
+// classify.ts — widen the single-sourced predicate:
+export function isFreezeEligible(key: {
+  state: HumbleKeyState
+  expiration: string | null
+  revealedKeyValuePresent?: boolean
+}): boolean {
+  if (!isServerTerminal(key.state)) return false
+  if (key.state === 'REVEALED') {
+    return key.expiration === null && key.revealedKeyValuePresent === true
+  }
+  return true // REDEEMED/UNREDEEMABLE: unchanged
+}
 ```
 
-Finish mode then honors D-66 (never re-reveals): `humbleGetRevealedKeyValue` returns null for a website-revealed key and the wizard shows the honest `ambiguous` state with the D-72 owned-note path, matching the summary's documented expectation. Add a Waiting-tab test with a `state: 'REVEALED'` key and an empty annotations map asserting `onFinish` (not `onClaim`) is the rendered action.
+- In `classifyOrder`, pass each tpk's `redeemedKeyValuePresent` into the per-key eligibility check (it is already computed at `classify.ts:371`).
+- In `fetchAndCommitOrder`, compute `freezeEligible` over `keysWithInternalFields` (where the carried-forward/side-channel `revealedKeyValue` lives) instead of persisting `classified.freezeEligible`, so a GameLib-revealed key whose value was carried forward still freezes.
+- In `patchCachedState`, `HumbleKeyInternal.revealedKeyValue !== undefined` supplies the same signal — a successful reveal (value persisted) freezes; an ambiguous one (no patch) never does.
+- Caveat to decide explicitly: non-Steam keys whose server value is an OBJECT are deliberately omitted from the string side-channel (`classify.ts:404-408`) — under this fix they keep re-fetching. If that residual exposure matters, use the truthy `redeemedKeyValuePresent` (object-tolerant) at classify time and document the internal-field divergence.
+- Add the missing regression test: ambiguous reveal → sync (server has no value) → order must NOT freeze → later sync with server value present → freezes.
 
 ## Warnings
 
-### WR-01: `patchCachedState` never recomputes `allTerminal` — undo leaves a non-terminal key frozen under D-24
+### WR-01: Steam connectivity gate duplicated inline — the exact invariant Fix 1 depends on is enforced by comment, not by code
 
-**File:** `src/backend/humble/library.ts:481-504` (patchCachedState), `src/backend/humble/library.ts:1169-1186` (undoRedeemed)
+**File:** `src/backend/humble/library.ts:205-206` vs `src/backend/humble/library.ts:441-448`
 
-**Issue:** Sequence: user marks a key redeemed → next sync re-classifies the order REDEEMED via `isLocallyRedeemed` and commits `allTerminal: true` → the order is now frozen (D-24, `partitionGamekeys` skips it). User then clicks **Undo**: `undoRedeemed` deletes the mark and `patchCachedState` flips the key back to REVEALED — but spreads `{ ...entry, keys: newKeys }`, leaving `allTerminal: true` on an entry whose only key is now non-terminal. Every subsequent sync skips the order, so:
+**Issue:** The commit-time branch selector re-implements the D-48 double-gate (`SteamUser.isLoggedIn() && steamGames.length > 0`) inline, while `recomputeOwnership` expresses the same gate as two early returns. The Fix 1 comment asserts they are "the EXACT same Steam connectivity check," but nothing structural enforces it. This is precisely the drift class Fix 2 just eliminated for the freeze predicate (single-sourced `isFreezeEligible`): if either site's gate later changes (e.g., a staleness/partial-refresh condition is added to `recomputeOwnership` only), the commit-time branch and the end-of-sync recompute disagree again and the fill-then-empty churn / T-14-03 C2 window reopens silently — the tests pin today's behavior but wouldn't catch a one-sided semantic addition.
 
-- HSYNC-03 retroactive-expiry recompute never runs for it (a key that has since expired keeps showing REVEALED instead of UNREDEEMABLE — violating the expiry-beats-all invariant at the sync layer, even though `classifyTpk` itself is correct);
-- expiration refreshes and any server-side changes never reach it until the next `HUMBLE_CLASSIFIER_VERSION` bump.
-
-The 14-07 realignment makes this path central: REDEEMED is now always-undoable by design, so mark→sync→undo is an expected flow, not an edge case. Existing tests (`library.test.ts:2561-2639`) cover mark→sync→undo but never run a **second** sync after the undo, which is where the stale freeze bites.
-
-**Fix:** Recompute `allTerminal` from the patched key set:
+**Fix:** Extract a shared helper and use it at both sites:
 
 ```ts
-const newKeys = [...entry.keys]
-newKeys[index] = patchedKey
-const allTerminal =
-  newKeys.length > 0 &&
-  newKeys.every((k) => k.state === 'REDEEMED' || k.state === 'UNREDEEMABLE')
-humbleLibraryStore.set(gamekey, { ...entry, keys: newKeys, allTerminal })
+function getSteamGate(): { open: boolean; steamGames: GameInfo[] } {
+  if (!SteamUser.isLoggedIn()) return { open: false, steamGames: [] }
+  const steamGames = steamLibraryStore.get('games', [])
+  return { open: steamGames.length > 0, steamGames }
+}
 ```
 
-(Consider exporting `isTerminal` from `classify.ts` so the predicate cannot drift.) Add a test: mark → sync → undo → sync again asserts `getOrderDetail` IS called for that gamekey.
+### WR-02: "isTerminal is UNCHANGED" guard test never calls `isTerminal` — the stated invariant is not asserted
 
-### WR-02: `refreshAnnotations` and `onUndoRedeem` have no rejection handling and no unmount guard
+**File:** `src/backend/humble/__tests__/classify.test.ts:1120-1126`
 
-**File:** `src/frontend/screens/Humble/Keys/Waiting/index.tsx:50-57,140-146`
-
-**Issue:** The mount-time effect guards `cancelled`, but `refreshAnnotations()` (invoked from `closeWizard` and after undo) does not — `void promise.then(setState)` with no `.catch`. An IPC rejection (renderer channel torn down, backend error) becomes an unhandled promise rejection, and a late resolution after the user navigates away calls `setAnnotations`/`setOverrides` on an unmounted component. `onUndoRedeem`'s chain (`humbleUndoRedeemed(...).then(() => refreshAnnotations())`) has the same gap: a rejected undo IPC call surfaces as an unhandled rejection and the annotations silently stay stale (the row keeps showing "Redeemed + Undo" although nothing changed). This is exactly the failure class 14-REVIEW's earlier WR-05 fixed inside `HumbleClaimWizard`; the same discipline was not applied here.
+**Issue:** The test titled *"isTerminal (user-journey terminality) is UNCHANGED — still REDEEMED/UNREDEEMABLE only"* asserts only `expect(isServerTerminal('REVEALED')).toBe(true)` — a duplicate of the first test in the describe block. `isTerminal` is not even imported into this file. The one regression this guard exists to catch (someone "simplifying" `isTerminal` to include REVEALED, which would freeze REVEALED orders under `allTerminal` and break `patchCachedState`'s recompute) would pass this test untouched. The guard is vacuous.
 
 **Fix:**
 
 ```ts
-function refreshAnnotations() {
-  window.api
-    .humbleGetClaimAnnotations()
-    .then((map) => setAnnotations(map))
-    .catch(() => {/* keep last-known map; annotations are advisory */})
-  window.api
-    .humbleGetOwnershipOverrides()
-    .then((map) => setOverrides(map))
-    .catch(() => {})
-}
-// onUndoRedeem:
-onUndoRedeem: () =>
-  void window.api
-    .humbleUndoRedeemed({ gamekey: key.gamekey, machineName: key.machineName })
-    .then(() => refreshAnnotations())
-    .catch(() => refreshAnnotations())
+import { isTerminal } from '../classify'
+// ...
+test('isTerminal (user-journey terminality) is UNCHANGED — still REDEEMED/UNREDEEMABLE only', () => {
+  expect(isTerminal('REVEALED')).toBe(false) // server-terminal but NOT user-journey terminal
+  expect(isTerminal('REDEEMED')).toBe(true)
+  expect(isTerminal('UNREDEEMABLE')).toBe(true)
+  expect(isTerminal('UNREVEALED')).toBe(false)
+  expect(isTerminal('UNPICKED')).toBe(false)
+})
 ```
-
-(If unmount-safety is wanted too, hoist a `mountedRef` and check it in the `.then`s.)
 
 ## Info
 
-### IN-01: `WAITING_STATES` doc comment now contradicts the code it annotates
+### IN-01: Duplicated D-74 comment block in `fetchAndCommitOrder`
 
-**File:** `src/common/humble/viewFilters.ts:12-15,64`
-**Issue:** The comment above `WAITING_STATES` still reads "REDEEMED/UNREDEEMABLE are terminal and never appear here", but `selectKeysWaiting` deliberately includes every unowned REDEEMED key (`… || k.state === 'REDEEMED'`). Related UX consequence worth a deliberate UAT check: because REDEEMED rows now stay in the view permanently, the tab badge (`Keys/index.tsx:108`) counts already-redeemed keys, the blurb "Keys you don't own yet — claim them before they expire" describes rows that need no claiming, and the "You're all caught up" empty state becomes unreachable once any key is marked redeemed.
-**Fix:** Update the comment ("UNREDEEMABLE is terminal and never appears here; REDEEMED is a local, undoable overlay and stays visible for its Undo affordance"), and confirm with the design owner that the badge/blurb/empty-state implications are intended.
+**File:** `src/backend/humble/library.ts:182-188` and `src/backend/humble/library.ts:232-239`
 
-### IN-02: Stale IPC doc comment references the deleted server-confirmed redeem tier
+**Issue:** The seven-line "Phase 14 (D-74): merge the freshly-classified order's keyindex side-channel…" comment appears verbatim twice — a copy-paste artifact of inserting the Fix 1 block between the original comment and the code it described. The first instance (above `priorEntry`) now describes code ~50 lines away.
 
-**File:** `src/common/types/ipc.ts:317-318`
-**Issue:** `humbleUndoRedeemed`'s comment says "never applicable to a server-confirmed redeem" — that tier was deleted by 14-07; every REDEEMED mark is now undoable.
-**Fix:** Reword to "reverses the local-only 'Mark as redeemed' overlay (every REDEEMED mark is local and undoable, 14-07)".
+**Fix:** Delete the first instance (lines 182-188); keep the one directly above `keysWithInternalFields`.
 
-### IN-03: `ClaimAnnotation` doc cites classifier version 4 as the backfill trigger
+### IN-02: Zero-key orders never freeze — residual per-sync re-fetch exposure the Fix 2 goal does not cover
 
-**File:** `src/common/types/humble.ts:209-210`
-**Issue:** "HUMBLE_CLASSIFIER_VERSION bump to 4 forces the one-time backfill" is stale — the constant is now 5, and 5 is what forces the re-classification pass that also backfills keyindex.
-**Fix:** Drop the hardcoded number ("the HUMBLE_CLASSIFIER_VERSION bump forces the one-time backfill") so the comment cannot rot again.
+**File:** `src/backend/humble/library.ts:266-273` (`freezeEligible: classified.freezeEligible`), `src/backend/humble/classify.ts:491-492`
 
-### IN-04: `HumbleClaimWizard.handleMarkRedeemed` discards the `RedeemOutcome` — an `ineligible` result closes the wizard as if it succeeded
+**Issue:** For an order that classifies to zero keys (pure PDF/ebook/entitlement bundles, D-29), `keys.length > 0 && …` yields `freezeEligible: false` (and `allTerminal: false`), so these orders are re-fetched on every sync forever. This preserves pre-existing partition semantics, but it is the same standing Cloudflare/WAF re-fetch exposure class Fix 2 was written to cut — a tester with many ebook bundles keeps a permanent N-orders-per-sync fetch load. If intentional (an entitlement-only order could theoretically gain keys later), record it as an explicit decision; otherwise consider a distinct freeze rule for diagnosed-legitimate zero-key shapes.
 
-**File:** `src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx:168-188` (cross-file consumer of the realigned `markRedeemed` contract)
-**Issue:** `markRedeemed` now returns `{ status: 'ineligible' }` whenever the cached state is not currently REVEALED (e.g. the key expired to UNREDEEMABLE between reveal and mark, or an ambiguous reveal left the cached state UNREVEALED). The wizard `await`s the call and unconditionally invokes `onDone()`, so the user sees the wizard close normally while no mark was recorded; only the subsequent annotations refresh hints that nothing happened. Rare paths, but the outcome type exists precisely so the renderer can react.
-**Fix:** `const outcome = await window.api.humbleMarkRedeemed(...); if (outcome.status === 'ineligible') { setStep('ambiguous'); return } onDone()` (or a dedicated notice), keeping the current catch/finally behavior.
+### IN-03: Branch B ownership carry-forward inherits the index-based fallback-identity hazard
+
+**File:** `src/backend/humble/library.ts:223-230` (with `src/backend/humble/classify.ts:362-365`)
+
+**Issue:** The carry-forward map is keyed by `machineName`, but a tpk lacking `machine_name` gets the synthetic identity `` `${gamekey}:${keys.length}` `` — an array index. If the composition/order of key-evidenced tpks in an order changes between syncs, indexes shift and a prior key's `ownedElsewhere`/`matchConfidence` (and, pre-existing, `revealedKeyValue`) can be carried onto the wrong key — including carrying a stale `false` onto a previously-owned key. Real Humble payloads reliably carry `machine_name`, so this is a low-probability edge, and the pattern predates 14-08 (the `revealedKeyValue` carry uses the same map) — noted because Fix 1 extends it to a C2-security-relevant field.
+
+**Fix:** No action required now; if machine_name-less tpks are ever observed live, switch the synthetic identity to a content hash of stable tpk fields rather than an index.
 
 ---
 
-_Reviewed: 2026-07-09T00:46:48Z_
+_Reviewed: 2026-07-09T03:21:47Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
