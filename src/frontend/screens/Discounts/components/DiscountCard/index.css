@@ -75,6 +75,31 @@
   padding: var(--space-2xs) var(--space-xs);
 }
 
+/* D-78..D-85 (Phase 15): informational-only ownership pills, rendered
+   INSIDE .discountCard__info directly above .discountCard__title — not a
+   third image-overlay corner span alongside .discountCard__score /
+   .discountCard__badge (D-80). Chrome cloned verbatim from
+   .humbleKeyStateBadge (Phase 13); only `background` varies. No
+   `cursor: pointer`, no hover state (D-81). */
+.discountCard__badge--owned,
+.discountCard__badge--keyAvailable {
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  color: var(--neutral-01);
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.discountCard__badge--owned {
+  background: var(--status-success);
+}
+
+.discountCard__badge--keyAvailable {
+  background: var(--status-info);
+}
+
 .discountCard__title {
   font-size: var(--text-md);
   font-weight: var(--bold);

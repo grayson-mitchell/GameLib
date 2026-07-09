@@ -296,6 +296,10 @@
             "pagination": "Pagination",
             "rating": "Rating {{rating}} out of 10"
         },
+        "badge": {
+            "keyAvailable": "Key available",
+            "owned": "Owned"
+        },
         "empty": "No discounted games available right now.",
         "error": "Could not load discounts. Please try again later.",
         "filters": {
