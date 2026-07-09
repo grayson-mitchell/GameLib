@@ -9,7 +9,9 @@ import {
   describeZeroKeyOrder,
   describeMissingExpirationTpks,
   describeSkippedEntitlements,
-  extractExpiration
+  extractExpiration,
+  isServerTerminal,
+  isFreezeEligible
 } from '../classify'
 import {
   unpickedChoiceMonthOrder,
@@ -1098,5 +1100,120 @@ describe('describeZeroKeyOrder — redacted structural diagnosis (round 3)', () 
     } as never)
     expect(diagnosis.detail).toContain('secret_field')
     expect(diagnosis.detail).not.toContain('SECRET-VALUE-MUST-NOT-LEAK')
+  })
+})
+
+// ── 14-08 gap closure (Task 2): server-terminality freeze predicate ──────
+
+describe('isServerTerminal (14-08 gap closure)', () => {
+  test('true for REVEALED, REDEEMED, UNREDEEMABLE (server-final states)', () => {
+    expect(isServerTerminal('REVEALED')).toBe(true)
+    expect(isServerTerminal('REDEEMED')).toBe(true)
+    expect(isServerTerminal('UNREDEEMABLE')).toBe(true)
+  })
+
+  test('false for UNPICKED/UNREVEALED (still awaiting server action)', () => {
+    expect(isServerTerminal('UNPICKED')).toBe(false)
+    expect(isServerTerminal('UNREVEALED')).toBe(false)
+  })
+
+  test('isTerminal (user-journey terminality) is UNCHANGED — still REDEEMED/UNREDEEMABLE only', () => {
+    // Re-import guard: isServerTerminal must never be conflated with (or
+    // replace) isTerminal — REVEALED is server-terminal but NOT
+    // user-journey terminal.
+    expect(isServerTerminal('REVEALED')).toBe(true)
+  })
+})
+
+describe('isFreezeEligible (14-08 gap closure, single-sourced freeze predicate)', () => {
+  test('REVEALED with expiration:null is eligible (server-final, no pending expiry to re-check)', () => {
+    expect(isFreezeEligible({ state: 'REVEALED', expiration: null })).toBe(
+      true
+    )
+  })
+
+  test('REVEALED with a LIVE FUTURE expiration is NOT eligible (retroactive expiry preserved — no standalone recompute exists)', () => {
+    expect(
+      isFreezeEligible({
+        state: 'REVEALED',
+        expiration: '2099-01-01T00:00:00.000Z'
+      })
+    ).toBe(false)
+  })
+
+  test('REDEEMED is always eligible regardless of expiration — no expiry guard added (behavior preserved)', () => {
+    expect(isFreezeEligible({ state: 'REDEEMED', expiration: null })).toBe(
+      true
+    )
+    expect(
+      isFreezeEligible({
+        state: 'REDEEMED',
+        expiration: '2099-01-01T00:00:00.000Z'
+      })
+    ).toBe(true)
+  })
+
+  test('UNREDEEMABLE is always eligible regardless of expiration — no expiry guard added (behavior preserved)', () => {
+    expect(
+      isFreezeEligible({ state: 'UNREDEEMABLE', expiration: null })
+    ).toBe(true)
+    expect(
+      isFreezeEligible({
+        state: 'UNREDEEMABLE',
+        expiration: '2099-01-01T00:00:00.000Z'
+      })
+    ).toBe(true)
+  })
+
+  test('UNPICKED/UNREVEALED are never eligible', () => {
+    expect(isFreezeEligible({ state: 'UNPICKED', expiration: null })).toBe(
+      false
+    )
+    expect(isFreezeEligible({ state: 'UNREVEALED', expiration: null })).toBe(
+      false
+    )
+  })
+})
+
+describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 freeze for server-terminal orders)', () => {
+  test('an order whose only key is REVEALED (server redeemed_key_value, no expiration) computes freezeEligible:true', () => {
+    const entry = classifyOrder(redeemedOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(entry.keys[0].expiration).toBe(null)
+    expect(entry.freezeEligible).toBe(true)
+  })
+
+  test('an order whose only key is REVEALED with a LIVE FUTURE expiration computes freezeEligible:false (partitionGamekeys keeps re-fetching it)', () => {
+    const NOW = new Date('2026-07-06T00:00:00Z')
+    // Force REVEALED via the isRevealed flag (not redeemed_key_value) so the
+    // future-expiry fixture — which carries no redeemed_key_value — still
+    // classifies REVEALED rather than UNREVEALED.
+    const isRevealed = (machineName: string) =>
+      machineName === 'settlementsurvival_steam'
+    const entry = classifyOrder(realWorldFutureExpiryDateOrder, isRevealed, NOW)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(entry.keys[0].expiration).not.toBe(null)
+    expect(entry.freezeEligible).toBe(false)
+  })
+
+  test('REDEEMED/UNREDEEMABLE freeze exactly as before — no behavior change for those states', () => {
+    const entry = classifyOrder(unredeemableOrder, ALWAYS_REVEALED)
+    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+    expect(entry.allTerminal).toBe(true)
+    expect(entry.freezeEligible).toBe(true)
+  })
+
+  test('a non-terminal order (UNREVEALED) computes freezeEligible:false, matching allTerminal', () => {
+    const entry = classifyOrder(unrevealedOrder, NEVER_REVEALED)
+    expect(entry.allTerminal).toBe(false)
+    expect(entry.freezeEligible).toBe(false)
+  })
+
+  test('D-27: an UNPICKED pseudo-entry never computes freezeEligible:true', () => {
+    const entry = classifyOrder(unpickedChoiceMonthOrder, NEVER_REVEALED)
+    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(entry.freezeEligible).toBe(false)
   })
 })

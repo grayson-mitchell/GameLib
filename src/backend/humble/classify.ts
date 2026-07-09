@@ -69,6 +69,48 @@ export function isTerminal(state: HumbleKeyState): boolean {
 }
 
 /**
+ * Server-side terminality (14-08 gap closure — Fix 2, restores the D-24
+ * freeze benefit and cuts the standing Cloudflare/WAF re-fetch exposure).
+ * Distinct from `isTerminal` (user-journey terminality: REDEEMED/
+ * UNREDEEMABLE only, unchanged above): REVEALED is ALSO server-final — once
+ * Humble populates `redeemed_key_val` it never un-populates it or changes
+ * its value, so a REVEALED key needs no further re-fetch on THAT basis.
+ * See `isFreezeEligible` for the one caveat this predicate alone does not
+ * capture (a pending future expiration on a REVEALED key).
+ */
+export function isServerTerminal(state: HumbleKeyState): boolean {
+  return (
+    state === 'REVEALED' || state === 'REDEEMED' || state === 'UNREDEEMABLE'
+  )
+}
+
+/**
+ * Single-sourced freeze-eligibility predicate (14-08 gap closure). BOTH
+ * classifyOrder (fresh sync) and library.ts's patchCachedState (undo/mark
+ * recompute) call this EXACT function so the two can never drift out of
+ * sync with partitionGamekeys' frozen/skip decision — an order a fresh sync
+ * would freeze and an order an undo just recomputed must always agree.
+ *
+ * REVEALED is server-final (the key value cannot change once revealed), so
+ * it is freeze-eligible by default — EXCEPT when it still carries a pending
+ * FUTURE expiration: confirmed during 14-08 planning, the ONLY way a key's
+ * expiry is ever re-evaluated is by re-fetching a non-terminal order (no
+ * standalone retroactive-expiry recompute exists) — so a frozen
+ * REVEALED(future-exp) key would never flip to UNREDEEMABLE once its
+ * expiration passes. REDEEMED/UNREDEEMABLE deliberately get NO expiry guard
+ * — they keep their pre-existing always-eligible freeze behavior exactly.
+ */
+export function isFreezeEligible(key: {
+  state: HumbleKeyState
+  expiration: string | null
+}): boolean {
+  return (
+    isServerTerminal(key.state) &&
+    !(key.state === 'REVEALED' && key.expiration !== null)
+  )
+}
+
+/**
  * D-29 key-evidence gate (live-UAT round 5): a tpk becomes a key ROW only when
  * it carries a `key_type` field with a string value. Both working integrations
  * gate on exactly this field — Playnite HumbleKeysLibrary only surfaces tpks
@@ -442,11 +484,18 @@ export function classifyOrder(
 
   const allTerminal =
     keys.length > 0 && keys.every((key) => isTerminal(key.state))
+  // 14-08 gap closure (Fix 2): computed alongside allTerminal via the
+  // single-sourced isFreezeEligible helper — distinct semantic (server-side
+  // terminality, restores D-24 freeze for REVEALED-without-pending-expiry
+  // orders), never conflated with allTerminal's user-journey meaning.
+  const freezeEligible =
+    keys.length > 0 && keys.every((key) => isFreezeEligible(key))
 
   return {
     gamekey,
     keys,
     allTerminal,
+    freezeEligible,
     keyIndexByComposite,
     revealedKeyValueByComposite
   }

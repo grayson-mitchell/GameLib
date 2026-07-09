@@ -1538,13 +1538,17 @@ describe('HumbleLibrary', () => {
       expect(versionLog).toBeUndefined()
     })
 
-    // 14-07 gap closure: a REVEALED-only key (server redeemed_key_val
-    // present, no local mark) is no longer terminal — Humble's model has no
-    // way to signal "done" beyond expiry or an explicit local mark, so this
-    // key is correctly re-fetched on EVERY sync rather than frozen. This is
-    // an accepted, honest consequence of the realignment (see 14-07-SUMMARY
-    // "Known UX consequences").
-    test('14-07: a server-revealed (not locally-redeemed) key is never frozen — re-fetched on every subsequent sync', async () => {
+    // 14-08 gap closure (Fix 2) SUPERSEDES this test's original 14-07
+    // expectation: a REVEALED-only key (server redeemed_key_val present, no
+    // local mark) is server-terminal (isServerTerminal — REVEALED is
+    // server-final, Humble never un-populates/changes a redeemed_key_val),
+    // so with no pending expiration it is now freeze-eligible and skipped on
+    // the NEXT sync — restoring the D-24 freeze benefit 14-07's realignment
+    // had lost (this plan's own root-cause diagnosis identified the
+    // resulting standing 19-orders-per-sync re-fetch as a Cloudflare/WAF
+    // exposure risk; see 14-07-SUMMARY "Known UX consequences" for the
+    // original tradeoff this fixes).
+    test('14-08: a server-revealed (not locally-redeemed) key with no pending expiration now freezes — skipped on the next sync', async () => {
       libraryData.set('frozen-gk', makeTerminalEntry('frozen-gk'))
       syncData.set('state', {
         syncedAt: 1,
@@ -1560,6 +1564,37 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.sync()
       expect(libraryData.get('frozen-gk')?.keys[0].state).toBe('REVEALED')
       expect(libraryData.get('frozen-gk')?.allTerminal).toBe(false)
+      expect(libraryData.get('frozen-gk')?.freezeEligible).toBe(true)
+
+      mockGetOrderDetail.mockClear()
+      await HumbleLibrary.sync()
+      expect(mockGetOrderDetail).not.toHaveBeenCalled()
+    })
+
+    // 14-08 gap closure: the SAME REVEALED key, but carrying a LIVE FUTURE
+    // expiration, must NOT freeze — retroactive expiry recompute is
+    // re-fetch-driven only (no standalone recompute exists), so a frozen
+    // REVEALED(future-exp) key would never flip to UNREDEEMABLE once its
+    // expiration passes.
+    test('14-08: a server-revealed key with a LIVE FUTURE expiration does NOT freeze — keeps re-fetching (retroactive expiry preserved)', async () => {
+      libraryData.set('expiring-gk', makeTerminalEntry('expiring-gk'))
+      syncData.set('state', {
+        syncedAt: 1,
+        syncError: 'none',
+        classifierVersion: 1
+      })
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['expiring-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('expiring-gk', {
+          redeemed: true,
+          expiration: '2099-01-01T00:00:00Z'
+        })
+      })
+
+      await HumbleLibrary.sync()
+      expect(libraryData.get('expiring-gk')?.keys[0].state).toBe('REVEALED')
+      expect(libraryData.get('expiring-gk')?.freezeEligible).toBe(false)
 
       mockGetOrderDetail.mockClear()
       await HumbleLibrary.sync()
@@ -2862,12 +2897,17 @@ describe('HumbleLibrary', () => {
       expect(JSON.stringify(broadcasts)).not.toContain('REDEEMED-VALUE')
     })
 
-    // WR-01 (14-REVIEW re-review): patchCachedState must RECOMPUTE
-    // allTerminal. Sequence under test: mark (order becomes all-terminal and
-    // freezes under D-24 after a sync) → undo (key reverts to REVEALED — the
-    // entry must UNFREEZE) → a SECOND sync must fetch the order again, or
-    // HSYNC-03 retroactive-expiry recompute could never reach it.
-    test('WR-01: mark → sync → undo → second sync re-fetches the order (undo unfreezes the D-24 terminal freeze)', async () => {
+    // WR-01 (14-REVIEW re-review), UPDATED by the 14-08 gap closure: patchCachedState
+    // must RECOMPUTE allTerminal AND (14-08) freezeEligible. Sequence under
+    // test: mark (order becomes all-terminal and freezes under D-24 after a
+    // sync) → undo (key reverts to REVEALED, expiration:null — allTerminal
+    // recomputes false, but freezeEligible recomputes TRUE per 14-08's
+    // server-terminal predicate: a REVEALED key with no pending expiration
+    // is freeze-eligible) — partitionGamekeys' next-sync frozen decision
+    // must read the SAME value patchCachedState just wrote, so the order
+    // stays frozen (no needless re-fetch), never disagreeing between the two
+    // sites.
+    test('WR-01: mark → sync → undo → second sync does NOT needlessly re-fetch a still-server-terminal (REVEALED, no expiration) order (14-08: undo recomputes freezeEligible via the same single-sourced predicate)', async () => {
       libraryData.set(
         'gk1',
         makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
@@ -2885,16 +2925,69 @@ describe('HumbleLibrary', () => {
       expect(libraryData.get('gk1')?.allTerminal).toBe(true)
 
       // Undo: the mark clears, the key reverts to REVEALED, and the frozen
-      // entry's allTerminal is recomputed — not spread forward as true.
+      // entry's allTerminal is recomputed — not spread forward as true. Its
+      // freezeEligible, however, recomputes TRUE (server-terminal, no
+      // pending expiration) via the exact same isFreezeEligible helper
+      // partitionGamekeys reads.
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
       expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
       expect(libraryData.get('gk1')?.allTerminal).toBe(false)
+      expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
 
       // Second sync (classifier version already stamped by the first sync,
-      // so nothing else bypasses the freeze): the order IS fetched again.
+      // so nothing else bypasses the freeze): the order stays frozen and is
+      // NOT re-fetched — freezeEligible wins over the allTerminal fallback,
+      // and undo never left the two computation sites disagreeing.
+      mockGetOrderDetail.mockClear()
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      expect(mockGetOrderDetail).not.toHaveBeenCalled()
+    })
+
+    // 14-08 gap closure: the WR-01 predicate-consistency guarantee proven
+    // with a FUTURE-expiring REVEALED key instead — here undo genuinely
+    // UNFREEZES the order (freezeEligible:false, since a pending expiration
+    // is present), so the next sync legitimately re-fetches it; re-marking
+    // REDEEMED then REFREEZES it. partitionGamekeys and patchCachedState
+    // never disagree about the same key set across this full cycle.
+    test('WR-01 (14-08): mark → sync (freezes) → undo(future-exp REVEALED, thaws) → sync (re-fetches) → mark (refreezes)', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+      // A prior actual reveal recorded the local flag — needed so the
+      // second sync's fresh classify (after undo clears the local-redeemed
+      // mark) still reads REVEALED rather than defaulting to UNREVEALED.
+      revealedData.set('gk1_key', { revealedAt: Date.now() })
+      await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { expiration: '2099-01-01T00:00:00Z' })
+      })
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      expect(libraryData.get('gk1')?.allTerminal).toBe(true)
+      expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
+
+      // Undo: reverts to REVEALED, but this key's fresh classify carried a
+      // future expiration — patchCachedState's patched key inherits the
+      // PRIOR key's fields (including `expiration`), so freezeEligible
+      // recomputes to false: the order genuinely UNFREEZES.
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(libraryData.get('gk1')?.allTerminal).toBe(false)
+      expect(libraryData.get('gk1')?.freezeEligible).toBe(false)
+
+      // Second sync: the order IS re-fetched (thawed, not frozen).
       mockGetOrderDetail.mockClear()
       await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
       expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'gk1')
+
+      // Re-mark REDEEMED: the order REFREEZES (freezeEligible has no expiry
+      // guard for REDEEMED).
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+      expect(outcome).toEqual({ status: 'ok' })
+      expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
     })
 
     test('CR-01: a GameLib-revealed key keeps its own persisted value across a re-sync (prior value wins over the server copy)', async () => {

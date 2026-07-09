@@ -44,7 +44,12 @@ export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
 //       not REDEEMED (REDEEMED is local-only via isLocallyRedeemed) — forces
 //       reclassification of every cached row that was misclassified REDEEMED
 //       under the old (wrong) precedence.
-export const HUMBLE_CLASSIFIER_VERSION = 5
+//   6 = 14-08 gap closure: freezeEligible / server-terminal freeze predicate
+//       added — forces every cached order to backfill freezeEligible once,
+//       which also freezes the currently-thrashing REVEALED(null-exp)
+//       orders (restores the D-24 freeze benefit, cuts Cloudflare/WAF
+//       exposure from the standing 19-orders-per-sync re-fetch).
+export const HUMBLE_CLASSIFIER_VERSION = 6
 
 // HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
 // locked at 85%+, NOT the community-norm 70% — DLC titles false-positive

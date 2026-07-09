@@ -15,7 +15,8 @@ import {
   describeZeroKeyOrder,
   describeMissingExpirationTpks,
   describeSkippedEntitlements,
-  isTerminal
+  isTerminal,
+  isFreezeEligible
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import {
@@ -92,7 +93,12 @@ function partitionGamekeys(gamekeys: string[]): PartitionResult {
       continue
     }
     const entry = humbleLibraryStore.get(gamekey)
-    if (entry?.allTerminal) {
+    // 14-08 gap closure (Fix 2): freezeEligible (server-terminality,
+    // including REVEALED-without-pending-expiry) is the frozen decision when
+    // present; a pre-v6 entry that hasn't been backfilled yet falls back to
+    // the original allTerminal semantic (D-24) until its next re-fetch.
+    const frozen = entry?.freezeEligible ?? entry?.allTerminal
+    if (frozen) {
       frozenGamekeys.push(gamekey)
     } else {
       nonTerminalGamekeys.push(gamekey)
@@ -260,7 +266,10 @@ async function fetchAndCommitOrder(
     const entry = {
       gamekey: classified.gamekey,
       keys: keysWithInternalFields,
-      allTerminal: classified.allTerminal
+      allTerminal: classified.allTerminal,
+      // 14-08 gap closure (Fix 2): single-sourced via classify.ts's
+      // isFreezeEligible (see partitionGamekeys/patchCachedState).
+      freezeEligible: classified.freezeEligible
     }
     // Committed immediately per resolve, never batched (D-34).
     humbleLibraryStore.set(gamekey, entry)
@@ -567,7 +576,18 @@ function patchCachedState(
   newKeys[index] = patchedKey
   const allTerminal =
     newKeys.length > 0 && newKeys.every((key) => isTerminal(key.state))
-  humbleLibraryStore.set(gamekey, { ...entry, keys: newKeys, allTerminal })
+  // 14-08 gap closure (Fix 2, WR-01 undo consistency): recomputed via the
+  // SAME single-sourced isFreezeEligible helper classifyOrder uses — undo
+  // (or mark) can never leave partitionGamekeys' next-sync frozen decision
+  // disagreeing with what this patch just computed.
+  const freezeEligible =
+    newKeys.length > 0 && newKeys.every((key) => isFreezeEligible(key))
+  humbleLibraryStore.set(gamekey, {
+    ...entry,
+    keys: newKeys,
+    allTerminal,
+    freezeEligible
+  })
   sendFrontendMessage('humbleKeysUpdated', getKeys())
 }
 

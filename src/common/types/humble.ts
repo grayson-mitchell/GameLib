@@ -144,6 +144,25 @@ export interface HumbleOrderCacheEntry {
   gamekey: string
   keys: HumbleKey[]
   allTerminal: boolean
+  /**
+   * Server-terminality freeze predicate (14-08 gap closure, Fix 2) — OPTIONAL,
+   * not required. (a) Absent on pre-v6 persisted cache entries (the field did
+   * not exist before the 14-08 classifier bump); `partitionGamekeys` falls
+   * back to `allTerminal` for those until their next re-fetch backfills it.
+   * (b) All three write sites (classifyOrder, patchCachedState,
+   * fetchAndCommitOrder) ALWAYS populate it going forward. (c) Distinct from
+   * `allTerminal` (user-journey terminal — REDEEMED/UNREDEEMABLE only, D-24's
+   * original meaning, preserved unchanged): `freezeEligible` also treats a
+   * REVEALED key with no pending future expiration as frozen-safe, since
+   * REVEALED is server-final (Humble never un-populates or changes a
+   * redeemed_key_val) — restoring the D-24 freeze benefit for those orders
+   * and cutting the standing Cloudflare/WAF re-fetch exposure. A REVEALED key
+   * with a live future expiration is deliberately NOT freeze-eligible, so it
+   * keeps re-fetching until retroactive expiry can reclassify it
+   * UNREDEEMABLE (no standalone recompute exists — see classify.ts's
+   * isFreezeEligible).
+   */
+  freezeEligible?: boolean
 }
 
 /**
