@@ -22,7 +22,8 @@ import {
   UseFramelessWindow,
   WinePrefixesBasePath,
   PlaytimeSync,
-  AnalyticsOptIn
+  AnalyticsOptIn,
+  NotifyHumbleExpirations
 } from '../../components'
 
 export default function GeneralSettings() {
@@ -67,6 +68,8 @@ export default function GeneralSettings() {
       <PlaytimeSync />
 
       <DiscordRPC />
+
+      <NotifyHumbleExpirations />
 
       <DisableController />
 
