@@ -553,6 +553,7 @@
         "emptyBody": "Your synced key inventory will appear here once your account has orders.",
         "emptyTitle": "No Humble keys yet",
         "expiresOn": "Expires {{date}}",
+        "expiringSoon": "Expiring soon",
         "finishActivation": "Finish activation",
         "finishOwnedNote": "You already own this on Steam — activation will likely fail there.",
         "giftConfirmAction": "Open Humble",

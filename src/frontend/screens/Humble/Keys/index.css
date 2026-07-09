@@ -146,6 +146,21 @@
   border-radius: var(--space-3xs);
 }
 
+/* D-86 (Phase 15): the pinned "Expiring soon" heading clones
+   .humbleKeyGroupHeading's static parts only — it is a <div>, not a
+   <button>, so the interactive-only cursor/pointer affordance is reset. No
+   chevron, no aria-expanded, no onClick (UI-SPEC deviation from
+   HumbleKeyGroup's collapsible header). */
+.humbleKeyGroupHeading--static {
+  cursor: default;
+}
+
+/* --space-md vertical gap between the pinned section and the rest of the
+   Keys-waiting list (UI-SPEC Spacing Scale). */
+.humbleKeysPinnedSection {
+  margin-bottom: var(--space-md);
+}
+
 .humbleKeyGroupList {
   list-style: none;
   margin: 0;
@@ -329,7 +344,9 @@
   color: var(--text-default);
   white-space: nowrap;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .humbleKeyGiftButton:hover {

@@ -74,13 +74,10 @@ describe('selectKeysWaiting', () => {
     'REVEALED',
     'REDEEMED',
     'UNREDEEMABLE'
-  ])(
-    'excludes an ownedElsewhere key regardless of state (%s)',
-    (state) => {
-      const key = makeKey({ state, ownedElsewhere: true })
-      expect(selectKeysWaiting([key])).toEqual([])
-    }
-  )
+  ])('excludes an ownedElsewhere key regardless of state (%s)', (state) => {
+    const key = makeKey({ state, ownedElsewhere: true })
+    expect(selectKeysWaiting([key])).toEqual([])
+  })
 
   test('D-54: a fuzzy-matched ownedElsewhere key is excluded from waiting (matchConfidence is irrelevant)', () => {
     const key = makeKey({
