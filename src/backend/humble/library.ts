@@ -263,13 +263,31 @@ async function fetchAndCommitOrder(
         }
       }
     )
+    // 14-08 gap closure (Fix 2), reworked for CR-01 (14-08 re-review):
+    // freezeEligible is recomputed here over keysWithInternalFields — NOT
+    // persisted from classified.freezeEligible — because the merged keys are
+    // where the carried-forward `revealedKeyValue` lives: a GameLib-revealed
+    // key whose value was carried forward from the prior entry must still
+    // freeze even when the fresh server payload lacks the value. The
+    // predicate itself stays single-sourced (classify.ts's isFreezeEligible,
+    // same as classifyOrder/patchCachedState); only the value-present signal
+    // is site-local. A flag-only REVEALED key (D-78 ambiguous /
+    // rejected_by_server write-ahead — no value anywhere) therefore never
+    // freezes and keeps re-fetching until the server value lands.
+    const freezeEligible =
+      keysWithInternalFields.length > 0 &&
+      keysWithInternalFields.every((key) =>
+        isFreezeEligible({
+          state: key.state,
+          expiration: key.expiration,
+          revealedKeyValuePresent: key.revealedKeyValue !== undefined
+        })
+      )
     const entry = {
       gamekey: classified.gamekey,
       keys: keysWithInternalFields,
       allTerminal: classified.allTerminal,
-      // 14-08 gap closure (Fix 2): single-sourced via classify.ts's
-      // isFreezeEligible (see partitionGamekeys/patchCachedState).
-      freezeEligible: classified.freezeEligible
+      freezeEligible
     }
     // Committed immediately per resolve, never batched (D-34).
     humbleLibraryStore.set(gamekey, entry)
@@ -579,9 +597,20 @@ function patchCachedState(
   // 14-08 gap closure (Fix 2, WR-01 undo consistency): recomputed via the
   // SAME single-sourced isFreezeEligible helper classifyOrder uses — undo
   // (or mark) can never leave partitionGamekeys' next-sync frozen decision
-  // disagreeing with what this patch just computed.
+  // disagreeing with what this patch just computed. CR-01 (14-08
+  // re-review): the value-present signal here is the internal
+  // `revealedKeyValue` field — a successful reveal (value just persisted via
+  // `extra`) freezes; an ambiguous/rejected reveal (no patch ever reaches
+  // this function, no value) never does.
   const freezeEligible =
-    newKeys.length > 0 && newKeys.every((key) => isFreezeEligible(key))
+    newKeys.length > 0 &&
+    newKeys.every((key) =>
+      isFreezeEligible({
+        state: key.state,
+        expiration: key.expiration,
+        revealedKeyValuePresent: key.revealedKeyValue !== undefined
+      })
+    )
   humbleLibraryStore.set(gamekey, {
     ...entry,
     keys: newKeys,

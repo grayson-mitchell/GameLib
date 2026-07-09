@@ -92,22 +92,42 @@ export function isServerTerminal(state: HumbleKeyState): boolean {
  * would freeze and an order an undo just recomputed must always agree.
  *
  * REVEALED is server-final (the key value cannot change once revealed), so
- * it is freeze-eligible by default — EXCEPT when it still carries a pending
- * FUTURE expiration: confirmed during 14-08 planning, the ONLY way a key's
- * expiry is ever re-evaluated is by re-fetching a non-terminal order (no
- * standalone retroactive-expiry recompute exists) — so a frozen
- * REVEALED(future-exp) key would never flip to UNREDEEMABLE once its
- * expiration passes. REDEEMED/UNREDEEMABLE deliberately get NO expiry guard
- * — they keep their pre-existing always-eligible freeze behavior exactly.
+ * it is freeze-eligible by default — EXCEPT in two cases:
+ *
+ * 1. A pending FUTURE expiration: confirmed during 14-08 planning, the ONLY
+ *    way a key's expiry is ever re-evaluated is by re-fetching a
+ *    non-terminal order (no standalone retroactive-expiry recompute exists)
+ *    — so a frozen REVEALED(future-exp) key would never flip to
+ *    UNREDEEMABLE once its expiration passes.
+ * 2. CR-01 (14-08 re-review): the revealed key VALUE is not actually
+ *    present. A key can classify REVEALED purely from the local write-ahead
+ *    flag (humbleRevealedStore) with NO server value at all — the state the
+ *    D-78 `ambiguous` and WR-06 `rejected_by_server` reveal outcomes
+ *    deliberately produce. Those keys depend on every-sync re-fetch for
+ *    their "unconfirmed — sync to check" reconciliation AND for the D-66
+ *    website-reveal value pickup; freezing them would strand both forever
+ *    (no thaw path exists short of a classifier-version bump). Only a
+ *    value-backed REVEALED key is genuinely server-final. Callers supply
+ *    `revealedKeyValuePresent` from whichever value signal exists at their
+ *    site (classifyOrder: the string side-channel; library.ts: the
+ *    internal `revealedKeyValue` field) — absent/undefined is treated as
+ *    NOT present, the safe default (keep re-fetching).
+ *
+ * REDEEMED/UNREDEEMABLE deliberately get NO expiry or value guard — they
+ * keep their pre-existing always-eligible freeze behavior exactly.
  */
 export function isFreezeEligible(key: {
   state: HumbleKeyState
   expiration: string | null
+  revealedKeyValuePresent?: boolean
 }): boolean {
-  return (
-    isServerTerminal(key.state) &&
-    !(key.state === 'REVEALED' && key.expiration !== null)
-  )
+  if (!isServerTerminal(key.state)) {
+    return false
+  }
+  if (key.state === 'REVEALED') {
+    return key.expiration === null && key.revealedKeyValuePresent === true
+  }
+  return true
 }
 
 /**
@@ -488,8 +508,26 @@ export function classifyOrder(
   // single-sourced isFreezeEligible helper — distinct semantic (server-side
   // terminality, restores D-24 freeze for REVEALED-without-pending-expiry
   // orders), never conflated with allTerminal's user-journey meaning.
+  // CR-01 (14-08 re-review): a REVEALED key is only freeze-eligible when its
+  // value is actually present. The signal here is the STRING side-channel
+  // (revealedKeyValueByComposite) — the same signal library.ts persists onto
+  // the internal `revealedKeyValue` field — so this computation and
+  // fetchAndCommitOrder's recompute over the merged keys agree exactly for a
+  // fresh order. Deliberate consequence: a non-Steam key whose server value
+  // is an OBJECT (omitted from the string side-channel above) never
+  // freezes and keeps re-fetching — consistent with its honest Pitfall-B
+  // "unconfirmed" getRevealedKeyValue path, and stale-safe (a residual
+  // re-fetch, never a stranded key).
   const freezeEligible =
-    keys.length > 0 && keys.every((key) => isFreezeEligible(key))
+    keys.length > 0 &&
+    keys.every((key) =>
+      isFreezeEligible({
+        state: key.state,
+        expiration: key.expiration,
+        revealedKeyValuePresent:
+          `${gamekey}:${key.machineName}` in revealedKeyValueByComposite
+      })
+    )
 
   return {
     gamekey,

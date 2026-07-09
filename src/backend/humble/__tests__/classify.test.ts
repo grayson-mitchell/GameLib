@@ -1126,13 +1126,41 @@ describe('isServerTerminal (14-08 gap closure)', () => {
 })
 
 describe('isFreezeEligible (14-08 gap closure, single-sourced freeze predicate)', () => {
-  test('REVEALED with expiration:null is eligible (server-final, no pending expiry to re-check)', () => {
-    expect(isFreezeEligible({ state: 'REVEALED', expiration: null })).toBe(
-      true
-    )
+  test('VALUE-BACKED REVEALED with expiration:null is eligible (server-final, no pending expiry to re-check)', () => {
+    expect(
+      isFreezeEligible({
+        state: 'REVEALED',
+        expiration: null,
+        revealedKeyValuePresent: true
+      })
+    ).toBe(true)
   })
 
-  test('REVEALED with a LIVE FUTURE expiration is NOT eligible (retroactive expiry preserved — no standalone recompute exists)', () => {
+  test('CR-01 (14-08 re-review): flag-only REVEALED (no key value present) is NEVER eligible — freezing it would strand the D-78 "unconfirmed — sync to check" reconciliation and the D-66 website-reveal pickup', () => {
+    // Absent signal (the safe default — e.g. a caller that has no value
+    // information at all) treated as NOT present.
+    expect(isFreezeEligible({ state: 'REVEALED', expiration: null })).toBe(
+      false
+    )
+    // Explicit false — the write-ahead-flag-only state produced by the
+    // ambiguous / rejected_by_server reveal outcomes.
+    expect(
+      isFreezeEligible({
+        state: 'REVEALED',
+        expiration: null,
+        revealedKeyValuePresent: false
+      })
+    ).toBe(false)
+  })
+
+  test('REVEALED with a LIVE FUTURE expiration is NOT eligible even when value-backed (retroactive expiry preserved — no standalone recompute exists)', () => {
+    expect(
+      isFreezeEligible({
+        state: 'REVEALED',
+        expiration: '2099-01-01T00:00:00.000Z',
+        revealedKeyValuePresent: true
+      })
+    ).toBe(false)
     expect(
       isFreezeEligible({
         state: 'REVEALED',
@@ -1182,6 +1210,18 @@ describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 fre
     expect(entry.keys[0].state).toBe('REVEALED')
     expect(entry.keys[0].expiration).toBe(null)
     expect(entry.freezeEligible).toBe(true)
+  })
+
+  test('CR-01 (14-08 re-review): a FLAG-ONLY REVEALED key (local write-ahead flag, NO server redeemed value) computes freezeEligible:false — the order must keep re-fetching so the ambiguous-reveal reconciliation / website-reveal value pickup can ever land', () => {
+    // revealedViaFlagOrder carries redeemed_key_value: null — REVEALED comes
+    // purely from the injected isRevealed lookup (the humbleRevealedStore
+    // write-ahead flag), exactly the state the D-78 ambiguous and WR-06
+    // rejected_by_server outcomes leave behind.
+    const entry = classifyOrder(revealedViaFlagOrder, ALWAYS_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(entry.keys[0].expiration).toBe(null)
+    expect(entry.freezeEligible).toBe(false)
   })
 
   test('an order whose only key is REVEALED with a LIVE FUTURE expiration computes freezeEligible:false (partitionGamekeys keeps re-fetching it)', () => {

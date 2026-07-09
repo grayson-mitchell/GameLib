@@ -153,14 +153,19 @@ export interface HumbleOrderCacheEntry {
    * fetchAndCommitOrder) ALWAYS populate it going forward. (c) Distinct from
    * `allTerminal` (user-journey terminal — REDEEMED/UNREDEEMABLE only, D-24's
    * original meaning, preserved unchanged): `freezeEligible` also treats a
-   * REVEALED key with no pending future expiration as frozen-safe, since
-   * REVEALED is server-final (Humble never un-populates or changes a
-   * redeemed_key_val) — restoring the D-24 freeze benefit for those orders
-   * and cutting the standing Cloudflare/WAF re-fetch exposure. A REVEALED key
-   * with a live future expiration is deliberately NOT freeze-eligible, so it
-   * keeps re-fetching until retroactive expiry can reclassify it
-   * UNREDEEMABLE (no standalone recompute exists — see classify.ts's
-   * isFreezeEligible).
+   * VALUE-BACKED REVEALED key with no pending future expiration as
+   * frozen-safe, since REVEALED is server-final (Humble never un-populates
+   * or changes a redeemed_key_val) — restoring the D-24 freeze benefit for
+   * those orders and cutting the standing Cloudflare/WAF re-fetch exposure.
+   * A REVEALED key with a live future expiration is deliberately NOT
+   * freeze-eligible, so it keeps re-fetching until retroactive expiry can
+   * reclassify it UNREDEEMABLE (no standalone recompute exists). Likewise
+   * (CR-01, 14-08 re-review) a flag-only REVEALED key — local write-ahead
+   * reveal flag with NO present key value (the D-78 ambiguous /
+   * rejected_by_server outcomes) — is NOT freeze-eligible: it depends on
+   * every-sync re-fetch for its "unconfirmed — sync to check"
+   * reconciliation and the D-66 website-reveal value pickup (see
+   * classify.ts's isFreezeEligible).
    */
   freezeEligible?: boolean
 }
