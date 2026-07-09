@@ -99,6 +99,8 @@ before this phase is RESOLVED here as D-71.
   mark** — undo flips the key back to REVEALED and writes an audit event. Once a Humble
   sync returns `redeemed_key_value`, the key is genuinely REDEEMED and the undo
   affordance disappears (server truth wins — mirrors D-30's classification precedence).
+  **Superseded by Phase 14 gap closure (14-07) — see PROJECT.md D-30 amendment:
+  redeemed_key_val presence means REVEALED, REDEEMED is local-only.**
 - **D-78:** The write-ahead REVEALED flag **rolls back on confirmed failure only**: a
   definitive API error (4xx/5xx response, schema error) clears the flag — key stays
   UNREVEALED, audit outcome "failed", modal shows a retryable error. An **ambiguous
