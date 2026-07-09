@@ -241,6 +241,7 @@ import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_CLASSIFIER_VERSION
 } from '../constants'
+import { selectKeysWaiting } from 'common/humble/viewFilters'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -1870,6 +1871,190 @@ describe('HumbleLibrary', () => {
       expect(lastPushed.find((k) => k.gamekey === 'gk1')?.ownedElsewhere).toBe(
         true
       )
+    })
+  })
+
+  // ── 14-08 gap closure (Task 1): ownership-overlay integrity at COMMIT
+  // time — UAT test 8 churn root cause + T-14-03 mid-sync C2 window. ──────
+
+  function makeOwnedNonTerminalEntry(
+    gamekey: string,
+    steamAppId: string
+  ): HumbleOrderCacheEntry {
+    const key: HumbleKey = {
+      gamekey,
+      machineName: `${gamekey}_key`,
+      state: 'UNREVEALED',
+      title: `Key for ${gamekey}`,
+      platform: 'steam',
+      expiration: null,
+      origin: `Order ${gamekey}`,
+      steamAppId,
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    }
+    return { gamekey, keys: [key], allTerminal: false }
+  }
+
+  describe('sync() — 14-08 gap closure: ownership-overlay integrity at commit time (Fix 1)', () => {
+    test('churn regression: an owned key keeps ownedElsewhere:true in EVERY intermediate humbleKeysUpdated broadcast during a re-sync (UAT test 8) — never appears in selectKeysWaiting', async () => {
+      libraryData.set('gk1', makeOwnedNonTerminalEntry('gk1', '440'))
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1', 'gk2'] })
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) =>
+          Promise.resolve({
+            status: 'ok',
+            data: makeRawOrder(gamekey, {
+              steamAppId: gamekey === 'gk1' ? '440' : undefined
+            })
+          })
+      )
+
+      await HumbleLibrary.sync()
+
+      const keysUpdatedCalls = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      // D-26 progressive fill preserved: at least one push per committed
+      // order, never batched/deferred/debounced.
+      expect(keysUpdatedCalls.length).toBeGreaterThanOrEqual(2)
+      for (const call of keysUpdatedCalls) {
+        const pushedKeys = call[1] as HumbleKey[]
+        const ownedKey = pushedKeys.find((k) => k.machineName === 'gk1_key')
+        expect(ownedKey?.ownedElsewhere).toBe(true)
+        const waiting = selectKeysWaiting(pushedKeys)
+        expect(
+          waiting.find((k) => k.machineName === 'gk1_key')
+        ).toBeUndefined()
+      }
+    })
+
+    test('C2 mid-sync security (T-14-03): a reveal on a key whose order was just re-committed mid-sync is still owned_blocked — never reads a transiently-false ownedElsewhere', async () => {
+      libraryData.set('gk1', makeOwnedNonTerminalEntry('gk1', '440'))
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1', 'gk2'] })
+
+      let resolveGk2!: (v: unknown) => void
+      mockGetOrderDetail.mockImplementation(
+        (_cookie: string, gamekey: string) => {
+          if (gamekey === 'gk2') {
+            return new Promise((r) => {
+              resolveGk2 = r
+            })
+          }
+          return Promise.resolve({
+            status: 'ok',
+            data: makeRawOrder('gk1', { steamAppId: '440' })
+          })
+        }
+      )
+
+      const syncPromise = HumbleLibrary.sync()
+      await flushAsync()
+
+      // gk1 has committed mid-sync; gk2 is still in flight, so the
+      // end-of-sync recomputeOwnership() has NOT run yet.
+      const midSyncKey = libraryData.get('gk1')?.keys[0]
+      expect(midSyncKey?.ownedElsewhere).toBe(true)
+
+      const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+      expect(outcome).toEqual({ status: 'owned_blocked' })
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+
+      resolveGk2({ status: 'ok', data: makeRawOrder('gk2') })
+      await syncPromise
+    })
+
+    describe('gated-off Steam carry-forward (D-48)', () => {
+      test('SteamUser.isLoggedIn() false: a previously-owned order re-committed mid-sync KEEPS ownedElsewhere:true / matchConfidence — never classify\'s hard-reset false', async () => {
+        libraryData.set('gk1', makeOwnedNonTerminalEntry('gk1', '440'))
+        mockSteamIsLoggedIn.mockReturnValue(false)
+        mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+        mockGetOrderDetail.mockResolvedValue({
+          status: 'ok',
+          data: makeRawOrder('gk1', { steamAppId: '440' })
+        })
+
+        await HumbleLibrary.sync()
+
+        const key = libraryData.get('gk1')?.keys[0]
+        expect(key?.ownedElsewhere).toBe(true)
+        expect(key?.matchConfidence).toBe('exact')
+      })
+
+      test('logged in but steamLibraryStore games empty: a previously-owned order re-committed mid-sync KEEPS ownedElsewhere:true / matchConfidence', async () => {
+        libraryData.set('gk1', makeOwnedNonTerminalEntry('gk1', '440'))
+        mockSteamIsLoggedIn.mockReturnValue(true)
+        mockSteamLibraryStoreGet.mockReturnValue([])
+        mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+        mockGetOrderDetail.mockResolvedValue({
+          status: 'ok',
+          data: makeRawOrder('gk1', { steamAppId: '440' })
+        })
+
+        await HumbleLibrary.sync()
+
+        const key = libraryData.get('gk1')?.keys[0]
+        expect(key?.ownedElsewhere).toBe(true)
+        expect(key?.matchConfidence).toBe('exact')
+      })
+    })
+
+    test('new-owned-order coverage: an order not previously cached whose game IS owned on Steam commits ownedElsewhere:true on the FIRST commit (not only after end-of-sync recompute)', async () => {
+      mockSteamIsLoggedIn.mockReturnValue(true)
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['new-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('new-gk', { steamAppId: '440' })
+      })
+
+      await HumbleLibrary.sync()
+
+      const keysUpdatedCalls = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      expect(keysUpdatedCalls.length).toBeGreaterThan(0)
+      // The FIRST push (fired from the per-order commit, before the final
+      // end-of-sync recompute push) already carries ownedElsewhere:true.
+      const firstPush = keysUpdatedCalls[0][1] as HumbleKey[]
+      expect(
+        firstPush.find((k) => k.gamekey === 'new-gk')?.ownedElsewhere
+      ).toBe(true)
+    })
+
+    test('regression guard: end-of-sync recomputeOwnership() STILL runs and stays authoritative — a key that becomes owned only after Steam connects mid-sync still gets ownedElsewhere:true', async () => {
+      let calls = 0
+      mockSteamIsLoggedIn.mockImplementation(() => {
+        calls += 1
+        // false for the per-order commit's own gate check (Branch B — no
+        // prior entry, stays unowned at commit time); true from then on, so
+        // the unconditional end-of-sync recomputeOwnership() catches up.
+        return calls > 1
+      })
+      mockSteamLibraryStoreGet.mockReturnValue([
+        makeSteamGame('440', 'Team Fortress 2')
+      ])
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['new-gk'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('new-gk', { steamAppId: '440' })
+      })
+
+      await HumbleLibrary.sync()
+
+      const key = libraryData.get('new-gk')?.keys[0]
+      expect(key?.ownedElsewhere).toBe(true)
+      expect(key?.matchConfidence).toBe('exact')
     })
   })
 

@@ -184,7 +184,54 @@ async function fetchAndCommitOrder(
     const priorKeysByMachineName = new Map(
       (priorEntry?.keys ?? []).map((key) => [key.machineName, key])
     )
-    const keysWithInternalFields: HumbleKeyInternal[] = classified.keys.map(
+
+    // 14-08 gap closure (Fix 1 — UAT test 8 churn + T-14-03 C2 window):
+    // classifyOrder always hard-resets ownedElsewhere:false/matchConfidence:
+    // 'none' on every fresh classify (classify.ts has no Steam knowledge by
+    // design). D-26 broadcasts humbleKeysUpdated after EVERY per-order
+    // commit, but recomputeOwnership() below only runs once at sync END — so
+    // committing classified.keys as-is would transiently reset an
+    // already-owned key's overlay on every intermediate broadcast (the
+    // fill-then-empty churn) AND let a mid-sync revealKey() call read a
+    // transiently-false ownedElsewhere (the C2 bypass window). Fixed with a
+    // merged two-branch strategy, gated on the EXACT same Steam
+    // connectivity check recomputeOwnership() uses below:
+    const steamGames = steamLibraryStore.get('games', [])
+    const steamGateOpen = SteamUser.isLoggedIn() && steamGames.length > 0
+    const overlaidKeys: HumbleKey[] = steamGateOpen
+      ? // Branch A (gate PASSES): run the pure dedup recompute on the
+        // freshly-classified keys BEFORE building the entry, for EVERY
+        // order (including a brand-new never-cached one) — this fully
+        // closes the T-14-03 window and eliminates the churn at its root.
+        dedupRecomputeOwnership(
+          classified.keys,
+          steamGames,
+          (machineName) => humbleOwnershipOverrideStore.has(machineName)
+        )
+      : // Branch B (gate FAILS — Steam logged out, or logged in with an
+        // empty cached library): carry forward each prior cached key's
+        // ownedElsewhere/matchConfidence per-key, exactly like
+        // revealedKeyValue is carried below (D-48 keep-last-known) — a
+        // Steam hiccup mid-sync can never zero out a previously-computed
+        // ownedElsewhere:true, so the C2 guard's data stays stale-but-safe.
+        classified.keys.map((key) => {
+          const priorKey = priorKeysByMachineName.get(key.machineName)
+          return {
+            ...key,
+            ownedElsewhere: priorKey?.ownedElsewhere ?? key.ownedElsewhere,
+            matchConfidence: priorKey?.matchConfidence ?? key.matchConfidence
+          }
+        })
+
+    // Phase 14 (D-74): merge the freshly-classified order's keyindex
+    // side-channel onto each cached key as the internal-only `keyindex`
+    // field (persisted with the cache entry — no new store, survives
+    // restarts without a sync). A fresh classify never regresses a
+    // previously-revealed key's plaintext value to null — carry the prior
+    // cached record's `revealedKeyValue` forward when the fresh record
+    // lacks one (a re-sync must never un-reveal a key the user already
+    // revealed in this session).
+    const keysWithInternalFields: HumbleKeyInternal[] = overlaidKeys.map(
       (key) => {
         const priorKey = priorKeysByMachineName.get(key.machineName)
         const keyindex =
