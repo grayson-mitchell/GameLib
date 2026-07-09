@@ -373,7 +373,7 @@ Plans:
 - [x] 14-04-PLAN.md — HumbleClaimWizard modal component (warning → reveal → key + open Steam / redeem link-out → mark redeemed) + tests
 - [x] 14-05-PLAN.md — HumbleKeyRow claimAction + Keys-waiting wizard mount + Spares WR-04 undo-override + i18n
 - [x] 14-06-PLAN.md — Live reveal-endpoint validation checkpoint (disposable key) + full-suite gate + 14-VALIDATION.md
-- [ ] 14-07-PLAN.md — Gap closure (UAT test 2 CR-01 + test 3 WR-02): realign classifier so server redeemed_key_val = REVEALED and REDEEMED is a local-only, always-undoable overlay; delete the locallyRedeemedPending / WR-02 keep-visible / server_confirmed_ack machinery; classifier version 4→5
+- [x] 14-07-PLAN.md — Gap closure (UAT test 2 CR-01 + test 3 WR-02): realign classifier so server redeemed_key_val = REVEALED and REDEEMED is a local-only, always-undoable overlay; delete the locallyRedeemedPending / WR-02 keep-visible / server_confirmed_ack machinery; classifier version 4→5
 
 **Wave 1:** 14-01 · **Wave 2:** 14-02 · **Wave 3:** 14-03 · **Wave 4:** 14-04 · **Wave 5:** 14-05 · **Wave 6:** 14-06 (checkpoint) · **Wave 1 (gap closure):** 14-07
 **UI hint**: yes
@@ -411,5 +411,5 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 11. Library Sync + 5-State Key Model | 5/5 | Complete    | 2026-07-06 |
 | 12. Ownership Dedup | 5/5 | Complete    | 2026-07-06 |
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
-| 14. Guided Claim Flow | 6/6 | Complete    | 2026-07-08 |
+| 14. Guided Claim Flow | 7/7 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 0/? | Not started | - |

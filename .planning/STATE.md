@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
-status: ready_to_plan
-stopped_at: Phase 14 complete (6/6) — ready to discuss Phase 15
-last_updated: 2026-07-08T10:53:14.552Z
+status: planning
+stopped_at: Phase 14 gap closure (14-07) complete — classifyTpk realigned, D-30 amended; ready for Phase 15 discussion
+last_updated: "2026-07-09T00:39:27.550Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 0
-  completed_plans: 44
+  completed_plans: 0
   percent: 0
 ---
 
@@ -98,6 +98,7 @@ Last activity: 2026-07-08
 | Phase 08-new-steam-surfaces P02 | 5min | 3 tasks | 4 files |
 | Phase 10 P06 | ~55min | 2 tasks | 5 files |
 | Phase 14 P06 | 30min | 2 tasks | 2 files |
+| Phase 14 P07 | 35min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,7 @@ Recent decisions affecting current work:
 - [Phase 10]: Frontend connected-state must be gated on an explicit isLoggedIn boolean, never on optional profile fields like username — root cause of the Task 2 UAT tile-never-flips bug (e2236bc1)
 - [Phase 14]: CSRF disposition for Humble reveal/redeem confirmed REQUIRED (csrf-prevention-token header + matching csrf_cookie both necessary) — csrf-capture code must not be dropped as dead code
 - [Phase 14]: Reveal/redeem POST must route through Electron net.request on persist:humble session partition, not axios — Cloudflare Bot Management blocks axios's non-browser TLS fingerprint before Humble's app code inspects the request
+- [Phase 14-07]: D-30 amended (Phase 14 gap closure, 14-07): server truth = revealed-ness + expiry only; redeemed_key_val presence classifies REVEALED, never REDEEMED. REDEEMED is a local-only, always-undoable overlay via Mark-as-redeemed. Closed UAT tests 2 (CR-01) and 3 (WR-02) at their shared root cause; deleted the locallyRedeemedPending/WR-02-keep-visible/server_confirmed_ack compensation machinery. HUMBLE_CLASSIFIER_VERSION bumped 4->5.
 
 ### Pending Todos
 
@@ -176,6 +178,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-08T10:35:24.078Z
-Stopped at: Phase 14 complete (14-06 live checkpoint approved), ready for verify-work
+Last session: 2026-07-09T00:39:27.545Z
+Stopped at: Phase 14 gap closure (14-07) complete — classifyTpk realigned, D-30 amended; ready for Phase 15 discussion
 Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning
