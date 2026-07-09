@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Humble Bundle Integration
 status: planning
-stopped_at: Phase 14 gap closure (14-07) complete — classifyTpk realigned, D-30 amended; ready for Phase 15 discussion
-last_updated: "2026-07-09T00:39:27.550Z"
+stopped_at: Phase 14 gap closure (14-08) complete — ownership-overlay churn/C2 window fixed, D-24 freeze predicate restored; ready for Phase 15 discussion
+last_updated: "2026-07-09T03:12:48.790Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 4
@@ -99,6 +99,7 @@ Last activity: 2026-07-08
 | Phase 10 P06 | ~55min | 2 tasks | 5 files |
 | Phase 14 P06 | 30min | 2 tasks | 2 files |
 | Phase 14 P07 | 35min | 3 tasks | 12 files |
+| Phase 14 P08 | ~30min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,7 @@ Recent decisions affecting current work:
 - [Phase 14]: CSRF disposition for Humble reveal/redeem confirmed REQUIRED (csrf-prevention-token header + matching csrf_cookie both necessary) — csrf-capture code must not be dropped as dead code
 - [Phase 14]: Reveal/redeem POST must route through Electron net.request on persist:humble session partition, not axios — Cloudflare Bot Management blocks axios's non-browser TLS fingerprint before Humble's app code inspects the request
 - [Phase 14-07]: D-30 amended (Phase 14 gap closure, 14-07): server truth = revealed-ness + expiry only; redeemed_key_val presence classifies REVEALED, never REDEEMED. REDEEMED is a local-only, always-undoable overlay via Mark-as-redeemed. Closed UAT tests 2 (CR-01) and 3 (WR-02) at their shared root cause; deleted the locallyRedeemedPending/WR-02-keep-visible/server_confirmed_ack compensation machinery. HUMBLE_CLASSIFIER_VERSION bumped 4->5.
+- [Phase 14-08]: Gap closure — UAT test 8 (Keys-waiting fill-then-empty sync churn) root-caused to fetchAndCommitOrder committing classifyOrder's hard-reset ownedElsewhere overlay on every per-order commit while D-26 broadcasts each intermediate snapshot. Fixed with a merged two-branch commit-time overlay (Steam gate open -> dedup recompute at commit; gate closed -> per-key carry-forward from prior entry, D-48) — also closed a T-14-03 mid-sync C2 reveal-bypass window. Added a single-sourced isServerTerminal/isFreezeEligible predicate (classify.ts) so REVEALED-without-pending-expiry orders now freeze under D-24 again (restores the freeze benefit 14-07 had lost, cutting the standing ~19-orders-per-sync Cloudflare/WAF re-fetch exposure); REVEALED-with-future-expiry orders keep re-fetching (retroactive expiry preserved). partitionGamekeys/patchCachedState both route through the same predicate. HUMBLE_CLASSIFIER_VERSION bumped 5->6.
 
 ### Pending Todos
 
@@ -178,6 +180,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-09T00:39:27.545Z
-Stopped at: Phase 14 gap closure (14-07) complete — classifyTpk realigned, D-30 amended; ready for Phase 15 discussion
+Last session: 2026-07-09T03:12:48.790Z
+Stopped at: Phase 14 gap closure (14-08) complete — ownership-overlay churn/C2 window fixed, D-24 freeze predicate restored; ready for Phase 15 discussion
 Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning
