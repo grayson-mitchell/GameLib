@@ -397,7 +397,14 @@ Not applicable — no external ecosystem/library version drift is relevant here;
 | A3 | The pre-existing 24-48h urgency countdown-copy bug (CR-01 from Phase 13 verification) is in scope for Phase 15 to fix opportunistically, or at minimum must be explicitly flagged rather than silently inherited | Pitfall 2 | If left unaddressed and unflagged, Phase 15's pinned Expiring-soon section — the highest-visibility urgency surface in the app — ships with a known display bug for its most urgent 24h window |
 | A4 | The new `humbleNotifiedExpirationStore` should follow the "survives disconnect" exemption pattern of `humbleRevealedStore`/`humbleOwnershipOverrideStore` (never wiped by `HumbleUser.disconnect()`) rather than being wiped like `humbleLibraryStore`/`humbleSyncStore` | Architecture Patterns, Don't Hand-Roll | If wiped on disconnect, a user who disconnects/reconnects Humble would get re-notified for every already-known expiring key on the next sync — likely undesirable but not explicitly locked in CONTEXT.md (listed under Claude's Discretion: "the persisted notified-state storage shape") |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three questions were resolved by the user during plan-phase (2026-07-09) and are implemented in the committed plans:
+> - **OQ1 → RESOLVED:** Exact-normalized-title bridge confirmed. A new `Map<normalizedTitle, steamAppId>` scoped to `steam.library` only resolves `CatalogProduct` → AppID; downstream comparisons are exact-AppID; no fuzzy matching (D-82 spirit preserved). Implemented in 15-01 (`common/discounts/badges.ts`). Assumption A1 confirmed.
+> - **OQ2 → RESOLVED:** Phase 13 CR-01 (24-48h countdown bug) is OUT of Phase 15 scope — fix belongs to `/gsd:plan-phase 13 --gaps`. Pinned section reuses the existing urgency helper as-is; inheritance documented in 15-04's KNOWN-ISSUE INHERITANCE block. Assumption A3 overridden (flag, don't fix).
+> - **OQ3 → RESOLVED:** Both the `AppSettings` type field AND the `config.ts` factory default are added (not relying on `useSetting`'s default argument alone). Implemented in 15-02.
+>
+> Note: Assumption A2 (first-sync fires digest per literal D-92) was **overridden** by user decision — first-sync baseline seeding suppresses the notification storm on fresh connect. Implemented in 15-03 (`suppressNotifications`).
 
 1. **How should a `CatalogProduct` (GOG catalog, no Steam AppID) resolve to a Steam AppID for exact-match badging, given D-82's "no fuzzy title matching" constraint?**
    - What we know: `CatalogProduct` (src/common/types/discounts.ts) has `id` (GOG product id) and `title` only — no Steam-related field. The existing `Discounts/index.tsx` already does one title-based cross-store ownership check (`ownedTitles`, exact-normalized, not fuzzy) for the pre-existing "Hide Owned" filter. Phase 12's dedup engine (`recomputeOwnership`/`fuzzyMatch`) operates on `HumbleKey[]` against `GameInfo[]` (Steam library), never on `CatalogProduct[]`.
