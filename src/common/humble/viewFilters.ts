@@ -1,5 +1,6 @@
 import { HumbleKey, HumbleKeyState } from '../types/humble'
 import { GENERIC_KEY_PLATFORM } from './groupKeys'
+import { getUrgencyTier } from './urgencyBadge'
 
 /**
  * Pure view-membership + sort helpers for the Keys-waiting and Giftable-
@@ -73,4 +74,32 @@ export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
  */
 export function selectGiftableSpares(keys: HumbleKey[]): HumbleKey[] {
   return keys.filter((k) => k.ownedElsewhere && k.state === 'UNREVEALED')
+}
+
+/**
+ * D-86/D-87/D-88/D-89 (Phase 15): splits an already-`selectKeysWaiting`-
+ * filtered/sorted list into a pinned "Expiring soon" set and everything else,
+ * for the Keys-waiting view's pinned section. Membership is decided entirely
+ * by the existing urgency-tier helper (D-87 — zero new threshold logic, no
+ * new numeric literal here): a key is pinned exactly when its urgency badge
+ * would be live (`getUrgencyTier(...) !== null`). Single pass over the input
+ * so `pinned` and `rest` are guaranteed disjoint and together equal the input
+ * (D-88 — a key can never be duplicated or dropped), and both outputs inherit
+ * `selectKeysWaiting`'s soonest-first ordering since insertion order is
+ * preserved relative to the input.
+ */
+export function partitionWaitingByUrgency(waiting: HumbleKey[]): {
+  pinned: HumbleKey[]
+  rest: HumbleKey[]
+} {
+  const pinned: HumbleKey[] = []
+  const rest: HumbleKey[] = []
+  for (const key of waiting) {
+    if (getUrgencyTier(key.state, key.expiration) !== null) {
+      pinned.push(key)
+    } else {
+      rest.push(key)
+    }
+  }
+  return { pinned, rest }
 }
