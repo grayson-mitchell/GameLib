@@ -20,7 +20,8 @@ import {
   humbleOwnershipOverrideStore,
   humbleGiftedAtStore,
   humbleAuditStore,
-  humbleLocalRedeemedStore
+  humbleLocalRedeemedStore,
+  humbleNotifiedExpirationStore
 } from '../electronStores'
 
 describe('humbleOwnershipOverrideStore', () => {
@@ -193,6 +194,50 @@ describe('humbleLocalRedeemedStore', () => {
 
     expect(humbleLocalRedeemedStore.has(compositeKey)).toBe(true)
     expect(humbleLocalRedeemedStore.get(compositeKey)).toEqual({ redeemedAt })
+  })
+})
+
+/**
+ * Phase 15 (HSTORE-03, D-92): `humbleNotifiedExpirationStore` records the
+ * last-notified expiration date per key, keyed by `machineName`, and must
+ * survive a disconnect/reconnect cycle exactly like the other disconnect-
+ * exempt stores above — a reconnect must not re-notify already-known
+ * expirations.
+ */
+describe('humbleNotifiedExpirationStore', () => {
+  beforeEach(() => {
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+    humbleNotifiedExpirationStore.clear()
+  })
+
+  test('is created under the store name humble_notified_expiration, keyed by machineName, value shape { expiration: string }', () => {
+    const machineName = 'sometitle_steam'
+    const expiration = '2026-08-01'
+    humbleNotifiedExpirationStore.set(machineName, { expiration })
+
+    expect(humbleNotifiedExpirationStore.has(machineName)).toBe(true)
+    expect(humbleNotifiedExpirationStore.get(machineName)).toEqual({
+      expiration
+    })
+  })
+
+  test('D-92: a notified-expiration record survives a disconnect-style wipe of configStore/humbleLibraryStore/humbleSyncStore', () => {
+    const machineName = 'anothertitle_steam'
+    const expiration = '2026-09-15'
+    humbleNotifiedExpirationStore.set(machineName, { expiration })
+
+    // Simulates exactly what HumbleUser.disconnect() clears (D-07/D-04/D-30)
+    // — deliberately NOT humbleNotifiedExpirationStore, per D-92.
+    configStore.clear()
+    humbleLibraryStore.clear()
+    humbleSyncStore.clear()
+
+    expect(humbleNotifiedExpirationStore.has(machineName)).toBe(true)
+    expect(humbleNotifiedExpirationStore.get(machineName)).toEqual({
+      expiration
+    })
   })
 })
 

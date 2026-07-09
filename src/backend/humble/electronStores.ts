@@ -1,6 +1,10 @@
 import { TypeCheckedStoreBackend } from '../electron_store'
 import CacheStore from '../cache'
-import { HumbleKey, HumbleOrderCacheEntry, HumbleSyncState } from 'common/types/humble'
+import {
+  HumbleKey,
+  HumbleOrderCacheEntry,
+  HumbleSyncState
+} from 'common/types/humble'
 
 const configStore = new TypeCheckedStoreBackend('humbleConfigStore', {
   cwd: 'humble_store'
@@ -128,10 +132,24 @@ const humbleAuditStore = new CacheStore<AuditRecord[], string>(
 // re-offer a key the user already redeemed. Kept as its own electron-store
 // file on disk for the same isolation reason as the stores above — do not
 // merge this into humbleLibraryStore.
-const humbleLocalRedeemedStore = new CacheStore<
-  { redeemedAt: number },
+const humbleLocalRedeemedStore = new CacheStore<{ redeemedAt: number }, string>(
+  'humble_local_redeemed',
+  null
+)
+
+// Phase 15 (HSTORE-03, D-92): records the last-notified expiration date per
+// key, keyed by `machineName`, so a re-sync that observes the SAME
+// expiration date already notified does not re-notify (transition-based
+// dedup). Like humbleRevealedStore/humbleOwnershipOverrideStore/
+// humbleGiftedAtStore/humbleAuditStore/humbleLocalRedeemedStore above, this
+// store is NEVER cleared by HumbleUser.disconnect() (D-04 exemption) — a
+// reconnect must not re-notify already-known expirations (RESEARCH A4).
+// Kept as its own electron-store file on disk for the same isolation reason
+// as the stores above — do not merge this into humbleLibraryStore.
+const humbleNotifiedExpirationStore = new CacheStore<
+  { expiration: string },
   string
->('humble_local_redeemed', null)
+>('humble_notified_expiration', null)
 
 export {
   configStore,
@@ -141,5 +159,6 @@ export {
   humbleOwnershipOverrideStore,
   humbleGiftedAtStore,
   humbleAuditStore,
-  humbleLocalRedeemedStore
+  humbleLocalRedeemedStore,
+  humbleNotifiedExpirationStore
 }
