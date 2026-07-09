@@ -150,6 +150,9 @@ function makeHumbleKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
 // className since HumbleKeyRow itself (not one of its own DOM nodes) is the
 // target here.
 type ClaimAction = {
+  revealedAt: number | null
+  redeemedAt: number | null
+  keyindexResolved: boolean
   onClaim: () => void
   onFinish: () => void
   onUndoRedeem: () => void
@@ -319,5 +322,94 @@ describe('HumbleKeysWaiting', () => {
     const props = findHumbleKeyRowProps(rerender())
     expect(props).toBeDefined()
     expect(props?.undoOverride).toBe(false)
+  })
+
+  // CR-01 (14-REVIEW re-review): a key that is REVEALED by SERVER truth alone
+  // (revealed on Humble's website — no local reveal annotation) must render
+  // "Finish activation", never a dead-end "Claim": the backend refuses to
+  // reveal any non-UNREVEALED key (D-66 never-re-reveal), so a Claim button
+  // on this row could only ever fail.
+  describe('CR-01: server-revealed key with no local annotation', () => {
+    function textContent(node: ReactNode): string {
+      if (node === null || node === undefined || typeof node === 'boolean') {
+        return ''
+      }
+      if (typeof node === 'string' || typeof node === 'number') {
+        return String(node)
+      }
+      if (Array.isArray(node)) {
+        return node.map((child) => textContent(child as ReactNode)).join('')
+      }
+      if (typeof node === 'object' && 'props' in node) {
+        return textContent(
+          (node as ReactElement<PropsWithChildren>).props?.children
+        )
+      }
+      return ''
+    }
+
+    it('renders onFinish (not onClaim) as the row action, without a "Revealed {date}" annotation', async () => {
+      const key = makeHumbleKey({ state: 'REVEALED' })
+      contextValue = {
+        humble: { keys: [key] },
+        showDialogModal: jest.fn()
+      }
+      // Empty annotations map: this key was never revealed THROUGH GameLib —
+      // exactly the website-revealed population the v5 classifier surfaces.
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+
+      const tree = mount()
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(tree)
+      expect(props).toBeDefined()
+      expect(props!.claimAction.revealedAt).toBeNull()
+
+      // Render the row itself (plain function invocation — HumbleKeyRow has
+      // no hooks beyond the module-mocked useTranslation) and inspect the
+      // actual claim affordance it picks.
+      const rowTree = HumbleKeyRow({
+        humbleKey: key,
+        claimAction: props!.claimAction
+      }) as unknown as ReactElement
+      const buttons = collectElements(rowTree).filter(
+        (el) => el.type === 'button'
+      ) as ReactElement<PropsWithChildren & { onClick?: () => void }>[]
+
+      const finishButton = buttons.find(
+        (b) => b.props.onClick === props!.claimAction.onFinish
+      )
+      expect(finishButton).toBeDefined()
+      expect(textContent(finishButton!)).toContain('Finish activation')
+
+      // No button is wired to onClaim — the dead-end Claim path is gone.
+      expect(
+        buttons.find((b) => b.props.onClick === props!.claimAction.onClaim)
+      ).toBeUndefined()
+
+      // The local "Revealed {date}" annotation only renders when the local
+      // timestamp exists — never fabricated from server truth alone.
+      expect(textContent(rowTree)).not.toContain('Revealed ')
+    })
+
+    it('onFinish opens the wizard in finish mode (fetches the stored value on demand, never re-reveals)', async () => {
+      const key = makeHumbleKey({ state: 'REVEALED' })
+      const showDialogModal = jest.fn<
+        void,
+        [{ message?: ReactElement<{ entryMode: 'claim' | 'finish' }> }]
+      >()
+      contextValue = { humble: { keys: [key] }, showDialogModal }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+
+      const tree = mount()
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(tree)
+      props!.claimAction.onFinish()
+
+      expect(showDialogModal).toHaveBeenCalledTimes(1)
+      const dialogOptions = showDialogModal.mock.calls[0][0]
+      expect(dialogOptions.message?.props.entryMode).toBe('finish')
+    })
   })
 })

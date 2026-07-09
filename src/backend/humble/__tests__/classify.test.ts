@@ -845,6 +845,79 @@ describe('classifyOrder — keyIndexByComposite side-channel (Phase 14)', () => 
   })
 })
 
+// ── revealedKeyValueByComposite side-channel (CR-01, 14-REVIEW re-review) ──
+// A key revealed on Humble's WEBSITE carries redeemed_key_val server-side but
+// has no local reveal record — the server value must reach library.ts's
+// internal-only revealedKeyValue field via a side-channel (same discipline as
+// keyindex: never on the broadcast HumbleKey, never logged).
+
+describe('classifyOrder — revealedKeyValueByComposite side-channel (CR-01)', () => {
+  test('a string redeemed_key_val is recorded under the gamekey:machineName composite key', () => {
+    const entry = classifyOrder(realWorldRedeemedKeyValOrder, NEVER_REVEALED)
+    expect(entry.revealedKeyValueByComposite).toEqual({
+      'order-real-redeemed:realredeemed_steam': 'redeemed-value-string'
+    })
+  })
+
+  test('the spec fallback field redeemed_key_value is also captured', () => {
+    const order = {
+      gamekey: 'order-fallback-val',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'fallbackval_steam',
+            key_type: 'steam',
+            is_expired: false,
+            redeemed_key_value: 'fallback-value-string'
+          }
+        ]
+      }
+    }
+    const entry = classifyOrder(order, NEVER_REVEALED)
+    expect(entry.revealedKeyValueByComposite).toEqual({
+      'order-fallback-val:fallbackval_steam': 'fallback-value-string'
+    })
+  })
+
+  test('an OBJECT-shaped redeemed value is omitted from the map (key still classifies REVEALED)', () => {
+    const order = {
+      gamekey: 'order-object-val',
+      tpkd_dict: {
+        all_tpks: [
+          {
+            machine_name: 'objectval_gog',
+            key_type: 'gog',
+            is_expired: false,
+            redeemed_key_val: { nested: 'structure' }
+          }
+        ]
+      }
+    }
+    const entry = classifyOrder(order, NEVER_REVEALED)
+    expect(entry.revealedKeyValueByComposite).toEqual({})
+    // Truthy object still counts as "revealed" for classification.
+    expect(entry.keys[0].state).toBe('REVEALED')
+  })
+
+  test('a tpk with no redeemed value is simply absent from the map', () => {
+    const entry = classifyOrder(unrevealedOrder, NEVER_REVEALED)
+    expect(entry.revealedKeyValueByComposite).toEqual({})
+  })
+
+  test('the redeemed value NEVER appears on any returned HumbleKey (C4/T-14-02)', () => {
+    const entry = classifyOrder(realWorldRedeemedKeyValOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0]).not.toHaveProperty('revealedKeyValue')
+    expect(JSON.stringify(entry.keys)).not.toContain('redeemed-value-string')
+  })
+
+  test('a skipped direct-redeem entitlement never contributes to the map', () => {
+    const entry = classifyOrder(directRedeemEntitlementOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(0)
+    expect(entry.revealedKeyValueByComposite).toEqual({})
+  })
+})
+
 describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () => {
   const order = {
     gamekey: 'order-local-redeem',

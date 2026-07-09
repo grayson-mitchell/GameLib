@@ -2637,5 +2637,66 @@ describe('HumbleLibrary', () => {
       expect(outcome).toEqual({ status: 'ok' })
       expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
     })
+
+    // CR-01 (14-REVIEW re-review): the website-revealed key path. A key the
+    // user revealed on Humble's WEBSITE carries redeemed_key_val server-side
+    // but has no local reveal record and no locally-persisted value — the
+    // sync must carry the SERVER value onto the internal revealedKeyValue
+    // field so the wizard's finish mode can show the key on demand, without
+    // ever firing a reveal POST (D-66 never-re-reveal).
+    test('CR-01: a website-revealed key (server value, no local record) exposes the key value to finish mode without any reveal call', async () => {
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { redeemed: true })
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      const key = libraryData.get('gk1')?.keys[0]
+      expect(key?.state).toBe('REVEALED')
+      // Finish mode's on-demand read returns the SERVER-provided value.
+      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
+        'REDEEMED-VALUE'
+      )
+      // D-66: the reveal adapter was never touched.
+      expect(mockAdapterRevealKey).not.toHaveBeenCalled()
+      // C5/C4: the server value never reaches a log line or the display
+      // broadcast — only the explicit getRevealedKeyValue read surfaces it.
+      for (const call of [
+        ...mockLogInfo.mock.calls,
+        ...mockLogWarning.mock.calls,
+        ...mockLogError.mock.calls
+      ]) {
+        expect(JSON.stringify(call)).not.toContain('REDEEMED-VALUE')
+      }
+      const broadcasts = mockSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'humbleKeysUpdated'
+      )
+      expect(broadcasts.length).toBeGreaterThan(0)
+      expect(JSON.stringify(broadcasts)).not.toContain('REDEEMED-VALUE')
+    })
+
+    test('CR-01: a GameLib-revealed key keeps its own persisted value across a re-sync (prior value wins over the server copy)', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REVEALED',
+          keyindex: 'idx-1',
+          revealedKeyValue: 'LOCAL-REVEALED-VALUE'
+        })
+      )
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1', { redeemed: true })
+      })
+
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+
+      expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
+        'LOCAL-REVEALED-VALUE'
+      )
+    })
   })
 })

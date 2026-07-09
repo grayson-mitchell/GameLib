@@ -209,13 +209,24 @@ export default function HumbleKeyRow({
               {t('humbleKeys.undo', 'Undo')}
             </button>
           </span>
-        ) : claimAction.revealedAt !== null ? (
+        ) : claimAction.revealedAt !== null ||
+          humbleKey.state === 'REVEALED' ? (
+          // CR-01 (14-REVIEW re-review): the Finish/Claim decision is gated
+          // on server truth (`state === 'REVEALED'`), not solely on the
+          // local reveal annotation — a key revealed on Humble's WEBSITE
+          // carries redeemed_key_val (classifies REVEALED) but has no
+          // humbleRevealedStore record, so `revealedAt` is null. Rendering
+          // "Claim" for it is a dead end: the backend refuses to reveal any
+          // non-UNREVEALED key (D-66 never-re-reveal). The "Revealed {date}"
+          // annotation still renders only when the local timestamp exists.
           <span className="humbleKeyClaimGroup">
-            <span className="humbleKeyClaimAnnotation">
-              {t('humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
-                date: new Date(claimAction.revealedAt).toLocaleDateString()
-              })}
-            </span>
+            {claimAction.revealedAt !== null && (
+              <span className="humbleKeyClaimAnnotation">
+                {t('humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
+                  date: new Date(claimAction.revealedAt).toLocaleDateString()
+                })}
+              </span>
+            )}
             <button
               type="button"
               className="humbleKeyGiftButton"

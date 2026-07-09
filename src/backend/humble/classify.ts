@@ -256,6 +256,18 @@ export function extractExpiration(
  * `humbleKeysUpdated` (14-RESEARCH.md: no display purpose, needlessly widens
  * the IPC surface) — callers that need it (the Phase 14 reveal IPC handler)
  * read this side-channel directly instead.
+ *
+ * CR-01 (14-REVIEW re-review): `revealedKeyValueByComposite` is a SECOND
+ * backend-only side-channel carrying the server-provided plaintext key value
+ * (`redeemed_key_val`) for keys the user revealed on Humble's WEBSITE — those
+ * classify REVEALED with no local reveal record and no locally-persisted
+ * value, yet the wizard's finish mode must still be able to show the key
+ * without re-firing the reveal POST (D-66). Same discipline as keyindex:
+ * NEVER placed on HumbleKey (C4/T-14-02) and NEVER logged (C5) — library.ts
+ * merges it onto the cache entry's internal-only `revealedKeyValue` field.
+ * Strings only: some non-Steam key types carry an OBJECT here (see
+ * redeemedKeyValuePresent below), which cannot back the string-typed internal
+ * field — those keys keep the honest Pitfall-B "unconfirmed" path.
  */
 export function classifyOrder(
   rawOrder: OrderDetail,
@@ -265,9 +277,11 @@ export function classifyOrder(
     false
 ): HumbleOrderCacheEntry & {
   keyIndexByComposite: Record<string, string | number>
+  revealedKeyValueByComposite: Record<string, string>
 } {
   const gamekey = rawOrder.gamekey ?? ''
   const keyIndexByComposite: Record<string, string | number> = {}
+  const revealedKeyValueByComposite: Record<string, string> = {}
   const rawProduct = rawOrder.product as
     | { category?: string | null; choice_url?: string | null; human_name?: string | null }
     | null
@@ -333,6 +347,15 @@ export function classifyOrder(
       const rawKeyIndex = tpk.keyindex
       if (typeof rawKeyIndex === 'string' || typeof rawKeyIndex === 'number') {
         keyIndexByComposite[`${gamekey}:${machineName}`] = rawKeyIndex
+      }
+      // CR-01 (14-REVIEW re-review): capture the server-side revealed key
+      // value into the backend-only side-channel (see the function-level doc
+      // comment) — strings only, non-empty; an OBJECT-shaped value (some
+      // non-Steam key types) is deliberately omitted.
+      const rawRevealedValue = tpk.redeemed_key_val ?? tpk.redeemed_key_value
+      if (typeof rawRevealedValue === 'string' && rawRevealedValue !== '') {
+        revealedKeyValueByComposite[`${gamekey}:${machineName}`] =
+          rawRevealedValue
       }
       // D-28: platform label is derived from key_type for ANY platform —
       // classification itself is fully platform-agnostic. Guaranteed a
@@ -413,7 +436,13 @@ export function classifyOrder(
   const allTerminal =
     keys.length > 0 && keys.every((key) => isTerminal(key.state))
 
-  return { gamekey, keys, allTerminal, keyIndexByComposite }
+  return {
+    gamekey,
+    keys,
+    allTerminal,
+    keyIndexByComposite,
+    revealedKeyValueByComposite
+  }
 }
 
 // Cap on field-name lists in the zero-key diagnosis — enough to recognize a

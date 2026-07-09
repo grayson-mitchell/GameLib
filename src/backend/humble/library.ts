@@ -190,12 +190,22 @@ async function fetchAndCommitOrder(
           classified.keyIndexByComposite[
             compositeKey(gamekey, key.machineName)
           ]
+        // CR-01 (14-REVIEW re-review): a key revealed on Humble's WEBSITE has
+        // no local reveal record and no prior revealedKeyValue — carry the
+        // SERVER-provided value (classify.ts side-channel) onto the
+        // internal-only field so the wizard's finish mode can show the key
+        // on demand without ever re-firing the reveal POST (D-66). A prior
+        // (GameLib-revealed) value still wins when present, preserving the
+        // never-regress guarantee above.
+        const revealedKeyValue =
+          priorKey?.revealedKeyValue ??
+          classified.revealedKeyValueByComposite[
+            compositeKey(gamekey, key.machineName)
+          ]
         return {
           ...key,
           ...(keyindex !== undefined ? { keyindex } : {}),
-          ...(priorKey?.revealedKeyValue !== undefined
-            ? { revealedKeyValue: priorKey.revealedKeyValue }
-            : {})
+          ...(revealedKeyValue !== undefined ? { revealedKeyValue } : {})
         }
       }
     )
