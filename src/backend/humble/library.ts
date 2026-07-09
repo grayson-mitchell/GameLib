@@ -39,6 +39,7 @@ import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
 import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
 import { SteamUser } from 'backend/storeManagers/steam/user'
+import { GameInfo } from 'common/types'
 
 // Phase 14 guided claim flow: composite-key discipline (Pattern 3) — every
 // store keyed by `gamekey:machineName` uses this exact builder so two
@@ -123,6 +124,30 @@ interface OrderFetchResult {
 }
 
 /**
+ * WR-01 (14-08 re-review): the D-48/T-12-02 Steam connectivity double-gate,
+ * extracted into ONE shared helper so fetchAndCommitOrder's commit-time
+ * branch selector and recomputeOwnership's end-of-sync no-op gate can never
+ * drift apart — Fix 1's churn/C2-window guarantees depend on both sites
+ * reading the EXACT same gate, and that parity is now enforced by code
+ * rather than by comment (the same drift class Fix 2 eliminated for the
+ * freeze predicate with the single-sourced isFreezeEligible).
+ *
+ * `open` is true only when Steam is logged in AND its cached library is
+ * non-empty (Pitfall 3 / Assumption A3) — a Steam hiccup (disconnect, empty
+ * cache mid-refresh) must read as CLOSED so no caller ever zeroes a
+ * previously-computed `ownedElsewhere: true` (D-48 keep-last-known).
+ * `steamGames` is the snapshot callers pass to dedupRecomputeOwnership when
+ * the gate is open; it is only read from the store when logged in.
+ */
+function getSteamGate(): { open: boolean; steamGames: GameInfo[] } {
+  if (!SteamUser.isLoggedIn()) {
+    return { open: false, steamGames: [] }
+  }
+  const steamGames = steamLibraryStore.get('games', [])
+  return { open: steamGames.length > 0, steamGames }
+}
+
+/**
  * Fetches + classifies + commits a single order. Per-order isolation
  * (Pattern 2): a schema_error or a caught throw here keeps that gamekey's
  * PRIOR cache entry untouched and never aborts the rest of the pool — only
@@ -200,18 +225,18 @@ async function fetchAndCommitOrder(
     // already-owned key's overlay on every intermediate broadcast (the
     // fill-then-empty churn) AND let a mid-sync revealKey() call read a
     // transiently-false ownedElsewhere (the C2 bypass window). Fixed with a
-    // merged two-branch strategy, gated on the EXACT same Steam
-    // connectivity check recomputeOwnership() uses below:
-    const steamGames = steamLibraryStore.get('games', [])
-    const steamGateOpen = SteamUser.isLoggedIn() && steamGames.length > 0
-    const overlaidKeys: HumbleKey[] = steamGateOpen
+    // merged two-branch strategy, gated on the shared getSteamGate() helper
+    // (WR-01, 14-08 re-review) — the SAME gate recomputeOwnership() reads,
+    // enforced structurally so the two sites can never drift:
+    const steamGate = getSteamGate()
+    const overlaidKeys: HumbleKey[] = steamGate.open
       ? // Branch A (gate PASSES): run the pure dedup recompute on the
         // freshly-classified keys BEFORE building the entry, for EVERY
         // order (including a brand-new never-cached one) — this fully
         // closes the T-14-03 window and eliminates the churn at its root.
         dedupRecomputeOwnership(
           classified.keys,
-          steamGames,
+          steamGate.steamGames,
           (machineName) => humbleOwnershipOverrideStore.has(machineName)
         )
       : // Branch B (gate FAILS — Steam logged out, or logged in with an
@@ -443,13 +468,15 @@ function getKeys(): HumbleKey[] {
  * the current Steam owned-apps snapshot, then re-pushes the merged key
  * inventory to the renderer.
  *
- * Double-gated (T-12-02, Pitfall 3 / Assumption A3): if Steam is not
+ * Double-gated (T-12-02, Pitfall 3 / Assumption A3) via the shared
+ * getSteamGate() helper (WR-01, 14-08 re-review — the same gate
+ * fetchAndCommitOrder's commit-time branch selector reads): if Steam is not
  * connected OR its cached library is empty, this is a COMPLETE no-op — no
  * store write, no renderer push — so a Steam hiccup (disconnect, empty
  * cache mid-refresh) can never zero out a previously-computed
  * `ownedElsewhere: true` (D-48 keep-last-known). The pure `dedup.ts` module
  * has its own empty-array floor as a second, defense-in-depth safeguard —
- * the authoritative connectivity decision lives here.
+ * the authoritative connectivity decision lives in the shared gate.
  *
  * Called as the final step of runSync() (after every order commits) and as
  * the exported entrypoint the Steam-refresh trigger (Plan 04) invokes
@@ -457,11 +484,8 @@ function getKeys(): HumbleKey[] {
  * without waiting for the next Humble sync.
  */
 function recomputeOwnership(): void {
-  if (!SteamUser.isLoggedIn()) {
-    return
-  }
-  const steamGames = steamLibraryStore.get('games', [])
-  if (steamGames.length === 0) {
+  const { open, steamGames } = getSteamGate()
+  if (!open) {
     return
   }
 
