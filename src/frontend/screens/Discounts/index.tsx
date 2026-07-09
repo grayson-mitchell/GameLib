@@ -8,6 +8,8 @@ import type {
   CatalogGenre,
   CatalogProduct
 } from 'common/types/discounts'
+import { resolveDiscountBadge, type DiscountBadge } from 'common/discounts/badges'
+import { selectKeysWaiting } from 'common/humble/viewFilters'
 import DiscountCard from './components/DiscountCard'
 import DiscountFilters from './components/DiscountFilters'
 import DiscountPagination from './components/DiscountPagination'
@@ -41,7 +43,7 @@ export default function Discounts() {
     () => getLocaleSettings(i18n.language, regionOverride),
     [i18n.language, regionOverride]
   )
-  const { epic, gog, amazon, steam, zoom } = useContext(ContextProvider)
+  const { epic, gog, amazon, steam, zoom, humble } = useContext(ContextProvider)
   const isGogLoggedIn: boolean = !!gog?.username
 
   // Build a normalized-title set of games owned in ANY store (Epic, GOG,
@@ -71,6 +73,24 @@ export default function Discounts() {
   // The Hide Owned toggle is available whenever the user owns games in any
   // store, independent of GOG login.
   const canHideOwned = ownedTitles.size > 0
+
+  // D-78..D-85 (Phase 15): normalized title -> Steam AppID bridge, built from
+  // steam.library ONLY (never epic/gog/amazon/zoom — the badge is
+  // specifically a Humble/Steam ownership signal). First-wins on a duplicate
+  // normalized title, same convention as the ownedTitles memo above.
+  const titleToSteamAppId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const game of steam.library) {
+      const key = game.title?.trim().toLowerCase()
+      if (key && !map.has(key)) map.set(key, game.app_name)
+    }
+    return map
+  }, [steam.library])
+
+  const ownedSteamAppIds = useMemo(
+    () => new Set(steam.library.map((g) => g.app_name)),
+    [steam.library]
+  )
 
   const handleRegionChange = (countryCode: string | null) => {
     setRegionOverride(countryCode)
@@ -461,6 +481,26 @@ export default function Discounts() {
     [filteredSorted, clampedPage, pageSize]
   )
 
+  // D-78..D-85 (Phase 15): resolved once per product list — DiscountCard
+  // never recomputes the badge itself, it only renders the literal passed
+  // in via the `badge` prop.
+  const discountBadges = useMemo(() => {
+    const keysWaiting = selectKeysWaiting(humble.keys ?? [])
+    const map = new Map<string, DiscountBadge>()
+    for (const product of paginated) {
+      map.set(
+        product.id,
+        resolveDiscountBadge(
+          product,
+          titleToSteamAppId,
+          ownedSteamAppIds,
+          keysWaiting
+        )
+      )
+    }
+    return map
+  }, [paginated, titleToSteamAppId, ownedSteamAppIds, humble.keys])
+
   const hasActiveFilters =
     selectedGenres.length > 0 ||
     selectedFeatures.length > 0 ||
@@ -628,7 +668,11 @@ export default function Discounts() {
           ) : (
             <div className="discountsScreen__grid">
               {paginated.map((product) => (
-                <DiscountCard key={product.id} product={product} />
+                <DiscountCard
+                  key={product.id}
+                  product={product}
+                  badge={discountBadges.get(product.id) ?? null}
+                />
               ))}
             </div>
           )}
