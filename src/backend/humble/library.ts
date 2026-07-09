@@ -14,7 +14,8 @@ import {
   classifyOrder,
   describeZeroKeyOrder,
   describeMissingExpirationTpks,
-  describeSkippedEntitlements
+  describeSkippedEntitlements,
+  isTerminal
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import {
@@ -487,6 +488,14 @@ function loadCached(): void {
  * broadcast so the renderer reflects the reveal/redeem/undo outcome
  * immediately, without waiting for the next sync. A no-op if the
  * gamekey/machineName is not found in the cache.
+ *
+ * WR-01 (14-REVIEW re-review): `allTerminal` is RECOMPUTED from the patched
+ * key set, never spread forward. The undo path made this load-bearing:
+ * mark→sync commits `allTerminal: true` (the order freezes under D-24), and
+ * an Undo that flips the key back to REVEALED must unfreeze it — otherwise
+ * every later sync skips the order and HSYNC-03 retroactive-expiry recompute
+ * can never reach it again. Uses classify.ts's exported isTerminal so the
+ * predicate cannot drift from what a fresh sync computes.
  */
 function patchCachedState(
   gamekey: string,
@@ -509,7 +518,9 @@ function patchCachedState(
   }
   const newKeys = [...entry.keys]
   newKeys[index] = patchedKey
-  humbleLibraryStore.set(gamekey, { ...entry, keys: newKeys })
+  const allTerminal =
+    newKeys.length > 0 && newKeys.every((key) => isTerminal(key.state))
+  humbleLibraryStore.set(gamekey, { ...entry, keys: newKeys, allTerminal })
   sendFrontendMessage('humbleKeysUpdated', getKeys())
 }
 

@@ -57,7 +57,14 @@ export function classifyTpk(
   return 'UNREVEALED'
 }
 
-function isTerminal(state: HumbleKeyState): boolean {
+/**
+ * The single source of truth for "terminal" (D-24 freeze eligibility).
+ * Exported (WR-01, 14-REVIEW re-review) so library.ts's patchCachedState can
+ * recompute `allTerminal` with the exact same predicate classifyOrder uses —
+ * the two must never drift, or an undone key could stay frozen (or a frozen
+ * order thaw) inconsistently with what a fresh sync would compute.
+ */
+export function isTerminal(state: HumbleKeyState): boolean {
   return state === 'REDEEMED' || state === 'UNREDEEMABLE'
 }
 

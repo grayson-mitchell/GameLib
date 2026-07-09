@@ -2677,6 +2677,41 @@ describe('HumbleLibrary', () => {
       expect(JSON.stringify(broadcasts)).not.toContain('REDEEMED-VALUE')
     })
 
+    // WR-01 (14-REVIEW re-review): patchCachedState must RECOMPUTE
+    // allTerminal. Sequence under test: mark (order becomes all-terminal and
+    // freezes under D-24 after a sync) → undo (key reverts to REVEALED — the
+    // entry must UNFREEZE) → a SECOND sync must fetch the order again, or
+    // HSYNC-03 retroactive-expiry recompute could never reach it.
+    test('WR-01: mark → sync → undo → second sync re-fetches the order (undo unfreezes the D-24 terminal freeze)', async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+      await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      // First sync: the only key stays REDEEMED (local mark wins) — the
+      // order commits allTerminal: true and freezes.
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({
+        status: 'ok',
+        data: makeRawOrder('gk1')
+      })
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      expect(libraryData.get('gk1')?.allTerminal).toBe(true)
+
+      // Undo: the mark clears, the key reverts to REVEALED, and the frozen
+      // entry's allTerminal is recomputed — not spread forward as true.
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(libraryData.get('gk1')?.allTerminal).toBe(false)
+
+      // Second sync (classifier version already stamped by the first sync,
+      // so nothing else bypasses the freeze): the order IS fetched again.
+      mockGetOrderDetail.mockClear()
+      await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
+      expect(mockGetOrderDetail).toHaveBeenCalledWith('cookie-value', 'gk1')
+    })
+
     test('CR-01: a GameLib-revealed key keeps its own persisted value across a re-sync (prior value wins over the server copy)', async () => {
       libraryData.set(
         'gk1',
