@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: Ownership Dedup** - Every Humble key cross-referenced against the Steam library; redeemed Steam keys collapse onto their existing Steam library entries (completed 2026-07-06)
 - [ ] **Phase 13: Keys-Waiting + Giftable-Spares Views** - Users can see claimable keys sorted by expiration urgency and surface gift links for owned-elsewhere spares
 - [x] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout (completed 2026-07-08)
-- [ ] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications (executed 2026-07-10; verification gaps_found 8/10 — HSTORE-01 "Key available" badge unreachable, see 15-VERIFICATION.md; needs gap closure)
+- [x] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications (completed 2026-07-10; re-verified 10/10 after gap closure — 15-05 CR-01 badge reachability, 15-06 WR-01/WR-02 composite dedup + i18n, follow-up WR-01 divergence fix baac4527; see 15-VERIFICATION.md)
 
 ## Phase Details
 
@@ -392,8 +392,8 @@ Plans:
   - [x] 15-02-PLAN.md — Notification foundation: default-ON Settings toggle + disconnect-exempt notified-state store (HSTORE-03)
   - [x] 15-03-PLAN.md — Expiration-transition detection + digest OS notification + runSync hook (dedup + first-sync baseline) (HSTORE-03)
   - [x] 15-04-PLAN.md — Pinned "Expiring soon" section on Keys-waiting (pure partition helper + static section) (HSTORE-03)
-  - [ ] 15-05-PLAN.md — [gap closure] Fix CR-01: make 'Key available' badge reachable via shared buildDiscountBadgeMaps helper + integration test (HSTORE-01)
-  - [ ] 15-06-PLAN.md — [gap closure] Fix WR-01 (composite gamekey:machineName dedup + legacy backfill) + WR-02 (register humble.notification.* i18n keys) (HSTORE-03)
+  - [x] 15-05-PLAN.md — [gap closure] Fix CR-01: make 'Key available' badge reachable via shared buildDiscountBadgeMaps helper + integration test (HSTORE-01)
+  - [x] 15-06-PLAN.md — [gap closure] Fix WR-01 (composite gamekey:machineName dedup + legacy backfill) + WR-02 (register humble.notification.* i18n keys) (HSTORE-03)
 
 **Wave 1** (parallel — zero code-file overlap): 15-01, 15-02, 15-04
 **Wave 2** (blocked on 15-02 — reads notified-state store + notify setting): 15-03
@@ -422,4 +422,4 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 12. Ownership Dedup | 5/5 | Complete    | 2026-07-06 |
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
-| 15. Store Overlay + Expiration Alerts | 4/4 | Complete   | 2026-07-09 |
+| 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
