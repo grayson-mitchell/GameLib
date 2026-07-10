@@ -91,8 +91,6 @@ const initialContext: ContextType = {
   setAllTilesInColor: () => null,
   titlesAlwaysVisible: false,
   setTitlesAlwaysVisible: () => null,
-  appleRatingSource: 'crossover',
-  setAppleRatingSource: () => null,
   sidebarCollapsed: false,
   setSideBarCollapsed: () => null,
   activeController: '',
