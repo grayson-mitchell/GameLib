@@ -5,6 +5,7 @@ import { WineBar } from '@mui/icons-material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
 import { ratingTier } from './appleRating'
+import { formatCrossoverRating } from './crossoverRating'
 
 interface Props {
   gameInfo: GameInfo
@@ -18,14 +19,23 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     return null
   }
 
+  const codeweavers = wikiInfo.codeweavers
   const applegamingwiki = wikiInfo.applegamingwiki
 
-  if (!applegamingwiki) {
-    return null
+  const onClickCrossover = () => {
+    if (codeweavers?.slug) {
+      createNewWindow(
+        `https://www.codeweavers.com/compatibility/crossover/${codeweavers.slug}`
+      )
+    } else {
+      createNewWindow(
+        `https://www.codeweavers.com/compatibility?browse=&app_desc=&company=&rating=&platform=&date_start=&date_end=&name=${gameInfo.title}&search=app#results`
+      )
+    }
   }
 
-  const onClick = () => {
-    if (applegamingwiki.crossoverLink) {
+  const onClickWine = () => {
+    if (applegamingwiki?.crossoverLink) {
       createNewWindow(
         `https://www.codeweavers.com/compatibility/crossover/${applegamingwiki.crossoverLink}`
       )
@@ -36,28 +46,37 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     }
   }
 
+  const crossoverDisplay = codeweavers
+    ? formatCrossoverRating(codeweavers.rating, codeweavers.ratingCount) ??
+      t('info.no-compatibility-data', 'No compatibility data available')
+    : null
+
   return (
     <>
-      <a
-        role="button"
-        className="iconWithText"
-        title={t('info.clickToOpen', 'Click to open')}
-        onClick={onClick}
-      >
-        <WineBar />
-        <b>{t('info.crossover-rating', 'Crossover rating')}:</b>
-        {ratingTier(applegamingwiki.crossoverRating).label}
-      </a>
-      <a
-        role="button"
-        className="iconWithText"
-        title={t('info.clickToOpen', 'Click to open')}
-        onClick={onClick}
-      >
-        <WineBar />
-        <b>{t('info.wine-rating', 'Wine rating')}:</b>
-        {ratingTier(applegamingwiki.wineRating).label}
-      </a>
+      {codeweavers && (
+        <a
+          role="button"
+          className="iconWithText"
+          title={t('info.clickToOpen', 'Click to open')}
+          onClick={onClickCrossover}
+        >
+          <WineBar />
+          <b>{t('info.crossover-rating', 'Crossover rating')}:</b>
+          {crossoverDisplay}
+        </a>
+      )}
+      {applegamingwiki && (
+        <a
+          role="button"
+          className="iconWithText"
+          title={t('info.clickToOpen', 'Click to open')}
+          onClick={onClickWine}
+        >
+          <WineBar />
+          <b>{t('info.wine-rating', 'Wine rating')}:</b>
+          {ratingTier(applegamingwiki.wineRating).label}
+        </a>
+      )}
     </>
   )
 }
