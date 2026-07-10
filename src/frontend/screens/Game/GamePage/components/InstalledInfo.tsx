@@ -4,9 +4,36 @@ import GameContext from '../../GameContext'
 import { DownloadDone } from '@mui/icons-material'
 import PopoverComponent from 'frontend/components/UI/PopoverComponent'
 import { GameInfo } from 'common/types'
+import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
+import { faFolderOpen } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 interface Props {
   gameInfo: GameInfo
+}
+
+/**
+ * Maps an InstallPlatform string to a FontAwesome brand icon + title,
+ * case-insensitively. Returns null for values with no known icon so the
+ * caller can fall back to raw text (e.g. any future/unexpected values).
+ */
+const getInstallPlatformIcon = (installPlatform: string | undefined) => {
+  const value = (installPlatform ?? '').toLowerCase()
+  if (value.includes('win')) {
+    return { icon: faWindows, title: 'Windows' }
+  }
+  if (
+    value === 'osx' ||
+    value === 'mac' ||
+    value === 'darwin' ||
+    value.includes('mac')
+  ) {
+    return { icon: faApple, title: 'macOS' }
+  }
+  if (value.includes('linux')) {
+    return { icon: faLinux, title: 'Linux' }
+  }
+  return null
 }
 
 const InstalledInfo = ({ gameInfo }: Props) => {
@@ -75,7 +102,17 @@ const InstalledInfo = ({ gameInfo }: Props) => {
       )}
       <div style={{ textTransform: 'capitalize' }}>
         <b>{t('info.installedPlatform', 'Installed Platform')}:</b>{' '}
-        {installPlatform === 'osx' ? 'MacOS' : installPlatform}
+        {(() => {
+          const platformIcon = getInstallPlatformIcon(installPlatform)
+          return platformIcon ? (
+            <FontAwesomeIcon
+              icon={platformIcon.icon}
+              title={platformIcon.title}
+            />
+          ) : (
+            installPlatform
+          )
+        })()}
       </div>
       {!isSideloaded && !isThirdParty && (
         <div>
@@ -101,6 +138,10 @@ const InstalledInfo = ({ gameInfo }: Props) => {
         >
           <b>{t('info.path')}:</b>{' '}
           <div className="truncatedPath">{appLocation}</div>
+          <FontAwesomeIcon
+            icon={faFolderOpen}
+            title={t('info.openLocation', 'Open location')}
+          />
         </div>
       )}
       {!is.win && !is.native && (
