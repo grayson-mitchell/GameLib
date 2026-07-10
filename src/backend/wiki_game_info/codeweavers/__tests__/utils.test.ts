@@ -9,13 +9,25 @@ import { axiosClient } from 'backend/utils'
 jest.mock('backend/logger')
 jest.mock('electron-store')
 
-function htmlWithVideoGameJsonLd(ratingValue: number, ratingCount: number) {
+function htmlWithVideoGameJsonLd(
+  macRating: number | null,
+  linuxRating: number | null
+) {
+  const reviews = []
+  if (macRating !== null) {
+    reviews.push(`{ "@type": "Review", "about": { "operatingSystem": "macOS" },
+          "reviewRating": { "@type": "Rating", "ratingValue": ${macRating} } }`)
+  }
+  if (linuxRating !== null) {
+    reviews.push(`{ "@type": "Review", "about": { "operatingSystem": "Linux" },
+          "reviewRating": { "@type": "Rating", "ratingValue": ${linuxRating} } }`)
+  }
+
   return `<!doctype html><html><head><title>Will Half-Life 2 run on Mac or Linux? | CodeWeavers</title>
     <script type="application/ld+json">
       { "@context": "https://schema.org", "@graph": [
-        { "@type": "VideoGame", "name": "Half-Life 2",
-          "aggregateRating": { "@type": "AggregateRating", "ratingValue": ${ratingValue}, "ratingCount": ${ratingCount} }
-        }
+        { "@type": "VideoGame", "name": "Half-Life 2" },
+        ${reviews.join(',\n')}
       ]}
     </script>
   </head><body></body></html>`
@@ -83,16 +95,16 @@ describe('getInfoFromCodeweavers', () => {
     jest.restoreAllMocks()
   })
 
-  test('HIT: parses aggregateRating from VideoGame JSON-LD', async () => {
+  test('HIT: parses per-OS ratings from VideoGame+Review JSON-LD', async () => {
     jest
       .spyOn(axiosClient, 'get')
-      .mockResolvedValueOnce({ data: htmlWithVideoGameJsonLd(4.5, 2) })
+      .mockResolvedValueOnce({ data: htmlWithVideoGameJsonLd(5, 1) })
 
     const result = await getInfoFromCodeweavers('Half-Life 2')
 
     expect(result).toStrictEqual({
-      rating: 4.5,
-      ratingCount: 2,
+      macRating: 5,
+      linuxRating: 1,
       slug: 'half-life-2'
     })
   })
@@ -106,8 +118,8 @@ describe('getInfoFromCodeweavers', () => {
 
     expect(result).not.toBeNull()
     expect(result).toStrictEqual({
-      rating: null,
-      ratingCount: null,
+      macRating: null,
+      linuxRating: null,
       slug: 'definitely-not-a-real-game-9000'
     })
   })
@@ -144,13 +156,29 @@ describe('getInfoFromCodeweavers', () => {
     const result = await getInfoFromCodeweavers("Baldur's Gate 3")
 
     expect(result).toStrictEqual({
-      rating: 4,
-      ratingCount: 1,
+      macRating: 4,
+      linuxRating: 1,
       slug: 'baldur-s-gate-3'
     })
     expect(axiosGetSpy).toHaveBeenCalledTimes(2)
     const [fallbackUrl] = axiosGetSpy.mock.calls[1]
     expect(fallbackUrl).toMatch(/\/baldur-s-gate-3$/)
+  })
+
+  test('VideoGame present but both ratings null -> treated as miss, fallback fires', async () => {
+    const axiosGetSpy = jest
+      .spyOn(axiosClient, 'get')
+      .mockResolvedValueOnce({ data: htmlWithVideoGameJsonLd(null, null) })
+      .mockResolvedValueOnce({ data: htmlWithVideoGameJsonLd(null, null) })
+
+    const result = await getInfoFromCodeweavers("Baldur's Gate 3")
+
+    expect(result).toStrictEqual({
+      macRating: null,
+      linuxRating: null,
+      slug: 'baldurs-gate-3'
+    })
+    expect(axiosGetSpy).toHaveBeenCalledTimes(2)
   })
 
   test('FALLBACK: both primary and fallback slug miss -> EMPTY marker, bounded to 2 calls', async () => {
@@ -162,8 +190,8 @@ describe('getInfoFromCodeweavers', () => {
     const result = await getInfoFromCodeweavers("Baldur's Gate 3")
 
     expect(result).toStrictEqual({
-      rating: null,
-      ratingCount: null,
+      macRating: null,
+      linuxRating: null,
       slug: 'baldurs-gate-3'
     })
     expect(axiosGetSpy).toHaveBeenCalledTimes(2)
