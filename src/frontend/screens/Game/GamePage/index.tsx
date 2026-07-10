@@ -48,7 +48,6 @@ import { hasStatus } from 'frontend/hooks/hasStatus'
 import GameContext from '../GameContext'
 import { GameContextType } from 'frontend/types'
 import {
-  AppleRatingOverlay,
   AppleWikiInfo,
   CloudSavesSync,
   CompatibilityInfo,
@@ -443,20 +442,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         art_logo={art_logo}
                         store={runner}
                       />
-                      {/*
-                        DETAIL-02: the AppleGamingWiki CrossOver/Wine rating
-                        measures how a WINDOWS game runs on macOS via a
-                        translation layer — a Mac-native game runs natively and
-                        needs no such rating. Show the pill on macOS for
-                        NON-Mac-native (Windows) games. Supersedes D-13 (which had
-                        the gate inverted). AppleRatingOverlay always renders a
-                        pill ("Unrated" when there is no rating). Rendered as a
-                        sibling of .gamePicture (which is z-index:-1) so the pill
-                        stays above the cover art and remains clickable.
-                      */}
-                      {platform === 'darwin' && !gameInfo.is_mac_native && (
-                        <AppleRatingOverlay gameInfo={gameInfo} />
-                      )}
                       <div className="store-icon">
                         <StoreLogos runner={runner} />
                       </div>
