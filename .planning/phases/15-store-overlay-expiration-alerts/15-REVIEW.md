@@ -1,201 +1,193 @@
 ---
 phase: 15-store-overlay-expiration-alerts
-reviewed: 2026-07-09T20:39:25Z
+reviewed: 2026-07-10T02:19:38Z
 depth: standard
-files_reviewed: 16
+files_reviewed: 7
 files_reviewed_list:
   - src/common/discounts/badges.ts
-  - src/common/humble/viewFilters.ts
-  - src/common/types.ts
-  - src/backend/config.ts
-  - src/backend/humble/electronStores.ts
-  - src/backend/humble/expirationAlerts.ts
-  - src/backend/humble/library.ts
   - src/frontend/screens/Discounts/index.tsx
-  - src/frontend/screens/Discounts/components/DiscountCard/index.tsx
-  - src/frontend/screens/Discounts/components/DiscountCard/index.css
-  - src/frontend/screens/Humble/Keys/Waiting/index.tsx
-  - src/frontend/screens/Settings/components/NotifyHumbleExpirations.tsx
-  - src/frontend/screens/Settings/components/index.ts
-  - src/frontend/screens/Settings/sections/GeneralSettings/index.tsx
-  - public/locales/en/translation.json
+  - src/backend/discounts/__tests__/badges.test.ts
+  - src/backend/humble/expirationAlerts.ts
+  - src/backend/humble/electronStores.ts
   - src/backend/humble/__tests__/expirationAlerts.test.ts
+  - public/locales/en/translation.json
 findings:
-  critical: 1
-  warning: 2
-  info: 2
-  total: 5
+  critical: 0
+  warning: 1
+  info: 3
+  total: 4
 status: issues_found
 ---
 
 # Phase 15: Code Review Report
 
-**Reviewed:** 2026-07-09T20:39:25Z
+**Reviewed:** 2026-07-10T02:19:38Z
 **Depth:** standard
-**Files Reviewed:** 16
 **Status:** issues_found
 
 ## Summary
 
-Phase 15 adds Discounts-screen ownership badges (HSTORE-01) and Humble
-expiration alerts (HSTORE-03). The expiration-transition detection, the pinned
-"Expiring soon" partition, and the settings/config plumbing are largely sound
-and well-tested. However, the review surfaced one blocking defect: the
-**"Key available" badge — a core HSTORE-01 deliverable — is structurally
-unreachable in production** because of how the container wires up the pure
-`resolveDiscountBadge` helper. The helper's own unit tests pass only because
-they hand-decouple two maps that the real container derives from the same
-source. Two secondary issues concern the notification dedup key (machineName
-collisions can re-fire on every sync) and missing i18n keys for the OS
-notification copy.
+This is an adversarial re-review of the phase-15 gap-closure commits after
+`22fca3f0`: CR-01 (make the `key-available` badge reachable via
+`buildDiscountBadgeMaps`), WR-01 (composite `gamekey:machineName` dedup keying
+with legacy backfill), and WR-02 (register the four `humble.notification.*`
+i18n keys).
 
-The focus areas requested were: notification dedup, expiration-transition
-detection, ownership badge exact-match, and settings/config plumbing. Findings
-below map to all four.
+The three prior findings are substantively closed:
 
-## Critical Issues
+- **WR-02 is fully resolved.** All four `humble.notification.*` keys are
+  registered in `translation.json` (lines 549-553), placed before `humbleKeys`,
+  alphabetically ordered within `notification`, values match the inline
+  fallbacks, and the file parses as valid JSON.
+- **WR-01 keying is resolved** for the common cases: the dedup store is keyed by
+  the composite everywhere in the detection path, duplicate-machineName-across-
+  orders no longer re-fires indefinitely, and the store comment is updated. The
+  legacy backfill is correct for the non-colliding upgrade (the dominant case).
+- **CR-01 is resolved for the happy path**: `buildDiscountBadgeMaps` is the
+  single source of both maps, `ownedAppIds` stays steam.library-only, and the
+  `key-available` branch is now reachable.
 
-### CR-01: "Key available" badge is unreachable in production — the branch can never execute
-
-**File:** `src/frontend/screens/Discounts/index.tsx:81-93, 487-502` (with `src/common/discounts/badges.ts:35-56`)
-
-**Issue:** The container builds both inputs to `resolveDiscountBadge` from the
-**same source** — `steam.library`:
-
-```ts
-const titleToSteamAppId = ... for (const game of steam.library) map.set(key, game.app_name)
-const ownedSteamAppIds = new Set(steam.library.map((g) => g.app_name))
-```
-
-Inside `resolveDiscountBadge`, the only way to obtain an `appId` is
-`titleToAppId.get(normalize(product.title))`. Every value in
-`titleToSteamAppId` is a `game.app_name` pulled from `steam.library`, and
-`ownedSteamAppIds` is exactly the set of those same `app_name`s. Therefore
-**any `appId` the helper resolves is guaranteed to be present in
-`ownedAppIds`**, so `ownedAppIds.has(appId)` is always true and the function
-returns `'owned'` on every title match. The `'key-available'` branch
-(`badges.ts:48-55`) is dead code from this call site — a Humble key waiting for
-a game the user does *not* own on Steam has no entry in `titleToSteamAppId`
-(it is not in `steam.library`), so `appId` is `undefined` and the helper
-returns `null`. Net result: the "Key available" pill never renders, defeating
-HSTORE-01 / D-84.
-
-The unit test `badges.test.ts:58-67` masks this by passing
-`ownedAppIds = new Set<string>()` (empty) *alongside* a populated
-`titleToAppId` — a state the real container can never produce — so the suite
-is green while the shipped feature is inert.
-
-**Fix:** Resolve the title→appId bridge from a source that includes games the
-user does NOT own on Steam. Since `HumbleKey` already carries both `title` and
-`steamAppId`, build the bridge (and/or the key-available match) directly from
-the waiting-keys set rather than from `steam.library`:
-
-```ts
-// Include Humble keys' own steamAppId so an unowned-but-keyed game resolves.
-const titleToSteamAppId = useMemo(() => {
-  const map = new Map<string, string>()
-  for (const game of steam.library) {
-    const key = game.title?.trim().toLowerCase()
-    if (key && !map.has(key)) map.set(key, game.app_name)
-  }
-  for (const k of (humble.keys ?? [])) {
-    const key = k.title?.trim().toLowerCase()
-    if (key && k.steamAppId && !map.has(key)) map.set(key, k.steamAppId)
-  }
-  return map
-}, [steam.library, humble.keys])
-```
-
-`ownedSteamAppIds` should stay derived from `steam.library` only, so the
-`'owned'`-wins precedence is preserved and the `'key-available'` branch becomes
-reachable. Add an integration-level test that exercises the helper with the
-two maps built exactly as the container builds them (not artificially
-decoupled) to prevent regression.
+However, the CR-01 fix introduces a **new key-set inconsistency** in the
+container that the regression test cannot catch (WR-01 below), plus two
+narrower correctness/coverage gaps (Info). No blocker-severity defect was
+proven; the `key-available` feature does work for the primary single-waiting-
+key case.
 
 ## Warnings
 
-### WR-01: Notification dedup keyed by `machineName` alone — collisions re-fire every sync
+### WR-01: Badge map and resolver are fed different key sets — a non-waiting key can suppress a legitimate `key-available`
 
-**File:** `src/backend/humble/expirationAlerts.ts:27-38`, `src/backend/humble/electronStores.ts:149-152`
+**File:** `src/frontend/screens/Discounts/index.tsx:87-91, 485-500` (with `src/common/discounts/badges.ts:77-105`)
 
-**Issue:** `humbleNotifiedExpirationStore` is keyed by `key.machineName`, and
-`detectAndNotifyExpirationTransitions` reads/writes it with `key.machineName`.
-The same `machineName` can appear across two different orders/bundles
-(`gamekey`s) — this is the exact collision the Phase 14 composite-key
-discipline (WR-01 lesson) was introduced to prevent, and it is honored by
-`humbleAuditStore` and `humbleLocalRedeemedStore` (both keyed
-`gamekey:machineName`), but *not* here. `getKeys()` (`library.ts:458-464`)
-flattens keys across all orders with no de-duplication, so if the same
-`machineName` exists in two orders with **different** expirations, the loop
-sets the store to one date for the first and the other date for the second;
-every subsequent sync then sees `current !== last` for both and re-fires the
-notification indefinitely — the notification storm the design set out to avoid.
-
-**Fix:** Key the dedup store by the composite, consistent with the other
-disconnect-exempt stores. `HumbleKey` already carries `gamekey`:
+**Issue:** The container builds the title→AppID map from **all** Humble keys but
+resolves the badge against only the **waiting** subset:
 
 ```ts
-const composite = `${key.gamekey}:${key.machineName}`
-const last = humbleNotifiedExpirationStore.get(composite)?.expiration ?? null
+// line 89 — map built from ALL keys
+buildDiscountBadgeMaps(steam.library, humble.keys ?? [])
 ...
-humbleNotifiedExpirationStore.set(composite, { expiration: current })
+// line 486 — resolver matched against the WAITING subset only
+const keysWaiting = selectKeysWaiting(humble.keys ?? [])
+resolveDiscountBadge(product, titleToSteamAppId, ownedSteamAppIds, keysWaiting)
 ```
 
-### WR-02: OS notification i18n keys are referenced but not registered
+`selectKeysWaiting` (`src/common/humble/viewFilters.ts:59-68`) drops every key
+that is `ownedElsewhere`, on the generic-key platform, or not in a
+waiting/`REDEEMED` state. So `buildDiscountBadgeMaps` populates `titleToAppId`
+from keys that `resolveDiscountBadge` will never treat as waiting. Two
+consequences:
 
-**File:** `src/backend/humble/expirationAlerts.ts:88-109`, `public/locales/en/translation.json`
+1. **Dead map entries** — a non-waiting key (e.g. `ownedElsewhere: true`, or a
+   plain `REVEALED` key) for a title absent from `steam.library` inserts a
+   `title → steamAppId` entry that can only ever resolve to `null` (no waiting
+   key carries that AppID), so it is inert but pollutes the map.
 
-**Issue:** `buildDigestCopy` calls
-`i18next.t('humble.notification.expiringTitleSingle', ...)` and three sibling
-keys (`expiringBodySingle`, `expiringTitlePlural`, `expiringBodyPlural`), but
-none of these keys exist in `public/locales/en/translation.json` (grep
-confirms zero matches). The user-facing feature works in English *only* because
-each call passes an inline English fallback as the second argument; for every
-other locale the OS notification silently falls back to English, and
-translators have no key to localize. This is inconsistent with Plan 01's own
-convention, which deliberately hand-registered the `discounts.badge.*` keys.
+2. **Legitimate-badge suppression (the real defect)** — because the merge is
+   *first-wins* (`badges.ts:97`), if a **non-waiting** key and a **waiting** key
+   share the same normalized title but carry *different* `steamAppId`s, and the
+   non-waiting key is iterated first, the map slot is taken by the non-waiting
+   key's AppID. `resolveDiscountBadge` then checks
+   `keysWaiting.some(k => k.steamAppId === appId)` against the non-waiting
+   AppID, finds no match, and returns `null` — even though the user has a
+   genuine waiting key for that title. The `key-available` pill is silently
+   dropped. (This only ever produces a false *negative*; `owned` is unaffected
+   because `ownedAppIds` is steam.library-only, and no false *positive*
+   `key-available` is possible since a positive still requires a waiting-key
+   AppID match.)
 
-**Fix:** Add the four keys under a `humble.notification` block in
-`translation.json` (matching the fallback strings in `buildDigestCopy`), the
-same way the badge keys were added.
+The plan's own contract (`15-05-PLAN.md` must_haves: "merges waiting-key
+steamAppId", truth #1 "matches an unclaimed **waiting** Humble key") specifies
+the *waiting* set, so passing `humble.keys` is a deviation, not just a superset
+optimization.
+
+The regression test does **not** catch this because it feeds the *same* array
+to both functions (`badges.test.ts:135-138` calls
+`buildDiscountBadgeMaps([], [key])` and passes `[key]` to the resolver), so the
+container's two-different-inputs divergence is invisible to the suite — the same
+class of "test doesn't mirror the container" masking that let the original
+CR-01 ship.
+
+**Fix:** Feed both consumers the identical key set. Compute the waiting list
+once and pass it to the map builder too:
+
+```ts
+const keysWaiting = useMemo(
+  () => selectKeysWaiting(humble.keys ?? []),
+  [humble.keys]
+)
+const { titleToAppId, ownedAppIds } = useMemo(
+  () => buildDiscountBadgeMaps(steam.library, keysWaiting),
+  [steam.library, keysWaiting]
+)
+```
+
+and reuse that `keysWaiting` in the `discountBadges` memo. Then add an
+integration test that passes a *superset* to the map builder and the *filtered*
+subset to the resolver (i.e. include a non-waiting co-titled key with a
+different `steamAppId`) so the divergence is regression-covered.
 
 ## Info
 
-### IN-01: Dedup store advances even when notifications are disabled — backlog is silently consumed
+### IN-01: Legacy backfill cannot reconstruct per-order state for the exact collision it targets — one terminal re-fire on upgrade
 
-**File:** `src/backend/humble/expirationAlerts.ts:30-45, 52-55`
+**File:** `src/backend/humble/expirationAlerts.ts:35-43`
 
-**Issue:** The loop that advances `humbleNotifiedExpirationStore` runs *before*
-the `suppressNotifications` early-return and the `notifyHumbleExpirations`
-settings gate. So while notifications are disabled, transitions are still
-recorded as "notified." If the user later enables the toggle, transitions that
-occurred while it was off will never surface — the "last-notified" watermark
-already moved past them. This is asserted as intended behavior by
-`expirationAlerts.test.ts:268-279`, so it appears to be a deliberate product
-decision (avoid a backlog storm on enable). Flagged only to confirm intent —
-if the desired behavior is "surface anything that changed since the toggle was
-enabled," the store advance must be gated behind the settings check.
+**Issue:** The pre-migration store held one entry per `machineName`. For the
+WR-01 collision (two orders sharing a `machineName` with *different*
+expirations), that single legacy entry holds only the last-written date. On
+upgrade both composites are absent, so both keys backfill from the *same*
+legacy value:
 
-**Fix:** No change if intended. Otherwise, move the store `.set` inside the
-branch that actually fires (or is allowed to fire) the notification.
+- the order whose current `expiration` equals the legacy value → `current === last` → no fire (correct),
+- the order whose `expiration` differs → backfilled with the wrong sibling's date → `current !== last` → **fires once**.
 
-### IN-02: `getKeys()` flattening has no cross-order de-duplication
+So the exact scenario WR-01 set out to make storm-free still emits one spurious
+notification per colliding `machineName` on the first post-upgrade sync. Impact
+is bounded and self-healing (the composite entry is written correctly and never
+re-fires afterward), and it is strictly better than the old behavior (which
+re-fired every sync), so this is acceptable — but it does not fully satisfy the
+plan's "does not fire for already-notified keys" truth for collided keys.
 
-**File:** `src/backend/humble/library.ts:458-464`
+**Fix:** Acceptable as-is given the pre-existing data is irrecoverable. If
+zero upgrade-time fires are required, seed silently on the *first* sync that
+performs any backfill (treat a backfill-touched key as baseline for that sync).
+Otherwise document the one-time behavior in the SUMMARY.
 
-**Issue:** `getKeys()` concatenates `entry.keys` across every cached order with
-no de-dup. This is pre-existing and fine for the Keys views, but it is the
-input to `detectAndNotifyExpirationTransitions` and compounds WR-01: a
-duplicate `machineName` across orders is counted twice in the digest
-(`newlyExpiring.length`), inflating the "N Humble keys" count and potentially
-naming the same game twice. Resolving WR-01 (composite keying) largely
-neutralizes this; noted for completeness.
+### IN-02: Backfill collision-avoidance relies on an unstated `machineName` invariant
 
-**Fix:** None required beyond WR-01; if a precise digest count matters,
-de-duplicate `newlyExpiring` by composite key before building the copy.
+**File:** `src/backend/humble/expirationAlerts.ts:28-43`
+
+**Issue:** The comment asserts "Legacy keys contain no colon and composite keys
+always do, so there is no collision risk." This holds only if `machineName`
+never contains a `:`. Nothing in the code or `HumbleKey` type enforces that; the
+value originates from the Humble API. If a `machineName` ever contained a colon,
+a legacy entry could be indistinguishable from a composite key and the backfill
+guard (`!has(composite) && has(machineName)`) could misbehave. In practice
+Humble machine_names are `snake_case` and colon-free, so this is low-risk, but
+the safety argument is an undocumented assumption rather than an enforced one.
+
+**Fix:** No change required if the invariant is trusted. Optionally assert/skip
+composite construction when `machineName.includes(':')`, or note the invariant
+explicitly.
+
+### IN-03: `buildDiscountBadgeMaps` merges non-waiting keys — helper contract is looser than the plan's stated intent
+
+**File:** `src/common/discounts/badges.ts:88-100`
+
+**Issue:** The helper iterates "each humble key" with no waiting filter, so its
+behavior depends entirely on the caller pre-filtering. Given the container does
+*not* pre-filter (WR-01), the helper's permissive contract is what allows the
+non-waiting keys into the map. Even after WR-01 is fixed at the call site, the
+helper remains foot-gun-shaped for future callers.
+
+**Fix:** Either rename/document the parameter as "already-waiting keys" and rely
+on callers, or filter inside the helper via `selectKeysWaiting`. Given the
+helper lives in `common/` and is meant to be the single source of truth,
+filtering inside it (and updating the container to pass `humble.keys ?? []`
+unchanged) would make the map/resolver sets structurally impossible to diverge.
 
 ---
 
-_Reviewed: 2026-07-09T20:39:25Z_
+_Reviewed: 2026-07-10T02:19:38Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
