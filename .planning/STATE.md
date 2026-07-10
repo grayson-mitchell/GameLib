@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Humble Bundle Integration
 status: executing
 stopped_at: Phase 17 context gathered
-last_updated: "2026-07-10T09:59:36.403Z"
-last_activity: 2026-07-10 -- Phase 17 planning complete
+last_updated: "2026-07-10T10:05:50.953Z"
+last_activity: 2026-07-10 -- Phase 17 execution started
 progress:
   total_phases: 4
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Milestone complete
+**Current focus:** Phase 17 — steam-on-macos-via-crossover-wine-windows-only-steam-games-i
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-10 -- Phase 17 planning complete
+Phase: 17 (steam-on-macos-via-crossover-wine-windows-only-steam-games-i) — EXECUTING
+Plan: 1 of 7
+Status: Executing Phase 17
+Last activity: 2026-07-10 -- Phase 17 execution started
 
 ## v1.1 Phase Map
 
