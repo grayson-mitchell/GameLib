@@ -42,10 +42,12 @@ reported: "First install attempt: banner 'could not download steam' with try-aga
 severity: blocker
 remediation: "Fixed by 17-08 (provisioning now mkdir's the redist dir before downloading SteamSetup.exe; install/launch/uninstall route on real bottle readiness via isBottleReady() instead of cxbottle.conf existence, so a half-provisioned bottle self-heals instead of entering the stuck loop) + 17-10 (styled .steamBottleSetupToast banner)."
 retest_round_2:
-  original_blocker: resolved  # wizard now fires; steam setup actually starts; no 'could not download steam'; no stuck loop; banner styled
+  original_blocker: resolved  # wizard fires; steam setup starts; SteamSetup.exe installer DOES open; no 'could not download steam'; no stuck loop; banner styled
+  clarification: "User confirmed the real SteamSetup.exe installer window DID open — it just opened BEHIND the GameLib window (z-order/focus), so it looked like nothing happened. GAP 1 functionally resolved."
   new_issues:
     - "GAP 3 (state desync, major): after confirming Steam setup in the wizard, the main Install button does NOT update (still reads 'Install') and the game-page status message still says 'The Game is not installed' — even though the RIGHT-side toast correctly shows Steam is being set up. If you press 'Done' in the toast you can re-open the wizard and re-run 'set up steam' (same result). If you do NOT press 'Done', clicking Install does nothing — a quick flash of 'queued' then reverts to 'game not installed'."
     - "GAP 4 (cosmetic): in the WineSelector wizard, move the 'use shared wine prefix' option to the bottom."
+    - "GAP 5 (UX, minor): the SteamSetup.exe installer window opens BEHIND the GameLib window, so the user thinks nothing happened. Fix: after runWineCommand launches the installer (bottle.ts:~328), minimize/hide the GameLib main window (precedent: launcher.ts:176 mainWindow?.hide() on game launch) so the installer is frontmost; optionally a toast hint. Cannot force the foreign CrossOver window always-on-top from Electron."
 
 ### 3. Guided flow fires from all entry points (MACSTEAM-04)
 expected: The same guided setup can be triggered from every Install/Play surface — the game-details page button, the library grid tile, and the install modal. All three reach the same consent-then-provision flow (not just one).
@@ -103,14 +105,19 @@ reason: "User deferred — retest later (native-Mac steam://, GOG/Epic shared bo
 
 total: 10
 passed: 2
-issues: 1              # test 2 retest — original blocker resolved, but a NEW state-desync issue (GAP 3) surfaced
+issues: 1              # test 2 retest — original blocker resolved; NEW issues GAP 3/4/5 surfaced
 remediated: 2          # GAP 1 (test 2) + GAP 2 (test 3) confirmed resolved on retest round 2
 ready_for_retest: 4    # tests 4-7 — depend on setup COMPLETING (blocked by GAP 3 until button/status sync)
 pending: 1             # test 8 indicator — retestable independently once a confirmed Windows-only game is loaded
 blocked: 0
 skipped: 1             # test 10 — deferred by user
 
-note: "Retest round 2 (macOS + CrossOver): the guided wizard fires and Steam setup actually starts (right-side toast confirms) — GAP 1 blocker + GAP 2 both resolved. NEW: GAP 3 (major) game-page Install button + status message don't sync with the in-progress setup; GAP 4 (cosmetic) WineSelector option ordering. Tests 4-7 (login/install/launch/badge) can't complete until GAP 3 is fixed so setup completion is observable."
+open_gaps:             # new issues from retest round 2 — feed into a gap-closure wave
+  - "GAP 3 (major): install button/status desync with in-progress bottle setup"
+  - "GAP 4 (cosmetic): WineSelector 'use shared wine prefix' ordering"
+  - "GAP 5 (minor/UX): SteamSetup installer opens behind the GameLib window"
+
+note: "Retest round 2 (macOS + CrossOver): guided wizard fires, Steam setup starts, and the real SteamSetup.exe installer DOES open — GAP 1 blocker + GAP 2 both resolved. (Installer opened behind the GameLib window = new GAP 5, a z-order issue, not a launch failure.) Remaining new issues: GAP 3 (major) button/status desync, GAP 4 (cosmetic) wizard option order, GAP 5 (minor) installer z-order. Tests 4-7 (login/install/launch/badge) blocked on GAP 3 until setup completion is observable in the UI."
 
 ## Gaps
 
@@ -171,3 +178,18 @@ note: "Retest round 2 (macOS + CrossOver): the guided wizard fires and Steam set
   label: "GAP 4 — WineSelector 'use shared wine prefix' ordering"
   artifacts: []  # Filled by diagnosis
   missing: []    # Filled by diagnosis
+
+- truth: "When the SteamSetup.exe installer launches, it is visible to the user (frontmost), not hidden behind the GameLib window"
+  status: failed
+  reason: "User reported (retest round 2): the real SteamSetup.exe installer window opened BEHIND the GameLib window, so it appeared nothing happened. Confirmed the installer does open — this is a z-order/focus issue, not a launch failure."
+  severity: minor
+  test: 2
+  label: "GAP 5 — SteamSetup installer opens behind GameLib window"
+  artifacts:
+    - src/backend/storeManagers/steam/bottle.ts  # after runWineCommand (~line 328)
+    - src/backend/launcher.ts  # precedent: line 176 mainWindow?.hide() on launch
+    - src/backend/main_window.ts  # getMainWindow() accessor
+  missing:
+    - "minimize/hide the GameLib main window (getMainWindow()?.minimize()) right after runWineCommand dispatches SteamSetup.exe, so the installer is frontmost"
+    - "optional: toast hint that GameLib minimized to reveal the installer"
+  notes: "Cannot force a foreign CrossOver/wine window always-on-top from Electron; the robust lever is to have GameLib step out of the way (precedent: launcher.ts:176)."
