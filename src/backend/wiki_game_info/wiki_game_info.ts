@@ -6,6 +6,7 @@ import { removeSpecialcharacters } from '../utils'
 import { SteamInfo, WikiInfo } from 'common/types'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { getInfoFromAppleGamingWiki } from './applegamingwiki/utils'
+import { getInfoFromCodeweavers } from './codeweavers/utils'
 import { getHowLongToBeat } from './howlongtobeat/utils'
 import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
@@ -28,7 +29,12 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     // as a miss and re-fetch. Once re-fetched it caches a non-null value (real
     // ratings or the "checked, none found" marker) and refreshes on TTL expiry.
     const staleAppleData = isMac && !cachedResponse?.applegamingwiki
-    if (cachedResponse && !staleAppleData) {
+    // Self-heal stale caches: entries populated before CodeWeavers data was
+    // captured (or on a Windows session) hold codeweavers=null. On Mac/Linux
+    // the CrossOver rating pill needs that data, so treat a null-codeweavers
+    // hit as a miss and re-fetch (mirrors staleAppleData above).
+    const staleCrossoverData = (isMac || isLinux) && !cachedResponse?.codeweavers
+    if (cachedResponse && !staleAppleData && !staleCrossoverData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
@@ -38,12 +44,14 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
 
     logInfo(`Getting ExtraGameInfo data for ${title}`, LogPrefix.ExtraGameInfo)
 
-    const [pcgamingwiki, gamesdb, applegamingwiki, umuId] = await Promise.all([
-      getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
-      getInfoFromGamesDB(title, appName, runner),
-      isMac ? getInfoFromAppleGamingWiki(title) : null,
-      isLinux ? getUmuId(appName, runner) : null
-    ])
+    const [pcgamingwiki, gamesdb, applegamingwiki, umuId, codeweavers] =
+      await Promise.all([
+        getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
+        getInfoFromGamesDB(title, appName, runner),
+        isMac ? getInfoFromAppleGamingWiki(title) : null,
+        isLinux ? getUmuId(appName, runner) : null,
+        isMac || isLinux ? getInfoFromCodeweavers(title) : null
+      ])
 
     // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
     const howlongtobeat = await getHowLongToBeat(
@@ -75,11 +83,7 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     const wikiGameInfo = {
       pcgamingwiki,
       applegamingwiki,
-      // TODO(phase-16-02): wire real getInfoFromCodeweavers(title) lookup here,
-      // gated isMac || isLinux (D-07), with the staleCrossoverData self-heal
-      // guard. Placeholder keeps WikiInfo's new codeweavers field type-safe
-      // until the orchestrator plan lands.
-      codeweavers: null,
+      codeweavers,
       howlongtobeat,
       gamesdb,
       steamInfo,
