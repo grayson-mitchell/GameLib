@@ -860,7 +860,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
-    await game.install({} as any)
+    const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
@@ -868,6 +868,10 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       'steamBottleSetupRequired',
       { appName: APP_ID }
     )
+    // The install did not actually start (no ACF poller) — flag the deferral so
+    // the DownloadManager clears the transient 'installing' badge instead of
+    // leaving the game stuck "installing" after Confirm or "Not now".
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
   it('bottle-eligible + provisioned: install() calls tellBottledSteamToInstall + bottle-scoped startInstallPolling, NOT shell.openExternal', async () => {

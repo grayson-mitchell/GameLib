@@ -15,6 +15,11 @@ import type LogWriter from 'backend/logger/log_writer'
 export interface InstallResult {
   status: 'done' | 'error' | 'abort'
   error?: string
+  // Steam bottle (Phase 17): set when install() did NOT actually install because
+  // the dedicated Steam bottle isn't provisioned yet — the guided setup was
+  // requested instead. The DownloadManager uses this to clear the transient
+  // 'installing' badge, since no ACF poller starts in this case.
+  deferredToSetup?: boolean
 }
 
 export type RemoveArgs = {

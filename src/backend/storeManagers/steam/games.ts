@@ -353,7 +353,11 @@ export default class SteamGame implements Game {
         sendFrontendMessage('steamBottleSetupRequired', {
           appName: this.appId
         })
-        return { status: 'done' }
+        // Nothing was installed and no ACF poller starts here — flag the
+        // deferral so the DownloadManager clears the transient 'installing'
+        // badge instead of leaving the game stuck "installing" (the guided
+        // setup, or the user's "Not now", owns what happens next).
+        return { status: 'done', deferredToSetup: true }
       }
 
       logInfo(
