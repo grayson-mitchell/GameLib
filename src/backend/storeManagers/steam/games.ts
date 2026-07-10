@@ -15,6 +15,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
+import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
 import { library, pendingFetches } from './state'
@@ -345,8 +346,35 @@ export default class SteamGame implements Game {
     return { status: 'done' }
   }
 
+  /**
+   * Per-OS confirmed-not-native check (D-11).
+   *
+   * Non-macOS (Linux/Windows) always returns true — those platforms keep the
+   * native steam:// delegation unchanged; Proton is Steam's own concern.
+   *
+   * On macOS, returns true (native path) UNLESS the game has been CONFIRMED
+   * not-native via a completed appdetails fetch: `platformsCaptured === true`
+   * (a lazy-fetch has actually recorded platform data) AND `is_mac_native ===
+   * false`. A never-synced entry defaults `is_mac_native` to false in
+   * library.ts (D-11 nuance), which is ambiguous on its own — requiring
+   * platformsCaptured===true prevents a freshly-synced game (whose real
+   * platform support isn't known yet) from being misrouted into the bottle.
+   */
   isNative(): boolean {
-    return true
+    return !this.isBottleEligible()
+  }
+
+  /**
+   * True only for a CONFIRMED not-native macOS game (D-11) — the single
+   * source of truth for whether install/launch/uninstall should route through
+   * the bottled Steam client instead of the native steam:// path. Reused by
+   * isNative() here; Phase 17 Plan 05 Task 2 also reuses it from
+   * getSettings(), install(), launch(), and uninstall().
+   */
+  private isBottleEligible(): boolean {
+    if (!isMac) return false
+    const meta = steamMetadataStore.get(this.appId)
+    return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 
   async addShortcuts(_fromMenu?: boolean): Promise<void> {

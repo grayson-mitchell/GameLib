@@ -129,6 +129,16 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn()
 }))
 
+// ── backend/constants/environment mock — mutable double, defaults to non-mac ─
+// (mirrors library.test.ts's pattern) so pre-existing tests keep their
+// pre-Phase-17 behavior (isBottleEligible() short-circuits false) unless a
+// test explicitly flips envMock.isMac = true.
+jest.mock('backend/constants/environment', () => ({
+  isWindows: false,
+  isMac: false,
+  isLinux: true
+}))
+
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
 const APP_ID = '570'
@@ -515,7 +525,72 @@ describe('SteamGame.launch() — GAME-01', () => {
     expect(url).toMatch(/^steam:\/\/rungameid\/\d+$/)
   })
 
-  it('GAME-01: isNative() still returns true (unchanged — Wine branch is skipped in launcher.ts)', () => {
+})
+
+// ── D-11: SteamGame.isNative() — per-OS confirmed-not-native ─────────────────
+
+describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+  })
+
+  it('non-mac (Linux/Windows): isNative() returns true even for a confirmed-not-native metadata entry', () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('D-11: macOS confirmed-not-native (platformsCaptured:true, is_mac_native:false) — isNative() returns false', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+  })
+
+  it('D-11 (BLOCKER): macOS NOT-yet-captured (platformsCaptured not true) — isNative() returns true (do not bottle an unconfirmed game)', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('macOS Mac-native game (platformsCaptured:true, is_mac_native:true) — isNative() returns true', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('macOS with no metadata entry at all — isNative() returns true (D-11 ambiguous-default fallback)', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
     const game = new SteamGame(APP_ID)
     expect(game.isNative()).toBe(true)
   })
