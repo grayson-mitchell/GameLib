@@ -18,10 +18,14 @@ import { steamBottleConfigStore } from '../electronStores'
 import {
   getBottleDir,
   getBottleSteamappsDir,
+  getBottleSteamExePath,
   isBottleProvisioned,
   sanitizeBottleName,
   getSteamBottleSettings,
-  provisionBottle
+  provisionBottle,
+  tellBottledSteamToInstall,
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -290,6 +294,83 @@ describe('bottle.ts', () => {
         false
       )
       expect(call.commandParts.some((p: string) => p === '/S')).toBe(false)
+    })
+  })
+
+  describe('tellBottledSteamTo{Install,Launch,Uninstall}', () => {
+    const BAD_APP_ID = '123; rm -rf /'
+    const GOOD_APP_ID = '440'
+
+    test('rejects a non-numeric appId for install without calling runWineCommand', async () => {
+      const result = await tellBottledSteamToInstall(BAD_APP_ID)
+      expect(result.status).toBe('error')
+      expect(mockedRunWineCommand).not.toHaveBeenCalled()
+    })
+
+    test('rejects a non-numeric appId for launch without calling runWineCommand', async () => {
+      const result = await tellBottledSteamToLaunch(BAD_APP_ID)
+      expect(result.status).toBe('error')
+      expect(mockedRunWineCommand).not.toHaveBeenCalled()
+    })
+
+    test('rejects a non-numeric appId for uninstall without calling runWineCommand', async () => {
+      const result = await tellBottledSteamToUninstall(BAD_APP_ID)
+      expect(result.status).toBe('error')
+      expect(mockedRunWineCommand).not.toHaveBeenCalled()
+    })
+
+    test('returns an error (no spawn) when the bottle is not provisioned', async () => {
+      mockedExistsSync.mockReturnValue(false) // isBottleProvisioned() -> false
+
+      const installResult = await tellBottledSteamToInstall(GOOD_APP_ID)
+      const launchResult = await tellBottledSteamToLaunch(GOOD_APP_ID)
+      const uninstallResult = await tellBottledSteamToUninstall(GOOD_APP_ID)
+
+      expect(installResult.status).toBe('error')
+      expect(launchResult.status).toBe('error')
+      expect(uninstallResult.status).toBe('error')
+      expect(mockedRunWineCommand).not.toHaveBeenCalled()
+    })
+
+    test('launch dispatches -applaunch <appId> as discrete argv elements targeting the bottle Steam.exe', async () => {
+      mockedExistsSync.mockReturnValue(true) // isBottleProvisioned() -> true
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      const result = await tellBottledSteamToLaunch(GOOD_APP_ID)
+
+      expect(result.status).toBe('done')
+      const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
+      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
+      expect(commandParts).toContain('-applaunch')
+      expect(commandParts).toContain(GOOD_APP_ID)
+    })
+
+    test('install dispatches steam://install/<appId> targeting the bottle Steam.exe', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      const result = await tellBottledSteamToInstall(GOOD_APP_ID)
+
+      expect(result.status).toBe('done')
+      const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
+      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
+      expect(
+        commandParts.some((p: string) => p.includes(GOOD_APP_ID))
+      ).toBe(true)
+    })
+
+    test('uninstall dispatches steam://uninstall/<appId> targeting the bottle Steam.exe', async () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      const result = await tellBottledSteamToUninstall(GOOD_APP_ID)
+
+      expect(result.status).toBe('done')
+      const { commandParts } = mockedRunWineCommand.mock.calls[0][0]
+      expect(commandParts[0]).toBe(getBottleSteamExePath(DEFAULT_STEAM_BOTTLE_NAME))
+      expect(
+        commandParts.some((p: string) => p.includes(GOOD_APP_ID))
+      ).toBe(true)
     })
   })
 })

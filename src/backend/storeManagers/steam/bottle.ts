@@ -314,3 +314,93 @@ export async function provisionBottle(opts?: {
 
   return { status: 'done' }
 }
+
+// ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
+
+const NUMERIC_APP_ID = /^\d+$/
+
+type BottledSteamVerb = 'install' | 'launch' | 'uninstall'
+type BottledSteamResult = { status: 'done' | 'error'; error?: string }
+
+/**
+ * Numeric-guards appId (mirrors buildSteamProtocolUrl's /^\d+$/ rule,
+ * T-17-04), pre-flights isBottleProvisioned(), then dispatches the verb to
+ * the bottled Steam client via runWineCommand. Fire-and-forget — never
+ * optimistically flips install state (D-02); the bottle-scoped ACF poller
+ * (17-05) owns real status.
+ */
+async function dispatchToBottledSteam(
+  verb: BottledSteamVerb,
+  appId: string
+): Promise<BottledSteamResult> {
+  if (!NUMERIC_APP_ID.test(appId)) {
+    logWarning(
+      `tellBottledSteamTo${verb}: rejected non-numeric appId "${appId}" — not dispatching (T-17-04)`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Invalid appId: "${appId}"` }
+  }
+
+  if (!isBottleProvisioned()) {
+    return {
+      status: 'error',
+      error: 'Steam bottle is not provisioned yet'
+    }
+  }
+
+  const bottleName =
+    steamBottleConfigStore.get_nodefault('bottleName') ??
+    DEFAULT_STEAM_BOTTLE_NAME
+  const steamExePath = getBottleSteamExePath(bottleName)
+
+  let commandParts: string[]
+  switch (verb) {
+    case 'launch':
+      commandParts = [steamExePath, '-applaunch', appId]
+      break
+    case 'install':
+      commandParts = [steamExePath, `steam://install/${appId}`]
+      break
+    case 'uninstall':
+      commandParts = [steamExePath, `steam://uninstall/${appId}`]
+      break
+  }
+
+  try {
+    await runWineCommand({
+      commandParts,
+      gameSettings: getSteamBottleSettings(),
+      wait: false,
+      protonVerb: 'run',
+      skipPrefixCheckIKnowWhatImDoing: true
+    })
+    return { status: 'done' }
+  } catch (error) {
+    logError(
+      [`tellBottledSteamTo${verb}: runWineCommand failed`, error],
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `Failed to dispatch ${verb} to bottled Steam: ${error}`
+    }
+  }
+}
+
+export function tellBottledSteamToInstall(
+  appId: string
+): Promise<BottledSteamResult> {
+  return dispatchToBottledSteam('install', appId)
+}
+
+export function tellBottledSteamToLaunch(
+  appId: string
+): Promise<BottledSteamResult> {
+  return dispatchToBottledSteam('launch', appId)
+}
+
+export function tellBottledSteamToUninstall(
+  appId: string
+): Promise<BottledSteamResult> {
+  return dispatchToBottledSteam('uninstall', appId)
+}
