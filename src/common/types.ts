@@ -735,6 +735,12 @@ export interface AppleGamingWikiInfo {
   crossoverLink: string
 }
 
+export interface CodeweaversInfo {
+  rating: number | null
+  ratingCount: number | null
+  slug: string
+}
+
 export interface GamesDBInfo {
   steamID: string
 }
@@ -755,6 +761,7 @@ export interface SteamInfo {
 export interface WikiInfo {
   pcgamingwiki: PCGamingWikiInfo | null
   applegamingwiki: AppleGamingWikiInfo | null
+  codeweavers: CodeweaversInfo | null
   howlongtobeat: HeroicHowLongToBeatEntry | null
   gamesdb: GamesDBInfo | null
   steamInfo: SteamInfo | null
