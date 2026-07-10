@@ -26,6 +26,32 @@ import {
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame from './games'
+import {
+  getBottleSteamappsDir,
+  getSteamBottleSettings,
+  isBottleProvisioned
+} from './bottle'
+
+/**
+ * Which Steam client's steamapps root an ACF scan/poll should target.
+ * 'native' (default) preserves all pre-Phase-17 behavior; 'bottle' scans the
+ * dedicated CrossOver bottle's own steamapps dir instead (RESEARCH.md Pitfall 2
+ * — the two roots must never be conflated).
+ */
+export type AcfSource = 'native' | 'bottle'
+
+/** Shared options shape for both install/uninstall poller start functions. */
+type PollOptions = { intervalMs?: number; source?: AcfSource }
+
+/**
+ * Resolves the bottle's own steamapps dir from the dedicated Steam bottle's
+ * stored GameSettings (falls back to DEFAULT_STEAM_BOTTLE_NAME internally via
+ * getSteamBottleSettings()). Single chokepoint so every bottle-aware scan
+ * roots at the same path.
+ */
+function getBottleSteamappsRoot(): string {
+  return getBottleSteamappsDir(getSteamBottleSettings().wineCrossoverBottle)
+}
 
 // DETAIL-01 gap-fix: Steam installs the depot for the host OS, so the installed
 // build reflects the platform GameLib is running on. Report that instead of a
@@ -36,6 +62,14 @@ function hostInstallPlatform(): InstallPlatform {
   if (isMac) return 'Mac'
   if (isLinux) return 'linux'
   return 'Windows'
+}
+
+// Pitfall 3 fix: a bottle-installed game is a Windows depot running under
+// Wine/CrossOver — it must ALWAYS report 'Windows', regardless of host OS.
+// Only a native-sourced install object should ever consult hostInstallPlatform().
+function installPlatformForSource(source: AcfSource): InstallPlatform {
+  if (source === 'bottle') return 'Windows'
+  return hostInstallPlatform()
 }
 
 export default class SteamLibraryManager implements LibraryManager {
@@ -213,7 +247,9 @@ export default class SteamLibraryManager implements LibraryManager {
           ? {
               install_path: installedData.installPath,
               install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              platform: hostInstallPlatform()
+              // refresh() only ever scans the native ACF path (buildInstalledMap
+              // above) — bottle reconciliation is refreshInstallState()'s job.
+              platform: installPlatformForSource('native')
             }
           : {},
         extra: {
@@ -312,17 +348,36 @@ export default class SteamLibraryManager implements LibraryManager {
    *  - D-02: badges flip only after confirmed ACF data; never optimistically
    *    from a click.
    *
+   * 17-03 (MACSTEAM-05): when isMac && isBottleProvisioned(), ALSO diffs each
+   * library entry against buildBottleInstalledMap() (the dedicated CrossOver
+   * bottle's own ACF root) and reconciles bottle-installed games with
+   * install.platform: 'Windows' (Pitfall 3) — never the host OS. Bottle
+   * reconciliation is gated strictly behind isBottleProvisioned() (T-17-03: a
+   * missing/unprovisioned bottle is a no-op, not a repeated failing scan) and
+   * is skipped entirely on Linux/Windows or an un-provisioned macOS, leaving
+   * the native-only reconciliation byte-for-byte unchanged in those cases.
+   * The native map always takes precedence for a given appId — a bottle
+   * result is only consulted when the native scan found nothing for that
+   * appId, so the two roots are never double-counted or conflated.
+   *
    * Only games whose state changed are pushed (avoids flooding the frontend).
    * The GameInfo install shape matches refresh() when installed:
-   *   install_path, install_size, platform: 'Windows'
+   *   install_path, install_size, platform ('Windows' always for a bottle
+   *   install; host-OS-derived for a native install)
    * and is set to {} when not installed.
    */
   async refreshInstallState(): Promise<void> {
     const installedMap = await buildInstalledMap()
+    const bottleInstalledMap =
+      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
 
     for (const [appIdStr, gameInfo] of library.entries()) {
       const appId = parseInt(appIdStr, 10)
-      const installedData = installedMap.get(appId)
+      const nativeInstalledData = installedMap.get(appId)
+      const bottleInstalledData = bottleInstalledMap?.get(appId)
+      // Native always wins when present — never double-count/conflate the two roots.
+      const installedData = nativeInstalledData ?? bottleInstalledData
+      const source: AcfSource = nativeInstalledData ? 'native' : 'bottle'
       const isNowInstalled = !!installedData
 
       if (gameInfo.is_installed !== isNowInstalled) {
@@ -333,7 +388,7 @@ export default class SteamLibraryManager implements LibraryManager {
             ? {
                 install_path: installedData.installPath,
                 install_size: getFileSize(Number(installedData.sizeOnDisk)),
-                platform: hostInstallPlatform()
+                platform: installPlatformForSource(source)
               }
             : {}
         }
@@ -423,19 +478,30 @@ const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safet
  * - 'downloading': manifest present but bit 4 unset (download in flight)
  * - 'absent':      no manifest found for this appId in any library path
  *
- * Corrupt/unreadable manifests are skipped without throwing (T-2-01).
+ * `source` selects which steamapps root(s) to scan:
+ *  - 'native' (default): every native library path from getSteamLibraries()
+ *    — exactly the pre-Phase-17 behavior, byte-for-byte unchanged.
+ *  - 'bottle': the single dedicated CrossOver bottle steamapps root
+ *    (RESEARCH.md Pitfall 2 — never conflated with the native roots).
+ *
+ * Corrupt/unreadable manifests are skipped without throwing (T-2-01 / T-17-05).
  * Exported for unit testing.
  */
-export async function readAcfState(appId: string): Promise<{
+export async function readAcfState(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<{
   state: 'absent' | 'downloading' | 'installed'
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
 }> {
-  const libraryPaths = await getSteamLibraries()
+  const steamappsDirs =
+    source === 'bottle'
+      ? [getBottleSteamappsRoot()]
+      : (await getSteamLibraries()).map((libPath) => join(libPath, 'steamapps'))
 
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
+  for (const steamappsDir of steamappsDirs) {
     if (!existsSync(steamappsDir)) continue
 
     const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
@@ -466,16 +532,76 @@ export async function readAcfState(appId: string): Promise<{
 }
 
 /**
+ * Bottle-scoped sibling of buildInstalledMap() — same StateFlags bitmask +
+ * corrupt-file discipline (T-2-01/T-17-05), rooted at the dedicated CrossOver
+ * bottle's own steamapps dir instead of the native defaultSteamPath (Pitfall 2).
+ * Returns an empty Map when the bottle steamapps dir doesn't exist yet (e.g.
+ * bottle not provisioned or Steam not yet installed inside it).
+ *
+ * Exported for unit testing.
+ */
+export async function buildBottleInstalledMap(): Promise<
+  Map<number, { installPath: string; sizeOnDisk: string }>
+> {
+  const installed = new Map<
+    number,
+    { installPath: string; sizeOnDisk: string }
+  >()
+  const steamappsDir = getBottleSteamappsRoot()
+  if (!existsSync(steamappsDir)) return installed
+
+  let files: string[]
+  try {
+    files = readdirSync(steamappsDir)
+  } catch {
+    return installed
+  }
+
+  for (const file of files) {
+    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+
+    try {
+      const content = readFileSync(join(steamappsDir, file), 'utf-8')
+      const parsed = parse(content)
+      const state = parsed?.AppState
+      if (!state) continue
+
+      const appid = parseInt(state.appid, 10)
+      const stateFlags = parseInt(state.StateFlags, 10)
+      // Bit 4 (0x4) = FullyInstalled — bitmask, NOT equality (Pitfall 6)
+      const isInstalled = (stateFlags & 4) !== 0
+
+      if (isInstalled && !isNaN(appid)) {
+        installed.set(appid, {
+          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
+          sizeOnDisk: state.SizeOnDisk ?? '0'
+        })
+      }
+    } catch {
+      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
+    }
+  }
+
+  return installed
+}
+
+/**
  * Executes one polling tick for appId:
  *   'downloading' → updates seenDownloading flag, sends gameStatusUpdate { status: 'installing' }
  *   'installed'   → updates library entry, sends pushGameToLibrary +
  *                   gameStatusUpdate { status: 'done' }, stops the poll
  *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
  *
+ * `source` selects the native (default) or bottle-scoped ACF root — see
+ * readAcfState() for the distinction.
+ *
  * Exported for unit testing.
  */
-export async function pollInstallOnce(appId: string): Promise<void> {
-  const result = await readAcfState(appId)
+export async function pollInstallOnce(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<void> {
+  const result = await readAcfState(appId, source)
   const poll = activePolls.get(appId)
 
   if (result.state === 'downloading') {
@@ -494,7 +620,7 @@ export async function pollInstallOnce(appId: string): Promise<void> {
         install: {
           install_path: result.installPath!,
           install_size: getFileSize(Number(result.sizeOnDisk!)),
-          platform: hostInstallPlatform()
+          platform: installPlatformForSource(source)
         }
       }
       library.set(appId, updated)
@@ -531,13 +657,30 @@ export async function pollInstallOnce(appId: string): Promise<void> {
  *     (user likely cancelled Steam's install dialog — T-03-06 mitigation)
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
+ * The second parameter accepts EITHER a plain intervalMs number (existing
+ * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
+ * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
+ * instead of the native one. Omitting the second arg entirely, or passing a
+ * bare number, preserves today's native behavior byte-for-byte.
+ *
  * Exported for unit testing.
  */
-export function startInstallPolling(appId: string, intervalMs = 3000): void {
+export function startInstallPolling(
+  appId: string,
+  intervalMsOrOptions: number | PollOptions = 3000
+): void {
   if (activePolls.has(appId)) return // idempotent
 
+  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+    typeof intervalMsOrOptions === 'number'
+      ? { intervalMs: intervalMsOrOptions, source: 'native' }
+      : {
+          intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
+          source: intervalMsOrOptions.source ?? 'native'
+        }
+
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms)`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
     LogPrefix.Steam
   )
 
@@ -560,7 +703,7 @@ export function startInstallPolling(appId: string, intervalMs = 3000): void {
       return
     }
 
-    await pollInstallOnce(appId)
+    await pollInstallOnce(appId, source)
 
     // pollInstallOnce may have stopped the poll (state became 'installed')
     if (!activePolls.has(appId)) return
@@ -625,10 +768,14 @@ const STATE_UNINSTALLING = 2048
  *               or was cancelled — handled by the grace logic in startUninstallPolling.
  *
  * Install state is never optimistically flipped (D-02) — only an absent manifest
- * (confirmed removal) flips the badge. Exported for unit testing.
+ * (confirmed removal) flips the badge. `source` selects the native (default) or
+ * bottle-scoped ACF root — see readAcfState(). Exported for unit testing.
  */
-export async function pollUninstallOnce(appId: string): Promise<void> {
-  const result = await readAcfState(appId)
+export async function pollUninstallOnce(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<void> {
+  const result = await readAcfState(appId, source)
   const poll = activeUninstallPolls.get(appId)
 
   if (result.state === 'absent') {
@@ -685,13 +832,30 @@ export async function pollUninstallOnce(appId: string): Promise<void> {
  *     any transient status, leaving the badge installed
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
+ * The second parameter accepts EITHER a plain intervalMs number (existing
+ * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
+ * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
+ * instead of the native one. Omitting the second arg entirely, or passing a
+ * bare number, preserves today's native behavior byte-for-byte.
+ *
  * Exported for unit testing.
  */
-export function startUninstallPolling(appId: string, intervalMs = 3000): void {
+export function startUninstallPolling(
+  appId: string,
+  intervalMsOrOptions: number | PollOptions = 3000
+): void {
   if (activeUninstallPolls.has(appId)) return // idempotent
 
+  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+    typeof intervalMsOrOptions === 'number'
+      ? { intervalMs: intervalMsOrOptions, source: 'native' }
+      : {
+          intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
+          source: intervalMsOrOptions.source ?? 'native'
+        }
+
   logInfo(
-    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms)`,
+    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
     LogPrefix.Steam
   )
 
@@ -714,7 +878,7 @@ export function startUninstallPolling(appId: string, intervalMs = 3000): void {
       return
     }
 
-    await pollUninstallOnce(appId)
+    await pollUninstallOnce(appId, source)
 
     // pollUninstallOnce may have stopped the poll (manifest absent = complete)
     if (!activeUninstallPolls.has(appId)) return
