@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Humble Bundle Integration
+milestone: v1.4
+milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 17 context gathered
-last_updated: "2026-07-10T21:14:09.567Z"
-last_activity: 2026-07-10 -- Phase 17 execution started
+stopped_at: Phase 17 plan 17-09 complete (17-07 human validation gate remains)
+last_updated: "2026-07-11T00:00:00.000Z"
+last_activity: 2026-07-11 -- Phase 17 plan 17-09 (UAT GAP 2 / MACSTEAM-04) executed
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 17 (steam-on-macos-via-crossover-wine-windows-only-steam-games-i) — EXECUTING
-Plan: 1 of 10
-Status: Executing Phase 17
-Last activity: 2026-07-10 -- Phase 17 execution started
+Plan: 9 of 10 complete (17-07 remaining — human validation gate)
+Status: Phase 17 automated work done; awaiting human macOS+CrossOver validation (17-07) + UAT re-test
+Last activity: 2026-07-11 -- Phase 17 plan 17-09 (UAT GAP 2 / MACSTEAM-04) executed
 
 ## v1.1 Phase Map
 
