@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 15
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-07-10 - Completed quick task 260710-knr: Install Info platform icon + folder-open affordance (runtime visual UAT pending)
+Last activity: 2026-07-10 - Completed quick task 260710-l27: Extra-info Crossover/Wine rating rows + removed Mac rating-source setting (runtime visual UAT pending)
 
 ## v1.1 Phase Map
 
@@ -170,6 +170,7 @@ Recent decisions affecting current work:
 | 260704-mig | Fix Phase 8 Gap D launch-overlay regression (Steam overlay flashed at ~0s because steam:// blur fired instantly) via a 1.5s minimum-visible floor + 8s safety net; plus GameLib icon above text on artwork placeholders (greyscale on the 'Artwork unavailable' missing variant). tsc 0, eslint clean. Runtime re-UAT pending | 2026-07-04 | [260704-mig-fix-phase-8-gap-d-launch-overlay-regress](.planning/quick/260704-mig-fix-phase-8-gap-d-launch-overlay-regress/) |
 | 260710-kba | Format Steam install_size as human-readable in Install Info panel: Steam persisted raw ACF sizeOnDisk bytes (e.g. 20622023528) while all other stores store a getFileSize()-formatted string. Wrapped all three steam/library.ts install-object sites (refresh, refreshInstallState, pollInstallOnce) in getFileSize(Number(sizeOnDisk)) and simplified getSteamInstallSize fast path to return the pre-formatted string. codecheck 0, 812 tests pass | 2026-07-10 | [260710-kba-format-steam-install-size-as-human-reada](.planning/quick/260710-kba-format-steam-install-size-as-human-reada/) |
 | 260710-knr | Install Info panel consistency: Installed Platform row now renders a FontAwesome brand icon (faWindows/faApple/faLinux, case-insensitive helper w/ raw-text fallback, Browser branch unchanged) matching the Supported-platforms row; Install Path row gains a trailing faFolderOpen affordance inside the existing clickable openFolder div (no new handler) + info.openLocation i18n key. codecheck 0, eslint clean. Runtime visual UAT pending (needs GUI) | 2026-07-10 | [260710-knr-install-info-platform-icon-folder-open-i](.planning/quick/260710-knr-install-info-platform-icon-folder-open-i/) |
+| 260710-l27 | Extra-info AppleGamingWiki refactor: split single rating row into two always-visible rows (Crossover rating + Wine rating, "Unrated" fallback via ratingTier); removed the cover-art rating pill (AppleRatingOverlay) entirely; fully removed the redundant "Mac compatibility rating source" (appleRatingSource) setting across settings UI, GlobalState/ContextProvider, frontend/common types, electron_store schema, and i18n. tsc 0, grep gate confirms zero dangling refs. Runtime visual UAT pending (needs GUI) | 2026-07-10 | [260710-l27-extra-info-crossover-wine-rating-rows-re](.planning/quick/260710-l27-extra-info-crossover-wine-rating-rows-re/) |
 
 ## Deferred Items
 
