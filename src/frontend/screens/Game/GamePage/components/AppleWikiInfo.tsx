@@ -31,7 +31,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
 
   const showProton =
     is.linux && gameInfo.runner === 'steam' && !!steamInfo?.compatibilityLevel
-  const showCrossover = is.mac && codeweavers?.macRating != null
+  const showCrossover = is.mac && !!codeweavers
   const showWine = !!applegamingwiki && !showProton
 
   const onClickCrossover = () => {
@@ -73,13 +73,17 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
         >
           <CrossoverIcon style={{ width: '24px', height: '24px' }} />
           <b>{t('info.crossover-rating', 'Crossover emulation')}:</b>
-          <Rating
-            value={codeweavers?.macRating}
-            precision={0.5}
-            max={5}
-            readOnly
-            size="small"
-          />
+          {codeweavers?.macRating != null ? (
+            <Rating
+              value={codeweavers.macRating}
+              precision={0.5}
+              max={5}
+              readOnly
+              size="small"
+            />
+          ) : (
+            t('info.unrated', 'Unrated')
+          )}
         </a>
       )}
       {showProton &&
@@ -97,7 +101,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
               {stars !== null ? (
                 <Rating value={stars} max={5} readOnly size="small" />
               ) : (
-                t('info.no-compatibility-data', 'No compatibility data available')
+                t('info.unrated', 'Unrated')
               )}
             </a>
           )
