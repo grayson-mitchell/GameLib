@@ -433,15 +433,46 @@ Plans:
 ### Phase 17: Steam on macOS via CrossOver/Wine
 **Goal**: Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of the native steam:// delegation
 **Depends on**: Phase 3 (Steam Game Operations), Phase 7 (is_mac_native platform data)
-**Requirements**: TBD (define during discuss/plan)
+**Requirements**: MACSTEAM-01, MACSTEAM-02, MACSTEAM-03, MACSTEAM-04, MACSTEAM-05, MACSTEAM-06 (minted during /gsd:plan-phase 17)
 **Locked architecture decision** (from discussion 2026-07-10):
   - Run the **Windows Steam client inside a CrossOver/Wine bottle**; install & launch Windows-only games *through* that bottled Steam client so Steam DRM/runtime requirements are satisfied. Reuse GameLib's existing bottle plumbing (`WineSelector`, `CrossoverBottle.tsx`).
   - Do NOT wine-run individual game `.exe`s directly (rejected: only works for DRM-free games, breaks anything needing the Steam runtime).
 **Scope notes:**
   - **Reverses Phase 3 GAME-04 for macOS non-native games:** `SteamGame.isNative()` must become per-OS (return `is_mac_native`) instead of hardcoded `true`; the frontend install short-circuit in `state/InstallGameModal.ts:35` must stop firing `steam://install` directly for non-mac-native games on macOS and route them through the bottle flow.
   - **Linux is unchanged** — Windows-only Steam games on Linux continue to delegate to Steam Proton (Phase 3 GAME-04 stays intact there). This phase is macOS-specific.
-**Success Criteria** (what must be TRUE): TBD (derive during planning)
-**Plans**: TBD (run /gsd-plan-phase 17)
+**Success Criteria** (what must be TRUE):
+  1. On macOS, a confirmed Windows-only Steam game (no Mac build) installs and launches through a dedicated GameLib-managed CrossOver/Wine bottle running the Windows Steam client
+  2. First Install/Play on such a game with no bottle yet triggers a guided setup + consent flow (bottle create, engine choice, SteamSetup click-through, one-time bottled login) — never a failing native steam://install
+  3. `SteamGame.isNative()` is per-OS and confirmed-not-native-gated (platformsCaptured && !is_mac_native) — a not-yet-synced game is NOT force-bottled (D-11)
+  4. A bottle-installed game's badge reads from the bottle's own steamapps ACF as a Windows install
+  5. The game page shows a "runs via the Windows Steam bottle" indicator
+  6. Native-Mac Steam, Windows, Linux (Proton), and GOG/Epic shared-bottle behavior are all unchanged
+**Plans**: 7 plans
+
+**Wave 0** — Resolve the one genuine unknown before provisioning:
+- [ ] `17-01-PLAN.md` — Spike: confirm the `cxbottle --create` mechanism (Assumption A1) on a real CrossOver install; lock CLI-or-GUI-fallback (MACSTEAM-02) *(checkpoint)*
+
+**Wave 1** — Bottle foundation:
+- [ ] `17-02-PLAN.md` — constants, dedicated `steamBottleConfigStore`, `bottle.ts` paths/guards/settings + tests (MACSTEAM-02, MACSTEAM-05)
+
+**Wave 2** *(parallel — no file overlap)*:
+- [ ] `17-03-PLAN.md` — `library.ts` bottle-aware ACF scan, Windows-for-bottle platform, source-parameterized pollers + refreshInstallState (MACSTEAM-05)
+- [ ] `17-04-PLAN.md` — `bottle.ts` provisioning (create + SteamSetup) + tellBottledSteamTo{Install,Launch,Uninstall} + bottle IPC/preload/main (MACSTEAM-02, MACSTEAM-03, MACSTEAM-04)
+
+**Wave 3** *(parallel — backend games vs frontend)*:
+- [ ] `17-05-PLAN.md` — `games.ts` per-OS isNative() (D-11) + bottle routing of install/launch/uninstall + Pitfall-5 guard (MACSTEAM-01, MACSTEAM-04)
+- [ ] `17-06-PLAN.md` — Frontend: InstallGameModal guided-setup routing + SteamBottleSetup consent/login UI + D-08 indicator + i18n (MACSTEAM-04, MACSTEAM-06)
+
+**Wave 4** *(checkpoint)*:
+- [ ] `17-07-PLAN.md` — Full-suite gate + end-to-end macOS UAT on real CrossOver + scope-fence non-regression + 17-VALIDATION.md sign-off (MACSTEAM-01..06)
+
+**Cross-cutting constraints:**
+- Zero new npm packages (RESEARCH.md confirmed — all Wine/VDF/download primitives already exist).
+- Two Steam libraries must never be conflated: native `defaultSteamPath` vs the bottle's `drive_c/Program Files (x86)/Steam/steamapps`.
+- Bottle name → path/argv only through `sanitizeBottleName`; appId → bottled command only through the `/^\d+$/` numeric guard.
+- The bottled Steam session is opaque (D-04) — no credential parsing/bridging.
+- GAME-05 "Playing" badge parity for bottled games is explicitly out of scope (documented in 17-VALIDATION.md).
+
 **UI hint**: yes
 
 ## Progress
@@ -471,4 +502,4 @@ v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only Cross
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
-| 17. Steam on macOS via CrossOver/Wine | 0/? | Not started | - |
+| 17. Steam on macOS via CrossOver/Wine | 0/7 | Not started | - |

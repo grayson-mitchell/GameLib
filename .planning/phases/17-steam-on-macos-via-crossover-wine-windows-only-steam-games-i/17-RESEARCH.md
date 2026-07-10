@@ -301,25 +301,31 @@ if (is.native) {
 
 ## Open Questions
 
+> **All four resolved during `/gsd:plan-phase 17` — see the RESOLVED marker under each.**
+
 1. **What is the exact `cxbottle` CLI syntax for non-interactive bottle creation on the CrossOver version GameLib users are likely to have installed?**
    - What we know: Community sources describe `cxbottle --create --bottle NAME --template/--distro TYPE`; official CodeWeavers docs confirm the bottle storage path and in-bottle environment variables (`CX_ROOT`, `CX_BOTTLE`, `WINEPREFIX`) but not the create-flag surface.
    - What's unclear: Exact flag name (`--template` vs `--distro`), valid values, and whether this is stable across CrossOver versions.
    - Recommendation: Budget a Wave 0 spike (mirroring Phase 16's `spike/` precedent) to empirically confirm against a real CrossOver install before committing to this as the provisioning mechanism; fall back to "GameLib prompts the user to create the bottle via CrossOver's GUI, then verifies + configures it" if the CLI proves unreliable.
+   - **RESOLVED → plan 17-01 (Wave 0 spike):** a `probe-cxbottle.sh` + `FINDINGS.md` empirically lock the create mechanism (working `cxbottle --create` argv OR the documented GUI fallback) before 17-04 provisioning implements it. 17-04 Task 1 consumes the locked MECHANISM DECISION verbatim.
 
 2. **Should uninstall/move for bottled games route through the bottled Steam client, and what does "move" even mean when the install lives inside a shared bottle?**
    - What we know: D-09 says install is bottle-driven; CONTEXT.md marks uninstall/move mechanics as Claude's-discretion, expecting uninstall to mirror install (route through bottled Steam). The existing frontend already hides Move/Change/Verify/Settings for all Steam games (`GameSubMenu` `!isSteam` gates), so "Move" is likely already a non-issue — it's simply never offered.
    - What's unclear: Whether "uninstall" for a bottled game should just fire `steam://uninstall` *at the bottled client* (analogous to install), or whether GameLib should ever offer "delete the whole bottle" as a separate, more drastic reset action (tied to D-01's stated rationale of being able to "reset/reinstall Steam without risking non-Steam games").
    - Recommendation: Plan uninstall as routing through the bottled client (steam:// verb executed against the bottle's Steam process) for parity with install; treat "reset the entire bottle" as an explicitly separate Settings-level action, out of this phase's per-game uninstall flow unless the planner decides otherwise.
+   - **RESOLVED → plans 17-04 (tellBottledSteamToUninstall) + 17-05 (uninstall bottle routing):** uninstall for a bottle-eligible game routes through the bottled Steam client with a bottle-scoped uninstall poller, parity with install. "Move" stays unoffered (GameSubMenu `!isSteam` gates). Whole-bottle reset is out of this phase's per-game uninstall flow.
 
 3. **Does GAME-05 "Playing" badge parity extend to bottled games in this phase, or is it explicitly out of scope?**
    - What we know: The existing `macOsRunningAppId()` poller (steam/library.ts:849) reads the **native** Steam client's `registry.vdf`; a bottled Steam client would need its own registry read routed through the bottle (Windows-style `reg query` executed via Wine, or the bottle's own `registry.vdf` if CrossOver exposes one at a predictable path).
    - What's unclear: ROADMAP.md's Phase 17 scope explicitly covers "install and launch" only, with no mention of the running-game poller; CONTEXT.md doesn't mention GAME-05 either.
    - Recommendation: Treat as explicitly out of scope for Phase 17 unless the planner decides otherwise — flag it as a known limitation/follow-up rather than silently under-delivering GAME-05 parity.
+   - **RESOLVED → out of scope, documented in 17-VALIDATION.md (`## Out-of-Scope`):** bottled GAME-05 "Playing" badge parity is explicitly deferred (Phase 17 scope = install + launch only) and tracked as a known limitation/follow-up, not silently under-delivered.
 
 4. **Where does the D-07 guided setup UI live (Settings vs. an install-time modal), and how does its state persist across the multi-minute provisioning + login flow if the user navigates away?**
    - What we know: CONTEXT.md marks this as Claude's-discretion. D-07 ties the guided prompt to the very first Install/Play click on an eligible game.
    - What's unclear: Whether this should be a modal (blocking, similar to `InstallModal`) or a background task with a persistent progress indicator (similar to the Steam ACF install poller's non-blocking toast pattern) — probably the latter, given D-09's precedent of "no GameLib install modal for Steam, Steam owns its own progress UI."
    - Recommendation: Model it as a background-task + notification pattern (consistent with the existing Steam install-polling UX), not a blocking modal — but flag this as a `/gsd-ui-phase` decision point per D-08's note.
+   - **RESOLVED → plan 17-06 (SteamBottleSetup + global listener):** the guided flow is a background-task + consent-dialog surface (not a blocking modal), driven by a single backend `steamBottleSetupRequired` signal + a global `GlobalState.tsx` listener so it fires from every install/play entry point; visual polish flagged for `/gsd-ui-phase`.
 
 ## Environment Availability
 

@@ -89,6 +89,19 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 - [ ] **HSTORE-01**: When browsing store surfaces, each title is badged Owned / Unclaimed-key-available / New based on ownership and key availability
 - [ ] **HSTORE-03**: An "expiring soon" surface flags keys nearing expiration, with optional OS notifications for newly-expiring keys
 
+## v1.4 Requirements
+
+Requirements for the v1.4 milestone — **Steam macOS Compatibility Runtime**. On macOS, Windows-only Steam games (no native Mac build) install and launch through the Windows Steam client running inside a dedicated GameLib-managed CrossOver/Wine bottle, instead of native `steam://` delegation. Minted during `/gsd:plan-phase 17` from the locked D-01..D-11 decisions (see `.planning/phases/17-.../17-CONTEXT.md`). Linux (Proton), Windows, native-Mac Steam, and GOG/Epic bottle behavior are explicitly out of scope / unchanged. Each maps to Phase 17.
+
+### Steam macOS Runtime
+
+- [ ] **MACSTEAM-01**: `SteamGame.isNative()` is per-OS — on macOS it returns `false` only for a *confirmed-not-native* game (`platformsCaptured === true` AND `is_mac_native === false`), and `true` for not-yet-captured, Mac-native, and all Windows/Linux games (reverses Phase 3 GAME-04 for macOS only; D-11 unknown-until-confirmed)
+- [ ] **MACSTEAM-02**: A dedicated, GameLib-managed CrossOver/Wine Steam bottle is provisioned via a guided click-through flow (bottle created, official `SteamSetup.exe` fetched over HTTPS and installed non-silently), with the compatibility engine chosen via the reused `WineSelector`; the shared GameLib GOG/Epic bottle is untouched (D-01/D-02/D-03/D-07)
+- [ ] **MACSTEAM-03**: The user completes the one-time bottled-Steam login during setup; GameLib treats bottled-Steam auth as opaque (no credential parsing/bridging, D-04) and gates installs/launches on bottle-provisioned state (D-05/D-06)
+- [ ] **MACSTEAM-04**: On macOS, install / launch / uninstall of a confirmed-not-native Steam game route through the bottled Steam client (not native `steam://`); the native path is unchanged for Mac-native, not-yet-captured, Windows, and Linux (Proton) games (always-on for macOS, D-09/D-10)
+- [ ] **MACSTEAM-05**: A bottle-installed game's install state is read from the bottle's own `steamapps` ACF path (distinct from the native `defaultSteamPath`) and reported with `platform: 'Windows'`; install progress/completion surface via bottle-scoped ACF polling (D-09; RESEARCH.md Pitfalls 2 & 3)
+- [ ] **MACSTEAM-06**: The game page shows an indicator that a game runs through the Windows Steam bottle rather than natively (D-08)
+
 ## Future Requirements
 
 Deferred beyond v1.1. Tracked but not in the current roadmap.
@@ -158,6 +171,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | HCLAIM-05 | Phase 14 | Complete |
 | HSTORE-01 | Phase 15 | Pending |
 | HSTORE-03 | Phase 15 | Pending |
+| MACSTEAM-01 | Phase 17 | Pending |
+| MACSTEAM-02 | Phase 17 | Pending |
+| MACSTEAM-03 | Phase 17 | Pending |
+| MACSTEAM-04 | Phase 17 | Pending |
+| MACSTEAM-05 | Phase 17 | Pending |
+| MACSTEAM-06 | Phase 17 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
