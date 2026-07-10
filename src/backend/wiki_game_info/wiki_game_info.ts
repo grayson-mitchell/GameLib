@@ -75,6 +75,11 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     const wikiGameInfo = {
       pcgamingwiki,
       applegamingwiki,
+      // TODO(phase-16-02): wire real getInfoFromCodeweavers(title) lookup here,
+      // gated isMac || isLinux (D-07), with the staleCrossoverData self-heal
+      // guard. Placeholder keeps WikiInfo's new codeweavers field type-safe
+      // until the orchestrator plan lands.
+      codeweavers: null,
       howlongtobeat,
       gamesdb,
       steamInfo,
