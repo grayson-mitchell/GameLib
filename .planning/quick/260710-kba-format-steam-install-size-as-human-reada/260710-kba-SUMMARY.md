@@ -107,3 +107,15 @@ None - no external service configuration required.
 ---
 *Task: 260710-kba*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+All claimed files and commit hashes verified present:
+- src/backend/storeManagers/steam/library.ts (FOUND)
+- src/backend/storeManagers/steam/games.ts (FOUND)
+- src/backend/storeManagers/steam/__tests__/games.test.ts (FOUND)
+- src/backend/storeManagers/steam/__tests__/library.test.ts (FOUND)
+- .planning/quick/260710-kba-format-steam-install-size-as-human-reada/260710-kba-SUMMARY.md (FOUND)
+- Commit 4ea64185 (FOUND)
+- Commit 63c43f04 (FOUND)
+- Commit 0bd2c03d (FOUND)
