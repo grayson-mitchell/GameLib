@@ -373,12 +373,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
     }
 
     const hasWikiInfo =
-      wikiInfo?.applegamingwiki ||
       wikiInfo?.howlongtobeat ||
       wikiInfo?.pcgamingwiki?.metacritic.score ||
       wikiInfo?.pcgamingwiki?.opencritic.score ||
-      wikiInfo?.steamInfo ||
-      wikiInfo?.codeweavers?.rating != null
+      wikiInfo?.steamInfo
 
     const hasRequirements = extraInfo ? extraInfo.reqs.length > 0 : false
 
@@ -548,6 +546,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           className="infoTab"
                         >
                           <PlatformSupport gameInfo={gameInfo} />
+                          <AppleWikiInfo gameInfo={gameInfo} />
                           <DownloadSizeInfo gameInfo={gameInfo} />
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
@@ -562,7 +561,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <Scores gameInfo={gameInfo} />
                           <HLTB />
                           <CompatibilityInfo gameInfo={gameInfo} />
-                          <AppleWikiInfo gameInfo={gameInfo} />
                         </TabPanel>
 
                         <TabPanel
