@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 15
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-07-10 - Completed quick task 260710-m3f: Show estimated install size on pre-install Steam game page
+Last activity: 2026-07-10 - Completed quick task 260710-mkw: Steam grid cover art falls back to header art when portrait capsule missing
 
 ## v1.1 Phase Map
 
@@ -174,6 +174,7 @@ Recent decisions affecting current work:
 | 260710-d7b | Fix install default folder: DownloadDialog + ImportDialog fallback `${userHome}/Games/Heroic` → Games/GameLib (matches backend heroicInstallPath default). Fallback-only; configured paths unaffected. tsc 0 | 2026-07-10 | (fast task, commit d7bbd883) |
 | 260710-lmo | Complete Heroic→GameLib user-facing rebrand sweep: 44 en-locale display values (translation.json + gamepage.json) + JSX default fallbacks across 25 components + theme name ("Old School GameLib") + CrossoverBottle default value ('GameLib' — behavioral: new crossover setups default to a GameLib bottle). Two factual corrections: CustomCSS path `~/.config/heroic/config.json`→GameLib, protocol `heroic://`→`gamelib://`. Preserved i18n keys, code identifiers (getHeroicVersion/HEROIC_GAME_TITLE/etc.), CSS classes, upstream URLs, legacy-config migration source. tsc 0, both locale JSON valid, grep audit clean. Runtime visual UAT pending | 2026-07-10 | [260710-lmo-complete-heroic-gamelib-rebrand-of-user-](.planning/quick/260710-lmo-complete-heroic-gamelib-rebrand-of-user-/) |
 | 260710-m3f | Show estimated Install Size on pre-install Steam game page (parity w/ Epic/GOG): replaced the `runner === 'steam'` early-return in DownloadSizeInfo with a `SteamInstallSize` child component (unconditional hooks) that calls new `getSteamInstallSize` IPC handler (thin pass-through to existing backend estimator — parses store API `pc_requirements.minimum`; appId `/^\d+$/` + bounded-regex guards T-06-01/02 preserved). Install Size row ONLY (no Download Size — Steam has no public download-size source); "~"+"(estimate)" indicator; "?? MB"/undefined→"Unknown" fallback. Installed-game path untouched. codecheck 0, 812 tests pass. Runtime visual UAT PASSED (user-confirmed 2026-07-10) | 2026-07-10 | [260710-m3f-show-estimated-install-size-on-pre-insta](.planning/quick/260710-m3f-show-estimated-install-size-on-pre-insta/) |
+| 260710-mkw | Fix missing Steam grid cover art: extended `CachedImage` to accept an ordered `string \| string[]` fallback chain (backward-compatible; numeric index replaces boolean useFallback, bounded/no-loop). Grid (non-justPlayed) tile now passes `[art_cover, fallBackImageMissing]` when a distinct header exists, so Steam games with a 404 portrait capsule (library_600x900.jpg) but valid header (header.jpg) — e.g. Bard's Tale IV (566090) — render real header art instead of the generic placeholder. justPlayed branch + non-Steam runners unchanged. Frontend jest 28/28, tsc 0, eslint clean. Runtime visual UAT pending (needs GUI) | 2026-07-10 | [260710-mkw-steam-grid-cover-art-falls-back-to-heade](.planning/quick/260710-mkw-steam-grid-cover-art-falls-back-to-heade/) |
 
 ## Deferred Items
 
