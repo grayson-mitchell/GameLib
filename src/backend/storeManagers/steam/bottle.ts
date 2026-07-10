@@ -30,7 +30,12 @@ import {
   downloadFile,
   spawnAsync
 } from 'backend/utils'
-import { runWineCommand } from 'backend/launcher'
+// NOTE: `runWineCommand` is imported LAZILY (dynamic import inside the two
+// async functions that use it) rather than statically. Importing it at module
+// load pulls in backend/launcher -> the full storeManagers barrel (sideload ->
+// shortcuts -> fs-extra), which breaks any unit test that imports bottle.ts for
+// its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
+// the provisioning/command functions actually need it, so defer the load.
 import {
   DEFAULT_STEAM_BOTTLE_NAME,
   STEAM_BOTTLE_RESERVED_APPNAME,
@@ -278,6 +283,7 @@ export async function provisionBottle(opts?: {
   // (7) Run the installer NON-SILENTLY (D-02) — no /S or /VERYSILENT flags,
   // the user sees and clicks through the real installer window.
   try {
+    const { runWineCommand } = await import('backend/launcher')
     await runWineCommand({
       commandParts: [steamSetupExePath],
       gameSettings: getSteamBottleSettings(),
@@ -367,6 +373,7 @@ async function dispatchToBottledSteam(
   }
 
   try {
+    const { runWineCommand } = await import('backend/launcher')
     await runWineCommand({
       commandParts,
       gameSettings: getSteamBottleSettings(),
