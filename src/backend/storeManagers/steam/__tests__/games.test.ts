@@ -19,7 +19,7 @@ import SteamGame, {
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 import {
-  isBottleProvisioned,
+  isBottleReady,
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
@@ -146,12 +146,12 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── bottle.ts mock — Phase 17 bottle-routing surface (isBottleProvisioned,
+// ── bottle.ts mock — Phase 17 bottle-routing surface (isBottleReady,
 // tellBottledSteamTo*, getSteamBottleSettings). Fully replaced (not spied) —
 // bottle.ts pulls in backend/config's heavy transitive chain and lazily
 // imports backend/launcher, neither of which games.test.ts needs to exercise.
 jest.mock('../bottle', () => ({
-  isBottleProvisioned: jest.fn(),
+  isBottleReady: jest.fn(),
   tellBottledSteamToInstall: jest.fn(),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn(),
@@ -639,7 +639,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(isBottleReady as jest.Mock).mockReset()
     ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
   })
 
@@ -648,7 +648,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
     const result = await game.launch({} as any)
@@ -667,7 +667,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -850,7 +850,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(isBottleReady as jest.Mock).mockReset()
     ;(tellBottledSteamToInstall as jest.Mock).mockReset()
   })
 
@@ -863,7 +863,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
@@ -880,12 +880,34 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
+  it('bottle-eligible + half-provisioned bottle (conf exists, steam.exe missing — isBottleReady false) does NOT dispatch to bottled Steam', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    // isBottleReady() is the real readiness gate (conf + steam.exe); a
+    // half-provisioned bottle (cxbottle.conf present, steam.exe missing —
+    // the GAP 1 stuck-loop scenario) reports false here, exactly like an
+    // un-provisioned bottle from games.ts's perspective.
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      { appName: APP_ID }
+    )
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
   it('bottle-eligible + provisioned: install() calls tellBottledSteamToInstall + bottle-scoped startInstallPolling, NOT shell.openExternal', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -1053,7 +1075,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(isBottleReady as jest.Mock).mockReset()
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
   })
 
@@ -1066,7 +1088,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -1087,7 +1109,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       platformsCaptured: true,
       is_mac_native: false
     })
-    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
     await game.uninstall({} as any)

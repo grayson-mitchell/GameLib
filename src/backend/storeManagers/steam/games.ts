@@ -27,7 +27,7 @@ import {
 } from './state'
 import { startInstallPolling, startUninstallPolling } from './library'
 import {
-  isBottleProvisioned,
+  isBottleReady,
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
@@ -367,7 +367,7 @@ export default class SteamGame implements Game {
    */
   async install(_args: InstallArgs): Promise<InstallResult> {
     if (this.isBottleEligible()) {
-      if (!isBottleProvisioned()) {
+      if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
           LogPrefix.Steam
@@ -485,7 +485,7 @@ export default class SteamGame implements Game {
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
     if (this.isBottleEligible()) {
-      if (!isBottleProvisioned()) {
+      if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
           LogPrefix.Steam
@@ -567,7 +567,7 @@ export default class SteamGame implements Game {
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
     if (this.isBottleEligible()) {
-      if (!isBottleProvisioned()) {
+      if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
           LogPrefix.Steam
