@@ -88,8 +88,16 @@ skipped: 1
   reason: "User reported: first install attempt failed with a 'could not download steam' banner (also cosmetically broken — no background, plain text over the window, try-again/stop options). After Stop + app reload, retrying install shows NO SteamSetup window — just a brief 'installing the game' message, the button reads 'steam installing', then reverts after a few minutes; retrying reproduces the same stuck loop identically."
   severity: blocker
   test: 2
-  artifacts: []
-  missing: []
+  artifacts:
+    - .planning/debug/steam-bottle-provision-stuck-loop.md
+    - src/backend/storeManagers/steam/bottle.ts
+    - src/backend/storeManagers/steam/games.ts
+  missing:
+    - "mkdir -p of steam_store/redist before SteamSetup download (ENOENT trigger)"
+    - "provisioned gate keyed on real bottled steam.exe, not cxbottle.conf existence"
+    - "re-entrant / self-healing provisioning when bottle is half-created (conf exists, steam.exe missing)"
+    - "CSS for .steamBottleSetupToast / .steamBottleSetupMessage (unstyled banner)"
+  root_cause: "provisionBottle() writes cxbottle.conf (bottle.ts:200-206) BEFORE downloading+installing Steam; isBottleProvisioned() gates only on existsSync(cxbottle.conf) (bottle.ts:121-127). The redist download dir is never mkdir'd (bottle.ts:235) -> ENOENT -> download fails -> half-provisioned bottle. Retry sees isBottleProvisioned()==true, skips guided setup, dispatches steam://install to a nonexistent bottled steam.exe -> 'steam installing' badge that reverts (stuck loop). SteamSetup URL itself is live/correct (agent verified HTTP 200). Banner unstyled (zero matching CSS). Confidence HIGH."
   sub_issues:
     - "SteamSetup download fails ('could not download steam') — bottle provisioning cannot complete"
     - "After first failure + reload, provisioning never re-runs SteamSetup; enters an install->revert loop with a persistent 'steam installing' button state"
@@ -100,5 +108,12 @@ skipped: 1
   reason: "User reported: all entry points behave identically — the button jumps straight to 'steam installing' with NO consent dialog and NO WineSelector engine choice. Expected at least a prompt for which Wine/engine version to use before provisioning. Suggests the guided-setup UI (17-06 consent + WineSelector reuse) is not firing; the button flips straight to the (broken) install state."
   severity: major
   test: 3
-  artifacts: []
-  missing: []
+  artifacts:
+    - .planning/debug/steam-bottle-guided-setup-never-fires.md
+    - src/backend/storeManagers/steam/games.ts
+  missing:
+    - "reliable platformsCaptured before install/launch can be triggered (or synchronous appdetails platform check on the install entry)"
+    - "decouple isBottleEligible() D-11 gate from the throttled fire-and-forget appdetails fetch race"
+    - "reconcile D-08 indicator gate (is_mac_native===false) with routing gate (platformsCaptured===true) so UI promise and routing agree"
+  root_cause: "Backend never emits steamBottleSetupRequired because isBottleEligible() requires meta.platformsCaptured===true (games.ts:446-450), which is only set by the throttled fire-and-forget appdetails fetch (games.ts:292-300). When that hasn't completed/failed (cold-cache ETIMEDOUT history), the gate is false and install()/launch() fall through to native steam://install (games.ts:400-418) -> ordinary 'steam installing' badge, no signal, no consent Dialog/WineSelector. Frontend wiring verified intact end-to-end (emit->preload->GlobalState listener->store-><SteamBottleSetup/>). The 5/5 unit test only exercised the store in isolation. Confidence HIGH on mechanism; MEDIUM on why platformsCaptured is false (systematic fetch failure vs timing race)."
+  cross_link: "Connected to Issue 1 via leftover cxbottle.conf: a prior partial provision makes isBottleProvisioned() true, which ALSO skips the consent emit and dispatches into a broken bottle — same 'no dialog + stuck installing' symptom. Rule out at runtime."
