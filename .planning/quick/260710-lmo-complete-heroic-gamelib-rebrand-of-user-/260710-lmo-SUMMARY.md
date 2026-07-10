@@ -151,3 +151,15 @@ Rebrand sweep complete at the code level. No further Heroic->GameLib display-str
 ---
 *Phase: quick-260710-lmo*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+- FOUND: public/locales/en/translation.json
+- FOUND: public/locales/en/gamepage.json
+- FOUND: src/frontend/screens/Settings/components/CrossoverBottle.tsx
+- FOUND: src/frontend/components/UI/ThemeSelector/index.tsx
+- FOUND: src/frontend/screens/Settings/components/WineVersionSelector.tsx
+- FOUND: .planning/quick/260710-lmo-complete-heroic-gamelib-rebrand-of-user-/260710-lmo-SUMMARY.md
+- FOUND: commit 3961a9a5 (Task 1)
+- FOUND: commit 5d21570f (Task 2)
+- FOUND: commit b1514c67 (SUMMARY commit)
