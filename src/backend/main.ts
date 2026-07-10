@@ -40,6 +40,7 @@ import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
 import { steamSyncStore } from './storeManagers/steam/electronStores'
+import { getSteamInstallSize } from './storeManagers/steam/games'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
 import { HumbleLibrary } from './humble/library'
@@ -874,6 +875,9 @@ addHandler('steamSubmitGuard', async (event, code) =>
 addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
 addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled())
 addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
+addHandler('getSteamInstallSize', async (event, appId) =>
+  getSteamInstallSize(appId)
+)
 addListener('logoutSteam', () => SteamUser.logout())
 
 registerHumbleIpcHandlers()
