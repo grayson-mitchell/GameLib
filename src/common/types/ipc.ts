@@ -249,6 +249,7 @@ interface AsyncIPCFunctions {
   getSteamUserInfo: () => Promise<SteamUserData | undefined>
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>
+  getSteamInstallSize: (appId: string) => Promise<string>
   humbleStartLogin: () => Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
