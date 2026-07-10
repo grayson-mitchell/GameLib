@@ -12,15 +12,18 @@
 import { existsSync } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
+import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
+import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../electronStores'
 import {
   getBottleDir,
   getBottleSteamappsDir,
   isBottleProvisioned,
   sanitizeBottleName,
-  getSteamBottleSettings
+  getSteamBottleSettings,
+  provisionBottle
 } from '../bottle'
-import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
+import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
 jest.mock('electron', () => ({
@@ -47,9 +50,32 @@ jest.mock('backend/config', () => ({
   }
 }))
 
+jest.mock('backend/utils', () => ({
+  checkWineBeforeLaunch: jest.fn(),
+  downloadFile: jest.fn(),
+  spawnAsync: jest.fn()
+}))
+
+jest.mock('backend/launcher', () => ({
+  runWineCommand: jest.fn()
+}))
+
+jest.mock('backend/logger', () => ({
+  getRunnerLogWriter: jest.fn().mockReturnValue({}),
+  logError: jest.fn(),
+  logInfo: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: { Steam: 'Steam' }
+}))
+
 const mockedExistsSync = existsSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
+const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+const mockedSpawnAsync = spawnAsync as jest.Mock
+const mockedDownloadFile = downloadFile as jest.Mock
+const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
+const mockedRunWineCommand = runWineCommand as jest.Mock
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -62,6 +88,21 @@ describe('bottle.ts', () => {
     mockedExistsSync.mockReset()
     mockedGetNodefault.mockReset()
     mockedGlobalConfigGet.mockReset()
+    mockedSet.mockReset()
+    mockedSpawnAsync.mockReset()
+    mockedDownloadFile.mockReset()
+    mockedCheckWineBeforeLaunch.mockReset()
+    mockedRunWineCommand.mockReset()
+
+    // Sensible defaults so provisionBottle()/dispatch tests that don't care
+    // about GlobalConfig still have a valid GameSettings to compose from.
+    mockedGlobalConfigGet.mockReturnValue({
+      getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+    })
+    mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+    mockedDownloadFile.mockResolvedValue(undefined)
+    mockedCheckWineBeforeLaunch.mockResolvedValue(true)
+    mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
   })
 
   describe('getBottleDir / getBottleSteamappsDir', () => {
@@ -181,6 +222,74 @@ describe('bottle.ts', () => {
       const settings = getSteamBottleSettings()
       expect(settings.wineCrossoverBottle).toBe('CustomBottle')
       expect(settings.wineVersion).toEqual(storedWine)
+    })
+  })
+
+  describe('provisionBottle', () => {
+    test('rejects an unsafe bottle name and does NOT call downloadFile', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      const result = await provisionBottle({ bottleName: 'a/../b' })
+
+      expect(result.status).toBe('error')
+      expect(mockedDownloadFile).not.toHaveBeenCalled()
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    test('short-circuits to {status:"done"} when the bottle is already provisioned (no download, no create)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // isBottleProvisioned() reads existsSync — mock true so the
+      // idempotent short-circuit fires before create/download.
+      mockedExistsSync.mockReturnValue(true)
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(mockedDownloadFile).not.toHaveBeenCalled()
+    })
+
+    test('downloads SteamSetup.exe from the HTTPS STEAM_SETUP_EXE_URL when un-provisioned', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // First existsSync check (isBottleProvisioned pre-create) -> false so
+      // we proceed to create; subsequent calls (cxbottle.conf post-create,
+      // cached SteamSetup.exe check, final Steam.exe check) also false so
+      // the create step runs and the download is attempted.
+      mockedExistsSync.mockReturnValueOnce(false) // pre-create idempotent check
+      mockedExistsSync.mockReturnValueOnce(true) // post-create cxbottle.conf confirm
+      mockedExistsSync.mockReturnValueOnce(false) // cached SteamSetup.exe check
+      mockedExistsSync.mockReturnValue(false) // final Steam.exe check
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result.status).toBe('done')
+      expect(mockedDownloadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ url: STEAM_SETUP_EXE_URL })
+      )
+      expect(STEAM_SETUP_EXE_URL.startsWith('https://')).toBe(true)
+    })
+
+    test('runs SteamSetup.exe non-silently via runWineCommand with skipPrefixCheckIKnowWhatImDoing', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      mockedExistsSync.mockReturnValueOnce(false) // pre-create idempotent check
+      mockedExistsSync.mockReturnValue(true) // everything after: provisioned/exists
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(mockedRunWineCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          commandParts: expect.arrayContaining([
+            expect.stringContaining('SteamSetup.exe')
+          ]),
+          skipPrefixCheckIKnowWhatImDoing: true,
+          wait: false
+        })
+      )
+      const call = mockedRunWineCommand.mock.calls[0][0]
+      expect(call.commandParts.some((p: string) => p === '/VERYSILENT')).toBe(
+        false
+      )
+      expect(call.commandParts.some((p: string) => p === '/S')).toBe(false)
     })
   })
 })
