@@ -527,7 +527,11 @@ const GameCard = ({
             ) : (
               <CachedImage
                 src={getImageFormatting(cover, runner)}
-                fallback={fallBackImageMissing}
+                fallback={
+                  art_cover && art_cover !== cover
+                    ? [getImageFormatting(art_cover, runner), fallBackImageMissing]
+                    : fallBackImageMissing
+                }
                 className={imgClasses}
                 alt="cover"
               />
