@@ -14,8 +14,7 @@ import {
   WikiInfo,
   GameInfo,
   WindowProps,
-  UploadedLogData,
-  AppleRatingSource
+  UploadedLogData
 } from 'common/types'
 import { UserData } from 'common/types/gog'
 import { NileUserData } from './nile'
@@ -39,7 +38,6 @@ export interface StoreStructure {
     actionsFontFamily: string
     allTilesInColor: boolean
     titlesAlwaysVisible: boolean
-    appleRatingSource: AppleRatingSource
     disableDialogBackdropClose: boolean
     disableAnimations: boolean
     language: string

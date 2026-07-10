@@ -735,12 +735,6 @@ export interface AppleGamingWikiInfo {
   crossoverLink: string
 }
 
-/**
- * DETAIL-02: which AppleGamingWiki rating drives the compatibility surfaces
- * (art overlay + Extra-info tab row). App-wide setting, default 'crossover'.
- */
-export type AppleRatingSource = 'crossover' | 'wine'
-
 export interface GamesDBInfo {
   steamID: string
 }
