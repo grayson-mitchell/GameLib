@@ -2,6 +2,7 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { WineBar } from '@mui/icons-material'
+import { Rating } from '@mui/material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
 import { ratingTier } from './appleRating'
@@ -46,9 +47,8 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     }
   }
 
-  const crossoverDisplay = codeweavers
-    ? formatCrossoverRating(codeweavers.rating, codeweavers.ratingCount) ??
-      t('info.no-compatibility-data', 'No compatibility data available')
+  const crossoverRatingCountLabel = codeweavers
+    ? formatCrossoverRating(codeweavers.rating, codeweavers.ratingCount)
     : null
 
   return (
@@ -62,7 +62,20 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
         >
           <WineBar />
           <b>{t('info.crossover-rating', 'Crossover rating')}:</b>
-          {crossoverDisplay}
+          {codeweavers.rating !== null ? (
+            <>
+              <Rating
+                value={codeweavers.rating}
+                precision={0.5}
+                max={5}
+                readOnly
+                size="small"
+              />
+              {crossoverRatingCountLabel}
+            </>
+          ) : (
+            t('info.no-compatibility-data', 'No compatibility data available')
+          )}
         </a>
       )}
       {applegamingwiki && (
