@@ -23,6 +23,7 @@ import { InstallGameWrapper } from './screens/Library/components/InstallModal'
 import { SettingsModalWrapper } from './screens/Settings/components/SettingsModal'
 import AnalyticsDialog from './screens/Settings/components/AnalyticsDialog'
 import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
+import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 
 function Root() {
   const {
@@ -93,6 +94,7 @@ function Root() {
             <main className="content">
               <DialogHandler />
               <InstallGameWrapper />
+              <SteamBottleSetup />
               <SettingsModalWrapper />
               <ExternalLinkDialog />
               <LogFileUploadDialog />
