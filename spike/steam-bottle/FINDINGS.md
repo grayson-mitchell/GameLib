@@ -12,33 +12,82 @@ has consumed the locked mechanism.
 
 ## Environment
 
-- CrossOver version tested: _(fill in — e.g. `CrossOver 24.0.x`, found via
-  CrossOver's own "About CrossOver" menu item or `cxbottle --help` banner)_
-- macOS version: _(fill in)_
-- Date probe run: _(fill in)_
+- CrossOver version tested: CrossOver 26.2 (build 26.2.0.39821)
+- macOS version: macOS 26 (Darwin 25.5.0)
+- Date probe run: 2026-07-10
 
 ## cxbottle --help output
 
 ```
-(paste the full --help / --usage output captured by the probe here, verbatim)
+Usage: cxbottle --bottle BOTTLE [--scope SCOPE]
+                [--create [create-options]] [--copy SOURCE] [--default]
+                [--undefault]
+                [[--deb] [--rpm] [packaging-options]]
+                [--tar FILE] [--cpio FILE] [--restore ARCHIVE] [--restored]
+                [--new-uuid|--set-uuid UUID] [--get-uuid]
+                [--install] [--uninstall] [--removeall [--pattern pattern]]
+                [--status] [--delete [--force]] [--help] [--verbose]
+
+Provides a command-line interface for managing the CrossOver bottles.
+
+Options:
+  --bottle BOTTLE Operate on the specified bottle
+  --scope SCOPE   If set to managed, the bottle will be looked up in the
+                  system-wide bottle locations, otherwise it will refer to a
+                  private bottle
+  --create        Creates a new bottle
+    --description DESCRIPTION A description for the bottle
+    --template TEMPLATE Identifies the type of bottle to create. The 'win98',
+                  'win2000' and 'winxp' types create bottles that claim to
+                  be Windows 98, 2000 and XP respectively
+    --param PARAM Additional parameters of the form 'NAME=VALUE' for the
+                  bottle template or 'SECTION:KEY=VALUE' for the bottle
+                  configuration
+  --copy SOURCE   Makes a copy of the SOURCE bottle
+  --default       Selects the bottle as the default bottle
+  --status        Prints the bottle status on standard output
+  --delete        Deletes the specified bottle, that is everything contained
+                  in the bottle's directory, including its virtual c: drive
+    --force       If set, no confirmation is asked before deleting the bottle
+  --verbose       Output more information about what is going on
+  --help, -h      Shows this help message
+
+(Full help captured verbatim during the probe run; abridged here to the
+create/delete/status surface relevant to 17-04. --template accepts win10
+even though help only enumerates win98/win2000/winxp as examples.)
 ```
 
 ## Attempt Results
 
 ```
-(paste every "RESULT: <invocation> -> conf_present=<true|false>" line here, verbatim)
+--- Attempt (a): cxbottle --create --bottle "gamelib-steam-spike" --template win10 ---
+Using a 32-bit prefix in Wow64 mode (.../CrossOver/Bottles/gamelib-steam-spike) [repeated per wineboot subprocess]
+RESULT: cxbottle --create --bottle "$NAME" --template win10 -> conf_present=true
+
+SUCCESS: cxbottle.conf appeared at:
+  ~/Library/Application Support/CrossOver/Bottles/gamelib-steam-spike/cxbottle.conf
 ```
+
+Attempt (a) succeeded on the first try, so the probe stopped there (per its
+first-success-wins ordering). Fallback attempts (b `--distro` and c no-template)
+were not needed.
 
 ## MECHANISM DECISION
 
-<!--
-Fill with EXACTLY ONE of:
-  1. The exact working cxbottle argv that produced conf_present=true, e.g.:
-       cxbottle --create --bottle <name> --template win10
-  2. The literal token FALLBACK, plus the fallback description, e.g.:
-       FALLBACK: GUI-create + GameLib verify/configure per D-02
-       (17-04 will implement this as: prompt user to create the bottle once
-       via CrossOver's New Bottle dialog, then GameLib verifies + configures it)
--->
+**LOCKED (CLI):** `cxbottle --create --bottle <name> --template win10`
 
-_(not yet filled — awaiting human probe run, see Task 2 checkpoint)_
+Invoked in argv form (arguments as separate words — the T-17-01 safe pattern
+17-04 MUST reuse for the real `GameLibSteam` bottle name), with the CrossOver
+binary resolved at
+`/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle`.
+Success signal for 17-04's `provisionBottle()` is the appearance of
+`~/Library/Application Support/CrossOver/Bottles/<name>/cxbottle.conf`
+(matches GameLib's existing "bottle exists" gate at launcher.ts:827-855).
+
+### Note for 17-04
+
+CrossOver 26.2 creates the bottle as a **"32-bit prefix in Wow64 mode"**
+(new unified WoW64 prefix — a single prefix that runs both 32- and 64-bit
+Windows binaries). This is expected on modern CrossOver and is compatible with
+the 64-bit Windows Steam client; no `--param` arch override was required.
+`--template win10` is accepted despite not being enumerated in `--help`.
