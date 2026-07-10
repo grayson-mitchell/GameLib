@@ -366,6 +366,7 @@ export default class SteamGame implements Game {
    * bottled Steam client instead of native steam:// — see isBottleEligible().
    */
   async install(_args: InstallArgs): Promise<InstallResult> {
+    await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       if (!isBottleReady()) {
         logInfo(
@@ -449,6 +450,56 @@ export default class SteamGame implements Game {
     return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 
+  /**
+   * Phase 17 Plan 09 (MACSTEAM-04 gap closure): forces platform data to be
+   * resolved BEFORE install()/launch()/uninstall() consult isBottleEligible(),
+   * decoupling bottle routing from the async fetchMetadataIfNeeded race
+   * (.planning/debug/steam-bottle-guided-setup-never-fires.md). Previously,
+   * isBottleEligible() only saw fresh platform data if the fire-and-forget
+   * lazy fetch (triggered by getGameInfo()) had already completed by the time
+   * the user clicked Install/Play — a cold cache or a slow/failed fetch left
+   * platformsCaptured false, silently routing a Windows-only macOS game down
+   * the native steam:// path with no guided-setup dialog.
+   *
+   * No-op on non-macOS (native steam:// delegation is unaffected) and when
+   * this appId's platforms are already captured (no redundant network on the
+   * hot path).
+   *
+   * getGameInfo() call below re-triggers the SAME lazy fetch as a fire-and-forget
+   * side effect (adding this.appId to pendingFetches synchronously). Our own
+   * explicit fetchMetadataIfNeeded() call then hits the T-2-03 dedup guard and
+   * returns immediately without a second network request — so we fall into the
+   * bounded poll below and wait for that single in-flight fetch to resolve
+   * platformsCaptured, rather than hoping it finishes before routing happens.
+   */
+  private async ensurePlatformsCaptured(): Promise<void> {
+    if (!isMac) return
+
+    const alreadyCaptured = (): boolean =>
+      steamMetadataStore.get(this.appId)?.platformsCaptured === true
+
+    if (alreadyCaptured()) return
+
+    await this.fetchMetadataIfNeeded(this.getGameInfo())
+
+    // Bounded poll for the T-2-03 dedup race: fetchMetadataIfNeeded() may have
+    // early-returned because a concurrent fetch (the getGameInfo() side effect
+    // above, or an earlier render's lazy fetch) is already in flight for this
+    // appId. Wait for it to resolve platformsCaptured, drain from
+    // pendingFetches, or hit METADATA_FETCH_TIMEOUT_MS — whichever first, so
+    // install()/launch()/uninstall() can never hang indefinitely (T-17-09-01).
+    if (!alreadyCaptured() && pendingFetches.has(this.appId)) {
+      const deadline = Date.now() + METADATA_FETCH_TIMEOUT_MS
+      while (
+        !alreadyCaptured() &&
+        pendingFetches.has(this.appId) &&
+        Date.now() < deadline
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
+  }
+
   async addShortcuts(_fromMenu?: boolean): Promise<void> {
     logWarning(
       `SteamGame.addShortcuts not implemented until Phase 2 (appId: ${this.appId})`,
@@ -484,6 +535,7 @@ export default class SteamGame implements Game {
     _args?: string[],
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
+    await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       if (!isBottleReady()) {
         logInfo(
@@ -566,6 +618,7 @@ export default class SteamGame implements Game {
    * round-trip; the focus re-read (D-01) remains as a backstop.
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
+    await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       if (!isBottleReady()) {
         logInfo(
