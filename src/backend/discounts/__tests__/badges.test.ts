@@ -6,7 +6,10 @@
  */
 
 import { HumbleKey } from 'common/types/humble'
-import { resolveDiscountBadge } from 'common/discounts/badges'
+import {
+  resolveDiscountBadge,
+  buildDiscountBadgeMaps
+} from 'common/discounts/badges'
 
 function makeSteamGame(overrides: { title: string; app_name: string }) {
   return overrides
@@ -119,4 +122,59 @@ describe('resolveDiscountBadge', () => {
       resolveDiscountBadge(product, titleToAppId, ownedAppIds, [])
     ).toBe('owned')
   })
+})
+
+describe('buildDiscountBadgeMaps + resolveDiscountBadge (integration)', () => {
+  test('CR-01 regression: unowned-but-keyed title resolves to key-available via the real map-building path', () => {
+    // No steam.library entry for this title at all — the AppID only exists
+    // via the waiting Humble key. Before the fix, the container derived
+    // BOTH maps from steam.library alone, so this AppID could never appear
+    // in titleToAppId; the helper must merge it in from the waiting key.
+    const key = makeKey({ title: 'Hollow Knight', steamAppId: '367520' })
+    const product = makeProduct({ title: 'Hollow Knight' })
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps([], [key])
+    expect(
+      resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
+    ).toBe('key-available')
+  })
+
+  test('D-83/D-85: an exact steam.library match still resolves to owned, even with a waiting key for the same title', () => {
+    const game = makeSteamGame({ title: 'Celeste', app_name: '504230' })
+    const key = makeKey({ title: 'Celeste', steamAppId: '504230' })
+    const product = makeProduct({ title: 'Celeste' })
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps(
+      [game],
+      [key]
+    )
+    expect(ownedAppIds.has(game.app_name)).toBe(true)
+    expect(
+      resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
+    ).toBe('owned')
+  })
+
+  test('D-79/D-82: a title in neither steam.library nor any waiting key resolves to null', () => {
+    const game = makeSteamGame({ title: 'Celeste', app_name: '504230' })
+    const key = makeKey({ title: 'Hollow Knight', steamAppId: '367520' })
+    const product = makeProduct({ title: 'Some Unrelated Game' })
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps(
+      [game],
+      [key]
+    )
+    expect(
+      resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
+    ).toBeNull()
+  })
+
+  test.each(['', '0', undefined])(
+    'WR-01: a waiting key with falsy steamAppId %p contributes no map entry and yields null',
+    (steamAppId) => {
+      const key = makeKey({ title: 'Hollow Knight', steamAppId })
+      const product = makeProduct({ title: 'Hollow Knight' })
+      const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps([], [key])
+      expect(titleToAppId.has('hollow knight')).toBe(false)
+      expect(
+        resolveDiscountBadge(product, titleToAppId, ownedAppIds, [key])
+      ).toBeNull()
+    }
+  )
 })
