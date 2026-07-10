@@ -221,7 +221,7 @@ export async function provisionBottle(opts?: {
     )
     return {
       status: 'error',
-      error: `Failed to create CrossOver bottle "${bottleName}": ${error}`
+      error: `Failed to create CrossOver bottle "${bottleName}": ${String(error)}`
     }
   }
 
@@ -239,7 +239,7 @@ export async function provisionBottle(opts?: {
       )
       return {
         status: 'error',
-        error: `Failed to download SteamSetup.exe: ${error}`
+        error: `Failed to download SteamSetup.exe: ${String(error)}`
       }
     }
   }
@@ -293,7 +293,7 @@ export async function provisionBottle(opts?: {
     )
     return {
       status: 'error',
-      error: `Failed to launch SteamSetup.exe inside the bottle: ${error}`
+      error: `Failed to launch SteamSetup.exe inside the bottle: ${String(error)}`
     }
   }
 
@@ -382,7 +382,7 @@ async function dispatchToBottledSteam(
     )
     return {
       status: 'error',
-      error: `Failed to dispatch ${verb} to bottled Steam: ${error}`
+      error: `Failed to dispatch ${verb} to bottled Steam: ${String(error)}`
     }
   }
 }

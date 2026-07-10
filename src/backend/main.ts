@@ -39,8 +39,16 @@ import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
-import { steamSyncStore } from './storeManagers/steam/electronStores'
+import {
+  steamBottleConfigStore,
+  steamSyncStore
+} from './storeManagers/steam/electronStores'
 import { getSteamInstallSize } from './storeManagers/steam/games'
+import {
+  isBottleProvisioned,
+  provisionBottle
+} from './storeManagers/steam/bottle'
+import { DEFAULT_STEAM_BOTTLE_NAME } from './storeManagers/steam/constants'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
 import { HumbleLibrary } from './humble/library'
@@ -879,6 +887,22 @@ addHandler('getSteamInstallSize', async (event, appId) =>
   getSteamInstallSize(appId)
 )
 addListener('logoutSteam', () => SteamUser.logout())
+
+// Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.
+// D-04: bottled-Steam auth is opaque — loggedIn is only ever flipped by the
+// guided-setup flow (17-06) confirming the user completed login, never by
+// parsing loginusers.vdf/sentry here.
+addHandler('steamBottleProvision', async (event, args) =>
+  provisionBottle(args)
+)
+addHandler('isSteamBottleProvisioned', async () => isBottleProvisioned())
+addHandler('steamBottleStatus', async () => ({
+  provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
+  loggedIn: steamBottleConfigStore.get_nodefault('loggedIn') ?? false,
+  bottleName:
+    steamBottleConfigStore.get_nodefault('bottleName') ??
+    DEFAULT_STEAM_BOTTLE_NAME
+}))
 
 registerHumbleIpcHandlers()
 
