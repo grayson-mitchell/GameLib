@@ -37,6 +37,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout (completed 2026-07-08)
 - [x] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications (completed 2026-07-10; re-verified 10/10 after gap closure — 15-05 CR-01 badge reachability, 15-06 WR-01/WR-02 composite dedup + i18n, follow-up WR-01 divergence fix baac4527; see 15-VERIFICATION.md)
 
+### v1.3 — Compatibility Data
+
+- [ ] **Phase 16: CrossOver Compatibility Rating (CodeWeavers)** - The extra-info Crossover rating comes from live CodeWeavers compatibility data instead of the stale AppleGamingWiki source
+
 ## Phase Details
 
 ### Phase 1: Steam Authentication
@@ -267,8 +271,6 @@ Plans:
   3. Any regressions discovered during the pass are documented as issues or resolved before completion
 **Plans**: TBD
 
----
-
 ## v1.2 Phase Details
 
 ### Phase 10: Humble Auth + Adapter Scaffold
@@ -399,12 +401,33 @@ Plans:
 **Wave 2** (blocked on 15-02 — reads notified-state store + notify setting): 15-03
 **UI hint**: yes
 
+## v1.3 Phase Details
+
+### Phase 16: CrossOver Compatibility Rating (CodeWeavers)
+
+**Goal**: The extra-info panel's "Crossover rating" row is populated from live CodeWeavers CrossOver compatibility data (replacing the stale AppleGamingWiki source added in quick task 260710-l27), fetched on-demand and cached, with a graceful "no compatibility data" state for genuine misses.
+**Depends on**: Phase 7 (extra-info compatibility rows), spike 260710-nwb (feasibility validated)
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. For a title with a real CodeWeavers listing, the extra-info Crossover rating row shows the CodeWeavers aggregateRating (value + count) instead of the AppleGamingWiki value
+  2. Lookups are on-demand and cached — no bulk crawl of the ~22,350-app directory; requests use a desktop browser User-Agent
+  3. Genuine misses render a graceful "no compatibility data available" state, not an error or a false rating
+**Locked constraints** (from validated spike 260710-nwb — see `spike/crossover-compat-FINDINGS.md`):
+  - Hit/miss detected by CONTENT (presence of a parseable `VideoGame` JSON-LD node), NOT HTTP status — every response is 200; misses are soft-404 pages titled "404 Not Found"
+  - Slugify drops apostrophes entirely (`baldurs-gate-3`) and normalizes roman numerals to Arabic digits (`modern-warfare-2`); consider a secondary fallback slug on a primary miss. Spike match rate 66.7% naive / ~83.3% with these fixes
+  - Respect CodeWeavers' content signal (`use=reference, ai-train=no`): on-demand reference-style lookups + polite caching with a desktop browser UA — not a bulk harvest
+**Open questions for planning**:
+  - Does the separate Wine rating row (also from 260710-l27) stay on AppleGamingWiki, move to a new source, or is it out of scope?
+  - For Steam games the AppID is known — is an AppID-based lookup more reliable than title-slug, and does CodeWeavers expose one?
+**Plans**: TBD (run /gsd-plan-phase 16 to break down)
+
 ## Progress
 
 **Execution Order:**
 v1.0: 1 → 2 → 3 → 4 (complete)
 v1.1: 5 → 6 → 7 → 8 → 9
 v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
+v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -423,3 +446,4 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
+| 16. CrossOver Compatibility Rating (CodeWeavers) | 0/? | Not started | - |

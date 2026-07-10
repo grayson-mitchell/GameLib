@@ -108,6 +108,7 @@ Last activity: 2026-07-10 - Completed quick task 260710-mkw: Steam grid cover ar
 
 - Phase 08.1 inserted after Phase 8: Steam Delisted Games & Library Filters — delisted availability signal, 'Game no longer available' + install-disable, only-show filter modes (from Phase 8 UAT) (URGENT)
 - v1.2 roadmap created 2026-07-05: Phases 10–15, 18 requirements mapped. Dependency chain is non-negotiable (auth → sync → dedup → views → claim flow → store overlay). Phase 10 carries highest validation risk (live API confirmation of axios + cookie + X-Requested-By header reaching api/v1/user/order).
+- Phase 16 added 2026-07-10 under new milestone **v1.3 — Compatibility Data**: CrossOver Compatibility Rating (CodeWeavers) — replace the extra-info Crossover rating's stale AppleGamingWiki source (from quick 260710-l27) with a live CodeWeavers slug-lookup backend. Feasibility validated by spike 260710-nwb (66.7% naive / ~83.3% with slugify fixes). Locked constraints: content-based hit/miss detection (soft-404 = HTTP 200), apostrophe-drop + roman-numeral slugify fixes, on-demand reference-style lookups (no bulk crawl). Depends on Phase 7 extra-info rows.
 
 ### Decisions
 
