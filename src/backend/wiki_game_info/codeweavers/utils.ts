@@ -80,15 +80,57 @@ function isSoft404(html: string): boolean {
 }
 
 interface ParsedRating {
-  rating: number
-  ratingCount: number
+  macRating: number | null
+  linuxRating: number | null
+}
+
+type JsonLdNode = {
+  '@type'?: string | string[]
+  about?: { operatingSystem?: string }
+  reviewAspect?: string
+  reviewRating?: { ratingValue?: unknown }
+}
+
+function nodeHasType(node: JsonLdNode, wanted: string): boolean {
+  const type = node?.['@type']
+  if (!type) {
+    return false
+  }
+  return Array.isArray(type) ? type.includes(wanted) : type === wanted
+}
+
+/** Classifies a Review node's OS by `about.operatingSystem`, falling back to
+ * `reviewAspect` when `about` is absent. Returns null when neither field
+ * identifies macOS or Linux. */
+function classifyReviewOS(node: JsonLdNode): 'mac' | 'linux' | null {
+  const operatingSystem = node.about?.operatingSystem?.toLowerCase()
+  if (operatingSystem === 'macos') {
+    return 'mac'
+  }
+  if (operatingSystem === 'linux') {
+    return 'linux'
+  }
+
+  const aspect = String(node.reviewAspect ?? '').toLowerCase()
+  if (aspect.includes('macos')) {
+    return 'mac'
+  }
+  if (aspect.includes('linux')) {
+    return 'linux'
+  }
+
+  return null
 }
 
 /**
  * Ports `extractVideoGameJsonLd` from spike/crossover-compat-lookup.mjs:
  * match the first `application/ld+json` script block, parse it, and walk
- * `@graph` for a `VideoGame` node's `aggregateRating`. Returns null on any
- * parse/shape failure (soft-404 pages have no such block at all).
+ * `@graph` for a `VideoGame` node plus per-OS `Review` nodes. Returns the
+ * per-OS ratings separately (T-rjm — the aggregate rating averages macOS and
+ * Linux reviews together, which is misleading for a macOS-only CrossOver
+ * row). Returns null on any parse/shape failure, when no `VideoGame` node is
+ * present, or when neither OS yields a numeric rating (soft-404 pages have
+ * no such block at all).
  */
 function extractVideoGameJsonLd(html: string): ParsedRating | null {
   const match = html.match(ldJsonRegEx)
@@ -103,28 +145,45 @@ function extractVideoGameJsonLd(html: string): ParsedRating | null {
     return null
   }
 
-  const graph = Array.isArray(data?.['@graph']) ? data['@graph'] : [data]
-  const videoGame = graph.find((node: { '@type'?: string | string[] }) => {
-    const type = node?.['@type']
-    if (!type) {
-      return false
+  const graph: JsonLdNode[] = Array.isArray(data?.['@graph'])
+    ? data['@graph']
+    : [data]
+
+  const videoGame = graph.find((node) => nodeHasType(node, 'VideoGame'))
+  if (!videoGame) {
+    return null
+  }
+
+  let macRating: number | null = null
+  let linuxRating: number | null = null
+
+  for (const node of graph) {
+    if (!nodeHasType(node, 'Review')) {
+      continue
     }
-    return Array.isArray(type) ? type.includes('VideoGame') : type === 'VideoGame'
-  })
 
-  const aggregateRating = videoGame?.aggregateRating
-  if (!aggregateRating) {
+    const os = classifyReviewOS(node)
+    if (!os) {
+      continue
+    }
+
+    const ratingValue = Number(node.reviewRating?.ratingValue)
+    if (!Number.isFinite(ratingValue)) {
+      continue
+    }
+
+    if (os === 'mac') {
+      macRating = ratingValue
+    } else {
+      linuxRating = ratingValue
+    }
+  }
+
+  if (macRating === null && linuxRating === null) {
     return null
   }
 
-  const rating = Number(aggregateRating.ratingValue)
-  const ratingCount = Number(aggregateRating.ratingCount)
-
-  if (!Number.isFinite(rating) || !Number.isFinite(ratingCount)) {
-    return null
-  }
-
-  return { rating, ratingCount }
+  return { macRating, linuxRating }
 }
 
 /**
@@ -162,20 +221,24 @@ export async function getInfoFromCodeweavers(
 
     const primary = await fetchRatingForSlug(slug)
     if (primary) {
-      return { rating: primary.rating, ratingCount: primary.ratingCount, slug }
+      return {
+        macRating: primary.macRating,
+        linuxRating: primary.linuxRating,
+        slug
+      }
     }
 
     // D-04 / SC-02: primary slug missed (content-classified soft-404, or a
-    // hit page with no parseable aggregateRating). Attempt exactly ONE
-    // fallback — the pre-D-04 naive slug — before giving up. Never more
-    // than one fallback (polite, bounded lookups).
+    // hit page with no parseable rating). Attempt exactly ONE fallback — the
+    // pre-D-04 naive slug — before giving up. Never more than one fallback
+    // (polite, bounded lookups).
     const fallbackSlug = naiveSlugify(title)
     if (fallbackSlug !== slug) {
       const fallback = await fetchRatingForSlug(fallbackSlug)
       if (fallback) {
         return {
-          rating: fallback.rating,
-          ratingCount: fallback.ratingCount,
+          macRating: fallback.macRating,
+          linuxRating: fallback.linuxRating,
           slug: fallbackSlug
         }
       }
@@ -183,7 +246,7 @@ export async function getInfoFromCodeweavers(
 
     // Genuine miss (both slugs content-classified as soft-404/unratable).
     // Cacheable — NOT null — so this game isn't re-fetched every visit.
-    return { rating: null, ratingCount: null, slug }
+    return { macRating: null, linuxRating: null, slug }
   } catch (error) {
     logError(
       [`Was not able to get CodeWeavers data for ${title}`, error],

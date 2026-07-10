@@ -6,8 +6,8 @@ import { Rating } from '@mui/material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
 import { ratingTier } from './appleRating'
-import { formatCrossoverRating } from './crossoverRating'
-import CodeweaversLogo from 'frontend/assets/codeweavers_icon.svg?react'
+import { protonTierToStars } from './protonRating'
+import CrossoverIcon from 'frontend/assets/crossover_icon.svg?react'
 
 interface Props {
   gameInfo: GameInfo
@@ -27,6 +27,12 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
 
   const codeweavers = wikiInfo.codeweavers
   const applegamingwiki = wikiInfo.applegamingwiki
+  const steamInfo = wikiInfo.steamInfo
+
+  const showProton =
+    is.linux && gameInfo.runner === 'steam' && !!steamInfo?.compatibilityLevel
+  const showCrossover = is.mac && codeweavers?.macRating != null
+  const showWine = !!applegamingwiki && !showProton
 
   const onClickCrossover = () => {
     if (codeweavers?.slug) {
@@ -38,6 +44,10 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
         `https://www.codeweavers.com/compatibility?browse=&app_desc=&company=&rating=&platform=&date_start=&date_end=&name=${gameInfo.title}&search=app#results`
       )
     }
+  }
+
+  const onClickProton = () => {
+    createNewWindow(`https://www.protondb.com/app/${gameInfo.app_name}`)
   }
 
   const onClickWine = () => {
@@ -52,38 +62,47 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     }
   }
 
-  const crossoverRatingCountLabel = codeweavers
-    ? formatCrossoverRating(codeweavers.rating, codeweavers.ratingCount)
-    : null
-
   return (
     <>
-      {codeweavers && (
+      {showCrossover && (
         <a
           role="button"
           className="iconWithText"
           title={t('info.clickToOpen', 'Click to open')}
           onClick={onClickCrossover}
         >
-          <CodeweaversLogo style={{ width: '24px', height: '24px' }} />
+          <CrossoverIcon style={{ width: '24px', height: '24px' }} />
           <b>{t('info.crossover-rating', 'Crossover emulation')}:</b>
-          {codeweavers.rating !== null ? (
-            <>
-              <Rating
-                value={codeweavers.rating}
-                precision={0.5}
-                max={5}
-                readOnly
-                size="small"
-              />
-              {crossoverRatingCountLabel}
-            </>
-          ) : (
-            t('info.no-compatibility-data', 'No compatibility data available')
-          )}
+          <Rating
+            value={codeweavers?.macRating}
+            precision={0.5}
+            max={5}
+            readOnly
+            size="small"
+          />
         </a>
       )}
-      {applegamingwiki && (
+      {showProton &&
+        (() => {
+          const stars = protonTierToStars(steamInfo?.compatibilityLevel)
+          return (
+            <a
+              role="button"
+              className="iconWithText"
+              title={t('info.clickToOpen', 'Click to open')}
+              onClick={onClickProton}
+            >
+              <WineBar />
+              <b>{t('info.proton-rating', 'Proton emulation')}:</b>
+              {stars !== null ? (
+                <Rating value={stars} max={5} readOnly size="small" />
+              ) : (
+                t('info.no-compatibility-data', 'No compatibility data available')
+              )}
+            </a>
+          )
+        })()}
+      {showWine && (
         <a
           role="button"
           className="iconWithText"
@@ -92,7 +111,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
         >
           <WineBar />
           <b>{t('info.wine-rating', 'Wine emulation')}:</b>
-          {ratingTier(applegamingwiki.wineRating).label}
+          {ratingTier(applegamingwiki?.wineRating ?? '').label}
         </a>
       )}
     </>

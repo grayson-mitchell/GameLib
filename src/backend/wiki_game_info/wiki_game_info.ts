@@ -32,8 +32,13 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     // Self-heal stale caches: entries populated before CodeWeavers data was
     // captured (or on a Windows session) hold codeweavers=null. On Mac/Linux
     // the CrossOver rating pill needs that data, so treat a null-codeweavers
-    // hit as a miss and re-fetch (mirrors staleAppleData above).
-    const staleCrossoverData = (isMac || isLinux) && !cachedResponse?.codeweavers
+    // hit as a miss and re-fetch (mirrors staleAppleData above). Also treat
+    // an old-shaped cache (pre-per-OS-rating, no `macRating` field at all) as
+    // stale so it gets re-fetched into the new shape.
+    const staleCrossoverData =
+      (isMac || isLinux) &&
+      (!cachedResponse?.codeweavers ||
+        cachedResponse.codeweavers.macRating === undefined)
     if (cachedResponse && !staleAppleData && !staleCrossoverData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],

@@ -736,8 +736,8 @@ export interface AppleGamingWikiInfo {
 }
 
 export interface CodeweaversInfo {
-  rating: number | null
-  ratingCount: number | null
+  macRating: number | null
+  linuxRating: number | null
   slug: string
 }
 
