@@ -24,7 +24,7 @@ const HideWindowOnProtocolLaunch = () => {
       <InfoIcon
         text={t(
           'help.hide-window-on-protocol-launch',
-          "Keeps the Heroic window hidden when a game is launched from an external shortcut, like the 'Add to Steam' feature."
+          "Keeps the GameLib window hidden when a game is launched from an external shortcut, like the 'Add to Steam' feature."
         )}
       />
     </div>

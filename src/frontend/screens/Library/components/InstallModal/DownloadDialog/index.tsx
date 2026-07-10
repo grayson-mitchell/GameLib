@@ -231,7 +231,7 @@ export default function DownloadDialog({
             This game uses anticheat software that is not compatible with your
             operating system or the support was not enabled by the game
             developers. This means that the multiplayer features will not work,
-            and there is nothing you (or the Heroic team) can do about it.
+            and there is nothing you (or the GameLib team) can do about it.
             <br />
             <br />
             To install this game and try it anyway, go to Settings, Advanced,

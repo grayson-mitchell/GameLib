@@ -190,10 +190,10 @@ export default function WineVersionSelector() {
               <span>{t('help.wine.part1')}</span>
               <ul>
                 <li>
-                  <i>~/.config/heroic/tools/wine</i>
+                  <i>~/.config/GameLib/tools/wine</i>
                 </li>
                 <li>
-                  <i>~/.config/heroic/tools/proton</i>
+                  <i>~/.config/GameLib/tools/proton</i>
                 </li>
                 <li>
                   <i>~/.steam/root/compatibilitytools.d</i>
