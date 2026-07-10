@@ -283,6 +283,10 @@ export default class SteamGame implements Game {
         is_linux_native,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
+        // Phase 17 D-08 reconciliation: this push only happens after a
+        // successful appdetails fetch, which is exactly when platforms are
+        // captured — mirrors steamMetadataStore.platformsCaptured below.
+        steamPlatformsCaptured: true,
         extra
       }
 

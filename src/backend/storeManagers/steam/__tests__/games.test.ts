@@ -362,7 +362,11 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       expect.objectContaining({
         app_name: APP_ID,
         art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        title: 'Dota 2'
+        title: 'Dota 2',
+        // Phase 17 D-08 reconciliation (Plan 09): this push only happens
+        // after a successful appdetails fetch, exactly when platforms are
+        // captured — the frontend bottle indicator relies on this flag.
+        steamPlatformsCaptured: true
       })
     )
   })
