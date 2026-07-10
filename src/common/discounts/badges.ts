@@ -54,3 +54,52 @@ export function resolveDiscountBadge(
   )
   return hasWaitingKey ? 'key-available' : null
 }
+
+/**
+ * CR-01 fix: builds the two maps `resolveDiscountBadge` needs, from a SINGLE
+ * shared helper consumed by both the Discounts container and its tests —
+ * closing the "hand-decoupled fixtures" gap that let the 'key-available'
+ * branch ship structurally unreachable (the container previously derived
+ * both `titleToSteamAppId` and `ownedSteamAppIds` from steam.library alone,
+ * so any AppID that resolved was always already "owned").
+ *
+ * `titleToAppId`: steam.library entries first (first-wins on a duplicate
+ * normalized title, unchanged from prior container logic), THEN each waiting
+ * Humble key with a USABLE (non-falsy) `steamAppId` fills in a normalized
+ * title that isn't already present — steam.library always wins on collision,
+ * so an owned title never gets displaced by a keyed one (D-83/D-85). The
+ * falsy guard mirrors resolveDiscountBadge's own ('' / '0' / undefined).
+ *
+ * `ownedAppIds`: steam.library ONLY, never merged with Humble keys — this is
+ * what keeps an unowned-but-keyed AppID present in `titleToAppId` while
+ * ABSENT from `ownedAppIds`, making the 'key-available' branch reachable.
+ */
+export function buildDiscountBadgeMaps(
+  steamLibrary: { title?: string; app_name: string }[],
+  humbleKeys: HumbleKey[]
+): { titleToAppId: Map<string, string>; ownedAppIds: Set<string> } {
+  const titleToAppId = new Map<string, string>()
+  for (const game of steamLibrary) {
+    const key = game.title ? normalize(game.title) : ''
+    if (key && !titleToAppId.has(key)) {
+      titleToAppId.set(key, game.app_name)
+    }
+  }
+  for (const humbleKey of humbleKeys) {
+    if (
+      humbleKey.steamAppId === undefined ||
+      humbleKey.steamAppId === '' ||
+      humbleKey.steamAppId === '0'
+    ) {
+      continue
+    }
+    const key = normalize(humbleKey.title)
+    if (key && !titleToAppId.has(key)) {
+      titleToAppId.set(key, humbleKey.steamAppId)
+    }
+  }
+
+  const ownedAppIds = new Set(steamLibrary.map((g) => g.app_name))
+
+  return { titleToAppId, ownedAppIds }
+}
