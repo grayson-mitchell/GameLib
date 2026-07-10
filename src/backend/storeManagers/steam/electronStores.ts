@@ -1,10 +1,20 @@
 import { TypeCheckedStoreBackend } from '../../electron_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
+import type { SteamBottleConfig } from 'common/types/steam'
 
 const configStore = new TypeCheckedStoreBackend('steamConfigStore', {
   cwd: 'steam_store'
 })
+
+// ── Phase 17 (17-02): dedicated Steam CrossOver bottle settings store ───────
+// A DEDICATED store (not a phantom GameConfig entry — see RESEARCH.md
+// "Alternatives Considered") persisting the bottle's own Wine engine +
+// provisioned/login state, independent of configStore (auth-only).
+const steamBottleConfigStore = new TypeCheckedStoreBackend(
+  'steamBottleConfigStore',
+  { cwd: 'steam_store' }
+)
 
 // ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
 const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
@@ -41,4 +51,11 @@ export interface SteamMetadataCacheEntry {
   platformsCaptured?: boolean
 }
 
-export { configStore, steamLibraryStore, steamMetadataStore, steamSyncStore }
+export type { SteamBottleConfig }
+export {
+  configStore,
+  steamLibraryStore,
+  steamMetadataStore,
+  steamSyncStore,
+  steamBottleConfigStore
+}
