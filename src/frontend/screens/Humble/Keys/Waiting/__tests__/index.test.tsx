@@ -440,7 +440,7 @@ describe('HumbleKeysWaiting', () => {
         (b) => b.props.onClick === props!.claimAction.onFinish
       )
       expect(finishButton).toBeDefined()
-      expect(textContent(finishButton!)).toContain('Finish activation')
+      expect(textContent(finishButton)).toContain('Finish activation')
 
       // No button is wired to onClaim — the dead-end Claim path is gone.
       expect(
