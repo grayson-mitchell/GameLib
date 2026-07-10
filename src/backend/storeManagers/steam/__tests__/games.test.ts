@@ -362,7 +362,11 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       expect.objectContaining({
         app_name: APP_ID,
         art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
-        title: 'Dota 2'
+        title: 'Dota 2',
+        // Phase 17 D-08 reconciliation (Plan 09): this push only happens
+        // after a successful appdetails fetch, exactly when platforms are
+        // captured — the frontend bottle indicator relies on this flag.
+        steamPlatformsCaptured: true
       })
     )
   })
@@ -965,6 +969,136 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+})
+
+// ── Phase 17 Plan 09 (MACSTEAM-04 gap closure): ensurePlatformsCaptured() ────
+//
+// Closes UAT GAP 2: on macOS, an uncaptured Windows-only game's Install/Play
+// previously fell through to native steam:// with no guided-setup dialog
+// because isBottleEligible() required platformsCaptured===true, which was
+// only ever set by a throttled fire-and-forget fetch. install()/launch()/
+// uninstall() now await ensurePlatformsCaptured() BEFORE consulting the gate.
+
+describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MACSTEAM-04)', () => {
+  let shellOpenExternal: jest.Mock
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  /** Windows-only appdetails fixture (mac:false) — the confirmed-not-native case. */
+  const windowsOnlyFixture = {
+    data: {
+      [APP_ID]: {
+        success: true,
+        data: {
+          name: 'Windows Only Game',
+          short_description: '',
+          platforms: { windows: true, mac: false, linux: false },
+          genres: []
+        }
+      }
+    }
+  }
+
+  /** Native-Mac appdetails fixture (mac:true). */
+  const macNativeFixture = {
+    data: {
+      [APP_ID]: {
+        success: true,
+        data: {
+          name: 'Mac Native Game',
+          short_description: '',
+          platforms: { windows: true, mac: true, linux: false },
+          genres: []
+        }
+      }
+    }
+  }
+
+  /**
+   * Stateful steamMetadataStore double — .get() reflects the last .set() call
+   * (unlike a static mockReturnValue), so ensurePlatformsCaptured's bounded
+   * poll can actually observe the in-flight fetch resolving platformsCaptured,
+   * mirroring how the real electron-store behaves.
+   */
+  function mockStatefulMetadataStore(initial: Record<string, unknown>) {
+    let state: Record<string, unknown> | undefined = initial
+    ;(steamMetadataStore.get as jest.Mock).mockImplementation(() => state)
+    ;(steamMetadataStore.set as jest.Mock).mockImplementation((_id, meta) => {
+      state = meta
+    })
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Windows Only Game' }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleReady as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    // Explicit reset (do not rely on test-order discipline in later describes).
+    envMock.isMac = false
+  })
+
+  it('platformsCaptured-uncaptured macOS install does NOT fall through to native — forces a synchronous capture and routes to guided setup', async () => {
+    mockStatefulMetadataStore({ platformsCaptured: undefined })
+    ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(axios.get).toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
+      appName: APP_ID
+    })
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it('native-Mac game routes native after capture — install() calls shell.openExternal once platforms resolve is_mac_native:true', async () => {
+    mockStatefulMetadataStore({ platformsCaptured: undefined })
+    ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(axios.get).toHaveBeenCalled()
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('non-macOS install skips platform capture — axios.get is NOT called by ensurePlatformsCaptured, native path used unchanged', async () => {
+    envMock.isMac = false
+    mockStatefulMetadataStore({ platformsCaptured: undefined })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(axios.get).not.toHaveBeenCalled()
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('already-captured game skips the fetch — no redundant network on the hot path', async () => {
+    mockStatefulMetadataStore({ platformsCaptured: true, is_mac_native: false })
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(axios.get).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
+      appName: APP_ID
+    })
   })
 })
 

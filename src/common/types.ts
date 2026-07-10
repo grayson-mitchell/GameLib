@@ -222,6 +222,9 @@ export interface GameInfo {
   /** Delisted = confirmed unavailable on Steam (appdetails success:false).
    * When true the game is hidden from Console and not activatable. */
   is_delisted?: boolean
+  /** Phase 17 D-08 reconciliation — mirrors steamMetadataStore.platformsCaptured
+   * so the frontend bottle indicator matches the backend D-11 routing gate. */
+  steamPlatformsCaptured?: boolean
   browserUrl?: string
   description?: string
   //used for store release versions. if remote !== local, then update

@@ -242,6 +242,9 @@ export default class SteamLibraryManager implements LibraryManager {
         is_linux_native: cachedMeta?.is_linux_native ?? false,
         // GAP-B: seed the persisted delisted verdict so it survives a library resync
         is_delisted: cachedMeta?.is_delisted ?? false,
+        // Phase 17 D-08 reconciliation: mirrors platformsCaptured so the
+        // frontend bottle indicator matches the backend D-11 routing gate.
+        steamPlatformsCaptured: cachedMeta?.platformsCaptured ?? false,
         is_installed: !!installedData,
         install: installedData
           ? {

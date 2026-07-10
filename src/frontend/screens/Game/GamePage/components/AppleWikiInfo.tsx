@@ -39,8 +39,16 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   // gated on the concrete platformsCaptured-aware flag (is_mac_native ===
   // false, not just falsy/undefined) so it only fires for CONFIRMED
   // non-native games, matching the backend's D-11-safe eligibility check.
+  // Plan 09 (D-08 reconciliation): also requires steamPlatformsCaptured===true
+  // so the indicator matches the backend routing gate (games.ts
+  // isBottleEligible()) exactly — a never-synced game defaults is_mac_native
+  // to false (library.ts), which alone would over-promise the bottle
+  // indicator for a game that hasn't actually been confirmed Windows-only.
   const showBottle =
-    is.mac && gameInfo.runner === 'steam' && gameInfo.is_mac_native === false
+    is.mac &&
+    gameInfo.runner === 'steam' &&
+    gameInfo.is_mac_native === false &&
+    gameInfo.steamPlatformsCaptured === true
 
   const onClickCrossover = () => {
     if (codeweavers?.slug) {
