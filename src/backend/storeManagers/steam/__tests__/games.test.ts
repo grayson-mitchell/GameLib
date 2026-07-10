@@ -409,9 +409,13 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     // logWarning should have been called with the error
     const { logWarning } = jest.requireMock('backend/logger')
     expect(logWarning).toHaveBeenCalled()
-    // steamMetadataStore.set and sendFrontendMessage must NOT have been called
+    // steamMetadataStore.set must NOT run, and no game must be pushed to the
+    // frontend (the steamMetadataSyncing on/off signals are expected + allowed).
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
   })
 })
 
@@ -1583,8 +1587,12 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
 
     // Assert: no persistence write whatsoever — transient branch returns early.
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    // Assert: no frontend push — owned game must remain visible.
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
+    // Assert: no game pushed — owned game must remain visible (the
+    // steamMetadataSyncing on/off signals are expected + allowed).
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
   })
 
   it('CONSOLE-01/B4: network error (axios throw) does NOT write is_delisted — catch block must never mark owned games delisted', async () => {
@@ -1596,8 +1604,12 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     expect(() => new SteamGame(APP_ID).getGameInfo()).not.toThrow()
     await flushAsync()
 
-    // Assert: catch block only logs; no store write, no frontend push.
+    // Assert: catch block only logs; no store write, no game pushed (the
+    // steamMetadataSyncing on/off signals are expected + allowed).
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.anything()
+    )
   })
 })

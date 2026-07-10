@@ -530,6 +530,10 @@ interface FrontendMessages {
   // bottle-eligible game is un-provisioned; the global listener (17-06)
   // subscribes to this to drive the guided-setup flow.
   steamBottleSetupRequired: (payload: { appName: string }) => void
+  // Emitted while Steam per-game metadata/art is being fetched in the
+  // background (throttled). `syncing: true` when the first fetch starts,
+  // `false` once the last one finishes — drives the library sync indicator.
+  steamMetadataSyncing: (payload: { syncing: boolean }) => void
   progressOfWinetricks: (payload: {
     messages: string[]
     installingComponent: string

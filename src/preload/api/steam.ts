@@ -21,3 +21,7 @@ export const steamBottleStatus = makeHandlerInvoker('steamBottleStatus')
 export const handleSteamBottleSetupRequired = frontendListenerSlot(
   'steamBottleSetupRequired'
 )
+// One-way push — backend emits while background metadata/art fetch is running.
+export const handleSteamMetadataSyncing = frontendListenerSlot(
+  'steamMetadataSyncing'
+)

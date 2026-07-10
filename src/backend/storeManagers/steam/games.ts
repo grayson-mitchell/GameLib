@@ -208,6 +208,11 @@ export default class SteamGame implements Game {
     // Guard: if a fetch is already in-flight for this appId, return immediately
     // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
     if (pendingFetches.has(this.appId)) return
+    // Notify the frontend a background metadata/art sync is starting (the first
+    // pending fetch flips the indicator on; the last one flips it off below).
+    if (pendingFetches.size === 0) {
+      sendFrontendMessage('steamMetadataSyncing', { syncing: true })
+    }
     pendingFetches.add(this.appId)
 
     // Throttle: wait for a concurrency slot so a cold cache doesn't open
@@ -307,6 +312,10 @@ export default class SteamGame implements Game {
     } finally {
       releaseMetadataSlot()
       pendingFetches.delete(this.appId)
+      // Last pending fetch drained — turn the sync indicator off.
+      if (pendingFetches.size === 0) {
+        sendFrontendMessage('steamMetadataSyncing', { syncing: false })
+      }
     }
   }
 

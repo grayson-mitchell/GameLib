@@ -102,6 +102,7 @@ interface StateProps {
   isIntelMac: boolean
   refreshing: boolean
   refreshingInTheBackground: boolean
+  steamMetadataSyncing: boolean
   hiddenGames: HiddenGame[]
   favouriteGames: FavouriteGame[]
   customCategories: Record<string, string[]>
@@ -266,6 +267,7 @@ class GlobalState extends PureComponent<Props> {
     isIntelMac: false,
     refreshing: false,
     refreshingInTheBackground: true,
+    steamMetadataSyncing: false,
     hiddenGames: configStore.get('games.hidden', []),
     currentCustomCategories: loadCurrentCategories(),
     sidebarCollapsed: JSON.parse(
@@ -1059,6 +1061,10 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleSteamBottleSetupRequired(
       handleSteamBottleSetupRequiredSignal
     )
+
+    window.api.handleSteamMetadataSyncing((e, { syncing }) => {
+      this.setState({ steamMetadataSyncing: syncing })
+    })
 
     window.api.handleRefreshLibrary((e, runner) => {
       this.refreshLibrary({

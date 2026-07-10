@@ -45,6 +45,8 @@ export interface ContextType {
   refreshLibrary: (options: RefreshOptions) => Promise<void>
   refreshing: boolean
   refreshingInTheBackground: boolean
+  // True while Steam per-game metadata/art is streaming in the background.
+  steamMetadataSyncing: boolean
   hiddenGames: {
     list: HiddenGame[]
     add: (appNameToHide: string, appTitle: string) => void
