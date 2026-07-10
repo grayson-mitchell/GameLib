@@ -8,7 +8,11 @@ import type {
   CatalogGenre,
   CatalogProduct
 } from 'common/types/discounts'
-import { resolveDiscountBadge, type DiscountBadge } from 'common/discounts/badges'
+import {
+  resolveDiscountBadge,
+  buildDiscountBadgeMaps,
+  type DiscountBadge
+} from 'common/discounts/badges'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
 import DiscountCard from './components/DiscountCard'
 import DiscountFilters from './components/DiscountFilters'
@@ -74,23 +78,17 @@ export default function Discounts() {
   // store, independent of GOG login.
   const canHideOwned = ownedTitles.size > 0
 
-  // D-78..D-85 (Phase 15): normalized title -> Steam AppID bridge, built from
-  // steam.library ONLY (never epic/gog/amazon/zoom — the badge is
-  // specifically a Humble/Steam ownership signal). First-wins on a duplicate
-  // normalized title, same convention as the ownedTitles memo above.
-  const titleToSteamAppId = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const game of steam.library) {
-      const key = game.title?.trim().toLowerCase()
-      if (key && !map.has(key)) map.set(key, game.app_name)
-    }
-    return map
-  }, [steam.library])
-
-  const ownedSteamAppIds = useMemo(
-    () => new Set(steam.library.map((g) => g.app_name)),
-    [steam.library]
-  )
+  // D-78..D-85 (Phase 15, CR-01 fix): normalized title -> Steam AppID bridge
+  // PLUS the owned-AppID set, built via the shared buildDiscountBadgeMaps
+  // helper (common/discounts/badges.ts) — never inlined here. titleToAppId
+  // merges in waiting Humble keys for titles absent from steam.library so an
+  // unowned-but-keyed AppID can resolve to 'key-available'; ownedAppIds stays
+  // steam.library-only so 'owned' precedence (D-83/D-85) is preserved.
+  const { titleToAppId: titleToSteamAppId, ownedAppIds: ownedSteamAppIds } =
+    useMemo(
+      () => buildDiscountBadgeMaps(steam.library, humble.keys ?? []),
+      [steam.library, humble.keys]
+    )
 
   const handleRegionChange = (countryCode: string | null) => {
     setRegionOverride(countryCode)
