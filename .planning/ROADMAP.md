@@ -117,7 +117,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can install a Steam game from GameLib (Steam client handles the download via steam://install)
   3. User can uninstall a Steam game from GameLib (via steam://uninstall)
   4. Windows-only Steam games on Linux launch via Steam Proton, not Heroic's Wine layer
-**Plans**: 4 plans
+**Plans**: 6 plans
 
 **Wave 1** — Launch slice:
 - [ ] `03-01-PLAN.md` — SteamGame.launch() fires steam://rungameid + hand-off toast + numeric appId guard; supporting getSettings/getExtraInfo/isGameAvailable/stop so GamePage and launchEventCallback work. isNative() stays true (GAME-04). Gate: `npm test -- --testPathPattern=steam/games` + codecheck. (GAME-01, GAME-04)
@@ -387,11 +387,13 @@ Plans:
   1. With a connected Humble account, each title on store surfaces shows an ownership badge: Owned, Unclaimed-key-available, or New
   2. An "expiring soon" surface lists keys nearing expiration sorted by urgency
   3. When a previously non-expiring key gains an expiration on sync, an OS notification alerts the user — the notification does not repeat on subsequent syncs for the same key
-**Plans**: 4 plans
+**Plans**: 6 plans (4 original + 2 gap closure)
   - [x] 15-01-PLAN.md — Store overlay ownership badges on Discounts (exact-match pure helper + DiscountCard pill) (HSTORE-01)
   - [x] 15-02-PLAN.md — Notification foundation: default-ON Settings toggle + disconnect-exempt notified-state store (HSTORE-03)
   - [x] 15-03-PLAN.md — Expiration-transition detection + digest OS notification + runSync hook (dedup + first-sync baseline) (HSTORE-03)
   - [x] 15-04-PLAN.md — Pinned "Expiring soon" section on Keys-waiting (pure partition helper + static section) (HSTORE-03)
+  - [ ] 15-05-PLAN.md — [gap closure] Fix CR-01: make 'Key available' badge reachable via shared buildDiscountBadgeMaps helper + integration test (HSTORE-01)
+  - [ ] 15-06-PLAN.md — [gap closure] Fix WR-01 (composite gamekey:machineName dedup + legacy backfill) + WR-02 (register humble.notification.* i18n keys) (HSTORE-03)
 
 **Wave 1** (parallel — zero code-file overlap): 15-01, 15-02, 15-04
 **Wave 2** (blocked on 15-02 — reads notified-state store + notify setting): 15-03
