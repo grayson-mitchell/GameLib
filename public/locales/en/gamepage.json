@@ -13,6 +13,7 @@
             "readyForLogin": "Steam is installed in the bottle.",
             "retry": "Try again",
             "sameAccount": "Tip: use the same Steam account you use elsewhere in GameLib.",
+            "sharedPrefixNote": "Reuses your global shared prefix/bottle instead of a dedicated one. Not recommended for Steam — the Windows Steam client should stay in its own dedicated GameLibSteam bottle.",
             "title": "Set up Steam for macOS"
         }
     },

@@ -171,6 +171,10 @@ const SteamBottleSetup = () => {
             wineVersionList={wineVersionList}
             crossoverBottle={crossoverBottle}
             setCrossoverBottle={setCrossoverBottle}
+            sharedPrefixNote={t(
+              'bottle.setup.sharedPrefixNote',
+              'Reuses your global shared prefix/bottle instead of a dedicated one. Not recommended for Steam — the Windows Steam client should stay in its own dedicated GameLibSteam bottle.'
+            )}
             initiallyOpen
           />
         </DialogContent>

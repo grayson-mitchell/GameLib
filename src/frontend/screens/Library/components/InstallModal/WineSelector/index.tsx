@@ -25,6 +25,10 @@ type Props = {
   title?: string
   appName: string
   initiallyOpen?: boolean
+  // Optional note prepended to the "Use shared Wine prefix" toggle's tooltip.
+  // Used by the Steam guided setup (Phase 17) to warn that sharing the prefix/
+  // bottle is not recommended for the dedicated Steam bottle.
+  sharedPrefixNote?: string
 }
 
 export default function WineSelector({
@@ -37,7 +41,8 @@ export default function WineSelector({
   crossoverBottle,
   setCrossoverBottle,
   initiallyOpen,
-  appName
+  appName,
+  sharedPrefixNote
 }: Props) {
   const { t, i18n } = useTranslation('gamepage')
 
@@ -47,9 +52,16 @@ export default function WineSelector({
   const globalConfig = useAwaited(() => window.api.requestAppSettings())
 
   const sharedToggleDescription = useMemo(() => {
-    if (!globalConfig) return ''
-    return `${globalConfig.wineVersion.name}\n${globalConfig.defaultWinePrefix}`
-  }, [globalConfig])
+    const configDetails = globalConfig
+      ? `${globalConfig.wineVersion.name}\n${globalConfig.defaultWinePrefix}`
+      : ''
+    if (sharedPrefixNote) {
+      return configDetails
+        ? `${sharedPrefixNote}\n\n${configDetails}`
+        : sharedPrefixNote
+    }
+    return configDetails
+  }, [globalConfig, sharedPrefixNote])
 
   useEffect(() => {
     if (!globalConfig) return
