@@ -14,7 +14,7 @@
  * guided-setup flow (17-06) confirming the user completed login.
  */
 import { join } from 'path'
-import { existsSync } from 'graceful-fs'
+import { existsSync, mkdirSync } from 'graceful-fs'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
@@ -117,6 +117,13 @@ export function sanitizeBottleName(name: string): string | null {
  * existing CrossOver bottle-exists gate) as the provisioned-state signal.
  * `bottleName` defaults to the stored bottle name, falling back to
  * DEFAULT_STEAM_BOTTLE_NAME.
+ *
+ * NOTE: this retains its narrow, original meaning — "the bottle directory
+ * has been created" — NOT "the bottle is ready to use". A bottle can have
+ * cxbottle.conf on disk while the bottled Steam.exe install never completed
+ * (half-provisioned, e.g. the SteamSetup.exe download failed). Used by
+ * provisionBottle() to decide whether `cxbottle --create` needs to run again
+ * (re-entrancy check). For the REAL completion signal, use isBottleReady().
  */
 export function isBottleProvisioned(bottleName?: string): boolean {
   const name =
@@ -124,6 +131,25 @@ export function isBottleProvisioned(bottleName?: string): boolean {
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
   return existsSync(join(getBottleDir(name), 'cxbottle.conf'))
+}
+
+/**
+ * The REAL bottle-readiness signal (per the GAP 1 stuck-loop diagnosis in
+ * .planning/debug/steam-bottle-provision-stuck-loop.md): true only when
+ * BOTH cxbottle.conf exists AND the bottled Steam.exe exists. cxbottle.conf
+ * alone means only that CrossOver created the bottle directory — the Steam
+ * install inside it (SteamSetup.exe download + non-silent run) may never
+ * have completed, leaving a half-provisioned bottle. Every routing gate in
+ * games.ts and the dispatchToBottledSteam pre-flight below must use THIS
+ * function, not isBottleProvisioned(), to decide whether it's safe to
+ * dispatch commands into the bottled Steam client.
+ */
+export function isBottleReady(bottleName?: string): boolean {
+  const name =
+    bottleName ??
+    steamBottleConfigStore.get_nodefault('bottleName') ??
+    DEFAULT_STEAM_BOTTLE_NAME
+  return isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
 }
 
 /**
@@ -189,51 +215,66 @@ export async function provisionBottle(opts?: {
     steamBottleConfigStore.set('wineVersion', opts.wineVersion)
   }
 
-  // (3) Idempotent short-circuit — bottle already exists.
-  if (isBottleProvisioned(bottleName)) {
+  // (3) Idempotent short-circuit — bottle is FULLY ready (conf + steam.exe).
+  // A half-provisioned bottle (conf only) must NOT short-circuit here — it
+  // needs to resume (self-heal) via steps 4-7 below.
+  if (isBottleReady(bottleName)) {
     return { status: 'done' }
   }
 
   // (4) CREATE the bottle via the 17-01 LOCKED mechanism — argv form only,
-  // arguments as discrete words, never a shell-interpolated string.
-  try {
-    const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
-      '--create',
-      '--bottle',
-      bottleName,
-      '--template',
-      'win10'
-    ])
-    if (!isBottleProvisioned(bottleName)) {
+  // arguments as discrete words, never a shell-interpolated string. Skipped
+  // when cxbottle.conf already exists (half-provisioned bottle being
+  // resumed) — re-running `cxbottle --create` on an existing bottle is
+  // unnecessary and this resumes straight into the download/install step.
+  if (!isBottleProvisioned(bottleName)) {
+    try {
+      const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
+        '--create',
+        '--bottle',
+        bottleName,
+        '--template',
+        'win10'
+      ])
+      if (!isBottleProvisioned(bottleName)) {
+        logError(
+          [
+            'provisionBottle: cxbottle create did not produce cxbottle.conf for',
+            bottleName,
+            `(code=${code}):`,
+            stderr
+          ],
+          LogPrefix.Steam
+        )
+        return {
+          status: 'error',
+          error: `Failed to create CrossOver bottle "${bottleName}"`
+        }
+      }
+    } catch (error) {
       logError(
-        [
-          'provisionBottle: cxbottle create did not produce cxbottle.conf for',
-          bottleName,
-          `(code=${code}):`,
-          stderr
-        ],
+        ['provisionBottle: cxbottle create threw', error],
         LogPrefix.Steam
       )
       return {
         status: 'error',
-        error: `Failed to create CrossOver bottle "${bottleName}"`
+        error: `Failed to create CrossOver bottle "${bottleName}": ${String(error)}`
       }
     }
-  } catch (error) {
-    logError(
-      ['provisionBottle: cxbottle create threw', error],
+  } else {
+    logInfo(
+      `provisionBottle: resuming half-provisioned bottle "${bottleName}" (cxbottle.conf exists, Steam.exe missing) — skipping cxbottle --create`,
       LogPrefix.Steam
     )
-    return {
-      status: 'error',
-      error: `Failed to create CrossOver bottle "${bottleName}": ${String(error)}`
-    }
   }
 
   // (5) Download the official SteamSetup.exe (HTTPS only — T-17-02), reusing
-  // a cached copy on re-provision.
+  // a cached copy on re-provision. mkdirSync the redist dir first (recursive
+  // is idempotent, no throw if it already exists) — closes the ENOENT that
+  // caused "Failed to download SteamSetup.exe" per the debug root cause.
   const steamSetupDir = join(steamSupportPath, 'redist')
   const steamSetupExePath = join(steamSetupDir, 'SteamSetup.exe')
+  mkdirSync(steamSetupDir, { recursive: true })
   if (!existsSync(steamSetupExePath)) {
     try {
       await downloadFile({ url: STEAM_SETUP_EXE_URL, dest: steamSetupExePath })
@@ -330,10 +371,11 @@ type BottledSteamResult = { status: 'done' | 'error'; error?: string }
 
 /**
  * Numeric-guards appId (mirrors buildSteamProtocolUrl's /^\d+$/ rule,
- * T-17-04), pre-flights isBottleProvisioned(), then dispatches the verb to
- * the bottled Steam client via runWineCommand. Fire-and-forget — never
- * optimistically flips install state (D-02); the bottle-scoped ACF poller
- * (17-05) owns real status.
+ * T-17-04), pre-flights isBottleReady() (conf + steam.exe — belt-and-
+ * suspenders even if a caller reaches dispatch on a half-provisioned
+ * bottle), then dispatches the verb to the bottled Steam client via
+ * runWineCommand. Fire-and-forget — never optimistically flips install
+ * state (D-02); the bottle-scoped ACF poller (17-05) owns real status.
  */
 async function dispatchToBottledSteam(
   verb: BottledSteamVerb,
@@ -347,10 +389,10 @@ async function dispatchToBottledSteam(
     return { status: 'error', error: `Invalid appId: "${appId}"` }
   }
 
-  if (!isBottleProvisioned()) {
+  if (!isBottleReady()) {
     return {
       status: 'error',
-      error: 'Steam bottle is not provisioned yet'
+      error: 'Steam bottle is not ready yet'
     }
   }
 

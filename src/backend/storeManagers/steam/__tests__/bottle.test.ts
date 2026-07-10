@@ -9,7 +9,7 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
-import { existsSync } from 'graceful-fs'
+import { existsSync, mkdirSync } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
@@ -20,6 +20,7 @@ import {
   getBottleSteamappsDir,
   getBottleSteamExePath,
   isBottleProvisioned,
+  isBottleReady,
   sanitizeBottleName,
   getSteamBottleSettings,
   provisionBottle,
@@ -37,7 +38,8 @@ jest.mock('electron', () => ({
 }))
 
 jest.mock('graceful-fs', () => ({
-  existsSync: jest.fn()
+  existsSync: jest.fn(),
+  mkdirSync: jest.fn()
 }))
 
 jest.mock('../electronStores', () => ({
@@ -73,6 +75,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 const mockedExistsSync = existsSync as jest.Mock
+const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
@@ -90,6 +93,7 @@ const defaultWine: WineInstallation = {
 describe('bottle.ts', () => {
   beforeEach(() => {
     mockedExistsSync.mockReset()
+    mockedMkdirSync.mockReset()
     mockedGetNodefault.mockReset()
     mockedGlobalConfigGet.mockReset()
     mockedSet.mockReset()
@@ -156,6 +160,25 @@ describe('bottle.ts', () => {
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining(DEFAULT_STEAM_BOTTLE_NAME)
       )
+    })
+  })
+
+  describe('isBottleReady', () => {
+    test('is false when cxbottle.conf exists but steam.exe is missing (half-provisioned)', () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('cxbottle.conf')
+      )
+      expect(isBottleReady('GameLibSteam')).toBe(false)
+    })
+
+    test('is true only when both cxbottle.conf and steam.exe exist', () => {
+      mockedExistsSync.mockReturnValue(true)
+      expect(isBottleReady('GameLibSteam')).toBe(true)
+    })
+
+    test('is false when neither cxbottle.conf nor steam.exe exist', () => {
+      mockedExistsSync.mockReturnValue(false)
+      expect(isBottleReady('GameLibSteam')).toBe(false)
     })
   })
 
@@ -230,6 +253,21 @@ describe('bottle.ts', () => {
   })
 
   describe('provisionBottle', () => {
+    // Path-aware existsSync double — robust to the exact call order/count of
+    // isBottleProvisioned()/isBottleReady() checks inside provisionBottle().
+    // `flags` is mutable so a test can simulate a filesystem effect (e.g. a
+    // successful `cxbottle --create` producing cxbottle.conf) via a
+    // spawnAsync/downloadFile mockImplementation side effect.
+    type FsFlags = { conf: boolean; steamExe: boolean; steamSetupExe: boolean }
+    function setBottleFs(flags: FsFlags) {
+      mockedExistsSync.mockImplementation((path: string) => {
+        if (path.includes('cxbottle.conf')) return flags.conf
+        if (path.includes('SteamSetup.exe')) return flags.steamSetupExe
+        if (path.endsWith('steam.exe')) return flags.steamExe
+        return false
+      })
+    }
+
     test('rejects an unsafe bottle name and does NOT call downloadFile', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
 
@@ -240,33 +278,36 @@ describe('bottle.ts', () => {
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
     })
 
-    test('short-circuits to {status:"done"} when the bottle is already provisioned (no download, no create)', async () => {
+    test('short-circuits to {status:"done"} when the bottle is fully ready — conf + steam.exe (no download, no create)', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
-      // isBottleProvisioned() reads existsSync — mock true so the
-      // idempotent short-circuit fires before create/download.
-      mockedExistsSync.mockReturnValue(true)
+      setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
 
       const result = await provisionBottle({ bottleName: 'GameLibSteam' })
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
       expect(mockedDownloadFile).not.toHaveBeenCalled()
+      expect(mockedMkdirSync).not.toHaveBeenCalled()
     })
 
     test('downloads SteamSetup.exe from the HTTPS STEAM_SETUP_EXE_URL when un-provisioned', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
-      // First existsSync check (isBottleProvisioned pre-create) -> false so
-      // we proceed to create; subsequent calls (cxbottle.conf post-create,
-      // cached SteamSetup.exe check, final Steam.exe check) also false so
-      // the create step runs and the download is attempted.
-      mockedExistsSync.mockReturnValueOnce(false) // pre-create idempotent check
-      mockedExistsSync.mockReturnValueOnce(true) // post-create cxbottle.conf confirm
-      mockedExistsSync.mockReturnValueOnce(false) // cached SteamSetup.exe check
-      mockedExistsSync.mockReturnValue(false) // final Steam.exe check
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      // Simulate `cxbottle --create` producing cxbottle.conf on disk.
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
 
       const result = await provisionBottle({ bottleName: 'GameLibSteam' })
 
       expect(result.status).toBe('done')
+      expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
       expect(mockedDownloadFile).toHaveBeenCalledWith(
         expect.objectContaining({ url: STEAM_SETUP_EXE_URL })
       )
@@ -275,8 +316,16 @@ describe('bottle.ts', () => {
 
     test('runs SteamSetup.exe non-silently via runWineCommand with skipPrefixCheckIKnowWhatImDoing', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
-      mockedExistsSync.mockReturnValueOnce(false) // pre-create idempotent check
-      mockedExistsSync.mockReturnValue(true) // everything after: provisioned/exists
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
 
       await provisionBottle({ bottleName: 'GameLibSteam' })
 
@@ -294,6 +343,56 @@ describe('bottle.ts', () => {
         false
       )
       expect(call.commandParts.some((p: string) => p === '/S')).toBe(false)
+    })
+
+    test("provisionBottle mkdir's the redist dir before downloading SteamSetup.exe", async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(mockedMkdirSync).toHaveBeenCalledWith(
+        expect.stringContaining('redist'),
+        { recursive: true }
+      )
+      const mkdirOrder = mockedMkdirSync.mock.invocationCallOrder[0]
+      const downloadOrder = mockedDownloadFile.mock.invocationCallOrder[0]
+      expect(mkdirOrder).toBeLessThan(downloadOrder)
+    })
+
+    test('resumes a half-provisioned bottle without re-running cxbottle create', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // conf present, steam.exe absent — half-provisioned.
+      setBottleFs({ conf: true, steamExe: false, steamSetupExe: false })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result.status).toBe('done')
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(mockedDownloadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ url: STEAM_SETUP_EXE_URL })
+      )
+    })
+
+    test('short-circuits only when fully ready (conf + steam.exe) — half-provisioned does NOT short-circuit', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Both present: full short-circuit, no spawn, no download.
+      setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(mockedDownloadFile).not.toHaveBeenCalled()
     })
   })
 
@@ -320,7 +419,7 @@ describe('bottle.ts', () => {
     })
 
     test('returns an error (no spawn) when the bottle is not provisioned', async () => {
-      mockedExistsSync.mockReturnValue(false) // isBottleProvisioned() -> false
+      mockedExistsSync.mockReturnValue(false) // isBottleReady() -> false (neither conf nor steam.exe)
 
       const installResult = await tellBottledSteamToInstall(GOOD_APP_ID)
       const launchResult = await tellBottledSteamToLaunch(GOOD_APP_ID)
@@ -332,8 +431,20 @@ describe('bottle.ts', () => {
       expect(mockedRunWineCommand).not.toHaveBeenCalled()
     })
 
+    test('returns an error (no spawn) when the bottle is half-provisioned (conf exists, steam.exe missing)', async () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('cxbottle.conf')
+      )
+
+      const installResult = await tellBottledSteamToInstall(GOOD_APP_ID)
+
+      expect(installResult.status).toBe('error')
+      expect(installResult.error).toMatch(/not ready/)
+      expect(mockedRunWineCommand).not.toHaveBeenCalled()
+    })
+
     test('launch dispatches -applaunch <appId> as discrete argv elements targeting the bottle Steam.exe', async () => {
-      mockedExistsSync.mockReturnValue(true) // isBottleProvisioned() -> true
+      mockedExistsSync.mockReturnValue(true) // isBottleReady() -> true (conf + steam.exe)
       mockedGetNodefault.mockReturnValue(undefined)
 
       const result = await tellBottledSteamToLaunch(GOOD_APP_ID)
