@@ -23,15 +23,33 @@ export function detectAndNotifyExpirationTransitions(
   const newlyExpiring: HumbleKey[] = []
 
   for (const key of keys) {
+    const composite = `${key.gamekey}:${key.machineName}`
+
+    // WR-01 one-time legacy backfill: entries written before the
+    // composite-key migration are keyed by machineName alone (no colon —
+    // composite keys always contain one, so there is no collision risk).
+    // If the composite entry is absent but a legacy entry exists, copy it
+    // forward so the upgrade preserves "already notified" state and does
+    // not fire a spurious notification storm. Legacy entries are left in
+    // place (harmless, keeps the backfill idempotent).
+    if (
+      !humbleNotifiedExpirationStore.has(composite) &&
+      humbleNotifiedExpirationStore.has(key.machineName)
+    ) {
+      humbleNotifiedExpirationStore.set(
+        composite,
+        humbleNotifiedExpirationStore.get(key.machineName)!
+      )
+    }
+
     const current = key.expiration
-    const last =
-      humbleNotifiedExpirationStore.get(key.machineName)?.expiration ?? null
+    const last = humbleNotifiedExpirationStore.get(composite)?.expiration ?? null
 
     if (current !== null && current !== last) {
       newlyExpiring.push(key)
       // Always advance the persisted state — even under suppression — so
       // dedup works correctly on every subsequent sync (locked decision 3).
-      humbleNotifiedExpirationStore.set(key.machineName, {
+      humbleNotifiedExpirationStore.set(composite, {
         expiration: current
       })
     }

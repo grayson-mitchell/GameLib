@@ -138,14 +138,22 @@ const humbleLocalRedeemedStore = new CacheStore<{ redeemedAt: number }, string>(
 )
 
 // Phase 15 (HSTORE-03, D-92): records the last-notified expiration date per
-// key, keyed by `machineName`, so a re-sync that observes the SAME
-// expiration date already notified does not re-notify (transition-based
-// dedup). Like humbleRevealedStore/humbleOwnershipOverrideStore/
-// humbleGiftedAtStore/humbleAuditStore/humbleLocalRedeemedStore above, this
-// store is NEVER cleared by HumbleUser.disconnect() (D-04 exemption) — a
-// reconnect must not re-notify already-known expirations (RESEARCH A4).
-// Kept as its own electron-store file on disk for the same isolation reason
-// as the stores above — do not merge this into humbleLibraryStore.
+// key, keyed by a composite `gamekey:machineName` string (matching
+// humbleAuditStore/humbleLocalRedeemedStore above), so a re-sync that
+// observes the SAME expiration date already notified does not re-notify
+// (transition-based dedup). WR-01 gap closure: a machineName-only key
+// collided across two orders sharing the same machineName but different
+// expirations, causing an indefinite re-fire — the composite key removes
+// that collision the same way it was removed for the two stores above.
+// expirationAlerts.ts performs a one-time legacy backfill from any
+// pre-migration machineName-only entry so the upgrade does not fire a
+// notification storm for already-notified keys. Like
+// humbleRevealedStore/humbleOwnershipOverrideStore/humbleGiftedAtStore/
+// humbleAuditStore/humbleLocalRedeemedStore above, this store is NEVER
+// cleared by HumbleUser.disconnect() (D-04 exemption) — a reconnect must
+// not re-notify already-known expirations (RESEARCH A4). Kept as its own
+// electron-store file on disk for the same isolation reason as the stores
+// above — do not merge this into humbleLibraryStore.
 const humbleNotifiedExpirationStore = new CacheStore<
   { expiration: string },
   string
