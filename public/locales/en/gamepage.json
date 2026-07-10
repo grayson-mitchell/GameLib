@@ -181,7 +181,7 @@
     "info": {
         "canRunOffline": "Online Required",
         "clickToOpen": "Click to open",
-        "crossover-rating": "Crossover rating",
+        "crossover-rating": "Crossover emulation",
         "game-scores": "Game Scores",
         "humbleOrigin": "Includes a key from Humble Bundle: {{origin}}",
         "installedInfo": "Installed Information",
@@ -196,7 +196,7 @@
         "syncsaves": "Sync Saves",
         "third-party-app": "Third-Party Manager",
         "version": "Version",
-        "wine-rating": "Wine rating"
+        "wine-rating": "Wine emulation"
     },
     "install": {
         "anticheat-warning": {

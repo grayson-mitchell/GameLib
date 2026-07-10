@@ -7,6 +7,7 @@ import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
 import { ratingTier } from './appleRating'
 import { formatCrossoverRating } from './crossoverRating'
+import CodeweaversLogo from 'frontend/assets/codeweavers_icon.svg?react'
 
 interface Props {
   gameInfo: GameInfo
@@ -14,9 +15,13 @@ interface Props {
 
 const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
-  const { wikiInfo } = useContext(GameContext)
+  const { wikiInfo, is } = useContext(GameContext)
 
   if (!wikiInfo) {
+    return null
+  }
+
+  if (is.native) {
     return null
   }
 
@@ -36,13 +41,13 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   }
 
   const onClickWine = () => {
-    if (applegamingwiki?.crossoverLink) {
+    if (is.mac) {
       createNewWindow(
-        `https://www.codeweavers.com/compatibility/crossover/${applegamingwiki.crossoverLink}`
+        `https://www.applegamingwiki.com/w/index.php?search=${encodeURIComponent(gameInfo.title)}`
       )
     } else {
       createNewWindow(
-        `https://www.codeweavers.com/compatibility?browse=&app_desc=&company=&rating=&platform=&date_start=&date_end=&name=${gameInfo.title}&search=app#results`
+        `https://appdb.winehq.org/objectManager.php?sClass=application&sTitle=Browse+Applications&bIsQueue=false&bIsRejected=false&sOrderBy=appName&bAscending=true&sHavingText=${encodeURIComponent(gameInfo.title)}`
       )
     }
   }
@@ -60,8 +65,8 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           title={t('info.clickToOpen', 'Click to open')}
           onClick={onClickCrossover}
         >
-          <WineBar />
-          <b>{t('info.crossover-rating', 'Crossover rating')}:</b>
+          <CodeweaversLogo style={{ width: '24px', height: '24px' }} />
+          <b>{t('info.crossover-rating', 'Crossover emulation')}:</b>
           {codeweavers.rating !== null ? (
             <>
               <Rating
@@ -86,7 +91,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           onClick={onClickWine}
         >
           <WineBar />
-          <b>{t('info.wine-rating', 'Wine rating')}:</b>
+          <b>{t('info.wine-rating', 'Wine emulation')}:</b>
           {ratingTier(applegamingwiki.wineRating).label}
         </a>
       )}
