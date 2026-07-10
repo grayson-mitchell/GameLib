@@ -10,6 +10,10 @@ import {
 } from 'frontend/components/UI/Dialog'
 import WineSelector from 'frontend/screens/Library/components/InstallModal/WineSelector'
 import { useAwaited } from 'frontend/hooks/useAwaited'
+import {
+  DEFAULT_STEAM_BOTTLE_NAME,
+  resolveSteamBottleEngine
+} from './steamBottleDefaults'
 
 type Phase = 'consent' | 'provisioning' | 'error'
 
@@ -37,6 +41,7 @@ const SteamBottleSetup = () => {
   const [winePrefix, setWinePrefix] = useState('')
   const [wineVersion, setWineVersion] = useState<WineInstallation>()
   const [wineVersionList, setWineVersionList] = useState<WineInstallation[]>([])
+  const [enginesFetched, setEnginesFetched] = useState(false)
   const [crossoverBottle, setCrossoverBottle] = useState('')
 
   const pollRef = useRef<ReturnType<typeof setInterval>>()
@@ -52,15 +57,17 @@ const SteamBottleSetup = () => {
     setProvisioned(false)
   }, [isOpen, appName])
 
-  // D-03: fetch the available compatibility engines and default to the
-  // user's globally-configured engine (the "detected engine") — same source
-  // WineSelector's callers use elsewhere (InstallModal).
+  // D-03: fetch the available compatibility engines. `enginesFetched` gates the
+  // seeding effect below so we only choose a default engine once the list is
+  // known — otherwise a CrossOver engine that loads after globalConfig would be
+  // missed (the seed runs once and is guarded by `wineVersion`).
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
     void window.api.getAlternativeWine().then((list: WineInstallation[]) => {
       if (cancelled) return
       setWineVersionList(list)
+      setEnginesFetched(true)
     })
     return () => {
       cancelled = true
@@ -68,13 +75,20 @@ const SteamBottleSetup = () => {
   }, [isOpen])
 
   useEffect(() => {
-    if (!globalConfig || wineVersion) return
-    setWineVersion(globalConfig.wineVersion)
+    if (!globalConfig || wineVersion || !enginesFetched) return
+    // Prefer CrossOver — the Steam bottle is created via CrossOver's cxbottle
+    // (17-01/17-04), so CrossOver is the correct default even when the user's
+    // global engine is plain Wine (17-06 UAT finding).
+    setWineVersion(
+      resolveSteamBottleEngine(globalConfig.wineVersion, wineVersionList)
+    )
     setWinePrefix(globalConfig.defaultWinePrefixDir)
-    if (globalConfig.wineCrossoverBottle) {
-      setCrossoverBottle(globalConfig.wineCrossoverBottle)
-    }
-  }, [globalConfig, wineVersion])
+    // ALWAYS the dedicated Steam bottle, never the user's shared GOG/Epic
+    // bottle (globalConfig.wineCrossoverBottle) — the two must stay distinct
+    // (17-02). Seeding the shared name here was the 17-06 UAT bug that would
+    // have provisioned Steam into the shared bottle.
+    setCrossoverBottle(DEFAULT_STEAM_BOTTLE_NAME)
+  }, [globalConfig, wineVersion, enginesFetched, wineVersionList])
 
   // Background-task progress: poll steamBottleStatus while provisioning is
   // underway (D-02 — SteamSetup.exe runs non-silently / wait:false, so we
