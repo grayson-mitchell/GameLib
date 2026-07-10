@@ -150,3 +150,12 @@ None - no external service configuration required.
 ---
 *Phase: 17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/bottle.ts
+- FOUND: src/backend/storeManagers/steam/__tests__/bottle.test.ts
+- FOUND: .planning/phases/17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i/17-02-SUMMARY.md
+- FOUND: a1e5dbc1 (Task 1 commit)
+- FOUND: 94f55f94 (Task 2 commit)
+- FOUND: e82ea00d (plan metadata commit)
