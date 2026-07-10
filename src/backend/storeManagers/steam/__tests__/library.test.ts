@@ -13,6 +13,7 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 import SteamLibraryManager, {
   buildInstalledMap,
+  buildBottleInstalledMap,
   readAcfState,
   startInstallPolling,
   stopInstallPolling,
@@ -38,6 +39,7 @@ import {
   steamMetadataStore,
   steamSyncStore
 } from '../electronStores'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -129,6 +131,20 @@ jest.mock('../electronStores', () => ({
     set: jest.fn()
   }
 }))
+
+// ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
+jest.mock('../bottle', () => ({
+  getBottleSteamappsDir: jest.fn(),
+  getSteamBottleSettings: jest.fn(),
+  isBottleProvisioned: jest.fn()
+}))
+
+/** Bottle steamapps root used consistently across the bottle-path tests below. */
+const BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files (x86)/Steam/steamapps'
+)
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -726,6 +742,141 @@ describe('readAcfState()', () => {
   })
 })
 
+// ── 17-03: readAcfState('bottle') — bottle-scoped ACF scan, never conflated ───
+
+describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('reads a manifest placed under the mocked bottle steamapps root and returns state:"installed" (bit 4 set)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    // Bottle scan must never consult getSteamLibraries() (the native root)
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" when the bottle root has no manifest, even though the native root is separately mocked as installed (proves no conflation)', async () => {
+    // Simulate a native library ALSO configured with an installed manifest for
+    // the same appId — if the bottle scan ever fell back to or merged with the
+    // native root, this would incorrectly report 'installed'.
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path === '/steam' || path === join('/steam', 'steamapps')
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('absent')
+    // The bottle scan must never even consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('existing native readAcfState(appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
+    // Native scan must never consult the bottle path resolver
+    expect(getBottleSteamappsDir).not.toHaveBeenCalled()
+  })
+})
+
+// ── 17-03: buildBottleInstalledMap() ──────────────────────────────────────────
+
+describe('buildBottleInstalledMap()', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('returns an empty Map when the bottle steamapps dir does not exist', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.size).toBe(0)
+  })
+
+  it('marks a bottle-installed appId (StateFlags bit 4 set), rooted at the bottle steamapps dir', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.has(730)).toBe(true)
+    expect(result.get(730)?.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    // Bottle map build must never consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('skips a corrupt bottle ACF file without throwing (T-2-01/T-17-05)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.size).toBe(0)
+  })
+})
+
 // ── D-07: pollInstallOnce() ──────────────────────────────────────────────────
 
 describe('pollInstallOnce()', () => {
@@ -896,6 +1047,39 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         appName: '730',
         runner: 'steam',
         status: 'done'
+      })
+    )
+  })
+
+  // ── 17-03: startInstallPolling(appId, { source: 'bottle' }) ────────────────
+
+  it('startInstallPolling(appId, { source: "bottle" }) polls the bottle steamapps root, not the native one', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2', // downloading — keeps the poll alive for the assertion
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    startInstallPolling('730', { source: 'bottle' })
+    await jest.advanceTimersByTimeAsync(3000)
+
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'installing'
       })
     )
   })
