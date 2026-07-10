@@ -44,6 +44,7 @@ import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import useGlobalState from './GlobalStateV2'
+import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -1047,6 +1048,17 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleGameStatus((e, args) => {
       this.handleGameStatus({ ...args })
     })
+
+    // Phase 17 (17-06), D-07: single global listener that opens the guided
+    // bottle-setup flow whenever the backend emits `steamBottleSetupRequired`
+    // — fires from EVERY Install/Play entry point (game-details button,
+    // library grid, install modal) since they all funnel into
+    // window.api.install/launch, which is where the backend decision is
+    // made. No frontend eligibility check on gameInfo.is_mac_native is added
+    // here or anywhere else (D-11 stays backend-owned).
+    window.api.handleSteamBottleSetupRequired(
+      handleSteamBottleSetupRequiredSignal
+    )
 
     window.api.handleRefreshLibrary((e, runner) => {
       this.refreshLibrary({
