@@ -184,6 +184,7 @@
         "humbleOrigin": "Includes a key from Humble Bundle: {{origin}}",
         "installedInfo": "Installed Information",
         "installedPlatform": "Installed Platform",
+        "openLocation": "Open location",
         "path": "Install Path",
         "protondb-compatibility-info": "Proton Compatibility Tier",
         "size": "Size",
