@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved-pending-verify
 trigger: "Issue 2 (MAJOR, Test 3, MACSTEAM-04): macOS Install/Play on Windows-only Steam game goes straight to 'steam installing' — no consent dialog, no WineSelector engine choice. Guided-setup UI never appears."
 created: 2026-07-11
 updated: 2026-07-11
+resolved_by: [17-09]
 ---
 
 ## Current Focus
@@ -41,6 +42,17 @@ started: Phase 17 guided flow (17-06) — first UAT of the guided flow.
 ## Resolution
 
 root_cause: isBottleEligible() D-11 gate (games.ts:446-450) requires platformsCaptured===true; that flag is only set by a successful appdetails fetch (games.ts:292-300), which is failing/racing. With the gate false, install()/launch() take the native steam:// branch and never call sendFrontendMessage('steamBottleSetupRequired'), so the (correctly wired) frontend guided-setup listener never fires.
-fix: (deferred — diagnose-only)
-verification: (deferred)
-files_changed: []
+fix: |
+  17-09: install()/launch()/uninstall() now await a new ensurePlatformsCaptured() — a SYNCHRONOUS
+  appdetails platform check — BEFORE consulting isBottleEligible(). This removes the race: a
+  Windows-only macOS game whose platformsCaptured wasn't yet set no longer falls through to native
+  steam://install; the gate resolves true and steamBottleSetupRequired is emitted, so the consent
+  dialog + WineSelector guided flow fires. Also reconciled the D-08 frontend indicator gate with the
+  D-11 routing gate via a new steamPlatformsCaptured field on GameInfo so UI promise and routing agree.
+verification: 243/243 steam unit tests pass, tsc clean. Runtime confirmation (real macOS + CrossOver
+  Install/Play showing consent + WineSelector) PENDING via /gsd:verify-work 17 — see 17-UAT.md test 3.
+files_changed:
+  - src/backend/storeManagers/steam/games.ts
+  - src/common/types.ts
+  - src/backend/storeManagers/steam/library.ts
+  - src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx

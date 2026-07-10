@@ -1,8 +1,9 @@
 ---
-status: diagnosed
+status: resolved-pending-verify
 trigger: "UAT Issue 1 BLOCKER (MACSTEAM-02): macOS+CrossOver install of Windows-only Steam game — 'could not download steam' then stuck 'steam installing' loop with no SteamSetup window; unstyled error banner"
 created: 2026-07-11
 updated: 2026-07-11
+resolved_by: [17-08, 17-10]
 ---
 
 ## Current Focus
@@ -53,6 +54,16 @@ started: Phase 17 feature (new), first UAT.
 ## Resolution
 
 root_cause: Bottle creation (cxbottle.conf) precedes Steam.exe install, and isBottleProvisioned() gates on cxbottle.conf existence alone. A failure between the two (triggered here by SteamSetup.exe download ENOENT from the never-created steam_store/redist dir) leaves a half-provisioned bottle that reports provisioned, permanently short-circuiting re-provisioning and routing installs to a nonexistent bottled steam.exe.
-fix: (planner) see diagnosis suggested direction.
-verification: static trace only; runtime log confirmation of ENOENT pending on macOS box.
-files_changed: []
+fix: |
+  17-08: provisioning now mkdir's the steam_store/redist dir before downloading SteamSetup.exe
+  (fixes the ENOENT that broke the download), and install/launch/uninstall/dispatch route on
+  isBottleReady() (real bottled steam.exe present) instead of isBottleProvisioned() (cxbottle.conf
+  existence). A half-provisioned bottle now self-heals by re-running guided setup instead of
+  short-circuiting into the stuck 'steam installing' loop.
+  17-10: styled .steamBottleSetupToast / .steamBottleSetupMessage (fixes symptom 3, the unstyled banner).
+verification: static trace + 243/243 steam unit tests pass, tsc clean. Runtime confirmation
+  (real macOS + CrossOver install click-through) PENDING via /gsd:verify-work 17 — see 17-UAT.md tests 2-8.
+files_changed:
+  - src/backend/storeManagers/steam/bottle.ts
+  - src/backend/storeManagers/steam/games.ts
+  - src/frontend/screens/Game/GamePage/components/SteamBottleSetup (toast SCSS, 17-10)
