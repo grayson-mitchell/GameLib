@@ -421,7 +421,7 @@ Plans:
   - For Steam games the AppID is known — is an AppID-based lookup more reliable than title-slug, and does CodeWeavers expose one?
 **Plans**: 3 plans
 - [x] 16-01-PLAN.md — CodeWeavers backend lookup service (slugify + JSON-LD parse + soft-404 detection + cacheable-miss contract) + CodeweaversInfo/WikiInfo types
-- [ ] 16-02-PLAN.md — Wire getInfoFromCodeweavers into getWikiGameInfo (Mac+Linux gate, self-heal, cache)
+- [x] 16-02-PLAN.md — Wire getInfoFromCodeweavers into getWikiGameInfo (Mac+Linux gate, self-heal, cache)
 - [ ] 16-03-PLAN.md — Numeric CrossOver rating row + graceful miss state + applegamingwiki decoupling + i18n
 
 ## Progress
@@ -449,4 +449,4 @@ v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
-| 16. CrossOver Compatibility Rating (CodeWeavers) | 1/3 | In Progress|  |
+| 16. CrossOver Compatibility Rating (CodeWeavers) | 2/3 | In Progress|  |
