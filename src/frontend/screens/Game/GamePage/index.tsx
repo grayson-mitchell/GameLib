@@ -377,7 +377,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
       wikiInfo?.howlongtobeat ||
       wikiInfo?.pcgamingwiki?.metacritic.score ||
       wikiInfo?.pcgamingwiki?.opencritic.score ||
-      wikiInfo?.steamInfo
+      wikiInfo?.steamInfo ||
+      wikiInfo?.codeweavers?.rating != null
 
     const hasRequirements = extraInfo ? extraInfo.reqs.length > 0 : false
 
