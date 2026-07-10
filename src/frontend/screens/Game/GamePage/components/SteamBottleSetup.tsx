@@ -14,6 +14,7 @@ import {
   DEFAULT_STEAM_BOTTLE_NAME,
   resolveSteamBottleEngine
 } from './steamBottleDefaults'
+import './SteamBottleSetup.scss'
 
 type Phase = 'consent' | 'provisioning' | 'error'
 
