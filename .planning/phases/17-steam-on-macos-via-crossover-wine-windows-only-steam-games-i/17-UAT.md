@@ -6,13 +6,20 @@ source:
   - 17-04-SUMMARY.md
   - 17-05-SUMMARY.md
   - 17-06-SUMMARY.md
+remediation:
+  - 17-08-SUMMARY.md  # GAP 1 (blocker) — provisioning stuck-loop fix
+  - 17-10-SUMMARY.md  # GAP 1 cosmetic — banner/toast styling
+  - 17-09-SUMMARY.md  # GAP 2 (major) — synchronous platform capture at install/launch
 started: 2026-07-11T00:00:00Z
-updated: 2026-07-11T00:00:00Z
+updated: 2026-07-11T00:30:00Z
 ---
 
 ## Current Test
 
-[testing paused — 2 issues to diagnose; test 10 deferred by user]
+[both diagnosed gaps REMEDIATED in code (GAP 1 → 17-08 + 17-10, GAP 2 → 17-09);
+awaiting human re-test on a macOS + CrossOver machine. Tests 2–8 are now
+ready-for-retest / unblocked. Test 10 still deferred by user. Resume via
+`/gsd:verify-work 17`.]
 
 ## Tests
 
@@ -22,45 +29,52 @@ result: pass
 
 ### 2. Guided bottle provisioning + SteamSetup click-through (MACSTEAM-02)
 expected: On macOS with CrossOver installed, hit Install/Play on a Windows-only Steam game (one with no native Mac build). A consent dialog explains a Windows Steam bottle is needed. Accepting kicks off a background task that provisions the dedicated `GameLibSteam` CrossOver bottle and opens the real (non-silent) SteamSetup.exe installer window for you to click through.
-result: issue
+result: remediated
 reported: "First install attempt: banner 'could not download steam' with try-again/stop options; banner was cosmetically broken (no background, just text over the window). Chose Stop, reloaded the app, clicked Install again -> no SteamSetup window at all, just a quick 'installing the game' message and the button changed to 'steam installing'; after a few minutes it reverts and pressing Install again reproduces the same result (stuck loop)."
 severity: blocker
+remediation: "Fixed by 17-08 (provisioning now mkdir's the redist dir before downloading SteamSetup.exe; install/launch/uninstall route on real bottle readiness via isBottleReady() instead of cxbottle.conf existence, so a half-provisioned bottle self-heals instead of entering the stuck loop) + 17-10 (styled .steamBottleSetupToast banner). Needs human re-test on macOS + CrossOver."
 
 ### 3. Guided flow fires from all entry points (MACSTEAM-04)
 expected: The same guided setup can be triggered from every Install/Play surface — the game-details page button, the library grid tile, and the install modal. All three reach the same consent-then-provision flow (not just one).
-result: issue
+result: remediated
 reported: "All entry points follow the same broken pattern — the button goes straight to 'steam installing'. There is no consent dialog and no WineSelector engine/version choice; it should at least give the option for which version of Wine before provisioning."
 severity: major
+remediation: "Fixed by 17-09: install()/launch()/uninstall() now await ensurePlatformsCaptured() (a synchronous appdetails platform check) BEFORE the isBottleEligible() gate, so a Windows-only macOS game whose platform data wasn't yet captured no longer falls through to native steam://install — it routes into the guided consent + WineSelector flow. Also reconciled the D-08 indicator gate with the D-11 routing gate via steamPlatformsCaptured. 243/243 steam tests pass. Needs human re-test on macOS + CrossOver."
 
 ### 4. One-time bottled Steam login persists (MACSTEAM-03)
 expected: After SteamSetup completes, the bottled Windows Steam client opens and you log in once. The login persists — relaunching a bottled game later does NOT force you to log in to Steam again each time.
-result: blocked
+result: ready-for-retest
 blocked_by: prior-phase
 reason: "Cannot reach — bottle provisioning / SteamSetup never completes (tests 2 & 3). No bottled Steam client exists to log into."
+unblocked: "Tests 2 & 3 remediated (17-08/17-10/17-09) — provisioning should now complete; retest login persistence on macOS + CrossOver."
 
 ### 5. Install a Windows-only game through the bottle (MACSTEAM-04)
 expected: Triggering Install on a Windows-only Steam game downloads/installs it through the bottled Windows Steam client (not via native `steam://` and not by wine-running a bare exe). Install progresses and completes.
-result: blocked
+result: ready-for-retest
 blocked_by: prior-phase
 reason: "Cannot reach — no provisioned bottle / bottled Steam client (tests 2 & 3)."
+unblocked: "Tests 2 & 3 remediated (17-08/17-10/17-09) — retest install through the bottle on macOS + CrossOver."
 
 ### 6. Launch a bottled game (MACSTEAM-04)
 expected: Pressing Play on the installed bottled game launches it through the bottled Windows Steam client and the game runs.
-result: blocked
+result: ready-for-retest
 blocked_by: prior-phase
 reason: "Cannot reach — nothing installed in a bottle (tests 2 & 3)."
+unblocked: "Tests 2 & 3 remediated (17-08/17-10/17-09) — retest launch of a bottled game on macOS + CrossOver."
 
 ### 7. Install badge shows Windows + bottle path (MACSTEAM-05)
 expected: For the installed bottled game, the Install Info shows platform "Windows" (not macOS) and the install path points into the GameLibSteam bottle's steamapps root — not a host-OS Steam library.
-result: blocked
+result: ready-for-retest
 blocked_by: prior-phase
 reason: "Cannot reach — no bottle install exists to inspect (tests 2 & 3)."
+unblocked: "Tests 2 & 3 remediated (17-08/17-10/17-09) — retest the Windows + bottle-path install badge on macOS + CrossOver."
 
 ### 8. "Runs via Windows Steam bottle" indicator (MACSTEAM-06)
 expected: The game page for a confirmed-Windows-only Steam game shows a "Runs via Windows Steam bottle" indicator row. A native-Mac Steam game does NOT show this row.
-result: blocked
+result: ready-for-retest
 blocked_by: prior-phase
 reason: "Deferred — pending fix of the provisioning flow; can retest the indicator row alongside a working install. (Indicator is display-gated on confirmed-not-native, testable independently, but grouped here to retest after fix.)"
+unblocked: "Remediated by 17-09 — the 'Runs via Windows Steam bottle' indicator is now gated on steamPlatformsCaptured===true && is_mac_native===false, matching the backend routing gate. Retest that it shows for a confirmed Windows-only game and NOT for a native-Mac game."
 
 ### 9. Deferred setup doesn't stick an 'installing' badge (17-05)
 expected: If you decline or dismiss the bottle-setup consent dialog (defer it), the game does NOT get stuck showing a persistent 'installing' badge — its status returns to not-installed / installable.
@@ -76,15 +90,21 @@ reason: "User deferred — retest later (native-Mac steam://, GOG/Epic shared bo
 
 total: 10
 passed: 2
-issues: 2
+issues: 0
+remediated: 2          # tests 2 & 3 — fixed in code, awaiting human re-test
+ready_for_retest: 5    # tests 4-8 — unblocked by the remediations above
 pending: 0
-blocked: 5
-skipped: 1
+blocked: 0
+skipped: 1             # test 10 — deferred by user
+
+note: "Both diagnosed gaps remediated (GAP 1 → 17-08 + 17-10, GAP 2 → 17-09). No code-level UAT gaps remain open. Next: human re-test on macOS + CrossOver via /gsd:verify-work 17 (this also satisfies the 17-07 human validation gate)."
 
 ## Gaps
 
 - truth: "Guided setup provisions the GameLibSteam CrossOver bottle and runs the SteamSetup.exe click-through when installing a Windows-only Steam game on macOS"
-  status: failed
+  status: remediated
+  remediated_by: [17-08, 17-10]
+  remediation: "17-08: provisioning mkdir's steam_store/redist before the SteamSetup download (fixes the ENOENT that broke the download), and isBottleReady() now gates on a real bottled steam.exe rather than cxbottle.conf existence, so install/launch/uninstall route on real readiness and a half-provisioned bottle self-heals instead of entering the install->revert stuck loop. 17-10: styled .steamBottleSetupToast / .steamBottleSetupMessage (fixes the unstyled banner). Awaiting human re-test on macOS + CrossOver."
   reason: "User reported: first install attempt failed with a 'could not download steam' banner (also cosmetically broken — no background, plain text over the window, try-again/stop options). After Stop + app reload, retrying install shows NO SteamSetup window — just a brief 'installing the game' message, the button reads 'steam installing', then reverts after a few minutes; retrying reproduces the same stuck loop identically."
   severity: blocker
   test: 2
@@ -104,7 +124,9 @@ skipped: 1
     - "Cosmetic: the error banner renders with no background — plain text overlaid on the window"
 
 - truth: "Guided setup surfaces a consent dialog and a WineSelector engine/version choice before provisioning the bottle, from every Install/Play entry point"
-  status: failed
+  status: remediated
+  remediated_by: [17-09]
+  remediation: "17-09: install()/launch()/uninstall() now await ensurePlatformsCaptured() — a synchronous appdetails platform check — BEFORE the isBottleEligible() gate, so a Windows-only macOS game whose platformsCaptured wasn't yet set no longer falls through to native steam://install; it emits steamBottleSetupRequired and routes into the guided consent + WineSelector flow. Also reconciled the D-08 indicator gate (is_mac_native===false) with the routing gate via steamPlatformsCaptured so UI promise and routing agree. 243/243 steam tests pass, tsc clean. Awaiting human re-test on macOS + CrossOver."
   reason: "User reported: all entry points behave identically — the button jumps straight to 'steam installing' with NO consent dialog and NO WineSelector engine choice. Expected at least a prompt for which Wine/engine version to use before provisioning. Suggests the guided-setup UI (17-06 consent + WineSelector reuse) is not firing; the button flips straight to the (broken) install state."
   severity: major
   test: 3
