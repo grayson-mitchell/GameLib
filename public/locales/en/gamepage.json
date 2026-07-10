@@ -208,6 +208,7 @@
         "path": "Install Path",
         "proton-rating": "Proton emulation",
         "protondb-compatibility-info": "Proton Compatibility Tier",
+        "runs-via-bottle": "Runs via Windows Steam bottle",
         "size": "Size",
         "steamdeck-compatibility-info": "SteamDeck Compatibility",
         "supportedPlatforms": "Supported platforms",

@@ -33,6 +33,14 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     is.linux && gameInfo.runner === 'steam' && !!steamInfo?.compatibilityLevel
   const showCrossover = is.mac && !!codeweavers
   const showWine = !!applegamingwiki && !showProton
+  // D-08 (Phase 17): confirmed-not-native macOS Steam games run through the
+  // Windows Steam client inside a GameLib-managed CrossOver/Wine bottle
+  // (Phase 17). `is.native` already early-returns above, but this row is
+  // gated on the concrete platformsCaptured-aware flag (is_mac_native ===
+  // false, not just falsy/undefined) so it only fires for CONFIRMED
+  // non-native games, matching the backend's D-11-safe eligibility check.
+  const showBottle =
+    is.mac && gameInfo.runner === 'steam' && gameInfo.is_mac_native === false
 
   const onClickCrossover = () => {
     if (codeweavers?.slug) {
@@ -64,6 +72,15 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
 
   return (
     <>
+      {showBottle && (
+        <span
+          className="iconWithText"
+          title={t('info.runs-via-bottle', 'Runs via Windows Steam bottle')}
+        >
+          <CrossoverIcon style={{ width: '24px', height: '24px' }} />
+          <b>{t('info.runs-via-bottle', 'Runs via Windows Steam bottle')}</b>
+        </span>
+      )}
       {showCrossover && (
         <a
           role="button"
