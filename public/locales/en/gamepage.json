@@ -177,9 +177,9 @@
     },
     "howLongToBeat": "How Long To Beat",
     "info": {
-        "apple-gaming-wiki": "AppleGamingWiki Rating",
         "canRunOffline": "Online Required",
         "clickToOpen": "Click to open",
+        "crossover-rating": "Crossover rating",
         "game-scores": "Game Scores",
         "humbleOrigin": "Includes a key from Humble Bundle: {{origin}}",
         "installedInfo": "Installed Information",
@@ -192,7 +192,8 @@
         "supportedPlatforms": "Supported platforms",
         "syncsaves": "Sync Saves",
         "third-party-app": "Third-Party Manager",
-        "version": "Version"
+        "version": "Version",
+        "wine-rating": "Wine rating"
     },
     "install": {
         "anticheat-warning": {

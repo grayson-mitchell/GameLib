@@ -1,15 +1,7 @@
-import { AppleGamingWikiInfo, AppleRatingSource } from 'common/types'
-
 /**
  * DETAIL-02 shared helpers for the AppleGamingWiki compatibility surfaces
- * (art overlay + Extra-info tab row) so the two never disagree.
+ * (Extra-info tab rows).
  */
-
-/** Pick the rating string that the app-wide setting selects (D-10/D-11). */
-export const pickRating = (
-  info: AppleGamingWikiInfo,
-  source: AppleRatingSource
-): string => (source === 'wine' ? info.wineRating : info.crossoverRating)
 
 export interface RatingTier {
   /** Human label, first letter capitalized; 'Unrated' when empty/unknown. */
