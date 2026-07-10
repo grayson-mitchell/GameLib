@@ -78,6 +78,19 @@ export default function Discounts() {
   // store, independent of GOG login.
   const canHideOwned = ownedTitles.size > 0
 
+  // D-78..D-85 (Phase 15, CR-01 fix): the waiting-key set is derived ONCE and
+  // fed to BOTH buildDiscountBadgeMaps (below) and resolveDiscountBadge (in
+  // discountBadges). Feeding the raw humble.keys to the map builder while
+  // resolveDiscountBadge saw only selectKeysWaiting(...) diverged the two: a
+  // non-waiting key sharing a normalized title but carrying a different
+  // steamAppId could occupy the title slot (first-wins) and suppress a
+  // legitimate 'key-available' badge (WR-01 false negative). Sharing this
+  // memo keeps the map's contract identical to the resolver's input.
+  const keysWaiting = useMemo(
+    () => selectKeysWaiting(humble.keys ?? []),
+    [humble.keys]
+  )
+
   // D-78..D-85 (Phase 15, CR-01 fix): normalized title -> Steam AppID bridge
   // PLUS the owned-AppID set, built via the shared buildDiscountBadgeMaps
   // helper (common/discounts/badges.ts) — never inlined here. titleToAppId
@@ -86,8 +99,8 @@ export default function Discounts() {
   // steam.library-only so 'owned' precedence (D-83/D-85) is preserved.
   const { titleToAppId: titleToSteamAppId, ownedAppIds: ownedSteamAppIds } =
     useMemo(
-      () => buildDiscountBadgeMaps(steam.library, humble.keys ?? []),
-      [steam.library, humble.keys]
+      () => buildDiscountBadgeMaps(steam.library, keysWaiting),
+      [steam.library, keysWaiting]
     )
 
   const handleRegionChange = (countryCode: string | null) => {
@@ -483,7 +496,6 @@ export default function Discounts() {
   // never recomputes the badge itself, it only renders the literal passed
   // in via the `badge` prop.
   const discountBadges = useMemo(() => {
-    const keysWaiting = selectKeysWaiting(humble.keys ?? [])
     const map = new Map<string, DiscountBadge>()
     for (const product of paginated) {
       map.set(
@@ -497,7 +509,7 @@ export default function Discounts() {
       )
     }
     return map
-  }, [paginated, titleToSteamAppId, ownedSteamAppIds, humble.keys])
+  }, [paginated, titleToSteamAppId, ownedSteamAppIds, keysWaiting])
 
   const hasActiveFilters =
     selectedGenres.length > 0 ||

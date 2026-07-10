@@ -10,6 +10,7 @@ import {
   resolveDiscountBadge,
   buildDiscountBadgeMaps
 } from 'common/discounts/badges'
+import { selectKeysWaiting } from 'common/humble/viewFilters'
 
 function makeSteamGame(overrides: { title: string; app_name: string }) {
   return overrides
@@ -177,4 +178,34 @@ describe('buildDiscountBadgeMaps + resolveDiscountBadge (integration)', () => {
       ).toBeNull()
     }
   )
+
+  test('WR-01: a non-waiting decoy key sharing a title but a different AppID does not suppress key-available (container feeds selectKeysWaiting output to BOTH consumers)', () => {
+    // A key already owned elsewhere (dropped by selectKeysWaiting) shares the
+    // normalized title with a genuine waiting key but carries a DIFFERENT
+    // steamAppId. Ordered first so a first-wins map builder that saw the raw
+    // key list would occupy the title slot with the decoy's AppID (999999) —
+    // resolveDiscountBadge would then find no waiting key for 999999 and
+    // return null (the WR-01 false negative). Mirroring the container, we
+    // filter ONCE via selectKeysWaiting and feed that single list to both.
+    const decoy = makeKey({
+      title: 'Hollow Knight',
+      steamAppId: '999999',
+      ownedElsewhere: true,
+      state: 'REVEALED'
+    })
+    const waiting = makeKey({ title: 'Hollow Knight', steamAppId: '367520' })
+    const product = makeProduct({ title: 'Hollow Knight' })
+
+    const keysWaiting = selectKeysWaiting([decoy, waiting])
+    const { titleToAppId, ownedAppIds } = buildDiscountBadgeMaps(
+      [],
+      keysWaiting
+    )
+
+    // The decoy was filtered out, so the waiting key's AppID owns the slot.
+    expect(titleToAppId.get('hollow knight')).toBe('367520')
+    expect(
+      resolveDiscountBadge(product, titleToAppId, ownedAppIds, keysWaiting)
+    ).toBe('key-available')
+  })
 })
