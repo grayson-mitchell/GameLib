@@ -16,7 +16,10 @@ findings:
   warning: 1
   info: 3
   total: 4
-status: issues_found
+warning_resolved: 1
+status: resolved
+resolution:
+  WR-01: "Fixed in baac4527 — keysWaiting derived once and fed to both buildDiscountBadgeMaps and resolveDiscountBadge; regression test with non-waiting decoy added. Info findings IN-01/IN-02/IN-03 accepted as bounded/documented."
 ---
 
 # Phase 15: Code Review Report
