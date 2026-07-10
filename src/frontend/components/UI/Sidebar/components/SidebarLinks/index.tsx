@@ -39,6 +39,7 @@ export default function SidebarLinks() {
     amazon,
     epic,
     gog,
+    steam,
     zoom,
     humble,
     platform,
@@ -53,7 +54,11 @@ export default function SidebarLinks() {
   const isWin = platform === 'win32'
 
   const loggedIn =
-    epic.username || gog.username || amazon.user_id || zoom.username
+    epic.username ||
+    gog.username ||
+    amazon.user_id ||
+    zoom.username ||
+    steam.username
 
   async function handleRefresh() {
     localStorage.setItem('scrollPosition', '0')
@@ -101,6 +106,15 @@ export default function SidebarLinks() {
   } else if (!epic.username && gog.username) {
     // Otherwise, if not logged in to Epic Games, open GOG Store
     defaultStore = 'gog'
+  } else if (
+    !epic.username &&
+    !gog.username &&
+    !amazon.user_id &&
+    steam.username
+  ) {
+    // If only logged in to Steam, open the (browse-only) Steam store so the
+    // Stores link doesn't land on Epic and show a "not logged in" warning.
+    defaultStore = 'steam'
   }
 
   // if we have a stored last-url, default to the `/last-url` route
