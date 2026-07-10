@@ -1,5 +1,5 @@
 ---
-status: partial
+status: testing
 phase: 17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i
 source:
   - 17-03-SUMMARY.md
@@ -11,15 +11,23 @@ remediation:
   - 17-10-SUMMARY.md  # GAP 1 cosmetic — banner/toast styling
   - 17-09-SUMMARY.md  # GAP 2 (major) — synchronous platform capture at install/launch
 started: 2026-07-11T00:00:00Z
-updated: 2026-07-11T00:30:00Z
+updated: 2026-07-11T01:00:00Z
+retest_round: 2  # both diagnosed gaps remediated in code; re-testing tests 2-8 on macOS + CrossOver
 ---
 
 ## Current Test
 
-[both diagnosed gaps REMEDIATED in code (GAP 1 → 17-08 + 17-10, GAP 2 → 17-09);
-awaiting human re-test on a macOS + CrossOver machine. Tests 2–8 are now
-ready-for-retest / unblocked. Test 10 still deferred by user. Resume via
-`/gsd:verify-work 17`.]
+number: 2
+name: Guided bottle provisioning + SteamSetup click-through (MACSTEAM-02)
+expected: |
+  On macOS with CrossOver installed, hit Install/Play on a Windows-only Steam game
+  (one with no native Mac build). A consent dialog explains a Windows Steam bottle is
+  needed. Accepting kicks off a background task that provisions the dedicated
+  `GameLibSteam` CrossOver bottle and opens the real (non-silent) SteamSetup.exe
+  installer window for you to click through. (Re-test after 17-08/17-10 fix: no
+  "could not download steam" failure, no stuck "steam installing" loop, banner is
+  properly styled.)
+awaiting: user response
 
 ## Tests
 
@@ -29,10 +37,15 @@ result: pass
 
 ### 2. Guided bottle provisioning + SteamSetup click-through (MACSTEAM-02)
 expected: On macOS with CrossOver installed, hit Install/Play on a Windows-only Steam game (one with no native Mac build). A consent dialog explains a Windows Steam bottle is needed. Accepting kicks off a background task that provisions the dedicated `GameLibSteam` CrossOver bottle and opens the real (non-silent) SteamSetup.exe installer window for you to click through.
-result: remediated
+result: issue
 reported: "First install attempt: banner 'could not download steam' with try-again/stop options; banner was cosmetically broken (no background, just text over the window). Chose Stop, reloaded the app, clicked Install again -> no SteamSetup window at all, just a quick 'installing the game' message and the button changed to 'steam installing'; after a few minutes it reverts and pressing Install again reproduces the same result (stuck loop)."
 severity: blocker
-remediation: "Fixed by 17-08 (provisioning now mkdir's the redist dir before downloading SteamSetup.exe; install/launch/uninstall route on real bottle readiness via isBottleReady() instead of cxbottle.conf existence, so a half-provisioned bottle self-heals instead of entering the stuck loop) + 17-10 (styled .steamBottleSetupToast banner). Needs human re-test on macOS + CrossOver."
+remediation: "Fixed by 17-08 (provisioning now mkdir's the redist dir before downloading SteamSetup.exe; install/launch/uninstall route on real bottle readiness via isBottleReady() instead of cxbottle.conf existence, so a half-provisioned bottle self-heals instead of entering the stuck loop) + 17-10 (styled .steamBottleSetupToast banner)."
+retest_round_2:
+  original_blocker: resolved  # wizard now fires; steam setup actually starts; no 'could not download steam'; no stuck loop; banner styled
+  new_issues:
+    - "GAP 3 (state desync, major): after confirming Steam setup in the wizard, the main Install button does NOT update (still reads 'Install') and the game-page status message still says 'The Game is not installed' — even though the RIGHT-side toast correctly shows Steam is being set up. If you press 'Done' in the toast you can re-open the wizard and re-run 'set up steam' (same result). If you do NOT press 'Done', clicking Install does nothing — a quick flash of 'queued' then reverts to 'game not installed'."
+    - "GAP 4 (cosmetic): in the WineSelector wizard, move the 'use shared wine prefix' option to the bottom."
 
 ### 3. Guided flow fires from all entry points (MACSTEAM-04)
 expected: The same guided setup can be triggered from every Install/Play surface — the game-details page button, the library grid tile, and the install modal. All three reach the same consent-then-provision flow (not just one).
@@ -90,14 +103,14 @@ reason: "User deferred — retest later (native-Mac steam://, GOG/Epic shared bo
 
 total: 10
 passed: 2
-issues: 0
-remediated: 2          # tests 2 & 3 — fixed in code, awaiting human re-test
-ready_for_retest: 5    # tests 4-8 — unblocked by the remediations above
-pending: 0
+issues: 1              # test 2 retest — original blocker resolved, but a NEW state-desync issue (GAP 3) surfaced
+remediated: 2          # GAP 1 (test 2) + GAP 2 (test 3) confirmed resolved on retest round 2
+ready_for_retest: 4    # tests 4-7 — depend on setup COMPLETING (blocked by GAP 3 until button/status sync)
+pending: 1             # test 8 indicator — retestable independently once a confirmed Windows-only game is loaded
 blocked: 0
 skipped: 1             # test 10 — deferred by user
 
-note: "Both diagnosed gaps remediated (GAP 1 → 17-08 + 17-10, GAP 2 → 17-09). No code-level UAT gaps remain open. Next: human re-test on macOS + CrossOver via /gsd:verify-work 17 (this also satisfies the 17-07 human validation gate)."
+note: "Retest round 2 (macOS + CrossOver): the guided wizard fires and Steam setup actually starts (right-side toast confirms) — GAP 1 blocker + GAP 2 both resolved. NEW: GAP 3 (major) game-page Install button + status message don't sync with the in-progress setup; GAP 4 (cosmetic) WineSelector option ordering. Tests 4-7 (login/install/launch/badge) can't complete until GAP 3 is fixed so setup completion is observable."
 
 ## Gaps
 
@@ -139,3 +152,22 @@ note: "Both diagnosed gaps remediated (GAP 1 → 17-08 + 17-10, GAP 2 → 17-09)
     - "reconcile D-08 indicator gate (is_mac_native===false) with routing gate (platformsCaptured===true) so UI promise and routing agree"
   root_cause: "Backend never emits steamBottleSetupRequired because isBottleEligible() requires meta.platformsCaptured===true (games.ts:446-450), which is only set by the throttled fire-and-forget appdetails fetch (games.ts:292-300). When that hasn't completed/failed (cold-cache ETIMEDOUT history), the gate is false and install()/launch() fall through to native steam://install (games.ts:400-418) -> ordinary 'steam installing' badge, no signal, no consent Dialog/WineSelector. Frontend wiring verified intact end-to-end (emit->preload->GlobalState listener->store-><SteamBottleSetup/>). The 5/5 unit test only exercised the store in isolation. Confidence HIGH on mechanism; MEDIUM on why platformsCaptured is false (systematic fetch failure vs timing race)."
   cross_link: "Connected to Issue 1 via leftover cxbottle.conf: a prior partial provision makes isBottleProvisioned() true, which ALSO skips the consent emit and dispatches into a broken bottle — same 'no dialog + stuck installing' symptom. Rule out at runtime."
+
+- truth: "Once the user confirms Steam setup in the wizard, the game-page Install button and status message reflect the in-progress setup (e.g. 'Setting up Steam…' / disabled), staying in sync with the setup toast — and clicking Install while setup is in progress does not dead-end"
+  status: failed
+  reason: "User reported (retest round 2, macOS + CrossOver): after confirming Steam install in the wizard, the main Install button does NOT update (still reads 'Install') and the game-page message still says 'The Game is not installed' — even though the RIGHT-side toast correctly shows Steam is being set up. Pressing 'Done' in the toast lets you re-open the wizard and re-run 'set up steam' (same result each time). If you do NOT press 'Done', clicking Install does nothing: a quick flash of 'queued' then it reverts to 'game not installed'."
+  severity: major
+  test: 2
+  label: "GAP 3 — install button / status desync with in-progress bottle setup"
+  artifacts: []  # Filled by diagnosis
+  missing: []    # Filled by diagnosis
+  notes: "Regression surfaced only after GAP 1/GAP 2 fixes made the guided flow reachable. Likely the game-page install status is not subscribed to the steamBottleStatus / setup-in-progress state that the toast reads; and the Install click path is re-queued/no-op'd while a setup task is active. Blocks tests 4-7 (can't observe setup completion → can't reach login/install/launch/badge)."
+
+- truth: "The WineSelector wizard presents engine/version options in a sensible order for bottle setup"
+  status: failed
+  reason: "User reported (retest round 2): cosmetic — the 'use shared wine prefix' option should be moved to the bottom of the WineSelector wizard."
+  severity: cosmetic
+  test: 2
+  label: "GAP 4 — WineSelector 'use shared wine prefix' ordering"
+  artifacts: []  # Filled by diagnosis
+  missing: []    # Filled by diagnosis
