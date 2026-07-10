@@ -19,7 +19,7 @@ import {
 import { UserData } from 'common/types/gog'
 import { NileUserData } from './nile'
 import { ZoomCredentials } from './zoom'
-import { SteamUserData } from './steam'
+import { SteamUserData, SteamBottleConfig } from './steam'
 import { HumbleUserData } from './humble'
 
 export interface StoreStructure {
@@ -87,6 +87,10 @@ export interface StoreStructure {
     refreshToken?: string // safeStorage-encrypted base64 string with 'steam:v1:' prefix
     userData?: SteamUserData
   }
+  // Phase 17 (17-02): dedicated Steam CrossOver bottle settings — separate
+  // from steamConfigStore (auth) and never reused as a phantom GameConfig
+  // entry.
+  steamBottleConfigStore: SteamBottleConfig
   nileConfigStore: {
     userData?: NileUserData
   }
