@@ -39,7 +39,11 @@ import {
   steamMetadataStore,
   steamSyncStore
 } from '../electronStores'
-import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import {
+  getBottleSteamappsDir,
+  getSteamBottleSettings,
+  isBottleProvisioned
+} from '../bottle'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -636,6 +640,104 @@ describe('SteamLibraryManager', () => {
       // No side effects
       expect(sendFrontendMessage).not.toHaveBeenCalled()
     })
+
+    // ── 17-03: bottle-aware reconciliation (MACSTEAM-05, T-17-03 gate) ───────
+
+    describe('bottle reconciliation', () => {
+      const envMock = jest.requireMock('backend/constants/environment')
+
+      beforeEach(() => {
+        envMock.isMac = true
+        envMock.isLinux = false
+        jest
+          .mocked(getSteamBottleSettings)
+          .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+        jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      })
+
+      afterEach(() => {
+        envMock.isMac = false
+        envMock.isLinux = true
+      })
+
+      it('flips a bottle-installed game to installed (platform Windows) via pushGameToLibrary when isBottleProvisioned() is true', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Native scan finds nothing; bottle scan finds the manifest.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '570',
+            is_installed: true,
+            install: expect.objectContaining({ platform: 'Windows' })
+          })
+        )
+      })
+
+      it('performs NO bottle reconciliation when isBottleProvisioned() returns false', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(false)
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Even though the bottle path mocks WOULD report installed, the gate
+        // must prevent buildBottleInstalledMap() (and readdirSync) from ever
+        // being consulted.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+        expect(library.get('570')!.is_installed).toBe(false)
+      })
+    })
   })
 
   // ── D-07: startup resume via scanDownloadingAppIds ────────────────────────
@@ -984,6 +1086,41 @@ describe('pollInstallOnce()', () => {
     })
     await pollInstallOnce('730')
     expect(notify).not.toHaveBeenCalled()
+  })
+
+  // ── 17-03: pollInstallOnce(appId, 'bottle') — Pitfall 3 platform label ─────
+
+  it('a bottle-sourced install object has platform === "Windows" even when isMac is mocked true', async () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isLinux = false
+    try {
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'csgo',
+          SizeOnDisk: '50000'
+        }
+      })
+      startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+      await pollInstallOnce('730', 'bottle')
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: true,
+          install: expect.objectContaining({ platform: 'Windows' })
+        })
+      )
+    } finally {
+      envMock.isMac = false
+      envMock.isLinux = true
+    }
   })
 })
 

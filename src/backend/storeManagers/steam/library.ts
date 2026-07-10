@@ -26,7 +26,11 @@ import {
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame from './games'
-import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
+import {
+  getBottleSteamappsDir,
+  getSteamBottleSettings,
+  isBottleProvisioned
+} from './bottle'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -58,6 +62,14 @@ function hostInstallPlatform(): InstallPlatform {
   if (isMac) return 'Mac'
   if (isLinux) return 'linux'
   return 'Windows'
+}
+
+// Pitfall 3 fix: a bottle-installed game is a Windows depot running under
+// Wine/CrossOver — it must ALWAYS report 'Windows', regardless of host OS.
+// Only a native-sourced install object should ever consult hostInstallPlatform().
+function installPlatformForSource(source: AcfSource): InstallPlatform {
+  if (source === 'bottle') return 'Windows'
+  return hostInstallPlatform()
 }
 
 export default class SteamLibraryManager implements LibraryManager {
@@ -235,7 +247,9 @@ export default class SteamLibraryManager implements LibraryManager {
           ? {
               install_path: installedData.installPath,
               install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              platform: hostInstallPlatform()
+              // refresh() only ever scans the native ACF path (buildInstalledMap
+              // above) — bottle reconciliation is refreshInstallState()'s job.
+              platform: installPlatformForSource('native')
             }
           : {},
         extra: {
@@ -334,17 +348,36 @@ export default class SteamLibraryManager implements LibraryManager {
    *  - D-02: badges flip only after confirmed ACF data; never optimistically
    *    from a click.
    *
+   * 17-03 (MACSTEAM-05): when isMac && isBottleProvisioned(), ALSO diffs each
+   * library entry against buildBottleInstalledMap() (the dedicated CrossOver
+   * bottle's own ACF root) and reconciles bottle-installed games with
+   * install.platform: 'Windows' (Pitfall 3) — never the host OS. Bottle
+   * reconciliation is gated strictly behind isBottleProvisioned() (T-17-03: a
+   * missing/unprovisioned bottle is a no-op, not a repeated failing scan) and
+   * is skipped entirely on Linux/Windows or an un-provisioned macOS, leaving
+   * the native-only reconciliation byte-for-byte unchanged in those cases.
+   * The native map always takes precedence for a given appId — a bottle
+   * result is only consulted when the native scan found nothing for that
+   * appId, so the two roots are never double-counted or conflated.
+   *
    * Only games whose state changed are pushed (avoids flooding the frontend).
    * The GameInfo install shape matches refresh() when installed:
-   *   install_path, install_size, platform: 'Windows'
+   *   install_path, install_size, platform ('Windows' always for a bottle
+   *   install; host-OS-derived for a native install)
    * and is set to {} when not installed.
    */
   async refreshInstallState(): Promise<void> {
     const installedMap = await buildInstalledMap()
+    const bottleInstalledMap =
+      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
 
     for (const [appIdStr, gameInfo] of library.entries()) {
       const appId = parseInt(appIdStr, 10)
-      const installedData = installedMap.get(appId)
+      const nativeInstalledData = installedMap.get(appId)
+      const bottleInstalledData = bottleInstalledMap?.get(appId)
+      // Native always wins when present — never double-count/conflate the two roots.
+      const installedData = nativeInstalledData ?? bottleInstalledData
+      const source: AcfSource = nativeInstalledData ? 'native' : 'bottle'
       const isNowInstalled = !!installedData
 
       if (gameInfo.is_installed !== isNowInstalled) {
@@ -355,7 +388,7 @@ export default class SteamLibraryManager implements LibraryManager {
             ? {
                 install_path: installedData.installPath,
                 install_size: getFileSize(Number(installedData.sizeOnDisk)),
-                platform: hostInstallPlatform()
+                platform: installPlatformForSource(source)
               }
             : {}
         }
@@ -587,7 +620,7 @@ export async function pollInstallOnce(
         install: {
           install_path: result.installPath!,
           install_size: getFileSize(Number(result.sizeOnDisk!)),
-          platform: hostInstallPlatform()
+          platform: installPlatformForSource(source)
         }
       }
       library.set(appId, updated)
