@@ -1,12 +1,24 @@
 ---
 phase: 16-crossover-compatibility-rating-codeweavers
 verified: 2026-07-10T19:30:00Z
-status: gaps_found
-score: 7/8 must-haves verified
+status: passed
+score: 8/8 must-haves verified
 overrides_applied: 0
+gap_resolution: >
+  The single gap (D-08 Extra-info tab reachability) was closed inline during
+  this execution by commit cf022f4d: `hasWikiInfo` in
+  src/frontend/screens/Game/GamePage/index.tsx now includes
+  `wikiInfo?.codeweavers?.rating != null`, so the Extra-info tab (and the
+  CrossOver row) surfaces on Linux whenever a live CodeWeavers rating exists,
+  independent of applegamingwiki/HLTB/PCGamingWiki/Steam data. The gate uses
+  `rating != null` rather than a raw `codeweavers` truthy check because a
+  genuine soft-404 miss caches a truthy EMPTY marker ({rating:null,...}), which
+  would otherwise open the tab for every Mac/Linux game. Verified via
+  `pnpm codecheck` (exit 0) and code inspection. All 3 success criteria and
+  locked constraints now satisfied.
 gaps:
   - truth: "CrossOver row renders on Linux independently of AppleGamingWiki (D-08)"
-    status: partial
+    status: resolved
     reason: >
       AppleWikiInfo.tsx's own render logic is correctly decoupled from
       applegamingwiki (the CrossOver <a> block is gated only on `codeweavers`
