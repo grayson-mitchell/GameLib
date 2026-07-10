@@ -508,7 +508,7 @@ export default function WebView() {
             <p>
               {t(
                 'adtraction-locked.description',
-                'It seems the track.adtraction.com domain was unable to load or is blocked. With adtraction, any purchase you make in the GOG store supports Heroic financially. Consider removing the block if you wish to contribute.'
+                'It seems the track.adtraction.com domain was unable to load or is blocked. With adtraction, any purchase you make in the GOG store supports GameLib financially. Consider removing the block if you wish to contribute.'
               )}
             </p>
             <ToggleSwitch

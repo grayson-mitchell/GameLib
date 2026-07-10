@@ -52,7 +52,7 @@ function Settings() {
 
   const helpContent = t(
     'help.content.settingsDefault',
-    'Shows all settings of Heroic and defaults for games.'
+    'Shows all settings of GameLib and defaults for games.'
   )
 
   hasHelp(

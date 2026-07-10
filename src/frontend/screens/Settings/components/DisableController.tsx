@@ -22,7 +22,7 @@ const DisableController = () => {
       handleChange={() => setDisableController(!disableController)}
       title={t(
         'setting.disable_controller',
-        'Disable Heroic navigation using controller'
+        'Disable GameLib navigation using controller'
       )}
     />
   )

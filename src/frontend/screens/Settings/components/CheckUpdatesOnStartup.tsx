@@ -29,7 +29,7 @@ const CheckUpdatesOnStartup = () => {
       }
       title={t(
         'setting.checkForUpdatesOnStartup',
-        'Check for Heroic Updates on Startup'
+        'Check for GameLib Updates on Startup'
       )}
     />
   )
