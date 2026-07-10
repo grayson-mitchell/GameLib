@@ -29,7 +29,7 @@ import SteamLibraryManager, {
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { SteamUser } from '../user'
@@ -52,9 +52,13 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── backend/utils mock — provides getSteamLibraries() ───────────────────────
+// ── backend/utils mock — provides getSteamLibraries() and getFileSize() ─────
+// Note: resetMocks:true wipes any factory-provided implementation before each
+// test, so getFileSize's return value must be re-established per-describe
+// (see beforeEach blocks below) — same pattern as games.test.ts.
 jest.mock('backend/utils', () => ({
-  getSteamLibraries: jest.fn()
+  getSteamLibraries: jest.fn(),
+  getFileSize: jest.fn()
 }))
 
 // ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
@@ -465,6 +469,11 @@ describe('SteamLibraryManager', () => {
       library.clear()
       // Default: getSteamLibraries returns empty → buildInstalledMap returns empty Map
       jest.mocked(getSteamLibraries).mockResolvedValue([])
+      // install_size is persisted via getFileSize(Number(sizeOnDisk)) — mock a
+      // stable, distinguishable formatted string per byte count.
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
     })
 
     it('refreshInstallState() calls buildInstalledMap and pushes update when is_installed changes false→true', async () => {
@@ -539,7 +548,9 @@ describe('SteamLibraryManager', () => {
       expect(updatedGame.install).toEqual(
         expect.objectContaining({
           install_path: join('/steam', 'steamapps', 'common', 'dota2'),
-          install_size: '50000'
+          // install_size is persisted as a getFileSize-formatted string
+          // (mocked here as `${bytes} B`) — matches legendary/gog/nile contract.
+          install_size: '50000 B'
           // platform is host-derived (GAP 2 fix — no longer hardcoded 'Windows');
           // not asserted here since this test covers install_path/size detection.
         })
@@ -736,6 +747,9 @@ describe('pollInstallOnce()', () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
+    jest
+      .mocked(getFileSize)
+      .mockImplementation((bytes: unknown) => `${bytes} B`)
   })
 
   afterEach(() => {
@@ -1445,6 +1459,9 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
     // Provide empty caches so init()/migrateStaleArtUrls() are no-ops if called
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    jest
+      .mocked(getFileSize)
+      .mockImplementation((bytes: unknown) => `${bytes} B`)
   })
 
   afterEach(() => {

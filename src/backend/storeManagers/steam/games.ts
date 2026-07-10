@@ -79,8 +79,9 @@ export function parseSteamStorageRequirement(
 /**
  * Returns a human-readable install size string for a Steam game.
  *
- * Fast path (no network): if the game is already installed and `install_size`
- * is present in GameInfo, parse and return it via getFileSize.
+ * Fast path (no network): if the game is already installed, `install_size`
+ * is already a `getFileSize`-formatted string (persisted that way by
+ * library.ts) — return it directly, no parse.
  *
  * Pre-install estimate: call the public Steam store appdetails API, parse
  * the `pc_requirements.minimum` HTML for a storage figure, and return it via
@@ -92,10 +93,10 @@ export async function getSteamInstallSize(
   appId: string,
   gameInfo?: GameInfo
 ): Promise<string> {
-  // Fast path: already installed — use the ACF-verified size, no network needed
+  // Fast path: already installed — install_size is already formatted, return
+  // it directly (no parse, no network needed)
   if (gameInfo?.is_installed && gameInfo?.install?.install_size) {
-    const bytes = parseInt(gameInfo.install.install_size, 10)
-    if (!isNaN(bytes) && bytes > 0) return getFileSize(bytes)
+    return gameInfo.install.install_size
   }
 
   // Guard: non-numeric appId rejected before constructing any URL (T-06-01)

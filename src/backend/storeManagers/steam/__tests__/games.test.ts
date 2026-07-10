@@ -743,11 +743,17 @@ describe('getSteamInstallSize', () => {
   it('LIB-06: returns installed game size from install_size without calling axios.get', async () => {
     const gameInfo = makeEntry({
       is_installed: true,
-      install: { install_size: '16106127360', install_path: '/games/tf2' }
+      install: { install_size: '15.00 GiB', install_path: '/games/tf2' }
     })
     const result = await getSteamInstallSize('440', gameInfo)
     expect(jest.mocked(axios.get)).not.toHaveBeenCalled()
+    // Fast path returns the already-formatted string straight through — no
+    // parse, no getFileSize call — regardless of the mocked getFileSize
+    // return value configured in beforeEach.
     expect(result).toBe('15.00 GiB')
+    expect(
+      jest.requireMock('backend/utils').getFileSize as jest.Mock
+    ).not.toHaveBeenCalled()
   })
 
   it('LIB-06: calls store API for uninstalled game and returns parsed size string', async () => {

@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { isWindows, isMac, isLinux } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
-import { getSteamLibraries } from 'backend/utils'
+import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
 import { notify } from '../../dialog/dialog'
 import i18next from 'i18next'
@@ -212,7 +212,7 @@ export default class SteamLibraryManager implements LibraryManager {
         install: installedData
           ? {
               install_path: installedData.installPath,
-              install_size: installedData.sizeOnDisk,
+              install_size: getFileSize(Number(installedData.sizeOnDisk)),
               platform: hostInstallPlatform()
             }
           : {},
@@ -332,7 +332,7 @@ export default class SteamLibraryManager implements LibraryManager {
           install: isNowInstalled
             ? {
                 install_path: installedData.installPath,
-                install_size: installedData.sizeOnDisk,
+                install_size: getFileSize(Number(installedData.sizeOnDisk)),
                 platform: hostInstallPlatform()
               }
             : {}
@@ -493,7 +493,7 @@ export async function pollInstallOnce(appId: string): Promise<void> {
         is_installed: true,
         install: {
           install_path: result.installPath!,
-          install_size: result.sizeOnDisk!,
+          install_size: getFileSize(Number(result.sizeOnDisk!)),
           platform: hostInstallPlatform()
         }
       }
