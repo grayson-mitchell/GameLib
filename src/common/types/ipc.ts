@@ -50,7 +50,7 @@ import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
-import type { SteamUserData } from './steam'
+import type { SteamBottleConfig, SteamUserData } from './steam'
 import type {
   ClaimAnnotation,
   HumbleAuthState,
@@ -250,6 +250,18 @@ interface AsyncIPCFunctions {
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>
   getSteamInstallSize: (appId: string) => Promise<string>
+  // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
+  // (create via the locked cxbottle mechanism, fetch + non-silently run
+  // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this
+  // never inspects loginusers.vdf/sentry.
+  steamBottleProvision: (args?: {
+    bottleName?: string
+    wineVersion?: WineInstallation
+  }) => Promise<{ status: 'done' | 'error'; error?: string }>
+  isSteamBottleProvisioned: () => Promise<boolean>
+  steamBottleStatus: () => Promise<
+    Pick<SteamBottleConfig, 'provisioned' | 'loggedIn' | 'bottleName'>
+  >
   humbleStartLogin: () => Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
@@ -514,6 +526,10 @@ interface FrontendMessages {
   installGame: (appName: string, runner: Runner) => void
   recentGamesChanged: (newRecentGames: RecentGame[]) => void
   pushGameToLibrary: (info: GameInfo) => void
+  // Phase 17 (17-04): pushed by SteamGame.install()/launch() (17-05) when a
+  // bottle-eligible game is un-provisioned; the global listener (17-06)
+  // subscribes to this to drive the guided-setup flow.
+  steamBottleSetupRequired: (payload: { appName: string }) => void
   progressOfWinetricks: (payload: {
     messages: string[]
     installingComponent: string
