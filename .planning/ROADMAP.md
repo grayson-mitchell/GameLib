@@ -41,6 +41,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 16: CrossOver Compatibility Rating (CodeWeavers)** - The extra-info Crossover rating comes from live CodeWeavers compatibility data instead of the stale AppleGamingWiki source (completed 2026-07-10)
 
+### v1.4 — Steam macOS Compatibility Runtime
+
+- [ ] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation
+
 ## Phase Details
 
 ### Phase 1: Steam Authentication
@@ -424,6 +428,22 @@ Plans:
 - [x] 16-02-PLAN.md — Wire getInfoFromCodeweavers into getWikiGameInfo (Mac+Linux gate, self-heal, cache)
 - [x] 16-03-PLAN.md — Numeric CrossOver rating row + graceful miss state + applegamingwiki decoupling + i18n
 
+## v1.4 Phase Details
+
+### Phase 17: Steam on macOS via CrossOver/Wine
+**Goal**: Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of the native steam:// delegation
+**Depends on**: Phase 3 (Steam Game Operations), Phase 7 (is_mac_native platform data)
+**Requirements**: TBD (define during discuss/plan)
+**Locked architecture decision** (from discussion 2026-07-10):
+  - Run the **Windows Steam client inside a CrossOver/Wine bottle**; install & launch Windows-only games *through* that bottled Steam client so Steam DRM/runtime requirements are satisfied. Reuse GameLib's existing bottle plumbing (`WineSelector`, `CrossoverBottle.tsx`).
+  - Do NOT wine-run individual game `.exe`s directly (rejected: only works for DRM-free games, breaks anything needing the Steam runtime).
+**Scope notes:**
+  - **Reverses Phase 3 GAME-04 for macOS non-native games:** `SteamGame.isNative()` must become per-OS (return `is_mac_native`) instead of hardcoded `true`; the frontend install short-circuit in `state/InstallGameModal.ts:35` must stop firing `steam://install` directly for non-mac-native games on macOS and route them through the bottle flow.
+  - **Linux is unchanged** — Windows-only Steam games on Linux continue to delegate to Steam Proton (Phase 3 GAME-04 stays intact there). This phase is macOS-specific.
+**Success Criteria** (what must be TRUE): TBD (derive during planning)
+**Plans**: TBD (run /gsd-plan-phase 17)
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
@@ -431,6 +451,7 @@ v1.0: 1 → 2 → 3 → 4 (complete)
 v1.1: 5 → 6 → 7 → 8 → 9
 v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
 v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
+v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -450,3 +471,4 @@ v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
+| 17. Steam on macOS via CrossOver/Wine | 0/? | Not started | - |
