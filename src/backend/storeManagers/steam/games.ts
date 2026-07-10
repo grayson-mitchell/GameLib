@@ -18,7 +18,13 @@ import { GameConfig } from 'backend/game_config'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
-import { library, pendingFetches } from './state'
+import {
+  library,
+  pendingFetches,
+  acquireMetadataSlot,
+  releaseMetadataSlot,
+  METADATA_FETCH_TIMEOUT_MS
+} from './state'
 import { startInstallPolling, startUninstallPolling } from './library'
 import {
   isBottleProvisioned,
@@ -204,8 +210,14 @@ export default class SteamGame implements Game {
     if (pendingFetches.has(this.appId)) return
     pendingFetches.add(this.appId)
 
+    // Throttle: wait for a concurrency slot so a cold cache doesn't open
+    // hundreds of parallel Steam CDN connections at once (mass ETIMEDOUT).
+    await acquireMetadataSlot()
+
     try {
-      const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`)
+      const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`, {
+        timeout: METADATA_FETCH_TIMEOUT_MS
+      })
 
       const entry = resp.data?.[this.appId]
       const data = entry?.data
@@ -293,6 +305,7 @@ export default class SteamGame implements Game {
         LogPrefix.Steam
       )
     } finally {
+      releaseMetadataSlot()
       pendingFetches.delete(this.appId)
     }
   }

@@ -274,7 +274,8 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
 
     expect(axios.get).toHaveBeenCalledTimes(1)
     expect(axios.get).toHaveBeenCalledWith(
-      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`
+      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`,
+      { timeout: 15000 }
     )
   })
 
@@ -438,7 +439,8 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
     await flushAsync()
     expect(axios.get).toHaveBeenCalledTimes(1)
     expect(axios.get).toHaveBeenCalledWith(
-      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`
+      `https://store.steampowered.com/api/appdetails?appids=${APP_ID}`,
+      { timeout: 15000 }
     )
   })
 })
