@@ -449,4 +449,4 @@ v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260
 | 13. Keys-Waiting + Giftable-Spares Views | 5/5 | Gaps found | - |
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
-| 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete   | 2026-07-10 |
+| 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
