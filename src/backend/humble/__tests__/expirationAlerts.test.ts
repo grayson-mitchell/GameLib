@@ -174,7 +174,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      key.machineName,
+      `${key.gamekey}:${key.machineName}`,
       { expiration: '2026-08-01' }
     )
     expect(mockNotificationShow).toHaveBeenCalledTimes(1)
@@ -182,7 +182,9 @@ describe('detectAndNotifyExpirationTransitions', () => {
 
   test('D-92 dedup: same expiration re-seen is a no-op, no second fire', () => {
     const key = makeKey({ expiration: '2026-08-01' })
-    notifiedExpirationData.set(key.machineName, { expiration: '2026-08-01' })
+    notifiedExpirationData.set(`${key.gamekey}:${key.machineName}`, {
+      expiration: '2026-08-01'
+    })
 
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
@@ -191,12 +193,14 @@ describe('detectAndNotifyExpirationTransitions', () => {
 
   test('D-92: date -> different-date fires again and updates the store to the new date', () => {
     const key = makeKey({ expiration: '2026-09-15' })
-    notifiedExpirationData.set(key.machineName, { expiration: '2026-08-01' })
+    notifiedExpirationData.set(`${key.gamekey}:${key.machineName}`, {
+      expiration: '2026-08-01'
+    })
 
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      key.machineName,
+      `${key.gamekey}:${key.machineName}`,
       { expiration: '2026-09-15' }
     )
     expect(mockNotificationShow).toHaveBeenCalledTimes(1)
@@ -218,13 +222,116 @@ describe('detectAndNotifyExpirationTransitions', () => {
       suppressNotifications: true
     })
 
-    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith('a_steam', {
+    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
+      `${keyA.gamekey}:a_steam`,
+      { expiration: '2026-08-01' }
+    )
+    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
+      `${keyB.gamekey}:b_steam`,
+      { expiration: '2026-09-01' }
+    )
+    expect(mockNotificationShow).not.toHaveBeenCalled()
+  })
+
+  test('WR-01: duplicate machineName across two orders (different gamekeys) with DIFFERENT expirations both fire once on first observation; a second identical sync fires NEITHER', () => {
+    const keyA = makeKey({
+      gamekey: 'order-a',
+      machineName: 'shared_steam',
+      title: 'Game A',
       expiration: '2026-08-01'
     })
-    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith('b_steam', {
-      expiration: '2026-09-01'
+    const keyB = makeKey({
+      gamekey: 'order-b',
+      machineName: 'shared_steam',
+      title: 'Game B',
+      expiration: '2026-09-15'
+    })
+
+    // First observation: both are null -> date transitions, both should fire.
+    detectAndNotifyExpirationTransitions([keyA, keyB], {
+      suppressNotifications: false
+    })
+    expect(mockNotificationShow).toHaveBeenCalledTimes(1)
+    const firstCallOpts = mockNotificationCtor.mock.calls[0][0]
+    expect(firstCallOpts.body).toContain('2')
+
+    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
+      'order-a:shared_steam',
+      { expiration: '2026-08-01' }
+    )
+    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
+      'order-b:shared_steam',
+      { expiration: '2026-09-15' }
+    )
+
+    jest.clearAllMocks()
+    mockGetSettings.mockImplementation(() => ({
+      notifyHumbleExpirations: mockNotifyHumbleExpirations
+    }))
+
+    // Second identical sync: neither should re-fire (composite keys already
+    // hold each order's own expiration — this is the WR-01 fix).
+    detectAndNotifyExpirationTransitions([keyA, keyB], {
+      suppressNotifications: false
     })
     expect(mockNotificationShow).not.toHaveBeenCalled()
+  })
+
+  test('WR-01: duplicate machineName across two orders where only ONE order changes date on re-sync — only that one re-fires', () => {
+    const keyA = makeKey({
+      gamekey: 'order-a',
+      machineName: 'shared_steam',
+      title: 'Game A',
+      expiration: '2026-08-01'
+    })
+    const keyB = makeKey({
+      gamekey: 'order-b',
+      machineName: 'shared_steam',
+      title: 'Game B',
+      expiration: '2026-09-15'
+    })
+    notifiedExpirationData.set('order-a:shared_steam', {
+      expiration: '2026-08-01'
+    })
+    notifiedExpirationData.set('order-b:shared_steam', {
+      expiration: '2026-09-15'
+    })
+
+    // Only order-b's expiration changes on this sync.
+    const keyBChanged = { ...keyB, expiration: '2026-10-01' }
+
+    detectAndNotifyExpirationTransitions([keyA, keyBChanged], {
+      suppressNotifications: false
+    })
+
+    expect(mockNotificationShow).toHaveBeenCalledTimes(1)
+    expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
+      'order-b:shared_steam',
+      { expiration: '2026-10-01' }
+    )
+    expect(mockNotifiedExpirationStore.set).not.toHaveBeenCalledWith(
+      'order-a:shared_steam',
+      expect.anything()
+    )
+  })
+
+  test('WR-01 legacy backfill: a pre-existing machineName-only entry matching the current expiration is treated as already-notified and does not fire, and the composite entry is created', () => {
+    const key = makeKey({
+      gamekey: 'order-a',
+      machineName: 'legacy_steam',
+      expiration: '2026-08-01'
+    })
+    // Pre-seed a legacy machineName-only entry (no colon) equal to the
+    // current expiration — this simulates an on-disk store from before the
+    // composite-key migration.
+    notifiedExpirationData.set('legacy_steam', { expiration: '2026-08-01' })
+
+    detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
+
+    expect(mockNotificationShow).not.toHaveBeenCalled()
+    expect(notifiedExpirationData.get('order-a:legacy_steam')).toEqual({
+      expiration: '2026-08-01'
+    })
   })
 
   test('D-90: a single affected key uses the singular digest body naming the game title', () => {
@@ -272,7 +379,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      key.machineName,
+      `${key.gamekey}:${key.machineName}`,
       { expiration: '2026-08-01' }
     )
     expect(mockNotificationShow).not.toHaveBeenCalled()
@@ -285,7 +392,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      key.machineName,
+      `${key.gamekey}:${key.machineName}`,
       { expiration: '2026-08-01' }
     )
     expect(mockNotificationShow).not.toHaveBeenCalled()
@@ -298,7 +405,7 @@ describe('detectAndNotifyExpirationTransitions', () => {
     detectAndNotifyExpirationTransitions([key], { suppressNotifications: false })
 
     expect(mockNotifiedExpirationStore.set).toHaveBeenCalledWith(
-      key.machineName,
+      `${key.gamekey}:${key.machineName}`,
       { expiration: '2026-08-01' }
     )
     expect(mockNotificationShow).not.toHaveBeenCalled()

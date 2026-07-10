@@ -545,6 +545,14 @@
         "wine-wayland": "The Wine-Wayland experimental driver allows games to run natively under the Wayland display protocol. Enabling might break some games.",
         "WoW64": "The Wine WoW64 mode allows 32-bit Windows games to be run on 64-bit Wine. Enabling may improve performance, but could also break older 32-bit games."
     },
+    "humble": {
+        "notification": {
+            "expiringBodyPlural": "{{count}} Humble keys gained expiration dates",
+            "expiringBodySingle": "{{title}}'s Humble key now expires on {{date}}",
+            "expiringTitlePlural": "Humble keys expiring",
+            "expiringTitleSingle": "Humble key expiring"
+        }
+    },
     "humbleKeys": {
         "ambiguousOutcome": "We couldn't confirm this finished — sync to check",
         "c2Action": "Go to Giftable spares",
