@@ -15,10 +15,18 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
+import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore } from './electronStores'
 import { library, pendingFetches } from './state'
 import { startInstallPolling, startUninstallPolling } from './library'
+import {
+  isBottleProvisioned,
+  tellBottledSteamToInstall,
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall,
+  getSteamBottleSettings
+} from './bottle'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
@@ -138,8 +146,17 @@ export default class SteamGame implements Game {
    * autoSyncSaves resolves false by default — Steam Cloud is Steam-managed;
    * launcher.ts:151 skips syncSaves when autoSyncSaves is false.
    * Analog: nile/games.ts lines 65-68.
+   *
+   * D-11/Phase 17: a confirmed-not-native macOS game resolves the dedicated
+   * bottle's GameSettings (getSteamBottleSettings) instead of an empty
+   * per-appId GameConfig — launcher.ts's pre-launch checkWineBeforeLaunch
+   * (which now runs for these games since isNative() is false) must see the
+   * bottle's real wineVersion/wineCrossoverBottle, not an empty config.
    */
   async getSettings(): Promise<GameSettings> {
+    if (this.isBottleEligible()) {
+      return getSteamBottleSettings()
+    }
     const gameConfig = GameConfig.get(this.appId)
     return gameConfig.config || (await gameConfig.getSettings())
   }
@@ -322,8 +339,38 @@ export default class SteamGame implements Game {
    * Does NOT call sendProgressUpdate — Steam owns the download with its own UI.
    * Install state is never optimistically flipped on click (D-02); badge
    * reconciliation happens when the user tabs back (focus → ACF re-read, D-01).
+   *
+   * Phase 17 (D-10/D-11): a confirmed-not-native macOS game routes through the
+   * bottled Steam client instead of native steam:// — see isBottleEligible().
    */
   async install(_args: InstallArgs): Promise<InstallResult> {
+    if (this.isBottleEligible()) {
+      if (!isBottleProvisioned()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        return { status: 'done' }
+      }
+
+      logInfo(
+        `SteamGame: delegating install for appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToInstall(this.appId)
+
+      // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
+      // root is distinct from the native root (RESEARCH.md Pitfall 2).
+      startInstallPolling(this.appId, { source: 'bottle' })
+
+      return result.status === 'done'
+        ? { status: 'done' }
+        : { status: 'error', error: result.error }
+    }
+
     const url = buildSteamProtocolUrl('install', this.appId)
     if (!url) {
       return { status: 'error', error: `Invalid appId: ${this.appId}` }
@@ -345,8 +392,35 @@ export default class SteamGame implements Game {
     return { status: 'done' }
   }
 
+  /**
+   * Per-OS confirmed-not-native check (D-11).
+   *
+   * Non-macOS (Linux/Windows) always returns true — those platforms keep the
+   * native steam:// delegation unchanged; Proton is Steam's own concern.
+   *
+   * On macOS, returns true (native path) UNLESS the game has been CONFIRMED
+   * not-native via a completed appdetails fetch: `platformsCaptured === true`
+   * (a lazy-fetch has actually recorded platform data) AND `is_mac_native ===
+   * false`. A never-synced entry defaults `is_mac_native` to false in
+   * library.ts (D-11 nuance), which is ambiguous on its own — requiring
+   * platformsCaptured===true prevents a freshly-synced game (whose real
+   * platform support isn't known yet) from being misrouted into the bottle.
+   */
   isNative(): boolean {
-    return true
+    return !this.isBottleEligible()
+  }
+
+  /**
+   * True only for a CONFIRMED not-native macOS game (D-11) — the single
+   * source of truth for whether install/launch/uninstall should route through
+   * the bottled Steam client instead of the native steam:// path. Reused by
+   * isNative() here; Phase 17 Plan 05 Task 2 also reuses it from
+   * getSettings(), install(), launch(), and uninstall().
+   */
+  private isBottleEligible(): boolean {
+    if (!isMac) return false
+    const meta = steamMetadataStore.get(this.appId)
+    return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 
   async addShortcuts(_fromMenu?: boolean): Promise<void> {
@@ -368,8 +442,13 @@ export default class SteamGame implements Game {
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
    * any URL is constructed or passed to shell.openExternal.
    *
-   * isNative() returns true, so launcher.ts skips checkWineBeforeLaunch —
-   * Proton selection is fully delegated to Steam (GAME-04 / D-06).
+   * isNative() returns true for non-eligible games, so launcher.ts skips
+   * checkWineBeforeLaunch — Proton selection is fully delegated to Steam
+   * (GAME-04 / D-06). For a bottle-eligible confirmed-not-native macOS game
+   * (D-10/D-11), isNative() is false, so launcher.ts's launchEventCallback
+   * runs checkWineBeforeLaunch BEFORE calling this method (using the
+   * getSteamBottleSettings() result from getSettings()) — this method then
+   * dispatches the actual launch to the bottled Steam client.
    *
    * Does NOT call sendGameStatusUpdate — Steam client owns the 'playing' state.
    */
@@ -379,6 +458,26 @@ export default class SteamGame implements Game {
     _args?: string[],
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
+    if (this.isBottleEligible()) {
+      if (!isBottleProvisioned()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        return false
+      }
+
+      logInfo(
+        `SteamGame: launching appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToLaunch(this.appId)
+      return result.status === 'done'
+    }
+
     const url = buildSteamProtocolUrl('rungameid', this.appId)
     if (!url) {
       // Non-numeric appId — rejection already logged by buildSteamProtocolUrl
@@ -441,6 +540,30 @@ export default class SteamGame implements Game {
    * round-trip; the focus re-read (D-01) remains as a backstop.
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
+    if (this.isBottleEligible()) {
+      if (!isBottleProvisioned()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        return { stdout: '', stderr: '' }
+      }
+
+      logInfo(
+        `SteamGame: delegating uninstall for appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToUninstall(this.appId)
+
+      // Bottle-scoped ACF polling (D-07) — distinct root from the native scan.
+      startUninstallPolling(this.appId, { source: 'bottle' })
+
+      return { stdout: '', stderr: result.error ?? '' }
+    }
+
     const url = buildSteamProtocolUrl('uninstall', this.appId)
     if (!url) {
       return { stdout: '', stderr: `Invalid appId: ${this.appId}` }

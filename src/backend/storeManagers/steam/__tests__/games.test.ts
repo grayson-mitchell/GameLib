@@ -18,6 +18,13 @@ import SteamGame, {
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
+import {
+  isBottleProvisioned,
+  tellBottledSteamToInstall,
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall,
+  getSteamBottleSettings
+} from '../bottle'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
 
@@ -127,6 +134,28 @@ jest.mock('../user', () => ({
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn()
+}))
+
+// ── backend/constants/environment mock — mutable double, defaults to non-mac ─
+// (mirrors library.test.ts's pattern) so pre-existing tests keep their
+// pre-Phase-17 behavior (isBottleEligible() short-circuits false) unless a
+// test explicitly flips envMock.isMac = true.
+jest.mock('backend/constants/environment', () => ({
+  isWindows: false,
+  isMac: false,
+  isLinux: true
+}))
+
+// ── bottle.ts mock — Phase 17 bottle-routing surface (isBottleProvisioned,
+// tellBottledSteamTo*, getSteamBottleSettings). Fully replaced (not spied) —
+// bottle.ts pulls in backend/config's heavy transitive chain and lazily
+// imports backend/launcher, neither of which games.test.ts needs to exercise.
+jest.mock('../bottle', () => ({
+  isBottleProvisioned: jest.fn(),
+  tellBottledSteamToInstall: jest.fn(),
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn(),
+  getSteamBottleSettings: jest.fn()
 }))
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -515,9 +544,188 @@ describe('SteamGame.launch() — GAME-01', () => {
     expect(url).toMatch(/^steam:\/\/rungameid\/\d+$/)
   })
 
-  it('GAME-01: isNative() still returns true (unchanged — Wine branch is skipped in launcher.ts)', () => {
+})
+
+// ── D-11: SteamGame.isNative() — per-OS confirmed-not-native ─────────────────
+
+describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+  })
+
+  it('non-mac (Linux/Windows): isNative() returns true even for a confirmed-not-native metadata entry', () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
     const game = new SteamGame(APP_ID)
     expect(game.isNative()).toBe(true)
+  })
+
+  it('D-11: macOS confirmed-not-native (platformsCaptured:true, is_mac_native:false) — isNative() returns false', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+  })
+
+  it('D-11 (BLOCKER): macOS NOT-yet-captured (platformsCaptured not true) — isNative() returns true (do not bottle an unconfirmed game)', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('macOS Mac-native game (platformsCaptured:true, is_mac_native:true) — isNative() returns true', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('macOS with no metadata entry at all — isNative() returns true (D-11 ambiguous-default fallback)', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+})
+
+// ── Phase 17 (D-10/D-11): SteamGame.launch() bottle routing ─────────────────
+
+describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
+  let shellOpenExternal: jest.Mock
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
+  })
+
+  it('bottle-eligible + un-provisioned: launch() does NOT call shell.openExternal, emits steamBottleSetupRequired, resolves false', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      { appName: APP_ID }
+    )
+    expect(result).toBe(false)
+  })
+
+  it('bottle-eligible + provisioned: launch() calls tellBottledSteamToLaunch, NOT shell.openExternal', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
+    expect(result).toBe(true)
+  })
+
+  it('D-10/scope-fence: NON-eligible (Mac-native) — launch() STILL calls shell.openExternal with steam://rungameid/<appId> (native path unchanged)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(result).toBe(true)
+  })
+
+  it('D-11 (BLOCKER): NOT-yet-captured macOS game — launch() STILL takes the native rungameid path and does NOT emit steamBottleSetupRequired', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      expect.anything()
+    )
+  })
+
+  it('D-10/scope-fence: NON-eligible (non-mac) — launch() STILL calls shell.openExternal with steam://rungameid/<appId>', async () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://rungameid/${APP_ID}`,
+      { activate: false }
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
   })
 })
 
@@ -614,6 +822,120 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 })
 
+// ── Phase 17 (D-10/D-11): SteamGame.install() bottle routing ────────────────
+
+describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+  })
+
+  it('bottle-eligible + un-provisioned: install() does NOT call shell.openExternal and emits steamBottleSetupRequired', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      { appName: APP_ID }
+    )
+  })
+
+  it('bottle-eligible + provisioned: install() calls tellBottledSteamToInstall + bottle-scoped startInstallPolling, NOT shell.openExternal', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('D-11 (BLOCKER): NOT-yet-captured macOS game — install() STILL takes the native steam://install path and does NOT emit steamBottleSetupRequired', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      expect.anything()
+    )
+  })
+
+  it('D-10/scope-fence: NON-eligible (Mac-native) — install() STILL calls shell.openExternal with steam://install/<appId> (native path unchanged)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+
+  it('D-10/scope-fence: NON-eligible (non-mac) — install() STILL calls shell.openExternal with steam://install/<appId>', async () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+})
+
 // ── GAME-03: SteamGame.uninstall() ───────────────────────────────────────────
 
 describe('SteamGame.uninstall() — GAME-03', () => {
@@ -696,6 +1018,122 @@ describe('SteamGame.uninstall() — GAME-03', () => {
 
     // Badge state is reconciled only after the focus ACF re-read, never assumed from click
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+// ── Phase 17 (D-10/D-11): SteamGame.uninstall() bottle routing ──────────────
+
+describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => {
+  let shellOpenExternal: jest.Mock
+  let startUninstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
+    startUninstallPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(isBottleProvisioned as jest.Mock).mockReset()
+    ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    startUninstallPollingSpy.mockRestore()
+  })
+
+  it('bottle-eligible + provisioned: uninstall() calls tellBottledSteamToUninstall + bottle-scoped startUninstallPolling, NOT shell.openExternal', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
+    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('bottle-eligible + un-provisioned: uninstall() does NOT call shell.openExternal and emits steamBottleSetupRequired', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleProvisioned as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBottleSetupRequired',
+      { appName: APP_ID }
+    )
+  })
+
+  it('D-10/scope-fence: NON-eligible (Mac-native) — uninstall() STILL calls shell.openExternal with steam://uninstall/<appId> (native path unchanged)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+  })
+
+  it('D-11: NOT-yet-captured macOS game — uninstall() STILL takes the native path', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: false,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+  })
+
+  it('D-10/scope-fence: NON-eligible (non-mac) — uninstall() STILL calls shell.openExternal', async () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
   })
 })
 
@@ -878,6 +1316,70 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   it('getSettings() does not throw', async () => {
     const game = new SteamGame(APP_ID)
     await expect(game.getSettings()).resolves.not.toThrow()
+  })
+
+  // ── Phase 17 (D-11): getSettings() bottle-eligible resolution ────────────
+  //
+  // LAUNCH ORDERING: launcher.ts's launchEventCallback runs checkWineBeforeLaunch
+  // BEFORE game.launch() for a bottle-eligible game (isNative()===false) — that
+  // pre-step consumes THIS getSettings() result. It must resolve the dedicated
+  // bottle store (getSteamBottleSettings), never fall through to an empty
+  // per-appId GameConfig.get(<numeric appId>) (Pitfall-6 phantom-config guard).
+
+  describe('bottle-eligible resolution (D-11)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let envMock: any
+
+    beforeEach(() => {
+      envMock = jest.requireMock('backend/constants/environment')
+      envMock.isMac = true
+      envMock.isWindows = false
+      envMock.isLinux = false
+      ;(getSteamBottleSettings as jest.Mock).mockReset()
+    })
+
+    it('bottle-eligible game: getSettings() resolves getSteamBottleSettings(), NOT GameConfig.get(<appId>)', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      const bottleSettings = {
+        autoSyncSaves: false,
+        wineVersion: { name: 'CrossOver', type: 'crossover', bin: '' },
+        wineCrossoverBottle: 'GameLibSteam'
+      }
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue(bottleSettings)
+      const gameConfigGetMock = jest.requireMock('backend/game_config')
+        .GameConfig.get as jest.Mock
+      gameConfigGetMock.mockClear()
+
+      const game = new SteamGame(APP_ID)
+      const settings = await game.getSettings()
+
+      expect(settings).toBe(bottleSettings)
+      expect(getSteamBottleSettings).toHaveBeenCalledTimes(1)
+      expect(gameConfigGetMock).not.toHaveBeenCalled()
+    })
+
+    it('non-eligible macOS game (Mac-native): getSettings() falls back to GameConfig.get(<appId>) unchanged', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: true
+      })
+      const gameConfigGetMock = jest.requireMock('backend/game_config')
+        .GameConfig.get as jest.Mock
+      gameConfigGetMock.mockReturnValue({
+        config: undefined,
+        getSettings: jest.fn().mockResolvedValue({ autoSyncSaves: false })
+      })
+
+      const game = new SteamGame(APP_ID)
+      const settings = await game.getSettings()
+
+      expect(gameConfigGetMock).toHaveBeenCalledWith(APP_ID)
+      expect(getSteamBottleSettings).not.toHaveBeenCalled()
+      expect(settings.autoSyncSaves).toBe(false)
+    })
   })
 
   // ── getExtraInfo ───────────────────────────────────────────────────────────
