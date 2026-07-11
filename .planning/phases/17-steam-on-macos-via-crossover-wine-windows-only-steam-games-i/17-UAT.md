@@ -192,3 +192,24 @@ note: "Retest round 2 (macOS + CrossOver): guided wizard fires, Steam setup star
     - "Wired before the runWineCommand await at both installer sites (provisionBottle unconditional; dispatchToBottledSteam verb==='install')."
     - "GameLib's own window state is untouched (guided banner stays visible); when fullscreen, `set frontmost` makes macOS auto-scroll Spaces to the installer. app.hide() kept only as fallback if the installer process never appears."
   notes: "Cannot force a foreign CrossOver/wine window always-on-top from Electron, and cannot re-parent it into a BrowserWindow. Explored the native NSApp.yieldActivation(to:) route (would need a mac-only N-API addon) but the pure-JS System Events raise proved sufficient — no native code required. Earlier iterations (minimize, then app.hide) superseded: minimize left GameLib the active app so the installer was never promoted; app.hide hid the guided banner. Full trace in .planning/debug/resolved/steam-installer-behind-focus.md."
+
+## Added Coverage (post-UAT)
+
+# Native Steam install focus-handover parity with the CrossOver install path.
+# Added after the GAP 5 work to confirm both install paths foreground Steam/the
+# installer — via DIFFERENT mechanisms. Automated contract test locks the native
+# side; the manual check below covers the OS-level behavior units can't observe.
+- truth: "A native Steam install (Linux/Windows, or a mac-native Steam game) brings the Steam client to the foreground, comparable to how the CrossOver install path surfaces its installer window"
+  status: manual-check-pending
+  type: manual
+  test: native-install-focus
+  label: "Native install focus-handover parity"
+  reason: "Native install and CrossOver install foreground Steam via different mechanisms and we want to confirm the outcome is equivalent for the user."
+  mechanism_note: "Native: games.ts install() calls shell.openExternal('steam://install/<appId>') with NO { activate: false } — the OS steam:// protocol handler activates the native Steam client (contrast launch(), which passes { activate: false } to avoid stealing foreground from Console mode). CrossOver: dispatchToBottledSteam('install') + raiseInstallerWindow() does a GameLib-driven System Events `set frontmost` raise because a Wine process won't auto-focus."
+  automated_coverage:
+    - "src/backend/storeManagers/steam/__tests__/games.test.ts — 'GAME-02/focus: native install HANDS FOCUS to Steam' asserts install() calls shell.openExternal WITHOUT { activate: false } (activation not suppressed), contrasted with launch()'s { activate: false }. This is the unit-testable CONTRACT; actual OS focus is verified by the manual steps below."
+  manual_steps:
+    - "On a platform with the native Steam client installed (Linux/Windows, or a mac-native Steam game so the bottle path is NOT taken), trigger Install on a not-yet-installed Steam game in GameLib."
+    - "Confirm the native Steam client comes to the FOREGROUND to show its install/confirmation dialog (OS-activated), without GameLib needing to hide or minimize."
+    - "Sanity-compare against the CrossOver install path (macOS, Windows-only game): the SteamSetup.exe / bottled-Steam installer surfaces via raiseInstallerWindow(). Both should end with the installer/Steam visible and focused — same OUTCOME, different mechanism."
+    - "Regression guard: launching (not installing) a game should NOT yank Steam to the foreground (launch() passes { activate: false })."

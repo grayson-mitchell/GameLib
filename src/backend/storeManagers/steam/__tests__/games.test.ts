@@ -786,6 +786,25 @@ describe('SteamGame.install() — GAME-02', () => {
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
   })
 
+  it('GAME-02/focus: native install HANDS FOCUS to Steam — openExternal is called WITHOUT { activate: false }, so the steam:// protocol handler foregrounds the native Steam client (OS-delegated parity with the CrossOver path\'s raiseInstallerWindow() System Events raise); contrast launch() which passes { activate: false } to avoid stealing foreground', async () => {
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledTimes(1)
+    // Native install intentionally lets the OS bring Steam to the front — the
+    // SAME OUTCOME as the bottled/CrossOver install (raiseInstallerWindow), via
+    // a different MECHANISM (OS protocol activation vs a GameLib-driven raise).
+    // The focus handover is "hands off": activation must NOT be suppressed.
+    const [url, opts] = shellOpenExternal.mock.calls[0]
+    expect(url).toBe(`steam://install/${APP_ID}`)
+    expect(opts).toBeUndefined()
+    // Explicit contrast with launch()'s { activate: false } foreground-suppression.
+    expect(shellOpenExternal).not.toHaveBeenCalledWith(
+      `steam://install/${APP_ID}`,
+      { activate: false }
+    )
+  })
+
   it('GAME-02: install() resolves { status: "done" } for a valid numeric appId', async () => {
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
