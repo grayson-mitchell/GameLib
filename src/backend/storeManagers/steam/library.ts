@@ -498,6 +498,15 @@ export async function readAcfState(
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
+  /** Bytes downloaded/staged so far, and the totals to compare against —
+   *  parsed from the ACF's AppState (strings on disk). Only populated on the
+   *  'downloading' result; used by pollInstallOnce to derive a progress
+   *  percent for the bottle install path (GAP-17-BOTTLE-PROGRESS). Missing or
+   *  non-numeric values default to 0. */
+  bytesDownloaded?: number
+  bytesToDownload?: number
+  bytesStaged?: number
+  bytesToStage?: number
 }> {
   const steamappsDirs =
     source === 'bottle'
@@ -525,7 +534,14 @@ export async function readAcfState(
           sizeOnDisk: state.SizeOnDisk ?? '0'
         }
       }
-      return { state: 'downloading', stateFlags }
+      return {
+        state: 'downloading',
+        stateFlags,
+        bytesDownloaded: Number(state.BytesDownloaded) || 0,
+        bytesToDownload: Number(state.BytesToDownload) || 0,
+        bytesStaged: Number(state.BytesStaged) || 0,
+        bytesToStage: Number(state.BytesToStage) || 0
+      }
     } catch {
       continue // skip corrupt ACF (T-2-01)
     }
@@ -614,6 +630,41 @@ export async function pollInstallOnce(
       runner: 'steam',
       status: 'installing'
     })
+
+    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
+    // feeding the frontend progress store — the ACF's own byte counts are
+    // the only source of truth. Prefer the download totals; fall back to
+    // the staging totals when the download total is 0/missing (late-stage
+    // installs that are past the download phase). Never emit a non-finite
+    // percent — if BOTH totals are 0/missing, skip the progress emit
+    // entirely (the gameStatusUpdate above still fired).
+    const {
+      bytesDownloaded = 0,
+      bytesToDownload = 0,
+      bytesStaged = 0,
+      bytesToStage = 0
+    } = result
+
+    const useStaged = !(bytesToDownload > 0)
+    const denominator = useStaged ? bytesToStage : bytesToDownload
+    const numerator = useStaged ? bytesStaged : bytesDownloaded
+
+    if (denominator > 0) {
+      const rawPercent = (numerator / denominator) * 100
+      if (Number.isFinite(rawPercent)) {
+        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)))
+        sendFrontendMessage('progressUpdate', {
+          appName: appId,
+          runner: 'steam',
+          status: 'installing',
+          progress: {
+            percent,
+            bytes: getFileSize(numerator),
+            eta: ''
+          }
+        })
+      }
+    }
   } else if (result.state === 'installed') {
     const existing = library.get(appId)
     if (existing) {
