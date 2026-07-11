@@ -8,7 +8,6 @@ import LibraryContext from '../../LibraryContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import AddGameButton from '../AddGameButton'
-import classNames from 'classnames'
 
 type Props = {
   list: GameInfo[]
@@ -29,7 +28,7 @@ function formatRelativeTime(ms: number): string {
 
 export default React.memo(function LibraryHeader({ list }: Props) {
   const { t } = useTranslation()
-  const { showFavourites, storesFilters } = useContext(LibraryContext)
+  const { showFavourites } = useContext(LibraryContext)
   const {
     refreshing,
     refreshingInTheBackground,
@@ -71,8 +70,6 @@ export default React.memo(function LibraryHeader({ list }: Props) {
 
   const staleTime = syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
 
-  const steamFilterActive = storesFilters?.steam === true
-
   return (
     <h5 className="libraryHeader" data-tour="library-header">
       <div className="libraryHeaderWrapper">
@@ -100,21 +97,6 @@ export default React.memo(function LibraryHeader({ list }: Props) {
         )}
         <div className="actionIconsWrapper">
           <ActionIcons />
-          {steamFilterActive && (
-            <button
-              className={classNames('steamRefreshButton', {
-                spinning: refreshing
-              })}
-              title={t('steam.refresh', 'Refresh Steam Library')}
-              disabled={refreshing}
-              onClick={() => window.api.refreshLibrary('steam')}
-            >
-              <FontAwesomeIcon
-                icon={faSyncAlt}
-                className={classNames({ 'fa-spin': refreshing })}
-              />
-            </button>
-          )}
         </div>
       </div>
     </h5>

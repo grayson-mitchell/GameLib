@@ -48,28 +48,3 @@
   align-items: center;
   gap: var(--space-xs);
 }
-
-.steamRefreshButton {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--action-icon);
-  padding: var(--space-3xs);
-  border-radius: var(--space-3xs);
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
-}
-
-.steamRefreshButton:hover:not(:disabled) {
-  color: var(--accent);
-}
-
-.steamRefreshButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.steamRefreshButton.spinning {
-  animation: refreshing 1.5s infinite;
-}
