@@ -92,14 +92,42 @@ automated_verified: 2026-07-11
 
 ## UAT Findings & Candidate Gaps (17-07 Task 2 — in progress)
 
-> Live human UAT started 2026-07-11. Recording per-step results; Approval remains pending until all 7 steps + scope fences pass or gaps are routed.
+> Live human UAT started 2026-07-11; resumed same day (session 2) after gap-closure plans 17-08/09/10/11 landed. Recording per-step results; Approval remains pending until all 7 steps + scope fences pass or gaps are routed.
 
 | Step | Requirement | Result | Notes |
 |------|-------------|--------|-------|
-| 1 — Provision + all entry points | MACSTEAM-02/04 | ✅ pass | Guided setup fires correctly; dedicated bottle + SteamSetup.exe window confirmed |
-| 2–7 | — | ⏳ pending | Paused mid-UAT to design the install-time UX (GAP-17-INSTALL-UX below) |
+| 1 — Provision + all entry points | MACSTEAM-02/04 | ✅ pass | Guided setup fires; dedicated `GameLibSteam` bottle created (CrossOver 26.2); real SteamSetup.exe window opens; Steam installs and logs in successfully inside the bottle (`isLoggedIn: true`) |
+| 2 — Login | MACSTEAM-03 | ⚠️ blocked | Login itself succeeds inside the bottle, but GameLib never advances past provisioning (GAP-17-PFX86-PATH), so the flow can't be exercised end-to-end |
+| 3 — Install | MACSTEAM-04/05 | ❌ FAIL | Badge never flips to installed; GameLib re-opens SteamSetup.exe on every Install click. Root cause: readiness path bug (GAP-17-PFX86-PATH) |
+| 4 — Launch | MACSTEAM-04 | ⛔ untestable | Blocked by GAP-17-PFX86-PATH (never reaches installed state) |
+| 5 — Indicator | MACSTEAM-06 | ⛔ untestable | Blocked by GAP-17-PFX86-PATH |
+| 6 — D-11 guard | MACSTEAM-01 | ⏳ pending | Not yet exercised this session |
+| 7 — Scope fences | MACSTEAM-01/04 | ⏳ pending | Not yet exercised this session |
+| (aside) steamwebhelper hang | — | ❌ FAIL | Leaving SteamSetup's "Run Steam" ticked launched the bottled client's self-updater, which hung and required Force Quit; no recovery hint surfaced (GAP-17-STEAMWEBHELPER-HANG) |
 
-### GAP-17-INSTALL-UX — continuous install-time feedback + auto-chain (candidate gap for `/gsd:plan-phase 17 --gaps`)
+### GAP-17-PFX86-PATH — bottle readiness checks the wrong Program Files directory (BLOCKER, MACSTEAM-04/05) — candidate gap for `/gsd:plan-phase 17 --gaps`
+
+**Observed (2026-07-11, real CrossOver 26.2 on macOS):** After the guided setup runs SteamSetup.exe, Steam installs and logs in successfully **inside** the `GameLibSteam` bottle, but GameLib never recognizes it — the game card stays un-installed and every Install click re-launches SteamSetup.exe. `steamBottleConfigStore.provisioned` is stuck `false`.
+
+**Root cause (definitive, from live filesystem + config inspection):**
+- The CrossOver `win10` template created a **32-bit prefix** (`cxbottle.conf` → `"WineArch" = "win32"`). A win32 prefix has **no `Program Files (x86)`** directory — 32-bit apps install to `C:\Program Files`.
+- Steam is really installed at `…/Bottles/GameLibSteam/drive_c/Program Files/Steam/steam.exe` ✅ (verified on disk).
+- But `getBottleSteamExePath()` / `getBottleSteamappsDir()` in `src/backend/storeManagers/steam/bottle.ts` **hardcode `Program Files (x86)`**, which is empty in this bottle. So `existsSync(getBottleSteamExePath())` → `false` → `isBottleReady()` → `false` forever.
+- Consequence chain: `provisionBottle()` step 8 sets `provisioned = isBottleProvisioned && existsSync(x86 steam.exe)` = `false`; every routing gate (`isBottleReady`) fails; `dispatchToBottledSteam` short-circuits with "Steam bottle is not ready yet"; the guided flow keeps re-provisioning → SteamSetup re-opens.
+
+**Fix direction:** Resolve the bottled Steam install location by probing **both** candidates and using whichever exists — `drive_c/Program Files (x86)/Steam` (win64 prefix, Steam being 32-bit) **and** `drive_c/Program Files/Steam` (win32 prefix). Apply to `getBottleSteamExePath()` **and** `getBottleSteamappsDir()` (the ACF/steamapps reader in `library.ts` shares the same assumption and would mislocate installed-game manifests even after readiness is fixed). Prefer a single shared resolver so exe-path and steamapps-path stay consistent. Add unit fixtures for both prefix layouts.
+
+**Files likely touched:** `src/backend/storeManagers/steam/bottle.ts` (path resolver + `isBottleReady`/`provisionBottle`), `src/backend/storeManagers/steam/library.ts` (bottle steamapps ACF scan), respective `__tests__`.
+
+### GAP-17-STEAMWEBHELPER-HANG — "Run Steam" left ticked hangs the bottled client with no recovery hint (MAJOR, Pitfall 4) — candidate gap
+
+**Observed:** On SteamSetup.exe's final screen the "Run Steam" checkbox is ticked by default; leaving it ticked launched the bottled Steam client immediately, whose steamwebhelper self-update hung (Pitfall 4 / A3) and had to be Force Quit. No recovery hint appeared. Unticking "Run Steam" avoided the hang (GameLib drives launch itself via `tellBottledSteamTo*`).
+
+**Fix direction:** In the guided-setup consent/instructions copy, explicitly tell the user to **untick "Run Steam"** on SteamSetup's final page (GameLib launches Steam itself once the bottle is ready). Optionally detect the steamwebhelper hang and surface the Pitfall 4 recovery hint — this would satisfy UAT step 7's "recovery hint shown" expectation.
+
+**Files likely touched:** `src/frontend/screens/Game/GamePage/components/SteamBottleSetup.tsx` + i18n `gamepage` keys (instruction copy); optionally `src/backend/storeManagers/steam/bottle.ts` (hang detection).
+
+### GAP-17-INSTALL-UX — continuous install-time feedback + auto-chain (superseded — addressed by 17-08/09/10/11)
 
 **Observed:** During the Steam-client provisioning phase the surface is a single static banner line ("Setting up Steam…"), and after the bottled `steam.exe` appears the user must click **Install a second time** for the game download to begin. The game card never shows the "Installing" status/button-text transition the native install flow provides, so there is no real progress feedback for the Steam-client phase and a confusing manual re-click.
 
@@ -131,4 +159,4 @@ automated_verified: 2026-07-11
 
 **Automated half status:** COMPLETE (2026-07-10, re-confirmed FINAL 2026-07-11 post-17-11 merge) — full suite green (48/48 suites, 938/938 tests), `npm run codecheck` exit 0. Re-run against the fully merged tree including gap-closure plans 17-08, 17-09, 17-10, and 17-11 (install button/status desync fix). All six MACSTEAM requirements have at least one automated test covering their code-level behavior; the real-hardware runtime surface (bottle creation, bottled login, install/launch through the bottle, visual indicator, scope-fence regressions on real CrossOver) is enumerated in Manual-Only Verifications above and awaits Task 2's human UAT resumption (steps 2-7; step 1 already passed per the UAT Findings table above).
 
-**Approval:** pending (blocked on Task 2 — end-to-end macOS UAT on real CrossOver, resuming from step 2 now that gap-closure plans 17-08/09/10/11 have landed)
+**Approval:** GAPS FOUND (2026-07-11 session 2) — end-to-end macOS UAT halted at step 3 by a BLOCKER (GAP-17-PFX86-PATH: bottle readiness checks `Program Files (x86)` but the win32 CrossOver bottle installs Steam to `Program Files`) plus a MAJOR (GAP-17-STEAMWEBHELPER-HANG). Automated suite remains green; the real-runtime path is blocked. Route via `/gsd:plan-phase 17 --gaps` → `/gsd:execute-phase 17 --gaps-only`, then resume this UAT from step 3.
