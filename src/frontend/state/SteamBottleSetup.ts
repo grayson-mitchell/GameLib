@@ -1,5 +1,6 @@
 import type { IpcRendererEvent } from 'electron'
 import { create } from 'zustand'
+import { Runner } from 'common/types'
 
 interface SteamBottleSetupState {
   isOpen: boolean
@@ -32,4 +33,19 @@ export const handleSteamBottleSetupRequiredSignal = (
   { appName }: { appName: string }
 ): void => {
   useSteamBottleSetup.getState().open(appName)
+}
+
+// Phase 17 (17-11), GAP 3 gap-closure: the single source-of-truth predicate
+// for "is a guided bottle-setup surface active for THIS game right now" —
+// consumed by both the toast (SteamBottleSetup.tsx, via isOpen directly) and
+// the game page (MainButton/GameStatus, via GameContext's is.settingUpBottle).
+// Keeping this as one exported pure function (rather than re-deriving the
+// condition separately on each consumer) is what prevents the button/status/
+// toast desync this plan closes.
+export const isSteamBottleSetupActiveFor = (
+  state: { isOpen: boolean; appName?: string },
+  appName: string,
+  runner: Runner
+): boolean => {
+  return state.isOpen && state.appName === appName && runner === 'steam'
 }

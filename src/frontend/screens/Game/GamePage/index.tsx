@@ -77,6 +77,10 @@ import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import Achievements from './components/Achievements'
 import { LaunchOptionSelector } from 'frontend/screens/Settings/components'
+import {
+  useSteamBottleSetup,
+  isSteamBottleSetupActiveFor
+} from 'frontend/state/SteamBottleSetup'
 
 export default React.memo(function GamePage(): JSX.Element | null {
   const { appName, runner } = useParams() as { appName: string; runner: Runner }
@@ -148,6 +152,16 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isMac = platform === 'darwin'
   const isSideloaded = runner === 'sideload'
   const isBrowserGame = gameInfo?.install.platform === 'Browser'
+
+  // Phase 17 (17-11), GAP 3 gap-closure: single source of truth shared with
+  // the guided bottle-setup toast (SteamBottleSetup.tsx) — see
+  // isSteamBottleSetupActiveFor docstring in frontend/state/SteamBottleSetup.ts.
+  const steamBottleSetup = useSteamBottleSetup()
+  const settingUpBottle = isSteamBottleSetupActiveFor(
+    steamBottleSetup,
+    appName,
+    runner
+  )
 
   const isInstalling = status === 'installing'
   const isImporting = status === 'importing'
@@ -361,6 +375,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
         queued: isQueued,
         reparing: isReparing,
         sideloaded: isSideloaded,
+        settingUpBottle,
         syncing: isSyncing,
         uninstalling: isUninstalling,
         updating: isUpdating,
@@ -610,6 +625,13 @@ export default React.memo(function GamePage(): JSX.Element | null {
       storage.removeItem(appName)
       return window.api.removeFromDMQueue(appName)
     }
+
+    // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
+    // already active for this game — do NOT re-dispatch install() while it
+    // provisions (isBottleReady() would still be false, so this would just
+    // re-flash 'queued' and revert with no progress; see MainButton/GameStatus
+    // for the corresponding button/status reflection).
+    if (settingUpBottle) return
 
     // Steam: bypass install-location modal — delegate straight to SteamGame.install() (D-04)
     if (gameInfo.runner === 'steam' && !is_installed) {
