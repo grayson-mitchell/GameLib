@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 17 plan 17-09 complete (17-07 human validation gate remains)
-last_updated: "2026-07-11T00:00:00.000Z"
-last_activity: 2026-07-11 -- Phase 17 plan 17-09 (UAT GAP 2 / MACSTEAM-04) executed
+stopped_at: Phase 17 context gathered
+last_updated: "2026-07-11T01:51:40.648Z"
+last_activity: 2026-07-11 -- Phase 17 planning complete
 progress:
   total_phases: 4
   completed_phases: 0
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 17 (steam-on-macos-via-crossover-wine-windows-only-steam-games-i) — EXECUTING
 Plan: 9 of 10 complete (17-07 remaining — human validation gate)
-Status: Phase 17 automated work done; awaiting human macOS+CrossOver validation (17-07) + UAT re-test
-Last activity: 2026-07-11 -- Completed quick task 260711-htb: WineSelector 'use shared Wine prefix' toggle moved to bottom (phase 17 GAP 4)
+Status: Ready to execute
+Last activity: 2026-07-11 -- Phase 17 planning complete
 
 ## v1.1 Phase Map
 
@@ -204,3 +204,5 @@ Last session: 2026-07-10T08:59:23.302Z
 Stopped at: Phase 17 context gathered
 Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
+| 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
+| 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
