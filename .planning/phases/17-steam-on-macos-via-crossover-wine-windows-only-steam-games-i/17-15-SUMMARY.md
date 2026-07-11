@@ -103,3 +103,11 @@ None — no external service configuration required.
 ---
 *Phase: 17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i*
 *Completed: 2026-07-11*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/bottle.ts (modified, task 1 commit 72d1ca74)
+- FOUND: spike/steam-bottle/FINDINGS.md (modified, task 1 commit 72d1ca74)
+- FOUND: src/backend/storeManagers/steam/__tests__/bottle.test.ts (modified, task 2 commit 4a47469d)
+- FOUND: commit 72d1ca74 in git log
+- FOUND: commit 4a47469d in git log
