@@ -121,12 +121,52 @@ describe('bottle.ts', () => {
       )
     })
 
-    test('getBottleSteamappsDir contains the bottle-scoped steamapps root', () => {
+    test('getBottleSteamappsDir defaults to the x86 root when neither steam.exe path exists on disk', () => {
+      mockedExistsSync.mockReturnValue(false)
       const dir = getBottleSteamappsDir('GameLibSteam')
-      expect(dir).toContain(
-        'drive_c/Program Files (x86)/Steam/steamapps'
-      )
+      expect(dir).toContain('drive_c/Program Files (x86)/Steam/steamapps')
       expect(dir).toContain('GameLibSteam')
+    })
+  })
+
+  // ── GAP-17-PFX86-PATH: both-root resolver (win64 x86 layout vs win32 layout) ──
+  describe('getBottleSteamExePath / getBottleSteamappsDir — both prefix layouts', () => {
+    test('win64 layout: resolves under "Program Files (x86)/Steam" when steam.exe exists there', () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('Program Files (x86)/Steam/steam.exe')
+      )
+
+      expect(getBottleSteamExePath('GameLibSteam')).toBe(
+        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
+      )
+      expect(getBottleSteamappsDir('GameLibSteam')).toBe(
+        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steamapps`
+      )
+    })
+
+    test('win32 layout (self-heal): resolves under "Program Files/Steam" when steam.exe exists ONLY there (no x86 dir)', () => {
+      mockedExistsSync.mockImplementation(
+        (path: string) =>
+          path.endsWith('/Program Files/Steam/steam.exe') ||
+          path.includes('cxbottle.conf')
+      )
+
+      expect(getBottleSteamExePath('GameLibSteam')).toBe(
+        `${getBottleDir('GameLibSteam')}/drive_c/Program Files/Steam/steam.exe`
+      )
+      expect(getBottleSteamappsDir('GameLibSteam')).toBe(
+        `${getBottleDir('GameLibSteam')}/drive_c/Program Files/Steam/steamapps`
+      )
+    })
+
+    test('neither root has steam.exe: getBottleSteamExePath falls back to the default x86 path', () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('cxbottle.conf')
+      )
+
+      expect(getBottleSteamExePath('GameLibSteam')).toBe(
+        `${getBottleDir('GameLibSteam')}/drive_c/Program Files (x86)/Steam/steam.exe`
+      )
     })
   })
 
@@ -179,6 +219,15 @@ describe('bottle.ts', () => {
     test('is false when neither cxbottle.conf nor steam.exe exist', () => {
       mockedExistsSync.mockReturnValue(false)
       expect(isBottleReady('GameLibSteam')).toBe(false)
+    })
+
+    test('GAP-17-PFX86-PATH self-heal: is true when steam.exe exists ONLY under "Program Files" (win32 prefix, no x86 dir)', () => {
+      mockedExistsSync.mockImplementation(
+        (path: string) =>
+          path.includes('cxbottle.conf') ||
+          path.endsWith('/Program Files/Steam/steam.exe')
+      )
+      expect(isBottleReady('GameLibSteam')).toBe(true)
     })
   })
 

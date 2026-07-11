@@ -150,6 +150,20 @@ const BOTTLE_STEAMAPPS_ROOT = join(
   'drive_c/Program Files (x86)/Steam/steamapps'
 )
 
+/**
+ * GAP-17-PFX86-PATH regression fixture: the same bottle steamapps root but
+ * under a win32-prefix layout (no "(x86)" segment — 32-bit Steam installs
+ * directly under `Program Files`). getBottleSteamappsDir is mocked in this
+ * file, so this fixture proves the bottle-source ACF scan resolves manifests
+ * identically regardless of which root the (real, unmocked) resolver in
+ * bottle.ts returns.
+ */
+const WIN32_BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files/Steam/steamapps'
+)
+
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
 const makeOwnedApp = (
@@ -940,6 +954,31 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     expect(getSteamLibraries).not.toHaveBeenCalled()
   })
 
+  // ── GAP-17-PFX86-PATH: win32-layout bottle (no "(x86)" root) ──────────────
+  it('resolves an installed manifest identically under a win32-layout bottle steamapps root (Program Files, no x86)', async () => {
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(WIN32_BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
   it('existing native readAcfState(appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -1160,6 +1199,34 @@ describe('pollInstallOnce()', () => {
       envMock.isMac = false
       envMock.isLinux = true
     }
+  })
+
+  // ── GAP-17-PFX86-PATH: win32-layout bottle platform label ──────────────────
+  it('a bottle-sourced install object from a win32-layout bottle still has platform === "Windows"', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+    await pollInstallOnce('730', 'bottle')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: '730',
+        is_installed: true,
+        install: expect.objectContaining({ platform: 'Windows' })
+      })
+    )
   })
 })
 

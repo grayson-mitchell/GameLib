@@ -62,32 +62,79 @@ export function getBottleDir(bottleName: string): string {
 }
 
 /**
+ * GAP-17-PFX86-PATH: the CrossOver `win10` bottle template does not
+ * guarantee a 64-bit prefix. A 32-bit (`win32`) prefix has NO
+ * `Program Files (x86)` directory at all — 32-bit apps (including Steam,
+ * which is itself a 32-bit executable) install directly under
+ * `Program Files`. Verified on real CrossOver 26.2 / macOS: the bottle's
+ * `cxbottle.conf` reported `WineArch = win32`, and Steam installed to
+ * `drive_c/Program Files/Steam/steam.exe` — NOT `Program Files (x86)`.
+ * Hardcoding the x86 path here meant `isBottleReady()` never went true for
+ * such a bottle, so the guided flow re-ran SteamSetup.exe on every Install
+ * click even though Steam was already installed and working.
+ *
+ * Order matters: x86 first (win64 prefix, the common/expected CrossOver
+ * layout), plain `Program Files` second (win32 prefix fallback).
+ */
+const STEAM_ROOT_SEGMENTS: string[][] = [
+  ['Program Files (x86)', 'Steam'],
+  ['Program Files', 'Steam']
+]
+
+/**
+ * Shared both-root resolver (GAP-17-PFX86-PATH): probes every candidate
+ * Steam-root layout inside the bottle's `drive_c` and returns whichever one
+ * the bottle actually created. Every bottled-Steam-path consumer
+ * (getBottleSteamExePath, getBottleSteamappsDir — and transitively
+ * isBottleReady/provisionBottle/dispatchToBottledSteam, which all call
+ * those two) MUST route through this single resolver rather than
+ * duplicating the probe.
+ *
+ * Resolution order:
+ *  1. The first candidate root whose `steam.exe` exists (the real
+ *     "which layout did this bottle actually use" signal).
+ *  2. If no candidate has steam.exe yet, the first candidate root whose
+ *     directory itself exists (bottle created but Steam not installed).
+ *  3. Otherwise the FIRST (x86) candidate, so pre-install path
+ *     construction (e.g. the initial provisionBottle download target) is
+ *     still deterministic.
+ *
+ * Pure `existsSync` probe only — never writes to disk.
+ */
+function resolveBottleSteamRoot(bottleName: string): string {
+  const bottleDir = getBottleDir(bottleName)
+  const candidateRoots = STEAM_ROOT_SEGMENTS.map((segments) =>
+    join(bottleDir, 'drive_c', ...segments)
+  )
+
+  const byExe = candidateRoots.find((root) =>
+    existsSync(join(root, 'steam.exe'))
+  )
+  if (byExe) return byExe
+
+  const byDir = candidateRoots.find((root) => existsSync(root))
+  if (byDir) return byDir
+
+  return candidateRoots[0]
+}
+
+/**
  * The bottle's OWN steamapps ACF root — distinct from the native
  * `defaultSteamPath`. Windows Steam installs here inside the bottle's Wine
- * prefix, regardless of host OS.
+ * prefix, regardless of host OS. Resolves under EITHER prefix layout via
+ * resolveBottleSteamRoot (GAP-17-PFX86-PATH).
  */
 export function getBottleSteamappsDir(bottleName: string): string {
-  return join(
-    getBottleDir(bottleName),
-    'drive_c',
-    'Program Files (x86)',
-    'Steam',
-    'steamapps'
-  )
+  return join(resolveBottleSteamRoot(bottleName), 'steamapps')
 }
 
 /**
  * The bottle's own Windows Steam client executable — the target of every
- * tellBottledSteamTo* dispatch below.
+ * tellBottledSteamTo* dispatch below. Resolves under EITHER prefix layout
+ * via resolveBottleSteamRoot (GAP-17-PFX86-PATH).
  */
 export function getBottleSteamExePath(bottleName: string): string {
-  return join(
-    getBottleDir(bottleName),
-    'drive_c',
-    'Program Files (x86)',
-    'Steam',
-    'steam.exe'
-  )
+  return join(resolveBottleSteamRoot(bottleName), 'steam.exe')
 }
 
 /**
