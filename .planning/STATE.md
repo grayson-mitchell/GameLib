@@ -5,7 +5,7 @@ milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Phase 17 context gathered
 last_updated: "2026-07-11T01:53:41.726Z"
-last_activity: 2026-07-11 -- Phase 17 execution started
+last_activity: 2026-07-11 -- Phase 17-07 Task 1 (full-suite gate) re-confirmed post-17-11 merge; Task 2 (human macOS+CrossOver UAT) blocked, awaiting resume
 progress:
   total_phases: 4
   completed_phases: 0
@@ -201,8 +201,8 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-10T08:59:23.302Z
-Stopped at: Phase 17 context gathered
-Next: Run `/gsd:verify-work 10` to close out Phase 10, then begin Phase 11 (Library Sync + 5-State Key Model) planning
+Stopped at: Phase 17-07 Task 1 complete (full-suite gate re-confirmed post-17-11 merge: 48 suites / 938 tests, codecheck clean); Task 2 checkpoint:human-verify blocking — human macOS+CrossOver UAT resume needed (step 1 passed 2026-07-11, steps 2-7 pending)
+Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
