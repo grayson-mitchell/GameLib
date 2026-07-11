@@ -308,6 +308,7 @@ export interface GameContextType {
     queued: boolean
     reparing: boolean
     sideloaded: boolean
+    settingUpBottle: boolean
     syncing: boolean
     uninstalling: boolean
     updating: boolean
