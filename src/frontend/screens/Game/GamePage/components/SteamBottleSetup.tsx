@@ -225,6 +225,12 @@ const SteamBottleSetup = () => {
           </span>
           <span className="steamBottleSetupMessage">
             {t(
+              'bottle.setup.uncheckRunSteam',
+              'On the final Steam installer screen, UNTICK "Run Steam" before clicking Finish — GameLib will start Steam itself once the bottle is ready.'
+            )}
+          </span>
+          <span className="steamBottleSetupMessage">
+            {t(
               'bottle.setup.login',
               'Finish by logging in to Steam in the window that opens.'
             )}
