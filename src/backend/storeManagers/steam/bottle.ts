@@ -14,7 +14,7 @@
  * guided-setup flow (17-06) confirming the user completed login.
  */
 import { join } from 'path'
-import { existsSync, mkdirSync } from 'graceful-fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
@@ -178,6 +178,36 @@ export function isBottleProvisioned(bottleName?: string): boolean {
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
   return existsSync(join(getBottleDir(name), 'cxbottle.conf'))
+}
+
+/**
+ * GAP-17-CEF-RENDER: reads a bottle's `cxbottle.conf` to determine whether it
+ * was created 32-bit (`WineArch = win32`) or 64-bit (`WineArch = win64`). A
+ * win32 prefix breaks modern 64-bit Steam's CEF-based install-dialog UI
+ * (steamwebhelper composites at "Invalid browser dimensions: 0 x 0"),
+ * rendering as a grey, unresponsive bar. This is the pre-guard signal
+ * `provisionBottle()` uses to detect a stale win32 bottle and recreate it as
+ * win10_64 BEFORE either idempotent guard (isBottleReady / isBottleProvisioned)
+ * gets a chance to reuse the stale bottle forever.
+ *
+ * Mirrors `isBottleProvisioned`'s cxbottle.conf path construction. Reads
+ * defensively — any error (file missing/unreadable) returns `null` rather
+ * than throwing, since this check must never break provisioning.
+ */
+export function bottleWineArch(bottleName: string): 'win32' | 'win64' | null {
+  const confPath = join(getBottleDir(bottleName), 'cxbottle.conf')
+  try {
+    const contents = readFileSync(confPath, 'utf-8')
+    if (/["']?WineArch["']?\s*=\s*["']?win32["']?/i.test(contents)) {
+      return 'win32'
+    }
+    if (/["']?WineArch["']?\s*=\s*["']?win64["']?/i.test(contents)) {
+      return 'win64'
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -362,6 +392,56 @@ export async function provisionBottle(opts?: {
     steamBottleConfigStore.set('wineVersion', opts.wineVersion)
   }
 
+  // (2b) GAP-17-CEF-RENDER: a win32 bottle cannot be converted in place — it
+  // must be detected and recreated as win10_64 BEFORE either idempotent guard
+  // below (isBottleReady / isBottleProvisioned) gets a chance to reuse the
+  // stale bottle forever. Only bottle STATE (`provisioned`) is reset here;
+  // GameLib's Steam ACCOUNT auth (refreshToken/isLoggedIn/userData) is never
+  // touched — bottled-client login lives inside the prefix, so re-login in
+  // the fresh bottle is inherent and expected (MACSTEAM-02/MACSTEAM-04).
+  if (
+    isBottleProvisioned(bottleName) &&
+    bottleWineArch(bottleName) === 'win32'
+  ) {
+    logInfo(
+      `provisionBottle: bottle "${bottleName}" is a stale 32-bit (win32) prefix — recreating as win10_64 (GAP-17-CEF-RENDER)`,
+      LogPrefix.Steam
+    )
+    try {
+      await spawnAsync(CXBOTTLE_BIN, [
+        '--bottle',
+        bottleName,
+        '--delete',
+        '--force'
+      ])
+    } catch (error) {
+      logWarning(
+        [
+          'provisionBottle: cxbottle --delete of the stale win32 bottle threw',
+          error
+        ],
+        LogPrefix.Steam
+      )
+    }
+    // Fallback: if cxbottle.conf lingered (delete failed/incomplete), remove
+    // the bottle directory directly so the create-guard below rebuilds fresh.
+    if (isBottleProvisioned(bottleName)) {
+      try {
+        rmSync(getBottleDir(bottleName), { recursive: true, force: true })
+      } catch (error) {
+        logWarning(
+          [
+            'provisionBottle: fallback rmSync of the stale win32 bottle dir threw',
+            error
+          ],
+          LogPrefix.Steam
+        )
+      }
+    }
+    // Reset ONLY bottle state — never touch refreshToken/isLoggedIn/userData.
+    steamBottleConfigStore.set('provisioned', false)
+  }
+
   // (3) Idempotent short-circuit — bottle is FULLY ready (conf + steam.exe).
   // A half-provisioned bottle (conf only) must NOT short-circuit here — it
   // needs to resume (self-heal) via steps 4-7 below.
@@ -369,11 +449,14 @@ export async function provisionBottle(opts?: {
     return { status: 'done' }
   }
 
-  // (4) CREATE the bottle via the 17-01 LOCKED mechanism — argv form only,
-  // arguments as discrete words, never a shell-interpolated string. Skipped
-  // when cxbottle.conf already exists (half-provisioned bottle being
-  // resumed) — re-running `cxbottle --create` on an existing bottle is
-  // unnecessary and this resumes straight into the download/install step.
+  // (4) CREATE the bottle via the 17-01 LOCKED mechanism (win10_64 per
+  // GAP-17-CEF-RENDER — win10 is CrossOver's 32-bit template and its win32
+  // prefix breaks modern 64-bit Steam's CEF install-dialog UI (0x0 render);
+  // MACSTEAM-02) — argv form only, arguments as discrete words, never a
+  // shell-interpolated string. Skipped when cxbottle.conf already exists
+  // (half-provisioned bottle being resumed) — re-running `cxbottle --create`
+  // on an existing bottle is unnecessary and this resumes straight into the
+  // download/install step.
   if (!isBottleProvisioned(bottleName)) {
     try {
       const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
@@ -381,7 +464,7 @@ export async function provisionBottle(opts?: {
         '--bottle',
         bottleName,
         '--template',
-        'win10'
+        'win10_64'
       ])
       if (!isBottleProvisioned(bottleName)) {
         logError(

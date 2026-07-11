@@ -74,7 +74,7 @@ were not needed.
 
 ## MECHANISM DECISION
 
-**LOCKED (CLI):** `cxbottle --create --bottle <name> --template win10`
+**LOCKED (CLI):** `cxbottle --create --bottle <name> --template win10_64`
 
 Invoked in argv form (arguments as separate words — the T-17-01 safe pattern
 17-04 MUST reuse for the real `GameLibSteam` bottle name), with the CrossOver
@@ -84,10 +84,19 @@ Success signal for 17-04's `provisionBottle()` is the appearance of
 `~/Library/Application Support/CrossOver/Bottles/<name>/cxbottle.conf`
 (matches GameLib's existing "bottle exists" gate at launcher.ts:827-855).
 
+**GAP-17-CEF-RENDER correction (17-15):** the original probe run used
+`--template win10`, which creates a **32-bit** (`WineArch = win32`) prefix.
+Modern 64-bit Steam's CEF-based install-dialog UI (steamwebhelper) composites
+at "Invalid browser dimensions: 0 x 0" inside a win32 prefix, rendering the
+install dialog as a grey, unresponsive bar. `win10_64` is CrossOver's 64-bit
+template and is the corrected, locked mechanism (MACSTEAM-02).
+
 ### Note for 17-04
 
-CrossOver 26.2 creates the bottle as a **"32-bit prefix in Wow64 mode"**
-(new unified WoW64 prefix — a single prefix that runs both 32- and 64-bit
-Windows binaries). This is expected on modern CrossOver and is compatible with
-the 64-bit Windows Steam client; no `--param` arch override was required.
-`--template win10` is accepted despite not being enumerated in `--help`.
+~~CrossOver 26.2 creates the bottle as a "32-bit prefix in Wow64 mode" ...
+this is expected and compatible with the 64-bit Windows Steam client.~~
+**Corrected by GAP-17-CEF-RENDER (17-15):** this claim was wrong. The win32
+prefix produced by `--template win10` is NOT compatible with modern 64-bit
+Steam's CEF UI — it is the confirmed root cause of the grey/unresponsive
+install-dialog bug. Use `--template win10_64` to create a genuine 64-bit
+(`WineArch = win64`) prefix instead.
