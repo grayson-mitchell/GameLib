@@ -114,7 +114,7 @@ skipped: 1             # test 10 — deferred by user
 
 open_gaps:             # new issues from retest round 2 — feed into a gap-closure wave
   - "GAP 3 (major): install button/status desync with in-progress bottle setup"
-  - "GAP 4 (cosmetic): WineSelector 'use shared wine prefix' ordering"
+  - "GAP 4 (cosmetic): WineSelector 'use shared wine prefix' ordering — RESOLVED (quick 260711-htb; toggle moved below Wine-version dropdown, global reorder)"
   - "GAP 5 (minor/UX): SteamSetup installer opens behind the GameLib window — RESOLVED (debug: steam-installer-behind-focus; raiseInstallerWindow System Events raise)"
 
 note: "Retest round 2 (macOS + CrossOver): guided wizard fires, Steam setup starts, and the real SteamSetup.exe installer DOES open — GAP 1 blocker + GAP 2 both resolved. (Installer opened behind the GameLib window = new GAP 5, a z-order issue, not a launch failure.) Remaining new issues: GAP 3 (major) button/status desync, GAP 4 (cosmetic) wizard option order, GAP 5 (minor) installer z-order. Tests 4-7 (login/install/launch/badge) blocked on GAP 3 until setup completion is observable in the UI."
