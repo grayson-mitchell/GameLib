@@ -520,4 +520,4 @@ v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only Cross
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
-| 17. Steam on macOS via CrossOver/Wine | 13/14 | In Progress|  |
+| 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
