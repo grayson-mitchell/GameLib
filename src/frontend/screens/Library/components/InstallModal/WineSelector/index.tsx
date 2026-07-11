@@ -101,31 +101,6 @@ export default function WineSelector({
           {t('setting.show-wine-settings', 'Show Wine settings')}
         </summary>
         <>
-          <ToggleSwitch
-            htmlId="use-shared-wine-config"
-            title={t(
-              'setting.use-shared-wine-config',
-              'Use shared Wine prefix'
-            )}
-            value={useSharedPrefix}
-            handleChange={() => setUseSharedPrefix(!useSharedPrefix)}
-            description={sharedToggleDescription}
-          />
-          {useSharedPrefix && (
-            <div className="infoBox">
-              <FontAwesomeIcon icon={faWarning} />
-              <Trans
-                i18n={i18n}
-                i18nKey="setting.warn-use-shared-wine-config"
-                ns="gamepage"
-              >
-                Only use this option if you know what you are doing.
-                <br />
-                Sharing the same prefix for multiple games can create problems
-                if their dependencies are incompatible.
-              </Trans>
-            </div>
-          )}
           {showPrefix && (
             <PathSelectionBox
               type="directory"
@@ -168,6 +143,31 @@ export default function WineSelector({
                 </MenuItem>
               ))}
           </SelectField>
+          <ToggleSwitch
+            htmlId="use-shared-wine-config"
+            title={t(
+              'setting.use-shared-wine-config',
+              'Use shared Wine prefix'
+            )}
+            value={useSharedPrefix}
+            handleChange={() => setUseSharedPrefix(!useSharedPrefix)}
+            description={sharedToggleDescription}
+          />
+          {useSharedPrefix && (
+            <div className="infoBox">
+              <FontAwesomeIcon icon={faWarning} />
+              <Trans
+                i18n={i18n}
+                i18nKey="setting.warn-use-shared-wine-config"
+                ns="gamepage"
+              >
+                Only use this option if you know what you are doing.
+                <br />
+                Sharing the same prefix for multiple games can create problems
+                if their dependencies are incompatible.
+              </Trans>
+            </div>
+          )}
         </>
       </details>
     </>
