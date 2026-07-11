@@ -93,19 +93,21 @@ automated_verified: 2026-07-11
 
 ## UAT Findings & Candidate Gaps (17-07 Task 2 — in progress)
 
-> Live human UAT started 2026-07-11; session 2 after 17-08/09/10/11; **session 3 after 17-12/17-13 landed** (PFX86 path fix + untick-Run-Steam copy). Recording per-step results; Approval remains pending until all 7 steps + scope fences pass or gaps are routed. Rows below reflect the LATEST session-3 result.
+> Live human UAT started 2026-07-11; session 2 after 17-08/09/10/11; session 3 after 17-12/17-13 landed; **session 5 after 17-15 (win10_64) landed** — the win32 bottle was manually deleted (see GAP-17-CEF-RECREATE-RUNNING) and a fresh **win64** bottle provisioned. Approval remains pending until all 7 steps + scope fences pass or gaps are routed. Rows below reflect the LATEST session-5 (win64) result.
 
 | Step | Requirement | Result | Notes |
 |------|-------------|--------|-------|
-| 1 — Provision + all entry points | MACSTEAM-02/04 | ✅ pass | Guided setup fires; dedicated `GameLibSteam` bottle created (CrossOver 26.2); real SteamSetup.exe window opens; Steam installs and logs in inside the bottle |
-| 2 — Login | MACSTEAM-03 | ✅ pass (session 3) | Bottle recognized ready after 17-12 self-heal; login persists (`isLoggedIn: true`); no re-prompt |
-| 3 — Install | MACSTEAM-04/05 | ⚠️ partial (session 3) | Game **installs successfully** (ACF `StateFlags=4`, Windows platform, path under bottle `drive_c`) and the "Installation Finished" notification fires. BUT (a) the install progress tracker is **stuck at 0%** the whole time (GAP-17-BOTTLE-PROGRESS), and (b) after completion the game-page button stays **"Steam installing"** + the library tile keeps spinning until you navigate away and back (GAP-17-BOTTLE-INSTALL-DONE-DESYNC) |
-| 4 — Launch | MACSTEAM-04 | ✅ pass (session 3) | Re-entering the game page shows Play; the game launches and runs via the bottled Steam client |
-| 5 — Indicator | MACSTEAM-06 | ⏳ pending | Not yet reported this session |
+| 1 — Provision + all entry points | MACSTEAM-02/04 | ✅ pass (session 5) | Guided setup fires; fresh win64 `GameLibSteam` bottle provisions; SteamSetup.exe window opens and clicks through |
+| 2 — Login | MACSTEAM-03 | ✅ pass (session 5) | Login inside the bottle persists (`isLoggedIn: true`); no re-prompt |
+| 3 — Install dialog renders | MACSTEAM-02/05 | ✅ pass (session 5) | **GAP-17-CEF-RENDER FIXED by 17-15** — on the win64 bottle the Steam install dialog composites correctly (no grey `0×0` bar); Install button responsive; games install (Avernum 4/206020 + Avernum 6/206060, ACF `StateFlags=4` under `Program Files (x86)/Steam/steamapps`) |
+| 4 — Launch / install recognition | MACSTEAM-04 | ❌ FAIL (session 5) | **BLOCKER: the game installs on disk (runs fine launched directly from Steam) but GameLib never recognizes the install** — the game-page button stays on **"Install"**, never flips to **Play**, so the game cannot be launched from GameLib even after focus/nav round-trips → GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED |
+| 5 — Indicator | MACSTEAM-06 | ⏳ blocked | Behind step 4 |
 | 6 — D-11 guard | MACSTEAM-01 | ⏳ pending | Not yet exercised |
 | 7 — Scope fences | MACSTEAM-01/04 | ⏳ pending | Not yet exercised |
 
-**Resolved by 17-12/17-13 (session 3 confirmed):** GAP-17-PFX86-PATH (install now completes — self-heal recognized the win32 bottle) and GAP-17-STEAMWEBHELPER-HANG (untick-Run-Steam copy shipped).
+**Also observed (session 5, MINOR UX):** window focus does not always move to the bottled Steam window when the guided flow raises it (`raiseInstallerWindow` best-effort loop, `bottle.ts:~320`) — non-blocking but confusing; the user must click the Steam window manually.
+
+**Resolved / confirmed by 17-15 (session 5):** GAP-17-CEF-RENDER — the win10_64 template fixes the grey-bar install dialog (steps 1-3 now pass on a real win64 bottle). The win32→win64 **auto**-recreate sub-behavior is separately broken (GAP-17-CEF-RECREATE-RUNNING) — the win64 bottle here was created after a manual delete.
 
 ### GAP-17-BOTTLE-PROGRESS — bottle install progress bar stuck at 0% (MAJOR, MACSTEAM-05) — candidate gap for `/gsd:plan-phase 17 --gaps`
 
@@ -150,6 +152,37 @@ automated_verified: 2026-07-11
 **Revised route:** this is now a clean **`/gsd:plan-phase 17 --gaps`** code fix (template + re-provision), NOT a `/gsd:debug` hardware-hypothesis session. Files likely touched: `src/backend/storeManagers/steam/bottle.ts` (template arg + win32-detect/recreate), `spike/steam-bottle/FINDINGS.md` (update LOCKED CLI), tests.
 
 **Status:** ✅ Fixed by 17-15 (2026-07-11, merge `b37a8f96`) — code-level. `provisionBottle()` now creates bottles with the `win10_64` template; a new `bottleWineArch()` detector runs BEFORE the `isBottleReady` short-circuit and, when it finds an existing `WineArch = win32` bottle, deletes (`cxbottle --delete --force`) and recreates it as win64 while preserving GameLib's Steam account auth (`refreshToken`/`isLoggedIn`/`userData` untouched; only bottle `provisioned` state resets). Unit coverage: win10_64 template regression guard, win32 recreate with auth-preservation assertions, win64 idempotent short-circuit (bottle suite 62/62). **Requires a fresh real-CrossOver UAT re-test** (this is what Task 2 session 5 verifies): the existing win32 `GameLibSteam` bottle must be recreated win64 on next `provisionBottle()`, SteamSetup re-run + login once, and the install dialog must composite correctly (no more grey `0 x 0` bar).
+
+### GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED — bottle-installed game never flips to Play (BLOCKER, MACSTEAM-04/05) — candidate for `/gsd:debug 17`
+
+**Observed (2026-07-11 session 5, real CrossOver 26.2 / win64 bottle):** A confirmed-not-native game installs successfully through the bottled Steam client (runs fine when launched **directly from Steam**), but GameLib never recognizes the install — the game-page button stays on **"Install"**, never becomes **Play**, and the game cannot be launched from GameLib. This persists across focus/nav round-trips (unlike session-3's transient desync).
+
+**Verified NOT the cause (static + live-filesystem checks from the orchestrator):**
+- Bottle is win64; Steam at `drive_c/Program Files (x86)/Steam`; `resolveBottleSteamRoot()` correctly resolves it (steam.exe probe hits x86 first).
+- Both ACFs present with `StateFlags = 4` (`appmanifest_206020.acf` Avernum 4, `appmanifest_206060.acf` Avernum 6) under the resolved `steamapps/`.
+- A faithful replica of `buildBottleInstalledMap()` against the real bottle returns **both** appIds.
+- Both games are in the loaded library cache (`is_installed: false`) and are confirmed-not-native (`is_mac_native:false, platformsCaptured:true`) — so they route to the bottle and are eligible for reconciliation.
+- `refreshInstallState()`'s gate `isMac && isBottleProvisioned()` is satisfied (`isBottleProvisioned()` is a live cxbottle.conf check → true), and `getSteamLibraries()` can't throw (falls back to `['/usr/share/steam']`), so the native map build doesn't abort the reconcile.
+- Frontend `hasStatus`/`deriveInstallStatusKind` correctly returns `'installed'` when the `is_installed` prop is true, and 17-14 added the live `gameInfo`→`newGameInfo` sync.
+
+**Therefore the break is in the LIVE reconcile→frontend chain, which has never actually executed on real hardware until now** (17-14 shipped after session 3; sessions 4-5 were blocked by CEF-RENDER). Prime suspects, in order:
+1. The `mainWindow.on('focus')` → `refreshInstallState()` trigger (`main.ts:233`) isn't firing / isn't reconciling in this flow (compounded by the focus-not-moving UX issue).
+2. `refreshInstallState()` runs but its in-memory `library` Map isn't the same populated instance (empty/unhydrated at reconcile time), so `library.entries()` skips the games.
+3. `pushGameToLibrary` reaches the frontend but the GamePage's `gameInfo` prop / `GameContext` doesn't re-fetch, so `hasStatus` never sees `is_installed:true` (17-14's GlobalState/GameContext wiring not effective on the steam-bottle path).
+
+**Why `/gsd:debug` (not a blind gap plan):** the backend scan is provably correct in isolation, so this is a live wiring/timing bug that needs the running app's backend logs + frontend devtools to pin which of (1)/(2)/(3) it is. A debug session should instrument `refreshInstallState` entry + `library.size` + the `pushGameToLibrary` receipt on the GamePage.
+
+**Files likely in scope:** `src/backend/main.ts` (focus trigger), `src/backend/storeManagers/steam/library.ts` (`refreshInstallState`, live `library` hydration + the bottle poll `pollInstallOnce` 'done' path), `src/frontend/state/GlobalState.tsx` (`handleGameStatus`/`pushGameToLibrary`), `src/frontend/screens/Game/GameContext.tsx` + `GamePage/index.tsx` (live `gameInfo` refresh).
+
+### GAP-17-PROVISIONED-FLAG-STUCK — `provisioned` config flag never becomes true after a real click-through install (MAJOR, MACSTEAM-02) — candidate gap for `/gsd:plan-phase 17 --gaps`
+
+**Observed (2026-07-11 session 5):** `steam_store/config.json` shows `"provisioned": false` even though the bottle is fully set up (cxbottle.conf present, `Program Files (x86)/Steam/steam.exe` exists, `isLoggedIn: true`, games installed).
+
+**Root cause (static, certain):** `provisionBottle()` step 8 (`bottle.ts:~588`) computes `fullyProvisioned = isBottleProvisioned(bottleName) && existsSync(steamExePath)` and writes it to the store **immediately after** launching `SteamSetup.exe` with `wait:false` (fire-and-forget, D-02 non-silent). At that instant Steam is not yet installed, so `existsSync(steamExePath)` is false → `provisioned` is persisted `false` and **never re-evaluated** once the user completes SteamSetup. The frontend guided-setup reads this flag (`SteamBottleSetup.tsx:107 if (status.provisioned)`; IPC `getSteamBottleStatus` returns it), so a stale `false` can keep the setup/consent surface returning instead of reflecting a ready bottle.
+
+**Fix direction:** stop deriving `provisioned` from a race against a `wait:false` installer. Either (a) set `provisioned:true` lazily the first time `isBottleReady()` observes steam.exe (e.g. in `getSteamBottleStatus`/a readiness recheck), or (b) detect SteamSetup.exe process-exit (the `INSTALLER_PROCESS_NAMES` machinery) then re-evaluate and persist. Add a unit test asserting `provisioned` is NOT written `false` while steam.exe is absent right after a `wait:false` launch.
+
+**Files likely touched:** `src/backend/storeManagers/steam/bottle.ts` (step 8 timing / readiness recheck), tests. *(Note: this flag does NOT gate the badge reconcile — that path uses the live `isBottleProvisioned()` conf check — so it is not the cause of GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED, but it should be fixed alongside it.)*
 
 ### GAP-17-CEF-RECREATE-RUNNING — win32→win64 auto-recreate aborts while the bottled Steam client is running (MAJOR, MACSTEAM-02) — candidate gap for `/gsd:plan-phase 17 --gaps`
 
@@ -236,4 +269,6 @@ The live process was `steam.exe steam://install/206040` (the bottled Steam clien
 
 **Automated half status:** COMPLETE (2026-07-10, re-confirmed FINAL 2026-07-11 post-17-11 merge) — full suite green (48/48 suites, 938/938 tests), `npm run codecheck` exit 0. Re-run against the fully merged tree including gap-closure plans 17-08, 17-09, 17-10, and 17-11 (install button/status desync fix). All six MACSTEAM requirements have at least one automated test covering their code-level behavior; the real-hardware runtime surface (bottle creation, bottled login, install/launch through the bottle, visual indicator, scope-fence regressions on real CrossOver) is enumerated in Manual-Only Verifications above and awaits Task 2's human UAT resumption (steps 2-7; step 1 already passed per the UAT Findings table above).
 
-**Approval:** GAPS FOUND (2026-07-11 session 4) — resolved so far: GAP-17-PFX86-PATH (17-12), GAP-17-STEAMWEBHELPER-HANG (17-13), GAP-17-BOTTLE-PROGRESS + GAP-17-BOTTLE-INSTALL-DONE-DESYNC (17-14, code-level; steps 1/2/4 pass). NEW BLOCKER: GAP-17-CEF-RENDER — the bottled Steam client's install dialog renders as a grey bar with unresponsive buttons (`webhelper.txt`: "Invalid browser dimensions: 0 x 0"; win32 bottle). This is a runtime CEF-rendering bug in bottled Steam (not GameLib React), so it needs `/gsd:debug 17` (hardware hypothesis-testing of `-cef-disable-gpu` / focus-timing / win64) rather than a blind gap-plan. Steps 5-7 (indicator, D-11, scope fences) remain untested behind this blocker.
+**Approval:** GAPS FOUND (2026-07-11 session 5, real CrossOver win64 bottle). **GAP-17-CEF-RENDER is FIXED by 17-15** — the win10_64 template makes the Steam install dialog composite correctly; UAT steps 1-3 now pass and games install to disk. **New BLOCKER: GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED** — a bottle-installed game (verified `StateFlags=4` on disk, runs directly from Steam) never flips to Play in GameLib; the button stays "Install" even after focus/nav, so the game can't be launched from GameLib (step 4 FAIL). Backend scan proven correct in isolation → live reconcile/frontend wiring bug → route to **`/gsd:debug 17`**. Additional gaps for **`/gsd:plan-phase 17 --gaps`**: GAP-17-PROVISIONED-FLAG-STUCK (config `provisioned` stuck false; static fix), GAP-17-CEF-RECREATE-RUNNING (win32→win64 auto-recreate delete aborts while Steam runs; static fix), and the minor focus-not-moving-to-Steam-window UX. Steps 5-7 (indicator, D-11, scope fences) remain untested behind the step-4 blocker.
+
+**Phase 17 status:** NOT signed off — 17-07 Task 2 (human-verify gate) remains OPEN pending the above gap closures + a UAT re-run. Do not run `/gsd:verify-work` or complete the phase until GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED is resolved and steps 4-7 pass.
