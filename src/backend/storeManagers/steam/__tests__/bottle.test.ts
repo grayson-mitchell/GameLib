@@ -9,7 +9,7 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
-import { existsSync, mkdirSync } from 'graceful-fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
@@ -21,6 +21,7 @@ import {
   getBottleSteamExePath,
   isBottleProvisioned,
   isBottleReady,
+  bottleWineArch,
   sanitizeBottleName,
   getSteamBottleSettings,
   provisionBottle,
@@ -39,7 +40,9 @@ jest.mock('electron', () => ({
 
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
-  mkdirSync: jest.fn()
+  mkdirSync: jest.fn(),
+  readFileSync: jest.fn(),
+  rmSync: jest.fn()
 }))
 
 jest.mock('../electronStores', () => ({
@@ -76,6 +79,8 @@ jest.mock('backend/logger', () => ({
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
+const mockedReadFileSync = readFileSync as jest.Mock
+const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
@@ -94,6 +99,8 @@ describe('bottle.ts', () => {
   beforeEach(() => {
     mockedExistsSync.mockReset()
     mockedMkdirSync.mockReset()
+    mockedReadFileSync.mockReset()
+    mockedRmSync.mockReset()
     mockedGetNodefault.mockReset()
     mockedGlobalConfigGet.mockReset()
     mockedSet.mockReset()
@@ -111,6 +118,10 @@ describe('bottle.ts', () => {
     mockedDownloadFile.mockResolvedValue(undefined)
     mockedCheckWineBeforeLaunch.mockResolvedValue(true)
     mockedRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
+    // Default cxbottle.conf contents to a win64 prefix so the new
+    // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)
+    // never fires unless a test explicitly arranges a win32 conf string.
+    mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
   })
 
   describe('getBottleDir / getBottleSteamappsDir', () => {
@@ -228,6 +239,32 @@ describe('bottle.ts', () => {
           path.endsWith('/Program Files/Steam/steam.exe')
       )
       expect(isBottleReady('GameLibSteam')).toBe(true)
+    })
+  })
+
+  // ── GAP-17-CEF-RENDER: win32/win64 detector used by provisionBottle's ──────
+  // recreate pre-guard.
+  describe('bottleWineArch', () => {
+    test('returns "win32" when cxbottle.conf contains WineArch = win32', () => {
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
+      expect(bottleWineArch('GameLibSteam')).toBe('win32')
+    })
+
+    test('returns "win64" when cxbottle.conf contains WineArch = win64', () => {
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
+      expect(bottleWineArch('GameLibSteam')).toBe('win64')
+    })
+
+    test('returns null when cxbottle.conf is missing/unreadable', () => {
+      mockedReadFileSync.mockImplementation(() => {
+        throw new Error('ENOENT')
+      })
+      expect(bottleWineArch('GameLibSteam')).toBeNull()
+    })
+
+    test('returns null when cxbottle.conf has no recognizable WineArch value', () => {
+      mockedReadFileSync.mockReturnValue('"SomeOtherKey" = "value"')
+      expect(bottleWineArch('GameLibSteam')).toBeNull()
     })
   })
 
@@ -436,6 +473,107 @@ describe('bottle.ts', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       // Both present: full short-circuit, no spawn, no download.
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(mockedDownloadFile).not.toHaveBeenCalled()
+    })
+
+    // ── GAP-17-CEF-RENDER (17-15): win10_64 create template + win32 detect/recreate ──
+    test('create uses --template win10_64 (not win10) — GAP-17-CEF-RENDER regression guard', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const createCall = mockedSpawnAsync.mock.calls.find((call) =>
+        (call[1] as string[]).includes('--create')
+      )
+      expect(createCall).toBeDefined()
+      const argv = createCall![1] as string[]
+      expect(argv).toContain('win10_64')
+      expect(argv.includes('win10')).toBe(false)
+    })
+
+    test('an existing win32 bottle is deleted and recreated as win10_64, preserving Steam account auth', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Bottle "looks ready" (conf + steam.exe present) but is win32 — must
+      // still be recreated, proving the pre-guard runs BEFORE isBottleReady.
+      const flags: FsFlags = {
+        conf: true,
+        steamExe: true,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
+
+      mockedSpawnAsync.mockImplementation(
+        async (_bin: string, argv: string[]) => {
+          if (argv.includes('--delete')) {
+            // Simulate the delete clearing the stale bottle from disk.
+            flags.conf = false
+            flags.steamExe = false
+          } else if (argv.includes('--create')) {
+            // Simulate the recreate producing a fresh bottle.
+            flags.conf = true
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result.status).toBe('done')
+
+      const deleteCall = mockedSpawnAsync.mock.calls.find((call) =>
+        (call[1] as string[]).includes('--delete')
+      )
+      expect(deleteCall).toBeDefined()
+      expect(deleteCall![1]).toEqual([
+        '--bottle',
+        'GameLibSteam',
+        '--delete',
+        '--force'
+      ])
+
+      const createCall = mockedSpawnAsync.mock.calls.find((call) =>
+        (call[1] as string[]).includes('--create')
+      )
+      expect(createCall).toBeDefined()
+      expect(createCall![1]).toEqual(
+        expect.arrayContaining(['--template', 'win10_64'])
+      )
+
+      expect(mockedSet).toHaveBeenCalledWith('provisioned', false)
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'refreshToken',
+        expect.anything()
+      )
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'isLoggedIn',
+        expect.anything()
+      )
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'userData',
+        expect.anything()
+      )
+    })
+
+    test('a ready win64 bottle is NOT recreated — idempotent short-circuit still holds', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
 
       const result = await provisionBottle({ bottleName: 'GameLibSteam' })
 
