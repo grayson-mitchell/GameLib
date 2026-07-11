@@ -881,6 +881,48 @@ describe('readAcfState()', () => {
     expect(result.installPath).toBeUndefined()
   })
 
+  // ── GAP-17-BOTTLE-PROGRESS: readAcfState surfaces ACF byte counts ─────────
+  it('a downloading ACF with BytesDownloaded/BytesToDownload returns those numbers on the result', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+    expect(result.bytesDownloaded).toBe(5)
+    expect(result.bytesToDownload).toBe(10)
+    expect(result.bytesStaged).toBe(3)
+    expect(result.bytesToStage).toBe(6)
+  })
+
+  it('defaults missing/non-numeric ACF byte fields to 0', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.bytesDownloaded).toBe(0)
+    expect(result.bytesToDownload).toBe(0)
+    expect(result.bytesStaged).toBe(0)
+    expect(result.bytesToStage).toBe(0)
+  })
+
   it('returns state:"absent" when no manifest file is found for the appId', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
     const result = await readAcfState('730')
@@ -1106,6 +1148,80 @@ describe('pollInstallOnce()', () => {
         status: 'installing'
       })
     )
+  })
+
+  // ── GAP-17-BOTTLE-PROGRESS: pollInstallOnce derives percent from ACF bytes ─
+
+  it('emits progressUpdate with progress.percent === 50 for a mid-download ACF (BytesDownloaded=5, BytesToDownload=10)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10'
+      }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        progress: expect.objectContaining({ percent: 50 })
+      })
+    )
+  })
+
+  it('falls back to BytesStaged/BytesToStage when BytesToDownload is 0 (percent 50 via staged fallback)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        progress: expect.objectContaining({ percent: 50 })
+      })
+    )
+  })
+
+  it('does NOT emit progressUpdate (and never a non-finite percent) when BOTH BytesToDownload and BytesToStage are 0', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '0',
+        BytesToStage: '0'
+      }
+    })
+    await pollInstallOnce('730')
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(progressCalls).toHaveLength(0)
+    // Belt-and-suspenders: no call anywhere ever carries a non-finite percent.
+    for (const [, payload] of (sendFrontendMessage as jest.Mock).mock.calls) {
+      if (payload?.progress?.percent !== undefined) {
+        expect(Number.isFinite(payload.progress.percent)).toBe(true)
+      }
+    }
   })
 
   it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
