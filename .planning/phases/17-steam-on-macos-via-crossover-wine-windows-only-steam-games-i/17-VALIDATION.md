@@ -128,7 +128,7 @@ automated_verified: 2026-07-11
 
 **Status:** ✅ Fixed by 17-14 (progress percent + hasStatus live is_installed) — but see GAP-17-CEF-RENDER below, which blocks re-testing this on a fresh install.
 
-### GAP-17-CEF-RENDER — bottled Steam install dialog renders as a grey bar with dead buttons (BLOCKER for a NEW install, runtime/env) — needs `/gsd:debug` (hypothesis-testing on hardware)
+### GAP-17-CEF-RENDER — bottled Steam install dialog renders as a grey bar with dead buttons (BLOCKER for a NEW install) — root cause CONFIRMED: 32-bit bottle (wrong `win10` template)
 
 **Observed (2026-07-11 session 4, real CrossOver 26.2 on macOS):** Starting a NEW game install, the bottled Steam client's install dialog opens but the right ~half is covered by a grey bar; the two shortcut checkboxes toggle, but the Install button (and a second, grey, unreadable button) are unresponsive — the install cannot be confirmed.
 
@@ -137,12 +137,16 @@ automated_verified: 2026-07-11
 - Bottle is **`WineArch = win32`** running `steam_client_win32` (bootstrap_log). The 32-bit Steam CEF UI is the fragile path under Wine/CrossOver.
 - NOT caused by 17-14 (that only touched GameLib's progress %/status hook; cannot affect Steam's own CEF UI).
 
-**Leading hypotheses (test on hardware, do not code blind):**
-1. **`-cef-disable-gpu` launch flag** — the established community fix for Steam CEF "grey/blank + 0×0" under Wine. GameLib controls the `steam.exe` launch in `bottle.ts` (`dispatchToBottledSteam`, `provisionBottle`), but the flag must land on the client **cold start**, not a URL-forward to an already-running client. May also need `-cef-disable-gpu-compositing` / `-cef-in-process-gpu`.
-2. **Focus/visibility timing** — the 0×0-while-hidden log implies the dialog is created before the Steam window is foregrounded; `raiseInstallerWindow` may need to foreground Steam BEFORE the install URL is dispatched.
-3. **win64 bottle** — a `win64` prefix (steam_client_win64) may render CEF correctly and would ALSO have avoided GAP-17-PFX86-PATH; but re-provisioning loses the current install/login, so this is a last resort.
+**CONFIRMED root cause (2026-07-11, decisive): the bottle is created 32-bit because GameLib uses the wrong CrossOver template.**
+- `provisionBottle()` runs `cxbottle --create --bottle <name> --template win10`. In CrossOver, **`win10` is the 32-bit template** and **`win10_64` is the 64-bit one** (both exist in `.../share/crossover/bottle_templates`: `win10`, `win10_64`, `win11_64`, `win8_64`, `win7_64`, …). The 17-01 spike locked `win10` on "does a bottle get created?" alone — it never checked the resulting `WineArch`, so the 32-bit default slipped through.
+- Steam has dropped 32-bit; the modern 64-bit Steam client + its CEF UI (steamwebhelper) is what renders the install dialog, and it does not composite correctly in a `win32` prefix → the `0 x 0` browser dimensions / grey bar.
 
-**Recommended route:** `/gsd:debug 17` — form the CEF-flag hypothesis, test the relaunch on hardware, then codify the winning flag/timing into `bottle.ts`. Files likely touched (once confirmed): `src/backend/storeManagers/steam/bottle.ts` (launch args), possibly `constants.ts`.
+**Fix (high-confidence code change, no more hardware hypothesis needed):**
+1. Change the create template `win10` → **`win10_64`** in `provisionBottle()` (and the 17-01 spike/FINDINGS "LOCKED CLI" note).
+2. **Re-provision the existing win32 bottle** — a win32 prefix cannot be converted in place. `provisionBottle()` should detect an existing bottle whose `cxbottle.conf` reports `WineArch = win32` and recreate it as `win10_64` (delete + `--create --template win10_64`), or the user deletes the `GameLibSteam` bottle so provisioning recreates it 64-bit. Either way the user re-runs SteamSetup + logs in once in the new bottle.
+3. 17-12's both-root Steam resolver stays as-is (belt-and-suspenders); on win64, Steam installs to `Program Files (x86)` — the "normal" case the resolver already handles.
+
+**Revised route:** this is now a clean **`/gsd:plan-phase 17 --gaps`** code fix (template + re-provision), NOT a `/gsd:debug` hardware-hypothesis session. Files likely touched: `src/backend/storeManagers/steam/bottle.ts` (template arg + win32-detect/recreate), `spike/steam-bottle/FINDINGS.md` (update LOCKED CLI), tests.
 
 ### GAP-17-PFX86-PATH — bottle readiness checks the wrong Program Files directory (BLOCKER, MACSTEAM-04/05) — ✅ RESOLVED by 17-12 (session 3 confirmed)
 
