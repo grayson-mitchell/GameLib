@@ -25,7 +25,8 @@ automated_verified: 2026-07-11
 | **Estimated runtime** | ~30-90 seconds (quick), full suite ~2-4 min |
 | **Actual full-suite runtime (17-07 Task 1)** | 15.2s (`npm test`) — 45 suites / 908 tests passed, 0 failed; `npm run codecheck` (tsc --noEmit) exit 0, no errors |
 | **Re-confirmed after gap-closure (2026-07-11)** | `npm test` — 48 suites / 934 tests passed, 0 failed (6.0s); `npm run codecheck` exit 0. Re-run after 17-08/09/10 + debug fixes (`ac35a8ce`, `432f0870`) to keep "suite green before sign-off" honest. |
-| **Re-confirmed after 17-11 merge, FINAL pre-UAT-resume gate (2026-07-11)** | `npm test` — 48 suites / 938 tests passed, 0 failed (6.1s); `npm run codecheck` (tsc --noEmit) exit 0, no errors. Re-run against the fully merged tree including 17-11 (GAP 3 install button/status desync fix, commit `f1f89acb`) — 4 additional tests vs. the prior re-confirmation (938 vs 934) from 17-11's new selector coverage. This is the automated gate the human UAT resumes against for Task 2. |
+| **Re-confirmed after 17-11 merge, pre-UAT-resume gate (2026-07-11)** | `npm test` — 48 suites / 938 tests passed, 0 failed (6.1s); `npm run codecheck` (tsc --noEmit) exit 0, no errors. Re-run against the fully merged tree including 17-11 (GAP 3 install button/status desync fix, commit `f1f89acb`) — 4 additional tests vs. the prior re-confirmation (938 vs 934) from 17-11's new selector coverage. |
+| **Re-confirmed after 17-15 (GAP-17-CEF-RENDER) merge — FINAL pre-UAT-resume gate (2026-07-11)** | `npm test` — 49 suites / 962 tests passed, 0 failed (4.5s); `npm run codecheck` (tsc --noEmit) exit 0, no errors. Re-run against the fully merged tree including 17-12/17-13/17-14 (session-3 gap closures) and **17-15** (win10_64 bottle template + win32 detect/delete/recreate, commits `72d1ca74`/`4a47469d`, merge `b37a8f96`) — 24 additional tests vs. the prior re-confirmation (962 vs 938) from 17-14/17-15 coverage (bottle win64 recreate + auth-preservation, hasStatus reconcile, progress percent). This is the automated gate the human UAT resumes against for Task 2. |
 
 ---
 
@@ -56,7 +57,7 @@ automated_verified: 2026-07-11
 | 17-06-01 | 06 | 3 | MACSTEAM-04 | T-17-09/08 | guided flow fires from backend signal for ALL entry points; frontend does NOT gate on raw is_mac_native (D-11 backend-owned) | unit (frontend) | `npm test -- --testPathPattern=SteamBottleSetup` | ✅ (new test file, 5/5 pass) | ✅ green |
 | 17-06-02 | 06 | 3 | MACSTEAM-02/03 | T-17-01 | provision via IPC; name re-sanitized backend-side | unit + visual | `npm run codecheck` | ✅ (new component) | ✅ green (unit); visual = manual-only (see below) |
 | 17-06-03 | 06 | 3 | MACSTEAM-06 | — | indicator gated on confirmed-not-native | unit + visual | `npm run codecheck` | ✅ existing | ✅ green (unit); visual = manual-only (see below) |
-| 17-07-01 | 07 | 4 | ALL | — | full-suite gate | suite | `npm test && npm run codecheck` | ✅ | ✅ green — 48 suites / 938 tests pass, 0 failed; `tsc --noEmit` exit 0 (re-confirmed 2026-07-11 post-17-11 merge) |
+| 17-07-01 | 07 | 4 | ALL | — | full-suite gate | suite | `npm test && npm run codecheck` | ✅ | ✅ green — 49 suites / 962 tests pass, 0 failed; `tsc --noEmit` exit 0 (re-confirmed 2026-07-11 post-17-15 GAP-17-CEF-RENDER merge) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -147,6 +148,8 @@ automated_verified: 2026-07-11
 3. 17-12's both-root Steam resolver stays as-is (belt-and-suspenders); on win64, Steam installs to `Program Files (x86)` — the "normal" case the resolver already handles.
 
 **Revised route:** this is now a clean **`/gsd:plan-phase 17 --gaps`** code fix (template + re-provision), NOT a `/gsd:debug` hardware-hypothesis session. Files likely touched: `src/backend/storeManagers/steam/bottle.ts` (template arg + win32-detect/recreate), `spike/steam-bottle/FINDINGS.md` (update LOCKED CLI), tests.
+
+**Status:** ✅ Fixed by 17-15 (2026-07-11, merge `b37a8f96`) — code-level. `provisionBottle()` now creates bottles with the `win10_64` template; a new `bottleWineArch()` detector runs BEFORE the `isBottleReady` short-circuit and, when it finds an existing `WineArch = win32` bottle, deletes (`cxbottle --delete --force`) and recreates it as win64 while preserving GameLib's Steam account auth (`refreshToken`/`isLoggedIn`/`userData` untouched; only bottle `provisioned` state resets). Unit coverage: win10_64 template regression guard, win32 recreate with auth-preservation assertions, win64 idempotent short-circuit (bottle suite 62/62). **Requires a fresh real-CrossOver UAT re-test** (this is what Task 2 session 5 verifies): the existing win32 `GameLibSteam` bottle must be recreated win64 on next `provisionBottle()`, SteamSetup re-run + login once, and the install dialog must composite correctly (no more grey `0 x 0` bar).
 
 ### GAP-17-PFX86-PATH — bottle readiness checks the wrong Program Files directory (BLOCKER, MACSTEAM-04/05) — ✅ RESOLVED by 17-12 (session 3 confirmed)
 
