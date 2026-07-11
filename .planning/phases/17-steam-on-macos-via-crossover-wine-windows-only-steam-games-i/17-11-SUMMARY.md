@@ -112,3 +112,7 @@ None - no external service configuration required.
 ---
 *Phase: 17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i*
 *Completed: 2026-07-11*
+
+## Self-Check: PASSED
+
+All 8 modified/created source files verified present on disk; commits `a93ec612`, `1758871c`, `4afcd426` verified present in `git log --oneline --all`.
