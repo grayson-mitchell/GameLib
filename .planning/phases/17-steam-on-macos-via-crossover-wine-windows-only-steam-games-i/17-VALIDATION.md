@@ -87,6 +87,30 @@ automated_verified: 2026-07-10
 
 ---
 
+## UAT Findings & Candidate Gaps (17-07 Task 2 — in progress)
+
+> Live human UAT started 2026-07-11. Recording per-step results; Approval remains pending until all 7 steps + scope fences pass or gaps are routed.
+
+| Step | Requirement | Result | Notes |
+|------|-------------|--------|-------|
+| 1 — Provision + all entry points | MACSTEAM-02/04 | ✅ pass | Guided setup fires correctly; dedicated bottle + SteamSetup.exe window confirmed |
+| 2–7 | — | ⏳ pending | Paused mid-UAT to design the install-time UX (GAP-17-INSTALL-UX below) |
+
+### GAP-17-INSTALL-UX — continuous install-time feedback + auto-chain (candidate gap for `/gsd:plan-phase 17 --gaps`)
+
+**Observed:** During the Steam-client provisioning phase the surface is a single static banner line ("Setting up Steam…"), and after the bottled `steam.exe` appears the user must click **Install a second time** for the game download to begin. The game card never shows the "Installing" status/button-text transition the native install flow provides, so there is no real progress feedback for the Steam-client phase and a confusing manual re-click.
+
+**Decided design (user-approved 2026-07-11 — "auto-start game install"):**
+1. Drive banner text from real Steam-client state: `Installing Steam client…` (SteamSetup.exe running) → `Steam client installed` when the bottled `steam.exe` appears (optionally tightened by detecting `SteamSetup.exe` **process exit** via the existing `INSTALLER_PROCESS_NAMES` machinery rather than only file-existence).
+2. The moment `isBottleReady()` flips true, **auto-invoke the game install** (`tellBottledSteamToInstall` + `startInstallPolling({source:'bottle'})`) instead of requiring a second manual click. Bottled Steam surfaces its own login prompt inline if needed (login stays opaque per D-04 — we do not detect/await it).
+3. Game card then shows the standard `'installing'` status + button-text change with ACF-driven progress, and the setup banner self-dismisses.
+
+**Constraints noted:** SteamSetup runs `wait:false` (no direct completion event — infer via `steam.exe`/process-exit); bottled login is opaque by design (D-04), so the chain fires the install and lets Steam handle login rather than gating on a login-complete signal.
+
+**Files likely touched:** `src/frontend/screens/Game/GamePage/components/SteamBottleSetup.tsx` (text + auto-trigger), `src/backend/storeManagers/steam/bottle.ts` (optional SteamSetup process-exit signal), `src/backend/storeManagers/steam/games.ts` (install auto-chain wiring), i18n `gamepage` keys.
+
+---
+
 ## Out-of-Scope (documented, not gaps)
 
 - **GAME-05 "Playing" badge parity for bottled games** — the native running-game poller reads the native Steam `registry.vdf`; a bottled client writes its RunningAppID to a Windows-side registry inside the prefix (RESEARCH.md Open Question 3, PATTERNS.md "No Analog Found"). Explicitly deferred: Phase 17 scope is "install and launch" only (ROADMAP + CONTEXT do not mention GAME-05). Tracked as a known limitation / follow-up, not an under-delivery.
