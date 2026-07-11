@@ -151,6 +151,25 @@ automated_verified: 2026-07-11
 
 **Status:** ✅ Fixed by 17-15 (2026-07-11, merge `b37a8f96`) — code-level. `provisionBottle()` now creates bottles with the `win10_64` template; a new `bottleWineArch()` detector runs BEFORE the `isBottleReady` short-circuit and, when it finds an existing `WineArch = win32` bottle, deletes (`cxbottle --delete --force`) and recreates it as win64 while preserving GameLib's Steam account auth (`refreshToken`/`isLoggedIn`/`userData` untouched; only bottle `provisioned` state resets). Unit coverage: win10_64 template regression guard, win32 recreate with auth-preservation assertions, win64 idempotent short-circuit (bottle suite 62/62). **Requires a fresh real-CrossOver UAT re-test** (this is what Task 2 session 5 verifies): the existing win32 `GameLibSteam` bottle must be recreated win64 on next `provisionBottle()`, SteamSetup re-run + login once, and the install dialog must composite correctly (no more grey `0 x 0` bar).
 
+### GAP-17-CEF-RECREATE-RUNNING — win32→win64 auto-recreate aborts while the bottled Steam client is running (MAJOR, MACSTEAM-02) — candidate gap for `/gsd:plan-phase 17 --gaps`
+
+**Observed (2026-07-11 session 5, real CrossOver 26.2 on macOS — reproduced from the orchestrator):** After 17-15 shipped the win32-detect/delete/recreate path, the stale `GameLibSteam` bottle was still `WineArch = win32` on disk. Running the exact command `provisionBottle()` uses — `cxbottle --bottle GameLibSteam --delete --force` — aborts:
+
+```
+There are still applications running in the GameLibSteam bottle. Aborting the current operation.
+cxbottle exit=1
+```
+
+The live process was `steam.exe steam://install/206040` (the bottled Steam client + steamwebhelper, still up from the grey-bar CEF dialog). So 17-15's recreate branch cannot delete the win32 bottle in the very scenario it targets — the user hits the CEF grey-bar *because* Steam is running, and that same running Steam blocks the delete. The `rmSync(getBottleDir)` fallback then runs against a live prefix (open file handles) and is unreliable, leaving a half-deleted bottle.
+
+**Root cause:** `provisionBottle()`'s recreate branch (`bottle.ts` ~410-440) issues `cxbottle --delete` without first stopping the bottle's wine processes. `cxbottle --delete` refuses when any app is running in the prefix.
+
+**Fix direction:** Before the `cxbottle --delete` in the win32-recreate branch, stop the bottle's wine processes — run CrossOver's `wineserver -k` with `WINEPREFIX=getBottleDir(bottleName)` (and `CX_ROOT` set), verified working here (exit 0, all `steam.exe`/`winewrapper.exe` procs gone), then delete. Keep the `rmSync` fallback as a last resort but only after the kill. Add a unit test asserting the kill step runs before `--delete` in the recreate path.
+
+**Workaround applied this session (unblocks the win10_64 UAT):** orchestrator ran `WINEPREFIX=<bottle> CX_ROOT=<cxroot> wineserver -k` (exit 0) then `cxbottle --bottle GameLibSteam --delete --force` (exit 0) — win32 bottle removed cleanly; GOG/Epic bottles untouched. Next Install now provisions a fresh `win10_64` bottle for the core CEF-render re-test (UAT steps 1-7).
+
+**Files likely touched:** `src/backend/storeManagers/steam/bottle.ts` (process-kill before `--delete` in the win32-recreate branch), `src/backend/storeManagers/steam/__tests__/bottle.test.ts`.
+
 ### GAP-17-PFX86-PATH — bottle readiness checks the wrong Program Files directory (BLOCKER, MACSTEAM-04/05) — ✅ RESOLVED by 17-12 (session 3 confirmed)
 
 **Observed (2026-07-11, real CrossOver 26.2 on macOS):** After the guided setup runs SteamSetup.exe, Steam installs and logs in successfully **inside** the `GameLibSteam` bottle, but GameLib never recognizes it — the game card stays un-installed and every Install click re-launches SteamSetup.exe. `steamBottleConfigStore.provisioned` is stuck `false`.
