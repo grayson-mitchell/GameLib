@@ -5,7 +5,7 @@ status: automated-pass
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-10
-automated_verified: 2026-07-10
+automated_verified: 2026-07-11
 ---
 
 # Phase 17 — Validation Strategy
@@ -25,6 +25,7 @@ automated_verified: 2026-07-10
 | **Estimated runtime** | ~30-90 seconds (quick), full suite ~2-4 min |
 | **Actual full-suite runtime (17-07 Task 1)** | 15.2s (`npm test`) — 45 suites / 908 tests passed, 0 failed; `npm run codecheck` (tsc --noEmit) exit 0, no errors |
 | **Re-confirmed after gap-closure (2026-07-11)** | `npm test` — 48 suites / 934 tests passed, 0 failed (6.0s); `npm run codecheck` exit 0. Re-run after 17-08/09/10 + debug fixes (`ac35a8ce`, `432f0870`) to keep "suite green before sign-off" honest. |
+| **Re-confirmed after 17-11 merge, FINAL pre-UAT-resume gate (2026-07-11)** | `npm test` — 48 suites / 938 tests passed, 0 failed (6.1s); `npm run codecheck` (tsc --noEmit) exit 0, no errors. Re-run against the fully merged tree including 17-11 (GAP 3 install button/status desync fix, commit `f1f89acb`) — 4 additional tests vs. the prior re-confirmation (938 vs 934) from 17-11's new selector coverage. This is the automated gate the human UAT resumes against for Task 2. |
 
 ---
 
@@ -55,11 +56,13 @@ automated_verified: 2026-07-10
 | 17-06-01 | 06 | 3 | MACSTEAM-04 | T-17-09/08 | guided flow fires from backend signal for ALL entry points; frontend does NOT gate on raw is_mac_native (D-11 backend-owned) | unit (frontend) | `npm test -- --testPathPattern=SteamBottleSetup` | ✅ (new test file, 5/5 pass) | ✅ green |
 | 17-06-02 | 06 | 3 | MACSTEAM-02/03 | T-17-01 | provision via IPC; name re-sanitized backend-side | unit + visual | `npm run codecheck` | ✅ (new component) | ✅ green (unit); visual = manual-only (see below) |
 | 17-06-03 | 06 | 3 | MACSTEAM-06 | — | indicator gated on confirmed-not-native | unit + visual | `npm run codecheck` | ✅ existing | ✅ green (unit); visual = manual-only (see below) |
-| 17-07-01 | 07 | 4 | ALL | — | full-suite gate | suite | `npm test && npm run codecheck` | ✅ | ✅ green — 45 suites / 908 tests pass, 0 failed; `tsc --noEmit` exit 0 |
+| 17-07-01 | 07 | 4 | ALL | — | full-suite gate | suite | `npm test && npm run codecheck` | ✅ | ✅ green — 48 suites / 938 tests pass, 0 failed; `tsc --noEmit` exit 0 (re-confirmed 2026-07-11 post-17-11 merge) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
 **Automated gate result (17-07 Task 1, 2026-07-10):** `npm test` → 45 suites, 908 tests, 0 failures, 15.2s. `npm run codecheck` (`tsc --noEmit`) → exit 0, no type errors. All MACSTEAM-01..06 rows above that have an automated test are green; MACSTEAM-02/03/04/05/06's real-runtime surface (bottle creation, login persistence, install/launch through the bottle, visual indicator) remains manual-only per the table below and is deferred to Task 2's human UAT.
+
+**Automated gate re-confirmation (17-07 Task 1, FINAL post-17-11 merge, 2026-07-11):** `npm test` → 48 suites, 938 tests, 0 failures, 6.1s. `npm run codecheck` (`tsc --noEmit`) → exit 0, no type errors. Re-run against the fully merged tree including gap-closure plans 17-08 (bottle real-readiness gate), 17-09 (D-08/D-11 platform-capture reconciliation), 17-10 (setup banner styling), and 17-11 (install button/status desync fix, commit `f1f89acb`). All MACSTEAM-01..06 rows remain green on the automated surface; the full suite is green before the human resumes UAT at Task 2.
 
 ---
 
@@ -123,9 +126,9 @@ automated_verified: 2026-07-10
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify (every row in the Per-Task Verification Map has a concrete automated command)
 - [x] Wave 0 covers all MISSING references (bottle.test.ts, SteamBottleSetup.test.ts, library bottle fixtures) — all three now exist and pass
 - [x] No watch-mode flags
-- [x] Feedback latency < 90s (full suite ran in 15.2s)
+- [x] Feedback latency < 90s (full suite ran in 6.1s on the FINAL re-confirmation)
 - [x] `nyquist_compliant: true` set in frontmatter (17-07 Task 1)
 
-**Automated half status:** COMPLETE (2026-07-10) — full suite green (45/45 suites, 908/908 tests), `npm run codecheck` exit 0. All six MACSTEAM requirements have at least one automated test covering their code-level behavior; the real-hardware runtime surface (bottle creation, bottled login, install/launch through the bottle, visual indicator, scope-fence regressions on real CrossOver) is enumerated in Manual-Only Verifications above and awaits Task 2's human UAT.
+**Automated half status:** COMPLETE (2026-07-10, re-confirmed FINAL 2026-07-11 post-17-11 merge) — full suite green (48/48 suites, 938/938 tests), `npm run codecheck` exit 0. Re-run against the fully merged tree including gap-closure plans 17-08, 17-09, 17-10, and 17-11 (install button/status desync fix). All six MACSTEAM requirements have at least one automated test covering their code-level behavior; the real-hardware runtime surface (bottle creation, bottled login, install/launch through the bottle, visual indicator, scope-fence regressions on real CrossOver) is enumerated in Manual-Only Verifications above and awaits Task 2's human UAT resumption (steps 2-7; step 1 already passed per the UAT Findings table above).
 
-**Approval:** pending (blocked on Task 2 — end-to-end macOS UAT on real CrossOver)
+**Approval:** pending (blocked on Task 2 — end-to-end macOS UAT on real CrossOver, resuming from step 2 now that gap-closure plans 17-08/09/10/11 have landed)
