@@ -24,6 +24,7 @@ automated_verified: 2026-07-10
 | **Full suite command** | `npm test` |
 | **Estimated runtime** | ~30-90 seconds (quick), full suite ~2-4 min |
 | **Actual full-suite runtime (17-07 Task 1)** | 15.2s (`npm test`) — 45 suites / 908 tests passed, 0 failed; `npm run codecheck` (tsc --noEmit) exit 0, no errors |
+| **Re-confirmed after gap-closure (2026-07-11)** | `npm test` — 48 suites / 934 tests passed, 0 failed (6.0s); `npm run codecheck` exit 0. Re-run after 17-08/09/10 + debug fixes (`ac35a8ce`, `432f0870`) to keep "suite green before sign-off" honest. |
 
 ---
 
