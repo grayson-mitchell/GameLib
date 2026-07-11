@@ -173,6 +173,106 @@ export function getSteamBottleSettings(): GameSettings {
   }
 }
 
+// GAP 5: bottled-Steam installer process names to raise to the front. The
+// guided provisioning installer is `SteamSetup.exe`; a per-game bottled install
+// surfaces the bottled Windows Steam client `steam.exe`. Deliberately NOT the
+// native macOS Steam client (`steam_osx`), which may also be running.
+const INSTALLER_PROCESS_NAMES = ['SteamSetup.exe', 'steam.exe']
+
+/**
+ * GAP 5 fix (macOS-only, fire-and-forget): the installer window is owned by a
+ * separate, UNBUNDLED CrossOver/Wine process that appears a few seconds AFTER
+ * dispatch — diagnosed via GAP5-DIAG as `SteamSetup.exe` (provisioning) /
+ * bottled `steam.exe` (per-game install), each its OWN foreground macOS app
+ * with bundleId "missing value". Because it has no bundle id AND (in CrossOver
+ * per-app mode) is a distinct app from the CrossOver host, we target the
+ * process directly BY NAME and raise it via System Events `set frontmost` —
+ * the scripted-user action that should defeat macOS focus-stealing protection.
+ *
+ * We poll (~1.5s cadence, ~18s window) because the process appears after the
+ * wine launcher runs; once raised, we re-raise once to catch the splash->main
+ * window transition. If the installer process never appears, we fall back to
+ * app.hide() (the previous best-effort yield) so GameLib at least steps aside.
+ *
+ * GameLib's window + guided banner stay VISIBLE on the success path — we do NOT
+ * touch GameLib's own window state. In particular, when GameLib is in native
+ * fullscreen (its own macOS Space), `set frontmost` on the installer makes
+ * macOS auto-switch Spaces to the installer (the "scroll" to its Space) rather
+ * than us yanking GameLib out of fullscreen (17-UAT refinement). Every step is
+ * guarded; failure never affects the install flow. No-op on Linux/Windows.
+ */
+async function raiseInstallerWindow(context: string): Promise<void> {
+  try {
+    const { isMac } = await import('backend/constants/environment')
+    if (!isMac) {
+      return
+    }
+
+    const nameClause = INSTALLER_PROCESS_NAMES.map(
+      (n) => `name is "${n}"`
+    ).join(' or ')
+    const raiseScript = [
+      'tell application "System Events"',
+      `set procs to (every process whose (${nameClause}))`,
+      'if procs is {} then return "none"',
+      'set p to item 1 of procs',
+      'set frontmost of p to true',
+      'return (name of p) & " pid=" & (unix id of p)',
+      'end tell'
+    ].join('\n')
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    const tryRaise = async (): Promise<string | null> => {
+      try {
+        const { stdout } = await spawnAsync('osascript', ['-e', raiseScript])
+        const out = stdout.trim()
+        return out && out !== 'none' ? out : null
+      } catch (error) {
+        logWarning(
+          [`raiseInstallerWindow [${context}]: osascript raise failed`, error],
+          LogPrefix.Steam
+        )
+        return null
+      }
+    }
+
+    let raised: string | null = null
+    for (let attempt = 0; attempt < 12 && !raised; attempt++) {
+      await sleep(1500)
+      raised = await tryRaise()
+    }
+
+    if (raised) {
+      logInfo(
+        `raiseInstallerWindow [${context}]: raised installer to front (${raised})`,
+        LogPrefix.Steam
+      )
+      // Re-raise once after the installer's main window settles (splash -> UI).
+      await sleep(2500)
+      await tryRaise()
+    } else {
+      logWarning(
+        `raiseInstallerWindow [${context}]: installer process not found within ~18s — falling back to app.hide()`,
+        LogPrefix.Steam
+      )
+      try {
+        const { app } = await import('electron')
+        app.hide()
+      } catch (error) {
+        logWarning(
+          [`raiseInstallerWindow [${context}]: app.hide fallback failed`, error],
+          LogPrefix.Steam
+        )
+      }
+    }
+  } catch (error) {
+    logWarning(
+      [`raiseInstallerWindow [${context}]: failed`, error],
+      LogPrefix.Steam
+    )
+  }
+}
+
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
 
 export type ProvisionBottleResult = { status: 'done' | 'error'; error?: string }
@@ -324,6 +424,10 @@ export async function provisionBottle(opts?: {
   // (7) Run the installer NON-SILENTLY (D-02) — no /S or /VERYSILENT flags,
   // the user sees and clicks through the real installer window.
   try {
+    // GAP 5: raise the installer to the front once it appears (fire-and-forget).
+    // Kicked off BEFORE awaiting runWineCommand — that await does not resolve
+    // until the installer closes, so it must not gate the raise.
+    void raiseInstallerWindow('provision-SteamSetup')
     const { runWineCommand } = await import('backend/launcher')
     await runWineCommand({
       commandParts: [steamSetupExePath],
@@ -416,6 +520,12 @@ async function dispatchToBottledSteam(
 
   try {
     const { runWineCommand } = await import('backend/launcher')
+    // GAP 5: raise the installer to the front once it appears (fire-and-forget).
+    // 'install' only — 'launch'/'uninstall' don't spawn the guided installer UI.
+    // Fire BEFORE the await (see provisionBottle note) so it runs concurrently.
+    if (verb === 'install') {
+      void raiseInstallerWindow('install')
+    }
     await runWineCommand({
       commandParts,
       gameSettings: getSteamBottleSettings(),

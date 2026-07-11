@@ -115,7 +115,7 @@ skipped: 1             # test 10 — deferred by user
 open_gaps:             # new issues from retest round 2 — feed into a gap-closure wave
   - "GAP 3 (major): install button/status desync with in-progress bottle setup"
   - "GAP 4 (cosmetic): WineSelector 'use shared wine prefix' ordering"
-  - "GAP 5 (minor/UX): SteamSetup installer opens behind the GameLib window"
+  - "GAP 5 (minor/UX): SteamSetup installer opens behind the GameLib window — RESOLVED (debug: steam-installer-behind-focus; raiseInstallerWindow System Events raise)"
 
 note: "Retest round 2 (macOS + CrossOver): guided wizard fires, Steam setup starts, and the real SteamSetup.exe installer DOES open — GAP 1 blocker + GAP 2 both resolved. (Installer opened behind the GameLib window = new GAP 5, a z-order issue, not a launch failure.) Remaining new issues: GAP 3 (major) button/status desync, GAP 4 (cosmetic) wizard option order, GAP 5 (minor) installer z-order. Tests 4-7 (login/install/launch/badge) blocked on GAP 3 until setup completion is observable in the UI."
 
@@ -180,16 +180,15 @@ note: "Retest round 2 (macOS + CrossOver): guided wizard fires, Steam setup star
   missing: []    # Filled by diagnosis
 
 - truth: "When the SteamSetup.exe installer launches, it is visible to the user (frontmost), not hidden behind the GameLib window"
-  status: failed
-  reason: "User reported (retest round 2): the real SteamSetup.exe installer window opened BEHIND the GameLib window, so it appeared nothing happened. Confirmed the installer does open — this is a z-order/focus issue, not a launch failure."
+  status: resolved
+  reason: "User reported (retest round 2): the real SteamSetup.exe installer window opened BEHIND the GameLib window, so it appeared nothing happened. Confirmed the installer does open — a z-order/focus issue, not a launch failure. RESOLVED on real macOS + CrossOver hardware via debug session steam-installer-behind-focus: user confirms the installer now surfaces in front (behind-window, dual-monitor, and fullscreen cases all work)."
   severity: minor
   test: 2
   label: "GAP 5 — SteamSetup installer opens behind GameLib window"
   artifacts:
-    - src/backend/storeManagers/steam/bottle.ts  # after runWineCommand (~line 328)
-    - src/backend/launcher.ts  # precedent: line 176 mainWindow?.hide() on launch
-    - src/backend/main_window.ts  # getMainWindow() accessor
-  missing:
-    - "minimize/hide the GameLib main window (getMainWindow()?.minimize()) right after runWineCommand dispatches SteamSetup.exe, so the installer is frontmost"
-    - "optional: toast hint that GameLib minimized to reveal the installer"
-  notes: "Cannot force a foreign CrossOver/wine window always-on-top from Electron; the robust lever is to have GameLib step out of the way (precedent: launcher.ts:176)."
+    - src/backend/storeManagers/steam/bottle.ts  # raiseInstallerWindow() + INSTALLER_PROCESS_NAMES
+  resolution:
+    - "raiseInstallerWindow() (bottle.ts, macOS-only, fire-and-forget): after diagnosing that the installer window is owned by a separate UNBUNDLED CrossOver process (SteamSetup.exe / bottled steam.exe, not the CrossOver host, never native steam_osx), poll for it by name and osascript `set frontmost of <process> to true` to raise it — the scripted-user action that beats macOS focus-stealing protection."
+    - "Wired before the runWineCommand await at both installer sites (provisionBottle unconditional; dispatchToBottledSteam verb==='install')."
+    - "GameLib's own window state is untouched (guided banner stays visible); when fullscreen, `set frontmost` makes macOS auto-scroll Spaces to the installer. app.hide() kept only as fallback if the installer process never appears."
+  notes: "Cannot force a foreign CrossOver/wine window always-on-top from Electron, and cannot re-parent it into a BrowserWindow. Explored the native NSApp.yieldActivation(to:) route (would need a mac-only N-API addon) but the pure-JS System Events raise proved sufficient — no native code required. Earlier iterations (minimize, then app.hide) superseded: minimize left GameLib the active app so the installer was never promoted; app.hide hid the guided banner. Full trace in .planning/debug/resolved/steam-installer-behind-focus.md."
