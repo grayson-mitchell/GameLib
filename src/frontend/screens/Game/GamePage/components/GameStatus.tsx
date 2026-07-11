@@ -116,6 +116,12 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return t('status.installed')
     }
 
+    // Phase 17 (17-11), GAP 3 gap-closure: mirror the guided bottle-setup
+    // toast instead of falling through to "This game is not installed"
+    if (is.settingUpBottle) {
+      return t('status.settingUpBottle', 'Setting up Steam…')
+    }
+
     return t('status.notinstalled')
   }
 

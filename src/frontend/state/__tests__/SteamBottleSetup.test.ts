@@ -7,7 +7,8 @@
  */
 import {
   useSteamBottleSetup,
-  handleSteamBottleSetupRequiredSignal
+  handleSteamBottleSetupRequiredSignal,
+  isSteamBottleSetupActiveFor
 } from '../SteamBottleSetup'
 import type { IpcRendererEvent } from 'electron'
 
@@ -56,5 +57,44 @@ describe('handleSteamBottleSetupRequiredSignal (backend signal wiring)', () => {
     // No signal fired in this test at all.
     expect(useSteamBottleSetup.getState().isOpen).toBe(false)
     expect(useSteamBottleSetup.getState().appName).toBeUndefined()
+  })
+})
+
+describe('isSteamBottleSetupActiveFor selector (17-11, GAP 3 gap-closure)', () => {
+  afterEach(() => {
+    useSteamBottleSetup.setState({ isOpen: false, appName: undefined })
+  })
+
+  it('returns true when a setup surface is open for the matching steam appName', () => {
+    useSteamBottleSetup.getState().open('440')
+
+    expect(
+      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '440', 'steam')
+    ).toBe(true)
+  })
+
+  it('returns false for a different appName than the one setup is active for', () => {
+    useSteamBottleSetup.getState().open('440')
+
+    expect(
+      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '730', 'steam')
+    ).toBe(false)
+  })
+
+  it('returns false for a non-steam runner even when appName matches', () => {
+    useSteamBottleSetup.getState().open('440')
+
+    expect(
+      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '440', 'gog')
+    ).toBe(false)
+  })
+
+  it('returns false once the store is closed', () => {
+    useSteamBottleSetup.getState().open('440')
+    useSteamBottleSetup.getState().close()
+
+    expect(
+      isSteamBottleSetupActiveFor(useSteamBottleSetup.getState(), '440', 'steam')
+    ).toBe(false)
   })
 })
