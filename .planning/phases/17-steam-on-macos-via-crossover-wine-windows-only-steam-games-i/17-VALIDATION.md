@@ -126,6 +126,24 @@ automated_verified: 2026-07-11
 
 **Files likely touched:** `src/frontend/state/GlobalState.tsx` (handleGameStatus done handling), `src/frontend/screens/Game/GameContext.tsx` + `GamePage/index.tsx` (live is_installed refresh), possibly `src/frontend/hooks/hasStatus.ts`, respective `__tests__`.
 
+**Status:** ✅ Fixed by 17-14 (progress percent + hasStatus live is_installed) — but see GAP-17-CEF-RENDER below, which blocks re-testing this on a fresh install.
+
+### GAP-17-CEF-RENDER — bottled Steam install dialog renders as a grey bar with dead buttons (BLOCKER for a NEW install, runtime/env) — needs `/gsd:debug` (hypothesis-testing on hardware)
+
+**Observed (2026-07-11 session 4, real CrossOver 26.2 on macOS):** Starting a NEW game install, the bottled Steam client's install dialog opens but the right ~half is covered by a grey bar; the two shortcut checkboxes toggle, but the Install button (and a second, grey, unreadable button) are unresponsive — the install cannot be confirmed.
+
+**Root cause (from the bottle's own Steam logs — this is Steam's CEF renderer, NOT GameLib React):**
+- `…/GameLibSteam/drive_c/Program Files/Steam/logs/webhelper.txt` repeats **`Invalid browser dimensions: 0 x 0`** on the `MessageDisplay-'store.stea'` surface (= the install dialog), and shows the surface going `WasHidden 1 … 0 x 0` — CEF composited the dialog at 0×0 while hidden → grey bar + dead input.
+- Bottle is **`WineArch = win32`** running `steam_client_win32` (bootstrap_log). The 32-bit Steam CEF UI is the fragile path under Wine/CrossOver.
+- NOT caused by 17-14 (that only touched GameLib's progress %/status hook; cannot affect Steam's own CEF UI).
+
+**Leading hypotheses (test on hardware, do not code blind):**
+1. **`-cef-disable-gpu` launch flag** — the established community fix for Steam CEF "grey/blank + 0×0" under Wine. GameLib controls the `steam.exe` launch in `bottle.ts` (`dispatchToBottledSteam`, `provisionBottle`), but the flag must land on the client **cold start**, not a URL-forward to an already-running client. May also need `-cef-disable-gpu-compositing` / `-cef-in-process-gpu`.
+2. **Focus/visibility timing** — the 0×0-while-hidden log implies the dialog is created before the Steam window is foregrounded; `raiseInstallerWindow` may need to foreground Steam BEFORE the install URL is dispatched.
+3. **win64 bottle** — a `win64` prefix (steam_client_win64) may render CEF correctly and would ALSO have avoided GAP-17-PFX86-PATH; but re-provisioning loses the current install/login, so this is a last resort.
+
+**Recommended route:** `/gsd:debug 17` — form the CEF-flag hypothesis, test the relaunch on hardware, then codify the winning flag/timing into `bottle.ts`. Files likely touched (once confirmed): `src/backend/storeManagers/steam/bottle.ts` (launch args), possibly `constants.ts`.
+
 ### GAP-17-PFX86-PATH — bottle readiness checks the wrong Program Files directory (BLOCKER, MACSTEAM-04/05) — ✅ RESOLVED by 17-12 (session 3 confirmed)
 
 **Observed (2026-07-11, real CrossOver 26.2 on macOS):** After the guided setup runs SteamSetup.exe, Steam installs and logs in successfully **inside** the `GameLibSteam` bottle, but GameLib never recognizes it — the game card stays un-installed and every Install click re-launches SteamSetup.exe. `steamBottleConfigStore.provisioned` is stuck `false`.
@@ -192,4 +210,4 @@ automated_verified: 2026-07-11
 
 **Automated half status:** COMPLETE (2026-07-10, re-confirmed FINAL 2026-07-11 post-17-11 merge) — full suite green (48/48 suites, 938/938 tests), `npm run codecheck` exit 0. Re-run against the fully merged tree including gap-closure plans 17-08, 17-09, 17-10, and 17-11 (install button/status desync fix). All six MACSTEAM requirements have at least one automated test covering their code-level behavior; the real-hardware runtime surface (bottle creation, bottled login, install/launch through the bottle, visual indicator, scope-fence regressions on real CrossOver) is enumerated in Manual-Only Verifications above and awaits Task 2's human UAT resumption (steps 2-7; step 1 already passed per the UAT Findings table above).
 
-**Approval:** GAPS FOUND (2026-07-11 session 3) — the session-2 blocker (GAP-17-PFX86-PATH) and hang (GAP-17-STEAMWEBHELPER-HANG) are RESOLVED by 17-12/17-13: install now completes end-to-end and launch works (steps 1,2,4 pass). Two MAJOR live-reconciliation gaps remain on the install path: GAP-17-BOTTLE-PROGRESS (tracker stuck at 0%) and GAP-17-BOTTLE-INSTALL-DONE-DESYNC (button/tile don't flip to Play without a nav round-trip). Steps 5-7 (indicator, D-11, scope fences) still pending. Route via `/gsd:plan-phase 17 --gaps` → `/gsd:execute-phase 17 --gaps-only`, then resume UAT from step 3.
+**Approval:** GAPS FOUND (2026-07-11 session 4) — resolved so far: GAP-17-PFX86-PATH (17-12), GAP-17-STEAMWEBHELPER-HANG (17-13), GAP-17-BOTTLE-PROGRESS + GAP-17-BOTTLE-INSTALL-DONE-DESYNC (17-14, code-level; steps 1/2/4 pass). NEW BLOCKER: GAP-17-CEF-RENDER — the bottled Steam client's install dialog renders as a grey bar with unresponsive buttons (`webhelper.txt`: "Invalid browser dimensions: 0 x 0"; win32 bottle). This is a runtime CEF-rendering bug in bottled Steam (not GameLib React), so it needs `/gsd:debug 17` (hardware hypothesis-testing of `-cef-disable-gpu` / focus-timing / win64) rather than a blind gap-plan. Steps 5-7 (indicator, D-11, scope fences) remain untested behind this blocker.
