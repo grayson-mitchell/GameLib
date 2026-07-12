@@ -71,13 +71,17 @@ jest.mock('../electronStores', () => ({
   }
 }))
 
-// ── electron shell mock — controls shell.openExternal ────────────────────────
+// ── electron mock — shell.openExternal + dialog.showMessageBox (MAC32-03 i386
+// recovery confirm, library.ts's promptI386Recovery) ─────────────────────────
 jest.mock('electron', () => ({
   shell: {
     openExternal: jest.fn()
   },
   app: {
     getPath: jest.fn().mockReturnValue('/tmp/mock-path')
+  },
+  dialog: {
+    showMessageBox: jest.fn()
   }
 }))
 
@@ -1789,6 +1793,99 @@ describe('SteamGame.forceUninstall()', () => {
       'pushGameToLibrary',
       expect.objectContaining({ app_name: APP_ID, is_installed: false })
     )
+  })
+})
+
+// ── MAC32-03 Task 3: promptI386Recovery — i386 recovery (CONTEXT D-6) ─────────
+//
+// Given verifyMacArchGroundTruth (library.ts, Task 2) has already flipped and
+// cached mac_arch:'32' for this appId, promptI386Recovery is the decoupled,
+// user-consented recovery: confirm → forceUninstall() the dead native copy,
+// then install() — which now routes through the bottle because
+// isBottleEligible() honors the cached mac_arch:'32' verdict. Cancel → neither
+// is called, the '32' verdict (persisted independently by
+// verifyMacArchGroundTruth before this prompt ever fires) is left untouched.
+
+describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => {
+  let shellOpenExternal: jest.Mock
+  let dialogShowMessageBox: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell, dialog } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    dialogShowMessageBox = dialog.showMessageBox as jest.Mock
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    library.set(APP_ID, makeEntry({ title: 'Old 32-bit Game', is_installed: true }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    ;(isBottleReady as jest.Mock).mockReset()
+    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+    envMock.isMac = false
+  })
+
+  it('confirmed dialog — forceUninstall() then install() (bottle path, mac_arch:32) are invoked', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '32',
+      mac_arch_source: 'macho',
+      mac_arch_verified: true
+    })
+    dialogShowMessageBox.mockResolvedValue({ response: 0 })
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    await libraryModule.promptI386Recovery(APP_ID)
+
+    expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
+    // forceUninstall(): dropped from the in-memory library + pushed not-installed
+    expect(library.has(APP_ID)).toBe(false)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, is_installed: false })
+    )
+    // install(): routes through the bottle (mac_arch:'32' → isBottleEligible())
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('cancelled dialog — neither forceUninstall() nor install() is invoked, mac_arch 32 stays cached', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '32',
+      mac_arch_source: 'macho',
+      mac_arch_verified: true
+    })
+    dialogShowMessageBox.mockResolvedValue({ response: 1 })
+
+    await libraryModule.promptI386Recovery(APP_ID)
+
+    expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    // forceUninstall() never ran — the native (unrunnable) install stays in
+    // the in-memory library untouched.
+    expect(library.has(APP_ID)).toBe(true)
+    // The '32' verdict (cached independently by verifyMacArchGroundTruth
+    // before this prompt fires) is never touched by promptI386Recovery itself.
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
 })
 
