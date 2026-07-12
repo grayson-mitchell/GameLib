@@ -606,6 +606,14 @@ export default class SteamGame implements Game {
   private isBottleEligible(): boolean {
     if (!isMac) return false
     const meta = steamMetadataStore.get(this.appId)
+    // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
+    // is_mac_native/platformsCaptured — a confirmed-32 game reports
+    // is_mac_native true (it DOES have a mac depot, just not a runnable one on
+    // modern macOS). Pre-install the min-OS heuristic (games.ts macArchFromMinOS)
+    // NEVER yields '32', so this branch only ever fires from Plan 18-03's
+    // post-install Mach-O ground-truth check — but the wiring lands now so
+    // routing goes live the moment 18-03 caches a '32' verdict.
+    if (meta?.mac_arch === '32') return true
     return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 

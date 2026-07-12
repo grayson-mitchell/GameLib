@@ -765,6 +765,62 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
     const game = new SteamGame(APP_ID)
     expect(game.isNative()).toBe(true)
   })
+
+  // ── MAC32-02: confirmed-32-bit routing (post-install Mach-O verdict) ─────
+
+  it('MAC32-02: macOS + mac_arch "32" (is_mac_native true — a confirmed-32 game reports it) — isNative() returns false', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '32',
+      mac_arch_verified: true,
+      mac_arch_source: 'macho'
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+  })
+
+  it('MAC32-02: non-macOS host + mac_arch "32" — isNative() returns true (the !isMac guard fires first, bottle is macOS-only)', () => {
+    envMock.isMac = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '32',
+      mac_arch_verified: true,
+      mac_arch_source: 'macho'
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('MAC32-02: macOS + mac_arch "64" or "unknown" with no D-11 trigger — isNative() returns true (native path, not bottle-eligible)', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '64',
+      mac_arch_verified: true,
+      mac_arch_source: 'macho'
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(true)
+  })
+
+  it('MAC32-02 regression: the existing D-11 path (platformsCaptured true && is_mac_native false) still routes to the bottle unchanged', () => {
+    envMock.isMac = true
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      mac_arch: 'unknown'
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(game.isNative()).toBe(false)
+  })
 })
 
 // ── Phase 17 (D-10/D-11): SteamGame.launch() bottle routing ─────────────────
