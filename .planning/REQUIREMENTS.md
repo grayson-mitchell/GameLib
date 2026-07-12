@@ -111,6 +111,21 @@ Detect a Steam game's macOS build architecture so 32-bit-only Mac builds (unrunn
 - [x] **MAC32-03**: After a native macOS install of a game with unknown/64-bit `osarch`, GameLib inspects the installed Mach-O binary (`lipo -archs` / `file`) as ground truth; an i386-only binary Steam failed to tag is re-routed to the bottle and the result is cached, so Steam's missing-`osarch` false-negatives are still caught without over-routing on the pre-install hint.
 - [x] **MAC32-04**: The left-panel game view shows an OS logo beside the game logo with a "32" mark on 32-bit macOS builds; the "32" treatment is escalated to an actionable warning only when the host OS is macOS (informational elsewhere).
 
+## v1.5 Requirements
+
+Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-level sidebar destination where one title search returns prices across many storefronts, annotated with what the user already owns. Prototyped on CheapShark (public, keyless, **USD-only**); IsThereAnyDeal is the localised production target (see `.planning/research/questions.md` Q2). Minted during `/gsd-discuss-phase 20` from the locked D-01..D-13 decisions (see `.planning/phases/20-aggregated-store-search-cheapshark/20-CONTEXT.md`). The aggregated *discovery/browse* surface (multi-provider Deals) is explicitly out of scope — see `.planning/seeds/aggregated-discovery-multi-provider-deals.md`. Each maps to Phase 20.
+
+### Aggregated Store Search (Phase 20)
+
+- [ ] **STORESEARCH-01**: A new top-level sidebar entry (sibling of the existing `/discounts` "Deals" item, not nested inside it) opens a store-search screen; typing a title returns matching games with prices sourced from CheapShark behind a provider interface, so a second provider can be added without reshaping the consumer (D-11/D-12)
+- [ ] **STORESEARCH-02**: Search is debounced (~400ms), requires a minimum of 3 characters, and cancels any in-flight request when a newer query supersedes it — one request per pause, never per keystroke, respecting a free keyless API (D-11)
+- [ ] **STORESEARCH-03**: Results render one row per game showing the cheapest price; expanding a row lazily fetches that game's per-store deals (`/games?id=`), so the per-store breakdown is only paid for when the user asks for it (D-12)
+- [ ] **STORESEARCH-04**: Every price displays its currency explicitly (e.g. `$14.99 USD`) — the unit travels with the number, never a bare `$`, because CheapShark is USD-only while the adjacent Deals screen renders localised prices and a non-US user would otherwise act on a wrong "cheapest" verdict (D-13)
+- [ ] **STORESEARCH-05**: A search result the user already owns carries an ownership badge naming the store(s) it is owned on (e.g. "Owned on Steam, GOG"); Steam ownership is resolved **exactly** via CheapShark's `steamAppID` (no title matching), while GOG/Epic/Amazon are resolved by fuzzy title match reusing `humble/dedup.ts`'s shared `HUMBLE_FUZZY_MATCH_THRESHOLD` (85%) and its `isDlcFalsePositiveRisk` guard. `sideloadedLibrary` is excluded (arbitrary user-supplied titles → highest false-positive risk) (D-01/D-02/D-04/D-05/D-06)
+- [ ] **STORESEARCH-06**: A result for which the user holds an unredeemed Humble key carries a `key-available` badge, shown **alongside** any ownership badge rather than suppressed by it — reusing the `owned | key-available | null` vocabulary from `common/discounts/badges.ts` while deliberately relaxing Phase 15's single-badge-per-card invariant (D-85) **on this surface only**; the Deals screen keeps its single-badge rule (D-03/D-07)
+- [ ] **STORESEARCH-07**: Clicking a result hands off to the user's external browser via `shell.openExternal()` (never the in-app `/store-page` WebView — GameLib must not wrap its own chrome around ~30 unvetted third-party checkout forms), using CheapShark's documented `redirect?dealID=` URL. No post-purchase machinery: the purchase lands on the next normal library sync (D-08/D-09/D-10)
+- [ ] **STORESEARCH-08**: The screen shows an explanatory prompt before any query is typed, and distinguishes "no results" from "the provider failed" — a provider failure renders an inline, retryable error while leaving the search box usable (fail-soft, mirroring the Humble adapter) (D-14)
+
 ## Future Requirements
 
 Deferred beyond v1.1. Tracked but not in the current roadmap.
@@ -186,6 +201,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MACSTEAM-04 | Phase 17 | Pending |
 | MACSTEAM-05 | Phase 17 | Pending |
 | MACSTEAM-06 | Phase 17 | Pending |
+| STORESEARCH-01 | Phase 20 | Pending |
+| STORESEARCH-02 | Phase 20 | Pending |
+| STORESEARCH-03 | Phase 20 | Pending |
+| STORESEARCH-04 | Phase 20 | Pending |
+| STORESEARCH-05 | Phase 20 | Pending |
+| STORESEARCH-06 | Phase 20 | Pending |
+| STORESEARCH-07 | Phase 20 | Pending |
+| STORESEARCH-08 | Phase 20 | Pending |
 | MAC32-01 | Phase 18 | Complete |
 | MAC32-02 | Phase 18 | Complete |
 | MAC32-03 | Phase 18 | Complete |
