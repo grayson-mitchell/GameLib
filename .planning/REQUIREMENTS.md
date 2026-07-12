@@ -106,10 +106,10 @@ Requirements for the v1.4 milestone — **Steam macOS Compatibility Runtime**. O
 
 Detect a Steam game's macOS build architecture so 32-bit-only Mac builds (unrunnable on modern macOS — 32-bit dropped in Catalina/2019) route to CrossOver/Wine instead of a failing native install, and surface the game's OS/arch as a left-panel badge. Extends the Phase 17 `isBottleEligible()`/D-11 routing. Steam-only for V1. Derived from `/gsd-explore` 2026-07-12 (see `.planning/notes/steam-mac-arch-detection-decisions.md`).
 
-- [ ] **MAC32-01**: A Steam game's macOS build architecture is read from PICS appinfo via `steam-user` `getProductInfo` (`apps[id].appinfo.config.launch[N].config.osarch`, matching both `"macos"` and legacy `"osx"` in the sibling `oslist`) and recorded as an arch signal on `GameInfo`; a missing/blank `osarch` is treated as **unknown**, NOT as 32-bit (avoids Steam's documented false-32-bit-flagging trap). The public Web API `appdetails` only exposes a `platforms.mac` boolean and is insufficient.
-- [ ] **MAC32-02**: On macOS, a game whose mac build is confirmed 32-bit is bottle-eligible — install / launch / uninstall route through the bottled Steam client (Windows depot under CrossOver) and a native `steam://` install is never attempted; extends `isBottleEligible()`/D-11 so 32-bit is an additional bottle-eligibility reason. Windows, Linux, not-yet-captured, and 64-bit/unknown Mac games are unaffected.
-- [ ] **MAC32-03**: After a native macOS install of a game with unknown/64-bit `osarch`, GameLib inspects the installed Mach-O binary (`lipo -archs` / `file`) as ground truth; an i386-only binary Steam failed to tag is re-routed to the bottle and the result is cached, so Steam's missing-`osarch` false-negatives are still caught without over-routing on the pre-install hint.
-- [ ] **MAC32-04**: The left-panel game view shows an OS logo beside the game logo with a "32" mark on 32-bit macOS builds; the "32" treatment is escalated to an actionable warning only when the host OS is macOS (informational elsewhere).
+- [x] **MAC32-01**: A Steam game's macOS build architecture is read from PICS appinfo via `steam-user` `getProductInfo` (`apps[id].appinfo.config.launch[N].config.osarch`, matching both `"macos"` and legacy `"osx"` in the sibling `oslist`) and recorded as an arch signal on `GameInfo`; a missing/blank `osarch` is treated as **unknown**, NOT as 32-bit (avoids Steam's documented false-32-bit-flagging trap). The public Web API `appdetails` only exposes a `platforms.mac` boolean and is insufficient.
+- [x] **MAC32-02**: On macOS, a game whose mac build is confirmed 32-bit is bottle-eligible — install / launch / uninstall route through the bottled Steam client (Windows depot under CrossOver) and a native `steam://` install is never attempted; extends `isBottleEligible()`/D-11 so 32-bit is an additional bottle-eligibility reason. Windows, Linux, not-yet-captured, and 64-bit/unknown Mac games are unaffected.
+- [x] **MAC32-03**: After a native macOS install of a game with unknown/64-bit `osarch`, GameLib inspects the installed Mach-O binary (`lipo -archs` / `file`) as ground truth; an i386-only binary Steam failed to tag is re-routed to the bottle and the result is cached, so Steam's missing-`osarch` false-negatives are still caught without over-routing on the pre-install hint.
+- [x] **MAC32-04**: The left-panel game view shows an OS logo beside the game logo with a "32" mark on 32-bit macOS builds; the "32" treatment is escalated to an actionable warning only when the host OS is macOS (informational elsewhere).
 
 ## Future Requirements
 
@@ -186,10 +186,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MACSTEAM-04 | Phase 17 | Pending |
 | MACSTEAM-05 | Phase 17 | Pending |
 | MACSTEAM-06 | Phase 17 | Pending |
-| MAC32-01 | Phase 18 | Pending |
-| MAC32-02 | Phase 18 | Pending |
-| MAC32-03 | Phase 18 | Pending |
-| MAC32-04 | Phase 18 | Pending |
+| MAC32-01 | Phase 18 | Complete |
+| MAC32-02 | Phase 18 | Complete |
+| MAC32-03 | Phase 18 | Complete |
+| MAC32-04 | Phase 18 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 15 total
