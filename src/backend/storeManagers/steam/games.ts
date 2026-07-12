@@ -396,6 +396,22 @@ export default class SteamGame implements Game {
       const is_mac_native = !!data.platforms?.mac
       const is_linux_native = !!data.platforms?.linux
 
+      // MAC32-01 (direction B): derive the pre-install arch hint from the
+      // SAME appdetails response — no separate network/PICS call. Gated:
+      //  1. Never overwrite a Mach-O-verified entry (post-install ground
+      //     truth always wins — a cheap heuristic must not regress a
+      //     confirmed fact, T-18-02-04).
+      //  2. Only compute when is_mac_native is true (Pitfall 2) — a false
+      //     is_mac_native already routes correctly via the existing
+      //     isBottleEligible() D-11 OR-branch, making this signal moot.
+      const existingMeta = steamMetadataStore.get(this.appId)
+      const macArchVerified = existingMeta?.mac_arch_verified === true
+      const mac_arch: GameInfo['mac_arch'] = macArchVerified
+        ? existingMeta.mac_arch
+        : is_mac_native
+          ? macArchFromMinOS(data.mac_requirements?.minimum)
+          : existingMeta?.mac_arch
+
       const updated: GameInfo = {
         ...current,
         title: data.name ?? current.title,
@@ -403,6 +419,7 @@ export default class SteamGame implements Game {
         art_square,
         is_mac_native,
         is_linux_native,
+        mac_arch,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
         // Phase 17 D-08 reconciliation: this push only happens after a
@@ -415,6 +432,11 @@ export default class SteamGame implements Game {
       // Persist metadata for next session (D-05, indefinite cache).
       // platformsCaptured:true records that appdetails `platforms` was read, so
       // getGameInfo won't re-fetch this game again for platform data (self-heal once).
+      // T-18-02-04: steamMetadataStore.set REPLACES the entire entry (electron-store
+      // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source)
+      // must be explicitly carried forward here — otherwise the NEXT
+      // fetchMetadataIfNeeded call (next launch/resync) would silently drop the
+      // verified flag and regress mac_arch back to the min-OS heuristic.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
@@ -422,7 +444,18 @@ export default class SteamGame implements Game {
         is_mac_native,
         is_linux_native,
         is_delisted: false,
-        platformsCaptured: true
+        platformsCaptured: true,
+        mac_arch,
+        ...(macArchVerified
+          ? {
+              mac_arch_verified: true as const,
+              ...(existingMeta?.mac_arch_source
+                ? { mac_arch_source: existingMeta.mac_arch_source }
+                : {})
+            }
+          : is_mac_native
+            ? { mac_arch_source: 'minos' as const }
+            : {})
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data

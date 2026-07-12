@@ -332,6 +332,146 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     )
   })
 
+  // ── MAC32-01: inline mac_arch derivation (direction B) ────────────────────
+
+  function fixtureWithMacRequirements(minimumHtml: string | undefined) {
+    return {
+      data: {
+        [APP_ID]: {
+          success: true,
+          data: {
+            ...fixtureApiResponse.data[APP_ID].data,
+            mac_requirements: { minimum: minimumHtml }
+          }
+        }
+      }
+    }
+  }
+
+  it('MAC32-01: is_mac_native true + min-OS 10.15 persists mac_arch "64" and mac_arch_source "minos", preserving art_cover/art_square/extra', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(
+      fixtureWithMacRequirements(
+        '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
+      )
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        mac_arch: '64',
+        mac_arch_source: 'minos',
+        art_cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/header.jpg`,
+        art_square: `https://cdn.cloudflare.steamstatic.com/steam/apps/${APP_ID}/library_600x900.jpg`,
+        extra: expect.anything()
+      })
+    )
+    const updated = library.get(APP_ID)!
+    expect(updated.mac_arch).toBe('64')
+  })
+
+  it('MAC32-01: is_mac_native true + min-OS 10.9.3 (real 32-bit, Age of Wonders III) persists mac_arch "unknown" — never a false-negative assert-32', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(
+      fixtureWithMacRequirements(
+        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
+      )
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ mac_arch: 'unknown', mac_arch_source: 'minos' })
+    )
+  })
+
+  it('MAC32-01: is_mac_native true + empty mac_requirements (minimum undefined) resolves mac_arch "unknown" without throwing', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(
+      fixtureWithMacRequirements(undefined)
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+    library.set(APP_ID, makeEntry())
+
+    expect(() => new SteamGame(APP_ID).getGameInfo()).not.toThrow()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ mac_arch: 'unknown', mac_arch_source: 'minos' })
+    )
+  })
+
+  it('MAC32-01: is_mac_native false does NOT recompute mac_arch — carries forward the existing entry unchanged', async () => {
+    const notMacNativeResponse = {
+      data: {
+        [APP_ID]: {
+          success: true,
+          data: {
+            ...fixtureApiResponse.data[APP_ID].data,
+            platforms: { windows: true, mac: false, linux: false },
+            mac_requirements: {
+              minimum: '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
+            }
+          }
+        }
+      }
+    }
+    ;(axios.get as jest.Mock).mockResolvedValue(notMacNativeResponse)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      mac_arch: 'unknown'
+    })
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ mac_arch: 'unknown' })
+    )
+    // mac_arch_source must not be freshly stamped 'minos' — is_mac_native is false.
+    const setCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([key]) => key === APP_ID
+    )
+    expect(setCall?.[1]?.mac_arch_source).toBeUndefined()
+  })
+
+  it('MAC32-01: existing mac_arch_verified true is NEVER regressed by a re-fetch — mac_arch/mac_arch_source/mac_arch_verified preserved', async () => {
+    ;(axios.get as jest.Mock).mockResolvedValue(
+      fixtureWithMacRequirements(
+        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>' // would compute 'unknown' if NOT gated
+      )
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true,
+      mac_arch: '32',
+      mac_arch_verified: true,
+      mac_arch_source: 'macho'
+    })
+    library.set(APP_ID, makeEntry())
+
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        mac_arch: '32',
+        mac_arch_verified: true,
+        mac_arch_source: 'macho'
+      })
+    )
+  })
+
   // ── LIB-04: cache persistence ─────────────────────────────────────────────
 
   it('LIB-04: fetched metadata is written to steamMetadataStore for indefinite reuse', async () => {
