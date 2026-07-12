@@ -175,6 +175,23 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **UI hint**: yes
 
+### Phase 18: macOS 32-bit detection, badge & CrossOver routing
+
+**Goal:** Detect a Steam game's macOS build architecture and route 32-bit-only mac games to CrossOver/Wine instead of a native install that fails on modern macOS (32-bit dropped in Catalina/2019), surfacing the game's OS/arch as a badge beside the game logo in the left panel.
+**Requirements**: TBD (derive at plan-phase)
+**Depends on:** Phase 17 (bottle routing / `isBottleEligible()` D-11), Phase 7 (platform data)
+**Scope** (from /gsd-explore 2026-07-12 — see `.planning/notes/steam-mac-arch-detection-decisions.md`):
+  1. **Arch source** — read `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`, matching both `"macos"` and legacy `"osx"` in `oslist`) as a pre-install hint. Public Web API `appdetails` only exposes a `platforms.mac` boolean — no arch.
+  2. **Hybrid correctness** — `osarch=="32"` → badge + route to CrossOver + never native-install; missing/`"64"` → install natively, then a post-install Mach-O check (`lipo -archs`) re-routes any i386-only binary Steam failed to tag. Missing osarch is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flagging trap — A Hat in Time, Metro: Last Light, etc.).
+  3. **Routing** — plug into the existing `isBottleEligible()` / D-11 bottle path (32-bit becomes another reason a mac game is bottle-eligible; routes the Windows depot under CrossOver, not the mac binary).
+  4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
+  - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
+**Pre-work:** todo `steam-getproductinfo-appinfo-dump.md` — runtime `getProductInfo` dump to lock the parser casing/nesting before building.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 18 to break down)
+
 ---
 
 ## v1.1 Phase Details
@@ -500,7 +517,7 @@ v1.0: 1 → 2 → 3 → 4 (complete)
 v1.1: 5 → 6 → 7 → 8 → 9
 v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
 v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
-v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime)
+v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime) → 18 (depends on Phase 17 bottle routing + Phase 7 platform data)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -521,3 +538,4 @@ v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only Cross
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
+| 18. macOS 32-bit detection, badge & CrossOver routing | 0/? | Not planned | - |
