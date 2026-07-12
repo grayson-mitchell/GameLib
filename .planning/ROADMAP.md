@@ -188,7 +188,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
   - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
 **Pre-work:** todo `steam-getproductinfo-appinfo-dump.md` — runtime `getProductInfo` dump to lock the parser casing/nesting before building.
-**Plans:** 5 plans (4 complete + 1 gap-closure)
+**Plans:** 5/5 plans complete
 
 **Wave 0** — contracts + fixture capture (blocks the parser):
 - [x] 18-01-PLAN.md — mac_arch contracts (GameInfo + SteamMetadataCacheEntry) + getProductInfo appinfo dump harness + captured fixtures (MAC32-01)
@@ -201,7 +201,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 18-03-PLAN.md — Mach-O lipo/file ground-truth check + i386 recovery (prompt → forceUninstall → bottle re-install) (MAC32-03)
 
 **Wave 0 (gap closure)** — CR-01 badge data-flow fix (independent, no file overlap with 18-01..04):
-- [ ] 18-05-PLAN.md — propagate the Mach-O mac_arch:'32' verdict from steamMetadataStore to the frontend GameInfo (verifyMacArchGroundTruth pushes to library Map + frontend; refresh() seeds mac_arch from cachedMeta) + regression test (MAC32-04 gap closure)
+- [x] 18-05-PLAN.md — propagate the Mach-O mac_arch:'32' verdict from steamMetadataStore to the frontend GameInfo (verifyMacArchGroundTruth pushes to library Map + frontend; refresh() seeds mac_arch from cachedMeta) + regression test (MAC32-04 gap closure)
 
 ---
 
@@ -607,6 +607,6 @@ v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 m
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
-| 18. macOS 32-bit detection, badge & CrossOver routing | 4/4 | Complete   | 2026-07-12 |
+| 18. macOS 32-bit detection, badge & CrossOver routing | 5/5 | Complete   | 2026-07-12 |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |

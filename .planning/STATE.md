@@ -4,13 +4,13 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: "Phase 17-07 Task 1 complete (full-suite gate re-confirmed post-17-11 merge: 48 suites / 938 tests, codecheck clean); Task 2 checkpoint:human-verify blocking — human macOS+CrossOver UAT resume needed (step 1 passed 2026-07-11, steps 2-7 pending)"
-last_updated: "2026-07-12T06:49:15.729Z"
+last_updated: "2026-07-12T08:35:54.873Z"
 last_activity: 2026-07-12 -- Phase 18 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 4
-  completed_plans: 1
+  total_plans: 5
+  completed_plans: 4
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 18 (macos-32-bit-detection-badge-crossover-routing) — EXECUTING
-Plan: 1 of 4
+Plan: 1 of 5
 Status: Executing Phase 18
 Last activity: 2026-07-12 -- Phase 18 execution started
 
