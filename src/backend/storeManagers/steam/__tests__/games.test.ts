@@ -14,7 +14,9 @@ import { sendFrontendMessage } from '../../../ipc'
 import { steamMetadataStore } from '../electronStores'
 import SteamGame, {
   parseSteamStorageRequirement,
-  getSteamInstallSize
+  getSteamInstallSize,
+  parseSteamMacMinOSVersion,
+  macArchFromMinOS
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -1348,6 +1350,154 @@ describe('parseSteamStorageRequirement', () => {
   it('LIB-06: returns undefined for non-string input (array cast — typeof guard)', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(parseSteamStorageRequirement([] as any)).toBeUndefined()
+  })
+})
+
+// ── MAC32-01: parseSteamMacMinOSVersion / macArchFromMinOS ───────────────────
+// Fixtures below are the LITERAL live-fetched mac_requirements.minimum HTML
+// strings from 18-RESEARCH.md Pattern 1's corpus (cross-checked against the
+// four committed 18-01 appinfo fixtures' real titles).
+
+describe('parseSteamMacMinOSVersion', () => {
+  it('canonical bulleted shape: Dota 2 (570) resolves to 10.15', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> macOS 10.15 or newer<br></li>'
+      )
+    ).toEqual({ major: 10, minor: 15 })
+  })
+
+  it('canonical bulleted shape with parenthetical codename: Age of Wonders III (226840, confirmed 32-bit) resolves to 10.9.3', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
+      )
+    ).toEqual({ major: 10, minor: 9 })
+  })
+
+  it('"or higher" phrasing: A Hat in Time (253230, false-flag, real 64-bit) resolves to 10.11.6', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> MAC OS X 10.11.6 or higher<br></li>'
+      )
+    ).toEqual({ major: 10, minor: 11 })
+  })
+
+  it('multi-alternative "or higher" list: Half-Life 2 (220) returns the LOWEST alternative (10.5.8, not 10.6.3)', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> Leopard 10.5.8, Snow Leopard 10.6.3, or higher<br></li>'
+      )
+    ).toEqual({ major: 10, minor: 5 })
+  })
+
+  it('tagless run-on prose: Portal resolves to 10.5.8 without the "1GB" RAM figure leaking in', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<strong>Minimum: </strong>OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM, NVIDIA...'
+      )
+    ).toEqual({ major: 10, minor: 5 })
+  })
+
+  it('label+value co-located inside one <strong>, range format: Terraria resolves to the lowest bound (10.9.5, not 10.11.6)', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>'
+      )
+    ).toEqual({ major: 10, minor: 9 })
+  })
+
+  it('decoy digits: Dust: An Elysian Tail resolves via 10.6.8, NOT via the literal "32" in "32/64-bit" (no dot, excluded)', () => {
+    expect(
+      parseSteamMacMinOSVersion(
+        '<li><strong>OS:</strong> Snow Leopard 10.6.8, 32/64-bit<br>...'
+      )
+    ).toEqual({ major: 10, minor: 6 })
+  })
+
+  it('major > 10: No Man\'s Sky resolves to 12.3', () => {
+    expect(
+      parseSteamMacMinOSVersion('<li><strong>OS:</strong> macOS Monterey 12.3<br></li>')
+    ).toEqual({ major: 12, minor: 3 })
+  })
+
+  it('returns null for undefined input (empty-array proxy: mac_requirements: [] yields undefined via optional chaining)', () => {
+    expect(parseSteamMacMinOSVersion(undefined)).toBeNull()
+  })
+
+  it('returns null without throwing when no OS line is present at all', () => {
+    expect(parseSteamMacMinOSVersion('no os line here at all')).toBeNull()
+  })
+
+  it('returns null for non-string input (typeof guard)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(parseSteamMacMinOSVersion([] as any)).toBeNull()
+  })
+})
+
+describe('macArchFromMinOS', () => {
+  it('Dota 2 (570, min-OS 10.15, Catalina floor) resolves to "64" (confident)', () => {
+    expect(
+      macArchFromMinOS('<li><strong>OS:</strong> macOS 10.15 or newer<br></li>')
+    ).toBe('64')
+  })
+
+  it('No Man\'s Sky (min-OS 12.3, major > 10) resolves to "64" (confident)', () => {
+    expect(
+      macArchFromMinOS('<li><strong>OS:</strong> macOS Monterey 12.3<br></li>')
+    ).toBe('64')
+  })
+
+  it('Age of Wonders III (226840, min-OS 10.9.3, REAL 32-bit) resolves to "unknown" — never a false-negative assert-32', () => {
+    expect(
+      macArchFromMinOS('<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>')
+    ).toBe('unknown')
+  })
+
+  it('A Hat in Time (253230, min-OS 10.11.6, REAL 64-bit false-flag) resolves to "unknown" — the false-flag-safe anchor', () => {
+    expect(
+      macArchFromMinOS(
+        '<li><strong>OS:</strong> MAC OS X 10.11.6 or higher<br></li>'
+      )
+    ).toBe('unknown')
+  })
+
+  it('Half-Life 2 (220, min-OS 10.5.8, lowest of two alternatives) resolves to "unknown"', () => {
+    expect(
+      macArchFromMinOS(
+        '<li><strong>OS:</strong> Leopard 10.5.8, Snow Leopard 10.6.3, or higher<br></li>'
+      )
+    ).toBe('unknown')
+  })
+
+  it('tagless prose (Portal) resolves to "unknown"', () => {
+    expect(
+      macArchFromMinOS(
+        '<strong>Minimum: </strong>OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM, NVIDIA...'
+      )
+    ).toBe('unknown')
+  })
+
+  it('Terraria range shape resolves to "unknown" (lowest bound 10.9.5)', () => {
+    expect(
+      macArchFromMinOS('<li><strong>OS: OSX 10.9.5 - 10.11.6</strong> <br></li>')
+    ).toBe('unknown')
+  })
+
+  it('Dust: An Elysian Tail decoy digits resolve to "unknown" via 10.6.8, not the literal "32"', () => {
+    expect(
+      macArchFromMinOS(
+        '<li><strong>OS:</strong> Snow Leopard 10.6.8, 32/64-bit<br>...'
+      )
+    ).toBe('unknown')
+  })
+
+  it('undefined input (empty-array proxy) resolves to "unknown" without throwing', () => {
+    expect(macArchFromMinOS(undefined)).toBe('unknown')
+  })
+
+  it('unparseable text resolves to "unknown" without throwing', () => {
+    expect(macArchFromMinOS('no os line here at all')).toBe('unknown')
   })
 })
 
