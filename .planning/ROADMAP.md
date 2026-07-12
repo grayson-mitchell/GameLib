@@ -178,7 +178,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### Phase 18: macOS 32-bit detection, badge & CrossOver routing
 
 **Goal:** Detect a Steam game's macOS build architecture and route 32-bit-only mac games to CrossOver/Wine instead of a native install that fails on modern macOS (32-bit dropped in Catalina/2019), surfacing the game's OS/arch as a badge beside the game logo in the left panel.
-**Requirements**: TBD (derive at plan-phase)
+**Requirements**: MAC32-01, MAC32-02, MAC32-03, MAC32-04
 **Depends on:** Phase 17 (bottle routing / `isBottleEligible()` D-11), Phase 7 (platform data)
 **Scope** (from /gsd-explore 2026-07-12 — see `.planning/notes/steam-mac-arch-detection-decisions.md`):
   1. **Arch source** — read `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`, matching both `"macos"` and legacy `"osx"` in `oslist`) as a pre-install hint. Public Web API `appdetails` only exposes a `platforms.mac` boolean — no arch.
