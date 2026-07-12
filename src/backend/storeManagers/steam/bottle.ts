@@ -278,25 +278,34 @@ const INSTALLER_PROCESS_NAMES = ['SteamSetup.exe', 'steam.exe']
  * than us yanking GameLib out of fullscreen (17-UAT refinement). Every step is
  * guarded; failure never affects the install flow. No-op on Linux/Windows.
  */
-async function raiseInstallerWindow(context: string): Promise<void> {
+// Steam's OWN client/helper processes running inside the bottle. When we raise
+// a LAUNCHED game's window (GAP-17-LAUNCH-FOCUS) we must skip these — the game
+// is a DIFFERENT unbundled `.exe`, and raising steam.exe/steamwebhelper would
+// pull the client forward instead of the game.
+const STEAM_CLIENT_PROCESS_NAMES = [
+  'steam.exe',
+  'steamwebhelper.exe',
+  'SteamSetup.exe',
+  'GameOverlayUI.exe'
+]
+
+/**
+ * Shared raise-to-front core (macOS-only, fire-and-forget). Polls (~1.5s
+ * cadence, ~18s window) running a caller-supplied AppleScript that returns
+ * either "<name> pid=<n>" for the raised process or "none". On a hit it
+ * re-raises once (splash -> main-window settle); on a persistent miss it falls
+ * back to app.hide() so GameLib at least steps aside. Every step is guarded —
+ * failure never affects the install/launch flow. No-op on Linux/Windows.
+ */
+async function raiseFrontmostBottledProcess(
+  context: string,
+  raiseScript: string
+): Promise<void> {
   try {
     const { isMac } = await import('backend/constants/environment')
     if (!isMac) {
       return
     }
-
-    const nameClause = INSTALLER_PROCESS_NAMES.map(
-      (n) => `name is "${n}"`
-    ).join(' or ')
-    const raiseScript = [
-      'tell application "System Events"',
-      `set procs to (every process whose (${nameClause}))`,
-      'if procs is {} then return "none"',
-      'set p to item 1 of procs',
-      'set frontmost of p to true',
-      'return (name of p) & " pid=" & (unix id of p)',
-      'end tell'
-    ].join('\n')
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
     const tryRaise = async (): Promise<string | null> => {
@@ -306,7 +315,7 @@ async function raiseInstallerWindow(context: string): Promise<void> {
         return out && out !== 'none' ? out : null
       } catch (error) {
         logWarning(
-          [`raiseInstallerWindow [${context}]: osascript raise failed`, error],
+          [`raiseFrontmostBottledProcess [${context}]: osascript raise failed`, error],
           LogPrefix.Steam
         )
         return null
@@ -321,15 +330,15 @@ async function raiseInstallerWindow(context: string): Promise<void> {
 
     if (raised) {
       logInfo(
-        `raiseInstallerWindow [${context}]: raised installer to front (${raised})`,
+        `raiseFrontmostBottledProcess [${context}]: raised to front (${raised})`,
         LogPrefix.Steam
       )
-      // Re-raise once after the installer's main window settles (splash -> UI).
+      // Re-raise once after the window settles (splash -> main UI).
       await sleep(2500)
       await tryRaise()
     } else {
       logWarning(
-        `raiseInstallerWindow [${context}]: installer process not found within ~18s — falling back to app.hide()`,
+        `raiseFrontmostBottledProcess [${context}]: no matching process within ~18s — falling back to app.hide()`,
         LogPrefix.Steam
       )
       try {
@@ -337,17 +346,59 @@ async function raiseInstallerWindow(context: string): Promise<void> {
         app.hide()
       } catch (error) {
         logWarning(
-          [`raiseInstallerWindow [${context}]: app.hide fallback failed`, error],
+          [`raiseFrontmostBottledProcess [${context}]: app.hide fallback failed`, error],
           LogPrefix.Steam
         )
       }
     }
   } catch (error) {
     logWarning(
-      [`raiseInstallerWindow [${context}]: failed`, error],
+      [`raiseFrontmostBottledProcess [${context}]: failed`, error],
       LogPrefix.Steam
     )
   }
+}
+
+async function raiseInstallerWindow(context: string): Promise<void> {
+  const nameClause = INSTALLER_PROCESS_NAMES.map(
+    (n) => `name is "${n}"`
+  ).join(' or ')
+  const raiseScript = [
+    'tell application "System Events"',
+    `set procs to (every process whose (${nameClause}))`,
+    'if procs is {} then return "none"',
+    'set p to item 1 of procs',
+    'set frontmost of p to true',
+    'return (name of p) & " pid=" & (unix id of p)',
+    'end tell'
+  ].join('\n')
+  await raiseFrontmostBottledProcess(context, raiseScript)
+}
+
+/**
+ * GAP-17-LAUNCH-FOCUS (macOS-only, fire-and-forget): after a bottled game is
+ * launched via `-applaunch`, the game window is a SEPARATE unbundled Wine
+ * process (the game's own `.exe`) that macOS focus-stealing protection leaves
+ * behind GameLib. Bottled Windows executables end in `.exe` (native macOS apps
+ * do not), so we raise the frontmost visible `.exe` process that is NOT one of
+ * Steam's own client/helper processes — i.e. the launched game itself.
+ */
+async function raiseBottledGameWindow(context: string): Promise<void> {
+  const excludeList = STEAM_CLIENT_PROCESS_NAMES.map((n) => `"${n}"`).join(', ')
+  const raiseScript = [
+    'tell application "System Events"',
+    `set steamNames to {${excludeList}}`,
+    'set procs to (every process whose visible is true and name ends with ".exe")',
+    'repeat with p in procs',
+    '  if (name of p) is not in steamNames then',
+    '    set frontmost of p to true',
+    '    return (name of p) & " pid=" & (unix id of p)',
+    '  end if',
+    'end repeat',
+    'return "none"',
+    'end tell'
+  ].join('\n')
+  await raiseFrontmostBottledProcess(context, raiseScript)
 }
 
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
@@ -650,11 +701,15 @@ async function dispatchToBottledSteam(
 
   try {
     const { runWineCommand } = await import('backend/launcher')
-    // GAP 5: raise the installer to the front once it appears (fire-and-forget).
-    // 'install' only — 'launch'/'uninstall' don't spawn the guided installer UI.
-    // Fire BEFORE the await (see provisionBottle note) so it runs concurrently.
+    // Raise the relevant bottled window once it appears (fire-and-forget, before
+    // the await so it runs concurrently — see provisionBottle note).
+    //  - 'install': raise the guided installer UI (steam.exe/SteamSetup.exe).
+    //  - 'launch' (GAP-17-LAUNCH-FOCUS): raise the launched game's own window.
+    //  - 'uninstall': no window to raise.
     if (verb === 'install') {
       void raiseInstallerWindow('install')
+    } else if (verb === 'launch') {
+      void raiseBottledGameWindow('launch')
     }
     await runWineCommand({
       commandParts,
