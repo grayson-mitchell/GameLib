@@ -34,27 +34,77 @@ warning for `knownnottowork` titles.
   theorize; the answer is empirical and cheap to get").
 
 - **D-02: The promotion gate is pre-committed, before the measurement runs.** Non-Steam
-  name matching ships in v1 **only if** wrong hits are **<2%** of claimed non-Steam titles
-  **AND** the hit rate is **>30%** of them. If either bound fails, v1 ships **Steam-AppID-only
+  name matching ships in v1 **only if** wrong hits are **<2%** of claimed titles
+  **AND** the hit rate is **>30%**. If either bound fails, v1 ships **Steam-AppID-only
   badges** and name matching becomes a follow-up phase. The gate is fixed in advance
   specifically so the number cannot be rationalized after the fact.
-  *Steam AppID joins are exact and are NOT subject to this gate.*
 
-- **D-03: The measurement sample is the real library plus a synthetic hard-case set.** The
-  user's actual Epic/GOG/Amazon/Humble titles supply the realistic distribution; a hand-built
-  adversarial set supplies the failure modes that library happens not to contain — edition
-  suffixes, roman vs arabic numerals, apostrophe variants (`Baldur's` / `Baldurs` / U+2019),
-  and the duplicate-`<app>`-record cases named in Q1.
+  > **AMENDED 2026-07-12 (post-research).** The gate is measured against the **123
+  > ground-truth pairs** (see D-03), NOT against the raw non-Steam library.
+  > **Why:** the real non-Steam library is 15 Epic entries, ~10 of which are DLC / art books /
+  > wallpapers — about five real games. On n=15 the smallest possible non-zero error rate is
+  > 6.7%, so a "<2%" bound silently collapses into "pass only if *exactly zero* wrong." That is
+  > the strictest-possible gate by arithmetic accident, and it is explicitly **not** the option
+  > that was chosen when offered. Scoring on the 123 pairs keeps the <2% / >30% bounds
+  > *meaningful* rather than degenerate. The bounds themselves are unchanged.
+  >
+  > *Steam AppID joins remain exact and are NOT subject to this gate — the AppID join is the
+  > ground truth the gate is measured against, not a thing the gate judges.*
 
-- **D-04: Dedup rule — highest `cxversion`, then most ratings (`num`).** Required even for a
-  Steam-only index: the dump carries **1,620 apps with a `<steamid>` but only 1,551 unique
-  Steam AppIDs**, so ~69 AppIDs collide across records. This tiebreak deliberately mirrors the
-  verified medal rule ("rating = medal on the highest cxversion"), so the index applies one
-  principle throughout rather than two.
+- **D-03: The measurement sample is the 123 Steam ground-truth pairs, plus a synthetic
+  hard-case set.**
+
+  > **AMENDED 2026-07-12 (post-research).** Originally "the real library + a synthetic set."
+  > Research found the real non-Steam library is too small to measure anything (see D-02).
+  >
+  > **The ground-truth set:** the user's Steam library (377 titles) ∩ dump-by-AppID =
+  > **123 pairs where the correct dump record is already known** by exact AppID join. Hold out
+  > the AppID, match on **name only**, and score the result against the record the AppID proves
+  > correct. This yields a real, labelled wrong-hit count on a sample 8× larger than the
+  > non-Steam library — and it measures precisely what the gate cares about: *does name matching
+  > select the WRONG record?*
+  >
+  > **Still required:** the synthetic hard-case set (edition suffixes, roman vs arabic numerals,
+  > apostrophe variants incl. U+2019, duplicate-`<app>` records) — it covers failure modes the
+  > library happens not to contain.
+  >
+  > **Non-Steam titles** are still run through the matcher and their **hit rate reported**, but
+  > their wrong-hit rate carries no statistical weight at n≈5 and must not be used to pass or
+  > fail the gate.
+  >
+  > **Research preview (indicative, not a substitute for the real measurement):** three candidate
+  > normalizers scored **0 wrong hits** at 77.2% / 80.5% / 84.6% hit rates. A self-collision test
+  > across all 2,866 dump names found **punctuation stripping is free** (zero rating-disagreeing
+  > collisions) while **edition-suffix stripping is where harm enters** (~1.2% of records at
+  > risk). Edition-suffix handling is therefore the live trade-off this measurement must
+  > adjudicate — it is the knob, not an afterthought.
+
+- **D-04: Dedup rule — highest `cxversion`, then most ratings (`num`), then `appid` ascending.**
+  Required even for a Steam-only index. The first two keys deliberately mirror the verified
+  medal rule ("rating = medal on the highest cxversion"), so the index applies one principle
+  throughout rather than two.
+
+  > **AMENDED 2026-07-12 (post-research). Two corrections:**
+  >
+  > **(a) The collision count was wrong.** CONTEXT originally said "~69 AppIDs collide," derived
+  > from `1,620 − 1,551`. That subtraction is invalid — it mixes a Mac-medal-scoped numerator
+  > against a whole-file-scoped unique count. The true figure **within the index's own scope is
+  > 205 colliding AppIDs across 261 records** (~3× larger).
+  >
+  > **(b) The two-key tiebreak does not totally order the records.** Many collisions have
+  > *identical* `cxversion` AND *identical* `num` (`Quake`, `EverQuest`, `Ghost Recon`) — a total
+  > tie, which makes the CI build **non-deterministic**. A third key is therefore mandatory:
+  > **`appid` ascending.** This is a strict refinement, not a contradiction — the first two keys
+  > still decide wherever they can, and `appid` only breaks the residual ties.
+  >
+  > **Blast radius:** only **7 of the 205** collisions actually disagree on rating, so the
+  > arbitrary-but-stable pick is nearly always harmless. Determinism is the point.
 
 - **D-05: Collisions log and resolve; they never fail the build.** CI picks a winner by D-04,
   emits the collision count as a build artifact so drift stays visible, and always publishes.
   The index is an enhancement — a broken daily build must not be able to block anything.
+  With D-04's third key the resolution is now always total, so "unbreakable tie" no longer
+  exists as a failure mode; the logging requirement stands as a drift signal.
 
 ### Index Delivery & Refresh
 
@@ -155,6 +205,33 @@ warning for `knownnottowork` titles.
   **Keep the *slug* function distinct from the *matching* key (D-01/D-03).** For slugs,
   verbatim is provably right and normalization provably wrong. For matching, normalization is
   the open question. Conflating them is the trap.
+
+### Execution Traps (from research — each would cost an execution cycle)
+
+Verified against live data during research, not recalled. See `19-RESEARCH.md` for detail.
+
+- **T-01: `fast-xml-parser@5` throws on this dump out of the box** — `Entity expansion limit
+  exceeded: 1001 > 1000`. Its v5 security defaults (`maxTotalExpansions: 1000`,
+  `maxExpandedLength: 100_000`) are orders of magnitude below a 23.7 MB document. Fix via a
+  `ProcessEntitiesOptions` object — **NOT** `processEntities: false`, which would leave `&amp;`
+  undecoded in names like `Command & Conquer`.
+
+- **T-02: the dump's real XML shape differs from the snippet in the findings note.** The root
+  path is `c4p > applications > app[]`, and `steamid` / `category` / `medal` live **inside
+  `<appprofile>`**, not as direct children of `<app>`. Extracting against the documented shape
+  silently yields **zero records**.
+
+- **T-03: GitHub disables scheduled workflows on forks by default.** GameLib is a fork, so
+  D-06's daily Action will **silently never run** until a human clicks "Enable workflow" — and
+  is then subject to 60-day-inactivity auto-disable. Requires: a `workflow_dispatch` trigger, an
+  explicit human enable step, and a `generatedAt` staleness signal in the index so a silently
+  dead builder is visible rather than invisible.
+
+- **T-04: the rolling tag must not match `v*`** — that pattern would trigger
+  `draft-release-mac.yml`'s signed/notarized build every day. It must also use `--latest=false`,
+  or the index release shadows real app releases on the repo's Releases page.
+
+- **T-05: the project uses `pnpm`, not `npm`.** Any plan writing `npm run …` is wrong.
 
 ### Claude's Discretion
 
