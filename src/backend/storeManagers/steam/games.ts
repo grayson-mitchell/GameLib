@@ -90,6 +90,128 @@ export function parseSteamStorageRequirement(
   return Math.round(value * (multipliers[unit] ?? 1))
 }
 
+interface MacOsVersion {
+  major: number
+  minor: number
+}
+
+/**
+ * Named macOS release codenames → major.minor, used ONLY as a fallback when
+ * the isolated OS segment has no digit-based version at all. Not observed as
+ * necessary in the live-verified corpus (18-RESEARCH.md Pattern 1) — kept for
+ * forward compatibility with future store copy that might drop numbers
+ * entirely (e.g. "macOS Sequoia" with no digit).
+ */
+const MACOS_CODENAME_VERSION: Record<string, MacOsVersion> = {
+  sequoia: { major: 15, minor: 0 },
+  sonoma: { major: 14, minor: 0 },
+  ventura: { major: 13, minor: 0 },
+  monterey: { major: 12, minor: 0 },
+  'big sur': { major: 11, minor: 0 },
+  catalina: { major: 10, minor: 15 },
+  mojave: { major: 10, minor: 14 },
+  'high sierra': { major: 10, minor: 13 },
+  sierra: { major: 10, minor: 12 },
+  'el capitan': { major: 10, minor: 11 },
+  yosemite: { major: 10, minor: 10 },
+  mavericks: { major: 10, minor: 9 },
+  'mountain lion': { major: 10, minor: 8 },
+  lion: { major: 10, minor: 7 },
+  'snow leopard': { major: 10, minor: 6 },
+  leopard: { major: 10, minor: 5 }
+}
+
+function extractVersionTokens(text: string): MacOsVersion[] {
+  // Matches "10.15", "10.9.3", "12.3" — deliberately requires a literal dot,
+  // so bare numbers like "32" (from "32/64-bit") or "1" (from "1GB RAM")
+  // never false-match (T-18-02-01/02: floor-only, never asserts '32').
+  const matches = [...text.matchAll(/\b(\d{1,2})\.(\d{1,2})(?:\.\d{1,2})?\b/g)]
+  return matches.map((m) => ({ major: Number(m[1]), minor: Number(m[2]) }))
+}
+
+/**
+ * Parses the Steam appdetails `mac_requirements.minimum` HTML/text blob and
+ * returns the LOWEST macOS version evidenced in it — i.e. the true minimum
+ * requirement, even when the string lists multiple named releases as
+ * alternatives ("Leopard 10.5.8, Snow Leopard 10.6.3, or higher" means
+ * "10.5.8 or higher", not "10.6.3 or higher").
+ *
+ * Returns null when nothing extractable — callers MUST treat null as
+ * 'unknown', mirroring parseSteamStorageRequirement's undefined-on-no-match
+ * convention. The HTML is never eval'd or rendered (T-06-02/T-18-02-01).
+ */
+export function parseSteamMacMinOSVersion(
+  htmlOrText: string | undefined
+): MacOsVersion | null {
+  if (!htmlOrText || typeof htmlOrText !== 'string') return null
+
+  // Strip HTML tags FIRST so the "OS" label and its value are never split
+  // across a tag boundary (the canonical shape wraps ONLY the label in
+  // <strong>...</strong>, with the actual value sitting outside the tag —
+  // isolating on '<' before stripping would truncate the label match to an
+  // empty string). Handles all 5 observed shapes uniformly once tag-free:
+  //  a) '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
+  //  b) '<strong>OS: OSX 10.9.5 - 10.11.6</strong>' (label+value co-located)
+  //  c) 'OS: Snow Leopard 10.6.8, ...<br />' (no <li>/<ul> wrapper)
+  //  d) 'OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM,...'
+  //     (fully tagless — no delimiter after the OS clause at all)
+  //  e) 'mac_requirements: []' — caller never invokes this fn (guarded by
+  //     optional chaining at the call site: data?.mac_requirements?.minimum)
+  const tagFree = htmlOrText.replace(/<[^>]*>/g, ' ')
+
+  // \b requires a word boundary before "OS" so mid-word substrings (e.g.
+  // "Chaos") never false-match; "X?" covers the "OS X" label variant.
+  const labelMatch = tagFree.match(/\bOS(?:\s*X)?\s*:?\s*(.*)/i)
+  if (!labelMatch) return null
+
+  let segment = labelMatch[1]
+  // Bound the tagless/run-on case (d): stop at the next competing spec
+  // keyword so a Processor/Memory figure never bleeds into the version
+  // extraction.
+  const stopIdx = segment.search(
+    /\b(processor|cpu|memory|ram|graphics|gpu|storage|network|additional)\b/i
+  )
+  if (stopIdx > -1) segment = segment.slice(0, stopIdx)
+
+  const versions = extractVersionTokens(segment)
+  if (versions.length > 0) {
+    return versions.reduce((min, v) =>
+      v.major < min.major || (v.major === min.major && v.minor < min.minor)
+        ? v
+        : min
+    )
+  }
+
+  const lowerSegment = segment.toLowerCase()
+  for (const [name, version] of Object.entries(MACOS_CODENAME_VERSION)) {
+    if (lowerSegment.includes(name)) return version
+  }
+
+  return null
+}
+
+/**
+ * MAC32-01 (direction B): the pre-install arch signal, derived from the
+ * SAME appdetails response `is_mac_native` already reads (no new network
+ * call, no PICS/steam-user involvement — see games.ts fetchMetadataIfNeeded).
+ *
+ * NEVER returns '32' — a low min-OS proves nothing about bitness (A Hat in
+ * Time: min-OS 10.11.6, genuinely 64-bit — 18-RESEARCH.md Pattern 1 corpus).
+ * Catalina's 32-bit removal only proves a FLOOR: min-OS >= 10.15 implies the
+ * binary MUST be 64-bit (Apple physically cannot run i386 on 10.15+), but
+ * min-OS < 10.15 implies nothing either way. The return type has no '32'
+ * member — Pitfall 3 / T-18-02-02 is enforced at the type level, not by
+ * convention. Only the post-install Mach-O check (Plan 18-03) may assert '32'.
+ */
+export function macArchFromMinOS(
+  minHtml: string | undefined
+): '64' | 'unknown' {
+  const v = parseSteamMacMinOSVersion(minHtml)
+  if (!v) return 'unknown'
+  const isCatalinaOrNewer = v.major > 10 || (v.major === 10 && v.minor >= 15)
+  return isCatalinaOrNewer ? '64' : 'unknown'
+}
+
 /**
  * Returns a human-readable install size string for a Steam game.
  *
@@ -274,6 +396,22 @@ export default class SteamGame implements Game {
       const is_mac_native = !!data.platforms?.mac
       const is_linux_native = !!data.platforms?.linux
 
+      // MAC32-01 (direction B): derive the pre-install arch hint from the
+      // SAME appdetails response — no separate network/PICS call. Gated:
+      //  1. Never overwrite a Mach-O-verified entry (post-install ground
+      //     truth always wins — a cheap heuristic must not regress a
+      //     confirmed fact, T-18-02-04).
+      //  2. Only compute when is_mac_native is true (Pitfall 2) — a false
+      //     is_mac_native already routes correctly via the existing
+      //     isBottleEligible() D-11 OR-branch, making this signal moot.
+      const existingMeta = steamMetadataStore.get(this.appId)
+      const macArchVerified = existingMeta?.mac_arch_verified === true
+      const mac_arch: GameInfo['mac_arch'] = macArchVerified
+        ? existingMeta.mac_arch
+        : is_mac_native
+          ? macArchFromMinOS(data.mac_requirements?.minimum)
+          : existingMeta?.mac_arch
+
       const updated: GameInfo = {
         ...current,
         title: data.name ?? current.title,
@@ -281,6 +419,7 @@ export default class SteamGame implements Game {
         art_square,
         is_mac_native,
         is_linux_native,
+        mac_arch,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
         // Phase 17 D-08 reconciliation: this push only happens after a
@@ -293,6 +432,11 @@ export default class SteamGame implements Game {
       // Persist metadata for next session (D-05, indefinite cache).
       // platformsCaptured:true records that appdetails `platforms` was read, so
       // getGameInfo won't re-fetch this game again for platform data (self-heal once).
+      // T-18-02-04: steamMetadataStore.set REPLACES the entire entry (electron-store
+      // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source)
+      // must be explicitly carried forward here — otherwise the NEXT
+      // fetchMetadataIfNeeded call (next launch/resync) would silently drop the
+      // verified flag and regress mac_arch back to the min-OS heuristic.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
@@ -300,7 +444,18 @@ export default class SteamGame implements Game {
         is_mac_native,
         is_linux_native,
         is_delisted: false,
-        platformsCaptured: true
+        platformsCaptured: true,
+        mac_arch,
+        ...(macArchVerified
+          ? {
+              mac_arch_verified: true as const,
+              ...(existingMeta?.mac_arch_source
+                ? { mac_arch_source: existingMeta.mac_arch_source }
+                : {})
+            }
+          : is_mac_native
+            ? { mac_arch_source: 'minos' as const }
+            : {})
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
@@ -451,6 +606,14 @@ export default class SteamGame implements Game {
   private isBottleEligible(): boolean {
     if (!isMac) return false
     const meta = steamMetadataStore.get(this.appId)
+    // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
+    // is_mac_native/platformsCaptured — a confirmed-32 game reports
+    // is_mac_native true (it DOES have a mac depot, just not a runnable one on
+    // modern macOS). Pre-install the min-OS heuristic (games.ts macArchFromMinOS)
+    // NEVER yields '32', so this branch only ever fires from Plan 18-03's
+    // post-install Mach-O ground-truth check — but the wiring lands now so
+    // routing goes live the moment 18-03 caches a '32' verdict.
+    if (meta?.mac_arch === '32') return true
     return meta?.platformsCaptured === true && meta?.is_mac_native === false
   }
 

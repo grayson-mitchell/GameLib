@@ -50,18 +50,22 @@ export interface SteamMetadataCacheEntry {
   // (is_mac_native/is_linux_native === false) verdict, so it can self-heal exactly once.
   platformsCaptured?: boolean
   /** MAC32-01/03: resolved macOS build architecture. 'unknown' default is
-   * implicit (absent key) — NEVER infer '32' from a missing osarch tag (the
-   * false-flag trap, see games.ts isBottleEligible). Set from PICS osarch
-   * pre-install; corrected by the post-install Mach-O ground-truth check. */
+   * implicit (absent key) — NEVER infer '32' from a low/unparseable min-OS
+   * signal (the false-flag trap, see games.ts isBottleEligible). Direction B
+   * (18-02): set from the store-API mac_requirements min-OS heuristic
+   * pre-install (never '32' — see macArchFromMinOS); corrected to '32' only
+   * by the post-install Mach-O ground-truth check (Plan 18-03). */
   mac_arch?: '32' | '64' | 'unknown'
   /** True once the post-install lipo/file check has run and confirmed or
    * corrected mac_arch — prevents re-shelling-out on every launch(). */
   mac_arch_verified?: boolean
-  /** MAC32-cache-shape (LOCKED, CONTEXT.md): provenance of the mac_arch verdict
-   * — 'osarch' (PICS pre-install hint) or 'macho' (post-install ground truth,
-   * i.e. a Steam-corrected fact). Forward-compat for a future community
-   * override export (Phase 19); do not omit even though nothing reads it yet. */
-  mac_arch_source?: 'osarch' | 'macho'
+  /** MAC32-cache-shape (LOCKED, CONTEXT.md; reconciled 18-02 direction B):
+   * provenance of the mac_arch verdict — 'minos' (store-API mac_requirements
+   * min-OS pre-install heuristic) or 'macho' (post-install Mach-O ground
+   * truth, i.e. a Steam-corrected fact). Forward-compat for a future
+   * community override export (Phase 19); do not omit even though nothing
+   * reads it yet. */
+  mac_arch_source?: 'minos' | 'macho'
 }
 
 export type { SteamBottleConfig }
