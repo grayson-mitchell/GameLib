@@ -1,4 +1,7 @@
 {
+    "badge": {
+        "macArch32": "32-bit macOS build"
+    },
     "bottle": {
         "setup": {
             "cancel": "Not now",

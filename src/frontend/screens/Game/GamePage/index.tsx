@@ -65,6 +65,7 @@ import {
   HLTB,
   HumbleOriginInfo,
   InstalledInfo,
+  MacArchBadge,
   MainButton,
   PlatformSupport,
   ReportIssue,
@@ -493,6 +494,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                       <div className="store-icon">
                         <StoreLogos runner={runner} />
                       </div>
+                      <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
 
                       <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
                       <Genres
