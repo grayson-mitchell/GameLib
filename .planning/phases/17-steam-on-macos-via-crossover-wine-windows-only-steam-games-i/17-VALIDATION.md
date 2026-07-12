@@ -107,6 +107,8 @@ automated_verified: 2026-07-11
 
 **Also observed (session 5, MINOR UX):** window focus does not always move to the bottled Steam window when the guided flow raises it (`raiseInstallerWindow` best-effort loop, `bottle.ts:~320`) — non-blocking but confusing; the user must click the Steam window manually.
 
+**Also observed (session 5, MINOR UX) — GAP-17-LAUNCH-FOCUS:** when **launching** a bottled game (Play), focus does not automatically switch to the game — it opens behind GameLib and the user must click it. Root cause confirmed: `dispatchToBottledSteam` (`bottle.ts:653-658`) only fires `raiseInstallerWindow` for `verb === 'install'`; the `'launch'` path never raises anything, so macOS focus-stealing prevention leaves the game window in the background. Note the existing raiser targets processes named `SteamSetup.exe`/`steam.exe` — a launched game is its own unbundled Wine process (its game `.exe`), so a launch-focus fix must target the newly-appeared game window (e.g. the newest unbundled Wine foreground app after dispatch), not steam.exe. Needs live-CrossOver iteration to confirm it grabs the right window. Route: `/gsd:plan-phase 17 --gaps` (or a quick live-tested inline fix).
+
 **Resolved / confirmed by 17-15 (session 5):** GAP-17-CEF-RENDER — the win10_64 template fixes the grey-bar install dialog (steps 1-3 now pass on a real win64 bottle). The win32→win64 **auto**-recreate sub-behavior is separately broken (GAP-17-CEF-RECREATE-RUNNING) — the win64 bottle here was created after a manual delete.
 
 ### GAP-17-BOTTLE-PROGRESS — bottle install progress bar stuck at 0% (MAJOR, MACSTEAM-05) — candidate gap for `/gsd:plan-phase 17 --gaps`
