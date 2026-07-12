@@ -2408,6 +2408,31 @@ describe('locateMachOBinary()', () => {
 
     expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
   })
+
+  // T-18-03-04: a launchExecutable that escapes installPath's subtree must be
+  // rejected, never filesystem-touched — join() alone does not contain '../'.
+  it('rejects a launchExecutable that escapes installPath via ".." traversal (never touches the filesystem)', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true) // even if it "exists", it must be refused
+    ;(readdirSync as jest.Mock).mockReturnValue([]) // fall-through scan finds nothing
+
+    const result = locateMachOBinary(INSTALL_PATH, '../../../../etc/passwd')
+
+    expect(result).toBeNull()
+    // The escaped candidate must never be returned, and existsSync must never
+    // be consulted for it (containment is checked before the fs probe).
+    expect(existsSync).not.toHaveBeenCalledWith(
+      join(INSTALL_PATH, '../../../../etc/passwd')
+    )
+  })
+
+  it('rejects a launchExecutable that resolves to an absolute path outside installPath', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
+
+    const result = locateMachOBinary(INSTALL_PATH, '/etc/passwd')
+
+    expect(result).toBeNull()
+  })
 })
 
 describe('verifyMacArchGroundTruth() — MAC32-03', () => {

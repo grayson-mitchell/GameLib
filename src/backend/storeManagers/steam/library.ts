@@ -8,7 +8,7 @@ import {
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { join } from 'path'
+import { join, resolve, relative, isAbsolute } from 'path'
 import { dialog } from 'electron'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
@@ -549,17 +549,34 @@ export function verdictFromArchs(archs: string[]): '32' | '64' | null {
  * Locates the installed Mach-O binary to inspect. Prefers a supplied launch
  * executable path (resolved relative to installPath); otherwise scans
  * installPath for a top-level *.app bundle and returns its
- * Contents/MacOS/<first file>. Bounded to installPath's own subtree via
- * join() (T-18-03-04) — never throws, returns null (log+skip at the call
- * site) on any miss. Exported for unit testing.
+ * Contents/MacOS/<first file>. Containment (T-18-03-04): a supplied
+ * launchExecutable that escapes installPath's own subtree — via `..`
+ * segments or an absolute path — is rejected (logged + skipped), not just
+ * join()'d; `join()` alone does not prevent `../../` traversal. Never
+ * throws, returns null (log+skip at the call site) on any miss. Exported
+ * for unit testing.
  */
 export function locateMachOBinary(
   installPath: string,
   launchExecutable?: string
 ): string | null {
   if (launchExecutable) {
-    const candidate = join(installPath, launchExecutable)
-    if (existsSync(candidate)) return candidate
+    // T-18-03-04: reject any candidate that escapes installPath's subtree.
+    // resolve() honors an absolute launchExecutable and collapses '..'
+    // segments; relative() then reveals an escape as a leading '..' (or, on
+    // Windows, a different drive → absolute). Verify containment BEFORE
+    // touching the filesystem — join() alone would silently nest an absolute
+    // path and does not prevent '../../' traversal.
+    const candidate = resolve(installPath, launchExecutable)
+    const rel = relative(installPath, candidate)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      logWarning(
+        `Steam: locateMachOBinary rejected launchExecutable '${launchExecutable}' — escapes installPath subtree; skipping`,
+        LogPrefix.Steam
+      )
+    } else if (existsSync(candidate)) {
+      return candidate
+    }
   }
   try {
     const entries = readdirSync(installPath)
