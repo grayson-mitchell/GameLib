@@ -95,8 +95,15 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [wikiInfo, setWikiInfo] = useState<WikiInfo | null>(null)
 
-  const { epic, gog, gameUpdates, platform, showDialogModal, connectivity } =
-    useContext(ContextProvider)
+  const {
+    epic,
+    gog,
+    steam,
+    gameUpdates,
+    platform,
+    showDialogModal,
+    connectivity
+  } = useContext(ContextProvider)
 
   const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
 
@@ -215,7 +222,14 @@ export default React.memo(function GamePage(): JSX.Element | null {
       }
     }
     updateGameInfo()
-  }, [status, gog.library, epic.library, isMoving])
+    // GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED: steam.library must be a dependency
+    // here (mirroring gog.library/epic.library) so a backend-pushed install-state
+    // change (focus-triggered reconcile or the bottle install poller's 'done'
+    // completion) actually triggers a getGameInfo() refetch for the steam runner.
+    // Without this, GamePage's local `gameInfo` state — seeded once from
+    // location.state at mount — never refreshes, and the button stays stuck on
+    // Install even after the ACF confirms the game is fully installed.
+  }, [status, gog.library, epic.library, steam.library, isMoving])
 
   useEffect(() => {
     const updateConfig = async () => {
