@@ -188,10 +188,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
   - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
 **Pre-work:** todo `steam-getproductinfo-appinfo-dump.md` — runtime `getProductInfo` dump to lock the parser casing/nesting before building.
-**Plans:** 0 plans
+**Plans:** 4 plans in 3 waves
 
-Plans:
-- [ ] TBD (run /gsd-plan-phase 18 to break down)
+**Wave 0** — contracts + fixture capture (blocks the parser):
+- [ ] 18-01-PLAN.md — mac_arch contracts (GameInfo + SteamMetadataCacheEntry) + getProductInfo appinfo dump harness + captured fixtures (MAC32-01)
+
+**Wave 1** — parser/routing + badge (parallel, no file overlap):
+- [ ] 18-02-PLAN.md — parseOsArchHint + ensureMacArchHint (getProductInfo) + isBottleEligible 32-bit OR-branch (MAC32-01, MAC32-02)
+- [ ] 18-04-PLAN.md — MacArchBadge "32" component beside the game logo, host-OS-gated warning styling (MAC32-04)
+
+**Wave 2** — post-install ground truth (depends on 18-02; shares library.ts/games.ts):
+- [ ] 18-03-PLAN.md — Mach-O lipo/file ground-truth check + i386 recovery (prompt → forceUninstall → bottle re-install) (MAC32-03)
 
 ---
 
