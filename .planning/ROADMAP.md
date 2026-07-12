@@ -539,6 +539,34 @@ Plans:
 
 **UI hint**: yes
 
+---
+
+## v1.5 Phase Details
+
+### Phase 20: Aggregated Store Search (CheapShark)
+
+**Goal:** From a new left-sidebar entry, search a title once and see what it costs across every store — with **"you already own this on GOG/Steam/Epic/Amazon/Humble"** badges that no price-comparison website can show. Ends the "open six tabs to find the cheapest key" problem.
+**Depends on:** Phase 12 (ownership dedup — supplies the title matcher). Independent of the v1.4 macOS/CrossOver line; can run in parallel.
+**Requirements:** TBD (mint during /gsd-plan-phase 20)
+**Scope** (from /gsd-explore 2026-07-12 — see `.planning/notes/aggregated-store-search-foundations.md`):
+
+  1. **Sidebar entry** — a sibling of the existing `/discounts` "Deals" item (`SidebarLinks/index.tsx:199`). Explicitly a **top-level left-menu destination**, not a tab nested inside Deals.
+  2. **Provider interface + CheapShark adapter** — CheapShark is the prototype source: public JSON, no API key, no approval. `steamAppID` on its game results is the key asset.
+  3. **Owned-badge — the headline feature.** Steam-owned titles join **exactly** on `steamAppID` (no fuzzy matching). Epic/GOG/Amazon/Humble fall back to the title matcher generalized out of `src/backend/humble/dedup.ts` (`normalizeTitle` + length-sensitive `titleSimilarity` at 85% + `isDlcFalsePositiveRisk`). **Generalize that module — do not write a second matcher.** Its `humble`/`steam` parameter names are a historical artifact; the logic is store-agnostic.
+  4. **Buy = handoff.** Results link out via `shell.openExternal()` to the store page; the user buys in their browser; the **next library sync picks the game up**. No payment handling, no purchase callback. This is settled, not a compromise.
+  5. **USD-only disclosure.** CheapShark reports **USD only** — the UI must say so plainly. A non-US user reading unlabelled `$` figures as their own currency gets a *wrong* "cheapest" verdict, which is worse than showing no verdict.
+
+  - **Known, consciously-accepted debt:** CheapShark's USD-only limitation means the provider interface is being designed against a source weaker than the app around it (`Discounts` already models `{ countryCode, locale, currencyCode }` correctly). The interface **will** be reshaped when IsThereAnyDeal lands. Contain USD-only inside the adapter — never leak it into shared types, IPC payloads, or the owned-badge logic. Migration cost scoped in `.planning/research/questions.md` **Q2**.
+  - **Risk — false-positive owned-badges.** Telling a user they already own a game they don't talks them out of a purchase they wanted. Bias the fuzzy threshold conservative; a miss is cheaper than a wrong badge. Same asymmetry as Phase 19 (exact on Steam ID, fuzzy on everything else) — see Q1.
+  - **Out of scope:** the aggregated *discovery/browse* surface (multi-provider Deals). Captured as `.planning/seeds/aggregated-discovery-multi-provider-deals.md`, deliberately gated on this phase's provider interface surviving one real consumer first.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 20 to break down)
+
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
@@ -548,6 +576,7 @@ v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can r
 v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
 v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime) → 18 (depends on Phase 17 bottle routing + Phase 7 platform data)
      19 (depends on Phase 16 only — independent of 17/18, can run in parallel)
+v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 macOS/CrossOver line, can run in parallel)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -570,3 +599,4 @@ v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only Cross
 | 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 0/? | Not planned | - |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
+| 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |
