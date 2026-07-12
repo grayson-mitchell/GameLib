@@ -13,7 +13,10 @@ import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
 
-export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
+export async function getWikiGameInfo(
+  game: Game,
+  forceRefresh = false
+): Promise<WikiInfo | null> {
   const gameInfo = game.getGameInfo()
   const appName = gameInfo.app_name
   const runner = gameInfo.runner
@@ -39,7 +42,7 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
       (isMac || isLinux) &&
       (!cachedResponse?.codeweavers ||
         cachedResponse.codeweavers.macRating === undefined)
-    if (cachedResponse && !staleAppleData && !staleCrossoverData) {
+    if (!forceRefresh && cachedResponse && !staleAppleData && !staleCrossoverData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
