@@ -1,8 +1,8 @@
-import { useContext } from 'react'
+import { MouseEvent, useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
-import { WineBar } from '@mui/icons-material'
-import { Rating } from '@mui/material'
+import { Refresh, WineBar } from '@mui/icons-material'
+import { IconButton, Rating } from '@mui/material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
 import { ratingTier } from './appleRating'
@@ -15,7 +15,22 @@ interface Props {
 
 const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
-  const { wikiInfo, is } = useContext(GameContext)
+  const { wikiInfo, is, refreshWikiInfo } = useContext(GameContext)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const onClickRefresh = async (
+    event: MouseEvent<HTMLButtonElement>
+  ) => {
+    // Stop the parent <a onClick={onClickCrossover}> from opening CodeWeavers.
+    event.stopPropagation()
+    event.preventDefault()
+    setRefreshing(true)
+    try {
+      await refreshWikiInfo?.()
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   if (!wikiInfo) {
     return null
@@ -109,6 +124,15 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           ) : (
             t('info.unrated', 'Unrated')
           )}
+          <IconButton
+            size="small"
+            disabled={refreshing}
+            onClick={onClickRefresh}
+            title={t('info.refresh-rating', 'Refresh rating')}
+            aria-label={t('info.refresh-rating', 'Refresh rating')}
+          >
+            <Refresh fontSize="small" />
+          </IconButton>
         </a>
       )}
       {showProton &&

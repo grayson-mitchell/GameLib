@@ -1,6 +1,12 @@
 import './index.css'
 
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from 'react'
 
 import {
   ArrowBackIosNew,
@@ -303,6 +309,19 @@ export default React.memo(function GamePage(): JSX.Element | null {
     })
   }, [appName])
 
+  // Force-refetch wiki info bypassing the 30-day cache. Unlike the initial
+  // useEffect (which gates on applegamingwiki/howlongtobeat/pcgamingwiki), this
+  // path accepts any non-null result so a codeweavers-only update still lands.
+  const refreshWikiInfo = useCallback(async () => {
+    const info = await window.api.getWikiGameInfo(
+      gameInfo.title,
+      appName,
+      runner,
+      true
+    )
+    if (info) setWikiInfo(info)
+  }, [gameInfo.title, appName, runner])
+
   useEffect(() => {
     // when the user clicks the Play button, we disable it so the user can't click it again
     // once we receive the "launching" status update we can safely unset this state
@@ -398,7 +417,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
       },
       statusContext,
       status,
-      wikiInfo
+      wikiInfo,
+      refreshWikiInfo
     }
 
     const hasWikiInfo =

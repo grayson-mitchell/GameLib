@@ -436,7 +436,8 @@ interface AsyncIPCFunctions {
   getWikiGameInfo: (
     title: string,
     appName: string,
-    runner: Runner
+    runner: Runner,
+    forceRefresh?: boolean
   ) => Promise<WikiInfo | null>
   getDefaultSavePath: (
     appName: string,

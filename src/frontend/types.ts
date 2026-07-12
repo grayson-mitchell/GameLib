@@ -318,6 +318,7 @@ export interface GameContextType {
   statusContext?: string
   status: Status | undefined
   wikiInfo: WikiInfo | null
+  refreshWikiInfo?: () => Promise<void>
 }
 
 export type DMQueue = {
