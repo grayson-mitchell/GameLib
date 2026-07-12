@@ -126,6 +126,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           )}
           <IconButton
             size="small"
+            color="inherit"
             disabled={refreshing}
             onClick={onClickRefresh}
             title={t('info.refresh-rating', 'Refresh rating')}
