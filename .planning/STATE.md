@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: completed
-stopped_at: Phase 20 context gathered
-last_updated: "2026-07-12T10:53:04.039Z"
+stopped_at: Phase 19 UI-SPEC approved
+last_updated: "2026-07-12T11:10:05.421Z"
 last_activity: 2026-07-12
 progress:
   total_phases: 5
@@ -205,8 +205,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-12T10:53:04.031Z
-Stopped at: Phase 20 context gathered
+Last session: 2026-07-12T11:10:05.409Z
+Stopped at: Phase 19 UI-SPEC approved
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
