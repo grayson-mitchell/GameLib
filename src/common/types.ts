@@ -218,6 +218,12 @@ export interface GameInfo {
   isEAManaged?: boolean
   isUbisoftManaged?: boolean
   is_mac_native?: boolean
+  /** MAC32-01: resolved macOS build architecture. Absent key / 'unknown' means
+   * "not resolved" — a missing or blank Steam `osarch` tag is NEVER coerced to
+   * '32' (the documented false-32-bit-flag trap). '32' routes the game to the
+   * CrossOver/Wine bottle (32-bit dropped in Catalina/2019); '64' and 'unknown'
+   * both stay on native macOS handling. */
+  mac_arch?: '32' | '64' | 'unknown'
   is_linux_native?: boolean
   /** Delisted = confirmed unavailable on Steam (appdetails success:false).
    * When true the game is hidden from Console and not activatable. */

@@ -49,6 +49,19 @@ export interface SteamMetadataCacheEntry {
   // distinguish "platform support never captured" from a genuine Windows-only
   // (is_mac_native/is_linux_native === false) verdict, so it can self-heal exactly once.
   platformsCaptured?: boolean
+  /** MAC32-01/03: resolved macOS build architecture. 'unknown' default is
+   * implicit (absent key) — NEVER infer '32' from a missing osarch tag (the
+   * false-flag trap, see games.ts isBottleEligible). Set from PICS osarch
+   * pre-install; corrected by the post-install Mach-O ground-truth check. */
+  mac_arch?: '32' | '64' | 'unknown'
+  /** True once the post-install lipo/file check has run and confirmed or
+   * corrected mac_arch — prevents re-shelling-out on every launch(). */
+  mac_arch_verified?: boolean
+  /** MAC32-cache-shape (LOCKED, CONTEXT.md): provenance of the mac_arch verdict
+   * — 'osarch' (PICS pre-install hint) or 'macho' (post-install ground truth,
+   * i.e. a Steam-corrected fact). Forward-compat for a future community
+   * override export (Phase 19); do not omit even though nothing reads it yet. */
+  mac_arch_source?: 'osarch' | 'macho'
 }
 
 export type { SteamBottleConfig }
