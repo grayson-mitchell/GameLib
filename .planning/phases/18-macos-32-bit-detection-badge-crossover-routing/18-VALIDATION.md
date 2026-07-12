@@ -40,8 +40,8 @@ Task IDs finalized by the planner; rows below are requirement-anchored seeds. `�
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 18-01-xx | 01 | 0 | MAC32-01 | — | Parser ignores untyped `osarch` input; numeric-appid guard | unit | `npm test -- --testPathPattern=steam/library` | ❌ W0 | ⬜ pending |
-| 18-01-xx | 01 | 1 | MAC32-01 | — | `osarch:"32"`→`'32'`; missing/blank→`'unknown'` (NOT `'32'`); `"osx"` alias parsed | unit | `npm test -- --testPathPattern=steam` | ❌ W0 | ⬜ pending |
+| 18-02-xx | 02 | 1 | MAC32-01 | T-06-02 | `parseSteamMacMinOSVersion` bounded-regex parse of untrusted `mac_requirements.minimum` HTML; never throws/renders; unparseable→`null` | unit | `npm test -- --testPathPattern=steam/games` | ❌ W0 | ⬜ pending |
+| 18-02-xx | 02 | 1 | MAC32-01 | — | `macArchFromMinOS`: min-OS ≥10.15→`'64'`; ≤10.14/absent/`[]`→`'unknown'` (type-level impossible to return `'32'`); AoW III 10.9.3 & A Hat in Time 10.11.6 both →`'unknown'` | unit | `npm test -- --testPathPattern=steam/games` | ❌ W0 | ⬜ pending |
 | 18-02-xx | 02 | 1 | MAC32-02 | — | `isBottleEligible()` returns true for `mac_arch==='32'` via independent OR-branch; unchanged for win/linux/64/unknown | unit | `npm test -- --testPathPattern=steam/games` | ❌ W0 | ⬜ pending |
 | 18-03-xx | 03 | 2 | MAC32-03 | — | Mach-O `lipo -archs` output `i386`-only → re-route verdict `'32'`; `x86_64`/`arm64` present → `native`; verdict cached | unit | `npm test -- --testPathPattern=steam` | ❌ W0 | ⬜ pending |
 | 18-04-xx | 04 | 2 | MAC32-04 | — | Badge renders "32" when `mac_arch==='32'`; warning styling only when host is macOS | unit (RTL) | `npm test -- --testPathPattern=Game` | ❌ W0 | ⬜ pending |
@@ -52,9 +52,9 @@ Task IDs finalized by the planner; rows below are requirement-anchored seeds. `�
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/storeManagers/steam/__tests__/fixtures/appinfo-*.json` — captured `getProductInfo` payloads for a 32-bit-only title, a 64-bit title, and an old NO-`osarch` title (from the required pre-work dump, `steam-getproductinfo-appinfo-dump.md`). MUST include the false-flag guard cases.
-- [ ] Extend `src/backend/storeManagers/steam/__tests__/library.test.ts` — RED scaffolds for the osarch parser (MAC32-01).
-- [ ] Extend `src/backend/storeManagers/steam/__tests__/games.test.ts` — RED scaffolds for the `isBottleEligible()` 32-bit OR-branch (MAC32-02) and Mach-O verdict logic (MAC32-03).
+- [ ] `src/backend/storeManagers/steam/__tests__/fixtures/appinfo-*.json` — captured by 18-01; retained as evidence that PICS carries no mac-arch signal (direction-B pivot). The min-OS parser (MAC32-01) is validated against these titles' real `mac_requirements.minimum` strings, seeded literally in `games.test.ts`.
+- [ ] Extend `src/backend/storeManagers/steam/__tests__/games.test.ts` — RED scaffolds for the min-OS heuristic parser `parseSteamMacMinOSVersion`/`macArchFromMinOS` (MAC32-01) and the `isBottleEligible()` 32-bit OR-branch (MAC32-02).
+- [ ] Extend `src/backend/storeManagers/steam/__tests__/library.test.ts` — RED scaffolds for the Mach-O verdict logic (MAC32-03).
 - [ ] Frontend RTL test scaffold for the OS/arch badge (MAC32-04).
 
 *Existing jest infrastructure covers the framework — only fixtures + new specs needed.*

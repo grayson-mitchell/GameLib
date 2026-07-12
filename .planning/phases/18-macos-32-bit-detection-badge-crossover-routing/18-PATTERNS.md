@@ -1,5 +1,7 @@
 # Phase 18: macOS 32-bit detection, badge & CrossOver routing - Pattern Map
 
+> ⚠️ **PARTIALLY SUPERSEDED (2026-07-12, direction-B pivot).** The **pre-install** patterns in this map — `ensureMacArchHint()`, `parseOsArchHint()`, and everything keyed on PICS `getProductInfo`/`osarch` (File Classification rows, the `games.ts ensureMacArchHint()` section, the `library.ts parseOsArchHint()` section, the `mac_arch_source: 'osarch'` enum, and the "Dedup-guarded lazy-fetch"/`parseOsArchHint` shared-pattern entries) — are **DEAD**. Plan 18-01's real appinfo dump proved Steam PICS carries no mac 32/64 signal. The pre-install source is now the store-API `mac_requirements.minimum` **min-OS heuristic** and `mac_arch_source` is `'minos' | 'macho'`. See **18-RESEARCH.md** (refreshed) and **18-02-PLAN.md** for the authoritative pre-install patterns. **Still valid and consumed by 18-03/18-04:** the Mach-O sections (`machOArchsOf`, `verifyMacArchGroundTruth`, `pollInstallOnce` hook), the `isBottleEligible()` `'32'` OR-branch, and all `MacArchBadge`/frontend sections below.
+
 **Mapped:** 2026-07-12
 **Files analyzed:** 9 (5 backend modified, 1 backend new-content-in-existing-file, 1 frontend new component, 1 types file, 3 test files extended/new)
 **Analogs found:** 9 / 9 — this phase is unusually well-covered because RESEARCH.md already pinpointed exact integration lines and the codebase has a near-identical prior-phase pattern (`is_mac_native`/D-11) to mirror throughout.
@@ -127,18 +129,19 @@ export interface SteamMetadataCacheEntry {
 Add adjacent to `is_mac_native?`/`platformsCaptured?`:
 ```typescript
   /** MAC32-01/03: resolved macOS build architecture. 'unknown' default is
-   * implicit (absent key) — NEVER infer '32' from a missing osarch tag (the
-   * false-flag trap, see games.ts isBottleEligible). Set from PICS osarch
-   * pre-install; corrected by the post-install Mach-O ground-truth check. */
+   * implicit (absent key) — NEVER infer '32' pre-install (the false-flag trap,
+   * see games.ts isBottleEligible). Set from the store-API mac_requirements
+   * min-OS heuristic pre-install (direction B); corrected by the post-install
+   * Mach-O ground-truth check. */
   mac_arch?: '32' | '64' | 'unknown'
   /** True once the post-install lipo/file check has run and confirmed or
    * corrected mac_arch — prevents re-shelling-out on every launch(). */
   mac_arch_verified?: boolean
-  /** MAC32-cache-shape (LOCKED, CONTEXT.md): provenance of the mac_arch verdict
-   * — 'osarch' (PICS pre-install hint) or 'macho' (post-install ground truth,
-   * i.e. a Steam-corrected fact). Forward-compat for a future community
-   * override export (Phase 19); do not omit even though nothing reads it yet. */
-  mac_arch_source?: 'osarch' | 'macho'
+  /** MAC32-cache-shape (CONTEXT.md, direction B): provenance of the mac_arch
+   * verdict — 'minos' (store-API mac_requirements min-OS pre-install hint) or
+   * 'macho' (post-install ground truth, i.e. a Steam-corrected fact).
+   * Forward-compat for a future community override export (Phase 19). */
+  mac_arch_source?: 'minos' | 'macho'
 ```
 Note: CONTEXT.md's cache shape is `appId → { arch, source }` — the flattened `mac_arch`/`mac_arch_verified`/`mac_arch_source` triple above achieves the same semantics while staying consistent with this store's existing flat-field convention (`is_mac_native`, `platformsCaptured` are flat booleans, not a nested object) — the planner should pick one shape and apply it consistently across `electronStores.ts`, `common/types.ts`, `games.ts`, and `library.ts`.
 

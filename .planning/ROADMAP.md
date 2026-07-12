@@ -182,8 +182,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: MAC32-01, MAC32-02, MAC32-03, MAC32-04
 **Depends on:** Phase 17 (bottle routing / `isBottleEligible()` D-11), Phase 7 (platform data)
 **Scope** (from /gsd-explore 2026-07-12 — see `.planning/notes/steam-mac-arch-detection-decisions.md`):
-  1. **Arch source** — read `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`, matching both `"macos"` and legacy `"osx"` in `oslist`) as a pre-install hint. Public Web API `appdetails` only exposes a `platforms.mac` boolean — no arch.
-  2. **Hybrid correctness** — `osarch=="32"` → badge + route to CrossOver + never native-install; missing/`"64"` → install natively, then a post-install Mach-O check (`lipo -archs`) re-routes any i386-only binary Steam failed to tag. Missing osarch is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flagging trap — A Hat in Time, Metro: Last Light, etc.).
+  1. **Arch source** *(direction-B pivot, 2026-07-12 — see 18-CONTEXT.md `<execution_update>`; original osarch/PICS approach proved dead by 18-01's appinfo dump)* — read the store-API `mac_requirements.minimum` **min-OS** off the already-fetched `appdetails` response as a pre-install hint: min-OS ≥10.15 (Catalina) ⟹ `'64'` confident; ≤10.14/unparseable/absent ⟹ `'unknown'`. NEVER assert `'32'` pre-install. (PICS `osarch` carries no mac 32/64 signal; `platforms.mac` is only a boolean.)
+  2. **Hybrid correctness** — pre-install min-OS gives a `'64'`-or-`'unknown'` hint only; a post-install Mach-O check (`lipo -archs`) is the sole detector that ever asserts `'32'`, re-routing any i386-only binary to CrossOver. Missing signal is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flagging trap — A Hat in Time, Metro: Last Light, etc.).
   3. **Routing** — plug into the existing `isBottleEligible()` / D-11 bottle path (32-bit becomes another reason a mac game is bottle-eligible; routes the Windows depot under CrossOver, not the mac binary).
   4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
   - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
@@ -194,7 +194,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 18-01-PLAN.md — mac_arch contracts (GameInfo + SteamMetadataCacheEntry) + getProductInfo appinfo dump harness + captured fixtures (MAC32-01)
 
 **Wave 1** — parser/routing + badge (parallel, no file overlap):
-- [ ] 18-02-PLAN.md — parseOsArchHint + ensureMacArchHint (getProductInfo) + isBottleEligible 32-bit OR-branch (MAC32-01, MAC32-02)
+- [ ] 18-02-PLAN.md — min-OS heuristic (parseSteamMacMinOSVersion + macArchFromMinOS off appdetails mac_requirements) + inline mac_arch derivation in fetchMetadataIfNeeded + isBottleEligible 32-bit OR-branch (MAC32-01, MAC32-02)
 - [ ] 18-04-PLAN.md — MacArchBadge "32" component beside the game logo, host-OS-gated warning styling (MAC32-04)
 
 **Wave 2** — post-install ground truth (depends on 18-02; shares library.ts/games.ts):
