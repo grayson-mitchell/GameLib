@@ -1,6 +1,7 @@
 import {
   GameInfo,
   ExecResult,
+  InstallArgs,
   InstallPlatform,
   InstallInfo,
   LaunchOption
@@ -8,6 +9,7 @@ import {
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
+import { dialog } from 'electron'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
@@ -584,6 +586,11 @@ export function locateMachOBinary(
  * or verdictFromArchs returns null) is a no-op — logs and leaves mac_arch
  * exactly as-is (T-18-03-03).
  *
+ * When the verdict is '32', triggers the user-consented recovery (CONTEXT
+ * D-6 / promptI386Recovery below) as a decoupled fire-and-forget call — the
+ * ground-truth check itself never awaits the dialog, so it never blocks the
+ * pollInstallOnce 'installed' badge-flip UX.
+ *
  * Exported for unit testing.
  */
 export async function verifyMacArchGroundTruth(
@@ -627,6 +634,70 @@ export async function verifyMacArchGroundTruth(
     `Steam: verifyMacArchGroundTruth resolved appId ${appId} to mac_arch '${verdict}' (Mach-O ground truth)`,
     LogPrefix.Steam
   )
+
+  if (verdict === '32') {
+    // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
+    // never blocks the pollInstallOnce 'installed' badge-flip UX above.
+    void promptI386Recovery(appId)
+  }
+}
+
+/**
+ * MAC32-03 / CONTEXT D-6: user-consented i386 recovery. Steam left this
+ * game's mac depot un-tagged and the post-install Mach-O check proved it is
+ * i386-only — unrunnable on this version of macOS (Apple removed 32-bit
+ * support in Catalina, 2019).
+ *
+ * Presents a native confirm dialog via Electron's `dialog.showMessageBox` —
+ * this codebase's established backend-AWAITED confirm primitive (see
+ * legendary/eos_overlay.ts's remove()/enable()) — deliberately NOT
+ * showDialogBoxModalAuto, whose `buttons[].onClick` callbacks travel over
+ * IPC (webContents.send uses the structured-clone algorithm, which cannot
+ * carry function values) and so can never round-trip a confirm decision back
+ * into this async function; dialog.showMessageBox is a native, in-process,
+ * awaitable primitive with no such limitation.
+ *
+ * On confirm: force-uninstalls the dead native copy, then re-installs —
+ * which now routes through the bottle because isBottleEligible() honors the
+ * mac_arch:'32' verdict verifyMacArchGroundTruth already persisted.
+ * On cancel/dismiss: leaves the (unrunnable) native install in place; the
+ * '32' verdict stays cached (persisted by verifyMacArchGroundTruth BEFORE
+ * this prompt fires) so the badge and future routing reflect reality either
+ * way.
+ *
+ * Exported for unit testing.
+ */
+export async function promptI386Recovery(appId: string): Promise<void> {
+  const { response } = await dialog.showMessageBox({
+    title: i18next.t(
+      'box.steam.mac32Detected.title',
+      '32-bit macOS build detected'
+    ),
+    message: i18next.t(
+      'box.steam.mac32Detected.message',
+      "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version."
+    ),
+    buttons: [
+      i18next.t('box.steam.mac32Detected.confirm', 'Reinstall via CrossOver'),
+      i18next.t('box.cancel', 'Cancel')
+    ]
+  })
+
+  if (response !== 0) {
+    logInfo(
+      `Steam: user declined i386 recovery for appId ${appId} — native install left in place (unrunnable)`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  logInfo(
+    `Steam: user confirmed i386 recovery for appId ${appId} — force-uninstalling the native copy and reinstalling via the bottle`,
+    LogPrefix.Steam
+  )
+  const game = new SteamGame(appId)
+  await game.forceUninstall()
+  await game.install({} as InstallArgs)
 }
 
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────

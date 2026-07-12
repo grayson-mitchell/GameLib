@@ -34,6 +34,7 @@ import SteamLibraryManager, {
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
+import { dialog } from 'electron'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
@@ -104,10 +105,24 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn().mockReturnValue(false)
 }))
 
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps) ─
+// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
+// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
 jest.mock('child_process', () => ({
   spawnSync: jest.fn(),
   execFileSync: jest.fn()
+}))
+
+// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
+// app.getPath (backend/constants/paths reads this at module load time) ───────
+// library.ts's only electron usage is `dialog`; games.ts's `shell` import
+// (pulled in transitively via `import SteamGame from './games'`) resolves to
+// undefined here, which is fine — SteamGame.install()/forceUninstall() are
+// only reached via a CONFIRMED promptI386Recovery, and this file's tests
+// keep the dialog mocked to a cancel response unless a test explicitly opts
+// into the confirm path.
+jest.mock('electron', () => ({
+  dialog: { showMessageBox: jest.fn() },
+  app: { getPath: jest.fn().mockReturnValue('/tmp/mock-path') }
 }))
 
 // ── backend/constants/environment mock — platform-switching for reader tests ──
@@ -2233,6 +2248,9 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
 
 // ── MAC32-03: Mach-O classification primitives ───────────────────────────────
 
+/** Flush pending microtask/macrotask queues (real timers only). */
+const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
+
 describe('machOArchsOf()', () => {
   it('runs lipo -archs argv-form and returns the space-split arch list', () => {
     ;(execFileSync as jest.Mock).mockReturnValue('x86_64 arm64\n')
@@ -2374,6 +2392,11 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     ;(execFileSync as jest.Mock).mockReset()
     ;(steamMetadataStore.get as jest.Mock).mockReset()
     ;(steamMetadataStore.set as jest.Mock).mockReset()
+    // Default to a cancel response — tests that exercise the confirm path
+    // (games.test.ts, MAC32-03 Task 3) override this explicitly. Prevents an
+    // unhandled rejection from the fire-and-forget promptI386Recovery call
+    // on an i386 flip.
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
   })
 
   afterEach(() => {
@@ -2511,5 +2534,35 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         mac_arch_verified: true
       })
     )
+  })
+
+  it('MAC32-03/CONTEXT D-6: an i386 flip triggers the user-consent dialog (never a silent uninstall) — decoupled fire-and-forget, cancel leaves the cached verdict untouched', async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    // Fire-and-forget: the dialog call itself runs synchronously up to its
+    // own first await when promptI386Recovery is invoked, so it has already
+    // been recorded by the time verifyMacArchGroundTruth returns.
+    await flushAsync()
+
+    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
+    // Cancelled — the '32' verdict persisted just above is left untouched
+    // (no second steamMetadataStore.set call from the recovery path).
+    expect(steamMetadataStore.set).toHaveBeenCalledTimes(1)
   })
 })
