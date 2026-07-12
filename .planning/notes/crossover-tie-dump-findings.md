@@ -87,15 +87,36 @@ UI change.
 dump's **canonical CodeWeavers name**, not from the store's game title. That removes the
 title-mismatch guessing that makes today's lookup miss.
 
-**This invalidates Phase 16's D-04 roman-numeral rule.** `slugify()` maps roman numerals
-to arabic (`Quake II` → `quake-2`), but:
+### D-04's roman-numeral rule is wrong (but not fatal)
 
-- `codeweavers.com/compatibility/crossover/quake-ii` → **HIT**
-- `codeweavers.com/compatibility/crossover/quake-2` → **soft-404 (miss)**
+`slugify()` does four things: drops apostrophes, **converts roman numerals I–X to arabic**,
+strips diacritics, and hyphen-collapses. `naiveSlugify()` (the single retry on a miss) does
+only the last two.
 
-The site slugifies its own name verbatim. Naive slugification of the dump name is the
-correct rule; D-04's roman-numeral normalization was a workaround for guessing from
-*store* titles and actively breaks games whose CodeWeavers name uses roman numerals.
+Splitting D-04 apart, the two halves have **opposite verdicts** — they were welded into one
+function and adopted together, which is how the wrong one rode in on the right one:
+
+| Rule | Site truth | Verdict | Games affected |
+|---|---|---|---|
+| Drop apostrophes | `alekhines-gun` HIT, `alekhine-s-gun` miss | **CORRECT — load-bearing.** `naiveSlugify` gets all of these wrong | 118 |
+| Roman → arabic | `age-of-empires-ii` HIT, `age-of-empires-2` miss<br>`armored-core-vi-fires-of-rubicon` HIT, `armored-core-6-…` miss<br>`quake-ii` HIT, `quake-2` miss | **WRONG.** Primary slug is guaranteed to miss; only the fallback saves it | 172 |
+| Strip diacritics | — | Harmless, negligible | 2 |
+
+**Why the roman rule is wrong in principle:** CodeWeavers names track each game's *official
+branding* — `Grand Theft Auto III` but `Grand Theft Auto 2`; `The Witcher 3`; `Fallout 4`;
+and both `ARMA II: Operation Arrowhead` and `Arma 3` exist as separate apps. Store titles
+track official branding too, so **both sides already agree**. Normalizing numerals takes two
+strings that matched and forces them apart. It could only pay off where a store writes roman
+and the official title is arabic — which does not happen, because stores use the official title.
+
+**Cost is a wasted round-trip, not a lost rating:** `Quake II` → primary `quake-2` misses →
+fallback `naiveSlugify` → `quake-ii` → HIT. So the 172 roman-numeral games do resolve, on the
+retry. (An earlier draft of this note claimed the rating was lost outright — that was wrong.)
+
+**Fix:** keep the apostrophe drop, delete the roman conversion. The primary slug then hits on
+the first attempt for the 172. Note this is the *slug* function, which must stay distinct from
+the *matching* key in Q1 — for slugs, naive-verbatim is provably right and normalization is
+provably wrong.
 
 ## Index sizing
 
