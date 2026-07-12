@@ -453,6 +453,41 @@ describe('SteamLibraryManager', () => {
     expect(pushed?.steamPlatformsCaptured).toBe(false)
   })
 
+  // ── CR-01 gap closure (18-05): mac_arch survives refresh() resync ─────────
+
+  it('CR-01: refresh() seeds mac_arch:\'32\' from cachedMeta so a cached Mach-O verdict survives resync', async () => {
+    const apps = [
+      makeOwnedApp(570, 'Old 32-bit Game', 120),
+      makeOwnedApp(440, 'Never Checked Game', 60)
+    ]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockImplementation(
+      (appId: string) => {
+        if (appId === '570') {
+          return { mac_arch: '32', mac_arch_source: 'macho' }
+        }
+        return undefined
+      }
+    )
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed570 = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+    const pushed440 = calls.find(
+      ([_msg, info]) => (info as any).app_name === '440'
+    )?.[1] as any
+
+    expect(pushed570?.mac_arch).toBe('32')
+    // Negative control: no cached mac_arch → 'unknown', never '32' by default
+    // (T-18-05-02 false-flag-safe invariant)
+    expect(pushed440?.mac_arch).toBe('unknown')
+  })
+
   // ── Cache fallback ────────────────────────────────────────────────────────
 
   it('refresh() serves cached library from steamLibraryStore when getUserOwnedApps throws', async () => {
@@ -2403,6 +2438,9 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     envMock.isWindows = false
     envMock.isMac = false
     envMock.isLinux = true
+    // CR-01 regression test seeds the real library Map (imported from
+    // '../state') — clean it up so it never leaks into sibling tests.
+    library.delete(APP_ID)
   })
 
   it("skips entirely (no subprocess, no cache write) when source==='bottle'", async () => {
@@ -2564,5 +2602,54 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     // Cancelled — the '32' verdict persisted just above is left untouched
     // (no second steamMetadataStore.set call from the recovery path).
     expect(steamMetadataStore.set).toHaveBeenCalledTimes(1)
+  })
+
+  // ── CR-01 gap closure (18-05): verdict reaches the frontend-visible ───────
+  // in-memory library Map + pushGameToLibrary payload, not just
+  // steamMetadataStore (backend disk cache).
+
+  it('CR-01: an i386 verdict updates the in-memory library Map and pushes the updated GameInfo to the frontend', async () => {
+    // Seed the real library Map (imported from '../state') with an existing
+    // GameInfo for APP_ID — the propagation fix only updates entries already
+    // present in the Map (never fabricates one).
+    library.set(APP_ID, {
+      runner: 'steam',
+      app_name: APP_ID,
+      title: 'Old Game',
+      is_installed: true,
+      install: { install_path: INSTALL_PATH },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    // Cancel path — promptI386Recovery is a no-op, keeps this test focused
+    // on the propagation fix rather than the recovery dialog flow.
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, mac_arch: '32' })
+    )
+    expect(library.get(APP_ID)?.mac_arch).toBe('32')
   })
 })

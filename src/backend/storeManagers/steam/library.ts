@@ -256,6 +256,12 @@ export default class SteamLibraryManager implements LibraryManager {
         is_linux_native: cachedMeta?.is_linux_native ?? false,
         // GAP-B: seed the persisted delisted verdict so it survives a library resync
         is_delisted: cachedMeta?.is_delisted ?? false,
+        // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
+        // cached '32' survives every startup/resync. Default MUST be
+        // 'unknown' (never '32') — a missing/blank cache can never be
+        // coerced into a 32-bit verdict (T-18-05-02, false-flag-safe
+        // invariant from MAC32-01).
+        mac_arch: cachedMeta?.mac_arch ?? 'unknown',
         // Phase 17 D-08 reconciliation: mirrors platformsCaptured so the
         // frontend bottle indicator matches the backend D-11 routing gate.
         steamPlatformsCaptured: cachedMeta?.platformsCaptured ?? false,
@@ -634,6 +640,25 @@ export async function verifyMacArchGroundTruth(
     `Steam: verifyMacArchGroundTruth resolved appId ${appId} to mac_arch '${verdict}' (Mach-O ground truth)`,
     LogPrefix.Steam
   )
+
+  // CR-01 fix: propagate the resolved verdict to the in-memory library Map
+  // and push it to the frontend, mirroring the library.set + push pattern
+  // used at the end of refresh()'s loop. Without this, the badge is
+  // unreachable until the next app restart/resync (steamMetadataStore alone
+  // is not frontend-visible). Only update when the game is already present
+  // in the Map — never fabricate a GameInfo; the store write above already
+  // carries the verdict for the next refresh() rebuild.
+  const currentGameInfo = library.get(appId)
+  if (currentGameInfo) {
+    const updatedGameInfo: GameInfo = { ...currentGameInfo, mac_arch: verdict }
+    library.set(appId, updatedGameInfo)
+    sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
+  } else {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth resolved appId ${appId} but it is not in the in-memory library Map — skipping frontend push (will pick up mac_arch on next refresh)`,
+      LogPrefix.Steam
+    )
+  }
 
   if (verdict === '32') {
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
