@@ -2651,5 +2651,11 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       expect.objectContaining({ app_name: APP_ID, mac_arch: '32' })
     )
     expect(library.get(APP_ID)?.mac_arch).toBe('32')
+    expect(steamLibraryStore.set).toHaveBeenCalledWith(
+      'games',
+      expect.arrayContaining([
+        expect.objectContaining({ app_name: APP_ID, mac_arch: '32' })
+      ])
+    )
   })
 })

@@ -652,6 +652,11 @@ export async function verifyMacArchGroundTruth(
   if (currentGameInfo) {
     const updatedGameInfo: GameInfo = { ...currentGameInfo, mac_arch: verdict }
     library.set(appId, updatedGameInfo)
+    // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately, mirroring every
+    // other library-mutating call site in this file — otherwise a restart
+    // before the next full refresh() reads a stale mac_arch from
+    // steamLibraryStore and the 32-bit badge silently reverts.
+    steamLibraryStore.set('games', Array.from(library.values()))
     sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
   } else {
     logInfo(
