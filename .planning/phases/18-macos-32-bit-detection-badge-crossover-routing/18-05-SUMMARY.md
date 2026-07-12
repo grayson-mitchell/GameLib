@@ -98,3 +98,13 @@ None - no external service configuration required.
 ---
 *Phase: 18-macos-32-bit-detection-badge-crossover-routing*
 *Completed: 2026-07-12*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/library.ts
+- FOUND: src/backend/storeManagers/steam/__tests__/library.test.ts
+- FOUND: .planning/phases/18-macos-32-bit-detection-badge-crossover-routing/18-05-SUMMARY.md
+- FOUND commit: efc83d37 (Task 1)
+- FOUND commit: f29bd8e2 (Task 2)
+- FOUND commit: a55bd5a4 (Task 3)
+- FOUND commit: b414f7aa (SUMMARY.md commit)
