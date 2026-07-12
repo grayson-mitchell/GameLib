@@ -50,6 +50,10 @@ Post-install ground truth (correctness backstop):
 - OS logo beside the game logo in the left panel; a "32" mark on 32-bit mac builds.
 - The "32" treatment is escalated to an actionable warning ONLY when the host OS is macOS. On Windows/Linux hosts it is informational (or omit) — a "mac 32" warning is not actionable there.
 
+### Post-install i386 recovery (LOCKED — resolves RESEARCH Open Question #1)
+- When the post-install Mach-O check (MAC32-03) flips a *natively-installed* game to `mac_arch === '32'` (Steam left `osarch` blank, binary is actually i386-only), GameLib **prompts the user** with a dialog explaining the native copy cannot run, and on confirm runs `forceUninstall()` + re-installs through the bottle. Not silent — user-consented (one extra redownload only for the rare Steam-mistagged game).
+- **Cache shape (forward-compat, LOCKED):** persist the verdict as `appId → { arch: '32' | '64' | 'unknown', source: 'osarch' | 'macho' }`. The `source: 'macho'` entries are the Steam-corrected ground-truth facts a later phase can export for a community override list — see the Phase 19 crowd-sourcing consideration in ROADMAP.md. Storing `source` now avoids reshaping `steamMetadataStore` later. Building the export/contribution flow is OUT of scope for this phase.
+
 ### Claude's Discretion
 - Exact GameInfo field name/shape for the arch signal (mirror `is_mac_native` neighbor at `src/common/types.ts:220`; likely a `mac_arch: '32' | '64' | 'unknown'` or similar) and where it is persisted (`steamMetadataStore` alongside `is_mac_native`).
 - Whether the Mach-O check runs at install-completion vs first-launch, and the exact `lipo`/`file` invocation and parsing.
