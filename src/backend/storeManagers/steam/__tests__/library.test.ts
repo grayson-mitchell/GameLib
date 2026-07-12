@@ -2658,4 +2658,37 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       ])
     )
   })
+
+  it('CR-01: does not push or throw when appId is not present in the in-memory library Map', async () => {
+    // library does not have APP_ID (afterEach deletes it)
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) =>
+      cmd === 'lipo'
+        ? 'i386\n'
+        : (() => {
+            throw new Error('unexpected')
+          })()
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await expect(
+      verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    ).resolves.not.toThrow()
+
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID })
+    )
+    expect(library.has(APP_ID)).toBe(false)
+  })
 })
