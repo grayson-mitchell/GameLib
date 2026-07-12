@@ -219,14 +219,26 @@ export default class SteamLibraryManager implements LibraryManager {
       return { stdout: '', stderr: String(err) }
     }
 
-    // ── Step 2: build install-state map from ACF manifests on disk ────────
+    // ── Step 2: build install-state map(s) from ACF manifests on disk ─────
+    // Bottle-aware (GAP-17-BOTTLE-PLAY-REVERT): this full resync can be
+    // triggered mid-session (e.g. the launch-completion 'done' status), so it
+    // must reconcile bottle-installed games the same way refreshInstallState()
+    // does — otherwise a bottle-only-installed game's is_installed gets
+    // clobbered back to false by this native-only scan every time it runs.
     const installedMap = await buildInstalledMap()
+    const bottleInstalledMap =
+      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
 
     // ── Step 3: build and push one GameInfo per owned game ────────────────
     library.clear()
     for (const app of ownedApps) {
       const appIdStr = String(app.appid)
-      const installedData = installedMap.get(app.appid)
+      const nativeInstalledData = installedMap.get(app.appid)
+      const bottleInstalledData = bottleInstalledMap?.get(app.appid)
+      // Native always wins when present — never double-count/conflate the
+      // two roots (mirrors refreshInstallState()'s reconciliation).
+      const installedData = nativeInstalledData ?? bottleInstalledData
+      const source: AcfSource = nativeInstalledData ? 'native' : 'bottle'
       const cachedMeta = steamMetadataStore.get(appIdStr)
 
       const gameInfo: GameInfo = {
@@ -250,9 +262,10 @@ export default class SteamLibraryManager implements LibraryManager {
           ? {
               install_path: installedData.installPath,
               install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              // refresh() only ever scans the native ACF path (buildInstalledMap
-              // above) — bottle reconciliation is refreshInstallState()'s job.
-              platform: installPlatformForSource('native')
+              // GAP-17-BOTTLE-PLAY-REVERT: platform must reflect which root
+              // actually matched (native vs bottle), never hardcoded — a
+              // bottle-installed game must always report 'Windows' (Pitfall 3).
+              platform: installPlatformForSource(source)
             }
           : {},
         extra: {
@@ -396,6 +409,12 @@ export default class SteamLibraryManager implements LibraryManager {
             : {}
         }
         library.set(appIdStr, updated)
+        // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately so the in-memory
+        // Map and the on-disk cache never diverge (mirrors refresh() and
+        // gog/library.ts's installedGamesStore.set-immediately-after-mutate
+        // pattern) — otherwise an app restart before the next full refresh()
+        // would read a stale is_installed from steamLibraryStore.
+        steamLibraryStore.set('games', Array.from(library.values()))
         sendFrontendMessage('pushGameToLibrary', updated)
       }
     }
@@ -678,6 +697,10 @@ export async function pollInstallOnce(
         }
       }
       library.set(appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
+      // refreshInstallState() for rationale) so a restart mid-poll can't read
+      // a stale not-installed state from steamLibraryStore.
+      steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     sendFrontendMessage('gameStatusUpdate', {
@@ -841,6 +864,9 @@ export async function pollUninstallOnce(
         install: {}
       }
       library.set(appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
+      // refreshInstallState() for rationale).
+      steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     sendFrontendMessage('gameStatusUpdate', {

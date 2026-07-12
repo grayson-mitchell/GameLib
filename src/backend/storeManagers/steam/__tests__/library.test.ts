@@ -466,6 +466,190 @@ describe('SteamLibraryManager', () => {
     expect(steamLibraryStore.set).not.toHaveBeenCalled()
   })
 
+  // ── GAP-17-BOTTLE-PLAY-REVERT: refresh() must be bottle-aware ──────────────
+  // Regression coverage for the follow-on to bottle-install-not-recognized:
+  // refresh() previously derived is_installed ONLY from buildInstalledMap()
+  // (native ACF scan), so a bottle-only-installed game was always reported
+  // not-installed by a full refresh() — which is reachable mid-session via the
+  // launch-completion 'done' status (see .planning/debug/bottle-install-not-recognized.md).
+
+  describe('SteamLibraryManager.refresh() bottle reconciliation', () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+
+    beforeEach(() => {
+      envMock.isMac = true
+      envMock.isLinux = false
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
+      // Native scan finds nothing by default in this block — only the bottle
+      // root (mocked separately below) has manifests.
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+    })
+
+    afterEach(() => {
+      envMock.isMac = false
+      envMock.isLinux = true
+    })
+
+    it('reports is_installed:true (platform Windows) for a game installed ONLY under the bottle root when isBottleProvisioned() is true', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206020.acf'] : []
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '206020',
+          StateFlags: '4',
+          installdir: 'Avernum 4',
+          SizeOnDisk: '123456'
+        }
+      })
+
+      const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206020'
+      )?.[1] as any
+
+      // RED before the fix: pushed.is_installed was false (native-only scan
+      // found nothing). GREEN after the fix: bottle fallback is consulted.
+      expect(pushed?.is_installed).toBe(true)
+      expect(pushed?.install).toEqual(
+        expect.objectContaining({
+          install_path: join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 4'),
+          install_size: '123456 B',
+          // Pitfall 3: bottle installs must always report 'Windows', regardless
+          // of host OS (isMac is mocked true in this block).
+          platform: 'Windows'
+        })
+      )
+    })
+
+    it('does NOT persist is_installed:false to steamLibraryStore for a bottle-only-installed game when refresh() runs mid-session', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206060.acf'] : []
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '206060',
+          StateFlags: '4',
+          installdir: 'Avernum 6',
+          SizeOnDisk: '654321'
+        }
+      })
+
+      const apps = [makeOwnedApp(206060, 'Avernum 6', 10)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const persistedCall = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.find(([key]) => key === 'games')
+      const persistedGames = persistedCall?.[1] as any[]
+      const persisted = persistedGames?.find((g) => g.app_name === '206060')
+
+      expect(persisted?.is_installed).toBe(true)
+    })
+
+    it('falls back to native install data when BOTH native and bottle report the same appId (native wins)', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      const NATIVE_ROOT = join('/native/steam', 'steamapps')
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+        if (dir === NATIVE_ROOT) return ['appmanifest_570.acf']
+        if (dir === BOTTLE_STEAMAPPS_ROOT) return ['appmanifest_570.acf']
+        return []
+      })
+      ;(readFileSync as jest.Mock).mockImplementation((file: string) => {
+        if (file.includes(NATIVE_ROOT)) return 'native-content'
+        return 'bottle-content'
+      })
+      ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+        content === 'native-content'
+          ? {
+              AppState: {
+                appid: '570',
+                StateFlags: '4',
+                installdir: 'dota2-native',
+                SizeOnDisk: '111'
+              }
+            }
+          : {
+              AppState: {
+                appid: '570',
+                StateFlags: '4',
+                installdir: 'dota2-bottle',
+                SizeOnDisk: '222'
+              }
+            }
+      )
+
+      const apps = [makeOwnedApp(570, 'Dota 2', 5)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '570'
+      )?.[1] as any
+
+      // Native must win — never double-count/conflate the two roots.
+      expect(pushed?.install?.install_path).toBe(
+        join(NATIVE_ROOT, 'common', 'dota2-native')
+      )
+    })
+
+    it('performs NO bottle reconciliation when isBottleProvisioned() returns false (byte-for-byte native-only behavior preserved)', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      // If the bottle path were consulted, readdirSync would be called on the
+      // bottle root too — assert it's never scanned (native-only).
+      ;(existsSync as jest.Mock).mockReturnValue(false)
+      ;(readdirSync as jest.Mock).mockReturnValue([])
+
+      const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206020'
+      )?.[1] as any
+
+      expect(pushed?.is_installed).toBe(false)
+      expect(readdirSync).not.toHaveBeenCalledWith(BOTTLE_STEAMAPPS_ROOT)
+    })
+  })
+
   // ── Art URL migration (capsule_616x353 → library_600x900) ──────────────────
 
   describe('init() migrates stale cover art URLs', () => {
