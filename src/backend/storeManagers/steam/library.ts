@@ -566,6 +566,69 @@ export function locateMachOBinary(
   }
 }
 
+/**
+ * Post-install ground-truth check (MAC32-03). Corrects Steam's un-tagged
+ * mac_arch signal by inspecting the installed Mach-O binary — the only path
+ * in this phase that may assert mac_arch === '32'.
+ *
+ * Skip gates, in order:
+ *  - source !== 'native': a bottle install is a Windows depot — no Mach-O
+ *    binary belongs to this game on that path (RESEARCH.md Anti-Patterns).
+ *  - !isMac: host-gated, mirrors games.ts ensurePlatformsCaptured()'s guard.
+ *  - mac_arch already '32', or mac_arch_verified already true: nothing to
+ *    correct, or already resolved — never re-shells on every install/launch.
+ *
+ * A definitive verdict ('32' or '64') is persisted with mac_arch_source:
+ * 'macho' and mac_arch_verified:true, spreading the existing cache entry so
+ * art/extra/etc. are never lost. An inconclusive result (no binary located,
+ * or verdictFromArchs returns null) is a no-op — logs and leaves mac_arch
+ * exactly as-is (T-18-03-03).
+ *
+ * Exported for unit testing.
+ */
+export async function verifyMacArchGroundTruth(
+  appId: string,
+  installPath: string,
+  source: AcfSource
+): Promise<void> {
+  if (source !== 'native') return
+  if (!isMac) return
+
+  const existing = steamMetadataStore.get(appId)
+  if (existing?.mac_arch === '32' || existing?.mac_arch_verified === true) {
+    return
+  }
+
+  const binaryPath = locateMachOBinary(installPath)
+  if (!binaryPath) {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth found no Mach-O binary for appId ${appId} at ${installPath} — skipping`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  const verdict = verdictFromArchs(machOArchsOf(binaryPath))
+  if (verdict === null) {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  steamMetadataStore.set(appId, {
+    ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+    mac_arch: verdict,
+    mac_arch_source: 'macho',
+    mac_arch_verified: true
+  })
+  logInfo(
+    `Steam: verifyMacArchGroundTruth resolved appId ${appId} to mac_arch '${verdict}' (Mach-O ground truth)`,
+    LogPrefix.Steam
+  )
+}
+
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
 /** Module-level registry of active install polls, keyed by appId string. */
@@ -804,6 +867,14 @@ export async function pollInstallOnce(
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
       LogPrefix.Steam
     )
+
+    // MAC32-03: fire-and-forget post-install ground-truth check — placed
+    // AFTER the badge-flip/notify above so it can never delay them. Native
+    // installs only (a bottle install is a Windows depot; no Mach-O binary
+    // belongs to this game on that path) and macOS-only (host-gated).
+    if (isMac && source === 'native') {
+      void verifyMacArchGroundTruth(appId, result.installPath!, source)
+    }
   }
   // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
 }

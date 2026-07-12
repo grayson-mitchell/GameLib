@@ -28,7 +28,8 @@ import SteamLibraryManager, {
   stopRunningPoll,
   machOArchsOf,
   verdictFromArchs,
-  locateMachOBinary
+  locateMachOBinary,
+  verifyMacArchGroundTruth
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
@@ -2353,5 +2354,162 @@ describe('locateMachOBinary()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
     expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+})
+
+describe('verifyMacArchGroundTruth() — MAC32-03', () => {
+  const APP_ID = '226840'
+  const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
+  const MACOS_DIR = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isWindows = false
+    envMock.isMac = true
+    envMock.isLinux = false
+    ;(existsSync as jest.Mock).mockReset()
+    ;(readdirSync as jest.Mock).mockReset()
+    ;(execFileSync as jest.Mock).mockReset()
+    ;(steamMetadataStore.get as jest.Mock).mockReset()
+    ;(steamMetadataStore.set as jest.Mock).mockReset()
+  })
+
+  afterEach(() => {
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+  })
+
+  it("skips entirely (no subprocess, no cache write) when source==='bottle'", async () => {
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'bottle')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(readdirSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('skips when !isMac (non-macOS host)', async () => {
+    envMock.isMac = false
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it("skips when mac_arch is already '32' (nothing to correct)", async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({ mac_arch: '32' })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('skips when mac_arch_verified is already true (already resolved)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      mac_arch: '64',
+      mac_arch_verified: true
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('logs+skips (no cache write) when locateMachOBinary finds nothing', async () => {
+    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('inconclusive verdict (both tools fail) does NOT overwrite an existing mac_arch hint', async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('neither tool available')
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      mac_arch: 'unknown',
+      mac_arch_source: 'minos'
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it("i386-only binary — persists mac_arch '32', mac_arch_source 'macho', mac_arch_verified true, spreading existing fields", async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: 'cover.jpg',
+      art_square: 'square.jpg',
+      extra: { reqs: [] },
+      is_mac_native: true,
+      platformsCaptured: true
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        art_cover: 'cover.jpg',
+        art_square: 'square.jpg',
+        is_mac_native: true,
+        platformsCaptured: true,
+        mac_arch: '32',
+        mac_arch_source: 'macho',
+        mac_arch_verified: true
+      })
+    )
+  })
+
+  it("x86_64 present — persists mac_arch '64' confirmed (Mach-O ground truth)", async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'x86_64\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        mac_arch: '64',
+        mac_arch_source: 'macho',
+        mac_arch_verified: true
+      })
+    )
   })
 })
