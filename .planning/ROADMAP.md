@@ -188,7 +188,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
   - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
 **Pre-work:** todo `steam-getproductinfo-appinfo-dump.md` — runtime `getProductInfo` dump to lock the parser casing/nesting before building.
-**Plans:** 4/4 plans complete
+**Plans:** 5 plans (4 complete + 1 gap-closure)
 
 **Wave 0** — contracts + fixture capture (blocks the parser):
 - [x] 18-01-PLAN.md — mac_arch contracts (GameInfo + SteamMetadataCacheEntry) + getProductInfo appinfo dump harness + captured fixtures (MAC32-01)
@@ -199,6 +199,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** — post-install ground truth (depends on 18-02; shares library.ts/games.ts):
 - [x] 18-03-PLAN.md — Mach-O lipo/file ground-truth check + i386 recovery (prompt → forceUninstall → bottle re-install) (MAC32-03)
+
+**Wave 0 (gap closure)** — CR-01 badge data-flow fix (independent, no file overlap with 18-01..04):
+- [ ] 18-05-PLAN.md — propagate the Mach-O mac_arch:'32' verdict from steamMetadataStore to the frontend GameInfo (verifyMacArchGroundTruth pushes to library Map + frontend; refresh() seeds mac_arch from cachedMeta) + regression test (MAC32-04 gap closure)
 
 ---
 
