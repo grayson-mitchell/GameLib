@@ -482,6 +482,90 @@ export async function buildInstalledMap(): Promise<
   return installed
 }
 
+// ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────
+// Post-install Mach-O binary inspection is the ONLY detector in this phase
+// that may ever assert mac_arch === '32'. Steam's manual osarch metadata
+// proved absent/unreliable on every macOS launch entry (18-01 finding,
+// retired) and the pre-install store-API min-OS heuristic (games.ts
+// macArchFromMinOS) structurally never returns '32' either — this is the
+// correctness backstop that catches an i386-only mac depot Steam left
+// un-tagged.
+
+/**
+ * Runs `lipo -archs` on the given binary — argv-form execFileSync (command +
+ * array, never a shell-interpolated string; T-18-03-01) mirroring the
+ * windowsRunningAppId/linuxFallbackRunningAppId convention above. Falls back
+ * to `file` when lipo throws (not installed / binary lipo doesn't recognize).
+ * Returns [] when BOTH tools fail — inconclusive, NEVER a 32-bit verdict on
+ * its own (verdictFromArchs below is the sole place that turns an arch list
+ * into a '32'/'64' answer). Exported for unit testing.
+ */
+export function machOArchsOf(binaryPath: string): string[] {
+  try {
+    const output = execFileSync('lipo', ['-archs', binaryPath], {
+      encoding: 'utf8',
+      timeout: 5000
+    })
+    return output.trim().split(/\s+/).filter(Boolean)
+  } catch {
+    try {
+      const output = execFileSync('file', [binaryPath], {
+        encoding: 'utf8',
+        timeout: 5000
+      })
+      const archs: string[] = []
+      if (/\bx86_64\b/.test(output)) archs.push('x86_64')
+      if (/\barm64\b/.test(output)) archs.push('arm64')
+      if (/\bi386\b/.test(output)) archs.push('i386')
+      return archs
+    } catch {
+      return [] // neither tool available/succeeded — inconclusive, NOT 32-bit
+    }
+  }
+}
+
+/**
+ * Maps a Mach-O arch list to a verdict. A universal binary (any x86_64/arm64
+ * slice present) is runnable — '64' wins even alongside an i386 slice. Empty
+ * input is inconclusive: null, never '32' (T-18-03-03 — the false-flag-safe
+ * invariant at this subprocess boundary). Exported for unit testing.
+ */
+export function verdictFromArchs(archs: string[]): '32' | '64' | null {
+  if (archs.length === 0) return null // inconclusive — do not overwrite existing hint
+  if (archs.includes('x86_64') || archs.includes('arm64')) return '64'
+  if (archs.includes('i386')) return '32'
+  return null
+}
+
+/**
+ * Locates the installed Mach-O binary to inspect. Prefers a supplied launch
+ * executable path (resolved relative to installPath); otherwise scans
+ * installPath for a top-level *.app bundle and returns its
+ * Contents/MacOS/<first file>. Bounded to installPath's own subtree via
+ * join() (T-18-03-04) — never throws, returns null (log+skip at the call
+ * site) on any miss. Exported for unit testing.
+ */
+export function locateMachOBinary(
+  installPath: string,
+  launchExecutable?: string
+): string | null {
+  if (launchExecutable) {
+    const candidate = join(installPath, launchExecutable)
+    if (existsSync(candidate)) return candidate
+  }
+  try {
+    const entries = readdirSync(installPath)
+    const appBundle = entries.find((e) => e.endsWith('.app'))
+    if (!appBundle) return null
+    const macOsDir = join(installPath, appBundle, 'Contents', 'MacOS')
+    if (!existsSync(macOsDir)) return null
+    const bins = readdirSync(macOsDir)
+    return bins.length ? join(macOsDir, bins[0]) : null
+  } catch {
+    return null
+  }
+}
+
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
 /** Module-level registry of active install polls, keyed by appId string. */

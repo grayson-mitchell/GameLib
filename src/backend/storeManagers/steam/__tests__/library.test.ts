@@ -25,7 +25,10 @@ import SteamLibraryManager, {
   readRunningAppId,
   pollRunningOnce,
   startRunningPoll,
-  stopRunningPoll
+  stopRunningPoll,
+  machOArchsOf,
+  verdictFromArchs,
+  locateMachOBinary
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
@@ -2224,5 +2227,131 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
     await installGame570()
 
     expect(library.get('570')!.install.platform).toBe('Windows')
+  })
+})
+
+// ── MAC32-03: Mach-O classification primitives ───────────────────────────────
+
+describe('machOArchsOf()', () => {
+  it('runs lipo -archs argv-form and returns the space-split arch list', () => {
+    ;(execFileSync as jest.Mock).mockReturnValue('x86_64 arm64\n')
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(execFileSync).toHaveBeenCalledWith(
+      'lipo',
+      ['-archs', '/Games/Foo.app/Contents/MacOS/Foo'],
+      expect.objectContaining({ encoding: 'utf8' })
+    )
+    expect(result).toEqual(['x86_64', 'arm64'])
+  })
+
+  it('falls back to `file` when lipo throws, and still classifies correctly', () => {
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') throw new Error('lipo not found')
+      if (cmd === 'file') {
+        return '/Games/Foo.app/Contents/MacOS/Foo: Mach-O executable i386\n'
+      }
+      throw new Error(`unexpected command ${cmd}`)
+    })
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(execFileSync).toHaveBeenCalledWith(
+      'file',
+      ['/Games/Foo.app/Contents/MacOS/Foo'],
+      expect.objectContaining({ encoding: 'utf8' })
+    )
+    expect(result).toEqual(['i386'])
+  })
+
+  it('returns [] (inconclusive) when BOTH lipo and file fail — never a 32-bit verdict', () => {
+    ;(execFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('neither tool available')
+    })
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(result).toEqual([])
+  })
+})
+
+describe('verdictFromArchs()', () => {
+  it("maps ['i386'] to '32'", () => {
+    expect(verdictFromArchs(['i386'])).toBe('32')
+  })
+
+  it("maps ['x86_64'] to '64'", () => {
+    expect(verdictFromArchs(['x86_64'])).toBe('64')
+  })
+
+  it("maps ['x86_64','arm64'] to '64'", () => {
+    expect(verdictFromArchs(['x86_64', 'arm64'])).toBe('64')
+  })
+
+  it("maps ['i386','x86_64'] to '64' — any 64 wins over i386 (universal binary)", () => {
+    expect(verdictFromArchs(['i386', 'x86_64'])).toBe('64')
+  })
+
+  it('maps [] to null — inconclusive, must NOT be coerced to 32', () => {
+    expect(verdictFromArchs([])).toBeNull()
+  })
+})
+
+describe('locateMachOBinary()', () => {
+  const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
+
+  beforeEach(() => {
+    ;(existsSync as jest.Mock).mockReset()
+    ;(readdirSync as jest.Mock).mockReset()
+  })
+
+  it('prefers a supplied launch executable path when it exists', () => {
+    const launchExe = join('OldGame.app', 'Contents', 'MacOS', 'OldGame')
+    ;(existsSync as jest.Mock).mockImplementation(
+      (p: string) => p === join(INSTALL_PATH, launchExe)
+    )
+
+    const result = locateMachOBinary(INSTALL_PATH, launchExe)
+
+    expect(result).toBe(join(INSTALL_PATH, launchExe))
+    expect(readdirSync).not.toHaveBeenCalled()
+  })
+
+  it('scans for a top-level *.app bundle and returns Contents/MacOS/<first bin> when no launch executable is supplied', () => {
+    const macOsDir = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app', 'readme.txt']
+      if (dir === macOsDir) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+
+    const result = locateMachOBinary(INSTALL_PATH)
+
+    expect(result).toBe(join(macOsDir, 'OldGame'))
+  })
+
+  it('returns null (no throw) when no *.app bundle is found', () => {
+    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+
+  it('returns null (no throw) when readdirSync throws', () => {
+    ;(readdirSync as jest.Mock).mockImplementation(() => {
+      throw new Error('ENOENT')
+    })
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+
+  it('returns null when the *.app bundle has no Contents/MacOS dir', () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+      dir === INSTALL_PATH ? ['OldGame.app'] : []
+    )
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
   })
 })
