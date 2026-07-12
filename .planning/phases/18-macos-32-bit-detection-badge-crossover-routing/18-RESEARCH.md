@@ -552,19 +552,22 @@ getProductInfo(
 | A3 | `lipo`/`file` are sufficient and their output format (space-separated arch list / free-text sentence) is stable | Pattern 4 | If Apple changes `lipo`'s output format in a future macOS version, the regex/split logic silently returns `[]` (inconclusive, not wrong) — degrades gracefully per the "no tool succeeded → don't overwrite" rule already baked into `verdictFromArchs`. |
 | A4 | Post-install Mach-O check should run at ACF-completion time (`pollInstallOnce`'s `'installed'` branch), not first-launch | Architecture Diagram | CONTEXT.md leaves this as pure discretion. If first-launch is preferred instead, the same `verifyMacArchGroundTruth` function can be called from `launch()` before `ensureMacArchHint()`/`isBottleEligible()` instead — no functional difference to the check itself, only to *when* it fires. Flagging so the planner makes an explicit choice rather than inheriting this research's pick by default. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three resolved during /gsd-plan-phase 18. Annotations added inline.
 
 1. **What happens to an already-downloaded native i386-only install after the post-install correction flips `mac_arch` to `'32'`?**
+   - **RESOLVED:** CONTEXT.md "Post-install i386 recovery" (LOCKED) + Plan 18-03 Task 3 — Option (a) with a user PROMPT before `forceUninstall()` + bottle reinstall (not silent). Cache verdict stored as `{ arch, source: 'macho' }`.
    - What we know: `isBottleEligible()` will return `true` on the next call, so `launch()`/`install()`/`uninstall()` will all attempt to route through the bottled Steam client — but nothing has ever been installed into the bottle's own `steamapps` for this game (the bottle's Steam client has no record of it).
    - What's unclear: Whether the correction should (a) auto-trigger `forceUninstall()` on the native copy + push `is_installed: false` so the user's next Install click naturally goes through `install()`'s already-correct bottle branch, or (b) leave the native install in place and surface a distinct "this install won't run — reinstall via CrossOver" warning state that doesn't exist anywhere in the codebase today, or (c) something else.
    - Recommendation: Option (a) is the least new surface area — it reuses the existing `forceUninstall()` method (`games.ts:687-695`, already used for a conceptually similar "in-memory state doesn't match reality" reconciliation) and the existing install()-bottle-branch rather than inventing a new UI state. Surface this explicitly to the user via a toast/notification (the existing `notify()` helper is already imported in `library.ts`) explaining why their install disappeared. **This needs an explicit planner/discuss-phase decision — CONTEXT.md does not resolve it.**
 
-2. **Should `ensureMacArchHint()` be awaited synchronously before every `install()`/`launch()`/`uninstall()` call (like `ensurePlatformsCaptured()`), or fire-and-forget like the general metadata fetch?**
+2. **RESOLVED (await synchronously, per Plan 18-02 Pattern 2).** Should `ensureMacArchHint()` be awaited synchronously before every `install()`/`launch()`/`uninstall()` call (like `ensurePlatformsCaptured()`), or fire-and-forget like the general metadata fetch?
    - What we know: `ensurePlatformsCaptured()` is awaited synchronously specifically to close a race condition documented in `.planning/debug/steam-bottle-guided-setup-never-fires.md` (Phase 17) — a fire-and-forget fetch could lose the race against the user's click.
    - What's unclear: Whether the same race applies here. It plausibly does — a 32-bit game whose hint hasn't resolved yet would fall through to the native path exactly like an unconfirmed `is_mac_native` game did pre-Phase-17-fix.
    - Recommendation: Await it synchronously, following the exact same `ensurePlatformsCaptured` pattern (Pattern 2 above already reflects this). Low risk either way since the pattern already exists to copy.
 
-3. **Exact `osarch` payload shape for the three pre-work sample titles** (32-bit-only, 64-bit, no-osarch) is not yet captured.
+3. **RESOLVED via Wave 0 (Plan 18-01 fixture-capture checkpoint).** Exact `osarch` payload shape for the three pre-work sample titles (32-bit-only, 64-bit, no-osarch) is not yet captured.
    - What we know: Field path and casing corroborated by two independent sources (Assumption A1).
    - What's unclear: The literal absent-vs-empty-string distinction for the "no osarch" case, and whether legacy `"osx"` vs current `"macos"` appears in practice for any of the three sample titles.
    - Recommendation: This is precisely the blocking pre-work already identified in `.planning/todos/pending/steam-getproductinfo-appinfo-dump.md` — the planner should sequence a Wave 0 task that runs this dump (using the `ensureMacArchHint`/`parseOsArchHint` scaffolding built in this phase, run once manually against real titles) before the parser's unit test fixtures are finalized.
