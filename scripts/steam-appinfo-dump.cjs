@@ -28,6 +28,7 @@ const fs = require('fs')
 const path = require('path')
 const SteamUserLib = require('steam-user')
 const { LoginSession, EAuthTokenPlatformType } = require('steam-session')
+const qrcode = require('qrcode-generator')
 
 const CM_CONNECT_TIMEOUT_MS = 15000
 const QR_LOGIN_TIMEOUT_MS = 120000
@@ -59,6 +60,32 @@ function validateAppIds(appIdArgs) {
   return validated
 }
 
+// Renders a challenge URL as a scannable half-block terminal QR code. The
+// Steam mobile app scanner needs an actual QR image — opening the raw
+// qrChallengeUrl in a browser just lands on a generic Steam page with nothing
+// to approve. Half-blocks (▀/▄/█) pack two module rows per text line, giving a
+// near-square aspect ratio that scans cleanly; low ECC ('L') keeps density down.
+function renderQrToTerminal(url) {
+  const qr = qrcode(0, 'L') // type 0 = auto-size, 'L' = low ECC (lower density, easier to scan)
+  qr.addData(url)
+  qr.make()
+  const n = qr.getModuleCount()
+  const quiet = 2 // quiet-zone modules
+  const isDark = (r, c) =>
+    r >= 0 && r < n && c >= 0 && c < n ? qr.isDark(r, c) : false
+  let out = ''
+  for (let r = -quiet; r < n + quiet; r += 2) {
+    let line = ''
+    for (let c = -quiet; c < n + quiet; c++) {
+      const top = isDark(r, c)
+      const bot = isDark(r + 1, c)
+      line += top && bot ? '█' : top ? '▀' : bot ? '▄' : ' '
+    }
+    out += line + '\n'
+  }
+  return out
+}
+
 // QR login via steam-session — mirrors user.ts's startQRLogin flow
 // (LoginSession + EAuthTokenPlatformType.SteamClient), standalone.
 function qrLogin() {
@@ -79,7 +106,11 @@ function qrLogin() {
     session
       .startWithQR()
       .then((response) => {
-        console.log('\nScan this URL with the Steam mobile app to log in:')
+        console.log(
+          '\nScan this QR code with the Steam mobile app (Steam Guard → scan QR):'
+        )
+        console.log(renderQrToTerminal(response.qrChallengeUrl))
+        console.log('If the QR will not scan, this is the raw challenge URL:')
         console.log(response.qrChallengeUrl)
         console.log('(waiting for approval, up to 2 minutes...)\n')
       })
