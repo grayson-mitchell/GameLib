@@ -648,6 +648,90 @@ describe('bottle.ts', () => {
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
       expect(mockedDownloadFile).not.toHaveBeenCalled()
     })
+
+    // ── GAP-17-CEF-RECREATE-RUNNING: WINEPREFIX-scoped wineserver -k before delete ──
+    // Helper: arrange a win32 bottle whose delete/create side-effects mutate
+    // `flags`, so provisionBottle runs the full recreate path.
+    function arrangeWin32Recreate(flags: FsFlags) {
+      setBottleFs(flags)
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
+      mockedSpawnAsync.mockImplementation(
+        async (_bin: string, argv: string[]) => {
+          if (argv.includes('--delete')) {
+            flags.conf = false
+            flags.steamExe = false
+          } else if (argv.includes('--create')) {
+            flags.conf = true
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+    }
+
+    test('GAP-17-CEF-RECREATE-RUNNING: win32 recreate runs a wineserver -k BEFORE cxbottle --delete', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killIdx = mockedSpawnAsync.mock.calls.findIndex((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      const deleteIdx = mockedSpawnAsync.mock.calls.findIndex((c) =>
+        (c[1] as string[]).includes('--delete')
+      )
+      expect(killIdx).toBeGreaterThanOrEqual(0)
+      expect(deleteIdx).toBeGreaterThanOrEqual(0)
+      // Ordering by real invocation sequence: kill must precede delete.
+      expect(
+        mockedSpawnAsync.mock.invocationCallOrder[killIdx]
+      ).toBeLessThan(mockedSpawnAsync.mock.invocationCallOrder[deleteIdx])
+    })
+
+    test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is scoped to the target bottle WINEPREFIX (never the shared GameLib bottle) and sets CX_ROOT', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killCall = mockedSpawnAsync.mock.calls.find((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      expect(killCall).toBeDefined()
+      // Binary resolves under the CrossOver bin dir (same dir as cxbottle).
+      expect(String(killCall![0])).toMatch(/\/bin\/wineserver$/)
+      // args are discrete words — never a shell string (T-17-01).
+      expect(killCall![1]).toEqual(['-k'])
+      // SCOPE-FENCE (T-17-DoS): WINEPREFIX is the dedicated Steam bottle's own
+      // dir, not the shared GameLib GOG/Epic bottle, and never unset/empty.
+      const opts = killCall![2] as { env: NodeJS.ProcessEnv }
+      expect(opts.env.WINEPREFIX).toBe(getBottleDir('GameLibSteam'))
+      expect(opts.env.WINEPREFIX).not.toBe(getBottleDir('GameLib'))
+      expect(opts.env.WINEPREFIX).toContain('GameLibSteam')
+      expect(opts.env.CX_ROOT).toBeTruthy()
+    })
+
+    test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is NOT spawned when the recreate branch is not taken (win64 bottle)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killCall = mockedSpawnAsync.mock.calls.find((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      expect(killCall).toBeUndefined()
+    })
   })
 
   describe('tellBottledSteamTo{Install,Launch,Uninstall}', () => {
