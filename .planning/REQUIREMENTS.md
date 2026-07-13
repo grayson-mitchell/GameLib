@@ -111,6 +111,24 @@ Detect a Steam game's macOS build architecture so 32-bit-only Mac builds (unrunn
 - [x] **MAC32-03**: After a native macOS install of a game with unknown/64-bit `osarch`, GameLib inspects the installed Mach-O binary (`lipo -archs` / `file`) as ground truth; an i386-only binary Steam failed to tag is re-routed to the bottle and the result is cached, so Steam's missing-`osarch` false-negatives are still caught without over-routing on the pre-install hint.
 - [x] **MAC32-04**: The left-panel game view shows an OS logo beside the game logo with a "32" mark on 32-bit macOS builds; the "32" treatment is escalated to an actionable warning only when the host OS is macOS (informational elsewhere).
 
+### CrossOver Compatibility Index (Phase 19)
+
+Serve every macOS library game a CrossOver medal badge — and a filter for it — offline from a small CI-built index of CodeWeavers' daily `.tie` dump, replacing the per-game live HTML scrape that cannot populate a whole library and guesses its URL from the store title. Minted during `/gsd-plan-phase 19` from the locked D-01..D-20 decisions (see `.planning/phases/19-crossover-compatibility-index-macos/19-CONTEXT.md`). Linux badges, Windows anything, the dump's `<bottletemplate>`/`<flag>`/`<installprofile>` data, and the crowd-sourced mac-arch override list are explicitly out of scope. Each maps to Phase 19.
+
+- [ ] **CXIDX-01**: A CI build script (`meta/buildCrossoverIndex.ts`) parses CodeWeavers' daily `.tie` dump — raising `fast-xml-parser`'s v5 entity-expansion limits (T-01) and extracting against the dump's real `c4p > applications > app[]` shape with `steamid`/`category`/`medal` nested inside `<appprofile>` (T-02) — filters to Games carrying a Mac medal (~2,866), applies the highest-`cxversion` medal rule, deduplicates by a **total, deterministic** three-key order (highest `cxversion`, then most `num`, then `appid` ascending — D-04 plus the mandatory third key that makes the build reproducible), emits a gzipped JSON index plus a collision report that logs drift but **never fails the build** (D-05), and fails **only** on a zero-record extraction (T-02) (D-04/D-05)
+- [ ] **CXIDX-02**: The index is published daily to a GitHub **Release asset on a rolling non-`v*` tag** (`crossover-index`) via `gh release ... --latest=false --clobber`, on a `schedule` + `workflow_dispatch` dual trigger with a `generatedAt` staleness signal in the payload — keeping the daily-rebuilt artifact out of the source tree to preserve Heroic upstream-mergeability; because GameLib is a fork whose scheduled workflows are disabled by default, a one-time **human "enable workflow" step** is required and the tag must not collide with `draft-release-*.yml`'s `v*` trigger (T-03/T-04) (D-06)
+- [ ] **CXIDX-03**: A runnable measurement harness (`meta/measureCrossoverMatching.ts`) scores candidate name normalizers against the **123-pair Steam AppID ground-truth set** (plus a synthetic adversarial set and a whole-dump self-collision test, each scored **separately** — never pooled into one denominator), evaluated against the **pre-committed D-02 promotion gate** (`<2%` wrong hits AND `>30%` hit rate on the ground-truth set), producing an auditable dated report that decides whether non-Steam name matching ships in v1 or defers to a follow-up phase (D-01/D-02/D-03)
+- [ ] **CXIDX-04**: The app ships a **bundled index snapshot** read via the existing `publicDir` constant (no `app.isPackaged` branch, no `extraResources`/`process.resourcesPath`), tolerating the file's absence as a normal cold-start; the snapshot is **gitignored** so it never enters the source tree, and the release workflows fetch it into `public/` before packaging (D-06/D-07)
+- [ ] **CXIDX-05**: A backend **fetch → TTL → schema-validate → keep-last-good** cache layer, parameterized by an `IndexDescriptor` (name/URL/schema — a single seam, deliberately **not** a plugin framework), refreshes on a **24-hour TTL** matching the source's daily cadence, `zod`-validates every fetched payload, and on rejection keeps the last good index (or the bundled snapshot) rather than throwing or injecting junk medals (D-08/D-09/D-19)
+- [ ] **CXIDX-06**: On macOS, `getInfoFromCodeweavers()` is **index-first** — the index is the single source for both the library grid and the game-details panel, returning the unchanged `CodeweaversInfo` shape on a hit — while on **Linux the existing live scrape runs exactly as today** (the index carries no Linux ratings by construction, so an ungated index-first path would silently regress the Linux rating Phase 16 shipped); the never-rendered Linux fetch is deliberately **not** removed (D-10/D-11/D-12/D-14)
+- [ ] **CXIDX-07**: An index miss paints **no grid badge** but still permits the lazy details-page scrape as the retained safety net (the grid never fires bulk scrapes to paint itself), and a stale Phase-16 cached "checked, none found" miss **self-heals** once the index loads on macOS so users stop seeing "no rating" for games the index now covers (D-13)
+- [ ] **CXIDX-08**: `slugify()` **keeps** the load-bearing apostrophe drop and **deletes** the roman→arabic numeral conversion (which soft-404s 172 games), and the CrossOver **matching key** lives in its own `crossover_index/normalize.ts` file, kept strictly distinct from the URL slug (the two have opposite correctness criteria — verbatim is right for slugs, normalization is the open question for matching) (D-20)
+- [ ] **CXIDX-09**: The backend resolves each library title to a rating and ships a **three-state map** (`rating` = badge, `null` = looked-up-but-absent, key-absent = not looked up) to the renderer over a **single bulk IPC pull + push** channel landing in a zustand slice, so the grid reads synchronously and is structurally incapable of triggering per-game work or a scrape (D-11/D-13/D-16)
+- [ ] **CXIDX-10**: Each macOS grid tile carries a **colored medal glyph** (gold/silver/bronze/red) with a full accessible `aria-label`, following the established `gameCardDelistedBadge` overlay pattern; the medal label is **derived from the rating number in the UI**, requiring no `CodeweaversInfo` type change (5→gold, 4→silver, 3→bronze, ≤2→knownnottowork) (D-12/D-15)
+- [ ] **CXIDX-11**: A neutral **"unknown" mark** is shown **only** on games actually looked up and absent from the index — never on games that were not looked up; if the D-02 gate fails and v1 ships Steam-only, non-Steam tiles get **no mark at all** rather than a grid of misleading grey (D-16)
+- [ ] **CXIDX-12**: A macOS-only **CrossOver-rating library filter** — multi-select, opt-out, default-all-true, **filter-only (no sort)** — is added alongside the existing library filters, gated on `darwin` exactly like the existing `mac` platform toggle (D-17)
+- [ ] **CXIDX-13**: The install modal shows a **non-blocking warning** for `knownnottowork` (rating ≤2) titles on the macOS CrossOver-bottle install path that warns but **never gates** the Install button — the data is community-sourced and can be a false negative (D-18)
+
 ## v1.5 Requirements
 
 Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-level sidebar destination where one title search returns prices across many storefronts, annotated with what the user already owns. Prototyped on CheapShark (public, keyless, **USD-only**); IsThereAnyDeal is the localised production target (see `.planning/research/questions.md` Q2). Minted during `/gsd-discuss-phase 20` from the locked D-01..D-13 decisions (see `.planning/phases/20-aggregated-store-search-cheapshark/20-CONTEXT.md`). The aggregated *discovery/browse* surface (multi-provider Deals) is explicitly out of scope — see `.planning/seeds/aggregated-discovery-multi-provider-deals.md`. Each maps to Phase 20.
@@ -213,6 +231,19 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MAC32-02 | Phase 18 | Complete |
 | MAC32-03 | Phase 18 | Complete |
 | MAC32-04 | Phase 18 | Complete |
+| CXIDX-01 | Phase 19 | Pending |
+| CXIDX-02 | Phase 19 | Pending |
+| CXIDX-03 | Phase 19 | Pending |
+| CXIDX-04 | Phase 19 | Pending |
+| CXIDX-05 | Phase 19 | Pending |
+| CXIDX-06 | Phase 19 | Pending |
+| CXIDX-07 | Phase 19 | Pending |
+| CXIDX-08 | Phase 19 | Pending |
+| CXIDX-09 | Phase 19 | Pending |
+| CXIDX-10 | Phase 19 | Pending |
+| CXIDX-11 | Phase 19 | Pending |
+| CXIDX-12 | Phase 19 | Pending |
+| CXIDX-13 | Phase 19 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
