@@ -122,3 +122,14 @@ None - no external service configuration required. (The daily GitHub Action, rol
 
 *Phase: 19-crossover-compatibility-index-macos*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+- FOUND: meta/buildCrossoverIndex.ts
+- FOUND: meta/__tests__/buildCrossoverIndex.test.ts
+- FOUND: meta/__tests__/fixtures/crossover-dump-sample.tie.xml
+- FOUND: meta/jest.config.js
+- FOUND: .planning/phases/19-crossover-compatibility-index-macos/19-01-SUMMARY.md
+- FOUND: 64582eb3 (test commit)
+- FOUND: c2106ae9 (feat commit)
+- FOUND: 97d622b8 (docs/summary commit)
