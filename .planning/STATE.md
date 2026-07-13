@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Phase 19 UI-SPEC approved
-last_updated: "2026-07-13T22:04:11.367Z"
-last_activity: 2026-07-13 -- Phase 19 execution started
+last_updated: "2026-07-13T23:11:42.561Z"
+last_activity: 2026-07-13
 progress:
   total_phases: 5
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 19 (crossover-compatibility-index-macos) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 19
-Last activity: 2026-07-13 -- Phase 19 execution started
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-07-13
 
 ## v1.4 Phase Map
 
@@ -112,6 +112,7 @@ Last activity: 2026-07-13 -- Phase 19 execution started
 | Phase 14 P06 | 30min | 2 tasks | 2 files |
 | Phase 14 P07 | 35min | 3 tasks | 12 files |
 | Phase 14 P08 | ~30min | 2 tasks | 6 files |
+| Phase 19 P05 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,8 @@ Recent decisions affecting current work:
 - [Phase 14]: Reveal/redeem POST must route through Electron net.request on persist:humble session partition, not axios — Cloudflare Bot Management blocks axios's non-browser TLS fingerprint before Humble's app code inspects the request
 - [Phase 14-07]: D-30 amended (Phase 14 gap closure, 14-07): server truth = revealed-ness + expiry only; redeemed_key_val presence classifies REVEALED, never REDEEMED. REDEEMED is a local-only, always-undoable overlay via Mark-as-redeemed. Closed UAT tests 2 (CR-01) and 3 (WR-02) at their shared root cause; deleted the locallyRedeemedPending/WR-02-keep-visible/server_confirmed_ack compensation machinery. HUMBLE_CLASSIFIER_VERSION bumped 4->5.
 - [Phase 14-08]: Gap closure — UAT test 8 (Keys-waiting fill-then-empty sync churn) root-caused to fetchAndCommitOrder committing classifyOrder's hard-reset ownedElsewhere overlay on every per-order commit while D-26 broadcasts each intermediate snapshot. Fixed with a merged two-branch commit-time overlay (Steam gate open -> dedup recompute at commit; gate closed -> per-key carry-forward from prior entry, D-48) — also closed a T-14-03 mid-sync C2 reveal-bypass window. Added a single-sourced isServerTerminal/isFreezeEligible predicate (classify.ts) so REVEALED-without-pending-expiry orders now freeze under D-24 again (restores the freeze benefit 14-07 had lost, cutting the standing ~19-orders-per-sync Cloudflare/WAF re-fetch exposure); REVEALED-with-future-expiry orders keep re-fetching (retroactive expiry preserved). partitionGamekeys/patchCachedState both route through the same predicate. HUMBLE_CLASSIFIER_VERSION bumped 5->6.
+- [Phase ?]: Steam-AppID exact joins never gated by NAME_MATCHING_SHIPS; only non-Steam name matching is (D-02)
+- [Phase ?]: D-20 reversal: slugify() keeps roman numerals verbatim, only apostrophe drop is load-bearing
 
 ### Pending Todos
 
@@ -214,7 +217,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-12T11:10:05.409Z
+Last session: 2026-07-13T23:10:53.602Z
 Stopped at: Phase 19 UI-SPEC approved
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
