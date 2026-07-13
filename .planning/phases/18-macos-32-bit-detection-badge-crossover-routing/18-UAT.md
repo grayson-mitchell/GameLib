@@ -1,14 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 18-macos-32-bit-detection-badge-crossover-routing
 source: [18-01-SUMMARY.md, 18-02-SUMMARY.md, 18-03-SUMMARY.md, 18-04-SUMMARY.md, 18-05-SUMMARY.md, 18-06-SUMMARY.md]
 started: 2026-07-12T11:14:47Z
-updated: 2026-07-13T20:52:00Z
+updated: 2026-07-13T21:05:00Z
 ---
 
 ## Current Test
 
-[testing paused — test 5 re-test blocked by an environmental Steam-client issue]
+[testing complete]
 
 ## Tests
 
@@ -52,11 +52,17 @@ note: |
 
 ### 5. A 32-bit mac game installs/launches through CrossOver (not native)
 expected: For a confirmed 32-bit-only mac game on macOS, Install (or Launch) from GameLib routes through the CrossOver/Wine bottle (the Windows depot under CrossOver) rather than attempting a native `steam://` install that would fail on modern macOS (32-bit dropped in Catalina). The game installs/launches via the bottle path; no "app is not optimized for your Mac / needs to be updated" native-32-bit failure.
-result: blocked
-blocked_by: other
-reason: "Re-test (2026-07-13) blocked by an environmental Steam-client issue, NOT a GameLib defect: the desktop Steam client reports 'no internet connection' and cannot install. Reproduces with GameLib FULLY QUIT (its steam-user session is not the cause — single-session-conflict hypothesis ruled out). Native steam://install can only be as healthy as the desktop Steam client it hands off to, so the recovery flow cannot be exercised until the Steam client is back online. Resume this re-test once the Steam client can connect."
-severity: major
+result: pass
 note: |
+  RE-TEST PASSED (2026-07-13): after resolving the environmental Steam-offline state
+  (closed Steam and retried), the full recovery flow worked end-to-end — install →
+  detected 32-bit as expected → installed through CrossOver instead of native. Confirms
+  the 18-06 fix and the MAC32-03 detection + re-route delegation live. The earlier
+  'no internet connection' failure was purely the desktop Steam client being offline
+  (reproduced with GameLib fully quit), NOT a GameLib defect — resolved by restarting
+  Steam.
+
+  HISTORY:
   ORIGINAL FINDING (2026-07-12): recovery dialog appeared and re-route to the bottle
   was delegated (log: 'delegating install via the bottled Steam client', Wine
   steam://install), but the bottle reinstall did not complete — install poll timed out
@@ -80,18 +86,19 @@ note: |
 ## Summary
 
 total: 5
-passed: 4
+passed: 5
 issues: 0
 pending: 0
 skipped: 0
-blocked: 1
+blocked: 0
 
 <!--
-  Badge feature (tests 1-4) verified live on real 32-bit titles (AoW3, Trine 2).
-  Test 5 recovery-flow re-test blocked by an environmental Steam 'no internet
-  connection' issue (reproduces with GameLib fully quit — not a GameLib defect).
-  The one prior test-5 gap (orphan/badge-blink) was already closed by Plan 18-06;
-  remaining recovery-UX items (a/c) are deferred debt tracked as todos.
+  All 5 tests pass. Badge feature (tests 1-4) verified live on real 32-bit titles
+  (AoW3, Trine 2). Test 5 recovery flow passed on re-test (install → 32-bit detected
+  → CrossOver route) after clearing an environmental Steam-offline state that was NOT
+  a GameLib defect. The prior test-5 orphan/badge-blink gap was closed by Plan 18-06;
+  remaining recovery-UX items (silent-timeout feedback, simultaneous-prompt
+  serialization) are deferred debt tracked as todos, not blockers.
 -->
 
 
