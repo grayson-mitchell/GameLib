@@ -100,3 +100,8 @@ T-17-CR01 (Tampering/DoS — shared-bottle destruction) is now **mitigated** exa
 ## Known Stubs
 
 None.
+
+## Self-Check: PASSED
+
+- SUMMARY.md present at the plan directory.
+- All task commits verified in git log: `0fcd52c2`, `a060dad4`, `ded8718d`, `8236a2ec`, `3b0ae62e`, `db17b49f`, `6495c44f`.
