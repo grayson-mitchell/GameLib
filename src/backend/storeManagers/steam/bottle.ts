@@ -553,6 +553,33 @@ export async function provisionBottle(opts?: {
     return { status: 'error', error: `Invalid bottle name: "${rawName}"` }
   }
 
+  // (1b) CR-01 (17-17) AUTHORITATIVE scope guard (D-01): refuse to provision
+  // Steam into the shared GameLib GOG/Epic Wine bottle. This is the SINGLE
+  // source of correctness — it MUST hold even if a future or renderer caller
+  // passes the shared bottle name, precisely because the downstream
+  // win32-recreate branch (step 2b) would otherwise `killBottleWineServer` +
+  // `cxbottle --delete --force` + `rmSync(getBottleDir(...))` the shared bottle
+  // (irrecoverable data loss), and the win64 path would install a multi-GB
+  // Steam client into it. Placed AFTER sanitize (so `bottleName` is trimmed) and
+  // BEFORE any store write / cxbottle delete-create / rmSync. Compared against
+  // the TRIMMED shared value so a whitespace-padded config value cannot slip
+  // past. An unset/empty shared value is inert — it never blocks provisioning.
+  const sharedBottle = GlobalConfig.get().getSettings().wineCrossoverBottle
+  if (
+    typeof sharedBottle === 'string' &&
+    sharedBottle.trim() &&
+    bottleName === sharedBottle.trim()
+  ) {
+    logError(
+      `provisionBottle: refusing to provision Steam into the shared GameLib GOG/Epic Wine bottle "${bottleName}" (CR-01 / D-01) — the dedicated Steam bottle must stay distinct`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: 'Refusing to provision Steam into the shared Wine bottle.'
+    }
+  }
+
   // (2) Persist the chosen wine/bottle identity before composing settings.
   steamBottleConfigStore.set('bottleName', bottleName)
   steamBottleConfigStore.set('wineCrossoverBottle', bottleName)
