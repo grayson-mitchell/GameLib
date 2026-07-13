@@ -11,13 +11,24 @@ jest.mock('electron-store')
 // NAME_MATCHING_SHIPS can be flipped per test (mirrors the
 // backend/constants/environment envMock pattern in games.test.ts). The
 // normalizer itself is the real implementation — only the gate flag is
-// mocked.
-const actualNormalize = jest.requireActual('../normalize')
-const normalizeMock = {
-  normalize: actualNormalize.normalize,
+// mocked. The factory is self-contained (no outer-scope const reference)
+// because jest.mock() factories run before this file's own top-level
+// imports finish resolving (index.ts is required transitively via
+// `backend/utils` at the very top of this file) — referencing an
+// outer `const` here previously threw "Cannot access before
+// initialization" (TDZ). `jest.requireActual` inside the factory is safe
+// because it is only evaluated lazily, when '../normalize' is first
+// required.
+jest.mock('../normalize', () => ({
+  ...jest.requireActual('../normalize'),
   NAME_MATCHING_SHIPS: true
+}))
+
+// Mutable reference to the mocked module so tests can flip the gate flag
+// per-test without re-registering the mock factory.
+const normalizeMock = jest.requireMock('../normalize') as {
+  NAME_MATCHING_SHIPS: boolean
 }
-jest.mock('../normalize', () => normalizeMock)
 
 // ── backend/crossover_index/fetcher mock — loadIndex replaced so the test
 // controls exactly what the "index" is without a network/gunzip round-trip.
