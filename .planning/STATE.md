@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: executing
-stopped_at: Phase 17 gap plan 17-16 complete; 17-07 UAT 5-7 + verify/secure remain
-last_updated: "2026-07-13T10:17:08.566Z"
+status: ready_to_plan
+stopped_at: Phase 17 complete (17/17) — run /gsd:secure-phase 17, then Phase 19 (18 already done)
+last_updated: 2026-07-13T11:23:55.919Z
 last_activity: 2026-07-13 -- Phase 17 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 6
+  completed_plans: 78
   percent: 20
 ---
 
@@ -21,22 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 17 — Steam on macOS via CrossOver
+**Current focus:** Phase 17 complete — run /gsd:secure-phase 17, then Phase 19 (CrossOver Compatibility Index). Phase 18 already complete (ran ahead).
 
 ## Current Position
 
-Phase: 17 (Steam on macOS via CrossOver) — EXECUTING (completion PAUSED for CR-01)
-Plan: All 16 plans executed (17-16 GAP A/B/C merged; 17-07 human UAT PASSED — all 7 steps + scope fences, approved 2026-07-13). Automated gate green (50 suites/1042 tests, codecheck exit 0).
-Status: Phase completion HELD. Code-review gate (17-REVIEW.md) surfaced a CONFIRMED data-loss BLOCKER — CR-01. Gap plan 17-17 PLANNED + plan-checker PASSED (closes CR-01 + WR-01 + WR-02, wave 11, gap_closure). verify_phase_goal and phase.complete NOT run. Next: /gsd-execute-phase 17 --gaps-only → then verify + secure + complete.
-CR-01 (BLOCKER, data loss): provisionBottle() has no guard rejecting bottleName === wineCrossoverBottle (shared GOG/Epic bottle). Reachable via UI: SteamBottleSetup embeds WineSelector whose "Use shared Wine prefix" toggle sets crossoverBottle = globalConfig.wineCrossoverBottle (WineSelector/index.tsx:72), forwarded as bottleName (SteamBottleSetup.tsx:133). If the shared bottle is win32, provisionBottle's recreate branch runs killBottleWineServer + `cxbottle --delete --force` + rmSync(getBottleDir) on it → shared GOG/Epic bottle destroyed; on win64 it installs multi-GB Steam into the shared bottle. Violates constants.ts D-01. Fix: reject bottleName === wineCrossoverBottle in provisionBottle AND remove the shared-prefix toggle from the Steam setup path.
-Also open (WARNING): WR-01 (games.ts:549-557 starts ACF poller even when tellBottledSteamToInstall errors → ~60s false "installing"); WR-02 (SteamBottleConfig.loggedIn never written backend-side → always false).
-Last activity: 2026-07-13 -- Phase 17 all plans done + UAT approved; code review found CR-01 data-loss BLOCKER; completion paused for gap closure
+Phase: 17 COMPLETE (2026-07-13) — next actionable is Phase 19 (Phase 18 already ran ahead & is complete; phase.complete's "next: 18" is wrong).
+Plan: All 17 plans done. 17-VERIFICATION.md status: passed (6/6 must-haves). Human UAT approved (17-VALIDATION.md, 7/7 steps). Code review CR-01 data-loss BLOCKER + WR-01/WR-02 all CLOSED by 17-17 (17-REVIEW.md status: resolved). Automated gate green (50 suites/1048 tests, codecheck exit 0).
+Status: Phase 17 verified & complete. REMAINING GATE: /gsd:secure-phase 17 (no 17-SECURITY.md yet; security_enforcement=true). Then v1.4 continues at Phase 19 (CrossOver Compatibility Index — has CONTEXT/RESEARCH/UI-SPEC, no plans).
+Last activity: 2026-07-13 -- Phase 17 complete: 17-17 gap closure (CR-01 data-loss guard) executed + merged, verifier PASSED, phase marked complete
 
 ## v1.4 Phase Map
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 17 | Steam on macOS via CrossOver/Wine | Incomplete — all 16 plans executed + UAT approved (2026-07-13); completion PAUSED on code-review CR-01 data-loss BLOCKER → /gsd:plan-phase 17 --gaps; no VERIFICATION/SECURITY yet |
+| 17 | Steam on macOS via CrossOver/Wine | Complete (2026-07-13) — 17 plans, UAT 7/7 approved, VERIFICATION passed 6/6, code-review CR-01/WR-01/WR-02 resolved by 17-17; SECURITY pending (/gsd:secure-phase 17) |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
 | 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
 
@@ -65,7 +63,7 @@ Last activity: 2026-07-13 -- Phase 17 all plans done + UAT approved; code review
 
 **Velocity (v1.0):**
 
-- Total plans completed: 67 (phases 1-4)
+- Total plans completed: 84 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -87,6 +85,7 @@ Last activity: 2026-07-13 -- Phase 17 all plans done + UAT approved; code review
 | 15 | 6 | - | - |
 | 16 | 3 | - | - |
 | 18 | 6 | - | - |
+| 17 | 17 | - | - |
 
 **v1.0 Detail Log:**
 
