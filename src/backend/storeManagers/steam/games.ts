@@ -17,7 +17,7 @@ import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore } from './electronStores'
+import { steamMetadataStore, steamLibraryStore } from './electronStores'
 import {
   library,
   pendingFetches,
@@ -841,18 +841,37 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Force-removes the game from the in-memory library Map and notifies the
-   * frontend to update its install badge immediately (is_installed: false).
+   * Marks the game not-installed in the in-memory library Map (keep-entry —
+   * mirrors pollUninstallOnce()'s 'absent' branch in library.ts) and notifies
+   * the frontend to update its install badge immediately (is_installed: false).
    * This is for cases where Steam's own uninstall dialog has already completed
    * but the in-memory state has not been reconciled via the focus ACF re-read.
-   * Analog: gog/games.ts lines 1282-1288.
+   *
+   * The entry is intentionally KEPT (never library.delete'd): removing it would
+   * orphan an owned game and drop badge-relevant fields (e.g. mac_arch:'32')
+   * during an i386-recovery forceUninstall, which — if a subsequent bottle
+   * reinstall does not complete — would leave the game permanently missing
+   * from both the in-memory library and the persisted store
+   * (GAP-18-06-FORCEUNINSTALL-ORPHAN). The spread onto `existing` preserves
+   * every other field. The mutated Map is persisted immediately to
+   * steamLibraryStore (GAP-17-BOTTLE-STORE-DIVERGENCE class) so the
+   * not-installed state cannot diverge on the next persist. When the appId is
+   * absent from the Map, no entry is fabricated and no push is made.
+   * Analog: gog/games.ts lines 1282-1288; keep-entry pattern: library.ts
+   * pollUninstallOnce() 'absent' branch (~1131-1144).
    */
   async forceUninstall(): Promise<void> {
-    const info = this.getGameInfo()
-    library.delete(this.appId)
-    sendFrontendMessage('pushGameToLibrary', { ...info, is_installed: false })
+    const existing = library.get(this.appId)
+    if (existing) {
+      const updated: GameInfo = { ...existing, is_installed: false, install: {} }
+      library.set(this.appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE / GAP-18-06: persist immediately so the
+      // not-installed (badge-preserving) state is not lost on the next persist.
+      steamLibraryStore.set('games', Array.from(library.values()))
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
     logInfo(
-      `SteamGame: force-uninstalled appId ${this.appId} from in-memory library`,
+      `SteamGame: force-uninstalled appId ${this.appId} — kept in-memory library entry marked not-installed`,
       LogPrefix.Steam
     )
   }
