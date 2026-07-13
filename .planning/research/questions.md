@@ -101,3 +101,94 @@ The USD-only debt was accepted **knowingly** (see the note). This question is wh
 from an open-ended "worry later" into a bounded, costed task. Answer it *before* the aggregated
 discovery surface is built on top of the same interface — the cost of reshaping grows with each
 consumer.
+
+---
+
+## Q3 — Will the Steam client cleanly adopt an `appmanifest_{appId}.acf` we wrote ourselves?
+
+**Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
+**Blocks:** Steam native install (seed: `.planning/seeds/steam-native-install.md`) — **entirely**
+**Context:** `.planning/notes/steam-depot-install-architecture.md`
+
+### The problem
+
+The whole "GameLib downloads, Steam launches" model depends on the Steam client accepting an
+install it did not perform. We place files in `steamapps/common/` and hand-write
+`appmanifest_{appId}.acf`; Steam must adopt it rather than ignore it, re-download it, or
+corrupt the entry.
+
+**There is no Valve documentation for any of this.** Every field, every `StateFlags` value, and
+every claim about re-validation behavior is community reverse-engineering. Confidence is LOW and
+the consequence of being wrong is total: if Steam won't adopt manual installs, the model collapses
+back to the DRM problem (files on disk that DRM-wrapped games refuse to launch) with no obvious
+fallback.
+
+This is **architecture-independent** — it must hold whether we download via `steam-user` or via a
+DepotDownloader wrapper. It is therefore the first thing to test and the cheapest thing to be wrong
+about early.
+
+### How to answer it
+
+Empirical, not literature review:
+1. Install a small game with the real Steam client. Preserve its `.acf` as ground truth.
+2. Uninstall. Download the same depot ourselves. Hand-write an `.acf` with `StateFlags = 1026`
+   (`UpdateRequired` + `UpdateStarted`, so Steam verifies and repairs rather than trusting us).
+3. Restart Steam. Observe: adopt-and-verify, silent ignore, full re-download, or corruption?
+4. Diff our `.acf` against the ground-truth one. Which fields actually matter?
+5. Confirm the game launches through `steam://rungameid` with DRM satisfied.
+
+---
+
+## Q4 — Can `steam-user` download a complete game end-to-end in-process?
+
+**Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
+**Blocks:** The architecture fork (Option A vs Option B) — not the feature itself
+**Context:** `.planning/notes/steam-depot-install-architecture.md`
+
+### The problem
+
+`steam-user` exposes the primitives (`getManifest`, `getDepotDecryptionKey`, `downloadChunk`,
+`downloadFile` with SHA1-verified parallel chunks) but DoctorMcKay explicitly declined to build a
+full-game orchestrator on top ([issue #183](https://github.com/DoctorMcKay/node-steam-user/issues/183),
+closed `wontfix`), and no mature JS equivalent to DepotDownloader exists.
+
+The question is whether the gap between "primitives" and "working downloader" is small — which it
+should be, **because we scoped updates to Steam** and therefore need no delta-patching, no resume,
+and no integrity repair, which is the genuinely hard part.
+
+If the answer is yes, Option B (a C# wrapper, a second language and release pipeline permanently in
+an Electron repo) loses its justification.
+
+### How to answer it
+
+Authenticate with the existing session → `getManifest()` for a small free-to-play app → walk the
+file list → `downloadFile()` each with bounded concurrency. Success = every file on disk hashes
+correctly against the manifest. Also measure LZMA decompression speed **without** `lzma-native`,
+since that package is a native module and cuts against the deliberate pure-JS stack constraint.
+
+---
+
+## Q5 — Does `Steam3Session.LogOnDetails.AccessToken` actually bypass credential login?
+
+**Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
+**Blocks:** Option B only (C# DepotDownloader wrapper) — moot if Q4 resolves in favour of Option A
+**Context:** `.planning/notes/steam-depot-install-architecture.md`
+
+### The problem
+
+The stock DepotDownloader CLI **cannot** be handed an existing token — a `-refresh_token` flag was
+requested and [closed as not planned](https://github.com/SteamRE/DepotDownloader/issues/500). The
+only path is a custom C# wrapper setting `SteamUser.LogOnDetails.AccessToken` directly, relying on
+`Steam3Session.cs` checking `if (Username != null && Password != null && AccessToken is null)`
+before falling back to credential login.
+
+This was read from a summary, not verified by executing the code. It is **load-bearing for the
+entire "reuse GameLib's existing session, no second logon" premise** of Option B. If the token
+cannot actually be injected, Option B forces users to log into Steam twice — which defeats the
+original motivation for the feature.
+
+### How to answer it
+
+Read the actual `Steam3Session.cs` and `ContentDownloader.cs` on current `master` (not a summary).
+Confirm the exact field name and the guard condition. Ideally: build the wrapper, inject a
+`steam-session` refresh token, confirm a download starts with no credential prompt.
