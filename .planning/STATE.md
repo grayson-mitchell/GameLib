@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: ready_to_execute
-stopped_at: Phase 19 planned (8 plans, CXIDX-01..13) + plan-checker PASS — run /gsd-execute-phase 19
-last_updated: 2026-07-14T00:00:00.000Z
-last_activity: 2026-07-14 -- Phase 19 planned via chunked mode; 2 plan-checker blockers closed
+status: executing
+stopped_at: Phase 19 UI-SPEC approved
+last_updated: "2026-07-13T22:04:11.367Z"
+last_activity: 2026-07-13 -- Phase 19 execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 78
+  completed_plans: 6
   percent: 20
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 17 complete — run /gsd:secure-phase 17, then Phase 19 (CrossOver Compatibility Index). Phase 18 already complete (ran ahead).
+**Current focus:** Phase 19 — crossover-compatibility-index-macos
 
 ## Current Position
 
-Phase: 17 COMPLETE (2026-07-13) — next actionable is Phase 19 (Phase 18 already ran ahead & is complete; phase.complete's "next: 18" is wrong).
-Plan: All 17 plans done. 17-VERIFICATION.md status: passed (6/6 must-haves). Human UAT approved (17-VALIDATION.md, 7/7 steps). Code review CR-01 data-loss BLOCKER + WR-01/WR-02 all CLOSED by 17-17 (17-REVIEW.md status: resolved). Automated gate green (50 suites/1048 tests, codecheck exit 0).
-Status: Phase 17 verified, complete & SECURED (17-SECURITY.md, threats_open: 0 — 21/21 threats: 13 mitigate verified in code incl. T-17-CR01 shared-bottle guard, 8 accept documented). All gates green. v1.4 continues at Phase 19 (CrossOver Compatibility Index — has CONTEXT/RESEARCH/UI-SPEC, no plans). Phase 18 already complete.
-Last activity: 2026-07-13 -- Phase 17 complete: 17-17 gap closure (CR-01 data-loss guard) executed + merged, verifier PASSED, phase marked complete
+Phase: 19 (crossover-compatibility-index-macos) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 19
+Last activity: 2026-07-13 -- Phase 19 execution started
 
 ## v1.4 Phase Map
 
