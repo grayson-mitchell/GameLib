@@ -318,6 +318,33 @@ const STEAM_CLIENT_PROCESS_NAMES = [
 ]
 
 /**
+ * GAP C (17-16) leak-safe cancellation state. The raise poll loop is fired
+ * `void` (fire-and-forget) from provisionBottle/dispatch, so under Jest its
+ * real ~18s `sleep` retry survived teardown — keeping the worker alive ("A
+ * worker process has failed to exit gracefully") and, worse, firing a dynamic
+ * `import(...)` after the environment was torn down ("import a file after the
+ * Jest environment has been torn down"). We (a) unref every retry timer so a
+ * pending sleep never keeps the process alive, and (b) gate each iteration on a
+ * cancellation flag so no `import`/spawn runs after teardown.
+ */
+let bottledRaiseLoopsCancelled = false
+const activeRaiseTimers = new Set<ReturnType<typeof setTimeout>>()
+
+/**
+ * Test-only teardown hook (GAP C): cancel any in-flight raise loop and clear
+ * every tracked retry timer so no loop survives a test (`jest.getTimerCount()`
+ * returns to 0). Production never calls this — the flag is reset at the start of
+ * each raise loop, so a prior cancel never suppresses a legitimate later raise.
+ */
+export function __stopBottledRaiseLoops(): void {
+  bottledRaiseLoopsCancelled = true
+  for (const handle of activeRaiseTimers) {
+    clearTimeout(handle)
+  }
+  activeRaiseTimers.clear()
+}
+
+/**
  * Shared raise-to-front core (macOS-only, fire-and-forget). Polls (~1.5s
  * cadence, ~18s window) running a caller-supplied AppleScript that returns
  * either "<name> pid=<n>" for the raised process or "none". On a hit it
@@ -330,12 +357,27 @@ async function raiseFrontmostBottledProcess(
   raiseScript: string
 ): Promise<void> {
   try {
+    // GAP C: a fresh loop clears any prior cancellation (teardown hook only
+    // suppresses loops that are already in flight, never future ones).
+    bottledRaiseLoopsCancelled = false
+
     const { isMac } = await import('backend/constants/environment')
-    if (!isMac) {
+    if (!isMac || bottledRaiseLoopsCancelled) {
       return
     }
 
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    // GAP C: unref the retry timer so a pending sleep never keeps the Node
+    // (Jest worker) process alive; track the handle so the teardown hook can
+    // clear it. Optional-chained unref is a no-op in any non-Node context.
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const handle = setTimeout(() => {
+          activeRaiseTimers.delete(handle)
+          resolve()
+        }, ms)
+        activeRaiseTimers.add(handle)
+        handle.unref?.()
+      })
     const tryRaise = async (): Promise<string | null> => {
       try {
         const { stdout } = await spawnAsync('osascript', ['-e', raiseScript])
@@ -352,7 +394,9 @@ async function raiseFrontmostBottledProcess(
 
     let raised: string | null = null
     for (let attempt = 0; attempt < 12 && !raised; attempt++) {
+      if (bottledRaiseLoopsCancelled) return
       await sleep(1500)
+      if (bottledRaiseLoopsCancelled) return
       raised = await tryRaise()
     }
 
@@ -362,8 +406,12 @@ async function raiseFrontmostBottledProcess(
         LogPrefix.Steam
       )
       // Re-raise once after the window settles (splash -> main UI).
+      if (bottledRaiseLoopsCancelled) return
       await sleep(2500)
+      if (bottledRaiseLoopsCancelled) return
       await tryRaise()
+    } else if (bottledRaiseLoopsCancelled) {
+      return
     } else {
       logWarning(
         `raiseFrontmostBottledProcess [${context}]: no matching process within ~18s — falling back to app.hide()`,
@@ -391,9 +439,13 @@ async function raiseInstallerWindow(context: string): Promise<void> {
   const nameClause = INSTALLER_PROCESS_NAMES.map(
     (n) => `name is "${n}"`
   ).join(' or ')
+  // GAP C (17-16): conservative focus reliability — filter to `visible is true`
+  // processes (mirroring the already-working raiseBottledGameWindow) and pick
+  // the FIRST visible match, so we never target a hidden/background helper of
+  // the same name (`item 1 of procs` could otherwise select one).
   const raiseScript = [
     'tell application "System Events"',
-    `set procs to (every process whose (${nameClause}))`,
+    `set procs to (every process whose visible is true and (${nameClause}))`,
     'if procs is {} then return "none"',
     'set p to item 1 of procs',
     'set frontmost of p to true',

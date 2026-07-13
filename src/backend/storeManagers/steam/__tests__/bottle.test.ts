@@ -27,7 +27,8 @@ import {
   provisionBottle,
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
-  tellBottledSteamToUninstall
+  tellBottledSteamToUninstall,
+  __stopBottledRaiseLoops
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -67,6 +68,16 @@ jest.mock('backend/utils', () => ({
 
 jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
+}))
+
+// GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
+// deterministically on every host (the loop is dynamically imported by
+// bottle.ts). isSnap is provided because backend/constants/paths reads it.
+jest.mock('backend/constants/environment', () => ({
+  isMac: true,
+  isWindows: false,
+  isLinux: false,
+  isSnap: false
 }))
 
 jest.mock('backend/logger', () => ({
@@ -122,6 +133,17 @@ describe('bottle.ts', () => {
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)
     // never fires unless a test explicitly arranges a win32 conf string.
     mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
+  })
+
+  // GAP C (17-16): several tests fire `void raiseInstallerWindow(...)` /
+  // `void raiseBottledGameWindow(...)` indirectly (provisionBottle step 7,
+  // the install/launch dispatch). Cancel any in-flight raise loop after every
+  // test so its ~18s poll cannot survive teardown, keep the worker alive, or
+  // fire a dynamic import post-teardown. Restore real timers for the fake-timer
+  // leak test.
+  afterEach(() => {
+    __stopBottledRaiseLoops()
+    jest.useRealTimers()
   })
 
   describe('getBottleDir / getBottleSteamappsDir', () => {
@@ -820,6 +842,35 @@ describe('bottle.ts', () => {
       expect(
         commandParts.some((p: string) => p.includes(GOOD_APP_ID))
       ).toBe(true)
+    })
+  })
+
+  // ── GAP C (17-16): leak-safe raise loop ────────────────────────────────────
+  describe('raise-loop leak safety (__stopBottledRaiseLoops)', () => {
+    const flushMicrotasks = async (times = 10) => {
+      for (let i = 0; i < times; i++) await Promise.resolve()
+    }
+
+    test('a fired raise loop schedules a retry timer that __stopBottledRaiseLoops clears (jest.getTimerCount() returns to 0)', async () => {
+      // Ready bottle so the install dispatch reaches `void raiseInstallerWindow`.
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      jest.useFakeTimers()
+      // Fire-and-forget, exactly as dispatchToBottledSteam does. The raise loop
+      // awaits the (mocked) isMac import, then schedules the first unref'd
+      // sleep(1500) retry timer.
+      void tellBottledSteamToInstall('440')
+      await flushMicrotasks()
+
+      // The pending retry timer is what previously survived Jest teardown.
+      expect(jest.getTimerCount()).toBeGreaterThan(0)
+
+      // The teardown hook cancels the loop and clears every tracked timer.
+      __stopBottledRaiseLoops()
+      expect(jest.getTimerCount()).toBe(0)
+
+      jest.useRealTimers()
     })
   })
 })
