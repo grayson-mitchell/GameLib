@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: milestone_complete
-stopped_at: Milestone complete (Phase 18 was final phase)
-last_updated: 2026-07-13T08:39:51.381Z
-last_activity: 2026-07-13 -- Phase 18 execution started
+status: in_progress
+stopped_at: Phase 18 complete + UAT 5/5. v1.4 NOT complete — Phase 17 (17-07 unexecuted, UAT open) and Phase 19 (unplanned) remain. STATE was mislabeled milestone_complete because Phase 18 ran ahead of 17/19; corrected 2026-07-13.
+last_updated: 2026-07-13T21:15:00.000Z
+last_activity: 2026-07-13 -- Phase 18 UAT completed 5/5; corrected milestone status
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 6
-  completed_plans: 75
-  percent: 0
+  total_phases: 3
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -21,14 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Milestone complete
+**Current focus:** Finishing v1.4 — resume Phase 17 (execute 17-07, complete UAT + verify), then plan & execute Phase 19, then audit + complete milestone.
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: Milestone complete
+Phase: 17 (resume)
+Plan: 17-07 unexecuted (14/15 plans have summaries); 17-UAT.md status: testing
+Status: v1.4 in progress — Phase 18 done (UAT 5/5), Phase 17 incomplete, Phase 19 not started
 Last activity: 2026-07-13
+
+## v1.4 Phase Map
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 17 | Steam on macOS via CrossOver/Wine | Incomplete — 17-07 unexecuted, UAT open, no VERIFICATION/SECURITY |
+| 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
+| 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
 
 ## v1.1 Phase Map
 
