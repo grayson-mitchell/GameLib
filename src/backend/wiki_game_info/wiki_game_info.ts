@@ -12,6 +12,10 @@ import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import {
+  getCodeweaversFromIndex,
+  crossoverIndexHas
+} from 'backend/crossover_index'
 
 export async function getWikiGameInfo(
   game: Game,
@@ -38,10 +42,18 @@ export async function getWikiGameInfo(
     // hit as a miss and re-fetch (mirrors staleAppleData above). Also treat
     // an old-shaped cache (pre-per-OS-rating, no `macRating` field at all) as
     // stale so it gets re-fetched into the new shape.
+    // D-13: additionally, on macOS a cached Phase-16 "checked, none found"
+    // miss (macRating === null, not undefined) is treated as stale ONLY when
+    // the index (crossoverIndexHas, D-02-gated) now covers this title —
+    // targeted, so a genuine miss (or a name-only title under a failed D-02
+    // gate) does NOT re-scrape on every details-page visit.
     const staleCrossoverData =
       (isMac || isLinux) &&
       (!cachedResponse?.codeweavers ||
-        cachedResponse.codeweavers.macRating === undefined)
+        cachedResponse.codeweavers.macRating === undefined ||
+        (isMac &&
+          cachedResponse.codeweavers.macRating === null &&
+          crossoverIndexHas(gameInfo)))
     if (!forceRefresh && cachedResponse && !staleAppleData && !staleCrossoverData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
@@ -58,7 +70,12 @@ export async function getWikiGameInfo(
         getInfoFromGamesDB(title, appName, runner),
         isMac ? getInfoFromAppleGamingWiki(title) : null,
         isLinux ? getUmuId(appName, runner) : null,
-        isMac || isLinux ? getInfoFromCodeweavers(title) : null
+        isMac
+          ? (await getCodeweaversFromIndex(gameInfo)) ??
+            getInfoFromCodeweavers(title)
+          : isLinux
+            ? getInfoFromCodeweavers(title)
+            : null
       ])
 
     // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
