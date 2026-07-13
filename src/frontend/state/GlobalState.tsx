@@ -1078,6 +1078,23 @@ class GlobalState extends PureComponent<Props> {
       this.updateGameOverrides(overrides)
     })
 
+    // Phase 19 (Plan 06), D-11/D-16: pushed after a validated background
+    // CrossOver-index refresh so the grid's `crossoverRatings` slice updates
+    // without a manual pull. This is the only IPC round-trip involved —
+    // painting a card never fires its own request (D-11/D-13).
+    window.api.handleCrossoverIndexChanged((e, index) => {
+      useGlobalState.getState().setCrossoverRatings(index)
+    })
+
+    // One-time pull on mount so the grid paints on first load without
+    // waiting for the next background refresh's push.
+    window.api
+      .getCrossoverIndex()
+      .then((index) => useGlobalState.getState().setCrossoverRatings(index))
+      .catch((error) =>
+        window.api.logError(`CrossOver index pull failed: ${String(error)}`)
+      )
+
     // D-09: state-only listener — never opens a dialog/modal directly. The
     // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting
     // `expired` state transition on its own.
