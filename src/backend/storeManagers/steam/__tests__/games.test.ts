@@ -1145,7 +1145,30 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
       source: 'bottle'
     })
+    expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('WR-01: bottle-eligible dispatch ERROR — install() returns the error and does NOT start the ACF poller (no false "installing")', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'error',
+      error: 'boom'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    // A failed dispatch must NOT spawn the ~60s bottle poller.
+    expect(startInstallPollingSpy).not.toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+    expect(result).toEqual({ status: 'error', error: 'boom' })
   })
 
   it('D-11 (BLOCKER): NOT-yet-captured macOS game — install() STILL takes the native steam://install path and does NOT emit steamBottleSetupRequired', async () => {

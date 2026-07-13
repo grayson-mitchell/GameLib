@@ -29,6 +29,13 @@ type Props = {
   // Used by the Steam guided setup (Phase 17) to warn that sharing the prefix/
   // bottle is not recommended for the dedicated Steam bottle.
   sharedPrefixNote?: string
+  // Steam guided setup (Phase 17 CR-01): the shared prefix/bottle must NEVER be
+  // selectable for the dedicated Steam bottle. When true, the "Use shared Wine
+  // prefix" toggle and its warning infoBox are not rendered, so useSharedPrefix
+  // stays false and the shared wineCrossoverBottle name can never reach the
+  // parent's setCrossoverBottle. Optional/default-undefined so every existing
+  // caller (GOG/Epic/Amazon/sideload install modals) is byte-for-byte unchanged.
+  hideSharedPrefixToggle?: boolean
 }
 
 export default function WineSelector({
@@ -42,7 +49,8 @@ export default function WineSelector({
   setCrossoverBottle,
   initiallyOpen,
   appName,
-  sharedPrefixNote
+  sharedPrefixNote,
+  hideSharedPrefixToggle
 }: Props) {
   const { t, i18n } = useTranslation('gamepage')
 
@@ -143,30 +151,39 @@ export default function WineSelector({
                 </MenuItem>
               ))}
           </SelectField>
-          <ToggleSwitch
-            htmlId="use-shared-wine-config"
-            title={t(
-              'setting.use-shared-wine-config',
-              'Use shared Wine prefix'
-            )}
-            value={useSharedPrefix}
-            handleChange={() => setUseSharedPrefix(!useSharedPrefix)}
-            description={sharedToggleDescription}
-          />
-          {useSharedPrefix && (
-            <div className="infoBox">
-              <FontAwesomeIcon icon={faWarning} />
-              <Trans
-                i18n={i18n}
-                i18nKey="setting.warn-use-shared-wine-config"
-                ns="gamepage"
-              >
-                Only use this option if you know what you are doing.
-                <br />
-                Sharing the same prefix for multiple games can create problems
-                if their dependencies are incompatible.
-              </Trans>
-            </div>
+          {/* CR-01 (Phase 17 17-17): the shared-prefix toggle is hidden on the
+              Steam guided-setup path so the shared GOG/Epic bottle can never be
+              selected for the dedicated Steam bottle. With the toggle absent,
+              useSharedPrefix stays false and setCrossoverBottle is never fed the
+              shared name. Rendered normally for all other callers. */}
+          {!hideSharedPrefixToggle && (
+            <>
+              <ToggleSwitch
+                htmlId="use-shared-wine-config"
+                title={t(
+                  'setting.use-shared-wine-config',
+                  'Use shared Wine prefix'
+                )}
+                value={useSharedPrefix}
+                handleChange={() => setUseSharedPrefix(!useSharedPrefix)}
+                description={sharedToggleDescription}
+              />
+              {useSharedPrefix && (
+                <div className="infoBox">
+                  <FontAwesomeIcon icon={faWarning} />
+                  <Trans
+                    i18n={i18n}
+                    i18nKey="setting.warn-use-shared-wine-config"
+                    ns="gamepage"
+                  >
+                    Only use this option if you know what you are doing.
+                    <br />
+                    Sharing the same prefix for multiple games can create
+                    problems if their dependencies are incompatible.
+                  </Trans>
+                </div>
+              )}
+            </>
           )}
         </>
       </details>

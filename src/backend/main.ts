@@ -889,16 +889,16 @@ addHandler('getSteamInstallSize', async (event, appId) =>
 addListener('logoutSteam', () => SteamUser.logout())
 
 // Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.
-// D-04: bottled-Steam auth is opaque — loggedIn is only ever flipped by the
-// guided-setup flow (17-06) confirming the user completed login, never by
-// parsing loginusers.vdf/sentry here.
+// D-04: bottled-Steam auth stays opaque — GameLib never inspects
+// loginusers.vdf/sentry, so there is no login state to surface here.
+// steamBottleStatus therefore reports only `provisioned` + `bottleName`
+// (WR-02, 17-17: the always-false `loggedIn` signal was removed).
 addHandler('steamBottleProvision', async (event, args) =>
   provisionBottle(args)
 )
 addHandler('isSteamBottleProvisioned', async () => isBottleProvisioned())
 addHandler('steamBottleStatus', async () => ({
   provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
-  loggedIn: steamBottleConfigStore.get_nodefault('loggedIn') ?? false,
   bottleName:
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME

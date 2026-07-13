@@ -260,7 +260,7 @@ interface AsyncIPCFunctions {
   }) => Promise<{ status: 'done' | 'error'; error?: string }>
   isSteamBottleProvisioned: () => Promise<boolean>
   steamBottleStatus: () => Promise<
-    Pick<SteamBottleConfig, 'provisioned' | 'loggedIn' | 'bottleName'>
+    Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>
   >
   humbleStartLogin: () => Promise<{
     status: 'done' | 'waiting' | 'error'
