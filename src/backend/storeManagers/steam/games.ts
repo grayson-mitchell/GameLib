@@ -548,13 +548,19 @@ export default class SteamGame implements Game {
       )
       const result = await tellBottledSteamToInstall(this.appId)
 
+      // WR-01 (17-17): only start the bottle ACF poller when the dispatch
+      // actually succeeded. A failed dispatch used to still spawn the poller,
+      // producing ~60s of false "installing" state; surface the error instead
+      // with no poller.
+      if (result.status !== 'done') {
+        return { status: 'error', error: result.error }
+      }
+
       // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
       // root is distinct from the native root (RESEARCH.md Pitfall 2).
       startInstallPolling(this.appId, { source: 'bottle' })
 
-      return result.status === 'done'
-        ? { status: 'done' }
-        : { status: 'error', error: result.error }
+      return { status: 'done' }
     }
 
     const url = buildSteamProtocolUrl('install', this.appId)
