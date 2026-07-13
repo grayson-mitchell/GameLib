@@ -475,7 +475,7 @@ Plans:
   4. A bottle-installed game's badge reads from the bottle's own steamapps ACF as a Windows install
   5. The game page shows a "runs via the Windows Steam bottle" indicator
   6. Native-Mac Steam, Windows, Linux (Proton), and GOG/Epic shared-bottle behavior are all unchanged
-**Plans**: 15 plans (7 base + 8 gap-closure)
+**Plans**: 16 plans (7 base + 9 gap-closure)
 
 **Wave 0** — Resolve the one genuine unknown before provisioning:
 - [ ] `17-01-PLAN.md` — Spike: confirm the `cxbottle --create` mechanism (Assumption A1) on a real CrossOver install; lock CLI-or-GUI-fallback (MACSTEAM-02) *(checkpoint)*
@@ -511,6 +511,9 @@ Plans:
 
 **Wave 9** *(gap closure — 2026-07-11 UAT session 4; BLOCKER)*:
 - [ ] `17-15-PLAN.md` — GAP-17-CEF-RENDER (BLOCKER): the bottled Steam install dialog renders as a grey 0x0 bar with dead buttons because the CrossOver bottle is 32-bit (`win10` = 32-bit template; modern 64-bit Steam CEF UI cannot composite in a win32 prefix) — change the create template to `win10_64`, add a `bottleWineArch()` cxbottle.conf reader, and make `provisionBottle()` detect + delete/recreate an existing win32 bottle as win64 BEFORE its idempotent guards (preserving Steam account auth: refreshToken/isLoggedIn/userData untouched, only `provisioned` reset); update spike FINDINGS LOCKED-CLI note (MACSTEAM-02, MACSTEAM-04)
+
+**Wave 10** *(gap closure — 2026-07-11 UAT session 5; 3 static/UX code gaps)*:
+- [ ] `17-16-PLAN.md` — GAP-17-PROVISIONED-FLAG-STUCK + GAP-17-CEF-RECREATE-RUNNING + focus/test-teardown (all in `bottle.ts`): (A) stop persisting `provisioned:false` in the race after the `wait:false` SteamSetup launch and reconcile `provisioned:true` lazily the first time `isBottleReady()` observes a real bottled steam.exe; (B) run a WINEPREFIX-scoped `wineserver -k` before `cxbottle --delete` in the win32→win64 recreate branch so the delete cannot abort while the bottled Steam client is running (scope-fenced to the target bottle's own prefix, never the shared GOG/Epic bottle); (C) make the macOS raise poll loop unref/cancellable so it no longer force-exits the Jest worker, plus a conservative visible-process focus improvement for the installer raiser (MACSTEAM-02, MACSTEAM-04)
 
 **Cross-cutting constraints:**
 - Zero new npm packages (RESEARCH.md confirmed — all Wine/VDF/download primitives already exist).

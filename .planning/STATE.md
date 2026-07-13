@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: in_progress
-stopped_at: Phase 17 execute attempted 2026-07-13 — only incomplete plan is 17-07 (blocking human-verify gate). Task 1 automated gate RE-CONFIRMED green today (50 suites/1033 tests, tsc --noEmit exit 0). Task 2 human UAT: steps 1-4 pass (verified 2026-07-12), steps 5-7 untested (need macOS+CrossOver), plus 3 open code gaps in 17-VALIDATION.md. Decision: route to gap closure first (/gsd-plan-phase 17 --gaps), then human UAT 5-7, then verify.
-last_updated: 2026-07-13T22:00:00.000Z
-last_activity: 2026-07-13 -- Phase 17 resume: re-confirmed 17-07 automated gate green; routing 3 code gaps to gap closure before UAT steps 5-7
+status: executing
+stopped_at: Phase 19 UI-SPEC approved
+last_updated: "2026-07-13T09:56:19.784Z"
+last_activity: 2026-07-13 -- Phase 17 planning complete
 progress:
-  total_phases: 3
+  total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 1
-  percent: 33
+  total_plans: 6
+  completed_plans: 6
+  percent: 20
 ---
 
 # Project State
@@ -26,15 +26,15 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 17 (resume)
-Plan: 17-07 unexecuted (14/15 plans have summaries); 17-UAT.md status: testing
-Status: v1.4 in progress — Phase 18 done (UAT 5/5), Phase 17 incomplete, Phase 19 not started
-Last activity: 2026-07-13
+Plan: 17-16 gap-closure plan created (gap_closure, 3 tasks, autonomous) — closes GAP-17-PROVISIONED-FLAG-STUCK, GAP-17-CEF-RECREATE-RUNNING, focus/test-leak. Plan-checker PASSED. Next: /gsd-execute-phase 17 --gaps-only. Still open after fixes: 17-07 human UAT steps 5-7 (indicator/D-11/scope-fences) on real macOS+CrossOver, then verify.
+Status: Ready to execute (17-16 gap plan)
+Last activity: 2026-07-13 -- Phase 17 gap-closure planning complete (17-16 planned + verified)
 
 ## v1.4 Phase Map
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 17 | Steam on macOS via CrossOver/Wine | Incomplete — 17-07 unexecuted, UAT open, no VERIFICATION/SECURITY |
+| 17 | Steam on macOS via CrossOver/Wine | Incomplete — 17-16 gap plan ready (--gaps-only); 17-07 UAT steps 5-7 open; no VERIFICATION/SECURITY |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
 | 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
 
