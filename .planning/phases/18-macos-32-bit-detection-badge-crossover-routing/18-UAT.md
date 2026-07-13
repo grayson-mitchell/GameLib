@@ -1,14 +1,14 @@
 ---
-status: complete
+status: partial
 phase: 18-macos-32-bit-detection-badge-crossover-routing
-source: [18-01-SUMMARY.md, 18-02-SUMMARY.md, 18-03-SUMMARY.md, 18-04-SUMMARY.md, 18-05-SUMMARY.md]
+source: [18-01-SUMMARY.md, 18-02-SUMMARY.md, 18-03-SUMMARY.md, 18-04-SUMMARY.md, 18-05-SUMMARY.md, 18-06-SUMMARY.md]
 started: 2026-07-12T11:14:47Z
-updated: 2026-07-13T00:00:00Z
+updated: 2026-07-13T20:52:00Z
 ---
 
 ## Current Test
 
-[testing complete]
+[testing paused — test 5 re-test blocked by an environmental Steam-client issue]
 
 ## Tests
 
@@ -52,24 +52,48 @@ note: |
 
 ### 5. A 32-bit mac game installs/launches through CrossOver (not native)
 expected: For a confirmed 32-bit-only mac game on macOS, Install (or Launch) from GameLib routes through the CrossOver/Wine bottle (the Windows depot under CrossOver) rather than attempting a native `steam://` install that would fail on modern macOS (32-bit dropped in Catalina). The game installs/launches via the bottle path; no "app is not optimized for your Mac / needs to be updated" native-32-bit failure.
-result: issue
-reported: "recovery dialog appeared and re-route to the bottle was delegated (log: 'delegating install via the bottled Steam client', Wine steam://install), but the bottle reinstall did not complete — install poll timed out after the 60s grace window ('no manifest detected; user may have cancelled'), no apparent action, game left uninstalled/orphaned"
+result: blocked
+blocked_by: other
+reason: "Re-test (2026-07-13) blocked by an environmental Steam-client issue, NOT a GameLib defect: the desktop Steam client reports 'no internet connection' and cannot install. Reproduces with GameLib FULLY QUIT (its steam-user session is not the cause — single-session-conflict hypothesis ruled out). Native steam://install can only be as healthy as the desktop Steam client it hands off to, so the recovery flow cannot be exercised until the Steam client is back online. Resume this re-test once the Steam client can connect."
 severity: major
 note: |
-  The DETECTION and RE-ROUTE DELEGATION work (MAC32-03 core fires correctly). The
-  gap is completion + UX of the recovery: (a) bottle reinstall hands off to the
-  CrossOver Steam install dialog and silently times out at 60s with no on-screen
-  feedback if not completed; (b) forceUninstall() does library.delete() and can
-  orphan the game if the reinstall doesn't complete; (c) two recovery dialogs fired
-  at once (AoW3 + Trine 2 from the startup download-resume), which is confusing.
+  ORIGINAL FINDING (2026-07-12): recovery dialog appeared and re-route to the bottle
+  was delegated (log: 'delegating install via the bottled Steam client', Wine
+  steam://install), but the bottle reinstall did not complete — install poll timed out
+  after the 60s grace window ('no manifest detected; user may have cancelled'), game
+  left uninstalled/orphaned. DETECTION and RE-ROUTE DELEGATION work (MAC32-03 core fires
+  correctly). The gap was completion + UX of recovery: (a) silent 60s timeout with no
+  on-screen feedback; (b) forceUninstall() did library.delete() and could orphan the
+  game; (c) two recovery dialogs fired at once (AoW3 + Trine 2 from startup
+  download-resume).
+
+  SINCE THEN: Plan 18-06 closed part (b) — forceUninstall() now keeps the library entry
+  is_installed:false with mac_arch preserved and persists to steamLibraryStore (no more
+  orphan / badge blink-out). Parts (a) silent-timeout UX feedback and (c) simultaneous
+  prompt serialization were out of 18-06 scope and remain deferred debt.
+
+  RE-TEST (2026-07-13): could not confirm the 18-06 fix live — blocked by the
+  environmental Steam 'no internet connection' issue above (reproduces with GameLib
+  fully quit, so it is not a GameLib bug). Marked blocked rather than issue: no new
+  GameLib defect was observed.
 
 ## Summary
 
 total: 5
 passed: 4
-issues: 1
+issues: 0
 pending: 0
 skipped: 0
+blocked: 1
+
+<!--
+  Badge feature (tests 1-4) verified live on real 32-bit titles (AoW3, Trine 2).
+  Test 5 recovery-flow re-test blocked by an environmental Steam 'no internet
+  connection' issue (reproduces with GameLib fully quit — not a GameLib defect).
+  The one prior test-5 gap (orphan/badge-blink) was already closed by Plan 18-06;
+  remaining recovery-UX items (a/c) are deferred debt tracked as todos.
+-->
+
 
 ## Gaps
 
