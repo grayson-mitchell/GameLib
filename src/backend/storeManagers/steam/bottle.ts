@@ -226,7 +226,26 @@ export function isBottleReady(bottleName?: string): boolean {
     bottleName ??
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
-  return isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+  const ready =
+    isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+
+  // GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile (intentional
+  // write-through side-effect). `provisioned` used to be derived from a race
+  // against the wait:false SteamSetup launch (provisionBottle step 8), so it
+  // was persisted `false` while steam.exe was legitimately still absent and
+  // then NEVER re-evaluated once the user finished the click-through. Instead,
+  // the FIRST time any routing call (games.ts install/launch/uninstall
+  // pre-flights, or provisionBottle's step-3 short-circuit) observes a genuinely
+  // ready bottle (cxbottle.conf + bottled steam.exe), self-heal the stored flag
+  // to `true`. This makes steamBottleStatus (main.ts) read a correct value with
+  // no main.ts change. Guarded by get_nodefault so a already-true flag is not
+  // needlessly re-written. NEVER writes `false` here — un-readiness is not a
+  // signal to un-provision (the win32-recreate branch owns the legitimate reset).
+  if (ready && steamBottleConfigStore.get_nodefault('provisioned') !== true) {
+    steamBottleConfigStore.set('provisioned', true)
+  }
+
+  return ready
 }
 
 /**
@@ -629,18 +648,24 @@ export async function provisionBottle(opts?: {
     }
   }
 
-  // (8) Only mark `provisioned: true` once the bottle exists AND the
-  // bottled Steam.exe is present (the installer's non-silent run is
-  // fire-and-forget — this will typically still be false immediately after
-  // returning here, and flips true on a later status check once the user
-  // finishes the click-through).
+  // (8) GAP-17-PROVISIONED-FLAG-STUCK: only ever persist `provisioned: true`
+  // here, and only when the bottled Steam.exe is genuinely present. The
+  // installer's non-silent run is fire-and-forget (wait:false), so right after
+  // returning here steam.exe is almost always still absent — writing the flag
+  // `false` in that window (as the old unconditional set did) clobbered a
+  // possibly-correct value and never re-evaluated it once the user finished the
+  // click-through. Leave the flag UNTOUCHED when steam.exe is absent; the lazy
+  // reconcile inside isBottleReady() flips it true the first time a real
+  // bottled steam.exe is observed.
   const steamExePath = getBottleSteamExePath(bottleName)
-  const fullyProvisioned =
+  const steamExeReady =
     isBottleProvisioned(bottleName) && existsSync(steamExePath)
-  steamBottleConfigStore.set('provisioned', fullyProvisioned)
+  if (steamExeReady) {
+    steamBottleConfigStore.set('provisioned', true)
+  }
 
   logInfo(
-    `provisionBottle: bottle "${bottleName}" created; SteamSetup.exe launched non-silently (provisioned=${fullyProvisioned})`,
+    `provisionBottle: bottle "${bottleName}" created; SteamSetup.exe launched non-silently (steamExeReady=${steamExeReady}; provisioned flag left untouched while steam.exe is absent)`,
     LogPrefix.Steam
   )
 
