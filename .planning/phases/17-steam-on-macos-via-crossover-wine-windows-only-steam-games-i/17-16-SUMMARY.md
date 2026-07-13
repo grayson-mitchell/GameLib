@@ -84,3 +84,8 @@ None.
 ## Threat Flags
 
 None — no new network endpoints, auth paths, or trust-boundary surface introduced. The one process-terminating call (`wineserver -k`, T-17-DoS in the plan's threat register) is scope-fenced to the target bottle's own WINEPREFIX with a dedicated unit-test assertion.
+
+## Self-Check: PASSED
+
+- FOUND: 17-16-SUMMARY.md
+- FOUND commits: f4a2483c (T1 RED), 1979bf07 (T1 fix), 556ab353 (T2 RED), d796c8e8 (T2 fix), ddb114da (T3)
