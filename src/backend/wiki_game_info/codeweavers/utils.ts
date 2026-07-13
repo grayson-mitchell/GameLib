@@ -14,22 +14,6 @@ import { axiosClient } from 'backend/utils'
  */
 const MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
-/** Roman numerals I-X, longest-alternative-first so e.g. "VIII" is matched
- * before "VI"/"I"/"V" would otherwise consume a prefix of it. */
-const ROMAN_NUMERAL_RE = /\b(VIII|VII|III|IV|IX|VI|II|I|V|X)\b/g
-const ROMAN_NUMERAL_MAP: Record<string, string> = {
-  I: '1',
-  II: '2',
-  III: '3',
-  IV: '4',
-  V: '5',
-  VI: '6',
-  VII: '7',
-  VIII: '8',
-  IX: '9',
-  X: '10'
-}
-
 /** Apostrophe and right-single-quote variants seen in game titles. */
 const APOSTROPHE_RE = /['’‘]/g
 
@@ -46,11 +30,15 @@ function baseSlugify(title: string): string {
 }
 
 /**
- * D-04: the corrected slug builder used as the PRIMARY lookup slug.
+ * D-04/D-20: the corrected slug builder used as the PRIMARY lookup slug.
  * (a) Apostrophes are dropped entirely, not hyphenated
- *     ("Baldur's Gate 3" -> "baldurs-gate-3").
- * (b) Standalone roman numerals I-X are normalized to Arabic digits
- *     ("Modern Warfare II" -> "modern-warfare-2").
+ *     ("Baldur's Gate 3" -> "baldurs-gate-3", "Alekhine's Gun" ->
+ *     "alekhines-gun") — load-bearing, 118 games depend on it.
+ * (b) Roman numerals are kept VERBATIM (D-20 reversal — CodeWeavers'
+ *     canonical slugs and Steam's store titles already agree on official
+ *     branding, e.g. "Age of Empires II" -> "age-of-empires-ii", "Quake II"
+ *     -> "quake-ii"; converting to Arabic digits pulled two already-
+ *     matching strings apart instead of uniting them).
  * Also collapses any other run of non-alphanumeric characters to a single
  * hyphen and trims leading/trailing hyphens (T-16-01 — output is always
  * `[a-z0-9-]`, so a crafted title cannot inject a path segment or change
@@ -58,11 +46,7 @@ function baseSlugify(title: string): string {
  */
 export function slugify(title: string): string {
   const withoutApostrophes = title.replace(APOSTROPHE_RE, '')
-  const withArabicNumerals = withoutApostrophes.replace(
-    ROMAN_NUMERAL_RE,
-    (match) => ROMAN_NUMERAL_MAP[match]
-  )
-  return baseSlugify(withArabicNumerals)
+  return baseSlugify(withoutApostrophes)
 }
 
 /**

@@ -65,11 +65,25 @@ describe('slugify', () => {
     )
   })
 
-  // D-04: roman numerals normalized to Arabic digits
-  test('Call of Duty: Modern Warfare II normalizes the roman numeral', () => {
+  // D-20: roman numerals kept VERBATIM — the site serves the roman form,
+  // converting to Arabic digits was WRONG and pulled two already-matching
+  // strings apart.
+  test('Call of Duty: Modern Warfare II keeps the roman numeral', () => {
     expect(slugify('Call of Duty: Modern Warfare II')).toBe(
-      'call-of-duty-modern-warfare-2'
+      'call-of-duty-modern-warfare-ii'
     )
+  })
+
+  test('Age of Empires II keeps the roman numeral', () => {
+    expect(slugify('Age of Empires II')).toBe('age-of-empires-ii')
+  })
+
+  test('Quake II keeps the roman numeral', () => {
+    expect(slugify('Quake II')).toBe('quake-ii')
+  })
+
+  test("Alekhine's Gun drops the apostrophe", () => {
+    expect(slugify("Alekhine's Gun")).toBe('alekhines-gun')
   })
 
   // Diacritics stripped
