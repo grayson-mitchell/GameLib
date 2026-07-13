@@ -675,6 +675,11 @@
         "options": "Launch Options..."
     },
     "library": {
+        "crossover_bronze": "Runs with issues on CrossOver (bronze rating)",
+        "crossover_gold": "Runs great on CrossOver (gold rating)",
+        "crossover_silver": "Runs well on CrossOver (silver rating)",
+        "crossover_unknown": "CrossOver compatibility unknown",
+        "crossover_wont_run": "Known not to work on CrossOver",
         "delisted": "Game no longer available",
         "hideAlphabetFilter": "Hide Alphabet Filter",
         "no_hidden_games": "No hidden games in your library",
