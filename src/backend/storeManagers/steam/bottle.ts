@@ -13,7 +13,7 @@
  * loginusers.vdf/sentry files; login state is only ever set by the
  * guided-setup flow (17-06) confirming the user completed login.
  */
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
@@ -48,6 +48,15 @@ import { steamBottleConfigStore } from './electronStores'
 // (spike/steam-bottle/FINDINGS.md MECHANISM DECISION). Locked, not derived.
 const CXBOTTLE_BIN =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle'
+
+// Single source of truth (GAP-17-CEF-RECREATE-RUNNING): derive the sibling
+// `wineserver` binary and the CrossOver root from CXBOTTLE_BIN rather than
+// hardcoding a second absolute path.
+//   CrossOver bin dir = dirname(CXBOTTLE_BIN)
+//   wineserver binary = <bin dir>/wineserver
+//   CX_ROOT           = dirname(<bin dir>)  (.../SharedSupport/CrossOver)
+const WINESERVER_BIN = join(dirname(CXBOTTLE_BIN), 'wineserver')
+const CX_ROOT = dirname(dirname(CXBOTTLE_BIN))
 
 /**
  * Directory of a named CrossOver bottle.
@@ -226,7 +235,26 @@ export function isBottleReady(bottleName?: string): boolean {
     bottleName ??
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
-  return isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+  const ready =
+    isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
+
+  // GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile (intentional
+  // write-through side-effect). `provisioned` used to be derived from a race
+  // against the wait:false SteamSetup launch (provisionBottle step 8), so it
+  // was persisted `false` while steam.exe was legitimately still absent and
+  // then NEVER re-evaluated once the user finished the click-through. Instead,
+  // the FIRST time any routing call (games.ts install/launch/uninstall
+  // pre-flights, or provisionBottle's step-3 short-circuit) observes a genuinely
+  // ready bottle (cxbottle.conf + bottled steam.exe), self-heal the stored flag
+  // to `true`. This makes steamBottleStatus (main.ts) read a correct value with
+  // no main.ts change. Guarded by get_nodefault so a already-true flag is not
+  // needlessly re-written. NEVER writes `false` here — un-readiness is not a
+  // signal to un-provision (the win32-recreate branch owns the legitimate reset).
+  if (ready && steamBottleConfigStore.get_nodefault('provisioned') !== true) {
+    steamBottleConfigStore.set('provisioned', true)
+  }
+
+  return ready
 }
 
 /**
@@ -290,6 +318,33 @@ const STEAM_CLIENT_PROCESS_NAMES = [
 ]
 
 /**
+ * GAP C (17-16) leak-safe cancellation state. The raise poll loop is fired
+ * `void` (fire-and-forget) from provisionBottle/dispatch, so under Jest its
+ * real ~18s `sleep` retry survived teardown — keeping the worker alive ("A
+ * worker process has failed to exit gracefully") and, worse, firing a dynamic
+ * `import(...)` after the environment was torn down ("import a file after the
+ * Jest environment has been torn down"). We (a) unref every retry timer so a
+ * pending sleep never keeps the process alive, and (b) gate each iteration on a
+ * cancellation flag so no `import`/spawn runs after teardown.
+ */
+let bottledRaiseLoopsCancelled = false
+const activeRaiseTimers = new Set<ReturnType<typeof setTimeout>>()
+
+/**
+ * Test-only teardown hook (GAP C): cancel any in-flight raise loop and clear
+ * every tracked retry timer so no loop survives a test (`jest.getTimerCount()`
+ * returns to 0). Production never calls this — the flag is reset at the start of
+ * each raise loop, so a prior cancel never suppresses a legitimate later raise.
+ */
+export function __stopBottledRaiseLoops(): void {
+  bottledRaiseLoopsCancelled = true
+  for (const handle of activeRaiseTimers) {
+    clearTimeout(handle)
+  }
+  activeRaiseTimers.clear()
+}
+
+/**
  * Shared raise-to-front core (macOS-only, fire-and-forget). Polls (~1.5s
  * cadence, ~18s window) running a caller-supplied AppleScript that returns
  * either "<name> pid=<n>" for the raised process or "none". On a hit it
@@ -302,12 +357,27 @@ async function raiseFrontmostBottledProcess(
   raiseScript: string
 ): Promise<void> {
   try {
+    // GAP C: a fresh loop clears any prior cancellation (teardown hook only
+    // suppresses loops that are already in flight, never future ones).
+    bottledRaiseLoopsCancelled = false
+
     const { isMac } = await import('backend/constants/environment')
-    if (!isMac) {
+    if (!isMac || bottledRaiseLoopsCancelled) {
       return
     }
 
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    // GAP C: unref the retry timer so a pending sleep never keeps the Node
+    // (Jest worker) process alive; track the handle so the teardown hook can
+    // clear it. Optional-chained unref is a no-op in any non-Node context.
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const handle = setTimeout(() => {
+          activeRaiseTimers.delete(handle)
+          resolve()
+        }, ms)
+        activeRaiseTimers.add(handle)
+        handle.unref?.()
+      })
     const tryRaise = async (): Promise<string | null> => {
       try {
         const { stdout } = await spawnAsync('osascript', ['-e', raiseScript])
@@ -324,7 +394,9 @@ async function raiseFrontmostBottledProcess(
 
     let raised: string | null = null
     for (let attempt = 0; attempt < 12 && !raised; attempt++) {
+      if (bottledRaiseLoopsCancelled) return
       await sleep(1500)
+      if (bottledRaiseLoopsCancelled) return
       raised = await tryRaise()
     }
 
@@ -334,8 +406,12 @@ async function raiseFrontmostBottledProcess(
         LogPrefix.Steam
       )
       // Re-raise once after the window settles (splash -> main UI).
+      if (bottledRaiseLoopsCancelled) return
       await sleep(2500)
+      if (bottledRaiseLoopsCancelled) return
       await tryRaise()
+    } else if (bottledRaiseLoopsCancelled) {
+      return
     } else {
       logWarning(
         `raiseFrontmostBottledProcess [${context}]: no matching process within ~18s — falling back to app.hide()`,
@@ -363,9 +439,13 @@ async function raiseInstallerWindow(context: string): Promise<void> {
   const nameClause = INSTALLER_PROCESS_NAMES.map(
     (n) => `name is "${n}"`
   ).join(' or ')
+  // GAP C (17-16): conservative focus reliability — filter to `visible is true`
+  // processes (mirroring the already-working raiseBottledGameWindow) and pick
+  // the FIRST visible match, so we never target a hidden/background helper of
+  // the same name (`item 1 of procs` could otherwise select one).
   const raiseScript = [
     'tell application "System Events"',
-    `set procs to (every process whose (${nameClause}))`,
+    `set procs to (every process whose visible is true and (${nameClause}))`,
     'if procs is {} then return "none"',
     'set p to item 1 of procs',
     'set frontmost of p to true',
@@ -404,6 +484,43 @@ async function raiseBottledGameWindow(context: string): Promise<void> {
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
 
 export type ProvisionBottleResult = { status: 'done' | 'error'; error?: string }
+
+/**
+ * GAP-17-CEF-RECREATE-RUNNING: stop the target bottle's OWN Wine processes so a
+ * subsequent `cxbottle --delete` cannot abort with "There are still
+ * applications running… Aborting" (the exact failure hit in the CEF grey-bar
+ * scenario the win32->win64 recreate targets — the user reaches the grey bar
+ * *because* the bottled Steam client is running, and that same running Steam
+ * blocks the delete).
+ *
+ * SCOPE-FENCE (T-17-DoS): `WINEPREFIX` MUST be `getBottleDir(bottleName)` — the
+ * dedicated Steam bottle's own prefix — and NOTHING else. Never the shared
+ * `GameLib` GOG/Epic bottle dir, and never unset/empty (an unset WINEPREFIX
+ * would let `wineserver -k` hit the default prefix and DoS unrelated bottles).
+ * `bottleName` is already sanitized by provisionBottle (T-17-01) before reaching
+ * here. `CX_ROOT` is required so the CrossOver-bundled wineserver resolves its
+ * own libraries. Best-effort: a kill failure logs a warning and MUST NOT abort
+ * provisioning (the rmSync fallback + recreate still run).
+ */
+async function killBottleWineServer(bottleName: string): Promise<void> {
+  try {
+    await spawnAsync(WINESERVER_BIN, ['-k'], {
+      env: {
+        ...process.env,
+        WINEPREFIX: getBottleDir(bottleName),
+        CX_ROOT
+      }
+    })
+  } catch (error) {
+    logWarning(
+      [
+        `killBottleWineServer: wineserver -k for bottle "${bottleName}" failed (best-effort — provisioning continues)`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+  }
+}
 
 /**
  * Creates the dedicated Steam CrossOver bottle (via the 17-01 LOCKED
@@ -458,6 +575,10 @@ export async function provisionBottle(opts?: {
       `provisionBottle: bottle "${bottleName}" is a stale 32-bit (win32) prefix — recreating as win10_64 (GAP-17-CEF-RENDER)`,
       LogPrefix.Steam
     )
+    // GAP-17-CEF-RECREATE-RUNNING: stop the bottle's OWN Wine processes first —
+    // WINEPREFIX-scoped (T-17-DoS) — so `cxbottle --delete` does not abort while
+    // the bottled Steam client/steamwebhelper is still running.
+    await killBottleWineServer(bottleName)
     try {
       await spawnAsync(CXBOTTLE_BIN, [
         '--bottle',
@@ -629,18 +750,24 @@ export async function provisionBottle(opts?: {
     }
   }
 
-  // (8) Only mark `provisioned: true` once the bottle exists AND the
-  // bottled Steam.exe is present (the installer's non-silent run is
-  // fire-and-forget — this will typically still be false immediately after
-  // returning here, and flips true on a later status check once the user
-  // finishes the click-through).
+  // (8) GAP-17-PROVISIONED-FLAG-STUCK: only ever persist `provisioned: true`
+  // here, and only when the bottled Steam.exe is genuinely present. The
+  // installer's non-silent run is fire-and-forget (wait:false), so right after
+  // returning here steam.exe is almost always still absent — writing the flag
+  // `false` in that window (as the old unconditional set did) clobbered a
+  // possibly-correct value and never re-evaluated it once the user finished the
+  // click-through. Leave the flag UNTOUCHED when steam.exe is absent; the lazy
+  // reconcile inside isBottleReady() flips it true the first time a real
+  // bottled steam.exe is observed.
   const steamExePath = getBottleSteamExePath(bottleName)
-  const fullyProvisioned =
+  const steamExeReady =
     isBottleProvisioned(bottleName) && existsSync(steamExePath)
-  steamBottleConfigStore.set('provisioned', fullyProvisioned)
+  if (steamExeReady) {
+    steamBottleConfigStore.set('provisioned', true)
+  }
 
   logInfo(
-    `provisionBottle: bottle "${bottleName}" created; SteamSetup.exe launched non-silently (provisioned=${fullyProvisioned})`,
+    `provisionBottle: bottle "${bottleName}" created; SteamSetup.exe launched non-silently (steamExeReady=${steamExeReady}; provisioned flag left untouched while steam.exe is absent)`,
     LogPrefix.Steam
   )
 

@@ -27,7 +27,8 @@ import {
   provisionBottle,
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
-  tellBottledSteamToUninstall
+  tellBottledSteamToUninstall,
+  __stopBottledRaiseLoops
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -67,6 +68,16 @@ jest.mock('backend/utils', () => ({
 
 jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
+}))
+
+// GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
+// deterministically on every host (the loop is dynamically imported by
+// bottle.ts). isSnap is provided because backend/constants/paths reads it.
+jest.mock('backend/constants/environment', () => ({
+  isMac: true,
+  isWindows: false,
+  isLinux: false,
+  isSnap: false
 }))
 
 jest.mock('backend/logger', () => ({
@@ -122,6 +133,17 @@ describe('bottle.ts', () => {
     // GAP-17-CEF-RENDER pre-guard in provisionBottle() (bottleWineArch check)
     // never fires unless a test explicitly arranges a win32 conf string.
     mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
+  })
+
+  // GAP C (17-16): several tests fire `void raiseInstallerWindow(...)` /
+  // `void raiseBottledGameWindow(...)` indirectly (provisionBottle step 7,
+  // the install/launch dispatch). Cancel any in-flight raise loop after every
+  // test so its ~18s poll cannot survive teardown, keep the worker alive, or
+  // fire a dynamic import post-teardown. Restore real timers for the fake-timer
+  // leak test.
+  afterEach(() => {
+    __stopBottledRaiseLoops()
+    jest.useRealTimers()
   })
 
   describe('getBottleDir / getBottleSteamappsDir', () => {
@@ -239,6 +261,36 @@ describe('bottle.ts', () => {
           path.endsWith('/Program Files/Steam/steam.exe')
       )
       expect(isBottleReady('GameLibSteam')).toBe(true)
+    })
+
+    // ── GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile ──────────────
+    test('GAP-17-PROVISIONED-FLAG-STUCK: a ready bottle lazily reconciles the stored provisioned flag to true', () => {
+      mockedExistsSync.mockReturnValue(true) // conf + steam.exe both present
+      mockedGetNodefault.mockReturnValue(undefined) // provisioned not yet stored
+
+      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: a half-provisioned bottle (conf only) does NOT write the provisioned flag', () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('cxbottle.conf')
+      )
+
+      expect(isBottleReady('GameLibSteam')).toBe(false)
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'provisioned',
+        expect.anything()
+      )
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: when provisioned is already true, a ready observation does not re-write it (get_nodefault guard)', () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(true) // provisioned already persisted true
+
+      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
     })
   })
 
@@ -570,6 +622,43 @@ describe('bottle.ts', () => {
       )
     })
 
+    // ── GAP-17-PROVISIONED-FLAG-STUCK: step 8 must never persist `false` ──────
+    test('GAP-17-PROVISIONED-FLAG-STUCK: provisioned is NEVER persisted false during the wait:false SteamSetup window (steam.exe still absent)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Un-provisioned bottle: create produces cxbottle.conf but steam.exe never
+      // appears within this call (installer is fire-and-forget, wait:false).
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result.status).toBe('done')
+      // The race that GAP-17-PROVISIONED-FLAG-STUCK describes: step 8 used to
+      // clobber the flag false while steam.exe was legitimately still absent.
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: provisioned flips true the moment provisionBottle observes a ready bottle (conf + steam.exe)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Fully ready from the start — the step-3 isBottleReady() short-circuit
+      // observes readiness and the lazy reconcile persists provisioned:true.
+      setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
+    })
+
     test('a ready win64 bottle is NOT recreated — idempotent short-circuit still holds', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
@@ -580,6 +669,90 @@ describe('bottle.ts', () => {
       expect(result).toEqual({ status: 'done' })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
       expect(mockedDownloadFile).not.toHaveBeenCalled()
+    })
+
+    // ── GAP-17-CEF-RECREATE-RUNNING: WINEPREFIX-scoped wineserver -k before delete ──
+    // Helper: arrange a win32 bottle whose delete/create side-effects mutate
+    // `flags`, so provisionBottle runs the full recreate path.
+    function arrangeWin32Recreate(flags: FsFlags) {
+      setBottleFs(flags)
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
+      mockedSpawnAsync.mockImplementation(
+        async (_bin: string, argv: string[]) => {
+          if (argv.includes('--delete')) {
+            flags.conf = false
+            flags.steamExe = false
+          } else if (argv.includes('--create')) {
+            flags.conf = true
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+    }
+
+    test('GAP-17-CEF-RECREATE-RUNNING: win32 recreate runs a wineserver -k BEFORE cxbottle --delete', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killIdx = mockedSpawnAsync.mock.calls.findIndex((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      const deleteIdx = mockedSpawnAsync.mock.calls.findIndex((c) =>
+        (c[1] as string[]).includes('--delete')
+      )
+      expect(killIdx).toBeGreaterThanOrEqual(0)
+      expect(deleteIdx).toBeGreaterThanOrEqual(0)
+      // Ordering by real invocation sequence: kill must precede delete.
+      expect(
+        mockedSpawnAsync.mock.invocationCallOrder[killIdx]
+      ).toBeLessThan(mockedSpawnAsync.mock.invocationCallOrder[deleteIdx])
+    })
+
+    test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is scoped to the target bottle WINEPREFIX (never the shared GameLib bottle) and sets CX_ROOT', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killCall = mockedSpawnAsync.mock.calls.find((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      expect(killCall).toBeDefined()
+      // Binary resolves under the CrossOver bin dir (same dir as cxbottle).
+      expect(String(killCall![0])).toMatch(/\/bin\/wineserver$/)
+      // args are discrete words — never a shell string (T-17-01).
+      expect(killCall![1]).toEqual(['-k'])
+      // SCOPE-FENCE (T-17-DoS): WINEPREFIX is the dedicated Steam bottle's own
+      // dir, not the shared GameLib GOG/Epic bottle, and never unset/empty.
+      const opts = killCall![2] as { env: NodeJS.ProcessEnv }
+      expect(opts.env.WINEPREFIX).toBe(getBottleDir('GameLibSteam'))
+      expect(opts.env.WINEPREFIX).not.toBe(getBottleDir('GameLib'))
+      expect(opts.env.WINEPREFIX).toContain('GameLibSteam')
+      expect(opts.env.CX_ROOT).toBeTruthy()
+    })
+
+    test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is NOT spawned when the recreate branch is not taken (win64 bottle)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      const killCall = mockedSpawnAsync.mock.calls.find((c) =>
+        String(c[0]).endsWith('/bin/wineserver')
+      )
+      expect(killCall).toBeUndefined()
     })
   })
 
@@ -669,6 +842,35 @@ describe('bottle.ts', () => {
       expect(
         commandParts.some((p: string) => p.includes(GOOD_APP_ID))
       ).toBe(true)
+    })
+  })
+
+  // ── GAP C (17-16): leak-safe raise loop ────────────────────────────────────
+  describe('raise-loop leak safety (__stopBottledRaiseLoops)', () => {
+    const flushMicrotasks = async (times = 10) => {
+      for (let i = 0; i < times; i++) await Promise.resolve()
+    }
+
+    test('a fired raise loop schedules a retry timer that __stopBottledRaiseLoops clears (jest.getTimerCount() returns to 0)', async () => {
+      // Ready bottle so the install dispatch reaches `void raiseInstallerWindow`.
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(undefined)
+
+      jest.useFakeTimers()
+      // Fire-and-forget, exactly as dispatchToBottledSteam does. The raise loop
+      // awaits the (mocked) isMac import, then schedules the first unref'd
+      // sleep(1500) retry timer.
+      void tellBottledSteamToInstall('440')
+      await flushMicrotasks()
+
+      // The pending retry timer is what previously survived Jest teardown.
+      expect(jest.getTimerCount()).toBeGreaterThan(0)
+
+      // The teardown hook cancels the loop and clears every tracked timer.
+      __stopBottledRaiseLoops()
+      expect(jest.getTimerCount()).toBe(0)
+
+      jest.useRealTimers()
     })
   })
 })
