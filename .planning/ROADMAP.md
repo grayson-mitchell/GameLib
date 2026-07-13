@@ -188,7 +188,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. **UI** — OS logo beside the game logo in the left panel with a "32" mark on 32-bit mac builds; the "32" treatment escalated only on a macOS host.
   - **Out of scope (V1):** non-Steam stores (GOG/Epic mac arch) — the signal is Steam-specific.
 **Pre-work:** todo `steam-getproductinfo-appinfo-dump.md` — runtime `getProductInfo` dump to lock the parser casing/nesting before building.
-**Plans:** 5/5 plans complete
+**Plans:** 6/6 plans complete
 
 **Wave 0** — contracts + fixture capture (blocks the parser):
 - [x] 18-01-PLAN.md — mac_arch contracts (GameInfo + SteamMetadataCacheEntry) + getProductInfo appinfo dump harness + captured fixtures (MAC32-01)
@@ -607,6 +607,6 @@ v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 m
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
-| 18. macOS 32-bit detection, badge & CrossOver routing | 5/5 | Complete    | 2026-07-12 |
+| 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete   | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |
