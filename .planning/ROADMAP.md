@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.4 — Steam macOS Compatibility Runtime
 
-- [ ] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation
+- [ ] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps)
 - [ ] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape
 
 ## Phase Details
@@ -492,7 +492,7 @@ Plans:
 - [ ] `17-06-PLAN.md` — Frontend: InstallGameModal guided-setup routing + SteamBottleSetup consent/login UI + D-08 indicator + i18n (MACSTEAM-04, MACSTEAM-06)
 
 **Wave 4** *(checkpoint)*:
-- [ ] `17-07-PLAN.md` — Full-suite gate + end-to-end macOS UAT on real CrossOver + scope-fence non-regression + 17-VALIDATION.md sign-off (MACSTEAM-01..06)
+- [x] `17-07-PLAN.md` — Full-suite gate + end-to-end macOS UAT on real CrossOver + scope-fence non-regression + 17-VALIDATION.md sign-off (MACSTEAM-01..06)
 
 **Wave 5** *(gap closure — 2026-07-11 UAT: 2 issues diagnosed)*:
 - [ ] `17-08-PLAN.md` — GAP 1 (BLOCKER): `isBottleReady()` real-readiness gate (conf + steam.exe) + mkdir redist before SteamSetup download + re-entrant `provisionBottle` + route install/launch/uninstall on real readiness (MACSTEAM-02, MACSTEAM-04)
@@ -513,7 +513,7 @@ Plans:
 - [ ] `17-15-PLAN.md` — GAP-17-CEF-RENDER (BLOCKER): the bottled Steam install dialog renders as a grey 0x0 bar with dead buttons because the CrossOver bottle is 32-bit (`win10` = 32-bit template; modern 64-bit Steam CEF UI cannot composite in a win32 prefix) — change the create template to `win10_64`, add a `bottleWineArch()` cxbottle.conf reader, and make `provisionBottle()` detect + delete/recreate an existing win32 bottle as win64 BEFORE its idempotent guards (preserving Steam account auth: refreshToken/isLoggedIn/userData untouched, only `provisioned` reset); update spike FINDINGS LOCKED-CLI note (MACSTEAM-02, MACSTEAM-04)
 
 **Wave 10** *(gap closure — 2026-07-11 UAT session 5; 3 static/UX code gaps)*:
-- [ ] `17-16-PLAN.md` — GAP-17-PROVISIONED-FLAG-STUCK + GAP-17-CEF-RECREATE-RUNNING + focus/test-teardown (all in `bottle.ts`): (A) stop persisting `provisioned:false` in the race after the `wait:false` SteamSetup launch and reconcile `provisioned:true` lazily the first time `isBottleReady()` observes a real bottled steam.exe; (B) run a WINEPREFIX-scoped `wineserver -k` before `cxbottle --delete` in the win32→win64 recreate branch so the delete cannot abort while the bottled Steam client is running (scope-fenced to the target bottle's own prefix, never the shared GOG/Epic bottle); (C) make the macOS raise poll loop unref/cancellable so it no longer force-exits the Jest worker, plus a conservative visible-process focus improvement for the installer raiser (MACSTEAM-02, MACSTEAM-04)
+- [x] `17-16-PLAN.md` — GAP-17-PROVISIONED-FLAG-STUCK + GAP-17-CEF-RECREATE-RUNNING + focus/test-teardown (all in `bottle.ts`): (A) stop persisting `provisioned:false` in the race after the `wait:false` SteamSetup launch and reconcile `provisioned:true` lazily the first time `isBottleReady()` observes a real bottled steam.exe; (B) run a WINEPREFIX-scoped `wineserver -k` before `cxbottle --delete` in the win32→win64 recreate branch so the delete cannot abort while the bottled Steam client is running (scope-fenced to the target bottle's own prefix, never the shared GOG/Epic bottle); (C) make the macOS raise poll loop unref/cancellable so it no longer force-exits the Jest worker, plus a conservative visible-process focus improvement for the installer raiser (MACSTEAM-02, MACSTEAM-04)
 
 **Cross-cutting constraints:**
 - Zero new npm packages (RESEARCH.md confirmed — all Wine/VDF/download primitives already exist).
@@ -609,7 +609,7 @@ v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 m
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
-| 17. Steam on macOS via CrossOver/Wine | 15/16 | In Progress|  |
+| 17. Steam on macOS via CrossOver/Wine | 16/16 | Complete   | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |

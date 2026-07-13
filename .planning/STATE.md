@@ -25,16 +25,18 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 17 (Steam on macOS via CrossOver) — EXECUTING
-Plan: 17-16 gap-closure complete (GAP A/B/C closed in bottle.ts + bottle.test.ts; codecheck exit 0, bottle suite 71/71 exit 0)
-Status: Gap plans done. Still open before phase can verify/complete: 17-07 (human UAT steps 5-7 — indicator/D-11/scope-fences on real macOS+CrossOver), then VERIFICATION + SECURITY.
-Last activity: 2026-07-13 -- Phase 17 gap plan 17-16 executed & merged (--gaps-only)
+Phase: 17 (Steam on macOS via CrossOver) — EXECUTING (completion PAUSED for CR-01)
+Plan: All 16 plans executed (17-16 GAP A/B/C merged; 17-07 human UAT PASSED — all 7 steps + scope fences, approved 2026-07-13). Automated gate green (50 suites/1042 tests, codecheck exit 0).
+Status: Phase completion HELD. Code-review gate (17-REVIEW.md) surfaced a CONFIRMED data-loss BLOCKER — CR-01. verify_phase_goal and phase.complete NOT run. Next: /gsd:plan-phase 17 --gaps to fix CR-01, execute it, then verify + secure + complete.
+CR-01 (BLOCKER, data loss): provisionBottle() has no guard rejecting bottleName === wineCrossoverBottle (shared GOG/Epic bottle). Reachable via UI: SteamBottleSetup embeds WineSelector whose "Use shared Wine prefix" toggle sets crossoverBottle = globalConfig.wineCrossoverBottle (WineSelector/index.tsx:72), forwarded as bottleName (SteamBottleSetup.tsx:133). If the shared bottle is win32, provisionBottle's recreate branch runs killBottleWineServer + `cxbottle --delete --force` + rmSync(getBottleDir) on it → shared GOG/Epic bottle destroyed; on win64 it installs multi-GB Steam into the shared bottle. Violates constants.ts D-01. Fix: reject bottleName === wineCrossoverBottle in provisionBottle AND remove the shared-prefix toggle from the Steam setup path.
+Also open (WARNING): WR-01 (games.ts:549-557 starts ACF poller even when tellBottledSteamToInstall errors → ~60s false "installing"); WR-02 (SteamBottleConfig.loggedIn never written backend-side → always false).
+Last activity: 2026-07-13 -- Phase 17 all plans done + UAT approved; code review found CR-01 data-loss BLOCKER; completion paused for gap closure
 
 ## v1.4 Phase Map
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 17 | Steam on macOS via CrossOver/Wine | Incomplete — 17-16 gap plan ready (--gaps-only); 17-07 UAT steps 5-7 open; no VERIFICATION/SECURITY |
+| 17 | Steam on macOS via CrossOver/Wine | Incomplete — all 16 plans executed + UAT approved (2026-07-13); completion PAUSED on code-review CR-01 data-loss BLOCKER → /gsd:plan-phase 17 --gaps; no VERIFICATION/SECURITY yet |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
 | 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
 
