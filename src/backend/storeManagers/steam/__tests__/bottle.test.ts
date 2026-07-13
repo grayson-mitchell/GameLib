@@ -240,6 +240,36 @@ describe('bottle.ts', () => {
       )
       expect(isBottleReady('GameLibSteam')).toBe(true)
     })
+
+    // ── GAP-17-PROVISIONED-FLAG-STUCK: lazy readiness reconcile ──────────────
+    test('GAP-17-PROVISIONED-FLAG-STUCK: a ready bottle lazily reconciles the stored provisioned flag to true', () => {
+      mockedExistsSync.mockReturnValue(true) // conf + steam.exe both present
+      mockedGetNodefault.mockReturnValue(undefined) // provisioned not yet stored
+
+      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: a half-provisioned bottle (conf only) does NOT write the provisioned flag', () => {
+      mockedExistsSync.mockImplementation((path: string) =>
+        path.includes('cxbottle.conf')
+      )
+
+      expect(isBottleReady('GameLibSteam')).toBe(false)
+      expect(mockedSet).not.toHaveBeenCalledWith(
+        'provisioned',
+        expect.anything()
+      )
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: when provisioned is already true, a ready observation does not re-write it (get_nodefault guard)', () => {
+      mockedExistsSync.mockReturnValue(true)
+      mockedGetNodefault.mockReturnValue(true) // provisioned already persisted true
+
+      expect(isBottleReady('GameLibSteam')).toBe(true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
+    })
   })
 
   // ── GAP-17-CEF-RENDER: win32/win64 detector used by provisionBottle's ──────
@@ -568,6 +598,43 @@ describe('bottle.ts', () => {
         'userData',
         expect.anything()
       )
+    })
+
+    // ── GAP-17-PROVISIONED-FLAG-STUCK: step 8 must never persist `false` ──────
+    test('GAP-17-PROVISIONED-FLAG-STUCK: provisioned is NEVER persisted false during the wait:false SteamSetup window (steam.exe still absent)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Un-provisioned bottle: create produces cxbottle.conf but steam.exe never
+      // appears within this call (installer is fire-and-forget, wait:false).
+      const flags: FsFlags = {
+        conf: false,
+        steamExe: false,
+        steamSetupExe: false
+      }
+      setBottleFs(flags)
+      mockedSpawnAsync.mockImplementation(async () => {
+        flags.conf = true
+        return { code: 0, stdout: '', stderr: '' }
+      })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result.status).toBe('done')
+      // The race that GAP-17-PROVISIONED-FLAG-STUCK describes: step 8 used to
+      // clobber the flag false while steam.exe was legitimately still absent.
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
+    })
+
+    test('GAP-17-PROVISIONED-FLAG-STUCK: provisioned flips true the moment provisionBottle observes a ready bottle (conf + steam.exe)', async () => {
+      mockedGetNodefault.mockReturnValue(undefined)
+      // Fully ready from the start — the step-3 isBottleReady() short-circuit
+      // observes readiness and the lazy reconcile persists provisioned:true.
+      setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+
+      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+      expect(result).toEqual({ status: 'done' })
+      expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
+      expect(mockedSet).not.toHaveBeenCalledWith('provisioned', false)
     })
 
     test('a ready win64 bottle is NOT recreated — idempotent short-circuit still holds', async () => {
