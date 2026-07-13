@@ -36,13 +36,22 @@ findings:
   warning: 2
   info: 2
   total: 5
-status: issues_found
+status: resolved
+resolved_by: 17-17-PLAN.md
+resolved: 2026-07-13
 ---
 
 # Phase 17: Code Review Report
 
 **Reviewed:** 2026-07-13
 **Depth:** standard
+
+> **RESOLUTION (2026-07-13, gap plan 17-17):** All findings closed and merged.
+> - **CR-01** (BLOCKER, data loss) — CLOSED. `provisionBottle()` now reads `GlobalConfig.get().getSettings().wineCrossoverBottle` and rejects `bottleName === sharedBottle.trim()` with `{status:'error'}` before any store write / `cxbottle --delete`/`--create` / `rmSync` (authoritative backend guard, 4 `wineCrossoverBottle` refs). The "Use shared Wine prefix" toggle is removed from the Steam setup path via the new `hideSharedPrefixToggle` prop (GOG/Epic install-modal caller unchanged). RED-first regression tests assert the guard performs NO destructive op against the shared name. bottle suite 76/76.
+> - **WR-01** — CLOSED. The bottle ACF poller now starts only on a successful `tellBottledSteamToInstall` dispatch. games suite 122/122.
+> - **WR-02** — CLOSED. The always-false, never-written `SteamBottleConfig.loggedIn` is removed from `steam.ts` / `ipc.ts` / `main.ts` (0 refs in ipc.ts).
+> - Bonus: the pre-existing `library.ts` install/uninstall poll-timer leak was `unref`'d (documented deviation), fixing the isolated `steam.*games` force-exit.
+> Full suite: 50 suites / 1048 tests, `codecheck` exit 0.
 **Files Reviewed:** 27
 **Status:** issues_found
 

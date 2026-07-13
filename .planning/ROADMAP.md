@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.4 — Steam macOS Compatibility Runtime
 
-- [ ] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps)
+- [x] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps) (completed 2026-07-13)
 - [ ] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape
 
 ## Phase Details
@@ -610,7 +610,7 @@ v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 m
 | 14. Guided Claim Flow | 8/8 | Complete   | 2026-07-09 |
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
-| 17. Steam on macOS via CrossOver/Wine | 16/16 | Complete   | 2026-07-13 |
+| 17. Steam on macOS via CrossOver/Wine | 17/17 | Complete   | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |
