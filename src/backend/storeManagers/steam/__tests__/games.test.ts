@@ -11,7 +11,7 @@
  */
 import axios from 'axios'
 import { sendFrontendMessage } from '../../../ipc'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore, steamLibraryStore } from '../electronStores'
 import SteamGame, {
   parseSteamStorageRequirement,
   getSteamInstallSize,
@@ -1776,13 +1776,15 @@ describe('SteamGame.forceUninstall()', () => {
     library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
   })
 
-  it('forceUninstall() deletes the appId from the in-memory library Map', async () => {
+  it('forceUninstall() keeps the appId in the library marked is_installed:false', async () => {
     expect(library.has(APP_ID)).toBe(true)
 
     const game = new SteamGame(APP_ID)
     await game.forceUninstall()
 
-    expect(library.has(APP_ID)).toBe(false)
+    expect(library.has(APP_ID)).toBe(true)
+    expect(library.get(APP_ID)?.is_installed).toBe(false)
+    expect(library.get(APP_ID)?.install).toEqual({})
   })
 
   it('forceUninstall() calls sendFrontendMessage pushGameToLibrary with is_installed: false', async () => {
@@ -1792,6 +1794,40 @@ describe('SteamGame.forceUninstall()', () => {
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.objectContaining({ app_name: APP_ID, is_installed: false })
+    )
+  })
+
+  it('GAP-18-06: forceUninstall() preserves mac_arch:32 in the Map and persists to steamLibraryStore', async () => {
+    library.set(
+      APP_ID,
+      makeEntry({
+        title: 'Old 32-bit Game',
+        is_installed: true,
+        mac_arch: '32'
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    await game.forceUninstall()
+
+    // Badge data survives in the Map
+    expect(library.get(APP_ID)?.mac_arch).toBe('32')
+    expect(library.get(APP_ID)?.is_installed).toBe(false)
+
+    // Persist happened (GAP-17-BOTTLE-STORE-DIVERGENCE class)
+    expect(steamLibraryStore.set).toHaveBeenCalledWith(
+      'games',
+      expect.any(Array)
+    )
+
+    // The pushed payload carries the badge data
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: APP_ID,
+        is_installed: false,
+        mac_arch: '32'
+      })
     )
   })
 })
@@ -1854,8 +1890,10 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     await libraryModule.promptI386Recovery(APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
-    // forceUninstall(): dropped from the in-memory library + pushed not-installed
-    expect(library.has(APP_ID)).toBe(false)
+    // forceUninstall(): kept in the in-memory library, marked not-installed
+    // (keep-entry — recovery no longer orphans the game) + pushed not-installed
+    expect(library.has(APP_ID)).toBe(true)
+    expect(library.get(APP_ID)?.is_installed).toBe(false)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.objectContaining({ app_name: APP_ID, is_installed: false })
