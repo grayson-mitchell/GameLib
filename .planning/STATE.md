@@ -27,14 +27,14 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 17 COMPLETE (2026-07-13) — next actionable is Phase 19 (Phase 18 already ran ahead & is complete; phase.complete's "next: 18" is wrong).
 Plan: All 17 plans done. 17-VERIFICATION.md status: passed (6/6 must-haves). Human UAT approved (17-VALIDATION.md, 7/7 steps). Code review CR-01 data-loss BLOCKER + WR-01/WR-02 all CLOSED by 17-17 (17-REVIEW.md status: resolved). Automated gate green (50 suites/1048 tests, codecheck exit 0).
-Status: Phase 17 verified & complete. REMAINING GATE: /gsd:secure-phase 17 (no 17-SECURITY.md yet; security_enforcement=true). Then v1.4 continues at Phase 19 (CrossOver Compatibility Index — has CONTEXT/RESEARCH/UI-SPEC, no plans).
+Status: Phase 17 verified, complete & SECURED (17-SECURITY.md, threats_open: 0 — 21/21 threats: 13 mitigate verified in code incl. T-17-CR01 shared-bottle guard, 8 accept documented). All gates green. v1.4 continues at Phase 19 (CrossOver Compatibility Index — has CONTEXT/RESEARCH/UI-SPEC, no plans). Phase 18 already complete.
 Last activity: 2026-07-13 -- Phase 17 complete: 17-17 gap closure (CR-01 data-loss guard) executed + merged, verifier PASSED, phase marked complete
 
 ## v1.4 Phase Map
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 17 | Steam on macOS via CrossOver/Wine | Complete (2026-07-13) — 17 plans, UAT 7/7 approved, VERIFICATION passed 6/6, code-review CR-01/WR-01/WR-02 resolved by 17-17; SECURITY pending (/gsd:secure-phase 17) |
+| 17 | Steam on macOS via CrossOver/Wine | Complete & secured (2026-07-13) — 17 plans, UAT 7/7, VERIFICATION 6/6, code-review CR-01/WR resolved (17-17), SECURITY threats_open:0 (21/21) |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
 | 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
 
