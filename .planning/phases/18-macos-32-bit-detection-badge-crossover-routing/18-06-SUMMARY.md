@@ -94,3 +94,12 @@ MAC32-04 is now fully closed: an i386-recovery (or any) forceUninstall leaves th
 ---
 *Phase: 18-macos-32-bit-detection-badge-crossover-routing*
 *Completed: 2026-07-13*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/games.ts
+- FOUND: src/backend/storeManagers/steam/__tests__/games.test.ts
+- FOUND: .planning/phases/18-macos-32-bit-detection-badge-crossover-routing/18-06-SUMMARY.md
+- FOUND commit: c40def65 (Task 1)
+- FOUND commit: 930634f5 (Task 2)
+- FOUND commit: 0b4b3152 (docs: complete plan)
