@@ -22,5 +22,9 @@ export type SteamBottleConfig = {
   wineVersion?: WineInstallation
   wineCrossoverBottle?: string
   provisioned: boolean
-  loggedIn: boolean
+  // WR-02 (17-17): the former `loggedIn` field was removed — bottled-Steam auth
+  // is opaque (D-04), so no backend point could ever truthfully write it; it
+  // always reported false. Leaving a dead always-false signal only invited a
+  // future consumer to trust it. steamBottleStatus surfaces provisioned +
+  // bottleName only.
 }
