@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 19 UI-SPEC approved
-last_updated: "2026-07-13T23:11:42.561Z"
+stopped_at: Completed 19-06-PLAN.md
+last_updated: "2026-07-13T23:54:05.589Z"
 last_activity: 2026-07-13
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 19 (crossover-compatibility-index-macos) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-07-13
 
@@ -113,6 +113,7 @@ Last activity: 2026-07-13
 | Phase 14 P07 | 35min | 3 tasks | 12 files |
 | Phase 14 P08 | ~30min | 2 tasks | 6 files |
 | Phase 19 P05 | 35min | 3 tasks | 6 files |
+| Phase 19 P06 | ~30min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -160,6 +161,8 @@ Recent decisions affecting current work:
 - [Phase 14-08]: Gap closure — UAT test 8 (Keys-waiting fill-then-empty sync churn) root-caused to fetchAndCommitOrder committing classifyOrder's hard-reset ownedElsewhere overlay on every per-order commit while D-26 broadcasts each intermediate snapshot. Fixed with a merged two-branch commit-time overlay (Steam gate open -> dedup recompute at commit; gate closed -> per-key carry-forward from prior entry, D-48) — also closed a T-14-03 mid-sync C2 reveal-bypass window. Added a single-sourced isServerTerminal/isFreezeEligible predicate (classify.ts) so REVEALED-without-pending-expiry orders now freeze under D-24 again (restores the freeze benefit 14-07 had lost, cutting the standing ~19-orders-per-sync Cloudflare/WAF re-fetch exposure); REVEALED-with-future-expiry orders keep re-fetching (retroactive expiry preserved). partitionGamekeys/patchCachedState both route through the same predicate. HUMBLE_CLASSIFIER_VERSION bumped 5->6.
 - [Phase ?]: Steam-AppID exact joins never gated by NAME_MATCHING_SHIPS; only non-Steam name matching is (D-02)
 - [Phase ?]: D-20 reversal: slugify() keeps roman numerals verbatim, only apostrophe drop is load-bearing
+- [Phase 19-06]: Added LibraryManager.getListOfGames() to the interface (Rule 3 fix) - only legendary had it; gog/nile/zoom/sideload/steam now implement it reading their own persisted libraryStore
+- [Phase 19-06]: isMac gate for D-16 non-mac-emptiness lives in buildCrossoverRatingMap itself, not in 19-05's getCodeweaversFromIndex/isCrossoverIndexEligible (neither actually gates on platform)
 
 ### Pending Todos
 
@@ -217,8 +220,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-13T23:10:53.602Z
-Stopped at: Phase 19 UI-SPEC approved
+Last session: 2026-07-13T23:54:05.584Z
+Stopped at: Completed 19-06-PLAN.md
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
