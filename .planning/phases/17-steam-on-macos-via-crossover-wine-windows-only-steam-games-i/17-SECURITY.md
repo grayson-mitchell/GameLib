@@ -62,3 +62,15 @@ None. The only `## Threat Flags` section across all Phase 17 summaries (17-16-SU
 ## Code-review cross-check
 
 17-REVIEW.md CR-01 (BLOCKER, data loss) / WR-01 / WR-02 were all closed by gap plan 17-17 and independently re-verified here in code (CR-01 → `bottle.ts:567-581` backend guard + `hideSharedPrefixToggle`; WR-01 → `games.ts:555-557` poller-on-success-only; WR-02 → dead `loggedIn` field removed).
+
+---
+
+## Security Audit 2026-07-14 (re-verification)
+
+Re-ran `/gsd-secure-phase 17`. No phase artifacts changed since the 2026-07-13 audit — the last commit to the phase directory is the original verification commit (`d940f141`); the 16 plan-time `<threat_model>` blocks still back the canonical register, so `register_authored_at_plan_time` remains `true`. Short-circuit rule applies (`threats_open: 0 AND register_authored_at_plan_time: true`): all plan-time threats stay verified CLOSED; no new attack surface introduced.
+
+| Metric | Count |
+|--------|-------|
+| Threats found | 21 |
+| Closed | 21 |
+| Open | 0 |
