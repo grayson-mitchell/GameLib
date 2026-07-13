@@ -13,7 +13,7 @@
  * loginusers.vdf/sentry files; login state is only ever set by the
  * guided-setup flow (17-06) confirming the user completed login.
  */
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
 import { userHome } from 'backend/constants/paths'
@@ -48,6 +48,15 @@ import { steamBottleConfigStore } from './electronStores'
 // (spike/steam-bottle/FINDINGS.md MECHANISM DECISION). Locked, not derived.
 const CXBOTTLE_BIN =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle'
+
+// Single source of truth (GAP-17-CEF-RECREATE-RUNNING): derive the sibling
+// `wineserver` binary and the CrossOver root from CXBOTTLE_BIN rather than
+// hardcoding a second absolute path.
+//   CrossOver bin dir = dirname(CXBOTTLE_BIN)
+//   wineserver binary = <bin dir>/wineserver
+//   CX_ROOT           = dirname(<bin dir>)  (.../SharedSupport/CrossOver)
+const WINESERVER_BIN = join(dirname(CXBOTTLE_BIN), 'wineserver')
+const CX_ROOT = dirname(dirname(CXBOTTLE_BIN))
 
 /**
  * Directory of a named CrossOver bottle.
@@ -425,6 +434,43 @@ async function raiseBottledGameWindow(context: string): Promise<void> {
 export type ProvisionBottleResult = { status: 'done' | 'error'; error?: string }
 
 /**
+ * GAP-17-CEF-RECREATE-RUNNING: stop the target bottle's OWN Wine processes so a
+ * subsequent `cxbottle --delete` cannot abort with "There are still
+ * applications running… Aborting" (the exact failure hit in the CEF grey-bar
+ * scenario the win32->win64 recreate targets — the user reaches the grey bar
+ * *because* the bottled Steam client is running, and that same running Steam
+ * blocks the delete).
+ *
+ * SCOPE-FENCE (T-17-DoS): `WINEPREFIX` MUST be `getBottleDir(bottleName)` — the
+ * dedicated Steam bottle's own prefix — and NOTHING else. Never the shared
+ * `GameLib` GOG/Epic bottle dir, and never unset/empty (an unset WINEPREFIX
+ * would let `wineserver -k` hit the default prefix and DoS unrelated bottles).
+ * `bottleName` is already sanitized by provisionBottle (T-17-01) before reaching
+ * here. `CX_ROOT` is required so the CrossOver-bundled wineserver resolves its
+ * own libraries. Best-effort: a kill failure logs a warning and MUST NOT abort
+ * provisioning (the rmSync fallback + recreate still run).
+ */
+async function killBottleWineServer(bottleName: string): Promise<void> {
+  try {
+    await spawnAsync(WINESERVER_BIN, ['-k'], {
+      env: {
+        ...process.env,
+        WINEPREFIX: getBottleDir(bottleName),
+        CX_ROOT
+      }
+    })
+  } catch (error) {
+    logWarning(
+      [
+        `killBottleWineServer: wineserver -k for bottle "${bottleName}" failed (best-effort — provisioning continues)`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+  }
+}
+
+/**
  * Creates the dedicated Steam CrossOver bottle (via the 17-01 LOCKED
  * mechanism), fetches the official SteamSetup.exe once, and runs it
  * NON-SILENTLY inside the bottle so the user clicks through the real
@@ -477,6 +523,10 @@ export async function provisionBottle(opts?: {
       `provisionBottle: bottle "${bottleName}" is a stale 32-bit (win32) prefix — recreating as win10_64 (GAP-17-CEF-RENDER)`,
       LogPrefix.Steam
     )
+    // GAP-17-CEF-RECREATE-RUNNING: stop the bottle's OWN Wine processes first —
+    // WINEPREFIX-scoped (T-17-DoS) — so `cxbottle --delete` does not abort while
+    // the bottled Steam client/steamwebhelper is still running.
+    await killBottleWineServer(bottleName)
     try {
       await spawnAsync(CXBOTTLE_BIN, [
         '--bottle',
