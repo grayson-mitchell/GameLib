@@ -607,6 +607,6 @@ v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 m
 | 15. Store Overlay + Expiration Alerts | 6/6 | Complete    | 2026-07-10 |
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 14/15 | In Progress|  |
-| 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete   | 2026-07-13 |
+| 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 0/? | Not planned | - |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |
