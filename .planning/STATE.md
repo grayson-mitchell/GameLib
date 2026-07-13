@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 19 UI-SPEC approved
-last_updated: "2026-07-13T09:56:19.784Z"
-last_activity: 2026-07-13 -- Phase 17 planning complete
+stopped_at: Phase 17 gap plan 17-16 complete; 17-07 UAT 5-7 + verify/secure remain
+last_updated: "2026-07-13T10:17:08.566Z"
+last_activity: 2026-07-13 -- Phase 17 execution started
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Finishing v1.4 — resume Phase 17 (execute 17-07, complete UAT + verify), then plan & execute Phase 19, then audit + complete milestone.
+**Current focus:** Phase 17 — Steam on macOS via CrossOver
 
 ## Current Position
 
-Phase: 17 (resume)
-Plan: 17-16 gap-closure plan created (gap_closure, 3 tasks, autonomous) — closes GAP-17-PROVISIONED-FLAG-STUCK, GAP-17-CEF-RECREATE-RUNNING, focus/test-leak. Plan-checker PASSED. Next: /gsd-execute-phase 17 --gaps-only. Still open after fixes: 17-07 human UAT steps 5-7 (indicator/D-11/scope-fences) on real macOS+CrossOver, then verify.
-Status: Ready to execute (17-16 gap plan)
-Last activity: 2026-07-13 -- Phase 17 gap-closure planning complete (17-16 planned + verified)
+Phase: 17 (Steam on macOS via CrossOver) — EXECUTING
+Plan: 17-16 gap-closure complete (GAP A/B/C closed in bottle.ts + bottle.test.ts; codecheck exit 0, bottle suite 71/71 exit 0)
+Status: Gap plans done. Still open before phase can verify/complete: 17-07 (human UAT steps 5-7 — indicator/D-11/scope-fences on real macOS+CrossOver), then VERIFICATION + SECURITY.
+Last activity: 2026-07-13 -- Phase 17 gap plan 17-16 executed & merged (--gaps-only)
 
 ## v1.4 Phase Map
 
