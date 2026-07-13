@@ -103,8 +103,9 @@ export function normalizePunctuationAndEditionStripped(title: string): string {
  * not a coincidence that both files agree here, only the edition-suffix
  * knob is actually contested.
  *
- * See `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-*.md`
- * for the recorded report this selection is transcribed from.
+ * Selected candidate: C (punctuation + edition-suffix stripped) — see
+ * `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md`
+ * (the highest hit rate among the candidates that pass the D-02 gate).
  */
 export const normalize = normalizePunctuationAndEditionStripped
 
@@ -116,7 +117,10 @@ export const normalize = normalizePunctuationAndEditionStripped
  * lookup imports this symbol to conditionally skip the byName matching path
  * — the name is a stable cross-plan contract, do not rename it.
  *
- * Placeholder until Task 2's harness runs: fail-safe false. Updated below
- * (Task 2) with the actual report filename and PASS/FAIL numbers.
+ * Set from: .planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md
+ * Verdict: PASS — candidate C (punctuation + edition-suffix stripped),
+ * wrongHitRate 0.81% (1/123), hitRate 85.37% (105/123), against the
+ * pre-committed bounds WRONG_HIT_MAX=0.02, HIT_RATE_MIN=0.30, evaluated on
+ * the 123-pair Steam ∩ dump-by-AppID ground-truth set.
  */
-export const NAME_MATCHING_SHIPS: boolean = false
+export const NAME_MATCHING_SHIPS: boolean = true
