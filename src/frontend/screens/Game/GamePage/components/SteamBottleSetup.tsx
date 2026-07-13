@@ -176,6 +176,12 @@ const SteamBottleSetup = () => {
               'bottle.setup.sharedPrefixNote',
               'Reuses your global shared prefix/bottle instead of a dedicated one. Not recommended for Steam — the Windows Steam client should stay in its own dedicated GameLibSteam bottle.'
             )}
+            // CR-01 (17-17): remove the shared-prefix escape hatch entirely on
+            // the Steam setup path — the shared GameLib GOG/Epic bottle must
+            // never be selectable for the dedicated Steam bottle. The Task 1
+            // backend guard remains the authoritative stop; this removes the
+            // reachable UI source that fed globalConfig.wineCrossoverBottle in.
+            hideSharedPrefixToggle
             initiallyOpen
           />
         </DialogContent>
