@@ -1078,6 +1078,14 @@ export function startInstallPolling(
     }
   }, intervalMs)
 
+  // Teardown-safety (mirrors bottle.ts GAP C): unref the interval so it never
+  // keeps a bare Node process (e.g. a Jest worker) alive on its own. In the
+  // Electron main process the app's own event loop keeps polling running, so
+  // this is production-neutral; under Jest it stops a leaked real poller from
+  // surviving teardown and crashing on a later tick (readAcfState on reset
+  // mocks). Optional-chained — a no-op in any non-Node timer context.
+  timer.unref?.()
+
   entry.timer = timer
   activePolls.set(appId, entry)
 }
@@ -1252,6 +1260,11 @@ export function startUninstallPolling(
       stopUninstallPolling(appId)
     }
   }, intervalMs)
+
+  // Teardown-safety (mirrors bottle.ts GAP C / the install poller above):
+  // unref so a leaked real poller never keeps a Jest worker alive or crashes
+  // on a later tick. Production-neutral in the Electron main process.
+  timer.unref?.()
 
   entry.timer = timer
   activeUninstallPolls.set(appId, entry)
