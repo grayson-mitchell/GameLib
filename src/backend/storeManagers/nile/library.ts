@@ -316,6 +316,10 @@ export default class NileLibraryManager implements LibraryManager {
     return game
   }
 
+  getListOfGames(): GameInfo[] {
+    return libraryStore.get('library', [])
+  }
+
   /**
    * Get game info for a particular game.
    */

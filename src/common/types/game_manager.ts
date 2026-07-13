@@ -73,6 +73,14 @@ export interface LibraryManager {
   getGame: (id: string) => Game
   refresh: () => Promise<ExecResult | null>
   getGameInfo: (appName: string, forceReload?: boolean) => GameInfo | undefined
+  /**
+   * Synchronous enumeration of every game this runner knows about (installed
+   * or not), read from the manager's own persisted library store — no
+   * network. Consumed by `crossover_index/ipc_handler.ts`'s
+   * `buildCrossoverRatingMap` (Phase 19 Plan 06) to resolve a rating for
+   * every library title without a per-runner special case.
+   */
+  getListOfGames: () => GameInfo[]
   getInstallInfo: (
     appName: string,
     installPlatform: InstallPlatform,

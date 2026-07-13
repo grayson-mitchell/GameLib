@@ -125,6 +125,7 @@ import {
   getAllGameOverrides,
   attachOverrides
 } from './game_overrides'
+import { buildCrossoverRatingMap } from './crossover_index/ipc_handler'
 import { backendEvents } from './backend_events'
 import { configStore } from './constants/key_value_stores'
 import {
@@ -352,6 +353,21 @@ if (!gotTheLock) {
     initOnlineMonitor()
     initStoreManagers()
     initImagesCache()
+
+    // Phase 19 (Plan 06), D-11/D-16: a validated background CrossOver-index
+    // refresh resolves the full three-state rating map once at startup and
+    // pushes it so the grid's `crossoverRatings` slice updates without the
+    // renderer needing to issue a manual pull. Fire-and-forget — never
+    // blocks readiness, and never fires on the `getCrossoverIndex` pull path
+    // (that handler already returns its own freshly resolved map).
+    buildCrossoverRatingMap()
+      .then((index) => sendFrontendMessage('crossoverIndexChanged', index))
+      .catch((error) =>
+        logError(
+          ['Failed to build CrossOver rating map on startup', error],
+          LogPrefix.Backend
+        )
+      )
 
     // Add User-Agent Client hints to behave like Windows
     if (process.argv.includes('--spoof-windows')) {

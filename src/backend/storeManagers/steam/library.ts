@@ -322,6 +322,10 @@ export default class SteamLibraryManager implements LibraryManager {
     return cached.find((g) => g.app_name === appName)
   }
 
+  getListOfGames(): GameInfo[] {
+    return steamLibraryStore.get('games', [])
+  }
+
   async getInstallInfo(
     _appName: string,
     _installPlatform: InstallPlatform,

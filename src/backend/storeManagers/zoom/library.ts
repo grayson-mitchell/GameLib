@@ -182,6 +182,13 @@ export default class ZoomLibraryManager implements LibraryManager {
     return library.get(slug) || this.getInstallAndGameInfo(slug)
   }
 
+  getListOfGames(): GameInfo[] {
+    if (!GlobalConfig.get().getSettings().experimentalFeatures?.zoomPlatform)
+      return []
+
+    return libraryStore.get('games', [])
+  }
+
   getInstallAndGameInfo(slug: string): GameInfo | undefined {
     if (!GlobalConfig.get().getSettings().experimentalFeatures?.zoomPlatform)
       return

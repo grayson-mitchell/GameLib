@@ -406,6 +406,10 @@ interface AsyncIPCFunctions {
       }
     >
   >
+  // Phase 19 (Plan 06): bulk CrossOver-rating resolver (D-11/D-16). Keyed by
+  // `app_name`; `number` = matched rating, `null` = eligible & consulted with
+  // no record, key-absent = never looked up (ineligible under the D-02 gate).
+  getCrossoverIndex: () => Promise<Record<string, number | null>>
   getEosOverlayStatus: () => {
     isInstalled: boolean
     version?: string
@@ -550,6 +554,10 @@ interface FrontendMessages {
       { title?: string; art_cover?: string; art_square?: string }
     >
   ) => void
+  // Phase 19 (Plan 06): pushed after a validated background CrossOver-index
+  // refresh so the grid picks up freshly resolved ratings without a manual
+  // pull. Same three-state shape as `getCrossoverIndex`'s resolved map.
+  crossoverIndexChanged: (index: Record<string, number | null>) => void
   // Plan 02 (Phase 10): pushed by HumbleUser.checkHealthAndFlagExpiry() on a
   // startup/401 expiry detection. MUST NOT include the session cookie
   // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.
