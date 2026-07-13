@@ -1,7 +1,7 @@
 ---
 phase: 17
 slug: steam-on-macos-via-crossover-wine-windows-only-steam-games-i
-status: automated-pass
+status: approved
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-10
@@ -92,7 +92,7 @@ automated_verified: 2026-07-11
 
 ---
 
-## UAT Findings & Candidate Gaps (17-07 Task 2 — in progress)
+## UAT Findings & Candidate Gaps (17-07 Task 2 — ✅ COMPLETE, approved 2026-07-13)
 
 > Live human UAT started 2026-07-11; session 2 after 17-08/09/10/11; session 3 after 17-12/17-13 landed; **session 5 after 17-15 (win10_64) landed** — the win32 bottle was manually deleted (see GAP-17-CEF-RECREATE-RUNNING) and a fresh **win64** bottle provisioned. Approval remains pending until all 7 steps + scope fences pass or gaps are routed. Rows below reflect the LATEST session-5 (win64) result.
 
@@ -102,9 +102,11 @@ automated_verified: 2026-07-11
 | 2 — Login | MACSTEAM-03 | ✅ pass (session 5) | Login inside the bottle persists (`isLoggedIn: true`); no re-prompt |
 | 3 — Install dialog renders | MACSTEAM-02/05 | ✅ pass (session 5) | **GAP-17-CEF-RENDER FIXED by 17-15** — on the win64 bottle the Steam install dialog composites correctly (no grey `0×0` bar); Install button responsive; games install (Avernum 4/206020 + Avernum 6/206060, ACF `StateFlags=4` under `Program Files (x86)/Steam/steamapps`) |
 | 4 — Launch / install recognition | MACSTEAM-04 | ✅ pass (session 5, post-fix) | Was a BLOCKER (button stuck on "Install"); **FIXED via `/gsd:debug` — GamePage now subscribes to `steam.library`** (GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED). Human-verified 2026-07-12: the button flips Install→Play and the game launches from GameLib |
-| 5 — Indicator | MACSTEAM-06 | ⏳ blocked | Behind step 4 |
-| 6 — D-11 guard | MACSTEAM-01 | ⏳ pending | Not yet exercised |
-| 7 — Scope fences | MACSTEAM-01/04 | ⏳ pending | Not yet exercised |
+| 5 — Indicator | MACSTEAM-06 | ✅ pass (session 6, 2026-07-13) | On the game page the "Runs via Windows Steam bottle" row shows for the bottled game |
+| 6 — D-11 guard | MACSTEAM-01 | ✅ pass (session 6, 2026-07-13) | A game whose platform data hasn't synced is NOT force-bottled — treated native until confirmed |
+| 7 — Scope fences | MACSTEAM-01/04 | ✅ pass (session 6, 2026-07-13) | Native-Mac Steam game → native `steam://` (no bottle/indicator); GOG/Epic Wine game → unchanged shared GameLib bottle; Windows-only Steam still delegates to Proton on Linux; steamwebhelper-hang recovery hint shows |
+
+**Session 6 (2026-07-13, real CrossOver) — 17-16 static gap-fixes re-confirmed:** GAP A (`provisioned` flag) — the guided-setup surface no longer reappears after a completed click-through install (no re-provision loop). GAP B (win32→win64 auto-recreate) — recreate now succeeds while the bottled Steam client is running (WINEPREFIX-scoped `wineserver -k` stops the bottle's own processes before `cxbottle --delete`; no "applications still running" abort); fresh win64 bottle provisions. GAP C (focus) — focus reliably moves to the bottled Steam / installer window. All three confirmed by the human tester; **all 7 UAT steps now pass**.
 
 **Also observed (session 5, MINOR UX):** window focus does not always move to the bottled Steam window when the guided flow raises it (`raiseInstallerWindow` best-effort loop, `bottle.ts:~320`) — non-blocking but confusing; the user must click the Steam window manually.
 
@@ -280,6 +282,8 @@ The live process was `steam.exe steam://install/206040` (the bottled Steam clien
 
 **Approval:** GAPS FOUND (2026-07-11 session 5, real CrossOver win64 bottle). **GAP-17-CEF-RENDER is FIXED by 17-15** — the win10_64 template makes the Steam install dialog composite correctly; UAT steps 1-3 now pass and games install to disk. **New BLOCKER: GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED** — a bottle-installed game (verified `StateFlags=4` on disk, runs directly from Steam) never flips to Play in GameLib; the button stays "Install" even after focus/nav, so the game can't be launched from GameLib (step 4 FAIL). Backend scan proven correct in isolation → live reconcile/frontend wiring bug → route to **`/gsd:debug 17`**. Additional gaps for **`/gsd:plan-phase 17 --gaps`**: GAP-17-PROVISIONED-FLAG-STUCK (config `provisioned` stuck false; static fix), GAP-17-CEF-RECREATE-RUNNING (win32→win64 auto-recreate delete aborts while Steam runs; static fix), and the minor focus-not-moving-to-Steam-window UX. Steps 5-7 (indicator, D-11, scope fences) remain untested behind the step-4 blocker.
 
-**Update (2026-07-12):** GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED is **RESOLVED** via `/gsd:debug` (GamePage subscribes to `steam.library`) and **human-verified** — step 4 now passes (button flips Install→Play, game launches from GameLib). Remaining before sign-off: (a) UAT steps 5-7 (indicator, D-11 guard, scope fences) — now unblocked, need a run; (b) static gaps GAP-17-PROVISIONED-FLAG-STUCK, GAP-17-CEF-RECREATE-RUNNING, and the focus-not-moving-to-Steam-window UX → `/gsd:plan-phase 17 --gaps`.
+**Update (2026-07-12):** GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED is **RESOLVED** via `/gsd:debug` (GamePage subscribes to `steam.library`) and **human-verified** — step 4 now passes (button flips Install→Play, game launches from GameLib). Remaining before sign-off: (a) UAT steps 5-7 (indicator, D-11 guard, scope fences); (b) static gaps GAP-17-PROVISIONED-FLAG-STUCK, GAP-17-CEF-RECREATE-RUNNING, and the focus-not-moving UX → closed by **17-16**.
 
-**Phase 17 status:** NOT yet signed off — 17-07 Task 2 (human-verify gate) remains OPEN pending UAT steps 5-7 + the three static gap closures. The step-4 blocker is cleared.
+**Approval: `approved 2026-07-13`** — All three static gaps closed by **17-16** (GAP-17-PROVISIONED-FLAG-STUCK, GAP-17-CEF-RECREATE-RUNNING, focus/leak-safe raise loop) and re-confirmed on real CrossOver (session 6). The final untested UAT steps — **5 (indicator), 6 (D-11 guard), 7 (scope fences: native-Mac steam://, GOG/Epic shared bottle, Linux Proton, steamwebhelper-hang recovery hint)** — all **PASS**. All 7 UAT steps green; automated gate green (50 suites / 1042 tests, codecheck exit 0). MACSTEAM-01..06 confirmed in reality. Human tester signed off 2026-07-13.
+
+**Phase 17 status:** ✅ SIGNED OFF (2026-07-13) — 17-07 Task 2 human-verify gate PASSED; all gaps closed. Ready for `/gsd-verify-work` + `/gsd:secure-phase`.
