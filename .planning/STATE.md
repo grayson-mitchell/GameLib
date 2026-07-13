@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: in_progress
-stopped_at: Phase 18 complete + UAT 5/5. v1.4 NOT complete — Phase 17 (17-07 unexecuted, UAT open) and Phase 19 (unplanned) remain. STATE was mislabeled milestone_complete because Phase 18 ran ahead of 17/19; corrected 2026-07-13.
-last_updated: 2026-07-13T21:15:00.000Z
-last_activity: 2026-07-13 -- Phase 18 UAT completed 5/5; corrected milestone status
+stopped_at: Phase 17 execute attempted 2026-07-13 — only incomplete plan is 17-07 (blocking human-verify gate). Task 1 automated gate RE-CONFIRMED green today (50 suites/1033 tests, tsc --noEmit exit 0). Task 2 human UAT: steps 1-4 pass (verified 2026-07-12), steps 5-7 untested (need macOS+CrossOver), plus 3 open code gaps in 17-VALIDATION.md. Decision: route to gap closure first (/gsd-plan-phase 17 --gaps), then human UAT 5-7, then verify.
+last_updated: 2026-07-13T22:00:00.000Z
+last_activity: 2026-07-13 -- Phase 17 resume: re-confirmed 17-07 automated gate green; routing 3 code gaps to gap closure before UAT steps 5-7
 progress:
   total_phases: 3
   completed_phases: 1
