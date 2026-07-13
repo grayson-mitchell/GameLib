@@ -416,6 +416,125 @@ describe('bottle.ts', () => {
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
     })
 
+    // ── CR-01 (17-17): authoritative shared-bottle scope guard (D-01) ──────────
+    // provisionBottle must refuse the shared GameLib GOG/Epic Wine bottle name
+    // BEFORE any store write, cxbottle --delete/--create, or rmSync — otherwise
+    // the win32-recreate branch would destroy the shared bottle (data loss).
+    describe('CR-01 shared-bottle guard', () => {
+      test('rejects bottleName === the shared wineCrossoverBottle, returning an error that mentions the shared bottle, with NO set/spawn/rmSync', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: 'GameLib'
+            }) as GameSettings
+        })
+        // Even if the FS "looks" like a stale win32 bottle (which would drive the
+        // destructive recreate branch), the guard must fire first.
+        setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
+        mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
+
+        const result = await provisionBottle({ bottleName: 'GameLib' })
+
+        expect(result.status).toBe('error')
+        expect(result.error).toMatch(/shared/i)
+        // No store write, no cxbottle delete/create, no rmSync — guard returns
+        // BEFORE any destructive op.
+        expect(mockedSet).not.toHaveBeenCalled()
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+        expect(mockedDownloadFile).not.toHaveBeenCalled()
+      })
+
+      test('fires on a whitespace-padded equivalent — "  GameLib  " (sanitized to "GameLib") is rejected the same way', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: 'GameLib'
+            }) as GameSettings
+        })
+        setBottleFs({ conf: false, steamExe: false, steamSetupExe: false })
+
+        const result = await provisionBottle({ bottleName: '  GameLib  ' })
+
+        expect(result.status).toBe('error')
+        expect(mockedSet).not.toHaveBeenCalled()
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('also fires when the shared config value itself is whitespace-padded ("  GameLib  ") vs a clean bottleName "GameLib"', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: '  GameLib  '
+            }) as GameSettings
+        })
+        setBottleFs({ conf: false, steamExe: false, steamSetupExe: false })
+
+        const result = await provisionBottle({ bottleName: 'GameLib' })
+
+        expect(result.status).toBe('error')
+        expect(mockedSet).not.toHaveBeenCalled()
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('does NOT over-fire: the dedicated GameLibSteam bottle proceeds normally even when the shared bottle is "GameLib"', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: 'GameLib'
+            }) as GameSettings
+        })
+        const flags: FsFlags = {
+          conf: false,
+          steamExe: false,
+          steamSetupExe: false
+        }
+        setBottleFs(flags)
+        mockedSpawnAsync.mockImplementation(async () => {
+          flags.conf = true
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+        expect(result.status).toBe('done')
+        // Normal create path still runs for the dedicated bottle.
+        expect(mockedSet).toHaveBeenCalledWith('bottleName', 'GameLibSteam')
+        expect(mockedDownloadFile).toHaveBeenCalledWith(
+          expect.objectContaining({ url: STEAM_SETUP_EXE_URL })
+        )
+      })
+
+      test('is inert when the shared config value is unset — the default GameLibSteam path is never blocked', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        // Default beforeEach GlobalConfig mock has NO wineCrossoverBottle.
+        const flags: FsFlags = {
+          conf: false,
+          steamExe: false,
+          steamSetupExe: false
+        }
+        setBottleFs(flags)
+        mockedSpawnAsync.mockImplementation(async () => {
+          flags.conf = true
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+
+        expect(result.status).toBe('done')
+        expect(mockedSet).toHaveBeenCalledWith('bottleName', 'GameLibSteam')
+      })
+    })
+
     test('short-circuits to {status:"done"} when the bottle is fully ready — conf + steam.exe (no download, no create)', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
