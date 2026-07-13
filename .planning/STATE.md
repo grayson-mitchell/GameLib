@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: ready_to_plan
-stopped_at: Phase 17 complete (17/17) — run /gsd:secure-phase 17, then Phase 19 (18 already done)
-last_updated: 2026-07-13T11:23:55.919Z
-last_activity: 2026-07-13 -- Phase 17 execution started
+status: ready_to_execute
+stopped_at: Phase 19 planned (8 plans, CXIDX-01..13) + plan-checker PASS — run /gsd-execute-phase 19
+last_updated: 2026-07-14T00:00:00.000Z
+last_activity: 2026-07-14 -- Phase 19 planned via chunked mode; 2 plan-checker blockers closed
 progress:
   total_phases: 5
   completed_phases: 1
@@ -36,7 +36,7 @@ Last activity: 2026-07-13 -- Phase 17 complete: 17-17 gap closure (CR-01 data-lo
 |-------|------|--------|
 | 17 | Steam on macOS via CrossOver/Wine | Complete & secured (2026-07-13) — 17 plans, UAT 7/7, VERIFICATION 6/6, code-review CR-01/WR resolved (17-17), SECURITY threats_open:0 (21/21) |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
-| 19 | CrossOver Compatibility Index (macOS) | Not started — CONTEXT/RESEARCH/UI-SPEC only, no plans |
+| 19 | CrossOver Compatibility Index (macOS) | Planned (2026-07-14) — 8 plans across 4 waves, reqs CXIDX-01..13, PATTERNS + threat models; plan-checker PASS after closing 2 blockers (D-02 gate enforcement, D-16 key-absence). Ready to execute |
 
 ## v1.1 Phase Map
 
