@@ -12,11 +12,13 @@ import { distance } from 'fastest-levenshtein'
  */
 
 /**
- * T-12-01 (ReDoS guard, preserved from dedup.ts / T-20-01): EDITION_SUFFIXES
- * and DLC_KEYWORDS are fixed, hardcoded, developer-controlled constants.
- * They must NEVER be accepted from a config file, IPC payload, or any store
- * API response — the only regex construction below interpolates these
- * trusted literals, never untrusted title strings (T-12-05).
+ * T-12-01 (ReDoS guard, preserved from dedup.ts / T-20-01): EDITION_SUFFIXES,
+ * DLC_KEYWORDS, and PRODUCT_VARIANT_KEYWORDS (T-a7g-01) are fixed, hardcoded,
+ * developer-controlled constants. They must NEVER be accepted from a config
+ * file, IPC payload, or any store API response — the only regex construction
+ * below interpolates these trusted literals, never untrusted title strings
+ * (T-12-05). PRODUCT_VARIANT_KEYWORDS is matched via plain substring
+ * `.includes()` only — no regex is ever constructed from it.
  */
 const EDITION_SUFFIXES = [
   'game of the year edition',
@@ -24,7 +26,6 @@ const EDITION_SUFFIXES = [
   'goty',
   'definitive edition',
   'enhanced edition',
-  'remastered',
   'anniversary edition',
   'complete edition',
   'ultimate edition',
@@ -44,6 +45,17 @@ const DLC_KEYWORDS = [
   'bonus content',
   'upgrade pack'
 ] as const
+
+/**
+ * Quick task 260715-a7g: a remaster/remake is a DIFFERENT product from the
+ * original release — owning the original grants nothing. Unlike the
+ * EDITION_SUFFIXES above (deluxe/GOTY/definitive/collection/etc.), which are
+ * the SAME base game and must keep matching, 'remaster'/'remake' are
+ * deliberately NOT stripped by normalizeTitle and are instead used as a
+ * product-differentiator guard (isRemasterFalsePositiveRisk) mirroring the
+ * DLC guard below. 'remaster' substring-covers 'remastered' via `.includes()`.
+ */
+const PRODUCT_VARIANT_KEYWORDS = ['remaster', 'remake'] as const
 
 /**
  * HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback, D-02):
@@ -106,8 +118,28 @@ export function isDlcFalsePositiveRisk(a: string, b: string): boolean {
   )
 }
 
+/**
+ * Defense-in-depth guard, mirroring isDlcFalsePositiveRisk: a remaster or
+ * remake is a distinct product from the original release, so an original
+ * title that lacks the keyword must never match a longer title that carries
+ * it — regardless of the computed similarity score. An exact remaster title
+ * matched against itself (both carry the keyword) is unaffected.
+ */
+export function isRemasterFalsePositiveRisk(a: string, b: string): boolean {
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a]
+  const longerLower = longer.toLowerCase()
+  const shorterLower = shorter.toLowerCase()
+  return PRODUCT_VARIANT_KEYWORDS.some(
+    (kw) => longerLower.includes(kw) && !shorterLower.includes(kw)
+  )
+}
+
 export function fuzzyMatch(humbleTitle: string, steamTitle: string): boolean {
-  if (isDlcFalsePositiveRisk(humbleTitle, steamTitle)) return false
+  if (
+    isDlcFalsePositiveRisk(humbleTitle, steamTitle) ||
+    isRemasterFalsePositiveRisk(humbleTitle, steamTitle)
+  )
+    return false
   return (
     titleSimilarity(humbleTitle, steamTitle) >= HUMBLE_FUZZY_MATCH_THRESHOLD
   )
