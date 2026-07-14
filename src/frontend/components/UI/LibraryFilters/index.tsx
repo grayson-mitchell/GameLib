@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import ToggleSwitch from '../ToggleSwitch'
 import { useTranslation } from 'react-i18next'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
-import { Category, PlatformsFilters } from 'frontend/types'
+import { Category, CrossoverRatingFilters, PlatformsFilters } from 'frontend/types'
 import ContextProvider from 'frontend/state/ContextProvider'
 import type { Runner } from 'common/types'
 import Dropdown from '../Dropdown'
@@ -32,6 +32,8 @@ export default function LibraryFilters() {
     setStoresFilters,
     platformsFilters,
     setPlatformsFilters,
+    crossoverRatingFilters,
+    setCrossoverRatingFilters,
     showSupportOfflineOnly,
     setShowSupportOfflineOnly,
     showThirdPartyManagedOnly,
@@ -93,6 +95,16 @@ export default function LibraryFilters() {
     setPlatformsFilters(newFilters)
   }
 
+  // D-17: macOS-only, multi-select opt-out CrossOver-rating filter — mirrors
+  // togglePlatformFilter's spread-and-flip shape, NOT the tri-state
+  // showHidden/showNonAvailable chain (a rating filter is inherently
+  // multi-select, not off/show/only).
+  const toggleCrossoverRatingFilter = (tier: keyof CrossoverRatingFilters) => {
+    const currentValue = crossoverRatingFilters[tier]
+    const newFilters = { ...crossoverRatingFilters, [tier]: !currentValue }
+    setCrossoverRatingFilters(newFilters)
+  }
+
   const setPlatformOnly = (plat: string) => {
     let newFilters = { win: false, linux: false, mac: false, browser: false }
     newFilters = { ...newFilters, [plat]: true }
@@ -152,6 +164,38 @@ export default function LibraryFilters() {
     return toggleWithOnly(toggle, onOnlyClick)
   }
 
+  // t('header.show_crossover_gold', 'Runs great (gold)')
+  // t('header.show_crossover_silver', 'Runs well (silver)')
+  // t('header.show_crossover_bronze', 'Runs with issues (bronze)')
+  // t('header.show_crossover_wont_run', "Known not to work")
+  // t('header.show_crossover_unrated', 'Unrated / not yet checked')
+  const crossoverRatingLabels: Record<
+    keyof CrossoverRatingFilters,
+    [string, string]
+  > = {
+    gold: ['header.show_crossover_gold', 'Runs great (gold)'],
+    silver: ['header.show_crossover_silver', 'Runs well (silver)'],
+    bronze: ['header.show_crossover_bronze', 'Runs with issues (bronze)'],
+    wontRun: ['header.show_crossover_wont_run', "Known not to work"],
+    unrated: ['header.show_crossover_unrated', 'Unrated / not yet checked']
+  }
+
+  // D-17: no "only" affordance per tier — filter only, no sort. If parity
+  // with platformToggle's "only" button is ever wanted, reuse toggleWithOnly()
+  // rather than inventing a second only-button implementation.
+  const crossoverRatingToggle = (tier: keyof CrossoverRatingFilters) => {
+    const [key, defaultText] = crossoverRatingLabels[tier]
+    return (
+      <ToggleSwitch
+        key={tier}
+        htmlId={`crossover-rating-${tier}`}
+        handleChange={() => toggleCrossoverRatingFilter(tier)}
+        value={crossoverRatingFilters[tier]}
+        title={t(key, defaultText)}
+      />
+    )
+  }
+
   // t('Epic Games', 'Epic Games')
   // t('GOG', 'GOG')
   // t('Amazon Games', 'Amazon Games')
@@ -187,6 +231,13 @@ export default function LibraryFilters() {
       mac: true,
       browser: true
     })
+    setCrossoverRatingFilters({
+      gold: true,
+      silver: true,
+      bronze: true,
+      wontRun: true,
+      unrated: true
+    })
     setShowHidden('off')
     setShowNonAvailable('off')
     setShowFavourites(false)
@@ -214,6 +265,15 @@ export default function LibraryFilters() {
       {platformToggle('win')}
       {platform === 'linux' && platformToggle('linux')}
       {platform === 'darwin' && platformToggle('mac')}
+      {platform === 'darwin' && (
+        <>
+          {crossoverRatingToggle('gold')}
+          {crossoverRatingToggle('silver')}
+          {crossoverRatingToggle('bronze')}
+          {crossoverRatingToggle('wontRun')}
+          {crossoverRatingToggle('unrated')}
+        </>
+      )}
       {platformToggle('browser')}
       <hr />
       {toggleWithOnly(

@@ -1,6 +1,12 @@
 import './index.css'
 
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from 'react'
 
 import {
   ArrowBackIosNew,
@@ -59,6 +65,7 @@ import {
   HLTB,
   HumbleOriginInfo,
   InstalledInfo,
+  MacArchBadge,
   MainButton,
   PlatformSupport,
   ReportIssue,
@@ -77,6 +84,10 @@ import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import Achievements from './components/Achievements'
 import { LaunchOptionSelector } from 'frontend/screens/Settings/components'
+import {
+  useSteamBottleSetup,
+  isSteamBottleSetupActiveFor
+} from 'frontend/state/SteamBottleSetup'
 
 export default React.memo(function GamePage(): JSX.Element | null {
   const { appName, runner } = useParams() as { appName: string; runner: Runner }
@@ -91,8 +102,15 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [wikiInfo, setWikiInfo] = useState<WikiInfo | null>(null)
 
-  const { epic, gog, gameUpdates, platform, showDialogModal, connectivity } =
-    useContext(ContextProvider)
+  const {
+    epic,
+    gog,
+    steam,
+    gameUpdates,
+    platform,
+    showDialogModal,
+    connectivity
+  } = useContext(ContextProvider)
 
   const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
 
@@ -149,6 +167,16 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isSideloaded = runner === 'sideload'
   const isBrowserGame = gameInfo?.install.platform === 'Browser'
 
+  // Phase 17 (17-11), GAP 3 gap-closure: single source of truth shared with
+  // the guided bottle-setup toast (SteamBottleSetup.tsx) — see
+  // isSteamBottleSetupActiveFor docstring in frontend/state/SteamBottleSetup.ts.
+  const steamBottleSetup = useSteamBottleSetup()
+  const settingUpBottle = isSteamBottleSetupActiveFor(
+    steamBottleSetup,
+    appName,
+    runner
+  )
+
   const isInstalling = status === 'installing'
   const isImporting = status === 'importing'
   const isPlaying = status === 'playing'
@@ -201,7 +229,14 @@ export default React.memo(function GamePage(): JSX.Element | null {
       }
     }
     updateGameInfo()
-  }, [status, gog.library, epic.library, isMoving])
+    // GAP-17-BOTTLE-INSTALL-NOT-RECOGNIZED: steam.library must be a dependency
+    // here (mirroring gog.library/epic.library) so a backend-pushed install-state
+    // change (focus-triggered reconcile or the bottle install poller's 'done'
+    // completion) actually triggers a getGameInfo() refetch for the steam runner.
+    // Without this, GamePage's local `gameInfo` state — seeded once from
+    // location.state at mount — never refreshes, and the button stays stuck on
+    // Install even after the ACF confirms the game is fully installed.
+  }, [status, gog.library, epic.library, steam.library, isMoving])
 
   useEffect(() => {
     const updateConfig = async () => {
@@ -274,6 +309,19 @@ export default React.memo(function GamePage(): JSX.Element | null {
       }
     })
   }, [appName])
+
+  // Force-refetch wiki info bypassing the 30-day cache. Unlike the initial
+  // useEffect (which gates on applegamingwiki/howlongtobeat/pcgamingwiki), this
+  // path accepts any non-null result so a codeweavers-only update still lands.
+  const refreshWikiInfo = useCallback(async () => {
+    const info = await window.api.getWikiGameInfo(
+      gameInfo.title,
+      appName,
+      runner,
+      true
+    )
+    if (info) setWikiInfo(info)
+  }, [gameInfo.title, appName, runner])
 
   useEffect(() => {
     // when the user clicks the Play button, we disable it so the user can't click it again
@@ -361,6 +409,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
         queued: isQueued,
         reparing: isReparing,
         sideloaded: isSideloaded,
+        settingUpBottle,
         syncing: isSyncing,
         uninstalling: isUninstalling,
         updating: isUpdating,
@@ -369,11 +418,11 @@ export default React.memo(function GamePage(): JSX.Element | null {
       },
       statusContext,
       status,
-      wikiInfo
+      wikiInfo,
+      refreshWikiInfo
     }
 
     const hasWikiInfo =
-      wikiInfo?.applegamingwiki ||
       wikiInfo?.howlongtobeat ||
       wikiInfo?.pcgamingwiki?.metacritic.score ||
       wikiInfo?.pcgamingwiki?.opencritic.score ||
@@ -445,6 +494,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                       <div className="store-icon">
                         <StoreLogos runner={runner} />
                       </div>
+                      <MacArchBadge gameInfo={gameInfo} isMac={isMac} />
 
                       <h1 style={{ opacity: art_logo ? 0 : 1 }}>{title}</h1>
                       <Genres
@@ -547,6 +597,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           className="infoTab"
                         >
                           <PlatformSupport gameInfo={gameInfo} />
+                          <AppleWikiInfo gameInfo={gameInfo} />
                           <DownloadSizeInfo gameInfo={gameInfo} />
                           <InstalledInfo gameInfo={gameInfo} />
                           <CloudSavesSync gameInfo={gameInfo} />
@@ -561,7 +612,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
                           <Scores gameInfo={gameInfo} />
                           <HLTB />
                           <CompatibilityInfo gameInfo={gameInfo} />
-                          <AppleWikiInfo gameInfo={gameInfo} />
                         </TabPanel>
 
                         <TabPanel
@@ -611,6 +661,13 @@ export default React.memo(function GamePage(): JSX.Element | null {
       storage.removeItem(appName)
       return window.api.removeFromDMQueue(appName)
     }
+
+    // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
+    // already active for this game — do NOT re-dispatch install() while it
+    // provisions (isBottleReady() would still be false, so this would just
+    // re-flash 'queued' and revert with no progress; see MainButton/GameStatus
+    // for the corresponding button/status reflection).
+    if (settingUpBottle) return
 
     // Steam: bypass install-location modal — delegate straight to SteamGame.install() (D-04)
     if (gameInfo.runner === 'steam' && !is_installed) {

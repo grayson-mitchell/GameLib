@@ -31,7 +31,14 @@ import {
 } from 'frontend/helpers/library'
 import RecentlyPlayed from './components/RecentlyPlayed'
 import LibraryContext from './LibraryContext'
-import { Category, FilterMode, PlatformsFilters, StoresFilters } from 'frontend/types'
+import {
+  Category,
+  CrossoverRatingFilters,
+  FilterMode,
+  PlatformsFilters,
+  StoresFilters
+} from 'frontend/types'
+import useGlobalState from 'frontend/state/GlobalStateV2'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
@@ -135,6 +142,37 @@ export default React.memo(function Library(): JSX.Element {
     storage.setItem('platformsFilters', JSON.stringify(newFilters))
     setPlatformsFilters_(newFilters)
   }
+
+  // D-17: macOS-only CrossOver-rating filter, same persisted-object shape as
+  // platformsFilters (default all true — opt-out, not tri-state).
+  let initialCrossoverRatingFilters: CrossoverRatingFilters
+  const crossoverRatingFiltersString = storage.getItem(
+    'crossoverRatingFilters'
+  )
+  if (crossoverRatingFiltersString) {
+    initialCrossoverRatingFilters = JSON.parse(
+      crossoverRatingFiltersString
+    ) as CrossoverRatingFilters
+  } else {
+    initialCrossoverRatingFilters = {
+      gold: true,
+      silver: true,
+      bronze: true,
+      wontRun: true,
+      unrated: true
+    }
+  }
+
+  const [crossoverRatingFilters, setCrossoverRatingFilters_] =
+    useState<CrossoverRatingFilters>(initialCrossoverRatingFilters)
+
+  const setCrossoverRatingFilters = (newFilters: CrossoverRatingFilters) => {
+    storage.setItem('crossoverRatingFilters', JSON.stringify(newFilters))
+    setCrossoverRatingFilters_(newFilters)
+  }
+
+  // 19-06 slice: app_name -> rating|null; absent = never looked up (D-16).
+  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
 
   const [filterText, setFilterText] = useState('')
 
@@ -589,10 +627,34 @@ export default React.memo(function Library(): JSX.Element {
       }
     }
 
+    // D-17: macOS-only CrossOver-rating filter. A game absent from the
+    // crossoverRatings slice was never looked up (non-macOS, or D-02 gate
+    // closed) — that is "no signal", not "unrated", and must never be
+    // filtered out here.
+    if (platform === 'darwin') {
+      const crossoverRatingTier = (
+        rating: number | null
+      ): keyof CrossoverRatingFilters => {
+        if (rating === null) return 'unrated'
+        if (rating >= 5) return 'gold'
+        if (rating === 4) return 'silver'
+        if (rating === 3) return 'bronze'
+        return 'wontRun'
+      }
+
+      library = library.filter((game) => {
+        const rating = crossoverRatings[game.app_name]
+        if (rating === undefined) return true
+        return crossoverRatingFilters[crossoverRatingTier(rating)]
+      })
+    }
+
     return library
   }, [
     storesFilters,
     platformsFilters,
+    crossoverRatingFilters,
+    crossoverRatings,
     epic.library,
     gog.library,
     amazon.library,
@@ -717,6 +779,7 @@ export default React.memo(function Library(): JSX.Element {
       value={{
         storesFilters,
         platformsFilters,
+        crossoverRatingFilters,
         layout,
         showHidden,
         showFavourites: showFavouritesLibrary,
@@ -726,6 +789,7 @@ export default React.memo(function Library(): JSX.Element {
         setStoresFilters,
         handleLayout: handleLayout,
         setPlatformsFilters,
+        setCrossoverRatingFilters,
         handleSearch: setFilterText,
         setShowHidden: handleShowHidden,
         setShowFavourites: handleShowFavourites,

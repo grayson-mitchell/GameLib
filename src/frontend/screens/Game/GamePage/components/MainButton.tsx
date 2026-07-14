@@ -53,7 +53,11 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.notInstallable ||
     is.importing ||
     // Steam installs cannot be cancelled from GamerLib — disable the button while polling (D-07)
-    (gameInfo.runner === 'steam' && is.installing)
+    (gameInfo.runner === 'steam' && is.installing) ||
+    // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
+    // active for this game — disable Install so a click cannot re-dispatch
+    // a no-op install while setup is in progress
+    is.settingUpBottle
 
   function getPlayLabel(): React.ReactNode {
     if (is.syncing) {
@@ -159,6 +163,17 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="buttonWithIcon">
           <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
           {t('status.steamInstalling', 'Steam installing')}
+        </span>
+      )
+    }
+
+    // Phase 17 (17-11), GAP 3 gap-closure: guided bottle-setup is active for
+    // this game — mirror the toast instead of falling through to "Install"
+    if (is.settingUpBottle) {
+      return (
+        <span className="buttonWithIcon">
+          <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
+          {t('status.settingUpBottle', 'Setting up Steam…')}
         </span>
       )
     }

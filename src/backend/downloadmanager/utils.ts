@@ -6,6 +6,7 @@ import {
   sendGameStatusUpdate
 } from '../utils'
 import { DMStatus, InstallParams, Runner } from 'common/types'
+import { InstallResult } from 'common/types/game_manager'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
@@ -85,10 +86,11 @@ async function installQueueElement(params: InstallParams): Promise<{
     )
   }
 
+  let deferredToSetup = false
   try {
     downloadFixesFor(appName, runner)
 
-    const { status, error } = await libraryManagerMap[runner]
+    const installResult: InstallResult = await libraryManagerMap[runner]
       .getGame(appName)
       .install({
         path: path.replaceAll("'", ''),
@@ -99,6 +101,9 @@ async function installQueueElement(params: InstallParams): Promise<{
         build,
         branch
       })
+    const { status, error } = installResult
+
+    deferredToSetup = installResult.deferredToSetup ?? false
 
     if (status === 'error') {
       errorMessage(error ?? '')
@@ -111,7 +116,11 @@ async function installQueueElement(params: InstallParams): Promise<{
   } finally {
     // Steam: ACF poller emits the real done — suppress it here to prevent
     // the installing→done→installing badge flash (GAME-02).
-    if (runner !== 'steam') {
+    //
+    // EXCEPTION (Phase 17): a bottle guided-setup deferral installed nothing and
+    // started no poller, so nothing else will clear the transient 'installing'
+    // badge — clear it here so the game doesn't appear stuck "installing".
+    if (runner !== 'steam' || deferredToSetup) {
       sendGameStatusUpdate({
         appName,
         runner,

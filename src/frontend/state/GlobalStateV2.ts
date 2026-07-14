@@ -38,6 +38,13 @@ interface GlobalStateV2 {
 
   gameOverrides: Record<string, GameOverride>
   setGameOverrides: (overrides: Record<string, GameOverride>) => void
+
+  // Phase 19 (Plan 06), D-11/D-16: display-only three-state CrossOver
+  // rating map (`number` = matched rating, `null` = looked-up-but-absent,
+  // key-absent = never looked up). The grid reads this synchronously — no
+  // component writes back to it, and reading it never triggers a fetch.
+  crossoverRatings: Record<string, number | null>
+  setCrossoverRatings: (ratings: Record<string, number | null>) => void
 }
 
 const useGlobalStateRaw = create<GlobalStateV2>()((set) => ({
@@ -82,6 +89,9 @@ const useGlobalStateRaw = create<GlobalStateV2>()((set) => ({
 
   gameOverrides: gameOverridesStore.get('overrides', {}),
   setGameOverrides: (gameOverrides) => set({ gameOverrides }),
+
+  crossoverRatings: {},
+  setCrossoverRatings: (crossoverRatings) => set({ crossoverRatings }),
 
   refreshingWineVersions: false,
   refreshWineVersions: (fetch) => {

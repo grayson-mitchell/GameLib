@@ -45,6 +45,8 @@ export interface ContextType {
   refreshLibrary: (options: RefreshOptions) => Promise<void>
   refreshing: boolean
   refreshingInTheBackground: boolean
+  // True while Steam per-game metadata/art is streaming in the background.
+  steamMetadataSyncing: boolean
   hiddenGames: {
     list: HiddenGame[]
     add: (appNameToHide: string, appTitle: string) => void
@@ -242,14 +244,28 @@ export interface PlatformsFilters {
   browser: boolean
 }
 
+// D-17: macOS-only CrossOver-rating library filter. Deliberately NOT
+// `FilterMode` (tri-state off/show/only) — a rating filter is inherently
+// multi-select, mirroring the `PlatformsFilters` shape (default all `true`,
+// opt-out semantics). See LibraryFilters/index.tsx + Library/index.tsx.
+export interface CrossoverRatingFilters {
+  gold: boolean
+  silver: boolean
+  bronze: boolean
+  wontRun: boolean
+  unrated: boolean
+}
+
 export type FilterMode = 'off' | 'show' | 'only'
 
 export interface LibraryContextType {
   storesFilters: StoresFilters
   platformsFilters: PlatformsFilters
+  crossoverRatingFilters: CrossoverRatingFilters
   filterText: string
   setStoresFilters: (filters: StoresFilters) => void
   setPlatformsFilters: (filters: PlatformsFilters) => void
+  setCrossoverRatingFilters: (filters: CrossoverRatingFilters) => void
   handleLayout: (value: string) => void
   handleSearch: (input: string) => void
   layout: string
@@ -306,6 +322,7 @@ export interface GameContextType {
     queued: boolean
     reparing: boolean
     sideloaded: boolean
+    settingUpBottle: boolean
     syncing: boolean
     uninstalling: boolean
     updating: boolean
@@ -315,6 +332,7 @@ export interface GameContextType {
   statusContext?: string
   status: Status | undefined
   wikiInfo: WikiInfo | null
+  refreshWikiInfo?: () => Promise<void>
 }
 
 export type DMQueue = {

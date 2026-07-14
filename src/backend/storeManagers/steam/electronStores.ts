@@ -1,10 +1,20 @@
 import { TypeCheckedStoreBackend } from '../../electron_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
+import type { SteamBottleConfig } from 'common/types/steam'
 
 const configStore = new TypeCheckedStoreBackend('steamConfigStore', {
   cwd: 'steam_store'
 })
+
+// ── Phase 17 (17-02): dedicated Steam CrossOver bottle settings store ───────
+// A DEDICATED store (not a phantom GameConfig entry — see RESEARCH.md
+// "Alternatives Considered") persisting the bottle's own Wine engine +
+// provisioned/login state, independent of configStore (auth-only).
+const steamBottleConfigStore = new TypeCheckedStoreBackend(
+  'steamBottleConfigStore',
+  { cwd: 'steam_store' }
+)
 
 // ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
 const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
@@ -39,6 +49,30 @@ export interface SteamMetadataCacheEntry {
   // distinguish "platform support never captured" from a genuine Windows-only
   // (is_mac_native/is_linux_native === false) verdict, so it can self-heal exactly once.
   platformsCaptured?: boolean
+  /** MAC32-01/03: resolved macOS build architecture. 'unknown' default is
+   * implicit (absent key) — NEVER infer '32' from a low/unparseable min-OS
+   * signal (the false-flag trap, see games.ts isBottleEligible). Direction B
+   * (18-02): set from the store-API mac_requirements min-OS heuristic
+   * pre-install (never '32' — see macArchFromMinOS); corrected to '32' only
+   * by the post-install Mach-O ground-truth check (Plan 18-03). */
+  mac_arch?: '32' | '64' | 'unknown'
+  /** True once the post-install lipo/file check has run and confirmed or
+   * corrected mac_arch — prevents re-shelling-out on every launch(). */
+  mac_arch_verified?: boolean
+  /** MAC32-cache-shape (LOCKED, CONTEXT.md; reconciled 18-02 direction B):
+   * provenance of the mac_arch verdict — 'minos' (store-API mac_requirements
+   * min-OS pre-install heuristic) or 'macho' (post-install Mach-O ground
+   * truth, i.e. a Steam-corrected fact). Forward-compat for a future
+   * community override export (Phase 19); do not omit even though nothing
+   * reads it yet. */
+  mac_arch_source?: 'minos' | 'macho'
 }
 
-export { configStore, steamLibraryStore, steamMetadataStore, steamSyncStore }
+export type { SteamBottleConfig }
+export {
+  configStore,
+  steamLibraryStore,
+  steamMetadataStore,
+  steamSyncStore,
+  steamBottleConfigStore
+}

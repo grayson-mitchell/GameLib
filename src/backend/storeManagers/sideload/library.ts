@@ -102,6 +102,10 @@ export default class SideloadLibraryManager implements LibraryManager {
     }
   }
 
+  getListOfGames(): GameInfo[] {
+    return libraryStore.get('games', [])
+  }
+
   async listUpdateableGames(): Promise<string[]> {
     logWarning(
       `listUpdateableGames not implemented on Sideload Library Manager`

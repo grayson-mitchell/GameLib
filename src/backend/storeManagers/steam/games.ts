@@ -15,10 +15,24 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
+import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore } from './electronStores'
-import { library, pendingFetches } from './state'
+import { steamMetadataStore, steamLibraryStore } from './electronStores'
+import {
+  library,
+  pendingFetches,
+  acquireMetadataSlot,
+  releaseMetadataSlot,
+  METADATA_FETCH_TIMEOUT_MS
+} from './state'
 import { startInstallPolling, startUninstallPolling } from './library'
+import {
+  isBottleReady,
+  tellBottledSteamToInstall,
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall,
+  getSteamBottleSettings
+} from './bottle'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
@@ -74,6 +88,128 @@ export function parseSteamStorageRequirement(
     TB: 1024 ** 4
   }
   return Math.round(value * (multipliers[unit] ?? 1))
+}
+
+interface MacOsVersion {
+  major: number
+  minor: number
+}
+
+/**
+ * Named macOS release codenames → major.minor, used ONLY as a fallback when
+ * the isolated OS segment has no digit-based version at all. Not observed as
+ * necessary in the live-verified corpus (18-RESEARCH.md Pattern 1) — kept for
+ * forward compatibility with future store copy that might drop numbers
+ * entirely (e.g. "macOS Sequoia" with no digit).
+ */
+const MACOS_CODENAME_VERSION: Record<string, MacOsVersion> = {
+  sequoia: { major: 15, minor: 0 },
+  sonoma: { major: 14, minor: 0 },
+  ventura: { major: 13, minor: 0 },
+  monterey: { major: 12, minor: 0 },
+  'big sur': { major: 11, minor: 0 },
+  catalina: { major: 10, minor: 15 },
+  mojave: { major: 10, minor: 14 },
+  'high sierra': { major: 10, minor: 13 },
+  sierra: { major: 10, minor: 12 },
+  'el capitan': { major: 10, minor: 11 },
+  yosemite: { major: 10, minor: 10 },
+  mavericks: { major: 10, minor: 9 },
+  'mountain lion': { major: 10, minor: 8 },
+  lion: { major: 10, minor: 7 },
+  'snow leopard': { major: 10, minor: 6 },
+  leopard: { major: 10, minor: 5 }
+}
+
+function extractVersionTokens(text: string): MacOsVersion[] {
+  // Matches "10.15", "10.9.3", "12.3" — deliberately requires a literal dot,
+  // so bare numbers like "32" (from "32/64-bit") or "1" (from "1GB RAM")
+  // never false-match (T-18-02-01/02: floor-only, never asserts '32').
+  const matches = [...text.matchAll(/\b(\d{1,2})\.(\d{1,2})(?:\.\d{1,2})?\b/g)]
+  return matches.map((m) => ({ major: Number(m[1]), minor: Number(m[2]) }))
+}
+
+/**
+ * Parses the Steam appdetails `mac_requirements.minimum` HTML/text blob and
+ * returns the LOWEST macOS version evidenced in it — i.e. the true minimum
+ * requirement, even when the string lists multiple named releases as
+ * alternatives ("Leopard 10.5.8, Snow Leopard 10.6.3, or higher" means
+ * "10.5.8 or higher", not "10.6.3 or higher").
+ *
+ * Returns null when nothing extractable — callers MUST treat null as
+ * 'unknown', mirroring parseSteamStorageRequirement's undefined-on-no-match
+ * convention. The HTML is never eval'd or rendered (T-06-02/T-18-02-01).
+ */
+export function parseSteamMacMinOSVersion(
+  htmlOrText: string | undefined
+): MacOsVersion | null {
+  if (!htmlOrText || typeof htmlOrText !== 'string') return null
+
+  // Strip HTML tags FIRST so the "OS" label and its value are never split
+  // across a tag boundary (the canonical shape wraps ONLY the label in
+  // <strong>...</strong>, with the actual value sitting outside the tag —
+  // isolating on '<' before stripping would truncate the label match to an
+  // empty string). Handles all 5 observed shapes uniformly once tag-free:
+  //  a) '<li><strong>OS:</strong> 10.9.3 (Mavericks)<br></li>'
+  //  b) '<strong>OS: OSX 10.9.5 - 10.11.6</strong>' (label+value co-located)
+  //  c) 'OS: Snow Leopard 10.6.8, ...<br />' (no <li>/<ul> wrapper)
+  //  d) 'OS X version Leopard 10.5.8, Snow Leopard 10.6.3, 1GB RAM,...'
+  //     (fully tagless — no delimiter after the OS clause at all)
+  //  e) 'mac_requirements: []' — caller never invokes this fn (guarded by
+  //     optional chaining at the call site: data?.mac_requirements?.minimum)
+  const tagFree = htmlOrText.replace(/<[^>]*>/g, ' ')
+
+  // \b requires a word boundary before "OS" so mid-word substrings (e.g.
+  // "Chaos") never false-match; "X?" covers the "OS X" label variant.
+  const labelMatch = tagFree.match(/\bOS(?:\s*X)?\s*:?\s*(.*)/i)
+  if (!labelMatch) return null
+
+  let segment = labelMatch[1]
+  // Bound the tagless/run-on case (d): stop at the next competing spec
+  // keyword so a Processor/Memory figure never bleeds into the version
+  // extraction.
+  const stopIdx = segment.search(
+    /\b(processor|cpu|memory|ram|graphics|gpu|storage|network|additional)\b/i
+  )
+  if (stopIdx > -1) segment = segment.slice(0, stopIdx)
+
+  const versions = extractVersionTokens(segment)
+  if (versions.length > 0) {
+    return versions.reduce((min, v) =>
+      v.major < min.major || (v.major === min.major && v.minor < min.minor)
+        ? v
+        : min
+    )
+  }
+
+  const lowerSegment = segment.toLowerCase()
+  for (const [name, version] of Object.entries(MACOS_CODENAME_VERSION)) {
+    if (lowerSegment.includes(name)) return version
+  }
+
+  return null
+}
+
+/**
+ * MAC32-01 (direction B): the pre-install arch signal, derived from the
+ * SAME appdetails response `is_mac_native` already reads (no new network
+ * call, no PICS/steam-user involvement — see games.ts fetchMetadataIfNeeded).
+ *
+ * NEVER returns '32' — a low min-OS proves nothing about bitness (A Hat in
+ * Time: min-OS 10.11.6, genuinely 64-bit — 18-RESEARCH.md Pattern 1 corpus).
+ * Catalina's 32-bit removal only proves a FLOOR: min-OS >= 10.15 implies the
+ * binary MUST be 64-bit (Apple physically cannot run i386 on 10.15+), but
+ * min-OS < 10.15 implies nothing either way. The return type has no '32'
+ * member — Pitfall 3 / T-18-02-02 is enforced at the type level, not by
+ * convention. Only the post-install Mach-O check (Plan 18-03) may assert '32'.
+ */
+export function macArchFromMinOS(
+  minHtml: string | undefined
+): '64' | 'unknown' {
+  const v = parseSteamMacMinOSVersion(minHtml)
+  if (!v) return 'unknown'
+  const isCatalinaOrNewer = v.major > 10 || (v.major === 10 && v.minor >= 15)
+  return isCatalinaOrNewer ? '64' : 'unknown'
 }
 
 /**
@@ -138,8 +274,17 @@ export default class SteamGame implements Game {
    * autoSyncSaves resolves false by default — Steam Cloud is Steam-managed;
    * launcher.ts:151 skips syncSaves when autoSyncSaves is false.
    * Analog: nile/games.ts lines 65-68.
+   *
+   * D-11/Phase 17: a confirmed-not-native macOS game resolves the dedicated
+   * bottle's GameSettings (getSteamBottleSettings) instead of an empty
+   * per-appId GameConfig — launcher.ts's pre-launch checkWineBeforeLaunch
+   * (which now runs for these games since isNative() is false) must see the
+   * bottle's real wineVersion/wineCrossoverBottle, not an empty config.
    */
   async getSettings(): Promise<GameSettings> {
+    if (this.isBottleEligible()) {
+      return getSteamBottleSettings()
+    }
     const gameConfig = GameConfig.get(this.appId)
     return gameConfig.config || (await gameConfig.getSettings())
   }
@@ -185,10 +330,21 @@ export default class SteamGame implements Game {
     // Guard: if a fetch is already in-flight for this appId, return immediately
     // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
     if (pendingFetches.has(this.appId)) return
+    // Notify the frontend a background metadata/art sync is starting (the first
+    // pending fetch flips the indicator on; the last one flips it off below).
+    if (pendingFetches.size === 0) {
+      sendFrontendMessage('steamMetadataSyncing', { syncing: true })
+    }
     pendingFetches.add(this.appId)
 
+    // Throttle: wait for a concurrency slot so a cold cache doesn't open
+    // hundreds of parallel Steam CDN connections at once (mass ETIMEDOUT).
+    await acquireMetadataSlot()
+
     try {
-      const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`)
+      const resp = await axios.get(`${STEAM_STORE_API}?appids=${this.appId}`, {
+        timeout: METADATA_FETCH_TIMEOUT_MS
+      })
 
       const entry = resp.data?.[this.appId]
       const data = entry?.data
@@ -240,6 +396,22 @@ export default class SteamGame implements Game {
       const is_mac_native = !!data.platforms?.mac
       const is_linux_native = !!data.platforms?.linux
 
+      // MAC32-01 (direction B): derive the pre-install arch hint from the
+      // SAME appdetails response — no separate network/PICS call. Gated:
+      //  1. Never overwrite a Mach-O-verified entry (post-install ground
+      //     truth always wins — a cheap heuristic must not regress a
+      //     confirmed fact, T-18-02-04).
+      //  2. Only compute when is_mac_native is true (Pitfall 2) — a false
+      //     is_mac_native already routes correctly via the existing
+      //     isBottleEligible() D-11 OR-branch, making this signal moot.
+      const existingMeta = steamMetadataStore.get(this.appId)
+      const macArchVerified = existingMeta?.mac_arch_verified === true
+      const mac_arch: GameInfo['mac_arch'] = macArchVerified
+        ? existingMeta.mac_arch
+        : is_mac_native
+          ? macArchFromMinOS(data.mac_requirements?.minimum)
+          : existingMeta?.mac_arch
+
       const updated: GameInfo = {
         ...current,
         title: data.name ?? current.title,
@@ -247,14 +419,24 @@ export default class SteamGame implements Game {
         art_square,
         is_mac_native,
         is_linux_native,
+        mac_arch,
         // GAP-B: clear any stale delisted flag — the app is available again.
         is_delisted: false,
+        // Phase 17 D-08 reconciliation: this push only happens after a
+        // successful appdetails fetch, which is exactly when platforms are
+        // captured — mirrors steamMetadataStore.platformsCaptured below.
+        steamPlatformsCaptured: true,
         extra
       }
 
       // Persist metadata for next session (D-05, indefinite cache).
       // platformsCaptured:true records that appdetails `platforms` was read, so
       // getGameInfo won't re-fetch this game again for platform data (self-heal once).
+      // T-18-02-04: steamMetadataStore.set REPLACES the entire entry (electron-store
+      // Store.set), so a Mach-O-verified verdict (mac_arch_verified/mac_arch_source)
+      // must be explicitly carried forward here — otherwise the NEXT
+      // fetchMetadataIfNeeded call (next launch/resync) would silently drop the
+      // verified flag and regress mac_arch back to the min-OS heuristic.
       steamMetadataStore.set(this.appId, {
         art_cover,
         art_square,
@@ -262,7 +444,18 @@ export default class SteamGame implements Game {
         is_mac_native,
         is_linux_native,
         is_delisted: false,
-        platformsCaptured: true
+        platformsCaptured: true,
+        mac_arch,
+        ...(macArchVerified
+          ? {
+              mac_arch_verified: true as const,
+              ...(existingMeta?.mac_arch_source
+                ? { mac_arch_source: existingMeta.mac_arch_source }
+                : {})
+            }
+          : is_mac_native
+            ? { mac_arch_source: 'minos' as const }
+            : {})
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
@@ -276,7 +469,12 @@ export default class SteamGame implements Game {
         LogPrefix.Steam
       )
     } finally {
+      releaseMetadataSlot()
       pendingFetches.delete(this.appId)
+      // Last pending fetch drained — turn the sync indicator off.
+      if (pendingFetches.size === 0) {
+        sendFrontendMessage('steamMetadataSyncing', { syncing: false })
+      }
     }
   }
 
@@ -322,8 +520,49 @@ export default class SteamGame implements Game {
    * Does NOT call sendProgressUpdate — Steam owns the download with its own UI.
    * Install state is never optimistically flipped on click (D-02); badge
    * reconciliation happens when the user tabs back (focus → ACF re-read, D-01).
+   *
+   * Phase 17 (D-10/D-11): a confirmed-not-native macOS game routes through the
+   * bottled Steam client instead of native steam:// — see isBottleEligible().
    */
   async install(_args: InstallArgs): Promise<InstallResult> {
+    await this.ensurePlatformsCaptured()
+    if (this.isBottleEligible()) {
+      if (!isBottleReady()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        // Nothing was installed and no ACF poller starts here — flag the
+        // deferral so the DownloadManager clears the transient 'installing'
+        // badge instead of leaving the game stuck "installing" (the guided
+        // setup, or the user's "Not now", owns what happens next).
+        return { status: 'done', deferredToSetup: true }
+      }
+
+      logInfo(
+        `SteamGame: delegating install for appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToInstall(this.appId)
+
+      // WR-01 (17-17): only start the bottle ACF poller when the dispatch
+      // actually succeeded. A failed dispatch used to still spawn the poller,
+      // producing ~60s of false "installing" state; surface the error instead
+      // with no poller.
+      if (result.status !== 'done') {
+        return { status: 'error', error: result.error }
+      }
+
+      // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
+      // root is distinct from the native root (RESEARCH.md Pitfall 2).
+      startInstallPolling(this.appId, { source: 'bottle' })
+
+      return { status: 'done' }
+    }
+
     const url = buildSteamProtocolUrl('install', this.appId)
     if (!url) {
       return { status: 'error', error: `Invalid appId: ${this.appId}` }
@@ -345,8 +584,93 @@ export default class SteamGame implements Game {
     return { status: 'done' }
   }
 
+  /**
+   * Per-OS confirmed-not-native check (D-11).
+   *
+   * Non-macOS (Linux/Windows) always returns true — those platforms keep the
+   * native steam:// delegation unchanged; Proton is Steam's own concern.
+   *
+   * On macOS, returns true (native path) UNLESS the game has been CONFIRMED
+   * not-native via a completed appdetails fetch: `platformsCaptured === true`
+   * (a lazy-fetch has actually recorded platform data) AND `is_mac_native ===
+   * false`. A never-synced entry defaults `is_mac_native` to false in
+   * library.ts (D-11 nuance), which is ambiguous on its own — requiring
+   * platformsCaptured===true prevents a freshly-synced game (whose real
+   * platform support isn't known yet) from being misrouted into the bottle.
+   */
   isNative(): boolean {
-    return true
+    return !this.isBottleEligible()
+  }
+
+  /**
+   * True only for a CONFIRMED not-native macOS game (D-11) — the single
+   * source of truth for whether install/launch/uninstall should route through
+   * the bottled Steam client instead of the native steam:// path. Reused by
+   * isNative() here; Phase 17 Plan 05 Task 2 also reuses it from
+   * getSettings(), install(), launch(), and uninstall().
+   */
+  private isBottleEligible(): boolean {
+    if (!isMac) return false
+    const meta = steamMetadataStore.get(this.appId)
+    // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
+    // is_mac_native/platformsCaptured — a confirmed-32 game reports
+    // is_mac_native true (it DOES have a mac depot, just not a runnable one on
+    // modern macOS). Pre-install the min-OS heuristic (games.ts macArchFromMinOS)
+    // NEVER yields '32', so this branch only ever fires from Plan 18-03's
+    // post-install Mach-O ground-truth check — but the wiring lands now so
+    // routing goes live the moment 18-03 caches a '32' verdict.
+    if (meta?.mac_arch === '32') return true
+    return meta?.platformsCaptured === true && meta?.is_mac_native === false
+  }
+
+  /**
+   * Phase 17 Plan 09 (MACSTEAM-04 gap closure): forces platform data to be
+   * resolved BEFORE install()/launch()/uninstall() consult isBottleEligible(),
+   * decoupling bottle routing from the async fetchMetadataIfNeeded race
+   * (.planning/debug/steam-bottle-guided-setup-never-fires.md). Previously,
+   * isBottleEligible() only saw fresh platform data if the fire-and-forget
+   * lazy fetch (triggered by getGameInfo()) had already completed by the time
+   * the user clicked Install/Play — a cold cache or a slow/failed fetch left
+   * platformsCaptured false, silently routing a Windows-only macOS game down
+   * the native steam:// path with no guided-setup dialog.
+   *
+   * No-op on non-macOS (native steam:// delegation is unaffected) and when
+   * this appId's platforms are already captured (no redundant network on the
+   * hot path).
+   *
+   * getGameInfo() call below re-triggers the SAME lazy fetch as a fire-and-forget
+   * side effect (adding this.appId to pendingFetches synchronously). Our own
+   * explicit fetchMetadataIfNeeded() call then hits the T-2-03 dedup guard and
+   * returns immediately without a second network request — so we fall into the
+   * bounded poll below and wait for that single in-flight fetch to resolve
+   * platformsCaptured, rather than hoping it finishes before routing happens.
+   */
+  private async ensurePlatformsCaptured(): Promise<void> {
+    if (!isMac) return
+
+    const alreadyCaptured = (): boolean =>
+      steamMetadataStore.get(this.appId)?.platformsCaptured === true
+
+    if (alreadyCaptured()) return
+
+    await this.fetchMetadataIfNeeded(this.getGameInfo())
+
+    // Bounded poll for the T-2-03 dedup race: fetchMetadataIfNeeded() may have
+    // early-returned because a concurrent fetch (the getGameInfo() side effect
+    // above, or an earlier render's lazy fetch) is already in flight for this
+    // appId. Wait for it to resolve platformsCaptured, drain from
+    // pendingFetches, or hit METADATA_FETCH_TIMEOUT_MS — whichever first, so
+    // install()/launch()/uninstall() can never hang indefinitely (T-17-09-01).
+    if (!alreadyCaptured() && pendingFetches.has(this.appId)) {
+      const deadline = Date.now() + METADATA_FETCH_TIMEOUT_MS
+      while (
+        !alreadyCaptured() &&
+        pendingFetches.has(this.appId) &&
+        Date.now() < deadline
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
   }
 
   async addShortcuts(_fromMenu?: boolean): Promise<void> {
@@ -368,8 +692,13 @@ export default class SteamGame implements Game {
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
    * any URL is constructed or passed to shell.openExternal.
    *
-   * isNative() returns true, so launcher.ts skips checkWineBeforeLaunch —
-   * Proton selection is fully delegated to Steam (GAME-04 / D-06).
+   * isNative() returns true for non-eligible games, so launcher.ts skips
+   * checkWineBeforeLaunch — Proton selection is fully delegated to Steam
+   * (GAME-04 / D-06). For a bottle-eligible confirmed-not-native macOS game
+   * (D-10/D-11), isNative() is false, so launcher.ts's launchEventCallback
+   * runs checkWineBeforeLaunch BEFORE calling this method (using the
+   * getSteamBottleSettings() result from getSettings()) — this method then
+   * dispatches the actual launch to the bottled Steam client.
    *
    * Does NOT call sendGameStatusUpdate — Steam client owns the 'playing' state.
    */
@@ -379,6 +708,27 @@ export default class SteamGame implements Game {
     _args?: string[],
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
+    await this.ensurePlatformsCaptured()
+    if (this.isBottleEligible()) {
+      if (!isBottleReady()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        return false
+      }
+
+      logInfo(
+        `SteamGame: launching appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToLaunch(this.appId)
+      return result.status === 'done'
+    }
+
     const url = buildSteamProtocolUrl('rungameid', this.appId)
     if (!url) {
       // Non-numeric appId — rejection already logged by buildSteamProtocolUrl
@@ -441,6 +791,31 @@ export default class SteamGame implements Game {
    * round-trip; the focus re-read (D-01) remains as a backstop.
    */
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
+    await this.ensurePlatformsCaptured()
+    if (this.isBottleEligible()) {
+      if (!isBottleReady()) {
+        logInfo(
+          `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBottleSetupRequired', {
+          appName: this.appId
+        })
+        return { stdout: '', stderr: '' }
+      }
+
+      logInfo(
+        `SteamGame: delegating uninstall for appId ${this.appId} via the bottled Steam client`,
+        LogPrefix.Steam
+      )
+      const result = await tellBottledSteamToUninstall(this.appId)
+
+      // Bottle-scoped ACF polling (D-07) — distinct root from the native scan.
+      startUninstallPolling(this.appId, { source: 'bottle' })
+
+      return { stdout: '', stderr: result.error ?? '' }
+    }
+
     const url = buildSteamProtocolUrl('uninstall', this.appId)
     if (!url) {
       return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
@@ -472,18 +847,37 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Force-removes the game from the in-memory library Map and notifies the
-   * frontend to update its install badge immediately (is_installed: false).
+   * Marks the game not-installed in the in-memory library Map (keep-entry —
+   * mirrors pollUninstallOnce()'s 'absent' branch in library.ts) and notifies
+   * the frontend to update its install badge immediately (is_installed: false).
    * This is for cases where Steam's own uninstall dialog has already completed
    * but the in-memory state has not been reconciled via the focus ACF re-read.
-   * Analog: gog/games.ts lines 1282-1288.
+   *
+   * The entry is intentionally KEPT (never library.delete'd): removing it would
+   * orphan an owned game and drop badge-relevant fields (e.g. mac_arch:'32')
+   * during an i386-recovery forceUninstall, which — if a subsequent bottle
+   * reinstall does not complete — would leave the game permanently missing
+   * from both the in-memory library and the persisted store
+   * (GAP-18-06-FORCEUNINSTALL-ORPHAN). The spread onto `existing` preserves
+   * every other field. The mutated Map is persisted immediately to
+   * steamLibraryStore (GAP-17-BOTTLE-STORE-DIVERGENCE class) so the
+   * not-installed state cannot diverge on the next persist. When the appId is
+   * absent from the Map, no entry is fabricated and no push is made.
+   * Analog: gog/games.ts lines 1282-1288; keep-entry pattern: library.ts
+   * pollUninstallOnce() 'absent' branch (~1131-1144).
    */
   async forceUninstall(): Promise<void> {
-    const info = this.getGameInfo()
-    library.delete(this.appId)
-    sendFrontendMessage('pushGameToLibrary', { ...info, is_installed: false })
+    const existing = library.get(this.appId)
+    if (existing) {
+      const updated: GameInfo = { ...existing, is_installed: false, install: {} }
+      library.set(this.appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE / GAP-18-06: persist immediately so the
+      // not-installed (badge-preserving) state is not lost on the next persist.
+      steamLibraryStore.set('games', Array.from(library.values()))
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
     logInfo(
-      `SteamGame: force-uninstalled appId ${this.appId} from in-memory library`,
+      `SteamGame: force-uninstalled appId ${this.appId} — kept in-memory library entry marked not-installed`,
       LogPrefix.Steam
     )
   }

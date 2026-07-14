@@ -167,6 +167,33 @@
         top: 0.5rem;
       }
 
+      .macArchBadge {
+        position: absolute;
+        right: 0.5rem;
+        top: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        padding: 0 0.35rem;
+        border-radius: 6px;
+        font-size: var(--text-sm);
+        font-weight: 700;
+        line-height: 1;
+        cursor: default;
+
+        &.macArchBadge--warning {
+          background-color: var(--status-warning);
+          color: var(--body-background);
+        }
+
+        &.macArchBadge--informational {
+          background-color: var(--neutral-05);
+          color: var(--text-title);
+        }
+      }
+
       .gamePicture {
         position: absolute;
         left: 2px;

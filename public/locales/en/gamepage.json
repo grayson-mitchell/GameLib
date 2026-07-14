@@ -1,4 +1,26 @@
 {
+    "badge": {
+        "macArch32": "32-bit macOS build"
+    },
+    "bottle": {
+        "setup": {
+            "cancel": "Not now",
+            "confirm": "Set up Steam",
+            "consent": "This game needs the Windows version of Steam, which does not run natively on macOS. GameLib will download and install a full Windows Steam client (several GB) inside a dedicated CrossOver/Wine bottle, one time only. Future installs and launches of Windows-only Steam games will reuse this bottle automatically.",
+            "done": "Done",
+            "engine": "Compatibility engine",
+            "errorMessage": "Steam setup could not start: {{error}}",
+            "hangHint": "If Steam appears stuck on \"Updating Steam\", it may be waiting on its own self-update — give it a few minutes before assuming it's frozen.",
+            "login": "Finish by logging in to Steam in the window that opens.",
+            "provisioning": "Setting up Steam — this can take a while on first run.",
+            "readyForLogin": "Steam is installed in the bottle.",
+            "retry": "Try again",
+            "sameAccount": "Tip: use the same Steam account you use elsewhere in GameLib.",
+            "sharedPrefixNote": "Reuses your global shared prefix/bottle instead of a dedicated one. Not recommended for Steam — the Windows Steam client should stay in its own dedicated GameLibSteam bottle.",
+            "title": "Set up Steam for macOS",
+            "uncheckRunSteam": "On the final Steam installer screen, UNTICK \"Run Steam\" before clicking Finish — GameLib will start Steam itself once the bottle is ready."
+        }
+    },
     "box": {
         "change": {
             "message": "This will change the install location of this game, are you sure?",
@@ -181,21 +203,25 @@
     "info": {
         "canRunOffline": "Online Required",
         "clickToOpen": "Click to open",
-        "crossover-rating": "Crossover rating",
+        "crossover-rating": "Crossover emulation",
         "game-scores": "Game Scores",
         "humbleOrigin": "Includes a key from Humble Bundle: {{origin}}",
         "installedInfo": "Installed Information",
         "installedPlatform": "Installed Platform",
+        "no-compatibility-data": "No compatibility data available",
         "openLocation": "Open location",
         "path": "Install Path",
+        "proton-rating": "Proton emulation",
         "protondb-compatibility-info": "Proton Compatibility Tier",
+        "runs-via-bottle": "Runs via Windows Steam bottle",
         "size": "Size",
         "steamdeck-compatibility-info": "SteamDeck Compatibility",
         "supportedPlatforms": "Supported platforms",
         "syncsaves": "Sync Saves",
         "third-party-app": "Third-Party Manager",
+        "unrated": "Unrated",
         "version": "Version",
-        "wine-rating": "Wine rating"
+        "wine-rating": "Wine emulation"
     },
     "install": {
         "anticheat-warning": {
@@ -212,6 +238,7 @@
         "path": "Select Install Path",
         "path-not-writtable": "Warning: path might not be writable.",
         "space-after-install": "After Install",
+        "warn-crossover-wont-run": "This game is known not to run well under CrossOver on macOS. Compatibility data is community-sourced and may be wrong for your setup — you can still install it and try for yourself.",
         "wineprefix": "WinePrefix",
         "wineversion": "Wine version"
     },
@@ -325,6 +352,7 @@
         "queued": "Queued",
         "redist": "Installing Redistributables ({{redist}})",
         "reparing": "Repairing Game, please wait",
+        "settingUpBottle": "Setting up Steam…",
         "steamInstalling": "Steam installing",
         "syncingSaves": "Syncing Saves",
         "this-game-uses-third-party": "This game uses third party launcher and it is not supported yet",
