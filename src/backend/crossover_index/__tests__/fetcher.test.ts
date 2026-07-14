@@ -141,6 +141,18 @@ describe('loadIndex', () => {
     expect(stored.data).toEqual(bundledData)
   })
 
+  test('WR-04: an http:// (non-https) descriptor URL is refused before any network call is made', async () => {
+    const insecureDescriptor: IndexDescriptor<CrossoverIndex> = {
+      ...descriptor,
+      url: 'http://example.com/crossover-index.json.gz'
+    }
+    const getSpy = jest.spyOn(axiosClient, 'get')
+
+    await expect(loadIndex(insecureDescriptor)).rejects.toThrow(/https/i)
+
+    expect(getSpy).not.toHaveBeenCalled()
+  })
+
   test('an ABSENT bundled snapshot (ENOENT) is tolerated as a normal cold-start: returns null, does not throw', async () => {
     mockedReadFileSync.mockImplementationOnce(() => {
       const err = new Error('ENOENT: no such file') as NodeJS.ErrnoException

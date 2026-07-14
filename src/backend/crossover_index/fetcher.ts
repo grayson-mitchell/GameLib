@@ -96,6 +96,27 @@ function persistBundledFallback<T>(desc: IndexDescriptor<T>): T | null {
 }
 
 /**
+ * WR-04 fix: enforces T-19-03's "MUST be https" invariant at runtime,
+ * rather than leaving it as a comment-only convention on `IndexDescriptor`.
+ * The one real descriptor today (`crossoverIndexDescriptor`) is hardcoded to
+ * an `https://` URL, so this isn't reachable as shipped — but D-19's whole
+ * premise is that a second descriptor (the deferred mac-arch-overrides
+ * index) gets added "without rework," and nothing today would stop an
+ * accidental `http://` URL (or a future refactor that reads the URL from a
+ * config/remote source) from silently downgrading the transport for a
+ * payload that drives a user-facing compatibility claim. Thrown BEFORE the
+ * cache/bundled-snapshot fallback chain runs: a scheme violation is a
+ * programming error to fail loudly on (callers such as
+ * `getCodeweaversFromIndex` already catch and log), not a transient failure
+ * to gracefully degrade through.
+ */
+function assertHttps<T>(desc: IndexDescriptor<T>): void {
+  if (!desc.url.startsWith('https://')) {
+    throw new Error(`IndexDescriptor '${desc.name}' url must be https`)
+  }
+}
+
+/**
  * D-19 generic fetch → gunzip → validate → keep-last-good layer. On ANY
  * failure (schema rejection, network error, gunzip/JSON error, oversized
  * payload) it returns the last-good cached value, falling back to the
@@ -106,6 +127,8 @@ function persistBundledFallback<T>(desc: IndexDescriptor<T>): T | null {
 export async function loadIndex<T>(
   desc: IndexDescriptor<T>
 ): Promise<T | null> {
+  assertHttps(desc)
+
   const cached = crossoverIndexStore.get(desc.name) as
     | CachedIndex<T>
     | undefined
