@@ -130,7 +130,7 @@ before building on this.**
 > manifest GID or SteamID64 touch a JS `Number`. Do not use `@node-steam/vdf.parse()` on any
 > VDF containing one. `vdf-strings.mjs` in this spike is a working ~50-line replacement.
 
-### Finding 2 — depot selection requires the user's licenses, not just PICS (CRITICAL)
+### Finding 2 — depot selection requires the user's licenses, not just PICS (SOLVED — see Finding 7)
 
 The naive filter (match `oslist`/`osarch`, skip `dlcappid`, skip `sharedinstall`) reproduced
 Steam's depot set for WazHack and **failed for every multi-depot game**.
@@ -236,31 +236,101 @@ content-identity vs. bookkeeping was **empirically correct**.
 (Note this contradicts the Step 0 inference that `TargetBuildID` is "always 0 when idle" —
 Steam set it *to* the build id post-adoption. It simply isn't load-bearing either way.)
 
+### Finding 7 — the depot selection rule, solved: 11/11 exact
+
+With an authenticated connection (QR login → `steam-user` → `licenses` event), the rule below
+reproduces Steam's `InstalledDepots` **exactly for all 11 installed games — depot-for-depot
+and GID-for-GID.** Getting there took three corrections, each found by a game that broke the
+previous rule:
+
+**a. Ownership is granted at the PACKAGE level, via `depotids`.**
+
+Each owned package's `packageinfo` carries both `appids` *and* `depotids`. The depot list is
+the one that matters. Decisive evidence — two depots **byte-for-byte identical in PICS**
+(`optional=1`, `systemdefined=1`, no `oslist`, no `dlcappid`):
+
+```
+Dead Island 201741  → Steam INSTALLED it       → in an owned package's depotids: YES
+Trine 2     35724   → Steam did NOT install it → in an owned package's depotids: NO
+```
+
+Nothing in the app metadata can tell these apart. No amount of `optional`/`systemdefined`
+heuristics would ever have worked. (465 packages → 1108 owned appIds, 3527 owned depotIds.)
+
+**b. Ownership arrives through TWO channels — neither alone is sufficient.**
+
+A DLC's package grants the DLC's *appid* but does not always list its *depot id*. So a depot
+is owned if **either** it appears in an owned package's `depotids`, **or** it has a `dlcappid`
+whose app the user owns. Channel 1 alone misses Trine 2's 35723, Wasteland 3's 1522651, and
+Dead Island's 91342/91345.
+
+**c. Depots can live in the DLC's OWN app entry, not the base game's.**
+
+Wasteland 3's depot **1522651 does not exist in app 719040's PICS entry at all** — it belongs
+to DLC app 1522650 ("The Battle of Steeltown"). The base app flags this with
+`depots.hasdepotsindlc`. Enumerating only the base app's depots silently misses these; you
+must also walk `extended.listofdlc` and fetch each DLC app's own depots.
+
+**d. Language-specific depots** (`config.language`) must be filtered to the user's selected
+language — otherwise Dead Island pulls in every localisation (it over-selected 10 extra
+depots before this).
+
+The final rule lives in `select.mjs`. Include a depot iff: it is owned (either channel), is
+not a shared redistributable (`depotfromapp`/`sharedinstall`), and its `oslist` / `osarch` /
+`language` match the target (or are absent).
+
+### Finding 8 — `SizeOnDisk` is NOT a derived sum (corrects Finding 3)
+
+Finding 3 claimed `SizeOnDisk` == sum of installed depot sizes, based on WazHack and Trine 2.
+**That generalisation was wrong.** Across all 11 games, summing depot sizes is exact for
+simple games and *overshoots* on complex ones:
+
+| Game | Delta (our sum − Steam's `SizeOnDisk`) |
+|---|---|
+| WazHack, Trine 2, HOARD, Len's Island, Wasteland 2, Naheulbeuk | exact |
+| Dead Island | +863 |
+| Pillars of Eternity | +11,891,818 |
+| Wasteland 3 | +236,860,930 |
+
+Steam measures **actual bytes on disk**, not a manifest sum. Since spike 001's live test showed
+Steam recomputes its bookkeeping fields during the verify pass, `SizeOnDisk` is almost certainly
+**bookkeeping, not content identity** — but this was only *proven* on a game where our value
+was exact. Writing a slightly-high `SizeOnDisk` on a multi-depot game is **untested**.
+
+### Finding 9 — GID "drift" on two games is a pending update, not an error
+
+Civ VII and 7 Days to Die reported GID mismatches. Both sit at `StateFlags 6`
+(`UpdateRequired`): their `.acf` is pinned to the **installed** build while PICS reports the
+**latest**. Their `.acf` is internally consistent (its own depot sizes sum to its own
+`SizeOnDisk`) — it is simply stale. For a fresh install we *want* the latest build, so our
+values are correct and the ground truth is the thing that's out of date.
+
+**Rule:** when comparing against an existing install, mask out apps with
+`StateFlags & UpdateRequired`.
+
 ## Signal for the Build
 
 | Decision | Status |
 |---|---|
 | **Steam adopts a GameLib-written manifest** | **✓ VALIDATED.** `1026` → `4`, zero bytes downloaded, files untouched. |
 | **Game launches via `steam://rungameid` after adoption** | **✓ VALIDATED** (soft caveat: confirm once on a hard-DRM title). |
+| **Depot selection** | **✓ SOLVED.** 11/11 exact, depot-for-depot and GID-for-GID. Rule in `select.mjs`. |
 | `StateFlags = 1026` (verify, don't assert) | **✓ Correct.** Steam verifies and repairs rather than trusting us. |
 | `.acf` field set, casing, derivation rules | **✓ Solved.** Reproduced exactly on a real machine. |
-| `SizeOnDisk` = sum of installed depot sizes | **✓ Confirmed.** No filesystem walk needed. |
 | `Bytes*` / `DownloadType` / `TargetBuildID` | **Free.** Steam recomputes them. |
 | Never parse 64-bit IDs with `@node-steam/vdf` | **⚠ Hard requirement.** Audit existing call sites. |
-| Depot selection from PICS alone | **✗ Invalidated.** Requires the authenticated license list. |
+| `SizeOnDisk` | **~ Approximate.** Steam measures real bytes; a manifest sum overshoots on multi-depot games. Believed bookkeeping; **untested** when wrong. |
 
-**D-1 and the `.acf` adoption model are validated. The remaining work is depot selection,
-not adoption.**
+**The architecture is validated end to end and the depot-selection blocker is closed.**
 
 ## Next
 
-1. **Fix depot selection using the authenticated license list** (Finding 2). This is now the
-   *only* thing standing between the spike and a production-ready manifest writer. Needs one
-   QR login; verify the ownership-aware rule reproduces `InstalledDepots` across all 11
-   installed games, not just the single-depot case.
-2. **Audit GameLib's existing `@node-steam/vdf` call sites** (Finding 1) for 64-bit exposure.
-3. **Spike 002 — `steam-user` depot download** (`.planning/research/questions.md` Q4). Now
-   worth doing: the thing it feeds into is proven to work.
+1. **Audit GameLib's existing `@node-steam/vdf` call sites** (Finding 1) for 64-bit exposure.
+2. **Spike 002 — `steam-user` depot download** (`.planning/research/questions.md` Q4). Now
+   clearly worth doing: everything it feeds into is proven.
+3. Confirm `SizeOnDisk` is truly bookkeeping (Finding 8) — needs a live swap on a multi-depot
+   game where our value overshoots. Deferred: the candidates are 9–35 GB and a wrong guess
+   provokes a large re-download.
 4. Optional: re-confirm Finding 5 against a known hard-DRM title.
 
 ## Machine state after this spike

@@ -32,10 +32,13 @@ Design decisions established so far. Non-negotiable for the real build.
   `Number.MAX_SAFE_INTEGER`. `@node-steam/vdf.parse()` silently rounds them and produces a
   wrong manifest GID — which is exactly how you cause a forced re-download. *(Established by
   spike 001.)*
-- **Depot selection needs the user's license list.** Owned-DLC depots are installed; PICS
-  alone cannot tell you which. DLC depots carry `dlcappid` *inside* the `InstalledDepots`
-  entry. `optional=1` depots without a `dlcappid` are user-opt-in and are NOT installed.
-  *(Established by spike 001.)*
+- **Depot selection is driven by PACKAGE-LEVEL OWNERSHIP, through two channels.** A depot is
+  installed iff it appears in an owned package's `depotids`, OR it carries a `dlcappid` whose
+  app the user owns. Neither channel alone is sufficient. Depots can also live in a DLC's OWN
+  app entry (walk `extended.listofdlc`), and language-specific depots must be filtered to the
+  user's language. No combination of `optional`/`systemdefined` flags can substitute for
+  ownership — two PICS-identical depots differ only in whether they are owned. Verified 11/11
+  against real installs. *(Established by spike 001; rule in `001-acf-adoption/select.mjs`.)*
 - **Never write `StateFlags = 4` for a manifest with a wrong `InstalledDepots` set.** A wrong
   depot set is the one condition that provokes a re-download. Any manifest writer must be
   able to prove its depot selection before writing. *(Established by spike 001.)*
@@ -61,9 +64,11 @@ model holds end to end.
 - ✓ **`Bytes*` / `DownloadType` / `TargetBuildID` are free** — Steam recomputes them.
 - ⚠ **Found a critical latent bug:** `@node-steam/vdf` corrupts 64-bit manifest GIDs
   (`…854` → `…700`). GameLib already uses this library on `.acf` files. **Audit call sites.**
-- ✗ **Depot selection from PICS alone is invalidated.** Passed on WazHack (1 depot), failed
-  on all 10 other installed games. Owned-DLC depots are installed and PICS cannot reveal
-  ownership — requires the authenticated license list. **This is now the only blocker to a
-  production manifest writer.**
+- ✓ **Depot selection SOLVED.** PICS-alone selection was invalidated (passed on WazHack,
+  failed on all 10 other games). With the authenticated license list, the two-channel
+  ownership rule now reproduces Steam **11/11 exactly — depot-for-depot and GID-for-GID.**
+- ~ **`SizeOnDisk` is not a derived sum** (corrects an earlier claim). Steam measures real
+  bytes on disk; a manifest sum overshoots on multi-depot games (Wasteland 3 by 236 MB).
+  Believed bookkeeping, but untested when wrong.
 - ~ **DRM caveat:** WazHack was not confirmed hard-DRM-wrapped. The launch path is proven;
   one confirmation against a DRM-heavy title is worth doing before shipping.
