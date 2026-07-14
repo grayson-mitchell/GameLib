@@ -70,6 +70,32 @@ function loadBundledSnapshot<T>(desc: IndexDescriptor<T>): T | null {
 }
 
 /**
+ * WR-01 fix: when neither a cached last-good value nor a fresh fetch is
+ * available, the bundled snapshot is the only data we have — but it was
+ * previously only ever *returned* to the caller, never written into
+ * `crossoverIndexStore`. `crossoverIndexHas()` (the synchronous D-13
+ * self-heal probe) reads that store directly and never calls `loadIndex()`,
+ * so on a machine where the network fetch has never once succeeded, the
+ * store stayed empty forever even though every real lookup was quietly
+ * being served by the bundled snapshot. Persisting it here means both paths
+ * see the SAME "last good" data. `fetchedAt: Date.now()` intentionally
+ * treats "just fell back to the bundled snapshot" the same as "just fetched
+ * successfully" for TTL purposes — consistent with D-08's own "never fetch
+ * more than daily cadence" philosophy, and it still self-heals to the real
+ * network payload the next time the TTL expires and a fetch succeeds.
+ */
+function persistBundledFallback<T>(desc: IndexDescriptor<T>): T | null {
+  const bundled = loadBundledSnapshot(desc)
+  if (bundled) {
+    crossoverIndexStore.set(desc.name, {
+      data: bundled,
+      fetchedAt: Date.now()
+    })
+  }
+  return bundled
+}
+
+/**
  * D-19 generic fetch → gunzip → validate → keep-last-good layer. On ANY
  * failure (schema rejection, network error, gunzip/JSON error, oversized
  * payload) it returns the last-good cached value, falling back to the
@@ -105,7 +131,7 @@ export async function loadIndex<T>(
         ['Rejected index payload', desc.name, parsed.error.issues],
         LogPrefix.Backend
       )
-      return cached?.data ?? loadBundledSnapshot(desc)
+      return cached?.data ?? persistBundledFallback(desc)
     }
 
     crossoverIndexStore.set(desc.name, {
@@ -118,6 +144,6 @@ export async function loadIndex<T>(
       ['Index refresh failed, keeping last good', desc.name, error],
       LogPrefix.Backend
     )
-    return cached?.data ?? loadBundledSnapshot(desc)
+    return cached?.data ?? persistBundledFallback(desc)
   }
 }

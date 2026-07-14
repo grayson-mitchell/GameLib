@@ -2,9 +2,11 @@ import { gzipSync } from 'node:zlib'
 import { readFileSync } from 'graceful-fs'
 
 import { axiosClient } from 'backend/utils'
+import { GameInfo } from 'common/types'
 import { loadIndex, IndexDescriptor } from '../fetcher'
 import { crossoverIndexStore } from '../electronStore'
 import { crossoverIndexSchema, CrossoverIndex } from '../schema'
+import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
 
 jest.mock('backend/logger')
 jest.mock('electron-store')
@@ -101,7 +103,7 @@ describe('loadIndex', () => {
     expect(stored.data).toEqual(lastGood)
   })
 
-  test('when there is no last-good AND safeParse fails, falls back to the bundled snapshot', async () => {
+  test('when there is no last-good AND safeParse fails, falls back to the bundled snapshot AND persists it into the store (WR-01)', async () => {
     const bundledData = makeValidIndex()
     mockedReadFileSync.mockReturnValueOnce(gzippedJson(bundledData))
     const invalidPayload = { version: 1, generatedAt: 'not-a-date', entries: [] }
@@ -112,6 +114,31 @@ describe('loadIndex', () => {
     const result = await loadIndex(descriptor)
 
     expect(result).toEqual(bundledData)
+    // WR-01: the bundled fallback must be written into crossoverIndexStore,
+    // not just returned to the caller -- otherwise crossoverIndexHas() (which
+    // reads the store directly, bypassing loadIndex) stays blind to it.
+    const stored = crossoverIndexStore.get(descriptor.name) as {
+      data: CrossoverIndex
+      fetchedAt: number
+    }
+    expect(stored.data).toEqual(bundledData)
+  })
+
+  test('a network error with no last-good falls back to the bundled snapshot AND persists it into the store (WR-01)', async () => {
+    const bundledData = makeValidIndex()
+    mockedReadFileSync.mockReturnValueOnce(gzippedJson(bundledData))
+    jest
+      .spyOn(axiosClient, 'get')
+      .mockRejectedValueOnce(new Error('network down'))
+
+    const result = await loadIndex(descriptor)
+
+    expect(result).toEqual(bundledData)
+    const stored = crossoverIndexStore.get(descriptor.name) as {
+      data: CrossoverIndex
+      fetchedAt: number
+    }
+    expect(stored.data).toEqual(bundledData)
   })
 
   test('an ABSENT bundled snapshot (ENOENT) is tolerated as a normal cold-start: returns null, does not throw', async () => {
@@ -157,5 +184,47 @@ describe('loadIndex', () => {
     const result = await loadIndex(descriptor)
 
     expect(result).toEqual(lastGood)
+  })
+})
+
+describe('crossoverIndexHas — WR-01 self-heal via bundled snapshot', () => {
+  beforeEach(() => {
+    crossoverIndexStore.clear()
+    jest.restoreAllMocks()
+    mockedReadFileSync.mockReset()
+  })
+
+  test('network never succeeded + bundled snapshot present -> crossoverIndexHas() true', async () => {
+    const bundledData = makeValidIndex({
+      entries: [
+        { name: 'Half-Life 2', rating: 5, steamid: '220' },
+        ...makeEntries(999)
+      ]
+    })
+    mockedReadFileSync.mockReturnValue(gzippedJson(bundledData))
+    jest.spyOn(axiosClient, 'get').mockRejectedValue(new Error('network down'))
+
+    const gameInfo = {
+      runner: 'steam',
+      app_name: '220',
+      title: 'Half-Life 2'
+    } as GameInfo
+
+    // Before any lookup has ever run, the self-heal probe is blind -- the
+    // store is genuinely empty (no network success, no prior lookup).
+    expect(crossoverIndexHas(gameInfo)).toBe(false)
+
+    // Mirrors what getCodeweaversFromIndex() does on every real lookup:
+    // loadIndex() tries the network, fails, and (post WR-01 fix) persists
+    // the bundled snapshot into crossoverIndexStore as a side effect.
+    const result = await loadIndex(crossoverIndexDescriptor)
+    expect(result).toEqual(bundledData)
+
+    // The synchronous self-heal probe now sees it -- WITHOUT itself calling
+    // loadIndex -- exactly as wiki_game_info.ts's staleCrossoverData check
+    // does. This is the exact gap WR-01 describes: a machine whose network
+    // fetch has never once succeeded must still self-heal off the bundled
+    // snapshot.
+    expect(crossoverIndexHas(gameInfo)).toBe(true)
   })
 })
