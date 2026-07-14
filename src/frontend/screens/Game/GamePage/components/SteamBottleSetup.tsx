@@ -165,6 +165,7 @@ const SteamBottleSetup = () => {
           </p>
           <WineSelector
             appName={appName ?? 'steam-bottle'}
+            runner="steam"
             winePrefix={winePrefix}
             setWinePrefix={setWinePrefix}
             wineVersion={wineVersion}

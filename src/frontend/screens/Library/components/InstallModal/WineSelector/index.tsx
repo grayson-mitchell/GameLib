@@ -4,8 +4,8 @@ import {
   TextInputField,
   PathSelectionBox
 } from 'frontend/components/UI'
-import React, { useEffect, useMemo, useState } from 'react'
-import { WineInstallation } from 'common/types'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { Runner, WineInstallation } from 'common/types'
 import { Trans, useTranslation } from 'react-i18next'
 import { removeSpecialcharacters } from 'frontend/helpers'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -13,6 +13,8 @@ import { faWarning } from '@fortawesome/free-solid-svg-icons'
 import { WineVersionListItem } from 'frontend/screens/Settings/components/WineVersionSelector'
 import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
+import ContextProvider from 'frontend/state/ContextProvider'
+import useGlobalState from 'frontend/state/GlobalStateV2'
 
 type Props = {
   setWineVersion: (newVersion: WineInstallation) => void
@@ -24,6 +26,12 @@ type Props = {
   wineVersion: WineInstallation | undefined
   title?: string
   appName: string
+  // D-18 (19-08): identifies the Steam CrossOver-bottle install path so the
+  // knownnottowork advisory warning below only ever renders there, never for
+  // the generic GOG/Epic/Amazon/sideload Wine installs that also render this
+  // shared component. Optional/default-undefined so every existing caller is
+  // byte-for-byte unchanged; only the Steam guided bottle setup passes it.
+  runner?: Runner
   initiallyOpen?: boolean
   // Optional note prepended to the "Use shared Wine prefix" toggle's tooltip.
   // Used by the Steam guided setup (Phase 17) to warn that sharing the prefix/
@@ -49,6 +57,7 @@ export default function WineSelector({
   setCrossoverBottle,
   initiallyOpen,
   appName,
+  runner,
   sharedPrefixNote,
   hideSharedPrefixToggle
 }: Props) {
@@ -56,6 +65,10 @@ export default function WineSelector({
 
   const [detailsOpen, setDetailsOpen] = useState(!!initiallyOpen)
   const [useSharedPrefix, setUseSharedPrefix] = useState(false)
+
+  const { platform } = useContext(ContextProvider)
+  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
+  const crossoverRating = crossoverRatings[appName]
 
   const globalConfig = useAwaited(() => window.api.requestAppSettings())
 
@@ -101,6 +114,19 @@ export default function WineSelector({
 
   const showPrefix = wineVersion?.type !== 'crossover'
   const showBottle = wineVersion?.type === 'crossover'
+
+  // D-18 (19-08): non-blocking knownnottowork advisory. Gated on the actual
+  // CrossOver-bottle install path (showBottle) for a confirmed macOS Steam
+  // rating <=2 -- an absent (never looked up) or null ("unrated") rating is
+  // NOT evidence of a problem and must show no warning. This is a sibling
+  // render only; it must NEVER be wired into the Install button's `disabled`
+  // prop or otherwise gate/delay the install.
+  const isKnownNotToWork =
+    platform === 'darwin' &&
+    runner === 'steam' &&
+    showBottle &&
+    typeof crossoverRating === 'number' &&
+    crossoverRating <= 2
 
   return (
     <>
@@ -151,6 +177,23 @@ export default function WineSelector({
                 </MenuItem>
               ))}
           </SelectField>
+          {isKnownNotToWork && (
+            <div className="infoBox">
+              <FontAwesomeIcon
+                icon={faWarning}
+                style={{ color: 'var(--status-danger)' }}
+              />
+              <Trans
+                i18n={i18n}
+                i18nKey="install.warn-crossover-wont-run"
+                ns="gamepage"
+              >
+                This game is known not to run well under CrossOver on macOS.
+                Compatibility data is community-sourced and may be wrong for
+                your setup — you can still install it and try for yourself.
+              </Trans>
+            </div>
+          )}
           {/* CR-01 (Phase 17 17-17): the shared-prefix toggle is hidden on the
               Steam guided-setup path so the shared GOG/Epic bottle can never be
               selected for the dedicated Steam bottle. With the toggle absent,
