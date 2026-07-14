@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 20-05-PLAN.md (StoreSearchRow + StoreSearchBreakdown presentational layer)
-last_updated: "2026-07-14T10:23:33.991Z"
+stopped_at: Completed 20-06-PLAN.md (StoreSearch container, debounce hook, sidebar entry, /store-search route, i18n keys)
+last_updated: "2026-07-14T10:41:23.752Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 20 (aggregated-store-search-cheapshark) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-07-14
 
@@ -122,6 +122,7 @@ Last activity: 2026-07-14
 | Phase 20 P03 | 15min | 1 tasks | 2 files |
 | Phase 20 P04 | 15min | 2 tasks | 6 files |
 | Phase 20 P05 | 15min | 2 tasks | 6 files |
+| Phase 20 P06 | 45min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,8 @@ Recent decisions affecting current work:
 - [Phase 20]: [Phase 20-05]: OwnedBadgeLabel.values widened to Record<string,string|number> (was a discriminated union) so a single t(key, defaultValue, values) call type-checks against react-i18next's TFunction overloads
 - [Phase 20]: [Phase 20-05]: Owned badge stack renders as ONE joined pill per the UI-SPEC copy contract (e.g. 'Owned on Steam, GOG'), not one pill per store; key-available always renders as an independent second pill (D-07 coexistence)
 - [Phase 20]: [Phase 20-05]: StoreSearchBreakdown unmounts on row collapse (not cached) so a later expand is a natural retry after a fetch failure, with no persisted per-row error UI
+- [Phase 20-06]: SearchBar gained optional loading prop (icon->spinner swap in same DOM slot) - non-breaking, default false, other consumers unaffected
+- [Phase 20-06]: Container filters humble.keys via selectKeysWaiting before resolveStoreSearchBadges, matching Discounts' own pattern, so a redeemed/expired key never shows key-available
 
 ### Pending Todos
 
@@ -242,8 +245,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-14T10:23:33.985Z
-Stopped at: Completed 20-05-PLAN.md (StoreSearchRow + StoreSearchBreakdown presentational layer)
+Last session: 2026-07-14T10:41:23.747Z
+Stopped at: Completed 20-06-PLAN.md (StoreSearch container, debounce hook, sidebar entry, /store-search route, i18n keys)
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
