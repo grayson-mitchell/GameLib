@@ -66,20 +66,29 @@ value is required, e.g. `--space-md-fixed: 16px` for the screen's outer padding,
 
 Reuse the existing type scale (`_typography.scss`) exactly. No new sizes or weights.
 
+Only **2 explicitly-declared weights** appear in phase CSS — matching `DiscountCard`'s actual
+pattern, whose `index.css` explicitly declares only `--bold` and `--semibold`. Body-weight text
+(400) is never given an explicit `font-weight` rule: it **inherits** the unset default from
+`_typography.scss` (`body { font-weight: var(--regular); }`). Roles that inherit that default are
+marked "(inherited default)" below and carry no `font-weight` declaration in phase code.
+
 | Role | Token | Size (16px root) | Weight | Line Height |
 |------|-------|-------------------|--------|-------------|
 | Screen heading (h2-equivalent) | `--text-2xl` | 27.65px | `--bold` (700) | 1.2 (heading default) |
 | Row title (game name) | `--text-md` | 16px | `--bold` (700) | 1.2 — matches `.discountCard__title` |
 | Cheapest price (collapsed row) | `--text-md` | 16px | `--bold` (700) | 1.2 — matches `.discountCard__finalPrice` |
-| Per-store price (expanded breakdown) | `--text-sm` | 13.33px | `--regular` (400) | 1.5 |
+| Per-store price (expanded breakdown) | `--text-sm` | 13.33px | (inherited default, 400 — no explicit rule) | 1.5 |
 | Badge / label text (owned, key-available, store label) | `--text-sm` | 13.33px | `--semibold` (600) | 1.2 — matches `.discountCard__badge--owned` |
-| Body / helper copy (empty state, error state) | `--text-md` | 16px | `--regular` (400) | 1.5 |
+| Body / helper copy (empty state, error state) | `--text-md` | 16px | (inherited default, 400 — no explicit rule) | 1.5 |
 | Uppercase section label (if used) | `--text-sm` | 13.33px | `--semibold` (600), `letter-spacing: 0.01em`, `text-transform: uppercase` — matches `.discountsScreen__regionLabel` | 1.2 |
 
-Only 2 weights appear anywhere in this contract: `--regular` (400) and `--semibold` (600) for
-UI chrome, plus `--bold` (700) reserved for the two "this is the number/name that matters" roles
-(title, price) — identical distribution to `DiscountCard`. Do not introduce `--medium` or
-`--light`.
+**Weight budget:** 2 explicitly-declared weights only — `--semibold` (600) for badges/labels and
+`--bold` (700) for the two "this is the number/name that matters" roles (row title, cheapest
+price on the collapsed row). Everything else — body copy, empty/error helper text, the per-store
+store-name label, and the per-store price in the expanded breakdown — inherits the default body
+weight (400) with no explicit override. This is the identical 2-explicit-weight distribution
+`DiscountCard/index.css` ships. Do not introduce `--medium`, `--light`, or an explicit
+`--regular` override.
 
 ---
 
@@ -89,7 +98,7 @@ UI chrome, plus `--bold` (700) reserved for the two "this is the number/name tha
 |------|-------|-------|
 | Dominant (60%) | `var(--body-background)` | Screen background (`.storeSearchScreen`) |
 | Secondary (30%) | `var(--gradient-gamecard)` (row/card surface) + `var(--background-darker)` (sidebar, already global) | Each result row's background, matching `.discountCard`'s `background-color: var(--gradient-gamecard)` |
-| Accent (10%) | `var(--accent)` | Reserved for: search-input focus ring/border (`.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline` pattern from `discountsScreen`), the expand/collapse chevron on hover, the "Retry" link/button text, and nothing else. Do not use accent for the price digits, the row background, or any badge. |
+| Accent (10%) | `var(--accent)` | Reserved for: search-input focus ring/border (`.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline` pattern from `discountsScreen`), the expand/collapse chevron on hover, the "Retry search" link/button text, and nothing else. Do not use accent for the price digits, the row background, or any badge. |
 | Ownership badge — `owned` | `var(--status-success)` background, `var(--neutral-01)` text | Exact reuse of `.discountCard__badge--owned` chrome |
 | Ownership badge — `key-available` | `var(--status-info)` background, `var(--neutral-01)` text | Exact reuse of `.discountCard__badge--keyAvailable` chrome |
 | Error / provider-failed state | `var(--status-danger)` | Inline retryable error banner icon + heading text only — this is NOT a destructive-action color, it is the existing "danger" semantic reused for a failure state (no destructive actions exist in this phase, see D-10) |
@@ -103,6 +112,17 @@ restyle the component).
 ---
 
 ## Component Inventory & Layout Contract
+
+### Visual hierarchy (first-glance focal point)
+The screen's primary focal point is **the game title paired with its cheapest price on each
+collapsed result row** — both set in `--bold` (700), the heaviest weight on the screen, so the
+eye lands on "what is this and what's the lowest price" first. The **owned-badge stack is the
+second-priority signal**: it sits between title and price and MUST be legible before any
+expansion (D-12 — the "don't buy this, you own it" verdict has to land on the collapsed row).
+The **per-store price breakdown is tertiary**, deliberately hidden until the user expands a row
+(lazy fetch, D-12), so it never competes with the primary scan. This ordering — title+price >
+owned badges > per-store breakdown — is the intended hierarchy; weight, position, and
+progressive disclosure all reinforce it.
 
 ### Sidebar entry (STORESEARCH-01)
 - New `<SidebarItem>` in `SidebarLinks/index.tsx`, placed as a **sibling immediately after** the
@@ -172,15 +192,18 @@ Once loaded, each store renders as its own sub-row inside `.storeSearchRow__brea
 (`display: flex; flex-direction: column; gap: var(--space-2xs); padding: var(--space-sm)
 var(--space-md); border-top: 1px solid var(--divider, rgba(255,255,255,0.12));`):
 
-- Store name — plain text label (`--text-sm` / `--regular`) resolved from CheapShark's numeric
-  `storeID` via the `/stores` endpoint lookup (Claude's discretion, per 20-CONTEXT.md). Where the
-  resolved store maps to an existing GameLib `Runner` (`steam`, `gog`, `legendary`/Epic,
+- Store name — plain text label (`--text-sm`, inherited default weight) resolved from CheapShark's
+  numeric `storeID` via the `/stores` endpoint lookup (Claude's discretion, per 20-CONTEXT.md).
+  Where the resolved store maps to an existing GameLib `Runner` (`steam`, `gog`, `legendary`/Epic,
   `nile`/Amazon), prefix the label with the existing `<StoreLogos runner={...} />` icon (16px) for
   visual consistency with the ownership badge icons below. The other ~26 CheapShark storefronts
   (Fanatical, Green Man Gaming, etc.) render text-only — do not source or fabricate new logo SVGs
   for them this phase.
-- Price — same one-text-node `${amount} USD` treatment as the collapsed row, `--text-sm` /
-  `--semibold`.
+- Price — same one-text-node `${amount} USD` **structure** as the collapsed row (unit travels
+  with the number, per the Currency Contract), but at `--text-sm` with the **inherited default
+  body weight (400, no explicit `font-weight` rule)** — the expanded breakdown is tertiary detail,
+  not a second bold/semibold price. "Same treatment as the collapsed row" means the same single
+  `${amount} USD` text-node structure, NOT the same size or weight.
 - The whole sub-row is the click target (D-08/D-09): `onClick` → `shell.openExternal()` on
   CheapShark's `redirect?dealID=` URL. Cursor `pointer`, hover background
   `rgba(255,255,255,0.05)` (matches `.discountFilters__toggle:hover`). No `withAffiliate()` call
@@ -228,7 +251,10 @@ Every rendered price — collapsed-row cheapest price AND every expanded per-sto
 1. `USD` is **never** a separate `<span>`, never a smaller font-size, never a reduced-opacity
    suffix, never behind a tooltip/hover-only reveal, and never a dismissible banner. It shares the
    exact `font-size`/`font-weight`/`color` of the number that precedes it, in the same DOM text
-   node or an adjacent non-differentiated inline span.
+   node or an adjacent non-differentiated inline span. (Note: the collapsed-row price and the
+   expanded per-store price use different sizes/weights from each other — `--text-md`/`--bold` vs.
+   `--text-sm`/inherited-400 — but within each, the number and its `USD` unit are always
+   identical in size/weight/color.)
 2. This is a deliberate departure from `.discountCard__basePrice`'s dimmed/struck-through
    treatment — that pattern is reserved for the "was" price in a discount, not for a currency
    unit, and must not be reused for `USD`.
@@ -247,7 +273,7 @@ another:
 |-------|---------|-------------------|------|
 | **Initial / explanatory prompt** | No query typed yet, or query <3 characters | Centered block, `var(--space-xl)` vertical margin, `var(--text-md)` `var(--text-secondary)` color, a large muted search icon above the text (reuse `faMagnifyingGlassDollar` at 48px, `opacity: 0.4`) | `t('storeSearch.prompt', 'Search a title to compare prices across every store — GameLib will tell you if you already own it.')` |
 | **No results** | Query ≥3 chars, request succeeded, zero matches | Same centered block position as initial prompt, but **no icon** (distinguishes it from the prompt at a glance) and `var(--text-secondary)` — matches `.discountsScreen__message` exactly | `t('storeSearch.noResults', 'No results for "{{query}}". Try a different spelling or a shorter title.')` |
-| **Provider failed (retryable)** | Request rejected/errored | An inline **banner**, not a centered block — `background: rgba(249, 120, 129, 0.1)` (status-danger tint), `border-left: 3px solid var(--status-danger)`, `padding: var(--space-sm) var(--space-md)`, `border-radius: var(--space-3xs)`, positioned directly under the search input (search box remains enabled/focusable — fail-soft) | `t('storeSearch.providerError', "Couldn't reach the price provider.")` + inline `t('storeSearch.retry', 'Retry')` link/button in `var(--accent)` color |
+| **Provider failed (retryable)** | Request rejected/errored | An inline **banner**, not a centered block — `background: rgba(249, 120, 129, 0.1)` (status-danger tint), `border-left: 3px solid var(--status-danger)`, `padding: var(--space-sm) var(--space-md)`, `border-radius: var(--space-3xs)`, positioned directly under the search input (search box remains enabled/focusable — fail-soft) | `t('storeSearch.error.provider', "Couldn't reach the price provider.")` + inline `t('storeSearch.error.retry', 'Retry search')` link/button in `var(--accent)` color |
 
 The no-results and provider-error states must never share the same visual container — a banner
 with a left accent bar (error) vs. a plain centered message (no-results) is the minimum
@@ -266,7 +292,7 @@ only the copy changed.
 | Search placeholder | `t('storeSearch.placeholder', 'Search for a game title…')` |
 | Empty state (initial) heading/body | `t('storeSearch.prompt', 'Search a title to compare prices across every store — GameLib will tell you if you already own it.')` |
 | No-results body | `t('storeSearch.noResults', 'No results for "{{query}}". Try a different spelling or a shorter title.')` |
-| Error state | `t('storeSearch.providerError', "Couldn't reach the price provider.")` + retry affordance `t('storeSearch.retry', 'Retry')` — problem stated, one clear next step, search box stays usable |
+| Error state | `t('storeSearch.error.provider', "Couldn't reach the price provider.")` + retry affordance `t('storeSearch.error.retry', 'Retry search')` — problem stated, one clear next step (a verb+noun, not a bare word), search box stays usable |
 | Ownership badge (single store) | `t('storeSearch.badge.ownedOn', 'Owned on {{store}}')` |
 | Ownership badge (multi, ≤2) | `t('storeSearch.badge.ownedOnMulti', 'Owned on {{stores}}')` |
 | Ownership badge (multi, >2, capped) | `t('storeSearch.badge.ownedOnOverflow', 'Owned on {{stores}} +{{count}} more')` |
