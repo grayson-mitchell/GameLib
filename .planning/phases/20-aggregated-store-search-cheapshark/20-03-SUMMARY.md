@@ -99,3 +99,11 @@ None - no external service configuration required.
 ---
 *Phase: 20-aggregated-store-search-cheapshark*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+- FOUND: src/common/discounts/badges.ts
+- FOUND: src/backend/discounts/__tests__/storeSearchBadges.test.ts
+- FOUND: .planning/phases/20-aggregated-store-search-cheapshark/20-03-SUMMARY.md
+- FOUND commit: 9bda81a4
+- FOUND commit: 84586533
