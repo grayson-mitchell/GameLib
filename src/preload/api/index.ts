@@ -8,6 +8,7 @@ import * as DownloadManager from './downloadmanager'
 import * as Zoom from './zoom'
 import * as Steam from './steam'
 import * as Humble from './humble'
+import * as StoreSearch from './storeSearch'
 
 export default {
   ...Misc,
@@ -19,5 +20,6 @@ export default {
   ...DownloadManager,
   ...Zoom,
   ...Steam,
-  ...Humble
+  ...Humble,
+  ...StoreSearch
 }
