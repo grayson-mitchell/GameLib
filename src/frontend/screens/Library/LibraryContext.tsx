@@ -13,10 +13,18 @@ const initialContext: LibraryContextType = {
     steam: true
   },
   platformsFilters: { win: true, linux: true, mac: true, browser: true },
+  crossoverRatingFilters: {
+    gold: true,
+    silver: true,
+    bronze: true,
+    wontRun: true,
+    unrated: true
+  },
   filterText: '',
   setStoresFilters: () => null,
   handleLayout: () => null,
   setPlatformsFilters: () => null,
+  setCrossoverRatingFilters: () => null,
   handleSearch: () => null,
   layout: 'grid',
   showHidden: 'off',
