@@ -46,6 +46,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps) (completed 2026-07-13)
 - [ ] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape
 
+### v1.5 — Aggregated Store Search
+
+- [ ] **Phase 20: Aggregated Store Search (CheapShark)** - Search a title once and see what it costs across every store, with "you already own this" badges no price-comparison site can show
+
+### v1.6 — Steam Native Install
+
+- [ ] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates
+
 ## Phase Details
 
 ### Phase 1: Steam Authentication
@@ -553,8 +561,6 @@ Plans:
 
 **UI hint**: yes
 
----
-
 ## v1.5 Phase Details
 
 ### Phase 20: Aggregated Store Search (CheapShark)
@@ -581,6 +587,39 @@ Plans:
 
 **UI hint**: yes
 
+---
+
+## v1.6 Phase Details
+
+### Phase 21: Steam Native Install (depot download)
+
+**Goal:** Steam games install through an in-process depot download GameLib owns — with real progress, real error surfaces, and recovery — instead of the opaque `steam://rungameid` handoff that returns nothing. GameLib downloads depot content over `steam-user`'s authenticated CM connection, writes an `appmanifest_{appId}.acf` the Steam client **adopts**, and launch stays with `steam://` so DRM keeps working. This closes the "Steam is the only store with no install progress and invisible failures" gap.
+**Depends on:** Phase 3 (Steam game operations — install/launch entry points, `state/InstallGameModal.ts`) and Phase 1 (Steam auth — the `steam-user` CM session this reuses). Independent of the v1.4 macOS/CrossOver line and of Phase 20.
+**Requirements:** TBD (mint during /gsd-discuss-phase 21 from the locked decisions in `.planning/spikes/MANIFEST.md`)
+**De-risked by spikes 001 + 002** (`.planning/spikes/`) — both VALIDATED against a real machine:
+
+  1. **`.acf` adoption works** (spike 001). Steam verified a GameLib-written manifest, flipped `StateFlags` `1026` → `4` itself, downloaded **zero bytes**, and the game launched via `steam://rungameid`. The full model — GameLib writes the manifest → Steam adopts it → Steam launches — holds end to end.
+  2. **In-process depot download works** (spike 002). Downloaded a full depot via `steam-user`, **171/171 files byte-identical** to Steam's own download. Pure-JS LZMA is sufficient — **no native module required** — so the C# DepotDownloader wrapper (Option B) is rejected.
+
+**Locked decisions** (full detail + rationale in `.planning/spikes/MANIFEST.md` and `.planning/notes/steam-depot-install-architecture.md`):
+
+  - **D-1 — Launch stays with Steam.** Depot download bypasses the download, not the DRM. Files on disk do not make a DRM-wrapped game launch; `steam://rungameid` after adoption does.
+  - **D-2 — Steam owns updates; GameLib owns only the first install.** No delta-patching, no resume, no integrity repair — deliberately scoped out. Any move to "GameLib owns updates" re-opens the whole build-vs-bundle question.
+  - **Write `StateFlags = 1026`, never `4`.** `1026` asks Steam to verify-and-repair; `4` asserts a byte-perfect download and ships broken installs when we're wrong.
+  - **Depot selection = package-level ownership, two channels** (owned `depotids`, or a `dlcappid` whose app is owned), plus DLC-app depot enumeration (`extended.listofdlc`) and per-language filtering. Verified 11/11 against real installs. Rule in `001-acf-adoption/select.mjs`.
+  - **Reimplement `steam-user`'s two broken helpers.** Its `getManifest()` truncates filenames and `downloadChunk`/`downloadFile` throw; use `getRawManifest()` + our own decrypt/decompress (~100 lines, `002-steam-user-depot-download/steam-depot.mjs`). Retry chunks across content servers (~16% fail under concurrency).
+  - **64-bit IDs are strings end to end.** `@node-steam/vdf.parse()` rounds manifest GIDs past `MAX_SAFE_INTEGER` — the exact way to cause a forced re-download.
+
+  - **Pre-work carried in from the spikes:** audit GameLib's existing `@node-steam/vdf` call sites for 64-bit exposure; confirm the launch path once against a known hard-DRM title (WazHack was not confirmed DRM-wrapped).
+  - **Untested at spike scale:** large (50 GB) games, streaming to disk (spike assembled files in RAM), and resume-after-interruption UX.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 21 to break down)
+
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
@@ -591,6 +630,7 @@ v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260
 v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime) → 18 (depends on Phase 17 bottle routing + Phase 7 platform data)
      19 (depends on Phase 16 only — independent of 17/18, can run in parallel)
 v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 macOS/CrossOver line, can run in parallel)
+v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+002 — .acf adoption + in-process depot download both VALIDATED)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
