@@ -124,8 +124,8 @@ Serve every macOS library game a CrossOver medal badge — and a filter for it �
 - [x] **CXIDX-07**: An index miss paints **no grid badge** but still permits the lazy details-page scrape as the retained safety net (the grid never fires bulk scrapes to paint itself), and a stale Phase-16 cached "checked, none found" miss **self-heals** once the index loads on macOS so users stop seeing "no rating" for games the index now covers (D-13)
 - [x] **CXIDX-08**: `slugify()` **keeps** the load-bearing apostrophe drop and **deletes** the roman→arabic numeral conversion (which soft-404s 172 games), and the CrossOver **matching key** lives in its own `crossover_index/normalize.ts` file, kept strictly distinct from the URL slug (the two have opposite correctness criteria — verbatim is right for slugs, normalization is the open question for matching) (D-20)
 - [x] **CXIDX-09**: The backend resolves each library title to a rating and ships a **three-state map** (`rating` = badge, `null` = looked-up-but-absent, key-absent = not looked up) to the renderer over a **single bulk IPC pull + push** channel landing in a zustand slice, so the grid reads synchronously and is structurally incapable of triggering per-game work or a scrape (D-11/D-13/D-16)
-- [ ] **CXIDX-10**: Each macOS grid tile carries a **colored medal glyph** (gold/silver/bronze/red) with a full accessible `aria-label`, following the established `gameCardDelistedBadge` overlay pattern; the medal label is **derived from the rating number in the UI**, requiring no `CodeweaversInfo` type change (5→gold, 4→silver, 3→bronze, ≤2→knownnottowork) (D-12/D-15)
-- [ ] **CXIDX-11**: A neutral **"unknown" mark** is shown **only** on games actually looked up and absent from the index — never on games that were not looked up; if the D-02 gate fails and v1 ships Steam-only, non-Steam tiles get **no mark at all** rather than a grid of misleading grey (D-16)
+- [x] **CXIDX-10**: Each macOS grid tile carries a **colored medal glyph** (gold/silver/bronze/red) with a full accessible `aria-label`, following the established `gameCardDelistedBadge` overlay pattern; the medal label is **derived from the rating number in the UI**, requiring no `CodeweaversInfo` type change (5→gold, 4→silver, 3→bronze, ≤2→knownnottowork) (D-12/D-15)
+- [x] **CXIDX-11**: A neutral **"unknown" mark** is shown **only** on games actually looked up and absent from the index — never on games that were not looked up; if the D-02 gate fails and v1 ships Steam-only, non-Steam tiles get **no mark at all** rather than a grid of misleading grey (D-16)
 - [ ] **CXIDX-12**: A macOS-only **CrossOver-rating library filter** — multi-select, opt-out, default-all-true, **filter-only (no sort)** — is added alongside the existing library filters, gated on `darwin` exactly like the existing `mac` platform toggle (D-17)
 - [ ] **CXIDX-13**: The install modal shows a **non-blocking warning** for `knownnottowork` (rating ≤2) titles on the macOS CrossOver-bottle install path that warns but **never gates** the Install button — the data is community-sourced and can be a false negative (D-18)
 
@@ -240,8 +240,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CXIDX-07 | Phase 19 | Complete |
 | CXIDX-08 | Phase 19 | Complete |
 | CXIDX-09 | Phase 19 | Complete |
-| CXIDX-10 | Phase 19 | Pending |
-| CXIDX-11 | Phase 19 | Pending |
+| CXIDX-10 | Phase 19 | Complete |
+| CXIDX-11 | Phase 19 | Complete |
 | CXIDX-12 | Phase 19 | Pending |
 | CXIDX-13 | Phase 19 | Pending |
 

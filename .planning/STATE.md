@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 19-06-PLAN.md
-last_updated: "2026-07-13T23:54:05.589Z"
+stopped_at: Completed 19-07-PLAN.md
+last_updated: "2026-07-14T00:00:57.614Z"
 last_activity: 2026-07-13
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 19 (crossover-compatibility-index-macos) — EXECUTING
-Plan: 3 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-07-13
 
@@ -114,6 +114,7 @@ Last activity: 2026-07-13
 | Phase 14 P08 | ~30min | 2 tasks | 6 files |
 | Phase 19 P05 | 35min | 3 tasks | 6 files |
 | Phase 19 P06 | ~30min | 2 tasks | 11 files |
+| Phase 19 P07 | 15min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,8 @@ Recent decisions affecting current work:
 - [Phase ?]: D-20 reversal: slugify() keeps roman numerals verbatim, only apostrophe drop is load-bearing
 - [Phase 19-06]: Added LibraryManager.getListOfGames() to the interface (Rule 3 fix) - only legendary had it; gog/nile/zoom/sideload/steam now implement it reading their own persisted libraryStore
 - [Phase 19-06]: isMac gate for D-16 non-mac-emptiness lives in buildCrossoverRatingMap itself, not in 19-05's getCodeweaversFromIndex/isCrossoverIndexEligible (neither actually gates on platform)
+- [Phase 19-07]: Tier derivation (5->gold, 4->silver, 3->bronze, <=2->wontRun, null->unknown, undefined->no element) computed entirely inside CrossoverBadge, never read as a pre-labeled field off the index (D-12); enforces D-16 honesty invariant in one place
+- [Phase 19-07]: CrossoverBadge renders unconditionally (no is.mac guard) in GameCard -- crossoverRatings map absence already yields undefined for every non-macOS/never-looked-up tile, which the component turns into no element
 
 ### Pending Todos
 
@@ -220,8 +223,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-13T23:54:05.584Z
-Stopped at: Completed 19-06-PLAN.md
+Last session: 2026-07-14T00:00:41.735Z
+Stopped at: Completed 19-07-PLAN.md
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
