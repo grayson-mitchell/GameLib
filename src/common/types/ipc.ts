@@ -50,7 +50,7 @@ import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
-import type { SteamUserData } from './steam'
+import type { SteamBottleConfig, SteamUserData } from './steam'
 import type {
   ClaimAnnotation,
   HumbleAuthState,
@@ -250,6 +250,18 @@ interface AsyncIPCFunctions {
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>
   getSteamInstallSize: (appId: string) => Promise<string>
+  // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
+  // (create via the locked cxbottle mechanism, fetch + non-silently run
+  // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this
+  // never inspects loginusers.vdf/sentry.
+  steamBottleProvision: (args?: {
+    bottleName?: string
+    wineVersion?: WineInstallation
+  }) => Promise<{ status: 'done' | 'error'; error?: string }>
+  isSteamBottleProvisioned: () => Promise<boolean>
+  steamBottleStatus: () => Promise<
+    Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>
+  >
   humbleStartLogin: () => Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
@@ -394,6 +406,10 @@ interface AsyncIPCFunctions {
       }
     >
   >
+  // Phase 19 (Plan 06): bulk CrossOver-rating resolver (D-11/D-16). Keyed by
+  // `app_name`; `number` = matched rating, `null` = eligible & consulted with
+  // no record, key-absent = never looked up (ineligible under the D-02 gate).
+  getCrossoverIndex: () => Promise<Record<string, number | null>>
   getEosOverlayStatus: () => {
     isInstalled: boolean
     version?: string
@@ -424,7 +440,8 @@ interface AsyncIPCFunctions {
   getWikiGameInfo: (
     title: string,
     appName: string,
-    runner: Runner
+    runner: Runner,
+    forceRefresh?: boolean
   ) => Promise<WikiInfo | null>
   getDefaultSavePath: (
     appName: string,
@@ -514,6 +531,14 @@ interface FrontendMessages {
   installGame: (appName: string, runner: Runner) => void
   recentGamesChanged: (newRecentGames: RecentGame[]) => void
   pushGameToLibrary: (info: GameInfo) => void
+  // Phase 17 (17-04): pushed by SteamGame.install()/launch() (17-05) when a
+  // bottle-eligible game is un-provisioned; the global listener (17-06)
+  // subscribes to this to drive the guided-setup flow.
+  steamBottleSetupRequired: (payload: { appName: string }) => void
+  // Emitted while Steam per-game metadata/art is being fetched in the
+  // background (throttled). `syncing: true` when the first fetch starts,
+  // `false` once the last one finishes — drives the library sync indicator.
+  steamMetadataSyncing: (payload: { syncing: boolean }) => void
   progressOfWinetricks: (payload: {
     messages: string[]
     installingComponent: string
@@ -529,6 +554,10 @@ interface FrontendMessages {
       { title?: string; art_cover?: string; art_square?: string }
     >
   ) => void
+  // Phase 19 (Plan 06): pushed after a validated background CrossOver-index
+  // refresh so the grid picks up freshly resolved ratings without a manual
+  // pull. Same three-state shape as `getCrossoverIndex`'s resolved map.
+  crossoverIndexChanged: (index: Record<string, number | null>) => void
   // Plan 02 (Phase 10): pushed by HumbleUser.checkHealthAndFlagExpiry() on a
   // startup/401 expiry detection. MUST NOT include the session cookie
   // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.

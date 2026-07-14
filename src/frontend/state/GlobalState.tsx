@@ -44,6 +44,7 @@ import { IpcRendererEvent } from 'electron'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import useGlobalState from './GlobalStateV2'
+import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -101,6 +102,7 @@ interface StateProps {
   isIntelMac: boolean
   refreshing: boolean
   refreshingInTheBackground: boolean
+  steamMetadataSyncing: boolean
   hiddenGames: HiddenGame[]
   favouriteGames: FavouriteGame[]
   customCategories: Record<string, string[]>
@@ -265,6 +267,7 @@ class GlobalState extends PureComponent<Props> {
     isIntelMac: false,
     refreshing: false,
     refreshingInTheBackground: true,
+    steamMetadataSyncing: false,
     hiddenGames: configStore.get('games.hidden', []),
     currentCustomCategories: loadCurrentCategories(),
     sidebarCollapsed: JSON.parse(
@@ -1048,6 +1051,21 @@ class GlobalState extends PureComponent<Props> {
       this.handleGameStatus({ ...args })
     })
 
+    // Phase 17 (17-06), D-07: single global listener that opens the guided
+    // bottle-setup flow whenever the backend emits `steamBottleSetupRequired`
+    // — fires from EVERY Install/Play entry point (game-details button,
+    // library grid, install modal) since they all funnel into
+    // window.api.install/launch, which is where the backend decision is
+    // made. No frontend eligibility check on gameInfo.is_mac_native is added
+    // here or anywhere else (D-11 stays backend-owned).
+    window.api.handleSteamBottleSetupRequired(
+      handleSteamBottleSetupRequiredSignal
+    )
+
+    window.api.handleSteamMetadataSyncing((e, { syncing }) => {
+      this.setState({ steamMetadataSyncing: syncing })
+    })
+
     window.api.handleRefreshLibrary((e, runner) => {
       this.refreshLibrary({
         checkForUpdates: false,
@@ -1059,6 +1077,28 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleMetadataChanged((e, overrides) => {
       this.updateGameOverrides(overrides)
     })
+
+    // Phase 19 (Plan 06), D-11/D-16: pushed after a validated background
+    // CrossOver-index refresh so the grid's `crossoverRatings` slice updates
+    // without a manual pull. This is the only IPC round-trip involved —
+    // painting a card never fires its own request (D-11/D-13). WR-05: the
+    // backend (`refreshCrossoverRatingMap()` in main.ts) now re-fires this
+    // event after every `refreshLibrary` completion too — not just at
+    // startup — so a game added mid-session (a background Steam sync, a
+    // manual "Refresh Library") gets a badge/filter signal without a
+    // restart. This listener needed no change to pick that up.
+    window.api.handleCrossoverIndexChanged((e, index) => {
+      useGlobalState.getState().setCrossoverRatings(index)
+    })
+
+    // One-time pull on mount so the grid paints on first load without
+    // waiting for the next background refresh's push.
+    window.api
+      .getCrossoverIndex()
+      .then((index) => useGlobalState.getState().setCrossoverRatings(index))
+      .catch((error) =>
+        window.api.logError(`CrossOver index pull failed: ${String(error)}`)
+      )
 
     // D-09: state-only listener — never opens a dialog/modal directly. The
     // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting

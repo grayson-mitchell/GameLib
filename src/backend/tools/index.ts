@@ -873,6 +873,22 @@ export async function runWineCommandOnGame(
   appName: string,
   { commandParts, wait = false, protonVerb, startFolder }: WineCommandArgs
 ): Promise<ExecResult> {
+  // Pitfall 5 (Phase 17): Steam games have no per-game Wine prefix — the
+  // CrossOver bottle is shared across every bottled Steam title. Now that
+  // isNative() can return false for a confirmed-not-native macOS Steam game
+  // (D-11), a per-game Winetricks/Verify-style Wine action must still never
+  // be dispatched against a Steam game. This guard runs BEFORE the
+  // game.isNative() check below so it applies regardless of platform/OS.
+  // Defense-in-depth: the frontend GameSubMenu already hides these entry
+  // points for Steam (!isSteam gates).
+  if (runner === 'steam') {
+    logError(
+      'runWineCommand called on a Steam game — Steam has no per-game Wine prefix (Pitfall 5)',
+      LogPrefix.Gog
+    )
+    return { stdout: '', stderr: '' }
+  }
+
   const game = libraryManagerMap[runner].getGame(appName)
   if (game.isNative()) {
     logError('runWineCommand called on native game!', LogPrefix.Gog)

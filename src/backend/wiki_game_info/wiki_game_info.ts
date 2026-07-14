@@ -6,13 +6,21 @@ import { removeSpecialcharacters } from '../utils'
 import { SteamInfo, WikiInfo } from 'common/types'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { getInfoFromAppleGamingWiki } from './applegamingwiki/utils'
+import { getInfoFromCodeweavers } from './codeweavers/utils'
 import { getHowLongToBeat } from './howlongtobeat/utils'
 import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
 import { isLinux, isMac } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import {
+  getCodeweaversFromIndex,
+  crossoverIndexHas
+} from 'backend/crossover_index'
 
-export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
+export async function getWikiGameInfo(
+  game: Game,
+  forceRefresh = false
+): Promise<WikiInfo | null> {
   const gameInfo = game.getGameInfo()
   const appName = gameInfo.app_name
   const runner = gameInfo.runner
@@ -28,7 +36,25 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     // as a miss and re-fetch. Once re-fetched it caches a non-null value (real
     // ratings or the "checked, none found" marker) and refreshes on TTL expiry.
     const staleAppleData = isMac && !cachedResponse?.applegamingwiki
-    if (cachedResponse && !staleAppleData) {
+    // Self-heal stale caches: entries populated before CodeWeavers data was
+    // captured (or on a Windows session) hold codeweavers=null. On Mac/Linux
+    // the CrossOver rating pill needs that data, so treat a null-codeweavers
+    // hit as a miss and re-fetch (mirrors staleAppleData above). Also treat
+    // an old-shaped cache (pre-per-OS-rating, no `macRating` field at all) as
+    // stale so it gets re-fetched into the new shape.
+    // D-13: additionally, on macOS a cached Phase-16 "checked, none found"
+    // miss (macRating === null, not undefined) is treated as stale ONLY when
+    // the index (crossoverIndexHas, D-02-gated) now covers this title —
+    // targeted, so a genuine miss (or a name-only title under a failed D-02
+    // gate) does NOT re-scrape on every details-page visit.
+    const staleCrossoverData =
+      (isMac || isLinux) &&
+      (!cachedResponse?.codeweavers ||
+        cachedResponse.codeweavers.macRating === undefined ||
+        (isMac &&
+          cachedResponse.codeweavers.macRating === null &&
+          crossoverIndexHas(gameInfo)))
+    if (!forceRefresh && cachedResponse && !staleAppleData && !staleCrossoverData) {
       logInfo(
         [`Using cached ExtraGameInfo data for ${title}`],
         LogPrefix.ExtraGameInfo
@@ -38,12 +64,19 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
 
     logInfo(`Getting ExtraGameInfo data for ${title}`, LogPrefix.ExtraGameInfo)
 
-    const [pcgamingwiki, gamesdb, applegamingwiki, umuId] = await Promise.all([
-      getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
-      getInfoFromGamesDB(title, appName, runner),
-      isMac ? getInfoFromAppleGamingWiki(title) : null,
-      isLinux ? getUmuId(appName, runner) : null
-    ])
+    const [pcgamingwiki, gamesdb, applegamingwiki, umuId, codeweavers] =
+      await Promise.all([
+        getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
+        getInfoFromGamesDB(title, appName, runner),
+        isMac ? getInfoFromAppleGamingWiki(title) : null,
+        isLinux ? getUmuId(appName, runner) : null,
+        isMac
+          ? (await getCodeweaversFromIndex(gameInfo)) ??
+            getInfoFromCodeweavers(title)
+          : isLinux
+            ? getInfoFromCodeweavers(title)
+            : null
+      ])
 
     // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
     const howlongtobeat = await getHowLongToBeat(
@@ -75,6 +108,7 @@ export async function getWikiGameInfo(game: Game): Promise<WikiInfo | null> {
     const wikiGameInfo = {
       pcgamingwiki,
       applegamingwiki,
+      codeweavers,
       howlongtobeat,
       gamesdb,
       steamInfo,

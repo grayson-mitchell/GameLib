@@ -57,6 +57,7 @@ const initialContext: ContextType = {
   refreshLibrary: async () => Promise.resolve(),
   refreshing: false,
   refreshingInTheBackground: true,
+  steamMetadataSyncing: false,
   isRTL: false,
   isFullscreen: false,
   isFrameless: false,

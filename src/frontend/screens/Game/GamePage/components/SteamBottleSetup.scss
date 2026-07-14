@@ -1,0 +1,66 @@
+// Phase 17-10 gap closure (MACSTEAM-02): the guided-setup banner
+// (.steamBottleSetupToast) previously had zero style rules and rendered as
+// plain text overlaid on the window. Mirrors the HumbleExpiryToast pattern
+// (frontend/components/UI/HumbleExpiryToast/index.scss) — same design
+// tokens, fixed bottom/right banner, z-index above the app chrome — but
+// stacked as a column since the provisioning state renders several message
+// spans plus a dismiss button rather than a single inline message.
+.steamBottleSetupToast {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: min(420px, calc(100vw - 2 * var(--space-lg)));
+  background: var(--background-darker, var(--body-background));
+  color: var(--text-default);
+  padding: var(--space-md);
+  border-radius: var(--space-2xs);
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.35);
+  border-inline-start: var(--space-3xs) solid var(--status-warning);
+}
+
+.steamBottleSetupMessage {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.steamBottleSetupAction {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--status-warning);
+  color: var(--status-warning);
+  border-radius: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.steamBottleSetupAction:hover {
+  background: var(--status-warning);
+  color: var(--body-background);
+}
+
+.steamBottleSetupDismiss {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-3xs);
+  font-size: var(--text-sm);
+}
+
+.steamBottleSetupDismiss:hover {
+  color: var(--text-default);
+}
+
+// Minor spacing for the "Compatibility engine" label inside the consent
+// MUI Dialog — the dialog chrome itself is already styled by Dialog.
+.steamBottleSetupEngineLabel {
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-2xs);
+}

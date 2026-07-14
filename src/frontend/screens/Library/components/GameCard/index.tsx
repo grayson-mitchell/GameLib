@@ -56,6 +56,7 @@ import {
 } from '@mui/icons-material'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
+import CrossoverBadge from './CrossoverBadge'
 
 interface Card {
   buttonClick: () => void
@@ -112,12 +113,17 @@ const GameCard = ({
     activeController,
     connectivity
   } = useContext(ContextProvider)
-  const { openGameSettingsModal, openGameLogsModal, openGameCategoriesModal } =
-    useGlobalState.keys(
-      'openGameSettingsModal',
-      'openGameLogsModal',
-      'openGameCategoriesModal'
-    )
+  const {
+    openGameSettingsModal,
+    openGameLogsModal,
+    openGameCategoriesModal,
+    crossoverRatings
+  } = useGlobalState.keys(
+    'openGameSettingsModal',
+    'openGameLogsModal',
+    'openGameCategoriesModal',
+    'crossoverRatings'
+  )
 
   const { layout } = useContext(LibraryContext)
 
@@ -128,6 +134,7 @@ const GameCard = ({
     is_installed: isInstalled,
     install: gameInstallInfo
   } = { ...gameInfoFromProps }
+  const crossoverRating = crossoverRatings[appName]
   const title = gameInfoFromProps.overrides?.title || gameInfoFromProps.title
   const art_cover =
     gameInfoFromProps.overrides?.art_cover || gameInfoFromProps.art_cover
@@ -509,6 +516,7 @@ const GameCard = ({
               {t2('library.delisted', 'Game no longer available')}
             </span>
           )}
+          <CrossoverBadge rating={crossoverRating} />
           <Link
             to={`/gamepage/${runner}/${appName}`}
             state={{ gameInfo }}
@@ -527,7 +535,11 @@ const GameCard = ({
             ) : (
               <CachedImage
                 src={getImageFormatting(cover, runner)}
-                fallback={fallBackImageMissing}
+                fallback={
+                  art_cover && art_cover !== cover
+                    ? [getImageFormatting(art_cover, runner), fallBackImageMissing]
+                    : fallBackImageMissing
+                }
                 className={imgClasses}
                 alt="cover"
               />

@@ -24,7 +24,7 @@ module.exports = {
 
   roots: ['<rootDir>/src/frontend'],
 
-  testMatch: ['**/__tests__/**/*.test.tsx'],
+  testMatch: ['**/__tests__/**/*.test.tsx', '**/__tests__/**/*.test.ts'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest'
   },

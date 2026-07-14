@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Trimmed fixture exercising the REAL shape of CodeWeavers' daily `.tie` dump
+  (Phase 19, CXIDX-01 — see .planning/notes/crossover-tie-dump-findings.md and
+  19-RESEARCH.md Pitfall 2). Root is `c4p > applications > app[]`; `steamid`,
+  `category`, and `medal` all live INSIDE `<appprofile>`, not as direct
+  children of `<app>`.
+
+  Cases covered (see 19-01-PLAN.md Task 1 <action>):
+    (a) appid 1001 "Half-Life" — Mac medal, bare no-lang <name> + a lang="en"
+        duplicate (deliberately different text so a test can catch a bug that
+        picks the lang="en" duplicate instead of the bare canonical name) plus
+        one other localized name (lang="fr").
+    (b) appid 1002 "Command & Conquer" — entity-encoded name + an
+        entity-dense <description> block (T-01 entity-decoding proof).
+    (c) appid 1003 "Linux Only Shooter" — Games category, but ONLY a Linux
+        medal — must be filtered OUT (no Mac medal).
+    (d) appid 1004 "Some Office Tool" — Mac medal, but a non-Games category
+        — must be filtered OUT (category does not startWith "Games").
+    (e) appid 2001 "Quake Remaster" / appid 2002 "Quake" — share one
+        <steamid> (2310) and tie EXACTLY on medal @_version AND @_num — the
+        D-04/Pitfall-5 determinism collision case.
+    (f) appid 1002 has no <steamid> (fallback-to-appid case); appid 1001 has
+        a <steamid> (70).
+-->
+<c4p>
+  <applications>
+    <app appid="1001" timestamp="2026-07-01T00:00:00Z">
+      <name>Half-Life</name>
+      <name lang="en">Half-Life (EN duplicate - must not be used as canonical)</name>
+      <name lang="fr">Half-Life (FR)</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>A classic first-person shooter.</description>
+        <category>Games/Action</category>
+        <steamid>70</steamid>
+        <medal rating="5" platform="Mac" version="26.2.0" num="10" last="2026-07-01">gold</medal>
+        <medal rating="4" platform="Linux" version="25.0.1" num="5" last="2026-06-01">silver</medal>
+      </appprofile>
+    </app>
+
+    <app appid="1002" timestamp="2026-07-01T00:00:00Z">
+      <name>Command &amp; Conquer</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>A dense &amp; &quot;classic&quot; RTS &#39;game&#39; &amp; a &amp; long &amp; entity-heavy &amp; description &amp; block.</description>
+        <category>Games/Strategy</category>
+        <medal rating="3" platform="Mac" version="26.1.0" num="2" last="2026-05-01">bronze</medal>
+      </appprofile>
+    </app>
+
+    <app appid="1003" timestamp="2026-07-01T00:00:00Z">
+      <name>Linux Only Shooter</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>A game with only a Linux medal.</description>
+        <category>Games/Action</category>
+        <medal rating="4" platform="Linux" version="26.2.0" num="8" last="2026-06-01">silver</medal>
+      </appprofile>
+    </app>
+
+    <app appid="1004" timestamp="2026-07-01T00:00:00Z">
+      <name>Some Office Tool</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>A productivity app that happens to carry a Mac medal.</description>
+        <category>Productivity/Business</category>
+        <medal rating="5" platform="Mac" version="26.2.0" num="20" last="2026-07-01">gold</medal>
+      </appprofile>
+    </app>
+
+    <app appid="2001" timestamp="2026-07-01T00:00:00Z">
+      <name>Quake Remaster</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>Steam ID collision case — tied cxversion and num with 2002.</description>
+        <category>Games/Action</category>
+        <steamid>2310</steamid>
+        <medal rating="5" platform="Mac" version="26.2.0" num="1" last="2026-07-01">gold</medal>
+      </appprofile>
+    </app>
+
+    <app appid="2002" timestamp="2026-07-01T00:00:00Z">
+      <name>Quake</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>Steam ID collision case — tied cxversion and num with 2001.</description>
+        <category>Games/Action</category>
+        <steamid>2310</steamid>
+        <medal rating="5" platform="Mac" version="26.2.0" num="1" last="2026-07-01">gold</medal>
+      </appprofile>
+    </app>
+
+    <app appid="3001" timestamp="2026-07-01T00:00:00Z">
+      <name>No Steam Link Game</name>
+      <cxversion product="cxoffice">22.0</cxversion>
+      <appprofile>
+        <description>A Mac-medal Games app with no steamid at all.</description>
+        <category>Games/Adventure</category>
+        <medal rating="2" platform="Mac" version="26.2.0" num="3" last="2026-07-01">knownnottowork</medal>
+      </appprofile>
+    </app>
+  </applications>
+</c4p>

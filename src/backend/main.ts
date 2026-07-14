@@ -39,8 +39,16 @@ import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
-import { steamSyncStore } from './storeManagers/steam/electronStores'
+import {
+  steamBottleConfigStore,
+  steamSyncStore
+} from './storeManagers/steam/electronStores'
 import { getSteamInstallSize } from './storeManagers/steam/games'
+import {
+  isBottleProvisioned,
+  provisionBottle
+} from './storeManagers/steam/bottle'
+import { DEFAULT_STEAM_BOTTLE_NAME } from './storeManagers/steam/constants'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
 import { HumbleLibrary } from './humble/library'
@@ -117,6 +125,7 @@ import {
   getAllGameOverrides,
   attachOverrides
 } from './game_overrides'
+import { buildCrossoverRatingMap } from './crossover_index/ipc_handler'
 import { backendEvents } from './backend_events'
 import { configStore } from './constants/key_value_stores'
 import {
@@ -307,6 +316,28 @@ async function initializeWindow(): Promise<BrowserWindow> {
   return mainWindow
 }
 
+/**
+ * WR-05 fix: `buildCrossoverRatingMap()` was previously only ever invoked
+ * from `app.whenReady()` (once, at startup) and from the `getCrossoverIndex`
+ * one-time renderer pull on mount — nothing tied it to a library-membership
+ * change. A game purchased/installed/synced into the library after startup
+ * (e.g. a background Steam metadata sync, or a manual "Refresh Library")
+ * was therefore permanently absent from `crossoverRatings` for the rest of
+ * the session. Extracted here so it can be re-invoked, fire-and-forget,
+ * from both the startup path and the `refreshLibrary` handler below —
+ * mirroring the existing `metadataChanged` push-after-mutation pattern.
+ */
+function refreshCrossoverRatingMap() {
+  buildCrossoverRatingMap()
+    .then((index) => sendFrontendMessage('crossoverIndexChanged', index))
+    .catch((error) =>
+      logError(
+        ['Failed to build CrossOver rating map', error],
+        LogPrefix.Backend
+      )
+    )
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -344,6 +375,16 @@ if (!gotTheLock) {
     initOnlineMonitor()
     initStoreManagers()
     initImagesCache()
+
+    // Phase 19 (Plan 06), D-11/D-16: a validated background CrossOver-index
+    // refresh resolves the full three-state rating map once at startup and
+    // pushes it so the grid's `crossoverRatings` slice updates without the
+    // renderer needing to issue a manual pull. Fire-and-forget — never
+    // blocks readiness, and never fires on the `getCrossoverIndex` pull path
+    // (that handler already returns its own freshly resolved map). Also
+    // re-invoked from the `refreshLibrary` handler below (WR-05) so a game
+    // added mid-session picks up a badge/filter signal without a restart.
+    refreshCrossoverRatingMap()
 
     // Add User-Agent Client hints to behave like Windows
     if (process.argv.includes('--spoof-windows')) {
@@ -880,6 +921,22 @@ addHandler('getSteamInstallSize', async (event, appId) =>
 )
 addListener('logoutSteam', () => SteamUser.logout())
 
+// Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.
+// D-04: bottled-Steam auth stays opaque — GameLib never inspects
+// loginusers.vdf/sentry, so there is no login state to surface here.
+// steamBottleStatus therefore reports only `provisioned` + `bottleName`
+// (WR-02, 17-17: the always-false `loggedIn` signal was removed).
+addHandler('steamBottleProvision', async (event, args) =>
+  provisionBottle(args)
+)
+addHandler('isSteamBottleProvisioned', async () => isBottleProvisioned())
+addHandler('steamBottleStatus', async () => ({
+  provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
+  bottleName:
+    steamBottleConfigStore.get_nodefault('bottleName') ??
+    DEFAULT_STEAM_BOTTLE_NAME
+}))
+
 registerHumbleIpcHandlers()
 
 // D-12/T-10-16: dev-only in-app validation trigger. Exercises the real
@@ -990,6 +1047,13 @@ addHandler('refreshLibrary', async (e, library?) => {
       )
     }
   }
+
+  // WR-05: re-resolve the CrossOver rating map after every library refresh
+  // (manual "Refresh Library", a background Steam metadata sync completing,
+  // etc.) so a game added mid-session gets a badge/filter signal without
+  // requiring an app restart. Fire-and-forget, same as the startup call —
+  // never blocks the refreshLibrary IPC response.
+  refreshCrossoverRatingMap()
 })
 
 // get pid/tid on launch and inject

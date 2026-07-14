@@ -13,6 +13,7 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 import SteamLibraryManager, {
   buildInstalledMap,
+  buildBottleInstalledMap,
   readAcfState,
   startInstallPolling,
   stopInstallPolling,
@@ -24,11 +25,16 @@ import SteamLibraryManager, {
   readRunningAppId,
   pollRunningOnce,
   startRunningPoll,
-  stopRunningPoll
+  stopRunningPoll,
+  machOArchsOf,
+  verdictFromArchs,
+  locateMachOBinary,
+  verifyMacArchGroundTruth
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
+import { dialog } from 'electron'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
@@ -38,6 +44,11 @@ import {
   steamMetadataStore,
   steamSyncStore
 } from '../electronStores'
+import {
+  getBottleSteamappsDir,
+  getSteamBottleSettings,
+  isBottleProvisioned
+} from '../bottle'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -94,10 +105,24 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn().mockReturnValue(false)
 }))
 
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps) ─
+// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
+// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
 jest.mock('child_process', () => ({
   spawnSync: jest.fn(),
   execFileSync: jest.fn()
+}))
+
+// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
+// app.getPath (backend/constants/paths reads this at module load time) ───────
+// library.ts's only electron usage is `dialog`; games.ts's `shell` import
+// (pulled in transitively via `import SteamGame from './games'`) resolves to
+// undefined here, which is fine — SteamGame.install()/forceUninstall() are
+// only reached via a CONFIRMED promptI386Recovery, and this file's tests
+// keep the dialog mocked to a cancel response unless a test explicitly opts
+// into the confirm path.
+jest.mock('electron', () => ({
+  dialog: { showMessageBox: jest.fn() },
+  app: { getPath: jest.fn().mockReturnValue('/tmp/mock-path') }
 }))
 
 // ── backend/constants/environment mock — platform-switching for reader tests ──
@@ -129,6 +154,34 @@ jest.mock('../electronStores', () => ({
     set: jest.fn()
   }
 }))
+
+// ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
+jest.mock('../bottle', () => ({
+  getBottleSteamappsDir: jest.fn(),
+  getSteamBottleSettings: jest.fn(),
+  isBottleProvisioned: jest.fn()
+}))
+
+/** Bottle steamapps root used consistently across the bottle-path tests below. */
+const BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files (x86)/Steam/steamapps'
+)
+
+/**
+ * GAP-17-PFX86-PATH regression fixture: the same bottle steamapps root but
+ * under a win32-prefix layout (no "(x86)" segment — 32-bit Steam installs
+ * directly under `Program Files`). getBottleSteamappsDir is mocked in this
+ * file, so this fixture proves the bottle-source ACF scan resolves manifests
+ * identically regardless of which root the (real, unmocked) resolver in
+ * bottle.ts returns.
+ */
+const WIN32_BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files/Steam/steamapps'
+)
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -361,6 +414,80 @@ describe('SteamLibraryManager', () => {
     expect(pushed?.extra?.steamLastPlayed).toBe(LAST_PLAYED_TS)
   })
 
+  // ── Phase 17 D-08 reconciliation (Plan 09): steamPlatformsCaptured ─────────
+
+  it('D-08 reconciliation: synced GameInfo carries steamPlatformsCaptured:true when cachedMeta.platformsCaptured is true', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.steamPlatformsCaptured).toBe(true)
+  })
+
+  it('D-08 reconciliation: synced GameInfo carries steamPlatformsCaptured:false when cachedMeta is absent (never synced)', async () => {
+    const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+
+    expect(pushed?.steamPlatformsCaptured).toBe(false)
+  })
+
+  // ── CR-01 gap closure (18-05): mac_arch survives refresh() resync ─────────
+
+  it('CR-01: refresh() seeds mac_arch:\'32\' from cachedMeta so a cached Mach-O verdict survives resync', async () => {
+    const apps = [
+      makeOwnedApp(570, 'Old 32-bit Game', 120),
+      makeOwnedApp(440, 'Never Checked Game', 60)
+    ]
+    const fakeClient = makeFakeClient(apps)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+    jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    ;(steamMetadataStore.get as jest.Mock).mockImplementation(
+      (appId: string) => {
+        if (appId === '570') {
+          return { mac_arch: '32', mac_arch_source: 'macho' }
+        }
+        return undefined
+      }
+    )
+
+    await manager.refresh()
+
+    const calls = jest.mocked(sendFrontendMessage).mock.calls
+    const pushed570 = calls.find(
+      ([_msg, info]) => (info as any).app_name === '570'
+    )?.[1] as any
+    const pushed440 = calls.find(
+      ([_msg, info]) => (info as any).app_name === '440'
+    )?.[1] as any
+
+    expect(pushed570?.mac_arch).toBe('32')
+    // Negative control: no cached mac_arch → 'unknown', never '32' by default
+    // (T-18-05-02 false-flag-safe invariant)
+    expect(pushed440?.mac_arch).toBe('unknown')
+  })
+
   // ── Cache fallback ────────────────────────────────────────────────────────
 
   it('refresh() serves cached library from steamLibraryStore when getUserOwnedApps throws', async () => {
@@ -391,6 +518,190 @@ describe('SteamLibraryManager', () => {
     )
     // Should NOT write a new list to the store on failure
     expect(steamLibraryStore.set).not.toHaveBeenCalled()
+  })
+
+  // ── GAP-17-BOTTLE-PLAY-REVERT: refresh() must be bottle-aware ──────────────
+  // Regression coverage for the follow-on to bottle-install-not-recognized:
+  // refresh() previously derived is_installed ONLY from buildInstalledMap()
+  // (native ACF scan), so a bottle-only-installed game was always reported
+  // not-installed by a full refresh() — which is reachable mid-session via the
+  // launch-completion 'done' status (see .planning/debug/bottle-install-not-recognized.md).
+
+  describe('SteamLibraryManager.refresh() bottle reconciliation', () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+
+    beforeEach(() => {
+      envMock.isMac = true
+      envMock.isLinux = false
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
+      // Native scan finds nothing by default in this block — only the bottle
+      // root (mocked separately below) has manifests.
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+    })
+
+    afterEach(() => {
+      envMock.isMac = false
+      envMock.isLinux = true
+    })
+
+    it('reports is_installed:true (platform Windows) for a game installed ONLY under the bottle root when isBottleProvisioned() is true', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206020.acf'] : []
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '206020',
+          StateFlags: '4',
+          installdir: 'Avernum 4',
+          SizeOnDisk: '123456'
+        }
+      })
+
+      const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206020'
+      )?.[1] as any
+
+      // RED before the fix: pushed.is_installed was false (native-only scan
+      // found nothing). GREEN after the fix: bottle fallback is consulted.
+      expect(pushed?.is_installed).toBe(true)
+      expect(pushed?.install).toEqual(
+        expect.objectContaining({
+          install_path: join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 4'),
+          install_size: '123456 B',
+          // Pitfall 3: bottle installs must always report 'Windows', regardless
+          // of host OS (isMac is mocked true in this block).
+          platform: 'Windows'
+        })
+      )
+    })
+
+    it('does NOT persist is_installed:false to steamLibraryStore for a bottle-only-installed game when refresh() runs mid-session', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206060.acf'] : []
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '206060',
+          StateFlags: '4',
+          installdir: 'Avernum 6',
+          SizeOnDisk: '654321'
+        }
+      })
+
+      const apps = [makeOwnedApp(206060, 'Avernum 6', 10)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const persistedCall = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.find(([key]) => key === 'games')
+      const persistedGames = persistedCall?.[1] as any[]
+      const persisted = persistedGames?.find((g) => g.app_name === '206060')
+
+      expect(persisted?.is_installed).toBe(true)
+    })
+
+    it('falls back to native install data when BOTH native and bottle report the same appId (native wins)', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      const NATIVE_ROOT = join('/native/steam', 'steamapps')
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+        if (dir === NATIVE_ROOT) return ['appmanifest_570.acf']
+        if (dir === BOTTLE_STEAMAPPS_ROOT) return ['appmanifest_570.acf']
+        return []
+      })
+      ;(readFileSync as jest.Mock).mockImplementation((file: string) => {
+        if (file.includes(NATIVE_ROOT)) return 'native-content'
+        return 'bottle-content'
+      })
+      ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+        content === 'native-content'
+          ? {
+              AppState: {
+                appid: '570',
+                StateFlags: '4',
+                installdir: 'dota2-native',
+                SizeOnDisk: '111'
+              }
+            }
+          : {
+              AppState: {
+                appid: '570',
+                StateFlags: '4',
+                installdir: 'dota2-bottle',
+                SizeOnDisk: '222'
+              }
+            }
+      )
+
+      const apps = [makeOwnedApp(570, 'Dota 2', 5)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '570'
+      )?.[1] as any
+
+      // Native must win — never double-count/conflate the two roots.
+      expect(pushed?.install?.install_path).toBe(
+        join(NATIVE_ROOT, 'common', 'dota2-native')
+      )
+    })
+
+    it('performs NO bottle reconciliation when isBottleProvisioned() returns false (byte-for-byte native-only behavior preserved)', async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      // If the bottle path were consulted, readdirSync would be called on the
+      // bottle root too — assert it's never scanned (native-only).
+      ;(existsSync as jest.Mock).mockReturnValue(false)
+      ;(readdirSync as jest.Mock).mockReturnValue([])
+
+      const apps = [makeOwnedApp(206020, 'Avernum 4', 30)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206020'
+      )?.[1] as any
+
+      expect(pushed?.is_installed).toBe(false)
+      expect(readdirSync).not.toHaveBeenCalledWith(BOTTLE_STEAMAPPS_ROOT)
+    })
   })
 
   // ── Art URL migration (capsule_616x353 → library_600x900) ──────────────────
@@ -620,6 +931,104 @@ describe('SteamLibraryManager', () => {
       // No side effects
       expect(sendFrontendMessage).not.toHaveBeenCalled()
     })
+
+    // ── 17-03: bottle-aware reconciliation (MACSTEAM-05, T-17-03 gate) ───────
+
+    describe('bottle reconciliation', () => {
+      const envMock = jest.requireMock('backend/constants/environment')
+
+      beforeEach(() => {
+        envMock.isMac = true
+        envMock.isLinux = false
+        jest
+          .mocked(getSteamBottleSettings)
+          .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+        jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      })
+
+      afterEach(() => {
+        envMock.isMac = false
+        envMock.isLinux = true
+      })
+
+      it('flips a bottle-installed game to installed (platform Windows) via pushGameToLibrary when isBottleProvisioned() is true', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Native scan finds nothing; bottle scan finds the manifest.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '570',
+            is_installed: true,
+            install: expect.objectContaining({ platform: 'Windows' })
+          })
+        )
+      })
+
+      it('performs NO bottle reconciliation when isBottleProvisioned() returns false', async () => {
+        jest.mocked(isBottleProvisioned).mockReturnValue(false)
+        library.set('570', {
+          runner: 'steam',
+          app_name: '570',
+          title: 'Dota 2',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Even though the bottle path mocks WOULD report installed, the gate
+        // must prevent buildBottleInstalledMap() (and readdirSync) from ever
+        // being consulted.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '570',
+            StateFlags: '4',
+            installdir: 'dota2',
+            SizeOnDisk: '50000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+        expect(library.get('570')!.is_installed).toBe(false)
+      })
+    })
   })
 
   // ── D-07: startup resume via scanDownloadingAppIds ────────────────────────
@@ -710,6 +1119,48 @@ describe('readAcfState()', () => {
     expect(result.installPath).toBeUndefined()
   })
 
+  // ── GAP-17-BOTTLE-PROGRESS: readAcfState surfaces ACF byte counts ─────────
+  it('a downloading ACF with BytesDownloaded/BytesToDownload returns those numbers on the result', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+    expect(result.bytesDownloaded).toBe(5)
+    expect(result.bytesToDownload).toBe(10)
+    expect(result.bytesStaged).toBe(3)
+    expect(result.bytesToStage).toBe(6)
+  })
+
+  it('defaults missing/non-numeric ACF byte fields to 0', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.bytesDownloaded).toBe(0)
+    expect(result.bytesToDownload).toBe(0)
+    expect(result.bytesStaged).toBe(0)
+    expect(result.bytesToStage).toBe(0)
+  })
+
   it('returns state:"absent" when no manifest file is found for the appId', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false)
     const result = await readAcfState('730')
@@ -723,6 +1174,166 @@ describe('readAcfState()', () => {
     })
     const result = await readAcfState('730')
     expect(result.state).toBe('absent')
+  })
+})
+
+// ── 17-03: readAcfState('bottle') — bottle-scoped ACF scan, never conflated ───
+
+describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('reads a manifest placed under the mocked bottle steamapps root and returns state:"installed" (bit 4 set)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    // Bottle scan must never consult getSteamLibraries() (the native root)
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" when the bottle root has no manifest, even though the native root is separately mocked as installed (proves no conflation)', async () => {
+    // Simulate a native library ALSO configured with an installed manifest for
+    // the same appId — if the bottle scan ever fell back to or merged with the
+    // native root, this would incorrectly report 'installed'.
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path === '/steam' || path === join('/steam', 'steamapps')
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('absent')
+    // The bottle scan must never even consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  // ── GAP-17-PFX86-PATH: win32-layout bottle (no "(x86)" root) ──────────────
+  it('resolves an installed manifest identically under a win32-layout bottle steamapps root (Program Files, no x86)', async () => {
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(WIN32_BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('existing native readAcfState(appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
+    // Native scan must never consult the bottle path resolver
+    expect(getBottleSteamappsDir).not.toHaveBeenCalled()
+  })
+})
+
+// ── 17-03: buildBottleInstalledMap() ──────────────────────────────────────────
+
+describe('buildBottleInstalledMap()', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('returns an empty Map when the bottle steamapps dir does not exist', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.size).toBe(0)
+  })
+
+  it('marks a bottle-installed appId (StateFlags bit 4 set), rooted at the bottle steamapps dir', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.has(730)).toBe(true)
+    expect(result.get(730)?.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    // Bottle map build must never consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('skips a corrupt bottle ACF file without throwing (T-2-01/T-17-05)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+
+    const result = await buildBottleInstalledMap()
+
+    expect(result.size).toBe(0)
   })
 })
 
@@ -775,6 +1386,80 @@ describe('pollInstallOnce()', () => {
         status: 'installing'
       })
     )
+  })
+
+  // ── GAP-17-BOTTLE-PROGRESS: pollInstallOnce derives percent from ACF bytes ─
+
+  it('emits progressUpdate with progress.percent === 50 for a mid-download ACF (BytesDownloaded=5, BytesToDownload=10)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10'
+      }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        progress: expect.objectContaining({ percent: 50 })
+      })
+    )
+  })
+
+  it('falls back to BytesStaged/BytesToStage when BytesToDownload is 0 (percent 50 via staged fallback)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        progress: expect.objectContaining({ percent: 50 })
+      })
+    )
+  })
+
+  it('does NOT emit progressUpdate (and never a non-finite percent) when BOTH BytesToDownload and BytesToStage are 0', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '0',
+        BytesToStage: '0'
+      }
+    })
+    await pollInstallOnce('730')
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(progressCalls).toHaveLength(0)
+    // Belt-and-suspenders: no call anywhere ever carries a non-finite percent.
+    for (const [, payload] of (sendFrontendMessage as jest.Mock).mock.calls) {
+      if (payload?.progress?.percent !== undefined) {
+        expect(Number.isFinite(payload.progress.percent)).toBe(true)
+      }
+    }
   })
 
   it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
@@ -833,6 +1518,69 @@ describe('pollInstallOnce()', () => {
     })
     await pollInstallOnce('730')
     expect(notify).not.toHaveBeenCalled()
+  })
+
+  // ── 17-03: pollInstallOnce(appId, 'bottle') — Pitfall 3 platform label ─────
+
+  it('a bottle-sourced install object has platform === "Windows" even when isMac is mocked true', async () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isLinux = false
+    try {
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '730',
+          StateFlags: '4',
+          installdir: 'csgo',
+          SizeOnDisk: '50000'
+        }
+      })
+      startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+      await pollInstallOnce('730', 'bottle')
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'pushGameToLibrary',
+        expect.objectContaining({
+          app_name: '730',
+          is_installed: true,
+          install: expect.objectContaining({ platform: 'Windows' })
+        })
+      )
+    } finally {
+      envMock.isMac = false
+      envMock.isLinux = true
+    }
+  })
+
+  // ── GAP-17-PFX86-PATH: win32-layout bottle platform label ──────────────────
+  it('a bottle-sourced install object from a win32-layout bottle still has platform === "Windows"', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+    await pollInstallOnce('730', 'bottle')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: '730',
+        is_installed: true,
+        install: expect.objectContaining({ platform: 'Windows' })
+      })
+    )
   })
 })
 
@@ -896,6 +1644,39 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         appName: '730',
         runner: 'steam',
         status: 'done'
+      })
+    )
+  })
+
+  // ── 17-03: startInstallPolling(appId, { source: 'bottle' }) ────────────────
+
+  it('startInstallPolling(appId, { source: "bottle" }) polls the bottle steamapps root, not the native one', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2', // downloading — keeps the poll alive for the assertion
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    startInstallPolling('730', { source: 'bottle' })
+    await jest.advanceTimersByTimeAsync(3000)
+
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'installing'
       })
     )
   })
@@ -1497,5 +2278,442 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
     await installGame570()
 
     expect(library.get('570')!.install.platform).toBe('Windows')
+  })
+})
+
+// ── MAC32-03: Mach-O classification primitives ───────────────────────────────
+
+/** Flush pending microtask/macrotask queues (real timers only). */
+const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
+
+describe('machOArchsOf()', () => {
+  it('runs lipo -archs argv-form and returns the space-split arch list', () => {
+    ;(execFileSync as jest.Mock).mockReturnValue('x86_64 arm64\n')
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(execFileSync).toHaveBeenCalledWith(
+      'lipo',
+      ['-archs', '/Games/Foo.app/Contents/MacOS/Foo'],
+      expect.objectContaining({ encoding: 'utf8' })
+    )
+    expect(result).toEqual(['x86_64', 'arm64'])
+  })
+
+  it('falls back to `file` when lipo throws, and still classifies correctly', () => {
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') throw new Error('lipo not found')
+      if (cmd === 'file') {
+        return '/Games/Foo.app/Contents/MacOS/Foo: Mach-O executable i386\n'
+      }
+      throw new Error(`unexpected command ${cmd}`)
+    })
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(execFileSync).toHaveBeenCalledWith(
+      'file',
+      ['/Games/Foo.app/Contents/MacOS/Foo'],
+      expect.objectContaining({ encoding: 'utf8' })
+    )
+    expect(result).toEqual(['i386'])
+  })
+
+  it('returns [] (inconclusive) when BOTH lipo and file fail — never a 32-bit verdict', () => {
+    ;(execFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('neither tool available')
+    })
+
+    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+
+    expect(result).toEqual([])
+  })
+})
+
+describe('verdictFromArchs()', () => {
+  it("maps ['i386'] to '32'", () => {
+    expect(verdictFromArchs(['i386'])).toBe('32')
+  })
+
+  it("maps ['x86_64'] to '64'", () => {
+    expect(verdictFromArchs(['x86_64'])).toBe('64')
+  })
+
+  it("maps ['x86_64','arm64'] to '64'", () => {
+    expect(verdictFromArchs(['x86_64', 'arm64'])).toBe('64')
+  })
+
+  it("maps ['i386','x86_64'] to '64' — any 64 wins over i386 (universal binary)", () => {
+    expect(verdictFromArchs(['i386', 'x86_64'])).toBe('64')
+  })
+
+  it('maps [] to null — inconclusive, must NOT be coerced to 32', () => {
+    expect(verdictFromArchs([])).toBeNull()
+  })
+})
+
+describe('locateMachOBinary()', () => {
+  const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
+
+  beforeEach(() => {
+    ;(existsSync as jest.Mock).mockReset()
+    ;(readdirSync as jest.Mock).mockReset()
+  })
+
+  it('prefers a supplied launch executable path when it exists', () => {
+    const launchExe = join('OldGame.app', 'Contents', 'MacOS', 'OldGame')
+    ;(existsSync as jest.Mock).mockImplementation(
+      (p: string) => p === join(INSTALL_PATH, launchExe)
+    )
+
+    const result = locateMachOBinary(INSTALL_PATH, launchExe)
+
+    expect(result).toBe(join(INSTALL_PATH, launchExe))
+    expect(readdirSync).not.toHaveBeenCalled()
+  })
+
+  it('scans for a top-level *.app bundle and returns Contents/MacOS/<first bin> when no launch executable is supplied', () => {
+    const macOsDir = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app', 'readme.txt']
+      if (dir === macOsDir) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+
+    const result = locateMachOBinary(INSTALL_PATH)
+
+    expect(result).toBe(join(macOsDir, 'OldGame'))
+  })
+
+  it('returns null (no throw) when no *.app bundle is found', () => {
+    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+
+  it('returns null (no throw) when readdirSync throws', () => {
+    ;(readdirSync as jest.Mock).mockImplementation(() => {
+      throw new Error('ENOENT')
+    })
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+
+  it('returns null when the *.app bundle has no Contents/MacOS dir', () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+      dir === INSTALL_PATH ? ['OldGame.app'] : []
+    )
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    expect(locateMachOBinary(INSTALL_PATH)).toBeNull()
+  })
+
+  // T-18-03-04: a launchExecutable that escapes installPath's subtree must be
+  // rejected, never filesystem-touched — join() alone does not contain '../'.
+  it('rejects a launchExecutable that escapes installPath via ".." traversal (never touches the filesystem)', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true) // even if it "exists", it must be refused
+    ;(readdirSync as jest.Mock).mockReturnValue([]) // fall-through scan finds nothing
+
+    const result = locateMachOBinary(INSTALL_PATH, '../../../../etc/passwd')
+
+    expect(result).toBeNull()
+    // The escaped candidate must never be returned, and existsSync must never
+    // be consulted for it (containment is checked before the fs probe).
+    expect(existsSync).not.toHaveBeenCalledWith(
+      join(INSTALL_PATH, '../../../../etc/passwd')
+    )
+  })
+
+  it('rejects a launchExecutable that resolves to an absolute path outside installPath', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
+
+    const result = locateMachOBinary(INSTALL_PATH, '/etc/passwd')
+
+    expect(result).toBeNull()
+  })
+})
+
+describe('verifyMacArchGroundTruth() — MAC32-03', () => {
+  const APP_ID = '226840'
+  const INSTALL_PATH = join('/steam', 'steamapps', 'common', 'oldgame')
+  const MACOS_DIR = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isWindows = false
+    envMock.isMac = true
+    envMock.isLinux = false
+    ;(existsSync as jest.Mock).mockReset()
+    ;(readdirSync as jest.Mock).mockReset()
+    ;(execFileSync as jest.Mock).mockReset()
+    ;(steamMetadataStore.get as jest.Mock).mockReset()
+    ;(steamMetadataStore.set as jest.Mock).mockReset()
+    // Default to a cancel response — tests that exercise the confirm path
+    // (games.test.ts, MAC32-03 Task 3) override this explicitly. Prevents an
+    // unhandled rejection from the fire-and-forget promptI386Recovery call
+    // on an i386 flip.
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+  })
+
+  afterEach(() => {
+    envMock.isWindows = false
+    envMock.isMac = false
+    envMock.isLinux = true
+    // CR-01 regression test seeds the real library Map (imported from
+    // '../state') — clean it up so it never leaks into sibling tests.
+    library.delete(APP_ID)
+  })
+
+  it("skips entirely (no subprocess, no cache write) when source==='bottle'", async () => {
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'bottle')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(readdirSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('skips when !isMac (non-macOS host)', async () => {
+    envMock.isMac = false
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it("skips when mac_arch is already '32' (nothing to correct)", async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({ mac_arch: '32' })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('skips when mac_arch_verified is already true (already resolved)', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      mac_arch: '64',
+      mac_arch_verified: true
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('logs+skips (no cache write) when locateMachOBinary finds nothing', async () => {
+    ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it('inconclusive verdict (both tools fail) does NOT overwrite an existing mac_arch hint', async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('neither tool available')
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      mac_arch: 'unknown',
+      mac_arch_source: 'minos'
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).not.toHaveBeenCalled()
+  })
+
+  it("i386-only binary — persists mac_arch '32', mac_arch_source 'macho', mac_arch_verified true, spreading existing fields", async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: 'cover.jpg',
+      art_square: 'square.jpg',
+      extra: { reqs: [] },
+      is_mac_native: true,
+      platformsCaptured: true
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        art_cover: 'cover.jpg',
+        art_square: 'square.jpg',
+        is_mac_native: true,
+        platformsCaptured: true,
+        mac_arch: '32',
+        mac_arch_source: 'macho',
+        mac_arch_verified: true
+      })
+    )
+  })
+
+  it("x86_64 present — persists mac_arch '64' confirmed (Mach-O ground truth)", async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'x86_64\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({
+        mac_arch: '64',
+        mac_arch_source: 'macho',
+        mac_arch_verified: true
+      })
+    )
+  })
+
+  it('MAC32-03/CONTEXT D-6: an i386 flip triggers the user-consent dialog (never a silent uninstall) — decoupled fire-and-forget, cancel leaves the cached verdict untouched', async () => {
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    // Fire-and-forget: the dialog call itself runs synchronously up to its
+    // own first await when promptI386Recovery is invoked, so it has already
+    // been recorded by the time verifyMacArchGroundTruth returns.
+    await flushAsync()
+
+    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
+    // Cancelled — the '32' verdict persisted just above is left untouched
+    // (no second steamMetadataStore.set call from the recovery path).
+    expect(steamMetadataStore.set).toHaveBeenCalledTimes(1)
+  })
+
+  // ── CR-01 gap closure (18-05): verdict reaches the frontend-visible ───────
+  // in-memory library Map + pushGameToLibrary payload, not just
+  // steamMetadataStore (backend disk cache).
+
+  it('CR-01: an i386 verdict updates the in-memory library Map and pushes the updated GameInfo to the frontend', async () => {
+    // Seed the real library Map (imported from '../state') with an existing
+    // GameInfo for APP_ID — the propagation fix only updates entries already
+    // present in the Map (never fabricates one).
+    library.set(APP_ID, {
+      runner: 'steam',
+      app_name: APP_ID,
+      title: 'Old Game',
+      is_installed: true,
+      install: { install_path: INSTALL_PATH },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    // Cancel path — promptI386Recovery is a no-op, keeps this test focused
+    // on the propagation fix rather than the recovery dialog flow.
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, mac_arch: '32' })
+    )
+    expect(library.get(APP_ID)?.mac_arch).toBe('32')
+    expect(steamLibraryStore.set).toHaveBeenCalledWith(
+      'games',
+      expect.arrayContaining([
+        expect.objectContaining({ app_name: APP_ID, mac_arch: '32' })
+      ])
+    )
+  })
+
+  it('CR-01: does not push or throw when appId is not present in the in-memory library Map', async () => {
+    // library does not have APP_ID (afterEach deletes it)
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) =>
+      cmd === 'lipo'
+        ? 'i386\n'
+        : (() => {
+            throw new Error('unexpected')
+          })()
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] }
+    })
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+    await expect(
+      verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    ).resolves.not.toThrow()
+
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID })
+    )
+    expect(library.has(APP_ID)).toBe(false)
   })
 })

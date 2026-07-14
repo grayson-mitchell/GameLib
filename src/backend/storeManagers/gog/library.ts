@@ -585,6 +585,10 @@ export default class GOGLibraryManager implements LibraryManager {
     return library.get(slug) || this.getInstallAndGameInfo(slug)
   }
 
+  getListOfGames(): GameInfo[] {
+    return libraryStore.get('games', [])
+  }
+
   getInstallAndGameInfo(slug: string): GameInfo | undefined {
     const lib = libraryStore.get('games', [])
     const game = lib.find((value) => value.app_name === slug)

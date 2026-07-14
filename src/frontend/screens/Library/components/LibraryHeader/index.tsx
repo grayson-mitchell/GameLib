@@ -8,7 +8,6 @@ import LibraryContext from '../../LibraryContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import AddGameButton from '../AddGameButton'
-import classNames from 'classnames'
 
 type Props = {
   list: GameInfo[]
@@ -29,9 +28,13 @@ function formatRelativeTime(ms: number): string {
 
 export default React.memo(function LibraryHeader({ list }: Props) {
   const { t } = useTranslation()
-  const { showFavourites, storesFilters } = useContext(LibraryContext)
-  const { refreshing, refreshingInTheBackground, connectivity } =
-    useContext(ContextProvider)
+  const { showFavourites } = useContext(LibraryContext)
+  const {
+    refreshing,
+    refreshingInTheBackground,
+    steamMetadataSyncing,
+    connectivity
+  } = useContext(ContextProvider)
 
   const [syncedAt, setSyncedAt] = useState<number | null>(null)
 
@@ -56,14 +59,16 @@ export default React.memo(function LibraryHeader({ list }: Props) {
     return total > 0 ? `${total}` : 0
   }, [list])
 
-  const isSteamSyncing = refreshing && refreshingInTheBackground
+  // Show the spinner both during the library-list refresh AND while per-game
+  // metadata/art is still streaming in the background (the long tail on a cold
+  // cache) — otherwise the art appears to load with no sign anything's happening.
+  const isSteamSyncing =
+    (refreshing && refreshingInTheBackground) || steamMetadataSyncing
 
   const showStaleIndicator =
     connectivity.status !== 'online' && syncedAt !== null
 
   const staleTime = syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
-
-  const steamFilterActive = storesFilters?.steam === true
 
   return (
     <h5 className="libraryHeader" data-tour="library-header">
@@ -92,21 +97,6 @@ export default React.memo(function LibraryHeader({ list }: Props) {
         )}
         <div className="actionIconsWrapper">
           <ActionIcons />
-          {steamFilterActive && (
-            <button
-              className={classNames('steamRefreshButton', {
-                spinning: refreshing
-              })}
-              title={t('steam.refresh', 'Refresh Steam Library')}
-              disabled={refreshing}
-              onClick={() => window.api.refreshLibrary('steam')}
-            >
-              <FontAwesomeIcon
-                icon={faSyncAlt}
-                className={classNames({ 'fa-spin': refreshing })}
-              />
-            </button>
-          )}
         </div>
       </div>
     </h5>

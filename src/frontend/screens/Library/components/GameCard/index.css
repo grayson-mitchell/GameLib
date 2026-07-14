@@ -214,6 +214,42 @@
   pointer-events: none;
 }
 
+/* CXIDX-10: CrossOver compatibility medal dot — bottom-right corner overlay
+   on the title bar (unused by the other three badges: store-icon top-right,
+   gameCardStatus/gameCardDelistedBadge top-left, gameCardUpdateBadge top
+   banner). Plain color-filled circle, no icon — reads fastest at grid scale. */
+.gameCard .gameCardCrossoverBadge {
+  position: absolute;
+  z-index: 3;
+  bottom: 5px;
+  right: 0.5rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--neutral-01);
+  pointer-events: none;
+}
+
+.gameCardCrossoverBadge--gold {
+  background-color: var(--status-success);
+}
+
+.gameCardCrossoverBadge--silver {
+  background-color: var(--status-info);
+}
+
+.gameCardCrossoverBadge--bronze {
+  background-color: var(--status-warning);
+}
+
+.gameCardCrossoverBadge--wontRun {
+  background-color: var(--status-danger);
+}
+
+.gameCardCrossoverBadge--unknown {
+  background-color: var(--status-default);
+}
+
 .gameCard .runner {
   display: none;
 }

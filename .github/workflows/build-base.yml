@@ -32,6 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/install-deps
+      - name: Fetch bundled CrossOver index snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download crossover-index --pattern crossover-index.json.gz --dir public --clobber \
+            || echo "No published index yet; shipping without a bundled snapshot"
       - name: Build Windows x64 Portable version
         run: pnpm dist:win portable --x64
         if: matrix.os == 'windows-2025'

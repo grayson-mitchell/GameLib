@@ -1,13 +1,15 @@
 import {
   GameInfo,
   ExecResult,
+  InstallArgs,
   InstallPlatform,
   InstallInfo,
   LaunchOption
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { join } from 'path'
+import { join, resolve, relative, isAbsolute } from 'path'
+import { dialog } from 'electron'
 import { spawnSync, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
@@ -26,6 +28,32 @@ import {
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import SteamGame from './games'
+import {
+  getBottleSteamappsDir,
+  getSteamBottleSettings,
+  isBottleProvisioned
+} from './bottle'
+
+/**
+ * Which Steam client's steamapps root an ACF scan/poll should target.
+ * 'native' (default) preserves all pre-Phase-17 behavior; 'bottle' scans the
+ * dedicated CrossOver bottle's own steamapps dir instead (RESEARCH.md Pitfall 2
+ * — the two roots must never be conflated).
+ */
+export type AcfSource = 'native' | 'bottle'
+
+/** Shared options shape for both install/uninstall poller start functions. */
+type PollOptions = { intervalMs?: number; source?: AcfSource }
+
+/**
+ * Resolves the bottle's own steamapps dir from the dedicated Steam bottle's
+ * stored GameSettings (falls back to DEFAULT_STEAM_BOTTLE_NAME internally via
+ * getSteamBottleSettings()). Single chokepoint so every bottle-aware scan
+ * roots at the same path.
+ */
+function getBottleSteamappsRoot(): string {
+  return getBottleSteamappsDir(getSteamBottleSettings().wineCrossoverBottle)
+}
 
 // DETAIL-01 gap-fix: Steam installs the depot for the host OS, so the installed
 // build reflects the platform GameLib is running on. Report that instead of a
@@ -36,6 +64,14 @@ function hostInstallPlatform(): InstallPlatform {
   if (isMac) return 'Mac'
   if (isLinux) return 'linux'
   return 'Windows'
+}
+
+// Pitfall 3 fix: a bottle-installed game is a Windows depot running under
+// Wine/CrossOver — it must ALWAYS report 'Windows', regardless of host OS.
+// Only a native-sourced install object should ever consult hostInstallPlatform().
+function installPlatformForSource(source: AcfSource): InstallPlatform {
+  if (source === 'bottle') return 'Windows'
+  return hostInstallPlatform()
 }
 
 export default class SteamLibraryManager implements LibraryManager {
@@ -185,14 +221,26 @@ export default class SteamLibraryManager implements LibraryManager {
       return { stdout: '', stderr: String(err) }
     }
 
-    // ── Step 2: build install-state map from ACF manifests on disk ────────
+    // ── Step 2: build install-state map(s) from ACF manifests on disk ─────
+    // Bottle-aware (GAP-17-BOTTLE-PLAY-REVERT): this full resync can be
+    // triggered mid-session (e.g. the launch-completion 'done' status), so it
+    // must reconcile bottle-installed games the same way refreshInstallState()
+    // does — otherwise a bottle-only-installed game's is_installed gets
+    // clobbered back to false by this native-only scan every time it runs.
     const installedMap = await buildInstalledMap()
+    const bottleInstalledMap =
+      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
 
     // ── Step 3: build and push one GameInfo per owned game ────────────────
     library.clear()
     for (const app of ownedApps) {
       const appIdStr = String(app.appid)
-      const installedData = installedMap.get(app.appid)
+      const nativeInstalledData = installedMap.get(app.appid)
+      const bottleInstalledData = bottleInstalledMap?.get(app.appid)
+      // Native always wins when present — never double-count/conflate the
+      // two roots (mirrors refreshInstallState()'s reconciliation).
+      const installedData = nativeInstalledData ?? bottleInstalledData
+      const source: AcfSource = nativeInstalledData ? 'native' : 'bottle'
       const cachedMeta = steamMetadataStore.get(appIdStr)
 
       const gameInfo: GameInfo = {
@@ -208,12 +256,24 @@ export default class SteamLibraryManager implements LibraryManager {
         is_linux_native: cachedMeta?.is_linux_native ?? false,
         // GAP-B: seed the persisted delisted verdict so it survives a library resync
         is_delisted: cachedMeta?.is_delisted ?? false,
+        // CR-01 fix: seed the persisted Mach-O ground-truth verdict so a
+        // cached '32' survives every startup/resync. Default MUST be
+        // 'unknown' (never '32') — a missing/blank cache can never be
+        // coerced into a 32-bit verdict (T-18-05-02, false-flag-safe
+        // invariant from MAC32-01).
+        mac_arch: cachedMeta?.mac_arch ?? 'unknown',
+        // Phase 17 D-08 reconciliation: mirrors platformsCaptured so the
+        // frontend bottle indicator matches the backend D-11 routing gate.
+        steamPlatformsCaptured: cachedMeta?.platformsCaptured ?? false,
         is_installed: !!installedData,
         install: installedData
           ? {
               install_path: installedData.installPath,
               install_size: getFileSize(Number(installedData.sizeOnDisk)),
-              platform: hostInstallPlatform()
+              // GAP-17-BOTTLE-PLAY-REVERT: platform must reflect which root
+              // actually matched (native vs bottle), never hardcoded — a
+              // bottle-installed game must always report 'Windows' (Pitfall 3).
+              platform: installPlatformForSource(source)
             }
           : {},
         extra: {
@@ -260,6 +320,10 @@ export default class SteamLibraryManager implements LibraryManager {
     // Fallback: consult persistent cache (useful if init() hasn't fired yet)
     const cached = steamLibraryStore.get('games', [])
     return cached.find((g) => g.app_name === appName)
+  }
+
+  getListOfGames(): GameInfo[] {
+    return steamLibraryStore.get('games', [])
   }
 
   async getInstallInfo(
@@ -312,17 +376,36 @@ export default class SteamLibraryManager implements LibraryManager {
    *  - D-02: badges flip only after confirmed ACF data; never optimistically
    *    from a click.
    *
+   * 17-03 (MACSTEAM-05): when isMac && isBottleProvisioned(), ALSO diffs each
+   * library entry against buildBottleInstalledMap() (the dedicated CrossOver
+   * bottle's own ACF root) and reconciles bottle-installed games with
+   * install.platform: 'Windows' (Pitfall 3) — never the host OS. Bottle
+   * reconciliation is gated strictly behind isBottleProvisioned() (T-17-03: a
+   * missing/unprovisioned bottle is a no-op, not a repeated failing scan) and
+   * is skipped entirely on Linux/Windows or an un-provisioned macOS, leaving
+   * the native-only reconciliation byte-for-byte unchanged in those cases.
+   * The native map always takes precedence for a given appId — a bottle
+   * result is only consulted when the native scan found nothing for that
+   * appId, so the two roots are never double-counted or conflated.
+   *
    * Only games whose state changed are pushed (avoids flooding the frontend).
    * The GameInfo install shape matches refresh() when installed:
-   *   install_path, install_size, platform: 'Windows'
+   *   install_path, install_size, platform ('Windows' always for a bottle
+   *   install; host-OS-derived for a native install)
    * and is set to {} when not installed.
    */
   async refreshInstallState(): Promise<void> {
     const installedMap = await buildInstalledMap()
+    const bottleInstalledMap =
+      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
 
     for (const [appIdStr, gameInfo] of library.entries()) {
       const appId = parseInt(appIdStr, 10)
-      const installedData = installedMap.get(appId)
+      const nativeInstalledData = installedMap.get(appId)
+      const bottleInstalledData = bottleInstalledMap?.get(appId)
+      // Native always wins when present — never double-count/conflate the two roots.
+      const installedData = nativeInstalledData ?? bottleInstalledData
+      const source: AcfSource = nativeInstalledData ? 'native' : 'bottle'
       const isNowInstalled = !!installedData
 
       if (gameInfo.is_installed !== isNowInstalled) {
@@ -333,11 +416,17 @@ export default class SteamLibraryManager implements LibraryManager {
             ? {
                 install_path: installedData.installPath,
                 install_size: getFileSize(Number(installedData.sizeOnDisk)),
-                platform: hostInstallPlatform()
+                platform: installPlatformForSource(source)
               }
             : {}
         }
         library.set(appIdStr, updated)
+        // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately so the in-memory
+        // Map and the on-disk cache never diverge (mirrors refresh() and
+        // gog/library.ts's installedGamesStore.set-immediately-after-mutate
+        // pattern) — otherwise an app restart before the next full refresh()
+        // would read a stale is_installed from steamLibraryStore.
+        steamLibraryStore.set('games', Array.from(library.values()))
         sendFrontendMessage('pushGameToLibrary', updated)
       }
     }
@@ -405,6 +494,263 @@ export async function buildInstalledMap(): Promise<
   return installed
 }
 
+// ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────
+// Post-install Mach-O binary inspection is the ONLY detector in this phase
+// that may ever assert mac_arch === '32'. Steam's manual osarch metadata
+// proved absent/unreliable on every macOS launch entry (18-01 finding,
+// retired) and the pre-install store-API min-OS heuristic (games.ts
+// macArchFromMinOS) structurally never returns '32' either — this is the
+// correctness backstop that catches an i386-only mac depot Steam left
+// un-tagged.
+
+/**
+ * Runs `lipo -archs` on the given binary — argv-form execFileSync (command +
+ * array, never a shell-interpolated string; T-18-03-01) mirroring the
+ * windowsRunningAppId/linuxFallbackRunningAppId convention above. Falls back
+ * to `file` when lipo throws (not installed / binary lipo doesn't recognize).
+ * Returns [] when BOTH tools fail — inconclusive, NEVER a 32-bit verdict on
+ * its own (verdictFromArchs below is the sole place that turns an arch list
+ * into a '32'/'64' answer). Exported for unit testing.
+ */
+export function machOArchsOf(binaryPath: string): string[] {
+  try {
+    const output = execFileSync('lipo', ['-archs', binaryPath], {
+      encoding: 'utf8',
+      timeout: 5000
+    })
+    return output.trim().split(/\s+/).filter(Boolean)
+  } catch {
+    try {
+      const output = execFileSync('file', [binaryPath], {
+        encoding: 'utf8',
+        timeout: 5000
+      })
+      const archs: string[] = []
+      if (/\bx86_64\b/.test(output)) archs.push('x86_64')
+      if (/\barm64\b/.test(output)) archs.push('arm64')
+      if (/\bi386\b/.test(output)) archs.push('i386')
+      return archs
+    } catch {
+      return [] // neither tool available/succeeded — inconclusive, NOT 32-bit
+    }
+  }
+}
+
+/**
+ * Maps a Mach-O arch list to a verdict. A universal binary (any x86_64/arm64
+ * slice present) is runnable — '64' wins even alongside an i386 slice. Empty
+ * input is inconclusive: null, never '32' (T-18-03-03 — the false-flag-safe
+ * invariant at this subprocess boundary). Exported for unit testing.
+ */
+export function verdictFromArchs(archs: string[]): '32' | '64' | null {
+  if (archs.length === 0) return null // inconclusive — do not overwrite existing hint
+  if (archs.includes('x86_64') || archs.includes('arm64')) return '64'
+  if (archs.includes('i386')) return '32'
+  return null
+}
+
+/**
+ * Locates the installed Mach-O binary to inspect. Prefers a supplied launch
+ * executable path (resolved relative to installPath); otherwise scans
+ * installPath for a top-level *.app bundle and returns its
+ * Contents/MacOS/<first file>. Containment (T-18-03-04): a supplied
+ * launchExecutable that escapes installPath's own subtree — via `..`
+ * segments or an absolute path — is rejected (logged + skipped), not just
+ * join()'d; `join()` alone does not prevent `../../` traversal. Never
+ * throws, returns null (log+skip at the call site) on any miss. Exported
+ * for unit testing.
+ */
+export function locateMachOBinary(
+  installPath: string,
+  launchExecutable?: string
+): string | null {
+  if (launchExecutable) {
+    // T-18-03-04: reject any candidate that escapes installPath's subtree.
+    // resolve() honors an absolute launchExecutable and collapses '..'
+    // segments; relative() then reveals an escape as a leading '..' (or, on
+    // Windows, a different drive → absolute). Verify containment BEFORE
+    // touching the filesystem — join() alone would silently nest an absolute
+    // path and does not prevent '../../' traversal.
+    const candidate = resolve(installPath, launchExecutable)
+    const rel = relative(installPath, candidate)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      logWarning(
+        `Steam: locateMachOBinary rejected launchExecutable '${launchExecutable}' — escapes installPath subtree; skipping`,
+        LogPrefix.Steam
+      )
+    } else if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+  try {
+    const entries = readdirSync(installPath)
+    const appBundle = entries.find((e) => e.endsWith('.app'))
+    if (!appBundle) return null
+    const macOsDir = join(installPath, appBundle, 'Contents', 'MacOS')
+    if (!existsSync(macOsDir)) return null
+    const bins = readdirSync(macOsDir)
+    return bins.length ? join(macOsDir, bins[0]) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Post-install ground-truth check (MAC32-03). Corrects Steam's un-tagged
+ * mac_arch signal by inspecting the installed Mach-O binary — the only path
+ * in this phase that may assert mac_arch === '32'.
+ *
+ * Skip gates, in order:
+ *  - source !== 'native': a bottle install is a Windows depot — no Mach-O
+ *    binary belongs to this game on that path (RESEARCH.md Anti-Patterns).
+ *  - !isMac: host-gated, mirrors games.ts ensurePlatformsCaptured()'s guard.
+ *  - mac_arch already '32', or mac_arch_verified already true: nothing to
+ *    correct, or already resolved — never re-shells on every install/launch.
+ *
+ * A definitive verdict ('32' or '64') is persisted with mac_arch_source:
+ * 'macho' and mac_arch_verified:true, spreading the existing cache entry so
+ * art/extra/etc. are never lost. An inconclusive result (no binary located,
+ * or verdictFromArchs returns null) is a no-op — logs and leaves mac_arch
+ * exactly as-is (T-18-03-03).
+ *
+ * When the verdict is '32', triggers the user-consented recovery (CONTEXT
+ * D-6 / promptI386Recovery below) as a decoupled fire-and-forget call — the
+ * ground-truth check itself never awaits the dialog, so it never blocks the
+ * pollInstallOnce 'installed' badge-flip UX.
+ *
+ * Exported for unit testing.
+ */
+export async function verifyMacArchGroundTruth(
+  appId: string,
+  installPath: string,
+  source: AcfSource
+): Promise<void> {
+  if (source !== 'native') return
+  if (!isMac) return
+
+  const existing = steamMetadataStore.get(appId)
+  if (existing?.mac_arch === '32' || existing?.mac_arch_verified === true) {
+    return
+  }
+
+  const binaryPath = locateMachOBinary(installPath)
+  if (!binaryPath) {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth found no Mach-O binary for appId ${appId} at ${installPath} — skipping`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  const verdict = verdictFromArchs(machOArchsOf(binaryPath))
+  if (verdict === null) {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  steamMetadataStore.set(appId, {
+    ...(existing ?? { art_cover: '', art_square: '', extra: { reqs: [] } }),
+    mac_arch: verdict,
+    mac_arch_source: 'macho',
+    mac_arch_verified: true
+  })
+  logInfo(
+    `Steam: verifyMacArchGroundTruth resolved appId ${appId} to mac_arch '${verdict}' (Mach-O ground truth)`,
+    LogPrefix.Steam
+  )
+
+  // CR-01 fix: propagate the resolved verdict to the in-memory library Map
+  // and push it to the frontend, mirroring the library.set + push pattern
+  // used at the end of refresh()'s loop. Without this, the badge is
+  // unreachable until the next app restart/resync (steamMetadataStore alone
+  // is not frontend-visible). Only update when the game is already present
+  // in the Map — never fabricate a GameInfo; the store write above already
+  // carries the verdict for the next refresh() rebuild.
+  const currentGameInfo = library.get(appId)
+  if (currentGameInfo) {
+    const updatedGameInfo: GameInfo = { ...currentGameInfo, mac_arch: verdict }
+    library.set(appId, updatedGameInfo)
+    // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately, mirroring every
+    // other library-mutating call site in this file — otherwise a restart
+    // before the next full refresh() reads a stale mac_arch from
+    // steamLibraryStore and the 32-bit badge silently reverts.
+    steamLibraryStore.set('games', Array.from(library.values()))
+    sendFrontendMessage('pushGameToLibrary', updatedGameInfo)
+  } else {
+    logInfo(
+      `Steam: verifyMacArchGroundTruth resolved appId ${appId} but it is not in the in-memory library Map — skipping frontend push (will pick up mac_arch on next refresh)`,
+      LogPrefix.Steam
+    )
+  }
+
+  if (verdict === '32') {
+    // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
+    // never blocks the pollInstallOnce 'installed' badge-flip UX above.
+    void promptI386Recovery(appId)
+  }
+}
+
+/**
+ * MAC32-03 / CONTEXT D-6: user-consented i386 recovery. Steam left this
+ * game's mac depot un-tagged and the post-install Mach-O check proved it is
+ * i386-only — unrunnable on this version of macOS (Apple removed 32-bit
+ * support in Catalina, 2019).
+ *
+ * Presents a native confirm dialog via Electron's `dialog.showMessageBox` —
+ * this codebase's established backend-AWAITED confirm primitive (see
+ * legendary/eos_overlay.ts's remove()/enable()) — deliberately NOT
+ * showDialogBoxModalAuto, whose `buttons[].onClick` callbacks travel over
+ * IPC (webContents.send uses the structured-clone algorithm, which cannot
+ * carry function values) and so can never round-trip a confirm decision back
+ * into this async function; dialog.showMessageBox is a native, in-process,
+ * awaitable primitive with no such limitation.
+ *
+ * On confirm: force-uninstalls the dead native copy, then re-installs —
+ * which now routes through the bottle because isBottleEligible() honors the
+ * mac_arch:'32' verdict verifyMacArchGroundTruth already persisted.
+ * On cancel/dismiss: leaves the (unrunnable) native install in place; the
+ * '32' verdict stays cached (persisted by verifyMacArchGroundTruth BEFORE
+ * this prompt fires) so the badge and future routing reflect reality either
+ * way.
+ *
+ * Exported for unit testing.
+ */
+export async function promptI386Recovery(appId: string): Promise<void> {
+  const { response } = await dialog.showMessageBox({
+    title: i18next.t(
+      'box.steam.mac32Detected.title',
+      '32-bit macOS build detected'
+    ),
+    message: i18next.t(
+      'box.steam.mac32Detected.message',
+      "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version."
+    ),
+    buttons: [
+      i18next.t('box.steam.mac32Detected.confirm', 'Reinstall via CrossOver'),
+      i18next.t('box.cancel', 'Cancel')
+    ]
+  })
+
+  if (response !== 0) {
+    logInfo(
+      `Steam: user declined i386 recovery for appId ${appId} — native install left in place (unrunnable)`,
+      LogPrefix.Steam
+    )
+    return
+  }
+
+  logInfo(
+    `Steam: user confirmed i386 recovery for appId ${appId} — force-uninstalling the native copy and reinstalling via the bottle`,
+    LogPrefix.Steam
+  )
+  const game = new SteamGame(appId)
+  await game.forceUninstall()
+  await game.install({} as InstallArgs)
+}
+
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
 /** Module-level registry of active install polls, keyed by appId string. */
@@ -423,19 +769,39 @@ const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safet
  * - 'downloading': manifest present but bit 4 unset (download in flight)
  * - 'absent':      no manifest found for this appId in any library path
  *
- * Corrupt/unreadable manifests are skipped without throwing (T-2-01).
+ * `source` selects which steamapps root(s) to scan:
+ *  - 'native' (default): every native library path from getSteamLibraries()
+ *    — exactly the pre-Phase-17 behavior, byte-for-byte unchanged.
+ *  - 'bottle': the single dedicated CrossOver bottle steamapps root
+ *    (RESEARCH.md Pitfall 2 — never conflated with the native roots).
+ *
+ * Corrupt/unreadable manifests are skipped without throwing (T-2-01 / T-17-05).
  * Exported for unit testing.
  */
-export async function readAcfState(appId: string): Promise<{
+export async function readAcfState(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<{
   state: 'absent' | 'downloading' | 'installed'
   stateFlags?: number
   installPath?: string
   sizeOnDisk?: string
+  /** Bytes downloaded/staged so far, and the totals to compare against —
+   *  parsed from the ACF's AppState (strings on disk). Only populated on the
+   *  'downloading' result; used by pollInstallOnce to derive a progress
+   *  percent for the bottle install path (GAP-17-BOTTLE-PROGRESS). Missing or
+   *  non-numeric values default to 0. */
+  bytesDownloaded?: number
+  bytesToDownload?: number
+  bytesStaged?: number
+  bytesToStage?: number
 }> {
-  const libraryPaths = await getSteamLibraries()
+  const steamappsDirs =
+    source === 'bottle'
+      ? [getBottleSteamappsRoot()]
+      : (await getSteamLibraries()).map((libPath) => join(libPath, 'steamapps'))
 
-  for (const libPath of libraryPaths) {
-    const steamappsDir = join(libPath, 'steamapps')
+  for (const steamappsDir of steamappsDirs) {
     if (!existsSync(steamappsDir)) continue
 
     const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
@@ -456,7 +822,14 @@ export async function readAcfState(appId: string): Promise<{
           sizeOnDisk: state.SizeOnDisk ?? '0'
         }
       }
-      return { state: 'downloading', stateFlags }
+      return {
+        state: 'downloading',
+        stateFlags,
+        bytesDownloaded: Number(state.BytesDownloaded) || 0,
+        bytesToDownload: Number(state.BytesToDownload) || 0,
+        bytesStaged: Number(state.BytesStaged) || 0,
+        bytesToStage: Number(state.BytesToStage) || 0
+      }
     } catch {
       continue // skip corrupt ACF (T-2-01)
     }
@@ -466,16 +839,76 @@ export async function readAcfState(appId: string): Promise<{
 }
 
 /**
+ * Bottle-scoped sibling of buildInstalledMap() — same StateFlags bitmask +
+ * corrupt-file discipline (T-2-01/T-17-05), rooted at the dedicated CrossOver
+ * bottle's own steamapps dir instead of the native defaultSteamPath (Pitfall 2).
+ * Returns an empty Map when the bottle steamapps dir doesn't exist yet (e.g.
+ * bottle not provisioned or Steam not yet installed inside it).
+ *
+ * Exported for unit testing.
+ */
+export async function buildBottleInstalledMap(): Promise<
+  Map<number, { installPath: string; sizeOnDisk: string }>
+> {
+  const installed = new Map<
+    number,
+    { installPath: string; sizeOnDisk: string }
+  >()
+  const steamappsDir = getBottleSteamappsRoot()
+  if (!existsSync(steamappsDir)) return installed
+
+  let files: string[]
+  try {
+    files = readdirSync(steamappsDir)
+  } catch {
+    return installed
+  }
+
+  for (const file of files) {
+    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+
+    try {
+      const content = readFileSync(join(steamappsDir, file), 'utf-8')
+      const parsed = parse(content)
+      const state = parsed?.AppState
+      if (!state) continue
+
+      const appid = parseInt(state.appid, 10)
+      const stateFlags = parseInt(state.StateFlags, 10)
+      // Bit 4 (0x4) = FullyInstalled — bitmask, NOT equality (Pitfall 6)
+      const isInstalled = (stateFlags & 4) !== 0
+
+      if (isInstalled && !isNaN(appid)) {
+        installed.set(appid, {
+          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
+          sizeOnDisk: state.SizeOnDisk ?? '0'
+        })
+      }
+    } catch {
+      /* skip corrupt ACF — T-2-01/T-17-05 mitigation */
+    }
+  }
+
+  return installed
+}
+
+/**
  * Executes one polling tick for appId:
  *   'downloading' → updates seenDownloading flag, sends gameStatusUpdate { status: 'installing' }
  *   'installed'   → updates library entry, sends pushGameToLibrary +
  *                   gameStatusUpdate { status: 'done' }, stops the poll
  *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
  *
+ * `source` selects the native (default) or bottle-scoped ACF root — see
+ * readAcfState() for the distinction.
+ *
  * Exported for unit testing.
  */
-export async function pollInstallOnce(appId: string): Promise<void> {
-  const result = await readAcfState(appId)
+export async function pollInstallOnce(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<void> {
+  const result = await readAcfState(appId, source)
   const poll = activePolls.get(appId)
 
   if (result.state === 'downloading') {
@@ -485,6 +918,41 @@ export async function pollInstallOnce(appId: string): Promise<void> {
       runner: 'steam',
       status: 'installing'
     })
+
+    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
+    // feeding the frontend progress store — the ACF's own byte counts are
+    // the only source of truth. Prefer the download totals; fall back to
+    // the staging totals when the download total is 0/missing (late-stage
+    // installs that are past the download phase). Never emit a non-finite
+    // percent — if BOTH totals are 0/missing, skip the progress emit
+    // entirely (the gameStatusUpdate above still fired).
+    const {
+      bytesDownloaded = 0,
+      bytesToDownload = 0,
+      bytesStaged = 0,
+      bytesToStage = 0
+    } = result
+
+    const useStaged = !(bytesToDownload > 0)
+    const denominator = useStaged ? bytesToStage : bytesToDownload
+    const numerator = useStaged ? bytesStaged : bytesDownloaded
+
+    if (denominator > 0) {
+      const rawPercent = (numerator / denominator) * 100
+      if (Number.isFinite(rawPercent)) {
+        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)))
+        sendFrontendMessage('progressUpdate', {
+          appName: appId,
+          runner: 'steam',
+          status: 'installing',
+          progress: {
+            percent,
+            bytes: getFileSize(numerator),
+            eta: ''
+          }
+        })
+      }
+    }
   } else if (result.state === 'installed') {
     const existing = library.get(appId)
     if (existing) {
@@ -494,10 +962,14 @@ export async function pollInstallOnce(appId: string): Promise<void> {
         install: {
           install_path: result.installPath!,
           install_size: getFileSize(Number(result.sizeOnDisk!)),
-          platform: hostInstallPlatform()
+          platform: installPlatformForSource(source)
         }
       }
       library.set(appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
+      // refreshInstallState() for rationale) so a restart mid-poll can't read
+      // a stale not-installed state from steamLibraryStore.
+      steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     sendFrontendMessage('gameStatusUpdate', {
@@ -517,6 +989,14 @@ export async function pollInstallOnce(appId: string): Promise<void> {
       `Steam: install polling complete for appId ${appId} — badge flipped to installed`,
       LogPrefix.Steam
     )
+
+    // MAC32-03: fire-and-forget post-install ground-truth check — placed
+    // AFTER the badge-flip/notify above so it can never delay them. Native
+    // installs only (a bottle install is a Windows depot; no Mach-O binary
+    // belongs to this game on that path) and macOS-only (host-gated).
+    if (isMac && source === 'native') {
+      void verifyMacArchGroundTruth(appId, result.installPath!, source)
+    }
   }
   // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
 }
@@ -531,13 +1011,30 @@ export async function pollInstallOnce(appId: string): Promise<void> {
  *     (user likely cancelled Steam's install dialog — T-03-06 mitigation)
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
+ * The second parameter accepts EITHER a plain intervalMs number (existing
+ * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
+ * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
+ * instead of the native one. Omitting the second arg entirely, or passing a
+ * bare number, preserves today's native behavior byte-for-byte.
+ *
  * Exported for unit testing.
  */
-export function startInstallPolling(appId: string, intervalMs = 3000): void {
+export function startInstallPolling(
+  appId: string,
+  intervalMsOrOptions: number | PollOptions = 3000
+): void {
   if (activePolls.has(appId)) return // idempotent
 
+  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+    typeof intervalMsOrOptions === 'number'
+      ? { intervalMs: intervalMsOrOptions, source: 'native' }
+      : {
+          intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
+          source: intervalMsOrOptions.source ?? 'native'
+        }
+
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms)`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
     LogPrefix.Steam
   )
 
@@ -560,7 +1057,7 @@ export function startInstallPolling(appId: string, intervalMs = 3000): void {
       return
     }
 
-    await pollInstallOnce(appId)
+    await pollInstallOnce(appId, source)
 
     // pollInstallOnce may have stopped the poll (state became 'installed')
     if (!activePolls.has(appId)) return
@@ -584,6 +1081,14 @@ export function startInstallPolling(appId: string, intervalMs = 3000): void {
       stopInstallPolling(appId)
     }
   }, intervalMs)
+
+  // Teardown-safety (mirrors bottle.ts GAP C): unref the interval so it never
+  // keeps a bare Node process (e.g. a Jest worker) alive on its own. In the
+  // Electron main process the app's own event loop keeps polling running, so
+  // this is production-neutral; under Jest it stops a leaked real poller from
+  // surviving teardown and crashing on a later tick (readAcfState on reset
+  // mocks). Optional-chained — a no-op in any non-Node timer context.
+  timer.unref?.()
 
   entry.timer = timer
   activePolls.set(appId, entry)
@@ -625,10 +1130,14 @@ const STATE_UNINSTALLING = 2048
  *               or was cancelled — handled by the grace logic in startUninstallPolling.
  *
  * Install state is never optimistically flipped (D-02) — only an absent manifest
- * (confirmed removal) flips the badge. Exported for unit testing.
+ * (confirmed removal) flips the badge. `source` selects the native (default) or
+ * bottle-scoped ACF root — see readAcfState(). Exported for unit testing.
  */
-export async function pollUninstallOnce(appId: string): Promise<void> {
-  const result = await readAcfState(appId)
+export async function pollUninstallOnce(
+  appId: string,
+  source: AcfSource = 'native'
+): Promise<void> {
+  const result = await readAcfState(appId, source)
   const poll = activeUninstallPolls.get(appId)
 
   if (result.state === 'absent') {
@@ -640,6 +1149,9 @@ export async function pollUninstallOnce(appId: string): Promise<void> {
         install: {}
       }
       library.set(appId, updated)
+      // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
+      // refreshInstallState() for rationale).
+      steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     sendFrontendMessage('gameStatusUpdate', {
@@ -685,13 +1197,30 @@ export async function pollUninstallOnce(appId: string): Promise<void> {
  *     any transient status, leaving the badge installed
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
+ * The second parameter accepts EITHER a plain intervalMs number (existing
+ * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
+ * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
+ * instead of the native one. Omitting the second arg entirely, or passing a
+ * bare number, preserves today's native behavior byte-for-byte.
+ *
  * Exported for unit testing.
  */
-export function startUninstallPolling(appId: string, intervalMs = 3000): void {
+export function startUninstallPolling(
+  appId: string,
+  intervalMsOrOptions: number | PollOptions = 3000
+): void {
   if (activeUninstallPolls.has(appId)) return // idempotent
 
+  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+    typeof intervalMsOrOptions === 'number'
+      ? { intervalMs: intervalMsOrOptions, source: 'native' }
+      : {
+          intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
+          source: intervalMsOrOptions.source ?? 'native'
+        }
+
   logInfo(
-    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms)`,
+    `Steam: starting uninstall polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
     LogPrefix.Steam
   )
 
@@ -714,7 +1243,7 @@ export function startUninstallPolling(appId: string, intervalMs = 3000): void {
       return
     }
 
-    await pollUninstallOnce(appId)
+    await pollUninstallOnce(appId, source)
 
     // pollUninstallOnce may have stopped the poll (manifest absent = complete)
     if (!activeUninstallPolls.has(appId)) return
@@ -735,6 +1264,11 @@ export function startUninstallPolling(appId: string, intervalMs = 3000): void {
       stopUninstallPolling(appId)
     }
   }, intervalMs)
+
+  // Teardown-safety (mirrors bottle.ts GAP C / the install poller above):
+  // unref so a leaked real poller never keeps a Jest worker alive or crashes
+  // on a later tick. Production-neutral in the Electron main process.
+  timer.unref?.()
 
   entry.timer = timer
   activeUninstallPolls.set(appId, entry)
