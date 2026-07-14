@@ -141,7 +141,7 @@ Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-l
 - [x] **STORESEARCH-04**: Every price displays its currency explicitly (e.g. `$14.99 USD`) — the unit travels with the number, never a bare `$`, because CheapShark is USD-only while the adjacent Deals screen renders localised prices and a non-US user would otherwise act on a wrong "cheapest" verdict (D-13)
 - [x] **STORESEARCH-05**: A search result the user already owns carries an ownership badge naming the store(s) it is owned on (e.g. "Owned on Steam, GOG"); Steam ownership is resolved **exactly** via CheapShark's `steamAppID` (no title matching), while GOG/Epic/Amazon are resolved by fuzzy title match reusing `humble/dedup.ts`'s shared `HUMBLE_FUZZY_MATCH_THRESHOLD` (85%) and its `isDlcFalsePositiveRisk` guard. `sideloadedLibrary` is excluded (arbitrary user-supplied titles → highest false-positive risk) (D-01/D-02/D-04/D-05/D-06)
 - [x] **STORESEARCH-06**: A result for which the user holds an unredeemed Humble key carries a `key-available` badge, shown **alongside** any ownership badge rather than suppressed by it — reusing the `owned | key-available | null` vocabulary from `common/discounts/badges.ts` while deliberately relaxing Phase 15's single-badge-per-card invariant (D-85) **on this surface only**; the Deals screen keeps its single-badge rule (D-03/D-07)
-- [ ] **STORESEARCH-07**: Clicking a result hands off to the user's external browser via `shell.openExternal()` (never the in-app `/store-page` WebView — GameLib must not wrap its own chrome around ~30 unvetted third-party checkout forms), using CheapShark's documented `redirect?dealID=` URL. No post-purchase machinery: the purchase lands on the next normal library sync (D-08/D-09/D-10)
+- [x] **STORESEARCH-07**: Clicking a result hands off to the user's external browser via `shell.openExternal()` (never the in-app `/store-page` WebView — GameLib must not wrap its own chrome around ~30 unvetted third-party checkout forms), using CheapShark's documented `redirect?dealID=` URL. No post-purchase machinery: the purchase lands on the next normal library sync (D-08/D-09/D-10)
 - [ ] **STORESEARCH-08**: The screen shows an explanatory prompt before any query is typed, and distinguishes "no results" from "the provider failed" — a provider failure renders an inline, retryable error while leaving the search box usable (fail-soft, mirroring the Humble adapter) (D-14)
 
 ## Future Requirements
@@ -225,7 +225,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | STORESEARCH-04 | Phase 20 | Complete |
 | STORESEARCH-05 | Phase 20 | Complete |
 | STORESEARCH-06 | Phase 20 | Complete |
-| STORESEARCH-07 | Phase 20 | Pending |
+| STORESEARCH-07 | Phase 20 | Complete |
 | STORESEARCH-08 | Phase 20 | Pending |
 | MAC32-01 | Phase 18 | Complete |
 | MAC32-02 | Phase 18 | Complete |
