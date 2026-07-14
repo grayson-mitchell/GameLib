@@ -12,6 +12,77 @@
   color: var(--text-default);
 }
 
+.storeSearchScreen__header {
+  font-size: var(--text-2xl);
+  font-weight: var(--bold);
+  margin-bottom: var(--space-md);
+}
+
+.storeSearchScreen__searchWrapper {
+  margin-bottom: var(--space-md);
+}
+
+.storeSearchScreen__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Three-state contract (STORESEARCH-08, D-14): the prompt/no-results block
+   and the error banner are deliberately DIFFERENT containers — never the
+   same `__message` paragraph with only the copy swapped. */
+.storeSearchScreen__message {
+  text-align: center;
+  margin: var(--space-xl) 0;
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+.storeSearchScreen__message--prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.storeSearchScreen__promptIcon {
+  font-size: 48px;
+  opacity: 0.4;
+  color: var(--text-secondary);
+}
+
+.storeSearchScreen__errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  background: rgba(249, 120, 129, 0.1);
+  border-left: 3px solid var(--status-danger);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--space-3xs);
+  margin-bottom: var(--space-md);
+}
+
+.storeSearchScreen__errorMessage {
+  color: var(--status-danger);
+  font-size: var(--text-md);
+}
+
+.storeSearchScreen__retryButton {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: var(--text-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.storeSearchScreen__retryButton:hover,
+.storeSearchScreen__retryButton:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 .storeSearchRow {
   display: flex;
   align-items: center;

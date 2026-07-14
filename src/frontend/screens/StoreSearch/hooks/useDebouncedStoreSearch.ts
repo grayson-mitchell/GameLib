@@ -119,11 +119,10 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
       return
     }
     fetchResults(debouncedQuery)
-    // fetchResults is a plain closure recreated each render; re-running the
-    // fetch on its identity change (rather than only on a real
-    // debouncedQuery change) would refire the request outside a real
-    // debounce commit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // fetchResults is intentionally omitted from the deps array: it's a
+    // plain closure recreated every render, and depending on it would
+    // refire the request on every render rather than only on a real
+    // debouncedQuery commit.
   }, [debouncedQuery])
 
   return {

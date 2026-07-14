@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef } from 'react'
 import './index.scss'
-import { faSearch, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faSearch, faSpinner, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 interface Props {
@@ -8,13 +8,19 @@ interface Props {
   onInputChanged: (text: string) => void
   value: string
   placeholder: string
+  /** Swaps the searchButton-slot icon for a spinner in the same DOM
+   * position (Phase 20 STORESEARCH-02/D-11 debounce affordance) — optional,
+   * defaults to false so existing callers (Discounts, WineManager) are
+   * unaffected. */
+  loading?: boolean
 }
 
 export default function SearchBar({
   suggestionsListItems,
   onInputChanged,
   value,
-  placeholder
+  placeholder,
+  loading = false
 }: Props) {
   const input = useRef<HTMLInputElement>(null)
 
@@ -55,10 +61,10 @@ export default function SearchBar({
   return (
     <div className="SearchBar" data-testid="searchBar">
       <FontAwesomeIcon
-        className="searchButton"
+        className={loading ? 'searchButton fa-spin-pulse' : 'searchButton'}
         style={{ padding: 'var(--space-2xs) var(--space-sm)' }}
         tabIndex={-1}
-        icon={faSearch}
+        icon={loading ? faSpinner : faSearch}
       />
       <input
         ref={input}

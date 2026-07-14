@@ -1220,6 +1220,28 @@
         }
     },
     "store": "Epic Store",
+    "storeSearch": {
+        "aria": {
+            "expand": "Show store breakdown for {{title}}",
+            "viewDeal": "View deal for {{title}} on {{store}}"
+        },
+        "badge": {
+            "keyAvailable": "Key available",
+            "ownedOn": "Owned on {{store}}",
+            "ownedOnMulti": "Owned on {{stores}}",
+            "ownedOnOverflow": "Owned on {{stores}} +{{count}} more"
+        },
+        "error": {
+            "provider": "Couldn't reach the price provider.",
+            "retry": "Retry search"
+        },
+        "loadingStores": "Loading store prices…",
+        "noResults": "No results for \"{{query}}\". Try a different spelling or a shorter title.",
+        "placeholder": "Search for a game title…",
+        "prompt": "Search a title to compare prices across every store — GameLib will tell you if you already own it.",
+        "sidebar": "Store Search",
+        "title": "Store Search"
+    },
     "stores": "Stores",
     "title": {
         "allGames": "All Games"

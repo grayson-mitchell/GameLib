@@ -11,7 +11,8 @@ import {
   faBarsProgress,
   faTv,
   faTags,
-  faKey
+  faKey,
+  faMagnifyingGlassDollar
 } from '@fortawesome/free-solid-svg-icons'
 import { useLocation } from 'react-router-dom'
 import { useContext } from 'react'
@@ -200,6 +201,12 @@ export default function SidebarLinks() {
         icon={faTags}
         label={t('discounts.sidebar', 'Deals')}
         dataTour="sidebar-discounts"
+      />
+      <SidebarItem
+        url="/store-search"
+        icon={faMagnifyingGlassDollar}
+        label={t('storeSearch.sidebar', 'Store Search')}
+        dataTour="sidebar-store-search"
       />
       <div className="divider" />
       <div className="SidebarItemWithSubmenu">
