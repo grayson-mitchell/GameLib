@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Completed 19-07-PLAN.md
-last_updated: "2026-07-14T00:00:57.614Z"
-last_activity: 2026-07-13
+last_updated: "2026-07-14T00:16:00.067Z"
+last_activity: 2026-07-14
 progress:
   total_phases: 5
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 19 (crossover-compatibility-index-macos) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
-Last activity: 2026-07-13 - Completed quick task 260714-gnc: Add .graphifyignore to scope knowledge graph to codebase
+Last activity: 2026-07-14
 
 ## v1.4 Phase Map
 
@@ -115,6 +115,7 @@ Last activity: 2026-07-13 - Completed quick task 260714-gnc: Add .graphifyignore
 | Phase 19 P05 | 35min | 3 tasks | 6 files |
 | Phase 19 P06 | ~30min | 2 tasks | 11 files |
 | Phase 19 P07 | 15min | 3 tasks | 5 files |
+| Phase 19 P08 | 20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,7 @@ Recent decisions affecting current work:
 - [Phase 19-06]: isMac gate for D-16 non-mac-emptiness lives in buildCrossoverRatingMap itself, not in 19-05's getCodeweaversFromIndex/isCrossoverIndexEligible (neither actually gates on platform)
 - [Phase 19-07]: Tier derivation (5->gold, 4->silver, 3->bronze, <=2->wontRun, null->unknown, undefined->no element) computed entirely inside CrossoverBadge, never read as a pre-labeled field off the index (D-12); enforces D-16 honesty invariant in one place
 - [Phase 19-07]: CrossoverBadge renders unconditionally (no is.mac guard) in GameCard -- crossoverRatings map absence already yields undefined for every non-macOS/never-looked-up tile, which the component turns into no element
+- [Phase 19-08]: WineSelector gained optional runner?: Runner prop so the D-18 knownnottowork warning gate can distinguish the Steam CrossOver-bottle guided-setup path (SteamBottleSetup.tsx) from the shared generic GOG/Epic/Amazon/sideload Wine-install path
 
 ### Pending Todos
 
