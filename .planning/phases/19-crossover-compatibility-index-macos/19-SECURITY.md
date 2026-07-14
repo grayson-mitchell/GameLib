@@ -1,12 +1,13 @@
 ---
 phase: 19-crossover-compatibility-index-macos
 audited: 2026-07-14
-status: OPEN_THREATS
+status: SECURED
 threats_total: 40
-threats_closed: 39
-threats_open: 1
+threats_closed: 40
+threats_open: 0
 asvs_level: 2
 unregistered_flags: 0
+resolution_note: "T-19-02-03 closed after audit — see Orchestrator Resolution at end of file"
 ---
 
 # Phase 19: CrossOver Compatibility Index (macOS) — Security Audit
@@ -151,3 +152,24 @@ existing in-memory state). No other SUMMARY.md in this phase has a
 Phase 19 should not be considered fully secured until the measurement
 harness's Sample-2 code path is fixed and the git history exposure is
 resolved.
+
+## Orchestrator Resolution (post-audit, 2026-07-14)
+
+T-19-02-03 is now CLOSED (status upgraded to SECURED, threats_open: 0):
+
+1. **Code-level gap FIXED** — commit `31d684a1`: `meta/measureCrossoverMatching.ts`
+   no longer builds/writes a per-title Sample 2 table. It now emits aggregate
+   classification/outcome counts only (base games: N HIT / M MISS; excluded-DLC
+   count; total). Re-running the harness — the only supported way to regenerate
+   the report — can no longer reproduce the owned-title leak. `pnpm tsc --noEmit`
+   clean. The report output itself was redacted earlier in commit `b2eeb6cb`.
+
+2. **Git-history exposure ACCEPTED via publication boundary** — the only remaining
+   un-redacted copy is the blob in local commit `19c6ce3e`, which lives entirely
+   under `.planning/`. Per user decision (2026-07-14), the public `gamelib` fork
+   will be published via `/gsd-pr-branch` (or equivalent), which excludes all
+   `.planning/` commits. The leaked blob therefore never reaches the public fork.
+   Nothing has been pushed to any remote. If the raw feature branch (with
+   `.planning/`) is ever pushed to a public remote, history MUST be rewritten
+   first — this acceptance is conditional on the `.planning/`-excluded publication
+   path.

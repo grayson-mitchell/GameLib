@@ -163,3 +163,24 @@ The two human-verification items do not block the phase's technical completion: 
 
 _Verified: 2026-07-14T02:41:25Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## Orchestrator Resolution (post-verification, 2026-07-14)
+
+The single blocking gap (CXIDX-03 / T-19-02-03 — owned-title names in the
+committed measurement report) has been REMEDIATED:
+- Report output redacted to aggregate-only counts (commit `b2eeb6cb`).
+- Harness code fixed so re-runs cannot re-leak (commit `31d684a1`).
+- Git-history exposure accepted via the `.planning/`-excluded publication path
+  (see 19-SECURITY.md "Orchestrator Resolution"; user decision 2026-07-14).
+
+Remaining before formal phase closure — both are the pre-existing
+human-verification items, NOT code gaps:
+1. 19-04 `checkpoint:human-action` — enable + first-run the CrossOver index
+   GitHub Action on the fork (user-deferred; offline fallback in place).
+2. WR-05 live check — mid-session-added game picks up its badge after a
+   library refresh.
+
+On resume, once (1) is done, re-run `/gsd-verify-work 19` (or re-verify) to flip
+status to passed, then `phase.complete`.
