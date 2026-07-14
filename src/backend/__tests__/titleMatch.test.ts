@@ -11,6 +11,7 @@ import {
   normalizeTitle,
   titleSimilarity,
   isDlcFalsePositiveRisk,
+  isRemasterFalsePositiveRisk,
   fuzzyMatch,
   HUMBLE_FUZZY_MATCH_THRESHOLD
 } from 'common/matching/titleMatch'
@@ -38,6 +39,10 @@ describe('normalizeTitle', () => {
       'assault android cactus'
     )
     expect(normalizeTitle('Skyrim: Game of the Year Edition')).toBe('skyrim')
+  })
+
+  it('no longer strips "remastered" — quick task 260715-a7g product-differentiator fix', () => {
+    expect(normalizeTitle('Alan Wake Remastered')).toContain('remastered')
   })
 })
 
@@ -80,6 +85,26 @@ describe('isDlcFalsePositiveRisk', () => {
   })
 })
 
+describe('isRemasterFalsePositiveRisk', () => {
+  it('flags an original title against its remastered/remade release (keyword in longer, not shorter)', () => {
+    expect(
+      isRemasterFalsePositiveRisk('Alan Wake', 'Alan Wake Remastered')
+    ).toBe(true)
+    expect(isRemasterFalsePositiveRisk('Alan Wake', 'Alan Wake Remake')).toBe(
+      true
+    )
+  })
+
+  it('does not flag when both titles carry the same product-variant keyword', () => {
+    expect(
+      isRemasterFalsePositiveRisk(
+        'Alan Wake Remastered',
+        'Alan Wake Remastered'
+      )
+    ).toBe(false)
+  })
+})
+
 describe('fuzzyMatch', () => {
   it('matches identical titles', () => {
     expect(fuzzyMatch('Portal 2', 'Portal 2')).toBe(true)
@@ -105,5 +130,29 @@ describe('fuzzyMatch', () => {
     expect(fuzzyMatch('Game X: Season Pass', 'Game X')).toBe(false)
     expect(fuzzyMatch('Batman', 'Batman: Arkham Knight')).toBe(false)
     expect(fuzzyMatch('Terraria', 'Terraria Soundtrack DLC')).toBe(false)
+  })
+
+  it('regression: other edition suffixes still match unaffected (Deluxe Edition, (Steam) qualifier)', () => {
+    expect(fuzzyMatch('Portal 2', 'Portal 2 Deluxe Edition')).toBe(true)
+    expect(fuzzyMatch('Into the Breach', 'Into The Breach (Steam)')).toBe(
+      true
+    )
+  })
+})
+
+describe('remaster/remake product differentiators (quick task 260715-a7g)', () => {
+  it('does not match an original title against its remaster/remake — the reported owned-badge bug', () => {
+    expect(fuzzyMatch('Alan Wake', 'Alan Wake Remastered')).toBe(false)
+    expect(fuzzyMatch('Alan Wake', 'Alan Wake Remake')).toBe(false)
+  })
+
+  it('an exact remaster title still self-matches', () => {
+    expect(fuzzyMatch('Alan Wake Remastered', 'Alan Wake Remastered')).toBe(
+      true
+    )
+  })
+
+  it('regression: a sequel is distinct and must not falsely match either title', () => {
+    expect(fuzzyMatch('Alan Wake', 'Alan Wake 2')).toBe(false)
   })
 })
