@@ -59,8 +59,8 @@ Steam verified it, flipped `StateFlags` `1026` → `4` (`FullyInstalled`) by its
 model holds end to end.
 
 - ✓ **`StateFlags = 1026` is correct.** Steam verifies-and-repairs rather than trusting us.
-- ✓ **Manifest format fully cracked.** Field set, casing (`universe`/`lastupdated` are
-  lowercase), and `SizeOnDisk` = sum of installed depot sizes — all reproduced exactly.
+- ✓ **Manifest format fully cracked.** Field set and casing (`universe`/`lastupdated` are
+  lowercase, while `SizeOnDisk`/`StateFlags` are cased) reproduced exactly.
 - ✓ **`Bytes*` / `DownloadType` / `TargetBuildID` are free** — Steam recomputes them.
 - ⚠ **Found a critical latent bug:** `@node-steam/vdf` corrupts 64-bit manifest GIDs
   (`…854` → `…700`). GameLib already uses this library on `.acf` files. **Audit call sites.**
