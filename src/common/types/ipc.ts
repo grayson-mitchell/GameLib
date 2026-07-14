@@ -46,6 +46,11 @@ import type {
   WineVersionInfo
 } from '../types'
 import type { CatalogLocaleSettings, CatalogProduct } from './discounts'
+import type {
+  StoreSearchDeal,
+  StoreSearchResult,
+  StoreSearchStore
+} from './storeSearch'
 import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
@@ -488,6 +493,9 @@ interface AsyncIPCFunctions {
     hideOwned?: boolean,
     wishlistOnly?: boolean
   ) => Promise<CatalogProduct[]>
+  searchStores: (query: string) => Promise<StoreSearchResult[]>
+  getStoreSearchDeals: (gameId: string) => Promise<StoreSearchDeal[]>
+  getStoreSearchStoreMap: () => Promise<Record<string, StoreSearchStore>>
   'steamgriddb.hasApiKey': () => Promise<boolean>
   'steamgriddb.setApiKey': (key: string) => Promise<void>
   'steamgriddb.searchGame': (
