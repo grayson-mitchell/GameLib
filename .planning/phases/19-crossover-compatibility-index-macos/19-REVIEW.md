@@ -51,6 +51,16 @@ findings:
   info: 4
   total: 9
 status: issues_found
+fixed_at: 2026-07-14T00:00:00Z
+warnings_fixed: 5/5
+warnings_fix_commits:
+  - 015b632b # WR-01
+  - 38618b0c # WR-04
+  - 32539796 # WR-02
+  - f2e0a2f3 # WR-03
+  - 3f16b6c0 # WR-05
+info_fixed: 0/4 # out of scope for this fix pass (Warning-only)
+fix_status: warnings_resolved
 ---
 
 # Phase 19: Code Review Report
@@ -93,7 +103,11 @@ when the library changes mid-session. Also some quality/dead-weight items.
 
 ## Warnings
 
+**Fix status (2026-07-14):** All 5 warnings below have been fixed and committed on `fix/steam-list-view-store-label`. See the `RESOLVED` note under each finding for the commit and a summary of the applied fix.
+
 ### WR-01: `crossoverIndexHas()` is blind to the bundled-snapshot fallback — D-13 self-heal silently breaks when only the bundled snapshot is available
+
+**RESOLVED (`015b632b`):** `loadIndex()`'s bundled-snapshot fallback (both the schema-rejection branch and the catch branch) now goes through a new `persistBundledFallback()` helper that writes the bundled data into `crossoverIndexStore` (via `crossoverIndexStore.set(desc.name, { data: bundled, fetchedAt: Date.now() })`) before returning it — the same store `crossoverIndexHas()` reads directly. Added `fetcher.test.ts` coverage: both bundled-fallback branches now assert the store was populated, and a new `crossoverIndexHas — WR-01 self-heal via bundled snapshot` test exercises the exact "network never succeeded + bundled snapshot present" scenario end-to-end (`crossoverIndexHas()` false before the lookup, true after).
 
 **File:** `src/backend/crossover_index/fetcher.ts:94-123` and `src/backend/crossover_index/index.ts:137-147`
 
@@ -160,6 +174,8 @@ return bundled
 
 ### WR-02: `header.show_crossover_*` i18n keys referenced in code are missing from `en/translation.json`
 
+**RESOLVED (`32539796`):** Added `show_crossover_gold`/`show_crossover_silver`/`show_crossover_bronze`/`show_crossover_wont_run`/`show_crossover_unrated` to `public/locales/en/translation.json`'s `header` object (alphabetically sorted, matching the surrounding `show_*` keys' English text from the `LibraryFilters/index.tsx` extraction comments). Verified valid JSON.
+
 **File:** `src/frontend/components/UI/LibraryFilters/index.tsx:167-181` and `public/locales/en/translation.json:443-458`
 
 **Issue:** `crossoverRatingLabels` uses dynamic keys `header.show_crossover_gold`,
@@ -185,6 +201,8 @@ five keys with their English defaults to `public/locales/en/translation.json`'s
 
 ### WR-03: `install.warn-crossover-wont-run` i18n key (gamepage namespace) is missing from `en/gamepage.json`
 
+**RESOLVED (`f2e0a2f3`):** Added `install.warn-crossover-wont-run` to `public/locales/en/gamepage.json` with the same text as the `<Trans>` JSX children in `WineSelector/index.tsx`. Verified valid JSON.
+
 **File:** `src/frontend/screens/Library/components/InstallModal/WineSelector/index.tsx:186-194` and `public/locales/en/gamepage.json:226-243`
 
 **Issue:** The D-18 non-blocking advisory uses
@@ -202,6 +220,8 @@ with the same text currently given as the `<Trans>` children.
 ---
 
 ### WR-04: `IndexDescriptor.url`'s "MUST be https" invariant (T-19-03) is a comment only, never enforced
+
+**RESOLVED (`38618b0c`):** Added `assertHttps()` in `fetcher.ts`, called as the first statement in `loadIndex()` (before the cache lookup and before any network call), throwing `IndexDescriptor '${desc.name}' url must be https` for any non-`https://` URL. Callers such as `getCodeweaversFromIndex()` already catch and log, so this fails loud without propagating further. Added a `fetcher.test.ts` case asserting an `http://` descriptor is rejected and `axiosClient.get` is never called.
 
 **File:** `src/backend/crossover_index/fetcher.ts:20-31`
 
@@ -228,6 +248,8 @@ if (!desc.url.startsWith('https://')) {
 ---
 
 ### WR-05: `crossoverRatings` is resolved once at startup / once on renderer mount — never refreshed when the library changes
+
+**RESOLVED (`3f16b6c0`), requires human verification:** Extracted the startup fire-and-forget call into `refreshCrossoverRatingMap()` in `main.ts` and re-invoke it at the end of the `refreshLibrary` IPC handler (after the existing Humble-ownership-recompute block), so every manual "Refresh Library" and background Steam metadata sync completion now re-pushes `crossoverIndexChanged`. The frontend's existing `handleCrossoverIndexChanged` listener in `GlobalState.tsx` needed no change to pick this up (comment updated to document the new trigger). `pnpm tsc --noEmit` is clean, but there is no automated test exercising the `refreshLibrary` handler's new fire-and-forget call (no existing `main.ts` test harness) — flagged for manual/live verification that a game added mid-session picks up its badge after a library refresh.
 
 **File:** `src/backend/main.ts:357-370`, `src/frontend/state/GlobalState.tsx:1081-1096`
 
