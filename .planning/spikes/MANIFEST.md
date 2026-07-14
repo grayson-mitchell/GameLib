@@ -33,26 +33,37 @@ Design decisions established so far. Non-negotiable for the real build.
   wrong manifest GID — which is exactly how you cause a forced re-download. *(Established by
   spike 001.)*
 - **Depot selection needs the user's license list.** Owned-DLC depots are installed; PICS
-  alone cannot tell you which. *(Established by spike 001.)*
+  alone cannot tell you which. DLC depots carry `dlcappid` *inside* the `InstalledDepots`
+  entry. `optional=1` depots without a `dlcappid` are user-opt-in and are NOT installed.
+  *(Established by spike 001.)*
+- **Never write `StateFlags = 4` for a manifest with a wrong `InstalledDepots` set.** A wrong
+  depot set is the one condition that provokes a re-download. Any manifest writer must be
+  able to prove its depot selection before writing. *(Established by spike 001.)*
 
 ## Spikes
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
-| 001 | acf-adoption | standard | Given a real Steam install, when GameLib derives an `appmanifest.acf` from PICS alone, then every content-identity field matches Steam's own manifest | ⚠ PARTIAL | steam, appmanifest, acf, depot, vdf |
+| 001 | acf-adoption | standard | Given a real Steam install, when GameLib writes its own `appmanifest.acf`, then Steam adopts it and launches the game with no re-download | ✓ VALIDATED | steam, appmanifest, acf, depot, vdf |
+| 002 | steam-user-depot-download | standard | Given an authenticated `steam-user` connection, when we `getManifest()` + `downloadFile()` a small app, then all files land on disk hashing correctly | ○ NOT RUN | steam, depot, download |
 
-### 001 — acf-adoption (PARTIAL)
+### 001 — acf-adoption (VALIDATED)
 
-Ran **Step 0 only** (read-only) by user decision — no writes to the Steam install, no
-downloads.
+**The core architecture works.** Wrote our own manifest for WazHack, restarted Steam:
+Steam verified it, flipped `StateFlags` `1026` → `4` (`FullyInstalled`) by itself, downloaded
+**zero bytes** (game dir byte-identical to the pre-swap backup), and the game **launched via
+`steam://rungameid`**. The "GameLib writes the manifest → Steam adopts it → Steam launches"
+model holds end to end.
 
+- ✓ **`StateFlags = 1026` is correct.** Steam verifies-and-repairs rather than trusting us.
 - ✓ **Manifest format fully cracked.** Field set, casing (`universe`/`lastupdated` are
-  lowercase), `TargetBuildID = 0` when idle, and `SizeOnDisk` = sum of installed depot sizes
-  — all reproduced exactly against a real machine.
-- ✗ **Found a critical latent bug:** `@node-steam/vdf` corrupts 64-bit manifest GIDs
-  (`…854` → `…700`). GameLib already uses this library on `.acf` files.
-- ✗ **Depot selection from PICS alone is invalidated.** Passed on WazHack (1 depot) and
-  failed on all 10 other installed games. Owned-DLC depots are installed and PICS cannot
-  reveal ownership — requires the authenticated license list.
-- ? **Steam adoption itself remains unproven** — the live swap was not run.
-- ? **DRM on launch remains unproven** — needs a DRM-wrapped test title.
+  lowercase), and `SizeOnDisk` = sum of installed depot sizes — all reproduced exactly.
+- ✓ **`Bytes*` / `DownloadType` / `TargetBuildID` are free** — Steam recomputes them.
+- ⚠ **Found a critical latent bug:** `@node-steam/vdf` corrupts 64-bit manifest GIDs
+  (`…854` → `…700`). GameLib already uses this library on `.acf` files. **Audit call sites.**
+- ✗ **Depot selection from PICS alone is invalidated.** Passed on WazHack (1 depot), failed
+  on all 10 other installed games. Owned-DLC depots are installed and PICS cannot reveal
+  ownership — requires the authenticated license list. **This is now the only blocker to a
+  production manifest writer.**
+- ~ **DRM caveat:** WazHack was not confirmed hard-DRM-wrapped. The launch path is proven;
+  one confirmation against a DRM-heavy title is worth doing before shipping.

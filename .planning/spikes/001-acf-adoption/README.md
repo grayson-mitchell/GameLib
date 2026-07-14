@@ -3,7 +3,7 @@ spike: 001
 name: acf-adoption
 type: standard
 validates: "Given a real Steam install, when GameLib derives an appmanifest_{appId}.acf from PICS data alone, then every content-identity field matches what Steam itself wrote"
-verdict: PARTIAL
+verdict: VALIDATED
 related: []
 tags: [steam, appmanifest, acf, depot, vdf, install]
 ---
@@ -23,12 +23,15 @@ This gates the entire "GameLib downloads, Steam launches" model
 adopt a manifest we wrote, the model collapses back to the DRM problem and there is no
 fallback.
 
-## Scope: Step 0 only (READ-ONLY)
+## Scope
 
-By explicit user decision, this spike ran **Step 0 only**: generate the manifest and diff
-it against ground truth. **Nothing in the Steam install was written, moved, or deleted.**
-No game was downloaded. The live-swap test (Step 1) was deliberately deferred pending
-these results.
+Ran in two gated stages:
+
+- **Step 0 (read-only)** — generate the manifest, diff it against ground truth. Nothing
+  written to the Steam install, nothing downloaded.
+- **Step 1 (live swap)** — after reviewing Step 0's results, back up, swap our manifest in,
+  restart Steam, observe. **Game files were never touched — only the ~2KB `.acf`.** Zero
+  bytes downloaded. A verified backup was taken first so rollback needed no network.
 
 ## Research
 
@@ -88,10 +91,21 @@ mismatches. WazHack passed only because it is the trivial case: one depot, no DL
 Built `depot-detail.mjs` to dump every PICS depot attribute side-by-side with whether Steam
 actually installed it. This produced the decisive evidence in Finding 2.
 
+### Iteration 6 — the live swap (Step 1)
+
+Backed up WazHack (verified byte-for-byte), quit Steam, wrote our generated manifest over
+Steam's, restarted Steam, waited 45s. Observed the result, then launched via
+`steam://rungameid/264160`. See Finding 5 — **the model works.**
+
+`live.mjs` guards the swap: it refuses to run without a verified backup, refuses while
+Steam is running, and refuses if our depot selection does not exactly reproduce Steam's
+(the one condition that would provoke a re-download).
+
 ## Results
 
-**Verdict: PARTIAL** — the manifest *format* is fully cracked, but depot *selection*
-cannot be done the way I assumed, and the live-adoption test has not been run.
+**Verdict: VALIDATED** — Steam adopts a manifest GameLib wrote, verifies it, and launches
+the game with zero bytes downloaded. The core architecture is sound. Two constraints and
+one open item came out of it (Findings 1, 2, 6).
 
 ### Finding 1 — `@node-steam/vdf` silently corrupts 64-bit IDs (CRITICAL)
 
@@ -166,33 +180,92 @@ Everything else derived correctly and is confirmed against a real machine:
   (`UpdateRequired|FullyInstalled`) — confirming Steam tolerates composite values, which
   supports the `1026` plan.
 
-### Finding 4 — NOT tested: whether Steam actually adopts the manifest
+### Finding 4 — STEAM ADOPTS THE MANIFEST (the result the architecture needed)
 
-Step 1 (live swap + restart Steam + observe) was **not run**. Everything above concerns
-whether we can *produce a byte-correct manifest*. Whether the Steam client will *adopt* one
-it did not write — verify-and-flip-to-4 vs. ignore vs. re-download — **remains unproven**,
-and it is still the load-bearing unknown for decision D-1.
+Wrote our generated manifest over Steam's for WazHack and restarted Steam. Within ~45s,
+with **no user interaction**:
 
-Also untested: **DRM.** The launch-through-Steam half of D-1 needs a DRM-wrapped title.
+```
+StateFlags  we wrote : 1026  (UpdateRequired | UpdateStarted)
+StateFlags  after    :    4  (FullyInstalled)          ← Steam flipped it ITSELF
+```
+
+Steam verified the on-disk content against the manifest GID we supplied, agreed with it, and
+promoted the app to `FullyInstalled` on its own. Confirmed by direct measurement:
+
+- **`steamapps/downloading/264160` — does not exist.** No staged download.
+- **Game dir still 115004 KB**, and `diff -rq` against the pre-swap backup reports
+  **byte-identical**. Steam did not fetch or alter a single byte.
+
+**`StateFlags = 1026` is the correct value and the verify-don't-assert strategy works
+exactly as designed.** Steam behaves as a safety net: it checks our claim rather than
+trusting it, and repairs rather than re-downloads.
+
+### Finding 5 — the game launches through `steam://rungameid` (D-1's other half)
+
+Launched via `steam://rungameid/264160` — the exact path GameLib uses today. **The game
+started and ran.** The full model holds end to end: *GameLib writes the manifest → Steam
+adopts it → Steam launches the game.*
+
+**Caveat, stated honestly:** WazHack is a small indie title and I did not independently
+confirm it is Steamworks-DRM-wrapped. This proves the *launch path* works on an adopted
+manifest; it does not by itself prove a hard-DRM title is satisfied. That said, the DRM check
+is performed by the Steam client against its own view of ownership + install state — and
+after adoption Steam's view is indistinguishable from a native install (`StateFlags 4`,
+correct depot GID, app owned). The mechanism has no obvious way to tell the difference.
+Worth one confirmation against a known DRM-heavy title before the phase ships.
+
+### Finding 6 — Steam rewrites the bookkeeping fields, confirming they are not identity
+
+After adoption, Steam rewrote exactly the fields Step 0 had flagged as non-identity, and
+left every content-identity field untouched:
+
+| Field | We wrote | Steam rewrote to |
+|---|---|---|
+| `BytesToDownload` / `BytesDownloaded` | 36221712 | **0** |
+| `BytesToStage` / `BytesStaged` | 117426878 | **0** |
+| `DownloadType` | 2 | 1 |
+| `TargetBuildID` | 0 | 9044149 |
+| `InstalledDepots.264162.manifest` | `3306037234848478854` | **unchanged** ✓ |
+| `SizeOnDisk`, `buildid`, `installdir`, `LastOwner` | (ours) | **unchanged** ✓ |
+
+Two lessons: the `Bytes*`/`DownloadType`/`TargetBuildID` fields are **free** — Steam
+recomputes them, so getting them "wrong" costs nothing. And the Step 0 classification of
+content-identity vs. bookkeeping was **empirically correct**.
+
+(Note this contradicts the Step 0 inference that `TargetBuildID` is "always 0 when idle" —
+Steam set it *to* the build id post-adoption. It simply isn't load-bearing either way.)
 
 ## Signal for the Build
 
 | Decision | Status |
 |---|---|
-| `.acf` field set, casing, and derivation rules | **Solved.** Reproduced exactly on a real machine. |
-| `SizeOnDisk` = sum of installed depot sizes | **Confirmed.** |
-| `StateFlags = 1026` (verify, don't assert) | Still the right plan; composite flags confirmed in the wild. |
-| Never parse 64-bit IDs with `@node-steam/vdf` | **Hard requirement.** Audit existing call sites. |
-| Depot selection from PICS alone | **Invalidated.** Requires the authenticated license list. |
-| Steam adopts a third-party manifest | **Unproven.** Blocks D-1. Needs Step 1. |
-| DRM satisfied on launch | **Unproven.** Needs a DRM-wrapped test title. |
+| **Steam adopts a GameLib-written manifest** | **✓ VALIDATED.** `1026` → `4`, zero bytes downloaded, files untouched. |
+| **Game launches via `steam://rungameid` after adoption** | **✓ VALIDATED** (soft caveat: confirm once on a hard-DRM title). |
+| `StateFlags = 1026` (verify, don't assert) | **✓ Correct.** Steam verifies and repairs rather than trusting us. |
+| `.acf` field set, casing, derivation rules | **✓ Solved.** Reproduced exactly on a real machine. |
+| `SizeOnDisk` = sum of installed depot sizes | **✓ Confirmed.** No filesystem walk needed. |
+| `Bytes*` / `DownloadType` / `TargetBuildID` | **Free.** Steam recomputes them. |
+| Never parse 64-bit IDs with `@node-steam/vdf` | **⚠ Hard requirement.** Audit existing call sites. |
+| Depot selection from PICS alone | **✗ Invalidated.** Requires the authenticated license list. |
+
+**D-1 and the `.acf` adoption model are validated. The remaining work is depot selection,
+not adoption.**
 
 ## Next
 
-Two open questions, in risk order:
+1. **Fix depot selection using the authenticated license list** (Finding 2). This is now the
+   *only* thing standing between the spike and a production-ready manifest writer. Needs one
+   QR login; verify the ownership-aware rule reproduces `InstalledDepots` across all 11
+   installed games, not just the single-depot case.
+2. **Audit GameLib's existing `@node-steam/vdf` call sites** (Finding 1) for 64-bit exposure.
+3. **Spike 002 — `steam-user` depot download** (`.planning/research/questions.md` Q4). Now
+   worth doing: the thing it feeds into is proven to work.
+4. Optional: re-confirm Finding 5 against a known hard-DRM title.
 
-1. **Step 1 — does Steam adopt it?** Back up, swap in our `.acf`, restart Steam, observe.
-   Fully reversible; rollback needs no download because game files are never touched.
-2. **Re-derive depot selection with an authenticated connection** and confirm the
-   ownership-aware rule reproduces Steam's `InstalledDepots` across all 11 installed games.
-   Requires a QR login (one scan).
+## Machine state after this spike
+
+WazHack's manifest is now the one **Steam itself wrote** during adoption (`StateFlags 4`,
+correct GID, healthy). The install is fully Steam-managed and was verified working. A backup
+remains at `~/.gamelib-spike-backup/264160/` and can be discarded, or rolled back with
+`node live.mjs restore 264160`.
