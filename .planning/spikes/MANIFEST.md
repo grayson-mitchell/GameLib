@@ -39,6 +39,18 @@ Design decisions established so far. Non-negotiable for the real build.
   user's language. No combination of `optional`/`systemdefined` flags can substitute for
   ownership — two PICS-identical depots differ only in whether they are owned. Verified 11/11
   against real installs. *(Established by spike 001; rule in `001-acf-adoption/select.mjs`.)*
+- **Download in-process via `steam-user`; do NOT bundle DepotDownloader.** Proven byte-identical
+  to Steam's own download. No .NET, no second auth stack, no stdout scraping. *(Spike 002.)*
+- **Do NOT use `steam-user`'s `getManifest()` filenames or `downloadChunk`/`downloadFile`.**
+  Both are broken against current Steam — filenames come back truncated to an AES block
+  boundary, and chunk download throws. Use `getRawManifest()` plus our own decrypt/decompress
+  (~100 lines, see `002-steam-user-depot-download/steam-depot.mjs`). The underlying protocol is
+  fine; only steam-user's handling of it is wrong. *(Spike 002.)*
+- **Retry chunks across DIFFERENT content servers.** Steam's CDN edges drop connections under
+  concurrency; ~16% of chunks fail without retry. This is normal, not a protocol error.
+  *(Spike 002.)*
+- **`lzma-native` is optional.** Pure-JS LZMA is correct, just 2.2× slower (8.1 vs 17.8 MB/s).
+  The project's no-native-modules constraint holds. *(Spike 002.)*
 - **Never write `StateFlags = 4` for a manifest with a wrong `InstalledDepots` set.** A wrong
   depot set is the one condition that provokes a re-download. Any manifest writer must be
   able to prove its depot selection before writing. *(Established by spike 001.)*
@@ -48,7 +60,7 @@ Design decisions established so far. Non-negotiable for the real build.
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 001 | acf-adoption | standard | Given a real Steam install, when GameLib writes its own `appmanifest.acf`, then Steam adopts it and launches the game with no re-download | ✓ VALIDATED | steam, appmanifest, acf, depot, vdf |
-| 002 | steam-user-depot-download | standard | Given an authenticated `steam-user` connection, when we `getManifest()` + `downloadFile()` a small app, then all files land on disk hashing correctly | ○ NOT RUN | steam, depot, download |
+| 002 | steam-user-depot-download | standard | Given an authenticated `steam-user` connection, when we fetch a depot manifest and download every chunk, then all files land on disk SHA1-verified and byte-identical to Steam's own install | ✓ VALIDATED | steam, depot, download, cdn, lzma, crypto |
 
 ### 001 — acf-adoption (VALIDATED)
 
@@ -72,3 +84,23 @@ model holds end to end.
   Believed bookkeeping, but untested when wrong.
 - ~ **DRM caveat:** WazHack was not confirmed hard-DRM-wrapped. The launch path is proven;
   one confirmation against a DRM-heavy title is worth doing before shipping.
+
+### 002 — steam-user-depot-download (VALIDATED)
+
+**Option A wins; the C# DepotDownloader wrapper is rejected.** Downloaded WazHack's macOS depot
+entirely in-process — **171/171 files, byte-identical to what the real Steam client
+downloaded**, in 6.3s at 17.8 MB/s.
+
+The twist: `steam-user` gets everything *hard* right (CM auth, PICS, depot keys, raw manifests,
+content servers) and both *easy* things wrong. `getManifest()` truncates every filename to an
+AES block boundary (`UnityEngine.SubstanceModule.dll` → `UnityEngine.Substan`), and
+`downloadChunk`/`downloadFile` throw outright. Neither is a protocol problem — decrypting by
+hand recovers perfect plaintext and a valid LZMA container. We reimplemented just those two
+pieces (~100 lines).
+
+- ✓ **Byte-identical to Steam**, verified against a real install.
+- ✓ **Pure-JS LZMA works** — `lzma-native` is a 2.2× speedup, not a requirement. The
+  no-native-modules constraint holds.
+- ⚠ **Retry across content servers is mandatory** — ~16% of chunks fail at concurrency 8.
+- ○ Untested: multi-depot games, large (50 GB) games, streaming to disk (files are currently
+  assembled in RAM), and resume-after-interruption.
