@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 20-02-PLAN.md (store-search type vocabulary + IPC contract)
-last_updated: "2026-07-14T09:52:46.826Z"
+stopped_at: Completed 20-03-PLAN.md (store-search ownership badge resolver)
+last_updated: "2026-07-14T09:58:22.603Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 20 (aggregated-store-search-cheapshark) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-07-14
 
@@ -119,6 +119,7 @@ Last activity: 2026-07-14
 | Phase 19 P08 | 20min | 2 tasks | 6 files |
 | Phase 20 P01 | 10min | 2 tasks | 4 files |
 | Phase 20 P02 | 10min | 2 tasks | 4 files |
+| Phase 20 P03 | 15min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,7 @@ Recent decisions affecting current work:
 - [Phase 20]: D-02: fuzzy title matcher lifted verbatim into src/common/matching/titleMatch.ts as the single shared module (normalizeTitle/titleSimilarity/isDlcFalsePositiveRisk/fuzzyMatch); HUMBLE_FUZZY_MATCH_THRESHOLD (0.85) single-sourced there, re-exported unchanged by backend/humble/constants.ts and backend/humble/dedup.ts — Store-search badge resolver (Plan 03) reuses the identical matcher instead of writing a second one, so the threshold and DLC guard behave identically on both surfaces
 - [Phase 20-02]: currencyCode kept as bare string (never a literal 'USD' union) in common/types/storeSearch.ts so D-13's USD-only debt stays visible in the type system, never implicit
 - [Phase 20-02]: storeMapping constant lives in common/discounts/storeMapping.ts (sibling file) per RESEARCH Open Question 1; buy handoff reuses existing openExternalUrl SyncIPC listener (D-08) rather than a new IPC channel
+- [Phase 20-03]: Steam ownership resolved by EXACT steamAppId join only (fuzzyMatch never called for Steam); GOG/Epic/Amazon resolved via the Plan 01 shared fuzzyMatch; keyAvailable computed independently and never suppressed by ownership (D-01/D-02/D-07)
 
 ### Pending Todos
 
@@ -234,8 +236,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-14T09:52:46.820Z
-Stopped at: Completed 20-02-PLAN.md (store-search type vocabulary + IPC contract)
+Last session: 2026-07-14T09:58:22.598Z
+Stopped at: Completed 20-03-PLAN.md (store-search ownership badge resolver)
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
