@@ -112,11 +112,12 @@ function readLibraryEntries(
 /**
  * A4 fallback heuristic (RESEARCH.md Pitfall 8/Assumptions Log A4): a title
  * is treated as DLC/add-on/non-game if it is a longer prefix-extension of
- * another owned title in the same sample (e.g. "Phoenix Point Art Book"
- * extends "Phoenix Point"). Approximate by design — this sample is
- * qualitative-only (n≈5), never gate-scored, so precision here does not
- * affect the D-02 verdict. Classification is printed in the report so a
- * human can sanity-check it.
+ * another owned title in the same sample (e.g. a "<Base Game> Art Book" or
+ * "<Base Game> Soundtrack" entry extends its base game). Approximate by
+ * design — this sample is qualitative-only (n≈5), never gate-scored, so
+ * precision here does not affect the D-02 verdict. Only AGGREGATE
+ * classification counts are printed in the report — per-title owned names are
+ * never emitted (see the Sample 2 privacy redaction).
  */
 function classifyBaseGames(
   entries: LibraryEntry[]
