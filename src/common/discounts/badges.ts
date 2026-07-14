@@ -1,4 +1,5 @@
 import { HumbleKey } from '../types/humble'
+import { fuzzyMatch } from '../matching/titleMatch'
 
 /**
  * Pure exact-match ownership badge resolution for the native Discounts
@@ -102,4 +103,98 @@ export function buildDiscountBadgeMaps(
   const ownedAppIds = new Set(steamLibrary.map((g) => g.app_name))
 
   return { titleToAppId, ownedAppIds }
+}
+
+/**
+ * Store-attributed, multi-badge ownership resolution for the aggregated
+ * store-search surface (Phase 20, STORESEARCH-05/06). Deliberately departs
+ * from `resolveDiscountBadge`'s single-badge/exact-only contract above —
+ * that resolver stays byte-for-byte unchanged; this is a NEW sibling export,
+ * not a modification.
+ *
+ * D-01: Steam ownership is an EXACT `steamAppID` ID-join ONLY — fuzzyMatch
+ * is never called against the Steam library. A CheapShark result whose
+ * title fuzzy-matches a steam.library game but whose `steamAppId` does not
+ * equal that game's `app_name` yields NO steam badge; a result with no
+ * `steamAppId` at all can never yield a steam badge. This mirrors T-20-03's
+ * mitigation: a wrong Steam badge is a spoofing risk a title collision must
+ * never produce.
+ *
+ * D-02: GOG/Epic('legendary')/Amazon('nile') ownership is resolved by fuzzy
+ * title match reusing the SAME shared `fuzzyMatch` (85% `titleSimilarity` +
+ * `isDlcFalsePositiveRisk` guard) as `backend/humble/dedup.ts` — imported
+ * from `common/matching/titleMatch.ts` (Plan 01's single-sourced matcher),
+ * never re-implemented here.
+ *
+ * D-04: the return value is WHICH store(s) matched (`StoreOwnershipMatch[]`),
+ * not a boolean — the UI names them ("Owned on GOG"), which a plain boolean
+ * cannot express.
+ *
+ * D-06: `owned` entries are pushed in the fixed deterministic order Steam,
+ * GOG, Epic(legendary), Amazon(nile) so the UI's cap/overflow ("+N more")
+ * is stable across renders.
+ *
+ * D-07: `keyAvailable` is computed independently of `owned` and is never
+ * suppressed by an ownership match — a result can be BOTH owned on GOG AND
+ * have a waiting Humble key (unlike `resolveDiscountBadge`'s "Owned wins,
+ * single badge" contract, which does not apply here).
+ */
+export interface StoreOwnershipMatch {
+  store: 'steam' | 'gog' | 'legendary' | 'nile'
+  confidence: 'exact' | 'fuzzy'
+}
+
+export function resolveStoreSearchBadges(
+  result: { title: string; steamAppId?: string },
+  libraries: {
+    steam: { app_name: string }[]
+    gog: { title: string }[]
+    epic: { title: string }[]
+    amazon: { title: string }[]
+  },
+  keysWaiting: HumbleKey[]
+): { owned: StoreOwnershipMatch[]; keyAvailable: boolean } {
+  const owned: StoreOwnershipMatch[] = []
+
+  const hasUsableSteamAppId =
+    result.steamAppId !== undefined &&
+    result.steamAppId !== '' &&
+    result.steamAppId !== '0'
+
+  // D-01: EXACT steamAppID join ONLY — never fuzzyMatch against Steam.
+  if (
+    hasUsableSteamAppId &&
+    libraries.steam.some((g) => g.app_name === result.steamAppId)
+  ) {
+    owned.push({ store: 'steam', confidence: 'exact' })
+  }
+
+  // D-02/D-06: fuzzy title match, fixed order GOG, Epic(legendary), Amazon(nile).
+  const fuzzyLibs: Array<['gog' | 'legendary' | 'nile', { title: string }[]]> =
+    [
+      ['gog', libraries.gog],
+      ['legendary', libraries.epic],
+      ['nile', libraries.amazon]
+    ]
+  for (const [store, lib] of fuzzyLibs) {
+    if (lib.some((g) => fuzzyMatch(result.title, g.title))) {
+      owned.push({ store, confidence: 'fuzzy' })
+    }
+  }
+
+  // D-07: independent signal, never suppressed by an ownership match.
+  const keyAvailable = keysWaiting.some((k) => {
+    const hasUsableKeyAppId =
+      k.steamAppId !== undefined && k.steamAppId !== '' && k.steamAppId !== '0'
+    if (
+      hasUsableSteamAppId &&
+      hasUsableKeyAppId &&
+      k.steamAppId === result.steamAppId
+    ) {
+      return true
+    }
+    return fuzzyMatch(result.title, k.title)
+  })
+
+  return { owned, keyAvailable }
 }
