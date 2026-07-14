@@ -1,0 +1,167 @@
+/* Phase 20 Plan 05 — presentational layer for the aggregated store-search
+   screen. Reuses the existing semantic token system exclusively (see
+   20-UI-SPEC.md); the .storeSearchScreen shell mirrors .discountsScreen and
+   is consumed by the Plan 06 container. */
+
+.storeSearchScreen {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 20vw;
+  padding: var(--space-md-fixed);
+  color: var(--text-default);
+}
+
+.storeSearchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--gradient-gamecard);
+  border-radius: var(--space-3xs);
+  /* UI-SPEC-specified shadow value, matches .discountCard's shadow exactly. */
+  box-shadow: 0px 0px 12px 4px #00000055;
+  transition: transform 0.1s ease-in;
+}
+
+.storeSearchRow:hover,
+.storeSearchRow:focus-within {
+  transform: scale(1.02);
+  outline: none;
+}
+
+.storeSearchRow__thumb {
+  width: 60px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+}
+
+.storeSearchRow__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-md);
+  font-weight: var(--bold);
+  color: var(--text-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.storeSearchRow__badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+}
+
+.storeSearchRow__price {
+  flex-shrink: 0;
+  font-size: var(--text-md);
+  font-weight: var(--bold);
+  color: var(--text-default);
+  text-align: right;
+}
+
+.storeSearchRow__expandButton {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xs);
+  border: none;
+  background: transparent;
+  color: var(--text-default);
+  cursor: pointer;
+  border-radius: var(--space-3xs);
+}
+
+.storeSearchRow__expandButton:hover,
+.storeSearchRow__expandButton:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+/* Chevron rotate — same pattern/values as .discountFilters__toggleIcon(--open),
+   duplicated here (not cross-imported) so this screen renders correctly
+   standalone regardless of Discounts' route-chunk load order. */
+.discountFilters__toggleIcon {
+  transition: transform 250ms ease;
+}
+
+.discountFilters__toggleIcon--open {
+  transform: rotate(180deg);
+}
+
+/* Ownership badge chrome — reused EXACTLY (same class names/values) from
+   .discountCard__badge--owned/--keyAvailable, duplicated here for the same
+   standalone-screen reason as the chevron above. */
+.discountCard__badge--owned,
+.discountCard__badge--keyAvailable {
+  padding: var(--space-3xs) var(--space-2xs);
+  border-radius: var(--space-3xs);
+  font-size: var(--text-sm);
+  font-weight: var(--semibold);
+  color: var(--neutral-01);
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.discountCard__badge--owned {
+  background: var(--status-success);
+}
+
+.discountCard__badge--keyAvailable {
+  background: var(--status-info);
+}
+
+.storeSearchRow__breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--divider, rgba(255, 255, 255, 0.12));
+}
+
+.storeSearchRow__loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--text-secondary);
+}
+
+.storeSearchRow__breakdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--space-3xs);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.storeSearchRow__breakdownItem:hover,
+.storeSearchRow__breakdownItem:focus-visible {
+  /* UI-SPEC-specified hover value, matches .discountFilters__toggle:hover. */
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.storeSearchRow__breakdownLogo {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.storeSearchRow__breakdownStore {
+  flex: 1 1 auto;
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+
+.storeSearchRow__breakdownPrice {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}

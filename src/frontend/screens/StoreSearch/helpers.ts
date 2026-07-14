@@ -38,24 +38,20 @@ const STORE_ORDER: StoreOwnershipMatch['store'][] = [
 /**
  * The i18n key + defaultValue + interpolation values the row passes straight
  * to `t()` — kept as data (not a pre-rendered string) so the row owns the
- * actual translation call and this helper stays framework-free.
+ * actual translation call and this helper stays framework-free. `values` is
+ * intentionally a homogeneous `Record` (rather than a discriminated union
+ * keyed off `key`) so a single `t(label.key, label.defaultValue,
+ * label.values)` call at the render site type-checks against react-i18next's
+ * `TFunction` overloads without a per-key switch.
  */
-export type OwnedBadgeLabel =
-  | {
-      key: 'storeSearch.badge.ownedOn'
-      defaultValue: string
-      values: { store: string }
-    }
-  | {
-      key: 'storeSearch.badge.ownedOnMulti'
-      defaultValue: string
-      values: { stores: string }
-    }
-  | {
-      key: 'storeSearch.badge.ownedOnOverflow'
-      defaultValue: string
-      values: { stores: string; count: number }
-    }
+export interface OwnedBadgeLabel {
+  key:
+    | 'storeSearch.badge.ownedOn'
+    | 'storeSearch.badge.ownedOnMulti'
+    | 'storeSearch.badge.ownedOnOverflow'
+  defaultValue: string
+  values: Record<string, string | number>
+}
 
 /**
  * D-04: owned badge copy always names the store(s), never a bare "Owned".
