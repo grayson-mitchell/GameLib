@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### v1.4 — Steam macOS Compatibility Runtime
 
 - [x] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps) (completed 2026-07-13)
-- [ ] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape
+- [x] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape (completed 2026-07-14)
 
 ### v1.5 — Aggregated Store Search
 
@@ -554,7 +554,7 @@ Plans:
   - **Out of scope:** the dump's `<bottletemplate>` / `<flag>` / install-profile data — captured as a seed (`.planning/seeds/crossover-bottle-templates-from-tie-dump.md`), gated on whether CodeWeavers' per-game profiles apply to GameLib's bottled-Steam model.
   - **Consideration — crowd-sourced 32-bit override list (from Phase 18):** Phase 18's post-install Mach-O check (MAC32-03) produces a high-value fact CodeWeavers' dump doesn't carry — "AppID X's mac build is *actually* i386-only, despite Steam not tagging it `osarch=32`." Phase 18 caches this locally as `appId → { arch, source: 'macho' }`. This same offline-index-from-GitHub delivery pattern could serve a community `mac-arch-overrides.json` so the 32-bit verdict becomes a **pre-install** hint for all users (closes the loop back to the "curated list" data source). **Design constraints if pursued:** opt-in per submission only — never silent telemetry (a bare AppID reveals ownership); GitHub-native transport (prefilled issue / copyable JSON snippet + maintainer-reviewed PR into a repo-hosted JSON), no app-side auto-PR; human review gate mitigates poisoning (the list acts pre-install, before any local Mach-O override). Evaluate whether to fold into this phase's index infra or spin a sibling index. See `.planning/notes/steam-mac-arch-detection-decisions.md`.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 19 to break down)
@@ -652,5 +652,5 @@ v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 17/17 | Complete    | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
-| 19. CrossOver Compatibility Index (macOS) | 7/8 | In Progress|  |
+| 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete   | 2026-07-14 |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |

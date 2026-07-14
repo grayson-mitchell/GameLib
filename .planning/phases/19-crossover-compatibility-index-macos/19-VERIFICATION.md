@@ -1,12 +1,12 @@
 ---
 phase: 19-crossover-compatibility-index-macos
 verified: 2026-07-14T02:41:25Z
-status: gaps_found
-score: 12/13 must-haves verified (1 gap, 2 human-verification items)
+status: human_needed
+score: 13/13 must-haves verified (privacy gap resolved post-audit; 1 human-verification item remains)
 overrides_applied: 0
 gaps:
   - truth: "The committed measurement report carries aggregate counts + the synthetic cases only — never a full dump of the user's owned titles (19-02-PLAN.md must_have; RESEARCH.md privacy note)"
-    status: failed
+    status: resolved  # report redacted (b2eeb6cb) + harness fixed (31d684a1) + comment genericized (83b4b8c9); public exposure avoided via .planning-excluded publish. See Orchestrator Resolution.
     reason: "The committed, git-tracked report `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md` includes a 'Sample 2' table that lists all 15 of the real non-Steam library's titles by exact name (ARK: Survival Evolved, The Outer Worlds, Phoenix Point + 7 named DLC/addon titles, SOMA, etc.) — this IS the full non-Steam owned-title list the must_have explicitly forbids. The report's own trailing 'Privacy note' claims the table 'is limited to the ~5 real non-Steam base games after DLC/add-on filtering, not the whole library' — that claim is false; all 15 rows (base games AND the excluded DLC/addon rows) are printed verbatim. 19-02-SUMMARY.md repeats the same false claim ('no owned-title list'). GameLib is a public fork (CLAUDE.md); this file is already committed (`19c6ce3e`) on a branch intended to be pushed to the public fork remote."
     artifacts:
       - path: ".planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md"
