@@ -54,7 +54,11 @@ export const HUMBLE_CLASSIFIER_VERSION = 6
 // HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
 // locked at 85%+, NOT the community-norm 70% — DLC titles false-positive
 // match base games at lower thresholds and false positives waste gift links.
-export const HUMBLE_FUZZY_MATCH_THRESHOLD = 0.85
+// Phase 20 (D-02): single source of truth moved to
+// common/matching/titleMatch.ts (shared with the store-search badge
+// resolver); re-exported here so every existing importer of this constant
+// from constants.ts keeps compiling unchanged.
+export { HUMBLE_FUZZY_MATCH_THRESHOLD } from 'common/matching/titleMatch'
 
 // Phase 14 guided claim flow (HCLAIM-01): path-only, joined to
 // HUMBLE_BASE_URL at call time by the adapter (C5 isolation) — the endpoint
