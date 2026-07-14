@@ -557,7 +557,7 @@ Plans:
 **Plans:** 8/8 plans complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 19 to break down)
+- [x] TBD (run /gsd-plan-phase 19 to break down) (completed 2026-07-14)
 
 **UI hint**: yes
 
@@ -652,5 +652,5 @@ v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 | 16. CrossOver Compatibility Rating (CodeWeavers) | 3/3 | Complete    | 2026-07-10 |
 | 17. Steam on macOS via CrossOver/Wine | 17/17 | Complete    | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
-| 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete   | 2026-07-14 |
+| 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete    | 2026-07-14 |
 | 20. Aggregated Store Search (CheapShark) | 0/? | Not planned | - |
