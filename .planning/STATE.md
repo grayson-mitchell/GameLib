@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 20-04-PLAN.md (CheapShark backend adapter + IPC surface)
-last_updated: "2026-07-14T10:08:02.026Z"
+stopped_at: Completed 20-05-PLAN.md (StoreSearchRow + StoreSearchBreakdown presentational layer)
+last_updated: "2026-07-14T10:23:33.991Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 20 (aggregated-store-search-cheapshark) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-14
 
@@ -121,6 +121,7 @@ Last activity: 2026-07-14
 | Phase 20 P02 | 10min | 2 tasks | 4 files |
 | Phase 20 P03 | 15min | 1 tasks | 2 files |
 | Phase 20 P04 | 15min | 2 tasks | 6 files |
+| Phase 20 P05 | 15min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -180,6 +181,9 @@ Recent decisions affecting current work:
 - [Phase 20-02]: storeMapping constant lives in common/discounts/storeMapping.ts (sibling file) per RESEARCH Open Question 1; buy handoff reuses existing openExternalUrl SyncIPC listener (D-08) rather than a new IPC channel
 - [Phase 20-03]: Steam ownership resolved by EXACT steamAppId join only (fuzzyMatch never called for Steam); GOG/Epic/Amazon resolved via the Plan 01 shared fuzzyMatch; keyAvailable computed independently and never suppressed by ownership (D-01/D-02/D-07)
 - [Phase 20-04]: SEARCH_CURRENCY='USD' contained inside cheapshark.ts only (D-13); T-20-01 mitigated by restricting buildRedirectUrl to interpolate only the dealID fragment inside a fixed https://www.cheapshark.com/redirect?dealID= host prefix
+- [Phase 20]: [Phase 20-05]: OwnedBadgeLabel.values widened to Record<string,string|number> (was a discriminated union) so a single t(key, defaultValue, values) call type-checks against react-i18next's TFunction overloads
+- [Phase 20]: [Phase 20-05]: Owned badge stack renders as ONE joined pill per the UI-SPEC copy contract (e.g. 'Owned on Steam, GOG'), not one pill per store; key-available always renders as an independent second pill (D-07 coexistence)
+- [Phase 20]: [Phase 20-05]: StoreSearchBreakdown unmounts on row collapse (not cached) so a later expand is a natural retry after a fetch failure, with no persisted per-row error UI
 
 ### Pending Todos
 
@@ -238,8 +242,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-14T10:08:02.021Z
-Stopped at: Completed 20-04-PLAN.md (CheapShark backend adapter + IPC surface)
+Last session: 2026-07-14T10:23:33.985Z
+Stopped at: Completed 20-05-PLAN.md (StoreSearchRow + StoreSearchBreakdown presentational layer)
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
