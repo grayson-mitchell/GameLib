@@ -78,7 +78,7 @@ Each task was committed atomically:
 - `src/backend/crossover_index/normalize.ts` - the matching key (`normalize()`), its three candidate variants, and `NAME_MATCHING_SHIPS` (now `true`)
 - `src/backend/crossover_index/__tests__/normalize.test.ts` - 10-test permanent adversarial regression suite
 - `meta/measureCrossoverMatching.ts` - the measurement harness (688 lines: dump fetch/parse, D-04-style dedup indices, three-sample scoring, self-collision test, Markdown report writer)
-- `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md` - the committed, auditable measurement report (aggregate counts + synthetic cases only, no owned-title list)
+- `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md` - the committed, auditable measurement report (aggregate counts + synthetic cases only, no owned-title list). NOTE: the initially-committed revision (commit `19c6ce3e`) DID list the 15 Sample 2 titles by name — this was a defect flagged by 19-VERIFICATION and redacted to aggregate-only counts in a follow-up commit; the names remain in that historical commit until history is rewritten before any public-fork push.
 
 ## Decisions Made
 

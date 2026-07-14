@@ -23,23 +23,13 @@ Dump Last-Modified: Mon, 13 Jul 2026 12:30:43 GMT
 
 ## Sample 2: real non-Steam library (qualitative only, n=15, NO percentage computed — sample too small to be statistically meaningful)
 
-| Title | Classification | Outcome (winning normalizer) |
+Aggregate outcomes only — per-title names are intentionally omitted because this report ships on a public fork (D-02/D-03 must_have: aggregate counts + synthetic cases only, never a dump of the user's owned titles).
+
+| Classification | Count | Outcomes |
 |---|---|---|
-| ARK: Survival Evolved | base game | MISS |
-| The Outer Worlds | base game | HIT (rating 5) |
-| The Outer Worlds: Spacer's Choice Edition | DLC/addon (excluded) | — |
-| Phoenix Point | base game | MISS |
-| Phoenix Point Content | DLC/addon (excluded) | — |
-| SOMA | base game | MISS |
-| Phoenix Point Art Book | DLC/addon (excluded) | — |
-| Phoenix Point Blood and Titanium | DLC/addon (excluded) | — |
-| Phoenix Point Legacy of the Ancients | DLC/addon (excluded) | — |
-| Phoenix Point Festering Skies | DLC/addon (excluded) | — |
-| Phoenix Point Corrupted Horizons | DLC/addon (excluded) | — |
-| Phoenix Point - Kaos Engines | DLC/addon (excluded) | — |
-| Phoenix Point Digital Game Manual | DLC/addon (excluded) | — |
-| Phoenix Point Compendium | DLC/addon (excluded) | — |
-| Phoenix Point Desktop Wallpaper | DLC/addon (excluded) | — |
+| Base games (matched against dump) | 4 | 1 HIT, 3 MISS |
+| DLC/add-ons (excluded before matching) | 11 | — |
+| **Total** | **15** | — |
 
 ## Sample 3: synthetic adversarial set (pass/fail per failure mode, never pooled into a rate)
 
@@ -61,4 +51,6 @@ Dump Last-Modified: Mon, 13 Jul 2026 12:30:43 GMT
 
 ## Privacy note
 
-This report carries aggregate counts and the synthetic test cases only. It does NOT include the full list of the user's owned titles (RESEARCH.md line 824) — Sample 2's table is limited to the ~5 real non-Steam base games after DLC/add-on filtering, not the whole library.
+This report carries aggregate counts and the synthetic test cases only. It does NOT include any of the user's owned titles by name — Sample 2 is reported as classification/outcome counts (4 base games, 11 excluded DLC/add-ons), with all per-title names redacted, per the D-02/D-03 must_have.
+
+> Redaction history: an earlier committed revision of this file (commit `19c6ce3e`) listed the 15 Sample 2 titles by name, contradicting this note. Those names were redacted in a follow-up commit. They remain in that historical commit — see the phase VERIFICATION gap and the wrap-up notes about rewriting history before any push to the public fork.
