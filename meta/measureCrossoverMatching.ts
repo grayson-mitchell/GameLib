@@ -631,11 +631,30 @@ async function main() {
     `## Sample 2: real non-Steam library (qualitative only, n=${nonSteamRows.length}, NO percentage computed — sample too small to be statistically meaningful)`
   )
   lines.push('')
-  lines.push('| Title | Classification | Outcome (winning normalizer) |')
+  lines.push(
+    'Aggregate outcomes only — per-title names are intentionally omitted because this ' +
+      'report ships on a public fork (D-02/D-03 must_have: aggregate counts + synthetic ' +
+      "cases only, never a dump of the user's owned titles)."
+  )
+  lines.push('')
+  // Derive counts from nonSteamRows WITHOUT ever writing a per-title name to the report.
+  const sample2BaseRows = nonSteamRows.filter(
+    (row) => row.classification === 'base game'
+  )
+  const sample2BaseHit = sample2BaseRows.filter((row) =>
+    row.outcome.startsWith('HIT')
+  ).length
+  const sample2BaseMiss = sample2BaseRows.length - sample2BaseHit
+  const sample2DlcCount = nonSteamRows.length - sample2BaseRows.length
+  lines.push('| Classification | Count | Outcomes |')
   lines.push('|---|---|---|')
-  for (const row of nonSteamRows) {
-    lines.push(`| ${row.title} | ${row.classification} | ${row.outcome} |`)
-  }
+  lines.push(
+    `| Base games (matched against dump) | ${sample2BaseRows.length} | ${sample2BaseHit} HIT, ${sample2BaseMiss} MISS |`
+  )
+  lines.push(
+    `| DLC/add-ons (excluded before matching) | ${sample2DlcCount} | — |`
+  )
+  lines.push(`| **Total** | **${nonSteamRows.length}** | — |`)
   lines.push('')
   lines.push('## Sample 3: synthetic adversarial set (pass/fail per failure mode, never pooled into a rate)')
   lines.push('')
