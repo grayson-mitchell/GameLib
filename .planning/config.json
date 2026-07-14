@@ -51,6 +51,6 @@
     "enabled": false
   },
   "graphify": {
-    "enabled": false
+    "enabled": true
   }
 }

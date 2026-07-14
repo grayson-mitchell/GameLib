@@ -106,6 +106,10 @@ consumer.
 
 ## Q3 — Will the Steam client cleanly adopt an `appmanifest_{appId}.acf` we wrote ourselves?
 
+> **ANSWERED — YES.** Spike 001 (`.planning/spikes/001-acf-adoption/`). Steam verified our
+> manifest, flipped `StateFlags` `1026` → `4` itself, downloaded zero bytes, and the game
+> launched via `steam://rungameid`.
+
 **Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
 **Blocks:** Steam native install (seed: `.planning/seeds/steam-native-install.md`) — **entirely**
 **Context:** `.planning/notes/steam-depot-install-architecture.md`
@@ -141,6 +145,10 @@ Empirical, not literature review:
 
 ## Q4 — Can `steam-user` download a complete game end-to-end in-process?
 
+> **ANSWERED — YES.** Spike 002 (`.planning/spikes/002-steam-user-depot-download/`). 171/171
+> files byte-identical to Steam's own download. `lzma-native` is NOT required (pure JS is
+> correct, 2.2× slower). Option A chosen; the C# DepotDownloader wrapper is rejected.
+
 **Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
 **Blocks:** The architecture fork (Option A vs Option B) — not the feature itself
 **Context:** `.planning/notes/steam-depot-install-architecture.md`
@@ -169,6 +177,9 @@ since that package is a native module and cuts against the deliberate pure-JS st
 ---
 
 ## Q5 — Does `Steam3Session.LogOnDetails.AccessToken` actually bypass credential login?
+
+> **MOOT.** Only mattered for Option B (the C# DepotDownloader wrapper), which spike 002
+> rejected. Left here for the record in case the decision is ever revisited.
 
 **Raised:** 2026-07-14 (/gsd-explore — Steam native install via depot download)
 **Blocks:** Option B only (C# DepotDownloader wrapper) — moot if Q4 resolves in favour of Option A

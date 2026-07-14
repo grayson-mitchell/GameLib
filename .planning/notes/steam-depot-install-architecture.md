@@ -106,19 +106,44 @@ which already does parallel chunk fetching (up to 4 concurrent) with SHA1 verifi
   Intel + Apple Silicon (~30MB each). Note the NuGet package is stale at 2.7.5 — GitHub releases
   are at v3.4.0; pull from source/releases, not NuGet.
 
-## Status: unresolved — spiking before committing
+## Status: RESOLVED — Option A chosen, both unknowns validated
 
-Both options hinge on unknowns cheap enough to test directly. See
-`.planning/seeds/steam-native-install.md` for trigger conditions and
-`.planning/research/questions.md` (Q2, Q3) for the open validation questions.
+Spikes 001 and 002 settled this against a real machine. See
+`.planning/spikes/MANIFEST.md` for the full findings and the locked requirements.
 
-- **Unknown A** — can `steam-user` actually pull a full game's files end-to-end
-  (authenticate → manifest → files on disk hashing correctly)? Go/no-go on Option A.
-  If it works, Option B's main justification evaporates.
-- **Unknown B** — does a hand-written `.acf` get cleanly adopted by Steam?
-  **Architecture-independent — this must work regardless of which downloader wins**, and it is
-  the riskier of the two (documented API vs. entirely reverse-engineered behavior).
-  If Steam won't adopt manual installs, D-1 collapses and we are back to the DRM problem.
+**Unknown B — does Steam adopt a hand-written `.acf`? → YES.** (Spike 001.) Wrote our own
+manifest for WazHack with `StateFlags = 1026`, restarted Steam: Steam verified it, flipped the
+flag to `4` (`FullyInstalled`) itself, downloaded **zero bytes**, and the game launched via
+`steam://rungameid`. Decision D-1 holds end to end.
+
+**Unknown A — can `steam-user` download a full game in-process? → YES.** (Spike 002.)
+**171/171 files, byte-identical to what the real Steam client downloaded**, 6.3s at 17.8 MB/s.
+
+### → Option A (in-process via `steam-user`). Option B is REJECTED.
+
+The C# wrapper has no remaining justification. Corrections to the analysis above, learned by
+building it:
+
+- **`lzma-native` is NOT required.** Pure-JS LZMA is byte-correct, just 2.2× slower
+  (8.1 vs 17.8 MB/s). The no-native-modules constraint holds — this was the main cost held
+  against Option A and it evaporated.
+- **`steam-user`'s convenience helpers are broken**, but its hard parts are not. `getManifest()`
+  truncates every filename to an AES block boundary and `downloadChunk`/`downloadFile` throw.
+  Neither is a protocol problem — decrypting by hand recovers perfect plaintext and a valid
+  LZMA container. We reimplement just those two pieces (~100 lines,
+  `.planning/spikes/002-steam-user-depot-download/steam-depot.mjs`). CM auth, PICS, depot keys,
+  raw manifests, and content-server discovery — the parts we'd least want to own — all work.
+- **The orchestrator is small precisely because of D-2.** No delta-patching, no resume, no
+  repair. Get the manifest, fetch each chunk, place it at its offset, verify. The hard parts of
+  DepotDownloader are exactly the parts we scoped out.
+
+### Still open
+
+- **`@node-steam/vdf` corrupts 64-bit IDs** (spike 001). GameLib already uses it on `.acf`
+  files. Audit existing call sites — likely harmless today, fatal once we write manifests.
+- **Retry across content servers is mandatory** — ~16% of chunks fail at concurrency 8.
+- **Untested:** multi-depot and large (50 GB) games, streaming to disk (files are currently
+  assembled in RAM), resume-after-interruption, and DRM on a confirmed hard-DRM title.
 
 ## Legal / ToS
 
