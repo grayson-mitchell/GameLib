@@ -316,6 +316,28 @@ async function initializeWindow(): Promise<BrowserWindow> {
   return mainWindow
 }
 
+/**
+ * WR-05 fix: `buildCrossoverRatingMap()` was previously only ever invoked
+ * from `app.whenReady()` (once, at startup) and from the `getCrossoverIndex`
+ * one-time renderer pull on mount — nothing tied it to a library-membership
+ * change. A game purchased/installed/synced into the library after startup
+ * (e.g. a background Steam metadata sync, or a manual "Refresh Library")
+ * was therefore permanently absent from `crossoverRatings` for the rest of
+ * the session. Extracted here so it can be re-invoked, fire-and-forget,
+ * from both the startup path and the `refreshLibrary` handler below —
+ * mirroring the existing `metadataChanged` push-after-mutation pattern.
+ */
+function refreshCrossoverRatingMap() {
+  buildCrossoverRatingMap()
+    .then((index) => sendFrontendMessage('crossoverIndexChanged', index))
+    .catch((error) =>
+      logError(
+        ['Failed to build CrossOver rating map', error],
+        LogPrefix.Backend
+      )
+    )
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -359,15 +381,10 @@ if (!gotTheLock) {
     // pushes it so the grid's `crossoverRatings` slice updates without the
     // renderer needing to issue a manual pull. Fire-and-forget — never
     // blocks readiness, and never fires on the `getCrossoverIndex` pull path
-    // (that handler already returns its own freshly resolved map).
-    buildCrossoverRatingMap()
-      .then((index) => sendFrontendMessage('crossoverIndexChanged', index))
-      .catch((error) =>
-        logError(
-          ['Failed to build CrossOver rating map on startup', error],
-          LogPrefix.Backend
-        )
-      )
+    // (that handler already returns its own freshly resolved map). Also
+    // re-invoked from the `refreshLibrary` handler below (WR-05) so a game
+    // added mid-session picks up a badge/filter signal without a restart.
+    refreshCrossoverRatingMap()
 
     // Add User-Agent Client hints to behave like Windows
     if (process.argv.includes('--spoof-windows')) {
@@ -1030,6 +1047,13 @@ addHandler('refreshLibrary', async (e, library?) => {
       )
     }
   }
+
+  // WR-05: re-resolve the CrossOver rating map after every library refresh
+  // (manual "Refresh Library", a background Steam metadata sync completing,
+  // etc.) so a game added mid-session gets a badge/filter signal without
+  // requiring an app restart. Fire-and-forget, same as the startup call —
+  // never blocks the refreshLibrary IPC response.
+  refreshCrossoverRatingMap()
 })
 
 // get pid/tid on launch and inject

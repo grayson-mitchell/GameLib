@@ -1081,7 +1081,12 @@ class GlobalState extends PureComponent<Props> {
     // Phase 19 (Plan 06), D-11/D-16: pushed after a validated background
     // CrossOver-index refresh so the grid's `crossoverRatings` slice updates
     // without a manual pull. This is the only IPC round-trip involved —
-    // painting a card never fires its own request (D-11/D-13).
+    // painting a card never fires its own request (D-11/D-13). WR-05: the
+    // backend (`refreshCrossoverRatingMap()` in main.ts) now re-fires this
+    // event after every `refreshLibrary` completion too — not just at
+    // startup — so a game added mid-session (a background Steam sync, a
+    // manual "Refresh Library") gets a badge/filter signal without a
+    // restart. This listener needed no change to pick that up.
     window.api.handleCrossoverIndexChanged((e, index) => {
       useGlobalState.getState().setCrossoverRatings(index)
     })
