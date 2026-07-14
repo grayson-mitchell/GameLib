@@ -23,12 +23,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}           # default token suffices; no custom secret needed
         run: |
           # gh release upload requires the release to already exist.
-          # Tag is NOT v* and NOT latest.
+          # Tag is NOT v*. Published as a PRERELEASE so GitHub never badges it
+          # "Latest": --latest=false alone is insufficient because GitHub forces a
+          # repo's sole non-draft/non-prerelease release to "Latest" regardless.
           gh release view crossover-index >/dev/null 2>&1 || \
             gh release create crossover-index \
               --title "CrossOver compatibility index" \
               --notes "Rolling artifact, rebuilt daily from CodeWeavers' public .tie dump. Not a GameLib release." \
+              --prerelease \
               --latest=false
+
+          # Self-heal: enforce prerelease/not-latest every run, in case the release
+          # was created by an older revision of this workflow (or edited by hand).
+          gh release edit crossover-index --prerelease --latest=false
 
           gh release upload crossover-index \
             dist-index/crossover-index.json.gz \
