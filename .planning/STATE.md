@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 20 UI-SPEC approved (6/6 dimensions)
-last_updated: "2026-07-14T09:39:15.699Z"
-last_activity: 2026-07-14 -- Phase 20 planning complete
+stopped_at: Completed 20-01-PLAN.md (shared fuzzy title matcher lift)
+last_updated: "2026-07-14T09:46:29.569Z"
+last_activity: 2026-07-14
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 20 — aggregated store search cheapshark
+**Current focus:** Phase 20 — aggregated-store-search-cheapshark
 
 ## Current Position
 
-Phase: 20
-Plan: Not started
+Phase: 20 (aggregated-store-search-cheapshark) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-07-14 -- Phase 20 planning complete
+Last activity: 2026-07-14
 
 ## v1.4 Phase Map
 
@@ -117,6 +117,7 @@ Last activity: 2026-07-14 -- Phase 20 planning complete
 | Phase 19 P06 | ~30min | 2 tasks | 11 files |
 | Phase 19 P07 | 15min | 3 tasks | 5 files |
 | Phase 19 P08 | 20min | 2 tasks | 6 files |
+| Phase 20 P01 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,7 @@ Recent decisions affecting current work:
 - [Phase 19-07]: Tier derivation (5->gold, 4->silver, 3->bronze, <=2->wontRun, null->unknown, undefined->no element) computed entirely inside CrossoverBadge, never read as a pre-labeled field off the index (D-12); enforces D-16 honesty invariant in one place
 - [Phase 19-07]: CrossoverBadge renders unconditionally (no is.mac guard) in GameCard -- crossoverRatings map absence already yields undefined for every non-macOS/never-looked-up tile, which the component turns into no element
 - [Phase 19-08]: WineSelector gained optional runner?: Runner prop so the D-18 knownnottowork warning gate can distinguish the Steam CrossOver-bottle guided-setup path (SteamBottleSetup.tsx) from the shared generic GOG/Epic/Amazon/sideload Wine-install path
+- [Phase 20]: D-02: fuzzy title matcher lifted verbatim into src/common/matching/titleMatch.ts as the single shared module (normalizeTitle/titleSimilarity/isDlcFalsePositiveRisk/fuzzyMatch); HUMBLE_FUZZY_MATCH_THRESHOLD (0.85) single-sourced there, re-exported unchanged by backend/humble/constants.ts and backend/humble/dedup.ts — Store-search badge resolver (Plan 03) reuses the identical matcher instead of writing a second one, so the threshold and DLC guard behave identically on both surfaces
 
 ### Pending Todos
 
@@ -229,8 +231,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-14T05:02:46.629Z
-Stopped at: Phase 20 UI-SPEC approved (6/6 dimensions)
+Last session: 2026-07-14T09:46:29.564Z
+Stopped at: Completed 20-01-PLAN.md (shared fuzzy title matcher lift)
 Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
