@@ -40,6 +40,7 @@ findings:
   info: 3
   total: 5
 status: issues_found
+fixes_applied: "2026-07-15 — WR-01 (074c26d0), WR-02 (8a6efb83); IN-01 closed incidentally by WR-01. IN-02/IN-03 deferred (documented debt)."
 ---
 
 # Phase 20: Code Review Report
@@ -74,7 +75,7 @@ a sidebar route-substring collision. Neither is a security or data-loss issue.
 
 ## Warnings
 
-### WR-01: Stale in-flight search response clobbers the "prompt" state when the query is cleared/shortened
+### WR-01: Stale in-flight search response clobbers the "prompt" state when the query is cleared/shortened — ✅ FIXED (074c26d0)
 
 **File:** `src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts:62-115`
 **Issue:** The generation counter (`generationRef`) is the only cross-IPC supersede
@@ -107,7 +108,7 @@ if (trimmed.length < MIN_QUERY_LENGTH) {
 }
 ```
 
-### WR-02: `.includes('store')` matches `/store-search`, wrongly activating the "Stores" webview item and expanding its submenu
+### WR-02: `.includes('store')` matches `/store-search`, wrongly activating the "Stores" webview item and expanding its submenu — ✅ FIXED (8a6efb83)
 
 **File:** `src/frontend/components/UI/Sidebar/components/SidebarLinks/index.tsx:51-53, 153, 159`
 **Issue:** The new route registered in this phase is `/store-search`
