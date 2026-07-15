@@ -124,6 +124,7 @@ export interface AppSettings extends GameSettings {
   disableGOGPresence: boolean
   downloadNoHttps: boolean
   downloadProtonToSteam: boolean
+  enableSteamNativeInstall: boolean
   egsLinkedPath: string
   enableUpdates: boolean
   exitToTray: boolean

@@ -523,6 +523,7 @@
             "part7": " to skip the launcher in some games, etc."
         },
         "preferSystemLibs": "Custom Wine versions (Wine-GE, Wine-Lutris) are shipped with their library dependencies. By enabling this option, these shipped libraries will be ignored and Wine will load system libraries instead. Warning! Issues may occur if dependencies are not met.",
+        "steam_native_install": "Downloads Steam games in GameLib with real progress and cancel. When off, Steam handles installs. Newer path — Steam still verifies and owns updates.",
         "steam_path": {
             "info": "This path lets GameLib determine what version of Proton Steam uses, for adding non-Steam games to Steam."
         },
@@ -1062,6 +1063,7 @@
         "showMetalOverlay": "Show Stats Overlay",
         "start-in-console-mode": "Start in Console Mode",
         "start-in-tray": "Start Minimized",
+        "steam-native-install": "Download Steam games directly in GameLib",
         "steamruntime": "Use Steam Runtime",
         "verboseLogs": {
             "description": "Enable verbose logs"

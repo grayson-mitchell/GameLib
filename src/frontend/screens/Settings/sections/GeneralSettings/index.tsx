@@ -9,6 +9,7 @@ import {
   DisableController,
   DiscordRPC,
   EgsSettings,
+  EnableSteamNativeInstall,
   HideChangelogOnStartup,
   LibraryTopSection,
   MaxRecentGames,
@@ -41,6 +42,8 @@ export default function GeneralSettings() {
       <WinePrefixesBasePath />
 
       <DefaultSteamPath />
+
+      <EnableSteamNativeInstall />
 
       <EgsSettings />
 
