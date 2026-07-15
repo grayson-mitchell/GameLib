@@ -222,9 +222,48 @@ async function fetchDepotPlanEntry(
  * (T-21-11) and validates appId as numeric before touching it at all (T-21-05).
  */
 export async function downloadSteamDepots(
-  _appId: string,
-  _opts: DownloadSteamDepotsOpts
+  appId: string,
+  opts: DownloadSteamDepotsOpts
 ): Promise<DepotPlan> {
-  // RED marker (Task 1, 21-04) — implementation follows in the next commit.
-  throw new Error('downloadSteamDepots: not implemented (Task 1)')
+  assertNumericAppId(appId)
+
+  const connected = await SteamUser.ensureConnected()
+  if (!connected) {
+    logWarning(
+      `downloadSteamDepots: no authenticated Steam CM connection for appId ${appId}`,
+      LogPrefix.Steam
+    )
+    throw new Error(
+      `downloadSteamDepots: no authenticated Steam CM connection available for appId ${appId}`
+    )
+  }
+
+  const client = getDepotClient()
+  const numericAppId = Number(appId)
+
+  const appinfo = await fetchAppInfo(client, numericAppId)
+  const owned = await getOwnedSets(client)
+  const dlcInfos = await fetchDlcInfos(client, appinfo)
+
+  const selectOpts: DepotSelectOpts = {
+    os: opts.os,
+    language: opts.language
+  }
+  const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts)
+
+  if (!descriptors.length) {
+    return { appId, depots: [], totalBytes: 0 }
+  }
+
+  const parser = await loadContentManifestParser()
+
+  const depots: DepotPlanEntry[] = []
+  let totalBytes = 0
+  for (const descriptor of descriptors) {
+    const entry = await fetchDepotPlanEntry(client, numericAppId, descriptor, parser)
+    depots.push(entry)
+    totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
+  }
+
+  return { appId, depots, totalBytes }
 }
