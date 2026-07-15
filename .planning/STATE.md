@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 21 context gathered
-last_updated: "2026-07-15T09:37:23.666Z"
-last_activity: 2026-07-15 -- Phase 21 planning complete
+stopped_at: Phase 21 Plan 01 complete
+last_updated: "2026-07-15T09:57:00.590Z"
+last_activity: 2026-07-15
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 21 — steam native install
+**Current focus:** Phase 21 — steam-native-install
 
 ## Current Position
 
-Phase: 21
-Plan: Not started
+Phase: 21 (steam-native-install) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-07-15 -- Phase 21 planning complete
+Last activity: 2026-07-15
 
 ## v1.4 Phase Map
 
@@ -125,6 +125,7 @@ Last activity: 2026-07-15 -- Phase 21 planning complete
 | Phase 20 P05 | 15min | 2 tasks | 6 files |
 | Phase 20 P06 | 45min | 2 tasks | 9 files |
 | Phase 20 P07 | 20min | 2 tasks | 4 files |
+| Phase 21 P01 | 35min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Recent decisions affecting current work:
 - [Phase 20-06]: SearchBar gained optional loading prop (icon->spinner swap in same DOM slot) - non-breaking, default false, other consumers unaffected
 - [Phase 20-06]: Container filters humble.keys via selectKeysWaiting before resolveStoreSearchBadges, matching Discounts' own pattern, so a redeemed/expired key never shows key-available
 - [Phase 20-07]: Owned-badge false-positive on remaster/remake titles fixed in the shared common/matching/titleMatch.ts matcher (PRODUCT_VARIANT_KEYWORDS guard, isRemasterFalsePositiveRisk OR'd into fuzzyMatch), so Humble dedup inherits the same correctness fix, not just store-search
+- [Phase 21-01]: lzma.d.ts ambient module declaration added (src/common/typedefs/, matches steam-shortcut-editor.d.ts precedent) since the lzma npm package ships no TypeScript types
+- [Phase 21-01]: crypto.ts uses namespaced node:crypto import (nodeCrypto.createDecipheriv) rather than named import so the acceptance-criteria grep for createDecipheriv counts exactly the 2 call sites (ECB+CBC), not the import line
 
 ### Pending Todos
 
@@ -249,8 +252,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T08:40:39.240Z
-Stopped at: Phase 21 context gathered
+Last session: 2026-07-15T09:57:00.584Z
+Stopped at: Phase 21 Plan 01 complete
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
