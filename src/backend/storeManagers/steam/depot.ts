@@ -13,10 +13,10 @@
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
-import { open, mkdir, type FileHandle } from 'node:fs/promises'
+import { open, mkdir, readdir, stat, type FileHandle } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { resolve, relative, dirname, isAbsolute } from 'path'
+import { resolve, relative, dirname, isAbsolute, join } from 'path'
 import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
 import { SteamUser } from './user'
@@ -30,6 +30,7 @@ import {
 } from './depot/select'
 import { decryptFilename } from './depot/crypto'
 import { fetchChunk, type LzmaModule, type DepotChunk } from './depot/decompress'
+import { writeAppManifest } from './depot/manifest'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -85,6 +86,17 @@ export interface DepotPlan {
   depots: DepotPlanEntry[]
   /** Real total bytes, summed across every depot's files (D-03). */
   totalBytes: number
+  /** PICS appinfo.common.name — falls back to the caller's installdir when
+   *  PICS returns no display name. Used by finalizeToSteam's manifest `name`
+   *  field (Plan 06). */
+  name: string
+}
+
+/** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of
+ *  select.ts's own SteamAppInfo (which only needs depots/extended). Widened
+ *  locally here purely to read the display name for the manifest writer. */
+interface AppCommonName {
+  common?: { name?: string }
 }
 
 /** Minimal surface of the raw-manifest parser this module depends on. steam-user's
@@ -119,6 +131,15 @@ interface SteamUserDepotExtras {
     gid: string,
     branch: string,
     callback: (err: Error | null, raw: Buffer) => void
+  ): void
+  /** Also undocumented in @types/steam-user (Pitfall 5) — resolves the CDN
+   *  hostnames Plan 05's downloadDepotFiles needs to fetch chunks from. */
+  getContentServers(
+    appId: number,
+    callback: (
+      err: Error | null,
+      servers: Array<{ Host?: string; vhost?: string }>
+    ) => void
   ): void
 }
 
@@ -261,8 +282,18 @@ async function fetchDepotPlanEntry(
  * manifest, and return the enqueue-time DepotPlan (real summed totalBytes,
  * D-03). Gates on an authenticated Steam CM connection before any network work
  * (T-21-11) and validates appId as numeric before touching it at all (T-21-05).
+ *
+ * This is the PLAN-BUILDING half only — it never touches disk or the network
+ * beyond PICS/manifest fetch. Exported (rather than kept private) so it stays
+ * independently unit-testable, matching this module's own established
+ * front-half/back-half split (21-04/21-05). `downloadSteamDepots` (Plan 06,
+ * below downloadDepotFiles) is the public orchestrator that calls this, then
+ * streams the files, then ALWAYS converges on finalizeToSteam — this function
+ * itself still throws/rejects on a guard failure (non-numeric appId, no
+ * authenticated connection), since it is an internal building block, not the
+ * top-level entry point Plan 07's SteamGame.install() calls.
  */
-export async function downloadSteamDepots(
+export async function buildDepotPlan(
   appId: string,
   opts: DownloadSteamDepotsOpts
 ): Promise<DepotPlan> {
@@ -283,6 +314,7 @@ export async function downloadSteamDepots(
   const numericAppId = Number(appId)
 
   const appinfo = await fetchAppInfo(client, numericAppId)
+  const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
   const owned = await getOwnedSets(client)
   const dlcInfos = await fetchDlcInfos(client, appinfo)
 
@@ -293,7 +325,7 @@ export async function downloadSteamDepots(
   const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts)
 
   if (!descriptors.length) {
-    return { appId, depots: [], totalBytes: 0 }
+    return { appId, depots: [], totalBytes: 0, name: displayName }
   }
 
   const parser = await loadContentManifestParser()
@@ -306,7 +338,7 @@ export async function downloadSteamDepots(
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
   }
 
-  return { appId, depots, totalBytes }
+  return { appId, depots, totalBytes, name: displayName }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -585,5 +617,206 @@ export async function downloadDepotFiles(
   return {
     outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
     failures
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 21 (21-06): finalizeToSteam — the SINGLE recovery mechanism (Pattern
+// 5, D-04/D-05/D-07). Cancel, failure, and full success ALL converge here:
+// measure REAL bytes on disk (never a manifest-derived sum — spike 001: a
+// summed total overshoots multi-depot installs by 236MB), write an honest
+// (possibly-incomplete) InstalledDepots map into a StateFlags=1026 manifest
+// via Plan 02's writeAppManifest, and stop. Steam's own verify-and-repair
+// pass (spike 001) reconciles whatever is actually on disk against the real
+// manifest — this module NEVER writes StateFlags "4" (T-21-07); only Steam's
+// verify pass earns that value. The manifest write is always the LAST
+// filesystem action so a Retry (re-invoking downloadSteamDepots) never races
+// a partially-written .acf (D-07's non-conflicting-paths guarantee).
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface FinalizeDepotEntry {
+  /** Steam depot id. STRING — never coerced to Number (T-21-04). */
+  depotId: string
+  /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */
+  gid: string
+  /** Depot's declared size in bytes (from the DepotPlan, NOT what's actually
+   *  on disk — SizeOnDisk is separately measured below). */
+  size: number
+}
+
+export interface FinalizeToSteamOpts {
+  targetSteamappsDir: string
+  installdir: string
+  name: string
+  /** Every depot ATTEMPTED, regardless of per-file success/failure — an
+   *  honest, possibly-incomplete InstalledDepots map (D-04). */
+  depots: FinalizeDepotEntry[]
+}
+
+/**
+ * Recursively sums real file sizes under `root` — the measured on-disk byte
+ * total finalizeToSteam writes as SizeOnDisk, NEVER a DepotPlan-derived sum
+ * (spike 001: summed totals overshoot multi-depot installs by 236MB). Missing
+ * root (nothing landed yet, e.g. a connection failure before any file write)
+ * measures as 0, not an error — an honest empty state is still a valid
+ * finalize target (D-04).
+ */
+async function measureInstalledBytes(root: string): Promise<number> {
+  let entries
+  try {
+    entries = await readdir(root, { withFileTypes: true })
+  } catch {
+    return 0
+  }
+
+  let total = 0
+  for (const entry of entries) {
+    const full = join(root, entry.name)
+    if (entry.isDirectory()) {
+      total += await measureInstalledBytes(full)
+    } else if (entry.isFile()) {
+      total += (await stat(full)).size
+    }
+  }
+  return total
+}
+
+/**
+ * The single recovery function cancel, failure, and success ALL funnel
+ * through (Pattern 5). Never writes StateFlags "4" (T-21-07) — only writes
+ * "1026" via Plan 02's writeAppManifest, with a measured (not summed)
+ * SizeOnDisk and the honest InstalledDepots map of whatever was attempted.
+ */
+export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts): Promise<void> {
+  assertNumericAppId(appId)
+
+  const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
+  const sizeOnDisk = await measureInstalledBytes(installRoot)
+
+  // SteamID64 of the currently-authenticated user, if any — LastOwner is a
+  // STRING (64-bit), never a JS Number (T-21-04). Falls back to manifest.ts's
+  // own "0" default when no authenticated client is available (e.g. a future
+  // Plan 08 startup-resume finalize invoked before reconnection completes).
+  const lastOwner = SteamUser.getClient()?.steamID?.getSteamID64()
+
+  await writeAppManifest(opts.targetSteamappsDir, {
+    appId,
+    installdir: opts.installdir,
+    name: opts.name,
+    sizeOnDisk: String(sizeOnDisk),
+    lastOwner,
+    installedDepots: opts.depots.map((d) => ({
+      depotId: d.depotId,
+      manifest: d.gid,
+      size: d.size
+    }))
+  })
+}
+
+/**
+ * Content-server hostnames for chunk download (Plan 05's downloadDepotFiles
+ * `hosts` param) — steam-user's getContentServers is undocumented in
+ * @types/steam-user (Pitfall 5), same discipline as getDepotDecryptionKey/
+ * getRawManifest above.
+ */
+async function getContentServerHosts(
+  client: SteamUserDepotClient,
+  numericAppId: number
+): Promise<string[]> {
+  const servers = await new Promise<Array<{ Host?: string; vhost?: string }>>(
+    (resolvePromise, reject) => {
+      client.getContentServers(numericAppId, (err, s) => (err ? reject(err) : resolvePromise(s)))
+    }
+  )
+  const hosts = servers.map((s) => s.Host ?? s.vhost).filter((h): h is string => Boolean(h))
+  if (!hosts.length) {
+    throw new Error('downloadSteamDepots: no content servers available')
+  }
+  return hosts
+}
+
+export interface DepotDownloadOutcome {
+  status: 'done' | 'error' | 'cancelled'
+  error?: string
+}
+
+/**
+ * The public depot-download orchestrator — Plan 07's SteamGame.install() call
+ * site. Builds the DepotPlan (buildDepotPlan), resolves content-server hosts,
+ * streams every file to disk (downloadDepotFiles), and ALWAYS converges on
+ * finalizeToSteam: on full success, on a partial/failed download, on
+ * AbortSignal cancel, and on any thrown error from plan-building itself
+ * (Pattern 5, D-04/D-05/D-07). The manifest write is always the LAST
+ * filesystem action before returning control. NEVER throws — every failure
+ * mode maps to a structured outcome the caller (Plan 07) and the
+ * DownloadManager queue consume directly, the same convention gog/legendary's
+ * own install() functions already use.
+ */
+export async function downloadSteamDepots(
+  appId: string,
+  opts: DownloadSteamDepotsOpts
+): Promise<DepotDownloadOutcome> {
+  const attempted: FinalizeDepotEntry[] = []
+  let displayName = opts.installdir
+
+  const finalize = (): Promise<void> =>
+    finalizeToSteam(appId, {
+      targetSteamappsDir: opts.targetSteamappsDir,
+      installdir: opts.installdir,
+      name: displayName,
+      depots: attempted
+    })
+
+  try {
+    const plan = await buildDepotPlan(appId, opts)
+    displayName = plan.name
+
+    for (const d of plan.depots) {
+      attempted.push({
+        depotId: d.depotId,
+        gid: d.gid,
+        size: d.files.reduce((sum, f) => sum + Number(f.size), 0)
+      })
+    }
+
+    if (!plan.depots.length) {
+      // Nothing owned/matching this OS — still finalize (honest, empty
+      // state) so a dangling prior partial attempt is never left unresolved.
+      await finalize()
+      return { status: 'done' }
+    }
+
+    const client = getDepotClient()
+    const hosts = await getContentServerHosts(client, Number(appId))
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: opts.targetSteamappsDir,
+      installdir: opts.installdir,
+      hosts,
+      signal: opts.signal
+    })
+
+    // Manifest write is always the LAST fs action — after every file write
+    // attempt, before returning control (D-07 no-race guarantee).
+    await finalize()
+
+    if (result.outcome === 'cancelled') {
+      return { status: 'cancelled' }
+    }
+    if (result.failures.length) {
+      return { status: 'error', error: result.failures[0].error }
+    }
+    return { status: 'done' }
+  } catch (err) {
+    // Any thrown failure — plan-build error, content-server resolution
+    // failure, anything — still funnels through the SAME finalize path
+    // (Pattern 5): write whatever landed, never rethrow.
+    await finalize().catch((finalizeErr) => {
+      logWarning(
+        [`downloadSteamDepots: finalizeToSteam itself failed for appId ${appId}:`, finalizeErr],
+        LogPrefix.Steam
+      )
+    })
+    return { status: 'error', error: (err as Error).message }
   }
 }

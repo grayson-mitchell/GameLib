@@ -567,7 +567,7 @@ describe('downloadDepotFiles', () => {
   }
 
   function makePlan(depots: DepotPlan['depots'], totalBytes: number): DepotPlan {
-    return { appId: '12345', depots, totalBytes }
+    return { appId: '12345', depots, totalBytes, name: 'SomeGame' }
   }
 
   it('streams chunks to disk via positional writes at their exact offsets (no whole-file Buffer.alloc)', async () => {
@@ -731,6 +731,7 @@ describe('downloadDepotFiles', () => {
 
     const plan: DepotPlan = {
       appId: '12345',
+      name: 'SomeGame',
       depots: [
         { depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [fileA] },
         { depotId: '222', gid: 'g2', key: Buffer.from('key'), files: [fileB] }
