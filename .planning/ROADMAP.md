@@ -746,7 +746,7 @@ Plans:
   - **Pre-work carried in from the spikes:** audit GameLib's existing `@node-steam/vdf` call sites for 64-bit exposure; confirm the launch path once against a known hard-DRM title (WazHack was not confirmed DRM-wrapped).
   - **Untested at spike scale:** large (50 GB) games, streaming to disk (spike assembled files in RAM), and resume-after-interruption UX.
 
-**Plans:** 7/12 plans executed
+**Plans:** 8/12 plans executed
 
 Plans:
 **Wave 1**
@@ -770,7 +770,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 21-07-PLAN.md — SteamGame.install()/stop() opt-in branch + seams; OFF path unchanged (SNI-07)
-- [ ] 21-08-PLAN.md — library.ts D-05 startup finalize-then-watch; poller-unchanged regression guard (SNI-04)
+- [x] 21-08-PLAN.md — library.ts D-05 startup finalize-then-watch; poller-unchanged regression guard (SNI-04)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
