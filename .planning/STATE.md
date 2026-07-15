@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: ready_to_plan
-stopped_at: Phase 20 complete (7/7) — ready to discuss Phase 21
-last_updated: 2026-07-15T06:41:59.421Z
+status: planning
+stopped_at: Phase 21 context gathered
+last_updated: "2026-07-15T08:40:39.247Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 93
+  completed_plans: 6
   percent: 20
 ---
 
@@ -249,8 +249,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T06:28:24.688Z
-Stopped at: Completed 20-07-PLAN.md (full-suite gate + live UAT approved, phase 20 complete)
+Last session: 2026-07-15T08:40:39.240Z
+Stopped at: Phase 21 context gathered
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
