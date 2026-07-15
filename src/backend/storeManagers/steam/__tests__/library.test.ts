@@ -34,7 +34,7 @@ import SteamLibraryManager, {
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
-import { dialog } from 'electron'
+import { dialog, shell } from 'electron'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
@@ -47,8 +47,11 @@ import {
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
-  isBottleProvisioned
+  isBottleProvisioned,
+  tellBottledSteamToInstall
 } from '../bottle'
+import { finalizeToSteam, downloadSteamDepots } from '../depot'
+import { runWineCommand } from 'backend/launcher'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -122,7 +125,8 @@ jest.mock('child_process', () => ({
 // into the confirm path.
 jest.mock('electron', () => ({
   dialog: { showMessageBox: jest.fn() },
-  app: { getPath: jest.fn().mockReturnValue('/tmp/mock-path') }
+  app: { getPath: jest.fn().mockReturnValue('/tmp/mock-path') },
+  shell: { openExternal: jest.fn() }
 }))
 
 // ── backend/constants/environment mock — platform-switching for reader tests ──
@@ -156,10 +160,25 @@ jest.mock('../electronStores', () => ({
 }))
 
 // ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
+// tellBottledSteamToInstall included so the D-05 no-auto-drive regression test
+// (folded-todo guard) can assert init() never dispatches to the bottled client.
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
-  isBottleProvisioned: jest.fn()
+  isBottleProvisioned: jest.fn(),
+  tellBottledSteamToInstall: jest.fn()
+}))
+
+// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
+jest.mock('../depot', () => ({
+  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
+  downloadSteamDepots: jest.fn()
+}))
+
+// ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
+jest.mock('backend/launcher', () => ({
+  runWineCommand: jest.fn()
 }))
 
 /** Bottle steamapps root used consistently across the bottle-path tests below. */
@@ -1074,6 +1093,142 @@ describe('SteamLibraryManager', () => {
     stopInstallPolling('730')
     jest.useRealTimers()
   })
+
+  // ── D-05: startup resume finalizes to 1026 THEN watches (folded todo) ─────
+
+  it('D-05: init() finalizes an interrupted GameLib depot download to a 1026 manifest and never re-invokes the depot orchestrator on startup', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    await manager.init()
+
+    expect(finalizeToSteam).toHaveBeenCalledWith(
+      '730',
+      expect.objectContaining({
+        targetSteamappsDir: join('/steam', 'steamapps'),
+        installdir: 'csgo',
+        depots: []
+      })
+    )
+    // Pitfall 4 / D-05: startup resume must NEVER re-drive a download.
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('D-05: init() finalizes BEFORE it starts watching (finalize-then-startInstallPolling ordering)', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    const order: string[] = []
+    jest.mocked(finalizeToSteam).mockImplementation(async () => {
+      order.push('finalize')
+    })
+    const setIntervalSpy = jest
+      .spyOn(global, 'setInterval')
+      .mockImplementation(((fn: () => void) => {
+        order.push('watch')
+        return { unref: () => undefined } as unknown as NodeJS.Timeout
+      }) as unknown as typeof setInterval)
+
+    await manager.init()
+
+    expect(order).toEqual(['finalize', 'watch'])
+
+    setIntervalSpy.mockRestore()
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('D-05: init() never dispatches to Steam/CrossOver on startup resume (tellBottledSteamToInstall / shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    await manager.init()
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(shell.openExternal).not.toHaveBeenCalled()
+    expect(runWineCommand).not.toHaveBeenCalled()
+
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
 })
 
 // ── D-07: readAcfState() ─────────────────────────────────────────────────────
@@ -1174,6 +1329,72 @@ describe('readAcfState()', () => {
     })
     const result = await readAcfState('730')
     expect(result.state).toBe('absent')
+  })
+})
+
+// ── D-05/D-15: regression-guard the "poller unchanged" claim ──────────────────
+// Locks in RESEARCH Pattern 4/Pitfall 4's "already works unmodified" finding —
+// readAcfState/pollInstallOnce/startInstallPolling are NEVER touched by this
+// plan; these tests feed a GameLib-shaped manifest (exactly writeAppManifest's
+// field set — depot/manifest.ts) through the UNCHANGED read side and lock the
+// round-trip so a future change can't silently break D-05/D-15 reuse.
+
+describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest round-trip', () => {
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+  })
+
+  it('a GameLib-written 1026 manifest (writeAppManifest field set) reads as state:"downloading"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        Universe: '1',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        name: 'CS:GO',
+        LastUpdated: '1700000000',
+        SizeOnDisk: '123',
+        buildid: '0',
+        LastOwner: '76561197960287930',
+        BytesToDownload: '0',
+        BytesDownloaded: '0',
+        AutoUpdateBehavior: '0',
+        InstalledDepots: {},
+        UserConfig: {},
+        MountedDepots: {}
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+  })
+
+  it('the SAME manifest with Steam-flipped StateFlags "4" reads as state:"installed"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        Universe: '1',
+        StateFlags: '4',
+        installdir: 'csgo',
+        name: 'CS:GO',
+        LastUpdated: '1700000000',
+        SizeOnDisk: '123',
+        buildid: '0',
+        LastOwner: '76561197960287930',
+        BytesToDownload: '0',
+        BytesDownloaded: '0',
+        AutoUpdateBehavior: '0',
+        InstalledDepots: {},
+        UserConfig: {},
+        MountedDepots: {}
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
   })
 })
 
@@ -1579,6 +1800,44 @@ describe('pollInstallOnce()', () => {
         app_name: '730',
         is_installed: true,
         install: expect.objectContaining({ platform: 'Windows' })
+      })
+    )
+  })
+
+  // ── D-05/D-15: bottle-source poller reads a hand-written GameLib manifest
+  // identically to native — no poller code change required for D-15 reuse ────
+  it('D-15: a hand-written GameLib 1026 manifest in the bottle steamapps root reads as "installing" via the UNCHANGED bottle poller', async () => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        Universe: '1',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        name: 'CS:GO',
+        LastUpdated: '1700000000',
+        SizeOnDisk: '123',
+        buildid: '0',
+        LastOwner: '76561197960287930',
+        BytesToDownload: '0',
+        BytesDownloaded: '0',
+        AutoUpdateBehavior: '0',
+        InstalledDepots: {},
+        UserConfig: {},
+        MountedDepots: {}
+      }
+    })
+    startInstallPolling('730', { intervalMs: 60000, source: 'bottle' })
+    await pollInstallOnce('730', 'bottle')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'installing'
       })
     )
   })
