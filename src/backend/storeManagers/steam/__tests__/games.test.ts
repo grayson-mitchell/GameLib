@@ -29,6 +29,15 @@ import {
 } from '../bottle'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
+import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
+import { downloadSteamDepots } from '../depot'
+import { ensureSteamClientReady } from '../clientSetup'
+import { resolveSteamInstallTarget } from '../installLocation'
+import {
+  createAbortController,
+  callAbortController,
+  deleteAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -162,6 +171,41 @@ jest.mock('../bottle', () => ({
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn()
+}))
+
+// ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
+// jest.fn() with no default implementation. resetMocks:true means it returns
+// undefined (falsy) unless a test explicitly sets mockReturnValue(true), so
+// every pre-existing test (which never touches this) keeps exercising the
+// opt-in-OFF / legacy steam://install path with zero changes.
+jest.mock('../nativeInstallSetting', () => ({
+  isSteamNativeInstallEnabled: jest.fn()
+}))
+
+// ── depot.ts mock — only downloadSteamDepots is needed by games.ts; depot.ts
+// itself pulls in steam-user's heavy internal manifest parser, which
+// games.test.ts has no reason to exercise.
+jest.mock('../depot', () => ({
+  downloadSteamDepots: jest.fn()
+}))
+
+// ── Plan 09/10 seam mocks — clientSetup.ts / installLocation.ts. Plan 07
+// wires these as call-order seams; their real (Plan 09/10) implementations
+// are out of this plan's scope, so games.test.ts controls their resolved
+// values directly.
+jest.mock('../clientSetup', () => ({
+  ensureSteamClientReady: jest.fn()
+}))
+jest.mock('../installLocation', () => ({
+  resolveSteamInstallTarget: jest.fn()
+}))
+
+// ── aborthandler mock — controls the AbortController create/call/delete
+// lifecycle for the native depot-download path (D-02).
+jest.mock('backend/utils/aborthandler/aborthandler', () => ({
+  createAbortController: jest.fn(),
+  callAbortController: jest.fn(),
+  deleteAbortController: jest.fn()
 }))
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -955,6 +999,61 @@ describe('SteamGame.stop() — no-op', () => {
   })
 })
 
+// ── SteamGame.stop() — D-02 real abort for an in-flight native depot download ─
+//
+// stop() converts from an unconditional no-op into: if a depot download
+// AbortController is registered for this.appId (registered at native install
+// start), call callAbortController(this.appId) so depot.ts's loop aborts and
+// finalizeToSteam (Plan 06) writes the 1026 handoff; otherwise stays a safe
+// no-op (native steam:// path / bottle path — Steam owns process lifecycle).
+
+describe('SteamGame.stop() — D-02 native depot-download abort', () => {
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    jest.spyOn(libraryModule, 'startInstallPolling').mockImplementation(() => {})
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
+      targetSteamappsDir: '/mock/steam/steamapps',
+      installdir: APP_ID
+    })
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: 'mock-signal'
+    })
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+  })
+
+  it('when a native depot download is in flight for this.appId, stop() calls callAbortController(this.appId)', async () => {
+    // Slow-resolving downloadSteamDepots — install() is in flight when stop() runs.
+    let resolveDownload!: (value: { status: 'done' }) => void
+    ;(downloadSteamDepots as jest.Mock).mockReturnValue(
+      new Promise((resolve) => {
+        resolveDownload = resolve
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const installPromise = game.install({} as any)
+    // Let install() run up through createAbortController/downloadSteamDepots
+    // before stop() is called.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    await game.stop()
+    expect(callAbortController).toHaveBeenCalledWith(APP_ID)
+
+    resolveDownload({ status: 'done' })
+    await installPromise
+  })
+
+  it('when no depot download is in flight (native steam:// path / bottle path), stop() remains a safe no-op and does not throw', async () => {
+    const game = new SteamGame(APP_ID)
+    await expect(game.stop()).resolves.toBeUndefined()
+    expect(callAbortController).not.toHaveBeenCalled()
+  })
+})
+
 // ── GAME-02: SteamGame.install() ──────────────────────────────────────────────
 
 describe('SteamGame.install() — GAME-02', () => {
@@ -1050,6 +1149,149 @@ describe('SteamGame.install() — GAME-02', () => {
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
     await badGame.install({} as any)
     expect(startInstallPollingSpy).not.toHaveBeenCalled()
+  })
+})
+
+// ── SNI-07 (D-13): SteamGame.install() native depot-download opt-in branch ──
+//
+// isSteamNativeInstallEnabled() gates whether install() routes a (non-bottle-
+// eligible) install through depot.ts's downloadSteamDepots orchestrator
+// instead of the legacy steam://install handoff. OFF preserves today's
+// behavior byte-for-byte (D-13 safety valve); ON wires the Plan 09/10 seams
+// (resolveSteamInstallTarget/ensureSteamClientReady) and maps
+// downloadSteamDepots's { status, error? } outcome onto InstallResult using
+// the SAME conventions gog/legendary's own install() functions use, so a
+// classified error renders through the EXISTING generic queue error+Retry
+// surface with zero downloadqueue.ts changes (D-06/D-07 reuse).
+
+describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+
+  const TARGET = { targetSteamappsDir: '/mock/steam/steamapps', installdir: APP_ID }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    // Non-macOS host (envMock defaults isMac:false) — never bottle-eligible,
+    // so every test here exercises the native/legacy branch, not Plan 11's
+    // bottle branch.
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: 'mock-signal'
+    })
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+  })
+
+  it('opt-in OFF: install() takes the legacy steam://install path and does NOT call downloadSteamDepots', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(ensureSteamClientReady).not.toHaveBeenCalled()
+    expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('opt-in ON, non-bottle: install() calls ensureSteamClientReady -> resolveSteamInstallTarget -> downloadSteamDepots in order, with the resolved target + host os + an AbortSignal, then startInstallPolling', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+
+    const readyOrder = (ensureSteamClientReady as jest.Mock).mock
+      .invocationCallOrder[0]
+    const targetOrder = (resolveSteamInstallTarget as jest.Mock).mock
+      .invocationCallOrder[0]
+    const downloadOrder = (downloadSteamDepots as jest.Mock).mock
+      .invocationCallOrder[0]
+    expect(readyOrder).toBeLessThan(targetOrder)
+    expect(targetOrder).toBeLessThan(downloadOrder)
+
+    expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
+    expect(resolveSteamInstallTarget).toHaveBeenCalledWith(APP_ID, {})
+    expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      targetSteamappsDir: TARGET.targetSteamappsDir,
+      installdir: TARGET.installdir,
+      os: expect.any(String),
+      signal: 'mock-signal'
+    })
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('D-06/D-07 error surface reuse: a { status: "error", error } depot outcome maps to an InstallResult.error carrying the EXACT classified message — no steam-specific error/Retry UI, downloadqueue.ts uninvolved', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    const classifiedMessage = 'Steam servers dropped the connection'
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'error',
+      error: classifiedMessage
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'error', error: classifiedMessage })
+    expect(result.status).not.toBe('abort')
+    expect(startInstallPollingSpy).not.toHaveBeenCalled()
+  })
+
+  it('cancel outcome: a { status: "cancelled" } depot outcome maps to the abort-shaped InstallResult other runners use for a user cancel — not an error', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'cancelled'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({ status: 'abort' })
+    expect(result.error).toBeUndefined()
+  })
+
+  it('non-numeric appId is still rejected before any native handoff (T-03-01 guard) even with the opt-in ON', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    // depot.ts's own guard classifies a rejected non-numeric appId as an
+    // error outcome — downloadSteamDepots never throws (Plan 06 contract).
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+      status: 'error',
+      error: 'Invalid Steam appId'
+    })
+    const badGame = new SteamGame('abc')
+    library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
+
+    const result = await badGame.install({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(result).toEqual(expect.objectContaining({ status: 'error' }))
+  })
+
+  it('createAbortController is registered under this.appId before downloadSteamDepots runs, and released after it resolves', async () => {
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(createAbortController).toHaveBeenCalledWith(APP_ID)
+    expect(deleteAbortController).toHaveBeenCalledWith(APP_ID)
   })
 })
 
