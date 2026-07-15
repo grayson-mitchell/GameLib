@@ -1035,10 +1035,13 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
 
     const game = new SteamGame(APP_ID)
     const installPromise = game.install({} as any)
-    // Let install() run up through createAbortController/downloadSteamDepots
-    // before stop() is called.
-    await Promise.resolve()
-    await Promise.resolve()
+    // Let install() run all the way through ensurePlatformsCaptured() ->
+    // ensureSteamClientReady -> resolveSteamInstallTarget -> createAbortController
+    // (each a separate microtask hop) up to the pending downloadSteamDepots
+    // call before stop() is called. flushAsync's setImmediate macrotask is
+    // guaranteed to run after every queued microtask, unlike a fixed count of
+    // Promise.resolve() hops.
+    await flushAsync()
 
     await game.stop()
     expect(callAbortController).toHaveBeenCalledWith(APP_ID)

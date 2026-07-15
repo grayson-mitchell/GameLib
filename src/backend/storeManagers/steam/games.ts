@@ -991,11 +991,24 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * No-op — Steam owns the process lifecycle for its games.
-   * GamerLib cannot observe or terminate Steam game processes.
-   * Analog: gog/games.ts lines 1291-1295.
+   * D-02: real abort for an in-flight native depot download (SNI-07); a safe
+   * no-op otherwise. Steam itself still owns the process lifecycle for its
+   * games once installed/launched — GamerLib cannot observe or terminate
+   * Steam game processes — so the legacy steam:// install path and the
+   * bottle path both fall through to the unchanged no-op below. Mirrors
+   * downloadqueue.ts's own stopCurrentDownload -> callAbortController(appName)
+   * call site. Analog: gog/games.ts lines 1291-1295.
    */
   async stop(_stopWine?: boolean): Promise<void> {
+    if (nativeInstallsInFlight.has(this.appId)) {
+      logInfo(
+        `SteamGame: aborting in-flight native depot download for appId ${this.appId}`,
+        LogPrefix.Steam
+      )
+      callAbortController(this.appId)
+      return
+    }
+
     logWarning(
       `SteamGame.stop: Steam owns process lifecycle for appId ${this.appId}; no-op`,
       LogPrefix.Steam
