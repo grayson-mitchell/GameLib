@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-06-PLAN.md
-last_updated: "2026-07-15T11:12:01.192Z"
+stopped_at: Completed 21-07-PLAN.md
+last_updated: "2026-07-15T11:24:32.912Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 21 (steam-native-install) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-07-15
 
@@ -131,6 +131,7 @@ Last activity: 2026-07-15
 | Phase 21 P04 | 20min | 2 tasks | 3 files |
 | Phase 21 P05 | ~30min | 2 tasks | 2 files |
 | Phase 21 P06 | 45min | 2 tasks | 4 files |
+| Phase 21 P07 | 40min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -208,6 +209,8 @@ Recent decisions affecting current work:
 - [Phase 21-06]: downloadSteamDepots's public contract changed from returning DepotPlan to a never-throwing { status, error? } outcome -- required by Plan 07's already-written SteamGame.install() call site; original plan-building logic preserved verbatim as buildDepotPlan
 - [Phase 21-06]: finalizeToSteam reads LastOwner internally via SteamUser.getClient().steamID.getSteamID64() rather than a caller parameter, keeping it self-contained and reusable by Plan 08's startup-resume path (D-05)
 - [Phase 21-06]: classifyDepotError classifies by regex over error text (not instanceof) since downloadDepotFiles's own failures are already reduced to plain strings by the time they reach the orchestrator
+- [Phase ?]: [Phase 21-07]: install()'s native branch placed AFTER isBottleEligible() (D-15 bottle branch untouched, Plan 11's scope); installNative() maps downloadSteamDepots outcome onto InstallResult using gog/legendary's own conventions (done/error/abort) so a classified error renders through downloadqueue.ts's EXISTING generic error+Retry surface with zero changes to that file
+- [Phase ?]: [Phase 21-07]: hostSteamDepotOs() is a new helper distinct from library.ts's hostInstallPlatform() -- depot/select.ts's oslist vocabulary (windows/macos/linux lowercase) differs from InstallPlatform (Windows/Mac/linux); stop() tracks in-flight native downloads via a private nativeInstallsInFlight Set (not a new aborthandler.ts export) so callAbortController is only invoked when a real depot download is running
 
 ### Pending Todos
 
@@ -267,8 +270,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T11:12:01.187Z
-Stopped at: Completed 21-06-PLAN.md
+Last session: 2026-07-15T11:24:32.907Z
+Stopped at: Completed 21-07-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
