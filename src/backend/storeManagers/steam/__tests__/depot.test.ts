@@ -21,13 +21,15 @@
  *    depotPrimitives.test.ts already)
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logWarning } from 'backend/logger'
 import {
+  buildDepotPlan,
   downloadSteamDepots,
   downloadDepotFiles,
+  finalizeToSteam,
   CHUNK_CONCURRENCY,
   type DepotPlan,
   type DepotPlanFile
@@ -102,6 +104,7 @@ const BASE_OPTS = {
 function makeFakeClient(overrides: Record<string, unknown> = {}) {
   return {
     licenses: [] as Array<{ package_id: number }>,
+    steamID: { getSteamID64: jest.fn().mockReturnValue('76561198012345678') },
     getProductInfo: jest.fn().mockResolvedValue({
       apps: { 12345: { appinfo: { depots: {}, extended: {} } } },
       packages: {},
@@ -110,15 +113,19 @@ function makeFakeClient(overrides: Record<string, unknown> = {}) {
     }),
     getDepotDecryptionKey: jest.fn(),
     getRawManifest: jest.fn(),
+    getContentServers: jest.fn().mockImplementation(
+      (_appId: number, cb: (err: Error | null, servers: Array<{ Host?: string }>) => void) =>
+        cb(null, [{ Host: 'cdn1.example.com' }])
+    ),
     ...overrides
   }
 }
 
-describe('downloadSteamDepots', () => {
+describe('buildDepotPlan', () => {
   describe('selection', () => {
     it('T-21-05: rejects a non-numeric appId before any network call', async () => {
       await expect(
-        downloadSteamDepots('12345; rm -rf /', BASE_OPTS)
+        buildDepotPlan('12345; rm -rf /', BASE_OPTS)
       ).rejects.toThrow(/non-numeric/i)
 
       expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
@@ -127,7 +134,7 @@ describe('downloadSteamDepots', () => {
     it('throws cleanly when the CM connection is not authenticated', async () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
 
-      await expect(downloadSteamDepots(APP_ID, BASE_OPTS)).rejects.toThrow(
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
         /no authenticated steam cm connection/i
       )
 
@@ -141,7 +148,7 @@ describe('downloadSteamDepots', () => {
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([])
 
-      const plan = await downloadSteamDepots(APP_ID, { ...BASE_OPTS, os: 'macos' })
+      const plan = await buildDepotPlan(APP_ID, { ...BASE_OPTS, os: 'macos' })
 
       expect(jest.mocked(selectAllDepots)).toHaveBeenCalledWith(
         expect.anything(),
@@ -152,7 +159,7 @@ describe('downloadSteamDepots', () => {
       // A second call with a different os proves the value flows through —
       // it is a parameter, not a literal baked into depot.ts.
       jest.mocked(selectAllDepots).mockClear()
-      await downloadSteamDepots(APP_ID, { ...BASE_OPTS, os: 'linux' })
+      await buildDepotPlan(APP_ID, { ...BASE_OPTS, os: 'linux' })
       expect(jest.mocked(selectAllDepots)).toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
@@ -208,7 +215,7 @@ describe('downloadSteamDepots', () => {
 
       jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
 
-      const plan = await downloadSteamDepots(APP_ID, BASE_OPTS)
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       expect(plan.depots).toHaveLength(2)
       expect(plan.depots[0].depotId).toBe('111')
@@ -256,7 +263,7 @@ describe('downloadSteamDepots', () => {
       })
       jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
 
-      const plan = await downloadSteamDepots(APP_ID, BASE_OPTS)
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       expect(plan.depots).toHaveLength(1)
       expect(plan.depots[0].depotId).toBe('333')
@@ -269,6 +276,268 @@ describe('downloadSteamDepots', () => {
       const real = jest.requireActual('steam-user/components/content_manifest.js')
       expect(typeof real.parse).toBe('function')
     })
+  })
+})
+
+/**
+ * Unit tests for finalizeToSteam (Phase 21-06) — the SINGLE recovery function
+ * cancel/failure/success all converge on (Pattern 5, D-04/D-07). Runs against
+ * a REAL tmpdir (manifest.test.ts's established precedent).
+ */
+describe('finalizeToSteam', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-finalize-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('writes exactly one appmanifest via writeAppManifest with StateFlags=1026 and the InstalledDepots map of the depots attempted (GIDs as strings)', async () => {
+    mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+    writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
+
+    await finalizeToSteam('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      name: 'Some Game',
+      depots: [
+        { depotId: '111', gid: '9007199254740993', size: 500 },
+        { depotId: '222', gid: '18446744073709551615', size: 250 }
+      ]
+    })
+
+    const acfPath = join(dir, 'appmanifest_12345.acf')
+    expect(existsSync(acfPath)).toBe(true)
+    const text = readFileSync(acfPath, 'utf8')
+    expect(text).toMatch(/"StateFlags"\s+"1026"/)
+    // Exactly one .acf written — no stray second write.
+    expect(text.match(/"AppState"/g)).toHaveLength(1)
+    // Both attempted depots present, GIDs preserved as exact strings.
+    expect(text).toMatch(/"111"/)
+    expect(text).toMatch(/"9007199254740993"/)
+    expect(text).toMatch(/"222"/)
+    expect(text).toMatch(/"18446744073709551615"/)
+  })
+
+  it("SizeOnDisk is the measured on-disk byte total, NOT the depots' declared/summed size", async () => {
+    mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+    writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(123))
+
+    await finalizeToSteam('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      name: 'Some Game',
+      // Declared depot size is deliberately much larger than what's actually
+      // on disk — proves SizeOnDisk is measured, not a DepotPlan-derived sum
+      // (spike 001: a summed total overshoots multi-depot installs by 236MB).
+      depots: [{ depotId: '111', gid: 'g1', size: 999999 }]
+    })
+
+    const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(text).toMatch(/"SizeOnDisk"\s+"123"/)
+  })
+
+  it('measures 0 bytes and still writes a valid 1026 manifest when nothing has landed on disk yet', async () => {
+    await finalizeToSteam('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'NeverStarted',
+      name: 'Never Started',
+      depots: []
+    })
+
+    const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(text).toMatch(/"SizeOnDisk"\s+"0"/)
+    expect(text).toMatch(/"StateFlags"\s+"1026"/)
+  })
+})
+
+/**
+ * Unit tests for downloadSteamDepots (Phase 21-06) — the public orchestrator
+ * Plan 07's SteamGame.install() calls. Proves success, failure, and cancel
+ * ALL converge on finalizeToSteam (Pattern 5) and that downloadSteamDepots
+ * itself NEVER throws — every outcome resolves as a structured
+ * { status, error? } object. Runs against a REAL tmpdir.
+ */
+describe('downloadSteamDepots (full orchestration + recovery convergence)', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-orchestrate-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  function sha1Hex(buf: Buffer): string {
+    return createHash('sha1').update(buf).digest('hex')
+  }
+
+  /** Wires the PICS/manifest-fetch plumbing every test in this block shares —
+   *  a single owned depot, single file. Each test configures its own
+   *  content_manifest.parse()/fetchChunk() outcome for its scenario. */
+  function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+    jest.mocked(selectAllDepots).mockReturnValue([{ id: '111', manifest: 'g1', size: 0 }])
+    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+      (
+        _appId: number,
+        depotId: number,
+        cb: (err: Error | null, key: Buffer) => void
+      ) => cb(null, Buffer.from(`key-${depotId}`))
+    )
+    jest.mocked(fakeClient.getRawManifest).mockImplementation(
+      (
+        _appId: number,
+        depotId: number,
+        _gid: string,
+        _branch: string,
+        cb: (err: Error | null, raw: Buffer) => void
+      ) => cb(null, Buffer.from(`raw-${depotId}`))
+    )
+    jest.mocked(decryptFilename).mockReturnValue('game.bin')
+  }
+
+  it('on full success: finalizeToSteam is invoked AFTER every file is written, and writes StateFlags=1026', async () => {
+    const content = Buffer.from('game-bytes')
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: String(content.length),
+          sha_content: sha1Hex(content),
+          chunks: [{ sha: 'chunk-sha', cb_original: content.length, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(content)
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+
+    // Files actually landed on disk BEFORE the manifest write below proves
+    // the ordering — if the manifest were written first, this file would not
+    // exist by the time we read it (downloadDepotFiles is fully awaited).
+    const written = readFileSync(join(dir, 'common', 'SomeGame', 'game.bin'))
+    expect(written.equals(content)).toBe(true)
+
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    expect(acfText).toMatch(/"111"/)
+  })
+
+  it('on failure (SHA1 mismatch): finalizeToSteam is still invoked with whatever landed, and downloadSteamDepots resolves — never throws — with status error', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: '5',
+          // Deliberately never matches whatever fetchChunk actually returns.
+          sha_content: 'sha-that-will-never-match',
+          chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(Buffer.from('wrong'))
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(typeof result.error).toBe('string')
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+  })
+
+  it('D-02/D-04: on cancel (AbortSignal), finalizeToSteam is still invoked and downloadSteamDepots resolves with status cancelled', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: '5',
+          sha_content: 'irrelevant-for-this-test',
+          chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+        }
+      ]
+    })
+
+    const controller = new AbortController()
+    jest.mocked(fetchChunk).mockImplementation(async () => {
+      controller.abort()
+      return Buffer.from('x')
+    })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows',
+      signal: controller.signal
+    })
+
+    expect(result.status).toBe('cancelled')
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+  })
+
+  it('a thrown plan-orchestration error (e.g. content-server resolution failure) also funnels through finalizeToSteam and NEVER rejects the caller', async () => {
+    const fakeClient = makeFakeClient({
+      getContentServers: jest
+        .fn()
+        .mockImplementation(
+          (_appId: number, cb: (err: Error | null, servers: unknown) => void) =>
+            cb(new Error('no CDN available'), [])
+        )
+    })
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [{ filename: 'enc-game', size: '5', sha_content: 'x', chunks: [] }]
+    })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+  })
+
+  it('never writes StateFlags "4" anywhere in depot.ts (T-21-07)', () => {
+    const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+    const uncommented = source
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
+      .join('\n')
+    expect(uncommented).not.toMatch(/"StateFlags"[^\n]*"4"/)
   })
 })
 
