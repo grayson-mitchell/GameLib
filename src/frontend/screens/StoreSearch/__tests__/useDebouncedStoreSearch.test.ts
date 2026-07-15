@@ -255,6 +255,46 @@ describe('useDebouncedStoreSearch', () => {
     expect(hook.status).toBe('results')
   })
 
+  it('WR-01: discards a stale in-flight response after the query is cleared below MIN_QUERY_LENGTH', async () => {
+    let resolveFetch: (value: StoreSearchResult[]) => void = () => {}
+    mockApi.searchStores.mockImplementation(
+      () =>
+        new Promise<StoreSearchResult[]>((resolve) => {
+          resolveFetch = resolve
+        })
+    )
+
+    let hook = mount()
+    hook.setQuery('portal')
+    hook = rerender()
+    jest.advanceTimersByTime(DEBOUNCE_WINDOW)
+    hook = await settle(hook)
+
+    // Request now in-flight.
+    expect(mockApi.searchStores).toHaveBeenCalledTimes(1)
+    expect(hook.loading).toBe(true)
+
+    // User clears the query below MIN_QUERY_LENGTH while the request is
+    // still in flight — this must invalidate the generation immediately
+    // (WR-01), not just when a new fetch eventually starts.
+    hook.setQuery('')
+    hook = rerender()
+    hook = await settle(hook)
+
+    expect(hook.status).toBe('prompt')
+    expect(hook.results).toEqual([])
+    expect(hook.loading).toBe(false)
+
+    // The stale in-flight response now resolves — it must be discarded,
+    // not repopulate results or flip the screen back to a results view.
+    resolveFetch([makeResult()])
+    hook = await settle(hook)
+
+    expect(hook.status).toBe('prompt')
+    expect(hook.results).toEqual([])
+    expect(hook.loading).toBe(false)
+  })
+
   it('a rejected searchStores exposes status "error", leaves the query editable, and logs the raw error (not returned state)', async () => {
     mockApi.searchStores.mockRejectedValue(new Error('network down'))
 

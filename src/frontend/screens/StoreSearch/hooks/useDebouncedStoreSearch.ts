@@ -62,7 +62,14 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
   useEffect(() => {
     const trimmed = query.trim()
     if (trimmed.length < MIN_QUERY_LENGTH) {
+      // WR-01: invalidate any in-flight fetch so a late-arriving response
+      // cannot clobber the 'prompt' state we're about to set below. The
+      // discard branches in fetchResults() return before setFetching(false),
+      // so `fetching` must be cleared here too or the spinner (loading =
+      // debouncePending || fetching) would stay stuck true.
+      generationRef.current++
       setDebouncePending(false)
+      setFetching(false)
       setDebouncedQuery('')
       setResults([])
       setStatus('prompt')
@@ -123,6 +130,14 @@ export function useDebouncedStoreSearch(): UseDebouncedStoreSearchResult {
     // plain closure recreated every render, and depending on it would
     // refire the request on every render rather than only on a real
     // debouncedQuery commit.
+
+    // IN-01: bump the generation on cleanup (deps change or unmount) so a
+    // resolution in flight for this debouncedQuery is discarded — this is
+    // the same one-line invalidation primitive as the WR-01 fix above, and
+    // it also guards against setState after unmount.
+    return () => {
+      generationRef.current++
+    }
   }, [debouncedQuery])
 
   return {
