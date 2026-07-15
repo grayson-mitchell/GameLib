@@ -47,11 +47,11 @@ updated: 2026-07-15
 | 21-03-02 | 03 | 1 | SNI-07 | T-21-08 | backend accessor default OFF | unit | `npx jest .../nativeInstallSetting.test.ts` | ❌ W0 | ⬜ pending |
 | 21-04-01 | 04 | 2 | SNI-01 | T-21-05/11 | numeric appId guard; connection gate; os param | unit | `npx jest .../depot.test.ts -t selection` | ❌ W0 | ⬜ pending |
 | 21-04-02 | 04 | 2 | SNI-01/03 | T-21-04/10 | multi-depot summed total; GIDs strings; parser smoke | unit | `npx jest .../depot.test.ts -t "manifest\|total"` | ❌ W0 | ⬜ pending |
-| 21-05-01 | 05 | 3 | SNI-01 | T-21-01/02/03 | positional streaming; containment; whole-file SHA1 | unit | `npx jest .../depot.test.ts -t "stream\|traversal\|sha1"` | ❌ W0 | ⬜ pending |
+| 21-05-01 | 05 | 3 | SNI-01 | T-21-01/02/03 | positional streaming; bounded chunk concurrency (no unbounded Promise.all); containment; whole-file SHA1 | unit | `npx jest .../depot.test.ts -t "stream\|traversal\|sha1\|chunk-concurrency"` | ❌ W0 | ⬜ pending |
 | 21-05-02 | 05 | 3 | SNI-03 | T-21-12 | throttled progress; AbortSignal cancel | unit | `npx jest .../depot.test.ts -t "progress\|cancel"` | ❌ W0 | ⬜ pending |
 | 21-06-01 | 06 | 4 | SNI-04 | T-21-07/13 | single 1026 finalize; manifest last; real SizeOnDisk | unit | `npx jest .../depot.test.ts -t "finalize\|recovery\|1026"` | ❌ W0 | ⬜ pending |
 | 21-06-02 | 06 | 4 | SNI-04 | T-21-14 | error classify → actionable copy; Retry non-race | unit | `npx jest .../depot.test.ts -t "error\|retry\|classify"` | ❌ W0 | ⬜ pending |
-| 21-07-01 | 07 | 5 | SNI-07 | T-21-08 | OFF path unchanged; ON routes to depot.ts | unit | `npx jest .../games.test.ts -t install` | ✅ (extend) | ⬜ pending |
+| 21-07-01 | 07 | 5 | SNI-07 | T-21-08/14 | OFF path unchanged; ON routes to depot.ts; classified error→InstallResult surfaces via EXISTING generic Retry (downloadqueue.ts unmodified) | unit | `npx jest .../games.test.ts -t "install\|error\|retry"` | ✅ (extend) | ⬜ pending |
 | 21-07-02 | 07 | 5 | SNI-07 | T-21-15 | stop() aborts depot loop, no-op otherwise | unit | `npx jest .../games.test.ts -t "stop\|cancel"` | ✅ (extend) | ⬜ pending |
 | 21-08-01 | 08 | 5 | SNI-04 | T-21-16 | startup finalize-then-watch; no re-download/auto-drive | unit | `npx jest .../library.test.ts -t "init\|resume\|finalize"` | ✅ (extend) | ⬜ pending |
 | 21-08-02 | 08 | 5 | SNI-04 | T-21-13 | poller unchanged; reads 1026 native+bottle | unit | `npx jest .../library.test.ts -t "acf\|poller\|bottle\|stateflags"` | ✅ (extend) | ⬜ pending |
