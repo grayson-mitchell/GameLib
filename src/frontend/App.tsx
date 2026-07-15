@@ -24,6 +24,7 @@ import { SettingsModalWrapper } from './screens/Settings/components/SettingsModa
 import AnalyticsDialog from './screens/Settings/components/AnalyticsDialog'
 import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
+import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
 import SteamInstallLocationPicker from './screens/Game/GamePage/components/SteamInstallLocationPicker'
 
 function Root() {
@@ -96,6 +97,7 @@ function Root() {
               <DialogHandler />
               <InstallGameWrapper />
               <SteamBottleSetup />
+              <SteamClientSetup />
               <SteamInstallLocationPicker />
               <SettingsModalWrapper />
               <ExternalLinkDialog />

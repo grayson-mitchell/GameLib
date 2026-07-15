@@ -1,0 +1,57 @@
+// Phase 21 (21-10): the guided native-Steam-client-install banner
+// (.steamClientSetupToast) mirrors SteamBottleSetup.scss's own toast
+// styling (same design tokens, fixed bottom/right banner, elevated
+// z-index) — an unstyled banner here would repeat the exact MACSTEAM-02
+// regression that plan fixed (plain unstyled text overlaid on the window).
+.steamClientSetupToast {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: min(420px, calc(100vw - 2 * var(--space-lg)));
+  background: var(--background-darker, var(--body-background));
+  color: var(--text-default);
+  padding: var(--space-md);
+  border-radius: var(--space-2xs);
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.35);
+  border-inline-start: var(--space-3xs) solid var(--status-warning);
+}
+
+.steamClientSetupMessage {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.steamClientSetupAction {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--status-warning);
+  color: var(--status-warning);
+  border-radius: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.steamClientSetupAction:hover {
+  background: var(--status-warning);
+  color: var(--body-background);
+}
+
+.steamClientSetupDismiss {
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-3xs);
+  font-size: var(--text-sm);
+}
+
+.steamClientSetupDismiss:hover {
+  color: var(--text-default);
+}

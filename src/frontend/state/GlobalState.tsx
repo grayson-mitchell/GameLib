@@ -45,6 +45,7 @@ import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
+import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -1060,6 +1061,14 @@ class GlobalState extends PureComponent<Props> {
     // here or anywhere else (D-11 stays backend-owned).
     window.api.handleSteamBottleSetupRequired(
       handleSteamBottleSetupRequiredSignal
+    )
+
+    // Phase 21 (21-10), D-10/D-11: single global listener that opens the
+    // native Steam-CLIENT guided-install/prompt-to-launch flow whenever the
+    // backend emits `steamClientSetupRequired` — distinct from the bottle
+    // listener above (macOS CrossOver bottle flow).
+    window.api.handleSteamClientSetupRequired(
+      handleSteamClientSetupRequiredSignal
     )
 
     window.api.handleSteamMetadataSyncing((e, { syncing }) => {
