@@ -128,3 +128,7 @@ None - no external service configuration required.
 ---
 *Phase: 21-steam-native-install*
 *Completed: 2026-07-15*
+
+## Self-Check: PASSED
+
+All created files verified present; all task commits (2fb34ea9, f392e6f3, 7df057dc, a6af2235) verified in git log.
