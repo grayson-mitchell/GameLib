@@ -31,6 +31,7 @@ import {
 import { decryptFilename } from './depot/crypto'
 import { fetchChunk, type LzmaModule, type DepotChunk } from './depot/decompress'
 import { writeAppManifest } from './depot/manifest'
+import { classifyDepotError } from './depotErrors'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -804,7 +805,11 @@ export async function downloadSteamDepots(
       return { status: 'cancelled' }
     }
     if (result.failures.length) {
-      return { status: 'error', error: result.failures[0].error }
+      // D-06: surface the CLASSIFIED, plain-language message — never the raw
+      // failure string — so the DownloadManager queue's existing generic
+      // error+Retry UI shows something actionable ("Steam servers dropped
+      // the connection", not a stack trace).
+      return { status: 'error', error: classifyDepotError(result.failures[0].error).message }
     }
     return { status: 'done' }
   } catch (err) {
@@ -817,6 +822,6 @@ export async function downloadSteamDepots(
         LogPrefix.Steam
       )
     })
-    return { status: 'error', error: (err as Error).message }
+    return { status: 'error', error: classifyDepotError(err).message }
   }
 }

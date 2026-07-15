@@ -95,6 +95,15 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
+// ── i18next mock — returns the fallback string for classifyDepotError
+//    assertions (library.test.ts's established pattern) ─────────────────────
+jest.mock('i18next', () => ({
+  __esModule: true,
+  default: {
+    t: (_key: string, fallback = '') => fallback
+  }
+}))
+
 const APP_ID = '12345'
 const BASE_OPTS = {
   targetSteamappsDir: '/tmp/steamapps',
