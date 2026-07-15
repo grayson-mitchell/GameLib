@@ -13,6 +13,12 @@
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
+import { open, mkdir, type FileHandle } from 'node:fs/promises'
+import { createReadStream } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { resolve, relative, dirname, isAbsolute } from 'path'
+import { getFileSize } from 'backend/utils'
+import { sendFrontendMessage } from '../../ipc'
 import { SteamUser } from './user'
 import {
   selectAllDepots,
@@ -23,6 +29,7 @@ import {
   type DepotSelectOpts
 } from './depot/select'
 import { decryptFilename } from './depot/crypto'
+import { fetchChunk, type LzmaModule, type DepotChunk } from './depot/decompress'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -300,4 +307,283 @@ export async function downloadSteamDepots(
   }
 
   return { appId, depots, totalBytes }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 21 (21-05): Streaming chunk-download loop.
+//
+// Consumes a DepotPlan (Plan 04) and writes every file's bytes to disk via
+// positional writes to an open fd — NEVER a whole-file Buffer.alloc (RESEARCH
+// Pattern 2 / D-14's "no fallback for 50GB+" requirement). Chunk fetches
+// within a single file are bounded by CHUNK_CONCURRENCY (NOT an unbounded
+// fan-out over every chunk in one go — a multi-GB file can hold thousands of
+// ~1MB chunks, so firing them all at once would defeat the size-independent
+// memory bound, T-21-02). Every decrypted filename is containment-checked
+// against the common/{installdir} root BEFORE any fs call (T-21-01). Progress
+// is throttled and emitted in the exact shape library.ts's pollInstallOnce()
+// already speaks, so the DownloadManager needs zero changes (D-01/D-03).
+// AbortSignal is consulted before every chunk/file so a queue-cancel stops
+// the loop promptly (D-02).
+//
+// Deliberately a SEPARATE exported function (not folded into
+// downloadSteamDepots itself) — it operates "on top of" an already-built
+// DepotPlan, has no dependency on the authenticated SteamUser client, and
+// stays independently unit-testable (mirrors 21-04's own precedent of
+// scoping each function to exactly what it needs).
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Bounded chunk-level concurrency PER FILE — never an unbounded fan-out over
+ *  every chunk in one go (T-21-02). Small on purpose: a single multi-GB file
+ *  can hold thousands of ~1MB chunks. */
+export const CHUNK_CONCURRENCY = 4
+/** Bounded file-level concurrency across ALL depots' files (spike-proven queue pattern). */
+export const FILE_CONCURRENCY = 8
+const PROGRESS_THROTTLE_MS = 500
+const PROGRESS_THROTTLE_PERCENT = 1
+
+/** Thrown when a decrypted filename resolves outside the target install root (T-21-01). */
+export class PathTraversalError extends Error {}
+
+/**
+ * Resolve `filename` against `root` and verify containment via relative()
+ * BEFORE any fs call — path.join alone is not containment (Phase 18 lesson,
+ * per user memory). A "../"-escaping filename never reaches open()/mkdir().
+ */
+function resolveContainedPath(root: string, filename: string): string {
+  const dest = resolve(root, filename.replace(/\\/g, '/'))
+  const rel = relative(root, dest)
+  if (rel.startsWith('..') || isAbsolute(rel)) {
+    throw new PathTraversalError(
+      `downloadDepotFiles: rejected path-traversal filename "${filename}" (escapes ${root})`
+    )
+  }
+  return dest
+}
+
+/** Streaming whole-file SHA1 — a ReadStream piped through createHash, never a
+ *  whole-file Buffer re-read (would defeat the point of streaming the write). */
+function sha1File(path: string): Promise<string> {
+  return new Promise((resolvePromise, reject) => {
+    const hash = createHash('sha1')
+    const stream = createReadStream(path)
+    stream.on('error', reject)
+    stream.on('data', (chunk: string | Buffer) => hash.update(chunk))
+    stream.on('end', () => resolvePromise(hash.digest('hex')))
+  })
+}
+
+export interface DownloadDepotFilesOpts {
+  targetSteamappsDir: string
+  installdir: string
+  /** Content-server hostnames from client.getContentServers() — caller-supplied
+   *  so this loop stays decoupled from the SteamUser client for testability. */
+  hosts: string[]
+  signal?: AbortSignal
+}
+
+export interface DepotDownloadFailure {
+  file: string
+  error: string
+}
+
+export interface DepotDownloadResult {
+  outcome: 'completed' | 'cancelled'
+  failures: DepotDownloadFailure[]
+}
+
+/**
+ * Bounded chunk-level worker pool for ONE file. Never an unbounded fan-out
+ * over every chunk in one go — peak in-flight fetchChunk calls is capped at
+ * CHUNK_CONCURRENCY regardless of how many chunks the file has (T-21-02).
+ * Chunks can land in any order — each is an independent positional
+ * write, so cross-server retry (Plan 01 fetchChunk) stays safe as-is.
+ */
+async function downloadFileChunks(
+  fd: FileHandle,
+  depotId: string,
+  key: Buffer,
+  hosts: string[],
+  lzma: LzmaModule,
+  file: DepotPlanFile,
+  fileSeed: number,
+  signal: AbortSignal | undefined,
+  onBytes: (n: number) => void
+): Promise<void> {
+  const queue = [...file.chunks]
+  const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (queue.length) {
+        if (signal?.aborted) return
+        const chunk = queue.shift()!
+        const depotChunk: DepotChunk = {
+          sha: chunk.sha,
+          cb_original: chunk.cb_original,
+          attemptSeed: hosts.length ? fileSeed % hosts.length : 0
+        }
+
+        const data = await fetchChunk(hosts, depotId, depotChunk, key, lzma)
+        if (signal?.aborted) return
+
+        await fd.write(data, 0, data.length, Number(chunk.offset))
+        onBytes(data.length)
+      }
+    })
+  )
+}
+
+/**
+ * Download one file: containment-check its destination (BEFORE any fs call,
+ * T-21-01), pre-size + positional-write every chunk (never a whole-file
+ * Buffer.alloc, T-21-02), then verify the whole-file SHA1 by STREAMING the
+ * written bytes back off disk (never re-reading the whole file into RAM,
+ * T-21-03). A mismatch is thrown — the caller records it as a failure, never
+ * silently accepted.
+ */
+async function downloadSingleFile(
+  installRoot: string,
+  depotId: string,
+  key: Buffer,
+  hosts: string[],
+  lzma: LzmaModule,
+  file: DepotPlanFile,
+  fileSeed: number,
+  signal: AbortSignal | undefined,
+  onBytes: (n: number) => void
+): Promise<void> {
+  const dest = resolveContainedPath(installRoot, file.filename)
+  await mkdir(dirname(dest), { recursive: true })
+
+  if (!file.chunks.length || Number(file.size) === 0) {
+    const empty = await open(dest, 'w')
+    await empty.close()
+    return
+  }
+
+  const fd = await open(dest, 'w')
+  try {
+    await fd.truncate(Number(file.size))
+    await downloadFileChunks(fd, depotId, key, hosts, lzma, file, fileSeed, signal, onBytes)
+  } finally {
+    await fd.close()
+  }
+
+  if (signal?.aborted) return
+
+  const expected = Buffer.isBuffer(file.sha_content)
+    ? file.sha_content.toString('hex')
+    : String(file.sha_content)
+  const got = await sha1File(dest)
+  if (got !== expected) {
+    throw new Error(
+      `downloadDepotFiles: whole-file SHA1 mismatch for ${file.filename}: ${got} != ${expected}`
+    )
+  }
+}
+
+/**
+ * Download every file across every depot in `plan`, streaming to disk with
+ * bounded file- and chunk-level concurrency, containment + SHA1 verification,
+ * throttled DownloadManager progress (D-01/D-03, matches library.ts
+ * pollInstallOnce()'s progressUpdate shape exactly), and prompt AbortSignal
+ * cancel (D-02). Failures are collected, never swallowed — a per-file error
+ * (traversal, SHA1 mismatch, exhausted chunk retries) does not stop the rest
+ * of the download.
+ */
+export async function downloadDepotFiles(
+  plan: DepotPlan,
+  opts: DownloadDepotFilesOpts
+): Promise<DepotDownloadResult> {
+  const lzmaModule = await import('lzma')
+  const lzma = ((lzmaModule as { default?: LzmaModule }).default ??
+    lzmaModule) as unknown as LzmaModule
+
+  const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
+
+  const jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }> = []
+  let seed = 0
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: seed++ })
+    }
+  }
+
+  const totalBytes = plan.totalBytes
+  const failures: DepotDownloadFailure[] = []
+  let doneBytes = 0
+  let lastEmitBytes = 0
+  let lastEmitTime = Date.now()
+  const tStart = Date.now()
+
+  const emitProgress = (force: boolean) => {
+    const percentDelta = totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
+    const timeDelta = Date.now() - lastEmitTime
+    // THROTTLE (~1%/500ms), never per-chunk — an IPC flood on a fast LAN (T-21-12).
+    if (!force && percentDelta < PROGRESS_THROTTLE_PERCENT && timeDelta < PROGRESS_THROTTLE_MS) {
+      return
+    }
+    lastEmitBytes = doneBytes
+    lastEmitTime = Date.now()
+
+    const elapsedSec = (Date.now() - tStart) / 1000
+    const downSpeed = elapsedSec > 0 ? doneBytes / elapsedSec : 0
+    const remaining = Math.max(totalBytes - doneBytes, 0)
+    const etaSec = downSpeed > 0 ? remaining / downSpeed : 0
+
+    // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
+    // the DownloadManager needs zero changes for the native depot-download path.
+    sendFrontendMessage('progressUpdate', {
+      appName: plan.appId,
+      runner: 'steam',
+      status: 'installing',
+      progress: {
+        // Denominator is the REAL multi-depot summed total (D-03), never a
+        // single depot's own bytes.
+        percent: totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0,
+        bytes: getFileSize(doneBytes),
+        downSpeed,
+        eta: Number.isFinite(etaSec) ? `${Math.round(etaSec)}s` : ''
+      }
+    })
+  }
+
+  const queue = [...jobs]
+  const workerCount = Math.min(FILE_CONCURRENCY, queue.length)
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (queue.length) {
+        // Checked per-file AND per-chunk (inside downloadFileChunks) so a
+        // queue-cancel stops issuing new work promptly (D-02).
+        if (opts.signal?.aborted) return
+        const job = queue.shift()!
+        try {
+          await downloadSingleFile(
+            installRoot,
+            job.depotId,
+            job.key,
+            opts.hosts,
+            lzma,
+            job.file,
+            job.fileSeed,
+            opts.signal,
+            (n) => {
+              doneBytes += n
+              emitProgress(false)
+            }
+          )
+        } catch (err) {
+          failures.push({ file: job.file.filename, error: (err as Error).message })
+        }
+      }
+    })
+  )
+
+  emitProgress(true)
+
+  return {
+    outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
+    failures
+  }
 }

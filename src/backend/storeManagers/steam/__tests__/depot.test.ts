@@ -52,6 +52,14 @@ jest.mock('backend/logger', () => ({
 // ── SteamUser mock — controls ensureConnected()/getClient() return values ────
 jest.mock('../user')
 
+// ── backend/utils mock — provides getFileSize() (prevents pulling in the
+//    heavy gog/library.ts transitive chain via the real utils.ts module,
+//    same pattern as library.test.ts). Progress tests below don't assert on
+//    the formatted `bytes` string, so no implementation needs re-establishing.
+jest.mock('backend/utils', () => ({
+  getFileSize: jest.fn()
+}))
+
 // ── depot/select mock — selectAllDepots is a jest.fn(); dlcAppIds stays real ─
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
