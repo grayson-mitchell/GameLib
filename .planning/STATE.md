@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: executing
-stopped_at: Completed 21-11-PLAN.md
-last_updated: "2026-07-15T12:00:15.678Z"
-last_activity: 2026-07-15
+status: verifying
+stopped_at: Completed 21-10-PLAN.md (Task 3 human-verify deferred to 21-12 UAT)
+last_updated: "2026-07-16T00:00:00.000Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 5
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 21 (steam-native-install) — EXECUTING
 Plan: 12 of 12
-Status: Ready to execute
-Last activity: 2026-07-15
+Status: All code plans complete (21-10 executed 2026-07-16); 21-12 is the manual real-machine UAT. Plan 21-10 Task 3 (guided-install / prompt-to-launch / continue-to-download) human-verify is DEFERRED into 21-12's UAT — code complete, hardware validation outstanding.
+Last activity: 2026-07-16
 
 ## v1.4 Phase Map
 
@@ -135,6 +135,7 @@ Last activity: 2026-07-15
 | Phase 21 P08 | ~30min | 2 tasks | 2 files |
 | Phase 21 P09 | ~50min | 2 tasks | 9 files |
 | Phase 21 P11 | 25min | 1 tasks | 2 files |
+| Phase 21 P10 | 55min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -277,7 +278,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T12:00:15.673Z
+Last session: 2026-07-15T19:08:16.850Z
 Stopped at: Completed 21-11-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
