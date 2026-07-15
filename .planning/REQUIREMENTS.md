@@ -144,6 +144,21 @@ Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-l
 - [x] **STORESEARCH-07**: Clicking a result hands off to the user's external browser via `shell.openExternal()` (never the in-app `/store-page` WebView — GameLib must not wrap its own chrome around ~30 unvetted third-party checkout forms), using CheapShark's documented `redirect?dealID=` URL. No post-purchase machinery: the purchase lands on the next normal library sync (D-08/D-09/D-10)
 - [x] **STORESEARCH-08**: The screen shows an explanatory prompt before any query is typed, and distinguishes "no results" from "the provider failed" — a provider failure renders an inline, retryable error while leaving the search box usable (fail-soft, mirroring the Humble adapter) (D-14)
 
+## v1.6 Requirements
+
+Requirements for the v1.6 milestone — **Steam Native Install**. Replace the opaque `steam://install/{appId}` handoff with an in-process depot download GameLib owns: real progress, real errors, real recovery, surfaced through the same DownloadManager every other store uses. GameLib downloads depots over its authenticated `steam-user` CM connection, writes an `appmanifest_{appId}.acf` (`StateFlags = 1026`) the Steam client **adopts**; launch stays on `steam://` (DRM works) and Steam owns all future updates. De-risked end to end by spikes 001 (.acf adoption) + 002 (in-process depot download). Minted during `/gsd-plan-phase 21` from the locked D-01..D-15 decisions in `.planning/phases/21-steam-native-install/21-CONTEXT.md`. Each maps to Phase 21.
+
+### Steam Native Install (Phase 21)
+
+- [ ] **SNI-01** (D-14): GameLib's in-process depot engine downloads **every** Steam install — single- and multi-depot, small and 50GB+ — via `steam-user`'s CM connection, reimplementing the two broken `steam-user` helpers (`getRawManifest` + hand decrypt/decompress, cross-content-server chunk retry), selecting depots by the verified two-channel package-level ownership rule, and **streaming chunks to disk** (positional `fs.write`, no whole-file RAM buffering) so large titles never OOM. No `steam://install` fallback when the opt-in is ON.
+- [ ] **SNI-02** (D-04 write mechanism): GameLib writes a hand-templated `appmanifest_{appId}.acf` with `StateFlags = 1026` (never `4`), keeping every 64-bit GID/SteamID64 a **string** end-to-end (no `@node-steam/vdf.stringify()`), written **atomically** (temp + rename) so a crash never orphans a half-written manifest.
+- [ ] **SNI-03** (D-01/D-02/D-03): Steam installs enqueue into the **existing DownloadManager** queue with real percent/speed/ETA driven by the **real total bytes** summed across all depots (replacing the `pc_requirements` estimate); the queue's **cancel** aborts the in-flight chunk loop.
+- [ ] **SNI-04** (D-04/D-05/D-06/D-07): Failure, user-cancel, and startup-with-a-partial all converge on **one** finalize function that writes the honest `1026` manifest and hands off to Steam's verify-repair pass; a failed download shows a **plain-language error + Retry**; startup **never silently auto-drives** Steam/Steam-in-CrossOver (resolves the Phase 18 folded todo).
+- [ ] **SNI-05** (D-08/D-09): Downloads target an **existing Steam-registered** library folder's `steamapps/` (never an arbitrary/unregistered path; no `libraryfolders.vdf` mutation), defaulting to Steam's primary library with an **override picker** only when multiple registered libraries exist.
+- [ ] **SNI-06** (D-10/D-11): When the Steam client is **absent**, a consent-gated **guided install** of the official Steam client runs (download+run non-silently on Win/macOS, link-out on Linux) before proceeding; when Steam is installed but never launched (no `libraryfolders.vdf`), the user is **prompted to launch Steam once** rather than GameLib authoring Steam config.
+- [ ] **SNI-07** (D-12/D-13/D-14): The feature ships behind a **user opt-in setting** (default OFF) on **all three desktop OSes**; OFF preserves today's `steam://install` handoff byte-for-byte; ON routes every Steam install through the depot engine with no per-case fallback.
+- [ ] **SNI-08** (D-15): On macOS, a bottle-eligible install **depot-downloads the Windows depot into the CrossOver bottle's `steamapps/`** (`os: 'windows'`, `getBottleSteamappsDir()` target, `isBottleReady()` gate) and the **bottled** Windows Steam adopts the `1026` manifest — unifying the install mechanism across native and bottle, with **no** Wine dispatch for the download itself.
+
 ## Future Requirements
 
 Deferred beyond v1.1. Tracked but not in the current roadmap.
@@ -244,6 +259,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | CXIDX-11 | Phase 19 | Complete |
 | CXIDX-12 | Phase 19 | Pending |
 | CXIDX-13 | Phase 19 | Pending |
+| SNI-01 | Phase 21 | Pending |
+| SNI-02 | Phase 21 | Pending |
+| SNI-03 | Phase 21 | Pending |
+| SNI-04 | Phase 21 | Pending |
+| SNI-05 | Phase 21 | Pending |
+| SNI-06 | Phase 21 | Pending |
+| SNI-07 | Phase 21 | Pending |
+| SNI-08 | Phase 21 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
@@ -253,6 +276,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 - v1.2 requirements: 18 total (HSTORE-02 deferred to Future)
 - Mapped to phases: 18 (Phases 10–15)
 - Unmapped: 0 ✓
+
+- v1.6 requirements: 8 total (SNI-01..08, minted 2026-07-15 from D-01..D-15)
+- Mapped to phases: 8 (Phase 21)
+- Unmapped: 0 ✓
+
+**D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
 
 ---
 *Requirements defined: 2026-07-02*
