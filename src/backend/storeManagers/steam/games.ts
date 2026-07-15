@@ -36,7 +36,8 @@ import {
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
-  getSteamBottleSettings
+  getSteamBottleSettings,
+  getBottleSteamappsDir
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { downloadSteamDepots } from './depot'
@@ -574,6 +575,20 @@ export default class SteamGame implements Game {
         return { status: 'done', deferredToSetup: true }
       }
 
+      // D-15/SNI-08 opt-in: depot-download the WINDOWS depot directly into
+      // the bottle's OWN steamapps/ filesystem path — the SAME depot.ts
+      // mechanism the (non-bottle-eligible) native opt-in branch below uses,
+      // just with the write target swapped to the bottle's steamapps dir and
+      // os hard-coded 'windows' (bottled Steam is a Windows Steam client,
+      // never the host's macOS depot). No Wine dispatch for the download
+      // itself — tellBottledSteamToInstall/dispatchToBottledSteam are never
+      // called on this path (that mechanism stays reserved for guided
+      // setup/launch/uninstall). OFF preserves the legacy
+      // tellBottledSteamToInstall dispatch below byte-for-byte (D-13).
+      if (isSteamNativeInstallEnabled()) {
+        return this.installBottleNative(args)
+      }
+
       logInfo(
         `SteamGame: delegating install for appId ${this.appId} via the bottled Steam client`,
         LogPrefix.Steam
@@ -639,11 +654,73 @@ export default class SteamGame implements Game {
    * downloadqueue.ts untouched), 'cancelled' -> the abort-shaped result other
    * runners return on user cancel (not an error).
    *
-   * Registers this.appId in nativeInstallsInFlight + a real AbortController
-   * (D-02) for the duration of the download so stop() can abort it; both are
-   * released in the finally regardless of outcome.
+   * Delegates to installDepotDownload() using the resolved native library
+   * target + host os (unchanged behavior/call signature from Plan 07).
    */
   private async installNative(args: InstallArgs): Promise<InstallResult> {
+    return this.installDepotDownload(args, { os: hostSteamDepotOs() })
+  }
+
+  /**
+   * D-15/SNI-08 (opt-in ON, bottle-eligible + isBottleReady) bottle
+   * depot-download install path — unifies the install mechanism across
+   * native and bottle: the SAME depot.ts orchestrator as installNative()
+   * above, with the write target swapped to the CrossOver bottle's OWN
+   * steamapps/ (getBottleSteamappsDir — plain Node fs, no Wine dispatch) and
+   * os hard-coded 'windows' (the bottled client is a Windows Steam client,
+   * never the host's macOS depot — RESEARCH Pattern 4). The bottle-scoped ACF
+   * poller (startInstallPolling(appId,{source:'bottle'}), Plan 08) is reused
+   * unchanged so the bottled Windows Steam client's own verify pass
+   * (StateFlags 1026 -> 4) is reflected in the UI exactly like the legacy
+   * tellBottledSteamToInstall path.
+   */
+  private async installBottleNative(args: InstallArgs): Promise<InstallResult> {
+    const targetSteamappsDir = getBottleSteamappsDir(
+      getSteamBottleSettings().wineCrossoverBottle
+    )
+    return this.installDepotDownload(args, {
+      targetSteamappsDirOverride: targetSteamappsDir,
+      os: 'windows',
+      pollerSource: 'bottle'
+    })
+  }
+
+  /**
+   * Shared depot-download engine for both installNative() (native, opt-in ON,
+   * non-bottle-eligible) and installBottleNative() (D-15, opt-in ON,
+   * bottle-eligible). Calls the Plan 10 (ensureSteamClientReady) and Plan 09
+   * (resolveSteamInstallTarget) seams — the SAME authenticated-CM-connection
+   * check and PICS-derived installdir resolution both paths need — then hands
+   * off to depot.ts's downloadSteamDepots orchestrator (Plan 04-06) with the
+   * caller-selected write target/os. `targetSteamappsDirOverride` replaces
+   * resolveSteamInstallTarget's own (native-library) targetSteamappsDir when
+   * present — the bottle path discards that native-library resolution
+   * entirely and reuses only the PICS-derived `installdir`; `pollerSource`
+   * lets the bottle path reuse the bottle-scoped ACF poller (Plan 08) while
+   * leaving the native path's `startInstallPolling(appId)` call signature
+   * byte-for-byte unchanged.
+   *
+   * Maps downloadSteamDepots's NEVER-throwing { status, error? } outcome onto
+   * InstallResult using the SAME conventions gog/legendary's own install()
+   * functions already use — 'done' -> success, 'error' -> the outcome's
+   * already-classified (Plan 06 classifyDepotError) message so the
+   * DownloadManager queue's EXISTING generic error+Retry surface renders it
+   * (D-06/D-07 reuse, no steam-specific UI, downloadqueue.ts untouched),
+   * 'cancelled' -> the abort-shaped result other runners return on user
+   * cancel (not an error).
+   *
+   * Registers this.appId in nativeInstallsInFlight + a real AbortController
+   * (D-02) for the duration of the download so stop() can abort it — for
+   * EITHER path — released in the finally regardless of outcome.
+   */
+  private async installDepotDownload(
+    args: InstallArgs,
+    opts: {
+      targetSteamappsDirOverride?: string
+      os: string
+      pollerSource?: 'bottle'
+    }
+  ): Promise<InstallResult> {
     const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
     if (!clientReady.ready) {
       return {
@@ -654,8 +731,9 @@ export default class SteamGame implements Game {
       }
     }
 
-    const { targetSteamappsDir, installdir } =
-      await resolveSteamInstallTarget(this.appId, args) // Plan 09
+    const resolved = await resolveSteamInstallTarget(this.appId, args) // Plan 09
+    const targetSteamappsDir =
+      opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
 
     const controller = createAbortController(this.appId)
     nativeInstallsInFlight.add(this.appId)
@@ -663,8 +741,8 @@ export default class SteamGame implements Game {
     try {
       const outcome = await downloadSteamDepots(this.appId, {
         targetSteamappsDir,
-        installdir,
-        os: hostSteamDepotOs(),
+        installdir: resolved.installdir,
+        os: opts.os,
         signal: controller.signal
       })
 
@@ -674,7 +752,7 @@ export default class SteamGame implements Game {
 
       if (outcome.status === 'error') {
         logWarning(
-          `SteamGame: native depot install failed for appId ${this.appId}: ${outcome.error}`,
+          `SteamGame: depot install failed for appId ${this.appId}: ${outcome.error}`,
           LogPrefix.Steam
         )
         return { status: 'error', error: outcome.error }
@@ -682,8 +760,13 @@ export default class SteamGame implements Game {
 
       // Start ACF polling so Steam's own verify/repair pass (which flips
       // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
-      // steam://install path (D-07).
-      startInstallPolling(this.appId)
+      // steam://install path (D-07) — bottle-scoped when pollerSource is set
+      // (Plan 08's distinct bottle steamapps root, D-15).
+      if (opts.pollerSource) {
+        startInstallPolling(this.appId, { source: opts.pollerSource })
+      } else {
+        startInstallPolling(this.appId)
+      }
 
       return { status: 'done' }
     } finally {
