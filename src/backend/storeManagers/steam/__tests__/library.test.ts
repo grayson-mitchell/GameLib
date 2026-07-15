@@ -1177,7 +1177,7 @@ describe('SteamLibraryManager', () => {
     })
     const setIntervalSpy = jest
       .spyOn(global, 'setInterval')
-      .mockImplementation(((fn: () => void) => {
+      .mockImplementation((() => {
         order.push('watch')
         return { unref: () => undefined } as unknown as NodeJS.Timeout
       }) as unknown as typeof setInterval)

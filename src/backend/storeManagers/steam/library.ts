@@ -33,6 +33,7 @@ import {
   getSteamBottleSettings,
   isBottleProvisioned
 } from './bottle'
+import { finalizeToSteam } from './depot'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -74,6 +75,50 @@ function installPlatformForSource(source: AcfSource): InstallPlatform {
   return hostInstallPlatform()
 }
 
+/**
+ * D-05 startup-resume helper: locates the steamapps dir + installdir +
+ * display name for an in-progress (downloading) appId directly from its
+ * on-disk ACF — the minimal data the depot module's finalize function needs
+ * to write an honest 1026 manifest over a GameLib-owned partial. A NEW
+ * helper — NOT a change to scanDownloadingAppIds/readAcfState (RESEARCH
+ * Pitfall 4 requires those stay untouched, they only watch); this duplicates
+ * only the installdir extraction those functions already perform internally
+ * but do not expose on their own return shapes. Returns null when the
+ * manifest can no longer be found (e.g. removed between the startup scan and
+ * this lookup) — the caller still starts the poller either way, since D-05's
+ * finalize-and-watch action is safe regardless of whether finalize ran.
+ */
+async function locateDownloadingTarget(appId: string): Promise<{
+  targetSteamappsDir: string
+  installdir: string
+  name: string
+} | null> {
+  const libraryPaths = await getSteamLibraries()
+
+  for (const libPath of libraryPaths) {
+    const steamappsDir = join(libPath, 'steamapps')
+    const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
+    if (!existsSync(manifestFile)) continue
+
+    try {
+      const content = readFileSync(manifestFile, 'utf-8')
+      const parsed = parse(content)
+      const installdir = parsed?.AppState?.installdir
+      if (!installdir) continue
+
+      return {
+        targetSteamappsDir: steamappsDir,
+        installdir,
+        name: library.get(appId)?.title ?? installdir
+      }
+    } catch {
+      continue // skip corrupt ACF — same discipline as readAcfState (T-2-01)
+    }
+  }
+
+  return null
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
    * On startup: load the cached library immediately, resume any in-progress
@@ -108,6 +153,34 @@ export default class SteamLibraryManager implements LibraryManager {
           `Steam: resuming install poll for appId ${appId} (download in progress on startup)`,
           LogPrefix.Steam
         )
+
+        // D-05: finalize a GameLib-owned partial to an honest 1026 manifest
+        // FIRST — write it and stop. NEVER re-invoke the depot orchestrator
+        // or dispatch to Steam/CrossOver on startup (Pitfall 4) — this is
+        // the folded-todo guard: an interrupted GameLib download must be
+        // left for Steam to adopt on its own next launch, not silently
+        // re-driven. Only after finalize does the poller start watching for
+        // Steam to flip StateFlags 1026 -> 4.
+        try {
+          const target = await locateDownloadingTarget(appId)
+          if (target) {
+            await finalizeToSteam(appId, {
+              targetSteamappsDir: target.targetSteamappsDir,
+              installdir: target.installdir,
+              name: target.name,
+              depots: []
+            })
+          }
+        } catch (finalizeErr) {
+          logWarning(
+            [
+              `Steam: startup finalize failed for appId ${appId}, will still watch:`,
+              finalizeErr
+            ],
+            LogPrefix.Steam
+          )
+        }
+
         startInstallPolling(appId)
       }
     } catch (err) {
