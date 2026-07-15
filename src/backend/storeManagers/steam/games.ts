@@ -15,7 +15,12 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
-import { isMac } from 'backend/constants/environment'
+import { isMac, isLinux } from 'backend/constants/environment'
+import {
+  createAbortController,
+  callAbortController,
+  deleteAbortController
+} from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './electronStores'
 import {
@@ -33,9 +38,36 @@ import {
   tellBottledSteamToUninstall,
   getSteamBottleSettings
 } from './bottle'
+import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
+import { downloadSteamDepots } from './depot'
+import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
+import { resolveSteamInstallTarget } from './installLocation' // Plan 09 seam
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
+
+/**
+ * appIds with an in-flight native depot download (SNI-07/D-02) — the single
+ * source of truth stop() consults to decide whether to abort a real download
+ * or stay the historic no-op. Populated for the duration of installNative()'s
+ * downloadSteamDepots call only; aborthandler.ts itself exposes no "is this id
+ * registered" query, so this Set is games.ts's own bookkeeping layer on top of
+ * createAbortController/deleteAbortController's create-call-delete lifecycle.
+ */
+const nativeInstallsInFlight = new Set<string>()
+
+/**
+ * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
+ * 'linux') — the SAME strings depot/select.ts's DepotSelectOpts.os matches
+ * PICS depot config.oslist against. NOT the InstallPlatform vocabulary
+ * library.ts's hostInstallPlatform() uses ('Windows'/'Mac'/'linux') — the two
+ * must not be conflated.
+ */
+function hostSteamDepotOs(): string {
+  if (isMac) return 'macos'
+  if (isLinux) return 'linux'
+  return 'windows'
+}
 
 /**
  * Build a validated steam:// protocol URL.
@@ -524,7 +556,7 @@ export default class SteamGame implements Game {
    * Phase 17 (D-10/D-11): a confirmed-not-native macOS game routes through the
    * bottled Steam client instead of native steam:// — see isBottleEligible().
    */
-  async install(_args: InstallArgs): Promise<InstallResult> {
+  async install(args: InstallArgs): Promise<InstallResult> {
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       if (!isBottleReady()) {
@@ -563,6 +595,15 @@ export default class SteamGame implements Game {
       return { status: 'done' }
     }
 
+    // D-13 opt-in: route a (non-bottle-eligible) native install through the
+    // depot.ts orchestrator instead of the steam://install handoff. Reading
+    // the setting is the ONLY new branch condition — OFF preserves today's
+    // steam://install path byte-for-byte below (D-13 safety valve). The D-15
+    // bottle branch above is Plan 11's scope, not this one.
+    if (isSteamNativeInstallEnabled()) {
+      return this.installNative(args)
+    }
+
     const url = buildSteamProtocolUrl('install', this.appId)
     if (!url) {
       return { status: 'error', error: `Invalid appId: ${this.appId}` }
@@ -582,6 +623,73 @@ export default class SteamGame implements Game {
     startInstallPolling(this.appId)
 
     return { status: 'done' }
+  }
+
+  /**
+   * SNI-07 (D-13 opt-in ON, non-bottle-eligible) native depot-download install
+   * path. Calls the Plan 10 (ensureSteamClientReady) and Plan 09
+   * (resolveSteamInstallTarget) seams so those plans can implement the real
+   * logic without re-touching this file, then hands off to depot.ts's
+   * downloadSteamDepots orchestrator (Plan 04-06). Maps its NEVER-throwing
+   * { status, error? } outcome onto InstallResult using the SAME conventions
+   * gog/legendary's own install() functions already use — 'done' -> success,
+   * 'error' -> the outcome's already-classified (Plan 06 classifyDepotError)
+   * message so the DownloadManager queue's EXISTING generic error+Retry
+   * surface renders it (D-06/D-07 reuse, no steam-specific UI,
+   * downloadqueue.ts untouched), 'cancelled' -> the abort-shaped result other
+   * runners return on user cancel (not an error).
+   *
+   * Registers this.appId in nativeInstallsInFlight + a real AbortController
+   * (D-02) for the duration of the download so stop() can abort it; both are
+   * released in the finally regardless of outcome.
+   */
+  private async installNative(args: InstallArgs): Promise<InstallResult> {
+    const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
+    if (!clientReady.ready) {
+      return {
+        status: 'error',
+        error:
+          clientReady.error ??
+          `Steam client not ready for appId ${this.appId}`
+      }
+    }
+
+    const { targetSteamappsDir, installdir } =
+      await resolveSteamInstallTarget(this.appId, args) // Plan 09
+
+    const controller = createAbortController(this.appId)
+    nativeInstallsInFlight.add(this.appId)
+
+    try {
+      const outcome = await downloadSteamDepots(this.appId, {
+        targetSteamappsDir,
+        installdir,
+        os: hostSteamDepotOs(),
+        signal: controller.signal
+      })
+
+      if (outcome.status === 'cancelled') {
+        return { status: 'abort' }
+      }
+
+      if (outcome.status === 'error') {
+        logWarning(
+          `SteamGame: native depot install failed for appId ${this.appId}: ${outcome.error}`,
+          LogPrefix.Steam
+        )
+        return { status: 'error', error: outcome.error }
+      }
+
+      // Start ACF polling so Steam's own verify/repair pass (which flips
+      // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
+      // steam://install path (D-07).
+      startInstallPolling(this.appId)
+
+      return { status: 'done' }
+    } finally {
+      nativeInstallsInFlight.delete(this.appId)
+      deleteAbortController(this.appId)
+    }
   }
 
   /**
