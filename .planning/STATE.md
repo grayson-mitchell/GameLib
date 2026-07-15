@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-08-PLAN.md
-last_updated: "2026-07-15T11:35:16.122Z"
+stopped_at: Completed 21-09-PLAN.md
+last_updated: "2026-07-15T11:50:18.694Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 21 (steam-native-install) — EXECUTING
-Plan: 9 of 12
+Plan: 10 of 12
 Status: Ready to execute
 Last activity: 2026-07-15
 
@@ -133,6 +133,7 @@ Last activity: 2026-07-15
 | Phase 21 P06 | 45min | 2 tasks | 4 files |
 | Phase 21 P07 | 40min | 2 tasks | 4 files |
 | Phase 21 P08 | ~30min | 2 tasks | 2 files |
+| Phase 21 P09 | ~50min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -213,6 +214,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 21-07]: install()'s native branch placed AFTER isBottleEligible() (D-15 bottle branch untouched, Plan 11's scope); installNative() maps downloadSteamDepots outcome onto InstallResult using gog/legendary's own conventions (done/error/abort) so a classified error renders through downloadqueue.ts's EXISTING generic error+Retry surface with zero changes to that file
 - [Phase ?]: [Phase 21-07]: hostSteamDepotOs() is a new helper distinct from library.ts's hostInstallPlatform() -- depot/select.ts's oslist vocabulary (windows/macos/linux lowercase) differs from InstallPlatform (Windows/Mac/linux); stop() tracks in-flight native downloads via a private nativeInstallsInFlight Set (not a new aborthandler.ts export) so callAbortController is only invoked when a real depot download is running
 - [Phase ?]: [Phase 21-08]: locateDownloadingTarget() is a new standalone helper, not an extension of scanDownloadingAppIds/readAcfState, so those four poller functions stay byte-for-byte unmodified; startup finalize passes depots: [] since no live DepotPlan exists on a fresh process (honest empty InstalledDepots, Steam's verify pass reconciles)
+- [Phase 21-09]: resolveSteamInstallTarget honors an args.path override only when it resolve()s to exactly one getSteamLibraries() entry (D-08); unregistered/blank overrides silently fall back to the primary library rather than erroring
+- [Phase 21-09]: D-09 multi-library override picker wired into InstallGameModal.ts's actual Steam chokepoint, not DownloadDialog (which Steam installs never route through); picker is a registered-libraries-only select, never PathSelectionBox's free-text filesystem browser
 
 ### Pending Todos
 
@@ -272,8 +275,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T11:35:16.117Z
-Stopped at: Completed 21-08-PLAN.md
+Last session: 2026-07-15T11:50:18.685Z
+Stopped at: Completed 21-09-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
