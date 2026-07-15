@@ -83,6 +83,8 @@ All eight Wave 0 test files exist and are green as of this plan's full-suite gat
 | Inline retryable error banner on a real provider failure (network disconnect / blocked host), and recovery via Retry | STORESEARCH-08 | Requires actually inducing a live network failure against `www.cheapshark.com`, not a mocked rejection | 20-07-PLAN.md Task 2, step 8 |
 | No-results state on a real zero-match live query | STORESEARCH-08 | Requires a real CheapShark response with zero matches, not a fixture | 20-07-PLAN.md Task 2, step 9 |
 
+**UAT: approved 2026-07-15.** All nine live checks passed on the running app against the real CheapShark API. One defect was found and fixed mid-checkpoint (owned-badge false positive on remaster/remake titles — "Alan Wake" wrongly showed Owned for "Alan Wake Remastered"; fixed in the shared `common/matching/titleMatch.ts` matcher via quick task 260715-a7g, covered by a new regression test, full backend suite 1087/1087 green after the fix). User re-verified live and gave final approval.
+
 ---
 
 ## Validation Sign-Off
@@ -94,5 +96,5 @@ All eight Wave 0 test files exist and are green as of this plan's full-suite gat
 - [x] Feedback latency < 6s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending — awaiting live human verification (20-07 Task 2)
+**Approval:** approved 2026-07-15 — live human verification passed (20-07 Task 2), see Manual-Only Verifications note above
 </content>

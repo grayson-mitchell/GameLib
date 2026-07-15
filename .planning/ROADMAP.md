@@ -48,7 +48,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.5 — Aggregated Store Search
 
-- [ ] **Phase 20: Aggregated Store Search (CheapShark)** - Search a title once and see what it costs across every store, with "you already own this" badges no price-comparison site can show
+- [x] **Phase 20: Aggregated Store Search (CheapShark)** - Search a title once and see what it costs across every store, with "you already own this" badges no price-comparison site can show (completed 2026-07-15)
 
 ### v1.6 — Steam Native Install
 
@@ -580,7 +580,7 @@ Plans:
   - **Risk — false-positive owned-badges.** Telling a user they already own a game they don't talks them out of a purchase they wanted. Bias the fuzzy threshold conservative; a miss is cheaper than a wrong badge. Same asymmetry as Phase 19 (exact on Steam ID, fuzzy on everything else) — see Q1.
   - **Out of scope:** the aggregated *discovery/browse* surface (multi-provider Deals). Captured as `.planning/seeds/aggregated-discovery-multi-provider-deals.md`, deliberately gated on this phase's provider interface surviving one real consumer first.
 
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 - [x] 20-01-PLAN.md — Lift the shared fuzzy title matcher into common/matching/titleMatch.ts; repoint dedup.ts/constants.ts (D-02)
@@ -589,7 +589,7 @@ Plans:
 - [x] 20-04-PLAN.md — CheapShark backend adapter + IPC handlers + preload (USD contained; verbatim dealID redirect, Pitfall 1)
 - [x] 20-05-PLAN.md — StoreSearchRow + lazy StoreSearchBreakdown + `$X USD` formatter + external buy handoff
 - [x] 20-06-PLAN.md — Container: debounce/min-3/generation-cancel hook, badge-once resolution, 3 fail-soft states, sidebar + route + i18n
-- [ ] 20-07-PLAN.md — Full-suite gate + live end-to-end human verification + 20-VALIDATION.md sign-off
+- [x] 20-07-PLAN.md — Full-suite gate + live end-to-end human verification + 20-VALIDATION.md sign-off
 
 **Wave 1** (parallel, no file overlap): 20-01, 20-02
 **Wave 2** (parallel): 20-03 (needs 20-01), 20-04 (needs 20-02)
@@ -665,4 +665,4 @@ v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 | 17. Steam on macOS via CrossOver/Wine | 17/17 | Complete    | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete    | 2026-07-14 |
-| 20. Aggregated Store Search (CheapShark) | 6/7 | In Progress|  |
+| 20. Aggregated Store Search (CheapShark) | 7/7 | Complete   | 2026-07-15 |

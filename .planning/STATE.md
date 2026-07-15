@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: executing
-stopped_at: Completed 20-06-PLAN.md (StoreSearch container, debounce hook, sidebar entry, /store-search route, i18n keys)
-last_updated: "2026-07-14T10:41:23.752Z"
-last_activity: 2026-07-14
+status: verifying
+stopped_at: Completed 20-07-PLAN.md (full-suite gate + live UAT approved, phase 20 complete)
+last_updated: "2026-07-15T06:28:24.694Z"
+last_activity: 2026-07-15
 progress:
   total_phases: 5
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 20 (aggregated-store-search-cheapshark) — EXECUTING
+Phase: 20 (aggregated-store-search-cheapshark) — COMPLETE
 Plan: 7 of 7
-Status: Ready to execute
-Last activity: 2026-07-15 - Completed quick task 260715-a7g: remaster/remake product-differentiator guard in shared title matcher
+Status: All 7 plans executed, full suite green, live UAT approved, VALIDATION.md signed off
+Last activity: 2026-07-15
 
 ## v1.4 Phase Map
 
@@ -123,6 +123,7 @@ Last activity: 2026-07-15 - Completed quick task 260715-a7g: remaster/remake pro
 | Phase 20 P04 | 15min | 2 tasks | 6 files |
 | Phase 20 P05 | 15min | 2 tasks | 6 files |
 | Phase 20 P06 | 45min | 2 tasks | 9 files |
+| Phase 20 P07 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,7 @@ Recent decisions affecting current work:
 - [Phase 20]: [Phase 20-05]: StoreSearchBreakdown unmounts on row collapse (not cached) so a later expand is a natural retry after a fetch failure, with no persisted per-row error UI
 - [Phase 20-06]: SearchBar gained optional loading prop (icon->spinner swap in same DOM slot) - non-breaking, default false, other consumers unaffected
 - [Phase 20-06]: Container filters humble.keys via selectKeysWaiting before resolveStoreSearchBadges, matching Discounts' own pattern, so a redeemed/expired key never shows key-available
+- [Phase 20-07]: Owned-badge false-positive on remaster/remake titles fixed in the shared common/matching/titleMatch.ts matcher (PRODUCT_VARIANT_KEYWORDS guard, isRemasterFalsePositiveRisk OR'd into fuzzyMatch), so Humble dedup inherits the same correctness fix, not just store-search
 
 ### Pending Todos
 
@@ -246,9 +248,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-14T10:41:23.747Z
-Stopped at: Completed 20-06-PLAN.md (StoreSearch container, debounce hook, sidebar entry, /store-search route, i18n keys)
-Next: Human performs 17-07 Task 2 UAT steps 2-7 on real macOS + CrossOver hardware, then resume executor with "approved" or a list of failures
+Last session: 2026-07-15T06:28:24.688Z
+Stopped at: Completed 20-07-PLAN.md (full-suite gate + live UAT approved, phase 20 complete)
+Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
