@@ -22,8 +22,7 @@ import {
   type DepotDescriptor,
   type DepotSelectOpts
 } from './depot/select'
-// decryptFilename is wired in by Task 2 (21-04) — fetchDepotPlanEntry is still
-// a not-implemented stub at this point in the file's history.
+import { decryptFilename } from './depot/crypto'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -194,10 +193,18 @@ async function fetchDlcInfos(
  * what surfaces a future steam-user version bump that moves/renames this file.
  */
 async function loadContentManifestParser(): Promise<ContentManifestModule> {
-  // Task 2 (21-04) implements this — Task 1 never reaches this call (its tests
-  // mock selectAllDepots to return zero descriptors, so the early-return above
-  // fires first).
-  throw new Error('loadContentManifestParser: not implemented (Task 2)')
+  const mod = await import('steam-user/components/content_manifest.js')
+  const candidate =
+    (mod as { default?: unknown }).default ?? (mod as unknown as ContentManifestModule)
+  if (typeof (candidate as ContentManifestModule)?.parse !== 'function') {
+    throw new Error(
+      'downloadSteamDepots: steam-user/components/content_manifest.js no longer exports a ' +
+        'parse(buffer) function — this internal path is undocumented (T-21-10) and may have ' +
+        'moved on a steam-user version bump. Pin the version and re-verify the export shape ' +
+        'before proceeding.'
+    )
+  }
+  return candidate as ContentManifestModule
 }
 
 /**
@@ -206,13 +213,40 @@ async function loadContentManifestParser(): Promise<ContentManifestModule> {
  * 002 finding); every file size is coerced through Number() for the D-03 sum.
  */
 async function fetchDepotPlanEntry(
-  _client: SteamUserDepotClient,
-  _numericAppId: number,
-  _descriptor: DepotDescriptor,
-  _parser: ContentManifestModule
+  client: SteamUserDepotClient,
+  numericAppId: number,
+  descriptor: DepotDescriptor,
+  parser: ContentManifestModule
 ): Promise<DepotPlanEntry> {
-  // Task 2 (21-04) implements this.
-  throw new Error('fetchDepotPlanEntry: not implemented (Task 2)')
+  const numericDepotId = Number(descriptor.id)
+
+  const key = await new Promise<Buffer>((resolve, reject) => {
+    client.getDepotDecryptionKey(numericAppId, numericDepotId, (err, k) =>
+      err ? reject(err) : resolve(k)
+    )
+  })
+
+  const raw = await new Promise<Buffer>((resolve, reject) => {
+    client.getRawManifest(numericAppId, numericDepotId, descriptor.manifest, 'public', (err, m) =>
+      err ? reject(err) : resolve(m)
+    )
+  })
+
+  const parsed = parser.parse(raw)
+  const files: DepotPlanFile[] = (parsed.files ?? []).map((f) => ({
+    filename: decryptFilename(f.filename, key),
+    size: Number(f.size),
+    sha_content: f.sha_content,
+    flags: f.flags,
+    chunks: f.chunks ?? []
+  }))
+
+  return {
+    depotId: descriptor.id,
+    gid: descriptor.manifest,
+    key,
+    files
+  }
 }
 
 /**
