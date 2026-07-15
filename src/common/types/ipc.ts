@@ -255,6 +255,13 @@ interface AsyncIPCFunctions {
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>
   getSteamInstallSize: (appId: string) => Promise<string>
+  // Phase 21 (21-09), D-09: registered Steam libraries for the multi-library
+  // install-location override picker (D-08 — registered folders only, never
+  // an arbitrary filesystem browse). Gated server-side on the D-13 opt-in
+  // (see main.ts) — returns [] when native install is OFF.
+  listSteamLibraryTargets: () => Promise<
+    { path: string; steamappsDir: string; isPrimary: boolean }[]
+  >
   // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
   // (create via the locked cxbottle mechanism, fetch + non-silently run
   // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this

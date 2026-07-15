@@ -45,6 +45,8 @@ import {
   steamSyncStore
 } from './storeManagers/steam/electronStores'
 import { getSteamInstallSize } from './storeManagers/steam/games'
+import { listSteamLibraryTargets } from './storeManagers/steam/installLocation'
+import { isSteamNativeInstallEnabled } from './storeManagers/steam/nativeInstallSetting'
 import {
   isBottleProvisioned,
   provisionBottle
@@ -919,6 +921,15 @@ addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled()
 addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
 addHandler('getSteamInstallSize', async (event, appId) =>
   getSteamInstallSize(appId)
+)
+// Phase 21 (21-09), D-09: multi-library override picker data source. Gated on
+// the D-13 opt-in here (the ONLY frontend-facing consumer) rather than inside
+// listSteamLibraryTargets() itself — a legacy steam://install (opt-in OFF)
+// ignores `path` entirely, so surfacing a picker in that case would be
+// misleading busywork; an empty array keeps the frontend's own gate simple
+// (>1 result -> show picker) with zero extra IPC round-trips.
+addHandler('listSteamLibraryTargets', async () =>
+  isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
 )
 addListener('logoutSteam', () => SteamUser.logout())
 

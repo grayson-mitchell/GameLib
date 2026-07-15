@@ -9,6 +9,10 @@ export const getSteamUserInfo = makeHandlerInvoker('getSteamUserInfo')
 export const checkSteamInstalled = makeHandlerInvoker('checkSteamInstalled')
 export const getSteamSyncedAt = makeHandlerInvoker('getSteamSyncedAt')
 export const getSteamInstallSize = makeHandlerInvoker('getSteamInstallSize')
+// Phase 21 (21-09), D-09: multi-library override picker data source.
+export const listSteamLibraryTargets = makeHandlerInvoker(
+  'listSteamLibraryTargets'
+)
 export const logoutSteam = makeListenerCaller('logoutSteam')
 
 // Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.

@@ -1,36 +1,196 @@
-// Phase 21 Plan 07 seam — Plan 09 owns the real implementation.
+// Phase 21 Plan 09 — real implementation of the resolveSteamInstallTarget /
+// listSteamLibraryTargets seam Plan 07 stubbed out.
 //
-// SteamGame.install()'s native (opt-in ON, non-bottle) branch calls
-// resolveSteamInstallTarget(appId, args) to get the { targetSteamappsDir,
-// installdir } pair downloadSteamDepots (depot.ts, Plan 04-06) needs, so a
-// future Plan 09 can implement the real Steam-library selection (multi-
-// library picker, free-space check, existing-library reuse) WITHOUT
-// re-touching games.ts — this file is the single seam Plan 07 wires against.
+// D-08: a native Steam install must land in an EXISTING Steam-registered
+// library folder's steamapps/ — Steam only "adopts" an .acf it discovers
+// inside a library it already knows about (libraryfolders.vdf). An override
+// path is honoured only when it resolves to exactly one of those registered
+// folders; anything else silently falls back to the primary library rather
+// than writing into an arbitrary/unregistered location (T-21-17). This module
+// never mutates libraryfolders.vdf — it only reads via getSteamLibraries().
 //
-// This stub is intentionally minimal: it resolves the FIRST Steam library
-// returned by getSteamLibraries() and uses the numeric appId as a
-// placeholder installdir, so Plan 07's own install()/stop() wiring can be
-// implemented and tested end-to-end now. Plan 09 replaces the body (not the
-// exported signature) with the real target-resolution flow.
+// D-09: single-library installs see zero friction (no override needed,
+// primary is picked automatically); multi-library installs get an override
+// picker (frontend, this plan's Task 2) populated from
+// listSteamLibraryTargets(), defaulting to the primary library.
 
-import { join } from 'path'
+import { join, resolve } from 'path'
 import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
+import { logWarning, LogPrefix } from 'backend/logger'
+import { SteamUser } from './user'
+
+/** Numeric-only guard for appId before any PICS lookup (T-21-05 — reused from
+ *  games.ts's buildSteamProtocolUrl / bottle.ts's dispatchToBottledSteam). */
+const NUMERIC_APP_ID = /^\d+$/
+
+/** Safe fallback installdir prefix used when PICS returns nothing usable, or
+ *  when it returns a hostile value (T-21-01). Never derived from unsanitized
+ *  input — appId itself is guarded by NUMERIC_APP_ID before it can reach here. */
+const FALLBACK_INSTALLDIR_PREFIX = 'app_'
 
 export interface SteamInstallTarget {
   targetSteamappsDir: string
   installdir: string
 }
 
+/** One registered Steam library, as surfaced to the frontend override picker
+ *  (D-09) and consumed internally by resolveSteamInstallTarget's override
+ *  matching. `path` is the library ROOT (getSteamLibraries()'s own return
+ *  shape), `steamappsDir` is the actual depot-download target directory. */
+export interface SteamLibraryTarget {
+  path: string
+  steamappsDir: string
+  isPrimary: boolean
+}
+
+/** Narrow, ADDITIONAL view of PICS appinfo's `config.installdir` field — not
+ *  part of depot/select.ts's own SteamAppInfo (which only needs
+ *  depots/extended). Widened locally here purely to read the installdir,
+ *  mirroring depot.ts's own AppCommonName pattern for `common.name`. */
+interface AppInstallDirInfo {
+  config?: { installdir?: string }
+}
+
+/**
+ * Every registered Steam library (getSteamLibraries() — read-side only,
+ * libraryfolders.vdf), primary first. Used both by resolveSteamInstallTarget's
+ * default/override logic and by the frontend override picker IPC handler.
+ */
+export async function listSteamLibraryTargets(): Promise<SteamLibraryTarget[]> {
+  const libraries = await getSteamLibraries()
+  return libraries.map((path, index) => ({
+    path,
+    steamappsDir: join(path, 'steamapps'),
+    isPrimary: index === 0
+  }))
+}
+
+/**
+ * Builds a safe fallback installdir from appId — used both when PICS returns
+ * nothing usable AND when appId itself is non-numeric/hostile (T-21-05), so
+ * the fallback itself is never a vector even though appId is untrusted input
+ * at this point. Strips everything except [a-zA-Z0-9_-] (no `.` survives
+ * either, so `..` traversal can never be reconstructed from the leftovers).
+ */
+function safeFallbackId(appId: string): string {
+  const sanitized = appId.replace(/[^a-zA-Z0-9_-]/g, '_')
+  return sanitized || 'unknown'
+}
+
+/**
+ * Sanitizes a PICS-sourced installdir so it is a single safe directory name
+ * (T-21-01) — rejects (not strips) any path separator or `..` traversal
+ * segment outright, since a partially-sanitized value is still an
+ * attacker-influenced string about to touch the filesystem. depot.ts's own
+ * per-file containment check (resolve+relative against
+ * steamapps/common/{installdir}) is the backstop; this is the first line of
+ * defense on the value that becomes that root segment.
+ */
+function sanitizeInstalldir(candidate: string | undefined, appId: string): string {
+  const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
+  if (!candidate || !candidate.trim()) {
+    return fallback
+  }
+  if (candidate.includes('/') || candidate.includes('\\') || candidate.includes('..')) {
+    logWarning(
+      `SteamGame: rejected hostile PICS installdir "${candidate}" for appId ${appId}, using fallback "${fallback}"`,
+      LogPrefix.Steam
+    )
+    return fallback
+  }
+  return candidate
+}
+
+/**
+ * Reads appinfo.config.installdir via PICS over the already-authenticated CM
+ * connection (never opens a second logon — T-21-11, same discipline as
+ * depot.ts's getDepotClient). Never throws: a missing client, non-numeric
+ * appId, or PICS failure all fall back to `undefined`, which
+ * sanitizeInstalldir turns into a safe appId-derived name — an install
+ * location lookup must not hard-fail the whole install over a cosmetic
+ * directory-name mismatch.
+ */
+async function fetchInstalldir(appId: string): Promise<string | undefined> {
+  if (!NUMERIC_APP_ID.test(appId)) {
+    logWarning(
+      `SteamGame: rejected non-numeric appId "${appId}" during install-location resolution`,
+      LogPrefix.Steam
+    )
+    return undefined
+  }
+
+  const client = SteamUser.getClient()
+  if (!client) {
+    return undefined
+  }
+
+  try {
+    const numericAppId = Number(appId)
+    const { apps } = await client.getProductInfo([numericAppId], [], true)
+    const entry = apps?.[numericAppId]
+    const appinfo = entry?.appinfo as unknown as AppInstallDirInfo | undefined
+    return appinfo?.config?.installdir
+  } catch (err) {
+    logWarning(
+      `SteamGame: failed to read PICS installdir for appId ${appId}: ${String(err)}`,
+      LogPrefix.Steam
+    )
+    return undefined
+  }
+}
+
+/**
+ * Resolves an override path (InstallArgs.path) against the registered
+ * libraries. D-08: an override is honoured ONLY when path.resolve()'d it
+ * matches exactly one registered library's own resolved path — comparison by
+ * resolve(), never join()/string-prefix, so a relative-segment trick can't
+ * smuggle a match (the Phase 18 "path.join is not containment" lesson applies
+ * identically here). An empty/blank override (the byte-for-byte default the
+ * legacy single-library call site still sends) or a non-matching override
+ * both fall back to the primary library — Steam install targets are NEVER an
+ * arbitrary unregistered path, silently or otherwise (T-21-17).
+ */
+function resolveOverride(
+  overridePath: string | undefined,
+  libraries: SteamLibraryTarget[]
+): SteamLibraryTarget {
+  const primary = libraries.find((lib) => lib.isPrimary) ?? libraries[0]
+  if (!overridePath || !overridePath.trim()) {
+    return primary
+  }
+  const resolvedOverride = resolve(overridePath)
+  const match = libraries.find((lib) => resolve(lib.path) === resolvedOverride)
+  if (!match) {
+    logWarning(
+      `SteamGame: rejected install-path override "${overridePath}" — not a registered Steam library, defaulting to primary library "${primary.path}"`,
+      LogPrefix.Steam
+    )
+    return primary
+  }
+  return match
+}
+
 /**
  * Resolves the steamapps dir + installdir a depot download should target.
- * Plan 07 stub: first Steam library's steamapps dir, appId as installdir.
+ * Replaces Plan 07's first-library stub: default is the primary registered
+ * library (D-09 zero-friction), an `args.path` override is honoured only
+ * when it matches a registered library (D-08), and installdir is derived
+ * from PICS `config.installdir`, sanitized against traversal (T-21-01).
  */
 export async function resolveSteamInstallTarget(
   appId: string,
-  _args: InstallArgs
+  args: InstallArgs
 ): Promise<SteamInstallTarget> {
-  const libraries = await getSteamLibraries()
-  const targetSteamappsDir = join(libraries[0] ?? '', 'steamapps')
-  return { targetSteamappsDir, installdir: appId }
+  const libraries = await listSteamLibraryTargets()
+  if (!libraries.length) {
+    throw new Error(
+      `resolveSteamInstallTarget: no registered Steam libraries found for appId ${appId}`
+    )
+  }
+
+  const target = resolveOverride(args?.path, libraries)
+  const installdir = sanitizeInstalldir(await fetchInstalldir(appId), appId)
+
+  return { targetSteamappsDir: target.steamappsDir, installdir }
 }
