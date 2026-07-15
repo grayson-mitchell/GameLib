@@ -20,11 +20,23 @@
  *    through the real AES/protobuf implementations (those are covered by
  *    depotPrimitives.test.ts already)
  */
+import { createHash } from 'node:crypto'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { logWarning } from 'backend/logger'
-import { downloadSteamDepots } from '../depot'
+import {
+  downloadSteamDepots,
+  downloadDepotFiles,
+  CHUNK_CONCURRENCY,
+  type DepotPlan,
+  type DepotPlanFile
+} from '../depot'
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
+import { fetchChunk } from '../depot/decompress'
+import { sendFrontendMessage } from '../../../ipc'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -54,6 +66,22 @@ jest.mock('../depot/crypto', () => ({
 // ── steam-user's undocumented raw-manifest parser (Pitfall 5) ────────────────
 jest.mock('steam-user/components/content_manifest.js', () => ({
   parse: jest.fn()
+}))
+
+// ── depot/decompress mock — fetchChunk is the only network-dependent piece of
+//    downloadDepotFiles; everything else (fs, crypto) runs for REAL against a
+//    tmpdir per manifest.test.ts's established precedent (node:fs/promises
+//    exports are non-configurable getters under this project's ts-jest/CJS
+//    interop — jest.mock/jest.spyOn cannot reliably intercept a specific fs
+//    call without breaking the underlying real I/O, so black-box real-fs
+//    assertions are used instead of mocking open/write/mkdir).
+jest.mock('../depot/decompress', () => ({
+  fetchChunk: jest.fn()
+}))
+
+// ── backend/ipc mock — captures progressUpdate emits for Task 2 assertions ───
+jest.mock('../../../ipc', () => ({
+  sendFrontendMessage: jest.fn()
 }))
 
 const APP_ID = '12345'
@@ -233,5 +261,258 @@ describe('downloadSteamDepots', () => {
       const real = jest.requireActual('steam-user/components/content_manifest.js')
       expect(typeof real.parse).toBe('function')
     })
+  })
+})
+
+/**
+ * Unit tests for downloadDepotFiles (Phase 21-05) — the streaming chunk-
+ * download loop. Runs against a REAL tmpdir (manifest.test.ts's established
+ * precedent: node:fs/promises exports are non-configurable getters under
+ * this project's ts-jest/CJS interop, so open/write/mkdir cannot be reliably
+ * mocked without breaking the underlying real I/O). Only the network-
+ * dependent fetchChunk and the frontend IPC emit are mocked.
+ */
+describe('downloadDepotFiles', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-depot-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  const HOSTS = ['cdn1.example.com']
+
+  function sha1Hex(buf: Buffer): string {
+    return createHash('sha1').update(buf).digest('hex')
+  }
+
+  function makePlan(depots: DepotPlan['depots'], totalBytes: number): DepotPlan {
+    return { appId: '12345', depots, totalBytes }
+  }
+
+  it('streams chunks to disk via positional writes at their exact offsets (no whole-file Buffer.alloc)', async () => {
+    const chunkA = Buffer.from('AAAA') // 4 bytes at offset 0
+    const chunkB = Buffer.from('BBBBBB') // 6 bytes at offset 4
+    const content = Buffer.concat([chunkA, chunkB])
+
+    const file: DepotPlanFile = {
+      filename: 'game.bin',
+      size: content.length,
+      sha_content: sha1Hex(content),
+      chunks: [
+        { sha: 'sha-a', cb_original: chunkA.length, offset: 0 },
+        { sha: 'sha-b', cb_original: chunkB.length, offset: chunkA.length }
+      ]
+    }
+
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) =>
+      chunk.sha === 'sha-a' ? chunkA : chunkB
+    )
+
+    const plan = makePlan(
+      [{ depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [file] }],
+      content.length
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.outcome).toBe('completed')
+    expect(result.failures).toEqual([])
+
+    const written = readFileSync(join(dir, 'common', 'SomeGame', 'game.bin'))
+    expect(written.equals(content)).toBe(true)
+    // Positional proof: byte 0 is chunkA's first byte, byte 4 (chunkA.length) is chunkB's first byte.
+    expect(written.subarray(0, 4).toString()).toBe('AAAA')
+    expect(written.subarray(4, 10).toString()).toBe('BBBBBB')
+  })
+
+  it('bounds chunk fetches within a single file to CHUNK_CONCURRENCY — never fires an unbounded Promise.all over all chunks', async () => {
+    const CHUNK_SIZE = 4
+    const CHUNK_COUNT = 50
+    const chunkBuf = Buffer.alloc(CHUNK_SIZE, 7)
+
+    let active = 0
+    let peak = 0
+    jest.mocked(fetchChunk).mockImplementation(async () => {
+      active++
+      peak = Math.max(peak, active)
+      await new Promise((r) => setTimeout(r, 5))
+      active--
+      return chunkBuf
+    })
+
+    const chunks = Array.from({ length: CHUNK_COUNT }, (_, i) => ({
+      sha: `sha-${i}`,
+      cb_original: CHUNK_SIZE,
+      offset: i * CHUNK_SIZE
+    }))
+
+    const file: DepotPlanFile = {
+      filename: 'many-chunks.bin',
+      size: CHUNK_SIZE * CHUNK_COUNT,
+      // Deliberately mismatched — this test only cares about bounded
+      // concurrency, not whole-file integrity (a real mismatch is simply
+      // recorded as a failure, which does not affect the assertions below).
+      sha_content: 'irrelevant-for-this-test',
+      chunks
+    }
+
+    const plan = makePlan(
+      [{ depotId: '222', gid: 'g2', key: Buffer.from('key'), files: [file] }],
+      CHUNK_SIZE * CHUNK_COUNT
+    )
+
+    await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(peak).toBeLessThanOrEqual(CHUNK_CONCURRENCY)
+    expect(peak).toBeGreaterThan(1) // proves real concurrency, not a serial loop
+    expect(jest.mocked(fetchChunk)).toHaveBeenCalledTimes(CHUNK_COUNT)
+  })
+
+  it('T-21-01: rejects a "../"-escaping filename before any write — no file is created outside common/{installdir}', async () => {
+    const file: DepotPlanFile = {
+      filename: '../../evil.txt',
+      size: 0,
+      sha_content: '',
+      chunks: []
+    }
+    const plan = makePlan([{ depotId: '333', gid: 'g3', key: Buffer.from('key'), files: [file] }], 0)
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].error).toMatch(/traversal/i)
+    expect(existsSync(join(dir, 'evil.txt'))).toBe(false)
+  })
+
+  it('surfaces a whole-file SHA1 mismatch as a failure, not a silently accepted download', async () => {
+    const content = Buffer.from('correct-content')
+    jest.mocked(fetchChunk).mockResolvedValue(content)
+
+    const file: DepotPlanFile = {
+      filename: 'bad-hash.bin',
+      size: content.length,
+      sha_content: sha1Hex(Buffer.from('DIFFERENT CONTENT')), // deliberately wrong
+      chunks: [{ sha: 'sha-x', cb_original: content.length, offset: 0 }]
+    }
+    const plan = makePlan([{ depotId: '444', gid: 'g4', key: Buffer.from('key'), files: [file] }], content.length)
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].file).toBe('bad-hash.bin')
+    expect(result.failures[0].error).toMatch(/sha1 mismatch/i)
+  })
+
+  it('never RAM-buffers a whole file (no Buffer.alloc(Number(file.size)) grep gate)', () => {
+    const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+    expect(source).not.toContain('Buffer.alloc(Number(file.size))')
+    expect(source).not.toContain('Buffer.alloc(Number(f.size))')
+    expect(source).toMatch(/truncate/)
+    expect(source).toMatch(/relative\(/)
+    // The chunk loop must NOT be an unbounded Promise.all over all chunks.
+    expect(source).not.toMatch(/Promise\.all\(\s*file\.chunks\.map/)
+  })
+
+  it('emits throttled progressUpdate into the DownloadManager queue; percent denominator is the multi-depot SUMMED total (D-01/D-03)', async () => {
+    const chunkBuf = Buffer.from('x')
+    jest.mocked(fetchChunk).mockResolvedValue(chunkBuf)
+
+    // Depot A's single file is 1 of 400 total bytes — proves the percent
+    // denominator is the SUM across both depots, not depot A's own total.
+    const fileA: DepotPlanFile = {
+      filename: 'a.bin',
+      size: 1,
+      sha_content: sha1Hex(chunkBuf),
+      chunks: [{ sha: 's-a', cb_original: 1, offset: 0 }]
+    }
+    const fileB: DepotPlanFile = {
+      filename: 'b.bin',
+      size: 1,
+      sha_content: sha1Hex(chunkBuf),
+      chunks: [{ sha: 's-b', cb_original: 1, offset: 0 }]
+    }
+
+    const plan: DepotPlan = {
+      appId: '12345',
+      depots: [
+        { depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [fileA] },
+        { depotId: '222', gid: 'g2', key: Buffer.from('key'), files: [fileB] }
+      ],
+      // Artificially large vs. the 2-byte real payload — forces the throttle
+      // to hold every emit but the final forced one, proving emits are
+      // throttled rather than fired per-chunk.
+      totalBytes: 400
+    }
+
+    await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    const mockedSend = sendFrontendMessage as jest.Mock
+    const calls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+    // Fewer emits than chunks (2 chunks total, forced-final emit still fires).
+    expect(calls.length).toBeGreaterThan(0)
+    expect(calls.length).toBeLessThan(2)
+
+    const [, payload] = calls[calls.length - 1] as [string, Record<string, unknown>]
+    expect(payload).toMatchObject({ appName: '12345', runner: 'steam', status: 'installing' })
+    const progress = payload.progress as Record<string, unknown>
+    // Both files done -> 2/400 rounds to 1%, denominator is the SUMMED total.
+    expect(progress.percent).toBe(1)
+  })
+
+  it('D-02: halts new chunk fetches once AbortSignal fires and returns a cancelled outcome promptly', async () => {
+    const controller = new AbortController()
+    jest.mocked(fetchChunk).mockImplementation(async () => {
+      controller.abort()
+      return Buffer.from('x')
+    })
+
+    const chunks = Array.from({ length: 5 }, (_, i) => ({
+      sha: `sha-${i}`,
+      cb_original: 1,
+      offset: i
+    }))
+    const file: DepotPlanFile = {
+      filename: 'abort-me.bin',
+      size: 5,
+      sha_content: 'irrelevant',
+      chunks
+    }
+    const plan = makePlan([{ depotId: '555', gid: 'g5', key: Buffer.from('key'), files: [file] }], 5)
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS,
+      signal: controller.signal
+    })
+
+    expect(result.outcome).toBe('cancelled')
+    // The abort fires inside the very first fetchChunk call; every other
+    // worker must observe signal.aborted before issuing its own fetch.
+    expect(jest.mocked(fetchChunk).mock.calls.length).toBeLessThan(chunks.length)
   })
 })
