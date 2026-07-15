@@ -8,6 +8,7 @@ import * as lzma from 'lzma'
 
 import { steamDecrypt, decryptFilename } from '../depot/crypto'
 import { decompressChunk, sha1, fetchChunk } from '../depot/decompress'
+import { selectAllDepots, selectDepots, type OwnedSets } from '../depot/select'
 
 // ── Test helpers ─────────────────────────────────────────────────────────
 
@@ -185,5 +186,114 @@ describe('decompress', () => {
       const out = await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
       expect(out.equals(data)).toBe(true)
     })
+  })
+})
+
+// ── select ───────────────────────────────────────────────────────────────
+
+describe('select', () => {
+  function makeOwned(apps: number[], depots: number[]): OwnedSets {
+    return { apps: new Set(apps), depots: new Set(depots) }
+  }
+
+  it('a depot appearing only in an owned package depotids is selected', () => {
+    const appinfo = {
+      depots: {
+        '100': {
+          manifests: { public: { gid: '111111111111111111', size: 1000 } },
+          config: {}
+        }
+      }
+    }
+    const owned = makeOwned([], [100])
+    const result = selectDepots(appinfo, owned, { os: 'windows' })
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('100')
+  })
+
+  it('a depot carrying an owned dlcappid is selected; an unowned dlcappid excludes it (two channels, neither alone sufficient)', () => {
+    const appinfoOwnedDlc = {
+      depots: {
+        '200': {
+          manifests: { public: { gid: '222222222222222222', size: 500 } },
+          config: {},
+          dlcappid: 999
+        }
+      }
+    }
+    const ownedApp999 = makeOwned([999], [])
+    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' })
+    expect(selected).toHaveLength(1)
+    expect(selected[0].id).toBe('200')
+
+    const appinfoUnownedDlc = {
+      depots: {
+        '201': {
+          manifests: { public: { gid: '333333333333333333', size: 500 } },
+          config: {},
+          dlcappid: 555 // not owned, and depot not directly owned either
+        }
+      }
+    }
+    const ownedNothing = makeOwned([], [])
+    const excluded = selectDepots(appinfoUnownedDlc, ownedNothing, { os: 'windows' })
+    expect(excluded).toHaveLength(0)
+  })
+
+  it('every returned depot manifest field is a string; a 19-digit GID survives with exact digits (never rounded)', () => {
+    const nineteenDigitGid = '1234567890123456789' // > Number.MAX_SAFE_INTEGER
+    const appinfo = {
+      depots: {
+        '300': {
+          manifests: { public: { gid: nineteenDigitGid, size: 42 } },
+          config: {}
+        }
+      }
+    }
+    const owned = makeOwned([], [300])
+    const result = selectDepots(appinfo, owned, { os: 'windows' })
+    expect(result).toHaveLength(1)
+    expect(typeof result[0].manifest).toBe('string')
+    expect(result[0].manifest).toBe(nineteenDigitGid)
+  })
+
+  it('os is honoured as a parameter — { os: "windows" } vs { os: "linux" } filter os-specific depots accordingly', () => {
+    const appinfo = {
+      depots: {
+        '400': {
+          manifests: { public: { gid: '444444444444444444', size: 10 } },
+          config: { oslist: 'windows' }
+        }
+      }
+    }
+    const owned = makeOwned([], [400])
+    expect(selectDepots(appinfo, owned, { os: 'windows' })).toHaveLength(1)
+    expect(selectDepots(appinfo, owned, { os: 'linux' })).toHaveLength(0)
+  })
+
+  it('selectAllDepots merges depots declared inside DLC app entries not present on the base app', () => {
+    const baseAppinfo = {
+      depots: {
+        '500': {
+          manifests: { public: { gid: '555555555555555555', size: 10 } },
+          config: {}
+        }
+      },
+      extended: { listofdlc: '600' }
+    }
+    const dlcInfos = {
+      '600': {
+        depots: {
+          '601': {
+            manifests: { public: { gid: '666666666666666666', size: 20 } },
+            config: {}
+          }
+        }
+      }
+    }
+    const owned = makeOwned([600], [500, 601])
+    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' })
+    const ids = result.map((d) => d.id).sort()
+    expect(ids).toEqual(['500', '601'])
   })
 })
