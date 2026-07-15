@@ -157,7 +157,7 @@ Requirements for the v1.6 milestone — **Steam Native Install**. Replace the op
 - [x] **SNI-05** (D-08/D-09): Downloads target an **existing Steam-registered** library folder's `steamapps/` (never an arbitrary/unregistered path; no `libraryfolders.vdf` mutation), defaulting to Steam's primary library with an **override picker** only when multiple registered libraries exist.
 - [ ] **SNI-06** (D-10/D-11): When the Steam client is **absent**, a consent-gated **guided install** of the official Steam client runs (download+run non-silently on Win/macOS, link-out on Linux) before proceeding; when Steam is installed but never launched (no `libraryfolders.vdf`), the user is **prompted to launch Steam once** rather than GameLib authoring Steam config.
 - [x] **SNI-07** (D-12/D-13/D-14): The feature ships behind a **user opt-in setting** (default OFF) on **all three desktop OSes**; OFF preserves today's `steam://install` handoff byte-for-byte; ON routes every Steam install through the depot engine with no per-case fallback.
-- [ ] **SNI-08** (D-15): On macOS, a bottle-eligible install **depot-downloads the Windows depot into the CrossOver bottle's `steamapps/`** (`os: 'windows'`, `getBottleSteamappsDir()` target, `isBottleReady()` gate) and the **bottled** Windows Steam adopts the `1026` manifest — unifying the install mechanism across native and bottle, with **no** Wine dispatch for the download itself.
+- [x] **SNI-08** (D-15): On macOS, a bottle-eligible install **depot-downloads the Windows depot into the CrossOver bottle's `steamapps/`** (`os: 'windows'`, `getBottleSteamappsDir()` target, `isBottleReady()` gate) and the **bottled** Windows Steam adopts the `1026` manifest — unifying the install mechanism across native and bottle, with **no** Wine dispatch for the download itself.
 
 ## Future Requirements
 
@@ -266,7 +266,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SNI-05 | Phase 21 | Complete |
 | SNI-06 | Phase 21 | Pending |
 | SNI-07 | Phase 21 | Complete |
-| SNI-08 | Phase 21 | Pending |
+| SNI-08 | Phase 21 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 15 total
