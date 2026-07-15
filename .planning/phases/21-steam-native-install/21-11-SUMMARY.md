@@ -211,3 +211,12 @@ No new network endpoints, auth paths, or schema changes beyond what the threat m
 ---
 *Phase: 21-steam-native-install*
 *Completed: 2026-07-15*
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/storeManagers/steam/games.ts`
+- FOUND: `src/backend/storeManagers/steam/__tests__/games.test.ts`
+- FOUND: `.planning/phases/21-steam-native-install/21-11-SUMMARY.md`
+- FOUND commit `0cb0a444` (test: RED)
+- FOUND commit `9de75742` (feat: GREEN)
+- FOUND commit `c9add5a9` (docs: plan metadata)
