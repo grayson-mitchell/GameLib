@@ -274,6 +274,24 @@ interface AsyncIPCFunctions {
   steamBottleStatus: () => Promise<
     Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>
   >
+  // Phase 21 (21-10), D-10: on user consent, downloads + non-silently runs
+  // (Win/macOS) or link-opens (Linux) the official native Steam client
+  // installer. See clientSetup.ts's startGuidedClientInstall.
+  steamClientSetupStart: () => Promise<{
+    status: 'started' | 'link-opened' | 'error'
+    error?: string
+  }>
+  // Phase 21 (21-10), D-10/D-11: re-checks ensureSteamClientReady(appId)
+  // after the user has acted (finished the guided install, or launched
+  // Steam once) — the frontend polls/re-checks this to know when to retry
+  // the install. appId is guarded server-side (T-21-05) inside
+  // ensureSteamClientReady itself, the single seam both this handler and
+  // SteamGame.install() go through.
+  steamClientSetupRecheck: (appId: string) => Promise<{
+    status: 'ready' | 'needs-install' | 'needs-launch'
+    ready: boolean
+    error?: string
+  }>
   humbleStartLogin: () => Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
@@ -550,6 +568,16 @@ interface FrontendMessages {
   // bottle-eligible game is un-provisioned; the global listener (17-06)
   // subscribes to this to drive the guided-setup flow.
   steamBottleSetupRequired: (payload: { appName: string }) => void
+  // Phase 21 (21-10), D-10/D-11: pushed by clientSetup.ts's
+  // ensureSteamClientReady() (native depot-download opt-in ON, non-bottle
+  // path) when the Steam CLIENT itself is either absent ('install') or
+  // installed-but-never-launched ('launch-once'). Distinct from
+  // steamBottleSetupRequired above — that event is the macOS CrossOver
+  // BOTTLE flow; this one is the native/host Steam client itself.
+  steamClientSetupRequired: (payload: {
+    appName: string
+    reason: 'install' | 'launch-once'
+  }) => void
   // Emitted while Steam per-game metadata/art is being fetched in the
   // background (throttled). `syncing: true` when the first fetch starts,
   // `false` once the last one finishes — drives the library sync indicator.

@@ -25,6 +25,16 @@ export const steamBottleStatus = makeHandlerInvoker('steamBottleStatus')
 export const handleSteamBottleSetupRequired = frontendListenerSlot(
   'steamBottleSetupRequired'
 )
+
+// Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided install +
+// prompt-to-launch — distinct from the bottle-provisioning trio above.
+export const steamClientSetupStart = makeHandlerInvoker('steamClientSetupStart')
+export const steamClientSetupRecheck = makeHandlerInvoker(
+  'steamClientSetupRecheck'
+)
+export const handleSteamClientSetupRequired = frontendListenerSlot(
+  'steamClientSetupRequired'
+)
 // One-way push — backend emits while background metadata/art fetch is running.
 export const handleSteamMetadataSyncing = frontendListenerSlot(
   'steamMetadataSyncing'

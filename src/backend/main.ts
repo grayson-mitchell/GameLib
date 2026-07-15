@@ -48,6 +48,10 @@ import { getSteamInstallSize } from './storeManagers/steam/games'
 import { listSteamLibraryTargets } from './storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from './storeManagers/steam/nativeInstallSetting'
 import {
+  ensureSteamClientReady,
+  startGuidedClientInstall
+} from './storeManagers/steam/clientSetup'
+import {
   isBottleProvisioned,
   provisionBottle
 } from './storeManagers/steam/bottle'
@@ -948,6 +952,14 @@ addHandler('steamBottleStatus', async () => ({
     steamBottleConfigStore.get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
 }))
+
+// Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided install +
+// prompt-to-launch recheck — distinct from the bottle trio above (that is
+// the macOS CrossOver bottle's own Windows Steam client).
+addHandler('steamClientSetupStart', async () => startGuidedClientInstall())
+addHandler('steamClientSetupRecheck', async (event, appId) =>
+  ensureSteamClientReady(appId)
+)
 
 registerHumbleIpcHandlers()
 
