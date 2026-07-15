@@ -39,6 +39,7 @@ import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
 import { sendFrontendMessage } from '../../../ipc'
+import { classifyDepotError } from '../depotErrors'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -538,6 +539,110 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
       .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
       .join('\n')
     expect(uncommented).not.toMatch(/"StateFlags"[^\n]*"4"/)
+  })
+
+  it('D-07: Retry (re-invoking downloadSteamDepots after a prior partial+1026) overwrites on-disk files without throwing and re-finalizes — no race with the already-written 1026 manifest', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+
+    // ── First attempt: SHA1 mismatch -> writes an honest 1026 over whatever landed.
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: '5',
+          sha_content: 'sha-that-will-never-match',
+          chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(Buffer.from('wrong'))
+
+    const first = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+    expect(first.status).toBe('error')
+    const acfBefore = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfBefore).toMatch(/"StateFlags"\s+"1026"/)
+
+    // ── Retry: re-invoke from scratch against the SAME directory, now with
+    // content that verifies correctly. Steam has not run its own repair pass
+    // yet (that only happens when the Steam client itself launches/focuses),
+    // so overwriting files + re-finalizing must not throw or race the
+    // already-written 1026 manifest.
+    const goodContent = Buffer.from('right')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: String(goodContent.length),
+          sha_content: sha1Hex(goodContent),
+          chunks: [{ sha: 'chunk-sha', cb_original: goodContent.length, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(goodContent)
+
+    const second = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+    expect(second.status).toBe('done')
+
+    const written = readFileSync(join(dir, 'common', 'SomeGame', 'game.bin'))
+    expect(written.equals(goodContent)).toBe(true)
+    const acfAfter = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfAfter).toMatch(/"StateFlags"\s+"1026"/)
+  })
+})
+
+/**
+ * Unit tests for classifyDepotError (Phase 21-06, D-06) — maps the
+ * downloader's failure modes to plain-language, actionable copy. Accepts
+ * either a real Error (thrown plan-orchestration failures) or a plain string
+ * (downloadDepotFiles's DepotDownloadFailure.error is already a string by
+ * the time it reaches the caller).
+ */
+describe('classifyDepotError', () => {
+  it('maps an ENOSPC error to a disk-full message', () => {
+    const result = classifyDepotError(new Error('ENOSPC: no space left on device, write'))
+    expect(result.message).toMatch(/disk space/i)
+  })
+
+  it('maps a CDN/connection-exhausted error to a "Steam servers dropped the connection" message', () => {
+    const result = classifyDepotError(
+      new Error('chunk abc123 failed after 4 attempts: CDN 503')
+    )
+    expect(result.message).toMatch(/steam servers dropped the connection/i)
+  })
+
+  it('maps a path-traversal rejection to its own message', () => {
+    const result = classifyDepotError(
+      'downloadDepotFiles: rejected path-traversal filename "../../evil.txt" (escapes /tmp/x)'
+    )
+    expect(result.message).toMatch(/unsafe file path/i)
+  })
+
+  it('maps a whole-file SHA1 mismatch to a verify message', () => {
+    const result = classifyDepotError(
+      'downloadDepotFiles: whole-file SHA1 mismatch for game.bin: abc123 != def456'
+    )
+    expect(result.message).toMatch(/failed verification/i)
+  })
+
+  it('falls back to a generic message for an unrecognized error', () => {
+    const result = classifyDepotError(new Error('something totally unexpected happened'))
+    expect(result.message).toMatch(/steam download failed/i)
+  })
+
+  it('accepts a plain string (DepotDownloadFailure.error shape), not only Error instances', () => {
+    const result = classifyDepotError('ENOSPC: no space left on device')
+    expect(result.message).toMatch(/disk space/i)
   })
 })
 
