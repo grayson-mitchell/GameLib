@@ -25,7 +25,8 @@ import {
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
-  getSteamBottleSettings
+  getSteamBottleSettings,
+  getBottleSteamappsDir
 } from '../bottle'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
@@ -170,7 +171,9 @@ jest.mock('../bottle', () => ({
   tellBottledSteamToInstall: jest.fn(),
   tellBottledSteamToLaunch: jest.fn(),
   tellBottledSteamToUninstall: jest.fn(),
-  getSteamBottleSettings: jest.fn()
+  getSteamBottleSettings: jest.fn(),
+  // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
+  getBottleSteamappsDir: jest.fn()
 }))
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
@@ -1458,6 +1461,137 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+})
+
+// ── Phase 21 Plan 11 (D-15/SNI-08): SteamGame.install() bottle depot-download
+// opt-in. Unifies the install mechanism across native and bottle: when the
+// opt-in is ON and a game is bottle-eligible + the bottle is ready, install()
+// depot-downloads the WINDOWS depot (bottled Steam is a Windows Steam client)
+// directly into the bottle's OWN steamapps/ via depot.ts's downloadSteamDepots
+// — the SAME mechanism SNI-07's native branch uses, just with the write
+// target swapped to getBottleSteamappsDir() and os hard-coded 'windows'. Never
+// dispatches to the bottled Steam client for the download itself
+// (tellBottledSteamToInstall/dispatchToBottledSteam untouched — that Wine-
+// dispatch mechanism stays reserved for guided setup/launch/uninstall). OFF
+// preserves the existing tellBottledSteamToInstall bottle path unchanged
+// (D-13 safety valve); not-ready still requests guided setup with zero depot
+// download attempted.
+
+describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  const BOTTLE_STEAMAPPS_DIR = '/mock/bottle/steamapps'
+  // resolveSteamInstallTarget's OWN targetSteamappsDir must be discarded on
+  // the bottle path (it resolves a NATIVE macOS Steam library, irrelevant to
+  // a bottle write target) — only its PICS-derived installdir is reused.
+  const RESOLVED_TARGET = {
+    targetSteamappsDir: '/mock/native/steamapps',
+    installdir: 'Dota 2'
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleReady as jest.Mock).mockReset()
+    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(BOTTLE_STEAMAPPS_DIR)
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLib'
+    })
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(RESOLVED_TARGET)
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: 'mock-signal'
+    })
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+  })
+
+  it('opt-in ON + bottle-eligible + ready: install() depot-downloads into the bottle steamapps dir with os:"windows", then starts the bottle-scoped poller', async () => {
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
+    expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      targetSteamappsDir: BOTTLE_STEAMAPPS_DIR,
+      installdir: RESOLVED_TARGET.installdir,
+      os: 'windows',
+      signal: 'mock-signal'
+    })
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('opt-in ON + bottle-eligible + ready: install() does NOT dispatch to the bottled Steam client (no Wine dispatch for the download itself)', async () => {
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+  })
+
+  it('opt-in OFF + bottle-eligible + ready: install() takes the legacy tellBottledSteamToInstall path unchanged (D-13 safety valve)', async () => {
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bottle'
+    })
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('opt-in ON + bottle-eligible but NOT ready: install() requests guided setup and never attempts a depot download', async () => {
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBottleSetupRequired', {
+      appName: APP_ID
+    })
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 })
 
