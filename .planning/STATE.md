@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-05-PLAN.md
-last_updated: "2026-07-15T10:51:35.011Z"
+stopped_at: Completed 21-06-PLAN.md
+last_updated: "2026-07-15T11:12:01.192Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 21 (steam-native-install) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
 Last activity: 2026-07-15
 
@@ -130,6 +130,7 @@ Last activity: 2026-07-15
 | Phase 21 P03 | 20min | 2 tasks | 8 files |
 | Phase 21 P04 | 20min | 2 tasks | 3 files |
 | Phase 21 P05 | ~30min | 2 tasks | 2 files |
+| Phase 21 P06 | 45min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 21-04]: loadContentManifestParser + fetchDepotPlanEntry are only invoked when selectAllDepots returns at least one descriptor -- zero owned depots returns { depots: [], totalBytes: 0 } without dynamically importing steam-user's undocumented internal parser
 - [Phase ?]: [Phase 21-05]: downloadDepotFiles is a SEPARATE exported function from downloadSteamDepots (operates on an already-built DepotPlan, no SteamUser client dependency) rather than folding the streaming loop into downloadSteamDepots itself
 - [Phase ?]: [Phase 21-05]: Real-tmpdir black-box fs testing (manifest.test.ts precedent) used for the streaming download loop -- node:fs/promises exports are non-configurable getters, unmockable in this project's ts-jest/CJS interop; only fetchChunk and sendFrontendMessage are mocked
+- [Phase 21-06]: downloadSteamDepots's public contract changed from returning DepotPlan to a never-throwing { status, error? } outcome -- required by Plan 07's already-written SteamGame.install() call site; original plan-building logic preserved verbatim as buildDepotPlan
+- [Phase 21-06]: finalizeToSteam reads LastOwner internally via SteamUser.getClient().steamID.getSteamID64() rather than a caller parameter, keeping it self-contained and reusable by Plan 08's startup-resume path (D-05)
+- [Phase 21-06]: classifyDepotError classifies by regex over error text (not instanceof) since downloadDepotFiles's own failures are already reduced to plain strings by the time they reach the orchestrator
 
 ### Pending Todos
 
@@ -263,8 +267,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T10:51:35.005Z
-Stopped at: Completed 21-05-PLAN.md
+Last session: 2026-07-15T11:12:01.187Z
+Stopped at: Completed 21-06-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

@@ -153,7 +153,7 @@ Requirements for the v1.6 milestone — **Steam Native Install**. Replace the op
 - [x] **SNI-01** (D-14): GameLib's in-process depot engine downloads **every** Steam install — single- and multi-depot, small and 50GB+ — via `steam-user`'s CM connection, reimplementing the two broken `steam-user` helpers (`getRawManifest` + hand decrypt/decompress, cross-content-server chunk retry), selecting depots by the verified two-channel package-level ownership rule, and **streaming chunks to disk** (positional `fs.write`, no whole-file RAM buffering) so large titles never OOM. No `steam://install` fallback when the opt-in is ON.
 - [x] **SNI-02** (D-04 write mechanism): GameLib writes a hand-templated `appmanifest_{appId}.acf` with `StateFlags = 1026` (never `4`), keeping every 64-bit GID/SteamID64 a **string** end-to-end (no `@node-steam/vdf.stringify()`), written **atomically** (temp + rename) so a crash never orphans a half-written manifest.
 - [x] **SNI-03** (D-01/D-02/D-03): Steam installs enqueue into the **existing DownloadManager** queue with real percent/speed/ETA driven by the **real total bytes** summed across all depots (replacing the `pc_requirements` estimate); the queue's **cancel** aborts the in-flight chunk loop.
-- [ ] **SNI-04** (D-04/D-05/D-06/D-07): Failure, user-cancel, and startup-with-a-partial all converge on **one** finalize function that writes the honest `1026` manifest and hands off to Steam's verify-repair pass; a failed download shows a **plain-language error + Retry**; startup **never silently auto-drives** Steam/Steam-in-CrossOver (resolves the Phase 18 folded todo).
+- [x] **SNI-04** (D-04/D-05/D-06/D-07): Failure, user-cancel, and startup-with-a-partial all converge on **one** finalize function that writes the honest `1026` manifest and hands off to Steam's verify-repair pass; a failed download shows a **plain-language error + Retry**; startup **never silently auto-drives** Steam/Steam-in-CrossOver (resolves the Phase 18 folded todo).
 - [ ] **SNI-05** (D-08/D-09): Downloads target an **existing Steam-registered** library folder's `steamapps/` (never an arbitrary/unregistered path; no `libraryfolders.vdf` mutation), defaulting to Steam's primary library with an **override picker** only when multiple registered libraries exist.
 - [ ] **SNI-06** (D-10/D-11): When the Steam client is **absent**, a consent-gated **guided install** of the official Steam client runs (download+run non-silently on Win/macOS, link-out on Linux) before proceeding; when Steam is installed but never launched (no `libraryfolders.vdf`), the user is **prompted to launch Steam once** rather than GameLib authoring Steam config.
 - [x] **SNI-07** (D-12/D-13/D-14): The feature ships behind a **user opt-in setting** (default OFF) on **all three desktop OSes**; OFF preserves today's `steam://install` handoff byte-for-byte; ON routes every Steam install through the depot engine with no per-case fallback.
@@ -262,7 +262,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SNI-01 | Phase 21 | Complete |
 | SNI-02 | Phase 21 | Complete |
 | SNI-03 | Phase 21 | Complete |
-| SNI-04 | Phase 21 | Pending |
+| SNI-04 | Phase 21 | Complete |
 | SNI-05 | Phase 21 | Pending |
 | SNI-06 | Phase 21 | Pending |
 | SNI-07 | Phase 21 | Complete |
