@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: verifying
-stopped_at: Completed 21-10-PLAN.md (Task 3 human-verify deferred to 21-12 UAT)
-last_updated: "2026-07-16T00:00:00.000Z"
+stopped_at: Completed 21-12-PLAN.md (UAT persisted status:partial — 11 hardware items deferred to /gsd:verify-work 21)
+last_updated: "2026-07-16T12:00:00.000Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 5
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — EXECUTING
-Plan: 12 of 12
-Status: All code plans complete (21-10 executed 2026-07-16); 21-12 is the manual real-machine UAT. Plan 21-10 Task 3 (guided-install / prompt-to-launch / continue-to-download) human-verify is DEFERRED into 21-12's UAT — code complete, hardware validation outstanding.
+Phase: 21 (steam-native-install) — CODE COMPLETE, UAT OUTSTANDING
+Plan: 12 of 12 (all executed)
+Status: Phase 21 CODE is complete — all 11 code plans (21-01..21-11) executed with automated suites green; 21-12 executed as UAT prep. The 11 real-machine UAT items (5 MUST-VALIDATE + 21-10's 3 deferred D-10/D-11/continue-to-download flows) are persisted in 21-UAT.md (status: partial, all PENDING) and will be run via /gsd:verify-work 21. No UAT result fabricated — hardware validation NOT performed. SNI-01/04/06/08 remain requirements-partial until the UAT passes.
 Last activity: 2026-07-16
 
 ## v1.4 Phase Map
@@ -136,6 +136,7 @@ Last activity: 2026-07-16
 | Phase 21 P09 | ~50min | 2 tasks | 9 files |
 | Phase 21 P11 | 25min | 1 tasks | 2 files |
 | Phase 21 P10 | 55min | 2 tasks | 12 files |
+| Phase 21 P12 | ~15min | 1 task (UAT prep; 3 human-verify deferred) | 1 file |
 
 ## Accumulated Context
 

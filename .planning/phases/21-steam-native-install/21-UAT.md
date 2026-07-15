@@ -1,3 +1,17 @@
+---
+phase: 21-steam-native-install
+plan: 12
+artifact: uat
+status: partial
+total_items: 11
+pending_items: 11
+passed_items: 0
+failed_items: 0
+requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
+run_via: "/gsd:verify-work 21"
+last_updated: 2026-07-16
+---
+
 # Phase 21 — Steam Native Install: Real-Machine UAT
 
 **Plan:** 21-12 (Wave 8, final plan of Phase 21 — steam-native-install)
