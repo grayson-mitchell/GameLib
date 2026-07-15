@@ -49,7 +49,8 @@ export default function SidebarLinks() {
   } = useContext(ContextProvider)
 
   const inWebviewScreen =
-    location.pathname.includes('store') ||
+    location.pathname.includes('/store/') ||
+    location.pathname.includes('store-page') ||
     location.pathname.includes('last-url')
   const isSettings = location.pathname.includes('settings')
   const isWin = platform === 'win32'
@@ -150,7 +151,7 @@ export default function SidebarLinks() {
 
       <div className="SidebarItemWithSubmenu">
         <SidebarItem
-          isActiveFallback={location.pathname.includes('store')}
+          isActiveFallback={location.pathname.includes('/store/')}
           url={`/store/${defaultStore}`}
           icon={faStore}
           label={t('stores', 'Stores')}
