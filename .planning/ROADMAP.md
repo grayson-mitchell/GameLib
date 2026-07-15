@@ -665,4 +665,4 @@ v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 | 17. Steam on macOS via CrossOver/Wine | 17/17 | Complete    | 2026-07-13 |
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete    | 2026-07-14 |
-| 20. Aggregated Store Search (CheapShark) | 7/7 | Complete   | 2026-07-15 |
+| 20. Aggregated Store Search (CheapShark) | 7/7 | Complete    | 2026-07-15 |
