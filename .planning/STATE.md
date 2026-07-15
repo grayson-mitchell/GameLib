@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-07-15T10:11:38.408Z"
+stopped_at: Completed 21-03-PLAN.md
+last_updated: "2026-07-15T10:19:15.687Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 21 (steam-native-install) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-07-15
 
@@ -127,6 +127,7 @@ Last activity: 2026-07-15
 | Phase 20 P07 | 20min | 2 tasks | 4 files |
 | Phase 21 P01 | 35min | 3 tasks | 5 files |
 | Phase 21 P02 | 40min | 1 tasks | 2 files |
+| Phase 21 P03 | 20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -196,6 +197,7 @@ Recent decisions affecting current work:
 - [Phase 21-01]: crypto.ts uses namespaced node:crypto import (nodeCrypto.createDecipheriv) rather than named import so the acceptance-criteria grep for createDecipheriv counts exactly the 2 call sites (ECB+CBC), not the import line
 - [Phase 21-02]: manifest.ts avoids the literal string '@node-steam/vdf' even in explanatory prose comments (acceptance-criteria grep requires zero occurrences file-wide, not just in imports)
 - [Phase 21-02]: Atomic-write test proves temp+rename via black-box stale-content replacement + structural source grep, not jest.spyOn/jest.mock -- node:fs/promises exports are non-configurable getters under this project's ts-jest/CJS interop, silently no-oping mocked I/O with no thrown error
+- [Phase 21-03]: enableSteamNativeInstall opt-in toggle registered in GeneralSettings (not WineManagerSettingsModal where DownloadProtonToSteam renders); isSteamNativeInstallEnabled() is the single backend read seam, default OFF at three layers (frontend useSetting default, GlobalConfigV0 factory default, accessor ?? false fallback)
 
 ### Pending Todos
 
@@ -255,8 +257,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T10:11:38.399Z
-Stopped at: Completed 21-02-PLAN.md
+Last session: 2026-07-15T10:19:15.682Z
+Stopped at: Completed 21-03-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
