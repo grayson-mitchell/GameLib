@@ -391,6 +391,20 @@ export async function buildDepotPlan(
 export const CHUNK_CONCURRENCY = 4
 /** Bounded file-level concurrency across ALL depots' files (spike-proven queue pattern). */
 export const FILE_CONCURRENCY = 8
+
+/** Bytes per MiB — the DownloadManager UI renders `downSpeed` with a "MB/s" label
+ *  and the gog/legendary runners emit MiB/s, so the native path must too (was
+ *  raw bytes/sec, ~1e6× too large — UAT D-UAT-02). */
+const BYTES_PER_MIB = 1024 * 1024
+
+/** Formats an ETA in seconds as `HH:MM:SS` for the DownloadManager ETA field —
+ *  matches the gog/legendary runners' formatted-string convention. Emitting raw
+ *  `${sec}s` produced unreadable values like "1247s" (UAT D-UAT-02). */
+export function formatEta(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds))
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
+}
 const PROGRESS_THROTTLE_MS = 500
 const PROGRESS_THROTTLE_PERCENT = 1
 
@@ -621,9 +635,9 @@ export async function downloadDepotFiles(
     lastEmitTime = Date.now()
 
     const elapsedSec = (Date.now() - tStart) / 1000
-    const downSpeed = elapsedSec > 0 ? doneBytes / elapsedSec : 0
+    const bytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
     const remaining = Math.max(totalBytes - doneBytes, 0)
-    const etaSec = downSpeed > 0 ? remaining / downSpeed : 0
+    const etaSec = bytesPerSec > 0 ? remaining / bytesPerSec : 0
 
     // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
     // the DownloadManager needs zero changes for the native depot-download path.
@@ -638,8 +652,11 @@ export async function downloadDepotFiles(
         // library.ts pollInstallOnce's own Math.min(100, ...) clamp).
         percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0,
         bytes: getFileSize(doneBytes),
-        downSpeed,
-        eta: Number.isFinite(etaSec) ? `${Math.round(etaSec)}s` : ''
+        // MiB/s (not raw bytes/sec) to match the UI's "MB/s" label + the
+        // gog/legendary unit convention (UAT D-UAT-02).
+        downSpeed: bytesPerSec / BYTES_PER_MIB,
+        // HH:MM:SS, not raw "1247s" (UAT D-UAT-02).
+        eta: Number.isFinite(etaSec) && etaSec > 0 ? formatEta(etaSec) : ''
       }
     })
   }

@@ -39,6 +39,7 @@ import {
   downloadSteamDepots,
   downloadDepotFiles,
   finalizeToSteam,
+  formatEta,
   CHUNK_CONCURRENCY,
   type DepotPlan,
   type DepotPlanFile
@@ -628,6 +629,20 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
  * (downloadDepotFiles's DepotDownloadFailure.error is already a string by
  * the time it reaches the caller).
  */
+describe('formatEta (D-UAT-02)', () => {
+  it('formats seconds as zero-padded HH:MM:SS', () => {
+    expect(formatEta(0)).toBe('00:00:00')
+    expect(formatEta(47)).toBe('00:00:47')
+    expect(formatEta(1247)).toBe('00:20:47') // was the unreadable "1247s"
+    expect(formatEta(3723)).toBe('01:02:03')
+    expect(formatEta(90061)).toBe('25:01:01')
+  })
+
+  it('never emits negative time (clamps to 0)', () => {
+    expect(formatEta(-5)).toBe('00:00:00')
+  })
+})
+
 describe('classifyDepotError', () => {
   it('maps an ENOSPC error to a disk-full message', () => {
     const result = classifyDepotError(new Error('ENOSPC: no space left on device, write'))
@@ -884,6 +899,12 @@ describe('downloadDepotFiles', () => {
     const progress = payload.progress as Record<string, unknown>
     // Both files done -> 2/400 rounds to 1%, denominator is the SUMMED total.
     expect(progress.percent).toBe(1)
+    // D-UAT-02: downSpeed is a MiB/s number (not raw bytes/sec), eta is
+    // HH:MM:SS or empty (never the old raw `${sec}s`).
+    expect(typeof progress.downSpeed).toBe('number')
+    expect(
+      progress.eta === '' || /^\d{2}:\d{2}:\d{2}$/.test(progress.eta as string)
+    ).toBe(true)
   })
 
   it('D-02: halts new chunk fetches once AbortSignal fires and returns a cancelled outcome promptly', async () => {
