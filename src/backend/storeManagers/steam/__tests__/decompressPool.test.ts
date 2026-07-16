@@ -15,6 +15,19 @@ import { decodeChunk, sha1, type LzmaModule } from '../depot/decompress'
 import { handleDecodeMessage } from '../depot/decompressWorker'
 import { DecompressPool } from '../depot/decompressPool'
 
+// decompressPool.ts logs replaceWorker failures (WR-02) via backend/logger,
+// whose heroicLogWriter is not initialized in the jest environment — factory
+// mock so the log call is an inert no-op (mirrors library.test.ts).
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: {
+    Steam: 'Steam',
+    Backend: 'Backend'
+  }
+}))
+
 /** Real worker_threads fixture (plain CommonJS — see the file's own header
  *  comment for why the pool tests below cannot spawn the project's own
  *  .ts decompressWorker.ts directly). */
@@ -287,6 +300,49 @@ describe('DecompressPool', () => {
       const data = Buffer.from('succeeds on the replacement worker', 'utf8')
       const { encrypted, expectedSha } = await buildEncrypted(data)
       const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
+    }
+  }, 15000)
+
+  it('a task queued while all workers are busy still settles (inline) when the pool drains to zero workers and replacement keeps failing — never a permanent hang (WR-01)', async () => {
+    // Real, decodable payload built up front so the queued task has valid
+    // bytes to decode inline once the pool collapses.
+    const data = Buffer.from('queued task must not orphan when the pool collapses', 'utf8')
+    const { encrypted, expectedSha } = await buildEncrypted(data)
+
+    // Single-worker pool: one busy worker + a short task timeout so the
+    // collapse path is reached deterministically.
+    const pool = new DecompressPool({
+      size: 1,
+      taskTimeoutMs: 300,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    try {
+      // Occupy the only worker with a task that never responds.
+      const hang = pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+      // Enqueue a real task while the sole worker is busy — it lands in the
+      // queue (no idle worker to dispatch to).
+      const queued = pool.decode(encrypted, key, expectedSha, data.length)
+
+      // Force worker REPLACEMENT to fail: once the timeout terminates the
+      // only worker, replaceWorker() respawns from this bad path and
+      // rejects. With zero workers left and a non-empty queue, the pool
+      // must drain the queue inline instead of leaving `queued` pending
+      // forever.
+      ;(pool as unknown as { workerPathOverride: string }).workerPathOverride = path.join(
+        __dirname,
+        'fixtures',
+        'this-file-does-not-exist.js'
+      )
+
+      await expect(hang).rejects.toThrow(/timed out/)
+
+      // Load-bearing assertion: the queued task settles (inline) with the
+      // correct bytes rather than hanging.
+      const out = await queued
       expect(out.equals(data)).toBe(true)
     } finally {
       await pool.shutdown()

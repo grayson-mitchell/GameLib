@@ -248,6 +248,29 @@ export class DecompressPool {
         ],
         LogPrefix.Steam
       )
+      // WR-01: if the pool has collapsed to zero live workers, no worker
+      // will ever call releaseWorker() to drain the queue — so any tasks
+      // already sitting in `this.queue` (queued while every worker was
+      // busy, before the collapse) would hang forever and stall the whole
+      // install. Drain them on the main thread instead, reusing the same
+      // inline decodeChunk safety net init()/decode() already rely on.
+      if (this.workers.length === 0) this.drainQueueInline()
+    }
+  }
+
+  /** Settles every still-queued task on the main thread via inlineDecode.
+   *  Called only when the pool has no live workers left AND worker
+   *  replacement is failing, so a deep queue can never orphan (WR-01).
+   *  `splice(0)` empties the queue atomically so releaseWorker()/dispatch()
+   *  can never also pick up a drained task (no double-settle). Each task
+   *  still passes through the identical sha1/size integrity gate inside
+   *  decodeChunk. */
+  private drainQueueInline(): void {
+    for (const task of this.queue.splice(0)) {
+      this.inlineDecode(task.encrypted, task.key, task.expectedSha, task.cbOriginal).then(
+        task.resolve,
+        task.reject
+      )
     }
   }
 
