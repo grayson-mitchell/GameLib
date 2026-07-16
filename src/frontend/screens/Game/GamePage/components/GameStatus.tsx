@@ -87,6 +87,17 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return `${t('status.updating')} ${currentProgress}`
     }
 
+    // D-UAT-04 (21-16): the GameLib-written 1026 manifest is waiting for a
+    // full Steam client restart to be adopted — not an endless "Installing".
+    // GameLib never auto-drives Steam; this is a passive hint only.
+    if (
+      runner === 'steam' &&
+      is.installing &&
+      statusContext === 'steam-waiting-for-restart'
+    ) {
+      return t('status.steamWaitingRestart', 'Restart Steam to finish')
+    }
+
     if (!is.updating && (is.installing || is.importing)) {
       if (!currentProgress) {
         return `${t('status.processing', 'Processing files, please wait')}...`
@@ -144,7 +155,11 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       >
         {is.installing && (
           <Link to={'/download-manager'}>
-            {getInstallLabel(gameInfo.is_installed, is.notAvailable)}
+            {getInstallLabel(
+              gameInfo.is_installed,
+              is.notAvailable,
+              statusContext
+            )}
           </Link>
         )}
         {!is.installing &&

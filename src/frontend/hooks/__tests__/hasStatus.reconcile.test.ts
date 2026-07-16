@@ -81,3 +81,61 @@ describe('deriveInstallStatusKind (GAP-17-BOTTLE-INSTALL-DONE-DESYNC done-transi
     expect(kind).toBe('notInstalled')
   })
 })
+
+/**
+ * D-UAT-04 (21-16): getStatusLabel's steam-branch copy fix + waiting-hint
+ * branch. This file's top-level `jest.mock('../constants', ...)` stubs
+ * getStatusLabel entirely (needed so `deriveInstallStatusKind` above can be
+ * imported without `../constants`'s module-scope `window.localStorage`
+ * touch throwing in this jsdom-less env — see file docstring). To exercise
+ * the REAL implementation here, stub `window.localStorage` first and pull
+ * it in via `jest.requireActual`, which bypasses the mock factory above.
+ */
+describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)', () => {
+  let getStatusLabelReal: (typeof import('../constants'))['getStatusLabel']
+  const fakeT = ((key: string, fallback?: string) => fallback ?? key) as never
+
+  beforeAll(() => {
+    ;(global as unknown as { window: unknown }).window = {
+      localStorage: {
+        getItem: () => null,
+        setItem: () => undefined
+      }
+    }
+    getStatusLabelReal = jest.requireActual('../constants').getStatusLabel
+  })
+
+  afterAll(() => {
+    delete (global as unknown as { window?: unknown }).window
+  })
+
+  it('returns the restart-hint string when statusContext is "steam-waiting-for-restart"', () => {
+    const label = getStatusLabelReal({
+      status: 'installing',
+      runner: 'steam',
+      statusContext: 'steam-waiting-for-restart',
+      t: fakeT
+    })
+    expect(label).toBe('Restart Steam to finish')
+  })
+
+  it('returns the improved active-install copy when statusContext is undefined', () => {
+    const label = getStatusLabelReal({
+      status: 'installing',
+      runner: 'steam',
+      statusContext: undefined,
+      t: fakeT
+    })
+    expect(label).toBe('Installing…')
+  })
+
+  it('non-steam runners are unaffected — still render Downloading {{percent}}%', () => {
+    const label = getStatusLabelReal({
+      status: 'installing',
+      runner: 'gog',
+      percent: 42,
+      t: fakeT
+    })
+    expect(label).toBe('Downloading 42%')
+  })
+})

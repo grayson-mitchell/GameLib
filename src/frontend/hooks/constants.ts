@@ -26,9 +26,14 @@ export function getStatusLabel({
     uninstalling: t('gamepage:status.uninstalling', 'Uninstalling'),
     updating: `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
     // Steam installs have no progress percentage (Steam owns the download) — D-07
+    // D-UAT-04 (21-16): while GameLib's written 1026 manifest awaits Steam's
+    // next full restart to adopt it, show a passive "restart to finish" hint
+    // instead of an indefinite spinner. GameLib never auto-drives Steam.
     installing:
       runner === 'steam'
-        ? t('gamepage:status.steamInstalling', 'Steam installing')
+        ? statusContext === 'steam-waiting-for-restart'
+          ? t('gamepage:status.steamWaitingRestart', 'Restart Steam to finish')
+          : t('gamepage:status.steamInstalling', 'Installing…')
         : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
             percent || 0
           )}%`,
