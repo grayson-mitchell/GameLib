@@ -13,7 +13,7 @@
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
-import { open, mkdir, readdir, stat, type FileHandle } from 'node:fs/promises'
+import { open, mkdir, readdir, stat, symlink, type FileHandle } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative, dirname, isAbsolute, join } from 'path'
@@ -35,6 +35,13 @@ import { classifyDepotError } from './depotErrors'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
+
+/** EDepotFileFlag bit values, per steam-user's own authoritative enum
+ *  (node_modules/steam-user/enums/EDepotFileFlag.js) — Directory = 64,
+ *  Symlink = 512. Hardcoded here rather than imported since steam-user does
+ *  not export this enum from its public entrypoint (CR-01 gap closure, 21-13). */
+const DIRECTORY_FLAG = 64
+const SYMLINK_FLAG = 512
 
 export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
@@ -64,6 +71,9 @@ export interface DepotPlanFile {
   sha_content: string | Buffer
   chunks: DepotPlanChunk[]
   flags?: number
+  /** Symlink target, from the manifest's `linktarget` (protobuf field 7,
+   *  content_manifest.proto) — only meaningful when `flags & Symlink` (512). */
+  linktarget?: string
 }
 
 /** One resolved + manifest-fetched depot, ready for Plan 05's chunk download. */
@@ -114,6 +124,7 @@ interface RawManifestFile {
   sha_content: string | Buffer
   flags?: number
   chunks?: DepotPlanChunk[]
+  linktarget?: string
 }
 
 /** steam-user client surface this module depends on that @types/steam-user does
@@ -267,6 +278,7 @@ async function fetchDepotPlanEntry(
     size: Number(f.size),
     sha_content: f.sha_content,
     flags: f.flags,
+    linktarget: f.linktarget,
     chunks: f.chunks ?? []
   }))
 
@@ -488,7 +500,43 @@ async function downloadSingleFile(
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
 
+  // Directory manifest entry (flags & Directory) — a REAL directory, never an
+  // empty regular file. Must be checked BEFORE the size===0 fast path below,
+  // since directory entries are also size 0 with no chunks (CR-01).
+  if (file.flags && file.flags & DIRECTORY_FLAG) {
+    await mkdir(dest, { recursive: true })
+    return
+  }
+
+  // Symlink manifest entry (flags & Symlink) — a REAL, containment-checked
+  // symlink pointing at the manifest's own linktarget, never an empty regular
+  // file with the LinkTarget discarded (CR-01).
+  if (file.flags && file.flags & SYMLINK_FLAG) {
+    if (!file.linktarget) {
+      throw new Error(
+        `downloadDepotFiles: symlink manifest entry for ${file.filename} has no linktarget`
+      )
+    }
+    const resolvedTarget = resolve(dirname(dest), file.linktarget)
+    const relToRoot = relative(installRoot, resolvedTarget)
+    if (relToRoot.startsWith('..') || isAbsolute(relToRoot)) {
+      throw new PathTraversalError(
+        `downloadDepotFiles: rejected symlink "${file.filename}" whose target ` +
+          `"${file.linktarget}" escapes ${installRoot}`
+      )
+    }
+    await symlink(file.linktarget, dest)
+    return
+  }
+
   if (!file.chunks.length || Number(file.size) === 0) {
+    if (Number(file.size) !== 0) {
+      // WR-02: a size>0 file with zero chunks is a corrupt/mis-parsed
+      // manifest — treat as a recorded failure, never a silent empty success.
+      throw new Error(
+        `downloadDepotFiles: manifest reported ${file.filename} size=${file.size} but zero chunks`
+      )
+    }
     const empty = await open(dest, 'w')
     await empty.close()
     return
@@ -573,7 +621,9 @@ export async function downloadDepotFiles(
       progress: {
         // Denominator is the REAL multi-depot summed total (D-03), never a
         // single depot's own bytes.
-        percent: totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0,
+        // WR-03: clamp to 100 — doneBytes can exceed totalBytes (matches
+        // library.ts pollInstallOnce's own Math.min(100, ...) clamp).
+        percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0,
         bytes: getFileSize(doneBytes),
         downSpeed,
         eta: Number.isFinite(etaSec) ? `${Math.round(etaSec)}s` : ''
