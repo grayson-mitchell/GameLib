@@ -37,7 +37,8 @@ import {
   type DepotSelectOpts
 } from './depot/select'
 import { decryptFilename } from './depot/crypto'
-import { fetchChunk, type LzmaModule, type DepotChunk } from './depot/decompress'
+import { fetchChunk, type LzmaModule, type DepotChunk, type DecodeFn } from './depot/decompress'
+import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { classifyDepotError } from './depotErrors'
 
@@ -474,7 +475,8 @@ async function downloadFileChunks(
   file: DepotPlanFile,
   fileSeed: number,
   signal: AbortSignal | undefined,
-  onBytes: (n: number) => void
+  onBytes: (n: number) => void,
+  decode?: DecodeFn
 ): Promise<void> {
   const queue = [...file.chunks]
   const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
@@ -490,7 +492,11 @@ async function downloadFileChunks(
           attemptSeed: hosts.length ? fileSeed % hosts.length : 0
         }
 
-        const data = await fetchChunk(hosts, depotId, depotChunk, key, lzma)
+        // Phase 21 gap closure (21-15, D-UAT-03): `decode` is the injected
+        // worker-pool decoder (DecompressPool.decode) — moves decrypt ->
+        // decompress -> sha1-verify off the main thread. Undefined falls
+        // back to fetchChunk's own default (inline decodeChunk), unchanged.
+        const data = await fetchChunk(hosts, depotId, depotChunk, key, lzma, 4, decode)
         if (signal?.aborted) return
 
         await fd.write(data, 0, data.length, Number(chunk.offset))
@@ -517,7 +523,8 @@ async function downloadSingleFile(
   file: DepotPlanFile,
   fileSeed: number,
   signal: AbortSignal | undefined,
-  onBytes: (n: number) => void
+  onBytes: (n: number) => void,
+  decode?: DecodeFn
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
@@ -572,7 +579,7 @@ async function downloadSingleFile(
   const fd = await open(dest, 'w')
   try {
     await fd.truncate(Number(file.size))
-    await downloadFileChunks(fd, depotId, key, hosts, lzma, file, fileSeed, signal, onBytes)
+    await downloadFileChunks(fd, depotId, key, hosts, lzma, file, fileSeed, signal, onBytes, decode)
   } finally {
     await fd.close()
   }
@@ -607,97 +614,113 @@ export async function downloadDepotFiles(
   const lzma = ((lzmaModule as { default?: LzmaModule }).default ??
     lzmaModule) as unknown as LzmaModule
 
+  // Phase 21 gap closure (21-15, D-UAT-03): move LZMA/zlib chunk decompress
+  // off the main thread onto a worker_threads pool. `lzma` above is kept as
+  // the inline-fallback codec — pool.decode transparently falls back to
+  // inline main-thread decodeChunk if the pool never initializes, so a
+  // pool-init failure never blocks the install (LOCKED requirement).
+  const pool = new DecompressPool()
+  await pool.init()
+
   const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
 
-  const jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }> = []
-  let seed = 0
-  for (const depot of plan.depots) {
-    for (const file of depot.files) {
-      jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: seed++ })
-    }
-  }
-
-  const totalBytes = plan.totalBytes
-  const failures: DepotDownloadFailure[] = []
-  let doneBytes = 0
-  let lastEmitBytes = 0
-  let lastEmitTime = Date.now()
-  const tStart = Date.now()
-
-  const emitProgress = (force: boolean) => {
-    const percentDelta = totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
-    const timeDelta = Date.now() - lastEmitTime
-    // THROTTLE (~1%/500ms), never per-chunk — an IPC flood on a fast LAN (T-21-12).
-    if (!force && percentDelta < PROGRESS_THROTTLE_PERCENT && timeDelta < PROGRESS_THROTTLE_MS) {
-      return
-    }
-    lastEmitBytes = doneBytes
-    lastEmitTime = Date.now()
-
-    const elapsedSec = (Date.now() - tStart) / 1000
-    const bytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
-    const remaining = Math.max(totalBytes - doneBytes, 0)
-    const etaSec = bytesPerSec > 0 ? remaining / bytesPerSec : 0
-
-    // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
-    // the DownloadManager needs zero changes for the native depot-download path.
-    sendFrontendMessage('progressUpdate', {
-      appName: plan.appId,
-      runner: 'steam',
-      status: 'installing',
-      progress: {
-        // Denominator is the REAL multi-depot summed total (D-03), never a
-        // single depot's own bytes.
-        // WR-03: clamp to 100 — doneBytes can exceed totalBytes (matches
-        // library.ts pollInstallOnce's own Math.min(100, ...) clamp).
-        percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0,
-        bytes: getFileSize(doneBytes),
-        // MiB/s (not raw bytes/sec) to match the UI's "MB/s" label + the
-        // gog/legendary unit convention (UAT D-UAT-02).
-        downSpeed: bytesPerSec / BYTES_PER_MIB,
-        // HH:MM:SS, not raw "1247s" (UAT D-UAT-02).
-        eta: Number.isFinite(etaSec) && etaSec > 0 ? formatEta(etaSec) : ''
+  try {
+    const jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }> = []
+    let seed = 0
+    for (const depot of plan.depots) {
+      for (const file of depot.files) {
+        jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: seed++ })
       }
-    })
-  }
+    }
 
-  const queue = [...jobs]
-  const workerCount = Math.min(FILE_CONCURRENCY, queue.length)
+    const totalBytes = plan.totalBytes
+    const failures: DepotDownloadFailure[] = []
+    let doneBytes = 0
+    let lastEmitBytes = 0
+    let lastEmitTime = Date.now()
+    const tStart = Date.now()
 
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (queue.length) {
-        // Checked per-file AND per-chunk (inside downloadFileChunks) so a
-        // queue-cancel stops issuing new work promptly (D-02).
-        if (opts.signal?.aborted) return
-        const job = queue.shift()!
-        try {
-          await downloadSingleFile(
-            installRoot,
-            job.depotId,
-            job.key,
-            opts.hosts,
-            lzma,
-            job.file,
-            job.fileSeed,
-            opts.signal,
-            (n) => {
-              doneBytes += n
-              emitProgress(false)
-            }
-          )
-        } catch (err) {
-          failures.push({ file: job.file.filename, error: (err as Error).message })
+    const emitProgress = (force: boolean) => {
+      const percentDelta = totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
+      const timeDelta = Date.now() - lastEmitTime
+      // THROTTLE (~1%/500ms), never per-chunk — an IPC flood on a fast LAN (T-21-12).
+      if (!force && percentDelta < PROGRESS_THROTTLE_PERCENT && timeDelta < PROGRESS_THROTTLE_MS) {
+        return
+      }
+      lastEmitBytes = doneBytes
+      lastEmitTime = Date.now()
+
+      const elapsedSec = (Date.now() - tStart) / 1000
+      const bytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
+      const remaining = Math.max(totalBytes - doneBytes, 0)
+      const etaSec = bytesPerSec > 0 ? remaining / bytesPerSec : 0
+
+      // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
+      // the DownloadManager needs zero changes for the native depot-download path.
+      sendFrontendMessage('progressUpdate', {
+        appName: plan.appId,
+        runner: 'steam',
+        status: 'installing',
+        progress: {
+          // Denominator is the REAL multi-depot summed total (D-03), never a
+          // single depot's own bytes.
+          // WR-03: clamp to 100 — doneBytes can exceed totalBytes (matches
+          // library.ts pollInstallOnce's own Math.min(100, ...) clamp).
+          percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0,
+          bytes: getFileSize(doneBytes),
+          // MiB/s (not raw bytes/sec) to match the UI's "MB/s" label + the
+          // gog/legendary unit convention (UAT D-UAT-02).
+          downSpeed: bytesPerSec / BYTES_PER_MIB,
+          // HH:MM:SS, not raw "1247s" (UAT D-UAT-02).
+          eta: Number.isFinite(etaSec) && etaSec > 0 ? formatEta(etaSec) : ''
         }
-      }
-    })
-  )
+      })
+    }
 
-  emitProgress(true)
+    const queue = [...jobs]
+    const workerCount = Math.min(FILE_CONCURRENCY, queue.length)
 
-  return {
-    outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
-    failures
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (queue.length) {
+          // Checked per-file AND per-chunk (inside downloadFileChunks) so a
+          // queue-cancel stops issuing new work promptly (D-02).
+          if (opts.signal?.aborted) return
+          const job = queue.shift()!
+          try {
+            await downloadSingleFile(
+              installRoot,
+              job.depotId,
+              job.key,
+              opts.hosts,
+              lzma,
+              job.file,
+              job.fileSeed,
+              opts.signal,
+              (n) => {
+                doneBytes += n
+                emitProgress(false)
+              },
+              pool.decode
+            )
+          } catch (err) {
+            failures.push({ file: job.file.filename, error: (err as Error).message })
+          }
+        }
+      })
+    )
+
+    emitProgress(true)
+
+    return {
+      outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
+      failures
+    }
+  } finally {
+    // No workers leak across installs — shutdown() is safe to call even if
+    // init() itself fell back to inline decode (it just terminates zero
+    // workers in that case).
+    await pool.shutdown()
   }
 }
 
