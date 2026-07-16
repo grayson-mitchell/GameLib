@@ -33,7 +33,16 @@ export default defineConfig(({ mode }) => ({
   main: {
     build: {
       rollupOptions: {
-        input: 'src/backend/main.ts'
+        // Object map (not a bare string) — Phase 21 gap closure (21-15) adds
+        // the DecompressPool's worker_threads entry as a second emitted
+        // bundle, `decompressWorker.js`, co-located with `main.js` in
+        // build/main/ (dev AND packaged asar builds). The `main` key is
+        // named to match package.json's `"main": "build/main/main.js"` — do
+        // not rename it, output filenames follow the object's keys.
+        input: {
+          main: 'src/backend/main.ts',
+          decompressWorker: 'src/backend/storeManagers/steam/depot/decompressWorker.ts'
+        }
       },
       outDir: 'build/main',
       minify: true,

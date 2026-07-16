@@ -74,15 +74,58 @@ export const sha1 = (buf: Buffer): string => createHash('sha1').update(buf).dige
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * Fetch one chunk: download -> decrypt -> decompress -> verify.
+ * Phase 21 gap closure (21-15): the CPU section of a chunk fetch, extracted
+ * out of fetchChunk so it can be run either inline (main thread, default) or
+ * inside a worker_threads pool (DecompressPool). Runs decrypt -> decompress ->
+ * the sha1/size integrity gate, and is the SINGLE source of that gate — never
+ * returns unverified bytes.
+ *
+ * SECURITY (T-21-15-01, mitigated): the `sha1(decompressed) === expectedSha`
+ * gate and the `length === cbOriginal` size check live here, enforced before
+ * any buffer is returned to the caller, regardless of where this function
+ * executes (main thread or worker isolate).
+ */
+export async function decodeChunk(
+  encrypted: Buffer,
+  key: Buffer,
+  expectedSha: string,
+  cbOriginal: number | string,
+  lzma: LzmaModule
+): Promise<Buffer> {
+  const decrypted = steamDecrypt(encrypted, key)
+  const data = await decompressChunk(decrypted, lzma)
+
+  // The chunk's SHA1 is the hash of its DECOMPRESSED bytes — free integrity check.
+  const got = sha1(data)
+  if (got !== expectedSha) throw new Error(`chunk sha1 mismatch: ${got} != ${expectedSha}`)
+  if (data.length !== Number(cbOriginal)) {
+    throw new Error(`chunk size mismatch: ${data.length} != ${cbOriginal}`)
+  }
+  return data
+}
+
+/** Injected decoder signature fetchChunk delegates the CPU section to — the
+ *  default (inline, main-thread decodeChunk) is a thin wrapper; Plan 21-15's
+ *  DecompressPool passes `pool.decode` here instead, moving the CPU work off
+ *  the main thread while fetchChunk keeps owning the network + retry loop. */
+export type DecodeFn = (
+  encrypted: Buffer,
+  key: Buffer,
+  expectedSha: string,
+  cbOriginal: number | string
+) => Promise<Buffer>
+
+/**
+ * Fetch one chunk: download -> decode (decrypt+decompress+verify) -> return.
  *
  * Retries across DIFFERENT content servers. Steam's CDN edges drop connections
  * under concurrency ("fetch failed" / ECONNRESET) — this is normal and expected,
  * not a protocol error. Without retry, ~16% of chunks failed at concurrency 8.
  * Rotating hosts on each attempt is what makes the download reliable.
  *
- * The `sha1(data) === chunk.sha` gate is a security control (T-21-03): a chunk
- * that never verifies is never returned — it throws after `attempts`.
+ * The `sha1(data) === chunk.sha` gate is a security control (T-21-03), enforced
+ * inside `decodeChunk`/the injected `decode` — a chunk that never verifies is
+ * never returned — it throws after `attempts`.
  */
 export async function fetchChunk(
   hosts: string[],
@@ -90,7 +133,9 @@ export async function fetchChunk(
   chunk: DepotChunk,
   key: Buffer,
   lzma: LzmaModule,
-  attempts = 4
+  attempts = 4,
+  decode: DecodeFn = (encrypted, decodeKey, expectedSha, cbOriginal) =>
+    decodeChunk(encrypted, decodeKey, expectedSha, cbOriginal, lzma)
 ): Promise<Buffer> {
   const sha = Buffer.isBuffer(chunk.sha) ? chunk.sha.toString('hex') : String(chunk.sha)
   let lastErr: Error | undefined
@@ -102,16 +147,7 @@ export async function fetchChunk(
       if (!res.ok) throw new Error(`CDN ${res.status}`)
 
       const encrypted = Buffer.from(await res.arrayBuffer())
-      const decrypted = steamDecrypt(encrypted, key)
-      const data = await decompressChunk(decrypted, lzma)
-
-      // The chunk's SHA1 is the hash of its DECOMPRESSED bytes — free integrity check.
-      const got = sha1(data)
-      if (got !== sha) throw new Error(`chunk sha1 mismatch: ${got} != ${sha}`)
-      if (data.length !== Number(chunk.cb_original)) {
-        throw new Error(`chunk size mismatch: ${data.length} != ${chunk.cb_original}`)
-      }
-      return data
+      return await decode(encrypted, key, sha, chunk.cb_original)
     } catch (err) {
       lastErr = err as Error
       if (i < attempts - 1) await sleep(200 * 2 ** i) // 200ms, 400ms, 800ms
