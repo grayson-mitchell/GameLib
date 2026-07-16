@@ -1741,6 +1741,80 @@ describe('pollInstallOnce()', () => {
     expect(notify).not.toHaveBeenCalled()
   })
 
+  // ── D-UAT-04 (21-16): GameLib handoff (StateFlags===1026) waiting signal ──
+
+  it('emits gameStatusUpdate with context "steam-waiting-for-restart" when StateFlags parses to exactly 1026 (GameLib handoff)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    await pollInstallOnce('730')
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        status: 'installing',
+        context: 'steam-waiting-for-restart'
+      })
+    )
+  })
+
+  it('does NOT set a context on the plain active-download branch (StateFlags=2, non-1026)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    await pollInstallOnce('730')
+    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    expect(call![1].context).toBeUndefined()
+  })
+
+  it('fires the "restart Steam" notification exactly once across multiple poll calls while StateFlags stays 1026', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    startInstallPolling('730', 60000) // register the activePolls entry so notifiedWaiting can gate
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Restart Steam to finish installing {{game}}'
+    })
+  })
+
+  it('does NOT fire the waiting notification for a non-1026 active download', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    startInstallPolling('730', 60000)
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalled()
+  })
+
   // ── 17-03: pollInstallOnce(appId, 'bottle') — Pitfall 3 platform label ─────
 
   it('a bottle-sourced install object has platform === "Windows" even when isMac is mocked true', async () => {

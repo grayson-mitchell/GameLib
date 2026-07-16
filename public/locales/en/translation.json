@@ -1214,7 +1214,10 @@
         },
         "lastSynced": "Steam library last synced {{time}} ago",
         "refresh": "Refresh Steam Library",
-        "syncing": "Syncing your Steam library…"
+        "syncing": "Syncing your Steam library…",
+        "waitingForSteam": {
+            "notify": "Restart Steam to finish installing {{game}}"
+        }
     },
     "steam-store": "Steam Store",
     "steamgriddb": {

@@ -826,10 +826,26 @@ export async function promptI386Recovery(appId: string): Promise<void> {
 
 // ── Install polling lifecycle (D-07) ─────────────────────────────────────────
 
+/**
+ * The exact StateFlags value GameLib writes on handoff (D-UAT-04 / 21-16):
+ * bit 4 (FullyInstalled) is deliberately unset until Steam adopts the
+ * manifest, which only happens on a full Steam client restart (focusing the
+ * window is not enough). Steam replaces this value the moment it adopts the
+ * install. See 21-RESEARCH for the full ACF field list.
+ */
+const GAMELIB_HANDOFF_STATE_FLAGS = 1026
+
 /** Module-level registry of active install polls, keyed by appId string. */
 const activePolls = new Map<
   string,
-  { timer: NodeJS.Timeout; ticks: number; seenDownloading: boolean }
+  {
+    timer: NodeJS.Timeout
+    ticks: number
+    seenDownloading: boolean
+    /** Fire-once guard (T-21-16-03) — the "restart Steam" notification must
+     *  fire exactly once per install, not on every poll tick. */
+    notifiedWaiting: boolean
+  }
 >()
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
@@ -986,11 +1002,35 @@ export async function pollInstallOnce(
 
   if (result.state === 'downloading') {
     if (poll) poll.seenDownloading = true
+
+    // D-UAT-04 (21-16): GameLib writes StateFlags EXACTLY 1026 on handoff —
+    // bit 4 (FullyInstalled) unset, waiting for Steam to adopt the manifest
+    // on its next full restart. That is NOT the same as an active download;
+    // surface a passive 'waiting for restart' context instead of the plain
+    // 'installing' status so the frontend can show a hint (Task 3) rather
+    // than an indefinite spinner. Never launch/focus/drive Steam (T-21-16-02).
+    const isWaitingForSteamRestart =
+      result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS
+
     sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
-      status: 'installing'
+      status: 'installing',
+      ...(isWaitingForSteamRestart ? { context: 'steam-waiting-for-restart' } : {})
     })
+
+    if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {
+      poll.notifiedWaiting = true
+      const game = library.get(appId)
+      notify({
+        title: game?.title ?? '',
+        body: i18next.t(
+          'steam.waitingForSteam.notify',
+          'Restart Steam to finish installing {{game}}',
+          { game: game?.title ?? '' }
+        )
+      })
+    }
 
     // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
     // feeding the frontend progress store — the ACF's own byte counts are
@@ -1114,7 +1154,8 @@ export function startInstallPolling(
   const entry = {
     timer: null as unknown as NodeJS.Timeout,
     ticks: 0,
-    seenDownloading: false
+    seenDownloading: false,
+    notifiedWaiting: false
   }
 
   const timer = setInterval(async () => {
