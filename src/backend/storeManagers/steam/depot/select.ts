@@ -17,6 +17,13 @@
 // Number.MAX_SAFE_INTEGER). `os` is a REQUIRED caller-supplied parameter — this
 // module never hardcodes a default host OS (the bottle path in Plan 11 calls
 // this with a Windows OS filter; the native path calls it with the host OS).
+//
+// T-21-16-01 (mitigated): observability logging added below logs ONLY
+// app/depot ids, manifest gids, sizes, and the os/arch/oslist/language
+// strings used for the selection decision — never a decryption key, token,
+// or SteamID64/LastOwner (none of those are in scope of this module).
+
+import { logInfo, LogPrefix } from 'backend/logger'
 
 export interface OwnedSets {
   /** Owned appIds (used for the DLC-ownership channel). */
@@ -103,6 +110,12 @@ export function selectAllDepots(
       }
     }
   }
+
+  logInfo(
+    `Steam depot selection: selectAllDepots union across base + DLC apps -> ${all.length} depot(s)`,
+    LogPrefix.Steam
+  )
+
   return all
 }
 
@@ -147,13 +160,31 @@ export function selectDepots(
 
     const cfg = d.config ?? {}
     const oslist = cfg.oslist
-    if (oslist && !String(oslist).split(',').includes(os)) continue
+    if (oslist && !String(oslist).split(',').includes(os)) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (oslist=${oslist} != ${os})`,
+        LogPrefix.Steam
+      )
+      continue
+    }
 
     const osarch = cfg.osarch
-    if (osarch && String(osarch) !== arch) continue
+    if (osarch && String(osarch) !== arch) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (osarch=${osarch} != ${arch})`,
+        LogPrefix.Steam
+      )
+      continue
+    }
 
     const depotLang = cfg.language
-    if (depotLang && String(depotLang) !== language) continue
+    if (depotLang && String(depotLang) !== language) {
+      logInfo(
+        `Steam depot selection: skipped depot ${id} (language=${depotLang} != ${language})`,
+        LogPrefix.Steam
+      )
+      continue
+    }
 
     out.push({
       id,
@@ -162,5 +193,14 @@ export function selectDepots(
       dlcappid: d.dlcappid ? String(d.dlcappid) : undefined
     })
   }
+
+  const chosen = out
+    .map((d) => `${d.id}(gid=${d.manifest},size=${d.size})`)
+    .join(', ')
+  logInfo(
+    `Steam depot selection: os=${os} arch=${arch} language=${language} branch=${branch} -> depots [${chosen}]`,
+    LogPrefix.Steam
+  )
+
   return out
 }

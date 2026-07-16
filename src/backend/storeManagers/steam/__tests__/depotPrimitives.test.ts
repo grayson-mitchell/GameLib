@@ -6,6 +6,13 @@ import { createCipheriv, randomBytes } from 'node:crypto'
 import { deflateRawSync } from 'node:zlib'
 import * as lzma from 'lzma'
 
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  LogPrefix: { Steam: 'Steam' }
+}))
+
+import { logInfo } from 'backend/logger'
+
 import { steamDecrypt, decryptFilename } from '../depot/crypto'
 import { decompressChunk, sha1, fetchChunk } from '../depot/decompress'
 import { selectAllDepots, selectDepots, type OwnedSets } from '../depot/select'
@@ -196,6 +203,10 @@ describe('select', () => {
     return { apps: new Set(apps), depots: new Set(depots) }
   }
 
+  beforeEach(() => {
+    ;(logInfo as jest.Mock).mockClear()
+  })
+
   it('a depot appearing only in an owned package depotids is selected', () => {
     const appinfo = {
       depots: {
@@ -295,5 +306,75 @@ describe('select', () => {
     const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' })
     const ids = result.map((d) => d.id).sort()
     expect(ids).toEqual(['500', '601'])
+  })
+
+  it('logs the chosen depot ids + os/arch/language decision, with no secrets in any logInfo argument (T-21-16-01)', () => {
+    const appinfo = {
+      depots: {
+        '700': {
+          manifests: { public: { gid: '777777777777777777', size: 999 } },
+          config: {}
+        }
+      }
+    }
+    const owned = makeOwned([], [700])
+    const result = selectDepots(appinfo, owned, { os: 'macos', arch: '64', language: 'english' })
+
+    // Regression guard: logging must not alter the returned descriptors.
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('700')
+
+    expect(logInfo).toHaveBeenCalled()
+    const calls = (logInfo as jest.Mock).mock.calls
+    const selectionLog = calls.find(([msg]) =>
+      String(msg).includes('700(gid=777777777777777777,size=999)')
+    )
+    expect(selectionLog).toBeDefined()
+    expect(String(selectionLog![0])).toContain('os=macos')
+    expect(String(selectionLog![0])).toContain('arch=64')
+    expect(String(selectionLog![0])).toContain('language=english')
+
+    for (const [message] of calls) {
+      const text = String(message)
+      expect(text).not.toMatch(/key|token|steamid|lastowner/i)
+    }
+  })
+
+  it('logs a per-depot skip reason when a candidate is filtered out by oslist (T-21-16-01)', () => {
+    const appinfo = {
+      depots: {
+        '800': {
+          manifests: { public: { gid: '888888888888888888', size: 5 } },
+          config: { oslist: 'windows' }
+        }
+      }
+    }
+    const owned = makeOwned([], [800])
+    const result = selectDepots(appinfo, owned, { os: 'linux' })
+
+    expect(result).toHaveLength(0)
+
+    const calls = (logInfo as jest.Mock).mock.calls
+    const skipLog = calls.find(([msg]) => String(msg).includes('skipped depot 800'))
+    expect(skipLog).toBeDefined()
+    expect(String(skipLog![0])).toContain('oslist=windows')
+  })
+
+  it('selectAllDepots logs the final union count', () => {
+    const baseAppinfo = {
+      depots: {
+        '900': {
+          manifests: { public: { gid: '999999999999999999', size: 1 } },
+          config: {}
+        }
+      }
+    }
+    const owned = makeOwned([], [900])
+    selectAllDepots(baseAppinfo, undefined, owned, { os: 'windows' })
+
+    const calls = (logInfo as jest.Mock).mock.calls
+    const unionLog = calls.find(([msg]) => String(msg).includes('selectAllDepots union'))
+    expect(unionLog).toBeDefined()
+    expect(String(unionLog![0])).toContain('1 depot(s)')
   })
 })
