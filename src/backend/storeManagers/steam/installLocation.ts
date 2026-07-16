@@ -79,20 +79,37 @@ function safeFallbackId(appId: string): string {
 }
 
 /**
+ * Positive whitelist for an accepted installdir shape (WR-04, T-21-14-03):
+ * letters, digits, spaces, dots, dashes, underscores only — no leading or
+ * trailing dot (blocks both a bare `.`/`..` and a hidden-file-style name).
+ * Quotes, colons (Windows drive-relative `C:foo`), path separators, and any
+ * ASCII control character are all excluded by construction — a candidate
+ * containing any of them simply fails this whitelist rather than needing a
+ * separate denylist check.
+ */
+const SAFE_INSTALLDIR = /^[A-Za-z0-9 ._-]+$/
+const LEADING_OR_TRAILING_DOT = /^\.|\.$/
+
+/**
  * Sanitizes a PICS-sourced installdir so it is a single safe directory name
- * (T-21-01) — rejects (not strips) any path separator or `..` traversal
- * segment outright, since a partially-sanitized value is still an
- * attacker-influenced string about to touch the filesystem. depot.ts's own
- * per-file containment check (resolve+relative against
- * steamapps/common/{installdir}) is the backstop; this is the first line of
- * defense on the value that becomes that root segment.
+ * (T-21-01, hardened WR-04/T-21-14-03) — rejects (not strips) any path
+ * separator, `..` traversal segment, quote, colon (Windows drive-relative
+ * name), ASCII control character, or any character outside the accepted
+ * whitelist outright, since a partially-sanitized value is still an
+ * attacker-influenced string about to touch the filesystem AND get
+ * interpolated into the `.acf` VDF. depot.ts's own per-file containment
+ * check (resolve+relative against steamapps/common/{installdir}) is the
+ * backstop; this is the first line of defense on the value that becomes
+ * that root segment.
  */
 function sanitizeInstalldir(candidate: string | undefined, appId: string): string {
   const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
   if (!candidate || !candidate.trim()) {
     return fallback
   }
-  if (candidate.includes('/') || candidate.includes('\\') || candidate.includes('..')) {
+  const isSafe =
+    SAFE_INSTALLDIR.test(candidate) && !LEADING_OR_TRAILING_DOT.test(candidate)
+  if (!isSafe) {
     logWarning(
       `SteamGame: rejected hostile PICS installdir "${candidate}" for appId ${appId}, using fallback "${fallback}"`,
       LogPrefix.Steam

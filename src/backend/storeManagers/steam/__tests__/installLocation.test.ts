@@ -219,6 +219,79 @@ describe('resolveSteamInstallTarget', () => {
     expect(result.installdir.includes('..')).toBe(false)
   })
 
+  it('WR-04: a quote-containing installdir falls back to a safe appId-derived name', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(
+        makeFakeClient({
+          getProductInfo: mockProductInfo(12345, 'Foo"bar')
+        }) as never
+      )
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
+    expect(jest.mocked(logWarning)).toHaveBeenCalled()
+  })
+
+  it('WR-04: a control-char/newline-containing installdir falls back to a safe appId-derived name', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(
+        makeFakeClient({
+          getProductInfo: mockProductInfo(12345, 'Foo\nBar')
+        }) as never
+      )
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
+  })
+
+  it('WR-04: a Windows drive-relative installdir (colon, no separator) falls back to a safe appId-derived name', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(
+        makeFakeClient({
+          getProductInfo: mockProductInfo(12345, 'C:foo')
+        }) as never
+      )
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
+  })
+
+  it('WR-04: a well-formed installdir with spaces/dots/dashes/underscores passes through unchanged', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValue(
+        makeFakeClient({
+          getProductInfo: mockProductInfo(12345, 'Half-Life 2')
+        }) as never
+      )
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    expect(result.installdir).toBe('Half-Life 2')
+  })
+
   it('throws when no Steam libraries are registered at all', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue([])
 
