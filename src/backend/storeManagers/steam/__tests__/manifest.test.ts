@@ -135,4 +135,54 @@ describe('depot/manifest', () => {
     expect(source).toMatch(/\.sync\(\)/) // fsync before the rename
     expect(source).toMatch(/rename\(/)
   })
+
+  it('WR-01: a crafted name embedding a StateFlags injection payload cannot add a second parseable StateFlags key', async () => {
+    const path = await writeAppManifest(dir, {
+      ...baseParams,
+      name: 'Foo" "StateFlags" "4'
+    })
+    const text = readFileSync(path, 'utf8')
+    // Exactly one StateFlags key, still 1026 — the injected content landed
+    // inside the escaped name value, not as a sibling AppState key.
+    expect((text.match(/"StateFlags"/g) ?? []).length).toBe(1)
+    expect(text).toMatch(/"StateFlags"\s+"1026"/)
+  })
+
+  it('WR-01: embedded quote/backslash/newline in name and installdir are neutralized (no VDF structure break)', async () => {
+    const path = await writeAppManifest(dir, {
+      ...baseParams,
+      name: 'Weird\\Name"With\nControl\rChars\tHere',
+      installdir: 'Weird\\Dir"With\nControl\rChars\tHere'
+    })
+    const text = readFileSync(path, 'utf8')
+    // No raw newline/carriage-return survives inside a quoted value.
+    expect(text).not.toMatch(/"name"\s+"[^"]*\n/)
+    expect(text).not.toMatch(/"installdir"\s+"[^"]*\n/)
+    // Backslash escaped so VDF parses it literally.
+    expect(text).toContain('\\\\Name')
+    expect(text).toContain('\\\\Dir')
+    // Quote escaped, not left as a bare unescaped terminator.
+    expect(text).toContain('\\"With')
+    // Still exactly one AppState, StateFlags untouched.
+    expect((text.match(/"StateFlags"/g) ?? []).length).toBe(1)
+    expect(text).toMatch(/"StateFlags"\s+"1026"/)
+  })
+
+  it('WR-01: a well-formed name/installdir round-trips unchanged', async () => {
+    const path = await writeAppManifest(dir, {
+      ...baseParams,
+      name: 'Half-Life 2',
+      installdir: 'Half-Life 2'
+    })
+    const text = readFileSync(path, 'utf8')
+    expect(text).toMatch(/"name"\s+"Half-Life 2"/)
+    expect(text).toMatch(/"installdir"\s+"Half-Life 2"/)
+  })
+
+  it('WR-01: buildAppManifestText applies vdfEscape to both name and installdir interpolations', () => {
+    const source = readFileSync(join(__dirname, '../depot/manifest.ts'), 'utf8')
+    expect((source.match(/vdfEscape\(/g) ?? []).length).toBeGreaterThanOrEqual(3)
+    expect(source).toMatch(/"installdir"[^\n]*vdfEscape\(params\.installdir\)/)
+    expect(source).toMatch(/"name"[^\n]*vdfEscape\(params\.name\)/)
+  })
 })

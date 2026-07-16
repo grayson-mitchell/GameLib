@@ -20,6 +20,16 @@
 // crash mid-write leaves the prior (or absent) manifest, never a half-written
 // one. Read-side sibling this must stay bit-consistent with: library.ts
 // readAcfState()'s `parseInt(state.StateFlags, 10) & 4` check.
+//
+// The `name` and `installdir` string fields are untrusted PICS-sourced values
+// (Steam CM network, not user input, but not trusted VDF-structure-wise
+// either) — both are VDF-escaped via vdfEscape() before interpolation (WR-01,
+// T-21-14-01/02) so a crafted value (embedded `"`, `\`, or newline) can never
+// close the quoted string early and inject a sibling AppState key — e.g. a
+// second, spoofed StateFlags entry claiming the fully-installed bit. The
+// numeric-guarded fields (appid, depotId, manifest GID, size) are untouched
+// by this — they are validated separately via assertNumericId / kept as
+// plain digit strings.
 
 import * as nodeFsPromises from 'node:fs/promises'
 import { join } from 'node:path'
@@ -54,6 +64,23 @@ function assertNumericId(id: string, label: string): void {
   if (!NUMERIC_ID.test(id)) {
     throw new Error(`writeAppManifest: rejected non-numeric ${label} "${id}"`)
   }
+}
+
+/**
+ * Escapes a string for safe interpolation into a double-quoted VDF value
+ * (WR-01, T-21-14-01/02). Untrusted PICS-sourced `name`/`installdir` values
+ * are the only callers — numeric-guarded fields never pass through this.
+ * Escaping order matters: backslash MUST be escaped before quote, otherwise
+ * a quote's own escaping backslash would itself get re-escaped.
+ * Control characters (\r, \n, \t) are neutralized (replaced with a single
+ * space) rather than escaped — a raw line break inside a quoted VDF value
+ * would break the file's line-oriented structure regardless of escaping.
+ */
+function vdfEscape(s: string): string {
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/[\r\n\t]/g, ' ')
 }
 
 function buildInstalledDepotsBlock(depots: InstalledDepotEntry[]): string {
@@ -92,8 +119,8 @@ export function buildAppManifestText(params: AppManifestParams): string {
       `\t"appid"\t\t"${params.appId}"`,
       '\t"Universe"\t\t"1"',
       '\t"StateFlags"\t\t"1026"',
-      `\t"installdir"\t\t"${params.installdir}"`,
-      `\t"name"\t\t"${params.name}"`,
+      `\t"installdir"\t\t"${vdfEscape(params.installdir)}"`,
+      `\t"name"\t\t"${vdfEscape(params.name)}"`,
       `\t"LastUpdated"\t\t"${lastUpdated}"`,
       `\t"SizeOnDisk"\t\t"${params.sizeOnDisk}"`,
       `\t"buildid"\t\t"${buildid}"`,
