@@ -23,6 +23,17 @@ export type DecompressWorkerResponse =
   | { id: number; ok: true; data: ArrayBuffer }
   | { id: number; ok: false; error: string }
 
+/** Explicit ready handshake DecompressPool's spawnWorker() waits for before
+ *  treating a worker as successfully spawned. `worker_threads`' own 'online'
+ *  event only confirms the worker's JS environment started — a bad/missing
+ *  entry path still fires 'online' BEFORE the module-not-found error
+ *  surfaces (Node worker_threads pitfall), so 'online' alone is not a safe
+ *  success signal. Sending this message only after the module's own require
+ *  graph has resolved makes success detection deterministic. */
+export interface DecompressWorkerReady {
+  type: 'ready'
+}
+
 let lzmaPromise: Promise<LzmaModule> | undefined
 
 /** Lazily loads the pure-JS `lzma` codec once per worker (module-load-scoped
@@ -81,4 +92,9 @@ if (parentPort) {
       port.postMessage(response)
     }
   })
+  // Sent once, after the listener above is registered — see
+  // DecompressWorkerReady's doc comment for why this replaces 'online' as
+  // the pool's spawn-success signal.
+  const ready: DecompressWorkerReady = { type: 'ready' }
+  port.postMessage(ready)
 }

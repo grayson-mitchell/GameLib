@@ -8,10 +8,17 @@
 
 import { randomBytes, createCipheriv } from 'node:crypto'
 import { deflateRawSync } from 'node:zlib'
+import * as path from 'node:path'
 import * as lzma from 'lzma'
 
 import { decodeChunk, sha1, type LzmaModule } from '../depot/decompress'
 import { handleDecodeMessage } from '../depot/decompressWorker'
+import { DecompressPool } from '../depot/decompressPool'
+
+/** Real worker_threads fixture (plain CommonJS — see the file's own header
+ *  comment for why the pool tests below cannot spawn the project's own
+ *  .ts decompressWorker.ts directly). */
+const POOL_TEST_WORKER_PATH = path.join(__dirname, 'fixtures', 'poolTestWorker.js')
 
 // ── fixtures (mirrors depotPrimitives.test.ts's VZ/PK builders) ───────────
 
@@ -172,6 +179,134 @@ describe('decompressWorker handleDecodeMessage', () => {
     expect(response.ok).toBe(false)
     if (!response.ok) {
       expect(response.error).toMatch(/unknown chunk container/)
+    }
+  })
+})
+
+// ── DecompressPool ──────────────────────────────────────────────────────
+
+describe('DecompressPool', () => {
+  const key = randomBytes(32)
+
+  async function buildEncrypted(data: Buffer): Promise<{ encrypted: Buffer; expectedSha: string }> {
+    const compressed = await compressAsync(data)
+    const vzChunk = buildVZChunk(data, compressed)
+    return { encrypted: steamEncrypt(vzChunk, key), expectedSha: sha1(data) }
+  }
+
+  it('pool.decode round-trips a VZ chunk to the same bytes as inline decodeChunk', async () => {
+    const data = Buffer.from('pool VZ round-trip fixture. '.repeat(10), 'utf8')
+    const { encrypted, expectedSha } = await buildEncrypted(data)
+
+    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    await pool.init()
+    try {
+      const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('pool.decode round-trips a PK chunk to the same bytes as inline decodeChunk', async () => {
+    const data = Buffer.from('pool PK round-trip fixture', 'utf8')
+    const pkChunk = buildPKChunk(data)
+    const encrypted = steamEncrypt(pkChunk, key)
+    const expectedSha = sha1(data)
+
+    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    await pool.init()
+    try {
+      const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('20 concurrent pool.decode calls across a 4-worker pool all resolve correctly and independently', async () => {
+    const pool = new DecompressPool({ size: 4, workerPath: POOL_TEST_WORKER_PATH })
+    await pool.init()
+    try {
+      const fixtures = await Promise.all(
+        Array.from({ length: 20 }, (_, i) =>
+          buildEncrypted(Buffer.from(`concurrent chunk #${i} distinct payload bytes`, 'utf8')).then(
+            ({ encrypted, expectedSha }) => ({
+              encrypted,
+              expectedSha,
+              data: Buffer.from(`concurrent chunk #${i} distinct payload bytes`, 'utf8')
+            })
+          )
+        )
+      )
+
+      const results = await Promise.all(
+        fixtures.map((f) => pool.decode(f.encrypted, key, f.expectedSha, f.data.length))
+      )
+
+      results.forEach((out, i) => {
+        expect(out.equals(fixtures[i].data)).toBe(true)
+      })
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('a worker that throws (malformed buffer) rejects only that task; the pool keeps serving subsequent tasks', async () => {
+    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    await pool.init()
+    try {
+      const bogus = Buffer.from('XXmalformed-container', 'utf8')
+      const bogusEncrypted = steamEncrypt(bogus, key)
+
+      await expect(pool.decode(bogusEncrypted, key, 'irrelevant', 0)).rejects.toThrow(
+        /unknown chunk container/
+      )
+
+      const data = Buffer.from('still works after a throw', 'utf8')
+      const { encrypted, expectedSha } = await buildEncrypted(data)
+      const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('a worker that hangs past the per-task timeout is terminated + replaced; the task rejects and later tasks succeed on the replacement', async () => {
+    const pool = new DecompressPool({
+      size: 1,
+      taskTimeoutMs: 150,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    try {
+      await expect(
+        pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+      ).rejects.toThrow(/timed out/)
+
+      const data = Buffer.from('succeeds on the replacement worker', 'utf8')
+      const { encrypted, expectedSha } = await buildEncrypted(data)
+      const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
+    }
+  }, 15000)
+
+  it('when init() is forced to fail (bad worker path), decode() falls back to inline decodeChunk and still returns correct bytes', async () => {
+    const data = Buffer.from('inline fallback fixture', 'utf8')
+    const { encrypted, expectedSha } = await buildEncrypted(data)
+
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: path.join(__dirname, 'fixtures', 'this-file-does-not-exist.js')
+    })
+    await pool.init()
+    try {
+      const out = await pool.decode(encrypted, key, expectedSha, data.length)
+      expect(out.equals(data)).toBe(true)
+    } finally {
+      await pool.shutdown()
     }
   })
 })
