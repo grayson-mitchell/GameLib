@@ -352,7 +352,7 @@ describe('finalizeToSteam', () => {
       // Declared depot size is deliberately much larger than what's actually
       // on disk — proves SizeOnDisk is measured, not a DepotPlan-derived sum
       // (spike 001: a summed total overshoots multi-depot installs by 236MB).
-      depots: [{ depotId: '111', gid: 'g1', size: 999999 }]
+      depots: [{ depotId: '111', gid: '11111111111111111', size: 999999 }]
     })
 
     const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
@@ -401,7 +401,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
   function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-    jest.mocked(selectAllDepots).mockReturnValue([{ id: '111', manifest: 'g1', size: 0 }])
+    jest.mocked(selectAllDepots).mockReturnValue([
+      { id: '111', manifest: '11111111111111111', size: 0 }
+    ])
     jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
       (
         _appId: number,
@@ -995,6 +997,35 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toEqual([])
+    const linkPath = join(dir, 'common', 'SomeGame', 'game.lnkname')
+    expect(lstatSync(linkPath).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(linkPath)).toBe('game.exe')
+  })
+
+  it('CR-02: re-running an install over an already-created symlink succeeds (idempotent, no EEXIST) — preserves the D-07 retry guarantee', async () => {
+    const symlinkEntry: DepotPlanFile = {
+      filename: 'game.lnkname',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: 'game.exe'
+    }
+    const plan = makePlan(
+      [{ depotId: '66a', gid: 'g6e', key: Buffer.from('key'), files: [symlinkEntry] }],
+      0
+    )
+    const opts = {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    }
+
+    const first = await downloadDepotFiles(plan, opts)
+    expect(first.failures).toEqual([])
+    // Second pass over the same target — a symlink already exists on disk.
+    const second = await downloadDepotFiles(plan, opts)
+    expect(second.failures).toEqual([])
     const linkPath = join(dir, 'common', 'SomeGame', 'game.lnkname')
     expect(lstatSync(linkPath).isSymbolicLink()).toBe(true)
     expect(readlinkSync(linkPath)).toBe('game.exe')

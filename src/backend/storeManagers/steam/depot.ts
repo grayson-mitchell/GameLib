@@ -13,7 +13,15 @@
 
 import { logWarning, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
-import { open, mkdir, readdir, stat, symlink, type FileHandle } from 'node:fs/promises'
+import {
+  open,
+  mkdir,
+  readdir,
+  stat,
+  symlink,
+  rm,
+  type FileHandle
+} from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative, dirname, isAbsolute, join } from 'path'
@@ -525,6 +533,11 @@ async function downloadSingleFile(
           `"${file.linktarget}" escapes ${installRoot}`
       )
     }
+    // Idempotent like the mkdir(recursive) / open('w') branches above:
+    // symlink() throws EEXIST if dest already exists, so a retry of a
+    // partially-succeeded install (D-07) would fail that file forever. Clear
+    // any stale entry first (force ignores a missing path).
+    await rm(dest, { force: true })
     await symlink(file.linktarget, dest)
     return
   }

@@ -87,6 +87,11 @@ function buildInstalledDepotsBlock(depots: InstalledDepotEntry[]): string {
   return depots
     .map((d) => {
       assertNumericId(d.depotId, 'depotId')
+      // The manifest GID is a PICS-sourced string (String(gid) off raw
+      // appinfo) — guard it as a plain digit string before interpolation, so
+      // the header comment's "validated separately via assertNumericId" claim
+      // holds and it cannot inject a sibling VDF key (WR-01 completeness).
+      assertNumericId(d.manifest, 'manifest')
       return [
         `\t\t"${d.depotId}"`,
         '\t\t{',

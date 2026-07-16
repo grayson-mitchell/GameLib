@@ -106,6 +106,17 @@ describe('depot/manifest', () => {
     ).rejects.toThrow()
   })
 
+  it('rejects a non-numeric manifest GID before interpolation (WR-01 completeness) — cannot inject a sibling VDF key', async () => {
+    await expect(
+      writeAppManifest(dir, {
+        ...baseParams,
+        installedDepots: [
+          { depotId: '264161', manifest: '123"\n\t"StateFlags"\t\t"4', size: 1 }
+        ]
+      })
+    ).rejects.toThrow()
+  })
+
   it('writes atomically: replaces stale temp/final artifacts, leaves only the correct final file behind', async () => {
     const finalPath = join(dir, `appmanifest_${baseParams.appId}.acf`)
     const tmpPath = `${finalPath}.tmp`
