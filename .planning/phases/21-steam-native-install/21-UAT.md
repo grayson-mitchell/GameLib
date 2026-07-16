@@ -4,12 +4,12 @@ plan: 12
 artifact: uat
 status: partial
 total_items: 11
-pending_items: 8
+pending_items: 9
 passed_items: 2
 failed_items: 0
-blocked_items: 1
+blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -126,9 +126,8 @@ layer rejecting the GameLib-downloaded-then-Steam-adopted file set.
 **Expected result:** Cancel → honest 1026 manifest → Steam's own repair-on-launch path completes the
 install without GameLib intervention.
 
-**Result:** BLOCKED (by D-UAT-05 — cannot start a fresh cancel test while two prior interrupted native installs are wedged in the DM queue and their pause/stop buttons are non-functional)
-**blocked_by:** D-UAT-05
-**Title/AppID used:** _(couldn't start — see D-UAT-05)_
+**Result:** PENDING (unblocked — D-UAT-05 fixed in code, commit `4267eba0`; awaiting real-HW re-run on a fresh build)
+**Title/AppID used:** _(record here)_
 
 > **🔴 D-UAT-05 (BLOCKER, found 2026-07-16, real macOS) — interrupted Steam native installs wedge the DownloadManager queue across app restart; pause/stop/cancel buttons non-functional.**
 >
@@ -160,6 +159,21 @@ install without GameLib intervention.
 >
 > **Workaround used to unblock UAT:** quit GameLib → empty the `queue` array in
 > `~/Library/Application Support/gamelib/store/download-manager.json` → relaunch.
+>
+> **✅ FIXED IN CODE (commit `4267eba0`, debug session `.planning/debug/steam-dm-queue-wedge.md`).**
+> Root cause was THREE converging mechanisms (all confirmed by code trace, not just the original
+> hypothesis): (1) `currentElement` stayed `null` from module load until `initQueue()` ran ~5s after
+> startup, so pause/stop/cancel (all guarded on `if (currentElement)`) were complete no-ops in that
+> window — including the `removeFromQueue()` that clears the persisted head; (2) the AbortController +
+> `nativeInstallsInFlight` were registered only after two awaits in `installDepotDownload`, so `stop()`
+> hit the no-op branch during that window; (3) `buildDepotPlan` never checked `opts.signal`, so a cancel
+> during the (long, on a cold restart) PICS/manifest plan-build phase had no effect. Fix: seed
+> `currentElement` from the persisted queue head at module load; register the AbortController before both
+> seam awaits with `signal.aborted` checks; add `throwIfAborted(opts.signal)` between every PICS/manifest
+> step and map plan-build aborts to `{status:'cancelled'}`. Backend suite 1224/1224 (7 new regression
+> tests incl. a fix-revert guard); GOG/Epic/Amazon paths untouched. **Still needs real-HW re-verification**
+> (dev UI could not be exercised by the debugger) — re-run the interrupt+cancel+restart flow on a fresh
+> build before closing.
 
 ---
 
@@ -355,7 +369,7 @@ launched Steam.
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
 | 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | BLOCKED | Blocked by D-UAT-05 (interrupted native installs wedge DM queue on restart; pause/stop non-functional). Workaround: clear persisted queue. |
+| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | PENDING | Unblocked — D-UAT-05 fixed in code (commit 4267eba0); re-run on a fresh build. Also re-verifies D-UAT-05 itself (interrupt+cancel+restart). |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PENDING | |
 | 2b | Byte-correctness spot-check | SNI-01 | PENDING | |
 | 2c | Real multi-depot game | SNI-01 (A2) | PENDING | |
@@ -364,11 +378,11 @@ launched Steam.
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | PENDING | |
 | 4c | Continue-to-download | SNI-06 (partial) | PENDING | |
 
-**Gate status:** NOT CLOSED. 2 PASS (1a, 1b), 1 N/A-native (1c), 1 BLOCKED (1d), 7 PENDING. Phase 21
-cannot be marked complete/verified until every row above is PASS (or has a captured divergence routed to
-a follow-up gap plan). **Open blocker finding D-UAT-05** (DM-queue wedge on restart + non-functional
-pause/stop for interrupted native installs) must be fixed before 1d and the Task 2/3 install-heavy tests
-can even be run reliably — an interrupted large install currently cannot be cancelled from the UI.
+**Gate status:** NOT CLOSED. 2 PASS (1a, 1b), 1 N/A-native (1c), 8 PENDING. Phase 21 cannot be marked
+complete/verified until every row above is PASS (or has a captured divergence routed to a follow-up gap
+plan). **D-UAT-05** (DM-queue wedge on restart + non-functional pause/stop for interrupted native
+installs) is **fixed in code** (commit `4267eba0`) but needs real-HW re-verification — re-running 1d on a
+fresh build exercises it. The Task 2/3 install-heavy tests can now be run reliably (interrupt/cancel works).
 
 ---
 *Prepared: 2026-07-16 by Plan 21-12 (autonomous prep). Awaiting human execution on real hardware.*
