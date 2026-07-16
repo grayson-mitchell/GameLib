@@ -1,246 +1,125 @@
 ---
 phase: 21-steam-native-install
-reviewed: 2026-07-15T19:22:57Z
+reviewed: 2026-07-16T10:49:33Z
 depth: standard
-files_reviewed: 28
+scope: gap-closure (21-15 worker-thread decompress pool, 21-16 waiting-for-restart UX)
+files_reviewed: 9
 files_reviewed_list:
-  - src/backend/config.ts
-  - src/backend/main.ts
-  - src/backend/storeManagers/steam/clientSetup.ts
+  - electron.vite.config.ts
   - src/backend/storeManagers/steam/depot.ts
-  - src/backend/storeManagers/steam/depot/crypto.ts
   - src/backend/storeManagers/steam/depot/decompress.ts
-  - src/backend/storeManagers/steam/depot/manifest.ts
+  - src/backend/storeManagers/steam/depot/decompressPool.ts
+  - src/backend/storeManagers/steam/depot/decompressWorker.ts
   - src/backend/storeManagers/steam/depot/select.ts
-  - src/backend/storeManagers/steam/depotErrors.ts
-  - src/backend/storeManagers/steam/games.ts
-  - src/backend/storeManagers/steam/installLocation.ts
   - src/backend/storeManagers/steam/library.ts
-  - src/backend/storeManagers/steam/nativeInstallSetting.ts
-  - src/common/typedefs/lzma.d.ts
-  - src/common/typedefs/steam-user-content-manifest.d.ts
-  - src/common/types.ts
-  - src/common/types/ipc.ts
-  - src/frontend/App.tsx
-  - src/frontend/screens/Game/GamePage/components/SteamClientSetup.tsx
-  - src/frontend/screens/Game/GamePage/components/SteamInstallLocationPicker.tsx
-  - src/frontend/screens/Settings/components/EnableSteamNativeInstall.tsx
-  - src/frontend/screens/Settings/components/index.ts
-  - src/frontend/screens/Settings/sections/GeneralSettings/index.tsx
-  - src/frontend/state/GlobalState.tsx
-  - src/frontend/state/InstallGameModal.ts
-  - src/frontend/state/SteamClientSetup.ts
-  - src/frontend/state/SteamInstallLocation.ts
-  - src/preload/api/steam.ts
+  - src/frontend/hooks/constants.ts
+  - src/frontend/screens/Game/GamePage/components/GameStatus.tsx
 findings:
-  critical: 1
-  warning: 4
+  critical: 0
+  warning: 2
   info: 3
-  total: 8
+  total: 5
 status: issues_found
 ---
 
-# Phase 21: Code Review Report
+# Phase 21: Code Review Report (gap closure 21-15 / 21-16)
 
-**Reviewed:** 2026-07-15T19:22:57Z
+**Reviewed:** 2026-07-16T10:49:33Z
 **Depth:** standard
-**Files Reviewed:** 28
+**Files Reviewed:** 9
 **Status:** issues_found
+
+> Scope: only the Phase 21 gap-closure changes (worker-thread decompress pool + waiting-for-restart UX). The rest of Phase 21 was reviewed in the prior 28-file pass; this file was regenerated for the gap-closure re-review per the workflow's `review_path`.
 
 ## Summary
 
-Phase 21 adds an in-process Steam depot downloader (fetch → AES decrypt → LZMA/zip
-decompress → positional writes → `.acf` manifest). The security-critical primitives are
-generally sound: per-chunk SHA1 gating in `fetchChunk`, whole-file SHA1 verification in
-`downloadSingleFile`, `resolve()+relative()` path containment in `resolveContainedPath`
-(correctly not trusting `path.join`), numeric appId/depotId guards at every network/FS
-entry point, atomic temp-file+rename manifest writes, and registered-library-only install
-targeting. IPC handlers validate appId server-side through a single seam.
+The four scope concerns were each traced end-to-end:
 
-However, the review surfaced one correctness BLOCKER and several robustness gaps. The
-streaming write loop parses each manifest file's `flags` field but never consults it —
-directory and symlink manifest entries (both size 0, no chunks) are written as empty
-regular files, which collides with real subdirectories and breaks the child file writes
-inside them. Separately, the `.acf` writer carefully guards its numeric fields but
-interpolates the untrusted PICS-sourced `name` and `installdir` strings into VDF text
-unescaped, allowing quote/newline injection into a state-control file. The remaining
-findings concern silent success on inconsistent manifests, an unclamped progress percent,
-and defensive-hardening opportunities.
+- **sha1 integrity gate off-thread:** SOUND. `decodeChunk` (decompress.ts:88) is the single source of the `sha1(data) === expectedSha` and `length === cbOriginal` gates, and it runs identically inline and inside the worker (`handleDecodeMessage` → `decodeChunk`). Neither path can return unverified bytes; tests decompressPool.test.ts:105/121 lock this.
+- **Transferable-buffer correctness:** SOUND. The encrypted chunk is copied into a fresh `ArrayBuffer` (`toOwnArrayBuffer`) before transfer, so the caller's buffer is never detached; the decryption key is copied and NEVER placed in the transfer list (decompressPool.ts:287 transfers only `encryptedArrayBuffer`); the worker slices its result to a fresh bounded `ArrayBuffer` before posting back and never posts the key back.
+- **Timeout / worker-replacement races & shutdown leak-safety:** the idempotent `handleWorkerFailure` guard (`workers.includes`), the pending-delete-before-terminate ordering, the `allWorkers` sweep, and the `inFlightReplacements` await in `shutdown()` are correctly reasoned — no double-settle, no double-replacement, no worker-count growth, no leak across the normal `downloadDepotFiles` `finally { shutdown() }`. One residual gap in the *queued* (not dispatched) path is WR-01.
+- **Build wiring:** CORRECT. `electron.vite.config.ts:42-50` emits `decompressWorker.js` as a second named rollup entry co-located with `main.js` in `build/main/`, matching `resolveWorkerPath()`'s `path.join(__dirname, 'decompressWorker.js')` for both dev and packaged output.
+- **Status-context plumbing:** REACHABLE and tested. `pollInstallOnce` emits `context: 'steam-waiting-for-restart'` for StateFlags exactly 1026 (library.ts:1012-1020; `readAcfState` classifies 1026 as `state:'downloading'`) → `handleGameStatus` re-pushes (no early-return, context differs — GlobalState.tsx:960) → `hasStatus` maps `context` → `statusContext` (hasStatus.ts:116) → both `getStatusLabel` (constants.ts:32) and `GameStatus.getInstallLabel` (GameStatus.tsx:93) render the passive hint. Backend branch covered by library.test.ts:1746/1767.
+- **Depot-selection logging (select.ts):** CLEAN. Every log line emits only app/depot ids, manifest gids, sizes, and os/arch/language/branch strings — no decryption key, token, or SteamID64/LastOwner. The two `logWarning` sites in depot.ts (326, 923) carry only appIds and a finalize error object.
 
-## Critical Issues
-
-### CR-01: Manifest `flags` parsed but never used — directory/symlink entries written as empty files, colliding with real subdirectories
-
-**File:** `src/backend/storeManagers/steam/depot.ts:265-271, 488-495`
-**Issue:** `fetchDepotPlanEntry` captures each manifest file's `flags` field
-(`flags: f.flags`) but nothing downstream ever consults it. Steam depot manifests
-(steam-user `content_manifest.parse`) include **directory** entries (flag
-`EDepotFileFlag.Directory`) and **symlink** entries (flag `Symlink`, carrying a
-`LinkTarget`), both of which have `size === 0` and no chunks. In `downloadSingleFile`:
-
-```ts
-if (!file.chunks.length || Number(file.size) === 0) {
-  const empty = await open(dest, 'w')   // creates an empty REGULAR FILE
-  await empty.close()
-  return
-}
-```
-
-A directory entry named `bin` is therefore written as an empty *file* `.../common/<dir>/bin`.
-Because files are processed with `FILE_CONCURRENCY` in arbitrary order:
-- If `bin` (the directory entry) is processed first, the later `bin/game.exe` write calls
-  `mkdir(dirname(dest), { recursive: true })` on a path whose parent is now a file →
-  `ENOTDIR`, recorded as a per-file failure.
-- If `bin/game.exe` is processed first, the directory `bin` is created, then the `bin`
-  directory *entry* calls `open(dest, 'w')` on an existing directory → `EISDIR`, another
-  failure.
-
-Either ordering produces spurious failures for essentially any game whose manifest
-contains directory entries (most games), and symlinks are silently materialized as empty
-files (broken links; `LinkTarget` discarded). This defeats the feature for real installs.
-**Fix:**
-```ts
-// EDepotFileFlag: Directory = 64, Symlink = 512 (verify against steam-user's enum)
-const DIRECTORY_FLAG = 64
-const SYMLINK_FLAG = 512
-
-// In downloadSingleFile, before any open()/mkdir():
-if (file.flags && (file.flags & DIRECTORY_FLAG)) {
-  await mkdir(dest, { recursive: true })
-  return
-}
-if (file.flags && (file.flags & SYMLINK_FLAG)) {
-  // create the symlink from its LinkTarget (must be captured in DepotPlanFile),
-  // after a containment check on BOTH the link path and its resolved target,
-  // or explicitly skip + record if link targets are out of scope.
-  return
-}
-```
-Before shipping, verify empirically what `content_manifest.parse` returns for a
-directory-bearing depot and confirm the flag bit values against steam-user's enum; the
-`flags` field is already threaded through `DepotPlanFile` for exactly this purpose but is
-never read.
+No BLOCKER-class defects (no data-loss, secret leak, injection, or common-path crash). Two robustness gaps in the worker pool and three minor items follow.
 
 ## Warnings
 
-### WR-01: Untrusted PICS `name`/`installdir` interpolated into `.acf` VDF text unescaped (manifest injection)
+### WR-01: Queued decode tasks can orphan (permanent install hang) when the pool drains to zero live workers
 
-**File:** `src/backend/storeManagers/steam/depot/manifest.ts:80-116, 92, 95, 96`
-**Issue:** `buildAppManifestText` rigorously guards its numeric fields
-(`assertNumericId` on appId/depotId) but interpolates the string fields directly:
+**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:322-339` (queue path), `242-250` (`releaseWorker`), `219-240` (`replaceWorker`)
 
+**Issue:** The queue is load-bearing and routinely non-empty: `downloadDepotFiles` runs up to `FILE_CONCURRENCY` (8) files × `CHUNK_CONCURRENCY` (4) = **up to 32 concurrent `decode()` calls against a pool of at most `min(cpus, 8)` workers**, so 24+ tasks sit in `this.queue` on an 8-core host (and nearly all of them on a 1-core VM, where `size` resolves to 1).
+
+Queued tasks are drained only by `releaseWorker()` (called on task completion or a *successful* `replaceWorker()`). There is no timeout on a queued task — the per-task timer is armed only in `dispatch()` once a worker is assigned — and `decode()`'s inline-fallback check (`this.workers.length === 0`, line 318) applies only to *newly arriving* calls; it never re-routes tasks already in `this.queue`. So if the pool reaches `workers.length === 0` while `queue.length > 0` **and** `replaceWorker()` spawns keep failing (EMFILE / ENOMEM / transient worker-entry load failure — the same resource exhaustion that kills workers en masse), the queued task promises never settle. `downloadSingleFile` awaits them forever: the install hangs with the UI stuck on "Installing…", no error, no completion, no `finalizeToSteam`. Worst on low-core hosts (pool size 1), where a single failed replacement after one timeout strands the entire remaining queue.
+
+**Fix:** When the pool can no longer serve queued work, drain it inline instead of leaking it:
 ```ts
-`\t"installdir"\t\t"${params.installdir}"`,
-`\t"name"\t\t"${params.name}"`,
-```
-
-`name` originates from PICS `appinfo.common.name` (`depot.ts:318`) with **no sanitization
-at all**, and `installdir`'s upstream `sanitizeInstalldir` (`installLocation.ts:90-103`)
-only rejects `/`, `\`, and `..` — it does **not** reject `"` , newlines, or other VDF
-control characters. A name/installdir containing `"` or a newline breaks the VDF structure
-or injects sibling keys into the AppState block that controls install state (e.g. a crafted
-value could emit a second `"StateFlags" "4"` line). The `.acf` is read back by
-`readAcfState` (`library.ts:889`, `parseInt(state.StateFlags,10) & 4`) and by Steam itself,
-so a corrupted/injected manifest either mislabels install state or is silently dropped as
-corrupt (`library.ts:906-907`). This is inconsistent with the module's own header comment,
-which claims values are safely handled.
-**Fix:** Escape VDF-significant characters before interpolation (VDF quotes strings with
-`\"` and `\\`; reject or strip control chars/newlines outright), e.g.
-```ts
-const vdfEscape = (s: string) =>
-  s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n\t]/g, ' ')
-// ...
-`\t"name"\t\t"${vdfEscape(params.name)}"`,
-`\t"installdir"\t\t"${vdfEscape(params.installdir)}"`,
-```
-and extend `sanitizeInstalldir` to also reject `"` and control characters.
-
-### WR-02: `size > 0` with zero chunks is silently written as an empty file and reported as success (no SHA verification)
-
-**File:** `src/backend/storeManagers/steam/depot.ts:491-495`
-**Issue:** The empty-file fast path fires on `!file.chunks.length || Number(file.size) === 0`.
-The `!file.chunks.length` half means a file that *should* have content (`size > 0`) but
-whose manifest returned no chunks — an inconsistent/corrupt/mis-parsed manifest — is
-truncated to an empty file, and the function returns **without** the whole-file SHA1 check
-that the normal path enforces (lines 507-515). The download is then reported as fully
-`completed` with no failure recorded, masking data loss until Steam's later verify pass.
-**Fix:** Only treat a genuinely empty file as complete; a `size > 0` file with no chunks is
-an error, not a success:
-```ts
-if (Number(file.size) === 0) {
-  const empty = await open(dest, 'w'); await empty.close(); return
+private async replaceWorker(): Promise<void> {
+  if (this.inlineFallback || this.shuttingDown) return
+  try {
+    const worker = await this.spawnWorker(this.resolveWorkerPath())
+    if (this.shuttingDown) { await worker.terminate().catch(() => undefined); return }
+    this.workers.push(worker)
+    this.releaseWorker(worker)
+  } catch {
+    if (this.workers.length === 0) this.drainQueueInline() // don't strand queued tasks
+  }
 }
-if (!file.chunks.length) {
-  throw new Error(`downloadDepotFiles: file ${file.filename} has size ${file.size} but no chunks`)
+
+private drainQueueInline(): void {
+  for (const t of this.queue.splice(0)) {
+    this.inlineDecode(t.encrypted, t.key, t.expectedSha, t.cbOriginal).then(t.resolve, t.reject)
+  }
 }
 ```
 
-### WR-03: Progress `percent` is not clamped and can exceed 100
+### WR-02: Silent pool capacity collapse — replacement failures are swallowed with no log
 
-**File:** `src/backend/storeManagers/steam/depot.ts:576`
-**Issue:** `percent: totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0`.
-`totalBytes` is the D-03 manifest-declared sum, while `doneBytes` accumulates
-*decompressed* bytes actually written; the two need not agree, and the module's own
-comments elsewhere note manifest sums can diverge from real on-disk totals. When
-`doneBytes > totalBytes` the emitted percent exceeds 100. The sibling
-`pollInstallOnce` in `library.ts:1016` explicitly clamps with
-`Math.min(100, Math.max(0, ...))`; this path does not, so the DownloadManager can render
->100%.
-**Fix:** `percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0`.
+**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:235-239`
 
-### WR-04: `sanitizeInstalldir` is separator-only — permits quotes, control chars, and Windows drive-relative names
+**Issue:** `replaceWorker()`'s failure is caught by a bare `catch {}` with no log, so the pool can quietly degrade 8 → 0 workers with zero output. This is the pool introduced specifically to fix UAT-reported slowness (D-UAT-03); a silent capacity collapse (and the WR-01 hang it precedes) leaves an operator investigating a hung/slow install with nothing to correlate — the opposite of the observability intent behind the sibling 21-16 logging work.
 
-**File:** `src/backend/storeManagers/steam/installLocation.ts:90-103`
-**Issue:** The check rejects only `/`, `\`, and `..`. A PICS `installdir` such as `C:foo`
-(Windows drive-relative, no separator), or one containing `"`/newline/control characters,
-passes through and is used both as a filesystem path segment in
-`resolve(targetSteamappsDir, 'common', installdir)` and interpolated into the VDF manifest
-(see WR-01). On Windows, `path.resolve` treats `C:foo` as drive-relative, producing a
-target outside the intended tree (the per-file containment check in `depot.ts` is the
-backstop, but the install-root itself is derived from this value before any per-file
-check). Defense-in-depth for an attacker-influenced string that becomes the install root
-should be stricter.
-**Fix:** Whitelist instead of blacklist, e.g. reject anything not matching
-`/^[A-Za-z0-9 ._-]+$/` after also rejecting a leading/trailing dot and any drive-letter
-prefix, or fall back to `app_<appId>` for any value containing `"`, control chars, `:`, or
-a bare `..` segment.
+**Fix:** Log at warn level when a replacement fails / the pool hits zero workers:
+```ts
+} catch (err) {
+  logWarning(
+    ['DecompressPool: worker replacement failed; pool now at', `${this.workers.length} worker(s)`,
+     (err as Error)?.message ?? ''],
+    LogPrefix.Steam
+  )
+}
+```
 
 ## Info
 
-### IN-01: `steamDecrypt` returns padded plaintext on invalid PKCS#7 padding instead of failing
+### IN-01: `os.cpus()` returning an empty array silently disables the pool
 
-**File:** `src/backend/storeManagers/steam/depot/crypto.ts:29-32`
-**Issue:** When the trailing padding bytes are not a valid PKCS#7 run, the function returns
-the full (still-padded) plaintext rather than throwing. For a wrong key or corrupted
-ciphertext this passes malformed bytes downstream. It is caught later (decompress footer
-magic / chunk SHA1 mismatch), so there is no exploit, but silently returning
-possibly-garbage plaintext is a foot-gun.
-**Fix:** Consider throwing on invalid padding, or add a comment documenting that
-downstream SHA1/decompress is the intended integrity gate.
+**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:96`
 
-### IN-02: `decompressChunk` decompresses before verifying `cb_original` size
+**Issue:** `this.size = opts.size ?? Math.min(os.cpus().length, 8)`. Some sandboxed/containerized hosts return `os.cpus() === []`, yielding `size === 0`. `init()` spawns zero workers (no error, so `inlineFallback` stays `false`), and every `decode()` runs inline on the main thread. Behavior stays correct, but the off-main-thread optimization silently no-ops with no log on exactly the low-resource hosts most likely to need it.
 
-**File:** `src/backend/storeManagers/steam/depot/decompress.ts:38-70, 101-113`
-**Issue:** LZMA `decompress` and `zlib.inflateRawSync` run to completion before the
-decompressed length is compared to `cb_original` (`depot/decompress.ts:111`). A crafted
-chunk (e.g. MITM of the CDN over the HTTPS boundary) could inflate to a very large buffer
-before the size check rejects it. Mitigated by HTTPS transport and the subsequent SHA1
-gate, so out-of-scope severity-wise (memory/DoS, not correctness), but worth noting.
-**Fix:** Reject chunks whose declared `cb_original` exceeds a sane chunk ceiling (Steam
-chunks are ~1MB) before decompressing, and/or bound `inflateRawSync` output length.
+**Fix:** `this.size = opts.size ?? Math.max(1, Math.min(os.cpus().length || 1, 8))` and/or log the chosen size.
 
-### IN-03: `downloadSteamDepots` can call `finalize()` twice on the error path
+### IN-02: Redundant double-copy of the depot key per dispatched chunk
 
-**File:** `src/backend/storeManagers/steam/depot.ts:802, 819`
-**Issue:** The `try` block awaits `finalize()` (line 802). If that call itself throws,
-control falls into the `catch`, which awaits `finalize()` again (line 819). The write is
-atomic (temp+rename) so a double write is harmless, but the second measure+write is
-redundant work on an already-failing path.
-**Fix:** Track whether finalize already ran (or move the success-path finalize outside the
-try) so the catch only finalizes when the try did not.
+**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:277`
+
+**Issue:** `toOwnArrayBuffer(Buffer.from(task.key))` copies the key twice (`Buffer.from` allocates+copies, then `.slice()` copies again). Correct and safe (key is never transferred), just wasteful per chunk. `toOwnArrayBuffer(task.key)` alone already yields an independent, non-transferred `ArrayBuffer`.
+
+**Fix:** `const keyArrayBuffer = toOwnArrayBuffer(task.key)`.
+
+### IN-03: worker_threads-from-asar loading should be verified against the packaged build
+
+**File:** `electron.vite.config.ts:42-50`, `src/backend/storeManagers/steam/depot/decompressPool.ts:101-103`
+
+**Issue:** Build wiring is correct, but the residual risk is runtime-only: `new Worker(<path inside app.asar>)` plus its dynamic `import('lzma')` (and WASM asset) must load from the packaged asar, not just the unpacked dev `build/`. Static review cannot confirm this; on failure the pool falls back inline (graceful, but the fix no-ops silently).
+
+**Fix:** Add a packaged-build smoke test / startup log asserting `init()` produced live workers (not an inline fallback); `asarUnpack` the `lzma` WASM asset if the packaged worker cannot load it.
 
 ---
 
-_Reviewed: 2026-07-15T19:22:57Z_
+_Reviewed: 2026-07-16T10:49:33Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
