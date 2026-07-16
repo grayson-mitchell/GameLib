@@ -125,3 +125,7 @@ None - no external service configuration required.
 ---
 *Phase: 21-steam-native-install*
 *Completed: 2026-07-16*
+
+## Self-Check: PASSED
+
+All 11 claimed files verified present on disk (select.ts, library.ts, constants.ts, GameCard/index.tsx, GameStatus.tsx, gamepage.json, translation.json, library.test.ts, depotPrimitives.test.ts, hasStatus.reconcile.test.ts, this SUMMARY). All 4 claimed commits (10ce366e, 0dddae26, 3a3e3736, 76ba3781) verified present in `git log --oneline --all`.
