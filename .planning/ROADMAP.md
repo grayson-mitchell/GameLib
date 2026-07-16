@@ -53,7 +53,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.6 — Steam Native Install
 
-- [ ] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (gaps found 2026-07-16 — SNI-01 depot directory/symlink handling failed verification; hardware UAT outstanding; see 21-VERIFICATION.md)
+- [x] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (gaps found 2026-07-16 — SNI-01 depot directory/symlink handling failed verification; hardware UAT outstanding; see 21-VERIFICATION.md) (completed 2026-07-16)
 
 ## Phase Details
 
@@ -746,7 +746,7 @@ Plans:
   - **Pre-work carried in from the spikes:** audit GameLib's existing `@node-steam/vdf` call sites for 64-bit exposure; confirm the launch path once against a known hard-DRM title (WazHack was not confirmed DRM-wrapped).
   - **Untested at spike scale:** large (50 GB) games, streaming to disk (spike assembled files in RAM), and resume-after-interruption UX.
 
-**Plans:** 13/14 plans executed
+**Plans:** 14/14 plans complete
 
 Plans:
 **Wave 1**
@@ -788,7 +788,7 @@ Plans:
 **Wave 9** *(gap closure — verifier gaps_found 2026-07-16; disjoint files, both parallel)*
 
 - [x] 21-13-PLAN.md — CR-01: downloadSingleFile branches on Directory/Symlink flags (real dir/symlink, containment-checked LinkTarget) + WR-02 zero-chunk error + WR-03 percent clamp + regression tests (SNI-01/04/08)
-- [ ] 21-14-PLAN.md — WR-01: VDF-escape name/installdir in the .acf writer + WR-04: harden sanitizeInstalldir (quotes/control/drive-relative) (SNI-02/05)
+- [x] 21-14-PLAN.md — WR-01: VDF-escape name/installdir in the .acf writer + WR-04: harden sanitizeInstalldir (quotes/control/drive-relative) (SNI-02/05)
 
 **UI hint**: yes
 

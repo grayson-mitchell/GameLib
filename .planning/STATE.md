@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: 21-13 (CR-01 Directory/Symlink depot flags, WR-02/WR-03) executed; 21-14 remaining
-stopped_at: Completed 21-13-PLAN.md
-last_updated: "2026-07-16T01:17:22.721Z"
-last_activity: 2026-07-16 -- Executed 21-13
+status: executing
+stopped_at: Completed 21-14-PLAN.md
+last_updated: "2026-07-16T01:23:47.840Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 5
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — EXECUTING (gap closure)
-Plan: 13 of 14
-Status: 21-13 (CR-01 Directory/Symlink depot flags, WR-02/WR-03) executed; 21-14 remaining
-Last activity: 2026-07-16 -- Executed 21-13
+Phase: 21 (steam-native-install) — gap-closure plans 21-13/21-14 executed (code-complete); 21-UAT.md real-hardware tasks remain PENDING per 21-12-PLAN.md gate
+Plan: 14 of 14
+Status: All 14 plans have SUMMARY.md; CR-01 (21-13) and WR-01/WR-04 (21-14) gaps closed. WR-02/WR-03 also closed in 21-13. Not milestone-complete — 21-UAT.md human verification still outstanding.
+Last activity: 2026-07-16 -- Executed 21-14 (VDF-escape WR-01, sanitizeInstalldir whitelist WR-04)
 
 ## v1.4 Phase Map
 
@@ -138,6 +138,7 @@ Last activity: 2026-07-16 -- Executed 21-13
 | Phase 21 P10 | 55min | 2 tasks | 12 files |
 | Phase 21 P12 | ~15min | 1 task (UAT prep; 3 human-verify deferred) | 1 file |
 | Phase 21 P13 | 20min | 2 tasks | 2 files |
+| Phase 21 P14 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -222,6 +223,8 @@ Recent decisions affecting current work:
 - [Phase 21-09]: D-09 multi-library override picker wired into InstallGameModal.ts's actual Steam chokepoint, not DownloadDialog (which Steam installs never route through); picker is a registered-libraries-only select, never PathSelectionBox's free-text filesystem browser
 - [Phase ?]: [Phase 21-11]: D-15 unified via a new shared installDepotDownload() engine (installNative + installBottleNative delegate to it) rather than a second parallel implementation; bottle installdir sourced from resolveSteamInstallTarget (discarding its native-library targetSteamappsDir) since installLocation.ts's PICS installdir helpers are private and out of this plan's files_modified scope
 - [Phase 21-13]: downloadSingleFile branches on DIRECTORY_FLAG(64)/SYMLINK_FLAG(512) BEFORE the size===0 fast path; symlink target resolved via resolve(dirname(dest), linktarget) then containment-checked against installRoot (never path.join); WR-02 zero-chunk and WR-03 percent-clamp closed in the same code path
+- [Phase ?]: Phase 21-14: vdfEscape escapes backslash before quote (order matters) and neutralizes \r/\n/\t to a space rather than escaping them
+- [Phase ?]: Phase 21-14: sanitizeInstalldir rewritten as a positive whitelist ([A-Za-z0-9 ._-]+, no leading/trailing dot) instead of an expanding denylist
 
 ### Pending Todos
 
@@ -281,9 +284,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-16T01:17:13.548Z
-Stopped at: Completed 21-13-PLAN.md
-Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
+Last session: 2026-07-16T01:23:47.834Z
+Stopped at: Completed 21-14-PLAN.md
+Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
