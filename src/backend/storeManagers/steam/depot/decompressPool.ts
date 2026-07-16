@@ -18,6 +18,7 @@ import { Worker } from 'node:worker_threads'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { decodeChunk, type LzmaModule } from './decompress'
+import { logWarning, LogPrefix } from 'backend/logger'
 import type {
   DecompressWorkerRequest,
   DecompressWorkerResponse,
@@ -232,10 +233,21 @@ export class DecompressPool {
       }
       this.workers.push(worker)
       this.releaseWorker(worker)
-    } catch {
+    } catch (err) {
       // Replacement failed too — the pool just runs smaller; decode() still
       // dispatches to any remaining workers, or falls back inline if none
-      // are left (same discipline as init()'s own fallback).
+      // are left (same discipline as init()'s own fallback). Log the
+      // capacity collapse so an operator investigating a slow/hung install
+      // can correlate it (WR-02) — only the error message is logged, never
+      // any key/token/SteamID.
+      logWarning(
+        [
+          'DecompressPool: worker replacement failed; pool now at',
+          `${this.workers.length} worker(s)`,
+          (err as Error)?.message ?? ''
+        ],
+        LogPrefix.Steam
+      )
     }
   }
 
