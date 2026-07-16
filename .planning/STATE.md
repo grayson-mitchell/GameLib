@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-15-PLAN.md
-last_updated: "2026-07-16T10:31:17.319Z"
-last_activity: 2026-07-16 -- Phase 21 Plan 15 (LZMA decompress worker pool) executed
+stopped_at: Completed 21-16-PLAN.md
+last_updated: "2026-07-16T10:42:02.842Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 5
   completed_phases: 1
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 21 (steam-native-install) — 21-15 (D-UAT-03 worker-pool gap-closure) executed and code-complete; 21-16 (D-UAT-03 UX/observability follow-up) and 21-UAT.md real-hardware tasks remain PENDING
-Plan: 15 of 16
+Plan: 16 of 16
 Status: Ready to execute
 Last activity: 2026-07-16
 
@@ -140,6 +140,7 @@ Last activity: 2026-07-16
 | Phase 21 P13 | 20min | 2 tasks | 2 files |
 | Phase 21 P14 | 20min | 2 tasks | 4 files |
 | Phase 21 P15 | 45min | 3 tasks | 8 files |
+| Phase 21 P16 | 30min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 21-14: sanitizeInstalldir rewritten as a positive whitelist ([A-Za-z0-9 ._-]+, no leading/trailing dot) instead of an expanding denylist
 - [Phase 21-15]: decompressWorker.ts sends an explicit {type:'ready'} handshake after its module graph loads; DecompressPool keys spawn-success off that message, not worker_threads' 'online' event, which fires before a bad entry path's module-not-found error surfaces
 - [Phase 21-15]: DecompressPool.shutdown() sets a shuttingDown flag first and awaits in-flight replaceWorker() spawns before its terminate sweep, closing a race where a replacement worker finishing spawn concurrently with shutdown() would otherwise never be tracked/terminated
+- [Phase ?]: [Phase 21-16]: GAMELIB_HANDOFF_STATE_FLAGS = 1026 tested by strict equality in pollInstallOnce (not a bitmask) since 1026 is the exact literal GameLib itself writes on handoff
+- [Phase ?]: [Phase 21-16]: notifiedWaiting fire-once flag co-located on the same activePolls entry as seenDownloading rather than a separate Map
+- [Phase ?]: [Phase 21-16]: GameCard/index.tsx needed zero code changes for the restart hint -- it already renders getStatusLabel's output verbatim via hasStatus.ts's label field
 
 ### Pending Todos
 
@@ -287,8 +291,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-16T10:31:17.313Z
-Stopped at: Completed 21-15-PLAN.md
+Last session: 2026-07-16T10:42:02.836Z
+Stopped at: Completed 21-16-PLAN.md
 Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
