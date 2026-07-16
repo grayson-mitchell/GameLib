@@ -712,6 +712,16 @@ export default class SteamGame implements Game {
    * Registers this.appId in nativeInstallsInFlight + a real AbortController
    * (D-02) for the duration of the download so stop() can abort it — for
    * EITHER path — released in the finally regardless of outcome.
+   *
+   * D-UAT-05 fix: registration happens FIRST, before either seam await
+   * (ensureSteamClientReady/resolveSteamInstallTarget) — previously it only
+   * happened after both had resolved, so a stop()/cancel() issued while
+   * either was still pending saw nativeInstallsInFlight.has(appId) === false
+   * and hit the historic no-op branch (observed in the field as "SteamGame.stop:
+   * Steam owns process lifecycle ...; no-op"). Registering synchronously up
+   * front closes that window entirely; the two `controller.signal.aborted`
+   * checks below make a cancel issued DURING either seam await still abort
+   * the install promptly instead of silently continuing to downloadSteamDepots.
    */
   private async installDepotDownload(
     args: InstallArgs,
@@ -721,24 +731,30 @@ export default class SteamGame implements Game {
       pollerSource?: 'bottle'
     }
   ): Promise<InstallResult> {
-    const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
-    if (!clientReady.ready) {
-      return {
-        status: 'error',
-        error:
-          clientReady.error ??
-          `Steam client not ready for appId ${this.appId}`
-      }
-    }
-
-    const resolved = await resolveSteamInstallTarget(this.appId, args) // Plan 09
-    const targetSteamappsDir =
-      opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
-
     const controller = createAbortController(this.appId)
     nativeInstallsInFlight.add(this.appId)
 
     try {
+      const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
+      if (controller.signal.aborted) {
+        return { status: 'abort' }
+      }
+      if (!clientReady.ready) {
+        return {
+          status: 'error',
+          error:
+            clientReady.error ??
+            `Steam client not ready for appId ${this.appId}`
+        }
+      }
+
+      const resolved = await resolveSteamInstallTarget(this.appId, args) // Plan 09
+      if (controller.signal.aborted) {
+        return { status: 'abort' }
+      }
+      const targetSteamappsDir =
+        opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
+
       const outcome = await downloadSteamDepots(this.appId, {
         targetSteamappsDir,
         installdir: resolved.installdir,

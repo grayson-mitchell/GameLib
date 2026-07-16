@@ -172,6 +172,34 @@ function assertNumericAppId(appId: string): void {
   }
 }
 
+/** Sentinel error D-UAT-05's abort checks throw — downloadSteamDepots's catch
+ *  block recognizes it (via opts.signal?.aborted, not instanceof, so ANY
+ *  error racing with an already-aborted signal is still reported as
+ *  'cancelled' rather than 'error') and maps it to a cancelled outcome
+ *  instead of classifyDepotError's generic error surface. */
+class DepotPlanAbortedError extends Error {
+  constructor() {
+    super('downloadSteamDepots: aborted during plan build')
+    this.name = 'DepotPlanAbortedError'
+  }
+}
+
+/**
+ * D-UAT-05: buildDepotPlan's PICS/manifest network calls (ensureConnected,
+ * getProductInfo x3, getDepotDecryptionKey+getRawManifest PER OWNED DEPOT)
+ * previously never consulted the AbortSignal at all — a stop()/cancel()
+ * issued while the plan was still being built had NO effect until the whole
+ * plan finished and downloadDepotFiles's own per-chunk signal checks took
+ * over. For a many-depot game that phase can run long, so cancel appeared
+ * "non-functional". Called between every major step below so an abort takes
+ * effect within roughly one network round-trip instead of the whole plan.
+ */
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DepotPlanAbortedError()
+  }
+}
+
 /** Never open a second logon (T-21-11) — reuse the same authenticated client
  *  library.ts's refresh() reaches via SteamUser.ensureConnected()/getClient(). */
 function getDepotClient(): SteamUserDepotClient {
@@ -320,8 +348,10 @@ export async function buildDepotPlan(
   opts: DownloadSteamDepotsOpts
 ): Promise<DepotPlan> {
   assertNumericAppId(appId)
+  throwIfAborted(opts.signal)
 
   const connected = await SteamUser.ensureConnected()
+  throwIfAborted(opts.signal)
   if (!connected) {
     logWarning(
       `downloadSteamDepots: no authenticated Steam CM connection for appId ${appId}`,
@@ -336,9 +366,12 @@ export async function buildDepotPlan(
   const numericAppId = Number(appId)
 
   const appinfo = await fetchAppInfo(client, numericAppId)
+  throwIfAborted(opts.signal)
   const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
   const owned = await getOwnedSets(client)
+  throwIfAborted(opts.signal)
   const dlcInfos = await fetchDlcInfos(client, appinfo)
+  throwIfAborted(opts.signal)
 
   const selectOpts: DepotSelectOpts = {
     os: opts.os,
@@ -355,6 +388,7 @@ export async function buildDepotPlan(
   const depots: DepotPlanEntry[] = []
   let totalBytes = 0
   for (const descriptor of descriptors) {
+    throwIfAborted(opts.signal)
     const entry = await fetchDepotPlanEntry(client, numericAppId, descriptor, parser)
     depots.push(entry)
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
@@ -892,6 +926,7 @@ export async function downloadSteamDepots(
 
     const client = getDepotClient()
     const hosts = await getContentServerHosts(client, Number(appId))
+    throwIfAborted(opts.signal)
 
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: opts.targetSteamappsDir,
@@ -925,6 +960,15 @@ export async function downloadSteamDepots(
         LogPrefix.Steam
       )
     })
+    // D-UAT-05: a cancel issued during plan-building throws
+    // DepotPlanAbortedError (or races with some OTHER thrown error while the
+    // signal is already aborted) — checked via opts.signal?.aborted rather
+    // than `instanceof` so either case still reports 'cancelled', matching
+    // downloadDepotFiles's own signal-aborted -> 'cancelled' outcome instead
+    // of surfacing a spurious error/Retry UI for a user-requested stop.
+    if (opts.signal?.aborted) {
+      return { status: 'cancelled' }
+    }
     return { status: 'error', error: classifyDepotError(err).message }
   }
 }

@@ -1058,6 +1058,34 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
     await expect(game.stop()).resolves.toBeUndefined()
     expect(callAbortController).not.toHaveBeenCalled()
   })
+
+  it('D-UAT-05: stop() called WHILE ensureSteamClientReady is still pending finds nativeInstallsInFlight already registered — no historic "Steam owns process lifecycle; no-op" branch', async () => {
+    const { logWarning } = jest.requireMock('backend/logger')
+    let resolveReady!: (value: { ready: true }) => void
+    ;(ensureSteamClientReady as jest.Mock).mockReturnValue(
+      new Promise((resolve) => {
+        resolveReady = resolve
+      })
+    )
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const installPromise = game.install({} as any)
+    // Let install() run through ensurePlatformsCaptured() into the
+    // (still-pending) ensureSteamClientReady await — registration (D-UAT-05
+    // fix) happens synchronously before this await starts.
+    await flushAsync()
+
+    await game.stop()
+    expect(callAbortController).toHaveBeenCalledWith(APP_ID)
+    expect(logWarning).not.toHaveBeenCalledWith(
+      expect.stringContaining('no-op'),
+      expect.anything()
+    )
+
+    resolveReady({ ready: true })
+    await installPromise
+  })
 })
 
 // ── GAME-02: SteamGame.install() ──────────────────────────────────────────────

@@ -297,6 +297,64 @@ describe('buildDepotPlan', () => {
       expect(typeof real.parse).toBe('function')
     })
   })
+
+  describe('D-UAT-05: abort signal during plan-build', () => {
+    it('an already-aborted signal throws before ensureConnected() is even called', async () => {
+      const controller = new AbortController()
+      controller.abort()
+
+      await expect(
+        buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
+      ).rejects.toThrow(/aborted/i)
+
+      expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    })
+
+    it('aborting mid-loop (after the first of two depots) stops before fetching the second depot manifest', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0 },
+        { id: '222', manifest: '9007199254740995', size: 0 }
+      ])
+
+      const controller = new AbortController()
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => {
+          // Abort partway through — right after the first depot's key fetch
+          // starts resolving, before the loop moves to the second descriptor.
+          if (depotId === 111) controller.abort()
+          cb(null, Buffer.from(`key-${depotId}`))
+        }
+      )
+      jest.mocked(fakeClient.getRawManifest).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [{ filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }]
+      })
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      await expect(
+        buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
+      ).rejects.toThrow(/aborted/i)
+
+      // The second depot's manifest fetch never starts (loop bailed before it).
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
+    })
+  })
 })
 
 /**
@@ -525,6 +583,31 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
     const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+  })
+
+  it('D-UAT-05: a cancel issued WHILE the plan is still being built (e.g. during the CM connect wait) resolves with status cancelled — never error — and never reaches downloadDepotFiles/fetchChunk', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const controller = new AbortController()
+    // Simulate a stop()/cancel() click that lands while ensureConnected()
+    // is still resolving — the CM-reconnect-on-restart window this bug was
+    // observed in.
+    jest.mocked(SteamUser.ensureConnected).mockImplementation(async () => {
+      controller.abort()
+      return true
+    })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows',
+      signal: controller.signal
+    })
+
+    expect(result.status).toBe('cancelled')
+    expect(fetchChunk).not.toHaveBeenCalled()
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
   })
 
   it('a thrown plan-orchestration error (e.g. content-server resolution failure) also funnels through finalizeToSteam and NEVER rejects the caller', async () => {

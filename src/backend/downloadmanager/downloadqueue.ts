@@ -24,7 +24,16 @@ const downloadManager = new TypeCheckedStoreBackend('downloadManager', {
 */
 
 let queueState: DownloadManagerState = 'idle'
-let currentElement: DMQueueElement | null = null
+// D-UAT-05: seeded from the persisted queue head at module load (instead of
+// staying null until initQueue()'s while loop first assigns it) so
+// pause/stop/cancel are never no-ops for a queue head that survived an app
+// restart — main.ts only calls initQueue() 5s after startup, and until this
+// var was populated, cancelCurrentDownload/pauseCurrentDownload/
+// stopCurrentDownload's `if (currentElement)` guards silently did nothing
+// (not even removing the item from the persisted queue) for that whole
+// window, so a fast click during it appeared completely non-functional and
+// the item stayed queued to auto-resume+re-wedge on the very next restart.
+let currentElement: DMQueueElement | null = getFirstQueueElement()
 let autoPaused = false
 
 onConnectivityChange((status) => {
