@@ -19,7 +19,10 @@ findings:
   warning: 2
   info: 3
   total: 5
-status: issues_found
+warnings_resolved:
+  - "WR-01 — resolved in 56aba291 (drainQueueInline on zero-worker collapse + regression test)"
+  - "WR-02 — resolved in a32e098e (log replaceWorker failures)"
+status: warnings_resolved
 ---
 
 # Phase 21: Code Review Report (gap closure 21-15 / 21-16)
@@ -27,7 +30,7 @@ status: issues_found
 **Reviewed:** 2026-07-16T10:49:33Z
 **Depth:** standard
 **Files Reviewed:** 9
-**Status:** issues_found
+**Status:** warnings_resolved (WR-01/WR-02 fixed 2026-07-16; Info items IN-01/02/03 left as-is)
 
 > Scope: only the Phase 21 gap-closure changes (worker-thread decompress pool + waiting-for-restart UX). The rest of Phase 21 was reviewed in the prior 28-file pass; this file was regenerated for the gap-closure re-review per the workflow's `review_path`.
 
