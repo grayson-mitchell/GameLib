@@ -4,12 +4,14 @@ plan: 12
 artifact: uat
 status: partial
 total_items: 11
-pending_items: 9
+pending_items: 8
 passed_items: 2
 failed_items: 0
+blocked_items: 1
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
+open_findings: [D-UAT-05]
 run_via: "/gsd:verify-work 21"
-last_updated: 2026-07-16
+last_updated: 2026-07-17
 ---
 
 # Phase 21 — Steam Native Install: Real-Machine UAT
@@ -124,8 +126,40 @@ layer rejecting the GameLib-downloaded-then-Steam-adopted file set.
 **Expected result:** Cancel → honest 1026 manifest → Steam's own repair-on-launch path completes the
 install without GameLib intervention.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
+**Result:** BLOCKED (by D-UAT-05 — cannot start a fresh cancel test while two prior interrupted native installs are wedged in the DM queue and their pause/stop buttons are non-functional)
+**blocked_by:** D-UAT-05
+**Title/AppID used:** _(couldn't start — see D-UAT-05)_
+
+> **🔴 D-UAT-05 (BLOCKER, found 2026-07-16, real macOS) — interrupted Steam native installs wedge the DownloadManager queue across app restart; pause/stop/cancel buttons non-functional.**
+>
+> **Reported:** "last uat I was testing installing Civilization VII, and stopped part way through. When
+> reopening the app that download is showing and can't pause, or stop (stop button and pause button do
+> not work), so I can't install another game and cancel."
+>
+> **State captured:** persisted `download-manager.json` held TWO stuck steam installs —
+> `1295660` Sid Meier's Civilization VII (20 GiB) + `1091500` Cyberpunk 2077 (70 GiB), `finished: []`.
+>
+> **Root-cause hypothesis (code-read, needs debug-session confirmation):** the DM queue persists to
+> electron-store and `main.ts:572` calls `initQueue()` at app startup, which auto-resumes queue[0].
+> Resuming a *steam native* install re-enters `installDepotDownload` → `ensureSteamClientReady` +
+> `resolveSteamInstallTarget` (two `await`s) BEFORE `createAbortController(appId)` +
+> `nativeInstallsInFlight.add(appId)` (games.ts:724-739). While wedged in that pre-download phase (or on
+> a stalled steam-user CM re-auth after restart), `pauseCurrentDownload`/`cancelCurrentDownload` →
+> `stopCurrentDownload` → `callAbortController(appName)` + `SteamGame.stop()` find nothing abortable
+> (`nativeInstallsInFlight` not yet populated, or the current await ignores the signal) → buttons no-op,
+> element never leaves the queue, every restart re-wedges. gog/legendary don't hit this because their
+> resume path registers the abort controller synchronously at the top.
+>
+> **Candidate fixes (for the gap/debug cycle):** (a) register the AbortController +
+> `nativeInstallsInFlight` FIRST in `installDepotDownload`, before the `ensureSteamClientReady`/
+> `resolveSteamInstallTarget` awaits, and make those awaits abort-aware; (b) make
+> `cancelCurrentDownload` able to remove a `currentElement === null` queue head (so a not-yet-running
+> persisted item can still be cancelled after restart); (c) consider NOT auto-resuming steam native
+> installs on startup (leave them paused, require an explicit user Resume) so a restart never silently
+> re-wedges. Route to `/gsd-debug` or a Phase-21 gap plan.
+>
+> **Workaround used to unblock UAT:** quit GameLib → empty the `queue` array in
+> `~/Library/Application Support/gamelib/store/download-manager.json` → relaunch.
 
 ---
 
@@ -321,7 +355,7 @@ launched Steam.
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
 | 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | PENDING | |
+| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | BLOCKED | Blocked by D-UAT-05 (interrupted native installs wedge DM queue on restart; pause/stop non-functional). Workaround: clear persisted queue. |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PENDING | |
 | 2b | Byte-correctness spot-check | SNI-01 | PENDING | |
 | 2c | Real multi-depot game | SNI-01 (A2) | PENDING | |
@@ -330,8 +364,11 @@ launched Steam.
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | PENDING | |
 | 4c | Continue-to-download | SNI-06 (partial) | PENDING | |
 
-**Gate status:** NOT CLOSED — all items PENDING. Phase 21 cannot be marked complete/verified until
-every row above is PASS (or has a captured divergence routed to a follow-up gap plan).
+**Gate status:** NOT CLOSED. 2 PASS (1a, 1b), 1 N/A-native (1c), 1 BLOCKED (1d), 7 PENDING. Phase 21
+cannot be marked complete/verified until every row above is PASS (or has a captured divergence routed to
+a follow-up gap plan). **Open blocker finding D-UAT-05** (DM-queue wedge on restart + non-functional
+pause/stop for interrupted native installs) must be fixed before 1d and the Task 2/3 install-heavy tests
+can even be run reliably — an interrupted large install currently cannot be cancelled from the UI.
 
 ---
 *Prepared: 2026-07-16 by Plan 21-12 (autonomous prep). Awaiting human execution on real hardware.*
