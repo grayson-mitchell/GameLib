@@ -746,7 +746,7 @@ Plans:
   - **Pre-work carried in from the spikes:** audit GameLib's existing `@node-steam/vdf` call sites for 64-bit exposure; confirm the launch path once against a known hard-DRM title (WazHack was not confirmed DRM-wrapped).
   - **Untested at spike scale:** large (50 GB) games, streaming to disk (spike assembled files in RAM), and resume-after-interruption UX.
 
-**Plans:** 12/12 plans complete
+**Plans:** 14 plans (12 complete + 2 gap-closure, 21-13/21-14)
 
 Plans:
 **Wave 1**
@@ -784,6 +784,11 @@ Plans:
 **Wave 8** *(blocked on Wave 7 completion)*
 
 - [x] 21-12-PLAN.md — Manual real-machine validation: adoption/hard-DRM, streaming@scale, multi-depot, bottle adoption (SNI-01/04/08)
+
+**Wave 9** *(gap closure — verifier gaps_found 2026-07-16; disjoint files, both parallel)*
+
+- [ ] 21-13-PLAN.md — CR-01: downloadSingleFile branches on Directory/Symlink flags (real dir/symlink, containment-checked LinkTarget) + WR-02 zero-chunk error + WR-03 percent clamp + regression tests (SNI-01/04/08)
+- [ ] 21-14-PLAN.md — WR-01: VDF-escape name/installdir in the .acf writer + WR-04: harden sanitizeInstalldir (quotes/control/drive-relative) (SNI-02/05)
 
 **UI hint**: yes
 
