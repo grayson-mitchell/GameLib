@@ -681,6 +681,20 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 22: Multiple Steam Bottles
+
+**Goal:** Extend the single dedicated Steam CrossOver bottle (Phase 17) to support more than one bottle, so a user can isolate Steam games into separate CrossOver bottles (each with its own Steam client, login, and Wine/CrossOver version) instead of every macOS Steam game sharing one bottle.
+**Depends on:** Phase 17 (dedicated Steam bottle foundation — `steam/bottle.ts`, `steamBottleConfigStore`, guided setup) and Phase 18 (bottle-eligibility routing). Independent of the Phase 20/21 lines.
+**Requirements**: TBD (mint during /gsd-spec-phase 22 → /gsd-discuss-phase 22)
+**Scope:** to be locked by SPEC.md (run /gsd-spec-phase 22). Net-new phase — no prior seed/note.
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 22 to break down)
+
+**UI hint**: yes
+
 ## v1.5 Phase Details
 
 ### Phase 20: Aggregated Store Search (CheapShark)
@@ -746,7 +760,7 @@ Plans:
   - **Pre-work carried in from the spikes:** audit GameLib's existing `@node-steam/vdf` call sites for 64-bit exposure; confirm the launch path once against a known hard-DRM title (WazHack was not confirmed DRM-wrapped).
   - **Untested at spike scale:** large (50 GB) games, streaming to disk (spike assembled files in RAM), and resume-after-interruption UX.
 
-**Plans:** 14/14 plans complete
+**Plans:** 15/16 plans executed
 
 Plans:
 **Wave 1**
@@ -792,7 +806,7 @@ Plans:
 
 **Wave 10** *(gap closure — real-hardware UAT findings 2026-07-16; disjoint files, both parallel)*
 
-- [ ] 21-15-PLAN.md — D-UAT-03: worker_threads LZMA decompression pool (off-main-thread decode, transferable ArrayBuffers, pure-JS lzma, integrity gate preserved, inline fallback, packaged-build worker wiring) (SNI-01/03)
+- [x] 21-15-PLAN.md — D-UAT-03: worker_threads LZMA decompression pool (off-main-thread decode, transferable ArrayBuffers, pure-JS lzma, integrity gate preserved, inline fallback, packaged-build worker wiring) (SNI-01/03)
 - [ ] 21-16-PLAN.md — D-UAT-04: UX + observability batch — poll-time "Restart Steam to finish" hint, cleaner Steam status copy, depot-selection logging (SNI-03/06)
 
 **UI hint**: yes

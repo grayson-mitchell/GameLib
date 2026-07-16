@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-14-PLAN.md
-last_updated: "2026-07-16T09:44:13.379Z"
-last_activity: 2026-07-16 -- Phase 21 planning complete
+stopped_at: Completed 21-15-PLAN.md
+last_updated: "2026-07-16T10:31:17.319Z"
+last_activity: 2026-07-16 -- Phase 21 Plan 15 (LZMA decompress worker pool) executed
 progress:
   total_phases: 5
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — gap-closure plans 21-13/21-14 executed (code-complete); 21-UAT.md real-hardware tasks remain PENDING per 21-12-PLAN.md gate
-Plan: 14 of 14
+Phase: 21 (steam-native-install) — 21-15 (D-UAT-03 worker-pool gap-closure) executed and code-complete; 21-16 (D-UAT-03 UX/observability follow-up) and 21-UAT.md real-hardware tasks remain PENDING
+Plan: 15 of 16
 Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 21 planning complete
+Last activity: 2026-07-16
 
 ## v1.4 Phase Map
 
@@ -139,6 +139,7 @@ Last activity: 2026-07-16 -- Phase 21 planning complete
 | Phase 21 P12 | ~15min | 1 task (UAT prep; 3 human-verify deferred) | 1 file |
 | Phase 21 P13 | 20min | 2 tasks | 2 files |
 | Phase 21 P14 | 20min | 2 tasks | 4 files |
+| Phase 21 P15 | 45min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,8 @@ Recent decisions affecting current work:
 - [Phase 21-13]: downloadSingleFile branches on DIRECTORY_FLAG(64)/SYMLINK_FLAG(512) BEFORE the size===0 fast path; symlink target resolved via resolve(dirname(dest), linktarget) then containment-checked against installRoot (never path.join); WR-02 zero-chunk and WR-03 percent-clamp closed in the same code path
 - [Phase ?]: Phase 21-14: vdfEscape escapes backslash before quote (order matters) and neutralizes \r/\n/\t to a space rather than escaping them
 - [Phase ?]: Phase 21-14: sanitizeInstalldir rewritten as a positive whitelist ([A-Za-z0-9 ._-]+, no leading/trailing dot) instead of an expanding denylist
+- [Phase 21-15]: decompressWorker.ts sends an explicit {type:'ready'} handshake after its module graph loads; DecompressPool keys spawn-success off that message, not worker_threads' 'online' event, which fires before a bad entry path's module-not-found error surfaces
+- [Phase 21-15]: DecompressPool.shutdown() sets a shuttingDown flag first and awaits in-flight replaceWorker() spawns before its terminate sweep, closing a race where a replacement worker finishing spawn concurrently with shutdown() would otherwise never be tracked/terminated
 
 ### Pending Todos
 
@@ -284,8 +287,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-16T01:23:47.834Z
-Stopped at: Completed 21-14-PLAN.md
+Last session: 2026-07-16T10:31:17.313Z
+Stopped at: Completed 21-15-PLAN.md
 Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
