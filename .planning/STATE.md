@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Completed 21-14-PLAN.md
-last_updated: "2026-07-16T01:23:47.840Z"
-last_activity: 2026-07-16
+last_updated: "2026-07-16T09:44:13.379Z"
+last_activity: 2026-07-16 -- Phase 21 planning complete
 progress:
   total_phases: 5
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 21 (steam-native-install) — gap-closure plans 21-13/21-14 executed (code-complete); 21-UAT.md real-hardware tasks remain PENDING per 21-12-PLAN.md gate
 Plan: 14 of 14
-Status: All 14 plans have SUMMARY.md; CR-01 (21-13) and WR-01/WR-04 (21-14) gaps closed. WR-02/WR-03 also closed in 21-13. Not milestone-complete — 21-UAT.md human verification still outstanding.
-Last activity: 2026-07-16 -- Executed 21-14 (VDF-escape WR-01, sanitizeInstalldir whitelist WR-04)
+Status: Ready to execute
+Last activity: 2026-07-16 -- Phase 21 planning complete
 
 ## v1.4 Phase Map
 
