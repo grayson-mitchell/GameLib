@@ -4,8 +4,8 @@ plan: 12
 artifact: uat
 status: partial
 total_items: 11
-pending_items: 11
-passed_items: 0
+pending_items: 9
+passed_items: 2
 failed_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
 run_via: "/gsd:verify-work 21"
@@ -64,9 +64,10 @@ owned on the account, not yet installed.
 `4` with (near) zero re-download (Steam's verify pass finds the files already correct on disk). The
 game shows Installed in the real Steam client's own library UI.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**Evidence:** _(re-download bytes observed, before/after StateFlags read from the .acf, screenshot path if any)_
+**Result:** PASS (with UX divergence — see note)
+**Title/AppID used:** WazHack
+**Evidence:** GameLib wrote `StateFlags "1026"`, `installdir "WazHack"`, `BytesToDownload "0"`/`BytesDownloaded "0"`. Real progress bar observed during depot download. After a FULL Steam restart (Quit Steam → reopen), Steam adopted the manifest almost immediately and flipped `StateFlags 1026 → 4` with zero re-download (verify pass found files correct on disk). Tested 2026-07-16 on macOS.
+**UX divergence (non-blocking):** After the depot download completed, GameLib showed a "Steam installing" spinner and did NOT progress or indicate that the user must FULLY RESTART the Steam client for it to notice + adopt the freshly-written `appmanifest_*.acf`. Focusing the Steam window was not sufficient — Steam only re-reads appmanifest files on startup. The install appeared stuck ("does not progress further") until a manual Steam quit+reopen. Adoption itself works correctly; the gap is purely that the UI gives no guidance at the handoff point. **Recommend:** a hint/banner at poll-time (e.g. "Restart Steam to finish installing") so the handoff isn't mistaken for a hang. Candidate for a follow-up gap/UX plan — does NOT block SNI-01/SNI-04 correctness.
 
 ### 1b. Launch after GameLib-owned install
 
@@ -74,7 +75,28 @@ game shows Installed in the real Steam client's own library UI.
 
 **Expected result:** Game runs.
 
-**Result:** PENDING
+**Result:** PASS (on current fixed build) — earlier failure was a stale pre-fix build
+
+> **✅ D-UAT-01 RESOLVED — root cause was the CR-01 directory bug (already fixed this session), NOT wrong-OS depot selection.**
+> Initial misdiagnosis: a first install of WazHack on macOS produced a broken app that failed to launch
+> with `failed to start process: os error 256` (same error from Steam), fixed by a Steam redownload — which
+> looked like a wrong-OS depot download. Investigation disproved that: WazHack's depots are all correctly
+> `oslist`-tagged (264161=windows, 264162=macos, 264163=linux), the macOS depot (264162) is 64-bit and runs,
+> and it has 0 symlinks — so neither wrong-OS selection nor the symlink half of CR-01 applied.
+>
+> **Actual root cause:** the pre-fix **CR-01 directory bug**. WazHack's macOS build is a `.app` bundle
+> (many directories: `Contents/`, `Contents/MacOS/`, `Contents/Resources/`, …). The OLD `downloadSingleFile`
+> wrote directory manifest entries as empty regular files (size 0, no chunks fell into the empty-file fast
+> path), corrupting the bundle structure → `os error 256` at launch. The first test ran on a GameLib build
+> from BEFORE this session's gap-closure commit `897eb515`.
+>
+> **Resolution:** a clean install on the CURRENT build (with `897eb515`, which creates real directories via
+> `mkdir(recursive)` before the empty-file fast path) installs WazHack correctly and it LAUNCHES. Confirmed
+> on macOS 2026-07-16. This is real-hardware validation of the CR-01 directory fix (SNI-01) that the unit
+> tests could only prove synthetically. No new defect; no follow-up gap plan required.
+>
+> **Lesson recorded:** test UAT only against a build that includes the fixes under test — a stale dev
+> server silently reintroduced the pre-fix bug and produced a misleading "wrong-OS" symptom.
 
 ### 1c. Hard-DRM title (Open Question 3)
 
@@ -277,8 +299,8 @@ launched Steam.
 
 | # | Item | Requirement(s) | Result | Notes |
 |---|------|-----------------|--------|-------|
-| 1a | Native adoption (1026→4) | SNI-04 | PENDING | |
-| 1b | Launch after GameLib install | SNI-04 | PENDING | |
+| 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
+| 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
 | 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
 | 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | PENDING | |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PENDING | |
