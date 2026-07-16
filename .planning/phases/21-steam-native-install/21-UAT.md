@@ -108,9 +108,8 @@ game shows Installed in the real Steam client's own library UI.
 **Expected result:** Adoption succeeds identically to 1a, and the title launches without the DRM
 layer rejecting the GameLib-downloaded-then-Steam-adopted file set.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here — must be a confirmed hard-DRM title, name the DRM)_
-**Evidence:** _(launch succeeded / any DRM-specific error observed)_
+**Result:** N/A on macOS-native (deferred to Task 3 / bottle)
+**Reason:** No Mac-native Denuvo/hard-DRM title available in the user's library (installed set: Trine 2, HOARD, Dead Island, 7 Days to Die, WazHack, Pillars of Eternity, Wasteland 2/3, Naheulbeuk, Civ VII, Len's Island — none are known Denuvo). Hard-DRM titles are almost all Windows-only, which route to the bottle path on macOS, so native 1c is not testable here. Hard-DRM verification routed to Task 3 (bottle) if a Windows Denuvo title is available; otherwise Open Question 3 remains open. (Civ VII store page could be checked for Denuvo — if present, a Civ VII native install would also exercise this.)
 
 ### 1d. Cancel mid-download → 1026 → Steam repair (D-04)
 
@@ -134,6 +133,23 @@ install without GameLib intervention.
 
 Source: 21-12-PLAN.md Task 2. Closes: MUST-VALIDATE streaming-to-disk (Assumption A1), MUST-VALIDATE
 multi-depot (Assumption A2).
+
+> **Findings observed during Task 2 (Civ VII native install, macOS 2026-07-16):**
+>
+> - **D-UAT-02 (SNI-03 UX) — FIXED (commit `6640e8ce`).** The DownloadManager showed ETA as raw seconds
+>   ("1247s") and the download speed was wrong/absent: `depot.ts` emitted `eta` as `` `${sec}s` `` and
+>   `downSpeed` as raw **bytes/sec** while the UI (`ProgressHeader:92`) labels it "MB/s" and gog/legendary
+>   emit MiB/s. Fixed: `eta` now zero-padded `HH:MM:SS` (new `formatEta`), `downSpeed` now MiB/s. Test added.
+> - **D-UAT-03 (SNI-01/SNI-03 perf) — OPEN, needs investigation.** Native install is **VERY slow** vs Steam.
+>   Root cause is almost certainly the pure-JS `lzma` decompression (`depot/decompress.ts`) running on the
+>   Electron main thread — CPU-bound, not network-bound; Steam uses native decompression + multi-CDN. Current
+>   concurrency: `FILE_CONCURRENCY=8`, `CHUNK_CONCURRENCY=4`. Candidate mitigations: move LZMA decompress to a
+>   worker_threads pool, raise concurrency, or reconsider the decompress path. This materially affects the
+>   feature's practical viability for large (10GB+) games and should get its own gap/spike. Routes to a
+>   follow-up cycle.
+> - **D-UAT-04 (minor UX) — OPEN.** The install button label reads "steam installing" (awkward status text);
+>   and per Task 1a there's no "restart Steam to finish" hint. Batch into the UX gap plan. Also: `buildDepotPlan`
+>   still logs nothing about depot selection — add selection logging for observability.
 
 ### 2a. Large-game (10GB+) streaming — memory bound (A1)
 
