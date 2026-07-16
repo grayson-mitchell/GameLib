@@ -21,7 +21,16 @@
  *    depotPrimitives.test.ts already)
  */
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logWarning } from 'backend/logger'
@@ -906,5 +915,170 @@ describe('downloadDepotFiles', () => {
     // The abort fires inside the very first fetchChunk call; every other
     // worker must observe signal.aborted before issuing its own fetch.
     expect(jest.mocked(fetchChunk).mock.calls.length).toBeLessThan(chunks.length)
+  })
+
+  // ── CR-01 gap closure (21-13): Directory/Symlink manifest entries ──────────
+  it('CR-01: a Directory manifest entry (flags: 64, size 0, no chunks) is written as a real directory, never an empty regular file', async () => {
+    const dirEntry: DepotPlanFile = {
+      filename: 'bin',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 64
+    }
+    const plan = makePlan([{ depotId: '666', gid: 'g6', key: Buffer.from('key'), files: [dirEntry] }], 0)
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toEqual([])
+    const stat = lstatSync(join(dir, 'common', 'SomeGame', 'bin'))
+    expect(stat.isDirectory()).toBe(true)
+  })
+
+  it('CR-01: a Directory entry AND a child regular file both succeed regardless of processing order (the ENOTDIR/EISDIR regression)', async () => {
+    const content = Buffer.from('exe-bytes')
+    jest.mocked(fetchChunk).mockResolvedValue(content)
+
+    const dirEntry: DepotPlanFile = {
+      filename: 'bin',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 64
+    }
+    const childFile: DepotPlanFile = {
+      filename: 'bin/game.exe',
+      size: content.length,
+      sha_content: sha1Hex(content),
+      chunks: [{ sha: 'sha-exe', cb_original: content.length, offset: 0 }]
+    }
+    const plan = makePlan(
+      [{ depotId: '667', gid: 'g6b', key: Buffer.from('key'), files: [dirEntry, childFile] }],
+      content.length
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toEqual([])
+    const binStat = lstatSync(join(dir, 'common', 'SomeGame', 'bin'))
+    expect(binStat.isDirectory()).toBe(true)
+    const exeStat = lstatSync(join(dir, 'common', 'SomeGame', 'bin', 'game.exe'))
+    expect(exeStat.isFile()).toBe(true)
+  })
+
+  it('CR-01: a Symlink manifest entry (flags: 512, linktarget) is written as a real symlink pointing at its manifest LinkTarget', async () => {
+    const symlinkEntry: DepotPlanFile = {
+      filename: 'game.lnkname',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: 'game.exe'
+    }
+    const plan = makePlan(
+      [{ depotId: '668', gid: 'g6c', key: Buffer.from('key'), files: [symlinkEntry] }],
+      0
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toEqual([])
+    const linkPath = join(dir, 'common', 'SomeGame', 'game.lnkname')
+    expect(lstatSync(linkPath).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(linkPath)).toBe('game.exe')
+  })
+
+  it('CR-01: a symlink whose resolved target escapes the install root is rejected (PathTraversalError), never created', async () => {
+    const evilSymlink: DepotPlanFile = {
+      filename: 'game.lnkname',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: '../../evil'
+    }
+    const plan = makePlan(
+      [{ depotId: '669', gid: 'g6d', key: Buffer.from('key'), files: [evilSymlink] }],
+      0
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+    expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(false)
+  })
+
+  it('WR-02: a size>0 file whose manifest returned zero chunks is recorded as a failure, never silently reported as a completed empty file', async () => {
+    const corruptFile: DepotPlanFile = {
+      filename: 'corrupt.bin',
+      size: 100,
+      sha_content: 'irrelevant',
+      chunks: []
+    }
+    const plan = makePlan(
+      [{ depotId: '670', gid: 'g6e', key: Buffer.from('key'), files: [corruptFile] }],
+      100
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].file).toBe('corrupt.bin')
+    const destPath = join(dir, 'common', 'SomeGame', 'corrupt.bin')
+    // No silently-completed empty file left behind at the destination.
+    expect(existsSync(destPath) && lstatSync(destPath).size === 0).toBe(false)
+  })
+
+  it('WR-03: emitted DownloadManager progress percent never exceeds 100 even when doneBytes overshoots totalBytes', async () => {
+    const chunkBuf = Buffer.from('0123456789') // 10 bytes
+    jest.mocked(fetchChunk).mockResolvedValue(chunkBuf)
+
+    const file: DepotPlanFile = {
+      filename: 'overshoot.bin',
+      size: chunkBuf.length,
+      sha_content: sha1Hex(chunkBuf),
+      chunks: [{ sha: 'sha-over', cb_original: chunkBuf.length, offset: 0 }]
+    }
+    // totalBytes deliberately declared SMALLER than the real bytes written,
+    // so doneBytes/totalBytes*100 would exceed 100 without the WR-03 clamp.
+    const plan = makePlan(
+      [{ depotId: '671', gid: 'g6f', key: Buffer.from('key'), files: [file] }],
+      1
+    )
+
+    await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    const mockedSend = sendFrontendMessage as jest.Mock
+    const calls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+    expect(calls.length).toBeGreaterThan(0)
+    for (const [, payload] of calls as Array<[string, Record<string, unknown>]>) {
+      const progress = payload.progress as Record<string, unknown>
+      expect(progress.percent as number).toBeLessThanOrEqual(100)
+    }
   })
 })
