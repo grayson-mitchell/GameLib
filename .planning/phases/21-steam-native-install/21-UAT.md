@@ -140,13 +140,16 @@ multi-depot (Assumption A2).
 >   ("1247s") and the download speed was wrong/absent: `depot.ts` emitted `eta` as `` `${sec}s` `` and
 >   `downSpeed` as raw **bytes/sec** while the UI (`ProgressHeader:92`) labels it "MB/s" and gog/legendary
 >   emit MiB/s. Fixed: `eta` now zero-padded `HH:MM:SS` (new `formatEta`), `downSpeed` now MiB/s. Test added.
-> - **D-UAT-03 (SNI-01/SNI-03 perf) — OPEN, needs investigation.** Native install is **VERY slow** vs Steam.
->   Root cause is almost certainly the pure-JS `lzma` decompression (`depot/decompress.ts`) running on the
->   Electron main thread — CPU-bound, not network-bound; Steam uses native decompression + multi-CDN. Current
->   concurrency: `FILE_CONCURRENCY=8`, `CHUNK_CONCURRENCY=4`. Candidate mitigations: move LZMA decompress to a
->   worker_threads pool, raise concurrency, or reconsider the decompress path. This materially affects the
->   feature's practical viability for large (10GB+) games and should get its own gap/spike. Routes to a
->   follow-up cycle.
+> - **D-UAT-03 (SNI-01/SNI-03 perf) — ROOT-CAUSED (spike 2026-07-16), fix pending.** Native install is
+>   **VERY slow**. Micro-benchmark (scratchpad/lzma-bench.mjs, 10-core machine) confirms: the pure-JS `lzma`
+>   v2.3.2 decompressor (`depot/decompress.ts` VZ path) runs at **~5 MB/s single-threaded**, vs native zlib
+>   ~800 MB/s. It executes on the Electron **main thread**, so it both caps throughput AND blocks the event
+>   loop — the 32-way network concurrency (FILE_CONCURRENCY=8 × CHUNK_CONCURRENCY=4) is wasted because every
+>   chunk's decompress serializes onto one core. Projection for a 15 GB all-LZMA game: **~51 min of pure
+>   decompression** single-threaded → **~5 min** with a worker pool.
+>   **Fix (chosen):** `worker_threads` decompression pool (size ≈ cores, cap ~8), transferable ArrayBuffers,
+>   keeps pure-JS codec (respects the no-native-modules constraint; `lzma-native` rejected). ~10× speedup +
+>   main thread freed. Implementation in progress.
 > - **D-UAT-04 (minor UX) — OPEN.** The install button label reads "steam installing" (awkward status text);
 >   and per Task 1a there's no "restart Steam to finish" hint. Batch into the UX gap plan. Also: `buildDepotPlan`
 >   still logs nothing about depot selection — add selection logging for observability.
