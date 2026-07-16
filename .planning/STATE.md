@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
-status: executing
-stopped_at: Completed 21-11-PLAN.md
-last_updated: "2026-07-16T01:07:31.509Z"
-last_activity: 2026-07-16 -- Phase 21 planning complete
+status: 21-13 (CR-01 Directory/Symlink depot flags, WR-02/WR-03) executed; 21-14 remaining
+stopped_at: Completed 21-13-PLAN.md
+last_updated: "2026-07-16T01:17:22.721Z"
+last_activity: 2026-07-16 -- Executed 21-13
 progress:
   total_phases: 5
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — CODE COMPLETE, UAT OUTSTANDING
-Plan: 12 of 12 (all executed)
-Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 21 planning complete
+Phase: 21 (steam-native-install) — EXECUTING (gap closure)
+Plan: 13 of 14
+Status: 21-13 (CR-01 Directory/Symlink depot flags, WR-02/WR-03) executed; 21-14 remaining
+Last activity: 2026-07-16 -- Executed 21-13
 
 ## v1.4 Phase Map
 
@@ -137,6 +137,7 @@ Last activity: 2026-07-16 -- Phase 21 planning complete
 | Phase 21 P11 | 25min | 1 tasks | 2 files |
 | Phase 21 P10 | 55min | 2 tasks | 12 files |
 | Phase 21 P12 | ~15min | 1 task (UAT prep; 3 human-verify deferred) | 1 file |
+| Phase 21 P13 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,7 @@ Recent decisions affecting current work:
 - [Phase 21-09]: resolveSteamInstallTarget honors an args.path override only when it resolve()s to exactly one getSteamLibraries() entry (D-08); unregistered/blank overrides silently fall back to the primary library rather than erroring
 - [Phase 21-09]: D-09 multi-library override picker wired into InstallGameModal.ts's actual Steam chokepoint, not DownloadDialog (which Steam installs never route through); picker is a registered-libraries-only select, never PathSelectionBox's free-text filesystem browser
 - [Phase ?]: [Phase 21-11]: D-15 unified via a new shared installDepotDownload() engine (installNative + installBottleNative delegate to it) rather than a second parallel implementation; bottle installdir sourced from resolveSteamInstallTarget (discarding its native-library targetSteamappsDir) since installLocation.ts's PICS installdir helpers are private and out of this plan's files_modified scope
+- [Phase 21-13]: downloadSingleFile branches on DIRECTORY_FLAG(64)/SYMLINK_FLAG(512) BEFORE the size===0 fast path; symlink target resolved via resolve(dirname(dest), linktarget) then containment-checked against installRoot (never path.join); WR-02 zero-chunk and WR-03 percent-clamp closed in the same code path
 
 ### Pending Todos
 
@@ -279,8 +281,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-15T19:08:16.850Z
-Stopped at: Completed 21-11-PLAN.md
+Last session: 2026-07-16T01:17:13.548Z
+Stopped at: Completed 21-13-PLAN.md
 Next: Phase 20 (v1.5 — Aggregated Store Search) complete, 7/7 plans. Next up is Phase 21 (v1.6 — Steam Native Install, depot download) per ROADMAP.md.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

@@ -115,3 +115,12 @@ None - no external service configuration required.
 ---
 *Phase: 21-steam-native-install*
 *Completed: 2026-07-16*
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/storeManagers/steam/depot.ts`
+- FOUND: `src/backend/storeManagers/steam/__tests__/depot.test.ts`
+- FOUND: `.planning/phases/21-steam-native-install/21-13-SUMMARY.md`
+- FOUND commit: `897eb515` (Task 1)
+- FOUND commit: `0208f955` (Task 2)
+- FOUND commit: `4a1cd81b` (Summary)
