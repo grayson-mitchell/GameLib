@@ -21,6 +21,14 @@ export interface DMItemStatusInfo {
    *  true for a plain error (unchanged legacy behavior, preserved for
    *  gog/epic/amazon parity). */
   canceled: boolean
+  /** D-UAT-08: a finished Steam error item needs its OWN, separate remove
+   *  affordance — the main-action button for isSteamError is Retry-only (it
+   *  re-enqueues via window.api.install/updateGame), so without this a
+   *  finished-failed Steam item could never be dismissed without also
+   *  re-triggering the install. True only for a non-current (i.e. finished)
+   *  Steam error — never for gog/epic/amazon, which keep dismissing a failed
+   *  item via the shared "canceled" main-action click, unchanged. */
+  showRemoveAction: boolean
 }
 
 export function classifyDMItemStatus(
@@ -31,6 +39,7 @@ export function classifyDMItemStatus(
   const finished = status === 'done'
   const isSteamError = runner === 'steam' && status === 'error'
   const canceled = !isSteamError && (status === 'error' || (status === 'abort' && !current))
+  const showRemoveAction = isSteamError && !current
 
-  return { finished, isSteamError, canceled }
+  return { finished, isSteamError, canceled, showRemoveAction }
 }

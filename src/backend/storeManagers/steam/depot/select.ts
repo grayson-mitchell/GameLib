@@ -46,6 +46,17 @@ export interface DepotDescriptor {
   manifest: string
   size: number
   dlcappid?: string
+  /** D-UAT-08: the appId this depot was ENUMERATED from — the base app for a
+   *  depot found in the base game's own PICS entry, or the DLC/sub-app's
+   *  appId for a depot found via that DLC/sub-app's own PICS entry (the
+   *  `depots.hasdepotsindlc` case). getDepotDecryptionKey/getRawManifest
+   *  (depot.ts's fetchDepotPlanEntry) MUST be called with THIS appId, never
+   *  unconditionally the base game's appId — Valve grants some depots (e.g. a
+   *  DLC's own native macOS depots) under the DLC/sub-app's appId even though
+   *  selectAllDepots's union makes the depot available to the base game's
+   *  install. STRING — same discipline as `id`/`manifest` (never coerced to a
+   *  JS Number until the single call site that needs it). */
+  ownerAppId: string
 }
 
 interface DepotManifestEntry {
@@ -92,18 +103,24 @@ export function dlcAppIds(appinfo: SteamAppInfo | undefined): number[] {
  *
  * @param appinfo   base app PICS entry
  * @param dlcInfos  map of dlcAppId -> PICS entry (fetch via getProductInfo)
+ * @param baseAppId the base game's own appId — stamped onto every
+ *                  DepotDescriptor produced from `appinfo` itself (D-UAT-08).
+ *                  Depots produced from a `dlcInfos` entry are stamped with
+ *                  THAT entry's own appId (the `dlcInfos` record key), never
+ *                  `baseAppId` — see DepotDescriptor.ownerAppId.
  */
 export function selectAllDepots(
   appinfo: SteamAppInfo,
   dlcInfos: Record<string, SteamAppInfo> | undefined,
   owned: OwnedSets,
-  opts: DepotSelectOpts
+  opts: DepotSelectOpts,
+  baseAppId: string
 ): DepotDescriptor[] {
-  const all = [...selectDepots(appinfo, owned, opts)]
+  const all = [...selectDepots(appinfo, owned, opts, baseAppId)]
   const seen = new Set(all.map((d) => d.id))
 
-  for (const dlc of Object.values(dlcInfos ?? {})) {
-    for (const d of selectDepots(dlc, owned, opts)) {
+  for (const [dlcAppId, dlc] of Object.entries(dlcInfos ?? {})) {
+    for (const d of selectDepots(dlc, owned, opts, dlcAppId)) {
       if (!seen.has(d.id)) {
         seen.add(d.id)
         all.push(d)
@@ -127,11 +144,18 @@ export function selectAllDepots(
  *   - its oslist matches the host OS, or it has none (platform-agnostic content)
  *   - its osarch matches, or it has none
  *   - its language matches the user's selection, or it has none
+ *
+ * @param ownerAppId the appId `appinfo` itself belongs to (base game or a
+ *                   DLC/sub-app) — stamped onto every emitted DepotDescriptor
+ *                   as `ownerAppId` (D-UAT-08). This is NOT necessarily the
+ *                   base game's appId — selectAllDepots calls this once per
+ *                   DLC/sub-app with THAT app's own id.
  */
 export function selectDepots(
   appinfo: SteamAppInfo,
   owned: OwnedSets,
-  opts: DepotSelectOpts
+  opts: DepotSelectOpts,
+  ownerAppId: string
 ): DepotDescriptor[] {
   const { os, arch = '64', language = 'english', branch = 'public' } = opts
   const out: DepotDescriptor[] = []
@@ -190,7 +214,8 @@ export function selectDepots(
       id,
       manifest: String(gid), // STRING — 64-bit, must never touch a JS Number
       size: Number(typeof m === 'object' ? (m.size ?? 0) : 0),
-      dlcappid: d.dlcappid ? String(d.dlcappid) : undefined
+      dlcappid: d.dlcappid ? String(d.dlcappid) : undefined,
+      ownerAppId
     })
   }
 

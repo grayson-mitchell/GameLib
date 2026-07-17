@@ -50,7 +50,7 @@ import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
 import { sendFrontendMessage } from '../../../ipc'
-import { classifyDepotError } from '../depotErrors'
+import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -175,7 +175,8 @@ describe('buildDepotPlan', () => {
         expect.anything(),
         expect.anything(),
         expect.anything(),
-        expect.objectContaining({ os: 'macos' })
+        expect.objectContaining({ os: 'macos' }),
+        APP_ID
       )
       // A second call with a different os proves the value flows through —
       // it is a parameter, not a literal baked into depot.ts.
@@ -185,7 +186,8 @@ describe('buildDepotPlan', () => {
         expect.anything(),
         expect.anything(),
         expect.anything(),
-        expect.objectContaining({ os: 'linux' })
+        expect.objectContaining({ os: 'linux' }),
+        APP_ID
       )
 
       expect(plan.depots).toEqual([])
@@ -200,8 +202,8 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0 },
-        { id: '222', manifest: '9007199254740995', size: 0 }
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
+        { id: '222', manifest: '9007199254740995', size: 0, ownerAppId: '12345' }
       ])
 
       jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
@@ -258,7 +260,7 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '333', manifest: '18446744073709551615', size: 0 }
+        { id: '333', manifest: '18446744073709551615', size: 0, ownerAppId: '12345' }
       ])
 
       jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
@@ -316,8 +318,8 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0 },
-        { id: '222', manifest: '9007199254740995', size: 0 }
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
+        { id: '222', manifest: '9007199254740995', size: 0, ownerAppId: '12345' }
       ])
 
       const controller = new AbortController()
@@ -363,7 +365,7 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0 }
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
       ])
 
       let keyCalls = 0
@@ -414,7 +416,7 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0 }
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
       ])
 
       jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
@@ -441,7 +443,7 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0 }
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
       ])
 
       const controller = new AbortController()
@@ -464,6 +466,216 @@ describe('buildDepotPlan', () => {
 
       // Never reached a second attempt — the abort short-circuited the retry.
       expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('D-UAT-08: depot decryption key requested with the owning appId', () => {
+    it('requests getDepotDecryptionKey/getRawManifest with a DLC/sub-app descriptor.ownerAppId, NOT the base appId, when they differ', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      // Descriptor enumerated from a DLC/sub-app (ownerAppId 54321) — as
+      // Cyberpunk 2077's macOS depots (1460472/2224089) were, per the field
+      // failure log — while the base game is APP_ID (12345).
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: '54321' }
+      ])
+
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) =>
+          cb(null, Buffer.from(`key-${depotId}`))
+      )
+      jest.mocked(fakeClient.getRawManifest).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+      })
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots).toHaveLength(1)
+      // The KEY assertion: called with 54321 (the DLC/sub-app's own appId),
+      // never 12345 (the base game's appId) — the D-UAT-08 root cause.
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledWith(
+        54321,
+        1460472,
+        expect.any(Function)
+      )
+      expect(fakeClient.getDepotDecryptionKey).not.toHaveBeenCalledWith(
+        12345,
+        1460472,
+        expect.any(Function)
+      )
+      expect(fakeClient.getRawManifest).toHaveBeenCalledWith(
+        54321,
+        1460472,
+        '9007199254740993',
+        'public',
+        expect.any(Function)
+      )
+    })
+
+    it('requests getDepotDecryptionKey with the BASE appId for a base-app depot (including one gated by dlcappid) — unchanged from before', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
+      ])
+
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) =>
+          cb(null, Buffer.from(`key-${depotId}`))
+      )
+      jest.mocked(fakeClient.getRawManifest).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+      })
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledWith(
+        12345,
+        111,
+        expect.any(Function)
+      )
+    })
+
+    it('never re-writes the base appId as the finalizeToSteam manifest filename/appid, even when depots are owned by a different appId', async () => {
+      // CRITICAL CONSTRAINT: the owning-appId change is ONLY for per-depot
+      // key/manifest requests — finalizeToSteam's .acf writer must KEEP
+      // using the base game's appId (Steam adopts the install as
+      // appmanifest_{BASE_appId}.acf regardless of which sub-app a depot's
+      // decryption key was fetched under).
+      const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+      const finalizeToSteamFn = source.slice(source.indexOf('export async function finalizeToSteam'))
+      const acfCallSite = finalizeToSteamFn.slice(0, finalizeToSteamFn.indexOf('writeAppManifest'))
+      // finalizeToSteam takes `appId` as ITS OWN first parameter (the base
+      // appId downloadSteamDepots was invoked with) — it never reads
+      // ownerAppId/descriptor at all.
+      expect(acfCallSite).not.toMatch(/ownerAppId/)
+    })
+
+    it('a terminal EResult (FileNotFound=9) fails FAST — never burns all PLAN_BUILD_MAX_ATTEMPTS retries on an error that will recur identically', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
+      ])
+
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (_appId: number, _depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
+          const err = new Error('FileNotFound') as Error & { eresult?: number }
+          err.eresult = 9 // EResult.FileNotFound — steam-user's helpers.eresultError shape
+          cb(err, undefined as unknown as Buffer)
+        }
+      )
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(/couldn't get decryption key/i)
+
+      // Exactly ONE attempt — never retried (retrying a terminal EResult can
+      // never succeed) — unlike the PLAN_BUILD_MAX_ATTEMPTS-attempt behavior
+      // for a transient ECONNRESET (see the D-UAT-06 tests above).
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
+        1
+      )
+      expect(PLAN_BUILD_MAX_ATTEMPTS).toBeGreaterThan(1) // sanity: the bound this test proves we did NOT hit
+    })
+
+    it('a non-terminal error (no eresult / not in the terminal set) still retries normally — non-retryable classification does not over-broaden', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
+      ])
+
+      let calls = 0
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
+          calls++
+          if (calls === 1) {
+            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+            return
+          }
+          cb(null, Buffer.from(`key-${depotId}`))
+        }
+      )
+      jest.mocked(fakeClient.getRawManifest).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+      })
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots).toHaveLength(1)
+      expect(calls).toBe(2)
+    })
+
+    it('surfaces an HONEST error (depot id + owning appId + real EResult name) instead of the misleading "connection dropped" copy', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'gamelib-honest-error-test-'))
+      try {
+        const fakeClient = makeFakeClient()
+        jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+        jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+        jest.mocked(selectAllDepots).mockReturnValue([
+          { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: '54321' }
+        ])
+
+        jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+          (_appId: number, _depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
+            const err = new Error('FileNotFound') as Error & { eresult?: number }
+            err.eresult = 9
+            cb(err, undefined as unknown as Buffer)
+          }
+        )
+
+        const result = await downloadSteamDepots(APP_ID, {
+          targetSteamappsDir: dir,
+          installdir: 'SomeGame',
+          os: 'windows'
+        })
+
+        expect(result.status).toBe('error')
+        // Never the generic/misleading "connection dropped" copy.
+        expect(result.error).not.toMatch(/dropped the connection/i)
+        // Honest: names the depot + owning appId so the failure is diagnosable.
+        expect(result.error).toMatch(/1460472/)
+        expect(result.error).toMatch(/54321/)
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
     })
   })
 })
@@ -572,7 +784,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
     jest.mocked(selectAllDepots).mockReturnValue([
-      { id: '111', manifest: '11111111111111111', size: 0 }
+      { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: '12345' }
     ])
     jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
       (
@@ -942,6 +1154,60 @@ describe('classifyDepotError', () => {
   it('accepts a plain string (DepotDownloadFailure.error shape), not only Error instances', () => {
     const result = classifyDepotError('ENOSPC: no space left on device')
     expect(result.message).toMatch(/disk space/i)
+  })
+
+  it('D-UAT-08: a wrapDepotKeyError-shaped message carrying a terminal `.eresult` is classified as depot-unavailable, NEVER "connection dropped", and embeds the depot/app-id detail', () => {
+    const err = new Error(
+      "couldn't get decryption key for depot 1460472 (app 54321): FileNotFound"
+    ) as Error & { eresult?: number }
+    err.eresult = 9 // FileNotFound — wrapDepotKeyError preserves this from the original steam-user error
+    const result = classifyDepotError(err)
+    expect(result.message).not.toMatch(/dropped the connection/i)
+    expect(result.key).toBe('steam.download.error.depotUnavailable')
+    expect(result.message).toMatch(/1460472/)
+    expect(result.message).toMatch(/54321/)
+  })
+
+  it('D-UAT-08: an Error carrying a terminal `.eresult` (e.g. AccessDenied=15) is classified as depot-unavailable even without the wrapped message text', () => {
+    const err = new Error('AccessDenied') as Error & { eresult?: number }
+    err.eresult = 15
+    const result = classifyDepotError(err)
+    expect(result.key).toBe('steam.download.error.depotUnavailable')
+    expect(result.message).not.toMatch(/dropped the connection/i)
+  })
+
+  it('D-UAT-08: a getDepotDecryptionKey failure with NO eresult (e.g. a genuine transient ECONNRESET, still wrapped with depot/app context) falls through to the connection-dropped classification, unchanged from before', () => {
+    const result = classifyDepotError(
+      new Error("couldn't get decryption key for depot 111 (app 12345): ECONNRESET")
+    )
+    expect(result.key).toBe('steam.download.error.connectionDropped')
+    expect(result.message).toMatch(/dropped the connection/i)
+  })
+})
+
+describe('isNonRetryableDepotError', () => {
+  it('returns true for each terminal EResult (FileNotFound=9, AccessDenied=15, and peers)', () => {
+    for (const eresult of [8, 9, 15, 17, 40, 42, 43]) {
+      const err = new Error('x') as Error & { eresult?: number }
+      err.eresult = eresult
+      expect(isNonRetryableDepotError(err)).toBe(true)
+    }
+  })
+
+  it('returns false for an error with no eresult property (e.g. ECONNRESET) — stays retryable', () => {
+    expect(isNonRetryableDepotError(new Error('ECONNRESET'))).toBe(false)
+  })
+
+  it('returns false for an eresult NOT in the terminal set (e.g. a transient server-side code)', () => {
+    const err = new Error('x') as Error & { eresult?: number }
+    err.eresult = 2 // Fail — generic, not in the terminal set
+    expect(isNonRetryableDepotError(err)).toBe(false)
+  })
+
+  it('returns false for non-object/non-Error values', () => {
+    expect(isNonRetryableDepotError('plain string')).toBe(false)
+    expect(isNonRetryableDepotError(null)).toBe(false)
+    expect(isNonRetryableDepotError(undefined)).toBe(false)
   })
 })
 

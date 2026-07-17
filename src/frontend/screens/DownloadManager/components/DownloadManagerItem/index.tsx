@@ -94,7 +94,7 @@ const DownloadManagerItem = ({
   // "isSteamError" gets its own honest label + working Retry affordance,
   // never lumped into "canceled". gog/epic/amazon are unaffected (see
   // classifyDMItemStatus).
-  const { finished, isSteamError, canceled } = classifyDMItemStatus(
+  const { finished, isSteamError, canceled, showRemoveAction } = classifyDMItemStatus(
     status,
     runner,
     current
@@ -163,6 +163,17 @@ const DownloadManagerItem = ({
       window.api.resumeCurrentDownload()
     } else if (state === 'running') {
       window.api.pauseCurrentDownload()
+    }
+  }
+
+  // D-UAT-08: a finished Steam error item's main action is Retry-only (see
+  // handleMainActionClick's isSteamError branch above) — this is the ONLY
+  // way to dismiss it without also re-triggering window.api.install/
+  // updateGame. Never re-enqueues; Retry (the main action) remains the sole
+  // re-enqueue path.
+  const handleRemoveClick = () => {
+    if (handleClearItem) {
+      handleClearItem(appName)
     }
   }
 
@@ -298,6 +309,14 @@ const DownloadManagerItem = ({
             title={secondaryIconTitle()}
           >
             {secondaryActionIcon()}
+          </SvgButton>
+        )}
+        {showRemoveAction && handleClearItem && (
+          <SvgButton
+            onClick={handleRemoveClick}
+            title={t('queue.label.remove', 'Remove from Downloads')}
+          >
+            <StopIcon className="cancelIcon" />
           </SvgButton>
         )}
       </span>

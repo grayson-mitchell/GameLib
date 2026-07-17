@@ -217,9 +217,24 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [100])
-    const result = selectDepots(appinfo, owned, { os: 'windows' })
+    const result = selectDepots(appinfo, owned, { os: 'windows' }, '12345')
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('100')
+  })
+
+  it('D-UAT-08: stamps the caller-supplied ownerAppId onto every emitted descriptor', () => {
+    const appinfo = {
+      depots: {
+        '100': {
+          manifests: { public: { gid: '111111111111111111', size: 1000 } },
+          config: {}
+        }
+      }
+    }
+    const owned = makeOwned([], [100])
+    const result = selectDepots(appinfo, owned, { os: 'windows' }, '99999')
+    expect(result).toHaveLength(1)
+    expect(result[0].ownerAppId).toBe('99999')
   })
 
   it('a depot carrying an owned dlcappid is selected; an unowned dlcappid excludes it (two channels, neither alone sufficient)', () => {
@@ -233,7 +248,7 @@ describe('select', () => {
       }
     }
     const ownedApp999 = makeOwned([999], [])
-    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' })
+    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' }, '12345')
     expect(selected).toHaveLength(1)
     expect(selected[0].id).toBe('200')
 
@@ -247,7 +262,7 @@ describe('select', () => {
       }
     }
     const ownedNothing = makeOwned([], [])
-    const excluded = selectDepots(appinfoUnownedDlc, ownedNothing, { os: 'windows' })
+    const excluded = selectDepots(appinfoUnownedDlc, ownedNothing, { os: 'windows' }, '12345')
     expect(excluded).toHaveLength(0)
   })
 
@@ -262,7 +277,7 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [300])
-    const result = selectDepots(appinfo, owned, { os: 'windows' })
+    const result = selectDepots(appinfo, owned, { os: 'windows' }, '12345')
     expect(result).toHaveLength(1)
     expect(typeof result[0].manifest).toBe('string')
     expect(result[0].manifest).toBe(nineteenDigitGid)
@@ -278,8 +293,8 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [400])
-    expect(selectDepots(appinfo, owned, { os: 'windows' })).toHaveLength(1)
-    expect(selectDepots(appinfo, owned, { os: 'linux' })).toHaveLength(0)
+    expect(selectDepots(appinfo, owned, { os: 'windows' }, '12345')).toHaveLength(1)
+    expect(selectDepots(appinfo, owned, { os: 'linux' }, '12345')).toHaveLength(0)
   })
 
   it('selectAllDepots merges depots declared inside DLC app entries not present on the base app', () => {
@@ -303,9 +318,58 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([600], [500, 601])
-    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' })
+    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' }, '12345')
     const ids = result.map((d) => d.id).sort()
     expect(ids).toEqual(['500', '601'])
+  })
+
+  it('D-UAT-08: a base-app depot is stamped with the BASE appId; a DLC-enumerated depot is stamped with the DLC/sub-app appId, not the base appId', () => {
+    const baseAppinfo = {
+      depots: {
+        '500': {
+          manifests: { public: { gid: '555555555555555555', size: 10 } },
+          config: {}
+        }
+      },
+      extended: { listofdlc: '600' }
+    }
+    const dlcInfos = {
+      '600': {
+        depots: {
+          '601': {
+            manifests: { public: { gid: '666666666666666666', size: 20 } },
+            config: {}
+          }
+        }
+      }
+    }
+    const owned = makeOwned([600], [500, 601])
+    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' }, '12345')
+
+    const baseDepot = result.find((d) => d.id === '500')
+    const dlcDepot = result.find((d) => d.id === '601')
+    expect(baseDepot?.ownerAppId).toBe('12345')
+    // D-UAT-08 root cause: the DLC-enumerated depot must carry the DLC's OWN
+    // appId (600), never the base game's appId (12345) — Cyberpunk 2077's
+    // macOS depots were requested with the base appId and rejected with
+    // FileNotFound because they belong to a sub-app.
+    expect(dlcDepot?.ownerAppId).toBe('600')
+  })
+
+  it('D-UAT-08: a base-app depot gated by dlcappid (ownership via the DLC channel) is still stamped with the BASE appId — it was enumerated from the base appinfo, not the DLC appinfo', () => {
+    const appinfoOwnedDlc = {
+      depots: {
+        '200': {
+          manifests: { public: { gid: '222222222222222222', size: 500 } },
+          config: {},
+          dlcappid: 999
+        }
+      }
+    }
+    const ownedApp999 = makeOwned([999], [])
+    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' }, '12345')
+    expect(selected).toHaveLength(1)
+    expect(selected[0].ownerAppId).toBe('12345')
   })
 
   it('logs the chosen depot ids + os/arch/language decision, with no secrets in any logInfo argument (T-21-16-01)', () => {
@@ -318,7 +382,7 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [700])
-    const result = selectDepots(appinfo, owned, { os: 'macos', arch: '64', language: 'english' })
+    const result = selectDepots(appinfo, owned, { os: 'macos', arch: '64', language: 'english' }, '12345')
 
     // Regression guard: logging must not alter the returned descriptors.
     expect(result).toHaveLength(1)
@@ -350,7 +414,7 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [800])
-    const result = selectDepots(appinfo, owned, { os: 'linux' })
+    const result = selectDepots(appinfo, owned, { os: 'linux' }, '12345')
 
     expect(result).toHaveLength(0)
 
@@ -370,7 +434,7 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [900])
-    selectAllDepots(baseAppinfo, undefined, owned, { os: 'windows' })
+    selectAllDepots(baseAppinfo, undefined, owned, { os: 'windows' }, '12345')
 
     const calls = (logInfo as jest.Mock).mock.calls
     const unionLog = calls.find(([msg]) => String(msg).includes('selectAllDepots union'))

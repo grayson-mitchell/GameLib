@@ -1208,6 +1208,7 @@
         "download": {
             "error": {
                 "connectionDropped": "Steam servers dropped the connection. Retry to continue.",
+                "depotUnavailable": "This game's content isn't available to download right now.",
                 "diskFull": "Out of disk space.",
                 "generic": "The Steam download failed. Retry to continue.",
                 "unsafePath": "The download contained an unsafe file path and was stopped.",

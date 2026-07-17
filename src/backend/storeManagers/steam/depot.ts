@@ -40,7 +40,7 @@ import { decryptFilename } from './depot/crypto'
 import { fetchChunk, type LzmaModule, type DepotChunk, type DecodeFn } from './depot/decompress'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
-import { classifyDepotError } from './depotErrors'
+import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -271,6 +271,15 @@ async function withPlanBuildRetry<T>(
       return await step(getDepotClient())
     } catch (err) {
       lastErr = err
+      // D-UAT-08: a terminal EResult (FileNotFound/AccessDenied/...) from
+      // getDepotDecryptionKey/getRawManifest recurs byte-for-byte identically
+      // on every retry — it is never a transient CM drop. Fail fast instead
+      // of burning all PLAN_BUILD_MAX_ATTEMPTS attempts (and the misleading
+      // "connection dropped" copy classifyDepotError previously fell back to
+      // after 3 pointless reconnects) on an error retrying can never fix.
+      if (isNonRetryableDepotError(err)) {
+        throw err
+      }
       if (attempt === PLAN_BUILD_MAX_ATTEMPTS) break
       logWarning(
         [
@@ -360,27 +369,61 @@ async function loadContentManifestParser(): Promise<ContentManifestModule> {
 }
 
 /**
+ * D-UAT-08: getDepotDecryptionKey/getRawManifest failures arrive as a bare
+ * steam-user EResult name ("FileNotFound") with no depot/app context —
+ * classifyDepotError's CDN/connection-drop pattern then swallowed them into
+ * the misleading "Steam servers dropped the connection" copy. Wrap with the
+ * depot id + owning appId + real EResult name so the failure is diagnosable,
+ * and preserve `err.eresult` on the wrapped error so both
+ * isNonRetryableDepotError (withPlanBuildRetry's fail-fast) and
+ * classifyDepotError (the final user-facing message) still recognize it.
+ */
+function wrapDepotKeyError(err: Error, descriptor: DepotDescriptor, what: string): Error {
+  const wrapped = new Error(
+    `couldn't get ${what} for depot ${descriptor.id} (app ${descriptor.ownerAppId}): ${err.message}`
+  )
+  const eresult = (err as Error & { eresult?: number }).eresult
+  if (typeof eresult === 'number') {
+    ;(wrapped as Error & { eresult?: number }).eresult = eresult
+  }
+  return wrapped
+}
+
+/**
  * Fetch, parse, and filename-decrypt a single depot's manifest. Filenames are
  * decrypted OURSELVES (steam-user truncates them at block boundaries — spike
  * 002 finding); every file size is coerced through Number() for the D-03 sum.
+ *
+ * D-UAT-08: getDepotDecryptionKey/getRawManifest are called with the depot's
+ * OWNING appId (descriptor.ownerAppId — the base game for a base-app depot,
+ * or the DLC/sub-app's own appId for a depot enumerated from that DLC's PICS
+ * entry), never unconditionally the base game's appId. Steam authorizes some
+ * depots (e.g. a DLC's own native macOS depots) only under the DLC/sub-app's
+ * appId even though selectAllDepots's union makes the depot available to the
+ * base game's install — requesting with the wrong appId fails with a
+ * terminal FileNotFound/AccessDenied EResult (never a transient CM drop).
  */
 async function fetchDepotPlanEntry(
   client: SteamUserDepotClient,
-  numericAppId: number,
   descriptor: DepotDescriptor,
   parser: ContentManifestModule
 ): Promise<DepotPlanEntry> {
   const numericDepotId = Number(descriptor.id)
+  const numericOwnerAppId = Number(descriptor.ownerAppId)
 
   const key = await new Promise<Buffer>((resolve, reject) => {
-    client.getDepotDecryptionKey(numericAppId, numericDepotId, (err, k) =>
-      err ? reject(err) : resolve(k)
+    client.getDepotDecryptionKey(numericOwnerAppId, numericDepotId, (err, k) =>
+      err ? reject(wrapDepotKeyError(err, descriptor, 'decryption key')) : resolve(k)
     )
   })
 
   const raw = await new Promise<Buffer>((resolve, reject) => {
-    client.getRawManifest(numericAppId, numericDepotId, descriptor.manifest, 'public', (err, m) =>
-      err ? reject(err) : resolve(m)
+    client.getRawManifest(
+      numericOwnerAppId,
+      numericDepotId,
+      descriptor.manifest,
+      'public',
+      (err, m) => (err ? reject(wrapDepotKeyError(err, descriptor, 'manifest')) : resolve(m))
     )
   })
 
@@ -458,7 +501,7 @@ export async function buildDepotPlan(
     os: opts.os,
     language: opts.language
   }
-  const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts)
+  const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts, appId)
 
   if (!descriptors.length) {
     return { appId, depots: [], totalBytes: 0, name: displayName }
@@ -471,7 +514,7 @@ export async function buildDepotPlan(
   for (const descriptor of descriptors) {
     throwIfAborted(opts.signal)
     const entry = await withPlanBuildRetry(opts.signal, (client) =>
-      fetchDepotPlanEntry(client, numericAppId, descriptor, parser)
+      fetchDepotPlanEntry(client, descriptor, parser)
     )
     depots.push(entry)
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
