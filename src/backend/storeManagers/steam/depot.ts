@@ -878,6 +878,51 @@ async function applyEDepotFileModes(
 }
 
 /**
+ * Re-applies EDepotFileFlag modes to every reconciled (skipped-download) file
+ * in `plan` that is not in `jobFiles` — heals a prior session that sha1-
+ * verified a file's CONTENT as complete but never actually ran (or never
+ * finished) mode application for it. Exported and shared by BOTH
+ * `downloadDepotFiles`' own post-reconciliation heal step (fresh-install/
+ * live-resume path) AND `library.ts`'s startup-resume path
+ * (`buildResumeFinalizeOpts`, Phase 23 code-review CR-01 gap closure) so the
+ * two callers can never silently diverge on this discipline — mirrors
+ * `canWriteFullOwnership`'s own single-source-of-truth rule.
+ *
+ * Directory(64)/Symlink(512) manifest entries are explicitly skipped — the
+ * same early-return guard `downloadSingleFile` itself applies before ever
+ * reaching mode application (23-code-review WR-01): a directory or symlink
+ * path must never be handed to chmod/attrib.exe, since `file.flags` is
+ * truthy for those entries too (e.g. `Directory | ReadOnly` = 72) and a
+ * `chmod(dirPath, 0o444)` would strip a directory's traversable bit.
+ */
+export async function healReconciledFileModes(
+  plan: DepotPlan,
+  installRoot: string,
+  jobFiles: Set<DepotPlanFile>
+): Promise<{ allModesHealed: boolean; failures: DepotDownloadFailure[] }> {
+  const failures: DepotDownloadFailure[] = []
+  let allModesHealed = true
+
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      if (jobFiles.has(file) || !file.flags) continue
+      if (file.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)) continue
+      const dest = resolveContainedPath(installRoot, file.filename)
+      const modeResult = await applyEDepotFileModes(dest, file.flags)
+      if (!modeResult.ok) {
+        allModesHealed = false
+        failures.push({
+          file: file.filename,
+          error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
+        })
+      }
+    }
+  }
+
+  return { allModesHealed, failures }
+}
+
+/**
  * Download every file across every depot in `plan`, streaming to disk with
  * bounded file- and chunk-level concurrency, containment + SHA1 verification,
  * throttled DownloadManager progress (D-01/D-03, matches library.ts

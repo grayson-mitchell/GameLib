@@ -33,7 +33,12 @@ import {
   getSteamBottleSettings,
   isBottleProvisioned
 } from './bottle'
-import { buildDepotPlan, finalizeToSteam, type FinalizeToSteamOpts } from './depot'
+import {
+  buildDepotPlan,
+  finalizeToSteam,
+  healReconciledFileModes,
+  type FinalizeToSteamOpts
+} from './depot'
 import { reconcilePartialState } from './depot/reconcile'
 
 /**
@@ -174,6 +179,24 @@ async function buildResumeFinalizeOpts(
     const installRoot = resolve(target.targetSteamappsDir, 'common', target.installdir)
     const { jobs, allFilesVerified } = await reconcilePartialState(plan, installRoot)
 
+    // CR-01 gap closure (23-code-review): allFilesVerified is a CONTENT-only
+    // (sha1) verdict from reconcilePartialState — it proves nothing about
+    // file mode bits. A crash exactly between an earlier session's
+    // downloadSingleFile whole-file sha1 check succeeding and its own
+    // mode-application call leaves a file that is byte-perfect (verifies)
+    // but was NEVER chmod'd. So this path must actually RE-RUN mode
+    // application/healing for every reconciler-trusted file — never infer
+    // "modes applied" from content verification alone. Reuses the exact same
+    // guarded heal step downloadDepotFiles' own fresh-install/live-resume
+    // path runs (healReconciledFileModes, shared in depot.ts) so this path
+    // can never silently diverge from that discipline.
+    const jobFiles = new Set(jobs.map((job) => job.file))
+    const { allModesHealed, failures: healFailures } = await healReconciledFileModes(
+      plan,
+      installRoot,
+      jobFiles
+    )
+
     return {
       targetSteamappsDir: target.targetSteamappsDir,
       installdir: target.installdir,
@@ -189,21 +212,22 @@ async function buildResumeFinalizeOpts(
       // as a failure (not silently dropped), never re-downloaded from this
       // startup path (Pitfall 4).
       outcome: jobs.length === 0 ? 'completed' : 'cancelled',
-      failures: jobs.map((job) => ({
-        file: job.file.filename,
-        error:
-          'missing or content-mismatched on startup resume (not re-downloaded — ' +
-          'startup resume never re-invokes the depot orchestrator, Pitfall 4)'
-      })),
+      failures: [
+        ...jobs.map((job) => ({
+          file: job.file.filename,
+          error:
+            'missing or content-mismatched on startup resume (not re-downloaded — ' +
+            'startup resume never re-invokes the depot orchestrator, Pitfall 4)'
+        })),
+        ...healFailures
+      ],
       allFilesVerified,
-      // Every file reconcile trusted was verified by the ORIGINAL download
-      // session's own per-file pipeline (downloadSingleFile applies
-      // EDepotFileFlag modes immediately after each file's own sha1 check
-      // passes, before moving to the next file) — so a file reconcile
-      // proves content-complete already had its modes applied in that same
-      // prior pass. Mirrors allFilesVerified rather than re-deriving a
-      // separate signal.
-      allModesApplied: allFilesVerified
+      // CR-01: only true once modes were ACTUALLY re-applied/healed THIS run
+      // AND that healing succeeded for every file — a healing failure (or a
+      // healing step that never ran) forces this false, so
+      // canWriteFullOwnership falls back to the safe 1026 verify-handoff
+      // instead of a wrongful StateFlags=4.
+      allModesApplied: allFilesVerified && allModesHealed
     }
   } catch (planErr) {
     logWarning(
