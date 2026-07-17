@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 23-03-PLAN.md
+stopped_at: 23-04-PLAN.md task 1/2 complete (23-UAT.md authored); awaiting D-07 human-verify checkpoint on real macOS hardware
 last_updated: "2026-07-17T09:16:24.034Z"
 last_activity: 2026-07-17
 progress:
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: In progress — 23-UAT.md authored (task 1/2 done); blocked on D-07 real-hardware human-verify checkpoint (task 2/2). Phase NOT complete until all 3 D-07 gates in 23-UAT.md pass on real macOS hardware.
 Last activity: 2026-07-17
 
 ## v1.4 Phase Map
@@ -304,8 +304,8 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-17T09:16:24.030Z
-Stopped at: Completed 23-03-PLAN.md
-Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
+Stopped at: 23-04-PLAN.md task 1/2 complete (23-UAT.md authored, commit c1dc0fe6); task 2/2 is the D-07 blocking human-verify checkpoint — NOT auto-approved, requires real macOS hardware + live Steam client + real owned titles.
+Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
