@@ -42,6 +42,7 @@ import {
   finalizeToSteam,
   canWriteFullOwnership,
   formatEta,
+  rollingRateMiBs,
   CHUNK_CONCURRENCY,
   PLAN_BUILD_MAX_ATTEMPTS,
   type DepotPlan,
@@ -1267,6 +1268,30 @@ describe('formatEta (D-UAT-02)', () => {
 
   it('never emits negative time (clamps to 0)', () => {
     expect(formatEta(-5)).toBe('00:00:00')
+  })
+})
+
+describe('rollingRateMiBs', () => {
+  const MIB = 1024 * 1024
+
+  it('computes an instantaneous MiB/s rate over the given window', () => {
+    // 5 MiB transferred in 500ms => 10 MiB/s.
+    expect(rollingRateMiBs(5 * MIB, 500, 0)).toBeCloseTo(10)
+  })
+
+  it('reports 0 during a stall (no bytes this window), not the previous rate', () => {
+    // Regression: the old cumulative-average never dropped to 0 while stalled.
+    expect(rollingRateMiBs(0, 500, 42)).toBe(0)
+  })
+
+  it('reuses the previous rate when the window is too small to be meaningful', () => {
+    // A forced emit landing right on top of a throttled one (~0ms) must not
+    // divide by a near-zero window and produce a garbage spike.
+    expect(rollingRateMiBs(1 * MIB, 1, 7.5)).toBe(7.5)
+  })
+
+  it('never returns a negative rate', () => {
+    expect(rollingRateMiBs(-1 * MIB, 500, 3)).toBe(0)
   })
 })
 

@@ -135,7 +135,12 @@ export async function fetchChunk(
   lzma: LzmaModule,
   attempts = 4,
   decode: DecodeFn = (encrypted, decodeKey, expectedSha, cbOriginal) =>
-    decodeChunk(encrypted, decodeKey, expectedSha, cbOriginal, lzma)
+    decodeChunk(encrypted, decodeKey, expectedSha, cbOriginal, lzma),
+  /** Reports the compressed (over-the-wire) byte count of the successful fetch,
+   *  so callers can measure a real network transfer rate distinct from the
+   *  decompressed bytes written to disk. Called once, only for the attempt that
+   *  ultimately verifies + returns. */
+  onNetworkBytes?: (compressedBytes: number) => void
 ): Promise<Buffer> {
   const sha = Buffer.isBuffer(chunk.sha) ? chunk.sha.toString('hex') : String(chunk.sha)
   let lastErr: Error | undefined
@@ -147,7 +152,9 @@ export async function fetchChunk(
       if (!res.ok) throw new Error(`CDN ${res.status}`)
 
       const encrypted = Buffer.from(await res.arrayBuffer())
-      return await decode(encrypted, key, sha, chunk.cb_original)
+      const data = await decode(encrypted, key, sha, chunk.cb_original)
+      onNetworkBytes?.(encrypted.length)
+      return data
     } catch (err) {
       lastErr = err as Error
       if (i < attempts - 1) await sleep(200 * 2 ** i) // 200ms, 400ms, 800ms

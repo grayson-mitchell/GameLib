@@ -598,6 +598,29 @@ export function formatEta(totalSeconds: number): string {
 const PROGRESS_THROTTLE_MS = 500
 const PROGRESS_THROTTLE_PERCENT = 1
 
+/** Minimum window (seconds) for a meaningful rolling-rate sample. A forced
+ *  emit right after a throttled one can have a sub-millisecond delta; dividing
+ *  by it yields a garbage spike, so below this we reuse the previous rate. */
+const MIN_RATE_WINDOW_SEC = 0.05
+
+/**
+ * Rolling (instantaneous) transfer rate in MiB/s over the window since the last
+ * emit — NOT a cumulative average since the download started, so the figure
+ * tracks the CURRENT rate and drops promptly when the transfer slows or stalls.
+ * Reuses `previousMiBs` when the window is too small to be meaningful (a forced
+ * emit landing right on top of a throttled one). Pure + exported for testing.
+ */
+export function rollingRateMiBs(
+  bytesDelta: number,
+  msDelta: number,
+  previousMiBs: number
+): number {
+  const secDelta = msDelta / 1000
+  if (secDelta < MIN_RATE_WINDOW_SEC) return previousMiBs
+  const rate = bytesDelta / secDelta / BYTES_PER_MIB
+  return rate > 0 ? rate : 0
+}
+
 /** Thrown when a decrypted filename resolves outside the target install root (T-21-01). */
 export class PathTraversalError extends Error {}
 
@@ -707,7 +730,7 @@ async function downloadFileChunks(
   file: DepotPlanFile,
   fileSeed: number,
   signal: AbortSignal | undefined,
-  onBytes: (n: number) => void,
+  onBytes: (diskBytes: number, netBytes: number) => void,
   decode?: DecodeFn
 ): Promise<void> {
   const queue = [...file.chunks]
@@ -728,11 +751,25 @@ async function downloadFileChunks(
         // worker-pool decoder (DecompressPool.decode) — moves decrypt ->
         // decompress -> sha1-verify off the main thread. Undefined falls
         // back to fetchChunk's own default (inline decodeChunk), unchanged.
-        const data = await fetchChunk(hosts, depotId, depotChunk, key, lzma, 4, decode)
+        // netBytes = compressed bytes actually fetched over the wire (for the
+        // download rate); data.length = decompressed bytes written to disk.
+        let netBytes = 0
+        const data = await fetchChunk(
+          hosts,
+          depotId,
+          depotChunk,
+          key,
+          lzma,
+          4,
+          decode,
+          (n) => {
+            netBytes = n
+          }
+        )
         if (signal?.aborted) return
 
         await fd.write(data, 0, data.length, Number(chunk.offset))
-        onBytes(data.length)
+        onBytes(data.length, netBytes)
       }
     })
   )
@@ -755,7 +792,7 @@ async function downloadSingleFile(
   file: DepotPlanFile,
   fileSeed: number,
   signal: AbortSignal | undefined,
-  onBytes: (n: number) => void,
+  onBytes: (diskBytes: number, netBytes: number) => void,
   decode?: DecodeFn
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
@@ -1009,9 +1046,13 @@ export async function downloadDepotFiles(
     )
     failures.push(...healFailures)
 
-    let doneBytes = 0
+    let doneBytes = 0 // decompressed bytes written to disk — drives percent + disk rate
+    let netBytes = 0 // compressed bytes fetched over the wire — drives download rate
     let lastEmitBytes = 0
+    let lastEmitNetBytes = 0
     let lastEmitTime = Date.now()
+    let lastDownSpeed = 0 // MiB/s — reused across sub-window forced emits
+    let lastDiskSpeed = 0 // MiB/s
     const tStart = Date.now()
 
     const emitProgress = (force: boolean) => {
@@ -1021,13 +1062,25 @@ export async function downloadDepotFiles(
       if (!force && percentDelta < PROGRESS_THROTTLE_PERCENT && timeDelta < PROGRESS_THROTTLE_MS) {
         return
       }
+
+      // Rolling/instantaneous rates over the window since the last emit (not a
+      // cumulative average since start), so both figures reflect the CURRENT
+      // rate and drop promptly on a stall. downSpeed = network (compressed)
+      // transfer; diskSpeed = write (decompressed) throughput — for game assets
+      // the decompressed rate typically reads higher than the wire rate.
+      lastDownSpeed = rollingRateMiBs(netBytes - lastEmitNetBytes, timeDelta, lastDownSpeed)
+      lastDiskSpeed = rollingRateMiBs(doneBytes - lastEmitBytes, timeDelta, lastDiskSpeed)
+
       lastEmitBytes = doneBytes
+      lastEmitNetBytes = netBytes
       lastEmitTime = Date.now()
 
+      // ETA stays a STABLE estimate from the cumulative average install rate
+      // (disk bytes since start) — an instantaneous ETA would jitter every frame.
       const elapsedSec = (Date.now() - tStart) / 1000
-      const bytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
+      const avgBytesPerSec = elapsedSec > 0 ? doneBytes / elapsedSec : 0
       const remaining = Math.max(totalBytes - doneBytes, 0)
-      const etaSec = bytesPerSec > 0 ? remaining / bytesPerSec : 0
+      const etaSec = avgBytesPerSec > 0 ? remaining / avgBytesPerSec : 0
 
       // Exact shape library.ts's pollInstallOnce() (L944-953) already speaks —
       // the DownloadManager needs zero changes for the native depot-download path.
@@ -1044,7 +1097,8 @@ export async function downloadDepotFiles(
           bytes: getFileSize(doneBytes),
           // MiB/s (not raw bytes/sec) to match the UI's "MB/s" label + the
           // gog/legendary unit convention (UAT D-UAT-02).
-          downSpeed: bytesPerSec / BYTES_PER_MIB,
+          downSpeed: lastDownSpeed,
+          diskSpeed: lastDiskSpeed,
           // HH:MM:SS, not raw "1247s" (UAT D-UAT-02).
           eta: Number.isFinite(etaSec) && etaSec > 0 ? formatEta(etaSec) : ''
         }
@@ -1071,8 +1125,9 @@ export async function downloadDepotFiles(
               job.file,
               job.fileSeed,
               opts.signal,
-              (n) => {
-                doneBytes += n
+              (disk, net) => {
+                doneBytes += disk
+                netBytes += net
                 emitProgress(false)
               },
               pool.decode
