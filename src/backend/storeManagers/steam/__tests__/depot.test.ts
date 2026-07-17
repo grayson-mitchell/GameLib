@@ -22,6 +22,7 @@
  */
 import { createHash } from 'node:crypto'
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -1935,5 +1936,150 @@ describe('downloadDepotFiles', () => {
       const progress = payload.progress as Record<string, unknown>
       expect(progress.percent as number).toBeLessThanOrEqual(100)
     }
+  })
+
+  // ── Phase 23 (23-03, D-04): reconciliation wiring ─────────────────────────
+  describe('reconciliation wiring (D-04/D-05)', () => {
+    it('a pre-existing sha1-matching file is skipped from re-download (fetchChunk never called for it) on a partial resume', async () => {
+      const goodContent = Buffer.from('already-here-content')
+      const freshContent = Buffer.from('needs-download')
+
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'good.bin'), goodContent)
+
+      jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-good') {
+          throw new Error('fetchChunk must never be called for an already-reconciled file')
+        }
+        return freshContent
+      })
+
+      const fileGood: DepotPlanFile = {
+        filename: 'good.bin',
+        size: goodContent.length,
+        sha_content: sha1Hex(goodContent),
+        chunks: [{ sha: 'sha-good', cb_original: goodContent.length, offset: 0 }]
+      }
+      const fileFresh: DepotPlanFile = {
+        filename: 'fresh.bin',
+        size: freshContent.length,
+        sha_content: sha1Hex(freshContent),
+        chunks: [{ sha: 'sha-fresh', cb_original: freshContent.length, offset: 0 }]
+      }
+      const plan = makePlan(
+        [{ depotId: '900', gid: 'g90', key: Buffer.from('key'), files: [fileGood, fileFresh] }],
+        goodContent.length + freshContent.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(result.allFilesVerifiedThisRun).toBe(true)
+      expect(jest.mocked(fetchChunk)).toHaveBeenCalledTimes(1)
+    })
+
+    it('an already-complete on-disk install yields zero jobs, zero chunk fetches, and its outputs let finalizeToSteam earn StateFlags=4 (D-05: no update ownership, no re-download)', async () => {
+      const contentA = Buffer.from('complete-file-a')
+      const contentB = Buffer.from('complete-file-b')
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), contentA)
+      writeFileSync(join(dir, 'common', 'SomeGame', 'b.bin'), contentB)
+
+      jest
+        .mocked(fetchChunk)
+        .mockRejectedValue(
+          new Error('fetchChunk must never be called on an already-complete install')
+        )
+
+      const fileA: DepotPlanFile = {
+        filename: 'a.bin',
+        size: contentA.length,
+        sha_content: sha1Hex(contentA),
+        chunks: [{ sha: 's-a', cb_original: contentA.length, offset: 0 }]
+      }
+      const fileB: DepotPlanFile = {
+        filename: 'b.bin',
+        size: contentB.length,
+        sha_content: sha1Hex(contentB),
+        chunks: [{ sha: 's-b', cb_original: contentB.length, offset: 0 }]
+      }
+      const plan: DepotPlan = {
+        appId: '12345',
+        name: 'SomeGame',
+        buildid: '9999999',
+        depots: [
+          { depotId: '901', gid: '9007199254740901', key: Buffer.from('key'), files: [fileA, fileB] }
+        ],
+        totalBytes: contentA.length + contentB.length
+      }
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(result.allFilesVerifiedThisRun).toBe(true)
+      expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+
+      await finalizeToSteam('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        name: 'SomeGame',
+        depots: plan.depots.map((d) => ({ depotId: d.depotId, gid: d.gid, size: 0 })),
+        buildid: plan.buildid,
+        outcome: result.outcome,
+        failures: result.failures,
+        allFilesVerified: result.allFilesVerifiedThisRun,
+        allModesApplied: result.allModesApplied
+      })
+
+      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"4"/)
+    })
+
+    it('a reconciled (skipped-download) file gets its EDepotFileFlag modes RE-APPLIED even though it was not re-downloaded (mode-heal, RESEARCH Pattern 3)', async () => {
+      const content = Buffer.from('already-here-exe-bytes')
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      const destPath = join(dir, 'common', 'SomeGame', 'already-here.bin')
+      writeFileSync(destPath, content)
+      // An older partial download never applied the Executable bit — start
+      // from a deliberately WRONG mode so the healing assertion is meaningful.
+      chmodSync(destPath, 0o644)
+
+      jest
+        .mocked(fetchChunk)
+        .mockRejectedValue(
+          new Error('fetchChunk must never be called for a reconciled file')
+        )
+
+      const file: DepotPlanFile = {
+        filename: 'already-here.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 's-exec', cb_original: content.length, offset: 0 }],
+        flags: 32 // Executable
+      }
+      const plan = makePlan(
+        [{ depotId: '902', gid: 'g92', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+      const stat = lstatSync(destPath)
+      expect(stat.mode & 0o777).toBe(0o755)
+    })
   })
 })

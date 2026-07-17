@@ -42,6 +42,7 @@ import { fetchChunk, type LzmaModule, type DepotChunk, type DecodeFn } from './d
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
+import { reconcilePartialState } from './depot/reconcile'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
@@ -827,30 +828,53 @@ async function downloadSingleFile(
     )
   }
 
-  // SPIKE 003 finding: apply the manifest's executable flag(s). Under the 1026
-  // handoff Steam's verify pass sets this; the StateFlags=4 full-ownership path
-  // does not run verify, so without this the game binary is non-executable and
-  // launch fails with `os error 256` on macOS. sha1 guarantees CONTENT, not the
-  // filesystem mode — so this is required for full ownership regardless of the
-  // spike flag (harmless under 1026: Steam would set the same bit anyway).
-  if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
-    await chmod(dest, 0o755)
-  }
-
-  // Phase 23 (23-01, D-06): ReadOnly(8)/Hidden(16) — same rationale as the
-  // Executable block above (sha1 guarantees CONTENT, not filesystem mode).
-  // A failure here is NOT swallowed: it throws so the caller
-  // (downloadDepotFiles) records it as a DepotDownloadFailure, never a
-  // silent success (T-23-03) — a mode failure must be visible to the Wave 2
+  // SPIKE 003 finding / Phase 23 (23-01, D-06): apply the manifest's full
+  // EDepotFileFlag mode set. Under the 1026 handoff Steam's verify pass sets
+  // these; the StateFlags=4 full-ownership path does not run verify, so
+  // without this the game binary/config would land with the wrong mode (a
+  // missing +x fails launch with `os error 256` on macOS). sha1 guarantees
+  // CONTENT, not filesystem mode — so this is required for full ownership
+  // regardless of the spike flag (harmless under 1026: Steam would set the
+  // same bits anyway). A failure here is NOT swallowed: it throws so the
+  // caller (downloadDepotFiles) records it as a DepotDownloadFailure, never
+  // a silent success (T-23-03) — a mode failure must be visible to the
   // completeness gate the same way a SHA1 mismatch already is.
-  if (file.flags && file.flags & (READONLY_FLAG | HIDDEN_FLAG)) {
-    const modeResult = await applyDepotFileFlags(dest, file.flags, process.platform)
+  if (file.flags) {
+    const modeResult = await applyEDepotFileModes(dest, file.flags)
     if (!modeResult.ok) {
       throw new Error(
         `downloadDepotFiles: failed to apply file mode flags for ${file.filename}: ${modeResult.error}`
       )
     }
   }
+}
+
+/**
+ * Applies the full EDepotFileFlag mode set (chmod 0o755 for Executable/
+ * CustomExecutable, applyDepotFileFlags for ReadOnly/Hidden) to an
+ * already-landed file at `dest`. Shared by downloadSingleFile's
+ * post-sha1-verify step AND the reconciled-file mode-heal loop in
+ * downloadDepotFiles (Phase 23, 23-03, D-04) — a reconciled (skipped-
+ * download) file must get the exact same mode treatment a freshly-downloaded
+ * one gets, so an older partial install's missing modes are healed even
+ * though the bytes themselves are untouched. Never throws for the exec
+ * chmod step (matches the pre-23-03 code); a ReadOnly/Hidden failure is
+ * surfaced via applyDepotFileFlags's own { ok, error } shape, letting each
+ * caller decide its own DepotDownloadFailure wording.
+ */
+async function applyEDepotFileModes(
+  dest: string,
+  flags: number
+): Promise<{ ok: boolean; error?: string }> {
+  if (flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
+    await chmod(dest, 0o755)
+  }
+
+  if (flags & (READONLY_FLAG | HIDDEN_FLAG)) {
+    return applyDepotFileFlags(dest, flags, process.platform)
+  }
+
+  return { ok: true }
 }
 
 /**
@@ -881,16 +905,60 @@ export async function downloadDepotFiles(
   const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
 
   try {
-    const jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }> = []
-    let seed = 0
-    for (const depot of plan.depots) {
-      for (const file of depot.files) {
-        jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: seed++ })
+    // Phase 23 (23-03, D-04): reconcile on-disk state BEFORE building the
+    // download job list — a present, sha1-verified file is never
+    // re-downloaded (D-05: reconciliation fills first-install/resume gaps
+    // only, it never owns updates). A reconciliation-time error (e.g. a
+    // path-traversal filename) must never abort the WHOLE run — fall back
+    // to the pre-23-03 full job list so every file still goes through
+    // downloadSingleFile's own per-job try/catch, which already records a
+    // per-file traversal/mismatch as a DepotDownloadFailure without ever
+    // crashing the loop (T-21-01 preserved).
+    let jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }>
+    try {
+      jobs = (await reconcilePartialState(plan, installRoot)).jobs
+    } catch (err) {
+      logWarning(
+        [
+          `downloadDepotFiles: reconciliation failed, falling back to a full re-download:`,
+          err
+        ],
+        LogPrefix.Steam
+      )
+      jobs = []
+      let fallbackSeed = 0
+      for (const depot of plan.depots) {
+        for (const file of depot.files) {
+          jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: fallbackSeed++ })
+        }
       }
     }
 
     const totalBytes = plan.totalBytes
     const failures: DepotDownloadFailure[] = []
+
+    // Every file the reconciler skipped (already sha1-verified, not
+    // re-downloaded) still needs its EDepotFileFlag modes re-applied
+    // idempotently — heals an older partial download whose modes were never
+    // set (RESEARCH.md Pattern 3). A failure here is NOT swallowed: it's
+    // recorded the same way a fresh-download mode-application failure
+    // already is (T-23-03), so a healing failure also blocks the
+    // completeness gate below.
+    const jobFiles = new Set(jobs.map((j) => j.file))
+    for (const depot of plan.depots) {
+      for (const file of depot.files) {
+        if (jobFiles.has(file) || !file.flags) continue
+        const dest = resolveContainedPath(installRoot, file.filename)
+        const modeResult = await applyEDepotFileModes(dest, file.flags)
+        if (!modeResult.ok) {
+          failures.push({
+            file: file.filename,
+            error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
+          })
+        }
+      }
+    }
+
     let doneBytes = 0
     let lastEmitBytes = 0
     let lastEmitTime = Date.now()
