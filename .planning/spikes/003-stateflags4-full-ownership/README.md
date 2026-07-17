@@ -93,8 +93,35 @@ uninstall/reinstall is low-cost.
 - 2026-07-17 — Design. Confirmed manifest.ts writes StateFlags 1026 + bytes/buildid 0; finalizeToSteam
   measures real SizeOnDisk + has lastOwner but does NOT thread buildid (appinfo.depots.branches.public
   .buildid is available in buildDepotPlan). Hypothesis: buildid=0 + bytes=0 are why a naive 4 would
-  re-verify. Awaiting user go-ahead to implement the env-gated throwaway change + run on WazHack.
+  re-verify.
+- 2026-07-17 — Built env-gated change (commit 816a76c9): StateFlags=4 + bytes=SizeOnDisk + real buildid
+  under `GAMELIB_SPIKE_STATEFLAGS4=1`. Default off = byte-identical to 1026 (72/72 tests, tsc clean).
+- 2026-07-17 — **RUN 1 (real HW, WazHack):** GameLib wrote StateFlags=4; user reinstalled + started Steam.
+  **RESULT: Steam TRUSTED the manifest — StateFlags stayed 4, no verify pass, no re-download.** The core
+  question is answered YES: a byte-perfect GameLib install with a complete field set (bytes + current
+  buildid) is accepted by Steam as FullyInstalled. BUT launch failed with macOS **`os error 256`**.
+- 2026-07-17 — **Root-caused the launch failure (not a wrong build):** `EDepotFileFlag.Executable = 32`
+  (and `CustomExecutable = 128`). The depot writer (`downloadDepotFiles`/`downloadSingleFile`) handled
+  Directory (64) + Symlink (512) but had **NO chmod/mode handling** — it never applied the executable
+  bit. Under the 1026 handoff, **Steam's verify pass sets +x** (which is why WazHack launched in UAT test
+  1b — that success secretly depended on Steam's verify). StateFlags=4 skips verify, so the game binary
+  lands non-executable → `os error 256`. **sha1 guarantees CONTENT, not filesystem mode** — the exact
+  class of gap spike 001's "1026 is a safety net" requirement was protecting against.
+- 2026-07-17 — Fix (still spike scope, commit pending): apply `chmod 0o755` after the whole-file sha1
+  check when `flags & (Executable|CustomExecutable)`. Required for full ownership regardless of the spike
+  flag; harmless under 1026 (Steam would set the same bit). 58/58 depot tests + tsc clean. Awaiting RUN 2.
 
 ## Results
 
-PENDING — awaiting real-hardware run.
+**PARTIAL → re-testing.** The make-or-break question is **VALIDATED: Steam trusts a GameLib-authored
+`StateFlags 4`** (stayed 4, no verify, no re-download) given a complete field set (StateFlags 4 + bytes ==
+SizeOnDisk + current public buildid). Full ownership is *feasible*.
+
+**Caveat that makes it PARTIAL until RUN 2:** "byte-perfect content" ≠ "launch-ready install". Because
+StateFlags=4 skips Steam's verify pass, GameLib must itself apply everything that pass does beyond bytes —
+starting with the **executable bit** (fixed here). Likely also relevant for Phase 22: ReadOnly (8) /
+Hidden (16) flags, and confirming no other verify-pass side effects (e.g. Steam-created config) are load-
+bearing for launch. RUN 2 (WazHack, exec-bit fix) will confirm the game launches under StateFlags=4.
+
+**Requirement emerging for Phase 22:** the depot downloader must replicate Steam's verify-pass filesystem
+metadata — at minimum apply EDepotFileFlag file modes (executable), since nothing downstream will.

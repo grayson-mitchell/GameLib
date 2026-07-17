@@ -20,6 +20,7 @@ import {
   stat,
   symlink,
   rm,
+  chmod,
   type FileHandle
 } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
@@ -51,6 +52,12 @@ const NUMERIC_ID = /^\d+$/
  *  not export this enum from its public entrypoint (CR-01 gap closure, 21-13). */
 const DIRECTORY_FLAG = 64
 const SYMLINK_FLAG = 512
+// SPIKE 003 finding: EDepotFileFlag.Executable (32) / CustomExecutable (128).
+// Steam's 1026 verify pass sets the +x bit from these flags; the StateFlags=4
+// full-ownership path skips verify, so GameLib must apply them itself or the
+// game binary lands non-executable and launch fails with macOS `os error 256`.
+const EXECUTABLE_FLAG = 32
+const CUSTOM_EXECUTABLE_FLAG = 128
 
 export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
@@ -766,6 +773,16 @@ async function downloadSingleFile(
     throw new Error(
       `downloadDepotFiles: whole-file SHA1 mismatch for ${file.filename}: ${got} != ${expected}`
     )
+  }
+
+  // SPIKE 003 finding: apply the manifest's executable flag(s). Under the 1026
+  // handoff Steam's verify pass sets this; the StateFlags=4 full-ownership path
+  // does not run verify, so without this the game binary is non-executable and
+  // launch fails with `os error 256` on macOS. sha1 guarantees CONTENT, not the
+  // filesystem mode — so this is required for full ownership regardless of the
+  // spike flag (harmless under 1026: Steam would set the same bit anyway).
+  if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
+    await chmod(dest, 0o755)
   }
 }
 
