@@ -5,11 +5,7 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { Box, LinearProgress, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { DownloadManagerState, Runner } from 'common/types'
-
-interface Point {
-  download: number
-  disk: number
-}
+import { nextSpeedSample, SpeedPoint as Point } from './speedSample'
 
 const roundToNearestHundredth = function (val: number | undefined) {
   if (!val) return 0
@@ -40,13 +36,17 @@ export default function ProgressHeader(props: {
       avgSpeed.shift()
     }
 
-    avgSpeed.push({
-      download:
-        progress.downSpeed && progress.downSpeed > 0
-          ? progress.downSpeed
-          : (avgSpeed.at(-1)?.download ?? 0),
-      disk: progress.diskSpeed ?? 0
-    })
+    // When the download is not actively running (e.g. paused), nextSpeedSample
+    // reports 0 MB/s instead of carrying the last nonzero speed forward — so a
+    // paused download stops looking like it is still transferring.
+    avgSpeed.push(
+      nextSpeedSample(
+        props.state,
+        progress.downSpeed,
+        progress.diskSpeed,
+        avgSpeed.at(-1)?.download ?? 0
+      )
+    )
 
     setAvgDownloadSpeed([...avgSpeed])
   }, [progress, props.state])
