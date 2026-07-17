@@ -1,10 +1,11 @@
 ---
 phase: 22
 slug: multiple-steam-bottles
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-07-17
+reviewed_at: 2026-07-17
 ---
 
 # Phase 22 — UI Design Contract
