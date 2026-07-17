@@ -24,10 +24,13 @@ Design decisions established so far. Non-negotiable for the real build.
 - **Steam owns updates; GameLib owns only the first install.** No delta-patching, no resume,
   no integrity repair — that is the hard part and we deliberately scoped it out. Any move to
   "GameLib owns updates" re-opens the entire build-vs-bundle architecture decision. (D-2)
-- **Write `StateFlags = 1026`, never `4`.** Claiming `FullyInstalled` asserts our download was
-  byte-perfect; if it wasn't, Steam trusts the lie and the user gets a broken game. `1026`
-  (`UpdateRequired|UpdateStarted`) asks Steam to verify and repair, making it a safety net
-  rather than an adversary.
+- **Write `StateFlags = 1026`, never `4`.** ~~Original rule~~ — **SUPERSEDED by spike 003 (2026-07-17).**
+  Was correct only while the download had no integrity guarantee. Phase 21's per-chunk sha1 gate + spike
+  003's exec-bit handling make a trustworthy `StateFlags 4` achievable: on real HW Steam accepted a
+  GameLib-written 4 with no verify/re-download and the game launched. Full-ownership (StateFlags=4) is the
+  new direction — see spike 003 + Phase 22. The 1026 path may stay as a fallback when completeness can't
+  be proven. Load-bearing for a trustworthy 4: StateFlags 4 + BytesToDownload==BytesDownloaded(!=0) +
+  current public buildid + correct InstalledDepots + **Executable(32)/CustomExecutable(128) file modes**.
 - **64-bit IDs are strings, end to end.** Depot manifest GIDs and SteamID64s exceed
   `Number.MAX_SAFE_INTEGER`. `@node-steam/vdf.parse()` silently rounds them and produces a
   wrong manifest GID — which is exactly how you cause a forced re-download. *(Established by
@@ -61,7 +64,7 @@ Design decisions established so far. Non-negotiable for the real build.
 |---|------|------|-----------|---------|------|
 | 001 | acf-adoption | standard | Given a real Steam install, when GameLib writes its own `appmanifest.acf`, then Steam adopts it and launches the game with no re-download | ✓ VALIDATED | steam, appmanifest, acf, depot, vdf |
 | 002 | steam-user-depot-download | standard | Given an authenticated `steam-user` connection, when we fetch a depot manifest and download every chunk, then all files land on disk SHA1-verified and byte-identical to Steam's own install | ✓ VALIDATED | steam, depot, download, cdn, lzma, crypto |
-| 003 | stateflags4-full-ownership | standard | Given a 100%-downloaded (per-chunk sha1-verified) WazHack macOS depot, when GameLib writes StateFlags=4 + consistent bytes + current buildid, then Steam shows it Installed with NO verify/re-download and it launches with DRM intact | ⚠ PARTIAL (Steam trusts 4 ✓; needs exec-bit fix — re-testing) | steam, appmanifest, stateflags, full-ownership, d-2-reversal |
+| 003 | stateflags4-full-ownership | standard | Given a 100%-downloaded (per-chunk sha1-verified) WazHack macOS depot, when GameLib writes StateFlags=4 + consistent bytes + current buildid, then Steam shows it Installed with NO verify/re-download and it launches with DRM intact | ✓ VALIDATED (Steam trusts 4; exec-bit fix → launches) | steam, appmanifest, stateflags, full-ownership, d-2-reversal |
 
 > **⚠ Spike 003 deliberately RE-OPENS two locked requirements** — "Write StateFlags=1026, never 4" and D-2 ("Steam owns completion; GameLib owns only first install"). Justification: Phase 21 shipped a per-chunk sha1 integrity gate, so "our download was byte-perfect" is now checkable. Note spike 001 found `Bytes*`/`buildid` were "free" ONLY because Steam recomputed them during its 1026 verify pass — under StateFlags=4 (no verify) they are expected to become load-bearing. If 003 INVALIDATES, the 1026 requirement stands.
 

@@ -3,7 +3,7 @@ spike: 003
 name: stateflags4-full-ownership
 type: standard
 validates: "Given a WazHack macOS depot GameLib downloaded 100% (per-chunk sha1-verified), when GameLib writes an appmanifest with StateFlags=4 + consistent bytes + current buildid, then the Steam client shows it Installed with NO verify pass / NO re-download and it launches via steam://rungameid with DRM intact."
-verdict: PENDING
+verdict: VALIDATED
 related: [001, 002]
 tags: [steam, appmanifest, stateflags, full-ownership, d-2-reversal]
 ---
@@ -125,3 +125,32 @@ bearing for launch. RUN 2 (WazHack, exec-bit fix) will confirm the game launches
 
 **Requirement emerging for Phase 22:** the depot downloader must replicate Steam's verify-pass filesystem
 metadata — at minimum apply EDepotFileFlag file modes (executable), since nothing downstream will.
+
+- 2026-07-17 — **RUN 2 (real HW, WazHack): PASS.** With the exec-bit fix, WazHack installs under
+  StateFlags=4 (Steam trusts it, no verify/re-download) AND **launches** — `os error 256` gone.
+
+## Verdict: ✓ VALIDATED — full-ownership (StateFlags=4) install is feasible
+
+Steam accepts and trusts a GameLib-authored `StateFlags 4` FullyInstalled manifest — no verify pass, no
+re-download — and the game launches, PROVIDED GameLib produces a genuinely launch-ready install, not just
+byte-correct file contents.
+
+**Proven load-bearing for a trustworthy StateFlags=4 (all confirmed on real HW):**
+1. `StateFlags "4"`.
+2. `BytesToDownload == BytesDownloaded` and non-zero (== SizeOnDisk here) — else Steam sees "incomplete".
+3. Current `public`-branch `buildid` (threaded from PICS appinfo) — a `"0"` buildid reads as UpdateRequired.
+4. Correct `InstalledDepots` GID set (already guaranteed by Phase 21 selection; spike 001's rule).
+5. **Executable file-mode bit** applied from `EDepotFileFlag.Executable(32)/CustomExecutable(128)` — the
+   surprise. sha1 guarantees content, not fs mode; Steam's verify normally set this. Without it: `os error 256`.
+
+**Supersedes the locked "StateFlags=1026, never 4" requirement** — that rule was correct only while the
+download had no integrity guarantee. Phase 21's per-chunk sha1 gate + this exec-bit handling make a
+trustworthy 4 achievable. **Reverses D-2** for first install (GameLib owns the complete install; Steam does
+nothing) — updates can remain Steam's job (unchanged).
+
+**Open items to nail down IN Phase 22 (not blockers to feasibility):**
+- Other EDepotFileFlags: ReadOnly(8), Hidden(16) — apply for fidelity (untested; unlikely to block launch).
+- Multi-depot / larger title (e.g. Cyberpunk once D-UAT-08 verified) — confirm StateFlags=4 across depots.
+- Hard-DRM title — confirm launch (spike 001's open DRM caveat still applies).
+- Resume/interrupted-download ownership (GameLib, not Steam) is now in-scope under full ownership.
+- Decide: keep 1026 as a fallback when GameLib can't prove completeness, or always 4?
