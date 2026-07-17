@@ -1758,6 +1758,41 @@ describe('downloadDepotFiles', () => {
     expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(false)
   })
 
+  it('WR-02 (23-code-review): a backslash-separated relative linktarget is normalized before the containment check, consistent with resolveContainedPath\'s own filename normalization — a backslash-encoded traversal attempt is rejected, not silently accepted as one literal (non-traversing) path component', async () => {
+    // The symlink lives one directory below installRoot (sub/game.lnkname)
+    // so dirname(dest) !== installRoot and the naive relToRoot.startsWith('..')
+    // string check can't accidentally catch this by coincidence. Without
+    // normalizing '\' to '/' first, resolve() on POSIX treats the whole
+    // target as ONE opaque path segment (no real separator present), so
+    // '..\\..\\evil' resolves relative to installRoot as "sub/..\\..\\evil"
+    // (starts with "sub", NOT rejected) rather than two real parent-directory
+    // hops. With normalization (matching resolveContainedPath's own
+    // convention for filenames), it correctly resolves to "../evil" and is
+    // rejected as an escape attempt.
+    const evilBackslashSymlink: DepotPlanFile = {
+      filename: 'sub/game.lnkname',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: '..\\..\\evil'
+    }
+    const plan = makePlan(
+      [{ depotId: '66b', gid: 'g6f', key: Buffer.from('key'), files: [evilBackslashSymlink] }],
+      0
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+    expect(existsSync(join(dir, 'common', 'SomeGame', 'sub', 'game.lnkname'))).toBe(false)
+  })
+
   it('WR-02: a size>0 file whose manifest returned zero chunks is recorded as a failure, never silently reported as a completed empty file', async () => {
     const corruptFile: DepotPlanFile = {
       filename: 'corrupt.bin',

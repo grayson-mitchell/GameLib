@@ -778,7 +778,15 @@ async function downloadSingleFile(
         `downloadDepotFiles: symlink manifest entry for ${file.filename} has no linktarget`
       )
     }
-    const resolvedTarget = resolve(dirname(dest), file.linktarget)
+    // WR-02 (23-code-review): normalize backslash-separated relative segments
+    // the same way resolveContainedPath does for filenames — resolve() does
+    // not treat '\' as a separator, so an unnormalized Windows-style
+    // linktarget would resolve as one literal path component rather than
+    // nested directories (a broken symlink, not a traversal escape: '\' is
+    // not a real separator on POSIX so no actual escape is possible either
+    // way — this keeps the containment check consistent with the one
+    // function up).
+    const resolvedTarget = resolve(dirname(dest), file.linktarget.replace(/\\/g, '/'))
     const relToRoot = relative(installRoot, resolvedTarget)
     if (relToRoot.startsWith('..') || isAbsolute(relToRoot)) {
       throw new PathTraversalError(
