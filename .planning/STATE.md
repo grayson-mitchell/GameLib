@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 23 context gathered
-last_updated: "2026-07-17T08:22:24.291Z"
-last_activity: 2026-07-17 -- Phase 23 planning complete
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-07-17T08:36:02.124Z"
+last_activity: 2026-07-17
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 21 — steam-native-install
+**Current focus:** Phase 23 — steam-full-ownership-install-stateflags-4
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — 21-15 (D-UAT-03 worker-pool gap-closure) executed and code-complete; 21-16 (D-UAT-03 UX/observability follow-up) and 21-UAT.md real-hardware tasks remain PENDING
-Plan: 16 of 16
+Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-17 -- Phase 23 planning complete
+Last activity: 2026-07-17
 
 ## v1.4 Phase Map
 
@@ -141,6 +141,7 @@ Last activity: 2026-07-17 -- Phase 23 planning complete
 | Phase 21 P14 | 20min | 2 tasks | 4 files |
 | Phase 21 P15 | 45min | 3 tasks | 8 files |
 | Phase 21 P16 | 30min | 3 tasks | 9 files |
+| Phase 23 P01 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -234,6 +235,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 21-16]: GAMELIB_HANDOFF_STATE_FLAGS = 1026 tested by strict equality in pollInstallOnce (not a bitmask) since 1026 is the exact literal GameLib itself writes on handoff
 - [Phase ?]: [Phase 21-16]: notifiedWaiting fire-once flag co-located on the same activePolls entry as seenDownloading rather than a separate Map
 - [Phase ?]: [Phase 21-16]: GameCard/index.tsx needed zero code changes for the restart hint -- it already renders getStatusLabel's output verbatim via hasStatus.ts's label field
+- [Phase 23-01]: applyDepotFileFlags never throws (returns {ok,error}); the caller (downloadSingleFile) throws to surface a mode-application failure as a DepotDownloadFailure, matching the existing SHA1-mismatch-throws convention
 
 ### Pending Todos
 
@@ -294,8 +296,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-17T07:39:32.392Z
-Stopped at: Phase 23 context gathered
+Last session: 2026-07-17T08:36:02.118Z
+Stopped at: Completed 23-01-PLAN.md
 Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
