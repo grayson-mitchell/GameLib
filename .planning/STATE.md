@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Phase 22 UI-SPEC approved
-last_updated: "2026-07-17T09:54:19.845Z"
-last_activity: 2026-07-17
+last_updated: "2026-07-17T10:53:01.301Z"
+last_activity: 2026-07-17 -- Phase 22 planning complete
 progress:
   total_phases: 5
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
 Plan: 4 of 4
-Status: In progress — 23-UAT.md authored (task 1/2 done); blocked on D-07 real-hardware human-verify checkpoint (task 2/2). Phase NOT complete until all 3 D-07 gates in 23-UAT.md pass on real macOS hardware.
-Last activity: 2026-07-17
+Status: Ready to execute
+Last activity: 2026-07-17 -- Phase 22 planning complete
 
 ## v1.4 Phase Map
 

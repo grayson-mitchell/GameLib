@@ -696,12 +696,32 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 22-01-PLAN.md — Reshape SteamBottleConfig → families/assignments + thread explicit bottleName through bottle.ts primitives (D-01/D-02/D-04/D-05 primitives)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 22-02-PLAN.md — families.ts service: zero-loss migration (D-07/D-08), CRUD, resolveFamilyForApp (D-05), naming rules (D-02/D-03/D-09)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 22-03-PLAN.md — Cross-family ACF reconciliation + poller: scan all families, tag bottleName (D-06, Req 8)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 22-04-PLAN.md — Resolver-first routing in games.ts across all four bottle-eligible methods (D-05, Req 7)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 22-05-PLAN.md — Fold single-bottle IPC into the family group + wire startup migration (D-12/D-07)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 22-06-PLAN.md — Parameterize the guided-setup store/component by bottleName (D-11, Pitfall 4/5, Req 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 22-07-PLAN.md — Install-time family picker + gate both install chokepoints (D-10, Req 3/7)
 - [ ] 22-08-PLAN.md — "Steam Families" Settings section: create/rename/set-wine/guarded delete (D-11/D-09, Req 4/5)
 
