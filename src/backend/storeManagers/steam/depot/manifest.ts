@@ -10,10 +10,13 @@
 // its numeric handling for 64-bit fields is unverified and risks the same
 // precision loss the parse side has).
 //
-// StateFlags is hard-coded to "1026" (spike 001's adoption value — Steam
-// itself verifies/repairs and flips bit 4 to reach "4"). This module must
-// NEVER write StateFlags "4" — only Steam's own verify pass earns that value
-// (T-21-07).
+// StateFlags defaults to "1026" (spike 001's adoption value — Steam itself
+// verifies/repairs and flips bit 4 to reach "4"); this default is
+// unconditional and unchanged. A caller MAY override it to "4" (full
+// ownership, Steam runs no verify pass) — but only depot.ts's
+// canWriteFullOwnership completeness gate (Phase 23, D-01/D-02,
+// spike-003 VALIDATED) is trusted to earn that override. This module itself
+// never decides; it only serializes whatever the caller proved.
 //
 // The write is atomic: text lands in `appmanifest_{appId}.acf.tmp` in the
 // same directory, fsynced, then renamed over the final `.acf` (T-21-06) — a
@@ -53,18 +56,22 @@ export interface AppManifestParams {
   name: string
   /** Measured real bytes on disk — caller supplies; NOT a manifest-derived sum. */
   sizeOnDisk: string
-  /** Free — Steam recomputes on its verify pass. Defaults to "0". */
+  /** Current public-branch buildid (Phase 23, D-02). Defaults to "0" when
+   *  absent/unknown — Steam reads "0" as UpdateRequired and runs its own
+   *  verify pass regardless of stateFlags. Numeric-shape guarded before
+   *  interpolation (T-23-05); "0" is exempt (the intentional sentinel). */
   buildid?: string
   /** SteamID64 — STRING, never a JS Number. Defaults to "0" when unknown. */
   lastOwner?: string
-  /** SPIKE 003 (throwaway, env-gated via GAMELIB_SPIKE_STATEFLAGS4): override
-   *  StateFlags. Defaults to "1026" (the ONLY production value — T-21-07). The
-   *  full-ownership spike passes "4" to test whether Steam trusts a byte-perfect
-   *  GameLib install without its own verify pass. Remove with the spike. */
+  /** Override StateFlags. Defaults to "1026" (the unconditional module
+   *  default — Steam runs its own verify/repair pass). A caller may pass "4"
+   *  (full ownership, no verify pass) ONLY after depot.ts's
+   *  canWriteFullOwnership completeness gate (D-01/D-02) has earned it. */
   stateFlags?: string
-  /** SPIKE 003: BytesToDownload/BytesDownloaded value. Defaults to "0" (the
-   *  1026 path — Steam recomputes). The StateFlags=4 spike passes SizeOnDisk so
-   *  "download complete" is signalled (BytesToDownload == BytesDownloaded). */
+  /** BytesToDownload/BytesDownloaded value. Defaults to "0" (the 1026 path —
+   *  Steam recomputes). A caller passing SizeOnDisk here signals
+   *  download-complete (BytesToDownload == BytesDownloaded) under the
+   *  StateFlags=4 full-ownership path. */
   bytes?: string
   installedDepots: InstalledDepotEntry[]
 }
@@ -72,6 +79,23 @@ export interface AppManifestParams {
 function assertNumericId(id: string, label: string): void {
   if (!NUMERIC_ID.test(id)) {
     throw new Error(`writeAppManifest: rejected non-numeric ${label} "${id}"`)
+  }
+}
+
+/**
+ * Numeric-shape guard for `buildid` before VDF interpolation (T-23-05,
+ * Phase 23-02). Mirrors assertNumericId's shape, but exempts the literal "0"
+ * sentinel — the intentional untouched-fallback value (Steam reads "0" as
+ * UpdateRequired) is not itself a PICS-sourced numeric value and must remain
+ * writable even though it wouldn't otherwise match a "real" digit-string.
+ * `buildid` is now unconditionally interpolated (previously only reachable
+ * behind the throwaway spike flag), so a crafted/compromised PICS response
+ * can no longer inject a sibling AppState key via this field.
+ */
+function assertNumericBuildid(buildid: string): void {
+  if (buildid === '0') return
+  if (!NUMERIC_ID.test(buildid)) {
+    throw new Error(`writeAppManifest: rejected non-numeric buildid "${buildid}"`)
   }
 }
 
@@ -123,9 +147,10 @@ export function buildAppManifestText(params: AppManifestParams): string {
 
   const lastUpdated = Math.floor(Date.now() / 1000).toString()
   const buildid = params.buildid ?? '0'
+  assertNumericBuildid(buildid)
   const lastOwner = params.lastOwner ?? '0'
-  // SPIKE 003 (env-gated): default to the production "1026" / "0" values so a
-  // build without GAMELIB_SPIKE_STATEFLAGS4 is byte-identical to before.
+  // Unconditional production defaults (D-01/D-03) — a caller omitting
+  // stateFlags/bytes always gets the safe 1026/"0" verify-handoff values.
   const stateFlags = params.stateFlags ?? '1026'
   const bytes = params.bytes ?? '0'
   const installedDepotsBlock = buildInstalledDepotsBlock(params.installedDepots)

@@ -196,4 +196,34 @@ describe('depot/manifest', () => {
     expect(source).toMatch(/"installdir"[^\n]*vdfEscape\(params\.installdir\)/)
     expect(source).toMatch(/"name"[^\n]*vdfEscape\(params\.name\)/)
   })
+
+  // ── Phase 23 (23-02, T-23-05): buildid numeric-shape guard ─────────────────
+  describe('buildid guard', () => {
+    it('a real public-branch buildid is interpolated verbatim (D-02)', async () => {
+      const path = await writeAppManifest(dir, { ...baseParams, buildid: '9044149' })
+      const text = readFileSync(path, 'utf8')
+      expect(text).toMatch(/"buildid"\s+"9044149"/)
+    })
+
+    it('the buildid ?? "0" fallback still emits "0" when buildid is omitted', async () => {
+      const path = await writeAppManifest(dir, baseParams)
+      const text = readFileSync(path, 'utf8')
+      expect(text).toMatch(/"buildid"\s+"0"/)
+    })
+
+    it('rejects a non-numeric buildid before interpolation (T-23-05) — cannot inject a sibling VDF key', async () => {
+      await expect(
+        writeAppManifest(dir, {
+          ...baseParams,
+          buildid: '9044149"\n\t"StateFlags"\t\t"4'
+        })
+      ).rejects.toThrow(/non-numeric buildid/i)
+    })
+
+    it('"0" is exempt from the numeric guard (the intentional untouched-fallback sentinel)', async () => {
+      const path = await writeAppManifest(dir, { ...baseParams, buildid: '0' })
+      const text = readFileSync(path, 'utf8')
+      expect(text).toMatch(/"buildid"\s+"0"/)
+    })
+  })
 })
