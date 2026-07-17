@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: 23-04-PLAN.md task 1/2 complete (23-UAT.md authored); awaiting D-07 human-verify checkpoint on real macOS hardware
-last_updated: "2026-07-17T09:16:24.034Z"
+stopped_at: Phase 22 context gathered
+last_updated: "2026-07-17T09:40:37.891Z"
 last_activity: 2026-07-17
 progress:
   total_phases: 5
@@ -303,8 +303,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-17T09:16:24.030Z
-Stopped at: 23-04-PLAN.md task 1/2 complete (23-UAT.md authored, commit c1dc0fe6); task 2/2 is the D-07 blocking human-verify checkpoint — NOT auto-approved, requires real macOS hardware + live Steam client + real owned titles.
+Last session: 2026-07-17T09:40:37.885Z
+Stopped at: Phase 22 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
