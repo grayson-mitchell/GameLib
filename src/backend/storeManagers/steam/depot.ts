@@ -988,21 +988,18 @@ export async function downloadDepotFiles(
     // set (RESEARCH.md Pattern 3). A failure here is NOT swallowed: it's
     // recorded the same way a fresh-download mode-application failure
     // already is (T-23-03), so a healing failure also blocks the
-    // completeness gate below.
+    // completeness gate below. Shared with library.ts's startup-resume path
+    // (healReconciledFileModes, 23-code-review CR-01) — including its
+    // Directory(64)/Symlink(512) skip guard (23-code-review WR-01), so a
+    // manifest entry combining those bits with ReadOnly/Hidden can never
+    // reach chmod/attrib.exe against a directory or symlink path here either.
     const jobFiles = new Set(jobs.map((j) => j.file))
-    for (const depot of plan.depots) {
-      for (const file of depot.files) {
-        if (jobFiles.has(file) || !file.flags) continue
-        const dest = resolveContainedPath(installRoot, file.filename)
-        const modeResult = await applyEDepotFileModes(dest, file.flags)
-        if (!modeResult.ok) {
-          failures.push({
-            file: file.filename,
-            error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
-          })
-        }
-      }
-    }
+    const { failures: healFailures } = await healReconciledFileModes(
+      plan,
+      installRoot,
+      jobFiles
+    )
+    failures.push(...healFailures)
 
     let doneBytes = 0
     let lastEmitBytes = 0

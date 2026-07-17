@@ -2081,5 +2081,41 @@ describe('downloadDepotFiles', () => {
       const stat = lstatSync(destPath)
       expect(stat.mode & 0o777).toBe(0o755)
     })
+
+    it('WR-01 (23-code-review): a reconciled Directory entry combined with ReadOnly is skipped by the mode-heal loop — never chmod-stripped of its traversable bit', async () => {
+      const dirPath = join(dir, 'common', 'SomeGame', 'readonly-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      jest
+        .mocked(fetchChunk)
+        .mockRejectedValue(
+          new Error('fetchChunk must never be called for a reconciled entry')
+        )
+
+      const file: DepotPlanFile = {
+        filename: 'readonly-dir',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: 64 | 8 // Directory | ReadOnly
+      }
+      const plan = makePlan(
+        [{ depotId: '903', gid: 'g93', key: Buffer.from('key'), files: [file] }],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      // The heal loop must never hand a Directory/Symlink manifest entry to
+      // chmod/attrib.exe — a directory stripped of its execute (traversable)
+      // bit (0o444) would make every file inside it inaccessible.
+      const st = lstatSync(dirPath)
+      expect(st.mode & 0o100).not.toBe(0) // owner-execute bit intact
+    })
   })
 })
