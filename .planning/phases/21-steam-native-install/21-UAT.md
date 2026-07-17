@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (Cyberpunk silent cancel — needs log, debug pending), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (CM drop during plan-build, no retry + error mislabeled cancelled — debug session steam-cm-drop-planbuild), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -370,18 +370,27 @@ launched Steam.
 > **Reported:** clicking Install on Cyberpunk 2077 says "installing" but never shows a %, then the
 > DownloadManager shows "cancelled" under it. Pressing X removes it; retrying gives the same result.
 >
-> **Context / likely cause (needs dev-terminal log to confirm):** Cyberpunk 2077 has NO native macOS
-> build (Windows-only) and ships Denuvo. On macOS it should route to the bottle path (`isBottleEligible`),
-> not a native depot download. Suspect one of: (a) it routes to native, depot selection finds no macOS
-> depot, and the outcome is being surfaced as 'cancelled' (should be a clear "not available on macOS /
-> use bottle" message, not a silent cancel); or (b) it routes to bottle but the bottle isn't provisioned
-> and the failure is mis-surfaced as 'cancelled'. Either way the UX is wrong: a non-installable title
-> must give an explicit reason, never a silent "cancelled".
-> **NOT a stale-abort regression** — `createAbortController` overwrites with a fresh non-aborted
-> controller each attempt (verified). **Needs:** the dev-terminal (electron-vite) log for one Install
-> click on 1091500 (grep `1091500|Bottle|depot|abort|cancel|not ready|macos`) to confirm routing, then
-> route to a debug/gap cycle. **Test-selection note:** Cyberpunk is a poor native-macOS UAT title; use a
-> Mac-native owned title for 1d/Task 2.
+> **ROOT CAUSE (confirmed via dev-terminal log 2026-07-17 — original Windows-only hypothesis was WRONG):**
+> Cyberpunk 2077 DOES have macOS depots; selection worked correctly (os=macos arch=64 english → 3 depots:
+> `1460472` ~65 GB, `2224089` ~24 GB, `2060314` ~193 MB, ~90 GB total; `selectAllDepots union … -> 3 depot(s)`).
+> The install fails ~3 s later, DURING plan-build (before any chunk streaming), with:
+> `SteamGame: depot install failed for appId 1091500: Steam servers dropped the connection. Retry to continue.`
+> → `[DownloadManager]: Installation of 1091500 failed with: Steam servers dropped the connection.`
+> Two distinct defects:
+> 1. **No retry on a CM connection drop during the manifest/PICS phase.** `buildDepotPlan` fetches
+>    `getRawManifest` + decryption keys per depot over the `steam-user` CM connection; for a big
+>    multi-depot game that phase is long and the CM drops the connection ("repeat for same results" =
+>    repeatable, not a one-off blip). The phase's locked "retry across content servers" logic only covers
+>    the CHUNK-download phase (`downloadDepotFiles`), NOT manifest/PICS fetching. Needs: retry/reconnect
+>    (ensureConnected + backoff) around the manifest-fetch steps, or a bounded whole-plan-build retry.
+> 2. **Surfacing bug.** Backend classifies this as `error` with a "Retry to continue" message, but the UI
+>    showed the user "cancelled" and only an X (remove) — no visible Retry affordance for a steam native
+>    install error. Confirm the generic error+Retry surface actually renders for `runner==='steam'`
+>    installs (games.ts claims D-06/D-07 reuse it) and isn't mislabeled as cancelled.
+> **NOT a routing bug and NOT a stale-abort regression** (`createAbortController` overwrites with a fresh
+> controller each attempt — verified). **Routed to debug session** `.planning/debug/steam-cm-drop-planbuild.md`.
+> **Note:** also observed a double depot-selection log line per app (`-> depots [..]` immediately followed
+> by `-> depots []`) — likely benign DLC-app enumeration, but worth a glance during the fix.
 >
 > **🟠 D-UAT-07 (MAJOR/UX, 2026-07-17) — GamePage detail action button does not handle
 > steam-waiting-for-restart; shows a greyed, disabled "Installing" with no actionable path.**
