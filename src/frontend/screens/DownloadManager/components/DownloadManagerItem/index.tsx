@@ -13,6 +13,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { useNavigate } from 'react-router-dom'
 import PlayIcon from 'frontend/assets/play-icon.svg?react'
 import PauseIcon from 'frontend/assets/pause-icon.svg?react'
+import { classifyDMItemStatus } from './status'
 
 type Props = {
   element?: DMQueueElement
@@ -89,8 +90,15 @@ const DownloadManagerItem = ({
 
   const [progress] = hasProgress(appName, runner)
   const { status } = element
-  const finished = status === 'done'
-  const canceled = status === 'error' || (status === 'abort' && !current)
+  // D-UAT-06: a genuine Steam install failure is distinct from a cancel —
+  // "isSteamError" gets its own honest label + working Retry affordance,
+  // never lumped into "canceled". gog/epic/amazon are unaffected (see
+  // classifyDMItemStatus).
+  const { finished, isSteamError, canceled } = classifyDMItemStatus(
+    status,
+    runner,
+    current
+  )
 
   const stopInstallation = async () => {
     if (!gameInfo) {
@@ -123,7 +131,24 @@ const DownloadManagerItem = ({
   const handleMainActionClick = () => {
     if (finished) {
       return goToGamePage()
-    } else if (canceled && handleClearItem) {
+    }
+
+    // D-UAT-06: a genuine Steam failure gets a real Retry — re-enqueue the
+    // exact same install/update params (matches D-07's own tested guarantee
+    // that re-invoking downloadSteamDepots over a prior partial install is
+    // safe/idempotent). MUST return here: falling through to the
+    // removeFromDMQueue() call below would immediately cancel the retry we
+    // just enqueued (same appName).
+    if (isSteamError) {
+      if (type === 'update') {
+        window.api.updateGame(params)
+      } else {
+        window.api.install(params)
+      }
+      return
+    }
+
+    if (canceled && handleClearItem) {
       handleClearItem(appName)
     }
 
@@ -149,7 +174,7 @@ const DownloadManagerItem = ({
       return <PlayIcon className="playIcon" />
     }
 
-    if (canceled) {
+    if (canceled || isSteamError) {
       return <StopIcon className="installIcon" />
     }
 
@@ -178,6 +203,12 @@ const DownloadManagerItem = ({
 
   const mainIconTitle = () => {
     const { status } = element
+    // D-UAT-06: a genuine Steam failure gets its own "Retry" title — never
+    // the (pre-existing, gog/epic/amazon-unchanged) "Open" title below,
+    // which makes no sense for a failed, never-installed item.
+    if (isSteamError) {
+      return t('queue.label.retry', 'Retry')
+    }
     if (status === 'done' || status === 'error') {
       return t('Open')
     }
@@ -202,7 +233,7 @@ const DownloadManagerItem = ({
       return 'var(--success)'
     }
 
-    if (canceled) {
+    if (canceled || isSteamError) {
       return 'var(--cancel-button, var(--danger))'
     }
 
@@ -244,7 +275,11 @@ const DownloadManagerItem = ({
           <span title={path}>
             {size ?? ''} |{' '}
             {platformToInstall === 'osx' ? 'Mac' : platformToInstall}
-            {canceled ? ` (${t('queue.label.canceled', 'Canceled')})` : ''}
+            {isSteamError
+              ? ` (${t('queue.label.failed', 'Failed')})`
+              : canceled
+                ? ` (${t('queue.label.canceled', 'Canceled')})`
+                : ''}
           </span>
         </span>
       </span>

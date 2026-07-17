@@ -859,8 +859,10 @@
             "clear": "Clear List",
             "downloading": "Downloading",
             "empty": "Nothing to download",
+            "failed": "Failed",
             "finished": "Completed",
-            "queued": "Queued"
+            "queued": "Queued",
+            "retry": "Retry"
         }
     },
     "Recent": "Played Recently",

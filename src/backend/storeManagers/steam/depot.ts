@@ -212,6 +212,81 @@ function getDepotClient(): SteamUserDepotClient {
   return client as unknown as SteamUserDepotClient
 }
 
+/** D-UAT-06: bounded reconnect+retry for buildDepotPlan's manifest/PICS phase.
+ *  Total attempts a single plan-build network step (fetchAppInfo,
+ *  getOwnedSets, fetchDlcInfos, or a single depot's fetchDepotPlanEntry) gets
+ *  before its failure is allowed to propagate. Bounded — never unbounded —
+ *  so a GENUINE, non-recoverable failure still surfaces promptly as an
+ *  honest error instead of hanging (fix goal #2). */
+export const PLAN_BUILD_MAX_ATTEMPTS = 3
+/** Fixed pause between a failed attempt and the next retry, given AFTER
+ *  ensureConnected() has already (re)settled — steam-user's own
+ *  autoRelogin/ensureConnected already waits out the real reconnect race;
+ *  this is just a short courtesy pause before hitting the CM again. */
+export const PLAN_BUILD_RETRY_DELAY_MS = 500
+
+/** Resolves after `ms`, or immediately if/when `signal` aborts — so a cancel
+ *  issued while a plan-build retry is backing off still takes effect
+ *  promptly (never weakens D-UAT-05's abort semantics, D-UAT-06 fix goal #3). */
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolvePromise) => {
+    const timer = setTimeout(resolvePromise, ms)
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        resolvePromise()
+      },
+      { once: true }
+    )
+  })
+}
+
+/**
+ * Runs `step` against the CURRENT authenticated client, retrying up to
+ * PLAN_BUILD_MAX_ATTEMPTS times on failure (D-UAT-06). A mid-loop Steam CM
+ * connection drop during the manifest/PICS phase previously hard-failed the
+ * whole plan build with no recovery — for a large multi-depot game this
+ * phase can run long enough for a transient drop to occur before a single
+ * chunk is ever streamed (the chunk-phase retry in downloadDepotFiles is
+ * never reached). On failure, re-runs SteamUser.ensureConnected() (which
+ * transparently reconnects — steam-user nulls out `steamID` the instant the
+ * CM connection drops, so a stale `connected` check would never catch this)
+ * and re-resolves getDepotClient() before the next attempt, since a
+ * reconnect creates a NEW client instance — reusing the old (dead) client
+ * reference would just fail again. throwIfAborted is consulted before every
+ * attempt and the retry backoff is abort-interruptible, so a user cancel
+ * during a retry wait still takes effect promptly (D-UAT-05 abort semantics
+ * preserved — a network drop is never reported as a user cancel and a user
+ * cancel is never silently retried).
+ */
+async function withPlanBuildRetry<T>(
+  signal: AbortSignal | undefined,
+  step: (client: SteamUserDepotClient) => Promise<T>
+): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 1; attempt <= PLAN_BUILD_MAX_ATTEMPTS; attempt++) {
+    throwIfAborted(signal)
+    try {
+      return await step(getDepotClient())
+    } catch (err) {
+      lastErr = err
+      if (attempt === PLAN_BUILD_MAX_ATTEMPTS) break
+      logWarning(
+        [
+          `downloadSteamDepots: plan-build step failed (attempt ${attempt}/${PLAN_BUILD_MAX_ATTEMPTS}), reconnecting and retrying:`,
+          err
+        ],
+        LogPrefix.Steam
+      )
+      await SteamUser.ensureConnected()
+      throwIfAborted(signal)
+      await delay(PLAN_BUILD_RETRY_DELAY_MS, signal)
+    }
+  }
+  throw lastErr
+}
+
 /**
  * Owned appIds + depotIds derived from the authenticated user's package
  * licenses. Depot ownership is granted at the PACKAGE level (spike 001) — an
@@ -362,15 +437,21 @@ export async function buildDepotPlan(
     )
   }
 
-  const client = getDepotClient()
   const numericAppId = Number(appId)
 
-  const appinfo = await fetchAppInfo(client, numericAppId)
+  // D-UAT-06: every PICS/manifest network step below runs through
+  // withPlanBuildRetry — bounded reconnect+retry instead of a single
+  // ensureConnected() up front and no recovery from a mid-loop CM drop.
+  const appinfo = await withPlanBuildRetry(opts.signal, (client) =>
+    fetchAppInfo(client, numericAppId)
+  )
   throwIfAborted(opts.signal)
   const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
-  const owned = await getOwnedSets(client)
+  const owned = await withPlanBuildRetry(opts.signal, (client) => getOwnedSets(client))
   throwIfAborted(opts.signal)
-  const dlcInfos = await fetchDlcInfos(client, appinfo)
+  const dlcInfos = await withPlanBuildRetry(opts.signal, (client) =>
+    fetchDlcInfos(client, appinfo)
+  )
   throwIfAborted(opts.signal)
 
   const selectOpts: DepotSelectOpts = {
@@ -389,7 +470,9 @@ export async function buildDepotPlan(
   let totalBytes = 0
   for (const descriptor of descriptors) {
     throwIfAborted(opts.signal)
-    const entry = await fetchDepotPlanEntry(client, numericAppId, descriptor, parser)
+    const entry = await withPlanBuildRetry(opts.signal, (client) =>
+      fetchDepotPlanEntry(client, numericAppId, descriptor, parser)
+    )
     depots.push(entry)
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
   }

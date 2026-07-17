@@ -41,6 +41,7 @@ import {
   finalizeToSteam,
   formatEta,
   CHUNK_CONCURRENCY,
+  PLAN_BUILD_MAX_ATTEMPTS,
   type DepotPlan,
   type DepotPlanFile
 } from '../depot'
@@ -355,6 +356,116 @@ describe('buildDepotPlan', () => {
       expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('D-UAT-06: reconnect+retry-on-drop during plan-build', () => {
+    it('a CM drop on the first attempt at a depot manifest fetch triggers ensureConnected() + retry, and the plan still completes', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0 }
+      ])
+
+      let keyCalls = 0
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => {
+          keyCalls++
+          if (keyCalls === 1) {
+            // Simulates the CM connection dropping mid-request (the exact
+            // D-UAT-06 field failure signature — classifyDepotError already
+            // recognizes ECONNRESET as a connection-dropped failure).
+            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+            return
+          }
+          cb(null, Buffer.from(`key-${depotId}`))
+        }
+      )
+      jest.mocked(fakeClient.getRawManifest).mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
+      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      jest.mocked(contentManifest.parse).mockReturnValue({
+        files: [{ filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }]
+      })
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots).toHaveLength(1)
+      expect(plan.depots[0].depotId).toBe('111')
+      expect(keyCalls).toBe(2)
+      // Initial connect (1, top of buildDepotPlan) + one mid-loop reconnect
+      // triggered by the retry wrapper after the drop (1) = 2.
+      expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalledTimes(2)
+    })
+
+    it('exhausts PLAN_BUILD_MAX_ATTEMPTS on a PERSISTENT drop and rejects — never retries unboundedly', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0 }
+      ])
+
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (
+          _appId: number,
+          _depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+      )
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(/ECONNRESET/)
+
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
+        PLAN_BUILD_MAX_ATTEMPTS
+      )
+      // 1 initial connect + (PLAN_BUILD_MAX_ATTEMPTS - 1) retry-reconnects.
+      expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalledTimes(
+        PLAN_BUILD_MAX_ATTEMPTS
+      )
+    })
+
+    it('a cancel that lands the instant a plan-build step fails short-circuits the retry — never proceeds to a second attempt or waits out the backoff', async () => {
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        { id: '111', manifest: '9007199254740993', size: 0 }
+      ])
+
+      const controller = new AbortController()
+      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+        (
+          _appId: number,
+          _depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => {
+          // First attempt fails (triggers the retry path); abort lands
+          // while withPlanBuildRetry is backing off before attempt 2.
+          controller.abort()
+          cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+        }
+      )
+
+      await expect(
+        buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
+      ).rejects.toThrow(/aborted/i)
+
+      // Never reached a second attempt — the abort short-circuited the retry.
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
+    })
+  })
 })
 
 /**
@@ -607,6 +718,76 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
 
     expect(result.status).toBe('cancelled')
     expect(fetchChunk).not.toHaveBeenCalled()
+    expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
+  })
+
+  it('D-UAT-06: a transient CM drop during plan-build recovers via reconnect+retry — the install still completes as status done, not error', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const content = Buffer.from('game-bytes')
+    let keyCalls = 0
+    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+      (
+        _appId: number,
+        depotId: number,
+        cb: (err: Error | null, key: Buffer) => void
+      ) => {
+        keyCalls++
+        if (keyCalls === 1) {
+          cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+          return
+        }
+        cb(null, Buffer.from(`key-${depotId}`))
+      }
+    )
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: String(content.length),
+          sha_content: sha1Hex(content),
+          chunks: [{ sha: 'chunk-sha', cb_original: content.length, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(content)
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    expect(keyCalls).toBe(2)
+  })
+
+  it('D-UAT-06: a PERSISTENT CM drop during plan-build exhausts the bounded retry and resolves status error (classified, actionable message) — never cancelled, never an unhandled throw', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
+      (
+        _appId: number,
+        _depotId: number,
+        cb: (err: Error | null, key: Buffer) => void
+      ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+    )
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+    expect(result.error).toBe(
+      classifyDepotError(new Error('ECONNRESET')).message
+    )
+    // Still converges on finalizeToSteam (Pattern 5) — never left unresolved.
     expect(existsSync(join(dir, 'appmanifest_12345.acf'))).toBe(true)
   })
 
