@@ -39,11 +39,13 @@ import {
   downloadSteamDepots,
   downloadDepotFiles,
   finalizeToSteam,
+  canWriteFullOwnership,
   formatEta,
   CHUNK_CONCURRENCY,
   PLAN_BUILD_MAX_ATTEMPTS,
   type DepotPlan,
-  type DepotPlanFile
+  type DepotPlanFile,
+  type DepotDownloadFailure
 } from '../depot'
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
@@ -690,6 +692,52 @@ describe('buildDepotPlan', () => {
         rmSync(dir, { recursive: true, force: true })
       }
     })
+  })
+})
+
+/**
+ * Unit tests for canWriteFullOwnership (Phase 23-02, D-01/D-02) — the single
+ * completeness gate deciding StateFlags=4 vs. the safe 1026 fallback. Every
+ * behavior bullet from the plan gets its own case; the gate must fail CLOSED
+ * on any missing/ambiguous input.
+ */
+describe('canWriteFullOwnership', () => {
+  const oneFailure: DepotDownloadFailure[] = [{ file: 'a.bin', error: 'boom' }]
+
+  const complete = {
+    outcome: 'completed' as const,
+    failures: [] as DepotDownloadFailure[],
+    buildid: '9044149',
+    allFilesVerified: true,
+    allModesApplied: true
+  }
+
+  it('returns true when every load-bearing field is present and clean', () => {
+    expect(canWriteFullOwnership(complete)).toBe(true)
+  })
+
+  it('outcome "cancelled" -> false', () => {
+    expect(canWriteFullOwnership({ ...complete, outcome: 'cancelled' })).toBe(false)
+  })
+
+  it('outcome "completed" with a non-empty failures array -> false (partial failure must not earn a 4)', () => {
+    expect(canWriteFullOwnership({ ...complete, failures: oneFailure })).toBe(false)
+  })
+
+  it('buildid undefined -> false', () => {
+    expect(canWriteFullOwnership({ ...complete, buildid: undefined })).toBe(false)
+  })
+
+  it('buildid "0" -> false (Steam reads "0" as UpdateRequired)', () => {
+    expect(canWriteFullOwnership({ ...complete, buildid: '0' })).toBe(false)
+  })
+
+  it('allFilesVerified false -> false', () => {
+    expect(canWriteFullOwnership({ ...complete, allFilesVerified: false })).toBe(false)
+  })
+
+  it('allModesApplied false -> false', () => {
+    expect(canWriteFullOwnership({ ...complete, allModesApplied: false })).toBe(false)
   })
 })
 

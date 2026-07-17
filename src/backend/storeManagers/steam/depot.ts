@@ -645,6 +645,35 @@ export interface DepotDownloadResult {
 }
 
 /**
+ * Phase 23 (23-02, D-01/D-02): the single completeness gate deciding whether
+ * finalizeToSteam may write StateFlags=4 (full ownership, no Steam verify
+ * pass) instead of the safe 1026 verify-handoff. Fails CLOSED — every input
+ * must be unambiguously present and good; any missing/ambiguous field (an
+ * absent buildid, a non-'completed' outcome, a single failure, an unverified
+ * file, an unapplied mode) resolves to false, never true. This is the ONLY
+ * place this decision is made — both the fresh-install path (this plan) and
+ * the future resume/reconciliation path (D-04) must call this exact function
+ * rather than inlining the check, so the two paths can never silently
+ * diverge (RESEARCH.md Pitfall 2).
+ */
+export function canWriteFullOwnership(opts: {
+  outcome: 'completed' | 'cancelled'
+  failures: DepotDownloadFailure[]
+  buildid?: string
+  allFilesVerified: boolean
+  allModesApplied: boolean
+}): boolean {
+  return (
+    opts.outcome === 'completed' &&
+    opts.failures.length === 0 &&
+    !!opts.buildid &&
+    opts.buildid !== '0' &&
+    opts.allFilesVerified === true &&
+    opts.allModesApplied === true
+  )
+}
+
+/**
  * Bounded chunk-level worker pool for ONE file. Never an unbounded fan-out
  * over every chunk in one go — peak in-flight fetchChunk calls is capped at
  * CHUNK_CONCURRENCY regardless of how many chunks the file has (T-21-02).
