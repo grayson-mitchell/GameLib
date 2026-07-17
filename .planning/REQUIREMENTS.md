@@ -159,6 +159,20 @@ Requirements for the v1.6 milestone — **Steam Native Install**. Replace the op
 - [x] **SNI-07** (D-12/D-13/D-14): The feature ships behind a **user opt-in setting** (default OFF) on **all three desktop OSes**; OFF preserves today's `steam://install` handoff byte-for-byte; ON routes every Steam install through the depot engine with no per-case fallback.
 - [ ] **SNI-08** (D-15): On macOS, a bottle-eligible install **depot-downloads the Windows depot into the CrossOver bottle's `steamapps/`** (`os: 'windows'`, `getBottleSteamappsDir()` target, `isBottleReady()` gate) and the **bottled** Windows Steam adopts the `1026` manifest — unifying the install mechanism across native and bottle, with **no** Wine dispatch for the download itself.
 
+## v1.6 Requirements — Steam Full-Ownership Install (Phase 23)
+
+Phase 23 productionizes spike-003: GameLib authors a `StateFlags=4` (FullyInstalled) `appmanifest_{appId}.acf` the Steam client trusts with **no verify pass and no re-download**, owning the complete first install **and** resume — reversing D-2 for first install and superseding the "StateFlags=1026, never 4" rule (both were correct only while the download had no integrity guarantee; Phase 21's per-chunk sha1 gate makes a trustworthy `4` achievable). Falls back to Phase 21's `1026` verify-handoff only when completeness can't be proven. Minted during `/gsd-plan-phase 23` from locked decisions D-01..D-07 in `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-CONTEXT.md`. Each maps to Phase 23. Depends on Phase 21.
+
+### Steam Full-Ownership Install (Phase 23)
+
+- [ ] **REQ-23-01** (D-01): A single `canWriteFullOwnership(...)` completeness predicate — outcome `completed`, zero failures, buildid non-`"0"`, every file sha1-verified, all file modes applied — earns `StateFlags=4`; any ambiguity **fails closed** to the unchanged Phase 21 `1026` verify-handoff (byte-identical fallback preserved).
+- [ ] **REQ-23-02** (D-02): The current public-branch `buildid` (`appinfo.depots.branches.public.buildid`) is threaded from `buildDepotPlan` → `finalizeToSteam` → `writeAppManifest` and written into the manifest (never `"0"` under a `4`), with a numeric-shape guard before VDF interpolation; a `StateFlags=4` manifest carries the full spike-proven load-bearing field set (`BytesToDownload == BytesDownloaded == SizeOnDisk`, non-zero; correct `InstalledDepots` GID set).
+- [ ] **REQ-23-03** (D-03): `StateFlags=4` is the behavior of the existing Phase 21 native-install path behind the **D-13 opt-in** — **no new user-facing toggle**; the `1026` writer and its unconditional manifest default are **retained** as the D-01 fallback (not deleted).
+- [ ] **REQ-23-04** (D-04): GameLib owns resume/interrupted-download recovery — a new sha1-gated `reconcilePartialState` re-verifies every already-present file (existence is never sufficient), downloads only missing/mismatched files, re-applies file modes idempotently, and earns a trustworthy `StateFlags=4` on a reconciled-complete resume; startup resume **never** silently auto-opens Steam-in-CrossOver (bottle root never scanned, `tellBottledSteamToInstall` never called — regression-tested).
+- [ ] **REQ-23-05** (D-05): Updates remain **Steam's** job — no delta-patching, no integrity-repair ownership; reconciliation fills first-install/resume gaps only, and an already-complete install re-downloads nothing.
+- [ ] **REQ-23-06** (D-06): The depot writer replicates the full `EDepotFileFlag` mode set on all OSes — POSIX `Executable(32)`/`CustomExecutable(128)` (+x) plus `ReadOnly(8)`/`Hidden(16)` via chmod (Hidden = documented POSIX no-op), Windows `ReadOnly`/`Hidden` via an argv-form `attrib.exe` subprocess — since `StateFlags=4` skips the verify pass that used to apply these.
+- [ ] **REQ-23-07** (D-07): Ships only after real-hardware (**macOS-first**) validation of three gates recorded in `23-UAT.md`: a multi-depot larger title under `StateFlags=4` (no verify/re-download), a confirmed hard-DRM title launching under `StateFlags=4`, and an interrupt-then-resume run yielding a Steam-trusted `4` with no full re-download and no silent Steam-in-CrossOver auto-open. Windows/Linux coverage is a deferred follow-up, not a Phase 23 gate.
+
 ## Future Requirements
 
 Deferred beyond v1.1. Tracked but not in the current roadmap.
@@ -267,6 +281,13 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SNI-06 | Phase 21 | Pending (hardware UAT) |
 | SNI-07 | Phase 21 | Complete |
 | SNI-08 | Phase 21 | In Progress (inherits SNI-01 gap; hardware UAT pending) |
+| REQ-23-01 | Phase 23 | Pending |
+| REQ-23-02 | Phase 23 | Pending |
+| REQ-23-03 | Phase 23 | Pending |
+| REQ-23-04 | Phase 23 | Pending |
+| REQ-23-05 | Phase 23 | Pending |
+| REQ-23-06 | Phase 23 | Pending |
+| REQ-23-07 | Phase 23 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
@@ -281,8 +302,15 @@ Which phases cover which requirements. Populated during roadmap creation.
 - Mapped to phases: 8 (Phase 21)
 - Unmapped: 0 ✓
 
+- Phase 23 requirements: 7 total (REQ-23-01..07, minted 2026-07-17 from D-01..D-07)
+- Mapped to phases: 7 (Phase 23)
+- Unmapped: 0 ✓
+
+**D-XX -> REQ mapping (Phase 23):** D-01 -> REQ-23-01 . D-02 -> REQ-23-02 . D-03 -> REQ-23-03 . D-04 -> REQ-23-04 . D-05 -> REQ-23-05 . D-06 -> REQ-23-06 . D-07 -> REQ-23-07
+
 **D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
 
 ---
 *Requirements defined: 2026-07-02*
 *Last updated: 2026-07-05 — v1.2 traceability appended during roadmap creation (Phases 10–15)*
+*Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*

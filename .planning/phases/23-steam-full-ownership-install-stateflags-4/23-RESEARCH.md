@@ -266,6 +266,16 @@ is an opt-in override the gate explicitly earns — inverting nothing about the 
 
 ### Pattern 3: Resume/reconciliation (D-04 — the largest new lift, genuinely new code)
 
+> **DIVERGENCE RESOLVED (2026-07-17, in favor of 23-PATTERNS.md / CONTEXT D-04):** The
+> "does NOT need to run for the startup ACF-watcher path" guidance below is the STALE view. CONTEXT
+> D-04 expands scope so GameLib *owns* resume/interrupted-download recovery and must be able to write a
+> trustworthy `StateFlags=4` on a proven-complete resume — which the empty `depots:[]` startup path
+> cannot do. Plan 23-03 Task 3 therefore has `library.ts init()` rebuild a real `DepotPlan`, run
+> `reconcilePartialState`, and feed real gate inputs to `finalizeToSteam` (fail-closed to 1026 when
+> reconciliation finds missing/failed files). The invariant Pattern 3 was protecting — never re-invoke
+> the network download loop / `tellBottledSteamToInstall` unprompted, never scan the bottle root — is
+> PRESERVED and regression-tested. See 23-PATTERNS.md "library.ts init() resume block" section.
+
 **What exists today:** Nothing. `installDepotDownload()` (`games.ts:726-792`) always calls
 `downloadSteamDepots` fresh; `buildDepotPlan` always builds the FULL plan (every owned depot, every file);
 `downloadDepotFiles` always processes every file in that plan; `downloadSingleFile` always
@@ -522,7 +532,7 @@ if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
 
 **If this table is empty:** N/A — see above.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact location of the `canWriteFullOwnership` gate — inline in `finalizeToSteam` vs. a separate exported/testable function?**
    - What we know: CONTEXT.md leaves this to "planner's call" (Claude's Discretion). `finalizeToSteam` is
@@ -534,6 +544,10 @@ if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
    - Recommendation: Extend `DepotDownloadResult` with an `allFilesVerifiedThisRun: boolean` (or similar)
      field the download loop already has the information to populate, rather than a parallel out-of-band
      verification pass — keeps the single-source-of-truth discipline this codebase already follows.
+   - **RESOLVED (2026-07-17):** Plan 23-02 Task 1 implements `canWriteFullOwnership` as a single **exported,
+     unit-tested pure predicate** called INSIDE `finalizeToSteam` (no forked finalize path); 23-02 Task 2
+     extends `DepotDownloadResult` with `allFilesVerifiedThisRun`/`allModesApplied` and threads them via
+     `FinalizeToSteamOpts`, exactly as recommended.
 
 2. **Does `measureInstalledBytes`'s recursive disk walk need to change for reconciliation, or is it already sufficient?**
    - What we know: `measureInstalledBytes` (`depot.ts:960-978`) already recursively sums real bytes under
@@ -544,6 +558,9 @@ if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
    - Recommendation: Treat `measureInstalledBytes` as already correct and unchanged for this phase — no
      open work here, but the planner should confirm no other assumption elsewhere depends on
      `SizeOnDisk` reflecting only THIS run's downloads (it already reflects the whole directory tree).
+   - **RESOLVED (2026-07-17):** Plan 23-03 Task 2 keeps `measureInstalledBytes` as the unchanged
+     SizeOnDisk/bytes source for both fresh and reconciled installs (acceptance criteria forbid a
+     DepotPlan-sum substitution) — no change needed, confirmed source-agnostic.
 
 3. **Multi-depot buildid: does every depot share one `buildid`, or is it per-depot?**
    - What we know: Spike-003 and the codebase both treat `buildid` as a single per-APP value from
@@ -553,6 +570,9 @@ if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
    - Recommendation: D-07 explicitly gates shipping on a real multi-depot hardware test; this is exactly
      the kind of assumption that test should surface. No code change needed now, but flag it as the thing
      D-07's multi-depot check is FOR.
+   - **RESOLVED (2026-07-17):** Deferred to Plan 23-04's D-07 multi-depot hardware gate (REQ-23-07,
+     Gate 1), as recommended — the per-app single-buildid assumption is exactly what that real
+     multi-depot install (Cyberpunk) is designed to surface. No code change in this phase.
 
 ## Validation Architecture
 

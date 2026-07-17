@@ -692,7 +692,7 @@ Plans:
   - **CrossOver-only constraint:** Steam bottling is built on CrossOver's `cxbottle` lifecycle; GPTK/`toolkit` is NOT a working Steam engine (see `.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`). Families use CrossOver.
   - **Login constraint (accepted):** each family/bottle requires its own one-time Steam login; isolated prefixes cannot share Steam auth (prefix isolation + D-04). One Steam account can only be actively playing in one family at a time; concurrent play needs distinct accounts per family.
 
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
 
@@ -742,13 +742,27 @@ Plans:
 ### Phase 23: Steam full-ownership install (StateFlags=4)
 
 **Goal:** GameLib authors a `StateFlags=4` (FullyInstalled) appmanifest that the Steam client trusts with no verify pass and no re-download — GameLib owns the complete first install (and resume), Steam does nothing until updates. Productionizes the spike-003 env-gated proof: threads the current public `buildid`, writes consistent completion bytes, and applies `EDepotFileFlag` file modes so the install is genuinely launch-ready, not just byte-correct. Falls back to Phase 21's `1026` verify-handoff only when completeness can't be proven.
-**Requirements**: TBD (mint during /gsd-plan-phase 23)
+**Requirements**: REQ-23-01, REQ-23-02, REQ-23-03, REQ-23-04, REQ-23-05, REQ-23-06, REQ-23-07 (minted 2026-07-17 from D-01..D-07; see `.planning/REQUIREMENTS.md` §Phase 23)
 **Depends on:** Phase 21 (depot download — per-chunk sha1 gate, `depot.ts`/`manifest.ts`, the env-gated `GAMELIB_SPIKE_STATEFLAGS4` code). NOT Phase 22 (independent macOS-bottles line). Corrected 2026-07-17.
 **De-risked by spike 003** (`.planning/spikes/003-stateflags4-full-ownership/`) — VALIDATED on real HW: Steam trusts a GameLib `StateFlags=4` given StateFlags=4 + `BytesToDownload==BytesDownloaded==SizeOnDisk` (non-zero) + current public buildid + correct InstalledDepots + executable file-mode bit. Supersedes the locked "StateFlags=1026, never 4" rule and reverses D-2 for first install.
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 23 to break down)
+**Wave 1**
+
+- [ ] 23-01-PLAN.md — EDepotFileFlag file-mode fidelity (ReadOnly/Hidden + Windows attrib.exe) [Wave 1, REQ-23-06]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 23-02-PLAN.md — completeness gate + buildid threading + de-gate StateFlags=4, keep 1026 fallback, no new toggle [Wave 2, REQ-23-01/02/03]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 23-03-PLAN.md — sha1-gated resume/reconciliation + startup-resume rebuild (no silent Steam-in-CrossOver auto-open) [Wave 3, REQ-23-04/05]
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 23-04-PLAN.md — D-07 real-hardware validation gate (multi-depot, hard-DRM, interrupt-resume; macOS-first) [Wave 4, REQ-23-07]
 
 ---
 

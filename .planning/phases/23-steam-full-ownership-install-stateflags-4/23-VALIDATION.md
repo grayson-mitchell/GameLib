@@ -17,18 +17,18 @@ created: 2026-07-17
 
 | Property | Value |
 |----------|-------|
-| **Framework** | vitest (existing — Steam depot suite ran 72/72 + 58/58 green at spike time) |
-| **Config file** | existing repo vitest config (Steam backend suite) |
-| **Quick run command** | `yarn vitest run src/backend/storeManagers/steam/depot` |
-| **Full suite command** | `yarn vitest run src/backend/storeManagers/steam` |
+| **Framework** | Jest (`jest.config.js`; pnpm@10.28.0) — Steam depot suite ran 72/72 + 58/58 green at spike time |
+| **Config file** | `jest.config.js` (repo root); Steam specs live flat in `src/backend/storeManagers/steam/__tests__/` |
+| **Quick run command** | `pnpm jest src/backend/storeManagers/steam/__tests__/depot` |
+| **Full suite command** | `pnpm jest src/backend/storeManagers/steam` |
 | **Estimated runtime** | ~30–60 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `yarn vitest run src/backend/storeManagers/steam/depot`
-- **After every plan wave:** Run `yarn vitest run src/backend/storeManagers/steam`
+- **After every task commit:** Run `pnpm jest src/backend/storeManagers/steam/__tests__/depot`
+- **After every plan wave:** Run `pnpm jest src/backend/storeManagers/steam`
 - **Before `/gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 60 seconds
 
@@ -40,10 +40,10 @@ created: 2026-07-17
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 23-01-01 | 01 | 1 | REQ-23-02 (buildid threading) | — | Manifest `buildid` equals downloaded public-branch buildid, never `"0"` when writing StateFlags=4 | unit | `yarn vitest run src/backend/storeManagers/steam/depot` | ❌ W0 | ⬜ pending |
-| 23-02-01 | 02 | 1 | REQ-23-01 (4-vs-1026 gate) | — | Completeness predicate returns 4 only when every chunk sha1-verified + all file modes applied; else 1026 | unit | `yarn vitest run src/backend/storeManagers/steam/depot` | ❌ W0 | ⬜ pending |
-| 23-03-01 | 03 | 1 | REQ-23-06 (file-mode fidelity) | — | Executable(32)/CustomExecutable(128) → +x applied; ReadOnly(8)/Hidden(16) applied; Windows attribs via attrib.exe | unit | `yarn vitest run src/backend/storeManagers/steam/depot` | ❌ W0 | ⬜ pending |
-| 23-04-01 | 04 | 2 | REQ-23-04 (resume/reconciliation) | — | Interrupted download re-verifies all chunks + re-applies modes before writing 4; no silent Steam-in-CrossOver auto-open | unit | `yarn vitest run src/backend/storeManagers/steam/depot` | ❌ W0 | ⬜ pending |
+| 23-01-01 | 01 | 1 | REQ-23-02 (buildid threading) | — | Manifest `buildid` equals downloaded public-branch buildid, never `"0"` when writing StateFlags=4 | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/depot` | ❌ W0 | ⬜ pending |
+| 23-02-01 | 02 | 1 | REQ-23-01 (4-vs-1026 gate) | — | Completeness predicate returns 4 only when every chunk sha1-verified + all file modes applied; else 1026 | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/depot` | ❌ W0 | ⬜ pending |
+| 23-03-01 | 03 | 1 | REQ-23-06 (file-mode fidelity) | — | Executable(32)/CustomExecutable(128) → +x applied; ReadOnly(8)/Hidden(16) applied; Windows attribs via attrib.exe | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/depot` | ❌ W0 | ⬜ pending |
+| 23-04-01 | 04 | 2 | REQ-23-04 (resume/reconciliation) | — | Interrupted download re-verifies all chunks + re-applies modes before writing 4; no silent Steam-in-CrossOver auto-open | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/depot` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -57,7 +57,7 @@ created: 2026-07-17
 - [ ] Unit/integration coverage for resume reconciliation: partial-state detection → re-selection → re-verify → complete-or-fallback
 - [ ] Existing default-off/1026 tests remain green (byte-identical fallback behavior is the safety net — must not regress)
 
-*Existing vitest infrastructure covers the framework; new specs are additive.*
+*Existing Jest infrastructure covers the framework; new specs are additive.*
 
 ---
 
