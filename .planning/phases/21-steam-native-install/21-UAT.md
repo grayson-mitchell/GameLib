@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (Cyberpunk silent cancel — needs log), D-UAT-07 (GamePage button ignores steam-waiting-for-restart)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (Cyberpunk silent cancel — needs log, debug pending), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -398,6 +398,13 @@ launched Steam.
 > action button (and its disabled/label logic) aware of `statusContext === 'steam-waiting-for-restart'` —
 > either surface a "Restart Steam" affordance or at least not present a stuck, greyed "Installing".
 > Candidate for the same gap/debug cycle as D-UAT-05/06.
+>
+> **✅ FIXED IN CODE (commit `ab0500c6`).** `MainButton.tsx` now reads `statusContext` and shows
+> "Restart Steam to finish" (Warning icon, no spinner) for `is.installing && runner==='steam' &&
+> statusContext==='steam-waiting-for-restart'`, checked before the generic steam-installing branch.
+> Button stays disabled (nothing for GamerLib to do — user restarts Steam) but no longer looks like an
+> active download. +2 regression tests (MainButton.steamWaitingRestart.test.tsx); frontend suite 119/119,
+> tsc clean. **Needs real-HW re-verification** on the Civ VII detail page after a fresh build.
 
 ## Summary Table (fill in after all items are run)
 
