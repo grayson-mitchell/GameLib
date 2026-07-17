@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause was entitlement, see D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (OPEN — non-retryable entitlement errors over-retried/mislabeled + X re-installs)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause is D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (OPEN, CORE BLOCKER — depot key uses base appId for DLC/sub-app depots → FileNotFound → AAA/Mac titles like Cyberpunk cannot install; +over-retry/mislabel/X-reinstall)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -413,16 +413,36 @@ launched Steam.
 > error is NOT a transient CM drop — it is a deterministic **`Error: FileNotFound`** from
 > `steam-user/components/cdn.js:119` = **`getDepotDecryptionKey`**'s eresult-error path (confirmed:
 > `fetchDepotPlanEntry` calls `getDepotDecryptionKey` before `getRawManifest`). Steam returns FileNotFound
-> for the decryption key of Cyberpunk's macOS depots (1460472, 2224089) → the account is NOT entitled to
-> those depots (Cyberpunk 2077 has no genuine native macOS build; the macOS-tagged depots are phantom/
-> legacy metadata). The retry fix is still valid for genuinely transient drops, but it (a) pointlessly
-> retries a permanent FileNotFound and (b) masks it as "Steam servers dropped the connection". Cyberpunk
-> is simply not natively installable on macOS — a poor UAT title. The bugs it exposed are tracked as
-> **D-UAT-08**.
+> for the decryption key of Cyberpunk's macOS depots (1460472, 2224089). **CORRECTION (do not trust the
+> first read below this line's original 'not entitled' guess): Cyberpunk 2077 IS a real owned native
+> Apple-Silicon macOS title** — the FileNotFound is a GameLib bug (base appId used for a sub-app depot's
+> key request), NOT missing entitlement. The retry fix is still valid for genuinely transient drops, but
+> it (a) pointlessly retries a permanent FileNotFound and (b) masks it as "Steam servers dropped the
+> connection". Full root cause + fix direction tracked as **D-UAT-08** (CORE BLOCKER).
 
-## D-UAT-08 (2026-07-17) — permanent depot-entitlement errors are mis-handled: over-retried, mislabeled, and the X button re-installs
+## D-UAT-08 (2026-07-17) — CORE BUG: depot decryption key requested with the BASE appId for DLC/sub-app depots → `FileNotFound` → flagship Mac title (Cyberpunk 2077) can't install
 
-> **🟠 D-UAT-08 (MAJOR) — three defects surfaced by attempting a non-entitled depot (Cyberpunk 2077 macOS):**
+> **🔴 D-UAT-08 (BLOCKER) — CORRECTION: Cyberpunk 2077 IS a real, owned, native Apple-Silicon macOS title
+> (installs fine via the Steam client; Apple-featured). The `getDepotDecryptionKey` → `FileNotFound` is
+> NOT an entitlement problem — it's a GameLib depot-download bug.**
+>
+> **Confirmed root cause (code-read):** `selectDepots` (src/backend/storeManagers/steam/depot/select.ts)
+> runs for the base app AND each DLC/sub-app (via `selectAllDepots`'s loop over `dlcInfos`), but the
+> `DepotDescriptor` it emits records only `{id, manifest, size, dlcappid}` — it NEVER records which app
+> (`appinfo.appid`) the depot was enumerated from. `buildDepotPlan` then calls
+> `fetchDepotPlanEntry(client, numericAppId=BASE, descriptor)` and requests
+> `getDepotDecryptionKey(BASE_appId, depotId)` for EVERY depot. For Cyberpunk's macOS depots (1460472,
+> 2224089), which live under sub-apps (log: enumerated from apps other than the base; "union across base
+> + DLC apps"), Steam rejects the base-app key request with EResult `FileNotFound` (cdn.js:119 =
+> getDepotDecryptionKey's error path). WazHack worked because it's a single app with no DLC/sub-app depots.
+>
+> **Fix direction (needs debug/HW cycle):** thread the OWNING appId onto each `DepotDescriptor`
+> (base appId for base-app depots; the dlc/sub-app appId for depots enumerated from a DLC app's appinfo)
+> and use `descriptor.ownerAppId` for `getDepotDecryptionKey` (and verify `getRawManifest` + the
+> finalizeToSteam manifest writer use the correct appId too). Confirm on HW that Cyberpunk then streams.
+> This is a CORE-PROMISE blocker: any multi-app / DLC-bearing game (i.e. most AAA titles) likely hits it.
+>
+> **Plus three secondary defects (still valid, same cluster):**
 >
 > 1. **Non-retryable errors are retried as transient.** `getDepotDecryptionKey` (and `getRawManifest`)
 >    returning EResult `FileNotFound` (9) / `AccessDenied` (15) means the account lacks entitlement to that
