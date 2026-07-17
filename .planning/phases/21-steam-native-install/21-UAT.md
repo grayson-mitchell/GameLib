@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause is D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (OPEN, CORE BLOCKER — depot key uses base appId for DLC/sub-app depots → FileNotFound → AAA/Mac titles like Cyberpunk cannot install; +over-retry/mislabel/X-reinstall)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause is D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (code-fixed 64d5afcc — owner-appId threaded to depot key/manifest; fail-fast + honest error + X-removes-vs-Retry; pending HW re-verify)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -442,7 +442,15 @@ launched Steam.
 > finalizeToSteam manifest writer use the correct appId too). Confirm on HW that Cyberpunk then streams.
 > This is a CORE-PROMISE blocker: any multi-app / DLC-bearing game (i.e. most AAA titles) likely hits it.
 >
-> **Plus three secondary defects (still valid, same cluster):**
+> **✅ FIXED IN CODE (commit `64d5afcc`, debug session `.planning/debug/steam-depot-key-appid.md`).**
+> Threaded `ownerAppId` through `DepotDescriptor`/`selectDepots`/`selectAllDepots` and used it for
+> `getDepotDecryptionKey` + `getRawManifest` in `fetchDepotPlanEntry` (base appId for base-app depots;
+> the DLC/sub-app appId for depots enumerated from a DLC app). `finalizeToSteam`/`writeAppManifest` keep
+> the BASE appId (Steam still adopts `appmanifest_{baseAppId}.acf`). Full suite 1387/1387, tsc clean.
+> **Needs real-HW re-verification** — reinstall Cyberpunk 2077 (1091500) on a fresh build; the macOS
+> sub-app depots should now fetch keys and stream to disk.
+>
+> **Plus three secondary defects (fixed same commit):**
 >
 > 1. **Non-retryable errors are retried as transient.** `getDepotDecryptionKey` (and `getRawManifest`)
 >    returning EResult `FileNotFound` (9) / `AccessDenied` (15) means the account lacks entitlement to that
@@ -463,7 +471,10 @@ launched Steam.
 > package ownership + oslist/language tags but never verifies the account can obtain a decryption key.
 > A game with SOME licensed depots + a phantom unlicensed one would hard-fail on the phantom. Consider
 > whether selection should tolerate/skip an unentitled depot, or whether an all-unentitled OS means
-> "not available on this OS". **Routed to a follow-up debug/gap cycle (not yet fixed).**
+> "not available on this OS". With the owner-appId fix, genuine unavailability now fails fast (terminal
+> EResults classified non-retryable) with an honest "couldn't get {key|manifest} for depot {id} (app
+> {ownerAppId})" message; the X button now only removes and Retry re-enqueues. **All fixed in `64d5afcc`,
+> pending real-HW re-verification.**
 >
 > **🟠 D-UAT-07 (MAJOR/UX, 2026-07-17) — GamePage detail action button does not handle
 > steam-waiting-for-restart; shows a greyed, disabled "Installing" with no actionable path.**
