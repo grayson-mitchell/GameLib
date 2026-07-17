@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (CM drop during plan-build, no retry + error mislabeled cancelled — debug session steam-cm-drop-planbuild), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200, pending HW re-verify), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -391,6 +391,21 @@ launched Steam.
 > controller each attempt — verified). **Routed to debug session** `.planning/debug/steam-cm-drop-planbuild.md`.
 > **Note:** also observed a double depot-selection log line per app (`-> depots [..]` immediately followed
 > by `-> depots []`) — likely benign DLC-app enumeration, but worth a glance during the fix.
+>
+> **✅ FIXED IN CODE (commit `5c65c200`, debug session resolved).** Two independent root causes:
+> (1) **backend** — `buildDepotPlan` called `ensureConnected()` once up front then ran the whole
+> PICS/manifest + per-depot `getDepotDecryptionKey`/`getRawManifest` loop unguarded; a mid-loop CM drop
+> (steam-user nulls `client.steamID` on drop) hard-failed before any chunk streamed, so the chunk-phase
+> retry never applied. Fix: bounded, **abort-interruptible** `withPlanBuildRetry` (3 attempts, 500 ms
+> backoff) around every plan-build network step, re-resolving the steam client after each reconnect —
+> without weakening D-UAT-05 abort semantics. (2) **frontend (pre-existing, ALL runners)** —
+> `DownloadManagerItem` collapsed `status==='error'` into `canceled`, rendering genuine errors as
+> "(Canceled)" with only an X and NO Retry anywhere (games.ts's claim of an "existing error+Retry surface"
+> was false). Fix: pure `classifyDMItemStatus` marks `error` as a distinct failed state ("(Failed)") with a
+> working **Retry** that re-enqueues. Full jest 1364/1364 (6 new depot cases + 9 new status cases); tsc
+> clean; no GOG/Epic/Amazon regression. **Needs real-HW re-verification** — retry Cyberpunk on a fresh
+> build; confirm it rides through the CM drop, or at least shows "(Failed)" + a working Retry (not
+> "cancelled").
 >
 > **🟠 D-UAT-07 (MAJOR/UX, 2026-07-17) — GamePage detail action button does not handle
 > steam-waiting-for-restart; shows a greyed, disabled "Installing" with no actionable path.**
