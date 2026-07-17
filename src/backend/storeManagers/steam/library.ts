@@ -40,6 +40,7 @@ import {
   type FinalizeToSteamOpts
 } from './depot'
 import { reconcilePartialState } from './depot/reconcile'
+import { sanitizeInstalldir } from './installLocation'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -169,14 +170,25 @@ async function buildResumeFinalizeOpts(
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
 ): Promise<FinalizeToSteamOpts> {
+  // WR-03 (23-code-review): target.installdir is read directly off the
+  // on-disk ACF's AppState.installdir (locateDownloadingTarget) with no
+  // sanitization of its own — route it through the same positive-whitelist
+  // guard the fresh-install path (installLocation.ts's
+  // resolveSteamInstallTarget) already enforces before it ever reaches
+  // buildDepotPlan/resolve() below. Defense-in-depth: an attacker would
+  // already need local write access to steamapps/ to plant a hostile ACF,
+  // but every filesystem-root-building value must be guarded the same way
+  // regardless of caller.
+  const installdir = sanitizeInstalldir(target.installdir, appId)
+
   try {
     const plan = await buildDepotPlan(appId, {
       targetSteamappsDir: target.targetSteamappsDir,
-      installdir: target.installdir,
+      installdir,
       os: hostSteamDepotOsForResume()
     })
 
-    const installRoot = resolve(target.targetSteamappsDir, 'common', target.installdir)
+    const installRoot = resolve(target.targetSteamappsDir, 'common', installdir)
     const { jobs, allFilesVerified } = await reconcilePartialState(plan, installRoot)
 
     // CR-01 gap closure (23-code-review): allFilesVerified is a CONTENT-only
@@ -199,7 +211,7 @@ async function buildResumeFinalizeOpts(
 
     return {
       targetSteamappsDir: target.targetSteamappsDir,
-      installdir: target.installdir,
+      installdir,
       name: target.name,
       depots: plan.depots.map((d) => ({
         depotId: d.depotId,
@@ -240,7 +252,7 @@ async function buildResumeFinalizeOpts(
     )
     return {
       targetSteamappsDir: target.targetSteamappsDir,
-      installdir: target.installdir,
+      installdir,
       name: target.name,
       depots: []
     }

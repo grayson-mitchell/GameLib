@@ -1478,6 +1478,42 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
+    it('WR-03 (23-code-review): a hostile installdir read off the on-disk ACF is sanitized to the safe appId-derived fallback before reaching buildDepotPlan/resolve()', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      // A hostile/malformed installdir the on-disk ACF could contain (an
+      // attacker who can already write into steamapps/ plants this) — must
+      // never reach buildDepotPlan or the installRoot resolve() unsanitized.
+      setupDownloadingFixture('730', '../evil')
+
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [],
+        totalBytes: 0
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      jest
+        .mocked(reconcilePartialState)
+        .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
+
+      await expect(manager.init()).resolves.toBeUndefined()
+
+      // sanitizeInstalldir's fallback shape: `app_${safeFallbackId(appId)}`.
+      expect(buildDepotPlan).toHaveBeenCalledWith(
+        '730',
+        expect.objectContaining({ installdir: 'app_730' })
+      )
+      expect(buildDepotPlan).not.toHaveBeenCalledWith(
+        '730',
+        expect.objectContaining({ installdir: '../evil' })
+      )
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
     it('a startup buildDepotPlan failure (offline/no CM connection) does not throw out of init() — degrades to the passive honest-empty 1026 fallback', async () => {
       jest.useFakeTimers()
       library.clear()
