@@ -41,6 +41,7 @@ import { decryptFilename } from './depot/crypto'
 import { fetchChunk, type LzmaModule, type DepotChunk, type DecodeFn } from './depot/decompress'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
+import { applyDepotFileFlags } from './depot/fileAttributes'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
@@ -58,6 +59,11 @@ const SYMLINK_FLAG = 512
 // game binary lands non-executable and launch fails with macOS `os error 256`.
 const EXECUTABLE_FLAG = 32
 const CUSTOM_EXECUTABLE_FLAG = 128
+// Phase 23 (23-01, D-06): ReadOnly/Hidden — the other half of the same gap.
+// Steam's 1026 verify pass would also set these; StateFlags=4 skips verify,
+// so GameLib must apply them itself via depot/fileAttributes.ts.
+const READONLY_FLAG = 8
+const HIDDEN_FLAG = 16
 
 export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
@@ -783,6 +789,21 @@ async function downloadSingleFile(
   // spike flag (harmless under 1026: Steam would set the same bit anyway).
   if (file.flags && file.flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
     await chmod(dest, 0o755)
+  }
+
+  // Phase 23 (23-01, D-06): ReadOnly(8)/Hidden(16) — same rationale as the
+  // Executable block above (sha1 guarantees CONTENT, not filesystem mode).
+  // A failure here is NOT swallowed: it throws so the caller
+  // (downloadDepotFiles) records it as a DepotDownloadFailure, never a
+  // silent success (T-23-03) — a mode failure must be visible to the Wave 2
+  // completeness gate the same way a SHA1 mismatch already is.
+  if (file.flags && file.flags & (READONLY_FLAG | HIDDEN_FLAG)) {
+    const modeResult = await applyDepotFileFlags(dest, file.flags, process.platform)
+    if (!modeResult.ok) {
+      throw new Error(
+        `downloadDepotFiles: failed to apply file mode flags for ${file.filename}: ${modeResult.error}`
+      )
+    }
   }
 }
 

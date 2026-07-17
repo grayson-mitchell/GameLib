@@ -51,6 +51,7 @@ import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
 import { sendFrontendMessage } from '../../../ipc'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
+import { applyDepotFileFlags } from '../depot/fileAttributes'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -84,6 +85,18 @@ jest.mock('../depot/select', () => ({
 jest.mock('../depot/crypto', () => ({
   decryptFilename: jest.fn()
 }))
+
+// ── depot/fileAttributes mock — a jest.fn() shell so individual ReadOnly/
+//    Hidden tests can either delegate to the REAL implementation (real-tmpdir
+//    POSIX mode-bit assertions, per depot.test.ts's established real-fs
+//    discipline) or force a failure (mode-application-failure-surfaces test)
+//    without depending on an environment-specific real chmod failure.
+jest.mock('../depot/fileAttributes', () => ({
+  applyDepotFileFlags: jest.fn()
+}))
+const actualApplyDepotFileFlags = jest.requireActual(
+  '../depot/fileAttributes'
+).applyDepotFileFlags
 
 // ── steam-user's undocumented raw-manifest parser (Pitfall 5) ────────────────
 jest.mock('steam-user/components/content_manifest.js', () => ({
@@ -1630,6 +1643,129 @@ describe('downloadDepotFiles', () => {
     const destPath = join(dir, 'common', 'SomeGame', 'corrupt.bin')
     // No silently-completed empty file left behind at the destination.
     expect(existsSync(destPath) && lstatSync(destPath).size === 0).toBe(false)
+  })
+
+  // ── EDepotFileFlag ReadOnly(8)/Hidden(16) wiring (D-06, 23-01) ────────────
+  // Delegates to the REAL applyDepotFileFlags implementation so these assert
+  // actual POSIX mode bits via a real tmpdir — the Windows attrib.exe path is
+  // covered by fileAttributes.test.ts, not here.
+  describe('EDepotFileFlag ReadOnly/Hidden (D-06, 23-01)', () => {
+    beforeEach(() => {
+      ;(applyDepotFileFlags as jest.Mock).mockImplementation(actualApplyDepotFileFlags)
+    })
+
+    it('ReadOnly(8) + Executable(32) → landed file is chmod 0o555 (exec bit preserved)', async () => {
+      const content = Buffer.from('exe-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'readonly-exec.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-ro-exec', cb_original: content.length, offset: 0 }],
+        flags: 8 | 32 // ReadOnly | Executable
+      }
+      const plan = makePlan(
+        [{ depotId: '672', gid: 'g70', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const stat = lstatSync(join(dir, 'common', 'SomeGame', 'readonly-exec.bin'))
+      expect(stat.mode & 0o777).toBe(0o555)
+    })
+
+    it('ReadOnly(8) only → landed file is chmod 0o444', async () => {
+      const content = Buffer.from('config-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'readonly.cfg',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-ro', cb_original: content.length, offset: 0 }],
+        flags: 8 // ReadOnly
+      }
+      const plan = makePlan(
+        [{ depotId: '673', gid: 'g71', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      const stat = lstatSync(join(dir, 'common', 'SomeGame', 'readonly.cfg'))
+      expect(stat.mode & 0o777).toBe(0o444)
+    })
+
+    it('Hidden(16) with no ReadOnly → file lands normally, no rename, no failure (documented POSIX no-op)', async () => {
+      const content = Buffer.from('hidden-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const file: DepotPlanFile = {
+        filename: 'hidden.dat',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-hidden', cb_original: content.length, offset: 0 }],
+        flags: 16 // Hidden
+      }
+      const plan = makePlan(
+        [{ depotId: '674', gid: 'g72', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      // Original filename, no dot-prefixed rename.
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'hidden.dat'))).toBe(true)
+      expect(existsSync(join(dir, 'common', 'SomeGame', '.hidden.dat'))).toBe(false)
+    })
+
+    it('a mode-application failure is recorded as a DepotDownloadFailure, never a silent success (T-23-03)', async () => {
+      const content = Buffer.from('mode-fail-bytes')
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      ;(applyDepotFileFlags as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        error: 'simulated mode-application failure'
+      })
+
+      const file: DepotPlanFile = {
+        filename: 'mode-fail.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-mode-fail', cb_original: content.length, offset: 0 }],
+        flags: 8 // ReadOnly
+      }
+      const plan = makePlan(
+        [{ depotId: '675', gid: 'g73', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toHaveLength(1)
+      expect(result.failures[0].file).toBe('mode-fail.bin')
+      expect(result.failures[0].error).toMatch(/mode-application failure|simulated mode-application failure/i)
+    })
   })
 
   it('WR-03: emitted DownloadManager progress percent never exceeds 100 even when doneBytes overshoots totalBytes', async () => {
