@@ -110,6 +110,10 @@ export interface DepotPlan {
    *  PICS returns no display name. Used by finalizeToSteam's manifest `name`
    *  field (Plan 06). */
   name: string
+  /** SPIKE 003 (throwaway): current `public` branch buildid from PICS appinfo
+   *  (appinfo.depots.branches.public.buildid). Needed only by the StateFlags=4
+   *  full-ownership spike — a "0" buildid makes Steam flag UpdateRequired. */
+  buildid?: string
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of
@@ -490,6 +494,14 @@ export async function buildDepotPlan(
   )
   throwIfAborted(opts.signal)
   const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
+  // SPIKE 003 (throwaway): current public-branch buildid, for the StateFlags=4
+  // full-ownership manifest. `depots.branches` is a special (non-depot) key not
+  // modelled by SteamAppInfo, so read it via a narrow cast.
+  const buildid = String(
+    (appinfo as unknown as {
+      depots?: { branches?: { public?: { buildid?: string | number } } }
+    }).depots?.branches?.public?.buildid ?? ''
+  )
   const owned = await withPlanBuildRetry(opts.signal, (client) => getOwnedSets(client))
   throwIfAborted(opts.signal)
   const dlcInfos = await withPlanBuildRetry(opts.signal, (client) =>
@@ -504,7 +516,7 @@ export async function buildDepotPlan(
   const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts, appId)
 
   if (!descriptors.length) {
-    return { appId, depots: [], totalBytes: 0, name: displayName }
+    return { appId, depots: [], totalBytes: 0, name: displayName, buildid }
   }
 
   const parser = await loadContentManifestParser()
@@ -520,7 +532,7 @@ export async function buildDepotPlan(
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
   }
 
-  return { appId, depots, totalBytes, name: displayName }
+  return { appId, depots, totalBytes, name: displayName, buildid }
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -915,6 +927,9 @@ export interface FinalizeToSteamOpts {
   /** Every depot ATTEMPTED, regardless of per-file success/failure — an
    *  honest, possibly-incomplete InstalledDepots map (D-04). */
   depots: FinalizeDepotEntry[]
+  /** SPIKE 003 (throwaway): current public-branch buildid, threaded from the
+   *  DepotPlan. Only consumed under GAMELIB_SPIKE_STATEFLAGS4. */
+  buildid?: string
 }
 
 /**
@@ -963,12 +978,30 @@ export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts):
   // Plan 08 startup-resume finalize invoked before reconnection completes).
   const lastOwner = SteamUser.getClient()?.steamID?.getSteamID64()
 
+  // SPIKE 003 (throwaway, env-gated): full-ownership StateFlags=4 experiment.
+  // When GAMELIB_SPIKE_STATEFLAGS4=1, write a "fully installed" manifest Steam
+  // should trust WITHOUT its own verify pass — StateFlags "4", bytes signalling
+  // download-complete, and the real current buildid (a "0" buildid otherwise
+  // reads as UpdateRequired). Default (flag unset) is byte-identical to the
+  // production 1026 path. Remove this block when the spike concludes (T-21-07).
+  const spike4 = process.env.GAMELIB_SPIKE_STATEFLAGS4 === '1'
+  if (spike4) {
+    logWarning(
+      `SPIKE 003: writing StateFlags=4 full-ownership manifest for appId ${appId} ` +
+        `(sizeOnDisk=${sizeOnDisk}, buildid=${opts.buildid ?? '<none>'})`,
+      LogPrefix.Steam
+    )
+  }
+
   await writeAppManifest(opts.targetSteamappsDir, {
     appId,
     installdir: opts.installdir,
     name: opts.name,
     sizeOnDisk: String(sizeOnDisk),
     lastOwner,
+    stateFlags: spike4 ? '4' : undefined,
+    bytes: spike4 ? String(sizeOnDisk) : undefined,
+    buildid: spike4 ? opts.buildid : undefined,
     installedDepots: opts.depots.map((d) => ({
       depotId: d.depotId,
       manifest: d.gid,
@@ -1022,18 +1055,23 @@ export async function downloadSteamDepots(
 ): Promise<DepotDownloadOutcome> {
   const attempted: FinalizeDepotEntry[] = []
   let displayName = opts.installdir
+  // SPIKE 003 (throwaway): captured from the DepotPlan so finalizeToSteam can
+  // write the real buildid into a StateFlags=4 manifest.
+  let buildid: string | undefined
 
   const finalize = (): Promise<void> =>
     finalizeToSteam(appId, {
       targetSteamappsDir: opts.targetSteamappsDir,
       installdir: opts.installdir,
       name: displayName,
-      depots: attempted
+      depots: attempted,
+      buildid
     })
 
   try {
     const plan = await buildDepotPlan(appId, opts)
     displayName = plan.name
+    buildid = plan.buildid
 
     for (const d of plan.depots) {
       attempted.push({

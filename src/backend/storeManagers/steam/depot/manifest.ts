@@ -57,6 +57,15 @@ export interface AppManifestParams {
   buildid?: string
   /** SteamID64 — STRING, never a JS Number. Defaults to "0" when unknown. */
   lastOwner?: string
+  /** SPIKE 003 (throwaway, env-gated via GAMELIB_SPIKE_STATEFLAGS4): override
+   *  StateFlags. Defaults to "1026" (the ONLY production value — T-21-07). The
+   *  full-ownership spike passes "4" to test whether Steam trusts a byte-perfect
+   *  GameLib install without its own verify pass. Remove with the spike. */
+  stateFlags?: string
+  /** SPIKE 003: BytesToDownload/BytesDownloaded value. Defaults to "0" (the
+   *  1026 path — Steam recomputes). The StateFlags=4 spike passes SizeOnDisk so
+   *  "download complete" is signalled (BytesToDownload == BytesDownloaded). */
+  bytes?: string
   installedDepots: InstalledDepotEntry[]
 }
 
@@ -115,6 +124,10 @@ export function buildAppManifestText(params: AppManifestParams): string {
   const lastUpdated = Math.floor(Date.now() / 1000).toString()
   const buildid = params.buildid ?? '0'
   const lastOwner = params.lastOwner ?? '0'
+  // SPIKE 003 (env-gated): default to the production "1026" / "0" values so a
+  // build without GAMELIB_SPIKE_STATEFLAGS4 is byte-identical to before.
+  const stateFlags = params.stateFlags ?? '1026'
+  const bytes = params.bytes ?? '0'
   const installedDepotsBlock = buildInstalledDepotsBlock(params.installedDepots)
 
   return (
@@ -123,15 +136,15 @@ export function buildAppManifestText(params: AppManifestParams): string {
       '{',
       `\t"appid"\t\t"${params.appId}"`,
       '\t"Universe"\t\t"1"',
-      '\t"StateFlags"\t\t"1026"',
+      `\t"StateFlags"\t\t"${stateFlags}"`,
       `\t"installdir"\t\t"${vdfEscape(params.installdir)}"`,
       `\t"name"\t\t"${vdfEscape(params.name)}"`,
       `\t"LastUpdated"\t\t"${lastUpdated}"`,
       `\t"SizeOnDisk"\t\t"${params.sizeOnDisk}"`,
       `\t"buildid"\t\t"${buildid}"`,
       `\t"LastOwner"\t\t"${lastOwner}"`,
-      '\t"BytesToDownload"\t\t"0"',
-      '\t"BytesDownloaded"\t\t"0"',
+      `\t"BytesToDownload"\t\t"${bytes}"`,
+      `\t"BytesDownloaded"\t\t"${bytes}"`,
       '\t"AutoUpdateBehavior"\t\t"0"',
       '\t"InstalledDepots"',
       '\t{',
