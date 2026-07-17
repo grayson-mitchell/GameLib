@@ -692,11 +692,18 @@ Plans:
   - **CrossOver-only constraint:** Steam bottling is built on CrossOver's `cxbottle` lifecycle; GPTK/`toolkit` is NOT a working Steam engine (see `.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`). Families use CrossOver.
   - **Login constraint (accepted):** each family/bottle requires its own one-time Steam login; isolated prefixes cannot share Steam auth (prefix isolation + D-04). One Steam account can only be actively playing in one family at a time; concurrent play needs distinct accounts per family.
 
-**Plans:** 4 plans
+**Plans:** 8 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 22 to break down)
+- [ ] 22-01-PLAN.md — Reshape SteamBottleConfig → families/assignments + thread explicit bottleName through bottle.ts primitives (D-01/D-02/D-04/D-05 primitives)
+- [ ] 22-02-PLAN.md — families.ts service: zero-loss migration (D-07/D-08), CRUD, resolveFamilyForApp (D-05), naming rules (D-02/D-03/D-09)
+- [ ] 22-03-PLAN.md — Cross-family ACF reconciliation + poller: scan all families, tag bottleName (D-06, Req 8)
+- [ ] 22-04-PLAN.md — Resolver-first routing in games.ts across all four bottle-eligible methods (D-05, Req 7)
+- [ ] 22-05-PLAN.md — Fold single-bottle IPC into the family group + wire startup migration (D-12/D-07)
+- [ ] 22-06-PLAN.md — Parameterize the guided-setup store/component by bottleName (D-11, Pitfall 4/5, Req 6)
+- [ ] 22-07-PLAN.md — Install-time family picker + gate both install chokepoints (D-10, Req 3/7)
+- [ ] 22-08-PLAN.md — "Steam Families" Settings section: create/rename/set-wine/guarded delete (D-11/D-09, Req 4/5)
 
 **UI hint**: yes
 
