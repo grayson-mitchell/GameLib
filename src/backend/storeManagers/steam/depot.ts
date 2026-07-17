@@ -11,7 +11,7 @@
 // chunk is fetched. The streaming download loop is Plan 05; recovery/finalize
 // (writeAppManifest) is Plan 06 — this module only builds the plan.
 
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
 import {
   open,
@@ -123,9 +123,12 @@ export interface DepotPlan {
    *  PICS returns no display name. Used by finalizeToSteam's manifest `name`
    *  field (Plan 06). */
   name: string
-  /** SPIKE 003 (throwaway): current `public` branch buildid from PICS appinfo
-   *  (appinfo.depots.branches.public.buildid). Needed only by the StateFlags=4
-   *  full-ownership spike — a "0" buildid makes Steam flag UpdateRequired. */
+  /** Current `public` branch buildid from PICS appinfo
+   *  (appinfo.depots.branches.public.buildid), captured ONCE at plan-build
+   *  time (D-02). Threaded unconditionally to finalizeToSteam — required
+   *  (non-empty, non-"0") for canWriteFullOwnership to earn StateFlags=4; a
+   *  "0"/absent buildid makes Steam flag UpdateRequired and always fails the
+   *  gate. Never re-derived by a second PICS read (RESEARCH.md Pitfall 4). */
   buildid?: string
 }
 
@@ -642,6 +645,17 @@ export interface DepotDownloadFailure {
 export interface DepotDownloadResult {
   outcome: 'completed' | 'cancelled'
   failures: DepotDownloadFailure[]
+  /** Every planned file for this run was attempted (queue fully drained, no
+   *  abort mid-way) AND every attempt succeeded (no failures). False when
+   *  the run was cancelled before every job was processed, or when any job
+   *  failed. Phase 23 (23-02, D-01): feeds canWriteFullOwnership. */
+  allFilesVerifiedThisRun: boolean
+  /** Every EDepotFileFlag mode application (exec/readonly/hidden, 23-01) for
+   *  this run succeeded. A mode-application failure already surfaces as a
+   *  DepotDownloadFailure, so this is currently derived from the same
+   *  failures list — kept as an explicit field so the completeness gate
+   *  never has to re-derive it ad-hoc (Phase 23, 23-02). */
+  allModesApplied: boolean
 }
 
 /**
@@ -951,9 +965,15 @@ export async function downloadDepotFiles(
 
     emitProgress(true)
 
+    // Phase 23 (23-02, D-01): a job left in `queue` means the run aborted
+    // before every planned file was even attempted — never "verified".
+    const allJobsAttempted = queue.length === 0
+
     return {
       outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
-      failures
+      failures,
+      allFilesVerifiedThisRun: allJobsAttempted && failures.length === 0,
+      allModesApplied: failures.length === 0
     }
   } finally {
     // No workers leak across installs — shutdown() is safe to call even if
@@ -964,17 +984,20 @@ export async function downloadDepotFiles(
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Phase 21 (21-06): finalizeToSteam — the SINGLE recovery mechanism (Pattern
-// 5, D-04/D-05/D-07). Cancel, failure, and full success ALL converge here:
-// measure REAL bytes on disk (never a manifest-derived sum — spike 001: a
-// summed total overshoots multi-depot installs by 236MB), write an honest
-// (possibly-incomplete) InstalledDepots map into a StateFlags=1026 manifest
-// via Plan 02's writeAppManifest, and stop. Steam's own verify-and-repair
-// pass (spike 001) reconciles whatever is actually on disk against the real
-// manifest — this module NEVER writes StateFlags "4" (T-21-07); only Steam's
-// verify pass earns that value. The manifest write is always the LAST
-// filesystem action so a Retry (re-invoking downloadSteamDepots) never races
-// a partially-written .acf (D-07's non-conflicting-paths guarantee).
+// Phase 21 (21-06)/Phase 23 (23-02): finalizeToSteam — the SINGLE recovery
+// mechanism (Pattern 5, D-04/D-05/D-07). Cancel, failure, and full success
+// ALL converge here: measure REAL bytes on disk (never a manifest-derived
+// sum — spike 001: a summed total overshoots multi-depot installs by
+// 236MB), then decide StateFlags via the canWriteFullOwnership completeness
+// gate (D-01/D-02, spike-003 VALIDATED). When the gate earns it, writes a
+// trustworthy StateFlags=4 (full ownership, Steam runs no verify pass) with
+// the real public-branch buildid and download-complete byte counts; when it
+// doesn't — any missing/ambiguous signal — falls back to the unchanged,
+// unconditional StateFlags=1026 verify-handoff Phase 21 already shipped
+// (Steam's own verify-and-repair pass reconciles whatever landed against the
+// real manifest). The manifest write is always the LAST filesystem action so
+// a Retry (re-invoking downloadSteamDepots) never races a partially-written
+// .acf (D-07's non-conflicting-paths guarantee).
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface FinalizeDepotEntry {
@@ -994,9 +1017,20 @@ export interface FinalizeToSteamOpts {
   /** Every depot ATTEMPTED, regardless of per-file success/failure — an
    *  honest, possibly-incomplete InstalledDepots map (D-04). */
   depots: FinalizeDepotEntry[]
-  /** SPIKE 003 (throwaway): current public-branch buildid, threaded from the
-   *  DepotPlan. Only consumed under GAMELIB_SPIKE_STATEFLAGS4. */
+  /** Current public-branch buildid, threaded from the plan-time PICS capture
+   *  (DepotPlan.buildid) — NEVER re-derived by a second PICS call here
+   *  (D-02, RESEARCH.md Pitfall 4). A "0"/absent buildid reads to Steam as
+   *  UpdateRequired and always fails the canWriteFullOwnership gate below. */
   buildid?: string
+  /** D-01/D-02 completeness-gate inputs, threaded from the DepotDownloadResult
+   *  of the run that just attempted this install/resume. Optional: a caller
+   *  that omits these (e.g. a finalize invoked with no download attempt at
+   *  all) fails CLOSED to the safe 1026 fallback — canWriteFullOwnership
+   *  never resolves true on an absent/undefined input. */
+  outcome?: 'completed' | 'cancelled'
+  failures?: DepotDownloadFailure[]
+  allFilesVerified?: boolean
+  allModesApplied?: boolean
 }
 
 /**
@@ -1029,9 +1063,12 @@ async function measureInstalledBytes(root: string): Promise<number> {
 
 /**
  * The single recovery function cancel, failure, and success ALL funnel
- * through (Pattern 5). Never writes StateFlags "4" (T-21-07) — only writes
- * "1026" via Plan 02's writeAppManifest, with a measured (not summed)
- * SizeOnDisk and the honest InstalledDepots map of whatever was attempted.
+ * through (Pattern 5). Writes StateFlags "4" (full ownership, Steam runs no
+ * verify pass) ONLY when canWriteFullOwnership earns it from the threaded
+ * completeness-gate inputs (D-01/D-02, spike-003 VALIDATED); otherwise falls
+ * back to the unchanged "1026" verify-handoff via manifest.ts's own default,
+ * with a measured (not summed) SizeOnDisk and the honest InstalledDepots map
+ * of whatever was attempted.
  */
 export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts): Promise<void> {
   assertNumericAppId(appId)
@@ -1045,17 +1082,23 @@ export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts):
   // Plan 08 startup-resume finalize invoked before reconnection completes).
   const lastOwner = SteamUser.getClient()?.steamID?.getSteamID64()
 
-  // SPIKE 003 (throwaway, env-gated): full-ownership StateFlags=4 experiment.
-  // When GAMELIB_SPIKE_STATEFLAGS4=1, write a "fully installed" manifest Steam
-  // should trust WITHOUT its own verify pass — StateFlags "4", bytes signalling
-  // download-complete, and the real current buildid (a "0" buildid otherwise
-  // reads as UpdateRequired). Default (flag unset) is byte-identical to the
-  // production 1026 path. Remove this block when the spike concludes (T-21-07).
-  const spike4 = process.env.GAMELIB_SPIKE_STATEFLAGS4 === '1'
-  if (spike4) {
-    logWarning(
-      `SPIKE 003: writing StateFlags=4 full-ownership manifest for appId ${appId} ` +
-        `(sizeOnDisk=${sizeOnDisk}, buildid=${opts.buildid ?? '<none>'})`,
+  // Phase 23 (23-02, D-01/D-02): the single completeness-gate call site.
+  // buildid is ONLY ever the caller-supplied opts.buildid (plan-time PICS
+  // capture, D-02) — a fresh PICS product-info lookup is never issued here
+  // (RESEARCH.md Pitfall 4). Every gate input defaults to a value that fails
+  // CLOSED when the caller omits it (e.g. today's startup-resume finalize,
+  // Wave 3), matching canWriteFullOwnership's own fail-closed contract.
+  const canWrite4 = canWriteFullOwnership({
+    outcome: opts.outcome ?? 'cancelled',
+    failures: opts.failures ?? [],
+    buildid: opts.buildid,
+    allFilesVerified: opts.allFilesVerified ?? false,
+    allModesApplied: opts.allModesApplied ?? false
+  })
+  if (canWrite4) {
+    logInfo(
+      `Writing StateFlags=4 full-ownership manifest for appId ${appId} ` +
+        `(sizeOnDisk=${sizeOnDisk}, buildid=${opts.buildid})`,
       LogPrefix.Steam
     )
   }
@@ -1066,9 +1109,9 @@ export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts):
     name: opts.name,
     sizeOnDisk: String(sizeOnDisk),
     lastOwner,
-    stateFlags: spike4 ? '4' : undefined,
-    bytes: spike4 ? String(sizeOnDisk) : undefined,
-    buildid: spike4 ? opts.buildid : undefined,
+    stateFlags: canWrite4 ? '4' : undefined,
+    bytes: canWrite4 ? String(sizeOnDisk) : undefined,
+    buildid: canWrite4 ? opts.buildid : undefined,
     installedDepots: opts.depots.map((d) => ({
       depotId: d.depotId,
       manifest: d.gid,
@@ -1122,9 +1165,16 @@ export async function downloadSteamDepots(
 ): Promise<DepotDownloadOutcome> {
   const attempted: FinalizeDepotEntry[] = []
   let displayName = opts.installdir
-  // SPIKE 003 (throwaway): captured from the DepotPlan so finalizeToSteam can
-  // write the real buildid into a StateFlags=4 manifest.
+  // D-02: captured once from the DepotPlan (plan-time PICS read) so
+  // finalizeToSteam can thread the real buildid into a StateFlags=4
+  // manifest — never re-derived by a second PICS call (Pitfall 4).
   let buildid: string | undefined
+  // D-01: the completeness-gate inputs from the download run this
+  // orchestration actually performed. Undefined (never assigned) on the
+  // zero-depot early-return and the thrown-error catch path below — both
+  // correctly fail CLOSED to the 1026 fallback via finalizeToSteam's own
+  // opts-omitted defaults.
+  let lastResult: DepotDownloadResult | undefined
 
   const finalize = (): Promise<void> =>
     finalizeToSteam(appId, {
@@ -1132,7 +1182,11 @@ export async function downloadSteamDepots(
       installdir: opts.installdir,
       name: displayName,
       depots: attempted,
-      buildid
+      buildid,
+      outcome: lastResult?.outcome,
+      failures: lastResult?.failures,
+      allFilesVerified: lastResult?.allFilesVerifiedThisRun,
+      allModesApplied: lastResult?.allModesApplied
     })
 
   try {
@@ -1165,6 +1219,7 @@ export async function downloadSteamDepots(
       hosts,
       signal: opts.signal
     })
+    lastResult = result
 
     // Manifest write is always the LAST fs action — after every file write
     // attempt, before returning control (D-07 no-race guarantee).

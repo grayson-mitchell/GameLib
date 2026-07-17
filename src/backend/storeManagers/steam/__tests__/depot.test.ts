@@ -814,6 +814,95 @@ describe('finalizeToSteam', () => {
     expect(text).toMatch(/"SizeOnDisk"\s+"0"/)
     expect(text).toMatch(/"StateFlags"\s+"1026"/)
   })
+
+  // ── Phase 23 (23-02, D-01/D-02): canWriteFullOwnership-gated StateFlags=4 ──
+  describe('StateFlags=4 full-ownership gate (D-01/D-02)', () => {
+    it('writes StateFlags "4" with BytesToDownload==BytesDownloaded==SizeOnDisk and the real buildid when every completeness signal is proven', async () => {
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(117426878 % 1000)) // arbitrary non-zero size
+
+      await finalizeToSteam('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        name: 'Some Game',
+        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
+        buildid: '9044149',
+        outcome: 'completed',
+        failures: [],
+        allFilesVerified: true,
+        allModesApplied: true
+      })
+
+      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"4"/)
+      expect(text).toMatch(/"buildid"\s+"9044149"/)
+
+      const sizeOnDisk = text.match(/"SizeOnDisk"\s+"(\d+)"/)?.[1]
+      const bytesToDownload = text.match(/"BytesToDownload"\s+"(\d+)"/)?.[1]
+      const bytesDownloaded = text.match(/"BytesDownloaded"\s+"(\d+)"/)?.[1]
+      expect(sizeOnDisk).toBeDefined()
+      expect(Number(sizeOnDisk)).toBeGreaterThan(0)
+      expect(bytesToDownload).toBe(sizeOnDisk)
+      expect(bytesDownloaded).toBe(sizeOnDisk)
+    })
+
+    it('falls back to StateFlags "1026" when the run had a non-empty failures array, even though every other signal is clean', async () => {
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
+
+      await finalizeToSteam('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        name: 'Some Game',
+        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
+        buildid: '9044149',
+        outcome: 'completed',
+        failures: [{ file: 'a.bin', error: 'sha1 mismatch' }],
+        allFilesVerified: true,
+        allModesApplied: true
+      })
+
+      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"1026"/)
+    })
+
+    it('falls back to StateFlags "1026" when buildid is "0" (Steam UpdateRequired sentinel), even though every other signal is clean', async () => {
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
+
+      await finalizeToSteam('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        name: 'Some Game',
+        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
+        buildid: '0',
+        outcome: 'completed',
+        failures: [],
+        allFilesVerified: true,
+        allModesApplied: true
+      })
+
+      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"1026"/)
+    })
+
+    it('falls back to StateFlags "1026" when the gate inputs are entirely omitted by the caller (fail-closed default)', async () => {
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(10))
+
+      await finalizeToSteam('12345', {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        name: 'Some Game',
+        depots: [{ depotId: '111', gid: '9007199254740993', size: 500 }],
+        buildid: '9044149'
+        // outcome/failures/allFilesVerified/allModesApplied all omitted.
+      })
+
+      const text = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"1026"/)
+    })
+  })
 })
 
 /**
