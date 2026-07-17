@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 23-02-PLAN.md
-last_updated: "2026-07-17T08:53:23.713Z"
+stopped_at: Completed 23-03-PLAN.md
+last_updated: "2026-07-17T09:16:24.034Z"
 last_activity: 2026-07-17
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-17
 
@@ -143,6 +143,7 @@ Last activity: 2026-07-17
 | Phase 21 P16 | 30min | 3 tasks | 9 files |
 | Phase 23 P01 | 10min | 2 tasks | 4 files |
 | Phase 23 P02 | 15min | 3 tasks | 5 files |
+| Phase 23 P03 | ~40min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -239,6 +240,9 @@ Recent decisions affecting current work:
 - [Phase 23-01]: applyDepotFileFlags never throws (returns {ok,error}); the caller (downloadSingleFile) throws to surface a mode-application failure as a DepotDownloadFailure, matching the existing SHA1-mismatch-throws convention
 - [Phase 23-02]: canWriteFullOwnership is a single exported fail-closed predicate consulted at ONE call site inside finalizeToSteam (outcome==='completed' AND failures.length===0 AND buildid present/!=='0' AND allFilesVerified AND allModesApplied); GAMELIB_SPIKE_STATEFLAGS4 fully removed
 - [Phase 23-02]: FinalizeToSteamOpts's new gate-input fields (outcome/failures/allFilesVerified/allModesApplied) are optional, not required — omitting them fails CLOSED to StateFlags=1026 via canWriteFullOwnership's own defaults, preserving pre-existing finalizeToSteam call sites (incl. library.ts's Wave-3-pending startup-resume finalize) without modification
+- [Phase 23-03]: Directory(64)/Symlink(512)/zero-size manifest entries reconcile by existence/target-match, never sha1 — sha1File/resolveContainedPath exported from depot.ts for reuse by depot/reconcile.ts (deliberate circular import, empirically safe under CJS/ts-jest since every cross-reference is a function-body call, never top-level state)
+- [Phase 23-03]: Startup resume's allModesApplied mirrors allFilesVerified rather than re-running a mode-reapplication pass — downloadSingleFile applies EDepotFileFlag modes immediately after each file's own sha1 check during the original download session, so a file reconcile trusts as verified already had correct modes applied
+- [Phase 23-03]: A reconciliation-time error inside downloadDepotFiles (e.g. path traversal) falls back to the full pre-23-03 job list rather than aborting the run; a startup buildDepotPlan/reconcile failure falls back to the honest-empty depots:[] finalize — reconciliation is purely additive, never a new failure mode, and init() never crashes
 
 ### Pending Todos
 
@@ -299,8 +303,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-17T08:53:23.707Z
-Stopped at: Completed 23-02-PLAN.md
+Last session: 2026-07-17T09:16:24.030Z
+Stopped at: Completed 23-03-PLAN.md
 Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
