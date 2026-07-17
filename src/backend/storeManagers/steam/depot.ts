@@ -605,7 +605,7 @@ export class PathTraversalError extends Error {}
  * BEFORE any fs call — path.join alone is not containment (Phase 18 lesson,
  * per user memory). A "../"-escaping filename never reaches open()/mkdir().
  */
-function resolveContainedPath(root: string, filename: string): string {
+export function resolveContainedPath(root: string, filename: string): string {
   const dest = resolve(root, filename.replace(/\\/g, '/'))
   const rel = relative(root, dest)
   if (rel.startsWith('..') || isAbsolute(rel)) {
@@ -617,8 +617,11 @@ function resolveContainedPath(root: string, filename: string): string {
 }
 
 /** Streaming whole-file SHA1 — a ReadStream piped through createHash, never a
- *  whole-file Buffer re-read (would defeat the point of streaming the write). */
-function sha1File(path: string): Promise<string> {
+ *  whole-file Buffer re-read (would defeat the point of streaming the write).
+ *  Exported for reuse by depot/reconcile.ts (Phase 23, 23-03, D-04) — the
+ *  Shared Patterns rule requires reconciliation compose this, not
+ *  reimplement it. */
+export function sha1File(path: string): Promise<string> {
   return new Promise((resolvePromise, reject) => {
     const hash = createHash('sha1')
     const stream = createReadStream(path)
