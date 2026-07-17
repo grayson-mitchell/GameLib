@@ -104,9 +104,11 @@ const DownloadManagerItem = ({
     if (!gameInfo) {
       return
     }
-    const folder_name = gameInfo.folder_name
-    if (!folder_name) return
-
+    // NOTE: do not gate cancel on gameInfo.folder_name. Steam GameInfo never
+    // populates folder_name (Steam uses the steamapps model, not Heroic's
+    // per-game folder), so requiring it silently no-oped every Steam cancel.
+    // The backend removeDownloaded path keeps its own `if (folder_name)` guard,
+    // so dropping this check cannot trigger a destructive removeFolder().
     return handleStopInstallation(
       appName,
       path,
