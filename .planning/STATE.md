@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Completed 21-16-PLAN.md
-last_updated: "2026-07-16T10:42:02.842Z"
+stopped_at: Phase 23 context gathered
+last_updated: "2026-07-17T07:39:32.400Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 5
@@ -155,6 +155,8 @@ Last activity: 2026-07-16
 
 - Phase 21 added 2026-07-14 under new milestone **v1.6 — Steam Native Install** (from /gsd-explore + spikes 001/002): replace the opaque `steam://rungameid` install handoff with an **in-process depot download GameLib owns** — real progress, real errors, recovery. GameLib downloads depots over `steam-user`'s authenticated CM connection and writes an `appmanifest_{appId}.acf` the Steam client **adopts**; launch stays with `steam://` (DRM works); **Steam owns updates, GameLib owns only the first install** (D-2). **Fully de-risked against a real machine:** spike 001 — Steam adopts a hand-written `.acf` (`StateFlags 1026`→`4`, zero-byte install, game launches); spike 002 — 171/171 files downloaded in-process, byte-identical to Steam, **pure-JS LZMA sufficient (no native module)** → C# DepotDownloader wrapper rejected. Locked: `StateFlags=1026` not `4`; depot selection = package-level ownership (two channels + DLC-app enumeration + language filter, 11/11 verified); reimplement `steam-user`'s broken `getManifest` filenames + chunk download (~100 lines); 64-bit IDs are strings (never `@node-steam/vdf.parse`); retry chunks across content servers. Pre-work: audit `@node-steam/vdf` call sites; confirm launch on a hard-DRM title. See `.planning/spikes/MANIFEST.md`, `.planning/notes/steam-depot-install-architecture.md`. Depends on Phase 3 + Phase 1.
 
+- Phase 23 added 2026-07-17: **Steam full-ownership install (StateFlags=4)** — GameLib FULLY installs a Steam game with zero Steam-client step, writing an `appmanifest_{appId}.acf` with `StateFlags=4` (installed/ready) rather than Phase 21's `StateFlags=1026` (update-queued handoff). **Reverses locked D-2** ("Steam owns first install"). De-risked by **spike-003 (VALIDATED 2026-07-17)**: full-ownership `StateFlags=4` install is feasible and *supersedes* the earlier "1026 never 4" constraint — Steam trusts a hand-written `StateFlags=4` manifest once the `EDepotFileFlag` executable bit is applied (the `os error 256` failure was a missing `+x`). Env-gated behind `GAMELIB_SPIKE_STATEFLAGS4` during spike. Builds on Phase 21 depot-download infrastructure. See spike-003 commits (a8ada46d, 6fa5a157, 816a76c9, f36d173a). Depends on Phase 21.
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
@@ -292,8 +294,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-16T10:42:02.836Z
-Stopped at: Completed 21-16-PLAN.md
+Last session: 2026-07-17T07:39:32.392Z
+Stopped at: Phase 23 context gathered
 Next: Phase 21 (v1.6 — Steam Native Install) all 14 plans code-complete + gap-closed (CR-01 via 21-13, WR-01/WR-04 via 21-14). 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) still PENDING before the phase's core promise can be trusted — not a re-verification blocker for code but required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
