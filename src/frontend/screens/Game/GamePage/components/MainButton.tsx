@@ -29,7 +29,7 @@ interface Props {
 
 const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
   const { t } = useTranslation('gamepage')
-  const { is } = useContext(GameContext)
+  const { is, statusContext } = useContext(GameContext)
   const [verboseLogs, setVerboseLogs] = useSetting('verboseLogs', true)
 
   const is_installed = gameInfo.is_installed
@@ -153,6 +153,26 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="buttonWithIcon">
           <Cancel />
           {t('button.queue.remove', 'Remove from Queue')}
+        </span>
+      )
+    }
+
+    // D-UAT-07 (21-16 follow-up): the GameLib-written 1026 manifest is done
+    // downloading and waiting for a full Steam restart to be adopted — surface
+    // an honest "Restart Steam to finish" hint (matching the tile + GameStatus
+    // text) instead of a stuck, spinning "Installing…". Must be checked BEFORE
+    // the generic steam-installing branch below, which would otherwise swallow
+    // this state. Button stays disabled (nothing for GamerLib to do — the user
+    // restarts Steam), but the label no longer looks like an active download.
+    if (
+      is.installing &&
+      gameInfo.runner === 'steam' &&
+      statusContext === 'steam-waiting-for-restart'
+    ) {
+      return (
+        <span className="buttonWithIcon">
+          <Warning />
+          {t('status.steamWaitingRestart', 'Restart Steam to finish')}
         </span>
       )
     }
