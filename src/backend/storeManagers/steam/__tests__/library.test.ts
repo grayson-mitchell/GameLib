@@ -32,6 +32,13 @@ import SteamLibraryManager, {
   verifyMacArchGroundTruth
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import {
+  mkdirSync as realMkdirSync,
+  mkdtempSync,
+  readFileSync as realReadFileSync,
+  rmSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import * as vdf from '@node-steam/vdf'
 import { spawnSync, execFileSync } from 'child_process'
 import { dialog, shell } from 'electron'
@@ -50,7 +57,8 @@ import {
   isBottleProvisioned,
   tellBottledSteamToInstall
 } from '../bottle'
-import { finalizeToSteam, downloadSteamDepots } from '../depot'
+import { finalizeToSteam, downloadSteamDepots, buildDepotPlan } from '../depot'
+import { reconcilePartialState } from '../depot/reconcile'
 import { runWineCommand } from 'backend/launcher'
 import { join } from 'path'
 import { library } from '../state'
@@ -170,10 +178,17 @@ jest.mock('../bottle', () => ({
 }))
 
 // ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
-// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
+// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) /
+// buildDepotPlan (Phase 23, 23-03, D-04 — startup resume rebuilds a real plan) ─
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn()
+  downloadSteamDepots: jest.fn(),
+  buildDepotPlan: jest.fn()
+}))
+
+// ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
+jest.mock('../depot/reconcile', () => ({
+  reconcilePartialState: jest.fn()
 }))
 
 // ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
@@ -1225,9 +1240,150 @@ describe('SteamLibraryManager', () => {
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
+    // Phase 23 (23-03, D-04) regression: rebuilding a real DepotPlan for
+    // reconciliation must NEVER scan the bottle steamapps root — the resume
+    // path stays native-only end to end.
+    expect(getBottleSteamappsDir).not.toHaveBeenCalled()
 
     stopInstallPolling('730')
     jest.useRealTimers()
+  })
+
+  // ── Phase 23 (23-03, D-04): startup resume rebuilds a real plan + reconciles ─
+  describe('startup resume reconciliation (D-04)', () => {
+    let tmp: string
+
+    beforeEach(() => {
+      tmp = mkdtempSync(join(tmpdir(), 'gamelib-library-resume-test-'))
+    })
+
+    afterEach(() => {
+      rmSync(tmp, { recursive: true, force: true })
+    })
+
+    function setupDownloadingFixture(appId: string, installdir: string) {
+      // writeAppManifest opens appmanifest_{appId}.acf.tmp directly (no
+      // mkdir) — the target steamapps dir must already exist.
+      realMkdirSync(join(tmp, 'steamapps'), { recursive: true })
+
+      library.set(appId, {
+        runner: 'steam',
+        app_name: appId,
+        title: installdir,
+        is_installed: false,
+        install: {},
+        art_cover: '',
+        art_square: '',
+        extra: { reqs: [] },
+        canRunOffline: true,
+        installable: true
+      } as any)
+
+      jest.mocked(getSteamLibraries).mockResolvedValue([tmp])
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      ;(readdirSync as jest.Mock).mockReturnValue([`appmanifest_${appId}.acf`])
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: { appid: appId, StateFlags: '2', installdir, SizeOnDisk: '0' }
+      })
+    }
+
+    it('a fully-reconciled-verified resume threads real depots/buildid/gate-inputs into finalizeToSteam and earns StateFlags=4', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      setupDownloadingFixture('730', 'csgo')
+
+      const file = { filename: 'game.bin', size: 10, sha_content: 'x', chunks: [] }
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [
+          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: 10
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      jest
+        .mocked(reconcilePartialState)
+        .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
+
+      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
+        '../depot'
+      ).finalizeToSteam
+      jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
+
+      await manager.init()
+
+      const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
+      const text = realReadFileSync(acfPath, 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"4"/)
+      expect(text).toMatch(/"buildid"\s+"9044149"/)
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
+    it('a resume where reconciliation finds genuinely missing/mismatched files fails CLOSED to StateFlags=1026 — never 4, never crashes init() (T-23-09)', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      setupDownloadingFixture('730', 'csgo')
+
+      const file = { filename: 'missing.bin', size: 10, sha_content: 'x', chunks: [] }
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [
+          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: 10
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      jest.mocked(reconcilePartialState).mockResolvedValue({
+        jobs: [{ depotId: '111', key: Buffer.from('key'), file, fileSeed: 0 }],
+        allFilesVerified: false
+      } as never)
+
+      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
+        '../depot'
+      ).finalizeToSteam
+      jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
+
+      await expect(manager.init()).resolves.toBeUndefined()
+
+      const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
+      const text = realReadFileSync(acfPath, 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"1026"/)
+      expect(text).not.toMatch(/"StateFlags"\s+"4"/)
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
+    it('a startup buildDepotPlan failure (offline/no CM connection) does not throw out of init() — degrades to the passive honest-empty 1026 fallback', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      setupDownloadingFixture('730', 'csgo')
+
+      jest
+        .mocked(buildDepotPlan)
+        .mockRejectedValue(new Error('no authenticated Steam CM connection'))
+
+      await expect(manager.init()).resolves.toBeUndefined()
+
+      expect(finalizeToSteam).toHaveBeenCalledWith(
+        '730',
+        expect.objectContaining({
+          targetSteamappsDir: join(tmp, 'steamapps'),
+          installdir: 'csgo',
+          depots: []
+        })
+      )
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
   })
 })
 

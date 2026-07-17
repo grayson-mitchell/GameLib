@@ -33,7 +33,8 @@ import {
   getSteamBottleSettings,
   isBottleProvisioned
 } from './bottle'
-import { finalizeToSteam } from './depot'
+import { buildDepotPlan, finalizeToSteam, type FinalizeToSteamOpts } from './depot'
+import { reconcilePartialState } from './depot/reconcile'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -73,6 +74,22 @@ function hostInstallPlatform(): InstallPlatform {
 function installPlatformForSource(source: AcfSource): InstallPlatform {
   if (source === 'bottle') return 'Windows'
   return hostInstallPlatform()
+}
+
+/**
+ * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
+ * 'linux') for buildDepotPlan's `os` param — the SAME mapping games.ts's own
+ * hostSteamDepotOs() uses for a fresh install. Kept as a small local
+ * duplicate rather than exporting a new symbol from games.ts: this file's
+ * startup-resume path (scanDownloadingAppIds, D-05) is confirmed
+ * native-only (RESEARCH Pitfall 5), so it only ever needs the native/host-OS
+ * mapping — never the bottle path's hardcoded 'windows' override
+ * installBottleNative() applies for a fresh bottle install.
+ */
+function hostSteamDepotOsForResume(): string {
+  if (isMac) return 'macos'
+  if (isLinux) return 'linux'
+  return 'windows'
 }
 
 /**
@@ -119,6 +136,93 @@ async function locateDownloadingTarget(appId: string): Promise<{
   return null
 }
 
+/**
+ * Phase 23 (23-03, D-04): rebuilds a real DepotPlan for a startup-resumed
+ * appId and reconciles it against on-disk state, returning the real
+ * gate-input FinalizeToSteamOpts a trustworthy resume needs (real
+ * depots/buildid/outcome/failures/allFilesVerified/allModesApplied) instead
+ * of the honest-but-uninformative empty `depots: []` Wave 2 left behind.
+ * A fully-reconciled-verified resume can earn StateFlags=4 via
+ * finalizeToSteam's own canWriteFullOwnership gate; a resume where
+ * reconciliation finds genuinely missing/mismatched files reports them as
+ * failures, which fails that same gate CLOSED to the safe 1026 fallback
+ * (T-23-09).
+ *
+ * NEVER throws — buildDepotPlan/reconcilePartialState failing for ANY
+ * reason (offline, a dropped CM connection, a corrupt PICS response) falls
+ * back to the pre-23-03 honest-empty `depots: []` shape, which itself fails
+ * CLOSED to 1026 via finalizeToSteam's own optional-field defaults. This is
+ * the ONLY way startup resume can degrade — it never crashes init().
+ *
+ * PRESERVES the confirmed-safe invariant (RESEARCH Pitfall 5): buildDepotPlan
+ * only reads PICS + fetches manifests over the already-authenticated CM
+ * connection — the exact same network calls a fresh install already
+ * performs. It never touches getBottleSteamappsDir()/tellBottledSteamToInstall
+ * — no silent Steam-in-CrossOver auto-open is introduced here.
+ */
+async function buildResumeFinalizeOpts(
+  appId: string,
+  target: { targetSteamappsDir: string; installdir: string; name: string }
+): Promise<FinalizeToSteamOpts> {
+  try {
+    const plan = await buildDepotPlan(appId, {
+      targetSteamappsDir: target.targetSteamappsDir,
+      installdir: target.installdir,
+      os: hostSteamDepotOsForResume()
+    })
+
+    const installRoot = resolve(target.targetSteamappsDir, 'common', target.installdir)
+    const { jobs, allFilesVerified } = await reconcilePartialState(plan, installRoot)
+
+    return {
+      targetSteamappsDir: target.targetSteamappsDir,
+      installdir: target.installdir,
+      name: target.name,
+      depots: plan.depots.map((d) => ({
+        depotId: d.depotId,
+        gid: d.gid,
+        size: d.files.reduce((sum, f) => sum + Number(f.size), 0)
+      })),
+      buildid: plan.buildid,
+      // D-05: reconciliation fills first-install/resume gaps only — a job
+      // left over here means genuinely missing/mismatched content, reported
+      // as a failure (not silently dropped), never re-downloaded from this
+      // startup path (Pitfall 4).
+      outcome: jobs.length === 0 ? 'completed' : 'cancelled',
+      failures: jobs.map((job) => ({
+        file: job.file.filename,
+        error:
+          'missing or content-mismatched on startup resume (not re-downloaded — ' +
+          'startup resume never re-invokes the depot orchestrator, Pitfall 4)'
+      })),
+      allFilesVerified,
+      // Every file reconcile trusted was verified by the ORIGINAL download
+      // session's own per-file pipeline (downloadSingleFile applies
+      // EDepotFileFlag modes immediately after each file's own sha1 check
+      // passes, before moving to the next file) — so a file reconcile
+      // proves content-complete already had its modes applied in that same
+      // prior pass. Mirrors allFilesVerified rather than re-deriving a
+      // separate signal.
+      allModesApplied: allFilesVerified
+    }
+  } catch (planErr) {
+    logWarning(
+      [
+        `Steam: startup resume plan rebuild/reconciliation failed for appId ${appId}, ` +
+          'falling back to the honest-empty 1026 finalize:',
+        planErr
+      ],
+      LogPrefix.Steam
+    )
+    return {
+      targetSteamappsDir: target.targetSteamappsDir,
+      installdir: target.installdir,
+      name: target.name,
+      depots: []
+    }
+  }
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
    * On startup: load the cached library immediately, resume any in-progress
@@ -154,22 +258,20 @@ export default class SteamLibraryManager implements LibraryManager {
           LogPrefix.Steam
         )
 
-        // D-05: finalize a GameLib-owned partial to an honest 1026 manifest
-        // FIRST — write it and stop. NEVER re-invoke the depot orchestrator
-        // or dispatch to Steam/CrossOver on startup (Pitfall 4) — this is
-        // the folded-todo guard: an interrupted GameLib download must be
-        // left for Steam to adopt on its own next launch, not silently
-        // re-driven. Only after finalize does the poller start watching for
-        // Steam to flip StateFlags 1026 -> 4.
+        // D-05: finalize a GameLib-owned partial FIRST — write it and stop.
+        // NEVER re-invoke the depot orchestrator or dispatch to Steam/
+        // CrossOver on startup (Pitfall 4) — this is the folded-todo guard:
+        // an interrupted GameLib download must be left for Steam to adopt on
+        // its own next launch (under 1026), not silently re-driven. Only
+        // after finalize does the poller start watching for Steam to flip
+        // StateFlags 1026 -> 4 (or, per Phase 23 23-03/D-04, GameLib itself
+        // may have already earned that 4 via buildResumeFinalizeOpts's
+        // reconciled-complete gate inputs below).
         try {
           const target = await locateDownloadingTarget(appId)
           if (target) {
-            await finalizeToSteam(appId, {
-              targetSteamappsDir: target.targetSteamappsDir,
-              installdir: target.installdir,
-              name: target.name,
-              depots: []
-            })
+            const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
+            await finalizeToSteam(appId, finalizeOpts)
           }
         } catch (finalizeErr) {
           logWarning(
