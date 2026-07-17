@@ -101,8 +101,15 @@ const LEADING_OR_TRAILING_DOT = /^\.|\.$/
  * check (resolve+relative against steamapps/common/{installdir}) is the
  * backstop; this is the first line of defense on the value that becomes
  * that root segment.
+ *
+ * Exported for reuse by library.ts's startup-resume path
+ * (buildResumeFinalizeOpts, 23-code-review WR-03 gap closure) — that path
+ * reads installdir directly off the on-disk ACF (attacker-writable if they
+ * can already write into steamapps/) with no equivalent guard of its own;
+ * this is the single sanitizer both callers must funnel through so they can
+ * never silently diverge on this discipline.
  */
-function sanitizeInstalldir(candidate: string | undefined, appId: string): string {
+export function sanitizeInstalldir(candidate: string | undefined, appId: string): string {
   const fallback = `${FALLBACK_INSTALLDIR_PREFIX}${safeFallbackId(appId)}`
   if (!candidate || !candidate.trim()) {
     return fallback

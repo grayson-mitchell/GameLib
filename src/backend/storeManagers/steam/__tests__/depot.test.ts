@@ -1758,6 +1758,41 @@ describe('downloadDepotFiles', () => {
     expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(false)
   })
 
+  it('WR-02 (23-code-review): a backslash-separated relative linktarget is normalized before the containment check, consistent with resolveContainedPath\'s own filename normalization — a backslash-encoded traversal attempt is rejected, not silently accepted as one literal (non-traversing) path component', async () => {
+    // The symlink lives one directory below installRoot (sub/game.lnkname)
+    // so dirname(dest) !== installRoot and the naive relToRoot.startsWith('..')
+    // string check can't accidentally catch this by coincidence. Without
+    // normalizing '\' to '/' first, resolve() on POSIX treats the whole
+    // target as ONE opaque path segment (no real separator present), so
+    // '..\\..\\evil' resolves relative to installRoot as "sub/..\\..\\evil"
+    // (starts with "sub", NOT rejected) rather than two real parent-directory
+    // hops. With normalization (matching resolveContainedPath's own
+    // convention for filenames), it correctly resolves to "../evil" and is
+    // rejected as an escape attempt.
+    const evilBackslashSymlink: DepotPlanFile = {
+      filename: 'sub/game.lnkname',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: '..\\..\\evil'
+    }
+    const plan = makePlan(
+      [{ depotId: '66b', gid: 'g6f', key: Buffer.from('key'), files: [evilBackslashSymlink] }],
+      0
+    )
+
+    const result = await downloadDepotFiles(plan, {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      hosts: HOSTS
+    })
+
+    expect(result.failures).toHaveLength(1)
+    expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+    expect(existsSync(join(dir, 'common', 'SomeGame', 'sub', 'game.lnkname'))).toBe(false)
+  })
+
   it('WR-02: a size>0 file whose manifest returned zero chunks is recorded as a failure, never silently reported as a completed empty file', async () => {
     const corruptFile: DepotPlanFile = {
       filename: 'corrupt.bin',
@@ -2080,6 +2115,42 @@ describe('downloadDepotFiles', () => {
       expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
       const stat = lstatSync(destPath)
       expect(stat.mode & 0o777).toBe(0o755)
+    })
+
+    it('WR-01 (23-code-review): a reconciled Directory entry combined with ReadOnly is skipped by the mode-heal loop — never chmod-stripped of its traversable bit', async () => {
+      const dirPath = join(dir, 'common', 'SomeGame', 'readonly-dir')
+      mkdirSync(dirPath, { recursive: true })
+
+      jest
+        .mocked(fetchChunk)
+        .mockRejectedValue(
+          new Error('fetchChunk must never be called for a reconciled entry')
+        )
+
+      const file: DepotPlanFile = {
+        filename: 'readonly-dir',
+        size: 0,
+        sha_content: '',
+        chunks: [],
+        flags: 64 | 8 // Directory | ReadOnly
+      }
+      const plan = makePlan(
+        [{ depotId: '903', gid: 'g93', key: Buffer.from('key'), files: [file] }],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      // The heal loop must never hand a Directory/Symlink manifest entry to
+      // chmod/attrib.exe — a directory stripped of its execute (traversable)
+      // bit (0o444) would make every file inside it inaccessible.
+      const st = lstatSync(dirPath)
+      expect(st.mode & 0o100).not.toBe(0) // owner-execute bit intact
     })
   })
 })

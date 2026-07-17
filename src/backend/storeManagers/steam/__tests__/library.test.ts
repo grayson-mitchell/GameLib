@@ -57,7 +57,12 @@ import {
   isBottleProvisioned,
   tellBottledSteamToInstall
 } from '../bottle'
-import { finalizeToSteam, downloadSteamDepots, buildDepotPlan } from '../depot'
+import {
+  finalizeToSteam,
+  downloadSteamDepots,
+  buildDepotPlan,
+  healReconciledFileModes
+} from '../depot'
 import { reconcilePartialState } from '../depot/reconcile'
 import { runWineCommand } from 'backend/launcher'
 import { join } from 'path'
@@ -180,10 +185,15 @@ jest.mock('../bottle', () => ({
 // ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) /
 // buildDepotPlan (Phase 23, 23-03, D-04 — startup resume rebuilds a real plan) ─
+// healReconciledFileModes included so buildResumeFinalizeOpts (CR-01 gap
+// closure, 23-code-review) can be exercised — defaulted to a successful heal
+// in the shared beforeEach below so pre-existing resume tests that don't care
+// about mode-healing still earn StateFlags=4 as before.
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn(),
-  buildDepotPlan: jest.fn()
+  buildDepotPlan: jest.fn(),
+  healReconciledFileModes: jest.fn()
 }))
 
 // ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
@@ -256,6 +266,11 @@ describe('SteamLibraryManager', () => {
     // Defaults so init()/migrateStaleArtUrls have empty caches to scan
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
+    // Default: mode-healing succeeds (CR-01) — resume tests that don't
+    // specifically exercise the healing-failure path still earn StateFlags=4.
+    jest
+      .mocked(healReconciledFileModes)
+      .mockResolvedValue({ allModesHealed: true, failures: [] } as never)
   })
 
   // ── LIB-02: install state via ACF StateFlags (Task 1 — green) ─────────────
@@ -1324,6 +1339,108 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
+    it('CR-01: resume re-applies file modes via healReconciledFileModes (never inferred from content-only sha1 verification) before earning StateFlags=4', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      setupDownloadingFixture('730', 'csgo')
+
+      const file = {
+        filename: 'game.bin',
+        size: 10,
+        sha_content: 'x',
+        chunks: [],
+        flags: 32
+      }
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [
+          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: 10
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      jest
+        .mocked(reconcilePartialState)
+        .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
+      jest
+        .mocked(healReconciledFileModes)
+        .mockResolvedValue({ allModesHealed: true, failures: [] } as never)
+
+      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
+        '../depot'
+      ).finalizeToSteam
+      jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
+
+      await manager.init()
+
+      // CR-01: modes must be actually re-applied/healed THIS run — the
+      // resume path must never earn StateFlags=4 by inferring "modes
+      // applied" from allFilesVerified's content-only sha1 verdict alone.
+      expect(healReconciledFileModes).toHaveBeenCalledWith(
+        plan,
+        expect.any(String),
+        expect.any(Set)
+      )
+
+      const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
+      const text = realReadFileSync(acfPath, 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"4"/)
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
+    it('CR-01: a mode-healing failure forces the resume to the safe StateFlags=1026 fallback — never 4, even when content sha1-verified 100% (the exact crash-window this gap closure targets)', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      setupDownloadingFixture('730', 'csgo')
+
+      const file = {
+        filename: 'game.bin',
+        size: 10,
+        sha_content: 'x',
+        chunks: [],
+        flags: 32
+      }
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [
+          { depotId: '111', gid: '9007199254740993', key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: 10
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      // Content is fully sha1-verified (byte-perfect) — but the mode-heal
+      // step fails, simulating a crash between an earlier session's
+      // whole-file sha1 check succeeding and its own chmod call.
+      jest
+        .mocked(reconcilePartialState)
+        .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
+      jest.mocked(healReconciledFileModes).mockResolvedValue({
+        allModesHealed: false,
+        failures: [{ file: 'game.bin', error: 'chmod EACCES' }]
+      } as never)
+
+      const realFinalizeToSteam = jest.requireActual<typeof import('../depot')>(
+        '../depot'
+      ).finalizeToSteam
+      jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
+
+      await expect(manager.init()).resolves.toBeUndefined()
+
+      const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
+      const text = realReadFileSync(acfPath, 'utf8')
+      expect(text).toMatch(/"StateFlags"\s+"1026"/)
+      expect(text).not.toMatch(/"StateFlags"\s+"4"/)
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
     it('a resume where reconciliation finds genuinely missing/mismatched files fails CLOSED to StateFlags=1026 — never 4, never crashes init() (T-23-09)', async () => {
       jest.useFakeTimers()
       library.clear()
@@ -1356,6 +1473,42 @@ describe('SteamLibraryManager', () => {
       const text = realReadFileSync(acfPath, 'utf8')
       expect(text).toMatch(/"StateFlags"\s+"1026"/)
       expect(text).not.toMatch(/"StateFlags"\s+"4"/)
+
+      stopInstallPolling('730')
+      jest.useRealTimers()
+    })
+
+    it('WR-03 (23-code-review): a hostile installdir read off the on-disk ACF is sanitized to the safe appId-derived fallback before reaching buildDepotPlan/resolve()', async () => {
+      jest.useFakeTimers()
+      library.clear()
+      // A hostile/malformed installdir the on-disk ACF could contain (an
+      // attacker who can already write into steamapps/ plants this) — must
+      // never reach buildDepotPlan or the installRoot resolve() unsanitized.
+      setupDownloadingFixture('730', '../evil')
+
+      const plan = {
+        appId: '730',
+        name: 'CS:GO',
+        buildid: '9044149',
+        depots: [],
+        totalBytes: 0
+      }
+      jest.mocked(buildDepotPlan).mockResolvedValue(plan as never)
+      jest
+        .mocked(reconcilePartialState)
+        .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
+
+      await expect(manager.init()).resolves.toBeUndefined()
+
+      // sanitizeInstalldir's fallback shape: `app_${safeFallbackId(appId)}`.
+      expect(buildDepotPlan).toHaveBeenCalledWith(
+        '730',
+        expect.objectContaining({ installdir: 'app_730' })
+      )
+      expect(buildDepotPlan).not.toHaveBeenCalledWith(
+        '730',
+        expect.objectContaining({ installdir: '../evil' })
+      )
 
       stopInstallPolling('730')
       jest.useRealTimers()

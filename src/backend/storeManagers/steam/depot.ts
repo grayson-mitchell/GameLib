@@ -778,7 +778,15 @@ async function downloadSingleFile(
         `downloadDepotFiles: symlink manifest entry for ${file.filename} has no linktarget`
       )
     }
-    const resolvedTarget = resolve(dirname(dest), file.linktarget)
+    // WR-02 (23-code-review): normalize backslash-separated relative segments
+    // the same way resolveContainedPath does for filenames — resolve() does
+    // not treat '\' as a separator, so an unnormalized Windows-style
+    // linktarget would resolve as one literal path component rather than
+    // nested directories (a broken symlink, not a traversal escape: '\' is
+    // not a real separator on POSIX so no actual escape is possible either
+    // way — this keeps the containment check consistent with the one
+    // function up).
+    const resolvedTarget = resolve(dirname(dest), file.linktarget.replace(/\\/g, '/'))
     const relToRoot = relative(installRoot, resolvedTarget)
     if (relToRoot.startsWith('..') || isAbsolute(relToRoot)) {
       throw new PathTraversalError(
@@ -878,6 +886,51 @@ async function applyEDepotFileModes(
 }
 
 /**
+ * Re-applies EDepotFileFlag modes to every reconciled (skipped-download) file
+ * in `plan` that is not in `jobFiles` — heals a prior session that sha1-
+ * verified a file's CONTENT as complete but never actually ran (or never
+ * finished) mode application for it. Exported and shared by BOTH
+ * `downloadDepotFiles`' own post-reconciliation heal step (fresh-install/
+ * live-resume path) AND `library.ts`'s startup-resume path
+ * (`buildResumeFinalizeOpts`, Phase 23 code-review CR-01 gap closure) so the
+ * two callers can never silently diverge on this discipline — mirrors
+ * `canWriteFullOwnership`'s own single-source-of-truth rule.
+ *
+ * Directory(64)/Symlink(512) manifest entries are explicitly skipped — the
+ * same early-return guard `downloadSingleFile` itself applies before ever
+ * reaching mode application (23-code-review WR-01): a directory or symlink
+ * path must never be handed to chmod/attrib.exe, since `file.flags` is
+ * truthy for those entries too (e.g. `Directory | ReadOnly` = 72) and a
+ * `chmod(dirPath, 0o444)` would strip a directory's traversable bit.
+ */
+export async function healReconciledFileModes(
+  plan: DepotPlan,
+  installRoot: string,
+  jobFiles: Set<DepotPlanFile>
+): Promise<{ allModesHealed: boolean; failures: DepotDownloadFailure[] }> {
+  const failures: DepotDownloadFailure[] = []
+  let allModesHealed = true
+
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      if (jobFiles.has(file) || !file.flags) continue
+      if (file.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)) continue
+      const dest = resolveContainedPath(installRoot, file.filename)
+      const modeResult = await applyEDepotFileModes(dest, file.flags)
+      if (!modeResult.ok) {
+        allModesHealed = false
+        failures.push({
+          file: file.filename,
+          error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
+        })
+      }
+    }
+  }
+
+  return { allModesHealed, failures }
+}
+
+/**
  * Download every file across every depot in `plan`, streaming to disk with
  * bounded file- and chunk-level concurrency, containment + SHA1 verification,
  * throttled DownloadManager progress (D-01/D-03, matches library.ts
@@ -943,21 +996,18 @@ export async function downloadDepotFiles(
     // set (RESEARCH.md Pattern 3). A failure here is NOT swallowed: it's
     // recorded the same way a fresh-download mode-application failure
     // already is (T-23-03), so a healing failure also blocks the
-    // completeness gate below.
+    // completeness gate below. Shared with library.ts's startup-resume path
+    // (healReconciledFileModes, 23-code-review CR-01) — including its
+    // Directory(64)/Symlink(512) skip guard (23-code-review WR-01), so a
+    // manifest entry combining those bits with ReadOnly/Hidden can never
+    // reach chmod/attrib.exe against a directory or symlink path here either.
     const jobFiles = new Set(jobs.map((j) => j.file))
-    for (const depot of plan.depots) {
-      for (const file of depot.files) {
-        if (jobFiles.has(file) || !file.flags) continue
-        const dest = resolveContainedPath(installRoot, file.filename)
-        const modeResult = await applyEDepotFileModes(dest, file.flags)
-        if (!modeResult.ok) {
-          failures.push({
-            file: file.filename,
-            error: `failed to re-apply file mode flags on reconciled file: ${modeResult.error}`
-          })
-        }
-      }
-    }
+    const { failures: healFailures } = await healReconciledFileModes(
+      plan,
+      installRoot,
+      jobFiles
+    )
+    failures.push(...healFailures)
 
     let doneBytes = 0
     let lastEmitBytes = 0
