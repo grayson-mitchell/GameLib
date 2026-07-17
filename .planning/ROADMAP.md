@@ -681,12 +681,17 @@ Plans:
 
 **UI hint**: yes
 
-### Phase 22: Multiple Steam Bottles
+### Phase 22: Steam Game Families (multiple bottle configurations)
 
-**Goal:** Extend the single dedicated Steam CrossOver bottle (Phase 17) to support more than one bottle, so a user can isolate Steam games into separate CrossOver bottles (each with its own Steam client, login, and Wine/CrossOver version) instead of every macOS Steam game sharing one bottle.
+**Goal:** Let a user group macOS Steam games into "families" — each family backed by its own dedicated CrossOver bottle with its own Steam client, login, and Wine/CrossOver version — so games that need a different configuration can get one, instead of every macOS Steam game sharing the single Phase 17 bottle. Extends the single-bottle foundation to N bottles + a game→family assignment model.
 **Depends on:** Phase 17 (dedicated Steam bottle foundation — `steam/bottle.ts`, `steamBottleConfigStore`, guided setup) and Phase 18 (bottle-eligibility routing). Independent of the Phase 20/21 lines.
 **Requirements**: TBD (mint during /gsd-spec-phase 22 → /gsd-discuss-phase 22)
-**Scope:** to be locked by SPEC.md (run /gsd-spec-phase 22). Net-new phase — no prior seed/note.
+**Scope:** to be locked by SPEC.md (run /gsd-spec-phase 22).
+
+  - **This is the pragmatic fallback.** The user's *preferred* long-term architecture is a Proton-style native-Steam bridge (one native client, cheap per-game prefixes, one login) — captured as `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`. That is gated on a hard dependency (no macOS `lsteamclient` exists; Valve/CodeWeavers-scale work) and is explicitly NOT this phase. Phase 22 ships per-game configuration isolation now, accepting the one-time-login-per-bottle cost the bridge would eliminate. If the bridge seed ever ships, it likely supersedes much of this phase.
+  - **CrossOver-only constraint:** Steam bottling is built on CrossOver's `cxbottle` lifecycle; GPTK/`toolkit` is NOT a working Steam engine (see `.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`). Families use CrossOver.
+  - **Login constraint (accepted):** each family/bottle requires its own one-time Steam login; isolated prefixes cannot share Steam auth (prefix isolation + D-04). One Steam account can only be actively playing in one family at a time; concurrent play needs distinct accounts per family.
+
 **Plans:** 0 plans
 
 Plans:
