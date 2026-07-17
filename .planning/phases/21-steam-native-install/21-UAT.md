@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200, pending HW re-verify), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause was entitlement, see D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (OPEN — non-retryable entitlement errors over-retried/mislabeled + X re-installs)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -406,6 +406,44 @@ launched Steam.
 > clean; no GOG/Epic/Amazon regression. **Needs real-HW re-verification** — retry Cyberpunk on a fresh
 > build; confirm it rides through the CM drop, or at least shows "(Failed)" + a working Retry (not
 > "cancelled").
+>
+> **⚠️ RE-VERIFY on fresh build (2026-07-17) — the fix WORKS but the real Cyberpunk cause was DIFFERENT
+> and deeper. Superseded understanding → see D-UAT-08.** Fresh dev log shows the retry firing correctly
+> (`plan-build step failed (attempt 1/3), reconnecting and retrying` → `(attempt 2/3)`), but the actual
+> error is NOT a transient CM drop — it is a deterministic **`Error: FileNotFound`** from
+> `steam-user/components/cdn.js:119` = **`getDepotDecryptionKey`**'s eresult-error path (confirmed:
+> `fetchDepotPlanEntry` calls `getDepotDecryptionKey` before `getRawManifest`). Steam returns FileNotFound
+> for the decryption key of Cyberpunk's macOS depots (1460472, 2224089) → the account is NOT entitled to
+> those depots (Cyberpunk 2077 has no genuine native macOS build; the macOS-tagged depots are phantom/
+> legacy metadata). The retry fix is still valid for genuinely transient drops, but it (a) pointlessly
+> retries a permanent FileNotFound and (b) masks it as "Steam servers dropped the connection". Cyberpunk
+> is simply not natively installable on macOS — a poor UAT title. The bugs it exposed are tracked as
+> **D-UAT-08**.
+
+## D-UAT-08 (2026-07-17) — permanent depot-entitlement errors are mis-handled: over-retried, mislabeled, and the X button re-installs
+
+> **🟠 D-UAT-08 (MAJOR) — three defects surfaced by attempting a non-entitled depot (Cyberpunk 2077 macOS):**
+>
+> 1. **Non-retryable errors are retried as transient.** `getDepotDecryptionKey` (and `getRawManifest`)
+>    returning EResult `FileNotFound` (9) / `AccessDenied` (15) means the account lacks entitlement to that
+>    depot — a PERMANENT condition. D-UAT-06's `withPlanBuildRetry` retries these 3× regardless. Fix:
+>    classify FileNotFound/AccessDenied (and similar terminal eresults) as non-retryable → fail fast.
+> 2. **Misleading error surfaced.** The failure reaches the user as "Steam servers dropped the connection.
+>    Retry to continue." (and processNotification 'error'). Truth: the depot/key isn't available for this
+>    account. Surface an honest message — ideally "No native macOS version available for this game" (or
+>    "depot not licensed to your account") — so the user isn't told to Retry something that can never work.
+>    Consider detecting the all-depots-unentitled case as "not natively installable on this OS".
+> 3. **X (remove) on a finished-failed item RE-INSTALLS it.** Dev log: pressing X emitted a fresh
+>    `[DownloadManager]: Cyberpunk 2077 was added to the download queue` → full re-attempt → fail →
+>    finished, instead of just removing the finished-error entry. Likely a wiring regression/confusion
+>    between the new Retry affordance (D-UAT-06 frontend) and the X/remove handler for
+>    `runner==='steam'` finished-error items. Fix: X must only remove; Retry must re-enqueue.
+>
+> **Depot-selection nuance (design question, not necessarily a bug):** `buildDepotPlan` selects depots by
+> package ownership + oslist/language tags but never verifies the account can obtain a decryption key.
+> A game with SOME licensed depots + a phantom unlicensed one would hard-fail on the phantom. Consider
+> whether selection should tolerate/skip an unentitled depot, or whether an all-unentitled OS means
+> "not available on this OS". **Routed to a follow-up debug/gap cycle (not yet fixed).**
 >
 > **🟠 D-UAT-07 (MAJOR/UX, 2026-07-17) — GamePage detail action button does not handle
 > steam-waiting-for-restart; shows a greyed, disabled "Installing" with no actionable path.**
