@@ -9,7 +9,7 @@ passed_items: 2
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify)]
+open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (Cyberpunk silent cancel — needs log), D-UAT-07 (GamePage button ignores steam-waiting-for-restart)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-17
 ---
@@ -361,6 +361,43 @@ launched Steam.
 **Evidence:** _(time from Steam launch to auto-retry observed, or confirmation it required a manual re-click — note as a deviation if so)_
 
 ---
+
+## New findings during 1d attempt (2026-07-17)
+
+> **🟠 D-UAT-06 (MAJOR, 2026-07-17) — a Windows-only / non-native-installable title (Cyberpunk 2077,
+> appId 1091500) silently "installing → cancelled" on macOS with no explanation.**
+>
+> **Reported:** clicking Install on Cyberpunk 2077 says "installing" but never shows a %, then the
+> DownloadManager shows "cancelled" under it. Pressing X removes it; retrying gives the same result.
+>
+> **Context / likely cause (needs dev-terminal log to confirm):** Cyberpunk 2077 has NO native macOS
+> build (Windows-only) and ships Denuvo. On macOS it should route to the bottle path (`isBottleEligible`),
+> not a native depot download. Suspect one of: (a) it routes to native, depot selection finds no macOS
+> depot, and the outcome is being surfaced as 'cancelled' (should be a clear "not available on macOS /
+> use bottle" message, not a silent cancel); or (b) it routes to bottle but the bottle isn't provisioned
+> and the failure is mis-surfaced as 'cancelled'. Either way the UX is wrong: a non-installable title
+> must give an explicit reason, never a silent "cancelled".
+> **NOT a stale-abort regression** — `createAbortController` overwrites with a fresh non-aborted
+> controller each attempt (verified). **Needs:** the dev-terminal (electron-vite) log for one Install
+> click on 1091500 (grep `1091500|Bottle|depot|abort|cancel|not ready|macos`) to confirm routing, then
+> route to a debug/gap cycle. **Test-selection note:** Cyberpunk is a poor native-macOS UAT title; use a
+> Mac-native owned title for 1d/Task 2.
+>
+> **🟠 D-UAT-07 (MAJOR/UX, 2026-07-17) — GamePage detail action button does not handle
+> steam-waiting-for-restart; shows a greyed, disabled "Installing" with no actionable path.**
+>
+> **Reported:** Civ VII shows the "Restart Steam to finish" hint on the Library tile (21-16 working
+> there), but on the game DETAIL screen the primary action button is greyed out and reads "installing".
+>
+> **Root cause (code-localized):** 21-16 wired the `steam-waiting-for-restart` `statusContext` into the
+> status LABELS only — `frontend/hooks/constants.ts` `getStatusLabel` (tile) and
+> `GamePage/components/GameStatus.tsx`'s status TEXT (line 93-99 branch). It did NOT update the GamePage
+> primary **action button**, which derives its disabled/greyed state and label purely from `is.installing`
+> (true while the 1026 manifest waits for Steam). So the detail page treats the waiting state as an active
+> install: button disabled, label "Installing", no way for the user to act. Fix scope: make the GamePage
+> action button (and its disabled/label logic) aware of `statusContext === 'steam-waiting-for-restart'` —
+> either surface a "Restart Steam" affordance or at least not present a stuck, greyed "Installing".
+> Candidate for the same gap/debug cycle as D-UAT-05/06.
 
 ## Summary Table (fill in after all items are run)
 
