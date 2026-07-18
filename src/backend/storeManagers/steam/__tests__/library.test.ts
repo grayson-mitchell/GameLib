@@ -2307,6 +2307,139 @@ describe('pollInstallOnce()', () => {
     }
   })
 
+  // ── T-AOG (quick/260719-aog, Task 2): paused/stalled detection ─────────────
+
+  it('emits gameStatusUpdate context "steam-paused" after STALLED_TICKS_THRESHOLD consecutive frozen-bytes ticks on a real in-flight download', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5000000',
+        BytesToDownload: '10000000'
+      }
+    })
+    startInstallPolling('730', 60000)
+    for (let i = 0; i < 4; i++) {
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+    }
+
+    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    expect(calls[calls.length - 1][1].context).toBe('steam-paused')
+  })
+
+  it('never emits "steam-paused" while BytesDownloaded keeps rising across ticks (active download resets the stalled counter)', async () => {
+    ;(vdf.parse as jest.Mock)
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '1000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '2000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '3000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '4000000',
+          BytesToDownload: '10000000'
+        }
+      })
+    startInstallPolling('730', 60000)
+    for (let i = 0; i < 4; i++) {
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+    }
+
+    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    for (const [, payload] of calls) {
+      expect(payload.context).not.toBe('steam-paused')
+    }
+  })
+
+  it('keeps "steam-waiting-for-restart" (never "steam-paused") for a frozen 1026 handoff manifest, even with a real in-flight download\'s frozen bytes', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5000000',
+        BytesToDownload: '10000000'
+      }
+    })
+    startInstallPolling('730', 60000)
+    for (let i = 0; i < 4; i++) {
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+    }
+
+    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    for (const [, payload] of calls) {
+      expect(payload.context).toBe('steam-waiting-for-restart')
+    }
+  })
+
+  it('does NOT flag "steam-paused" for a staged-fallback ACF (BytesToDownload=0) even though BytesDownloaded stays frozen at 0', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    startInstallPolling('730', 60000)
+    for (let i = 0; i < 4; i++) {
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+    }
+
+    const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    for (const [, payload] of calls) {
+      expect(payload.context).toBeUndefined()
+    }
+  })
+
   it('sends pushGameToLibrary + gameStatusUpdate { status:"done" } when state is "installed"', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {

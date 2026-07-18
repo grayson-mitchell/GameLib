@@ -129,6 +129,27 @@ describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)'
     expect(label).toBe('Installing…')
   })
 
+  // T-AOG (quick/260719-aog): paused-download hint
+  it('returns the "Paused" label when statusContext is "steam-paused"', () => {
+    const label = getStatusLabelReal({
+      status: 'installing',
+      runner: 'steam',
+      statusContext: 'steam-paused',
+      t: fakeT
+    })
+    expect(label).toBe('Paused')
+  })
+
+  it('restart-hint precedence is unaffected by the new paused branch', () => {
+    const label = getStatusLabelReal({
+      status: 'installing',
+      runner: 'steam',
+      statusContext: 'steam-waiting-for-restart',
+      t: fakeT
+    })
+    expect(label).toBe('Restart Steam to finish')
+  })
+
   it('non-steam runners are unaffected — still render Downloading {{percent}}%', () => {
     const label = getStatusLabelReal({
       status: 'installing',

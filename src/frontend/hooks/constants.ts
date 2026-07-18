@@ -29,11 +29,16 @@ export function getStatusLabel({
     // D-UAT-04 (21-16): while GameLib's written 1026 manifest awaits Steam's
     // next full restart to adopt it, show a passive "restart to finish" hint
     // instead of an indefinite spinner. GameLib never auto-drives Steam.
+    // T-AOG (quick/260719-aog): a frozen-bytes download surfaces a "Paused"
+    // hint instead of a silently stalled bar — restart-hint precedence is
+    // preserved (checked first, matching the backend's own precedence).
     installing:
       runner === 'steam'
         ? statusContext === 'steam-waiting-for-restart'
           ? t('gamepage:status.steamWaitingRestart', 'Restart Steam to finish')
-          : t('gamepage:status.steamInstalling', 'Installing…')
+          : statusContext === 'steam-paused'
+            ? t('gamepage:status.steamPaused', 'Paused')
+            : t('gamepage:status.steamInstalling', 'Installing…')
         : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
             percent || 0
           )}%`,

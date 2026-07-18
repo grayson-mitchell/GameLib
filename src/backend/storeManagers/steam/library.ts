@@ -1094,6 +1094,11 @@ const activePolls = new Map<
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
 const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
+/** T-AOG (quick/260719-aog): consecutive frozen 'downloading' ticks (at the
+ *  default 3 000 ms poll interval, ≈9 s) before a genuinely in-flight
+ *  download is surfaced as 'steam-paused' rather than a silently frozen
+ *  progress bar. */
+const STALLED_TICKS_THRESHOLD = 3
 /** Bytes per MiB — mirrors depot.ts's own (unexported) constant so this
  *  poller's `downSpeed` matches the native depot-download path's MiB/s
  *  convention (the DownloadManager UI renders `downSpeed` with a "MB/s"
@@ -1252,6 +1257,20 @@ export async function pollInstallOnce(
   if (result.state === 'downloading') {
     if (poll) poll.seenDownloading = true
 
+    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
+    // feeding the frontend progress store — the ACF's own byte counts are
+    // the only source of truth. Prefer the download totals; fall back to
+    // the staging totals when the download total is 0/missing (late-stage
+    // installs that are past the download phase). Never emit a non-finite
+    // percent — if BOTH totals are 0/missing, skip the progress emit
+    // entirely (the gameStatusUpdate below still fires).
+    const {
+      bytesDownloaded = 0,
+      bytesToDownload = 0,
+      bytesStaged = 0,
+      bytesToStage = 0
+    } = result
+
     // D-UAT-04 (21-16): GameLib writes StateFlags EXACTLY 1026 on handoff —
     // bit 4 (FullyInstalled) unset, waiting for Steam to adopt the manifest
     // on its next full restart. That is NOT the same as an active download;
@@ -1261,11 +1280,41 @@ export async function pollInstallOnce(
     const isWaitingForSteamRestart =
       result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS
 
+    // T-AOG (quick/260719-aog, Task 2): a genuinely in-flight download
+    // (BytesToDownload > 0 and not yet complete) whose BytesDownloaded hasn't
+    // advanced since the PREVIOUS tick is "stalled". STALLED_TICKS_THRESHOLD
+    // consecutive stalled ticks surface a 'steam-paused' hint — the restart
+    // hint always takes precedence (never both at once). Guarded on `poll`
+    // existing so a direct unit-test call with no active poll never flags
+    // paused. The staged-fallback phase (bytesToDownload===0) can never
+    // satisfy realDownloadInFlight, so it's never mistaken for paused.
+    const realDownloadInFlight =
+      bytesToDownload > 0 && bytesDownloaded < bytesToDownload
+    let isPaused = false
+    if (poll) {
+      if (
+        realDownloadInFlight &&
+        poll.lastBytesDownloaded !== undefined &&
+        bytesDownloaded <= poll.lastBytesDownloaded
+      ) {
+        poll.stalledTicks += 1
+      } else {
+        poll.stalledTicks = 0
+      }
+      isPaused =
+        !isWaitingForSteamRestart &&
+        poll.stalledTicks >= STALLED_TICKS_THRESHOLD
+    }
+
     sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
       runner: 'steam',
       status: 'installing',
-      ...(isWaitingForSteamRestart ? { context: 'steam-waiting-for-restart' } : {})
+      ...(isWaitingForSteamRestart
+        ? { context: 'steam-waiting-for-restart' }
+        : isPaused
+          ? { context: 'steam-paused' }
+          : {})
     })
 
     if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {
@@ -1281,27 +1330,16 @@ export async function pollInstallOnce(
       })
     }
 
-    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
-    // feeding the frontend progress store — the ACF's own byte counts are
-    // the only source of truth. Prefer the download totals; fall back to
-    // the staging totals when the download total is 0/missing (late-stage
-    // installs that are past the download phase). Never emit a non-finite
-    // percent — if BOTH totals are 0/missing, skip the progress emit
-    // entirely (the gameStatusUpdate above still fired).
-    const {
-      bytesDownloaded = 0,
-      bytesToDownload = 0,
-      bytesStaged = 0,
-      bytesToStage = 0
-    } = result
-
-    // T-AOG (quick/260719-aog): derive a live download speed + ETA from the
-    // DOWNLOAD bytes specifically (bytesDownloaded), NOT the staged/bottle
-    // numerator above — "download speed" tracks bytes off the network, which
-    // stays meaningful even during the bottle's staged-fallback phase (it
-    // will simply be 0/absent there since bytesDownloaded doesn't move).
-    // `poll` is undefined for direct unit-test calls with no active poll —
-    // every branch below degrades to "no speed/eta" rather than throwing.
+    // T-AOG (quick/260719-aog, Task 1): derive a live download speed + ETA
+    // from the DOWNLOAD bytes specifically (bytesDownloaded), NOT the
+    // staged/bottle numerator below — "download speed" tracks bytes off the
+    // network, which stays meaningful even during the bottle's staged-
+    // fallback phase (it will simply be 0/absent there since bytesDownloaded
+    // doesn't move). `poll` is undefined for direct unit-test calls with no
+    // active poll — every branch below degrades to "no speed/eta" rather
+    // than throwing. Runs AFTER the stalled-ticks comparison above so both
+    // read the same PREVIOUS-tick poll.lastBytesDownloaded baseline before
+    // it gets overwritten with the current tick's value here.
     let downSpeedMiBs: number | undefined
     if (poll) {
       const nowMs = Date.now()
@@ -1339,13 +1377,6 @@ export async function pollInstallOnce(
       }
     }
 
-    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
-    // feeding the frontend progress store — the ACF's own byte counts are
-    // the only source of truth. Prefer the download totals; fall back to
-    // the staging totals when the download total is 0/missing (late-stage
-    // installs that are past the download phase). Never emit a non-finite
-    // percent — if BOTH totals are 0/missing, skip the progress emit
-    // entirely (the gameStatusUpdate above still fired).
     const useStaged = !(bytesToDownload > 0)
     const denominator = useStaged ? bytesToStage : bytesToDownload
     const numerator = useStaged ? bytesStaged : bytesDownloaded
