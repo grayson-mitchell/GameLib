@@ -110,3 +110,56 @@ pieces (~100 lines).
 - ⚠ **Retry across content servers is mandatory** — ~16% of chunks fail at concurrency 8.
 - ○ Untested: multi-depot games, large (50 GB) games, streaming to disk (files are currently
   assembled in RAM), and resume-after-interruption.
+
+---
+
+## Idea B — macOS native Steam bridge (Phase 22's preferred long-term architecture)
+
+**Distinct idea line from spikes 001–003.** Replicate Linux/Proton's model on macOS: run ONE
+**native** macOS Steam client and bridge each bottled Windows game's Steamworks IPC out to it,
+instead of bottling a full Windows Steam client per CrossOver bottle. If feasible, the whole
+Phase 22 per-bottle-login problem dissolves (one native client = one login; cheap per-game
+prefixes). Seed: `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`.
+
+Spikes 004a/004b/004c are three sub-probes of ONE feasibility question (not comparison variants).
+Investigation/feasibility only — not building the bridge.
+
+### Requirements (Idea B — emerged from spike 004)
+
+- **Bridge at the `steam_api` flat-API layer, out-of-process — NOT the in-process `lsteamclient`
+  thunk.** The proven approach (L4D2-launcher) is a PE32 `steam_api.dll` shim in the bottle
+  marshaling over **TCP (localhost)** to a native Mach-O helper that loads the real
+  `libsteam_api.dylib`. The Linux-style in-process winelib PE→Mach-O thunk is blocked on macOS
+  (no build toolchain locally; Rosetta/protobuf interconnect) and is Valve/CodeWeavers-scale. *(004a/004b)*
+- **Proxy the running, signed-in native Mac Steam client — never replicate auth.** DRM/`SteamAPI_Init`
+  succeeds because it's the genuine client. The helper hardcodes nothing; it reads real
+  SteamID/persona/auth from the live client. *(004b/004c)*
+- **The native surface already exists on every user's machine.** `steamclient.dylib`
+  (universal, arm64, exports `CreateInterface`) and `libsteam_api.dylib` (full pipe/user IPC
+  surface) ship with Steam; macOS Steam's IPC transport is a **Mach service** (`ipcserver`,
+  `com.valvesoftware.steam.ipctool`). A bridge links against surfaces the user already has — no
+  bundling of Valve libraries. *(004c)*
+- **Generate Steamworks vtables from a pinned SDK version.** L4D2 generated from SDK 1.53a for
+  correct `__thiscall` arg counts / `ret N` and pack(4)→pack(8) callback repacking. Version drift
+  breaks the ABI. *(004b)*
+- **Known-hard gap: P2P / multiplayer *join*.** Single-player, auth, persona, listen-server
+  hosting, and server-browsing are proven; inbound P2P handshake needs `InitRelayNetworkAccess()`
+  + proactive `AcceptP2PSessionWithUser` and remains only partially fixed upstream. *(004b)*
+- **Seed trigger_condition needs revising.** The seed assumed the bridge is gated on a macOS
+  `lsteamclient`. Spike 004 shows a *lower, working* bridge tier already exists — the gate is
+  "productionize the out-of-process steam_api bridge," not "port lsteamclient." *(004b)*
+
+### Spikes (Idea B)
+
+| # | Name | Type | Validates | Verdict | Tags |
+|---|------|------|-----------|---------|------|
+| 004b | community-lsteamclient-survey | standard | Given the Whisky/GPTK/CrossOver/Wine ecosystems, when surveyed for a macOS lsteamclient port or Win↔native-Steam bridge, then find existing art or rule it out | ✓ VALIDATED | steam, macos, bridge, survey, lsteamclient |
+| 004a | wine-mach-o-thunk | standard | Given a Wine/CrossOver PE process, when it calls a native macOS .dylib via the winelib thunk, then the cross-boundary call returns correct data | ⚠ PARTIAL (in-process thunk blocked; routed around by out-of-process TCP) | steam, macos, wine, thunk, winelib |
+| 004c | native-mac-steam-ipc-surface | standard | Given the installed native macOS Steam client, when inspected for an attachable Steamworks IPC surface, then determine bridge-in vs headless-shim | ✓ VALIDATED | steam, macos, ipc, steamclient, mach-service |
+
+> **Overall 004 feasibility:** The bridge IS feasible **via the out-of-process `steam_api` TCP
+> bridge** (proven single-player; eliminates per-bottle login — the whole win over Phase 22),
+> **not** via a Linux-style in-process `lsteamclient` (blocked on macOS Wine build tooling +
+> Rosetta/protobuf; still dual-client today). If productionized, it likely supersedes much of
+> Phase 22's multi-bottle machinery — but P2P multiplayer and packaging/portability are real
+> remaining work. Phase 22 remains the ship-now answer.
