@@ -1329,6 +1329,127 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   })
 })
 
+// ── Phase 23 (23-05, T-23-12/T-23-13): single-flight guard + fail-safe ──────
+//
+// installDepotDownload adds this.appId to nativeInstallsInFlight but (prior to
+// this plan) never checked it on entry, so install() could be entered twice
+// for one appId and spawn two concurrent downloadSteamDepots runs (the Gate 1
+// progress-percent flip-flop root cause). These tests prove: at most one
+// downloadSteamDepots per appId, a joining caller resolves to the SAME
+// result, per-appId independence, and reliable registry release on
+// success/error/cancel/throw (T-23-13 — never permanently blocks a later
+// re-install).
+
+describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => {
+  const OTHER_APP_ID = '990080'
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    library.set(
+      OTHER_APP_ID,
+      makeEntry({ app_name: OTHER_APP_ID, title: 'Hogwarts Legacy' })
+    )
+    jest.spyOn(libraryModule, 'startInstallPolling').mockImplementation(() => {})
+    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
+      targetSteamappsDir: '/mock/steam/steamapps',
+      installdir: APP_ID
+    })
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: { aborted: false }
+    })
+  })
+
+  it('two overlapping installDepotDownload calls for the SAME appId invoke downloadSteamDepots exactly ONCE, and the joining caller resolves to the SAME result', async () => {
+    let resolveDownload!: (value: { status: 'done' }) => void
+    ;(downloadSteamDepots as jest.Mock).mockReturnValue(
+      new Promise((resolve) => {
+        resolveDownload = resolve
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const first = game.install({} as any)
+    await flushAsync()
+    const second = game.install({} as any)
+
+    resolveDownload({ status: 'done' })
+    const [firstResult, secondResult] = await Promise.all([first, second])
+
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
+    expect(secondResult).toEqual(firstResult)
+  })
+
+  it('registry cleared on success — a subsequent FRESH installDepotDownload for the same appId calls downloadSteamDepots again (not permanently blocked)', async () => {
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+    await game.install({} as any)
+
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+  })
+
+  it('registry cleared on an { status: "error" } outcome — a subsequent fresh install calls downloadSteamDepots again', async () => {
+    ;(downloadSteamDepots as jest.Mock)
+      .mockResolvedValueOnce({ status: 'error', error: 'boom' })
+      .mockResolvedValueOnce({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const first = await game.install({} as any)
+    const second = await game.install({} as any)
+
+    expect(first).toEqual({ status: 'error', error: 'boom' })
+    expect(second).toEqual({ status: 'done' })
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+  })
+
+  it('registry cleared on a { status: "cancelled" } outcome — a subsequent fresh install calls downloadSteamDepots again', async () => {
+    ;(downloadSteamDepots as jest.Mock)
+      .mockResolvedValueOnce({ status: 'cancelled' })
+      .mockResolvedValueOnce({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const first = await game.install({} as any)
+    const second = await game.install({} as any)
+
+    expect(first).toEqual({ status: 'abort' })
+    expect(second).toEqual({ status: 'done' })
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+  })
+
+  it('registry cleared when downloadSteamDepots rejects/throws — a subsequent fresh install calls downloadSteamDepots again', async () => {
+    ;(downloadSteamDepots as jest.Mock)
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await expect(game.install({} as any)).rejects.toThrow('network error')
+    const second = await game.install({} as any)
+
+    expect(second).toEqual({ status: 'done' })
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+  })
+
+  it('two overlapping installs for DIFFERENT appIds both proceed — guard is per-appId, not global', async () => {
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    const other = new SteamGame(OTHER_APP_ID)
+
+    const results = await Promise.all([
+      game.install({} as any),
+      other.install({} as any)
+    ])
+
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+    expect(results).toEqual([{ status: 'done' }, { status: 'done' }])
+  })
+})
+
 // ── Phase 17 (D-10/D-11): SteamGame.install() bottle routing ────────────────
 
 describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
