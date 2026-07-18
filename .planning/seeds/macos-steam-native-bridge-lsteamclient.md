@@ -1,7 +1,8 @@
 ---
 title: macOS Steam bridge — native Steam client + bottled games (Proton-style lsteamclient)
-trigger_condition: Once a macOS Wine↔native Steamworks bridge becomes feasible — e.g. CodeWeavers/Apple ship an lsteamclient-equivalent, a community port appears (Whisky/GPTK ecosystem), or we commit R&D budget to build one. NOT a weekend task; do not start until the bridge component exists or is explicitly resourced.
+trigger_condition: REVISED by spike 004 (2026-07-18). The original gate ("wait until a macOS lsteamclient exists") is wrong — a LOWER, working bridge tier already exists (out-of-process steam_api TCP bridge, proven by L4D2-launcher). The real gate is now RESOURCING: commit engineering budget to productionize the out-of-process bridge (proxy the running native Mac Steam client via a native helper loading libsteam_api.dylib). No longer blocked on a Valve/CodeWeavers-scale lsteamclient port. Still not a weekend task — P2P multiplayer join, packaging, and Apple-Silicon portability are real remaining work.
 planted_date: 2026-07-17
+feasibility_validated: 2026-07-18 (spike 004a/004b/004c — see .planning/spikes/MANIFEST.md "Idea B")
 related_phase: 22 (Multiple Steam Bottles / game-family configurations — the pragmatic fallback for this idea)
 ---
 
@@ -22,9 +23,39 @@ client + separate Steam Guard login.
 
 This is the user's **preferred** direction (2026-07-17). It is deferred, not
 rejected — Phase 22's game-family/multi-bottle approach is the fallback that ships
-value now while this remains gated on a hard dependency.
+value now.
 
-## Why it's deferred (the hard dependency)
+## Spike 004 findings (2026-07-18) — feasibility validated, approach reframed
+
+**This seed's original premise was too pessimistic.** Spike 004 (004a/004b/004c,
+see `.planning/spikes/MANIFEST.md` "Idea B") found the bridge splits into two tiers,
+and the useful one already works:
+
+- **Deep tier — the Linux-style in-process `lsteamclient` thunk (what this seed assumed
+  was the only path): still blocked, Valve/CodeWeavers-scale.** No macOS-aware Wine build
+  toolchain is present (CrossOver 26.2.0 ships the wine runtime only — no
+  `winegcc`/`winebuild`), and the community attempt ([natbro/kaon](https://github.com/natbro/kaon))
+  is stuck on that plus Rosetta 2 / protobuf-packing interconnect issues, still requiring
+  dual Steam clients.
+- **Shallow tier — out-of-process `steam_api` TCP bridge: PROVEN WORKING.**
+  [samdotson61/L4D2-launcher](https://github.com/samdotson61/L4D2-launcher) ships a PE32
+  `steam_api.dll` shim in the bottle that marshals Steamworks calls over **TCP (localhost)**
+  to a native Mach-O helper loading the real `libsteam_api.dylib` and proxying the running,
+  signed-in Mac Steam. Single-player, auth, persona, listen-server hosting, and server
+  browsing all work. DRM is genuinely satisfied (it's the real client). This tier already
+  eliminates the per-bottle login — the entire win over Phase 22 — **without** solving the
+  deep thunk.
+- **The native surface a bridge attaches to already exists on every Mac (spike 004c,
+  verified locally):** `steamclient.dylib` (universal, native arm64, exports `CreateInterface`),
+  `libsteam_api.dylib` (full pipe/user IPC surface, present in installed games + Steam's own
+  Helper), and a Mach service (`ipcserver` / `com.valvesoftware.steam.ipctool`). The missing
+  piece is purely the Wine-side marshaling, not the native client.
+
+**Net:** the bridge is feasible now via the shallow tier; the gate is resourcing a
+productionization effort, not waiting for an lsteamclient port. Remaining hard work:
+P2P/multiplayer *join* (partially fixed upstream), packaging, and Apple-Silicon portability.
+
+## Why the DEEP tier is deferred (the hard dependency)
 
 On Linux, the bridge is a **Valve-built Proton component**: `lsteamclient` (a Wine
 DLL shim) marshals the Windows Steamworks ABI in-process across the PE↔ELF
@@ -52,13 +83,26 @@ exactly why GameLib bottles the whole Windows Steam client today.
 
 ## First steps if/when picked up
 
-- Spike whether a Wine (CrossOver/GPTK) game process can load and call a native
-  macOS `.dylib` exposing the Steamworks C ABI (validate the thunk mechanism).
-- Survey the Whisky/GPTK community for any partial `lsteamclient` macOS work.
-- Determine whether the native macOS Steam client exposes any attachable
-  Steamworks IPC surface, or whether a headless Steamworks shim would be needed.
-- Only then scope a phase; until the bridge exists, Phase 22 (game families) is
-  the shipping answer.
+~~The three original recon questions~~ — all **answered by spike 004 (2026-07-18)**:
+whether a bottled game can reach native Steamworks (yes, out-of-process via TCP, not an
+in-process thunk); whether community art exists (yes — L4D2-launcher works, kaon investigates
+the deep path); and whether the native client exposes an attachable IPC surface (yes —
+`libsteam_api.dylib` / `steamclient.dylib` / the `ipcserver` Mach service, all on-disk).
+
+Next steps now point at **productionizing the shallow (out-of-process `steam_api`) bridge**:
+
+- Reproduce the L4D2 handshake against a **GameLib CrossOver bottle**: a PE32 `steam_api.dll`
+  shim → TCP → native helper loading the on-disk `libsteam_api.dylib`, proxying the running
+  signed-in Mac Steam. Confirm `SteamAPI_Init` + auth/persona on a GameLib-managed title.
+  (A minimal version of this is a good **frontier spike** — `/gsd-spike`.)
+- Solve the known-hard gap: **P2P/multiplayer join** (`InitRelayNetworkAccess()` +
+  `AcceptP2PSessionWithUser`; partially fixed upstream, necessary-not-sufficient).
+- Pin Steamworks **SDK vtable generation** (L4D2 used 1.53a) and design an update-resilient
+  build so SDK drift doesn't silently break the ABI.
+- Scope packaging + **Apple-Silicon portability** (L4D2 validated only on M4).
+- Only then scope a phase. Until the bridge is productionized, Phase 22 (game families) is the
+  shipping answer. The **deep `lsteamclient` tier stays deferred** (Valve/CodeWeavers-scale)
+  unless a macOS-aware Wine builtin toolchain + overlay/injection story appears.
 
 ## Relationship to Phase 22
 
