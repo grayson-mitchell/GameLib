@@ -1,0 +1,6 @@
+bridge_server
+bottle_client.exe
+*.lib
+*.pdb
+server.log
+steam_appid.txt
