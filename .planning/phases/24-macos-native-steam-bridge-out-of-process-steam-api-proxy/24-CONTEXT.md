@@ -57,6 +57,11 @@ Downstream agents MUST read `24-SPEC.md` before planning or implementing. Requir
 ### CrossOver constraint (folded todo)
 - **D-08:** Bridge game bottles MUST use CrossOver's `cxbottle` lifecycle. GPTK / Wine-`toolkit` engines produce a broken Steam bottle (`.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`). This mirrors the Phase 17/22 constraint and applies to any bottle the bridge provisions or reuses.
 
+### Resolved research open questions (locked 2026-07-18, post-RESEARCH)
+- **D-09 (resolves RESEARCH Open Q1):** The vtable generator (R1) sources interface layouts from a **GameLib-authored manifest** (interface name + pinned version + slot list, authored from the ABI proven in spike 006) — **do NOT vendor Valve's proprietary Steamworks SDK headers** into this public fork. Chosen to avoid redistributing Valve copyrighted header text. Unblocks Wave 1 generator tasks.
+- **D-10 (resolves RESEARCH Open Q3):** The vtable-generator tool is written in **TypeScript** (repo convention, single-language maintenance, Electron+TS mergeability spirit). It runs at build/package time (per D-07), not as app runtime. The ABI logic is reimplemented from spike 006 and MUST be covered by unit tests asserting the pinned SDK's slot order/offsets, `__thiscall`, `ret N`, and sret handling.
+- **D-11 (resolves RESEARCH Open Q2):** On bridge failure where the Phase 17 bottled-Steam fallback bottle was never provisioned, the D-05 fallback dialog **offers to provision it on demand** (reusing `provisionBottle` from `bottle.ts`) and then routes through it — rather than dead-ending. Preserves D-05's no-silent-strand principle.
+
 ### Claude's Discretion
 - Wire/marshaling protocol between shim and helper (framing, call identification by interface+method index, error propagation).
 - How the per-game export set is derived and fed to the generator (objdump parsing).
