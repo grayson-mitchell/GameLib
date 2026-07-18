@@ -1,6 +1,6 @@
 ---
 slug: steam-1026-download-restart
-status: awaiting_human_verify
+status: resolved
 trigger: "OFF-path Steam downloads are misclassified as 'steam-waiting-for-restart' ('reopen Steam') and show NO download progress, because Steam's active-download StateFlags 1026 collides with GameLib's native-install handoff marker GAMELIB_HANDOFF_STATE_FLAGS=1026. In pollInstallOnce (src/backend/storeManagers/steam/library.ts:1280-1281), isWaitingForSteamRestart = result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS treats ANY ACF whose StateFlags is exactly 1026 as a GameLib finished-handoff waiting for a Steam restart. But Steam itself writes StateFlags 1026 (0x400|0x2 = update-running | update-required) during a NORMAL active download on the native-install-OFF path (steam://install handoff — Steam owns the download). CONFIRMED with live ACF data on the user's machine."
 created: 2026-07-19
 updated: 2026-07-19 (root cause confirmed from live ACF data before session start; awaiting fix design + apply)
@@ -151,3 +151,20 @@ files_changed:
   - src/backend/storeManagers/steam/games.ts
   - src/backend/storeManagers/steam/__tests__/library.test.ts
   - src/backend/storeManagers/steam/__tests__/games.test.ts
+
+## Hardware verification (2026-07-19, partial)
+
+- **CORE FIX CONFIRMED on hardware.** User rebuilt (build/main/main.js @ 11:16, includes this fix — proven by the new log line `starting install polling for appId 8930 ... isNativeHandoff false`) and confirmed the **"reopen Steam" hint / greyed Install button is GONE** on the OFF path. The StateFlags-1026 misclassification (this session's scope) is resolved.
+- **Progress-visibility NOT yet cleanly verified.** User reports "no live %" but was "not sure" which surface they watched. Log analysis shows two confounds, neither of which is the 1026 bug:
+  1. OFF-path `install()` fires `steam://install` and returns immediately → DownloadManager logs `Finished Installation of 8930` + removes the queue entry in the SAME second (11:13:35). So the **downloads PAGE never shows an OFF-path install** — progress was only ever intended on the game CARD (poller → gameStatusUpdate/progressUpdate). Possible genuine UX gap, but distinct from this session's bug.
+  2. 8930 (Civ V) had just been UNINSTALLED at 11:12:16 (log) right before the OFF test, and the poller logged no subsequent downloading-ACF activity — so it's unconfirmed Steam was actively downloading during the test.
+- **CRASH (spun off — NOT this session's bug).** User reports GameLib "quit to desktop" (hard native crash) + possible download instability. No crash trace in gamelib.log; NO macOS .ips crash report. The running build was compiled from the working tree, which carries UNCOMMITTED, never-hardware-verified parked cycle-17 work from `.planning/debug/steam-install-slow-start.md` (decompressPool.ts +44, decompressWorker.ts +22, main_window.ts +9, package.json zstddec dep — worker_threads/zstd code that runs DURING downloads). Prime suspect for the quit-to-desktop crash; belongs to the steam-install-slow-start session, not here.
+- **Next action:** rebuild from clean HEAD (b10d3907) with the parked work stashed, so (a) the crash suspect is removed and (b) on-card progress can be tested with Steam actually downloading. Do NOT lose the parked work — stash + restore.
+
+## Resolution (2026-07-19)
+
+**RESOLVED** for this session's scope. The StateFlags-1026 misclassification — genuine OFF-path Steam downloads being shown as "reopen Steam" / greyed Install button — is FIXED (commit b10d3907, `isNativeHandoff` provenance gate) and HARDWARE-CONFIRMED by the user ("reopen Steam" hint gone on the OFF path). User decision: call the 1026 fix done now.
+
+Two items explicitly DEFERRED out of this session (they are NOT the 1026 bug):
+1. **Quit-to-desktop crash + download instability** → belongs to `.planning/debug/steam-install-slow-start.md`, whose UNCOMMITTED cycle-17 worker_threads/zstd code (decompressPool.ts, decompressWorker.ts, main_window.ts, package.json) was compiled into the test build and runs during downloads. Crash noted in that session for follow-up.
+2. **"No live %" on OFF-path installs** → not the 1026 bug. OFF-path `install()` fires `steam://install` and returns immediately, so the DownloadManager/downloads-page entry finishes instantly; progress was only ever intended on the game CARD (poller). Whether the card bar renders during a real Steam download is a separate verification (needs Steam actively downloading + a clean build), not tracked as a regression here.
