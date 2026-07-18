@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Phase 22 UI-SPEC approved
-last_updated: "2026-07-18T01:29:21.918Z"
-last_activity: 2026-07-18 -- Phase 23 planning complete
+last_updated: "2026-07-18T01:33:14.555Z"
+last_activity: 2026-07-18 -- Phase 23 execution started
 progress:
   total_phases: 5
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-07-18 -- Phase 23 planning complete
+Plan: 1 of 5
+Status: Executing Phase 23
+Last activity: 2026-07-18 -- Phase 23 execution started
 
 ## v1.4 Phase Map
 
@@ -249,6 +249,7 @@ Recent decisions affecting current work:
 - Phase 7 manual UAT on macOS (real Steam account): overlay visibility on Mac/Windows-only games, "Unrated" pill, CrossOver↔Wine toggle drives both surfaces, pill click-through, runner-agnostic platform icons.
 - Phase 10 live validation gate (before Phase 11 begins): empirically confirm axios + Cookie: _simpleauth_sess + X-Requested-By: hb_android_app reaches api/v1/user/order from Electron main process. Fallback = BrowserWindow webRequest proxy.
 - Steam bottle setup offers GPTK/Wine engines that produce a broken bottle (macOS): non-CrossOver `wineVersion` selections silently fail — `cxbottle` creates the bottle but the `toolkit`/`wine` run-path (launcher.ts:434-442) drops the CX_BOTTLE binding and runs against a different prefix; readiness never passes. Fix: filter Steam WineSelector to CrossOver engines and/or reject non-crossover in provisionBottle. See `.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`.
+- Productionize the macOS native Steam bridge (out-of-process `steam_api` proxy): feasibility PROVEN end-to-end (spikes 004+005 — drop-in `steam_api.dll` in the real GameLibSteam bottle returns the real SteamID from live native Mac Steam, zero Windows Steam client). Phase 22's preferred successor; deferred/needs resourcing. Next frontier = C++ vtable ABI for unmodified games. See `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md` + `spike-findings-gamelib` skill.
 
 ### Blockers/Concerns
 
