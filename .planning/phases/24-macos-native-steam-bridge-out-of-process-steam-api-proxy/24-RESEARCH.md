@@ -697,10 +697,10 @@ production code; there is nothing in `src/` yet for this capability to supersede
 | A4 | A new, separate "bridge bottle" (distinct from `GameLibSteam`) is the correct resolution of R6's "no Windows Steam client in the bottle" bar, rather than some other bottle-lifecycle change (e.g. surgically uninstalling Steam from an existing bottle) | Pattern 4 | Medium — this is a genuine architecture recommendation, not a locked decision; CONTEXT.md explicitly lists "bottle provisioning changes... lightweight prefix vs. reusing existing bottle machinery" as Claude's Discretion, so this should be confirmed at plan-check, not treated as settled |
 | A5 | "Fall back to bottled Steam" (D-05) should re-route into the existing Phase 17 `GameLibSteam`/`install()`/`launch()` non-bridge branch rather than a new bespoke fallback path | Pattern 4 / Pitfall 4 | Medium — reasonable given the existing guard chain, but not explicitly confirmed against user-facing UX expectations; flagged as Open Question 2 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Can Valve's Steamworks SDK header text (or a close paraphrase) be committed to GameLib's
-   public fork repo as the vtable generator's input?**
+   public fork repo as the vtable generator's input?** **RESOLVED: see D-09.**
    - What we know: L4D2-launcher's own documentation states SDK headers are "not
      redistributable" and plans to move to fetch-on-build before any public release. GameLib is
      explicitly a public fork (per `CLAUDE.md`).
@@ -713,7 +713,7 @@ production code; there is nothing in `src/` yet for this capability to supersede
      never a vendored header file.
 
 2. **What does "fall back to bottled Steam" (D-05) concretely do when the user has never
-   provisioned the Phase 17 `GameLibSteam` bottle?**
+   provisioned the Phase 17 `GameLibSteam` bottle?** **RESOLVED: see D-11.**
    - What we know: the existing `install()`/`launch()` non-bridge branch already has its own
      `isBottleReady()` guard and guided-setup dialog chain.
    - What's unclear: whether reusing that existing chain verbatim (Assumption A5) produces an
@@ -723,7 +723,7 @@ production code; there is nothing in `src/` yet for this capability to supersede
      starting Wave 1 (generator/helper work), only the R7 fallback-wiring task.
 
 3. **Is TypeScript (matching every existing `meta/*.ts` script) or Python (closer port of
-   L4D2-launcher's actual `gen_vtables.py`) preferred for the generator?**
+   L4D2-launcher's actual `gen_vtables.py`) preferred for the generator?** **RESOLVED: see D-10.**
    - What we know: this repo's convention is 100% TypeScript for build-time generator scripts.
    - What's unclear: whether reusing/adapting L4D2-launcher's actual Python logic (not
      independently reviewed in this research pass — only its README was fetched) saves more time
