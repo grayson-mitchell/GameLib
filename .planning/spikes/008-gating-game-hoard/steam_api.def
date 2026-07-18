@@ -1,0 +1,9 @@
+LIBRARY steam_api
+EXPORTS
+SteamAPI_Init
+SteamAPI_RestartAppIfNecessary
+SteamAPI_RunCallbacks
+SteamAPI_RegisterCallback
+SteamAPI_UnregisterCallback
+SteamAPI_RegisterCallResult
+SteamAPI_UnregisterCallResult

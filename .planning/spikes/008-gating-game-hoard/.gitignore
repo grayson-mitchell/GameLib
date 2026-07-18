@@ -1,0 +1,5 @@
+steam_api.dll
+*.lib
+*.pdb
+server.log
+steam_appid.txt

@@ -1,0 +1,22 @@
+008 gating demo — Hoard / Reuben.exe (GameLibSteam bottle), 2026-07-18
+Reuben.exe imports 7 steam_api symbols incl. SteamAPI_RestartAppIfNecessary (the hard-gate API).
+
+POSITIVE run (bridge UP):
+  hoard_gate.log:
+    RestartAppIfNecessary(0): bridge SteamID64=76561197995867096 live=1 -> 0 (proceed)
+    Init -> 1 (SteamID64=76561197995867096)
+  Reuben alive at t=10s? YES  (ran)
+
+NEGATIVE run (bridge DOWN):
+  hoard_gate.log:
+    RestartAppIfNecessary(0): bridge SteamID64=0 live=0 -> 1 (GATE FIRES: exit/relaunch)
+    Init -> 0 (SteamID64=0)
+  Reuben alive at t=10s? YES  (STILL ran — game ignored the gate return)
+
+FINDING: the bridge correctly DRIVES the gate (RestartAppIfNecessary/Init return bridge-derived
+values, verified both ways), but Reuben — like Avernum 4 (007) — does NOT self-enforce on the
+return. Both games call the gate APIs and ignore the result. So a "refuses to run without the
+bridge" demonstration was not achievable with these titles. Real launch-enforcement for gated
+titles is Steam CEG (Custom Executable Generation) / DRM wrappers, deeper than steam_api.dll —
+a separate, harder question the shim cannot exercise. The bridge's actual job (supply valid
+Steamworks answers, including correct gate values) IS proven.

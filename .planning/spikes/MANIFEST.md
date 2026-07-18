@@ -168,6 +168,7 @@ Investigation/feasibility only — not building the bridge.
 | 005c | min-steam_api-shim | standard | Given a Windows module in the bottle that LoadLibrary's a replacement steam_api.dll, when it calls the flat API, then GetSteamID marshals to the host bridge and returns the real SteamID | ✓ VALIDATED (live: game-like harness got real SteamID via drop-in steam_api.dll) | steam, macos, bridge, steam_api, shim, dll |
 | 006 | cpp-vtable-abi | standard | Given a replacement steam_api.dll with an MSVC-ABI C++ vtable for ISteamUser, when a game-style virtual dispatch calls GetSteamID (slot 2, __thiscall), then it marshals to the bridge and returns the real SteamID | ✓ VALIDATED (live: C++ virtual call ABI round-trips real SteamID; unmodified-game path) | steam, macos, bridge, vtable, thiscall, abi |
 | 007 | real-game-avernum | standard | Given a real commercial Steam game (Avernum 4) in the GameLibSteam bottle, when its steam_api.dll is replaced with our bridge-backed drop-in, then the game loads it, calls Init, gets the real live-session identity, and runs | ✓ VALIDATED (live: real game ran on the bridge; caveat — Avernum ignores Init return, so not a gating demo) | steam, macos, bridge, real-game, avernum |
+| 008 | gating-game-hoard | standard | Given a game importing SteamAPI_RestartAppIfNecessary (Hoard), when our bridge drives that gate, then the game runs iff the bridge validates the session | ⚠ PARTIAL (bridge drives the gate correctly both ways; but Hoard, like Avernum, ignores the return — steam_api returns are advisory, real enforcement is CEG-level) | steam, macos, bridge, gate, drm, ceg |
 
 > **Overall 004–007 feasibility:** The bridge IS feasible **via the out-of-process `steam_api`
 > TCP bridge**, **not** via a Linux-style in-process `lsteamclient` (blocked on macOS Wine build
@@ -182,6 +183,13 @@ Investigation/feasibility only — not building the bridge.
 > supersedes much of Phase 22's multi-bottle machinery — but Phase 22 remains the ship-now answer.
 > Tooling landmine (007): `cxstart` detaches and wedges the bottle's `wineserver`; use `bin/wine`
 > and `wineserver -k` between runs.
+>
+> **008 (gating):** the bridge *drives* the Steam gate correctly (`RestartAppIfNecessary`/`Init`
+> return bridge-derived values both ways), but two local games (Avernum 4, Hoard) call the gate
+> APIs and **ignore** the return — `steam_api.dll` returns are advisory, not enforcing. Real
+> launch-enforcement is Steam **CEG**/DRM below the flat API, out of scope for a flat-API bridge.
+> Takeaway: the bridge does not need to gate launches — its job is to make Steamworks calls
+> succeed so games that check get valid answers.
 >
 > Toolchain: no mingw-w64 installable here (Homebrew only dry-runs in this env) — PE builds used
 > **`zig cc -target x86-windows-gnu`** (self-contained mingw sysroot). Bottle run:
