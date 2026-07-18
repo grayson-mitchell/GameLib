@@ -1,12 +1,12 @@
 ---
 phase: 23-steam-full-ownership-install-stateflags-4
-plan: 04
+plan: 05
 artifact: uat
-status: diagnosed
+status: gap_fix_landed_hardware_pending
 total_items: 3
-pending_items: 2
+pending_items: 3
 passed_items: 0
-failed_items: 1
+failed_items: 0
 blocked_items: 0
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
@@ -106,12 +106,29 @@ current buildid, and the full multi-depot `InstalledDepots` set. Steam shows the
 verify pass and NO re-download across ANY of the depots** (not just the base depot — a partial-depot
 verify would be a real divergence). The game launches.
 
-**Result:** ISSUE — progress display defect during multi-depot download (never reached completion/adoption)
-**Title/AppID used:** Hogwarts Legacy (appId 990080) — multi-depot
-**Depot count / per-depot sizes:** _(not recorded — blocked by progress bug before completion)_
-**`.acf` field dump (pre-Steam-launch):** _(n/a — download never completed)_
-**`.acf` field dump (post-Steam-launch):** _(n/a)_
-**Verify/re-download observed?** _(n/a — did not reach Steam adoption)_
+**Result:** FIX LANDED (code) — hardware re-run PENDING. Plan 23-05 closed the diagnosed root
+cause: `installDepotDownload` now has a single-flight guard (join a LIVE entry instead of starting
+a second `downloadSteamDepots`), fail-safe registry cleanup on every exit path (success/error/
+cancel/throw), pause/resume abort-before-restart (no stacking of concurrent runs), and startup-
+resume reconciliation that skips any appId already owned by a live in-process install (a stale
+`StateFlags=1026` manifest can no longer spawn a phantom concurrent install). Commits: `cc77a9df`
+(RED, single-flight), `ddde970d` (GREEN, single-flight), `7fccfb2a` (RED, pause/resume +
+reconciliation), `f963de8b` (GREEN, pause/resume + reconciliation). Full steam backend suite
+568/568, `tsc --noEmit` 0 errors, grep gates confirmed (`nativeInstallsInFlight` read on entry in
+games.ts; `isNativeInstallInFlight` read at the resume consumption site in library.ts). **This is
+NOT a hardware PASS** — the fix has only been proven by automated regression tests against mocked
+`downloadSteamDepots`/`ensureSteamClientReady`/`resolveSteamInstallTarget` seams. The real
+multi-depot hardware re-run (Hogwarts Legacy 990080 or Cyberpunk 2077 1091500, precondition:
+delete the stale `appmanifest_990080.acf`) with a single monotonic progress percent through a
+pause/resume cycle, completing to `StateFlags=4` with no verify/re-download and a successful
+launch, remains an **outstanding human step** — same pattern as the steam-startup-resume-crash
+hardware verification. Do not treat this row as closed until that human run is recorded below.
+**Title/AppID used:** Hogwarts Legacy (appId 990080) — multi-depot (original defect); hardware
+re-run not yet performed
+**Depot count / per-depot sizes:** _(pending hardware re-run)_
+**`.acf` field dump (pre-Steam-launch):** _(pending hardware re-run)_
+**`.acf` field dump (post-Steam-launch):** _(pending hardware re-run)_
+**Verify/re-download observed?** _(pending hardware re-run)_
 **Launch confirmed?** _(n/a)_
 
 **Reported behavior (2026-07-18):** At download start, MB/s barely changed and the graph updated
@@ -284,13 +301,17 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
-| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | **ISSUE** | Hogwarts Legacy (990080): download % flip-flops 2%↔16% — two concurrent `progressUpdate` producers (emitProgress vs pollInstallOnce). Never reached completion. |
-| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | Blocked behind Gate 1 (need a clean completing install first) |
-| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Blocked behind Gate 1 |
+| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | **FIX LANDED — HW PENDING** | Root cause (two concurrent `downloadDepotFiles` runs racing progress) fixed in Plan 23-05: single-flight guard + fail-safe cleanup + pause/resume abort-before-restart + startup-resume reconciliation. Steam suite 568/568, tsc 0. Real-hardware re-run not yet performed — see updated Result above. |
+| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | Blocked behind Gate 1's hardware re-run (need a clean completing install first) |
+| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Blocked behind Gate 1's hardware re-run |
 
-**Gate status:** NOT CLOSED. 1 ISSUE (Gate 1 — progress-display defect), 2 PENDING. Phase 23 cannot be
-marked complete/verified until every gate is PASS. Gate 1's diagnosed defect routes to a fix plan via
-`/gsd-plan-phase 23 --gaps`.
+**Gate status:** NOT CLOSED. Gate 1's diagnosed defect has a code fix landed and regression-tested
+(Plan 23-05), but the real-hardware re-run is still an outstanding human step — 0 of 3 gates have a
+recorded hardware PASS. Phase 23 cannot be marked complete/verified until every gate is PASS on real
+hardware. Next step: human runs Gate 1's re-run steps above (delete stale `appmanifest_990080.acf`,
+install Hogwarts Legacy or Cyberpunk 2077 via GameLib's native path, confirm single monotonic
+percent through a pause/resume cycle, confirm `StateFlags=4` completion + launch); any residual
+flicker or divergence routes back to `/gsd-plan-phase 23 --gaps`.
 
 **Windows/Linux coverage:** Explicitly deferred, not dropped (per D-07 in `23-CONTEXT.md`). Not
 tracked in this document — file a follow-up todo if/when that work is scheduled.
