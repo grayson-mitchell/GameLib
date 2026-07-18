@@ -167,18 +167,21 @@ Investigation/feasibility only — not building the bridge.
 | 005b | bottle-to-host-tcp | standard | Given the GameLibSteam bottle, when a Windows PE inside it TCP-connects to the host bridge, then it round-trips the real signed-in identity | ✓ VALIDATED (live: PE in real bottle got real identity over loopback) | steam, macos, bridge, crossover, tcp, winsock |
 | 005c | min-steam_api-shim | standard | Given a Windows module in the bottle that LoadLibrary's a replacement steam_api.dll, when it calls the flat API, then GetSteamID marshals to the host bridge and returns the real SteamID | ✓ VALIDATED (live: game-like harness got real SteamID via drop-in steam_api.dll) | steam, macos, bridge, steam_api, shim, dll |
 | 006 | cpp-vtable-abi | standard | Given a replacement steam_api.dll with an MSVC-ABI C++ vtable for ISteamUser, when a game-style virtual dispatch calls GetSteamID (slot 2, __thiscall), then it marshals to the bridge and returns the real SteamID | ✓ VALIDATED (live: C++ virtual call ABI round-trips real SteamID; unmodified-game path) | steam, macos, bridge, vtable, thiscall, abi |
+| 007 | real-game-avernum | standard | Given a real commercial Steam game (Avernum 4) in the GameLibSteam bottle, when its steam_api.dll is replaced with our bridge-backed drop-in, then the game loads it, calls Init, gets the real live-session identity, and runs | ✓ VALIDATED (live: real game ran on the bridge; caveat — Avernum ignores Init return, so not a gating demo) | steam, macos, bridge, real-game, avernum |
 
-> **Overall 004+005+006 feasibility:** The bridge IS feasible **via the out-of-process `steam_api`
+> **Overall 004–007 feasibility:** The bridge IS feasible **via the out-of-process `steam_api`
 > TCP bridge**, **not** via a Linux-style in-process `lsteamclient` (blocked on macOS Wine build
 > tooling + Rosetta/protobuf; still dual-client today). Spikes 005+006 reproduced **all four legs on
-> GameLib's exact stack**: 005a host helper ↔ live Mac Steam; 005b Windows PE in the real
-> GameLibSteam bottle ↔ host over loopback; 005c a drop-in replacement `steam_api.dll` a
-> game-like caller loads (flat path); **006 the C++ vtable ABI** — a game-style virtual
-> `GetSteamID()` dispatch (MSVC `__thiscall`) round-trips the real SteamID, the unmodified-game
-> path. Remaining productionization: a real MSVC-compiled-game confirmation, sret (>8-byte struct
-> returns), full per-interface vtable generation (`gen_vtables.py` scope), callback breadth, a
-> persistent channel, and the known-hard **P2P-join** gap. If productionized it likely supersedes
-> much of Phase 22's multi-bottle machinery — but Phase 22 remains the ship-now answer.
+> GameLib's exact stack** (005a host↔Steam, 005b bottle↔host, 005c flat `steam_api.dll`, 006 C++
+> vtable ABI), and **007 ran a REAL commercial game** (Avernum 4) on the bridge — it loaded our
+> drop-in `steam_api.dll`, called `SteamAPI_Init`, got the real live-session identity, and ran, with
+> no Windows Steam client in the bottle. Remaining productionization: a **gating-game demo** (Avernum
+> ignores Init's return, so 007 proves drop-in compatibility, not launch-gating), sret (>8-byte
+> struct returns), full per-interface vtable + export generation (`gen_vtables.py` scope), callback
+> breadth, a persistent channel, and the known-hard **P2P-join** gap. If productionized it likely
+> supersedes much of Phase 22's multi-bottle machinery — but Phase 22 remains the ship-now answer.
+> Tooling landmine (007): `cxstart` detaches and wedges the bottle's `wineserver`; use `bin/wine`
+> and `wineserver -k` between runs.
 >
 > Toolchain: no mingw-w64 installable here (Homebrew only dry-runs in this env) — PE builds used
 > **`zig cc -target x86-windows-gnu`** (self-contained mingw sysroot). Bottle run:
