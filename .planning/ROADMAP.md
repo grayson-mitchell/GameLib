@@ -727,6 +727,17 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 24: macOS native Steam bridge (out-of-process steam_api proxy)
+
+**Goal:** Productionize the Proton-style macOS Steam bridge — run bottled Windows Steam games against ONE native macOS Steam client (one login) via an out-of-process `steam_api.dll` shim → TCP → native helper loading `libsteam_api.dylib`, instead of bottling a full Windows Steam client per bottle. This is Phase 22's preferred long-term successor; if shipped it likely supersedes much of the multi-bottle machinery (one native client, cheap per-game prefixes, one login).
+**Depends on:** Phase 17 (dedicated Steam bottle foundation — `steam/bottle.ts`) and Phase 22 (per-family bottle model this replaces/simplifies). Independent of the Phase 20/21 depot-install line.
+**Requirements:** TBD (mint during /gsd-spec-phase 24 → /gsd-discuss-phase 24)
+**De-risked by spikes 004–008** (`.planning/spikes/004*–008*`) — feasibility fully proven on GameLib's stack: every layer incl. the C++ vtable ABI (006) and a real commercial game (Avernum 4) running on the bridge via drop-in `steam_api.dll` (007). The bridge is a compatibility layer, not a DRM gate (008 — CEG enforcement is out of scope). Blueprint + working reference code: `Skill("spike-findings-gamelib")` → `references/macos-steam-bridge.md`; seed `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`; todo `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md`.
+**Plans:** 0 plans (first build task: the full `steam_api.dll`/vtable generator — `gen_vtables.py` equivalent + sret handling)
+
+Plans:
+- [ ] TBD (run /gsd-spec-phase 24 to lock scope, then /gsd-plan-phase 24)
+
 ## v1.5 Phase Details
 
 ### Phase 20: Aggregated Store Search (CheapShark)
@@ -906,16 +917,3 @@ v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 | 18. macOS 32-bit detection, badge & CrossOver routing | 6/6 | Complete    | 2026-07-13 |
 | 19. CrossOver Compatibility Index (macOS) | 8/8 | Complete    | 2026-07-14 |
 | 20. Aggregated Store Search (CheapShark) | 7/7 | Complete    | 2026-07-15 |
-
-## Backlog
-
-### Phase 999.1: macOS native Steam bridge (out-of-process steam_api proxy) (BACKLOG)
-
-**Goal:** Productionize the Proton-style macOS Steam bridge — run bottled Windows Steam games against ONE native macOS Steam client (one login) via an out-of-process `steam_api.dll` shim → TCP → native helper loading `libsteam_api.dylib`, instead of bottling a full Windows Steam client per bottle. **Feasibility is fully de-risked** (spikes 004–008): every layer proven on GameLib's stack incl. the C++ vtable ABI (006) and a real commercial game running (007); the bridge is a compatibility layer, not a DRM gate (008 — CEG enforcement is out of scope). This is Phase 22's (Steam Game Families) preferred long-term successor; if shipped it likely supersedes much of the multi-bottle machinery.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Blueprint + working reference code: `Skill("spike-findings-gamelib")` → `references/macos-steam-bridge.md`; spikes in `.planning/spikes/004*–008*`; seed `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`; todo `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md`. First build task: the full `steam_api.dll`/vtable generator (`gen_vtables.py` equivalent + sret handling).
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
