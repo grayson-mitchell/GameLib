@@ -1,0 +1,6 @@
+steam_api.dll
+harness.exe
+*.lib
+*.pdb
+server.log
+steam_appid.txt

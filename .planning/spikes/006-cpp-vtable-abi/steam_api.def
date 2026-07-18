@@ -1,0 +1,7 @@
+LIBRARY steam_api
+EXPORTS
+SteamAPI_Init
+SteamAPI_InitFlat
+SteamAPI_Shutdown
+SteamAPI_RunCallbacks
+SteamAPI_SteamUser_v023
