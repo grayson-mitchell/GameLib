@@ -731,12 +731,33 @@ Plans:
 
 **Goal:** Productionize the Proton-style macOS Steam bridge — run bottled Windows Steam games against ONE native macOS Steam client (one login) via an out-of-process `steam_api.dll` shim → TCP → native helper loading `libsteam_api.dylib`, instead of bottling a full Windows Steam client per bottle. This is Phase 22's preferred long-term successor; if shipped it likely supersedes much of the multi-bottle machinery (one native client, cheap per-game prefixes, one login).
 **Depends on:** Phase 17 (dedicated Steam bottle foundation — `steam/bottle.ts`) and Phase 22 (per-family bottle model this replaces/simplifies). Independent of the Phase 20/21 depot-install line.
-**Requirements:** TBD (mint during /gsd-spec-phase 24 → /gsd-discuss-phase 24)
-**De-risked by spikes 004–008** (`.planning/spikes/004*–008*`) — feasibility fully proven on GameLib's stack: every layer incl. the C++ vtable ABI (006) and a real commercial game (Avernum 4) running on the bridge via drop-in `steam_api.dll` (007). The bridge is a compatibility layer, not a DRM gate (008 — CEG enforcement is out of scope). Blueprint + working reference code: `Skill("spike-findings-gamelib")` → `references/macos-steam-bridge.md`; seed `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`; todo `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md`.
-**Plans:** 0 plans (first build task: the full `steam_api.dll`/vtable generator — `gen_vtables.py` equivalent + sret handling)
+**Requirements:** R1, R2, R3, R4, R5, R6, R7 (locked in 24-SPEC.md; 7 requirements)
+**De-risked by spikes 004–008** (`.claude/skills/spike-findings-gamelib/sources/`) — feasibility fully proven on GameLib's stack: every layer incl. the C++ vtable ABI (006) and a real commercial game (Avernum 4) running on the bridge via drop-in `steam_api.dll` (007). The bridge is a compatibility layer, not a DRM gate (008 — CEG enforcement is out of scope). Blueprint + working reference code: `Skill("spike-findings-gamelib")` → `references/macos-steam-bridge.md`; seed `.planning/seeds/macos-steam-native-bridge-lsteamclient.md`; todo `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md`.
+**Plans:** 10 plans across 5 waves (planned 2026-07-18; R5/R6 human-HW-gated). Key correction: bridge games use a NEW Windows-Steam-free bridge bottle (not the Phase 17 GameLibSteam bottle) and launch the game's own .exe directly via runWineCommand (not dispatchToBottledSteam). D-04 resolved: single generic identity-only AppID (480) under one init-once shared helper.
 
 Plans:
-- [ ] TBD (run /gsd-spec-phase 24 to lock scope, then /gsd-plan-phase 24)
+
+**Wave 1** (parallel — no file overlap):
+- [ ] 24-01-PLAN.md — R1 vtable+flat shim generator (D-09 GameLib-authored manifest, D-10 TypeScript, __thiscall/ret N/sret) + committed generated .c/.def (D-07)
+- [ ] 24-02-PLAN.md — R2 native helper (dlopen libsteam_api.dylib, InitFlat-once, single AppID 480, loopback-only persistent channel) + shared wire protocol.ts
+- [ ] 24-03-PLAN.md — R4 zod-validated bundled allowlist (D-01/D-02) with Avernum 4 + Hoard
+- [ ] 24-04-PLAN.md — NEW CrossOver-only bridge bottle (D-08) with no SteamSetup (R6 no-steam.exe) + getBridgeBottleSettings
+
+**Wave 2** (parallel):
+- [ ] 24-05-PLAN.md — R3 objdump import scan + automatic per-bottle shim placement (needs 24-01, 24-04)
+- [ ] 24-06-PLAN.md — R2/R7 shared-helper lifecycle (D-03) + ensureBridgeHelperReady readiness signal (D-06) + steamBridgeHelperPath (needs 24-02)
+- [ ] 24-07-PLAN.md — R5 packaging: pinned zig download + clang helper + zig cc PE shim into public/bin/${arch}/darwin (needs 24-01, 24-02)
+
+**Wave 3**:
+- [ ] 24-08-PLAN.md — R4/R7 games.ts routing (isBridgeEligible, install/launch/uninstall bridge branches, direct-.exe launch, readiness gate, D-05 signal) (needs 24-03/04/05/06)
+
+**Wave 4**:
+- [ ] 24-09-PLAN.md — R7/D-05 frontend fallback dialog seam + D-11 on-demand provision (needs 24-08)
+
+**Wave 5** (human-HW-gated, autonomous:false):
+- [ ] 24-10-PLAN.md — R5/R6 packaged-build + Avernum 4 + Hoard playable single-player acceptance → 24-UAT.md (needs 24-07/08/09)
+
+**UI hint**: yes
 
 ## v1.5 Phase Details
 
