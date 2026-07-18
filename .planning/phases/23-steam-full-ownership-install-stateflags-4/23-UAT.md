@@ -2,15 +2,15 @@
 phase: 23-steam-full-ownership-install-stateflags-4
 plan: 04
 artifact: uat
-status: pending
+status: diagnosed
 total_items: 3
-pending_items: 3
+pending_items: 2
 passed_items: 0
-failed_items: 0
+failed_items: 1
 blocked_items: 0
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
-last_updated: 2026-07-17
+last_updated: 2026-07-18
 ---
 
 # Phase 23 — Steam Full-Ownership Install (StateFlags=4): Real-Hardware UAT
@@ -106,13 +106,59 @@ current buildid, and the full multi-depot `InstalledDepots` set. Steam shows the
 verify pass and NO re-download across ANY of the depots** (not just the base depot — a partial-depot
 verify would be a real divergence). The game launches.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here — Cyberpunk 2077 / 1091500 preferred, or note fallback)_
-**Depot count / per-depot sizes:** _(record here)_
-**`.acf` field dump (pre-Steam-launch):** _(paste inspect-acf.mjs output or snapshot path)_
-**`.acf` field dump (post-Steam-launch):** _(paste inspect-acf.mjs output or snapshot path)_
-**Verify/re-download observed?** _(yes/no, and which depot(s) if yes)_
-**Launch confirmed?** _(yes/no)_
+**Result:** ISSUE — progress display defect during multi-depot download (never reached completion/adoption)
+**Title/AppID used:** Hogwarts Legacy (appId 990080) — multi-depot
+**Depot count / per-depot sizes:** _(not recorded — blocked by progress bug before completion)_
+**`.acf` field dump (pre-Steam-launch):** _(n/a — download never completed)_
+**`.acf` field dump (post-Steam-launch):** _(n/a)_
+**Verify/re-download observed?** _(n/a — did not reach Steam adoption)_
+**Launch confirmed?** _(n/a)_
+
+**Reported behavior (2026-07-18):** At download start, MB/s barely changed and the graph updated
+slowly — unclear it was even working. After ~2 min the opposite: graph updated much faster and **two
+stats appeared showing download %**, flickering between two values (1% ↔ 5%). Paused; on resume the
+same pattern — ~1-2 min of slow updates, then graph updating ~every 0.5s with progress **flashing
+between two values** (now 2% ↔ 16%). Strongly implicates commit `22619287` ("rolling instantaneous
+speed + real disk rate for Steam") — two competing progress sources (network-received % vs
+disk-written %) appear to be racing on the same display.
+
+**Diagnosis (static analysis, HIGH confidence on defect class):**
+Two INDEPENDENT `progressUpdate` producers exist for the same `{ appName: appId, runner: 'steam' }`,
+computing `percent` from DIFFERENT sources:
+1. `depot.ts` `emitProgress` (L1087): `percent = min(100, round(doneBytes / plan.totalBytes * 100))`
+   where `doneBytes` = decompressed bytes written this process. Monotonic within one run.
+2. `library.ts` `pollInstallOnce` (L1195): `percent = round(bytesDownloaded / bytesToDownload * 100)`
+   read from the on-disk ACF (`readAcfState`), emitted every ~3s by `startInstallPolling`.
+Because a single `emitProgress` run's `doneBytes` only increases, the observed BACKWARDS jump
+(16% → 2%) is impossible from one stream — it proves two producers were emitting for the same appId
+concurrently, and the DownloadManager's single `progress.percent` slot flip-flops between them. The two
+percent scales are unrelated (decompressed-disk vs ACF download bytes), so any overlap diverges by a
+large margin — matching 2% ↔ 16%.
+Overlap triggers (any of these; exact one not pinned without runtime logs):
+  - a leftover `startInstallPolling` from a PRIOR install attempt of the same title still running
+    against a stale partial ACF (constant low % vs the live climbing %);
+  - two concurrent `installDepotDownload`/`downloadDepotFiles` runs for one appId (no in-flight guard
+    on the DownloadManager side, only `nativeInstallsInFlight` inside SteamGame);
+  - a pause/resume that starts a fresh depot run while the previous run's workers are still draining.
+Secondary: the "slow-then-fast, ~0.5s graph" cadence is the `PROGRESS_THROTTLE` + `rollingRateMiBs`
+window behavior from commit `22619287` warming up — cosmetic, not the flicker cause.
+
+**Gaps (structured for /gsd-plan-phase 23 --gaps):**
+```yaml
+- truth: "A multi-depot title installs with a single, monotonic download-progress percent"
+  status: failed
+  reason: "Two independent progressUpdate producers (depot.ts emitProgress via doneBytes/plan.totalBytes, and library.ts pollInstallOnce via ACF bytesDownloaded/bytesToDownload) emit for the same {appName:appId, runner:'steam'} with divergent percent math and no mutual exclusion. When they overlap, the DownloadManager percent flip-flops (observed 2% <-> 16%). Backwards jumps are impossible from a single emitProgress stream (doneBytes only grows), confirming concurrent producers."
+  severity: major
+  test: gate-1-multi-depot
+  artifacts:
+    - "src/backend/storeManagers/steam/depot.ts:1087 (emitProgress percent)"
+    - "src/backend/storeManagers/steam/library.ts:1195 (pollInstallOnce percent)"
+    - "src/backend/storeManagers/steam/games.ts:726 (installDepotDownload; poller starts only after download, so overlap comes from a leftover/second poller or a double download run)"
+  missing:
+    - "Mutual exclusion / single source of truth for steam progressUpdate percent during a native/bottle depot download"
+    - "Stop/replace any existing startInstallPolling(appId) before starting a depot download run"
+    - "A DownloadManager-side in-flight guard preventing two concurrent depot runs for one appId"
+```
 
 ---
 
@@ -224,13 +270,13 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
-| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | PENDING | |
-| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | |
-| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | |
+| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | **ISSUE** | Hogwarts Legacy (990080): download % flip-flops 2%↔16% — two concurrent `progressUpdate` producers (emitProgress vs pollInstallOnce). Never reached completion. |
+| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | Blocked behind Gate 1 (need a clean completing install first) |
+| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Blocked behind Gate 1 |
 
-**Gate status:** NOT CLOSED. 3 PENDING. Phase 23 cannot be marked complete/verified until every gate
-above is PASS (or has a captured divergence routed to a follow-up gap plan via
-`/gsd-plan-phase 23 --gaps`).
+**Gate status:** NOT CLOSED. 1 ISSUE (Gate 1 — progress-display defect), 2 PENDING. Phase 23 cannot be
+marked complete/verified until every gate is PASS. Gate 1's diagnosed defect routes to a fix plan via
+`/gsd-plan-phase 23 --gaps`.
 
 **Windows/Linux coverage:** Explicitly deferred, not dropped (per D-07 in `23-CONTEXT.md`). Not
 tracked in this document — file a follow-up todo if/when that work is scheduled.
