@@ -2388,7 +2388,7 @@ describe('pollInstallOnce()', () => {
     }
   })
 
-  it('keeps "steam-waiting-for-restart" (never "steam-paused") for a frozen 1026 handoff manifest, even with a real in-flight download\'s frozen bytes', async () => {
+  it('keeps "steam-waiting-for-restart" (never "steam-paused") for a frozen 1026 handoff manifest on a native-ON handoff poll, even with a real in-flight download\'s frozen bytes', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -2399,7 +2399,10 @@ describe('pollInstallOnce()', () => {
         BytesToDownload: '10000000'
       }
     })
-    startInstallPolling('730', 60000)
+    // debug/steam-1026-download-restart: isNativeHandoff:true — this poll
+    // stands in for games.ts's post-depot.ts-download handoff poll, the ONLY
+    // scenario where StateFlags 1026 genuinely means "waiting for restart".
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
     for (let i = 0; i < 4; i++) {
       await pollInstallOnce('730')
       jest.advanceTimersByTime(3000)
@@ -2500,7 +2503,7 @@ describe('pollInstallOnce()', () => {
 
   // ── D-UAT-04 (21-16): GameLib handoff (StateFlags===1026) waiting signal ──
 
-  it('emits gameStatusUpdate with context "steam-waiting-for-restart" when StateFlags parses to exactly 1026 (GameLib handoff)', async () => {
+  it('emits gameStatusUpdate with context "steam-waiting-for-restart" when StateFlags parses to exactly 1026 on a native-ON handoff poll (GameLib handoff)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -2509,6 +2512,9 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '0'
       }
     })
+    // debug/steam-1026-download-restart: StateFlags 1026 alone is NOT enough
+    // — must also be a poll started for GameLib's own finished handoff.
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
     await pollInstallOnce('730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
@@ -2517,6 +2523,112 @@ describe('pollInstallOnce()', () => {
         runner: 'steam',
         status: 'installing',
         context: 'steam-waiting-for-restart'
+      })
+    )
+  })
+
+  // ── debug/steam-1026-download-restart: the 1026-collision regression ──────
+
+  it('regression: an OFF-path poll (Steam owns the download, no isNativeHandoff) at StateFlags 1026 with advancing bytes emits normal "installing" progress, NEVER "steam-waiting-for-restart"', async () => {
+    ;(vdf.parse as jest.Mock)
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '1026',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '1000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '1026',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '3000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '1026',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '5000000',
+          BytesToDownload: '10000000'
+        }
+      })
+    // No isNativeHandoff — mirrors games.ts's OFF-path startInstallPolling
+    // calls (steam://install handoff / legacy tellBottledSteamToInstall).
+    startInstallPolling('730', 60000)
+    for (let i = 0; i < 3; i++) {
+      await pollInstallOnce('730')
+      jest.advanceTimersByTime(3000)
+    }
+
+    const statusCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    for (const [, payload] of statusCalls) {
+      expect(payload.status).toBe('installing')
+      expect(payload.context).not.toBe('steam-waiting-for-restart')
+    }
+    expect(notify).not.toHaveBeenCalled()
+
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(progressCalls.length).toBeGreaterThan(0)
+    for (const [, payload] of progressCalls) {
+      expect(Number.isFinite(payload.progress.percent)).toBe(true)
+      expect(payload.progress.percent).toBeGreaterThan(0)
+    }
+  })
+
+  it('regression: the cold-start tick of an OFF-path 1026 poll (no prior baseline) never flashes "steam-waiting-for-restart"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '1000000',
+        BytesToDownload: '10000000'
+      }
+    })
+    startInstallPolling('730', 60000) // OFF-path, no isNativeHandoff
+    await pollInstallOnce('730') // very first tick — no lastBytesDownloaded baseline yet
+
+    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    expect(call![1].context).not.toBe('steam-waiting-for-restart')
+  })
+
+  it('regression: StateFlags 1042 (0x400|0x2|0x10, active download, never === 1026) still emits normal progress regardless of isNativeHandoff', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1042',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10'
+      }
+    })
+    await pollInstallOnce('730')
+    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+      ([channel]) => channel === 'gameStatusUpdate'
+    )
+    expect(call![1].status).toBe('installing')
+    expect(call![1].context).toBeUndefined()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        progress: expect.objectContaining({ percent: 50 })
       })
     )
   })
@@ -2537,7 +2649,7 @@ describe('pollInstallOnce()', () => {
     expect(call![1].context).toBeUndefined()
   })
 
-  it('fires the "restart Steam" notification exactly once across multiple poll calls while StateFlags stays 1026', async () => {
+  it('fires the "restart Steam" notification exactly once across multiple poll calls while StateFlags stays 1026 (native-ON handoff poll)', async () => {
     ;(vdf.parse as jest.Mock).mockReturnValue({
       AppState: {
         appid: '730',
@@ -2546,7 +2658,9 @@ describe('pollInstallOnce()', () => {
         SizeOnDisk: '0'
       }
     })
-    startInstallPolling('730', 60000) // register the activePolls entry so notifiedWaiting can gate
+    // debug/steam-1026-download-restart: isNativeHandoff:true — register the
+    // activePolls entry AS a native-ON handoff poll so notifiedWaiting can gate.
+    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
     await pollInstallOnce('730')
     await pollInstallOnce('730')
     await pollInstallOnce('730')
@@ -2555,6 +2669,24 @@ describe('pollInstallOnce()', () => {
       title: 'CS:GO',
       body: 'Restart Steam to finish installing {{game}}'
     })
+  })
+
+  it('regression: does NOT fire the waiting notification for an OFF-path poll (no isNativeHandoff) even while StateFlags stays 1026', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '1000000',
+        BytesToDownload: '10000000'
+      }
+    })
+    startInstallPolling('730', 60000) // OFF-path, no isNativeHandoff
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+    await pollInstallOnce('730')
+    expect(notify).not.toHaveBeenCalled()
   })
 
   it('does NOT fire the waiting notification for a non-1026 active download', async () => {

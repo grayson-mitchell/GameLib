@@ -52,8 +52,14 @@ import { sanitizeInstalldir } from './installLocation'
  */
 export type AcfSource = 'native' | 'bottle'
 
-/** Shared options shape for both install/uninstall poller start functions. */
-type PollOptions = { intervalMs?: number; source?: AcfSource }
+/** Shared options shape for both install/uninstall poller start functions.
+ *  `isNativeHandoff` is install-poller-only (ignored by startUninstallPolling)
+ *  — see activePolls' isNativeHandoff field docstring for its meaning. */
+type PollOptions = {
+  intervalMs?: number
+  source?: AcfSource
+  isNativeHandoff?: boolean
+}
 
 /**
  * Resolves the bottle's own steamapps dir from the dedicated Steam bottle's
@@ -1089,6 +1095,19 @@ const activePolls = new Map<
      *  'steam-paused' gameStatusUpdate hint once it crosses
      *  STALLED_TICKS_THRESHOLD. Reset to 0 the moment bytes advance again. */
     stalledTicks: number
+    /** debug/steam-1026-download-restart: true ONLY for a poll started
+     *  immediately after GameLib's OWN depot.ts download has already
+     *  finished (games.ts's runNativeDepotDownload, native-install-ON —
+     *  either the native or the bottle root) — the one scenario where
+     *  StateFlags 1026 genuinely means "GameLib wrote this handoff manifest,
+     *  waiting for a Steam restart to adopt it". Every OFF-path poll (Steam
+     *  itself owns the download, via steam://install or the bottled Steam
+     *  client's own tellBottledSteamToInstall dispatch) leaves this false —
+     *  on that path StateFlags 1026 is an ORDINARY Steam active-download
+     *  state (0x400 update-running | 0x2 update-required), not a handoff.
+     *  Root cause of the 1026-collision bug: this distinction cannot be made
+     *  from the ACF alone, only from which call site started the poll. */
+    isNativeHandoff: boolean
   }
 >()
 
@@ -1277,8 +1296,26 @@ export async function pollInstallOnce(
     // surface a passive 'waiting for restart' context instead of the plain
     // 'installing' status so the frontend can show a hint (Task 3) rather
     // than an indefinite spinner. Never launch/focus/drive Steam (T-21-16-02).
+    //
+    // debug/steam-1026-download-restart: StateFlags===1026 alone is NOT a
+    // unique GameLib-handoff signal — Steam itself writes 1026
+    // (0x400 update-running | 0x2 update-required) as an ORDINARY active-
+    // download state on the native-install-OFF path (confirmed via live ACF:
+    // two Steam-owned downloads sat at 1026 and were misclassified as
+    // "waiting for restart" with progress hidden, while a third at 1042 —
+    // also active, but !== 1026 — was unaffected). The equality check must
+    // therefore be gated on provenance: only a poll started right after
+    // GameLib's OWN depot.ts download finished (isNativeHandoff===true, set
+    // by startInstallPolling's caller in games.ts) may interpret 1026 as a
+    // finished handoff. A poll with no isNativeHandoff flag (OFF path, or a
+    // direct unit-test call with no active poll registered) never does —
+    // defaulting to "false" is the safe direction, since showing live
+    // progress for a genuine handoff poll is merely cosmetically wrong for
+    // one grace-window tick, while hiding progress for a genuine OFF-path
+    // download is the exact bug this fixes.
     const isWaitingForSteamRestart =
-      result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS
+      result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS &&
+      poll?.isNativeHandoff === true
 
     // T-AOG (quick/260719-aog, Task 2): a genuinely in-flight download
     // (BytesToDownload > 0 and not yet complete) whose BytesDownloaded hasn't
@@ -1457,10 +1494,12 @@ export async function pollInstallOnce(
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
  * The second parameter accepts EITHER a plain intervalMs number (existing
- * call signature, unchanged) OR a `{ intervalMs?, source? }` options object —
- * `source: 'bottle'` polls the dedicated CrossOver bottle's steamapps root
- * instead of the native one. Omitting the second arg entirely, or passing a
- * bare number, preserves today's native behavior byte-for-byte.
+ * call signature, unchanged) OR a `{ intervalMs?, source?, isNativeHandoff? }`
+ * options object — `source: 'bottle'` polls the dedicated CrossOver bottle's
+ * steamapps root instead of the native one. Omitting the second arg
+ * entirely, or passing a bare number, preserves today's native behavior
+ * byte-for-byte (including `isNativeHandoff` defaulting to false — see
+ * activePolls' isNativeHandoff docstring, debug/steam-1026-download-restart).
  *
  * Exported for unit testing.
  */
@@ -1470,16 +1509,25 @@ export function startInstallPolling(
 ): void {
   if (activePolls.has(appId)) return // idempotent
 
-  const { intervalMs, source }: { intervalMs: number; source: AcfSource } =
+  const {
+    intervalMs,
+    source,
+    isNativeHandoff
+  }: {
+    intervalMs: number
+    source: AcfSource
+    isNativeHandoff: boolean
+  } =
     typeof intervalMsOrOptions === 'number'
-      ? { intervalMs: intervalMsOrOptions, source: 'native' }
+      ? { intervalMs: intervalMsOrOptions, source: 'native', isNativeHandoff: false }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
-          source: intervalMsOrOptions.source ?? 'native'
+          source: intervalMsOrOptions.source ?? 'native',
+          isNativeHandoff: intervalMsOrOptions.isNativeHandoff ?? false
         }
 
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source})`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff})`,
     LogPrefix.Steam
   )
 
@@ -1488,7 +1536,8 @@ export function startInstallPolling(
     ticks: 0,
     seenDownloading: false,
     notifiedWaiting: false,
-    stalledTicks: 0
+    stalledTicks: 0,
+    isNativeHandoff
   }
 
   const timer = setInterval(async () => {

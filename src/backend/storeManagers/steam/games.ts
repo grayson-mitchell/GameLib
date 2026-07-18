@@ -925,10 +925,24 @@ export default class SteamGame implements Game {
       // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
       // steam://install path (D-07) — bottle-scoped when pollerSource is set
       // (Plan 08's distinct bottle steamapps root, D-15).
+      //
+      // debug/steam-1026-download-restart: isNativeHandoff:true is CORRECT
+      // (and ONLY correct) here — this line only runs after downloadSteamDepots
+      // has ALREADY finished downloading every depot itself (outcome.status
+      // ran past the 'error'/'cancelled' checks above). The 1026 manifest this
+      // poll will observe is GameLib's OWN finished-handoff write, genuinely
+      // waiting for a Steam restart — never a Steam-driven active download.
+      // Do NOT copy this flag to the OFF-path startInstallPolling calls above
+      // in install() (steam://install handoff / tellBottledSteamToInstall) —
+      // those hand the ENTIRE download off to Steam, so a 1026 seen there is
+      // Steam's own ordinary active-download state, not a handoff.
       if (opts.pollerSource) {
-        startInstallPolling(this.appId, { source: opts.pollerSource })
+        startInstallPolling(this.appId, {
+          source: opts.pollerSource,
+          isNativeHandoff: true
+        })
       } else {
-        startInstallPolling(this.appId)
+        startInstallPolling(this.appId, { isNativeHandoff: true })
       }
 
       return { status: 'done' }

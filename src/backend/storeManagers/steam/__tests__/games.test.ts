@@ -1375,7 +1375,12 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       os: expect.any(String),
       signal: 'mock-signal'
     })
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    // debug/steam-1026-download-restart: this poll starts AFTER GameLib's own
+    // depot.ts download finished — isNativeHandoff:true so StateFlags 1026 is
+    // correctly read as "waiting for Steam restart", not an active download.
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      isNativeHandoff: true
+    })
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -1845,8 +1850,13 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       os: 'windows',
       signal: 'mock-signal'
     })
+    // debug/steam-1026-download-restart: this poll starts AFTER GameLib's own
+    // depot.ts download finished (D-15/SNI-08 native-ON bottle path) —
+    // isNativeHandoff:true so StateFlags 1026 is correctly read as "waiting
+    // for Steam restart", not an active download.
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
+      source: 'bottle',
+      isNativeHandoff: true
     })
     expect(result).toEqual({ status: 'done' })
   })
