@@ -38,7 +38,17 @@ import {
   type DepotSelectOpts
 } from './depot/select'
 import { decryptFilename } from './depot/crypto'
-import { fetchChunk, type LzmaModule, type DepotChunk, type DecodeFn } from './depot/decompress'
+import {
+  fetchChunk,
+  type LzmaModule,
+  type DepotChunk,
+  type DecodeFn,
+  type OnChunkAttempt,
+  type ContentServerHostMeta
+} from './depot/decompress'
+import { HostHealthTracker } from './depot/hostHealth'
+import { CdnAuthTokenCache } from './depot/cdnAuth'
+import { StallTracker } from './depot/stallTracker'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
@@ -175,13 +185,34 @@ interface SteamUserDepotExtras {
     callback: (err: Error | null, raw: Buffer) => void
   ): void
   /** Also undocumented in @types/steam-user (Pitfall 5) — resolves the CDN
-   *  hostnames Plan 05's downloadDepotFiles needs to fetch chunks from. */
+   *  hostnames Plan 05's downloadDepotFiles needs to fetch chunks from.
+   *  Full field list per node_modules/steam-user/components/cdn.js's own
+   *  mapping (confirmed by reading source, not guessed) — widened in
+   *  diagnostic cycle 4 (debug/steam-install-slow-start, lead (a)) so the RAW
+   *  directory response (load/weightedload/preferred_server/etc, the ranking
+   *  data the real Steam client uses) could be logged before reduction.
+   *  `Host`/`vhost`/`weightedload` are now ACTIVELY consumed (cycle 5, via
+   *  `reduceContentServers`/`getContentServerHosts` below) to seed
+   *  HostHealthTracker's weightedload-aware cold-start selection — the rest
+   *  remain diagnostic-only. Note: this method takes only an optional
+   *  `appid` filter — steam-user's cdn.js has no count/limit parameter to
+   *  request a larger server pool. */
   getContentServers(
     appId: number,
-    callback: (
-      err: Error | null,
-      servers: Array<{ Host?: string; vhost?: string }>
-    ) => void
+    callback: (err: Error | null, servers: RawContentServer[]) => void
+  ): void
+  /** Debug/steam-install-slow-start (cycle 6): also undocumented in
+   *  @types/steam-user (Pitfall 5) — verified directly against the INSTALLED
+   *  steam-user@5.3.0 source (node_modules/steam-user/components/cdn.js:
+   *  144-165), not assumed. `depotId + '_' + hostname` is the exact key
+   *  steam-user's OWN internal cache uses for this call — confirming
+   *  per-depot+host granularity. See depot/cdnAuth.ts for the full writeup
+   *  (token format, caching, and the cycle-5 hardware evidence this closes). */
+  getCDNAuthToken(
+    appId: number,
+    depotId: number,
+    hostname: string,
+    callback: (err: Error | null, result?: { token: string; expires: Date }) => void
   ): void
 }
 
@@ -623,6 +654,19 @@ export async function buildDepotPlan(
 export const CHUNK_CONCURRENCY = 4
 /** Bounded file-level concurrency across ALL depots' files (spike-proven queue pattern). */
 export const FILE_CONCURRENCY = 8
+/** Debug/steam-install-slow-start gap closure: per-chunk retry budget passed to
+ *  fetchChunk (host-rotating retry across content servers). fetchChunk's own
+ *  docstring documents a ~16% per-chunk transient failure rate at
+ *  FILE_CONCURRENCY=8 without retry — over the thousands of chunks a large
+ *  modern game holds, the previous attempts=4 gave too little headroom: the
+ *  probability that AT LEAST ONE chunk exhausts every attempt approaches
+ *  certainty, and a single exhausted chunk currently escalates the WHOLE
+ *  install to a hard "Steam servers dropped the connection" failure
+ *  (downloadSteamDepots' failures.length check) even though that CDN chunk
+ *  retry never touches the authenticated SteamUser CM/session connection at
+ *  all. Raised (not unbounded) — still backed off, still host-rotating,
+ *  extends rather than replaces the existing mechanism. */
+export const CHUNK_FETCH_ATTEMPTS = 8
 
 /** Bytes per MiB — the DownloadManager UI renders `downSpeed` with a "MB/s" label
  *  and the gog/legendary runners emit MiB/s, so the native path must too (was
@@ -709,6 +753,30 @@ export interface DownloadDepotFilesOpts {
   /** Content-server hostnames from client.getContentServers() — caller-supplied
    *  so this loop stays decoupled from the SteamUser client for testability. */
   hosts: string[]
+  /** Debug/steam-install-slow-start (cycle 5): the content-server directory's
+   *  own `weightedload` ranking per host (cycle-4 lead (a) — captured in
+   *  getContentServerHosts's RAW dump but previously discarded entirely).
+   *  Seeds HostHealthTracker's cold-start PRIOR (depot/hostHealth.ts) so a
+   *  fresh download run favors the directory's own low-weightedload (local,
+   *  less-loaded) edges from the very first attempt, instead of treating
+   *  every host as an equal blind round-robin candidate. Optional — omitting
+   *  it (every pre-cycle-5 caller/test) leaves HostHealthTracker's cold-start
+   *  behavior byte-for-byte unchanged. */
+  hostWeightedLoads?: ReadonlyMap<string, number>
+  /** Debug/steam-install-slow-start (cycle 6): CDN auth token cache, created
+   *  in downloadSteamDepots (where the authenticated client is available —
+   *  this loop stays decoupled from the SteamUser client for testability,
+   *  same discipline as `hosts` above) and threaded down to every fetchChunk
+   *  call. Optional — omitting it (every pre-cycle-6 caller/test) leaves
+   *  every chunk/manifest URL byte-for-byte unchanged (no token appended). */
+  cdnAuth?: CdnAuthTokenCache
+  /** Debug/steam-install-slow-start (cycle 7): per-host `https_support`/
+   *  `usetokenauth` directory metadata (see depot/decompress.ts's
+   *  `ContentServerHostMeta`), threaded down to every fetchChunk call for
+   *  EXACT steam-user URL-scheme/token parity. Optional — omitting it
+   *  (every pre-cycle-7 caller/test) leaves fetchChunk's URL byte-for-byte
+   *  unchanged (hardcoded https://, no token). */
+  hostMeta?: ReadonlyMap<string, ContentServerHostMeta>
   signal?: AbortSignal
 }
 
@@ -769,7 +837,14 @@ export function canWriteFullOwnership(opts: {
  * Chunks can land in any order — each is an independent positional
  * write, so cross-server retry (Plan 01 fetchChunk) stays safe as-is.
  */
-async function downloadFileChunks(
+/**
+ * Exported (cycle 7) so its re-queue/stall give-up behavior is directly
+ * unit-testable without going through the full downloadDepotFiles/
+ * downloadSteamDepots stack — mirrors this module's existing precedent of
+ * exporting internal helpers (resolveContainedPath, sha1File,
+ * canWriteFullOwnership) purely for test surface, not for external callers.
+ */
+export async function downloadFileChunks(
   fd: FileHandle,
   depotId: string,
   key: Buffer,
@@ -779,7 +854,34 @@ async function downloadFileChunks(
   fileSeed: number,
   signal: AbortSignal | undefined,
   onBytes: (diskBytes: number, netBytes: number) => void,
-  decode?: DecodeFn
+  decode?: DecodeFn,
+  /** Debug/steam-install-slow-start (cycle 2): forwarded to every fetchChunk
+   *  call so the caller can aggregate per-host attempt/timeout/error stats
+   *  across the whole file — optional, additive, no behavior change. */
+  onAttempt?: OnChunkAttempt,
+  /** Debug/steam-install-slow-start (cycle 3): shared, per-DOWNLOAD-RUN
+   *  health-aware host selector — see depot/hostHealth.ts. Optional,
+   *  additive: omitting it (no existing caller/test does) leaves fetchChunk's
+   *  plain round-robin selection unchanged. */
+  hostHealth?: HostHealthTracker,
+  /** Debug/steam-install-slow-start (cycle 6): shared, per-DOWNLOAD-RUN CDN
+   *  auth token cache — see depot/cdnAuth.ts. Optional, additive: omitting it
+   *  leaves fetchChunk's URL unchanged (no token appended). */
+  cdnAuth?: CdnAuthTokenCache,
+  /** Debug/steam-install-slow-start (cycle 7): per-host https_support/
+   *  usetokenauth directory metadata — see depot/decompress.ts's
+   *  ContentServerHostMeta. Optional, additive. */
+  hostMeta?: ReadonlyMap<string, ContentServerHostMeta>,
+  /** Debug/steam-install-slow-start (cycle 7): shared, per-DOWNLOAD-RUN
+   *  forward-progress clock — see depot/stallTracker.ts. When supplied, a
+   *  chunk that exhausts fetchChunk's CHUNK_FETCH_ATTEMPTS budget is
+   *  RE-QUEUED (retried again later by whichever worker picks it up next)
+   *  instead of aborting this whole file, UNLESS the run has genuinely
+   *  stalled (no forward progress anywhere for STALL_TIMEOUT_MS) — in which
+   *  case it is a real, honest failure. Omitting it (every pre-cycle-7
+   *  caller/test) preserves the EXACT pre-cycle-7 behavior: a chunk
+   *  exhausting its attempts immediately fails this file. */
+  stallTracker?: StallTracker
 ): Promise<void> {
   const queue = [...file.chunks]
   const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
@@ -802,22 +904,57 @@ async function downloadFileChunks(
         // netBytes = compressed bytes actually fetched over the wire (for the
         // download rate); data.length = decompressed bytes written to disk.
         let netBytes = 0
-        const data = await fetchChunk(
-          hosts,
-          depotId,
-          depotChunk,
-          key,
-          lzma,
-          4,
-          decode,
-          (n) => {
-            netBytes = n
-          }
-        )
-        if (signal?.aborted) return
+        try {
+          const data = await fetchChunk(
+            hosts,
+            depotId,
+            depotChunk,
+            key,
+            lzma,
+            CHUNK_FETCH_ATTEMPTS,
+            decode,
+            (n) => {
+              netBytes = n
+            },
+            onAttempt,
+            hostHealth,
+            cdnAuth,
+            hostMeta
+          )
+          if (signal?.aborted) return
 
-        await fd.write(data, 0, data.length, Number(chunk.offset))
-        onBytes(data.length, netBytes)
+          await fd.write(data, 0, data.length, Number(chunk.offset))
+          onBytes(data.length, netBytes)
+          // Debug/steam-install-slow-start (cycle 7): resets the WHOLE-RUN
+          // stall clock — this file's forward progress counts as forward
+          // progress for every OTHER file/worker in this download run too
+          // (host health, like forward progress, is a property of the run,
+          // never of a single file).
+          stallTracker?.recordProgress()
+        } catch (err) {
+          if (signal?.aborted) return
+          // Debug/steam-install-slow-start (cycle 7, PART 3): a chunk
+          // exhausting its local CHUNK_FETCH_ATTEMPTS budget must NOT abort
+          // this whole FILE — re-queue it for another pass rather than
+          // letting the throw propagate out of this Promise.all and kill
+          // every other in-flight chunk-worker for this file, UNLESS the
+          // download run has genuinely stalled (no forward progress
+          // anywhere for STALL_TIMEOUT_MS), in which case this is a real,
+          // honest failure — never an unbounded retry loop. Omitting
+          // stallTracker (every pre-cycle-7 caller/test) rethrows
+          // immediately, preserving the exact pre-cycle-7 behavior.
+          if (stallTracker && !stallTracker.hasStalled()) {
+            queue.push(chunk)
+            continue
+          }
+          if (stallTracker) {
+            throw new Error(
+              `${(err as Error).message} (download stalled: no forward progress for ` +
+                `${stallTracker.msSinceProgress()}ms across the whole run)`
+            )
+          }
+          throw err
+        }
       }
     })
   )
@@ -841,7 +978,22 @@ async function downloadSingleFile(
   fileSeed: number,
   signal: AbortSignal | undefined,
   onBytes: (diskBytes: number, netBytes: number) => void,
-  decode?: DecodeFn
+  decode?: DecodeFn,
+  /** Debug/steam-install-slow-start (cycle 2): forwarded to downloadFileChunks
+   *  — optional, additive, no behavior change. */
+  onAttempt?: OnChunkAttempt,
+  /** Debug/steam-install-slow-start (cycle 3): forwarded to downloadFileChunks
+   *  — see depot/hostHealth.ts. Optional, additive. */
+  hostHealth?: HostHealthTracker,
+  /** Debug/steam-install-slow-start (cycle 6): forwarded to downloadFileChunks
+   *  — see depot/cdnAuth.ts. Optional, additive. */
+  cdnAuth?: CdnAuthTokenCache,
+  /** Debug/steam-install-slow-start (cycle 7): forwarded to downloadFileChunks
+   *  — see depot/decompress.ts's ContentServerHostMeta. Optional, additive. */
+  hostMeta?: ReadonlyMap<string, ContentServerHostMeta>,
+  /** Debug/steam-install-slow-start (cycle 7): forwarded to downloadFileChunks
+   *  — see depot/stallTracker.ts. Optional, additive. */
+  stallTracker?: StallTracker
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
@@ -904,7 +1056,23 @@ async function downloadSingleFile(
   const fd = await open(dest, 'w')
   try {
     await fd.truncate(Number(file.size))
-    await downloadFileChunks(fd, depotId, key, hosts, lzma, file, fileSeed, signal, onBytes, decode)
+    await downloadFileChunks(
+      fd,
+      depotId,
+      key,
+      hosts,
+      lzma,
+      file,
+      fileSeed,
+      signal,
+      onBytes,
+      decode,
+      onAttempt,
+      hostHealth,
+      cdnAuth,
+      hostMeta,
+      stallTracker
+    )
   } finally {
     await fd.close()
   }
@@ -1103,6 +1271,110 @@ export async function downloadDepotFiles(
     let lastDiskSpeed = 0 // MiB/s
     const tStart = Date.now()
 
+    // Debug/steam-install-slow-start (cycle 3): ONE tracker for this whole
+    // download run, shared across every file/depot — host health is a
+    // property of the RUN (which content-server edges are currently good),
+    // never per-file. See depot/hostHealth.ts for the root-cause writeup and
+    // scoring/blacklist mechanics. Cycle 5: seeded with the directory's own
+    // weightedload ranking (opts.hostWeightedLoads) so cold-start selection
+    // favors the local, low-weightedload edges immediately.
+    const hostHealth = new HostHealthTracker(opts.hostWeightedLoads)
+
+    // Debug/steam-install-slow-start (cycle 7): ONE forward-progress clock
+    // for this whole download run, shared across every file/depot — see
+    // depot/stallTracker.ts. Lets downloadFileChunks re-queue an exhausted
+    // chunk instead of aborting its whole file, as long as the run overall
+    // keeps making progress; only a genuine, sustained run-wide stall gives
+    // up honestly.
+    const stallTracker = new StallTracker()
+
+    // Debug/steam-install-slow-start (cycle 2): the chunk-fetch retry/rotation/
+    // timeout path was previously completely invisible in the dev log — this
+    // block makes it observable without changing any retry/backoff/rotation
+    // behavior (fetchChunk's onAttempt hook is purely a reporting callback).
+    // Aggregated PER HOST (not per-chunk — a multi-thousand-chunk install would
+    // flood the log) and flushed periodically via the existing heartbeat below.
+    interface HostStat {
+      attempts: number
+      successes: number
+      timeouts: number
+      errors: number
+      totalMs: number
+    }
+    const hostStats = new Map<string, HostStat>()
+    let totalAttempts = 0
+    let totalRotations = 0 // attempt index > 0 -- a chunk that needed >1 host
+    let totalTimeouts = 0
+    let firstByteMs: number | undefined
+    const onAttempt: OnChunkAttempt = (ev) => {
+      totalAttempts++
+      if (ev.attempt > 0) totalRotations++
+      if (ev.outcome === 'timeout') totalTimeouts++
+      const stat = hostStats.get(ev.host) ?? {
+        attempts: 0,
+        successes: 0,
+        timeouts: 0,
+        errors: 0,
+        totalMs: 0
+      }
+      stat.attempts++
+      stat.totalMs += ev.ms
+      if (ev.outcome === 'success') stat.successes++
+      else if (ev.outcome === 'timeout') stat.timeouts++
+      else stat.errors++
+      hostStats.set(ev.host, stat)
+    }
+
+    // Ranks hosts worst-first (timeouts+errors desc) and caps the line length —
+    // a large install can resolve dozens of content-server hosts, and logging
+    // every one every ~15s would itself become log noise.
+    const logChunkStreamStats = () => {
+      const elapsedSec = Math.round((Date.now() - tStart) / 1000)
+      const percent = totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0
+      // Debug/steam-install-slow-start (cycle 3): tags each host with the
+      // hostHealth tracker's own live unhealthy/healthy verdict — lets a
+      // hardware reproduction confirm the scoring/blacklist logic is actually
+      // deprioritizing the same hosts the raw a/ok/to/err counts suggest are
+      // bad, without having to cross-reference two separate systems by hand.
+      const worst = Array.from(hostStats.entries())
+        .map(([host, s]) => ({
+          host,
+          ...s,
+          avgMs: s.attempts ? Math.round(s.totalMs / s.attempts) : 0,
+          unhealthy: hostHealth.snapshot(host).unhealthy,
+          // Debug/steam-install-slow-start (cycle 5): the directory's own
+          // weightedload for this host, when known — lets a hardware
+          // reproduction directly confirm the low-weightedload local caches
+          // are absorbing the attempts and the high-weightedload (130) CDN
+          // fallbacks are receiving little/none, per the fix directive.
+          weightedload: opts.hostWeightedLoads?.get(host),
+          // Debug/steam-install-slow-start (cycle 7): the scheme this host is
+          // actually being requested over (mandatory-https vs http) + whether
+          // it's a usetokenauth server — lets a hardware reproduction confirm
+          // alibaba (https_support='unavailable') is now requested over http,
+          // and that NO host is quietly triggering a token fetch.
+          scheme: opts.hostMeta?.get(host)?.httpsSupport === 'mandatory' ? 'https' : 'http',
+          usetokenauth: !!opts.hostMeta?.get(host)?.usetokenauth
+        }))
+        .sort((a, b) => b.timeouts + b.errors - (a.timeouts + a.errors))
+        .slice(0, 6)
+        .map(
+          (s) =>
+            `${s.host}[a=${s.attempts} ok=${s.successes} to=${s.timeouts} err=${s.errors} ` +
+            `avgMs=${s.avgMs}${s.weightedload !== undefined ? ` wl=${s.weightedload}` : ''} ` +
+            `scheme=${s.scheme}${s.usetokenauth ? ' usetokenauth' : ''}` +
+            `${s.unhealthy ? ' UNHEALTHY' : ''}]`
+        )
+        .join(' ')
+      logInfo(
+        `[Timing] chunk-stream stats @${elapsedSec}s: percent=${percent}% ` +
+          `downSpeedMiBs=${lastDownSpeed.toFixed(2)} diskSpeedMiBs=${lastDiskSpeed.toFixed(2)} ` +
+          `totalAttempts=${totalAttempts} rotations=${totalRotations} timeouts=${totalTimeouts} ` +
+          `hosts=${hostStats.size} worstHosts=[${worst}]`,
+        LogPrefix.Steam
+      )
+    }
+
     const emitProgress = (force: boolean) => {
       const percentDelta = totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
       const timeDelta = Date.now() - lastEmitTime
@@ -1161,7 +1433,21 @@ export async function downloadDepotFiles(
     // completions bunch up. Started just before the worker fan-out and cleared
     // in the finally below on BOTH normal completion and throw/abort -- never
     // leaks a dangling interval past this Promise.all's own lifetime.
-    const heartbeat = setInterval(() => emitProgress(true), PROGRESS_HEARTBEAT_MS)
+    //
+    // Debug/steam-install-slow-start (cycle 2): also flushes the chunk-stream
+    // stats log every STATS_LOG_EVERY_TICKS ticks (~15s at the 1s heartbeat
+    // cadence) -- deliberately reuses this SAME interval rather than starting a
+    // second one, preserving the existing "exactly one setInterval" test
+    // contract (depot.test.ts's heartbeat-cadence test).
+    const STATS_LOG_EVERY_TICKS = 15
+    let heartbeatTicks = 0
+    const heartbeat = setInterval(() => {
+      emitProgress(true)
+      heartbeatTicks++
+      if (heartbeatTicks % STATS_LOG_EVERY_TICKS === 0) {
+        logChunkStreamStats()
+      }
+    }, PROGRESS_HEARTBEAT_MS)
     try {
       await Promise.all(
         Array.from({ length: workerCount }, async () => {
@@ -1181,11 +1467,30 @@ export async function downloadDepotFiles(
                 job.fileSeed,
                 opts.signal,
                 (disk, net) => {
+                  // Debug/steam-install-slow-start (cycle 2): time from the
+                  // start of this streaming phase (tStart, set right before the
+                  // heartbeat/worker fan-out) to the very FIRST decompressed
+                  // byte landing on disk -- explains the reported "long lag
+                  // before it initiated" independently of buildDepotPlan's
+                  // already-measured ~3.5s (which ends before this phase
+                  // starts).
+                  if (firstByteMs === undefined && disk > 0) {
+                    firstByteMs = Date.now() - tStart
+                    logInfo(
+                      `[Timing] downloadDepotFiles: first bytes written after ${firstByteMs}ms`,
+                      LogPrefix.Steam
+                    )
+                  }
                   doneBytes += disk
                   netBytes += net
                   emitProgress(false)
                 },
-                pool.decode
+                pool.decode,
+                onAttempt,
+                hostHealth,
+                opts.cdnAuth,
+                opts.hostMeta,
+                stallTracker
               )
             } catch (err) {
               failures.push({ file: job.file.filename, error: (err as Error).message })
@@ -1198,6 +1503,14 @@ export async function downloadDepotFiles(
     }
 
     emitProgress(true)
+    // Debug/steam-install-slow-start (cycle 2): always log a final stats
+    // snapshot regardless of where heartbeatTicks landed relative to
+    // STATS_LOG_EVERY_TICKS, so a short run (or one that fails before the
+    // first periodic flush) still leaves a stats line in the log — total
+    // attempts/timeouts/rotations are always meaningful even at totalBytes=0.
+    if (totalAttempts > 0) {
+      logChunkStreamStats()
+    }
 
     // Phase 23 (23-02, D-01): a job left in `queue` means the run aborted
     // before every planned file was even attempted — never "verified".
@@ -1354,27 +1667,152 @@ export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts):
   })
 }
 
+/** Raw per-server shape client.getContentServers resolves with — the full
+ *  field set steam-user's cdn.js actually returns (confirmed by reading
+ *  source, widened in diagnostic cycle 4 from a Host/vhost-only declaration).
+ *  `usetokenauth` added cycle 7 (steam-install-slow-start): steam-user's own
+ *  cdn.js `getContentServers` reduction has this field HARD-CODED commented
+ *  out (`//usetokenauth: '1'`) in the installed steam-user@5.3.0 source — so
+ *  in practice it is always absent/undefined from every real directory
+ *  response observed so far — but is declared as a real field (not assumed
+ *  always-false) so a future steam-user version that DOES populate it is
+ *  honored automatically by `reduceContentServers`'s `usetokenauth === 1`
+ *  check below, matching steam-user's own `contentServer.usetokenauth == 1`
+ *  gate exactly.
+ *  Named + exported so `reduceContentServers` below is directly testable
+ *  against fixture data without a live CM round-trip. */
+export interface RawContentServer {
+  Host?: string
+  vhost?: string
+  type?: string
+  sourceid?: number
+  cell?: number
+  // Debug/steam-install-slow-start (cycle 8): the directory's REAL response
+  // returns `load`/`weightedload` as STRINGS (confirmed via the cycle-4/5
+  // RAW JSON dump, e.g. `"weightedload": "130"`), not numbers — widened from
+  // `number` to `number | string` to match what steam-user's cdn.js actually
+  // hands back. `reduceContentServers` below coerces via `Number(...)`
+  // (NaN-guarded) before storing into `weightedLoads`.
+  load?: number | string
+  weightedload?: number | string
+  preferred_server?: boolean
+  NumEntriesInClientList?: number
+  https_support?: string
+  usetokenauth?: number
+  allowed_app_ids?: number[]
+}
+
 /**
- * Content-server hostnames for chunk download (Plan 05's downloadDepotFiles
- * `hosts` param) — steam-user's getContentServers is undocumented in
- * @types/steam-user (Pitfall 5), same discipline as getDepotDecryptionKey/
- * getRawManifest above.
+ * Debug/steam-install-slow-start (cycle 5): pure reduction of the raw
+ * directory response into (a) the flat hostname list downloadDepotFiles has
+ * always consumed, (b) a hostname -> weightedload PARALLEL MAP —
+ * threading through the directory's own load-based ranking (cycle-4 lead
+ * (a): the exact field this reduction previously discarded via
+ * `servers.map((s) => s.Host ?? s.vhost)`) so HostHealthTracker can seed its
+ * cold-start PRIOR from it (depot/hostHealth.ts), and (c, cycle 7) a
+ * hostname -> ContentServerHostMeta PARALLEL MAP carrying `https_support`/
+ * `usetokenauth` so fetchChunk can build the URL with EXACT steam-user
+ * parity (depot/decompress.ts). A server missing/invalid `weightedload` is
+ * simply omitted from that map (not defaulted to a synthetic worst-case
+ * value) — HostHealthTracker treats an absent entry as "no prior signal",
+ * falling through to its pre-cycle-5 neutral behavior for that host, never
+ * inventing a ranking the directory didn't actually supply. Extracted as a
+ * standalone pure function (no client/network dependency) so this mapping
+ * is directly unit-testable.
+ */
+export function reduceContentServers(servers: RawContentServer[]): {
+  hosts: string[]
+  weightedLoads: Map<string, number>
+  hostMeta: Map<string, ContentServerHostMeta>
+} {
+  const hosts: string[] = []
+  const weightedLoads = new Map<string, number>()
+  const hostMeta = new Map<string, ContentServerHostMeta>()
+  for (const s of servers) {
+    const host = s.Host ?? s.vhost
+    if (!host) continue
+    hosts.push(host)
+    // Debug/steam-install-slow-start (cycle 8): the directory returns
+    // `weightedload` as a STRING on real responses (e.g. "130"), not a
+    // number — the pre-cycle-8 `typeof s.weightedload === 'number'` guard
+    // silently dropped every real-world entry, leaving `weightedLoads`
+    // permanently empty (`[Timing] ... weightedLoads=0` for every hardware
+    // run) and making the weightedload-aware selection (cycle 5) inert.
+    // Coerce via `Number(...)` regardless of the source type, still
+    // NaN-guarded so a missing/malformed value is omitted (never defaulted
+    // to a synthetic worst-case ranking) rather than stored as `NaN`.
+    if (s.weightedload !== undefined && s.weightedload !== null) {
+      const numWeightedload = Number(s.weightedload)
+      if (Number.isFinite(numWeightedload)) {
+        weightedLoads.set(host, numWeightedload)
+      }
+    }
+    // Cycle 7: `usetokenauth === 1` mirrors steam-user's OWN
+    // `contentServer.usetokenauth == 1` gate exactly (cdn.js's downloadChunk)
+    // — never a loose truthy check, so a stray non-1 value never
+    // accidentally turns on token fetching for a server that didn't ask.
+    hostMeta.set(host, {
+      httpsSupport: s.https_support,
+      usetokenauth: s.usetokenauth === 1
+    })
+  }
+  return { hosts, weightedLoads, hostMeta }
+}
+
+/**
+ * Content-server hostnames (+ weightedload ranking, cycle 5; + per-host
+ * https_support/usetokenauth metadata, cycle 7) for chunk download (Plan
+ * 05's downloadDepotFiles `hosts`/`hostWeightedLoads`/`hostMeta` params) —
+ * steam-user's getContentServers is undocumented in @types/steam-user
+ * (Pitfall 5), same discipline as getDepotDecryptionKey/getRawManifest above.
  */
 async function getContentServerHosts(
   client: SteamUserDepotClient,
   numericAppId: number
-): Promise<string[]> {
-  const servers = await new Promise<Array<{ Host?: string; vhost?: string }>>(
-    (resolvePromise, reject) => {
-      client.getContentServers(numericAppId, (err, s) => (err ? reject(err) : resolvePromise(s)))
-    }
+): Promise<{
+  hosts: string[]
+  weightedLoads: Map<string, number>
+  hostMeta: Map<string, ContentServerHostMeta>
+}> {
+  // [Timing] debug/steam-install-slow-start: this is a live client.getContentServers
+  // CM round-trip that runs AFTER buildDepotPlan (already fully instrumented) and
+  // BEFORE downloadDepotFiles's first byte — previously unmeasured, and a candidate
+  // for the "stuck at 0%" gap the buildDepotPlan-only timing couldn't account for.
+  const start = Date.now()
+  const servers = await new Promise<RawContentServer[]>((resolvePromise, reject) => {
+    client.getContentServers(numericAppId, (err, s) => (err ? reject(err) : resolvePromise(s)))
+  })
+  // [Timing] debug/steam-install-slow-start diagnostic lead (a) — ONE-TIME raw
+  // dump of the directory response BEFORE we reduce it below. Kept (cycle 5):
+  // this is exactly how the cycle-4 capture that motivated this cycle's
+  // weightedload-aware selection was read, and remains the fastest way to
+  // confirm/deny the directory's ranking on the next hardware run.
+  logInfo(
+    `[Timing] getContentServerHosts RAW for appId ${numericAppId}: ${JSON.stringify(servers)}`,
+    LogPrefix.Steam
   )
-  const hosts = servers.map((s) => s.Host ?? s.vhost).filter((h): h is string => Boolean(h))
+  const { hosts, weightedLoads, hostMeta } = reduceContentServers(servers)
+  logInfo(
+    `[Timing] getContentServerHosts: getContentServers for appId ${numericAppId} took ` +
+      `${Date.now() - start}ms, hosts=${hosts.length}, weightedLoads=${weightedLoads.size}`,
+    LogPrefix.Steam
+  )
   if (!hosts.length) {
     throw new Error('downloadSteamDepots: no content servers available')
   }
-  return hosts
+  return { hosts, weightedLoads, hostMeta }
 }
+
+// Debug/steam-install-slow-start: cycle 2 tried a periodic (3min)
+// getContentServers re-fetch that spliced a fresh host list in place,
+// hypothesizing that individual degrading/rate-limited edges could be
+// dropped by re-resolving the pool. DISPROVEN by the cycle-3 hardware
+// reproduction with per-host stats instrumentation: Steam returned the
+// IDENTICAL 6-host list every refresh for the whole run ("replaced host list
+// (6 -> 6)", same hostnames) — the CDN assigns a fixed edge set per
+// app/region and re-resolving it changes nothing. REPLACED (cycle 3) by
+// depot/hostHealth.ts's health-aware selection below, which works WITHIN the
+// same fixed host pool instead of trying to refresh it away.
 
 export interface DepotDownloadOutcome {
   status: 'done' | 'error' | 'cancelled'
@@ -1444,13 +1882,37 @@ export async function downloadSteamDepots(
     }
 
     const client = getDepotClient()
-    const hosts = await getContentServerHosts(client, Number(appId))
+    const {
+      hosts,
+      weightedLoads: hostWeightedLoads,
+      hostMeta
+    } = await getContentServerHosts(client, Number(appId))
     throwIfAborted(opts.signal)
 
+    // Debug/steam-install-slow-start: cycle 2's periodic host-list refresh
+    // (disproven — see the comment above getContentServerHosts) is REPLACED
+    // by health-aware selection WITHIN this fixed host list, applied inside
+    // downloadDepotFiles via its own HostHealthTracker (depot/hostHealth.ts).
+    // Cycle 5: hostWeightedLoads threads the directory's own load-based
+    // ranking (cycle-4 lead (a)) into that tracker's cold-start PRIOR.
+    // Cycle 6: one CdnAuthTokenCache per download run — created here (where
+    // the authenticated `client` is available) and threaded through
+    // downloadDepotFiles the same way hosts/hostWeightedLoads already are, so
+    // fetchChunk's chunk URLs CAN carry a real per-depot+host CDN auth
+    // token (see depot/cdnAuth.ts). Cycle 7: gated strictly behind
+    // `hostMeta`'s per-host `usetokenauth` flag inside fetchChunk itself —
+    // cycle 6's unconditional fetch is DISPROVEN (see depot/decompress.ts's
+    // fetchChunk doc comment); in practice this cache stays dormant.
+    // hostMeta also threads https_support so fetchChunk can build the exact
+    // steam-user URL scheme per host (unlocks http-only edges like alibaba).
+    const cdnAuth = new CdnAuthTokenCache(client, Number(appId))
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: opts.targetSteamappsDir,
       installdir: opts.installdir,
       hosts,
+      hostWeightedLoads,
+      cdnAuth,
+      hostMeta,
       signal: opts.signal
     })
     lastResult = result

@@ -8,6 +8,7 @@ import * as lzma from 'lzma'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
+  logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
 
@@ -15,6 +16,8 @@ import { logInfo } from 'backend/logger'
 
 import { steamDecrypt, decryptFilename } from '../depot/crypto'
 import { decompressChunk, sha1, fetchChunk } from '../depot/decompress'
+import { HostHealthTracker } from '../depot/hostHealth'
+import { CdnAuthTokenCache, type CDNAuthTokenClient } from '../depot/cdnAuth'
 import { selectAllDepots, selectDepots, type OwnedSets } from '../depot/select'
 
 // ── Test helpers ─────────────────────────────────────────────────────────
@@ -192,6 +195,548 @@ describe('decompress', () => {
       const chunk = { sha: expectedSha, cb_original: data.length }
       const out = await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
       expect(out.equals(data)).toBe(true)
+    })
+
+    // Debug/steam-install-slow-start (cycle 3): host-scoring / health-aware
+    // selection. Omitting `hostHealth` (the two tests above, and every caller
+    // that predates this cycle) leaves fetchChunk's plain round-robin
+    // completely unchanged — these tests target the NEW behavior only
+    // reachable when a HostHealthTracker is explicitly supplied.
+    describe('with a HostHealthTracker (cycle 3)', () => {
+      it('a persistently-failing host is skipped in favor of a healthy one, and the chunk succeeds instead of exhausting attempts', async () => {
+        const data = Buffer.from('verifies correctly, from the good host', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const badHost = hosts[0]
+        const goodHost = hosts[1]
+
+        global.fetch = jest.fn((url: unknown) => {
+          const urlStr = String(url)
+          const host = urlStr.split('/')[2]
+          if (host === badHost) {
+            return Promise.reject(new Error('ECONNRESET'))
+          }
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const hostHealth = new HostHealthTracker()
+        // Pre-poison badHost with a consecutive-failure streak, exactly as a
+        // real multi-chunk stream would accumulate it over many prior chunks
+        // against the same host — this is the scenario the definitive
+        // diagnosis captured (a 0%-success host still receiving an equal
+        // share of attempts under plain round-robin).
+        for (let i = 0; i < 5; i++) hostHealth.record(badHost, 'error', 50)
+
+        const chunk = { sha: expectedSha, cb_original: data.length, attemptSeed: 0 }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          hostHealth
+        )
+
+        expect(out.equals(data)).toBe(true)
+        // badHost (seed=0 would normally be attempt 0's pick) must have been
+        // skipped entirely in favor of the healthy goodHost.
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        const calledUrl = String((global.fetch as jest.Mock).mock.calls[0][0])
+        expect(calledUrl).toContain(goodHost)
+        expect(calledUrl).not.toContain(badHost)
+      })
+
+      it('records a success/error outcome for every attempt via hostHealth.record, matching what the tracker itself would report', async () => {
+        const data = Buffer.from('never verifies, tracked attempts', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const hostHealth = new HostHealthTracker()
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: data.length,
+          attemptSeed: 0
+        }
+
+        await expect(
+          fetchChunk(hosts, depotId, chunk, key, lzma, 4, undefined, undefined, undefined, hostHealth)
+        ).rejects.toThrow(/failed after 4 attempts/)
+
+        // Every one of the 4 attempts (SHA1 never matches -> always 'error')
+        // must have been recorded against SOME host in the pool, attempts
+        // summing to 4 across the tracker.
+        const totalRecorded = hosts.reduce(
+          (sum, host) => sum + hostHealth.snapshot(host).attempts,
+          0
+        )
+        expect(totalRecorded).toBe(4)
+      })
+    })
+
+    // Debug/steam-install-slow-start (cycle 6, gating REVERTED+FIXED cycle
+    // 7): cycle 6 fetched a token whenever `cdnAuth` was merely supplied —
+    // DISPROVEN by the cycle-6 hardware run (steam-user's own downloadChunk
+    // only requests a token `if usetokenauth == 1`; every real host observed
+    // never sets it, so the unconditional fetch blocked every chunk behind a
+    // 10s CM timeout). Cycle 7: a token is fetched ONLY when a `hostMeta`
+    // entry for that exact host explicitly marks `usetokenauth: true`.
+    // Omitting `cdnAuth`/`hostMeta` entirely (every test above, and every
+    // caller that predates cycle 6) leaves the request URL byte-for-byte
+    // unchanged.
+    describe('with a CdnAuthTokenCache (cycle 6, usetokenauth-gated — cycle 7)', () => {
+      function makeFakeCdnClient(token = '?real-cdn-token'): {
+        client: CDNAuthTokenClient
+        calls: Array<{ depotId: number; hostname: string }>
+      } {
+        const calls: Array<{ depotId: number; hostname: string }> = []
+        const client: CDNAuthTokenClient = {
+          getCDNAuthToken: jest.fn((_appId, depotId, hostname, callback) => {
+            calls.push({ depotId, hostname })
+            callback(null, { token, expires: new Date(Date.now() + 60 * 60 * 1000) })
+          })
+        }
+        return { client, calls }
+      }
+
+      it('appends the acquired token VERBATIM to the chunk URL when hostMeta marks that host usetokenauth:true', async () => {
+        const data = Buffer.from('token-gated chunk', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const { client } = makeFakeCdnClient('?token=abc123&expires=999')
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(out.equals(data)).toBe(true)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}?token=abc123&expires=999`
+        )
+      })
+
+      it('debug/steam-install-slow-start (cycle 7, PART 1 REVERT REGRESSION GUARD): supplying cdnAuth ALONE, with NO hostMeta at all, never calls getCDNAuthToken and never appends a token — cycle 6\'s unconditional fetch must stay reverted', async () => {
+        const data = Buffer.from('no hostMeta at all', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const { client, calls } = makeFakeCdnClient()
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        // cdnAuth supplied, hostMeta OMITTED entirely.
+        await fetchChunk(hosts, depotId, chunk, key, lzma, 4, undefined, undefined, undefined, undefined, cdnAuth)
+
+        expect(calls).toHaveLength(0)
+        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+      })
+
+      it('debug/steam-install-slow-start (cycle 7, PART 1 REVERT REGRESSION GUARD): a hostMeta entry present but usetokenauth false/absent never calls getCDNAuthToken either', async () => {
+        const data = Buffer.from('hostMeta present but not usetokenauth', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const { client, calls } = makeFakeCdnClient()
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        // Real-world shape: every SteamCache host reduceContentServers has
+        // ever observed has a hostMeta entry (httpsSupport known) but
+        // usetokenauth is absent/false.
+        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory' }]])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(calls).toHaveLength(0)
+        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+      })
+
+      it('fetches the token at most once per depot+host across multiple chunks — never once per chunk', async () => {
+        const data1 = Buffer.from('chunk one', 'utf8')
+        const data2 = Buffer.from('chunk two, a different one', 'utf8')
+        const encrypted1 = await buildEncryptedChunkResponse(data1)
+        const encrypted2 = await buildEncryptedChunkResponse(data2)
+        const { client, calls } = makeFakeCdnClient()
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const hostMeta = new Map([[hosts[0], { usetokenauth: true }]])
+
+        global.fetch = jest.fn((url: unknown) => {
+          const urlStr = String(url)
+          const encrypted = urlStr.includes(sha1(data1)) ? encrypted1 : encrypted2
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        // Both chunks share attemptSeed=0 -> both attempt hosts[0] first.
+        await fetchChunk(
+          hosts,
+          depotId,
+          { sha: sha1(data1), cb_original: data1.length, attemptSeed: 0 },
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+        await fetchChunk(
+          hosts,
+          depotId,
+          { sha: sha1(data2), cb_original: data2.length, attemptSeed: 0 },
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        // Same depotId + same first-attempt host across both chunks -> ONE
+        // token fetch, reused for the second chunk's request.
+        expect(calls).toHaveLength(1)
+      })
+
+      it('omitting cdnAuth leaves the URL with no token appended, exactly as every pre-cycle-6 call', async () => {
+        const data = Buffer.from('no token here', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
+
+        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+      })
+
+      it('a 401 response invalidates the cached token for that depot+host, so the retry re-fetches a fresh one instead of repeating the rejected token', async () => {
+        const data = Buffer.from('recovers after a 401', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        let tokenCall = 0
+        const client: CDNAuthTokenClient = {
+          getCDNAuthToken: jest.fn((_appId, _depotId, _hostname, callback) => {
+            tokenCall++
+            callback(null, {
+              token: `?token-${tokenCall}`,
+              expires: new Date(Date.now() + 60 * 60 * 1000)
+            })
+          })
+        }
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const badHost = hosts[0]
+        const hostMeta = new Map([[badHost, { usetokenauth: true }]])
+        const requestedUrls: string[] = []
+
+        global.fetch = jest.fn((url: unknown) => {
+          const urlStr = String(url)
+          requestedUrls.push(urlStr)
+          const host = urlStr.split('/')[2]
+          if (host === badHost) {
+            // The FIRST request against badHost (carrying token-1) is
+            // rejected with 401; any LATER request against badHost (carrying
+            // the re-fetched token-2) succeeds — proves invalidate()
+            // actually triggered a re-fetch rather than the retry repeating
+            // the same rejected token forever.
+            if (urlStr.includes('token-1')) {
+              return Promise.resolve({ ok: false, status: 401 } as Response)
+            }
+            return Promise.resolve({
+              ok: true,
+              arrayBuffer: () =>
+                Promise.resolve(
+                  encrypted.buffer.slice(
+                    encrypted.byteOffset,
+                    encrypted.byteOffset + encrypted.byteLength
+                  )
+                )
+            } as Response)
+          }
+          // Every OTHER host always fails (plain network error, no token
+          // involved) — forces the round-robin to wrap back around to
+          // badHost within the attempt budget, so this test actually
+          // exercises a SECOND visit to badHost rather than succeeding on
+          // some other host first.
+          return Promise.reject(new Error('CDN 500'))
+        }) as unknown as typeof fetch
+
+        // attemptSeed=0, 4 hosts, attempts=hosts.length+1=5: attempt 0 hits
+        // hosts[0] (badHost, token-1, rejected+invalidated), attempts 1-3
+        // hit hosts[1..3] (always fail), attempt 4 wraps back to hosts[0]
+        // (badHost) — this time with a freshly-fetched token-2, which
+        // succeeds.
+        const chunk = { sha: expectedSha, cb_original: data.length, attemptSeed: 0 }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          hosts.length + 1,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(out.equals(data)).toBe(true)
+        // tokenCall is a single counter shared across every depot+host key
+        // this test fetches (badHost twice, plus one each for hosts[1..3]),
+        // so the badHost's SECOND token is not literally "token-2" — assert
+        // on the property that actually matters: invalidate() forced a
+        // DIFFERENT, freshly-fetched token for badHost's second visit,
+        // rather than repeating the rejected token-1.
+        const badHostRequests = requestedUrls.filter((u) => u.includes(badHost))
+        expect(badHostRequests).toHaveLength(2)
+        expect(badHostRequests[0]).toContain('token-1')
+        expect(badHostRequests[1]).not.toContain('token-1')
+        expect(badHostRequests[1]).not.toBe(badHostRequests[0])
+      }, 15000)
+
+      it('a token-fetch failure (for a usetokenauth host) degrades to a token-less request for that attempt, rather than aborting the chunk fetch', async () => {
+        const data = Buffer.from('degrades gracefully', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const client: CDNAuthTokenClient = {
+          getCDNAuthToken: jest.fn((_appId, _depotId, _hostname, callback) => {
+            callback(new Error('ClientGetCDNAuthToken: transient failure'))
+          })
+        }
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(out.equals(data)).toBe(true)
+        expect(client.getCDNAuthToken).toHaveBeenCalled()
+        // No token appended — the fetch still succeeded because this fixture
+        // host doesn't actually require one, exactly like a real SteamCache
+        // local edge would.
+        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+      })
+    })
+
+    // Debug/steam-install-slow-start (cycle 7): EXACT steam-user URL-scheme
+    // parity (node_modules/steam-user/components/cdn.js's own downloadChunk)
+    // -- only https_support === 'mandatory' selects https; everything else
+    // (including 'unavailable', the real cycle-5 hardware diagnosis's
+    // alibaba.cdn.steampipe.steamcontent.com) selects http. Omitting
+    // hostMeta (every pre-cycle-7 caller/test above) keeps the original
+    // hardcoded https://.
+    describe('URL scheme parity via hostMeta (cycle 7)', () => {
+      async function fetchOneChunkAndCaptureUrl(
+        hostMeta?: ReadonlyMap<string, { httpsSupport?: string; usetokenauth?: boolean }>
+      ): Promise<string> {
+        const data = Buffer.from('scheme-parity chunk', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          hostMeta
+        )
+        return requestedUrl
+      }
+
+      it('https_support: "mandatory" selects https://', async () => {
+        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory' }]])
+        const url = await fetchOneChunkAndCaptureUrl(hostMeta)
+        expect(url).toMatch(/^https:\/\//)
+      })
+
+      it('https_support: "unavailable" (the real alibaba.cdn.steampipe.steamcontent.com value) selects http:// — unlocking an HTTP-only content server the pre-cycle-7 hardcoded https:// call could never reach', async () => {
+        const hostMeta = new Map([[hosts[0], { httpsSupport: 'unavailable' }]])
+        const url = await fetchOneChunkAndCaptureUrl(hostMeta)
+        expect(url).toMatch(/^http:\/\//)
+      })
+
+      it('a host with NO hostMeta entry at all (present in `hosts` but missing from the map) falls back to https:// — never silently downgrades transport for a host this cycle has no data for', async () => {
+        const hostMeta = new Map([['some-other-host.example', { httpsSupport: 'unavailable' }]])
+        const url = await fetchOneChunkAndCaptureUrl(hostMeta)
+        expect(url).toMatch(/^https:\/\//)
+      })
+
+      it('omitting hostMeta entirely (every pre-cycle-7 caller/test) keeps the original hardcoded https:// — no regression', async () => {
+        const url = await fetchOneChunkAndCaptureUrl(undefined)
+        expect(url).toMatch(/^https:\/\//)
+      })
     })
   })
 })

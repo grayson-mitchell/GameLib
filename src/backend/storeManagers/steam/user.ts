@@ -240,6 +240,18 @@ export class SteamUser {
       client.once('loggedOn', async () => {
         clearTimeout(timeout)
         try {
+          // [Timing] debug/steam-install-slow-start diagnostic lead (a) —
+          // ONE-TIME log of the region info steam-user exposes post-logon.
+          // cellID drives which CDN edges getContentServers's directory call
+          // returns (confirmed: node_modules/steam-user/components/cdn.js
+          // passes {cell_id: this.cellID || 0} to GetServersForSteamPipe).
+          // We never set a cellID on logOn, so this tells us what steam-user
+          // resolved/persisted for us (or whether it's falling back to 0).
+          // Additive-only — does not change logon/connection behavior.
+          logInfo(
+            `[Timing] SteamUser.loggedOn: cellID=${client.cellID} publicIP=${client.publicIP}`,
+            LogPrefix.Steam
+          )
           if (!client.steamID) {
             resolve('Steam User')
             return

@@ -32,6 +32,7 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs'
+import { open } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logWarning } from 'backend/logger'
@@ -39,20 +40,26 @@ import {
   buildDepotPlan,
   downloadSteamDepots,
   downloadDepotFiles,
+  downloadFileChunks,
   finalizeToSteam,
   canWriteFullOwnership,
   formatEta,
   rollingRateMiBs,
   CHUNK_CONCURRENCY,
+  CHUNK_FETCH_ATTEMPTS,
   PLAN_BUILD_MAX_ATTEMPTS,
+  reduceContentServers,
   type DepotPlan,
   type DepotPlanFile,
-  type DepotDownloadFailure
+  type DepotDownloadFailure,
+  type RawContentServer
 } from '../depot'
 import { SteamUser } from '../user'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
-import { fetchChunk } from '../depot/decompress'
+import { fetchChunk, type LzmaModule } from '../depot/decompress'
+import { CdnAuthTokenCache } from '../depot/cdnAuth'
+import { StallTracker } from '../depot/stallTracker'
 import { sendFrontendMessage } from '../../../ipc'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 import { applyDepotFileFlags } from '../depot/fileAttributes'
@@ -154,6 +161,20 @@ function makeFakeClient(overrides: Record<string, unknown> = {}) {
     getContentServers: jest.fn().mockImplementation(
       (_appId: number, cb: (err: Error | null, servers: Array<{ Host?: string }>) => void) =>
         cb(null, [{ Host: 'cdn1.example.com' }])
+    ),
+    // Debug/steam-install-slow-start (cycle 6): default fake for the
+    // undocumented CDN-auth-token API — see depot/cdnAuth.ts. Not exercised
+    // by most tests here (fetchChunk itself is fully jest.mock'd in this
+    // file, so CdnAuthTokenCache.getToken is never actually invoked through
+    // the mocked fetchChunk), but present so a test can call it directly on
+    // the CdnAuthTokenCache instance downloadSteamDepots constructs.
+    getCDNAuthToken: jest.fn().mockImplementation(
+      (
+        _appId: number,
+        _depotId: number,
+        _hostname: string,
+        cb: (err: Error | null, result?: { token: string; expires: Date }) => void
+      ) => cb(null, { token: '?fake-token', expires: new Date(Date.now() + 60 * 60 * 1000) })
     ),
     ...overrides
   }
@@ -994,6 +1015,69 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(acfText).toMatch(/"111"/)
   })
 
+  it('debug/steam-install-slow-start (cycle 6): threads a REAL CdnAuthTokenCache — bound to the actual client + numeric appId — into every fetchChunk call', async () => {
+    const content = Buffer.from('game-bytes')
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: String(content.length),
+          sha_content: sha1Hex(content),
+          chunks: [{ sha: 'chunk-sha', cb_original: content.length, offset: 0 }]
+        }
+      ]
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(content)
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+    expect(result.status).toBe('done')
+
+    expect(fetchChunk).toHaveBeenCalledTimes(1)
+    // fetchChunk(hosts, depotId, chunk, key, lzma, attempts, decode,
+    // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta) — cdnAuth is
+    // the 11th positional argument (index 10); hostMeta (cycle 7) is now the
+    // 12th/last.
+    const callArgs = jest.mocked(fetchChunk).mock.calls[0]
+    const cdnAuth = callArgs[callArgs.length - 2]
+    expect(cdnAuth).toBeInstanceOf(CdnAuthTokenCache)
+
+    // Prove it's bound to the REAL client + the numeric form of the appId
+    // downloadSteamDepots was invoked with — calling getToken on it must
+    // reach fakeClient.getCDNAuthToken with appId=12345 (Number('12345')),
+    // never the string form.
+    await (cdnAuth as CdnAuthTokenCache).getToken('111', 'cdn1.example.com')
+    expect(fakeClient.getCDNAuthToken).toHaveBeenCalledWith(
+      12345,
+      111,
+      'cdn1.example.com',
+      expect.any(Function)
+    )
+
+    // Debug/steam-install-slow-start (cycle 7): the REAL, live-resolved
+    // hostMeta map (built by reduceContentServers from fakeClient's default
+    // getContentServers response — { Host: 'cdn1.example.com' }, no
+    // https_support/usetokenauth declared) is threaded too — usetokenauth
+    // defaults to false (fetchChunk must never call getCDNAuthToken for this
+    // host on its own; the call above proves the CACHE itself still works
+    // when a caller explicitly invokes getToken directly).
+    const hostMeta = callArgs[callArgs.length - 1] as Map<
+      string,
+      { httpsSupport?: string; usetokenauth?: boolean }
+    >
+    expect(hostMeta.get('cdn1.example.com')).toEqual({
+      httpsSupport: undefined,
+      usetokenauth: false
+    })
+  })
+
   it('on failure (SHA1 mismatch): finalizeToSteam is still invoked with whatever landed, and downloadSteamDepots resolves — never throws — with status error', async () => {
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
@@ -1292,6 +1376,343 @@ describe('rollingRateMiBs', () => {
 
   it('never returns a negative rate', () => {
     expect(rollingRateMiBs(-1 * MIB, 500, 3)).toBe(0)
+  })
+})
+
+// Debug/steam-install-slow-start (cycle 5): pure reduction of the raw
+// getContentServers directory response into {hosts, weightedLoads} —
+// extracted so the weightedload-threading fix is testable without a live CM
+// round-trip. See depot/hostHealth.test.ts for how weightedLoads then seeds
+// HostHealthTracker's cold-start PRIOR.
+describe('reduceContentServers', () => {
+  it('maps Host to hostname and threads a numeric weightedload into the parallel map', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'cache1-akl-tpwr.steamcontent.com', weightedload: 37 },
+      { Host: 'cache2-akl-tpwr.steamcontent.com', weightedload: 48 }
+    ]
+    const { hosts, weightedLoads } = reduceContentServers(servers)
+    expect(hosts).toEqual(['cache1-akl-tpwr.steamcontent.com', 'cache2-akl-tpwr.steamcontent.com'])
+    expect(weightedLoads.get('cache1-akl-tpwr.steamcontent.com')).toBe(37)
+    expect(weightedLoads.get('cache2-akl-tpwr.steamcontent.com')).toBe(48)
+  })
+
+  it('falls back to vhost when Host is absent', () => {
+    const servers: RawContentServer[] = [{ vhost: 'fastly.cdn.steampipe.steamcontent.com' }]
+    const { hosts } = reduceContentServers(servers)
+    expect(hosts).toEqual(['fastly.cdn.steampipe.steamcontent.com'])
+  })
+
+  it('skips a server with neither Host nor vhost, never producing an empty-string/undefined hostname', () => {
+    const servers: RawContentServer[] = [
+      { weightedload: 130 },
+      { Host: 'steampipe.akamaized.net', weightedload: 130 }
+    ]
+    const { hosts, weightedLoads } = reduceContentServers(servers)
+    expect(hosts).toEqual(['steampipe.akamaized.net'])
+    expect(weightedLoads.size).toBe(1)
+  })
+
+  it('omits a host from weightedLoads entirely when the field is missing or non-finite — never invents a synthetic worst-case ranking', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'no-weightedload-field.example' },
+      { Host: 'nan-weightedload.example', weightedload: Number.NaN },
+      { Host: 'good.example', weightedload: 20 }
+    ]
+    const { weightedLoads } = reduceContentServers(servers)
+    expect(weightedLoads.has('no-weightedload-field.example')).toBe(false)
+    expect(weightedLoads.has('nan-weightedload.example')).toBe(false)
+    expect(weightedLoads.get('good.example')).toBe(20)
+  })
+
+  // Debug/steam-install-slow-start (cycle 8): the REAL directory response
+  // returns weightedload/load as STRINGS ("130", "20", ...), not numbers —
+  // this is the regression that slipped through cycles 5-7 (their fixtures
+  // only ever used numeric weightedload values, so `weightedLoads=0` on
+  // every real hardware run went undetected by the test suite).
+  it('coerces STRING-valued weightedload into a number, so weightedLoads is populated from a real (string-typed) directory response', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'cache1-akl-edgx.steamcontent.com', weightedload: '20' },
+      { Host: 'cache1-akl-tpwr.steamcontent.com', weightedload: '37' },
+      { Host: 'cache2-akl-tpwr.steamcontent.com', weightedload: '48' },
+      { Host: 'steampipe.akamaized.net', weightedload: '130' },
+      { Host: 'alibaba.cdn.steampipe.steamcontent.com', weightedload: '130' },
+      { Host: 'fastly.cdn.steampipe.steamcontent.com', weightedload: '130' }
+    ]
+    const { hosts, weightedLoads } = reduceContentServers(servers)
+    expect(weightedLoads.size).toBe(hosts.length)
+    expect(weightedLoads.get('cache1-akl-edgx.steamcontent.com')).toBe(20)
+    expect(weightedLoads.get('cache1-akl-tpwr.steamcontent.com')).toBe(37)
+    expect(weightedLoads.get('cache2-akl-tpwr.steamcontent.com')).toBe(48)
+    expect(weightedLoads.get('steampipe.akamaized.net')).toBe(130)
+    expect(weightedLoads.get('alibaba.cdn.steampipe.steamcontent.com')).toBe(130)
+    expect(weightedLoads.get('fastly.cdn.steampipe.steamcontent.com')).toBe(130)
+  })
+
+  it('omits a host from weightedLoads when weightedload is a non-numeric string, without throwing', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'bad-string.example', weightedload: 'not-a-number' },
+      { Host: 'empty-string.example', weightedload: '' },
+      { Host: 'good.example', weightedload: '20' }
+    ]
+    const { weightedLoads } = reduceContentServers(servers)
+    expect(weightedLoads.has('bad-string.example')).toBe(false)
+    // Number('') === 0, which IS finite — an empty string coerces to the
+    // (arguably degenerate but not wrong) value 0, exactly matching
+    // Number(...)'s own documented coercion behavior; not special-cased.
+    expect(weightedLoads.get('empty-string.example')).toBe(0)
+    expect(weightedLoads.get('good.example')).toBe(20)
+  })
+
+  it('preserves the directory response order in the returned hosts array', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'z-host.example', weightedload: 1 },
+      { Host: 'a-host.example', weightedload: 2 }
+    ]
+    const { hosts } = reduceContentServers(servers)
+    expect(hosts).toEqual(['z-host.example', 'a-host.example'])
+  })
+
+  // Debug/steam-install-slow-start (cycle 7): hostMeta (https_support +
+  // usetokenauth) — the data fetchChunk needs for EXACT steam-user
+  // URL-scheme/token parity. See depot/decompress.ts's fetchChunk.
+  it('threads https_support into the hostMeta map, keyed by hostname', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'cache1-akl-tpwr.steamcontent.com', https_support: 'mandatory' },
+      // The real cycle-5 hardware diagnosis's directory response for
+      // alibaba.cdn.steampipe.steamcontent.com.
+      { Host: 'alibaba.cdn.steampipe.steamcontent.com', https_support: 'unavailable' }
+    ]
+    const { hostMeta } = reduceContentServers(servers)
+    expect(hostMeta.get('cache1-akl-tpwr.steamcontent.com')?.httpsSupport).toBe('mandatory')
+    expect(hostMeta.get('alibaba.cdn.steampipe.steamcontent.com')?.httpsSupport).toBe(
+      'unavailable'
+    )
+  })
+
+  it('maps usetokenauth === 1 to true (steam-user\'s own `== 1` gate, not a loose truthy check) and every other value (absent/0/other) to false', () => {
+    const servers: RawContentServer[] = [
+      { Host: 'wants-token.example', usetokenauth: 1 },
+      { Host: 'no-usetokenauth-field.example' },
+      { Host: 'zero-usetokenauth.example', usetokenauth: 0 }
+    ]
+    const { hostMeta } = reduceContentServers(servers)
+    expect(hostMeta.get('wants-token.example')?.usetokenauth).toBe(true)
+    expect(hostMeta.get('no-usetokenauth-field.example')?.usetokenauth).toBe(false)
+    expect(hostMeta.get('zero-usetokenauth.example')?.usetokenauth).toBe(false)
+  })
+
+  it('every host present in `hosts` has a corresponding hostMeta entry, even when https_support/usetokenauth are both absent from the raw server', () => {
+    const servers: RawContentServer[] = [{ Host: 'bare-host.example' }]
+    const { hosts, hostMeta } = reduceContentServers(servers)
+    expect(hosts).toEqual(['bare-host.example'])
+    expect(hostMeta.has('bare-host.example')).toBe(true)
+    expect(hostMeta.get('bare-host.example')).toEqual({
+      httpsSupport: undefined,
+      usetokenauth: false
+    })
+  })
+})
+
+/**
+ * Debug/steam-install-slow-start (cycle 7, PART 3): completion robustness —
+ * a single chunk exhausting fetchChunk's CHUNK_FETCH_ATTEMPTS budget must
+ * re-queue (not abort the whole file) as long as the download run overall
+ * hasn't stalled; only a genuine, sustained run-wide stall gives up
+ * honestly. `downloadFileChunks` is exported (cycle 7) specifically so this
+ * behavior is directly testable without going through the full
+ * downloadDepotFiles/downloadSteamDepots stack.
+ */
+describe('downloadFileChunks (cycle 7): completion robustness via StallTracker', () => {
+  let dir: string
+  let filePath: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-depot-chunks-test-'))
+    filePath = join(dir, 'out.bin')
+    writeFileSync(filePath, Buffer.alloc(20))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  function makeFile(): DepotPlanFile {
+    return {
+      filename: 'out.bin',
+      size: 20,
+      sha_content: 'unused-in-this-suite',
+      chunks: [
+        { sha: 'sha-a', cb_original: 10, offset: 0 },
+        { sha: 'sha-b', cb_original: 10, offset: 10 }
+      ]
+    }
+  }
+
+  it('re-queues a chunk that exhausts fetchChunk\'s attempts instead of aborting the whole file, as long as the run has not stalled', async () => {
+    let shaAAttempts = 0
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+      if (chunk.sha === 'sha-a') {
+        shaAAttempts++
+        if (shaAAttempts < 3) {
+          throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
+        }
+        return Buffer.alloc(10, 'a')
+      }
+      return Buffer.alloc(10, 'b')
+    })
+
+    const fd = await open(filePath, 'r+')
+    // Never stalls in this test -- 1 hour is far beyond anything a fast
+    // unit test could accumulate.
+    const stallTracker = new StallTracker(60 * 60 * 1000)
+    try {
+      await downloadFileChunks(
+        fd,
+        '111',
+        Buffer.from('key'),
+        ['cdn1.example.com'],
+        undefined as unknown as LzmaModule,
+        makeFile(),
+        0,
+        undefined,
+        () => {},
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        stallTracker
+      )
+    } finally {
+      await fd.close()
+    }
+
+    // sha-a exhausted fetchChunk's attempts TWICE (calls 1 and 2) and was
+    // re-queued both times rather than aborting the whole file -- it only
+    // succeeded on the 3rd pass.
+    expect(shaAAttempts).toBe(3)
+  })
+
+  it('gives up honestly (throws) once the run has genuinely stalled, rather than re-queuing forever', async () => {
+    let shaAAttempts = 0
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+      if (chunk.sha === 'sha-a') {
+        shaAAttempts++
+        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
+      }
+      return Buffer.alloc(10, 'b')
+    })
+
+    const fd = await open(filePath, 'r+')
+    // A negative timeout means hasStalled() is true for ANY elapsed time
+    // (including 0ms) -- deterministically "already stalled" from the very
+    // first exhaustion, without needing to wait for a real stall window.
+    const stallTracker = new StallTracker(-1)
+    try {
+      await expect(
+        downloadFileChunks(
+          fd,
+          '111',
+          Buffer.from('key'),
+          ['cdn1.example.com'],
+          undefined as unknown as LzmaModule,
+          makeFile(),
+          0,
+          undefined,
+          () => {},
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          stallTracker
+        )
+      ).rejects.toThrow(/failed after \d+ attempts[\s\S]*download stalled/)
+    } finally {
+      await fd.close()
+    }
+
+    // Gave up on the VERY FIRST exhaustion -- never re-queued, because the
+    // run was already stalled.
+    expect(shaAAttempts).toBe(1)
+  })
+
+  it('omitting stallTracker (every pre-cycle-7 caller/test) preserves the exact pre-cycle-7 behavior: a chunk exhausting its attempts immediately fails the whole file, no retry', async () => {
+    let shaAAttempts = 0
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+      if (chunk.sha === 'sha-a') {
+        shaAAttempts++
+        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
+      }
+      return Buffer.alloc(10, 'b')
+    })
+
+    const fd = await open(filePath, 'r+')
+    try {
+      await expect(
+        downloadFileChunks(
+          fd,
+          '111',
+          Buffer.from('key'),
+          ['cdn1.example.com'],
+          undefined as unknown as LzmaModule,
+          makeFile(),
+          0,
+          undefined,
+          () => {}
+          // decode, onAttempt, hostHealth, cdnAuth, hostMeta, stallTracker: all omitted.
+        )
+      ).rejects.toThrow(/failed after \d+ attempts/)
+    } finally {
+      await fd.close()
+    }
+
+    expect(shaAAttempts).toBe(1)
+  })
+
+  it('a user cancel (signal.aborted) still exits promptly even while a chunk would otherwise be re-queued, never spinning on a stale abort', async () => {
+    const controller = new AbortController()
+    let shaAAttempts = 0
+    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+      if (chunk.sha === 'sha-a') {
+        shaAAttempts++
+        // Simulates a user cancel arriving at the exact moment this chunk's
+        // attempts are exhausted.
+        controller.abort()
+        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
+      }
+      return Buffer.alloc(10, 'b')
+    })
+
+    const fd = await open(filePath, 'r+')
+    const stallTracker = new StallTracker(60 * 60 * 1000)
+    try {
+      await downloadFileChunks(
+        fd,
+        '111',
+        Buffer.from('key'),
+        ['cdn1.example.com'],
+        undefined as unknown as LzmaModule,
+        makeFile(),
+        0,
+        controller.signal,
+        () => {},
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        stallTracker
+      )
+    } finally {
+      await fd.close()
+    }
+
+    // Aborted right after sha-a's first exhaustion -- D-UAT-05/06: a user
+    // cancel must still cancel promptly, even mid re-queue-eligible failure,
+    // never re-queued/retried again despite stallTracker never reporting a
+    // stall (the run was cancelled, not wedged).
+    expect(shaAAttempts).toBe(1)
   })
 })
 
