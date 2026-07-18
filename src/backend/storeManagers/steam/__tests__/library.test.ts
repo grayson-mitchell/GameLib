@@ -191,11 +191,18 @@ jest.mock('../bottle', () => ({
 // closure, 23-code-review) can be exercised — defaulted to a successful heal
 // in the shared beforeEach below so pre-existing resume tests that don't care
 // about mode-healing still earn StateFlags=4 as before.
+// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
+// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
+// the REAL module rather than re-implemented as jest.fn() stubs so this
+// suite exercises the actual formatting/smoothing behavior.
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
   downloadSteamDepots: jest.fn(),
   buildDepotPlan: jest.fn(),
-  healReconciledFileModes: jest.fn()
+  healReconciledFileModes: jest.fn(),
+  formatEta: jest.requireActual<typeof import('../depot')>('../depot').formatEta,
+  rollingRateMiBs: jest.requireActual<typeof import('../depot')>('../depot')
+    .rollingRateMiBs
 }))
 
 // ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
@@ -2156,6 +2163,147 @@ describe('pollInstallOnce()', () => {
       if (payload?.progress?.percent !== undefined) {
         expect(Number.isFinite(payload.progress.percent)).toBe(true)
       }
+    }
+  })
+
+  // ── T-AOG (quick/260719-aog): download speed + ETA derivation ─────────────
+
+  it('emits no downSpeed and eta "" on a direct call with no active poll (poll undefined never throws)', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10'
+      }
+    })
+    await expect(pollInstallOnce('730')).resolves.toBeUndefined()
+    const call = (sendFrontendMessage as jest.Mock).mock.calls.find(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(call![1].progress.percent).toBe(50)
+    expect(call![1].progress.downSpeed).toBeUndefined()
+    expect(call![1].progress.eta).toBe('')
+  })
+
+  it('emits a finite downSpeed > 0 and a non-empty decreasing eta on the second tick of a rising download (first tick has no baseline yet)', async () => {
+    ;(vdf.parse as jest.Mock)
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '5000000',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '8000000',
+          BytesToDownload: '10000000'
+        }
+      })
+
+    startInstallPolling('730', 60000) // register activePolls entry for the speed baseline
+    await pollInstallOnce('730')
+    jest.advanceTimersByTime(3000) // 3s elapsed between ticks
+    await pollInstallOnce('730')
+
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(progressCalls).toHaveLength(2)
+
+    const [firstCall, secondCall] = progressCalls
+    // First tick: no prior baseline, so no speed yet — percent still fires.
+    expect(firstCall[1].progress.percent).toBe(50)
+    expect(firstCall[1].progress.downSpeed).toBeUndefined()
+    expect(firstCall[1].progress.eta).toBe('')
+
+    // Second tick: (8M - 5M) bytes over 3s -> a finite, positive MiB/s rate
+    // and a non-empty ETA string derived from the remaining bytes.
+    expect(secondCall[1].progress.percent).toBe(80)
+    expect(secondCall[1].progress.downSpeed).toBeGreaterThan(0)
+    expect(Number.isFinite(secondCall[1].progress.downSpeed)).toBe(true)
+    expect(typeof secondCall[1].progress.eta).toBe('string')
+    expect(secondCall[1].progress.eta.length).toBeGreaterThan(0)
+  })
+
+  it('never emits a non-finite/negative downSpeed or eta when two ticks land back-to-back with zero elapsed time (preallocation-jump guard)', async () => {
+    ;(vdf.parse as jest.Mock)
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          BytesDownloaded: '0',
+          BytesToDownload: '10000000'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '730',
+          StateFlags: '2',
+          installdir: 'csgo',
+          SizeOnDisk: '0',
+          // Simulates a Steam preallocation jump landing on the very next
+          // tick with no elapsed wall-clock time between polls.
+          BytesDownloaded: '9000000',
+          BytesToDownload: '10000000'
+        }
+      })
+
+    startInstallPolling('730', 60000)
+    await pollInstallOnce('730')
+    await pollInstallOnce('730') // no jest.advanceTimersByTime — zero elapsed ms
+
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    for (const [, payload] of progressCalls) {
+      if (payload.progress.downSpeed !== undefined) {
+        expect(Number.isFinite(payload.progress.downSpeed)).toBe(true)
+        expect(payload.progress.downSpeed).toBeGreaterThanOrEqual(0)
+      }
+      expect(typeof payload.progress.eta).toBe('string')
+      expect(Number.isFinite(payload.progress.percent)).toBe(true)
+    }
+  })
+
+  it('regression (GAP-17-BOTTLE-PROGRESS): staged-fallback ACF (BytesToDownload=0) still emits percent, with no downSpeed/eta', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '0',
+        BytesToDownload: '0',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    startInstallPolling('730', 60000)
+    await pollInstallOnce('730')
+    jest.advanceTimersByTime(3000)
+    await pollInstallOnce('730')
+
+    const progressCalls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
+    expect(progressCalls.length).toBeGreaterThan(0)
+    for (const [, payload] of progressCalls) {
+      expect(payload.progress.percent).toBe(50)
+      expect(payload.progress.downSpeed).toBeUndefined()
+      expect(payload.progress.eta).toBe('')
     }
   })
 

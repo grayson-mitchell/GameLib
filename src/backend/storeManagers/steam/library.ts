@@ -37,6 +37,8 @@ import {
   buildDepotPlan,
   finalizeToSteam,
   healReconciledFileModes,
+  formatEta,
+  rollingRateMiBs,
   type FinalizeToSteamOpts
 } from './depot'
 import { reconcilePartialState } from './depot/reconcile'
@@ -1076,11 +1078,27 @@ const activePolls = new Map<
     /** Fire-once guard (T-21-16-03) — the "restart Steam" notification must
      *  fire exactly once per install, not on every poll tick. */
     notifiedWaiting: boolean
+    /** T-AOG (quick/260719-aog): the PREVIOUS tick's BytesDownloaded + the
+     *  wall-clock time it was observed at, used to derive an instantaneous
+     *  download speed. Undefined until the first tick with an active poll
+     *  has run once — the very first tick therefore never has a speed. */
+    lastBytesDownloaded?: number
+    lastTickMs?: number
+    /** T-AOG: consecutive 'downloading' ticks where a real in-flight
+     *  download's BytesDownloaded did not advance — drives the
+     *  'steam-paused' gameStatusUpdate hint once it crosses
+     *  STALLED_TICKS_THRESHOLD. Reset to 0 the moment bytes advance again. */
+    stalledTicks: number
   }
 >()
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
 const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
+/** Bytes per MiB — mirrors depot.ts's own (unexported) constant so this
+ *  poller's `downSpeed` matches the native depot-download path's MiB/s
+ *  convention (the DownloadManager UI renders `downSpeed` with a "MB/s"
+ *  label; see depot.ts's BYTES_PER_MIB docstring, UAT D-UAT-02). */
+const BYTES_PER_MIB = 1024 * 1024
 
 /**
  * Reads the install state of a single appId from its ACF manifest.
@@ -1277,6 +1295,57 @@ export async function pollInstallOnce(
       bytesToStage = 0
     } = result
 
+    // T-AOG (quick/260719-aog): derive a live download speed + ETA from the
+    // DOWNLOAD bytes specifically (bytesDownloaded), NOT the staged/bottle
+    // numerator above — "download speed" tracks bytes off the network, which
+    // stays meaningful even during the bottle's staged-fallback phase (it
+    // will simply be 0/absent there since bytesDownloaded doesn't move).
+    // `poll` is undefined for direct unit-test calls with no active poll —
+    // every branch below degrades to "no speed/eta" rather than throwing.
+    let downSpeedMiBs: number | undefined
+    if (poll) {
+      const nowMs = Date.now()
+      const prevBytes = poll.lastBytesDownloaded
+      const prevTickMs = poll.lastTickMs
+
+      if (prevBytes !== undefined && prevTickMs !== undefined) {
+        const deltaBytes = bytesDownloaded - prevBytes
+        const deltaMs = nowMs - prevTickMs
+        // rollingRateMiBs guards the div-by-near-zero window (two ticks
+        // landing back-to-back — e.g. a Steam preallocation jump) by
+        // returning the previous rate (0 here) rather than dividing by a
+        // near-zero delta, so this can never yield NaN/Infinity (T-AOG-01).
+        const rate = rollingRateMiBs(deltaBytes, deltaMs, 0)
+        if (deltaBytes >= 0 && Number.isFinite(rate) && rate > 0) {
+          downSpeedMiBs = rate
+        }
+      }
+
+      poll.lastBytesDownloaded = bytesDownloaded
+      poll.lastTickMs = nowMs
+    }
+
+    let eta = ''
+    if (
+      downSpeedMiBs !== undefined &&
+      downSpeedMiBs > 0 &&
+      bytesToDownload > bytesDownloaded
+    ) {
+      const remainingBytes = bytesToDownload - bytesDownloaded
+      const speedBytesPerSec = downSpeedMiBs * BYTES_PER_MIB
+      const etaSeconds = remainingBytes / speedBytesPerSec
+      if (Number.isFinite(etaSeconds) && etaSeconds > 0) {
+        eta = formatEta(etaSeconds)
+      }
+    }
+
+    // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
+    // feeding the frontend progress store — the ACF's own byte counts are
+    // the only source of truth. Prefer the download totals; fall back to
+    // the staging totals when the download total is 0/missing (late-stage
+    // installs that are past the download phase). Never emit a non-finite
+    // percent — if BOTH totals are 0/missing, skip the progress emit
+    // entirely (the gameStatusUpdate above still fired).
     const useStaged = !(bytesToDownload > 0)
     const denominator = useStaged ? bytesToStage : bytesToDownload
     const numerator = useStaged ? bytesStaged : bytesDownloaded
@@ -1292,7 +1361,8 @@ export async function pollInstallOnce(
           progress: {
             percent,
             bytes: getFileSize(numerator),
-            eta: ''
+            eta,
+            ...(downSpeedMiBs !== undefined ? { downSpeed: downSpeedMiBs } : {})
           }
         })
       }
@@ -1386,7 +1456,8 @@ export function startInstallPolling(
     timer: null as unknown as NodeJS.Timeout,
     ticks: 0,
     seenDownloading: false,
-    notifiedWaiting: false
+    notifiedWaiting: false,
+    stalledTicks: 0
   }
 
   const timer = setInterval(async () => {

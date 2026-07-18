@@ -601,9 +601,13 @@ export default class SteamGame implements Game {
    * The appId is validated by buildSteamProtocolUrl (T-03-01 mitigation) before
    * any URL is constructed.
    *
-   * Does NOT call sendProgressUpdate — Steam owns the download with its own UI.
-   * Install state is never optimistically flipped on click (D-02); badge
-   * reconciliation happens when the user tabs back (focus → ACF re-read, D-01).
+   * Does NOT call sendProgressUpdate itself — Steam owns the download. The
+   * OFF-path pollInstallOnce() poller (library.ts) DOES stream a live
+   * percent/downSpeed/eta over the same progressUpdate channel, derived from
+   * the ACF's own byte counters, so the frontend still shows real progress
+   * even though install() here never drives it directly. Install state is
+   * never optimistically flipped on click (D-02); badge reconciliation
+   * happens when the user tabs back (focus → ACF re-read, D-01).
    *
    * Phase 17 (D-10/D-11): a confirmed-not-native macOS game routes through the
    * bottled Steam client instead of native steam:// — see isBottleEligible().
