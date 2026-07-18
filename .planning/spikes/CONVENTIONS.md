@@ -50,3 +50,15 @@ question requires otherwise.
 - macOS inspection: `file`, `nm -gU`, `find`, plist reads. CrossOver runtime at
   `/Applications/CrossOver.app/...` ships **no** winelib build toolchain (winegcc/winebuild) — a
   from-scratch winelib build is out of scope for a feasibility spike (004a).
+- **Windows PE cross-compilation (bridge line, 005b/005c):** `brew install` does **not** work in
+  this environment (Homebrew only dry-runs — "Would install"). Use **`zig cc -target
+  x86-windows-gnu`** instead — zig is a self-contained tarball (bundles a mingw-w64 sysroot), no
+  brew/root. Download via `ziglang.org/download/index.json` → the `aarch64-macos` tarball; scripts
+  take `ZIG=/path/to/zig`. Produces `PE32 … Intel 80386`. Force exact DLL export names with a
+  `.def` file (Steamworks S_API is `__cdecl` on i386).
+- **Running a PE in a GameLib bottle:** `CX_BOTTLE=<bottle> /Applications/CrossOver.app/Contents/
+  SharedSupport/CrossOver/bin/wine "C:\prog.exe"`. Wine on macOS **shares the host network
+  namespace**, so `127.0.0.1` in the bottle is the host loopback. The real bottle is
+  `GameLibSteam` (Phase 17); its `drive_c` is at `~/Library/Application Support/CrossOver/Bottles/
+  GameLibSteam/drive_c`. Have PEs also write results to `C:\*.txt` (recoverable host-side) in case
+  the bottle detaches stdout.

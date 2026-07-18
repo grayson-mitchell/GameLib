@@ -161,10 +161,19 @@ Investigation/feasibility only — not building the bridge.
 | 004a | wine-mach-o-thunk | standard | Given a Wine/CrossOver PE process, when it calls a native macOS .dylib via the winelib thunk, then the cross-boundary call returns correct data | ⚠ PARTIAL (in-process thunk blocked; routed around by out-of-process TCP) | steam, macos, wine, thunk, winelib |
 | 004c | native-mac-steam-ipc-surface | standard | Given the installed native macOS Steam client, when inspected for an attachable Steamworks IPC surface, then determine bridge-in vs headless-shim | ✓ VALIDATED | steam, macos, ipc, steamclient, mach-service |
 | 005a | native-steam-helper-handshake | standard | Given running signed-in Mac Steam + on-disk libsteam_api.dylib, when a native helper (not launched by Steam) dlopens it and inits, then it returns the user's real SteamID + persona | ✓ VALIDATED (live: SteamID64 + persona read from running client) | steam, macos, bridge, handshake, libsteam_api |
+| 005b | bottle-to-host-tcp | standard | Given the GameLibSteam bottle, when a Windows PE inside it TCP-connects to the host bridge, then it round-trips the real signed-in identity | ✓ VALIDATED (live: PE in real bottle got real identity over loopback) | steam, macos, bridge, crossover, tcp, winsock |
+| 005c | min-steam_api-shim | standard | Given a Windows module in the bottle that LoadLibrary's a replacement steam_api.dll, when it calls the flat API, then GetSteamID marshals to the host bridge and returns the real SteamID | ✓ VALIDATED (live: game-like harness got real SteamID via drop-in steam_api.dll) | steam, macos, bridge, steam_api, shim, dll |
 
-> **Overall 004 feasibility:** The bridge IS feasible **via the out-of-process `steam_api` TCP
-> bridge** (proven single-player; eliminates per-bottle login — the whole win over Phase 22),
-> **not** via a Linux-style in-process `lsteamclient` (blocked on macOS Wine build tooling +
-> Rosetta/protobuf; still dual-client today). If productionized, it likely supersedes much of
-> Phase 22's multi-bottle machinery — but P2P multiplayer and packaging/portability are real
-> remaining work. Phase 22 remains the ship-now answer.
+> **Overall 004+005 feasibility:** The bridge IS feasible **via the out-of-process `steam_api` TCP
+> bridge**, **not** via a Linux-style in-process `lsteamclient` (blocked on macOS Wine build
+> tooling + Rosetta/protobuf; still dual-client today). Spike 005 reproduced **all three legs on
+> GameLib's exact stack**: 005a host helper ↔ live Mac Steam; 005b Windows PE in the real
+> GameLibSteam bottle ↔ host over loopback; 005c a drop-in replacement `steam_api.dll` a
+> game-like caller loads, returning the real SteamID. The remaining productionization is the C++
+> **vtable ABI** for unmodified games (L4D2's `gen_vtables.py` territory), full API/callback
+> breadth, a persistent channel, and the known-hard **P2P-join** gap. If productionized it likely
+> supersedes much of Phase 22's multi-bottle machinery — but Phase 22 remains the ship-now answer.
+>
+> Toolchain: no mingw-w64 installable here (Homebrew only dry-runs in this env) — PE builds used
+> **`zig cc -target x86-windows-gnu`** (self-contained mingw sysroot). Bottle run:
+> `CX_BOTTLE=<bottle> <CrossOver>/bin/wine "C:\prog.exe"`.
