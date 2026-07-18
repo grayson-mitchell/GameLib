@@ -1,0 +1,6 @@
+LIBRARY steam_api
+EXPORTS
+SteamAPI_Init
+SteamAPI_Shutdown
+SteamAPI_RestartAppIfNecessary
+SteamAPI_IsSteamRunning

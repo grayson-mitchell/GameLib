@@ -62,3 +62,14 @@ question requires otherwise.
   `GameLibSteam` (Phase 17); its `drive_c` is at `~/Library/Application Support/CrossOver/Bottles/
   GameLibSteam/drive_c`. Have PEs also write results to `C:\*.txt` (recoverable host-side) in case
   the bottle detaches stdout.
+- **Bottle/wineserver hygiene (bridge line, 007+):** do NOT launch via `cxstart` — it detaches and
+  **wedges the bottle's `wineserver`**, silently swallowing later `wine` output. Use `bin/wine`, and
+  run `.../bin/wineserver -k` between runs to reset. Real 32-bit Windows games live under the bottle
+  at `.../GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps/common/<game>/`.
+- **Real-game drop-in shims (bridge line, 007/008):** to replace a game's `steam_api.dll`, first
+  enumerate its exact import set — `/usr/bin/objdump --private-headers "<game>.exe" | grep -A40
+  'DLL Name: steam_api'` — and export **every** one via a `.def` (a missing export = the process
+  won't load), identity marshaled to the bridge, the rest stubbed. Always back up the original DLL
+  and restore on exit (trap). Note: `steam_api.dll` return values (`Init`,
+  `RestartAppIfNecessary`) are **advisory** — many games ignore them; the bridge is a compatibility
+  layer, not a DRM gate.

@@ -1,0 +1,19 @@
+007 real-game run — Avernum 4 (Spiderweb Software), GameLibSteam bottle, 2026-07-18
+Avernum 4.exe imports exactly 2 symbols from steam_api.dll: SteamAPI_Init, SteamAPI_Shutdown (objdump).
+
+POSITIVE run (host bridge UP):
+  steam007.log:  SteamAPI_Init: bridge SteamID64=76561197995867096 -> returning 1
+  process:       Avernum 4.exe stayed alive across t=2..12s (running)
+  => the real game loaded our drop-in bridge-backed steam_api.dll, called SteamAPI_Init,
+     which validated the LIVE native Mac Steam session (real SteamID from the bridge) and
+     returned true; the game ran. Zero Windows Steam client in the bottle.
+
+NEGATIVE run (host bridge DOWN):
+  steam007.log:  SteamAPI_Init: bridge SteamID64=0 -> returning 0
+  process:       Avernum 4.exe ALSO stayed alive across t=2..12s
+  => Avernum ignores SteamAPI_Init's return value (weak/legacy DRM integration). So the
+     positive result proves drop-in compatibility + real-session marshaling into a live
+     game process, but NOT that the bridge gated THIS title's launch.
+
+Tooling lesson: `cxstart` detaches and wedges the bottle (later `wine` output vanished). Use
+`bin/wine` and reset with `wineserver -k` between runs.
