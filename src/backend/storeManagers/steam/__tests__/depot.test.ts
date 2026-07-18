@@ -2178,4 +2178,95 @@ describe('downloadDepotFiles', () => {
       expect(st.mode & 0o100).not.toBe(0) // owner-execute bit intact
     })
   })
+
+  // ── Progress heartbeat cadence (quick 260718-jmt) ──────────────────────────
+  // NOTE: a full jest.useFakeTimers() simulation was avoided here -- the real
+  // DecompressPool spawns real worker_threads with their own real internal
+  // dispatch timeout (decompressPool.ts), and faking global timers while a
+  // real cross-thread message round-trip is in flight risks a flaky/hanging
+  // test. Instead this captures the ACTUAL setInterval callback wired into
+  // downloadDepotFiles and invokes it directly (deterministic, no waiting),
+  // which exercises the exact forced-emit code path a real 1s tick would.
+  // Manual verify: start a real native Steam depot install and watch the
+  // DownloadManager ProgressHeader graph advance smoothly during warm-up.
+  describe('progress heartbeat: 1s wall-clock cadence independent of chunk completion', () => {
+    it('registers a PROGRESS_HEARTBEAT_MS (1000ms) setInterval before the worker Promise.all, whose callback forces an honest ~0 MB/s progressUpdate when no chunk activity has occurred, and clears the interval once the download settles', async () => {
+      const setIntervalSpy = jest.spyOn(global, 'setInterval')
+      const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
+
+      let resolveChunk!: (buf: Buffer) => void
+      const stalledChunk = new Promise<Buffer>((resolve) => {
+        resolveChunk = resolve
+      })
+      jest.mocked(fetchChunk).mockReturnValue(stalledChunk)
+
+      const content = Buffer.from('heartbeat-payload')
+      const file: DepotPlanFile = {
+        filename: 'heartbeat.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-hb', cb_original: content.length, offset: 0 }]
+      }
+      const plan = makePlan(
+        [{ depotId: '778', gid: 'g78', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const resultPromise = downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      // Poll (real timers, short real waits) until downloadDepotFiles reaches
+      // its setInterval() call -- registered synchronously just before the
+      // worker Promise.all, after pool.init()/reconciliation/mode-heal settle.
+      for (let i = 0; i < 200 && setIntervalSpy.mock.calls.length === 0; i++) {
+        await new Promise((r) => setTimeout(r, 5))
+      }
+
+      expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+      const [heartbeatFn, heartbeatMs] = setIntervalSpy.mock.calls[0]
+      expect(heartbeatMs).toBe(1000)
+
+      const mockedSend = sendFrontendMessage as jest.Mock
+      mockedSend.mockClear()
+
+      // The single chunk fetch is still stalled (unresolved) here -- no
+      // onBytes has fired, doneBytes/netBytes are still 0. Invoking the real
+      // registered callback 3x simulates ~3s of wall-clock heartbeat ticks
+      // with zero chunk activity.
+      ;(heartbeatFn as () => void)()
+      ;(heartbeatFn as () => void)()
+      ;(heartbeatFn as () => void)()
+
+      const heartbeatCalls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+      expect(heartbeatCalls.length).toBe(3)
+      for (const [, payload] of heartbeatCalls) {
+        const progress = (payload as Record<string, unknown>).progress as Record<string, unknown>
+        // Zero bytes moved during the stall -> heartbeat honestly reports
+        // ~0 MB/s, never a spike from the chunk-driven rolling-rate math.
+        expect(progress.downSpeed).toBe(0)
+      }
+
+      // Let the stalled chunk resolve and the download settle normally.
+      resolveChunk(content)
+      const result = await resultPromise
+
+      expect(result.outcome).toBe('completed')
+      expect(result.failures).toEqual([])
+
+      // The interval must be cleared with the SAME handle setInterval
+      // returned, once the worker Promise.all settles -- the shared
+      // try/finally covers normal completion AND throw/abort identically
+      // (this codebase's Promise.all never rejects in practice: per-file
+      // errors are caught inside the loop and a signal-abort also resolves
+      // normally, so both paths exercise this exact finally).
+      expect(clearIntervalSpy).toHaveBeenCalledWith(setIntervalSpy.mock.results[0].value)
+      expect(clearIntervalSpy).toHaveBeenCalledTimes(1)
+
+      setIntervalSpy.mockRestore()
+      clearIntervalSpy.mockRestore()
+    })
+  })
 })

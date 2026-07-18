@@ -598,6 +598,12 @@ export function formatEta(totalSeconds: number): string {
 const PROGRESS_THROTTLE_MS = 500
 const PROGRESS_THROTTLE_PERCENT = 1
 
+/** Forces a progressUpdate at least once per second, independent of chunk
+ *  completion. Without this, the DownloadManager ProgressHeader graph freezes
+ *  for however long chunk completions bunch up (warm-up, large files, decode-
+ *  pool backlog under load) -- observed gaps of ~30s in practice. */
+const PROGRESS_HEARTBEAT_MS = 1000
+
 /** Minimum window (seconds) for a meaningful rolling-rate sample. A forced
  *  emit right after a throttled one can have a sub-millisecond delta; dividing
  *  by it yields a garbage spike, so below this we reuse the previous rate. */
@@ -1108,36 +1114,46 @@ export async function downloadDepotFiles(
     const queue = [...jobs]
     const workerCount = Math.min(FILE_CONCURRENCY, queue.length)
 
-    await Promise.all(
-      Array.from({ length: workerCount }, async () => {
-        while (queue.length) {
-          // Checked per-file AND per-chunk (inside downloadFileChunks) so a
-          // queue-cancel stops issuing new work promptly (D-02).
-          if (opts.signal?.aborted) return
-          const job = queue.shift()!
-          try {
-            await downloadSingleFile(
-              installRoot,
-              job.depotId,
-              job.key,
-              opts.hosts,
-              lzma,
-              job.file,
-              job.fileSeed,
-              opts.signal,
-              (disk, net) => {
-                doneBytes += disk
-                netBytes += net
-                emitProgress(false)
-              },
-              pool.decode
-            )
-          } catch (err) {
-            failures.push({ file: job.file.filename, error: (err as Error).message })
+    // Wall-clock heartbeat: forces emitProgress(true) every PROGRESS_HEARTBEAT_MS
+    // regardless of chunk completion, so the graph advances even when chunk
+    // completions bunch up. Started just before the worker fan-out and cleared
+    // in the finally below on BOTH normal completion and throw/abort -- never
+    // leaks a dangling interval past this Promise.all's own lifetime.
+    const heartbeat = setInterval(() => emitProgress(true), PROGRESS_HEARTBEAT_MS)
+    try {
+      await Promise.all(
+        Array.from({ length: workerCount }, async () => {
+          while (queue.length) {
+            // Checked per-file AND per-chunk (inside downloadFileChunks) so a
+            // queue-cancel stops issuing new work promptly (D-02).
+            if (opts.signal?.aborted) return
+            const job = queue.shift()!
+            try {
+              await downloadSingleFile(
+                installRoot,
+                job.depotId,
+                job.key,
+                opts.hosts,
+                lzma,
+                job.file,
+                job.fileSeed,
+                opts.signal,
+                (disk, net) => {
+                  doneBytes += disk
+                  netBytes += net
+                  emitProgress(false)
+                },
+                pool.decode
+              )
+            } catch (err) {
+              failures.push({ file: job.file.filename, error: (err as Error).message })
+            }
           }
-        }
-      })
-    )
+        })
+      )
+    } finally {
+      clearInterval(heartbeat)
+    }
 
     emitProgress(true)
 
