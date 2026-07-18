@@ -1,0 +1,8 @@
+[2026-07-18T01:18:34Z] START    helper pid=21046 arch=arm64
+[2026-07-18T01:18:34Z] APPID    SteamAppId=480 (steam_appid.txt in cwd)
+[2026-07-18T01:18:34Z] DLOPEN   loaded /Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/Frameworks/Steam Helper.app/Contents/MacOS/libsteam_api.dylib
+[2026-07-18T01:18:34Z] DLSYM    resolved 8/8 flat-API symbols
+[2026-07-18T01:18:34Z] INIT     SteamAPI_InitFlat returned 0, errmsg=""
+[2026-07-18T01:18:34Z] IFACE    ISteamUser=0xb4100c6a0 ISteamFriends=0x102b4eaf0
+[2026-07-18T01:18:35Z] READ     BLoggedOn=1 SteamID64=76561197995867096 persona="Grayson"
+[2026-07-18T01:18:35Z] PASS     realIdentity=1 loggedOn=1

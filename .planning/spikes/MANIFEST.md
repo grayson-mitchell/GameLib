@@ -142,6 +142,10 @@ Investigation/feasibility only — not building the bridge.
 - **Generate Steamworks vtables from a pinned SDK version.** L4D2 generated from SDK 1.53a for
   correct `__thiscall` arg counts / `ret N` and pack(4)→pack(8) callback repacking. Version drift
   breaks the ABI. *(004b)*
+- **The helper/shim MUST supply the game's real AppID before init.** `SteamAPI_InitFlat` with no
+  `steam_appid.txt` / `SteamAppId` returns "No appID found" and every interface accessor returns
+  NULL. For a bottled game this is the game's own appID; `480` (Spacewar) suffices for
+  identity-only handshakes. Host helper needs no code signing/entitlements to load the dylib. *(005a)*
 - **Known-hard gap: P2P / multiplayer *join*.** Single-player, auth, persona, listen-server
   hosting, and server-browsing are proven; inbound P2P handshake needs `InitRelayNetworkAccess()`
   + proactive `AcceptP2PSessionWithUser` and remains only partially fixed upstream. *(004b)*
@@ -156,6 +160,7 @@ Investigation/feasibility only — not building the bridge.
 | 004b | community-lsteamclient-survey | standard | Given the Whisky/GPTK/CrossOver/Wine ecosystems, when surveyed for a macOS lsteamclient port or Win↔native-Steam bridge, then find existing art or rule it out | ✓ VALIDATED | steam, macos, bridge, survey, lsteamclient |
 | 004a | wine-mach-o-thunk | standard | Given a Wine/CrossOver PE process, when it calls a native macOS .dylib via the winelib thunk, then the cross-boundary call returns correct data | ⚠ PARTIAL (in-process thunk blocked; routed around by out-of-process TCP) | steam, macos, wine, thunk, winelib |
 | 004c | native-mac-steam-ipc-surface | standard | Given the installed native macOS Steam client, when inspected for an attachable Steamworks IPC surface, then determine bridge-in vs headless-shim | ✓ VALIDATED | steam, macos, ipc, steamclient, mach-service |
+| 005a | native-steam-helper-handshake | standard | Given running signed-in Mac Steam + on-disk libsteam_api.dylib, when a native helper (not launched by Steam) dlopens it and inits, then it returns the user's real SteamID + persona | ✓ VALIDATED (live: SteamID64 + persona read from running client) | steam, macos, bridge, handshake, libsteam_api |
 
 > **Overall 004 feasibility:** The bridge IS feasible **via the out-of-process `steam_api` TCP
 > bridge** (proven single-player; eliminates per-bottle login — the whole win over Phase 22),
