@@ -1448,6 +1448,51 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
     expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
     expect(results).toEqual([{ status: 'done' }, { status: 'done' }])
   })
+
+  // ── T-23-15: pause/resume abort-before-restart (no stacking) ──────────────
+  it('pause -> resume: a resume issued WHILE the aborted prior run is still tearing down waits for its settlement (finally cleanup) before starting a fresh downloadSteamDepots — the two never run concurrently', async () => {
+    let resolveFirstDownload!: (value: { status: 'cancelled' }) => void
+    ;(downloadSteamDepots as jest.Mock).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirstDownload = resolve
+      })
+    )
+
+    const game = new SteamGame(APP_ID)
+    const firstInstall = game.install({} as any)
+    // Let the first run reach the pending downloadSteamDepots call.
+    await flushAsync()
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
+
+    // Pause: stop() marks the tracked entry aborted and calls
+    // callAbortController — the first run is now TEARING DOWN, not yet
+    // settled (its downloadSteamDepots promise is still pending).
+    await game.stop()
+    expect(callAbortController).toHaveBeenCalledWith(APP_ID)
+
+    // Resume issued WHILE the aborted first run is still tearing down.
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
+      status: 'done'
+    })
+    const resumeInstall = game.install({} as any)
+    await flushAsync()
+
+    // The resume must NOT have started a second downloadSteamDepots yet —
+    // it is awaiting the prior (aborted) run's settlement first (no
+    // stacking).
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
+
+    // Let the first (aborted) run settle -> its finally cleanup runs.
+    resolveFirstDownload({ status: 'cancelled' })
+    await firstInstall
+    await flushAsync()
+
+    // The resume's fresh run can now proceed to a NEW downloadSteamDepots
+    // call.
+    const resumeResult = await resumeInstall
+    expect(downloadSteamDepots).toHaveBeenCalledTimes(2)
+    expect(resumeResult).toEqual({ status: 'done' })
+  })
 })
 
 // ── Phase 17 (D-10/D-11): SteamGame.install() bottle routing ────────────────

@@ -67,6 +67,7 @@ import { reconcilePartialState } from '../depot/reconcile'
 import { runWineCommand } from 'backend/launcher'
 import { join } from 'path'
 import { library } from '../state'
+import * as gamesModule from '../games'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -1120,6 +1121,102 @@ describe('SteamLibraryManager', () => {
     expect(setIntervalSpy).toHaveBeenCalled()
 
     setIntervalSpy.mockRestore()
+    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  // ── T-23-14: startup resume reconciles against the in-flight registry ────
+  //
+  // A stale on-disk StateFlags=1026 manifest for an appId already owned by a
+  // live in-process install (games.ts's nativeInstallsInFlight) must never
+  // spawn a phantom concurrent resume path racing the live download.
+
+  it('T-23-14: init() skips startup-resume for an appId already owned by a live in-process install (isNativeInstallInFlight)', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    const isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true)
+
+    await manager.init()
+
+    // A live install already owns '730' — startup resume must not finalize
+    // or re-drive the depot orchestrator for it.
+    expect(finalizeToSteam).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+
+    isNativeInstallInFlightSpy.mockRestore()
+    jest.useRealTimers()
+  })
+
+  it('T-23-14: an appId NOT in the in-flight registry is still resumed normally on startup (no regression)', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+
+    // isNativeInstallInFlight is the REAL (unmocked) games.ts function here —
+    // '730' was never registered by a real install(), so it returns false.
+    await manager.init()
+
+    expect(finalizeToSteam).toHaveBeenCalledWith(
+      '730',
+      expect.objectContaining({
+        targetSteamappsDir: join('/steam', 'steamapps'),
+        installdir: 'csgo',
+        depots: []
+      })
+    )
+
     stopInstallPolling('730')
     jest.useRealTimers()
   })
