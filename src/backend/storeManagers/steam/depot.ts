@@ -283,15 +283,34 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
  */
 async function withPlanBuildRetry<T>(
   signal: AbortSignal | undefined,
-  step: (client: SteamUserDepotClient) => Promise<T>
+  step: (client: SteamUserDepotClient) => Promise<T>,
+  // [Timing] debug/steam-install-slow-start: optional label for temporary
+  // per-step duration logging (see below). undefined = no logging (keeps
+  // existing call sites/tests that don't pass a label unaffected).
+  label?: string
 ): Promise<T> {
   let lastErr: unknown
+  const overallStart = Date.now()
   for (let attempt = 1; attempt <= PLAN_BUILD_MAX_ATTEMPTS; attempt++) {
     throwIfAborted(signal)
+    const attemptStart = Date.now()
     try {
-      return await step(getDepotClient())
+      const result = await step(getDepotClient())
+      if (label) {
+        logInfo(
+          `[Timing] buildDepotPlan/${label}: attempt ${attempt} succeeded in ${Date.now() - attemptStart}ms (total ${Date.now() - overallStart}ms)`,
+          LogPrefix.Steam
+        )
+      }
+      return result
     } catch (err) {
       lastErr = err
+      if (label) {
+        logInfo(
+          `[Timing] buildDepotPlan/${label}: attempt ${attempt} FAILED after ${Date.now() - attemptStart}ms`,
+          LogPrefix.Steam
+        )
+      }
       // D-UAT-08: a terminal EResult (FileNotFound/AccessDenied/...) from
       // getDepotDecryptionKey/getRawManifest recurs byte-for-byte identically
       // on every retry — it is never a transient CM drop. Fail fast instead
@@ -489,6 +508,10 @@ export async function buildDepotPlan(
   assertNumericAppId(appId)
   throwIfAborted(opts.signal)
 
+  // [Timing] debug/steam-install-slow-start: total buildDepotPlan duration,
+  // reported at every return/throw path below. Temporary instrumentation.
+  const planStart = Date.now()
+
   const connected = await SteamUser.ensureConnected()
   throwIfAborted(opts.signal)
   if (!connected) {
@@ -506,8 +529,10 @@ export async function buildDepotPlan(
   // D-UAT-06: every PICS/manifest network step below runs through
   // withPlanBuildRetry — bounded reconnect+retry instead of a single
   // ensureConnected() up front and no recovery from a mid-loop CM drop.
-  const appinfo = await withPlanBuildRetry(opts.signal, (client) =>
-    fetchAppInfo(client, numericAppId)
+  const appinfo = await withPlanBuildRetry(
+    opts.signal,
+    (client) => fetchAppInfo(client, numericAppId),
+    'fetchAppInfo'
   )
   throwIfAborted(opts.signal)
   const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
@@ -519,10 +544,16 @@ export async function buildDepotPlan(
       depots?: { branches?: { public?: { buildid?: string | number } } }
     }).depots?.branches?.public?.buildid ?? ''
   )
-  const owned = await withPlanBuildRetry(opts.signal, (client) => getOwnedSets(client))
+  const owned = await withPlanBuildRetry(
+    opts.signal,
+    (client) => getOwnedSets(client),
+    'getOwnedSets'
+  )
   throwIfAborted(opts.signal)
-  const dlcInfos = await withPlanBuildRetry(opts.signal, (client) =>
-    fetchDlcInfos(client, appinfo)
+  const dlcInfos = await withPlanBuildRetry(
+    opts.signal,
+    (client) => fetchDlcInfos(client, appinfo),
+    'fetchDlcInfos'
   )
   throwIfAborted(opts.signal)
 
@@ -533,6 +564,10 @@ export async function buildDepotPlan(
   const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts, appId)
 
   if (!descriptors.length) {
+    logInfo(
+      `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (0 depots)`,
+      LogPrefix.Steam
+    )
     return { appId, depots: [], totalBytes: 0, name: displayName, buildid }
   }
 
@@ -542,12 +577,19 @@ export async function buildDepotPlan(
   let totalBytes = 0
   for (const descriptor of descriptors) {
     throwIfAborted(opts.signal)
-    const entry = await withPlanBuildRetry(opts.signal, (client) =>
-      fetchDepotPlanEntry(client, descriptor, parser)
+    const entry = await withPlanBuildRetry(
+      opts.signal,
+      (client) => fetchDepotPlanEntry(client, descriptor, parser),
+      `fetchDepotPlanEntry:${descriptor.id}`
     )
     depots.push(entry)
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
   }
+
+  logInfo(
+    `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (${depots.length} depot(s))`,
+    LogPrefix.Steam
+  )
 
   return { appId, depots, totalBytes, name: displayName, buildid }
 }

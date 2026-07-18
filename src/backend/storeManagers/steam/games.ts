@@ -857,9 +857,18 @@ export default class SteamGame implements Game {
     }
   ): Promise<InstallResult> {
     const controller = createAbortController(this.appId)
+    // [Timing] debug/steam-install-slow-start: top-level breakdown of the
+    // ~30s pre-download latency across this seam's three major awaits.
+    // Temporary instrumentation, remove once root cause is confirmed.
+    const runStart = Date.now()
 
     try {
+      const clientReadyStart = Date.now()
       const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
+      logInfo(
+        `[Timing] runNativeDepotDownload: ensureSteamClientReady took ${Date.now() - clientReadyStart}ms for appId ${this.appId}`,
+        LogPrefix.Steam
+      )
       if (controller.signal.aborted) {
         return { status: 'abort' }
       }
@@ -872,19 +881,29 @@ export default class SteamGame implements Game {
         }
       }
 
+      const resolveTargetStart = Date.now()
       const resolved = await resolveSteamInstallTarget(this.appId, args) // Plan 09
+      logInfo(
+        `[Timing] runNativeDepotDownload: resolveSteamInstallTarget took ${Date.now() - resolveTargetStart}ms for appId ${this.appId}`,
+        LogPrefix.Steam
+      )
       if (controller.signal.aborted) {
         return { status: 'abort' }
       }
       const targetSteamappsDir =
         opts.targetSteamappsDirOverride ?? resolved.targetSteamappsDir
 
+      const downloadStart = Date.now()
       const outcome = await downloadSteamDepots(this.appId, {
         targetSteamappsDir,
         installdir: resolved.installdir,
         os: opts.os,
         signal: controller.signal
       })
+      logInfo(
+        `[Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took ${Date.now() - downloadStart}ms so far for appId ${this.appId} (status=${outcome.status}); total since click ${Date.now() - runStart}ms`,
+        LogPrefix.Steam
+      )
 
       if (outcome.status === 'cancelled') {
         return { status: 'abort' }

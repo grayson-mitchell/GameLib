@@ -17,7 +17,7 @@
 import { join, resolve } from 'path'
 import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
 
 /** Numeric-only guard for appId before any PICS lookup (T-21-05 — reused from
@@ -146,18 +146,33 @@ async function fetchInstalldir(appId: string): Promise<string | undefined> {
 
   const client = SteamUser.getClient()
   if (!client) {
+    // [Timing] debug/steam-install-slow-start: no client yet — this call is a
+    // no-op (0ms), so on a cold session this PICS round-trip is NOT paid here.
     return undefined
   }
 
+  // [Timing] debug/steam-install-slow-start: this getProductInfo call is a
+  // network round-trip for the SAME appId buildDepotPlan.fetchAppInfo fetches
+  // again moments later — candidate redundant PICS call. Temporary
+  // instrumentation, remove once root cause is confirmed.
+  const start = Date.now()
   try {
     const numericAppId = Number(appId)
     const { apps } = await client.getProductInfo([numericAppId], [], true)
     const entry = apps?.[numericAppId]
     const appinfo = entry?.appinfo as unknown as AppInstallDirInfo | undefined
+    logInfo(
+      `[Timing] fetchInstalldir: getProductInfo for appId ${appId} took ${Date.now() - start}ms`,
+      LogPrefix.Steam
+    )
     return appinfo?.config?.installdir
   } catch (err) {
     logWarning(
       `SteamGame: failed to read PICS installdir for appId ${appId}: ${String(err)}`,
+      LogPrefix.Steam
+    )
+    logInfo(
+      `[Timing] fetchInstalldir: getProductInfo for appId ${appId} FAILED after ${Date.now() - start}ms`,
       LogPrefix.Steam
     )
     return undefined
@@ -206,6 +221,9 @@ export async function resolveSteamInstallTarget(
   appId: string,
   args: InstallArgs
 ): Promise<SteamInstallTarget> {
+  // [Timing] debug/steam-install-slow-start: total duration of this seam,
+  // reported below. Temporary instrumentation.
+  const start = Date.now()
   const libraries = await listSteamLibraryTargets()
   if (!libraries.length) {
     throw new Error(
@@ -215,6 +233,11 @@ export async function resolveSteamInstallTarget(
 
   const target = resolveOverride(args?.path, libraries)
   const installdir = sanitizeInstalldir(await fetchInstalldir(appId), appId)
+
+  logInfo(
+    `[Timing] resolveSteamInstallTarget: total ${Date.now() - start}ms for appId ${appId}`,
+    LogPrefix.Steam
+  )
 
   return { targetSteamappsDir: target.steamappsDir, installdir }
 }

@@ -103,7 +103,17 @@ export class SteamUser {
    * share a single in-flight connection attempt.
    */
   static async ensureConnected(): Promise<boolean> {
-    if (this.client?.steamID) return true
+    if (this.client?.steamID) {
+      // [Timing] debug/steam-install-slow-start: fast path — already connected,
+      // no CM round-trip paid here. Logged so a runtime trace can rule this
+      // step in/out per-install (temporary instrumentation, remove after root
+      // cause of the ~30s pre-download latency is confirmed).
+      logInfo(
+        '[Timing] SteamUser.ensureConnected: already connected (fast path, 0ms)',
+        LogPrefix.Steam
+      )
+      return true
+    }
     if (!this.isLoggedIn()) return false
 
     const creds = await this.getCredentials()
@@ -115,6 +125,7 @@ export class SteamUser {
       return false
     }
 
+    const start = Date.now()
     if (!this.connectingPromise) {
       this.connectingPromise = this.connectSteamUserClient(
         creds.refreshToken
@@ -123,6 +134,13 @@ export class SteamUser {
       })
     }
     await this.connectingPromise
+    // [Timing] debug/steam-install-slow-start: cold-connect / CM-login path —
+    // this is the candidate ~15s-worst-case cost (connectSteamUserClient's own
+    // logOn timeout). Temporary instrumentation.
+    logInfo(
+      `[Timing] SteamUser.ensureConnected: cold-connect path took ${Date.now() - start}ms`,
+      LogPrefix.Steam
+    )
 
     return Boolean(this.client?.steamID)
   }
