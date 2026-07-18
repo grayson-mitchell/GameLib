@@ -14,6 +14,12 @@ question requires otherwise.
   of the real install — `file`, `nm -gU`, plist/config reads — captured inline as evidence.
   Appropriate when the question is a fact ("does this native surface exist / can this cross the
   boundary"), not a feeling.
+- **Native handshake spikes (bridge line, 005):** single-file `clang -arch arm64` helper that
+  **`dlopen`s the on-disk Steam dylib and `dlsym`s only the symbols found via `nm -gU`** — no SDK
+  headers, no link-time Valve dependency. Emit an ISO-timestamped forensic event log (stderr +
+  `run.log`) plus a final JSON verdict on stdout; exit code encodes pass/fail. `.gitignore` the
+  compiled binary + transient `steam_appid.txt`; commit source + scripts + README + `run.log`.
+  Requires the live signed-in Steam client (user launches it).
 
 ## Structure
 
