@@ -370,6 +370,12 @@ export interface InstalledInfo {
     modsEnabled: boolean
     modsToLoad: string[] // If this is empty redmod will load mods in alphabetic order
   }
+  // steam-startup-resume-crash (2026-07-18) / D-04 softened: set true when
+  // SteamLibraryManager.init() detects a leftover interrupted (StateFlags
+  // 1026) download on startup. Surfaces the game as resumable without
+  // auto-driving any heavy depot work unattended — the user's own Install
+  // click (SteamGame.install()) clears this and performs the resume.
+  steamResumePending?: boolean
 }
 
 export interface Reqs {

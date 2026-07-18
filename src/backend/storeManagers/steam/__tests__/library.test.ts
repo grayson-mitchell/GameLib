@@ -22,6 +22,7 @@ import SteamLibraryManager, {
   startUninstallPolling,
   stopUninstallPolling,
   scanDownloadingAppIds,
+  resumeInterruptedSteamInstall,
   readRunningAppId,
   pollRunningOnce,
   startRunningPoll,
@@ -1081,9 +1082,14 @@ describe('SteamLibraryManager', () => {
     })
   })
 
-  // ── D-07: startup resume via scanDownloadingAppIds ────────────────────────
+  // ── D-07 / steam-startup-resume-crash (2026-07-18), D-04 softened: startup
+  // now only DETECTS+SURFACES a leftover interrupted download via
+  // scanDownloadingAppIds — it never auto-drives finalize/reconcile/poll
+  // unattended anymore (that unattended path was the confirmed crash
+  // trigger). The heavy work moved to resumeInterruptedSteamInstall(), only
+  // invoked by the user's own Install click (see games.test.ts). ───────────
 
-  it('init() resumes polling for in-progress downloads detected on startup', async () => {
+  it('init() surfaces (does NOT auto-resume) an in-progress download detected on startup — no setInterval, no finalize, no depot plan', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -1117,11 +1123,67 @@ describe('SteamLibraryManager', () => {
 
     await manager.init()
 
-    // If init() called startInstallPolling for '730', setInterval should have been invoked
-    expect(setIntervalSpy).toHaveBeenCalled()
+    // Nothing heavy may run on boot for a detected interrupted install.
+    expect(setIntervalSpy).not.toHaveBeenCalled()
+    expect(finalizeToSteam).not.toHaveBeenCalled()
+    expect(buildDepotPlan).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+
+    // It IS surfaced: the library entry is flagged resumable and pushed.
+    expect(library.get('730')?.install?.steamResumePending).toBe(true)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: '730',
+        install: expect.objectContaining({ steamResumePending: true })
+      })
+    )
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'CS:GO' })
+    )
 
     setIntervalSpy.mockRestore()
-    stopInstallPolling('730')
+    jest.useRealTimers()
+  })
+
+  it('init() never throws when surfacing a resumable install fails for one appId, and does not block startup', async () => {
+    jest.useFakeTimers()
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    ;(notify as jest.Mock).mockImplementation(() => {
+      throw new Error('desktop notification backend unavailable')
+    })
+
+    await expect(manager.init()).resolves.toBeUndefined()
+
+    // The failure surfacing the notification must not stop the library
+    // entry from still being flagged resumable.
+    expect(library.get('730')?.install?.steamResumePending).toBe(true)
+
     jest.useRealTimers()
   })
 
@@ -1167,15 +1229,18 @@ describe('SteamLibraryManager', () => {
     await manager.init()
 
     // A live install already owns '730' — startup resume must not finalize
-    // or re-drive the depot orchestrator for it.
+    // or re-drive the depot orchestrator for it, and must not even surface
+    // it as a separate resumable game (the live install already owns the
+    // badge/poll for this appId).
     expect(finalizeToSteam).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(library.get('730')?.install?.steamResumePending).toBeUndefined()
 
     isNativeInstallInFlightSpy.mockRestore()
     jest.useRealTimers()
   })
 
-  it('T-23-14: an appId NOT in the in-flight registry is still resumed normally on startup (no regression)', async () => {
+  it('T-23-14: an appId NOT in the in-flight registry is still surfaced as resumable on startup (no regression)', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -1208,22 +1273,18 @@ describe('SteamLibraryManager', () => {
     // '730' was never registered by a real install(), so it returns false.
     await manager.init()
 
-    expect(finalizeToSteam).toHaveBeenCalledWith(
-      '730',
-      expect.objectContaining({
-        targetSteamappsDir: join('/steam', 'steamapps'),
-        installdir: 'csgo',
-        depots: []
-      })
-    )
+    expect(library.get('730')?.install?.steamResumePending).toBe(true)
+    expect(finalizeToSteam).not.toHaveBeenCalled()
 
-    stopInstallPolling('730')
     jest.useRealTimers()
   })
 
-  // ── D-05: startup resume finalizes to 1026 THEN watches (folded todo) ─────
+  // ── D-05 / steam-startup-resume-crash (2026-07-18): resumeInterruptedSteamInstall()
+  // finalizes to 1026 THEN watches (folded todo) — this logic used to run
+  // automatically from init(); it is now invoked ONLY by the user's own
+  // Install click (games.ts), so these regression tests call it directly. ──
 
-  it('D-05: init() finalizes an interrupted GameLib depot download to a 1026 manifest and never re-invokes the depot orchestrator on startup', async () => {
+  it('D-05: resumeInterruptedSteamInstall() finalizes an interrupted GameLib depot download to a 1026 manifest and never re-invokes the depot orchestrator', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -1252,7 +1313,7 @@ describe('SteamLibraryManager', () => {
       }
     })
 
-    await manager.init()
+    await resumeInterruptedSteamInstall('730')
 
     expect(finalizeToSteam).toHaveBeenCalledWith(
       '730',
@@ -1262,14 +1323,15 @@ describe('SteamLibraryManager', () => {
         depots: []
       })
     )
-    // Pitfall 4 / D-05: startup resume must NEVER re-drive a download.
+    // Pitfall 4 / D-05: resume must NEVER re-drive a full download itself —
+    // any genuine gap is left for the caller's own subsequent install flow.
     expect(downloadSteamDepots).not.toHaveBeenCalled()
 
     stopInstallPolling('730')
     jest.useRealTimers()
   })
 
-  it('D-05: init() finalizes BEFORE it starts watching (finalize-then-startInstallPolling ordering)', async () => {
+  it('D-05: resumeInterruptedSteamInstall() finalizes BEFORE it starts watching (finalize-then-startInstallPolling ordering)', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -1309,7 +1371,7 @@ describe('SteamLibraryManager', () => {
         return { unref: () => undefined } as unknown as NodeJS.Timeout
       }) as unknown as typeof setInterval)
 
-    await manager.init()
+    await resumeInterruptedSteamInstall('730')
 
     expect(order).toEqual(['finalize', 'watch'])
 
@@ -1318,7 +1380,7 @@ describe('SteamLibraryManager', () => {
     jest.useRealTimers()
   })
 
-  it('D-05: init() never dispatches to Steam/CrossOver on startup resume (tellBottledSteamToInstall / shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
+  it('D-05: resumeInterruptedSteamInstall() never dispatches to Steam/CrossOver (tellBottledSteamToInstall / shell.openExternal / runWineCommand — folded-todo regression guard)', async () => {
     jest.useFakeTimers()
     library.clear()
     library.set('730', {
@@ -1347,7 +1409,7 @@ describe('SteamLibraryManager', () => {
       }
     })
 
-    await manager.init()
+    await resumeInterruptedSteamInstall('730')
 
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(shell.openExternal).not.toHaveBeenCalled()
@@ -1425,7 +1487,7 @@ describe('SteamLibraryManager', () => {
       ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
-      await manager.init()
+      await resumeInterruptedSteamInstall('730')
 
       const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
       const text = realReadFileSync(acfPath, 'utf8')
@@ -1470,7 +1532,7 @@ describe('SteamLibraryManager', () => {
       ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
-      await manager.init()
+      await resumeInterruptedSteamInstall('730')
 
       // CR-01: modes must be actually re-applied/healed THIS run — the
       // resume path must never earn StateFlags=4 by inferring "modes
@@ -1527,7 +1589,9 @@ describe('SteamLibraryManager', () => {
       ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
-      await expect(manager.init()).resolves.toBeUndefined()
+      await expect(
+        resumeInterruptedSteamInstall('730')
+      ).resolves.toBeUndefined()
 
       const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
       const text = realReadFileSync(acfPath, 'utf8')
@@ -1538,7 +1602,7 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
-    it('a resume where reconciliation finds genuinely missing/mismatched files fails CLOSED to StateFlags=1026 — never 4, never crashes init() (T-23-09)', async () => {
+    it('a resume where reconciliation finds genuinely missing/mismatched files fails CLOSED to StateFlags=1026 — never 4, never crashes resumeInterruptedSteamInstall() (T-23-09)', async () => {
       jest.useFakeTimers()
       library.clear()
       setupDownloadingFixture('730', 'csgo')
@@ -1564,7 +1628,9 @@ describe('SteamLibraryManager', () => {
       ).finalizeToSteam
       jest.mocked(finalizeToSteam).mockImplementation(realFinalizeToSteam)
 
-      await expect(manager.init()).resolves.toBeUndefined()
+      await expect(
+        resumeInterruptedSteamInstall('730')
+      ).resolves.toBeUndefined()
 
       const acfPath = join(tmp, 'steamapps', 'appmanifest_730.acf')
       const text = realReadFileSync(acfPath, 'utf8')
@@ -1595,7 +1661,9 @@ describe('SteamLibraryManager', () => {
         .mocked(reconcilePartialState)
         .mockResolvedValue({ jobs: [], allFilesVerified: true } as never)
 
-      await expect(manager.init()).resolves.toBeUndefined()
+      await expect(
+        resumeInterruptedSteamInstall('730')
+      ).resolves.toBeUndefined()
 
       // sanitizeInstalldir's fallback shape: `app_${safeFallbackId(appId)}`.
       expect(buildDepotPlan).toHaveBeenCalledWith(
@@ -1611,7 +1679,7 @@ describe('SteamLibraryManager', () => {
       jest.useRealTimers()
     })
 
-    it('a startup buildDepotPlan failure (offline/no CM connection) does not throw out of init() — degrades to the passive honest-empty 1026 fallback', async () => {
+    it('a buildDepotPlan failure (offline/no CM connection) does not throw out of resumeInterruptedSteamInstall() — degrades to the passive honest-empty 1026 fallback', async () => {
       jest.useFakeTimers()
       library.clear()
       setupDownloadingFixture('730', 'csgo')
@@ -1620,7 +1688,9 @@ describe('SteamLibraryManager', () => {
         .mocked(buildDepotPlan)
         .mockRejectedValue(new Error('no authenticated Steam CM connection'))
 
-      await expect(manager.init()).resolves.toBeUndefined()
+      await expect(
+        resumeInterruptedSteamInstall('730')
+      ).resolves.toBeUndefined()
 
       expect(finalizeToSteam).toHaveBeenCalledWith(
         '730',

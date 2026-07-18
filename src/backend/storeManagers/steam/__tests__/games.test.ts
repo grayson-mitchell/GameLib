@@ -367,6 +367,40 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     expect(updated.is_linux_native).toBe(false)
   })
 
+  // ── steam-startup-resume-crash (2026-07-18) hardening: the fire-and-forget
+  // fetchMetadataIfNeeded() call in getGameInfo() must never produce an
+  // unhandled promise rejection, no matter what throws inside it. ──────────
+
+  it('a fetchMetadataIfNeeded() rejection is caught at the call site and never surfaces as an unhandled rejection', async () => {
+    const { logWarning } = jest.requireMock('backend/logger')
+    const rejectionSpy = jest.fn()
+    process.on('unhandledRejection', rejectionSpy)
+
+    const fetchSpy = jest
+      .spyOn(SteamGame.prototype as any, 'fetchMetadataIfNeeded')
+      .mockRejectedValue(new Error('simulated crash inside fetchMetadataIfNeeded'))
+
+    library.set(APP_ID, makeEntry())
+    new SteamGame(APP_ID).getGameInfo()
+    await flushAsync()
+    // Give any (incorrectly) unhandled rejection a full microtask+macrotask
+    // turn to actually surface before asserting it never did.
+    await flushAsync()
+
+    expect(rejectionSpy).not.toHaveBeenCalled()
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.stringContaining(
+          `unexpected error in background metadata fetch for appId ${APP_ID}`
+        )
+      ]),
+      'Steam'
+    )
+
+    process.off('unhandledRejection', rejectionSpy)
+    fetchSpy.mockRestore()
+  })
+
   it('DETAIL-01: native platform flags are persisted to steamMetadataStore', async () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
@@ -1183,6 +1217,80 @@ describe('SteamGame.install() — GAME-02', () => {
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
     await badGame.install({} as any)
     expect(startInstallPollingSpy).not.toHaveBeenCalled()
+  })
+})
+
+// ── steam-startup-resume-crash (2026-07-18) / D-04 softened ────────────────
+//
+// SteamLibraryManager.init() no longer auto-drives a leftover interrupted
+// (StateFlags 1026) install on boot — it only flags the library entry
+// steamResumePending:true. The user's own Install click is the resume
+// trigger: install() must call resumeInterruptedSteamInstall() FIRST when
+// that flag is set (and must never do so, and never let a failure there
+// block the real install, otherwise).
+
+describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-04 softened)', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  let resumeSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('electron')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    resumeSpy = jest
+      .spyOn(libraryModule, 'resumeInterruptedSteamInstall')
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+    resumeSpy.mockRestore()
+  })
+
+  it('calls resumeInterruptedSteamInstall(appId) BEFORE proceeding to the normal install flow when steamResumePending is true', async () => {
+    library.set(
+      APP_ID,
+      makeEntry({ title: 'Dota 2', install: { steamResumePending: true } as any })
+    )
+    const game = new SteamGame(APP_ID)
+
+    await game.install({} as any)
+
+    expect(resumeSpy).toHaveBeenCalledWith(APP_ID)
+    // The normal install flow still runs afterward (D-04 softened resume is
+    // additive, not a replacement for the real install/completion path).
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+  })
+
+  it('does NOT call resumeInterruptedSteamInstall when steamResumePending is not set (no regression for a normal fresh install)', async () => {
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    const game = new SteamGame(APP_ID)
+
+    await game.install({} as any)
+
+    expect(resumeSpy).not.toHaveBeenCalled()
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
+  })
+
+  it('a resumeInterruptedSteamInstall() rejection never blocks the subsequent real install attempt (hardening)', async () => {
+    resumeSpy.mockRejectedValue(new Error('resume finalize exploded'))
+    library.set(
+      APP_ID,
+      makeEntry({ title: 'Dota 2', install: { steamResumePending: true } as any })
+    )
+    const game = new SteamGame(APP_ID)
+
+    const result = await game.install({} as any)
+
+    expect(resumeSpy).toHaveBeenCalledWith(APP_ID)
+    expect(result).toEqual({ status: 'done' })
+    expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
   })
 })
 

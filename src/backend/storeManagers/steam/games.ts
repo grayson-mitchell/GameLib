@@ -30,7 +30,11 @@ import {
   releaseMetadataSlot,
   METADATA_FETCH_TIMEOUT_MS
 } from './state'
-import { startInstallPolling, startUninstallPolling } from './library'
+import {
+  startInstallPolling,
+  startUninstallPolling,
+  resumeInterruptedSteamInstall
+} from './library'
 import {
   isBottleReady,
   tellBottledSteamToInstall,
@@ -375,7 +379,22 @@ export default class SteamGame implements Game {
     const platformsNeverCaptured =
       !existing.is_delisted && cached?.platformsCaptured !== true
     if (!existing.art_cover || platformsNeverCaptured) {
-      void this.fetchMetadataIfNeeded(existing)
+      // steam-startup-resume-crash (2026-07-18) hardening: fetchMetadataIfNeeded
+      // already catches its own axios call internally, but this is the ONE
+      // true fire-and-forget invocation of it in this module (a `void` call
+      // does NOT prevent an unhandled rejection if anything ever throws
+      // before/around that internal try — e.g. a future refactor of the
+      // concurrency-slot wait above it). Chain an explicit .catch() so this
+      // call site can never produce an unhandled rejection, full stop.
+      void this.fetchMetadataIfNeeded(existing).catch((err) => {
+        logWarning(
+          [
+            `SteamGame: unexpected error in background metadata fetch for appId ${this.appId} (never blocks getGameInfo):`,
+            err
+          ],
+          LogPrefix.Steam
+        )
+      })
     }
 
     return existing
@@ -590,6 +609,27 @@ export default class SteamGame implements Game {
    * bottled Steam client instead of native steam:// — see isBottleEligible().
    */
   async install(args: InstallArgs): Promise<InstallResult> {
+    // steam-startup-resume-crash (2026-07-18) / D-04 softened: a
+    // startup-detected interrupted install is surfaced (steamResumePending)
+    // but never auto-driven — the user's own Install click IS the resume
+    // trigger. Run the honest verify-and-finalize pass first (fast: sha1-
+    // reconciles what's already on disk and only reports genuine gaps, it
+    // never itself re-downloads — see resumeInterruptedSteamInstall), then
+    // fall through into the normal install flow below, which will pick up
+    // and complete anything the reconcile pass left as a gap. A failure here
+    // must never block the real install attempt beneath it (hardening).
+    if (library.get(this.appId)?.install?.steamResumePending) {
+      await resumeInterruptedSteamInstall(this.appId).catch((err) => {
+        logWarning(
+          [
+            `SteamGame: resume-surface finalize failed for appId ${this.appId}, continuing to normal install:`,
+            err
+          ],
+          LogPrefix.Steam
+        )
+      })
+    }
+
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
       if (!isBottleReady()) {

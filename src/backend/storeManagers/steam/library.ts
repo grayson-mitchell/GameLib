@@ -259,11 +259,75 @@ async function buildResumeFinalizeOpts(
   }
 }
 
+/**
+ * steam-startup-resume-crash (2026-07-18) / D-04 softened: user-initiated
+ * counterpart to init()'s detect-only surfacing below. Performs the SAME
+ * locate -> rebuild-plan -> reconcile -> finalize -> watch sequence init()
+ * used to run UNATTENDED on every launch — now it only runs when the user
+ * actually triggers a resume (SteamGame.install() calls this first when the
+ * library entry is flagged steamResumePending). Moving buildDepotPlan's
+ * PICS/manifest network fetch (and everything chained after it) off the boot
+ * path is the actual fix: a native fatal in that machinery running
+ * unattended immediately after launch was the confirmed crash trigger.
+ * Running the exact same code here is safe because it is now consent-gated
+ * behind an explicit user click instead of firing automatically on startup.
+ *
+ * NEVER throws — degrades to "still start the poller" on any failure so a
+ * caller (SteamGame.install()) can always safely continue into its own
+ * normal install flow afterward, exactly like the pre-existing init()
+ * contract did.
+ */
+export async function resumeInterruptedSteamInstall(
+  appId: string
+): Promise<void> {
+  try {
+    // Clear the pending-resume marker up front — this call IS the resume
+    // attempt; it must never be left stuck "pending" after the user has
+    // already acted on it, even if the finalize step below fails.
+    const existing = library.get(appId)
+    if (existing?.install?.steamResumePending) {
+      const updated: GameInfo = {
+        ...existing,
+        install: { ...existing.install, steamResumePending: false }
+      }
+      library.set(appId, updated)
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
+
+    try {
+      const target = await locateDownloadingTarget(appId)
+      if (target) {
+        const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
+        await finalizeToSteam(appId, finalizeOpts)
+      }
+    } catch (finalizeErr) {
+      logWarning(
+        [
+          `Steam: resume finalize failed for appId ${appId}, will still watch:`,
+          finalizeErr
+        ],
+        LogPrefix.Steam
+      )
+    }
+
+    startInstallPolling(appId)
+  } catch (err) {
+    // Per-appId hardening: a resume attempt failing for any reason must
+    // never throw out to the caller (SteamGame.install() continues into its
+    // normal install flow regardless).
+    logWarning(
+      [`Steam: resumeInterruptedSteamInstall failed for appId ${appId}:`, err],
+      LogPrefix.Steam
+    )
+  }
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
-   * On startup: load the cached library immediately, resume any in-progress
-   * install polls (D-07), then trigger a background sync when online and
-   * logged in (D-01 / D-09).
+   * On startup: load the cached library immediately, SURFACE (never
+   * auto-drive) any in-progress install detected on disk (D-07, softened by
+   * steam-startup-resume-crash / D-04), then trigger a background sync when
+   * online and logged in (D-01 / D-09).
    */
   async init(): Promise<void> {
     // One-time migration: portrait library capsule replaced the cropped
@@ -284,8 +348,18 @@ export default class SteamLibraryManager implements LibraryManager {
       )
     }
 
-    // Resume polling for any in-progress downloads detected on disk (D-07).
-    // Wrapped in try/catch so a scan failure never blocks startup.
+    // steam-startup-resume-crash (2026-07-18) / D-04 softened: DETECT any
+    // in-progress download left on disk (D-07) and SURFACE it as resumable —
+    // never auto-drive it. Previously this block ran the full
+    // locate->rebuild-plan->reconcile->finalize->watch sequence UNATTENDED on
+    // every launch; a native fatal in that heavy machinery (buildDepotPlan's
+    // PICS/manifest fetch and everything chained after it) running
+    // immediately after startup was the confirmed root cause of a silent
+    // whole-app crash. That sequence now lives in resumeInterruptedSteamInstall()
+    // above and only runs when the user explicitly triggers it (their own
+    // Install click — see SteamGame.install()). Wrapped in try/catch (outer
+    // AND per-appId inner) so neither a scan failure nor a single game's
+    // surface step can ever block startup or take down the others.
     try {
       const downloadingIds = await scanDownloadingAppIds()
       for (const appId of downloadingIds) {
@@ -297,43 +371,48 @@ export default class SteamLibraryManager implements LibraryManager {
         // startInstallPolling itself once its own run completes).
         if (isNativeInstallInFlight(appId)) {
           logInfo(
-            `Steam: skipping startup resume for appId ${appId} — already owned by a live in-process install`,
+            `Steam: skipping startup resume-surface for appId ${appId} — already owned by a live in-process install`,
             LogPrefix.Steam
           )
           continue
         }
 
-        logInfo(
-          `Steam: resuming install poll for appId ${appId} (download in progress on startup)`,
-          LogPrefix.Steam
-        )
-
-        // D-05: finalize a GameLib-owned partial FIRST — write it and stop.
-        // NEVER re-invoke the depot orchestrator or dispatch to Steam/
-        // CrossOver on startup (Pitfall 4) — this is the folded-todo guard:
-        // an interrupted GameLib download must be left for Steam to adopt on
-        // its own next launch (under 1026), not silently re-driven. Only
-        // after finalize does the poller start watching for Steam to flip
-        // StateFlags 1026 -> 4 (or, per Phase 23 23-03/D-04, GameLib itself
-        // may have already earned that 4 via buildResumeFinalizeOpts's
-        // reconciled-complete gate inputs below).
+        // Per-appId hardening: surfacing one game's resumable state must
+        // never throw out of this loop and never block startup or the
+        // other appIds in this list.
         try {
-          const target = await locateDownloadingTarget(appId)
-          if (target) {
-            const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
-            await finalizeToSteam(appId, finalizeOpts)
+          const existing = library.get(appId)
+          if (existing) {
+            const updated: GameInfo = {
+              ...existing,
+              install: { ...existing.install, steamResumePending: true }
+            }
+            library.set(appId, updated)
+            sendFrontendMessage('pushGameToLibrary', updated)
           }
-        } catch (finalizeErr) {
+
+          logInfo(
+            `Steam: appId ${appId} has an interrupted install detected on startup — surfacing as resumable, NOT auto-resuming`,
+            LogPrefix.Steam
+          )
+
+          notify({
+            title: existing?.title ?? '',
+            body: i18next.t(
+              'steam.resumeAvailable.notify',
+              'An interrupted install for {{game}} is ready to resume — click Install to continue',
+              { game: existing?.title ?? '' }
+            )
+          })
+        } catch (surfaceErr) {
           logWarning(
             [
-              `Steam: startup finalize failed for appId ${appId}, will still watch:`,
-              finalizeErr
+              `Steam: failed to surface resumable install for appId ${appId} (never blocks startup):`,
+              surfaceErr
             ],
             LogPrefix.Steam
           )
         }
-
-        startInstallPolling(appId)
       }
     } catch (err) {
       logWarning(
