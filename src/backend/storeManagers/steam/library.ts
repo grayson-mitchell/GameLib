@@ -27,7 +27,7 @@ import {
 } from './electronStores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
-import SteamGame from './games'
+import SteamGame, { isNativeInstallInFlight } from './games'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
@@ -289,6 +289,20 @@ export default class SteamLibraryManager implements LibraryManager {
     try {
       const downloadingIds = await scanDownloadingAppIds()
       for (const appId of downloadingIds) {
+        // T-23-14: a stale on-disk StateFlags=1026 manifest for an appId
+        // already owned by a LIVE in-process install (games.ts's
+        // nativeInstallsInFlight) must never spawn a phantom concurrent
+        // resume path racing it — skip entirely and let the live install own
+        // this appId's finalize + poll start (installDepotDownload calls
+        // startInstallPolling itself once its own run completes).
+        if (isNativeInstallInFlight(appId)) {
+          logInfo(
+            `Steam: skipping startup resume for appId ${appId} — already owned by a live in-process install`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+
         logInfo(
           `Steam: resuming install poll for appId ${appId} (download in progress on startup)`,
           LogPrefix.Steam

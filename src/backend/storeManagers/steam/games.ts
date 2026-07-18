@@ -78,6 +78,18 @@ interface NativeInstallEntry {
 const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
 
 /**
+ * T-23-14 read seam: true if a native depot download is currently tracked
+ * (live OR tearing down) for this appId. Exposes a minimal boolean over
+ * nativeInstallsInFlight — never the mutable registry itself — so library.ts's
+ * startup-resume loop can skip an appId already owned by a live in-process
+ * install, so a stale on-disk StateFlags=1026 manifest can never spawn a
+ * phantom concurrent install racing it.
+ */
+export function isNativeInstallInFlight(appId: string): boolean {
+  return nativeInstallsInFlight.has(appId)
+}
+
+/**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
  * 'linux') — the SAME strings depot/select.ts's DepotSelectOpts.os matches
  * PICS depot config.oslist against. NOT the InstallPlatform vocabulary
@@ -751,6 +763,13 @@ export default class SteamGame implements Game {
    * synchronously before runNativeDepotDownload's first real await, so the
    * D-UAT-05 property (stop() issued during either seam await still finds
    * the appId registered) is preserved.
+   *
+   * T-23-15 pause/resume abort-before-restart: an existing entry whose
+   * `aborted` flag is true (stop() was called) is TEARING DOWN, not live —
+   * joining it would return an aborted result to a caller expecting a fresh
+   * install. Instead, await its settlement first (guaranteeing its `finally`
+   * cleanup has run) before starting a brand-new run, so the prior and the
+   * resumed run never overlap (no stacking).
    */
   private async installDepotDownload(
     args: InstallArgs,
@@ -762,9 +781,16 @@ export default class SteamGame implements Game {
   ): Promise<InstallResult> {
     const existing = nativeInstallsInFlight.get(this.appId)
     if (existing) {
-      // T-23-12: a download is already tracked for this appId — join it
-      // rather than starting a second downloadSteamDepots.
-      return existing.promise
+      if (!existing.aborted) {
+        // T-23-12: a LIVE download is already tracked for this appId — join
+        // it rather than starting a second downloadSteamDepots.
+        return existing.promise
+      }
+      // T-23-15: the tracked entry is tearing down after a pause/cancel —
+      // wait for it to settle (its finally cleanup deletes the entry) before
+      // proceeding to a fresh run below. Never rejects here: the prior run's
+      // own rejection (if any) is not this caller's concern.
+      await existing.promise.catch(() => undefined)
     }
 
     const runPromise = this.runNativeDepotDownload(args, opts)
