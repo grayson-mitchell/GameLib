@@ -48,14 +48,34 @@ const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
 
 /**
+ * A single tracked native depot-download run for one appId — the value type
+ * for nativeInstallsInFlight below. `promise` is the in-flight
+ * installDepotDownload() run's own settlement (joined by a second concurrent
+ * caller for the same appId, T-23-12); `aborted` is flipped true by stop()
+ * alongside callAbortController() so a subsequent installDepotDownload() call
+ * can distinguish a genuinely LIVE run (join it) from one that is merely
+ * TEARING DOWN after a pause/cancel (await its settlement first, then start a
+ * fresh run — T-23-15, no stacking). aborthandler.ts itself exposes no
+ * external "is this id's controller aborted" query, so this flag is games.ts's
+ * own bookkeeping layer on top of createAbortController/deleteAbortController's
+ * create-call-delete lifecycle.
+ */
+interface NativeInstallEntry {
+  promise: Promise<InstallResult>
+  aborted: boolean
+}
+
+/**
  * appIds with an in-flight native depot download (SNI-07/D-02) — the single
  * source of truth stop() consults to decide whether to abort a real download
- * or stay the historic no-op. Populated for the duration of installNative()'s
- * downloadSteamDepots call only; aborthandler.ts itself exposes no "is this id
- * registered" query, so this Set is games.ts's own bookkeeping layer on top of
- * createAbortController/deleteAbortController's create-call-delete lifecycle.
+ * or stay the historic no-op, AND (T-23-12) the single-flight guard
+ * installDepotDownload() consults on entry so a second concurrent call for the
+ * same appId never starts a second downloadSteamDepots. Populated for the
+ * duration of a native depot-download run only; released in a fail-safe
+ * `finally` on success, error, or cancel (T-23-13) so a crashed/aborted run
+ * can never permanently block a later re-install of that appId.
  */
-const nativeInstallsInFlight = new Set<string>()
+const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
 
 /**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
@@ -722,6 +742,15 @@ export default class SteamGame implements Game {
    * front closes that window entirely; the two `controller.signal.aborted`
    * checks below make a cancel issued DURING either seam await still abort
    * the install promptly instead of silently continuing to downloadSteamDepots.
+   *
+   * T-23-12 single-flight guard: if a LIVE entry already exists for
+   * this.appId, join it — return its stored promise instead of starting a
+   * second downloadSteamDepots (the Gate 1 progress-percent flip-flop root
+   * cause was exactly two concurrent runs each emitting progress against
+   * their own doneBytes). The guard check + registration below happen
+   * synchronously before runNativeDepotDownload's first real await, so the
+   * D-UAT-05 property (stop() issued during either seam await still finds
+   * the appId registered) is preserved.
    */
   private async installDepotDownload(
     args: InstallArgs,
@@ -731,8 +760,37 @@ export default class SteamGame implements Game {
       pollerSource?: 'bottle'
     }
   ): Promise<InstallResult> {
+    const existing = nativeInstallsInFlight.get(this.appId)
+    if (existing) {
+      // T-23-12: a download is already tracked for this appId — join it
+      // rather than starting a second downloadSteamDepots.
+      return existing.promise
+    }
+
+    const runPromise = this.runNativeDepotDownload(args, opts)
+    nativeInstallsInFlight.set(this.appId, {
+      promise: runPromise,
+      aborted: false
+    })
+    return runPromise
+  }
+
+  /**
+   * The actual native depot-download run — split out of installDepotDownload
+   * (T-23-12) so its promise can be registered in nativeInstallsInFlight
+   * BEFORE its first await, letting a concurrent caller for the same appId
+   * join the SAME promise instead of starting a second downloadSteamDepots.
+   * Body/contract unchanged from the pre-Phase-23-05 installDepotDownload.
+   */
+  private async runNativeDepotDownload(
+    args: InstallArgs,
+    opts: {
+      targetSteamappsDirOverride?: string
+      os: string
+      pollerSource?: 'bottle'
+    }
+  ): Promise<InstallResult> {
     const controller = createAbortController(this.appId)
-    nativeInstallsInFlight.add(this.appId)
 
     try {
       const clientReady = await ensureSteamClientReady(this.appId) // Plan 10
@@ -786,6 +844,9 @@ export default class SteamGame implements Game {
 
       return { status: 'done' }
     } finally {
+      // T-23-13: fail-safe cleanup on success, error, or cancel (including an
+      // unhandled throw/rejection) — never leaves this appId permanently
+      // blocked from a later re-install.
       nativeInstallsInFlight.delete(this.appId)
       deleteAbortController(this.appId)
     }
@@ -1099,11 +1160,16 @@ export default class SteamGame implements Game {
    * call site. Analog: gog/games.ts lines 1291-1295.
    */
   async stop(_stopWine?: boolean): Promise<void> {
-    if (nativeInstallsInFlight.has(this.appId)) {
+    const inFlight = nativeInstallsInFlight.get(this.appId)
+    if (inFlight) {
       logInfo(
         `SteamGame: aborting in-flight native depot download for appId ${this.appId}`,
         LogPrefix.Steam
       )
+      // T-23-15: flip the tracked entry's abort state alongside the real
+      // AbortController so a subsequent installDepotDownload() call (pause ->
+      // resume) can tell this run is tearing down rather than still live.
+      inFlight.aborted = true
       callAbortController(this.appId)
       return
     }
