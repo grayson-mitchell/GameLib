@@ -122,42 +122,56 @@ between two values** (now 2% ↔ 16%). Strongly implicates commit `22619287` ("r
 speed + real disk rate for Steam") — two competing progress sources (network-received % vs
 disk-written %) appear to be racing on the same display.
 
-**Diagnosis (static analysis, HIGH confidence on defect class):**
-Two INDEPENDENT `progressUpdate` producers exist for the same `{ appName: appId, runner: 'steam' }`,
-computing `percent` from DIFFERENT sources:
-1. `depot.ts` `emitProgress` (L1087): `percent = min(100, round(doneBytes / plan.totalBytes * 100))`
-   where `doneBytes` = decompressed bytes written this process. Monotonic within one run.
-2. `library.ts` `pollInstallOnce` (L1195): `percent = round(bytesDownloaded / bytesToDownload * 100)`
-   read from the on-disk ACF (`readAcfState`), emitted every ~3s by `startInstallPolling`.
-Because a single `emitProgress` run's `doneBytes` only increases, the observed BACKWARDS jump
-(16% → 2%) is impossible from one stream — it proves two producers were emitting for the same appId
-concurrently, and the DownloadManager's single `progress.percent` slot flip-flops between them. The two
-percent scales are unrelated (decompressed-disk vs ACF download bytes), so any overlap diverges by a
-large margin — matching 2% ↔ 16%.
-Overlap triggers (any of these; exact one not pinned without runtime logs):
-  - a leftover `startInstallPolling` from a PRIOR install attempt of the same title still running
-    against a stale partial ACF (constant low % vs the live climbing %);
-  - two concurrent `installDepotDownload`/`downloadDepotFiles` runs for one appId (no in-flight guard
-    on the DownloadManager side, only `nativeInstallsInFlight` inside SteamGame);
-  - a pause/resume that starts a fresh depot run while the previous run's workers are still draining.
-Secondary: the "slow-then-fast, ~0.5s graph" cadence is the `PROGRESS_THROTTLE` + `rollingRateMiBs`
-window behavior from commit `22619287` warming up — cosmetic, not the flicker cause.
+**Diagnosis (CONFIRMED via static analysis + on-disk evidence):**
+
+Symptom refined by user: it is ONE `progress.percent` value rapidly alternating between two figures
+(observed 2%↔16%, later 6%↔27%) — both figures CLIMB over time at different rates. The main-screen
+download summary AND the progress bar both jump between the two.
+
+Root cause: **two concurrent `downloadDepotFiles` runs for the same appId, with no single-flight
+guard.** `SteamGame.installDepotDownload` (games.ts:735) does `nativeInstallsInFlight.add(appId)` but
+NEVER checks it on entry — the set is only READ by `stop()` (games.ts:1102). So `install()` can be
+entered twice for one appId and spawn two concurrent depot downloads. Each run's `emitProgress`
+(depot.ts:1087) computes `percent = doneBytes/plan.totalBytes` against its OWN independent `doneBytes`,
+and both emit `progressUpdate` for `{ appName: appId, runner: 'steam' }`. One run is ahead, one behind →
+the single `progress.percent` slot flip-flops. A single `emitProgress` stream is monotonic (`doneBytes`
+only grows), so the alternation PROVES two concurrent runs.
+
+Ruled OUT as the second climbing source:
+- `pollInstallOnce` (library.ts:1195): the stale bottle ACF (see below) has `BytesToDownload 0` /
+  `BytesDownloaded 0`, so `readAcfState` returns all-zero byte totals → `denominator === 0` →
+  pollInstallOnce SKIPS the percent emit. The leftover poller keeps the game in 'installing' status but
+  does NOT emit a climbing percent.
+- `buildResumeFinalizeOpts` startup-resume (library.ts:169): only reconciles + heals modes + finalizes
+  — it never calls `downloadDepotFiles`, so it emits no climbing percent.
+
+Precondition CONFIRMED on disk (answers the "stale ACF?" question — YES):
+`~/Library/Application Support/CrossOver/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/
+steamapps/appmanifest_990080.acf` exists from a PRIOR attempt with `StateFlags "1026"` (Steam-verify
+pending, bit 4 NOT set), `SizeOnDisk 73965345601` (~74GB), `BytesDownloaded 0`, `BytesToDownload 0`,
+`InstalledDepots { 990081, 990082 }`. Because bit 4 is unset, `scanDownloadingAppIds()` classifies
+990080 as resumable — the state that lets GameLib re-enter an install for it alongside the user's
+manual install.
+
+Secondary (cosmetic, NOT the flicker): "slow-then-fast, ~0.5s graph" cadence is the
+`PROGRESS_THROTTLE` + `rollingRateMiBs` window from commit `22619287` warming up.
 
 **Gaps (structured for /gsd-plan-phase 23 --gaps):**
 ```yaml
-- truth: "A multi-depot title installs with a single, monotonic download-progress percent"
+- truth: "A depot install runs exactly one download per appId with a single, monotonic progress percent"
   status: failed
-  reason: "Two independent progressUpdate producers (depot.ts emitProgress via doneBytes/plan.totalBytes, and library.ts pollInstallOnce via ACF bytesDownloaded/bytesToDownload) emit for the same {appName:appId, runner:'steam'} with divergent percent math and no mutual exclusion. When they overlap, the DownloadManager percent flip-flops (observed 2% <-> 16%). Backwards jumps are impossible from a single emitProgress stream (doneBytes only grows), confirming concurrent producers."
+  reason: "SteamGame.installDepotDownload (games.ts:735) adds appId to nativeInstallsInFlight but never rejects a second concurrent entry (the set is only read by stop() at 1102). Two concurrent downloadDepotFiles runs for one appId each emit progressUpdate with independent doneBytes/plan.totalBytes, so the single progress.percent flip-flops between two climbing figures (confirmed 2%<->16%, later 6%<->27%). Confirmed precondition: a stale StateFlags=1026 appmanifest_990080.acf in the CrossOver bottle marks 990080 resumable."
   severity: major
   test: gate-1-multi-depot
   artifacts:
-    - "src/backend/storeManagers/steam/depot.ts:1087 (emitProgress percent)"
-    - "src/backend/storeManagers/steam/library.ts:1195 (pollInstallOnce percent)"
-    - "src/backend/storeManagers/steam/games.ts:726 (installDepotDownload; poller starts only after download, so overlap comes from a leftover/second poller or a double download run)"
+    - "src/backend/storeManagers/steam/games.ts:735 (installDepotDownload: add without reject-guard)"
+    - "src/backend/storeManagers/steam/games.ts:1102 (nativeInstallsInFlight only read by stop())"
+    - "src/backend/storeManagers/steam/depot.ts:1087 (emitProgress percent = doneBytes/plan.totalBytes)"
+    - "stale ACF: CrossOver/Bottles/GameLibSteam/.../steamapps/appmanifest_990080.acf StateFlags=1026"
   missing:
-    - "Mutual exclusion / single source of truth for steam progressUpdate percent during a native/bottle depot download"
-    - "Stop/replace any existing startInstallPolling(appId) before starting a depot download run"
-    - "A DownloadManager-side in-flight guard preventing two concurrent depot runs for one appId"
+    - "Single-flight guard: installDepotDownload must reject/join a second concurrent install for an appId already in nativeInstallsInFlight (return the in-flight result or no-op, do NOT start a 2nd downloadDepotFiles)"
+    - "Pause/resume must abort the prior run's AbortController before starting a new depot run (no stacking)"
+    - "Stale StateFlags=1026 handling so a leftover partial manifest can't trigger a phantom concurrent install racing a user-initiated one"
 ```
 
 ---
