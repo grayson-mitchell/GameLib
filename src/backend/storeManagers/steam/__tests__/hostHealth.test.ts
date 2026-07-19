@@ -13,7 +13,8 @@ import {
   MIN_SAMPLES_FOR_UNHEALTHY,
   MIN_SUCCESS_RATE_FOR_HEALTHY,
   PRIOR_HALFLIFE_SAMPLES,
-  priorScoreFromWeightedLoad
+  priorScoreFromWeightedLoad,
+  TOP_N_FANOUT
 } from '../depot/hostHealth'
 
 describe('HostHealthTracker', () => {
@@ -301,6 +302,66 @@ describe('HostHealthTracker', () => {
       expect(tracker.pickHost(pool, 0, 1)).toBe('cache1-akl-tpwr')
       expect(tracker.pickHost(pool, 0, 2)).toBe('cache2-akl-tpwr')
       expect(tracker.pickHost(pool, 0, 3)).toBe('alibaba-cdn')
+    })
+  })
+
+  // Debug/steam-install-slow-start (Thread C, Phase 25): worker-slot-aware
+  // fan-out. Root cause: pickHost's composite-score sort erases seed
+  // rotation once scores differentiate -- every attempt-0 call converges on
+  // ordered[0], so ~32 concurrent chunk workers all hammer the single
+  // top-scored host instead of spreading across the several genuinely-good
+  // hosts getContentServerHosts already returns. This dimension fixes
+  // attempt-0 selection ONLY (workerSlot is ignored for attemptIndex>0,
+  // preserving the existing failure-driven rotation and circuit breaker
+  // byte-for-byte).
+  describe('worker-slot-aware fan-out (Phase 25)', () => {
+    const hosts = ['host-a', 'host-b', 'host-c', 'host-d']
+
+    it('attemptIndex=0 with distinct workerSlot values spreads across the top-N healthy hosts among the top-N healthy hosts when scores differ', () => {
+      const tracker = new HostHealthTracker()
+      // Distinct, healthy composite scores for all four hosts (varying avg
+      // latency, all 100% success) so the top-N != a tied cold-start order.
+      for (let i = 0; i < 6; i++) tracker.record('host-a', 'success', 50)
+      for (let i = 0; i < 6; i++) tracker.record('host-b', 'success', 150)
+      for (let i = 0; i < 6; i++) tracker.record('host-c', 'success', 300)
+      for (let i = 0; i < 6; i++) tracker.record('host-d', 'success', 450)
+
+      const picks = [0, 1, 2].map((workerSlot) => tracker.pickHost(hosts, 0, 0, workerSlot))
+      expect(new Set(picks).size).toBeGreaterThan(1)
+      // Every pick must come from within the top-N healthy bucket, never an
+      // off-list host (T-25-01) -- and TOP_N_FANOUT itself bounds N.
+      expect(TOP_N_FANOUT).toBeGreaterThan(1)
+      for (const pick of picks) {
+        expect(hosts).toContain(pick)
+      }
+    })
+
+    it('attemptIndex>0 is unaffected by workerSlot — full ordered-list rotation preserved regardless of workerSlot value', () => {
+      const tracker = new HostHealthTracker()
+      for (let i = 0; i < 6; i++) tracker.record('host-a', 'success', 50)
+      for (let i = 0; i < 6; i++) tracker.record('host-b', 'success', 150)
+      for (let i = 0; i < 6; i++) tracker.record('host-c', 'success', 300)
+      for (let i = 0; i < 6; i++) tracker.record('host-d', 'success', 450)
+
+      for (const attemptIndex of [1, 2, 3]) {
+        const withoutSlot = tracker.pickHost(hosts, 0, attemptIndex)
+        expect(tracker.pickHost(hosts, 0, attemptIndex, 0)).toBe(withoutSlot)
+        expect(tracker.pickHost(hosts, 0, attemptIndex, 1)).toBe(withoutSlot)
+        expect(tracker.pickHost(hosts, 0, attemptIndex, 2)).toBe(withoutSlot)
+      }
+    })
+
+    it('omitting workerSlot (every pre-Phase-25 caller) reproduces the exact pre-Phase-25 ordered[0] pick — no regression', () => {
+      const tracker = new HostHealthTracker()
+      // Cold start, no weightedLoads -- identical assertions to the
+      // foundational "cold start preserves plain seed-rotation" test above,
+      // proving the new workerSlot dimension never changes the 3-arg call
+      // site's return value.
+      expect(tracker.pickHost(hosts, 0, 0)).toBe('host-a')
+      expect(tracker.pickHost(hosts, 0, 1)).toBe('host-b')
+      expect(tracker.pickHost(hosts, 0, 2)).toBe('host-c')
+      expect(tracker.pickHost(hosts, 0, 3)).toBe('host-d')
+      expect(tracker.pickHost(hosts, 2, 0)).toBe('host-c')
     })
   })
 })
