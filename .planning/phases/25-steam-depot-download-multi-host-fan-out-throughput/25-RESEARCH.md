@@ -310,22 +310,25 @@ logInfo(
 
 **None of the core diagnostic claims (root cause, mechanism, hosts=6 confirmed healthy, decode clean) are assumptions** — they are `[VERIFIED: source read this session]` against `hostHealth.ts`, `depot.ts`, and `decompress.ts`, cross-confirmed against the resolved, hardware-corroborated debug session `.planning/debug/resolved/steam-install-slow-start.md` (cycles 24-25).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact top-N fan-out width**
    - What we know: The 6-host pool splits into 3 local SteamCache edges (weightedload 20-48) and 3 global CDN fallbacks (weightedload 130, deliberately deprioritized to mirror the real Steam client). Fan-out should stay within the "genuinely good" subset.
    - What's unclear: Whether N=2, N=3, or N=4 best matches real-hardware throughput ceiling for a typical 6-host pool — no fresh hardware capture of a fanned-out run exists yet (correctly so — the fix hasn't been implemented).
    - Recommendation: Make it a named exported constant (following this file's established pattern), default to `min(3, healthy.length)`, and require the phase's own before/after hardware measurement (already in Acceptance Criteria) to validate/tune it. Do not treat the exact number as load-bearing for correctness — only for throughput magnitude.
+   - RESOLVED: `TOP_N_FANOUT = 3` shipped as a tunable exported constant (Plan 25-01, MHOST-01); its magnitude is validated/retuned by the Plan 25-03 hardware measurement (MHOST-04), never load-bearing for correctness.
 
 2. **Whether to combine file-level and chunk-level worker-slot dimensions, or use only one**
    - What we know: Both dimensions independently contribute to attempt-0 convergence (Pitfall 2). A fix must address the chunk-level dimension (largest single-file impact) at minimum.
    - What's unclear: Whether file-level diversity alone (spreading each file's uniform `fileSeed`-driven pick) is already "good enough" once the chunk-level dimension is fixed, or whether both need explicit combination.
    - Recommendation: Fix the chunk-level dimension first (inside `downloadFileChunks`, the smaller and clearer-cut of the two `Array.from` pools) and verify via hardware measurement; add file-level combination only if the single-file-dominated case (Pitfall 2's warning sign) still shows convergence.
+   - RESOLVED: combine BOTH dimensions as `fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot` (Plan 25-02, MHOST-02) so a single large file's chunk workers also fan out; both operands are plain `number` (default-param / Array.from index) for strict-mode-safe arithmetic.
 
 3. **CDN-auth cleanup scope-in vs scope-out for this phase**
    - What we know: `cdnAuth.ts` is 611 lines, referenced ~68 times across `depot.ts`/`decompress.ts`, has its own test file (`cdnAuth.test.ts`) and fixture, and is proven dormant for real hosts (`usetokenauth` absent on every observed real host; the `type==='CDN'` gate widening was itself a cycle-level fix later found unnecessary in practice since those hosts are barely used).
    - What's unclear: Whether removing it in the same phase as the fan-out fix increases regression risk (both touch `fetchChunk`'s signature/body) enough to warrant a separate phase/plan.
    - Recommendation: See "Optional Bundled Cleanup Risk Assessment" below — treat as an optional LAST wave/plan within this phase, strictly after the fan-out fix's own full regression pass is green, or descope to its own future phase entirely. Either is defensible; the roadmap already frames it as "optional."
+   - RESOLVED: DESCOPED out of Phase 25 to a follow-up quick-task/phase (no MHOST requirement ID minted), documented in ROADMAP.md and REQUIREMENTS.md; sequencing it after Phase 25 lands and is hardware-verified keeps the throughput fix's `fetchChunk` diff clean and bisectable (RESEARCH Assumptions Log A3).
 
 ## Optional Bundled Cleanup Risk Assessment (CDN-auth excision)
 
