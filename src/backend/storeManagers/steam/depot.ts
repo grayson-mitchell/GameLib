@@ -2073,7 +2073,18 @@ export async function downloadSteamDepots(
       // Nothing owned/matching this OS — still finalize (honest, empty
       // state) so a dangling prior partial attempt is never left unresolved.
       await finalize()
-      return { status: 'done' }
+      // WR-02 (21-17): honor an abort on this early return exactly like the
+      // main path (L2119) and the thrown-error path (L2152) do. If the signal
+      // was aborted after buildDepotPlan resolved with zero depots, finalize()
+      // above already forced the honest 'cancelled'/1026 manifest; reporting
+      // 'done' here would skip games.ts runNativeDepotDownload's cancelled
+      // branch and thus never call markSteamInstallIncomplete — surfacing an
+      // aborted install as if it had succeeded. Returning 'cancelled' routes
+      // it through the SAME abort->cancelled->mark chain (is_installed=false,
+      // steamResumePending=true) as the other two abort return paths.
+      return opts.signal?.aborted === true
+        ? { status: 'cancelled' }
+        : { status: 'done' }
     }
 
     const client = getDepotClient()
