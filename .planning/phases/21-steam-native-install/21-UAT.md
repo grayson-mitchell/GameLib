@@ -4,14 +4,14 @@ plan: 12
 artifact: uat
 status: partial
 total_items: 11
-pending_items: 9
-passed_items: 2
-failed_items: 0
-blocked_items: 0
+pending_items: 2
+passed_items: 3
+failed_items: 2
+blocked_items: 3
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (code-fixed 4267eba0, pending HW re-verify), D-UAT-06 (code-fixed 5c65c200 — retry works; real Cyberpunk cause is D-UAT-08), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (code-fixed 64d5afcc — owner-appId threaded to depot key/manifest; fail-fast + honest error + X-removes-vs-Retry; pending HW re-verify)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (OPEN — cancelled/incomplete install registered as "Installed"; Play triggers Steam install; found 2026-07-19 during 1d re-run), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
 run_via: "/gsd:verify-work 21"
-last_updated: 2026-07-17
+last_updated: 2026-07-19
 ---
 
 # Phase 21 — Steam Native Install: Real-Machine UAT
@@ -126,8 +126,16 @@ layer rejecting the GameLib-downloaded-then-Steam-adopted file set.
 **Expected result:** Cancel → honest 1026 manifest → Steam's own repair-on-launch path completes the
 install without GameLib intervention.
 
-**Result:** PENDING (unblocked — D-UAT-05 fixed in code, commit `4267eba0`; awaiting real-HW re-run on a fresh build)
-**Title/AppID used:** _(record here)_
+**Result:** DIVERGENCE (2026-07-19, real macOS, fresh build) — see D-UAT-09 below
+**Title/AppID used:** _(pending — record game/appID)_
+**Observed:** Cancelled the install just before the download finished. GameLib then registered the
+game as **Installed** (primary action became "Play"). Clicking Play opened Steam and Steam began its
+own **install process** rather than launching the game. So Steam DOES pick up the incomplete `1026`
+manifest and repair-on-launch (the D-04 mechanism works), but GameLib misrepresents a cancelled /
+incomplete install as fully installed — a "Play" button that actually triggers a Steam download.
+Whether the cancel itself was responsive (buttons live, item left queue, no re-wedge on GameLib
+restart — the core D-UAT-05 checks) and whether Steam's repair then completes into a launchable game
+are still to be confirmed.
 
 > **🔴 D-UAT-05 (BLOCKER, found 2026-07-16, real macOS) — interrupted Steam native installs wedge the DownloadManager queue across app restart; pause/stop/cancel buttons non-functional.**
 >
@@ -217,10 +225,13 @@ or the total install size (i.e. it does not look like the whole file/depot is be
 memory). RSS should plateau around `O(concurrency × chunk size)` per Pattern 2 in RESEARCH.md, not
 climb linearly with bytes downloaded.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**Total install size:** _(record here)_
-**Memory profile:** _(record RSS samples or a summary: min/max/plateau value)_
+**Result:** PASS (2026-07-19, real macOS, fresh build @ adced885)
+**Title/AppID used:** Cyberpunk 2077 (1091500)
+**Total install size:** ~90 GB across 3 macOS depots (multi-depot — doubles as 2c)
+**Memory profile:** Main-process RSS stayed **stable/bounded** during streaming (did not climb linearly
+with bytes downloaded). Download ran at **healthy speed** (worker-pool throughput — re-verifies
+D-UAT-03; not the old ~5 MB/s single-threaded LZMA crawl). Install rode **past plan-build** without the
+D-UAT-08 `FileNotFound` / "Steam servers dropped the connection" failure and streamed chunks to disk.
 
 ### 2b. Byte-correctness spot-check
 
@@ -249,9 +260,17 @@ any title known to ship base game + separate language/DLC depots).
 **Expected result:** Correct summed total shown during download; all depots present on disk; Steam
 adopts cleanly; no collision corruption.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**Depot count / per-depot sizes:** _(record here)_
+**Result:** PARTIAL PASS (2026-07-19, real macOS, fresh build @ adced885) — streaming half verified
+**Title/AppID used:** Cyberpunk 2077 (1091500)
+**Depot count / per-depot sizes:** 3 macOS depots (1460472 ~65 GB, 2224089 ~24 GB, 2060314 ~193 MB),
+~90 GB summed — this is the D-UAT-08 multi-app/sub-app title.
+**Verified:** past plan-build (owner-appId key fetch works for all sub-app depots — **D-UAT-08 fix
+`64d5afcc` real-HW confirmed**), multi-depot union selected, chunks stream to disk at healthy speed.
+**Still pending (needs a completed 90 GB download):** (a) Steam adopts the multi-depot install cleanly
+with no forced full re-download and no cross-depot file collision; (b) 2b byte-correctness SHA1
+spot-check. Left partial because the tester confirmed streaming and did not necessarily finish the full
+90 GB. Adoption of a *single*-depot install is already proven (1a WazHack 1026→4); the multi-depot
+no-collision adoption is the remaining unproven bit.
 
 ---
 
@@ -282,10 +301,23 @@ divergence (what Steam did instead — e.g. refused to recognize the manifest, r
 re-download, or crashed) below. This routes to a follow-up gap plan per the phase plan's own
 `<verification>` clause — it is the one D-15 risk RESEARCH flagged as inference, not tested.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**Bottle name:** _(record here)_
-**Divergence (if any):** _(describe exactly what happened, with evidence — logs, screenshots, .acf contents before/after)_
+**Result:** PARTIAL PASS — install + adoption VERIFIED; launch/UI DIVERGENCE (D-UAT-10). 2026-07-19, real macOS, fresh build @ adced885.
+**Title/AppID used:** Portal 2 (620) — VALID subject. GameLib metadata: `is_mac_native: false`,
+`is_linux_native: true`, no Mac build (Steam lists it Windows + SteamOS/Linux). Correctly routes to the
+Windows bottle. (Earlier note claiming Portal 2 is mac-native was WRONG — corrected 2026-07-19.)
+**Bottle name:** GameLibSteam (win64 bottle — install landed under `drive_c/Program Files (x86)/Steam/steamapps/`)
+**Adoption VERIFIED (A3 / D-15 bottle half):** GameLib selected the **Windows** depot (not the Mac depot)
+and streamed it directly into the bottle's own `steamapps/common/Portal 2/` — `portal2.exe` present,
+~12 GB on disk, complete Windows tree (`bin/`, `platform/`, `portal2/`). The bottle's
+`appmanifest_620.acf` reads `StateFlags "4"` with `BytesDownloaded == BytesToDownload` (12,755,935,432)
+— bottled Windows Steam adopted the GameLib-written manifest to fully-installed, bottle-only (no stray
+620 in the native macOS Steam library). This is real-HW confirmation of the one D-15 risk RESEARCH
+flagged as inference-not-tested. **The bottle adoption mechanism works.**
+**Launch/UI DIVERGENCE → D-UAT-10 (see below):** Play is a dead no-op, no install options, the detail
+page shows **Game Porting Toolkit** instead of CrossOver, and uninstall reverts to "Play". Root cause
+NOT yet determined — my first guess (`is_mac_native` routing) was DISPROVEN (620's `is_mac_native` is
+`false`; install record correctly shows platform=Windows, install_path=bottle, is_installed=true).
+Launch-through-bottle (step 4) therefore NOT verified — routed to `/gsd-debug` for real root-causing.
 
 ---
 
@@ -499,6 +531,89 @@ launched Steam.
 > active download. +2 regression tests (MainButton.steamWaitingRestart.test.tsx); frontend suite 119/119,
 > tsc clean. **Needs real-HW re-verification** on the Civ VII detail page after a fresh build.
 
+## D-UAT-09 (2026-07-19) — cancelled/incomplete native install is registered as "Installed"; Play triggers a Steam install instead of launching
+
+> **🟠 D-UAT-09 (MAJOR, found 2026-07-19, real macOS, fresh build @ adced885) — GameLib treats a
+> cancelled (incomplete) native install as fully installed.**
+>
+> **Reported:** "quit install just before finished download. game registered as installed. when i
+> click on play opens steam and starts steam install process."
+>
+> **What works:** Steam picks up the incomplete `1026` manifest and runs its own install/repair on
+> launch — the D-04 "cancel → 1026 → Steam repair" mechanism fires as designed.
+>
+> **The divergence:** After the cancel, GameLib shows the game as **Installed** with a **Play** button.
+> Play hands off to Steam, which then has to download/repair the remaining files before the game can
+> run. So the primary action lies about state: the user expects launch, gets a Steam download. A
+> cancelled/partial install (StateFlags `1026`, the "update required / incomplete" flag) should NOT be
+> surfaced as a clean "Installed" — it should read as incomplete / needs-Steam-to-finish, distinct from
+> a StateFlags `4` complete install.
+>
+> **Suspected cause (to confirm in debug):** GameLib's Steam install-state detection likely treats the
+> mere presence of an `appmanifest_*.acf` as "installed" without distinguishing `StateFlags 4` (fully
+> installed) from `1026` (incomplete/update-required). A cancelled install writes a `1026` manifest →
+> detected as installed → Play enabled. Compare with the 1a "waiting-for-restart" handling (21-16), which
+> already special-cases a freshly-written-but-not-yet-adopted manifest; the cancelled-partial case needs
+> analogous treatment (surface "resume in Steam" / incomplete, not "Play").
+>
+> **1d / D-UAT-05 closure (tester confirmations, 2026-07-19):**
+> 1. **Cancel responsiveness:** ✅ CONFIRMED — cancel worked, item left the DownloadManager queue
+>    immediately (no dead-button no-op).
+> 2. **No re-wedge:** ✅ CONFIRMED — after quitting + relaunching GameLib, the cancelled install did
+>    NOT reappear stuck in the queue.
+> 3. **Repair completes:** ⏳ NOT YET CONFIRMED — clicking Play launches Steam's install/repair, but the
+>    tester has not yet reported whether letting it finish yields a launchable game (D-04 end-to-end).
+>    Non-blocking for the D-UAT-05 queue-wedge closure; still open for the D-04 repair-path claim.
+>
+> **⇒ D-UAT-05 (queue-wedge on restart + dead pause/stop) is REAL-HW VERIFIED (fix `4267eba0` holds).**
+> D-UAT-09 (mislabel of the incomplete install as "Installed") is the remaining, contained issue.
+>
+> **Routing:** MAJOR install-state correctness divergence → candidate for a Phase-21 gap plan
+> (`/gsd-plan-phase 21 --gaps`) or a `/gsd-debug` session, batched with any remaining 1d/2x findings.
+
+## D-UAT-10 (2026-07-19) — a bottle-installed Steam game (Portal 2) is not launchable/uninstallable from GameLib: dead Play, no install options, detail page shows Game Porting Toolkit, uninstall reverts to Play
+
+> **🟠 D-UAT-10 (MAJOR, found 2026-07-19, real macOS, fresh build @ adced885) — a Windows Steam game
+> correctly installed into the CrossOver bottle cannot be launched or uninstalled from the GameLib UI.
+> ROOT CAUSE UNKNOWN — needs a debug session (do NOT trust the first, disproven guess).**
+>
+> **Reported:** "not sure what happened, or where installed — play button does not do anything. There
+> was not install options... but when I opened details said was game porting kit rather than crossover.
+> tried to uninstall but after a while reverted back to 'play option'." (Subject: Portal 2 / 620.)
+>
+> **What actually happened (confirmed on disk + in GameLib's store):** the bottle install SUCCEEDED.
+> GameLib streamed the **Windows** depot into `…/CrossOver/Bottles/GameLibSteam/drive_c/Program Files
+> (x86)/Steam/steamapps/common/Portal 2/` (`portal2.exe`, ~12 GB, complete Windows tree), the bottle
+> `appmanifest_620.acf` reads `StateFlags "4"`, and `steam_library.json` records 620 correctly:
+> `is_mac_native:false`, `is_linux_native:true`, `is_installed:true`, `install.platform:"Windows"`,
+> `install.install_path` = the bottle path, size 11.88 GiB. So install + adoption + the install RECORD
+> are all correct. The failure is purely GameLib's launch/uninstall/detail action wiring for a
+> bottle-installed Steam game.
+>
+> **DISPROVEN hypothesis (recorded so it isn't re-tried):** first guessed the GamePage routes by
+> `is_mac_native` to a native/GPTK path. FALSE — `620.is_mac_native` is `false` and the install record
+> already points at the bottle. The GPTK label + dead Play are NOT explained by a mac-native flag.
+>
+> **Open questions for the debug session:**
+> - Why does the detail page show **Game Porting Toolkit** as the tool when the game is a Steam bottle
+>   install that should launch via the CrossOver bottle's Steam (`steam://rungameid/620` inside the
+>   bottle)? Is GamePage reading a default/global Wine version (GPTK) instead of the Steam bottle wine?
+> - Is the Steam `launch()` / `uninstall()` path wired at all for a game whose install lives in the
+>   bottle steamapps (vs native), or does it fall through to a generic Wine/native path that no-ops?
+> - Why does uninstall "revert to Play" — does it fail silently and re-detect the still-present bottle
+>   `appmanifest_620.acf` / files as installed?
+> - Is `is_linux_native:true` (with `mac_arch:unknown`) steering any routing here?
+>
+> **Launch-through-bottle (Task 3 step 4) UNVERIFIED.** The adoption half (steps 1–3) PASSED; only the
+> launch/uninstall half is broken.
+>
+> **Cleanup note for the tester:** Portal 2 is fully installed in the bottle (12 GB) but not launchable
+> from GameLib right now. To remove it, uninstall from **inside the bottled Steam client** (or delete the
+> bottle's `common/Portal 2` + `appmanifest_620.acf`), since GameLib's uninstall is the broken path here.
+>
+> **Routing:** MAJOR launch/uninstall correctness divergence → `/gsd-debug` (root-cause first — my
+> code-read guess was wrong once already), then Phase-21 gap plan (batch with D-UAT-09).
+
 ## Summary Table (fill in after all items are run)
 
 | # | Item | Requirement(s) | Result | Notes |
@@ -506,11 +621,11 @@ launched Steam.
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
 | 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | PENDING | Unblocked — D-UAT-05 fixed in code (commit 4267eba0); re-run on a fresh build. Also re-verifies D-UAT-05 itself (interrupt+cancel+restart). |
-| 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PENDING | |
-| 2b | Byte-correctness spot-check | SNI-01 | PENDING | |
-| 2c | Real multi-depot game | SNI-01 (A2) | PENDING | |
-| 3 | Bottled Steam adoption | SNI-08 (A3) | PENDING | |
+| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | DIVERGENCE | D-UAT-09: cancelled install shows as "Installed" in GameLib; Play triggers a Steam install/repair instead of launch. Steam DOES repair the 1026 manifest (D-04 mechanism OK), but GameLib mislabels incomplete as installed. Cancel-responsiveness + repair-completion still to confirm. |
+| 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PASS | Cyberpunk 2077 (~90GB); main-proc RSS bounded, healthy speed (re-verifies D-UAT-03 worker-pool). |
+| 2b | Byte-correctness spot-check | SNI-01 | PENDING | Needs a completed download to SHA1-check; not run (Cyberpunk not necessarily finished). |
+| 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision pending full download. |
+| 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ❌ D-UAT-10 (bottle-installed game not launchable/uninstallable from GameLib; shows GPTK; root cause UNKNOWN → /gsd-debug). Step 4 launch-through-bottle unverified. |
 | 4a | D-10 guided client install | SNI-06 (partial) | PENDING | |
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | PENDING | |
 | 4c | Continue-to-download | SNI-06 (partial) | PENDING | |
