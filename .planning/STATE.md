@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
-stopped_at: Phase 24 context gathered
-last_updated: "2026-07-19T06:58:54.044Z"
+stopped_at: Completed 25-02-PLAN.md
+last_updated: "2026-07-19T07:07:12.730Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 5
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 25 (steam-depot-download-multi-host-fan-out-throughput) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-19
 
@@ -145,6 +145,7 @@ Last activity: 2026-07-19
 | Phase 23 P02 | 15min | 3 tasks | 5 files |
 | Phase 23 P03 | ~40min | 3 tasks | 6 files |
 | Phase 25 P01 | 12min | 2 tasks | 2 files |
+| Phase 25 P02 | ~20min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -248,6 +249,8 @@ Recent decisions affecting current work:
 - [Phase 23-03]: A reconciliation-time error inside downloadDepotFiles (e.g. path traversal) falls back to the full pre-23-03 job list rather than aborting the run; a startup buildDepotPlan/reconcile failure falls back to the honest-empty depots:[] finalize — reconciliation is purely additive, never a new failure mode, and init() never crashes
 - [Phase ?]: TOP_N_FANOUT=3, calibrated per PATTERNS.md guidance for fan-out width
 - [Phase ?]: pickHost workerSlot fan-out only applies at attemptIndex===0 && N>1; retries/circuit-breaker unaffected
+- [Phase 25-02]: fetchChunk/downloadFileChunks/downloadSingleFile gained defaulted trailing workerSlot/fileWorkerSlot: number = 0 params so combination arithmetic type-checks under strict mode; combined slot = fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot per RESEARCH.md A2
+- [Phase 25-02]: Integration test drives fetchChunk directly with distinct workerSlot values (not through the full downloadFileChunks pool) since pickHost's selection happens synchronously before fetchChunk's first await
 
 ### Pending Todos
 
@@ -313,8 +316,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T06:58:16.553Z
-Stopped at: Phase 24 context gathered
+Last session: 2026-07-19T07:07:12.724Z
+Stopped at: Completed 25-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

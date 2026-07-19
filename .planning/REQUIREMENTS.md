@@ -180,7 +180,7 @@ Phase 25 raises Steam native-depot download throughput toward Steam-client parit
 ### Steam Depot Multi-Host Fan-Out (Phase 25)
 
 - [x] **MHOST-01**: `HostHealthTracker.pickHost` gains an optional `workerSlot` param (default `0`); at `attemptIndex === 0` and when `N = min(TOP_N_FANOUT, healthy.length) > 1` it returns `healthy[workerSlot % N]` instead of always `ordered[0]`, spreading concurrent workers' first attempt across the top-N healthy hosts. `attemptIndex > 0` (failure-driven rotation) keeps the exact current full-`ordered`-list walk. `TOP_N_FANOUT` is a named exported constant with a rationale doc comment. Omitting `workerSlot` reproduces pre-Phase-25 selection byte-for-byte.
-- [ ] **MHOST-02**: A distinct worker-slot identity is threaded through BOTH nested concurrency pools — the `FILE_CONCURRENCY` file pool in `downloadDepotFiles` and the `CHUNK_CONCURRENCY` chunk pool in `downloadFileChunks` — by capturing `Array.from`'s native `(_, i)` index and passing it down through `downloadSingleFile` → `downloadFileChunks` → `fetchChunk` → `pickHost` as optional trailing params, so a single large file's concurrent chunk workers also fan out (not just cross-file), all following the module's additive-optional-param convention.
+- [x] **MHOST-02**: A distinct worker-slot identity is threaded through BOTH nested concurrency pools — the `FILE_CONCURRENCY` file pool in `downloadDepotFiles` and the `CHUNK_CONCURRENCY` chunk pool in `downloadFileChunks` — by capturing `Array.from`'s native `(_, i)` index and passing it down through `downloadSingleFile` → `downloadFileChunks` → `fetchChunk` → `pickHost` as optional trailing params, so a single large file's concurrent chunk workers also fan out (not just cross-file), all following the module's additive-optional-param convention.
 - [x] **MHOST-03**: Host-health scoring, the unhealthy-bucket circuit breaker (`MAX_CONSECUTIVE_FAILURES`/`MIN_SUCCESS_RATE_FOR_HEALTHY`), stall-aware retry (`StallTracker`), the per-chunk SHA1 integrity gate, and cancel/abort (`ChunkFetchAbortedError`, never recorded via `hostHealth.record`) are byte-for-byte unchanged when the new params are omitted — proven by the existing `hostHealth.test.ts` + `depotPrimitives.test.ts` suites passing unmodified plus dedicated omit-`workerSlot` no-regression guards.
 - [ ] **MHOST-04**: A before/after real-hardware (macOS/Apple Silicon) throughput measurement is recorded from the existing `chunk-stream stats` log line, showing sustained `hosts>1` and materially higher `downSpeedMiBs` than the ~1.5–2.9 MiB/s baseline, with decode still clean (`err=0`) and no cancel/abort or stall-retry regression. No new instrumentation.
 
@@ -302,7 +302,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-23-06 | Phase 23 | Complete |
 | REQ-23-07 | Phase 23 | Pending |
 | MHOST-01 | Phase 25 | Complete |
-| MHOST-02 | Phase 25 | Pending |
+| MHOST-02 | Phase 25 | Complete |
 | MHOST-03 | Phase 25 | Complete |
 | MHOST-04 | Phase 25 | Pending (hardware measurement) |
 
