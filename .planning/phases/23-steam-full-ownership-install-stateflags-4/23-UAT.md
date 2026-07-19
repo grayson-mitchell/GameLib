@@ -2,10 +2,10 @@
 phase: 23-steam-full-ownership-install-stateflags-4
 plan: 05
 artifact: uat
-status: gap_fix_landed_hardware_pending
+status: testing
 total_items: 3
-pending_items: 3
-passed_items: 0
+pending_items: 2
+passed_items: 1
 failed_items: 0
 blocked_items: 0
 requirements: [REQ-23-07]
@@ -106,7 +106,14 @@ current buildid, and the full multi-depot `InstalledDepots` set. Steam shows the
 verify pass and NO re-download across ANY of the depots** (not just the base depot — a partial-depot
 verify would be a real divergence). The game launches.
 
-**Result:** FIX LANDED (code) — hardware re-run PENDING. Plan 23-05 closed the diagnosed root
+**Result:** ✅ **PASS** — real macOS hardware, 2026-07-19 (user-confirmed). Gate 1 steps 4–6 ran to
+completion: the written `appmanifest.acf` showed `StateFlags "4"`, Steam adopted the multi-depot install
+with **no verify pass and no re-download across any depot**, and the title launched. Steps 1–3 (single
+monotonic progress through a pause/resume cycle, no flicker) were hardware-confirmed earlier the same
+day. The prior run's ~2.5h multi-depot download-time blocker cleared with the Phase 25 host fan-out fix
+now on this branch, letting the download finish so 4–6 could be observed. Gate 1 CLOSED.
+
+_Historical (fix landing, superseded by the PASS above):_ Plan 23-05 closed the diagnosed root
 cause: `installDepotDownload` now has a single-flight guard (join a LIVE entry instead of starting
 a second `downloadSteamDepots`), fail-safe registry cleanup on every exit path (success/error/
 cancel/throw), pause/resume abort-before-restart (no stacking of concurrent runs), and startup-
@@ -313,7 +320,7 @@ reconciliation genuinely could not prove completeness — record which), the gam
 
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
-| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | **FIX LANDED — HW PENDING** | Root cause (two concurrent `downloadDepotFiles` runs racing progress) fixed in Plan 23-05: single-flight guard + fail-safe cleanup + pause/resume abort-before-restart + startup-resume reconciliation. Steam suite 568/568, tsc 0. Real-hardware re-run not yet performed — see updated Result above. |
+| 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ✅ **PASS (HW)** | Hardware-confirmed 2026-07-19: `StateFlags=4`, Steam adopted multi-depot install with no verify/re-download, launched. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. |
 | 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | Blocked behind Gate 1's hardware re-run (need a clean completing install first) |
 | 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Blocked behind Gate 1's hardware re-run |
 
