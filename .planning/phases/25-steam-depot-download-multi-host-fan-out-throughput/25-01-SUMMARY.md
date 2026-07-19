@@ -99,3 +99,12 @@ None - no external service configuration required.
 ---
 *Phase: 25-steam-depot-download-multi-host-fan-out-throughput*
 *Completed: 2026-07-19*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/depot/hostHealth.ts
+- FOUND: src/backend/storeManagers/steam/__tests__/hostHealth.test.ts
+- FOUND: .planning/phases/25-steam-depot-download-multi-host-fan-out-throughput/25-01-SUMMARY.md
+- FOUND: commit 25aa5404 (test)
+- FOUND: commit 9923545e (feat)
+- FOUND: commit 494c111c (docs)
