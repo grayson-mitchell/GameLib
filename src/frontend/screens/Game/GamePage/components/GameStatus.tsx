@@ -133,6 +133,13 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return t('status.settingUpBottle', 'Setting up Steam…')
     }
 
+    // D-UAT-09 (21-17): an incomplete on-disk native install (not currently
+    // installing — this is the not-installing tail) reads as "needs Steam to
+    // finish", never the generic "This game is not installed" copy.
+    if (runner === 'steam' && !is_installed && statusContext === 'steam-incomplete') {
+      return t('status.steamFinishInSteam', 'Finish in Steam')
+    }
+
     return t('status.notinstalled')
   }
 

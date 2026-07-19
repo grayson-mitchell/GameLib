@@ -206,6 +206,29 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         </span>
       )
     }
+
+    // D-UAT-09 (21-17): an incomplete on-disk native install (StateFlags bit
+    // 4 unset, e.g. a same-session cancel via markSteamInstallIncomplete or
+    // init()'s startup-surface scan) must read as "needs Steam to finish" —
+    // never a bare "Install" (which would read as a fresh, from-scratch
+    // download) and never Play (gated off separately by is_installed above).
+    // The click handler below already routes steam to handleInstall (the
+    // correct resume action) unconditionally — no change needed there.
+    if (
+      gameInfo.runner === 'steam' &&
+      !gameInfo.is_installed &&
+      gameInfo.install?.steamResumePending &&
+      !is.installing &&
+      !is.queued
+    ) {
+      return (
+        <span className="buttonWithIcon">
+          <Warning />
+          {t('status.steamFinishInSteam', 'Finish in Steam')}
+        </span>
+      )
+    }
+
     return (
       <span className="buttonWithIcon">
         <Download />

@@ -49,7 +49,14 @@ export function getStatusLabel({
     installed: `${t('gamepage:status.installed')} ${
       runner === 'sideload' ? '' : size
     }`,
-    notInstalled: t('gamepage:status.notinstalled'),
+    // D-UAT-09 (21-17): an incomplete steam install (same-session cancel or
+    // a startup-surfaced interrupted download, threaded via statusContext —
+    // see hasStatus.ts's notInstalled branch) reads as "needs Steam to
+    // finish", never the generic not-installed copy.
+    notInstalled:
+      runner === 'steam' && statusContext === 'steam-incomplete'
+        ? t('gamepage:status.steamFinishInSteam', 'Finish in Steam')
+        : t('gamepage:status.notinstalled'),
     launching: t('gamepage:status.launching', 'Launching'),
     winetricks: t('gamepage:status.winetricks', 'Applying Winetricks fixes'),
     redist: t(

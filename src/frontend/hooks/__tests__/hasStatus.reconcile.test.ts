@@ -159,4 +159,35 @@ describe('getStatusLabel (real implementation, T-21-16 waiting-hint + copy fix)'
     })
     expect(label).toBe('Downloading 42%')
   })
+
+  // D-UAT-09 (21-17): notInstalled + steam + steam-incomplete resume signal
+  it('returns "Finish in Steam" for status notInstalled + runner steam + statusContext steam-incomplete', () => {
+    const label = getStatusLabelReal({
+      status: 'notInstalled',
+      runner: 'steam',
+      statusContext: 'steam-incomplete',
+      t: fakeT
+    })
+    expect(label).toBe('Finish in Steam')
+  })
+
+  it('a non-steam notInstalled game returns the plain notinstalled copy, even with steam-incomplete context', () => {
+    const label = getStatusLabelReal({
+      status: 'notInstalled',
+      runner: 'gog',
+      statusContext: 'steam-incomplete',
+      t: fakeT
+    })
+    expect(label).toBe('gamepage:status.notinstalled')
+  })
+
+  it('a steam notInstalled game with no resume context returns the plain notinstalled copy (no regression)', () => {
+    const label = getStatusLabelReal({
+      status: 'notInstalled',
+      runner: 'steam',
+      statusContext: undefined,
+      t: fakeT
+    })
+    expect(label).toBe('gamepage:status.notinstalled')
+  })
 })

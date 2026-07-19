@@ -168,12 +168,29 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
         return setGameStatus({ status: 'installed', label, statusContext })
       }
 
+      // D-UAT-09 (21-17): an incomplete on-disk native steam install (a
+      // same-session cancel via markSteamInstallIncomplete, or a startup-
+      // surfaced interrupted download — both set install.steamResumePending)
+      // must read as "needs Steam to finish", never the generic not-
+      // installed copy. Threaded via statusContext, the SAME mechanism
+      // steam-waiting-for-restart/steam-paused already use — 'steam-
+      // incomplete' is a DISTINCT value from those (this game is NOT
+      // currently installing; no active poll).
+      const resumeContext =
+        runner === 'steam' && newGameInfo?.install?.steamResumePending
+          ? 'steam-incomplete'
+          : statusContext
       const label = getStatusLabel({
         status: 'notInstalled',
         t,
-        runner
+        runner,
+        statusContext: resumeContext
       })
-      return setGameStatus({ status: 'notInstalled', label, statusContext })
+      return setGameStatus({
+        status: 'notInstalled',
+        label,
+        statusContext: resumeContext
+      })
     }
     checkGameStatus()
   }, [

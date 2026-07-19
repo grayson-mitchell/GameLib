@@ -370,6 +370,7 @@
         "redist": "Installing Redistributables ({{redist}})",
         "reparing": "Repairing Game, please wait",
         "settingUpBottle": "Setting up Steam…",
+        "steamFinishInSteam": "Finish in Steam",
         "steamInstalling": "Installing…",
         "steamPaused": "Paused",
         "steamWaitingRestart": "Restart Steam to finish",
