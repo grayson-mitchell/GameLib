@@ -173,6 +173,19 @@ Phase 23 productionizes spike-003: GameLib authors a `StateFlags=4` (FullyInstal
 - [x] **REQ-23-06** (D-06): The depot writer replicates the full `EDepotFileFlag` mode set on all OSes — POSIX `Executable(32)`/`CustomExecutable(128)` (+x) plus `ReadOnly(8)`/`Hidden(16)` via chmod (Hidden = documented POSIX no-op), Windows `ReadOnly`/`Hidden` via an argv-form `attrib.exe` subprocess — since `StateFlags=4` skips the verify pass that used to apply these.
 - [ ] **REQ-23-07** (D-07): Ships only after real-hardware (**macOS-first**) validation of three gates recorded in `23-UAT.md`: a multi-depot larger title under `StateFlags=4` (no verify/re-download), a confirmed hard-DRM title launching under `StateFlags=4`, and an interrupt-then-resume run yielding a Steam-trusted `4` with no full re-download and no silent Steam-in-CrossOver auto-open. Windows/Linux coverage is a deferred follow-up, not a Phase 23 gate.
 
+## Phase 25 Requirements — Steam Depot Multi-Host Fan-Out (Throughput)
+
+Phase 25 raises Steam native-depot download throughput toward Steam-client parity by fanning the first attempt of each concurrent chunk fetch across the multiple healthy CDN hosts `getContentServers` already returns, instead of `pickHost` confining every attempt-0 to the single top-scored host (which, with decode now clean, never rotates). A pure client-side scheduling fix inside code GameLib already ships — no new libraries, no new IPC, no protocol change. Minted 2026-07-19 during `/gsd-plan-phase 25` from the ROADMAP goal + acceptance criteria + RESEARCH candidate requirements 1–4 (no CONTEXT.md decisions exist for this phase). Each maps to Phase 25. Depends on Phase 21/23 depot infrastructure.
+
+### Steam Depot Multi-Host Fan-Out (Phase 25)
+
+- [ ] **MHOST-01**: `HostHealthTracker.pickHost` gains an optional `workerSlot` param (default `0`); at `attemptIndex === 0` and when `N = min(TOP_N_FANOUT, healthy.length) > 1` it returns `healthy[workerSlot % N]` instead of always `ordered[0]`, spreading concurrent workers' first attempt across the top-N healthy hosts. `attemptIndex > 0` (failure-driven rotation) keeps the exact current full-`ordered`-list walk. `TOP_N_FANOUT` is a named exported constant with a rationale doc comment. Omitting `workerSlot` reproduces pre-Phase-25 selection byte-for-byte.
+- [ ] **MHOST-02**: A distinct worker-slot identity is threaded through BOTH nested concurrency pools — the `FILE_CONCURRENCY` file pool in `downloadDepotFiles` and the `CHUNK_CONCURRENCY` chunk pool in `downloadFileChunks` — by capturing `Array.from`'s native `(_, i)` index and passing it down through `downloadSingleFile` → `downloadFileChunks` → `fetchChunk` → `pickHost` as optional trailing params, so a single large file's concurrent chunk workers also fan out (not just cross-file), all following the module's additive-optional-param convention.
+- [ ] **MHOST-03**: Host-health scoring, the unhealthy-bucket circuit breaker (`MAX_CONSECUTIVE_FAILURES`/`MIN_SUCCESS_RATE_FOR_HEALTHY`), stall-aware retry (`StallTracker`), the per-chunk SHA1 integrity gate, and cancel/abort (`ChunkFetchAbortedError`, never recorded via `hostHealth.record`) are byte-for-byte unchanged when the new params are omitted — proven by the existing `hostHealth.test.ts` + `depotPrimitives.test.ts` suites passing unmodified plus dedicated omit-`workerSlot` no-regression guards.
+- [ ] **MHOST-04**: A before/after real-hardware (macOS/Apple Silicon) throughput measurement is recorded from the existing `chunk-stream stats` log line, showing sustained `hosts>1` and materially higher `downSpeedMiBs` than the ~1.5–2.9 MiB/s baseline, with decode still clean (`err=0`) and no cancel/abort or stall-retry regression. No new instrumentation.
+
+**Deferred (not a Phase 25 requirement):** the optional CDN-auth phantom excision (`cdnAuth.ts`, ~611 lines, ~68 refs entangled in `fetchChunk`) is descoped to its own follow-up quick-task/phase. Rationale: it touches `fetchChunk`'s signature in the same place as MHOST-02's new param (RESEARCH Assumptions Log A3 flags the conflated-diff/bisect risk), it is inert dead code with zero behavior change for real hosts, and it is a separate tsc/lint/test unit (~15 `cdnAuth.test.ts` cases). Sequencing it after Phase 25 lands and is hardware-verified keeps the throughput fix's diff clean and bisectable.
+
 ## Future Requirements
 
 Deferred beyond v1.1. Tracked but not in the current roadmap.
@@ -288,6 +301,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-23-05 | Phase 23 | Complete |
 | REQ-23-06 | Phase 23 | Complete |
 | REQ-23-07 | Phase 23 | Pending |
+| MHOST-01 | Phase 25 | Pending |
+| MHOST-02 | Phase 25 | Pending |
+| MHOST-03 | Phase 25 | Pending |
+| MHOST-04 | Phase 25 | Pending (hardware measurement) |
 
 **Coverage:**
 - v1.1 requirements: 15 total
@@ -306,6 +323,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 - Mapped to phases: 7 (Phase 23)
 - Unmapped: 0 ✓
 
+- Phase 25 requirements: 4 total (MHOST-01..04, minted 2026-07-19 from ROADMAP goal + acceptance + RESEARCH candidates 1–4)
+- Mapped to phases: 4 (Phase 25)
+- Unmapped: 0 ✓
+
 **D-XX -> REQ mapping (Phase 23):** D-01 -> REQ-23-01 . D-02 -> REQ-23-02 . D-03 -> REQ-23-03 . D-04 -> REQ-23-04 . D-05 -> REQ-23-05 . D-06 -> REQ-23-06 . D-07 -> REQ-23-07
 
 **D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
@@ -314,3 +335,4 @@ Which phases cover which requirements. Populated during roadmap creation.
 *Requirements defined: 2026-07-02*
 *Last updated: 2026-07-05 — v1.2 traceability appended during roadmap creation (Phases 10–15)*
 *Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*
+*Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*
