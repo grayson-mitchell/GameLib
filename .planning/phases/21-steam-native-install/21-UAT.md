@@ -3,13 +3,16 @@ phase: 21-steam-native-install
 plan: 12
 artifact: uat
 status: partial
+disposition: "native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall remains an OPEN macOS bug (root cause unknown, not Windows-deferrable). macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
-pending_items: 2
+pending_items: 0
 passed_items: 3
-failed_items: 2
-blocked_items: 3
+deferred_items: 7
+open_macos_bug_items: 1
+failed_items: 0
+blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; pending HW re-verify via item 1d), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; HW re-verify via item 1d DEFERRED → Windows post-prod), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-20
 ---
@@ -657,21 +660,30 @@ launched Steam.
 |---|------|-----------------|--------|-------|
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
-| 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | DIVERGENCE → CODE-FIXED 2026-07-20, HW re-run PENDING | D-UAT-09 code-fixed via gap 21-17 + WR-01/WR-02 (verifier 4/4 must-haves): incomplete `1026` install no longer mislabeled Installed, shows "Finish in Steam" not Play, durable across refresh. Steam still repairs the 1026 manifest (D-04 OK). Re-run 1d on real macOS to confirm the label + end-to-end repair-launch. |
+| 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | DEFERRED → Windows post-prod | Deferred to post-production/implementation validation on Windows (2026-07-20 user decision). Cross-platform native-install path. |
+| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | CODE-FIXED 2026-07-20, HW re-run DEFERRED → Windows post-prod | D-UAT-09 code-fixed via gap 21-17 + WR-01/WR-02 (verifier 4/4 must-haves): incomplete `1026` install no longer mislabeled Installed, shows "Finish in Steam" not Play, durable across refresh. Steam still repairs the 1026 manifest (D-04 OK). HW re-run (confirm label + end-to-end repair-launch) deferred to Windows post-prod (2026-07-20). |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PASS | Cyberpunk 2077 (~90GB); main-proc RSS bounded, healthy speed (re-verifies D-UAT-03 worker-pool). |
-| 2b | Byte-correctness spot-check | SNI-01 | PENDING | Needs a completed download to SHA1-check; not run (Cyberpunk not necessarily finished). |
-| 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision pending full download. |
+| 2b | Byte-correctness spot-check | SNI-01 | DEFERRED → Windows post-prod | Needs a completed download to SHA1-check. Deferred to Windows post-prod validation (2026-07-20). |
+| 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL → remainder DEFERRED → Windows post-prod | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision deferred to Windows post-prod (2026-07-20). Note: real multi-depot StateFlags=4 adoption was independently HW-confirmed under Phase 23 Gate 1 (2026-07-19). |
 | 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ❌ D-UAT-10 (bottle-installed game not launchable/uninstallable from GameLib; shows GPTK; root cause UNKNOWN → /gsd-debug). Step 4 launch-through-bottle unverified. |
-| 4a | D-10 guided client install | SNI-06 (partial) | PENDING | |
-| 4b | D-11 prompt-to-launch | SNI-06 (partial) | PENDING | |
-| 4c | Continue-to-download | SNI-06 (partial) | PENDING | |
+| 4a | D-10 guided client install | SNI-06 (partial) | DEFERRED → Windows post-prod | Steam-client-detection / guided-install flow; deferred to Windows post-prod (2026-07-20). Guided-install UX differs per OS. |
+| 4b | D-11 prompt-to-launch | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
+| 4c | Continue-to-download | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
 
-**Gate status:** NOT CLOSED. 2 PASS (1a, 1b), 1 N/A-native (1c), 8 PENDING. Phase 21 cannot be marked
-complete/verified until every row above is PASS (or has a captured divergence routed to a follow-up gap
-plan). **D-UAT-05** (DM-queue wedge on restart + non-functional pause/stop for interrupted native
-installs) is **fixed in code** (commit `4267eba0`) but needs real-HW re-verification — re-running 1d on a
-fresh build exercises it. The Task 2/3 install-heavy tests can now be run reliably (interrupt/cancel works).
+**Gate status (updated 2026-07-20 — remaining native-install UAT DEFERRED to Windows post-production):**
+Per user decision 2026-07-20, the remaining cross-platform native-install UAT items — **1c, 1d, 2b, 2c, 4a,
+4b, 4c** — are **deferred to post-production/implementation validation on a Windows machine** rather than
+blocking Phase 21 on macOS hardware. All are code-complete (D-UAT-09 fix verified 4/4 in code; D-UAT-05
+fixed `4267eba0`; D-UAT-06/08 real-HW verified; multi-depot StateFlags=4 independently HW-confirmed via
+Phase 23 Gate 1, 2026-07-19). These become a post-production UAT checklist, tracked as verification debt.
+
+**Confirmed on macOS hardware:** 1a, 1b PASS; 2a PASS (10GB+ memory bound); D-UAT-05/06/08 resolved.
+
+**NOT Windows-deferrable — remains open on macOS:**
+- **Item 3 / D-UAT-10** — bottled Steam adoption: install+adoption ✅ but **launch/uninstall broken (shows
+  GPTK, root cause UNKNOWN)**. This is a CrossOver-bottle path that does not exist on Windows *and* is an
+  **unresolved bug**, not merely an unrun test. It cannot ride the Windows deferral — it needs a macOS
+  `/gsd-debug` session (or an explicit decision to descope bottled-Steam launch from v1.4).
 
 ---
 *Prepared: 2026-07-16 by Plan 21-12 (autonomous prep). Awaiting human execution on real hardware.*
