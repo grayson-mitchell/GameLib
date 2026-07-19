@@ -9,9 +9,9 @@ passed_items: 3
 failed_items: 2
 blocked_items: 3
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (OPEN — cancelled/incomplete install registered as "Installed"; Play triggers Steam install; found 2026-07-19 during 1d re-run), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; pending HW re-verify via item 1d), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
 run_via: "/gsd:verify-work 21"
-last_updated: 2026-07-19
+last_updated: 2026-07-20
 ---
 
 # Phase 21 — Steam Native Install: Real-Machine UAT
@@ -533,6 +533,23 @@ launched Steam.
 
 ## D-UAT-09 (2026-07-19) — cancelled/incomplete native install is registered as "Installed"; Play triggers a Steam install instead of launching
 
+> **✅ CODE FIX LANDED — 2026-07-20 (hardware re-run of item 1d still PENDING).** Gap plan 21-17 plus
+> two code-review follow-ups closed this at the code level (verifier: 4/4 must-haves, backend 695 /
+> frontend 19 tests green, `tsc` clean):
+> - **21-17** — single bit-4 completeness predicate `isFullyInstalledStateFlags` (a `1026` manifest is
+>   no longer surfaced as Installed and shows no Play button); abort-aware depot `finalize()` so a
+>   cancelled download can never earn `StateFlags=4`; a distinct **"Finish in Steam"** resume affordance
+>   in place of Play (D-04 honest-1026 handoff preserved).
+> - **WR-01** (`718b4bfe`) — `buildIncompleteInstallSet` re-seeds `steamResumePending` from the on-disk
+>   ACF on every mid-session library `refresh()`, so the "Finish in Steam" label is durable and does not
+>   revert to a bare "Install".
+> - **WR-02** (`e635a4b3`) — the zero-depot abort path now returns `cancelled`, routing through
+>   `markSteamInstallIncomplete` consistently with the other abort paths.
+>
+> **Remaining to close D-UAT-09 fully:** re-run item **1d** on real macOS — confirm the incomplete
+> install now shows "Finish in Steam" (never "Play"), and that Steam's repair pass still yields a
+> launchable game end-to-end (D-04).
+
 > **🟠 D-UAT-09 (MAJOR, found 2026-07-19, real macOS, fresh build @ adced885) — GameLib treats a
 > cancelled (incomplete) native install as fully installed.**
 >
@@ -641,7 +658,7 @@ launched Steam.
 | 1a | Native adoption (1026→4) | SNI-04 | PASS | WazHack; adoption 1026→4, zero re-download. UX gap: no "restart Steam" hint (follow-up). |
 | 1b | Launch after GameLib install | SNI-04/SNI-01 | PASS | WazHack launches on current fixed build. Earlier fail = stale pre-897eb515 build hitting CR-01 directory bug (D-UAT-01, now resolved — real-HW validation of the CR-01 fix). |
 | 1c | Hard-DRM title launch | SNI-04 (Open Question 3) | PENDING | |
-| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | DIVERGENCE | D-UAT-09: cancelled install shows as "Installed" in GameLib; Play triggers a Steam install/repair instead of launch. Steam DOES repair the 1026 manifest (D-04 mechanism OK), but GameLib mislabels incomplete as installed. Cancel-responsiveness + repair-completion still to confirm. |
+| 1d | Cancel → 1026 → Steam repair | SNI-04 (D-04) | DIVERGENCE → CODE-FIXED 2026-07-20, HW re-run PENDING | D-UAT-09 code-fixed via gap 21-17 + WR-01/WR-02 (verifier 4/4 must-haves): incomplete `1026` install no longer mislabeled Installed, shows "Finish in Steam" not Play, durable across refresh. Steam still repairs the 1026 manifest (D-04 OK). Re-run 1d on real macOS to confirm the label + end-to-end repair-launch. |
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PASS | Cyberpunk 2077 (~90GB); main-proc RSS bounded, healthy speed (re-verifies D-UAT-03 worker-pool). |
 | 2b | Byte-correctness spot-check | SNI-01 | PENDING | Needs a completed download to SHA1-check; not run (Cyberpunk not necessarily finished). |
 | 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision pending full download. |
