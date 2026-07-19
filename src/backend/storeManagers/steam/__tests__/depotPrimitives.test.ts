@@ -4,6 +4,7 @@
 
 import { createCipheriv, randomBytes } from 'node:crypto'
 import { deflateRawSync } from 'node:zlib'
+import * as zlibNs from 'node:zlib'
 import * as lzma from 'lzma'
 
 jest.mock('backend/logger', () => ({
@@ -12,13 +13,44 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-import { logInfo } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 
 import { steamDecrypt, decryptFilename } from '../depot/crypto'
-import { decompressChunk, sha1, fetchChunk } from '../depot/decompress'
+import {
+  decompressChunk,
+  sha1,
+  fetchChunk,
+  isDecodeStageError,
+  CHUNK_FETCH_TIMEOUT_MS,
+  CHUNK_FETCH_HEADERS
+} from '../depot/decompress'
 import { HostHealthTracker } from '../depot/hostHealth'
-import { CdnAuthTokenCache, type CDNAuthTokenClient } from '../depot/cdnAuth'
+import {
+  CdnAuthTokenCache,
+  CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS,
+  type CDNAuthTokenClient
+} from '../depot/cdnAuth'
 import { selectAllDepots, selectDepots, type OwnedSets } from '../depot/select'
+import {
+  CContentServerDirectory_GetCDNAuthToken_Request,
+  CContentServerDirectory_GetCDNAuthToken_Response as CdnAuthTokenResponse
+} from 'steam-user/protobufs/generated/_load.js'
+
+/** Debug/steam-install-slow-start cycle 11 ("DECISION 2026-07-19: OPTION B"):
+ *  cdnAuth.ts's manual `_send` bypass expects a REAL, encoded response
+ *  `Buffer` handed back through the callback (steam-user's own auto-decode
+ *  is skipped for this RPC) — every hand-rolled fake client below encodes
+ *  one via the real compiled protobuf class rather than passing a plain
+ *  object, matching production exactly. */
+function encodeCdnAuthTokenResponse(v: {
+  token?: string
+  expiration_time?: number
+}): Buffer {
+  return CdnAuthTokenResponse.encode({
+    token: v.token,
+    expiration_time: v.expiration_time
+  }).finish()
+}
 
 // ── Test helpers ─────────────────────────────────────────────────────────
 
@@ -48,7 +80,11 @@ function buildVZChunk(data: Buffer, compressed: Buffer): Buffer {
   const props = compressed.subarray(0, 5)
   const payload = compressed.subarray(13) // skip props(5) + alone-format size(8)
 
-  const header = Buffer.concat([Buffer.from('VZa', 'latin1'), Buffer.alloc(4), props])
+  const header = Buffer.concat([
+    Buffer.from('VZa', 'latin1'),
+    Buffer.alloc(4),
+    props
+  ])
   const footer = Buffer.alloc(10)
   footer.writeUInt32LE(0, 0) // crc — unused/unchecked by decompressChunk
   footer.writeUInt32LE(data.length, 4) // outSize — read at buf.length-6
@@ -72,27 +108,67 @@ function buildPKChunk(data: Buffer): Buffer {
   return buf
 }
 
+/** Debug/steam-install-slow-start (cycle 17): build a zstd/"VSZa"-container
+ *  chunk exactly matching steam-user's OWN bundled encoder-side layout
+ *  (`node_modules/steam-user/components/cdn_compression.js`'s
+ *  `decompressZstd`, read in reverse) — the same reference this cycle's
+ *  `decompressChunk` fix's `magic === 'VS'` branch was built against:
+ *    header : 'VSZa'(4) | crc32(4, ignored by our decoder)
+ *    body   : raw zstd-compressed stream
+ *    footer : decompressedCrc32(4, ignored) | decompressedSize(4) |
+ *             zero-padding(4) | 'zsv'(3)                            = 15 B
+ */
+function buildZstdChunk(data: Buffer, compressed: Buffer): Buffer {
+  const header = Buffer.concat([Buffer.from('VSZa', 'latin1'), Buffer.alloc(4)])
+  const footer = Buffer.alloc(15)
+  footer.writeUInt32LE(0, 0) // decompressedCrc — unused/unchecked by our decoder
+  footer.writeUInt32LE(data.length, 4) // decompressedSize — read at buf.length-11
+  footer.write('zsv', 12, 'latin1')
+  return Buffer.concat([header, compressed, footer])
+}
+
+/** Debug/steam-install-slow-start (cycle 17): Node's native zstd codec
+ *  (`zlib.zstdCompressSync`) landed after this project's `engines.node`
+ *  floor (">=22") — feature-detected so the zstd round-trip test below
+ *  degrades to a documented skip rather than a hard failure on a Node build
+ *  that predates it, without weakening coverage on any environment (like
+ *  this one) that has it. `zstddec` (the DECODER `decompressChunk` actually
+ *  ships with, matching steam-user's own dependency) has no encoder side —
+ *  a real compressor is required to produce a fixture ZSTDDecoder can
+ *  genuinely decode, not just a hand-rolled byte layout. */
+const zstdCompressSync = (
+  zlibNs as { zstdCompressSync?: (data: Buffer) => Buffer }
+).zstdCompressSync
+
 // ── crypto ────────────────────────────────────────────────────────────────
 
 describe('crypto', () => {
   const key = randomBytes(32)
 
   it('steamDecrypt round-trips a known plaintext under a known key', () => {
-    const plaintext = Buffer.from('some depot chunk plaintext bytes, arbitrary length!')
+    const plaintext = Buffer.from(
+      'some depot chunk plaintext bytes, arbitrary length!'
+    )
     const ciphertext = steamEncrypt(plaintext, key)
     expect(steamDecrypt(ciphertext, key)).toEqual(plaintext)
   })
 
   it('decryptFilename returns UTF-8 up to the first NUL, stripping trailing PKCS padding', () => {
     const filename = 'UnityEngine.SubstanceModule.dll'
-    const plaintext = Buffer.concat([Buffer.from(filename, 'utf8'), Buffer.from([0])])
+    const plaintext = Buffer.concat([
+      Buffer.from(filename, 'utf8'),
+      Buffer.from([0])
+    ])
     const ciphertext = steamEncrypt(plaintext, key)
     expect(decryptFilename(ciphertext.toString('base64'), key)).toBe(filename)
   })
 
   it('a filename decrypting to bytes containing "../" is returned verbatim (no sanitization)', () => {
     const filename = '../../evil/traversal.txt'
-    const plaintext = Buffer.concat([Buffer.from(filename, 'utf8'), Buffer.from([0])])
+    const plaintext = Buffer.concat([
+      Buffer.from(filename, 'utf8'),
+      Buffer.from([0])
+    ])
     const ciphertext = steamEncrypt(plaintext, key)
     expect(decryptFilename(ciphertext.toString('base64'), key)).toBe(filename)
   })
@@ -102,7 +178,10 @@ describe('crypto', () => {
 
 describe('decompress', () => {
   it('decompressChunk on a VZ-container fixture returns the exact decompressed bytes', async () => {
-    const data = Buffer.from('Steam depot chunk fixture data. '.repeat(20), 'utf8')
+    const data = Buffer.from(
+      'Steam depot chunk fixture data. '.repeat(20),
+      'utf8'
+    )
     const compressed = await compressAsync(data)
     const vzChunk = buildVZChunk(data, compressed)
     const out = await decompressChunk(vzChunk, lzma)
@@ -116,9 +195,89 @@ describe('decompress', () => {
     expect(out.equals(data)).toBe(true)
   })
 
-  it('decompressChunk throws on an unknown container magic', async () => {
+  // Debug/steam-install-slow-start (cycle 17): ROOT CAUSE fix for the
+  // deterministic, per-chunk `unknown_container` decode failure -- Valve's
+  // depot chunks can ALSO be zstd-compressed (magic "VSZa"/footer "zsv"),
+  // a THIRD container type `decompressChunk` never handled before this
+  // cycle. Confirmed via steam-user@5.3.0's own bundled zstd decoder
+  // (node_modules/steam-user/components/cdn_compression.js) and SteamKit2's
+  // "Add support for zstd compressed depot chunks" (issue #1503) -- see
+  // decompressChunk's own doc comment for the full provenance.
+  ;(zstdCompressSync ? it : it.skip)(
+    'decompressChunk on a VSZa/zstd-container fixture returns the exact decompressed bytes',
+    async () => {
+      const data = Buffer.from(
+        'zstd depot chunk fixture data. '.repeat(20),
+        'utf8'
+      )
+      const compressed = zstdCompressSync!(data)
+      const zstdChunk = buildZstdChunk(data, compressed)
+      // No cbOriginal passed here (undefined) -- proves the new pre-decode
+      // size guard (below) is a no-op when the caller has nothing to check
+      // against, so this pre-existing regression assertion is unaffected.
+      const out = await decompressChunk(zstdChunk, lzma)
+      expect(out.equals(data)).toBe(true)
+    }
+  )
+  ;(zstdCompressSync ? it : it.skip)(
+    'decompressChunk on a VSZa/zstd-container fixture still succeeds when a MATCHING cbOriginal is supplied',
+    async () => {
+      const data = Buffer.from(
+        'zstd depot chunk fixture data with a matching cbOriginal. '.repeat(10),
+        'utf8'
+      )
+      const compressed = zstdCompressSync!(data)
+      const zstdChunk = buildZstdChunk(data, compressed)
+      const out = await decompressChunk(zstdChunk, lzma, data.length)
+      expect(out.equals(data)).toBe(true)
+    }
+  )
+
+  // Debug/steam-install-slow-start (INBOUND CRASH REPORT follow-up): before
+  // this cycle, the zstd branch's untrusted footer `decompressedSize` was
+  // passed DIRECTLY into the WASM ZSTDDecoder's own malloc with zero
+  // validation -- a plausible mechanism for the flagged trace-less "hard
+  // quit-to-desktop crash" against this exact worker path (an unbounded
+  // native allocation attempt, unlike a catchable JS RangeError). This test
+  // proves a chunk whose footer size disagrees with the TRUSTED,
+  // manifest-derived cbOriginal is rejected via the existing size_mismatch
+  // classification BEFORE the WASM decoder is ever invoked -- no real zstd
+  // compression is needed to prove this, since the rejection happens before
+  // any decode is attempted (the "compressed" body is deliberately garbage).
+  it('decompressChunk rejects a zstd chunk whose footer decompressedSize disagrees with cbOriginal BEFORE ever invoking the WASM decoder', async () => {
+    const data = Buffer.from(
+      'a chunk whose footer size lies about the real decompressed size',
+      'utf8'
+    )
+    const zstdChunk = buildZstdChunk(
+      data,
+      Buffer.from('irrelevant-garbage-never-decoded')
+    )
+    await expect(
+      decompressChunk(zstdChunk, lzma, data.length + 1)
+    ).rejects.toMatchObject({
+      code: 'size_mismatch'
+    })
+  })
+
+  it('decompressChunk throws unknown_container (with a .code and a decryptedPreview of the post-decrypt bytes) on a truly unrecognized magic', async () => {
     const bogus = Buffer.from('XXsome-unknown-container-bytes', 'utf8')
-    await expect(decompressChunk(bogus, lzma)).rejects.toThrow(/unknown chunk container/)
+    await expect(decompressChunk(bogus, lzma)).rejects.toThrow(
+      /unknown chunk container/
+    )
+    try {
+      await decompressChunk(bogus, lzma)
+      throw new Error('expected decompressChunk to throw')
+    } catch (err) {
+      expect((err as { code?: string }).code).toBe('unknown_container')
+      // Debug/steam-install-slow-start (cycle 17, post-decrypt diagnostic):
+      // decompressChunk receives the POST-DECRYPT plaintext as `buf` -- its
+      // own first bytes are exactly what the next hardware capture needs to
+      // split "decrypt is wrong" (garbage) from "decoder still incomplete"
+      // (a consistent-but-unhandled magic).
+      const preview = (err as { decryptedPreview?: Buffer }).decryptedPreview
+      expect(preview?.equals(bogus.subarray(0, 16))).toBe(true)
+    }
   })
 
   it('sha1 hashes bytes to the expected hex digest', () => {
@@ -127,10 +286,47 @@ describe('decompress', () => {
     expect(sha1(data)).toBe('aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d')
   })
 
+  // Debug/steam-install-slow-start (cycle 17, retry-storm resilience):
+  // isDecodeStageError is the single check downloadFileChunks (depot.ts)
+  // uses to decide "deterministic, never re-queue" vs "transient, keep
+  // rotating hosts as today" -- every one of decodeChunk's five ChunkDecodeError
+  // codes must be recognized, and every network/HTTP-shaped error (the
+  // existing, UNCHANGED requeue path) must NOT be.
+  describe('isDecodeStageError', () => {
+    it.each([
+      'bad_footer_magic',
+      'unknown_container',
+      'sha1_mismatch',
+      'size_mismatch',
+      'decode_failed'
+    ])('recognizes ChunkDecodeError code %s as decode-stage', (code) => {
+      expect(isDecodeStageError({ code })).toBe(true)
+    })
+
+    it('does not treat a network error code as decode-stage', () => {
+      expect(isDecodeStageError({ code: 'ECONNRESET' })).toBe(false)
+    })
+
+    it('does not treat an HTTP-status error (ChunkHttpError-shaped) as decode-stage', () => {
+      expect(isDecodeStageError({ status: 503 })).toBe(false)
+    })
+
+    it('does not throw on undefined/null/non-object input', () => {
+      expect(isDecodeStageError(undefined)).toBe(false)
+      expect(isDecodeStageError(null)).toBe(false)
+      expect(isDecodeStageError('plain string error')).toBe(false)
+    })
+  })
+
   describe('fetchChunk', () => {
     const key = randomBytes(32)
     const depotId = '12345'
-    const hosts = ['host-a.example', 'host-b.example', 'host-c.example', 'host-d.example']
+    const hosts = [
+      'host-a.example',
+      'host-b.example',
+      'host-c.example',
+      'host-d.example'
+    ]
 
     async function buildEncryptedChunkResponse(data: Buffer) {
       const compressed = await compressAsync(data)
@@ -163,7 +359,10 @@ describe('decompress', () => {
         } as Response)
       }) as unknown as typeof fetch
 
-      const chunk = { sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', cb_original: data.length }
+      const chunk = {
+        sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+        cb_original: data.length
+      }
 
       await expect(
         fetchChunk(hosts, depotId, chunk, key, lzma, 4)
@@ -197,6 +396,51 @@ describe('decompress', () => {
       expect(out.equals(data)).toBe(true)
     })
 
+    // Debug/steam-install-slow-start (cycle 14): a cleartext pcap of the REAL
+    // Steam client proved its chunk-fetch GET carries a Steam-specific
+    // User-Agent (and static Accept/Accept-Charset headers) -- and that the
+    // CDN edges are otherwise unauthenticated. This codebase's pre-cycle-14
+    // fetch() sent undici's default UA, not Steam's, which is the suspected
+    // reason the type=CDN hosts (akamai/fastly/alibaba) rejected virtually
+    // every request. Asserts the outgoing request now carries the real
+    // client's headers on every host, not just CDN ones.
+    it('sends the real Steam client User-Agent and Accept headers on every chunk request (cycle 14 pcap fix)', async () => {
+      const data = Buffer.from(
+        'verifies correctly, with the right headers',
+        'utf8'
+      )
+      const encrypted = await buildEncryptedChunkResponse(data)
+      const expectedSha = sha1(data)
+
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          ok: true,
+          arrayBuffer: () =>
+            Promise.resolve(
+              encrypted.buffer.slice(
+                encrypted.byteOffset,
+                encrypted.byteOffset + encrypted.byteLength
+              )
+            )
+        } as Response)
+      ) as unknown as typeof fetch
+
+      const chunk = { sha: expectedSha, cb_original: data.length }
+      await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
+
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+      const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [
+        string,
+        RequestInit
+      ]
+      expect(init.headers).toEqual(CHUNK_FETCH_HEADERS)
+      expect(init.headers).toMatchObject({
+        'User-Agent': 'Valve/Steam HTTP Client 1.0',
+        Accept: 'text/html,*/*;q=0.9',
+        'Accept-Charset': 'ISO-8859-1,utf-8,*;q=0.7'
+      })
+    })
+
     // Debug/steam-install-slow-start (cycle 3): host-scoring / health-aware
     // selection. Omitting `hostHealth` (the two tests above, and every caller
     // that predates this cycle) leaves fetchChunk's plain round-robin
@@ -204,7 +448,10 @@ describe('decompress', () => {
     // reachable when a HostHealthTracker is explicitly supplied.
     describe('with a HostHealthTracker (cycle 3)', () => {
       it('a persistently-failing host is skipped in favor of a healthy one, and the chunk succeeds instead of exhausting attempts', async () => {
-        const data = Buffer.from('verifies correctly, from the good host', 'utf8')
+        const data = Buffer.from(
+          'verifies correctly, from the good host',
+          'utf8'
+        )
         const encrypted = await buildEncryptedChunkResponse(data)
         const expectedSha = sha1(data)
         const badHost = hosts[0]
@@ -236,7 +483,11 @@ describe('decompress', () => {
         // share of attempts under plain round-robin).
         for (let i = 0; i < 5; i++) hostHealth.record(badHost, 'error', 50)
 
-        const chunk = { sha: expectedSha, cb_original: data.length, attemptSeed: 0 }
+        const chunk = {
+          sha: expectedSha,
+          cb_original: data.length,
+          attemptSeed: 0
+        }
         const out = await fetchChunk(
           hosts,
           depotId,
@@ -284,7 +535,18 @@ describe('decompress', () => {
         }
 
         await expect(
-          fetchChunk(hosts, depotId, chunk, key, lzma, 4, undefined, undefined, undefined, hostHealth)
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            4,
+            undefined,
+            undefined,
+            undefined,
+            hostHealth
+          )
         ).rejects.toThrow(/failed after 4 attempts/)
 
         // Every one of the 4 attempts (SHA1 never matches -> always 'error')
@@ -295,6 +557,528 @@ describe('decompress', () => {
           0
         )
         expect(totalRecorded).toBe(4)
+      })
+    })
+
+    // Debug/steam-install-slow-start (diagnostic re-open, cycle 9): each
+    // failed onAttempt event now carries a short `reason` label -- an HTTP
+    // status for a non-ok response, or the thrown error's code/name for a
+    // network failure. Purely additive/observational: never changes retry,
+    // backoff, host-rotation, or selection -- these tests assert only the
+    // NEW `reason` field's value, everything else (host rotation, attempt
+    // count, thrown message) is unchanged from the pre-cycle-9 assertions
+    // above.
+    describe('onAttempt reason reporting (diagnostic re-open, cycle 9)', () => {
+      it('reports the numeric HTTP status as `reason` for a non-ok response', async () => {
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 429,
+            statusText: 'Too Many Requests'
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{
+          outcome: string
+          reason?: string
+          message?: string
+        }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) =>
+              events.push({
+                outcome: ev.outcome,
+                reason: ev.reason,
+                message: ev.message
+              })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('error')
+        expect(events[0].reason).toBe('429')
+        // Cheap statusText is folded into the message (still matches
+        // classifyDepotError's `/CDN \d/i` pattern -- see depotErrors.ts).
+        expect(events[0].message).toBe('CDN 429 Too Many Requests')
+      })
+
+      it("reports the thrown error's `code` as `reason` for a network failure (e.g. ECONNRESET)", async () => {
+        global.fetch = jest.fn(() => {
+          const err = new Error('read ECONNRESET') as Error & { code?: string }
+          err.code = 'ECONNRESET'
+          return Promise.reject(err)
+        }) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('error')
+        expect(events[0].reason).toBe('ECONNRESET')
+      })
+
+      it('reports "AbortError" as `reason` when the bounded per-attempt timeout fires', async () => {
+        jest.useFakeTimers()
+        global.fetch = jest.fn(
+          (_url: unknown, opts?: { signal?: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              opts?.signal?.addEventListener('abort', () => {
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                reject(err)
+              })
+            })
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        const pending = fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          1,
+          undefined,
+          undefined,
+          (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+        )
+        // Attach a handler synchronously so advancing the fake timer below
+        // (which settles `pending` as a rejection) never surfaces as an
+        // unhandled-rejection warning/failure before the real assertion runs.
+        pending.catch(() => {})
+        await jest.advanceTimersByTimeAsync(CHUNK_FETCH_TIMEOUT_MS)
+        await expect(pending).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('timeout')
+        expect(events[0].reason).toBe('AbortError')
+        jest.useRealTimers()
+      })
+
+      it("CDN-auth implementation cycle, PART 4 (hardened): reports the numeric status for ANY thrown value carrying a `status` field -- duck-typed, not dependent on `instanceof ChunkHttpError` -- distinct from a thrown-network error's `code` and a bounded timeout's `AbortError`", async () => {
+        // A plain object (deliberately NOT a ChunkHttpError instance, and not
+        // even an Error) thrown from deep inside the fetch/decode path --
+        // proves reason-extraction keys off the `status` field itself, not
+        // off class identity, which would otherwise be lost across any
+        // module/bundle boundary the real ChunkHttpError instance might not
+        // survive (the exact failure mode that produced a hardware run's
+        // generic `err=N{Error:N}` breakdown instead of the real HTTP status).
+        const duckTypedError = new Error(
+          'some other error shape entirely'
+        ) as Error & {
+          status: number
+        }
+        duckTypedError.name = 'SomeOtherErrorShape'
+        duckTypedError.status = 403
+        global.fetch = jest.fn(() =>
+          Promise.reject(duckTypedError)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('error')
+        // Must be the numeric status ('403'), NOT the fallback `name`
+        // ('SomeOtherErrorShape') -- proves the `status` check runs first
+        // and wins, regardless of class identity.
+        expect(events[0].reason).toBe('403')
+      })
+
+      // Debug/steam-install-slow-start (cycle 13): decode-stage failures
+      // (the response arrives, `res.ok` is true, but the body isn't a valid
+      // chunk -- exactly what a token-less request to a type=CDN host would
+      // produce if the edge answers with a small HTTP-200 denial/
+      // interstitial page instead of a proper 401/403) previously threw a
+      // PLAIN `Error` with no `.status`/`.code` at all, so `reason` fell all
+      // the way to the literal, uninformative string `'Error'` -- identical
+      // to what a genuinely-unknown failure would show. `ChunkDecodeError`
+      // (decompress.ts) now tags every decode-stage throw site with a
+      // distinct, aggregatable code.
+      it('cycle 13: reports "sha1_mismatch" as `reason` for a chunk that downloads fine but never verifies', async () => {
+        const data = Buffer.from(
+          'never verifies (cycle 13 reason test)',
+          'utf8'
+        )
+        const encrypted = await buildEncryptedChunkResponse(data)
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: data.length
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('error')
+        expect(events[0].reason).toBe('sha1_mismatch')
+      })
+
+      it('cycle 13: reports "unknown_container" as `reason` for a response body that is not a valid chunk container at all', async () => {
+        // Encrypts plain garbage bytes (no VZ/PK magic) -- the exact shape a
+        // small HTTP-200 denial/interstitial page would take once decrypted:
+        // downloads fast (tiny body) and fails at the container-magic check,
+        // never reaching sha1.
+        const garbage = steamEncrypt(
+          Buffer.from('not-a-real-chunk-body', 'utf8'),
+          key
+        )
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                garbage.buffer.slice(
+                  garbage.byteOffset,
+                  garbage.byteOffset + garbage.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].outcome).toBe('error')
+        expect(events[0].reason).toBe('unknown_container')
+      })
+
+      // Debug/steam-install-slow-start (cycle 15): cycle 14's hardware
+      // validation applied the User-Agent/Accept header fix but did NOT
+      // unlock the type=CDN hosts -- instead it revealed (via cycle 13's own
+      // reason-extraction fix) that MOST failing hosts fail with
+      // `unknown_container`: the fetch succeeds (res.ok is true) but the
+      // fetched body AES-decrypts to non-container garbage. This test proves
+      // the new raw-response-metadata diagnostic actually fires on exactly
+      // this failure class and carries the fields (status/content-type/
+      // content-encoding/content-length/raw-body preview) the next hardware
+      // run needs to attribute the garbage to a specific layer (HTML error
+      // page vs gzip artifact vs binary-but-wrong).
+      it('cycle 15: logs raw (pre-decrypt) response metadata on an unknown_container decode failure', async () => {
+        const garbage = steamEncrypt(
+          Buffer.from('not-a-real-chunk-body', 'utf8'),
+          key
+        )
+        ;(logWarning as jest.Mock).mockClear()
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            status: 200,
+            headers: {
+              get: (name: string) => {
+                const table: Record<string, string> = {
+                  'content-type': 'text/html',
+                  'content-length': String(garbage.length)
+                }
+                return table[name.toLowerCase()] ?? null
+              }
+            },
+            arrayBuffer: () =>
+              Promise.resolve(
+                garbage.buffer.slice(
+                  garbage.byteOffset,
+                  garbage.byteOffset + garbage.byteLength
+                )
+              )
+          } as unknown as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1
+        }
+
+        await expect(
+          fetchChunk(hosts, depotId, chunk, key, lzma, 1)
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(logWarning).toHaveBeenCalledTimes(1)
+        const [messageArgs] = (logWarning as jest.Mock).mock.calls[0] as [
+          string[]
+        ]
+        const message = messageArgs[0]
+        expect(message).toContain('decode-stage failure')
+        expect(message).toContain('reason=unknown_container')
+        expect(message).toContain('httpStatus=200')
+        expect(message).toContain('contentType=text/html')
+        expect(message).toContain('contentEncoding=absent')
+        expect(message).toContain(`contentLength=${garbage.length}`)
+        expect(message).toContain(`rawBodyBytes=${garbage.length}`)
+        expect(message).toMatch(/rawPreviewHex=[0-9a-f]{32}/)
+        // Debug/steam-install-slow-start (cycle 16): `scheme` (http vs
+        // https) and `rawSha1` (the raw CIPHERTEXT's own sha1, independent
+        // of the depot-chunk sha1 which only covers decompressed bytes) let
+        // the next hardware capture directly test whether a failing host
+        // and the known-working host return byte-identical or
+        // byte-different ciphertext for the identical depot+sha request —
+        // see decompress.ts's cycle-16 doc comment for the full reasoning.
+        // No hostMeta is supplied to fetchChunk in this test, so scheme
+        // falls back to the pre-cycle-7 default (https://), matching
+        // fetchChunk's own `!meta ... ? 'https://' : ...` fallback exactly.
+        expect(message).toContain('scheme=https://')
+        expect(message).toMatch(/rawSha1=[0-9a-f]{40}/)
+        // Debug/steam-install-slow-start (cycle 17, post-decrypt
+        // diagnostic): the DECRYPTED plaintext's own first bytes, alongside
+        // the pre-decrypt ciphertext preview above -- the single fact the
+        // next hardware capture needs to split "decrypt produced garbage"
+        // from "decoder still incomplete" for whatever chunk still fails
+        // unknown_container after this cycle's zstd fix.
+        expect(message).toMatch(/decryptedPreviewHex=[0-9a-f]{32}/)
+        expect(message).toContain('decryptedPreviewLatin1=')
+      })
+
+      // Debug/steam-install-slow-start (cycle 17, retry-storm resilience):
+      // the OUTER caller (downloadFileChunks, depot.ts) needs fetchChunk's
+      // FINAL exhausted-attempts error to still carry the last attempt's
+      // ChunkDecodeError `.code` -- this is what isDecodeStageError checks
+      // to stop re-queuing a deterministic decode failure forever. Before
+      // this cycle the final throw was a bare `Error` with no `.code` at
+      // all, discarding the exact signal the caller needs.
+      it("cycle 17: the final exhausted-attempts error carries the last decode-stage failure's `.code`", async () => {
+        const garbage = steamEncrypt(
+          Buffer.from('not-a-real-chunk-body', 'utf8'),
+          key
+        )
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                garbage.buffer.slice(
+                  garbage.byteOffset,
+                  garbage.byteOffset + garbage.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1
+        }
+
+        await expect(
+          fetchChunk(hosts, depotId, chunk, key, lzma, 2)
+        ).rejects.toMatchObject({
+          code: 'unknown_container'
+        })
+      })
+
+      // Negative case: a failure that never reaches the decode stage at all
+      // (the fetch itself rejects, so `encrypted` is never assigned) must
+      // NOT trigger the raw-response-metadata diagnostic -- there is no
+      // fetched body to describe, and this proves the gate is keyed on
+      // "did decode actually run", not merely "did this attempt fail".
+      it('cycle 15: does NOT log raw response metadata for a network-level failure that never reaches decode', async () => {
+        ;(logWarning as jest.Mock).mockClear()
+        global.fetch = jest.fn(() =>
+          Promise.reject(new Error('ECONNRESET'))
+        ) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1
+        }
+
+        await expect(
+          fetchChunk(hosts, depotId, chunk, key, lzma, 1)
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(logWarning).not.toHaveBeenCalled()
+      })
+
+      it('cycle 13: reports the deeper undici cause code ("ECONNRESET") when the immediate `.cause` has no `.code` but `.cause.cause` does', async () => {
+        global.fetch = jest.fn(() => {
+          const innermost = new Error('connect ECONNRESET') as Error & {
+            code?: string
+          }
+          innermost.code = 'ECONNRESET'
+          const middle = new Error('wrapped once') as Error & { cause?: Error }
+          middle.cause = innermost
+          const outer = new TypeError('fetch failed') as TypeError & {
+            cause?: Error
+          }
+          outer.cause = middle
+          return Promise.reject(outer)
+        }) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].reason).toBe('ECONNRESET')
+      })
+
+      it('cycle 13: reports the first AggregateError-nested code ("ENOTFOUND") when undici throws a multi-address connect failure with no top-level `.code`', async () => {
+        global.fetch = jest.fn(() => {
+          const attempt1 = new Error(
+            'getaddrinfo ENOTFOUND host (v6)'
+          ) as Error & {
+            code?: string
+          }
+          attempt1.code = 'ENOTFOUND'
+          const attempt2 = new Error(
+            'getaddrinfo ENOTFOUND host (v4)'
+          ) as Error & {
+            code?: string
+          }
+          attempt2.code = 'ENOTFOUND'
+          const agg = new AggregateError(
+            [attempt1, attempt2],
+            'connect failed'
+          ) as Error & {
+            errors?: unknown[]
+          }
+          const outer = new TypeError('fetch failed') as TypeError & {
+            cause?: Error
+          }
+          outer.cause = agg
+          return Promise.reject(outer)
+        }) as unknown as typeof fetch
+
+        const chunk = {
+          sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+          cb_original: 1,
+          attemptSeed: 0
+        }
+        const events: Array<{ outcome: string; reason?: string }> = []
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            1,
+            undefined,
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, reason: ev.reason })
+          )
+        ).rejects.toThrow(/failed after 1 attempts/)
+
+        expect(events).toHaveLength(1)
+        expect(events[0].reason).toBe('ENOTFOUND')
       })
     })
 
@@ -315,9 +1099,20 @@ describe('decompress', () => {
       } {
         const calls: Array<{ depotId: number; hostname: string }> = []
         const client: CDNAuthTokenClient = {
-          getCDNAuthToken: jest.fn((_appId, depotId, hostname, callback) => {
-            calls.push({ depotId, hostname })
-            callback(null, { token, expires: new Date(Date.now() + 60 * 60 * 1000) })
+          _send: jest.fn((_header, body, callback) => {
+            const decoded =
+              CContentServerDirectory_GetCDNAuthToken_Request.decode(body)
+            calls.push({
+              depotId: decoded.depot_id ?? 0,
+              hostname: decoded.host_name ?? ''
+            })
+            callback(
+              encodeCdnAuthTokenResponse({
+                token,
+                expiration_time: Math.floor(Date.now() / 1000) + 3600
+              }),
+              { proto: { eresult: 1 } }
+            )
           })
         }
         return { client, calls }
@@ -329,7 +1124,9 @@ describe('decompress', () => {
         const expectedSha = sha1(data)
         const { client } = makeFakeCdnClient('?token=abc123&expires=999')
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
-        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]])
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+        ])
 
         let requestedUrl = ''
         global.fetch = jest.fn((url: unknown) => {
@@ -368,7 +1165,7 @@ describe('decompress', () => {
         )
       })
 
-      it('debug/steam-install-slow-start (cycle 7, PART 1 REVERT REGRESSION GUARD): supplying cdnAuth ALONE, with NO hostMeta at all, never calls getCDNAuthToken and never appends a token — cycle 6\'s unconditional fetch must stay reverted', async () => {
+      it("debug/steam-install-slow-start (cycle 7, PART 1 REVERT REGRESSION GUARD): supplying cdnAuth ALONE, with NO hostMeta at all, never calls getCDNAuthToken and never appends a token — cycle 6's unconditional fetch must stay reverted", async () => {
         const data = Buffer.from('no hostMeta at all', 'utf8')
         const encrypted = await buildEncryptedChunkResponse(data)
         const expectedSha = sha1(data)
@@ -392,14 +1189,31 @@ describe('decompress', () => {
 
         const chunk = { sha: expectedSha, cb_original: data.length }
         // cdnAuth supplied, hostMeta OMITTED entirely.
-        await fetchChunk(hosts, depotId, chunk, key, lzma, 4, undefined, undefined, undefined, undefined, cdnAuth)
+        await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth
+        )
 
         expect(calls).toHaveLength(0)
-        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`
+        )
       })
 
       it('debug/steam-install-slow-start (cycle 7, PART 1 REVERT REGRESSION GUARD): a hostMeta entry present but usetokenauth false/absent never calls getCDNAuthToken either', async () => {
-        const data = Buffer.from('hostMeta present but not usetokenauth', 'utf8')
+        const data = Buffer.from(
+          'hostMeta present but not usetokenauth',
+          'utf8'
+        )
         const encrypted = await buildEncryptedChunkResponse(data)
         const expectedSha = sha1(data)
         const { client, calls } = makeFakeCdnClient()
@@ -441,7 +1255,9 @@ describe('decompress', () => {
         )
 
         expect(calls).toHaveLength(0)
-        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`
+        )
       })
 
       it('fetches the token at most once per depot+host across multiple chunks — never once per chunk', async () => {
@@ -455,7 +1271,9 @@ describe('decompress', () => {
 
         global.fetch = jest.fn((url: unknown) => {
           const urlStr = String(url)
-          const encrypted = urlStr.includes(sha1(data1)) ? encrypted1 : encrypted2
+          const encrypted = urlStr.includes(sha1(data1))
+            ? encrypted1
+            : encrypted2
           return Promise.resolve({
             ok: true,
             arrayBuffer: () =>
@@ -526,7 +1344,9 @@ describe('decompress', () => {
         const chunk = { sha: expectedSha, cb_original: data.length }
         await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
 
-        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`
+        )
       })
 
       it('a 401 response invalidates the cached token for that depot+host, so the retry re-fetches a fresh one instead of repeating the rejected token', async () => {
@@ -535,12 +1355,15 @@ describe('decompress', () => {
         const expectedSha = sha1(data)
         let tokenCall = 0
         const client: CDNAuthTokenClient = {
-          getCDNAuthToken: jest.fn((_appId, _depotId, _hostname, callback) => {
+          _send: jest.fn((_header, _body, callback) => {
             tokenCall++
-            callback(null, {
-              token: `?token-${tokenCall}`,
-              expires: new Date(Date.now() + 60 * 60 * 1000)
-            })
+            callback(
+              encodeCdnAuthTokenResponse({
+                token: `?token-${tokenCall}`,
+                expiration_time: Math.floor(Date.now() / 1000) + 3600
+              }),
+              { proto: { eresult: 1 } }
+            )
           })
         }
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
@@ -585,7 +1408,11 @@ describe('decompress', () => {
         // hit hosts[1..3] (always fail), attempt 4 wraps back to hosts[0]
         // (badHost) — this time with a freshly-fetched token-2, which
         // succeeds.
-        const chunk = { sha: expectedSha, cb_original: data.length, attemptSeed: 0 }
+        const chunk = {
+          sha: expectedSha,
+          cb_original: data.length,
+          attemptSeed: 0
+        }
         const out = await fetchChunk(
           hosts,
           depotId,
@@ -620,12 +1447,16 @@ describe('decompress', () => {
         const encrypted = await buildEncryptedChunkResponse(data)
         const expectedSha = sha1(data)
         const client: CDNAuthTokenClient = {
-          getCDNAuthToken: jest.fn((_appId, _depotId, _hostname, callback) => {
-            callback(new Error('ClientGetCDNAuthToken: transient failure'))
+          _send: jest.fn((_header, _body, callback) => {
+            callback(encodeCdnAuthTokenResponse({}), {
+              proto: { eresult: 5 /* AccessDenied, transient */ }
+            })
           })
         }
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
-        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]])
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+        ])
 
         let requestedUrl = ''
         global.fetch = jest.fn((url: unknown) => {
@@ -659,11 +1490,192 @@ describe('decompress', () => {
         )
 
         expect(out.equals(data)).toBe(true)
-        expect(client.getCDNAuthToken).toHaveBeenCalled()
+        expect(client._send).toHaveBeenCalled()
         // No token appended — the fetch still succeeded because this fixture
         // host doesn't actually require one, exactly like a real SteamCache
         // local edge would.
-        expect(requestedUrl).toBe(`https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`
+        )
+      })
+
+      it('debug/steam-install-slow-start (CDN-auth implementation cycle, PART 2 -- gate widened): a hostMeta entry with type=CDN (usetokenauth false/absent) STILL fetches and appends a token', async () => {
+        const data = Buffer.from('type=CDN gate widening', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const { client, calls } = makeFakeCdnClient('?token=cdn-type-gate')
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        // Real-world shape (RESEARCH SPIKE): usetokenauth is absent/false on
+        // every real directory response, including type=CDN hosts -- the
+        // widened gate must fire off `type` alone.
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', type: 'CDN' }]
+        ])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(out.equals(data)).toBe(true)
+        expect(calls).toHaveLength(1)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}?token=cdn-type-gate`
+        )
+      })
+
+      it('debug/steam-install-slow-start (CDN-auth implementation cycle, PART 2): a type=SteamCache host is NEVER gated on by type alone -- stays token-less exactly like the real client', async () => {
+        const data = Buffer.from('type=SteamCache stays token-less', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const { client, calls } = makeFakeCdnClient()
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', type: 'SteamCache' }]
+        ])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(calls).toHaveLength(0)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}`
+        )
+      })
+
+      it('debug/steam-install-slow-start (CDN-auth implementation cycle, PART 3 -- regression guard): a hanging token fetch degrades to token-less and the chunk still completes once the BOUNDED token timeout fires -- never left hanging indefinitely (the exact cycle-6 regression)', async () => {
+        jest.useFakeTimers()
+        try {
+          const data = Buffer.from(
+            'token fetch hangs but chunk still completes',
+            'utf8'
+          )
+          const encrypted = await buildEncryptedChunkResponse(data)
+          const expectedSha = sha1(data)
+          // This client's _send NEVER calls back -- simulates the exact
+          // cycle-6 regression mechanism (a token round-trip that never
+          // resolves). CdnAuthTokenCache's own bounded timeout
+          // (CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS, a few seconds) must degrade
+          // this to '' well before CHUNK_FETCH_TIMEOUT_MS (15s) could ever
+          // fire and rotate hosts -- proving the token round-trip is bounded
+          // independently of, and far tighter than, the chunk-fetch
+          // timeout, and never blocks/serializes the chunk pipeline.
+          const client: CDNAuthTokenClient = {
+            _send: jest.fn(() => {
+              /* never calls back */
+            })
+          }
+          const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+          const hostMeta = new Map([
+            [hosts[0], { httpsSupport: 'mandatory', type: 'CDN' }]
+          ])
+
+          global.fetch = jest.fn(() =>
+            Promise.resolve({
+              ok: true,
+              arrayBuffer: () =>
+                Promise.resolve(
+                  encrypted.buffer.slice(
+                    encrypted.byteOffset,
+                    encrypted.byteOffset + encrypted.byteLength
+                  )
+                )
+            } as Response)
+          ) as unknown as typeof fetch
+
+          const chunk = { sha: expectedSha, cb_original: data.length }
+          const promise = fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            4,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            cdnAuth,
+            hostMeta
+          )
+
+          let settled = false
+          void promise.then(() => {
+            settled = true
+          })
+
+          // Just short of the bounded token timeout -- still waiting on the
+          // token, not stuck past it.
+          await jest.advanceTimersByTimeAsync(
+            CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS - 1
+          )
+          expect(settled).toBe(false)
+
+          // Crossing the bound resolves the token to '' and the chunk fetch
+          // (using the instantly-resolving fetch mock) completes right
+          // after -- well under CHUNK_FETCH_TIMEOUT_MS (15s), proving the
+          // hanging token round-trip never serialized this chunk past its
+          // own tight bound.
+          await jest.advanceTimersByTimeAsync(10)
+          const out = await promise
+          expect(out.equals(data)).toBe(true)
+        } finally {
+          jest.useRealTimers()
+        }
       })
     })
 
@@ -676,7 +1688,10 @@ describe('decompress', () => {
     // hardcoded https://.
     describe('URL scheme parity via hostMeta (cycle 7)', () => {
       async function fetchOneChunkAndCaptureUrl(
-        hostMeta?: ReadonlyMap<string, { httpsSupport?: string; usetokenauth?: boolean }>
+        hostMeta?: ReadonlyMap<
+          string,
+          { httpsSupport?: string; usetokenauth?: boolean }
+        >
       ): Promise<string> {
         const data = Buffer.from('scheme-parity chunk', 'utf8')
         const encrypted = await buildEncryptedChunkResponse(data)
@@ -728,7 +1743,9 @@ describe('decompress', () => {
       })
 
       it('a host with NO hostMeta entry at all (present in `hosts` but missing from the map) falls back to https:// — never silently downgrades transport for a host this cycle has no data for', async () => {
-        const hostMeta = new Map([['some-other-host.example', { httpsSupport: 'unavailable' }]])
+        const hostMeta = new Map([
+          ['some-other-host.example', { httpsSupport: 'unavailable' }]
+        ])
         const url = await fetchOneChunkAndCaptureUrl(hostMeta)
         expect(url).toMatch(/^https:\/\//)
       })
@@ -736,6 +1753,198 @@ describe('decompress', () => {
       it('omitting hostMeta entirely (every pre-cycle-7 caller/test) keeps the original hardcoded https:// — no regression', async () => {
         const url = await fetchOneChunkAndCaptureUrl(undefined)
         expect(url).toMatch(/^https:\/\//)
+      })
+    })
+
+    // debug/steam-cancel-abort-thread-a: the external cancellation `signal`
+    // fetchChunk now accepts as its 13th (last) positional parameter — see
+    // its own doc comment for the full root-cause writeup. Before this fix,
+    // fetchChunk had NO way to observe a caller's cancel at all —
+    // downloadFileChunks (depot.ts) only checked `signal?.aborted`
+    // BEFORE/AFTER calling fetchChunk, never DURING it, so a cancel issued
+    // mid-retry had to wait for the whole call to naturally exhaust or
+    // succeed first (the hardware-observed ~62s hang).
+    describe('external cancel signal (debug/steam-cancel-abort-thread-a)', () => {
+      const abortedChunk = {
+        sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+        cb_original: 1,
+        attemptSeed: 0
+      }
+
+      it('a signal already aborted BEFORE the call starts never touches fetch() at all, and rejects immediately', async () => {
+        global.fetch = jest.fn() as unknown as typeof fetch
+        const controller = new AbortController()
+        controller.abort()
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            abortedChunk,
+            key,
+            lzma,
+            4,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            controller.signal
+          )
+        ).rejects.toMatchObject({
+          name: 'ChunkFetchAbortedError',
+          code: 'aborted'
+        })
+
+        expect(global.fetch).not.toHaveBeenCalled()
+      })
+
+      it('a signal that fires WHILE the fetch is in flight aborts the underlying request immediately — never waits for CHUNK_FETCH_TIMEOUT_MS, never retries', async () => {
+        const controller = new AbortController()
+        let sawAbortSignalOnFetch = false
+
+        global.fetch = jest.fn(
+          (_url: unknown, opts?: { signal?: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              opts?.signal?.addEventListener('abort', () => {
+                sawAbortSignalOnFetch = true
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                reject(err)
+              })
+            })
+        ) as unknown as typeof fetch
+
+        const pending = fetchChunk(
+          hosts,
+          depotId,
+          abortedChunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          controller.signal
+        )
+        pending.catch(() => {})
+
+        // Fire the EXTERNAL cancel mid-attempt — fetchChunk's own internal
+        // per-attempt AbortController (previously deaf to anything but its
+        // own CHUNK_FETCH_TIMEOUT_MS) must forward this into the in-flight
+        // fetch() call immediately (onExternalAbort listener).
+        controller.abort()
+
+        await expect(pending).rejects.toMatchObject({
+          name: 'ChunkFetchAbortedError',
+          code: 'aborted'
+        })
+        expect(sawAbortSignalOnFetch).toBe(true)
+        // Only ONE attempt — never retried/rotated to another host after an
+        // external cancel (contrast with the ECONNRESET regression test below,
+        // which DOES retry across all 4 attempts when signal is never aborted).
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+      })
+
+      it('an external cancel is NEVER recorded via hostHealth.record or onAttempt — a user cancel is not evidence a host is unhealthy (D-UAT-05)', async () => {
+        const controller = new AbortController()
+        global.fetch = jest.fn(
+          (_url: unknown, opts?: { signal?: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              opts?.signal?.addEventListener('abort', () => {
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                reject(err)
+              })
+            })
+        ) as unknown as typeof fetch
+
+        const hostHealth = new HostHealthTracker()
+        const recordSpy = jest.spyOn(hostHealth, 'record')
+        const events: Array<{ outcome: string }> = []
+
+        const pending = fetchChunk(
+          hosts,
+          depotId,
+          abortedChunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          (ev) => events.push({ outcome: ev.outcome }),
+          hostHealth,
+          undefined,
+          undefined,
+          controller.signal
+        )
+        pending.catch(() => {})
+        controller.abort()
+
+        await expect(pending).rejects.toMatchObject({ code: 'aborted' })
+        expect(recordSpy).not.toHaveBeenCalled()
+        expect(events).toHaveLength(0)
+      })
+
+      it('a genuine network failure with NO external signal firing is completely unaffected — still retried across all attempts exactly as before (D-UAT-06 regression protection: a network drop is never reported as a user cancel)', async () => {
+        const controller = new AbortController() // constructed, but never .abort()'d
+        let calls = 0
+        global.fetch = jest.fn(() => {
+          calls++
+          const err = new Error('read ECONNRESET') as Error & { code?: string }
+          err.code = 'ECONNRESET'
+          return Promise.reject(err)
+        }) as unknown as typeof fetch
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            abortedChunk,
+            key,
+            lzma,
+            4,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            controller.signal
+          )
+        ).rejects.toThrow(/failed after 4 attempts/)
+
+        expect(calls).toBe(4)
+      }, 15000)
+
+      it('omitting `signal` entirely (every pre-existing caller/test) preserves the exact previous behavior — retries run to completion, chunk still verifies', async () => {
+        const data = Buffer.from(
+          'verifies correctly, no signal supplied',
+          'utf8'
+        )
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(hosts, depotId, chunk, key, lzma, 4)
+        expect(out.equals(data)).toBe(true)
       })
     })
   })
@@ -793,7 +2002,12 @@ describe('select', () => {
       }
     }
     const ownedApp999 = makeOwned([999], [])
-    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' }, '12345')
+    const selected = selectDepots(
+      appinfoOwnedDlc,
+      ownedApp999,
+      { os: 'windows' },
+      '12345'
+    )
     expect(selected).toHaveLength(1)
     expect(selected[0].id).toBe('200')
 
@@ -807,7 +2021,12 @@ describe('select', () => {
       }
     }
     const ownedNothing = makeOwned([], [])
-    const excluded = selectDepots(appinfoUnownedDlc, ownedNothing, { os: 'windows' }, '12345')
+    const excluded = selectDepots(
+      appinfoUnownedDlc,
+      ownedNothing,
+      { os: 'windows' },
+      '12345'
+    )
     expect(excluded).toHaveLength(0)
   })
 
@@ -838,8 +2057,12 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [400])
-    expect(selectDepots(appinfo, owned, { os: 'windows' }, '12345')).toHaveLength(1)
-    expect(selectDepots(appinfo, owned, { os: 'linux' }, '12345')).toHaveLength(0)
+    expect(
+      selectDepots(appinfo, owned, { os: 'windows' }, '12345')
+    ).toHaveLength(1)
+    expect(selectDepots(appinfo, owned, { os: 'linux' }, '12345')).toHaveLength(
+      0
+    )
   })
 
   it('selectAllDepots merges depots declared inside DLC app entries not present on the base app', () => {
@@ -863,7 +2086,13 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([600], [500, 601])
-    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' }, '12345')
+    const result = selectAllDepots(
+      baseAppinfo,
+      dlcInfos,
+      owned,
+      { os: 'windows' },
+      '12345'
+    )
     const ids = result.map((d) => d.id).sort()
     expect(ids).toEqual(['500', '601'])
   })
@@ -889,7 +2118,13 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([600], [500, 601])
-    const result = selectAllDepots(baseAppinfo, dlcInfos, owned, { os: 'windows' }, '12345')
+    const result = selectAllDepots(
+      baseAppinfo,
+      dlcInfos,
+      owned,
+      { os: 'windows' },
+      '12345'
+    )
 
     const baseDepot = result.find((d) => d.id === '500')
     const dlcDepot = result.find((d) => d.id === '601')
@@ -912,7 +2147,12 @@ describe('select', () => {
       }
     }
     const ownedApp999 = makeOwned([999], [])
-    const selected = selectDepots(appinfoOwnedDlc, ownedApp999, { os: 'windows' }, '12345')
+    const selected = selectDepots(
+      appinfoOwnedDlc,
+      ownedApp999,
+      { os: 'windows' },
+      '12345'
+    )
     expect(selected).toHaveLength(1)
     expect(selected[0].ownerAppId).toBe('12345')
   })
@@ -927,7 +2167,12 @@ describe('select', () => {
       }
     }
     const owned = makeOwned([], [700])
-    const result = selectDepots(appinfo, owned, { os: 'macos', arch: '64', language: 'english' }, '12345')
+    const result = selectDepots(
+      appinfo,
+      owned,
+      { os: 'macos', arch: '64', language: 'english' },
+      '12345'
+    )
 
     // Regression guard: logging must not alter the returned descriptors.
     expect(result).toHaveLength(1)
@@ -964,7 +2209,9 @@ describe('select', () => {
     expect(result).toHaveLength(0)
 
     const calls = (logInfo as jest.Mock).mock.calls
-    const skipLog = calls.find(([msg]) => String(msg).includes('skipped depot 800'))
+    const skipLog = calls.find(([msg]) =>
+      String(msg).includes('skipped depot 800')
+    )
     expect(skipLog).toBeDefined()
     expect(String(skipLog![0])).toContain('oslist=windows')
   })
@@ -982,7 +2229,9 @@ describe('select', () => {
     selectAllDepots(baseAppinfo, undefined, owned, { os: 'windows' }, '12345')
 
     const calls = (logInfo as jest.Mock).mock.calls
-    const unionLog = calls.find(([msg]) => String(msg).includes('selectAllDepots union'))
+    const unionLog = calls.find(([msg]) =>
+      String(msg).includes('selectAllDepots union')
+    )
     expect(unionLog).toBeDefined()
     expect(String(unionLog![0])).toContain('1 depot(s)')
   })

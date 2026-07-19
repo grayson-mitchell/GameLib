@@ -31,7 +31,11 @@ jest.mock('backend/logger', () => ({
 /** Real worker_threads fixture (plain CommonJS — see the file's own header
  *  comment for why the pool tests below cannot spawn the project's own
  *  .ts decompressWorker.ts directly). */
-const POOL_TEST_WORKER_PATH = path.join(__dirname, 'fixtures', 'poolTestWorker.js')
+const POOL_TEST_WORKER_PATH = path.join(
+  __dirname,
+  'fixtures',
+  'poolTestWorker.js'
+)
 
 // ── fixtures (mirrors depotPrimitives.test.ts's VZ/PK builders) ───────────
 
@@ -50,7 +54,9 @@ function steamEncrypt(plaintext: Buffer, key: Buffer): Buffer {
 
 function compressAsync(data: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) =>
-    lzma.compress(data, 1, (result, err) => (err ? reject(err) : resolve(Buffer.from(result))))
+    lzma.compress(data, 1, (result, err) =>
+      err ? reject(err) : resolve(Buffer.from(result))
+    )
   )
 }
 
@@ -59,7 +65,11 @@ function buildVZChunk(data: Buffer, compressed: Buffer): Buffer {
   const props = compressed.subarray(0, 5)
   const payload = compressed.subarray(13) // skip props(5) + alone-format size(8)
 
-  const header = Buffer.concat([Buffer.from('VZa', 'latin1'), Buffer.alloc(4), props])
+  const header = Buffer.concat([
+    Buffer.from('VZa', 'latin1'),
+    Buffer.alloc(4),
+    props
+  ])
   const footer = Buffer.alloc(10)
   footer.writeUInt32LE(0, 0) // crc — unused/unchecked by decompressChunk
   footer.writeUInt32LE(data.length, 4) // outSize — read at buf.length-6
@@ -84,7 +94,10 @@ function buildPKChunk(data: Buffer): Buffer {
 }
 
 function toArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+  return buf.buffer.slice(
+    buf.byteOffset,
+    buf.byteOffset + buf.byteLength
+  ) as ArrayBuffer
 }
 
 const asLzmaModule = lzma as unknown as LzmaModule
@@ -101,7 +114,13 @@ describe('decodeChunk', () => {
     const encrypted = steamEncrypt(vzChunk, key)
     const expectedSha = sha1(data)
 
-    const out = await decodeChunk(encrypted, key, expectedSha, data.length, asLzmaModule)
+    const out = await decodeChunk(
+      encrypted,
+      key,
+      expectedSha,
+      data.length,
+      asLzmaModule
+    )
     expect(out.equals(data)).toBe(true)
   })
 
@@ -111,7 +130,13 @@ describe('decodeChunk', () => {
     const encrypted = steamEncrypt(pkChunk, key)
     const expectedSha = sha1(data)
 
-    const out = await decodeChunk(encrypted, key, expectedSha, data.length, asLzmaModule)
+    const out = await decodeChunk(
+      encrypted,
+      key,
+      expectedSha,
+      data.length,
+      asLzmaModule
+    )
     expect(out.equals(data)).toBe(true)
   })
 
@@ -194,6 +219,32 @@ describe('decompressWorker handleDecodeMessage', () => {
       expect(response.error).toMatch(/unknown chunk container/)
     }
   })
+
+  // Debug/steam-install-slow-start (cycle 13): the `code` field is new this
+  // cycle -- previously `DecompressWorkerResponse`'s `ok:false` variant
+  // carried ONLY a message string, and DecompressPool's message handler
+  // reconstructed a bare `new Error(message)` from it on the main thread,
+  // discarding any `.code` the original decodeChunk failure had (e.g.
+  // `ChunkDecodeError.code`). This is the worker_threads-boundary half of
+  // the fix for a hardware run's generic `err=N{Error:N}` chunk-stream
+  // breakdown.
+  it("posts the decode error's `.code` alongside the message (cycle 13)", async () => {
+    const bogus = Buffer.from('XXbad-container-bytes', 'utf8')
+    const encrypted = steamEncrypt(bogus, key)
+
+    const response = await handleDecodeMessage({
+      id: 3,
+      encrypted: toArrayBuffer(encrypted),
+      key: toArrayBuffer(key),
+      expectedSha: 'irrelevant',
+      cbOriginal: 0
+    })
+
+    expect(response.ok).toBe(false)
+    if (!response.ok) {
+      expect(response.code).toBe('unknown_container')
+    }
+  })
 })
 
 // ── DecompressPool ──────────────────────────────────────────────────────
@@ -201,7 +252,9 @@ describe('decompressWorker handleDecodeMessage', () => {
 describe('DecompressPool', () => {
   const key = randomBytes(32)
 
-  async function buildEncrypted(data: Buffer): Promise<{ encrypted: Buffer; expectedSha: string }> {
+  async function buildEncrypted(
+    data: Buffer
+  ): Promise<{ encrypted: Buffer; expectedSha: string }> {
     const compressed = await compressAsync(data)
     const vzChunk = buildVZChunk(data, compressed)
     return { encrypted: steamEncrypt(vzChunk, key), expectedSha: sha1(data) }
@@ -211,7 +264,10 @@ describe('DecompressPool', () => {
     const data = Buffer.from('pool VZ round-trip fixture. '.repeat(10), 'utf8')
     const { encrypted, expectedSha } = await buildEncrypted(data)
 
-    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
     await pool.init()
     try {
       const out = await pool.decode(encrypted, key, expectedSha, data.length)
@@ -227,7 +283,10 @@ describe('DecompressPool', () => {
     const encrypted = steamEncrypt(pkChunk, key)
     const expectedSha = sha1(data)
 
-    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
     await pool.init()
     try {
       const out = await pool.decode(encrypted, key, expectedSha, data.length)
@@ -238,23 +297,31 @@ describe('DecompressPool', () => {
   })
 
   it('20 concurrent pool.decode calls across a 4-worker pool all resolve correctly and independently', async () => {
-    const pool = new DecompressPool({ size: 4, workerPath: POOL_TEST_WORKER_PATH })
+    const pool = new DecompressPool({
+      size: 4,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
     await pool.init()
     try {
       const fixtures = await Promise.all(
         Array.from({ length: 20 }, (_, i) =>
-          buildEncrypted(Buffer.from(`concurrent chunk #${i} distinct payload bytes`, 'utf8')).then(
-            ({ encrypted, expectedSha }) => ({
-              encrypted,
-              expectedSha,
-              data: Buffer.from(`concurrent chunk #${i} distinct payload bytes`, 'utf8')
-            })
-          )
+          buildEncrypted(
+            Buffer.from(`concurrent chunk #${i} distinct payload bytes`, 'utf8')
+          ).then(({ encrypted, expectedSha }) => ({
+            encrypted,
+            expectedSha,
+            data: Buffer.from(
+              `concurrent chunk #${i} distinct payload bytes`,
+              'utf8'
+            )
+          }))
         )
       )
 
       const results = await Promise.all(
-        fixtures.map((f) => pool.decode(f.encrypted, key, f.expectedSha, f.data.length))
+        fixtures.map((f) =>
+          pool.decode(f.encrypted, key, f.expectedSha, f.data.length)
+        )
       )
 
       results.forEach((out, i) => {
@@ -266,15 +333,26 @@ describe('DecompressPool', () => {
   })
 
   it('a worker that throws (malformed buffer) rejects only that task; the pool keeps serving subsequent tasks', async () => {
-    const pool = new DecompressPool({ size: 2, workerPath: POOL_TEST_WORKER_PATH })
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
     await pool.init()
     try {
       const bogus = Buffer.from('XXmalformed-container', 'utf8')
       const bogusEncrypted = steamEncrypt(bogus, key)
 
-      await expect(pool.decode(bogusEncrypted, key, 'irrelevant', 0)).rejects.toThrow(
-        /unknown chunk container/
-      )
+      let caught: (Error & { code?: string }) | undefined
+      await pool.decode(bogusEncrypted, key, 'irrelevant', 0).catch((err) => {
+        caught = err
+      })
+      expect(caught?.message).toMatch(/unknown chunk container/)
+      // Debug/steam-install-slow-start (cycle 13): the reconstructed error
+      // carries the SAME `.code` the worker fixture attached, proving the
+      // code survives the REAL worker_threads message-passing boundary
+      // (poolTestWorker.js -> decompressPool.ts's `wireWorker` handler),
+      // not just the in-process handleDecodeMessage unit test above.
+      expect(caught?.code).toBe('unknown_container')
 
       const data = Buffer.from('still works after a throw', 'utf8')
       const { encrypted, expectedSha } = await buildEncrypted(data)
@@ -293,9 +371,18 @@ describe('DecompressPool', () => {
     })
     await pool.init()
     try {
-      await expect(
-        pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
-      ).rejects.toThrow(/timed out/)
+      let caught: (Error & { code?: string }) | undefined
+      await pool
+        .decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+        .catch((err) => {
+          caught = err
+        })
+      expect(caught?.message).toMatch(/timed out/)
+      // Debug/steam-install-slow-start (cycle 13): a pool-level timeout is
+      // just as distinguishable as a decode-stage or network-stage failure
+      // now — 'decompress_pool_timeout' instead of the generic `'Error'`
+      // attemptFailureReason would otherwise report.
+      expect(caught?.code).toBe('decompress_pool_timeout')
 
       const data = Buffer.from('succeeds on the replacement worker', 'utf8')
       const { encrypted, expectedSha } = await buildEncrypted(data)
@@ -309,7 +396,10 @@ describe('DecompressPool', () => {
   it('a task queued while all workers are busy still settles (inline) when the pool drains to zero workers and replacement keeps failing — never a permanent hang (WR-01)', async () => {
     // Real, decodable payload built up front so the queued task has valid
     // bytes to decode inline once the pool collapses.
-    const data = Buffer.from('queued task must not orphan when the pool collapses', 'utf8')
+    const data = Buffer.from(
+      'queued task must not orphan when the pool collapses',
+      'utf8'
+    )
     const { encrypted, expectedSha } = await buildEncrypted(data)
 
     // Single-worker pool: one busy worker + a short task timeout so the
@@ -322,7 +412,12 @@ describe('DecompressPool', () => {
     await pool.init()
     try {
       // Occupy the only worker with a task that never responds.
-      const hang = pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+      const hang = pool.decode(
+        Buffer.from('irrelevant'),
+        key,
+        '__TEST_HANG__',
+        0
+      )
       // Enqueue a real task while the sole worker is busy — it lands in the
       // queue (no idle worker to dispatch to).
       const queued = pool.decode(encrypted, key, expectedSha, data.length)
@@ -332,11 +427,8 @@ describe('DecompressPool', () => {
       // rejects. With zero workers left and a non-empty queue, the pool
       // must drain the queue inline instead of leaving `queued` pending
       // forever.
-      ;(pool as unknown as { workerPathOverride: string }).workerPathOverride = path.join(
-        __dirname,
-        'fixtures',
-        'this-file-does-not-exist.js'
-      )
+      ;(pool as unknown as { workerPathOverride: string }).workerPathOverride =
+        path.join(__dirname, 'fixtures', 'this-file-does-not-exist.js')
 
       await expect(hang).rejects.toThrow(/timed out/)
 
@@ -355,7 +447,11 @@ describe('DecompressPool', () => {
 
     const pool = new DecompressPool({
       size: 2,
-      workerPath: path.join(__dirname, 'fixtures', 'this-file-does-not-exist.js')
+      workerPath: path.join(
+        __dirname,
+        'fixtures',
+        'this-file-does-not-exist.js'
+      )
     })
     await pool.init()
     try {

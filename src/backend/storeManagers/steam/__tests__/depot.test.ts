@@ -63,6 +63,10 @@ import { StallTracker } from '../depot/stallTracker'
 import { sendFrontendMessage } from '../../../ipc'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
 import { applyDepotFileFlags } from '../depot/fileAttributes'
+import {
+  CContentServerDirectory_GetCDNAuthToken_Request,
+  CContentServerDirectory_GetCDNAuthToken_Response
+} from 'steam-user/protobufs/generated/_load.js'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -121,8 +125,27 @@ jest.mock('steam-user/components/content_manifest.js', () => ({
 //    interop — jest.mock/jest.spyOn cannot reliably intercept a specific fs
 //    call without breaking the underlying real I/O, so black-box real-fs
 //    assertions are used instead of mocking open/write/mkdir).
+// Debug/steam-install-slow-start (cycle 17): isDecodeStageError is a real,
+// pure duck-typed check (never network/fs-dependent) — mocked here with the
+// SAME logic as the real implementation (depot/decompress.ts) rather than a
+// bare jest.fn(), so downloadFileChunks' new decode-stage-vs-network requeue
+// guard behaves identically to production against this suite's fixture
+// errors (which never set `.code` unless a test explicitly constructs one).
 jest.mock('../depot/decompress', () => ({
-  fetchChunk: jest.fn()
+  fetchChunk: jest.fn(),
+  isDecodeStageError: (err: unknown) => {
+    const code = (err as { code?: unknown } | undefined)?.code
+    return (
+      typeof code === 'string' &&
+      [
+        'bad_footer_magic',
+        'unknown_container',
+        'sha1_mismatch',
+        'size_mismatch',
+        'decode_failed'
+      ].includes(code)
+    )
+  }
 }))
 
 // ── backend/ipc mock — captures progressUpdate emits for Task 2 assertions ───
@@ -158,24 +181,40 @@ function makeFakeClient(overrides: Record<string, unknown> = {}) {
     }),
     getDepotDecryptionKey: jest.fn(),
     getRawManifest: jest.fn(),
-    getContentServers: jest.fn().mockImplementation(
-      (_appId: number, cb: (err: Error | null, servers: Array<{ Host?: string }>) => void) =>
-        cb(null, [{ Host: 'cdn1.example.com' }])
-    ),
-    // Debug/steam-install-slow-start (cycle 6): default fake for the
-    // undocumented CDN-auth-token API — see depot/cdnAuth.ts. Not exercised
-    // by most tests here (fetchChunk itself is fully jest.mock'd in this
-    // file, so CdnAuthTokenCache.getToken is never actually invoked through
-    // the mocked fetchChunk), but present so a test can call it directly on
-    // the CdnAuthTokenCache instance downloadSteamDepots constructs.
-    getCDNAuthToken: jest.fn().mockImplementation(
-      (
-        _appId: number,
-        _depotId: number,
-        _hostname: string,
-        cb: (err: Error | null, result?: { token: string; expires: Date }) => void
-      ) => cb(null, { token: '?fake-token', expires: new Date(Date.now() + 60 * 60 * 1000) })
-    ),
+    getContentServers: jest
+      .fn()
+      .mockImplementation(
+        (
+          _appId: number,
+          cb: (err: Error | null, servers: Array<{ Host?: string }>) => void
+        ) => cb(null, [{ Host: 'cdn1.example.com' }])
+      ),
+    // Debug/steam-install-slow-start (cycle 6, transport-swapped in the
+    // CDN-auth implementation cycle; cycle 11 swapped the transport AGAIN —
+    // see depot/cdnAuth.ts's module doc comment, CYCLE 11 UPDATE section):
+    // default fake for the undocumented `_send` surface. Not exercised by
+    // most tests here (fetchChunk itself is fully jest.mock'd in this file,
+    // so CdnAuthTokenCache.getToken is never actually invoked through the
+    // mocked fetchChunk), but present so a test can call it directly on the
+    // CdnAuthTokenCache instance downloadSteamDepots constructs. Encodes/
+    // decodes REAL protobuf buffers (same classes cdnAuth.ts's manual bypass
+    // uses), matching the actual wire shape rather than a plain-object fake.
+    _send: jest
+      .fn()
+      .mockImplementation(
+        (
+          _header: { msg: number; proto: { target_job_name: string } },
+          _body: Buffer,
+          cb: (body: unknown, hdr?: { proto?: { eresult?: number } }) => void
+        ) =>
+          cb(
+            CContentServerDirectory_GetCDNAuthToken_Response.encode({
+              token: '?fake-token',
+              expiration_time: Math.floor(Date.now() / 1000) + 3600
+            }).finish(),
+            { proto: { eresult: 1 } }
+          )
+      ),
     ...overrides
   }
 }
@@ -240,41 +279,78 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
-        { id: '222', manifest: '9007199254740995', size: 0, ownerAppId: '12345' }
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        },
+        {
+          id: '222',
+          manifest: '9007199254740995',
+          size: 0,
+          ownerAppId: '12345'
+        }
       ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => cb(null, Buffer.from(`key-${depotId}`))
-      )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(null, Buffer.from(`key-${depotId}`))
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
 
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
       jest.mocked(contentManifest.parse).mockImplementation((raw: Buffer) => {
         if (raw.toString() === 'raw-111') {
-          return { files: [{ filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }] }
+          return {
+            files: [
+              {
+                filename: 'enc-a',
+                size: '100',
+                sha_content: 'sha-a',
+                chunks: []
+              }
+            ]
+          }
         }
         return {
           files: [
-            { filename: 'enc-b1', size: '150', sha_content: 'sha-b1', chunks: [] },
-            { filename: 'enc-b2', size: '100', sha_content: 'sha-b2', chunks: [] }
+            {
+              filename: 'enc-b1',
+              size: '150',
+              sha_content: 'sha-b1',
+              chunks: []
+            },
+            {
+              filename: 'enc-b2',
+              size: '100',
+              sha_content: 'sha-b2',
+              chunks: []
+            }
           ]
         }
       })
 
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -297,32 +373,54 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
 
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '333', manifest: '18446744073709551615', size: 0, ownerAppId: '12345' }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '333',
+            manifest: '18446744073709551615',
+            size: 0,
+            ownerAppId: '12345'
+          }
+        ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => cb(null, Buffer.from(`key-${depotId}`))
-      )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(null, Buffer.from(`key-${depotId}`))
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
 
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
+      )
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-solo', size: '42', sha_content: 'sha-solo', chunks: [] }]
+        files: [
+          {
+            filename: 'enc-solo',
+            size: '42',
+            sha_content: 'sha-solo',
+            chunks: []
+          }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -334,7 +432,9 @@ describe('buildDepotPlan', () => {
     })
 
     it('smoke: steam-user/components/content_manifest.js still exports a parse() function (Pitfall 5, T-21-10)', () => {
-      const real = jest.requireActual('steam-user/components/content_manifest.js')
+      const real = jest.requireActual(
+        'steam-user/components/content_manifest.js'
+      )
       expect(typeof real.parse).toBe('function')
     })
   })
@@ -356,37 +456,57 @@ describe('buildDepotPlan', () => {
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
       jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' },
-        { id: '222', manifest: '9007199254740995', size: 0, ownerAppId: '12345' }
+        {
+          id: '111',
+          manifest: '9007199254740993',
+          size: 0,
+          ownerAppId: '12345'
+        },
+        {
+          id: '222',
+          manifest: '9007199254740995',
+          size: 0,
+          ownerAppId: '12345'
+        }
       ])
 
       const controller = new AbortController()
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => {
-          // Abort partway through — right after the first depot's key fetch
-          // starts resolving, before the loop moves to the second descriptor.
-          if (depotId === 111) controller.abort()
-          cb(null, Buffer.from(`key-${depotId}`))
-        }
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            // Abort partway through — right after the first depot's key fetch
+            // starts resolving, before the loop moves to the second descriptor.
+            if (depotId === 111) controller.abort()
+            cb(null, Buffer.from(`key-${depotId}`))
+          }
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
       )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }]
+        files: [
+          { filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       await expect(
         buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
@@ -402,42 +522,59 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '12345'
+          }
+        ])
 
       let keyCalls = 0
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => {
-          keyCalls++
-          if (keyCalls === 1) {
-            // Simulates the CM connection dropping mid-request (the exact
-            // D-UAT-06 field failure signature — classifyDepotError already
-            // recognizes ECONNRESET as a connection-dropped failure).
-            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
-            return
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            keyCalls++
+            if (keyCalls === 1) {
+              // Simulates the CM connection dropping mid-request (the exact
+              // D-UAT-06 field failure signature — classifyDepotError already
+              // recognizes ECONNRESET as a connection-dropped failure).
+              cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+              return
+            }
+            cb(null, Buffer.from(`key-${depotId}`))
           }
-          cb(null, Buffer.from(`key-${depotId}`))
-        }
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
       )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }]
+        files: [
+          { filename: 'enc-a', size: '100', sha_content: 'sha-a', chunks: [] }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -453,19 +590,30 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '12345'
+          }
+        ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          _depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            _depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+        )
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
+        /ECONNRESET/
       )
-
-      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(/ECONNRESET/)
 
       expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
         PLAN_BUILD_MAX_ATTEMPTS
@@ -480,23 +628,32 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: '12345' }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '12345'
+          }
+        ])
 
       const controller = new AbortController()
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (
-          _appId: number,
-          _depotId: number,
-          cb: (err: Error | null, key: Buffer) => void
-        ) => {
-          // First attempt fails (triggers the retry path); abort lands
-          // while withPlanBuildRetry is backing off before attempt 2.
-          controller.abort()
-          cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
-        }
-      )
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            _depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            // First attempt fails (triggers the retry path); abort lands
+            // while withPlanBuildRetry is backing off before attempt 2.
+            controller.abort()
+            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+          }
+        )
 
       await expect(
         buildDepotPlan(APP_ID, { ...BASE_OPTS, signal: controller.signal })
@@ -515,28 +672,48 @@ describe('buildDepotPlan', () => {
       // Descriptor enumerated from a DLC/sub-app (ownerAppId 54321) — as
       // Cyberpunk 2077's macOS depots (1460472/2224089) were, per the field
       // failure log — while the base game is APP_ID (12345).
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: '54321' }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '1460472',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '54321'
+          }
+        ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) =>
-          cb(null, Buffer.from(`key-${depotId}`))
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(null, Buffer.from(`key-${depotId}`))
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
       )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+        files: [
+          { filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -566,28 +743,48 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: APP_ID
+          }
+        ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) =>
-          cb(null, Buffer.from(`key-${depotId}`))
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => cb(null, Buffer.from(`key-${depotId}`))
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
       )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+        files: [
+          { filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -605,8 +802,13 @@ describe('buildDepotPlan', () => {
       // appmanifest_{BASE_appId}.acf regardless of which sub-app a depot's
       // decryption key was fetched under).
       const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
-      const finalizeToSteamFn = source.slice(source.indexOf('export async function finalizeToSteam'))
-      const acfCallSite = finalizeToSteamFn.slice(0, finalizeToSteamFn.indexOf('writeAppManifest'))
+      const finalizeToSteamFn = source.slice(
+        source.indexOf('export async function finalizeToSteam')
+      )
+      const acfCallSite = finalizeToSteamFn.slice(
+        0,
+        finalizeToSteamFn.indexOf('writeAppManifest')
+      )
       // finalizeToSteam takes `appId` as ITS OWN first parameter (the base
       // appId downloadSteamDepots was invoked with) — it never reads
       // ownerAppId/descriptor at all.
@@ -617,27 +819,42 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '1460472',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: APP_ID
+          }
+        ])
 
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (_appId: number, _depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
-          const err = new Error('FileNotFound') as Error & { eresult?: number }
-          err.eresult = 9 // EResult.FileNotFound — steam-user's helpers.eresultError shape
-          cb(err, undefined as unknown as Buffer)
-        }
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            _depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            const err = new Error('FileNotFound') as Error & {
+              eresult?: number
+            }
+            err.eresult = 9 // EResult.FileNotFound — steam-user's helpers.eresultError shape
+            cb(err, undefined as unknown as Buffer)
+          }
+        )
+
+      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(
+        /couldn't get decryption key/i
       )
-
-      await expect(buildDepotPlan(APP_ID, BASE_OPTS)).rejects.toThrow(/couldn't get decryption key/i)
 
       // Exactly ONE attempt — never retried (retrying a terminal EResult can
       // never succeed) — unlike the PLAN_BUILD_MAX_ATTEMPTS-attempt behavior
       // for a transient ECONNRESET (see the D-UAT-06 tests above).
       expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
-      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
-        1
-      )
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
       expect(PLAN_BUILD_MAX_ATTEMPTS).toBeGreaterThan(1) // sanity: the bound this test proves we did NOT hit
     })
 
@@ -645,35 +862,56 @@ describe('buildDepotPlan', () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
       jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-      jest.mocked(selectAllDepots).mockReturnValue([
-        { id: '111', manifest: '9007199254740993', size: 0, ownerAppId: APP_ID }
-      ])
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: APP_ID
+          }
+        ])
 
       let calls = 0
-      jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-        (_appId: number, depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
-          calls++
-          if (calls === 1) {
-            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
-            return
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            cb: (err: Error | null, key: Buffer) => void
+          ) => {
+            calls++
+            if (calls === 1) {
+              cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+              return
+            }
+            cb(null, Buffer.from(`key-${depotId}`))
           }
-          cb(null, Buffer.from(`key-${depotId}`))
-        }
+        )
+      jest
+        .mocked(fakeClient.getRawManifest)
+        .mockImplementation(
+          (
+            _appId: number,
+            depotId: number,
+            _gid: string,
+            _branch: string,
+            cb: (err: Error | null, raw: Buffer) => void
+          ) => cb(null, Buffer.from(`raw-${depotId}`))
+        )
+      const contentManifest = jest.requireMock(
+        'steam-user/components/content_manifest.js'
       )
-      jest.mocked(fakeClient.getRawManifest).mockImplementation(
-        (
-          _appId: number,
-          depotId: number,
-          _gid: string,
-          _branch: string,
-          cb: (err: Error | null, raw: Buffer) => void
-        ) => cb(null, Buffer.from(`raw-${depotId}`))
-      )
-      const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
       jest.mocked(contentManifest.parse).mockReturnValue({
-        files: [{ filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }]
+        files: [
+          { filename: 'enc-a', size: '10', sha_content: 'sha-a', chunks: [] }
+        ]
       })
-      jest.mocked(decryptFilename).mockImplementation((b64: string) => `decrypted-${b64}`)
+      jest
+        .mocked(decryptFilename)
+        .mockImplementation((b64: string) => `decrypted-${b64}`)
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
@@ -687,17 +925,32 @@ describe('buildDepotPlan', () => {
         const fakeClient = makeFakeClient()
         jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
         jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-        jest.mocked(selectAllDepots).mockReturnValue([
-          { id: '1460472', manifest: '9007199254740993', size: 0, ownerAppId: '54321' }
-        ])
+        jest
+          .mocked(selectAllDepots)
+          .mockReturnValue([
+            {
+              id: '1460472',
+              manifest: '9007199254740993',
+              size: 0,
+              ownerAppId: '54321'
+            }
+          ])
 
-        jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-          (_appId: number, _depotId: number, cb: (err: Error | null, key: Buffer) => void) => {
-            const err = new Error('FileNotFound') as Error & { eresult?: number }
-            err.eresult = 9
-            cb(err, undefined as unknown as Buffer)
-          }
-        )
+        jest
+          .mocked(fakeClient.getDepotDecryptionKey)
+          .mockImplementation(
+            (
+              _appId: number,
+              _depotId: number,
+              cb: (err: Error | null, key: Buffer) => void
+            ) => {
+              const err = new Error('FileNotFound') as Error & {
+                eresult?: number
+              }
+              err.eresult = 9
+              cb(err, undefined as unknown as Buffer)
+            }
+          )
 
         const result = await downloadSteamDepots(APP_ID, {
           targetSteamappsDir: dir,
@@ -740,15 +993,21 @@ describe('canWriteFullOwnership', () => {
   })
 
   it('outcome "cancelled" -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, outcome: 'cancelled' })).toBe(false)
+    expect(canWriteFullOwnership({ ...complete, outcome: 'cancelled' })).toBe(
+      false
+    )
   })
 
   it('outcome "completed" with a non-empty failures array -> false (partial failure must not earn a 4)', () => {
-    expect(canWriteFullOwnership({ ...complete, failures: oneFailure })).toBe(false)
+    expect(canWriteFullOwnership({ ...complete, failures: oneFailure })).toBe(
+      false
+    )
   })
 
   it('buildid undefined -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, buildid: undefined })).toBe(false)
+    expect(canWriteFullOwnership({ ...complete, buildid: undefined })).toBe(
+      false
+    )
   })
 
   it('buildid "0" -> false (Steam reads "0" as UpdateRequired)', () => {
@@ -756,11 +1015,15 @@ describe('canWriteFullOwnership', () => {
   })
 
   it('allFilesVerified false -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, allFilesVerified: false })).toBe(false)
+    expect(
+      canWriteFullOwnership({ ...complete, allFilesVerified: false })
+    ).toBe(false)
   })
 
   it('allModesApplied false -> false', () => {
-    expect(canWriteFullOwnership({ ...complete, allModesApplied: false })).toBe(false)
+    expect(canWriteFullOwnership({ ...complete, allModesApplied: false })).toBe(
+      false
+    )
   })
 })
 
@@ -842,7 +1105,10 @@ describe('finalizeToSteam', () => {
   describe('StateFlags=4 full-ownership gate (D-01/D-02)', () => {
     it('writes StateFlags "4" with BytesToDownload==BytesDownloaded==SizeOnDisk and the real buildid when every completeness signal is proven', async () => {
       mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
-      writeFileSync(join(dir, 'common', 'SomeGame', 'a.bin'), Buffer.alloc(117426878 % 1000)) // arbitrary non-zero size
+      writeFileSync(
+        join(dir, 'common', 'SomeGame', 'a.bin'),
+        Buffer.alloc(117426878 % 1000)
+      ) // arbitrary non-zero size
 
       await finalizeToSteam('12345', {
         targetSteamappsDir: dir,
@@ -956,25 +1222,36 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
   function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
-    jest.mocked(selectAllDepots).mockReturnValue([
-      { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: '12345' }
-    ])
-    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-      (
-        _appId: number,
-        depotId: number,
-        cb: (err: Error | null, key: Buffer) => void
-      ) => cb(null, Buffer.from(`key-${depotId}`))
-    )
-    jest.mocked(fakeClient.getRawManifest).mockImplementation(
-      (
-        _appId: number,
-        depotId: number,
-        _gid: string,
-        _branch: string,
-        cb: (err: Error | null, raw: Buffer) => void
-      ) => cb(null, Buffer.from(`raw-${depotId}`))
-    )
+    jest
+      .mocked(selectAllDepots)
+      .mockReturnValue([
+        {
+          id: '111',
+          manifest: '11111111111111111',
+          size: 0,
+          ownerAppId: '12345'
+        }
+      ])
+    jest
+      .mocked(fakeClient.getDepotDecryptionKey)
+      .mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => cb(null, Buffer.from(`key-${depotId}`))
+      )
+    jest
+      .mocked(fakeClient.getRawManifest)
+      .mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          _gid: string,
+          _branch: string,
+          cb: (err: Error | null, raw: Buffer) => void
+        ) => cb(null, Buffer.from(`raw-${depotId}`))
+      )
     jest.mocked(decryptFilename).mockReturnValue('game.bin')
   }
 
@@ -983,7 +1260,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [
         {
@@ -1020,7 +1299,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [
         {
@@ -1042,24 +1323,40 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
 
     expect(fetchChunk).toHaveBeenCalledTimes(1)
     // fetchChunk(hosts, depotId, chunk, key, lzma, attempts, decode,
-    // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta) — cdnAuth is
-    // the 11th positional argument (index 10); hostMeta (cycle 7) is now the
-    // 12th/last.
+    // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta, signal) —
+    // cdnAuth is the 11th positional argument (index 10); hostMeta (cycle 7)
+    // is the 12th; signal (debug/steam-cancel-abort-thread-a) is now the
+    // 13th/last.
     const callArgs = jest.mocked(fetchChunk).mock.calls[0]
-    const cdnAuth = callArgs[callArgs.length - 2]
+    const cdnAuth = callArgs[callArgs.length - 3]
     expect(cdnAuth).toBeInstanceOf(CdnAuthTokenCache)
 
     // Prove it's bound to the REAL client + the numeric form of the appId
     // downloadSteamDepots was invoked with — calling getToken on it must
-    // reach fakeClient.getCDNAuthToken with appId=12345 (Number('12345')),
-    // never the string form.
+    // reach fakeClient._send with the MODERN unified-RPC method name (as
+    // header.proto.target_job_name — cycle 11's manual bypass, see
+    // depot/cdnAuth.ts's module doc comment) and app_id=12345
+    // (Number('12345')), never the string form. Decode the REAL request
+    // buffer _send actually received rather than asserting on a pre-decoded
+    // object, since cdnAuth.ts no longer hands steam-user a plain object at
+    // all — it hands it an already-encoded Buffer.
     await (cdnAuth as CdnAuthTokenCache).getToken('111', 'cdn1.example.com')
-    expect(fakeClient.getCDNAuthToken).toHaveBeenCalledWith(
-      12345,
-      111,
-      'cdn1.example.com',
+    expect(fakeClient._send).toHaveBeenCalledWith(
+      {
+        msg: 151,
+        proto: { target_job_name: 'ContentServerDirectory.GetCDNAuthToken#1' }
+      },
+      expect.any(Buffer),
       expect.any(Function)
     )
+    const sentBody = jest.mocked(fakeClient._send).mock.calls[0][1] as Buffer
+    expect(
+      CContentServerDirectory_GetCDNAuthToken_Request.decode(sentBody)
+    ).toMatchObject({
+      app_id: 12345,
+      depot_id: 111,
+      host_name: 'cdn1.example.com'
+    })
 
     // Debug/steam-install-slow-start (cycle 7): the REAL, live-resolved
     // hostMeta map (built by reduceContentServers from fakeClient's default
@@ -1068,13 +1365,14 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // defaults to false (fetchChunk must never call getCDNAuthToken for this
     // host on its own; the call above proves the CACHE itself still works
     // when a caller explicitly invokes getToken directly).
-    const hostMeta = callArgs[callArgs.length - 1] as Map<
+    const hostMeta = callArgs[callArgs.length - 2] as Map<
       string,
-      { httpsSupport?: string; usetokenauth?: boolean }
+      { httpsSupport?: string; usetokenauth?: boolean; type?: string }
     >
     expect(hostMeta.get('cdn1.example.com')).toEqual({
       httpsSupport: undefined,
-      usetokenauth: false
+      usetokenauth: false,
+      type: undefined
     })
   })
 
@@ -1082,7 +1380,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [
         {
@@ -1113,7 +1413,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [
         {
@@ -1175,22 +1477,26 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
 
     const content = Buffer.from('game-bytes')
     let keyCalls = 0
-    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-      (
-        _appId: number,
-        depotId: number,
-        cb: (err: Error | null, key: Buffer) => void
-      ) => {
-        keyCalls++
-        if (keyCalls === 1) {
-          cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
-          return
+    jest
+      .mocked(fakeClient.getDepotDecryptionKey)
+      .mockImplementation(
+        (
+          _appId: number,
+          depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => {
+          keyCalls++
+          if (keyCalls === 1) {
+            cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+            return
+          }
+          cb(null, Buffer.from(`key-${depotId}`))
         }
-        cb(null, Buffer.from(`key-${depotId}`))
-      }
-    )
+      )
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [
         {
@@ -1217,13 +1523,15 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    jest.mocked(fakeClient.getDepotDecryptionKey).mockImplementation(
-      (
-        _appId: number,
-        _depotId: number,
-        cb: (err: Error | null, key: Buffer) => void
-      ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
-    )
+    jest
+      .mocked(fakeClient.getDepotDecryptionKey)
+      .mockImplementation(
+        (
+          _appId: number,
+          _depotId: number,
+          cb: (err: Error | null, key: Buffer) => void
+        ) => cb(new Error('ECONNRESET'), undefined as unknown as Buffer)
+      )
 
     const result = await downloadSteamDepots('12345', {
       targetSteamappsDir: dir,
@@ -1250,7 +1558,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     })
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
     jest.mocked(contentManifest.parse).mockReturnValue({
       files: [{ filename: 'enc-game', size: '5', sha_content: 'x', chunks: [] }]
     })
@@ -1269,7 +1579,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
     const uncommented = source
       .split('\n')
-      .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
+      .filter(
+        (line) => !line.trim().startsWith('//') && !line.trim().startsWith('*')
+      )
       .join('\n')
     expect(uncommented).not.toMatch(/"StateFlags"[^\n]*"4"/)
   })
@@ -1278,7 +1590,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock('steam-user/components/content_manifest.js')
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
 
     // ── First attempt: SHA1 mismatch -> writes an honest 1026 over whatever landed.
     jest.mocked(contentManifest.parse).mockReturnValue({
@@ -1314,7 +1628,9 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
           filename: 'enc-game',
           size: String(goodContent.length),
           sha_content: sha1Hex(goodContent),
-          chunks: [{ sha: 'chunk-sha', cb_original: goodContent.length, offset: 0 }]
+          chunks: [
+            { sha: 'chunk-sha', cb_original: goodContent.length, offset: 0 }
+          ]
         }
       ]
     })
@@ -1391,13 +1707,18 @@ describe('reduceContentServers', () => {
       { Host: 'cache2-akl-tpwr.steamcontent.com', weightedload: 48 }
     ]
     const { hosts, weightedLoads } = reduceContentServers(servers)
-    expect(hosts).toEqual(['cache1-akl-tpwr.steamcontent.com', 'cache2-akl-tpwr.steamcontent.com'])
+    expect(hosts).toEqual([
+      'cache1-akl-tpwr.steamcontent.com',
+      'cache2-akl-tpwr.steamcontent.com'
+    ])
     expect(weightedLoads.get('cache1-akl-tpwr.steamcontent.com')).toBe(37)
     expect(weightedLoads.get('cache2-akl-tpwr.steamcontent.com')).toBe(48)
   })
 
   it('falls back to vhost when Host is absent', () => {
-    const servers: RawContentServer[] = [{ vhost: 'fastly.cdn.steampipe.steamcontent.com' }]
+    const servers: RawContentServer[] = [
+      { vhost: 'fastly.cdn.steampipe.steamcontent.com' }
+    ]
     const { hosts } = reduceContentServers(servers)
     expect(hosts).toEqual(['fastly.cdn.steampipe.steamcontent.com'])
   })
@@ -1444,7 +1765,9 @@ describe('reduceContentServers', () => {
     expect(weightedLoads.get('cache1-akl-tpwr.steamcontent.com')).toBe(37)
     expect(weightedLoads.get('cache2-akl-tpwr.steamcontent.com')).toBe(48)
     expect(weightedLoads.get('steampipe.akamaized.net')).toBe(130)
-    expect(weightedLoads.get('alibaba.cdn.steampipe.steamcontent.com')).toBe(130)
+    expect(weightedLoads.get('alibaba.cdn.steampipe.steamcontent.com')).toBe(
+      130
+    )
     expect(weightedLoads.get('fastly.cdn.steampipe.steamcontent.com')).toBe(130)
   })
 
@@ -1480,16 +1803,21 @@ describe('reduceContentServers', () => {
       { Host: 'cache1-akl-tpwr.steamcontent.com', https_support: 'mandatory' },
       // The real cycle-5 hardware diagnosis's directory response for
       // alibaba.cdn.steampipe.steamcontent.com.
-      { Host: 'alibaba.cdn.steampipe.steamcontent.com', https_support: 'unavailable' }
+      {
+        Host: 'alibaba.cdn.steampipe.steamcontent.com',
+        https_support: 'unavailable'
+      }
     ]
     const { hostMeta } = reduceContentServers(servers)
-    expect(hostMeta.get('cache1-akl-tpwr.steamcontent.com')?.httpsSupport).toBe('mandatory')
-    expect(hostMeta.get('alibaba.cdn.steampipe.steamcontent.com')?.httpsSupport).toBe(
-      'unavailable'
+    expect(hostMeta.get('cache1-akl-tpwr.steamcontent.com')?.httpsSupport).toBe(
+      'mandatory'
     )
+    expect(
+      hostMeta.get('alibaba.cdn.steampipe.steamcontent.com')?.httpsSupport
+    ).toBe('unavailable')
   })
 
-  it('maps usetokenauth === 1 to true (steam-user\'s own `== 1` gate, not a loose truthy check) and every other value (absent/0/other) to false', () => {
+  it("maps usetokenauth === 1 to true (steam-user's own `== 1` gate, not a loose truthy check) and every other value (absent/0/other) to false", () => {
     const servers: RawContentServer[] = [
       { Host: 'wants-token.example', usetokenauth: 1 },
       { Host: 'no-usetokenauth-field.example' },
@@ -1497,19 +1825,41 @@ describe('reduceContentServers', () => {
     ]
     const { hostMeta } = reduceContentServers(servers)
     expect(hostMeta.get('wants-token.example')?.usetokenauth).toBe(true)
-    expect(hostMeta.get('no-usetokenauth-field.example')?.usetokenauth).toBe(false)
+    expect(hostMeta.get('no-usetokenauth-field.example')?.usetokenauth).toBe(
+      false
+    )
     expect(hostMeta.get('zero-usetokenauth.example')?.usetokenauth).toBe(false)
   })
 
-  it('every host present in `hosts` has a corresponding hostMeta entry, even when https_support/usetokenauth are both absent from the raw server', () => {
+  it('every host present in `hosts` has a corresponding hostMeta entry, even when https_support/usetokenauth/type are all absent from the raw server', () => {
     const servers: RawContentServer[] = [{ Host: 'bare-host.example' }]
     const { hosts, hostMeta } = reduceContentServers(servers)
     expect(hosts).toEqual(['bare-host.example'])
     expect(hostMeta.has('bare-host.example')).toBe(true)
     expect(hostMeta.get('bare-host.example')).toEqual({
       httpsSupport: undefined,
-      usetokenauth: false
+      usetokenauth: false,
+      type: undefined
     })
+  })
+
+  // CDN-auth implementation cycle, PART 2: `type` threads into hostMeta so
+  // decompress.ts's `wantsCdnAuthToken` can widen the token gate to
+  // `type === 'CDN'` -- see the RESEARCH SPIKE's content_log.txt finding
+  // (real client authenticates on every type=CDN host unconditionally,
+  // regardless of the never-populated usetokenauth flag).
+  it("threads the raw server's `type` (CDN vs SteamCache) into the hostMeta map, keyed by hostname", () => {
+    const servers: RawContentServer[] = [
+      { Host: 'alibaba.cdn.steampipe.steamcontent.com', type: 'CDN' },
+      { Host: 'cache1-akl-tpwr.steamcontent.com', type: 'SteamCache' }
+    ]
+    const { hostMeta } = reduceContentServers(servers)
+    expect(hostMeta.get('alibaba.cdn.steampipe.steamcontent.com')?.type).toBe(
+      'CDN'
+    )
+    expect(hostMeta.get('cache1-akl-tpwr.steamcontent.com')?.type).toBe(
+      'SteamCache'
+    )
   })
 })
 
@@ -1548,18 +1898,22 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
     }
   }
 
-  it('re-queues a chunk that exhausts fetchChunk\'s attempts instead of aborting the whole file, as long as the run has not stalled', async () => {
+  it("re-queues a chunk that exhausts fetchChunk's attempts instead of aborting the whole file, as long as the run has not stalled", async () => {
     let shaAAttempts = 0
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-      if (chunk.sha === 'sha-a') {
-        shaAAttempts++
-        if (shaAAttempts < 3) {
-          throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-a') {
+          shaAAttempts++
+          if (shaAAttempts < 3) {
+            throw new Error(
+              `chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`
+            )
+          }
+          return Buffer.alloc(10, 'a')
         }
-        return Buffer.alloc(10, 'a')
-      }
-      return Buffer.alloc(10, 'b')
-    })
+        return Buffer.alloc(10, 'b')
+      })
 
     const fd = await open(filePath, 'r+')
     // Never stalls in this test -- 1 hour is far beyond anything a fast
@@ -1593,15 +1947,78 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
     expect(shaAAttempts).toBe(3)
   })
 
+  // Debug/steam-install-slow-start (cycle 17, retry-storm resilience): a
+  // decode-stage failure (fetchChunk's final exhausted-attempts error
+  // carrying a ChunkDecodeError `.code`, e.g. unknown_container) is
+  // DETERMINISTIC given (ciphertext, key) -- re-queuing it for another pass,
+  // exactly like the PREVIOUS test does for a genuinely transient network
+  // error, can never succeed. This is the fix for the hardware-observed
+  // retry storm (11,063 total attempt rotations in one run; 555 on a single
+  // chunk alone). Contrast with the test above: same stallTracker
+  // configuration (never stalls), but this chunk must fail on the FIRST
+  // exhaustion, not the third.
+  it('does NOT re-queue a chunk whose fetchChunk exhaustion carries a decode-stage .code (e.g. unknown_container) -- fails immediately even though the run has not stalled', async () => {
+    let shaAAttempts = 0
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-a') {
+          shaAAttempts++
+          const err = new Error(
+            `chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: unknown chunk container`
+          ) as Error & { code?: string }
+          err.code = 'unknown_container'
+          throw err
+        }
+        return Buffer.alloc(10, 'b')
+      })
+
+    const fd = await open(filePath, 'r+')
+    // Never stalls -- if the decode-stage guard were NOT in place, this
+    // chunk would be re-queued indefinitely (the exact retry-storm bug).
+    const stallTracker = new StallTracker(60 * 60 * 1000)
+    try {
+      await expect(
+        downloadFileChunks(
+          fd,
+          '111',
+          Buffer.from('key'),
+          ['cdn1.example.com'],
+          undefined as unknown as LzmaModule,
+          makeFile(),
+          0,
+          undefined,
+          () => {},
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          stallTracker
+        )
+      ).rejects.toThrow(/unknown chunk container/)
+    } finally {
+      await fd.close()
+    }
+
+    // Failed on the VERY FIRST exhaustion -- never re-queued, because the
+    // failure was decode-stage (deterministic), not network (transient).
+    expect(shaAAttempts).toBe(1)
+  })
+
   it('gives up honestly (throws) once the run has genuinely stalled, rather than re-queuing forever', async () => {
     let shaAAttempts = 0
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-      if (chunk.sha === 'sha-a') {
-        shaAAttempts++
-        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
-      }
-      return Buffer.alloc(10, 'b')
-    })
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-a') {
+          shaAAttempts++
+          throw new Error(
+            `chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`
+          )
+        }
+        return Buffer.alloc(10, 'b')
+      })
 
     const fd = await open(filePath, 'r+')
     // A negative timeout means hasStalled() is true for ANY elapsed time
@@ -1639,13 +2056,17 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
 
   it('omitting stallTracker (every pre-cycle-7 caller/test) preserves the exact pre-cycle-7 behavior: a chunk exhausting its attempts immediately fails the whole file, no retry', async () => {
     let shaAAttempts = 0
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-      if (chunk.sha === 'sha-a') {
-        shaAAttempts++
-        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
-      }
-      return Buffer.alloc(10, 'b')
-    })
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-a') {
+          shaAAttempts++
+          throw new Error(
+            `chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`
+          )
+        }
+        return Buffer.alloc(10, 'b')
+      })
 
     const fd = await open(filePath, 'r+')
     try {
@@ -1673,16 +2094,20 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
   it('a user cancel (signal.aborted) still exits promptly even while a chunk would otherwise be re-queued, never spinning on a stale abort', async () => {
     const controller = new AbortController()
     let shaAAttempts = 0
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-      if (chunk.sha === 'sha-a') {
-        shaAAttempts++
-        // Simulates a user cancel arriving at the exact moment this chunk's
-        // attempts are exhausted.
-        controller.abort()
-        throw new Error(`chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`)
-      }
-      return Buffer.alloc(10, 'b')
-    })
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        if (chunk.sha === 'sha-a') {
+          shaAAttempts++
+          // Simulates a user cancel arriving at the exact moment this chunk's
+          // attempts are exhausted.
+          controller.abort()
+          throw new Error(
+            `chunk sha-a failed after ${CHUNK_FETCH_ATTEMPTS} attempts: ECONNRESET`
+          )
+        }
+        return Buffer.alloc(10, 'b')
+      })
 
     const fd = await open(filePath, 'r+')
     const stallTracker = new StallTracker(60 * 60 * 1000)
@@ -1714,11 +2139,48 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
     // stall (the run was cancelled, not wedged).
     expect(shaAAttempts).toBe(1)
   })
+
+  // debug/steam-cancel-abort-thread-a: downloadFileChunks previously checked
+  // `signal?.aborted` before/after calling fetchChunk, but NEVER passed
+  // `signal` INTO fetchChunk itself — fetchChunk had no way to observe a
+  // cancel while it was mid-retry/mid-backoff, which is the root cause of
+  // the hardware-observed ~62s hang. Proves the wiring fix: the exact same
+  // `signal` this call received is forwarded as fetchChunk's own `signal`
+  // argument (its last positional parameter).
+  it('forwards its own `signal` parameter through to every fetchChunk call (Thread A wiring fix)', async () => {
+    const controller = new AbortController()
+    jest.mocked(fetchChunk).mockResolvedValue(Buffer.alloc(10))
+
+    const fd = await open(filePath, 'r+')
+    try {
+      await downloadFileChunks(
+        fd,
+        '111',
+        Buffer.from('key'),
+        ['cdn1.example.com'],
+        undefined as unknown as LzmaModule,
+        makeFile(),
+        0,
+        controller.signal,
+        () => {}
+        // decode, onAttempt, hostHealth, cdnAuth, hostMeta, stallTracker: all omitted.
+      )
+    } finally {
+      await fd.close()
+    }
+
+    expect(fetchChunk).toHaveBeenCalled()
+    for (const callArgs of jest.mocked(fetchChunk).mock.calls) {
+      expect(callArgs[callArgs.length - 1]).toBe(controller.signal)
+    }
+  })
 })
 
 describe('classifyDepotError', () => {
   it('maps an ENOSPC error to a disk-full message', () => {
-    const result = classifyDepotError(new Error('ENOSPC: no space left on device, write'))
+    const result = classifyDepotError(
+      new Error('ENOSPC: no space left on device, write')
+    )
     expect(result.message).toMatch(/disk space/i)
   })
 
@@ -1744,7 +2206,9 @@ describe('classifyDepotError', () => {
   })
 
   it('falls back to a generic message for an unrecognized error', () => {
-    const result = classifyDepotError(new Error('something totally unexpected happened'))
+    const result = classifyDepotError(
+      new Error('something totally unexpected happened')
+    )
     expect(result.message).toMatch(/steam download failed/i)
   })
 
@@ -1775,7 +2239,9 @@ describe('classifyDepotError', () => {
 
   it('D-UAT-08: a getDepotDecryptionKey failure with NO eresult (e.g. a genuine transient ECONNRESET, still wrapped with depot/app context) falls through to the connection-dropped classification, unchanged from before', () => {
     const result = classifyDepotError(
-      new Error("couldn't get decryption key for depot 111 (app 12345): ECONNRESET")
+      new Error(
+        "couldn't get decryption key for depot 111 (app 12345): ECONNRESET"
+      )
     )
     expect(result.key).toBe('steam.download.error.connectionDropped')
     expect(result.message).toMatch(/dropped the connection/i)
@@ -1833,7 +2299,10 @@ describe('downloadDepotFiles', () => {
     return createHash('sha1').update(buf).digest('hex')
   }
 
-  function makePlan(depots: DepotPlan['depots'], totalBytes: number): DepotPlan {
+  function makePlan(
+    depots: DepotPlan['depots'],
+    totalBytes: number
+  ): DepotPlan {
     return { appId: '12345', depots, totalBytes, name: 'SomeGame' }
   }
 
@@ -1852,9 +2321,11 @@ describe('downloadDepotFiles', () => {
       ]
     }
 
-    jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) =>
-      chunk.sha === 'sha-a' ? chunkA : chunkB
-    )
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) =>
+        chunk.sha === 'sha-a' ? chunkA : chunkB
+      )
 
     const plan = makePlan(
       [{ depotId: '111', gid: 'g1', key: Buffer.from('key'), files: [file] }],
@@ -1931,7 +2402,10 @@ describe('downloadDepotFiles', () => {
       sha_content: '',
       chunks: []
     }
-    const plan = makePlan([{ depotId: '333', gid: 'g3', key: Buffer.from('key'), files: [file] }], 0)
+    const plan = makePlan(
+      [{ depotId: '333', gid: 'g3', key: Buffer.from('key'), files: [file] }],
+      0
+    )
 
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: dir,
@@ -1954,7 +2428,10 @@ describe('downloadDepotFiles', () => {
       sha_content: sha1Hex(Buffer.from('DIFFERENT CONTENT')), // deliberately wrong
       chunks: [{ sha: 'sha-x', cb_original: content.length, offset: 0 }]
     }
-    const plan = makePlan([{ depotId: '444', gid: 'g4', key: Buffer.from('key'), files: [file] }], content.length)
+    const plan = makePlan(
+      [{ depotId: '444', gid: 'g4', key: Buffer.from('key'), files: [file] }],
+      content.length
+    )
 
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: dir,
@@ -2016,13 +2493,22 @@ describe('downloadDepotFiles', () => {
     })
 
     const mockedSend = sendFrontendMessage as jest.Mock
-    const calls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+    const calls = mockedSend.mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
     // Fewer emits than chunks (2 chunks total, forced-final emit still fires).
     expect(calls.length).toBeGreaterThan(0)
     expect(calls.length).toBeLessThan(2)
 
-    const [, payload] = calls[calls.length - 1] as [string, Record<string, unknown>]
-    expect(payload).toMatchObject({ appName: '12345', runner: 'steam', status: 'installing' })
+    const [, payload] = calls[calls.length - 1] as [
+      string,
+      Record<string, unknown>
+    ]
+    expect(payload).toMatchObject({
+      appName: '12345',
+      runner: 'steam',
+      status: 'installing'
+    })
     const progress = payload.progress as Record<string, unknown>
     // Both files done -> 2/400 rounds to 1%, denominator is the SUMMED total.
     expect(progress.percent).toBe(1)
@@ -2052,7 +2538,10 @@ describe('downloadDepotFiles', () => {
       sha_content: 'irrelevant',
       chunks
     }
-    const plan = makePlan([{ depotId: '555', gid: 'g5', key: Buffer.from('key'), files: [file] }], 5)
+    const plan = makePlan(
+      [{ depotId: '555', gid: 'g5', key: Buffer.from('key'), files: [file] }],
+      5
+    )
 
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: dir,
@@ -2064,7 +2553,9 @@ describe('downloadDepotFiles', () => {
     expect(result.outcome).toBe('cancelled')
     // The abort fires inside the very first fetchChunk call; every other
     // worker must observe signal.aborted before issuing its own fetch.
-    expect(jest.mocked(fetchChunk).mock.calls.length).toBeLessThan(chunks.length)
+    expect(jest.mocked(fetchChunk).mock.calls.length).toBeLessThan(
+      chunks.length
+    )
   })
 
   // ── CR-01 gap closure (21-13): Directory/Symlink manifest entries ──────────
@@ -2076,7 +2567,17 @@ describe('downloadDepotFiles', () => {
       chunks: [],
       flags: 64
     }
-    const plan = makePlan([{ depotId: '666', gid: 'g6', key: Buffer.from('key'), files: [dirEntry] }], 0)
+    const plan = makePlan(
+      [
+        {
+          depotId: '666',
+          gid: 'g6',
+          key: Buffer.from('key'),
+          files: [dirEntry]
+        }
+      ],
+      0
+    )
 
     const result = await downloadDepotFiles(plan, {
       targetSteamappsDir: dir,
@@ -2107,7 +2608,14 @@ describe('downloadDepotFiles', () => {
       chunks: [{ sha: 'sha-exe', cb_original: content.length, offset: 0 }]
     }
     const plan = makePlan(
-      [{ depotId: '667', gid: 'g6b', key: Buffer.from('key'), files: [dirEntry, childFile] }],
+      [
+        {
+          depotId: '667',
+          gid: 'g6b',
+          key: Buffer.from('key'),
+          files: [dirEntry, childFile]
+        }
+      ],
       content.length
     )
 
@@ -2120,7 +2628,9 @@ describe('downloadDepotFiles', () => {
     expect(result.failures).toEqual([])
     const binStat = lstatSync(join(dir, 'common', 'SomeGame', 'bin'))
     expect(binStat.isDirectory()).toBe(true)
-    const exeStat = lstatSync(join(dir, 'common', 'SomeGame', 'bin', 'game.exe'))
+    const exeStat = lstatSync(
+      join(dir, 'common', 'SomeGame', 'bin', 'game.exe')
+    )
     expect(exeStat.isFile()).toBe(true)
   })
 
@@ -2134,7 +2644,14 @@ describe('downloadDepotFiles', () => {
       linktarget: 'game.exe'
     }
     const plan = makePlan(
-      [{ depotId: '668', gid: 'g6c', key: Buffer.from('key'), files: [symlinkEntry] }],
+      [
+        {
+          depotId: '668',
+          gid: 'g6c',
+          key: Buffer.from('key'),
+          files: [symlinkEntry]
+        }
+      ],
       0
     )
 
@@ -2160,7 +2677,14 @@ describe('downloadDepotFiles', () => {
       linktarget: 'game.exe'
     }
     const plan = makePlan(
-      [{ depotId: '66a', gid: 'g6e', key: Buffer.from('key'), files: [symlinkEntry] }],
+      [
+        {
+          depotId: '66a',
+          gid: 'g6e',
+          key: Buffer.from('key'),
+          files: [symlinkEntry]
+        }
+      ],
       0
     )
     const opts = {
@@ -2189,7 +2713,14 @@ describe('downloadDepotFiles', () => {
       linktarget: '../../evil'
     }
     const plan = makePlan(
-      [{ depotId: '669', gid: 'g6d', key: Buffer.from('key'), files: [evilSymlink] }],
+      [
+        {
+          depotId: '669',
+          gid: 'g6d',
+          key: Buffer.from('key'),
+          files: [evilSymlink]
+        }
+      ],
       0
     )
 
@@ -2201,10 +2732,12 @@ describe('downloadDepotFiles', () => {
 
     expect(result.failures).toHaveLength(1)
     expect(result.failures[0].error).toMatch(/traversal|escapes/i)
-    expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(false)
+    expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(
+      false
+    )
   })
 
-  it('WR-02 (23-code-review): a backslash-separated relative linktarget is normalized before the containment check, consistent with resolveContainedPath\'s own filename normalization — a backslash-encoded traversal attempt is rejected, not silently accepted as one literal (non-traversing) path component', async () => {
+  it("WR-02 (23-code-review): a backslash-separated relative linktarget is normalized before the containment check, consistent with resolveContainedPath's own filename normalization — a backslash-encoded traversal attempt is rejected, not silently accepted as one literal (non-traversing) path component", async () => {
     // The symlink lives one directory below installRoot (sub/game.lnkname)
     // so dirname(dest) !== installRoot and the naive relToRoot.startsWith('..')
     // string check can't accidentally catch this by coincidence. Without
@@ -2224,7 +2757,14 @@ describe('downloadDepotFiles', () => {
       linktarget: '..\\..\\evil'
     }
     const plan = makePlan(
-      [{ depotId: '66b', gid: 'g6f', key: Buffer.from('key'), files: [evilBackslashSymlink] }],
+      [
+        {
+          depotId: '66b',
+          gid: 'g6f',
+          key: Buffer.from('key'),
+          files: [evilBackslashSymlink]
+        }
+      ],
       0
     )
 
@@ -2236,7 +2776,9 @@ describe('downloadDepotFiles', () => {
 
     expect(result.failures).toHaveLength(1)
     expect(result.failures[0].error).toMatch(/traversal|escapes/i)
-    expect(existsSync(join(dir, 'common', 'SomeGame', 'sub', 'game.lnkname'))).toBe(false)
+    expect(
+      existsSync(join(dir, 'common', 'SomeGame', 'sub', 'game.lnkname'))
+    ).toBe(false)
   })
 
   it('WR-02: a size>0 file whose manifest returned zero chunks is recorded as a failure, never silently reported as a completed empty file', async () => {
@@ -2247,7 +2789,14 @@ describe('downloadDepotFiles', () => {
       chunks: []
     }
     const plan = makePlan(
-      [{ depotId: '670', gid: 'g6e', key: Buffer.from('key'), files: [corruptFile] }],
+      [
+        {
+          depotId: '670',
+          gid: 'g6e',
+          key: Buffer.from('key'),
+          files: [corruptFile]
+        }
+      ],
       100
     )
 
@@ -2270,7 +2819,9 @@ describe('downloadDepotFiles', () => {
   // covered by fileAttributes.test.ts, not here.
   describe('EDepotFileFlag ReadOnly/Hidden (D-06, 23-01)', () => {
     beforeEach(() => {
-      ;(applyDepotFileFlags as jest.Mock).mockImplementation(actualApplyDepotFileFlags)
+      ;(applyDepotFileFlags as jest.Mock).mockImplementation(
+        actualApplyDepotFileFlags
+      )
     })
 
     it('ReadOnly(8) + Executable(32) → landed file is chmod 0o555 (exec bit preserved)', async () => {
@@ -2281,11 +2832,15 @@ describe('downloadDepotFiles', () => {
         filename: 'readonly-exec.bin',
         size: content.length,
         sha_content: sha1Hex(content),
-        chunks: [{ sha: 'sha-ro-exec', cb_original: content.length, offset: 0 }],
+        chunks: [
+          { sha: 'sha-ro-exec', cb_original: content.length, offset: 0 }
+        ],
         flags: 8 | 32 // ReadOnly | Executable
       }
       const plan = makePlan(
-        [{ depotId: '672', gid: 'g70', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '672', gid: 'g70', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2296,7 +2851,9 @@ describe('downloadDepotFiles', () => {
       })
 
       expect(result.failures).toEqual([])
-      const stat = lstatSync(join(dir, 'common', 'SomeGame', 'readonly-exec.bin'))
+      const stat = lstatSync(
+        join(dir, 'common', 'SomeGame', 'readonly-exec.bin')
+      )
       expect(stat.mode & 0o777).toBe(0o555)
     })
 
@@ -2312,7 +2869,9 @@ describe('downloadDepotFiles', () => {
         flags: 8 // ReadOnly
       }
       const plan = makePlan(
-        [{ depotId: '673', gid: 'g71', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '673', gid: 'g71', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2339,7 +2898,9 @@ describe('downloadDepotFiles', () => {
         flags: 16 // Hidden
       }
       const plan = makePlan(
-        [{ depotId: '674', gid: 'g72', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '674', gid: 'g72', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2351,8 +2912,12 @@ describe('downloadDepotFiles', () => {
 
       expect(result.failures).toEqual([])
       // Original filename, no dot-prefixed rename.
-      expect(existsSync(join(dir, 'common', 'SomeGame', 'hidden.dat'))).toBe(true)
-      expect(existsSync(join(dir, 'common', 'SomeGame', '.hidden.dat'))).toBe(false)
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'hidden.dat'))).toBe(
+        true
+      )
+      expect(existsSync(join(dir, 'common', 'SomeGame', '.hidden.dat'))).toBe(
+        false
+      )
     })
 
     it('a mode-application failure is recorded as a DepotDownloadFailure, never a silent success (T-23-03)', async () => {
@@ -2367,11 +2932,15 @@ describe('downloadDepotFiles', () => {
         filename: 'mode-fail.bin',
         size: content.length,
         sha_content: sha1Hex(content),
-        chunks: [{ sha: 'sha-mode-fail', cb_original: content.length, offset: 0 }],
+        chunks: [
+          { sha: 'sha-mode-fail', cb_original: content.length, offset: 0 }
+        ],
         flags: 8 // ReadOnly
       }
       const plan = makePlan(
-        [{ depotId: '675', gid: 'g73', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '675', gid: 'g73', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2383,7 +2952,9 @@ describe('downloadDepotFiles', () => {
 
       expect(result.failures).toHaveLength(1)
       expect(result.failures[0].file).toBe('mode-fail.bin')
-      expect(result.failures[0].error).toMatch(/mode-application failure|simulated mode-application failure/i)
+      expect(result.failures[0].error).toMatch(
+        /mode-application failure|simulated mode-application failure/i
+      )
     })
   })
 
@@ -2411,9 +2982,13 @@ describe('downloadDepotFiles', () => {
     })
 
     const mockedSend = sendFrontendMessage as jest.Mock
-    const calls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+    const calls = mockedSend.mock.calls.filter(
+      ([channel]) => channel === 'progressUpdate'
+    )
     expect(calls.length).toBeGreaterThan(0)
-    for (const [, payload] of calls as Array<[string, Record<string, unknown>]>) {
+    for (const [, payload] of calls as Array<
+      [string, Record<string, unknown>]
+    >) {
       const progress = payload.progress as Record<string, unknown>
       expect(progress.percent as number).toBeLessThanOrEqual(100)
     }
@@ -2428,27 +3003,42 @@ describe('downloadDepotFiles', () => {
       mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
       writeFileSync(join(dir, 'common', 'SomeGame', 'good.bin'), goodContent)
 
-      jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
-        if (chunk.sha === 'sha-good') {
-          throw new Error('fetchChunk must never be called for an already-reconciled file')
-        }
-        return freshContent
-      })
+      jest
+        .mocked(fetchChunk)
+        .mockImplementation(async (_hosts, _depotId, chunk) => {
+          if (chunk.sha === 'sha-good') {
+            throw new Error(
+              'fetchChunk must never be called for an already-reconciled file'
+            )
+          }
+          return freshContent
+        })
 
       const fileGood: DepotPlanFile = {
         filename: 'good.bin',
         size: goodContent.length,
         sha_content: sha1Hex(goodContent),
-        chunks: [{ sha: 'sha-good', cb_original: goodContent.length, offset: 0 }]
+        chunks: [
+          { sha: 'sha-good', cb_original: goodContent.length, offset: 0 }
+        ]
       }
       const fileFresh: DepotPlanFile = {
         filename: 'fresh.bin',
         size: freshContent.length,
         sha_content: sha1Hex(freshContent),
-        chunks: [{ sha: 'sha-fresh', cb_original: freshContent.length, offset: 0 }]
+        chunks: [
+          { sha: 'sha-fresh', cb_original: freshContent.length, offset: 0 }
+        ]
       }
       const plan = makePlan(
-        [{ depotId: '900', gid: 'g90', key: Buffer.from('key'), files: [fileGood, fileFresh] }],
+        [
+          {
+            depotId: '900',
+            gid: 'g90',
+            key: Buffer.from('key'),
+            files: [fileGood, fileFresh]
+          }
+        ],
         goodContent.length + freshContent.length
       )
 
@@ -2473,7 +3063,9 @@ describe('downloadDepotFiles', () => {
       jest
         .mocked(fetchChunk)
         .mockRejectedValue(
-          new Error('fetchChunk must never be called on an already-complete install')
+          new Error(
+            'fetchChunk must never be called on an already-complete install'
+          )
         )
 
       const fileA: DepotPlanFile = {
@@ -2493,7 +3085,12 @@ describe('downloadDepotFiles', () => {
         name: 'SomeGame',
         buildid: '9999999',
         depots: [
-          { depotId: '901', gid: '9007199254740901', key: Buffer.from('key'), files: [fileA, fileB] }
+          {
+            depotId: '901',
+            gid: '9007199254740901',
+            key: Buffer.from('key'),
+            files: [fileA, fileB]
+          }
         ],
         totalBytes: contentA.length + contentB.length
       }
@@ -2512,7 +3109,11 @@ describe('downloadDepotFiles', () => {
         targetSteamappsDir: dir,
         installdir: 'SomeGame',
         name: 'SomeGame',
-        depots: plan.depots.map((d) => ({ depotId: d.depotId, gid: d.gid, size: 0 })),
+        depots: plan.depots.map((d) => ({
+          depotId: d.depotId,
+          gid: d.gid,
+          size: 0
+        })),
         buildid: plan.buildid,
         outcome: result.outcome,
         failures: result.failures,
@@ -2547,7 +3148,9 @@ describe('downloadDepotFiles', () => {
         flags: 32 // Executable
       }
       const plan = makePlan(
-        [{ depotId: '902', gid: 'g92', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '902', gid: 'g92', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2581,7 +3184,9 @@ describe('downloadDepotFiles', () => {
         flags: 64 | 8 // Directory | ReadOnly
       }
       const plan = makePlan(
-        [{ depotId: '903', gid: 'g93', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '903', gid: 'g93', key: Buffer.from('key'), files: [file] }
+        ],
         0
       )
 
@@ -2629,7 +3234,9 @@ describe('downloadDepotFiles', () => {
         chunks: [{ sha: 'sha-hb', cb_original: content.length, offset: 0 }]
       }
       const plan = makePlan(
-        [{ depotId: '778', gid: 'g78', key: Buffer.from('key'), files: [file] }],
+        [
+          { depotId: '778', gid: 'g78', key: Buffer.from('key'), files: [file] }
+        ],
         content.length
       )
 
@@ -2661,10 +3268,13 @@ describe('downloadDepotFiles', () => {
       ;(heartbeatFn as () => void)()
       ;(heartbeatFn as () => void)()
 
-      const heartbeatCalls = mockedSend.mock.calls.filter(([channel]) => channel === 'progressUpdate')
+      const heartbeatCalls = mockedSend.mock.calls.filter(
+        ([channel]) => channel === 'progressUpdate'
+      )
       expect(heartbeatCalls.length).toBe(3)
       for (const [, payload] of heartbeatCalls) {
-        const progress = (payload as Record<string, unknown>).progress as Record<string, unknown>
+        const progress = (payload as Record<string, unknown>)
+          .progress as Record<string, unknown>
         // Zero bytes moved during the stall -> heartbeat honestly reports
         // ~0 MB/s, never a spike from the chunk-driven rolling-rate math.
         expect(progress.downSpeed).toBe(0)
@@ -2683,7 +3293,9 @@ describe('downloadDepotFiles', () => {
       // (this codebase's Promise.all never rejects in practice: per-file
       // errors are caught inside the loop and a signal-abort also resolves
       // normally, so both paths exercise this exact finally).
-      expect(clearIntervalSpy).toHaveBeenCalledWith(setIntervalSpy.mock.results[0].value)
+      expect(clearIntervalSpy).toHaveBeenCalledWith(
+        setIntervalSpy.mock.results[0].value
+      )
       expect(clearIntervalSpy).toHaveBeenCalledTimes(1)
 
       setIntervalSpy.mockRestore()

@@ -21,7 +21,7 @@ export interface DecompressWorkerRequest {
 
 export type DecompressWorkerResponse =
   | { id: number; ok: true; data: ArrayBuffer }
-  | { id: number; ok: false; error: string }
+  | { id: number; ok: false; error: string; code?: string }
 
 /** Explicit ready handshake DecompressPool's spawnWorker() waits for before
  *  treating a worker as successfully spawned. `worker_threads`' own 'online'
@@ -41,7 +41,9 @@ let lzmaPromise: Promise<LzmaModule> | undefined
 function getLzma(): Promise<LzmaModule> {
   if (!lzmaPromise) {
     lzmaPromise = import('lzma').then(
-      (mod) => ((mod as { default?: LzmaModule }).default ?? mod) as unknown as LzmaModule
+      (mod) =>
+        ((mod as { default?: LzmaModule }).default ??
+          mod) as unknown as LzmaModule
     )
   }
   return lzmaPromise
@@ -74,7 +76,25 @@ export async function handleDecodeMessage(
     ) as ArrayBuffer
     return { id: msg.id, ok: true, data }
   } catch (err) {
-    return { id: msg.id, ok: false, error: String((err as Error)?.message ?? err) }
+    // Debug/steam-install-slow-start (cycle 13): a plain `error: string`
+    // message is all this response type carried before this cycle --
+    // DecompressPool's message handler reconstructed a BARE `new
+    // Error(message)` from it, discarding any `.code` the original error
+    // had (e.g. `decodeChunk`'s new `ChunkDecodeError.code`, or a Node
+    // crypto/zlib error's own native `.code`) even when one existed. This
+    // is the worker_threads-boundary half of the fix for a hardware run's
+    // generic `err=N{Error:N}` breakdown -- threading `.code` across
+    // `postMessage` (a plain string, structured-clone-safe) lets the main
+    // thread rebuild an error that still carries it (see decompressPool.ts).
+    // Never the message/stack of anything more sensitive than the existing
+    // `error` string already logged; no key/token/URL crosses this boundary.
+    const e = err as { code?: unknown; message?: unknown } | undefined
+    return {
+      id: msg.id,
+      ok: false,
+      error: String(e?.message ?? err),
+      code: typeof e?.code === 'string' ? e.code : undefined
+    }
   }
 }
 

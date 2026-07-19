@@ -40,6 +40,7 @@ import {
 import { decryptFilename } from './depot/crypto'
 import {
   fetchChunk,
+  isDecodeStageError,
   type LzmaModule,
   type DepotChunk,
   type DecodeFn,
@@ -201,26 +202,34 @@ interface SteamUserDepotExtras {
     appId: number,
     callback: (err: Error | null, servers: RawContentServer[]) => void
   ): void
-  /** Debug/steam-install-slow-start (cycle 6): also undocumented in
-   *  @types/steam-user (Pitfall 5) — verified directly against the INSTALLED
-   *  steam-user@5.3.0 source (node_modules/steam-user/components/cdn.js:
-   *  144-165), not assumed. `depotId + '_' + hostname` is the exact key
-   *  steam-user's OWN internal cache uses for this call — confirming
-   *  per-depot+host granularity. See depot/cdnAuth.ts for the full writeup
-   *  (token format, caching, and the cycle-5 hardware evidence this closes). */
-  getCDNAuthToken(
-    appId: number,
-    depotId: number,
-    hostname: string,
-    callback: (err: Error | null, result?: { token: string; expires: Date }) => void
+  /** CDN-auth implementation cycle: also undocumented in @types/steam-user
+   *  (Pitfall 5) — verified directly against the INSTALLED steam-user@5.3.0
+   *  source (node_modules/steam-user/components/03-messages.js:419-491). A
+   *  plain, non-private prototype method ("Send a raw message") — cycle 11
+   *  (debug/steam-install-slow-start, "DECISION 2026-07-19: OPTION B")
+   *  switched depot/cdnAuth.ts from steam-user's own `_sendUnified` wrapper
+   *  (whose ENCODE step throws for `ContentServerDirectory.GetCDNAuthToken#1`
+   *  — that RPC's compiled classes were never wired into steam-user's
+   *  private protobufs lookup map, confirmed by exhaustively enumerating all
+   *  294 registered keys) to this lower-level method `_sendUnified` itself
+   *  delegates to, supplying an already-encoded `Buffer` body directly — see
+   *  depot/cdnAuth.ts's module doc comment (CYCLE 11 UPDATE section) for the
+   *  full evidence trail. */
+  _send(
+    header: { msg: number; proto: { target_job_name: string } },
+    body: Buffer,
+    callback: (body: unknown, hdr?: { proto?: { eresult?: number } }) => void
   ): void
 }
 
-type SteamUserDepotClient = InstanceType<typeof SteamUserLib> & SteamUserDepotExtras
+type SteamUserDepotClient = InstanceType<typeof SteamUserLib> &
+  SteamUserDepotExtras
 
 function assertNumericAppId(appId: string): void {
   if (!NUMERIC_ID.test(appId)) {
-    throw new Error(`downloadSteamDepots: rejected non-numeric appId "${appId}"`)
+    throw new Error(
+      `downloadSteamDepots: rejected non-numeric appId "${appId}"`
+    )
   }
 }
 
@@ -383,8 +392,9 @@ async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
   const apps = new Set<number>()
   const depots = new Set<number>()
   for (const pkg of Object.values(packages ?? {})) {
-    const info = (pkg as { packageinfo?: { appids?: unknown[]; depotids?: unknown[] } })
-      .packageinfo
+    const info = (
+      pkg as { packageinfo?: { appids?: unknown[]; depotids?: unknown[] } }
+    ).packageinfo
     for (const a of info?.appids ?? []) apps.add(Number(a))
     for (const d of info?.depotids ?? []) depots.add(Number(d))
   }
@@ -398,7 +408,9 @@ async function fetchAppInfo(
   const { apps } = await client.getProductInfo([numericAppId], [], true)
   const entry = apps?.[numericAppId]
   if (!entry) {
-    throw new Error(`downloadSteamDepots: no PICS appinfo returned for appId ${numericAppId}`)
+    throw new Error(
+      `downloadSteamDepots: no PICS appinfo returned for appId ${numericAppId}`
+    )
   }
   return entry.appinfo as unknown as SteamAppInfo
 }
@@ -427,7 +439,8 @@ async function fetchDlcInfos(
 async function loadContentManifestParser(): Promise<ContentManifestModule> {
   const mod = await import('steam-user/components/content_manifest.js')
   const candidate =
-    (mod as { default?: unknown }).default ?? (mod as unknown as ContentManifestModule)
+    (mod as { default?: unknown }).default ??
+    (mod as unknown as ContentManifestModule)
   if (typeof (candidate as ContentManifestModule)?.parse !== 'function') {
     throw new Error(
       'downloadSteamDepots: steam-user/components/content_manifest.js no longer exports a ' +
@@ -449,7 +462,11 @@ async function loadContentManifestParser(): Promise<ContentManifestModule> {
  * isNonRetryableDepotError (withPlanBuildRetry's fail-fast) and
  * classifyDepotError (the final user-facing message) still recognize it.
  */
-function wrapDepotKeyError(err: Error, descriptor: DepotDescriptor, what: string): Error {
+function wrapDepotKeyError(
+  err: Error,
+  descriptor: DepotDescriptor,
+  what: string
+): Error {
   const wrapped = new Error(
     `couldn't get ${what} for depot ${descriptor.id} (app ${descriptor.ownerAppId}): ${err.message}`
   )
@@ -484,7 +501,9 @@ async function fetchDepotPlanEntry(
 
   const key = await new Promise<Buffer>((resolve, reject) => {
     client.getDepotDecryptionKey(numericOwnerAppId, numericDepotId, (err, k) =>
-      err ? reject(wrapDepotKeyError(err, descriptor, 'decryption key')) : resolve(k)
+      err
+        ? reject(wrapDepotKeyError(err, descriptor, 'decryption key'))
+        : resolve(k)
     )
   })
 
@@ -494,7 +513,10 @@ async function fetchDepotPlanEntry(
       numericDepotId,
       descriptor.manifest,
       'public',
-      (err, m) => (err ? reject(wrapDepotKeyError(err, descriptor, 'manifest')) : resolve(m))
+      (err, m) =>
+        err
+          ? reject(wrapDepotKeyError(err, descriptor, 'manifest'))
+          : resolve(m)
     )
   })
 
@@ -566,14 +588,17 @@ export async function buildDepotPlan(
     'fetchAppInfo'
   )
   throwIfAborted(opts.signal)
-  const displayName = (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
+  const displayName =
+    (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
   // SPIKE 003 (throwaway): current public-branch buildid, for the StateFlags=4
   // full-ownership manifest. `depots.branches` is a special (non-depot) key not
   // modelled by SteamAppInfo, so read it via a narrow cast.
   const buildid = String(
-    (appinfo as unknown as {
-      depots?: { branches?: { public?: { buildid?: string | number } } }
-    }).depots?.branches?.public?.buildid ?? ''
+    (
+      appinfo as unknown as {
+        depots?: { branches?: { public?: { buildid?: string | number } } }
+      }
+    ).depots?.branches?.public?.buildid ?? ''
   )
   const owned = await withPlanBuildRetry(
     opts.signal,
@@ -592,7 +617,13 @@ export async function buildDepotPlan(
     os: opts.os,
     language: opts.language
   }
-  const descriptors = selectAllDepots(appinfo, dlcInfos, owned, selectOpts, appId)
+  const descriptors = selectAllDepots(
+    appinfo,
+    dlcInfos,
+    owned,
+    selectOpts,
+    appId
+  )
 
   if (!descriptors.length) {
     logInfo(
@@ -919,7 +950,14 @@ export async function downloadFileChunks(
             onAttempt,
             hostHealth,
             cdnAuth,
-            hostMeta
+            hostMeta,
+            // debug/steam-cancel-abort-thread-a: threads the cancel signal
+            // INTO fetchChunk's own retry/backoff loop (previously this
+            // worker loop only checked signal?.aborted before/after calling
+            // fetchChunk, never while it was mid-retry — the ~62s hardware
+            // hang) so a cancel interrupts an in-flight attempt immediately
+            // instead of waiting for it to naturally exhaust or succeed.
+            signal
           )
           if (signal?.aborted) return
 
@@ -933,6 +971,32 @@ export async function downloadFileChunks(
           stallTracker?.recordProgress()
         } catch (err) {
           if (signal?.aborted) return
+          // Debug/steam-install-slow-start (cycle 17, retry-storm
+          // resilience): a decode-stage failure — fetchChunk exhausted its
+          // whole CHUNK_FETCH_ATTEMPTS/host-rotation budget with a
+          // ChunkDecodeError as the last cause (unknown_container/
+          // sha1_mismatch/size_mismatch/bad_footer_magic/decode_failed) — is
+          // DETERMINISTIC given (ciphertext, key): see
+          // depot/decompress.ts's isDecodeStageError doc comment for the
+          // hardware evidence (the identical encrypted chunk failed
+          // unknown_container on ALL 6 content servers, all 555 attempts,
+          // byte-identical ciphertext across hosts). Re-queuing it below for
+          // ANOTHER full pass — the mechanism this cycle otherwise leaves
+          // completely unchanged for every transient network/HTTP failure —
+          // can never succeed and is exactly what collapsed one hardware
+          // run's throughput (11,063 total attempt rotations across the
+          // run; 555 on this one chunk alone) before this fix. Rethrown
+          // immediately as an honest per-chunk failure, same shape as the
+          // existing stalled-run path below, WITHOUT waiting for
+          // stallTracker to separately notice a global stall. The
+          // sha1(decompressed) === expectedSha integrity gate itself
+          // (T-21-03, enforced inside decodeChunk) is completely
+          // unchanged — this only stops RE-ATTEMPTING a chunk that gate has
+          // already, deterministically, rejected; it never weakens what
+          // counts as a pass.
+          if (isDecodeStageError(err)) {
+            throw err
+          }
           // Debug/steam-install-slow-start (cycle 7, PART 3): a chunk
           // exhausting its local CHUNK_FETCH_ATTEMPTS budget must NOT abort
           // this whole FILE — re-queue it for another pass rather than
@@ -1023,7 +1087,10 @@ async function downloadSingleFile(
     // not a real separator on POSIX so no actual escape is possible either
     // way — this keeps the containment check consistent with the one
     // function up).
-    const resolvedTarget = resolve(dirname(dest), file.linktarget.replace(/\\/g, '/'))
+    const resolvedTarget = resolve(
+      dirname(dest),
+      file.linktarget.replace(/\\/g, '/')
+    )
     const relToRoot = relative(installRoot, resolvedTarget)
     if (relToRoot.startsWith('..') || isAbsolute(relToRoot)) {
       throw new PathTraversalError(
@@ -1208,7 +1275,11 @@ export async function downloadDepotFiles(
   const pool = new DecompressPool()
   await pool.init()
 
-  const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
+  const installRoot = resolve(
+    opts.targetSteamappsDir,
+    'common',
+    opts.installdir
+  )
 
   try {
     // Phase 23 (23-03, D-04): reconcile on-disk state BEFORE building the
@@ -1220,7 +1291,12 @@ export async function downloadDepotFiles(
     // downloadSingleFile's own per-job try/catch, which already records a
     // per-file traversal/mismatch as a DepotDownloadFailure without ever
     // crashing the loop (T-21-01 preserved).
-    let jobs: Array<{ depotId: string; key: Buffer; file: DepotPlanFile; fileSeed: number }>
+    let jobs: Array<{
+      depotId: string
+      key: Buffer
+      file: DepotPlanFile
+      fileSeed: number
+    }>
     try {
       jobs = (await reconcilePartialState(plan, installRoot)).jobs
     } catch (err) {
@@ -1235,7 +1311,12 @@ export async function downloadDepotFiles(
       let fallbackSeed = 0
       for (const depot of plan.depots) {
         for (const file of depot.files) {
-          jobs.push({ depotId: depot.depotId, key: depot.key, file, fileSeed: fallbackSeed++ })
+          jobs.push({
+            depotId: depot.depotId,
+            key: depot.key,
+            file,
+            fileSeed: fallbackSeed++
+          })
         }
       }
     }
@@ -1300,6 +1381,14 @@ export async function downloadDepotFiles(
       timeouts: number
       errors: number
       totalMs: number
+      // Debug/steam-install-slow-start (diagnostic re-open, cycle 9): per-
+      // reason failure counts (HTTP status / error name-or-code) for
+      // outcome==='error' attempts only -- timeouts are already
+      // unambiguously CHUNK_FETCH_TIMEOUT_MS firing (see `timeouts` above)
+      // and are not broken down further. Purely observational: read only by
+      // logChunkStreamStats below, never by any selection/retry/backoff
+      // logic.
+      reasons: Map<string, number>
     }
     const hostStats = new Map<string, HostStat>()
     let totalAttempts = 0
@@ -1315,13 +1404,18 @@ export async function downloadDepotFiles(
         successes: 0,
         timeouts: 0,
         errors: 0,
-        totalMs: 0
+        totalMs: 0,
+        reasons: new Map<string, number>()
       }
       stat.attempts++
       stat.totalMs += ev.ms
       if (ev.outcome === 'success') stat.successes++
       else if (ev.outcome === 'timeout') stat.timeouts++
-      else stat.errors++
+      else {
+        stat.errors++
+        if (ev.reason)
+          stat.reasons.set(ev.reason, (stat.reasons.get(ev.reason) ?? 0) + 1)
+      }
       hostStats.set(ev.host, stat)
     }
 
@@ -1330,7 +1424,8 @@ export async function downloadDepotFiles(
     // every one every ~15s would itself become log noise.
     const logChunkStreamStats = () => {
       const elapsedSec = Math.round((Date.now() - tStart) / 1000)
-      const percent = totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0
+      const percent =
+        totalBytes > 0 ? Math.round((doneBytes / totalBytes) * 100) : 0
       // Debug/steam-install-slow-start (cycle 3): tags each host with the
       // hostHealth tracker's own live unhealthy/healthy verdict — lets a
       // hardware reproduction confirm the scoring/blacklist logic is actually
@@ -1353,17 +1448,40 @@ export async function downloadDepotFiles(
           // it's a usetokenauth server — lets a hardware reproduction confirm
           // alibaba (https_support='unavailable') is now requested over http,
           // and that NO host is quietly triggering a token fetch.
-          scheme: opts.hostMeta?.get(host)?.httpsSupport === 'mandatory' ? 'https' : 'http',
-          usetokenauth: !!opts.hostMeta?.get(host)?.usetokenauth
+          scheme:
+            opts.hostMeta?.get(host)?.httpsSupport === 'mandatory'
+              ? 'https'
+              : 'http',
+          usetokenauth: !!opts.hostMeta?.get(host)?.usetokenauth,
+          // CDN-auth implementation cycle: the directory's own `type` for
+          // this host (CDN vs SteamCache) — lets a hardware validation run
+          // directly confirm the widened `wantsCdnAuthToken` gate (PART 2)
+          // is firing for type=CDN hosts and NOT for type=SteamCache ones,
+          // and that a token is actually being acquired (via the separate
+          // `[Timing] CDN auth token acquired` log line) for the hosts that
+          // previously flipped 403 -> ok.
+          type: opts.hostMeta?.get(host)?.type,
+          // Debug/steam-install-slow-start (diagnostic re-open, cycle 9):
+          // compact failure-reason breakdown for this host's `errors`
+          // count, worst (most frequent) reason first, capped at 4 distinct
+          // reasons so a host with many different failure signatures still
+          // renders a bounded line. Empty string when there are no
+          // outcome==='error' attempts for this host yet.
+          errBreakdown: Array.from(s.reasons.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([reason, count]) => `${reason}:${count}`)
+            .join(',')
         }))
         .sort((a, b) => b.timeouts + b.errors - (a.timeouts + a.errors))
         .slice(0, 6)
         .map(
           (s) =>
-            `${s.host}[a=${s.attempts} ok=${s.successes} to=${s.timeouts} err=${s.errors} ` +
+            `${s.host}[a=${s.attempts} ok=${s.successes} to=${s.timeouts} ` +
+            `err=${s.errors}${s.errBreakdown ? `{${s.errBreakdown}}` : ''} ` +
             `avgMs=${s.avgMs}${s.weightedload !== undefined ? ` wl=${s.weightedload}` : ''} ` +
             `scheme=${s.scheme}${s.usetokenauth ? ' usetokenauth' : ''}` +
-            `${s.unhealthy ? ' UNHEALTHY' : ''}]`
+            `${s.type ? ` type=${s.type}` : ''}${s.unhealthy ? ' UNHEALTHY' : ''}]`
         )
         .join(' ')
       logInfo(
@@ -1376,10 +1494,15 @@ export async function downloadDepotFiles(
     }
 
     const emitProgress = (force: boolean) => {
-      const percentDelta = totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
+      const percentDelta =
+        totalBytes > 0 ? ((doneBytes - lastEmitBytes) / totalBytes) * 100 : 0
       const timeDelta = Date.now() - lastEmitTime
       // THROTTLE (~1%/500ms), never per-chunk — an IPC flood on a fast LAN (T-21-12).
-      if (!force && percentDelta < PROGRESS_THROTTLE_PERCENT && timeDelta < PROGRESS_THROTTLE_MS) {
+      if (
+        !force &&
+        percentDelta < PROGRESS_THROTTLE_PERCENT &&
+        timeDelta < PROGRESS_THROTTLE_MS
+      ) {
         return
       }
 
@@ -1388,8 +1511,16 @@ export async function downloadDepotFiles(
       // rate and drop promptly on a stall. downSpeed = network (compressed)
       // transfer; diskSpeed = write (decompressed) throughput — for game assets
       // the decompressed rate typically reads higher than the wire rate.
-      lastDownSpeed = rollingRateMiBs(netBytes - lastEmitNetBytes, timeDelta, lastDownSpeed)
-      lastDiskSpeed = rollingRateMiBs(doneBytes - lastEmitBytes, timeDelta, lastDiskSpeed)
+      lastDownSpeed = rollingRateMiBs(
+        netBytes - lastEmitNetBytes,
+        timeDelta,
+        lastDownSpeed
+      )
+      lastDiskSpeed = rollingRateMiBs(
+        doneBytes - lastEmitBytes,
+        timeDelta,
+        lastDiskSpeed
+      )
 
       lastEmitBytes = doneBytes
       lastEmitNetBytes = netBytes
@@ -1413,7 +1544,10 @@ export async function downloadDepotFiles(
           // single depot's own bytes.
           // WR-03: clamp to 100 — doneBytes can exceed totalBytes (matches
           // library.ts pollInstallOnce's own Math.min(100, ...) clamp).
-          percent: totalBytes > 0 ? Math.min(100, Math.round((doneBytes / totalBytes) * 100)) : 0,
+          percent:
+            totalBytes > 0
+              ? Math.min(100, Math.round((doneBytes / totalBytes) * 100))
+              : 0,
           bytes: getFileSize(doneBytes),
           // MiB/s (not raw bytes/sec) to match the UI's "MB/s" label + the
           // gog/legendary unit convention (UAT D-UAT-02).
@@ -1493,7 +1627,10 @@ export async function downloadDepotFiles(
                 stallTracker
               )
             } catch (err) {
-              failures.push({ file: job.file.filename, error: (err as Error).message })
+              failures.push({
+                file: job.file.filename,
+                error: (err as Error).message
+              })
             }
           }
         })
@@ -1617,10 +1754,17 @@ async function measureInstalledBytes(root: string): Promise<number> {
  * with a measured (not summed) SizeOnDisk and the honest InstalledDepots map
  * of whatever was attempted.
  */
-export async function finalizeToSteam(appId: string, opts: FinalizeToSteamOpts): Promise<void> {
+export async function finalizeToSteam(
+  appId: string,
+  opts: FinalizeToSteamOpts
+): Promise<void> {
   assertNumericAppId(appId)
 
-  const installRoot = resolve(opts.targetSteamappsDir, 'common', opts.installdir)
+  const installRoot = resolve(
+    opts.targetSteamappsDir,
+    'common',
+    opts.installdir
+  )
   const sizeOnDisk = await measureInstalledBytes(installRoot)
 
   // SteamID64 of the currently-authenticated user, if any — LastOwner is a
@@ -1751,9 +1895,16 @@ export function reduceContentServers(servers: RawContentServer[]): {
     // `contentServer.usetokenauth == 1` gate exactly (cdn.js's downloadChunk)
     // — never a loose truthy check, so a stray non-1 value never
     // accidentally turns on token fetching for a server that didn't ask.
+    // CDN-auth implementation cycle, PART 2: `type` is threaded alongside so
+    // decompress.ts's `wantsCdnAuthToken` can widen the gate to `type ===
+    // 'CDN'` -- this codebase's own directory captures never see
+    // `usetokenauth` populated, but the RESEARCH SPIKE's content_log.txt
+    // evidence shows the real client authenticates unconditionally on every
+    // type=CDN host regardless of that flag.
     hostMeta.set(host, {
       httpsSupport: s.https_support,
-      usetokenauth: s.usetokenauth === 1
+      usetokenauth: s.usetokenauth === 1,
+      type: s.type
     })
   }
   return { hosts, weightedLoads, hostMeta }
@@ -1779,9 +1930,13 @@ async function getContentServerHosts(
   // BEFORE downloadDepotFiles's first byte — previously unmeasured, and a candidate
   // for the "stuck at 0%" gap the buildDepotPlan-only timing couldn't account for.
   const start = Date.now()
-  const servers = await new Promise<RawContentServer[]>((resolvePromise, reject) => {
-    client.getContentServers(numericAppId, (err, s) => (err ? reject(err) : resolvePromise(s)))
-  })
+  const servers = await new Promise<RawContentServer[]>(
+    (resolvePromise, reject) => {
+      client.getContentServers(numericAppId, (err, s) =>
+        err ? reject(err) : resolvePromise(s)
+      )
+    }
+  )
   // [Timing] debug/steam-install-slow-start diagnostic lead (a) — ONE-TIME raw
   // dump of the directory response BEFORE we reduce it below. Kept (cycle 5):
   // this is exactly how the cycle-4 capture that motivated this cycle's
@@ -1929,7 +2084,10 @@ export async function downloadSteamDepots(
       // failure string — so the DownloadManager queue's existing generic
       // error+Retry UI shows something actionable ("Steam servers dropped
       // the connection", not a stack trace).
-      return { status: 'error', error: classifyDepotError(result.failures[0].error).message }
+      return {
+        status: 'error',
+        error: classifyDepotError(result.failures[0].error).message
+      }
     }
     return { status: 'done' }
   } catch (err) {
@@ -1938,7 +2096,10 @@ export async function downloadSteamDepots(
     // (Pattern 5): write whatever landed, never rethrow.
     await finalize().catch((finalizeErr) => {
       logWarning(
-        [`downloadSteamDepots: finalizeToSteam itself failed for appId ${appId}:`, finalizeErr],
+        [
+          `downloadSteamDepots: finalizeToSteam itself failed for appId ${appId}:`,
+          finalizeErr
+        ],
         LogPrefix.Steam
       )
     })

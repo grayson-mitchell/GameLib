@@ -26,7 +26,11 @@ import type {
 } from './decompressWorker'
 
 function isReadyMessage(msg: unknown): msg is DecompressWorkerReady {
-  return typeof msg === 'object' && msg !== null && (msg as { type?: string }).type === 'ready'
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    (msg as { type?: string }).type === 'ready'
+  )
 }
 
 const DEFAULT_TASK_TIMEOUT_MS = 30_000
@@ -58,7 +62,30 @@ export interface DecompressPoolOpts {
 }
 
 function toOwnArrayBuffer(buf: Buffer): ArrayBuffer {
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+  return buf.buffer.slice(
+    buf.byteOffset,
+    buf.byteOffset + buf.byteLength
+  ) as ArrayBuffer
+}
+
+/** Debug/steam-install-slow-start (cycle 13): builds an `Error` carrying a
+ *  `.code` field, reusing the exact same duck-typed `.code` property
+ *  `attemptFailureReason` (decompress.ts) already checks for network
+ *  errors -- so a pool-level failure (worker exit/timeout) is just as
+ *  distinguishable in a hardware run's `err=N{code:count}` breakdown as a
+ *  decode-stage failure (`ChunkDecodeError`) or a network-stage one, instead
+ *  of every one of these previously-generic `Error`s collapsing into the
+ *  single, uninformative literal `"Error"`. Purely observational -- never
+ *  read by any retry/replacement/queue-draining logic in this file, all of
+ *  which already keys off the message text or the task/worker identity, not
+ *  this new field. */
+function taggedPoolError(
+  message: string,
+  code: string
+): Error & { code: string } {
+  const err = new Error(message) as Error & { code: string }
+  err.code = code
+  return err
 }
 
 /**
@@ -100,7 +127,9 @@ export class DecompressPool {
   }
 
   private resolveWorkerPath(): string {
-    return this.workerPathOverride ?? path.join(__dirname, 'decompressWorker.js')
+    return (
+      this.workerPathOverride ?? path.join(__dirname, 'decompressWorker.js')
+    )
   }
 
   /**
@@ -120,7 +149,9 @@ export class DecompressPool {
       this.idle = [...spawned]
     } catch {
       this.inlineFallback = true
-      await Promise.all(spawned.map((w) => w.terminate().catch(() => undefined)))
+      await Promise.all(
+        spawned.map((w) => w.terminate().catch(() => undefined))
+      )
       this.workers = []
       this.idle = []
     }
@@ -177,7 +208,18 @@ export class DecompressPool {
       if (response.ok) {
         task.resolve(Buffer.from(response.data))
       } else {
-        task.reject(new Error(response.error))
+        // Debug/steam-install-slow-start (cycle 13): reconstruct the error
+        // WITH its `.code` (when the worker sent one — see
+        // decompressWorker.ts's `handleDecodeMessage`) instead of the
+        // pre-cycle-13 bare `new Error(response.error)`, which silently
+        // discarded any distinguishing code the original decode-stage
+        // failure carried, collapsing it to the generic `"Error"` name by
+        // the time it reached `attemptFailureReason`.
+        task.reject(
+          response.code
+            ? taggedPoolError(response.error, response.code)
+            : new Error(response.error)
+        )
       }
       this.releaseWorker(worker)
     })
@@ -185,7 +227,13 @@ export class DecompressPool {
     worker.on('error', (err) => this.handleWorkerFailure(worker, err))
     worker.on('exit', (code) => {
       if (code !== 0) {
-        this.handleWorkerFailure(worker, new Error(`decompressWorker exited with code ${code}`))
+        this.handleWorkerFailure(
+          worker,
+          taggedPoolError(
+            `decompressWorker exited with code ${code}`,
+            'decompress_worker_exit'
+          )
+        )
       }
     })
   }
@@ -209,7 +257,9 @@ export class DecompressPool {
 
     const replacePromise = this.replaceWorker()
     this.inFlightReplacements.add(replacePromise)
-    void replacePromise.finally(() => this.inFlightReplacements.delete(replacePromise))
+    void replacePromise.finally(() =>
+      this.inFlightReplacements.delete(replacePromise)
+    )
   }
 
   private removeWorker(worker: Worker): void {
@@ -267,10 +317,12 @@ export class DecompressPool {
    *  decodeChunk. */
   private drainQueueInline(): void {
     for (const task of this.queue.splice(0)) {
-      this.inlineDecode(task.encrypted, task.key, task.expectedSha, task.cbOriginal).then(
-        task.resolve,
-        task.reject
-      )
+      this.inlineDecode(
+        task.encrypted,
+        task.key,
+        task.expectedSha,
+        task.cbOriginal
+      ).then(task.resolve, task.reject)
     }
   }
 
@@ -298,13 +350,29 @@ export class DecompressPool {
       const timedOutTask = this.pending.get(id)
       if (timedOutTask) {
         this.pending.delete(id)
-        timedOutTask.reject(new Error(`decompress task ${id} timed out`))
+        timedOutTask.reject(
+          taggedPoolError(
+            `decompress task ${id} timed out`,
+            'decompress_pool_timeout'
+          )
+        )
       }
       void worker.terminate().catch(() => undefined)
-      this.handleWorkerFailure(worker, new Error(`decompress task ${id} timed out`))
+      this.handleWorkerFailure(
+        worker,
+        taggedPoolError(
+          `decompress task ${id} timed out`,
+          'decompress_pool_timeout'
+        )
+      )
     }, this.taskTimeoutMs)
 
-    this.pending.set(id, { resolve: task.resolve, reject: task.reject, timer, worker })
+    this.pending.set(id, {
+      resolve: task.resolve,
+      reject: task.reject,
+      timer,
+      worker
+    })
 
     // The key is copied into its OWN ArrayBuffer — never transferred, since
     // the caller's key buffer is reused across every chunk in the depot
@@ -330,7 +398,9 @@ export class DecompressPool {
   ): Promise<Buffer> {
     if (!this.lzmaPromise) {
       this.lzmaPromise = import('lzma').then(
-        (mod) => ((mod as { default?: LzmaModule }).default ?? mod) as unknown as LzmaModule
+        (mod) =>
+          ((mod as { default?: LzmaModule }).default ??
+            mod) as unknown as LzmaModule
       )
     }
     const lzma = await this.lzmaPromise
@@ -399,6 +469,8 @@ export class DecompressPool {
     this.allWorkers.clear()
     this.workers = []
     this.idle = []
-    await Promise.all(toTerminate.map((w) => w.terminate().catch(() => undefined)))
+    await Promise.all(
+      toTerminate.map((w) => w.terminate().catch(() => undefined))
+    )
   }
 }
