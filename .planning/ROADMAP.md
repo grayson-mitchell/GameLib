@@ -841,11 +841,11 @@ Plans:
 
 **Requirements:** MHOST-01, MHOST-02, MHOST-03, MHOST-04 (minted 2026-07-19; see `.planning/REQUIREMENTS.md` § Phase 25 Requirements)
 **Depends on:** Phase 24
-**Plans:** 3 plans across 3 waves
+**Plans:** 1/3 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 25-01-PLAN.md — pickHost attempt-0 top-N fan-out + TOP_N_FANOUT constant + unit tests (MHOST-01/03)
+- [x] 25-01-PLAN.md — pickHost attempt-0 top-N fan-out + TOP_N_FANOUT constant + unit tests (MHOST-01/03)
 **Wave 2** *(blocked on Wave 1)*
 - [ ] 25-02-PLAN.md — thread worker-slot through fetchChunk + both concurrency pools + integration test (MHOST-02/03)
 **Wave 3** *(blocked on Wave 2 — hardware checkpoint)*

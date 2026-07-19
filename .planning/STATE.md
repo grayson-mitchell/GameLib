@@ -4,8 +4,8 @@ milestone: v1.4
 milestone_name: Steam macOS Compatibility Runtime
 status: executing
 stopped_at: Phase 24 context gathered
-last_updated: "2026-07-18T11:21:51.850Z"
-last_activity: 2026-07-18 -- Phase 24 planning complete
+last_updated: "2026-07-19T06:58:54.044Z"
+last_activity: 2026-07-19
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 23 — steam-full-ownership-install-stateflags-4
+**Current focus:** Phase 25 — steam-depot-download-multi-host-fan-out-throughput
 
 ## Current Position
 
-Phase: 23 (steam-full-ownership-install-stateflags-4) — EXECUTING
-Plan: 05 of 05 — Task 1+2 (code) complete; Task 3 (checkpoint:human-verify, gate=blocking-human) BLOCKED on real-hardware Gate 1 re-run
+Phase: 25 (steam-depot-download-multi-host-fan-out-throughput) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-18 -- Completed quick task 260719-aog: Steam native install progress polish (speed, ETA, paused-state)
+Last activity: 2026-07-19
 
 ## v1.4 Phase Map
 
@@ -144,6 +144,7 @@ Last activity: 2026-07-18 -- Completed quick task 260719-aog: Steam native insta
 | Phase 23 P01 | 10min | 2 tasks | 4 files |
 | Phase 23 P02 | 15min | 3 tasks | 5 files |
 | Phase 23 P03 | ~40min | 3 tasks | 6 files |
+| Phase 25 P01 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,8 @@ Last activity: 2026-07-18 -- Completed quick task 260719-aog: Steam native insta
 - Phase 18 added 2026-07-12 (v1.4) from /gsd-explore: **macOS 32-bit detection, badge & CrossOver routing** — detect a Steam game's mac build arch and route 32-bit-only mac games to CrossOver/Wine (32-bit dropped in Catalina/2019) with an OS/arch badge beside the game logo. **Locked approach:** hybrid detection — `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`; match `"macos"` + legacy `"osx"`) as pre-install hint, plus post-install Mach-O check (`lipo -archs`). Missing `osarch` is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flag trap). Routes via existing `isBottleEligible()`/D-11. Steam-only V1. Pre-work: runtime `getProductInfo` dump to lock parser. See `.planning/notes/steam-mac-arch-detection-decisions.md`, todo `steam-getproductinfo-appinfo-dump.md`. Depends on Phase 17 + Phase 7.
 
 - Phase 21 added 2026-07-14 under new milestone **v1.6 — Steam Native Install** (from /gsd-explore + spikes 001/002): replace the opaque `steam://rungameid` install handoff with an **in-process depot download GameLib owns** — real progress, real errors, recovery. GameLib downloads depots over `steam-user`'s authenticated CM connection and writes an `appmanifest_{appId}.acf` the Steam client **adopts**; launch stays with `steam://` (DRM works); **Steam owns updates, GameLib owns only the first install** (D-2). **Fully de-risked against a real machine:** spike 001 — Steam adopts a hand-written `.acf` (`StateFlags 1026`→`4`, zero-byte install, game launches); spike 002 — 171/171 files downloaded in-process, byte-identical to Steam, **pure-JS LZMA sufficient (no native module)** → C# DepotDownloader wrapper rejected. Locked: `StateFlags=1026` not `4`; depot selection = package-level ownership (two channels + DLC-app enumeration + language filter, 11/11 verified); reimplement `steam-user`'s broken `getManifest` filenames + chunk download (~100 lines); 64-bit IDs are strings (never `@node-steam/vdf.parse`); retry chunks across content servers. Pre-work: audit `@node-steam/vdf` call sites; confirm launch on a hard-DRM title. See `.planning/spikes/MANIFEST.md`, `.planning/notes/steam-depot-install-architecture.md`. Depends on Phase 3 + Phase 1.
+
+- Phase 25 added 2026-07-19 (from resolved debug `steam-install-slow-start`, Thread C): **Steam depot download multi-host fan-out (throughput)** — raise native-depot throughput toward Steam-client parity by fanning chunk attempt-0 across the ~6 healthy CDN hosts `getContentServers` already returns, instead of `pickHost` confining all ~32 workers to the single top-scored host (rotates only on failure; with decode now clean/`err=0`, nothing fails → one host, `avgMs~360`, ~1.5–2.9 MiB/s). Acceptance = before/after hardware throughput measurement (`grep "chunk-stream stats" ~/Library/Logs/gamelib/gamelib.log`, expect sustained `hosts>1`). Must not regress decode, host-health scoring, stall retry, or cancel/abort. Optional bundled cleanup: excise the dormant CDN-auth phantom machinery. Code: `pickHost`/host-health in `depot.ts`/`decompress.ts`/`hostHealth`. Context in memory `steam-install-slow-start-outcome`.
 
 - Phase 23 added 2026-07-17: **Steam full-ownership install (StateFlags=4)** — GameLib FULLY installs a Steam game with zero Steam-client step, writing an `appmanifest_{appId}.acf` with `StateFlags=4` (installed/ready) rather than Phase 21's `StateFlags=1026` (update-queued handoff). **Reverses locked D-2** ("Steam owns first install"). De-risked by **spike-003 (VALIDATED 2026-07-17)**: full-ownership `StateFlags=4` install is feasible and *supersedes* the earlier "1026 never 4" constraint — Steam trusts a hand-written `StateFlags=4` manifest once the `EDepotFileFlag` executable bit is applied (the `os error 256` failure was a missing `+x`). Env-gated behind `GAMELIB_SPIKE_STATEFLAGS4` during spike. Builds on Phase 21 depot-download infrastructure. See spike-003 commits (a8ada46d, 6fa5a157, 816a76c9, f36d173a). Depends on Phase 21.
 
@@ -243,6 +246,8 @@ Recent decisions affecting current work:
 - [Phase 23-03]: Directory(64)/Symlink(512)/zero-size manifest entries reconcile by existence/target-match, never sha1 — sha1File/resolveContainedPath exported from depot.ts for reuse by depot/reconcile.ts (deliberate circular import, empirically safe under CJS/ts-jest since every cross-reference is a function-body call, never top-level state)
 - [Phase 23-03]: Startup resume's allModesApplied mirrors allFilesVerified rather than re-running a mode-reapplication pass — downloadSingleFile applies EDepotFileFlag modes immediately after each file's own sha1 check during the original download session, so a file reconcile trusts as verified already had correct modes applied
 - [Phase 23-03]: A reconciliation-time error inside downloadDepotFiles (e.g. path traversal) falls back to the full pre-23-03 job list rather than aborting the run; a startup buildDepotPlan/reconcile failure falls back to the honest-empty depots:[] finalize — reconciliation is purely additive, never a new failure mode, and init() never crashes
+- [Phase ?]: TOP_N_FANOUT=3, calibrated per PATTERNS.md guidance for fan-out width
+- [Phase ?]: pickHost workerSlot fan-out only applies at attemptIndex===0 && N>1; retries/circuit-breaker unaffected
 
 ### Pending Todos
 
@@ -308,7 +313,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-18T06:06:38.918Z
+Last session: 2026-07-19T06:58:16.553Z
 Stopped at: Phase 24 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
