@@ -570,6 +570,15 @@ export default class SteamLibraryManager implements LibraryManager {
     const installedMap = await buildInstalledMap()
     const bottleInstalledMap =
       isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
+    // WR-01 (21-17): the incomplete-on-disk set (native ACF present, bit 4
+    // unset — e.g. a 1026 cancel handoff). Because this rebuild does
+    // library.clear() below and derives each GameInfo purely from the ACF
+    // scan, the same-session steamResumePending marker (markSteamInstallIncomplete)
+    // would otherwise be silently wiped on the first mid-session resync,
+    // reverting "Finish in Steam" back to a bare "Install" (the D-UAT-09
+    // symptom). Deriving the flag from on-disk state here makes it durable
+    // across any number of refreshes.
+    const incompleteSet = await buildIncompleteInstallSet()
 
     // ── Step 3: build and push one GameInfo per owned game ────────────────
     library.clear()
@@ -615,7 +624,15 @@ export default class SteamLibraryManager implements LibraryManager {
               // bottle-installed game must always report 'Windows' (Pitfall 3).
               platform: installPlatformForSource(source)
             }
-          : {},
+          : // WR-01 (21-17): no fully-installed manifest, but an incomplete
+            // (bit-4-unset) native ACF is on disk — durably re-surface the
+            // "Finish in Steam" resume affordance. is_installed stays false
+            // (installedData is falsy here), so the no-regression Play-safety
+            // truth holds; a fully-installed ACF took the branch above and
+            // still yields is_installed=true + Play.
+            incompleteSet.has(app.appid)
+            ? { steamResumePending: true }
+            : {},
         extra: {
           reqs: [],
           // cachedMeta.extra preserves about/genres/art metadata from prior fetches.
@@ -844,6 +861,66 @@ export async function buildInstalledMap(): Promise<
   }
 
   return installed
+}
+
+/**
+ * WR-01 (21-17): scans on-disk native ACF manifests and returns the set of
+ * AppIDs whose StateFlags is present but NOT fully installed (bit 4 unset —
+ * e.g. the honest 1026 verify-repair handoff a cancelled native install
+ * writes). This is the durable, on-disk complement to buildInstalledMap:
+ * refresh() uses it to re-seed `steamResumePending` on every resync so a
+ * mid-session `library.clear()` + rebuild can never wipe the "Finish in
+ * Steam" resume affordance (the D-UAT-09 symptom). The incomplete verdict is
+ * derived from the SAME predicate as the installed detectors
+ * (`isFullyInstalledStateFlags`) — negated here — so the "installed" and
+ * "incomplete" decisions can never diverge on the bit logic. Skips missing
+ * directories and corrupt ACF files without throwing (T-2-01 mitigation).
+ *
+ * Exported for unit testing.
+ */
+export async function buildIncompleteInstallSet(): Promise<Set<number>> {
+  const incomplete = new Set<number>()
+  const libraryPaths = await getSteamLibraries()
+
+  for (const libPath of libraryPaths) {
+    const steamappsDir = join(libPath, 'steamapps')
+    if (!existsSync(steamappsDir)) continue
+
+    let files: string[]
+    try {
+      files = readdirSync(steamappsDir)
+    } catch {
+      continue
+    }
+
+    for (const file of files) {
+      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+
+      try {
+        const content = readFileSync(join(steamappsDir, file), 'utf-8')
+        const parsed = parse(content)
+        const state = parsed?.AppState
+        if (!state) continue
+
+        const appid = parseInt(state.appid, 10)
+        const stateFlags = parseInt(state.StateFlags, 10)
+        // A present-but-incomplete manifest (bit 4 unset). NaN StateFlags is
+        // excluded — an unparseable manifest is not a trustworthy resume
+        // signal, matching buildInstalledMap's fail-closed stance.
+        if (
+          !isNaN(appid) &&
+          !isNaN(stateFlags) &&
+          !isFullyInstalledStateFlags(stateFlags)
+        ) {
+          incomplete.add(appid)
+        }
+      } catch {
+        /* skip corrupt ACF — T-2-01 mitigation */
+      }
+    }
+  }
+
+  return incomplete
 }
 
 // ── macOS arch ground-truth check (MAC32-03) ─────────────────────────────────

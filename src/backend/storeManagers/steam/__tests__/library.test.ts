@@ -32,7 +32,8 @@ import SteamLibraryManager, {
   locateMachOBinary,
   verifyMacArchGroundTruth,
   isFullyInstalledStateFlags,
-  markSteamInstallIncomplete
+  markSteamInstallIncomplete,
+  buildIncompleteInstallSet
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
@@ -761,6 +762,128 @@ describe('SteamLibraryManager', () => {
 
       expect(pushed?.is_installed).toBe(false)
       expect(readdirSync).not.toHaveBeenCalledWith(BOTTLE_STEAMAPPS_ROOT)
+    })
+  })
+
+  // ── WR-01 (21-17): refresh() re-seeds steamResumePending from on-disk ACF ──
+  // Before the fix, refresh() derived each GameInfo's install object purely
+  // from buildInstalledMap() (bit-4-set only). A mid-session resync
+  // (reachable via the launch-completion 'done' status) therefore silently
+  // wiped the same-session steamResumePending marker set by
+  // markSteamInstallIncomplete — reverting the distinct "Finish in Steam"
+  // affordance back to a bare "Install" (the D-UAT-09 symptom). The flag is
+  // now derived durably from the on-disk incomplete (bit-4-unset) manifest,
+  // so it survives any number of refreshes.
+
+  describe('SteamLibraryManager.refresh() re-seeds steamResumePending (WR-01)', () => {
+    const NATIVE_ROOT = join('/native/steam', 'steamapps')
+
+    beforeEach(() => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
+      ;(existsSync as jest.Mock).mockReturnValue(true)
+      // One incomplete manifest (1026, bit 4 unset) and one fully-installed
+      // manifest (4, bit 4 set) sitting side-by-side in the native root.
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === NATIVE_ROOT
+          ? ['appmanifest_570.acf', 'appmanifest_440.acf']
+          : []
+      )
+      ;(readFileSync as jest.Mock).mockImplementation((file: string) =>
+        file.includes('appmanifest_570') ? 'incomplete' : 'installed'
+      )
+      ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+        content === 'incomplete'
+          ? {
+              AppState: {
+                appid: '570',
+                StateFlags: '1026',
+                installdir: 'Dota 2',
+                SizeOnDisk: '999'
+              }
+            }
+          : {
+              AppState: {
+                appid: '440',
+                StateFlags: '4',
+                installdir: 'Team Fortress 2',
+                SizeOnDisk: '654321'
+              }
+            }
+      )
+    })
+
+    it('an incomplete on-disk native install (bit-4-unset) survives refresh() as is_installed:false + steamResumePending:true', async () => {
+      const apps = [
+        makeOwnedApp(570, 'Dota 2', 120),
+        makeOwnedApp(440, 'Team Fortress 2', 60)
+      ]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const incomplete = calls.find(
+        ([_msg, info]) => (info as any).app_name === '570'
+      )?.[1] as any
+
+      // Play-safety invariant: never is_installed for a bit-4-unset manifest.
+      expect(incomplete?.is_installed).toBe(false)
+      // The durable resume affordance is re-derived from disk, not wiped.
+      expect(incomplete?.install?.steamResumePending).toBe(true)
+    })
+
+    it('a fully-installed on-disk native install (bit-4-set) yields is_installed:true and no steamResumePending (no regression)', async () => {
+      const apps = [
+        makeOwnedApp(570, 'Dota 2', 120),
+        makeOwnedApp(440, 'Team Fortress 2', 60)
+      ]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const installed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '440'
+      )?.[1] as any
+
+      expect(installed?.is_installed).toBe(true)
+      expect(installed?.install?.steamResumePending).toBeUndefined()
+      expect(installed?.install?.install_path).toBe(
+        join(NATIVE_ROOT, 'common', 'Team Fortress 2')
+      )
+    })
+
+    it('the re-seeded steamResumePending is persisted to steamLibraryStore (survives a restart mid-session)', async () => {
+      const apps = [makeOwnedApp(570, 'Dota 2', 120)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const persistedCall = jest
+        .mocked(steamLibraryStore.set)
+        .mock.calls.find(([key]) => key === 'games')
+      const persistedGames = persistedCall?.[1] as any[]
+      const persisted = persistedGames?.find((g) => g.app_name === '570')
+
+      expect(persisted?.is_installed).toBe(false)
+      expect(persisted?.install?.steamResumePending).toBe(true)
+    })
+
+    it('buildIncompleteInstallSet returns only the bit-4-unset appId (shares the isFullyInstalledStateFlags predicate)', async () => {
+      const set = await buildIncompleteInstallSet()
+
+      expect(set.has(570)).toBe(true) // 1026 → incomplete
+      expect(set.has(440)).toBe(false) // 4 → fully installed, excluded
     })
   })
 
