@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: in_progress
-stopped_at: Native-install arc (21-25) — Phase 23 partial (3/5 plans summarized), gated on Gate 1 hardware UAT; Phases 22 & 24 planned but unexecuted
+stopped_at: Native-install arc (21-25) — Phase 23 code-complete (4/5 summarized, 23-05 formalized); Gate 1 hardware UAT PASSED, Gates 2 & 3 DEFERRED by user (2026-07-20); Phases 22 & 24 planned but unexecuted
 last_updated: 2026-07-20T00:00:00.000Z
 last_activity: 2026-07-20
 progress:
@@ -11,8 +11,8 @@ progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 43
-  completed_plans: 23
-  percent: 53
+  completed_plans: 24
+  percent: 56
   # Whole-project plan totals (matches progress.bar): 116/136 = 85%
 ---
 
@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 23 — Steam full-ownership install (StateFlags=4): finish plans 23-04/23-05 + clear Gate 1 hardware UAT
+**Current focus:** Phase 23 code-complete (23-05 summarized, Gate 1 hardware PASS). Remaining to close: Gates 2 & 3 hardware UAT (DEFERRED by user 2026-07-20). Next executable work: Phase 22 or 24.
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -36,8 +36,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 23 (Steam full-ownership install, StateFlags=4)
-Plan: 3 of 5 summarized; 23-04/23-05 code landed via debug commits (cc77a9df/ddde970d/7fccfb2a/f963de8b), summaries not written
-Status: In progress — blocked on Gate 1 real-hardware UAT (see Blockers)
+Plan: 4 of 5 summarized. 23-05 formalized 2026-07-20 (single-flight guard + pause/resume, Tasks 1-2 code + Task 3 Gate 1 hardware PASS; 296/296 tests). Only 23-04 remains open — its deliverable is the D-07 UAT gate, blocked on Gates 2 & 3 (deferred).
+Status: Code-complete; NOT phase-complete — REQ-23-07 open pending Gates 2 & 3 hardware UAT (deferred by user 2026-07-20)
 Last activity: 2026-07-20
 
 Other open native-install phases:
@@ -50,7 +50,7 @@ Other open native-install phases:
 |-------|------|-------|-----------|--------|
 | 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
 | 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | 📋 Planned, not executed |
-| 23 | Steam full-ownership install (StateFlags=4) | 5 | 3 | 🔄 In progress — 23-04/23-05 landed via debug commits; Gate 1 multi-depot StateFlags=4 PASS on real macOS (b7ebf7e2); remaining gate = 23-UAT.md Gate 1 pause/resume re-run (blocking-human) before Gates 2/3 |
+| 23 | Steam full-ownership install (StateFlags=4) | 5 | 4 | 🔄 Code-complete, NOT phase-complete — 23-05 formalized 2026-07-20 (single-flight guard + pause/resume, 296/296 tests); Gate 1 multi-depot StateFlags=4 PASS on real macOS (2026-07-19). Only 23-04 open: Gates 2 (hard-DRM) & 3 (interrupt-resume) hardware UAT **DEFERRED by user** (2026-07-20). REQ-23-07 stays open until both pass (`/gsd-verify-work 23`) |
 | 24 | macOS native Steam bridge (steam_api proxy) | 10 | 0 | 📋 Planned, not executed — feasibility PROVEN (spikes 004+005); needs resourcing |
 | 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
 
