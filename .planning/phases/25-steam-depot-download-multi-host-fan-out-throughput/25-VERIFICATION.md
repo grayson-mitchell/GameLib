@@ -1,9 +1,10 @@
 ---
 phase: 25-steam-depot-download-multi-host-fan-out-throughput
 verified: 2026-07-19T07:29:03Z
-status: human_needed
-score: 4/4 must-haves verified (code+tests+hardware); 1 supplementary human-verification item outstanding
-overrides_applied: 0
+status: pass
+status_note: "Flipped human_needed → pass 2026-07-19 on the recorded override acceptance (accepted_by grayson.mitchell@gmail.com) — the sole outstanding item (cancel-mid-run re-test) was consciously accepted; abort/cancel code path is byte-for-byte unchanged by this phase and was hardware-verified in the prior stabilization thread. All 4 must-haves verified code+tests+hardware."
+score: 4/4 must-haves verified (code+tests+hardware); 1 supplementary human-verification item accepted via override
+overrides_applied: 1
 human_verification:
   - test: "Cancel a Steam native depot install mid-run on real macOS/Apple Silicon hardware with the Phase 25 fan-out code active, then resume and confirm completion + Steam adoption."
     expected: "Download aborts cleanly (no crash), no host is recorded as a failure purely because of the cancel (ChunkFetchAbortedError is not passed to hostHealth.record — confirmed in code), and a subsequent resume completes and is adopted by Steam (StateFlags flips as expected)."
