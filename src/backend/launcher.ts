@@ -1820,6 +1820,28 @@ async function callRunner(
 
       if (signal && !child.killed) {
         rej(new Error(`Process terminated with signal ${signal}`))
+        return
+      }
+
+      // debug/steam-install-slow-start (D-2): a process that exits with a
+      // non-zero code but WITHOUT an OS-level signal (e.g. gogdl/legendary/
+      // nile catching SIGTERM from utils.ts's killPattern() and shutting down
+      // gracefully with a failure exit code, or any ordinary runner-internal
+      // failure) previously fell through the `signal && !child.killed` check
+      // above and was unconditionally treated as a SUCCESSFUL completion —
+      // `res({stdout, stderr})` carried no `.error`/`.abort` flag at all. For
+      // GOG specifically, this let `install()`'s `if (res.abort)`/
+      // `if (res.error)` gate (games.ts) see two false values and fall
+      // through into the "Installation succeeded" branch, writing a full
+      // installedGamesStore entry for a download that never actually
+      // completed. Rejecting here routes the outcome through the exact same
+      // `.catch` classification below (abort vs error, based on
+      // `abortController.signal.aborted`), so a deliberate cancel/quit is
+      // still correctly reported as `abort` — this only removes the
+      // previously-silent "neither abort nor error" gap.
+      if (code !== 0 && code !== null) {
+        rej(new Error(`Process exited with code ${code}`))
+        return
       }
 
       res({
@@ -1849,14 +1871,34 @@ async function callRunner(
         }
       }
 
-      errorHandler(error, appName, runner.name)
+      // debug/steam-install-slow-start (D-2, adjacent fix): `error` here is
+      // whatever value rejected the executor promise above — an `Error`
+      // object for both the pre-existing signal-kill rejection and this
+      // cycle's new non-zero-exit-code rejection, never a plain string.
+      // `errorHandler` expects a `string` (it calls `.includes()` on its
+      // first argument) — passing the raw Error object through crashed with
+      // "error.includes is not a function" the moment this catch branch was
+      // ever actually exercised by a real rejection (previously untested;
+      // surfaced by this cycle's new callRunner test coverage). Stringifying
+      // here, and on the returned ExecResult's `.error` field (typed
+      // `string` in common/types.ts, but previously assigned the raw
+      // rejection value), fixes both without changing which branch is taken.
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
+      errorHandler(errorMessage, appName, runner.name)
 
       logError(
         ['Error running', 'command', `"${safeCommand}":`, error],
         runner.logPrefix
       )
 
-      return { stdout: '', stderr: `${error}`, fullCommand: safeCommand, error }
+      return {
+        stdout: '',
+        stderr: errorMessage,
+        fullCommand: safeCommand,
+        error: errorMessage
+      }
     })
     .finally(() => {
       // remove from list when done
