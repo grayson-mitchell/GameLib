@@ -830,7 +830,18 @@ export async function fetchChunk(
    *  regardless of any external signal. Never recorded via
    *  hostHealth.record/onAttempt when it fires (see ChunkFetchAbortedError's
    *  doc comment) — a user cancel is not evidence a host is unhealthy. */
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  /** Phase 25 (multi-host fan-out): per-worker slot index threaded from
+   *  downloadFileChunks' chunk pool (combined with the file pool's own slot —
+   *  see depot.ts), forwarded verbatim into hostHealth.pickHost's 4th arg.
+   *  Used only at attempt 0's top-N fan-out (see hostHealth.ts's
+   *  TOP_N_FANOUT) so concurrently-running chunk workers spread their
+   *  first-attempt requests across the top-N healthy hosts instead of all
+   *  converging on the single top-scored one. A defaulted param (not a bare
+   *  `?:`) so it stays a plain `number` under strict mode. Optional,
+   *  additive: omitting it — every pre-Phase-25 caller/test — defaults to
+   *  pickHost's workerSlot=0, reproducing the exact ordered[0] pick. */
+  workerSlot: number = 0
 ): Promise<Buffer> {
   const sha = Buffer.isBuffer(chunk.sha)
     ? chunk.sha.toString('hex')
@@ -850,7 +861,7 @@ export async function fetchChunk(
       throw new ChunkFetchAbortedError()
     }
     const host = hostHealth
-      ? hostHealth.pickHost(hosts, seed, i)
+      ? hostHealth.pickHost(hosts, seed, i, workerSlot)
       : hosts[(seed + i) % hosts.length]
     const meta = hostMeta?.get(host)
     // Debug/steam-install-slow-start (cycle 7): EXACT steam-user URL-scheme
