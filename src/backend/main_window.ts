@@ -1,5 +1,5 @@
 import { AppSettings, WindowProps } from 'common/types'
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, screen, app } from 'electron'
 import path from 'path'
 import { configStore } from './constants/key_value_stores'
 
@@ -64,7 +64,12 @@ export const createMainWindow = () => {
       contextIsolation: true,
       nodeIntegration: true,
       // sandbox: false,
-      preload: path.join(__dirname, '../preload/index.js')
+      // Resolve the preload from the app root (stable) rather than __dirname:
+      // the main bundle can code-split into build/main/chunks/, which shifts
+      // __dirname and breaks a `../preload` relative lookup. app.getAppPath()
+      // is the project root in dev and the asar root when packaged; the preload
+      // is always emitted to build/preload/index.js (electron.vite.config.ts).
+      preload: path.join(app.getAppPath(), 'build/preload/index.js')
     }
   })
 

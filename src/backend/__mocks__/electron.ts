@@ -18,6 +18,19 @@ const app = {
   getPath: jest.fn().mockImplementation((path: string) => {
     return join(appBasePath, path)
   }),
+  // Debug/steam-install-slow-start: main_window.ts resolves its preload path
+  // via app.getAppPath() (project root in dev, asar root when packaged) --
+  // the real Electron API this mock did not previously expose. A PLAIN
+  // method (not `jest.fn()`), matching `getVersion` below -- this config's
+  // `resetMocks: true` strips any `.mockImplementation()` set on a
+  // module-load-time `jest.fn()` before EVERY test body runs, so a jest.fn()
+  // here would return `undefined` for any caller invoked during a test
+  // (as opposed to `getPath`, whose mock survives only because
+  // electron-store's own construction calls it once at import time, before
+  // the first reset ever fires).
+  getAppPath(): string {
+    return appBasePath
+  },
   getVersion(): string {
     // TODO: What should we return here?
     return '1.0.0'

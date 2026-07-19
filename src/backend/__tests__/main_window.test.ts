@@ -21,8 +21,10 @@ describe('main_window', () => {
     describe('if there is a main window', () => {
       const window = {
         webContents: {
-          send: jest.fn()
-        }
+          send: jest.fn(),
+          isDestroyed: jest.fn().mockReturnValue(false)
+        },
+        isDestroyed: jest.fn().mockReturnValue(false)
       }
 
       // stub windows
@@ -33,6 +35,8 @@ describe('main_window', () => {
       // spy the `send` method
       beforeEach(() => {
         window.webContents.send = jest.fn()
+        window.webContents.isDestroyed = jest.fn().mockReturnValue(false)
+        window.isDestroyed = jest.fn().mockReturnValue(false)
       })
 
       // cleanup stubs
@@ -48,6 +52,85 @@ describe('main_window', () => {
           'param1',
           'param2'
         )
+      })
+    })
+
+    // debug/steam-install-slow-start (Thread D-1): a download/install progress
+    // heartbeat (GOG's onInstallOrUpdateOutput/sendProgressUpdate, or Steam's
+    // ACF poller) firing during app-quit teardown found `getMainWindow()`
+    // still returning a non-null reference to a window Electron had already
+    // destroyed as part of `app.exit()`'s internal shutdown — the pre-fix
+    // `if (!mainWindow) return false` guard doesn't cover "non-null but
+    // destroyed", so `mainWindow.webContents.send(...)` threw "Object has been
+    // destroyed" as an UNCAUGHT exception in the main process.
+    describe('if the main window is destroyed (Thread D-1)', () => {
+      const destroyedWindow = {
+        webContents: {
+          send: jest.fn(),
+          isDestroyed: jest.fn().mockReturnValue(false)
+        },
+        isDestroyed: jest.fn().mockReturnValue(true)
+      }
+
+      beforeAll(() => {
+        BrowserWindow.setAllWindows([destroyedWindow])
+      })
+
+      // `resetMocks: true` strips any `.mockReturnValue()` set at
+      // describe-body-eval time before EVERY test body runs (same gotcha
+      // documented in `__mocks__/electron.ts` for `app.getAppPath`) — so
+      // these must be (re)assigned fresh in `beforeEach`, not just once above.
+      beforeEach(() => {
+        destroyedWindow.webContents.send = jest.fn()
+        destroyedWindow.webContents.isDestroyed = jest
+          .fn()
+          .mockReturnValue(false)
+        destroyedWindow.isDestroyed = jest.fn().mockReturnValue(true)
+      })
+
+      afterAll(() => {
+        BrowserWindow.setAllWindows([])
+      })
+
+      it('returns false and never calls webContents.send', () => {
+        expect(sendFrontendMessage('message', 'param1')).toBe(false)
+        expect(destroyedWindow.webContents.send).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('if the main window is alive but its webContents is destroyed (Thread D-1)', () => {
+      const windowWithDestroyedWebContents = {
+        webContents: {
+          send: jest.fn(),
+          isDestroyed: jest.fn().mockReturnValue(true)
+        },
+        isDestroyed: jest.fn().mockReturnValue(false)
+      }
+
+      beforeAll(() => {
+        BrowserWindow.setAllWindows([windowWithDestroyedWebContents])
+      })
+
+      // See the sibling describe block above re: `resetMocks: true`.
+      beforeEach(() => {
+        windowWithDestroyedWebContents.webContents.send = jest.fn()
+        windowWithDestroyedWebContents.webContents.isDestroyed = jest
+          .fn()
+          .mockReturnValue(true)
+        windowWithDestroyedWebContents.isDestroyed = jest
+          .fn()
+          .mockReturnValue(false)
+      })
+
+      afterAll(() => {
+        BrowserWindow.setAllWindows([])
+      })
+
+      it('returns false and never calls webContents.send', () => {
+        expect(sendFrontendMessage('message', 'param1')).toBe(false)
+        expect(
+          windowWithDestroyedWebContents.webContents.send
+        ).not.toHaveBeenCalled()
       })
     })
   })
