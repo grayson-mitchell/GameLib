@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: — Steam macOS Compatibility Runtime
-status: completed
+status: "Phase 25 shipped — pushed to gamelib, folded into PR #3"
 stopped_at: Completed 25-02-PLAN.md
-last_updated: "2026-07-19T07:30:47.277Z"
-last_activity: 2026-07-19 -- Phase 25 marked complete
+last_updated: "2026-07-19T07:44:32.099Z"
+last_activity: 2026-07-19
 progress:
   total_phases: 21
   completed_phases: 18
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 25 — COMPLETE
 Plan: 3 of 3
-Status: Phase 25 complete
-Last activity: 2026-07-19 -- Phase 25 marked complete
+Status: Phase 25 shipped — pushed to gamelib, folded into PR #3
+Last activity: 2026-07-19
 
 ## v1.4 Phase Map
 
