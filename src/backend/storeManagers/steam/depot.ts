@@ -912,13 +912,23 @@ export async function downloadFileChunks(
    *  case it is a real, honest failure. Omitting it (every pre-cycle-7
    *  caller/test) preserves the EXACT pre-cycle-7 behavior: a chunk
    *  exhausting its attempts immediately fails this file. */
-  stallTracker?: StallTracker
+  stallTracker?: StallTracker,
+  /** Phase 25 (multi-host fan-out, MHOST-02/03): this file's own slot within
+   *  downloadDepotFiles' FILE_CONCURRENCY pool — combined below with this
+   *  function's own CHUNK_CONCURRENCY-pool index so every concurrently-
+   *  running chunk worker across the WHOLE run gets a distinct small
+   *  integer forwarded into fetchChunk's workerSlot (see RESEARCH.md
+   *  Assumptions Log A2). A defaulted param (not a bare `?:`) so it stays a
+   *  plain `number` under strict mode. Optional, additive: omitting it —
+   *  every pre-Phase-25 caller/test — combines as 0, reproducing the exact
+   *  chunk-pool-only slot. */
+  fileWorkerSlot: number = 0
 ): Promise<void> {
   const queue = [...file.chunks]
   const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
 
   await Promise.all(
-    Array.from({ length: workerCount }, async () => {
+    Array.from({ length: workerCount }, async (_, chunkWorkerSlot) => {
       while (queue.length) {
         if (signal?.aborted) return
         const chunk = queue.shift()!
@@ -957,7 +967,15 @@ export async function downloadFileChunks(
             // fetchChunk, never while it was mid-retry — the ~62s hardware
             // hang) so a cancel interrupts an in-flight attempt immediately
             // instead of waiting for it to naturally exhaust or succeed.
-            signal
+            signal,
+            // Phase 25 (multi-host fan-out): combines this file's own
+            // FILE_CONCURRENCY-pool slot with this chunk worker's own
+            // CHUNK_CONCURRENCY-pool index so every concurrently-running
+            // worker across the whole run maps to a distinct small integer
+            // — see RESEARCH.md Assumptions Log A2. Both operands are plain
+            // `number` (default-param / Array.from index), so the raw
+            // arithmetic needs no `?? 0` coalesce under strict mode.
+            fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot
           )
           if (signal?.aborted) return
 
@@ -1057,7 +1075,13 @@ async function downloadSingleFile(
   hostMeta?: ReadonlyMap<string, ContentServerHostMeta>,
   /** Debug/steam-install-slow-start (cycle 7): forwarded to downloadFileChunks
    *  — see depot/stallTracker.ts. Optional, additive. */
-  stallTracker?: StallTracker
+  stallTracker?: StallTracker,
+  /** Phase 25 (multi-host fan-out, MHOST-02/03): forwarded to
+   *  downloadFileChunks — see its own doc comment. A defaulted param (not a
+   *  bare `?:`) so it stays a plain `number` under strict mode. Optional,
+   *  additive: omitting it — every pre-Phase-25 caller/test — combines as 0.
+   */
+  fileWorkerSlot: number = 0
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
@@ -1138,7 +1162,8 @@ async function downloadSingleFile(
       hostHealth,
       cdnAuth,
       hostMeta,
-      stallTracker
+      stallTracker,
+      fileWorkerSlot
     )
   } finally {
     await fd.close()
@@ -1584,7 +1609,7 @@ export async function downloadDepotFiles(
     }, PROGRESS_HEARTBEAT_MS)
     try {
       await Promise.all(
-        Array.from({ length: workerCount }, async () => {
+        Array.from({ length: workerCount }, async (_, fileWorkerSlot) => {
           while (queue.length) {
             // Checked per-file AND per-chunk (inside downloadFileChunks) so a
             // queue-cancel stops issuing new work promptly (D-02).
@@ -1624,7 +1649,11 @@ export async function downloadDepotFiles(
                 hostHealth,
                 opts.cdnAuth,
                 opts.hostMeta,
-                stallTracker
+                stallTracker,
+                // Phase 25 (multi-host fan-out): this file's own slot in the
+                // FILE_CONCURRENCY pool, combined inside downloadSingleFile
+                // -> downloadFileChunks with the chunk pool's own index.
+                fileWorkerSlot
               )
             } catch (err) {
               failures.push({

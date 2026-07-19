@@ -1323,12 +1323,13 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
 
     expect(fetchChunk).toHaveBeenCalledTimes(1)
     // fetchChunk(hosts, depotId, chunk, key, lzma, attempts, decode,
-    // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta, signal) —
-    // cdnAuth is the 11th positional argument (index 10); hostMeta (cycle 7)
-    // is the 12th; signal (debug/steam-cancel-abort-thread-a) is now the
-    // 13th/last.
+    // onNetworkBytes, onAttempt, hostHealth, cdnAuth, hostMeta, signal,
+    // workerSlot) — cdnAuth is the 11th positional argument (index 10);
+    // hostMeta (cycle 7) is the 12th; signal (debug/steam-cancel-abort-
+    // thread-a) is the 13th; workerSlot (Phase 25 multi-host fan-out) is now
+    // the 14th/last.
     const callArgs = jest.mocked(fetchChunk).mock.calls[0]
-    const cdnAuth = callArgs[callArgs.length - 3]
+    const cdnAuth = callArgs[callArgs.length - 4]
     expect(cdnAuth).toBeInstanceOf(CdnAuthTokenCache)
 
     // Prove it's bound to the REAL client + the numeric form of the appId
@@ -1365,7 +1366,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // defaults to false (fetchChunk must never call getCDNAuthToken for this
     // host on its own; the call above proves the CACHE itself still works
     // when a caller explicitly invokes getToken directly).
-    const hostMeta = callArgs[callArgs.length - 2] as Map<
+    const hostMeta = callArgs[callArgs.length - 3] as Map<
       string,
       { httpsSupport?: string; usetokenauth?: boolean; type?: string }
     >
@@ -2146,7 +2147,8 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
   // cancel while it was mid-retry/mid-backoff, which is the root cause of
   // the hardware-observed ~62s hang. Proves the wiring fix: the exact same
   // `signal` this call received is forwarded as fetchChunk's own `signal`
-  // argument (its last positional parameter).
+  // argument (its second-to-last positional parameter — Phase 25 appended a
+  // trailing `workerSlot` after it).
   it('forwards its own `signal` parameter through to every fetchChunk call (Thread A wiring fix)', async () => {
     const controller = new AbortController()
     jest.mocked(fetchChunk).mockResolvedValue(Buffer.alloc(10))
@@ -2171,7 +2173,7 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
 
     expect(fetchChunk).toHaveBeenCalled()
     for (const callArgs of jest.mocked(fetchChunk).mock.calls) {
-      expect(callArgs[callArgs.length - 1]).toBe(controller.signal)
+      expect(callArgs[callArgs.length - 2]).toBe(controller.signal)
     }
   })
 })
