@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: — Steam macOS Compatibility Runtime
-status: "Phase 25 shipped — pushed to gamelib, folded into PR #3"
-stopped_at: Completed 25-02-PLAN.md
-last_updated: "2026-07-19T07:44:32.099Z"
+status: executing
+stopped_at: Completed 21-17-PLAN.md
+last_updated: "2026-07-19T10:39:00.001Z"
 last_activity: 2026-07-19
 progress:
-  total_phases: 21
-  completed_phases: 18
-  total_plans: 135
-  completed_plans: 115
-  percent: 85
+  total_phases: 5
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 6
+  percent: 20
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 25 — steam-depot-download-multi-host-fan-out-throughput
+**Current focus:** Phase 21 — steam-native-install
 
 ## Current Position
 
-Phase: 25 — COMPLETE
-Plan: 3 of 3
-Status: Phase 25 shipped — pushed to gamelib, folded into PR #3
+Phase: 21 (steam-native-install) — EXECUTING
+Plan: 2 of 17
+Status: Ready to execute
 Last activity: 2026-07-19
 
 ## v1.4 Phase Map
@@ -146,6 +146,7 @@ Last activity: 2026-07-19
 | Phase 23 P03 | ~40min | 3 tasks | 6 files |
 | Phase 25 P01 | 12min | 2 tasks | 2 files |
 | Phase 25 P02 | ~20min | 3 tasks | 4 files |
+| Phase 21 P17 | 30min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -251,6 +252,10 @@ Recent decisions affecting current work:
 - [Phase ?]: pickHost workerSlot fan-out only applies at attemptIndex===0 && N>1; retries/circuit-breaker unaffected
 - [Phase 25-02]: fetchChunk/downloadFileChunks/downloadSingleFile gained defaulted trailing workerSlot/fileWorkerSlot: number = 0 params so combination arithmetic type-checks under strict mode; combined slot = fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot per RESEARCH.md A2
 - [Phase 25-02]: Integration test drives fetchChunk directly with distinct workerSlot values (not through the full downloadFileChunks pool) since pickHost's selection happens synchronously before fetchChunk's first await
+- [Phase 21]: isFullyInstalledStateFlags is the ONLY place bit-4 (0x4 FullyInstalled) is computed — buildInstalledMap/readAcfState/buildBottleInstalledMap all route through it (T-21-17-01 regression lock)
+- [Phase 21]: downloadSteamDepots finalize() forces outcome to cancelled when lastResult.outcome==='cancelled' OR opts.signal?.aborted===true, closing an async-interleaving class that could otherwise let a completed outcome reach canWriteFullOwnership
+- [Phase 21]: markSteamInstallIncomplete() mirrors init()'s startup-surface pattern for a SAME-SESSION native cancel (the one gap init() doesn't cover), reusing the existing steamResumePending field
+- [Phase 21]: steam-incomplete is a distinct statusContext value from steam-waiting-for-restart/steam-paused — applies when NOT currently installing but an incomplete manifest exists; hasStatus.ts's notInstalled branch now threads statusContext for the first time
 
 ### Pending Todos
 
@@ -316,8 +321,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-19T07:07:12.724Z
-Stopped at: Completed 25-02-PLAN.md
+Last session: 2026-07-19T10:38:59.997Z
+Stopped at: Completed 21-17-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
