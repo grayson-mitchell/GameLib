@@ -558,6 +558,79 @@ describe('decompress', () => {
         )
         expect(totalRecorded).toBe(4)
       })
+
+      // Phase 25 (multi-host fan-out, MHOST-02/03): proves the depot.ts
+      // wiring this plan lands actually reaches pickHost -- concurrently-
+      // running chunk workers, each supplying its own distinct workerSlot
+      // (mirroring depot.ts's `fileWorkerSlot * CHUNK_CONCURRENCY +
+      // chunkWorkerSlot` combination), spread their attempt-0 requests
+      // across MORE THAN ONE healthy host instead of every worker
+      // converging on the single top-scored one (`ordered[0]`, the
+      // pre-Phase-25 behavior still exercised by the
+      // "skipped in favor of a healthy one" test above, which never varies
+      // workerSlot from its default 0).
+      it('concurrent chunk workers fan attempt-0 requests across more than one healthy host (Phase 25 top-N fan-out)', async () => {
+        const data = Buffer.from('fanned across hosts', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const attempt0Hosts: string[] = []
+
+        global.fetch = jest.fn((url: unknown) => {
+          const urlStr = String(url)
+          const host = urlStr.split('/')[2]
+          attempt0Hosts.push(host)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        // Fresh tracker, no prior record() history -- every host in `hosts`
+        // (4 distinct hosts) is healthy at cold start, so TOP_N_FANOUT=3 of
+        // them are eligible for attempt-0 fan-out.
+        const hostHealth = new HostHealthTracker()
+        const chunk = {
+          sha: expectedSha,
+          cb_original: data.length,
+          attemptSeed: 0
+        }
+
+        // Three concurrent "chunk workers" (mirrors depot.ts's
+        // downloadFileChunks pool), each supplying its own distinct
+        // workerSlot. Every worker's pickHost call happens synchronously
+        // BEFORE its first `await fetch(...)`, so all three attempt-0
+        // selections race against the SAME pre-record() tracker state --
+        // exactly the concurrency this plan's fan-out targets.
+        await Promise.all(
+          [0, 1, 2].map((workerSlot) =>
+            fetchChunk(
+              hosts,
+              depotId,
+              chunk,
+              key,
+              lzma,
+              4,
+              undefined,
+              undefined,
+              undefined,
+              hostHealth,
+              undefined,
+              undefined,
+              undefined,
+              workerSlot
+            )
+          )
+        )
+
+        expect(attempt0Hosts).toHaveLength(3)
+        expect(new Set(attempt0Hosts).size).toBeGreaterThan(1)
+      })
     })
 
     // Debug/steam-install-slow-start (diagnostic re-open, cycle 9): each
