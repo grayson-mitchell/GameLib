@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.4
-milestone_name: Steam macOS Compatibility Runtime
-status: executing
+milestone_name: — Steam macOS Compatibility Runtime
+status: completed
 stopped_at: Completed 25-02-PLAN.md
-last_updated: "2026-07-19T07:07:12.730Z"
-last_activity: 2026-07-19
+last_updated: "2026-07-19T07:30:47.277Z"
+last_activity: 2026-07-19 -- Phase 25 marked complete
 progress:
-  total_phases: 5
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 20
+  total_phases: 21
+  completed_phases: 18
+  total_plans: 135
+  completed_plans: 115
+  percent: 85
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 25 (steam-depot-download-multi-host-fan-out-throughput) — EXECUTING
+Phase: 25 — COMPLETE
 Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-19
+Status: Phase 25 complete
+Last activity: 2026-07-19 -- Phase 25 marked complete
 
 ## v1.4 Phase Map
 
