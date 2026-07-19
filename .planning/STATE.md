@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: — Steam macOS Compatibility Runtime
-status: executing
-stopped_at: Completed 21-17-PLAN.md
-last_updated: "2026-07-19T10:39:00.001Z"
+status: ready_to_plan
+stopped_at: Phase 21 complete (17/17) — ready to discuss Phase 22
+last_updated: 2026-07-19T21:29:58.745Z
 last_activity: 2026-07-19
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 6
+  completed_plans: 116
   percent: 20
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 21 — steam-native-install
+**Current focus:** Phase 22 — multiple steam bottles
 
 ## Current Position
 
-Phase: 21 (steam-native-install) — EXECUTING
-Plan: 2 of 17
-Status: Ready to execute
+Phase: 22
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-19
 
 ## v1.4 Phase Map
@@ -63,7 +63,7 @@ Last activity: 2026-07-19
 
 **Velocity (v1.0):**
 
-- Total plans completed: 99 (phases 1-4)
+- Total plans completed: 116 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -88,6 +88,7 @@ Last activity: 2026-07-19
 | 17 | 17 | - | - |
 | 19 | 8 | - | - |
 | 20 | 7 | - | - |
+| 21 | 17 | - | - |
 
 **v1.0 Detail Log:**
 
