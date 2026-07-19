@@ -10,7 +10,7 @@ failed_items: 0
 blocked_items: 0
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 # Phase 23 — Steam Full-Ownership Install (StateFlags=4): Real-Hardware UAT
@@ -129,7 +129,19 @@ re-run not yet performed
 **`.acf` field dump (pre-Steam-launch):** _(pending hardware re-run)_
 **`.acf` field dump (post-Steam-launch):** _(pending hardware re-run)_
 **Verify/re-download observed?** _(pending hardware re-run)_
-**Launch confirmed?** _(n/a)_
+**Launch confirmed?** _(pending download completion)_
+
+**Reported behavior (2026-07-19) — REGRESSION FIX CONFIRMED ON HARDWARE (steps 1–3):** Human ran
+Gate 1 on real macOS hardware after deleting the stale `appmanifest_990080.acf`. Steps 1–3 (install
+via native path + pause/resume cycle) observed a **single, monotonic download percent with NO
+flicker between two climbing values** — the 2%↔16% / 6%↔27% flip-flop from the 2026-07-18 run is
+GONE. This confirms Plan 23-05's single-flight guard (`installDepotDownload` now joins/rejects a
+second concurrent entry instead of spawning a racing `downloadDepotFiles`) holds on real hardware,
+not just against mocked seams. Steps 4–6 (`.acf` StateFlags=4 inspection, no-verify/no-re-download
+on Steam start, launch) remain PENDING the multi-depot download's completion (~2.5h at the current
+single-host throughput — the known Phase 25 fan-out cap, NOT a Gate 1 defect). Gate 1 does NOT close
+until steps 4–6 are recorded. WazHack cannot substitute here (single-depot; cannot prove the
+multi-depot `InstalledDepots` set or absence of a partial-depot verify).
 
 **Reported behavior (2026-07-18):** At download start, MB/s barely changed and the graph updated
 slowly — unclear it was even working. After ~2 min the opposite: graph updated much faster and **two
