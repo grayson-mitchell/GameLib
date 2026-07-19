@@ -1,6 +1,6 @@
 # Project Research Summary
 
-**Project:** GameLib — Humble Bundle Integration (v1.2)
+**Project:** GameLib — Humble Bundle Integration (v0.3)
 **Domain:** Undocumented-API key management overlay on a multi-store Electron launcher
 **Researched:** 2026-07-05
 **Confidence:** HIGH for auth/architecture approach; MEDIUM for Humble API stability
@@ -21,7 +21,7 @@ The dominant risks are not technical but behavioral. The Humble API is undocumen
 
 ### Recommended Stack
 
-Zero new dependencies are needed. The complete Humble integration is built on libraries already present in the repo. Electron's `BrowserWindow` is the only viable auth path: Humble's `/processlogin` endpoint requires a solved reCAPTCHA, making all programmatic login approaches impossible. Opening `https://www.humblebundle.com/login` in a `BrowserWindow` lets the user solve CAPTCHA and any Humble Guard email-code challenge naturally, then `webContents.session.cookies.get()` extracts the `_simpleauth_sess` cookie after login. Every HTTP call to Humble goes through `axios` with the cookie as a `Cookie` request header plus the mandatory `X-Requested-By: hb_android_app` header (reverse-engineered from the Humble Android app; omitting this header is the likely cause of all three Lutris integration failures). The session cookie is encrypted with `safeStorage.encryptString()` following the same `TOKEN_PREFIX` sentinel pattern used for the Steam refresh token in v1.0.
+Zero new dependencies are needed. The complete Humble integration is built on libraries already present in the repo. Electron's `BrowserWindow` is the only viable auth path: Humble's `/processlogin` endpoint requires a solved reCAPTCHA, making all programmatic login approaches impossible. Opening `https://www.humblebundle.com/login` in a `BrowserWindow` lets the user solve CAPTCHA and any Humble Guard email-code challenge naturally, then `webContents.session.cookies.get()` extracts the `_simpleauth_sess` cookie after login. Every HTTP call to Humble goes through `axios` with the cookie as a `Cookie` request header plus the mandatory `X-Requested-By: hb_android_app` header (reverse-engineered from the Humble Android app; omitting this header is the likely cause of all three Lutris integration failures). The session cookie is encrypted with `safeStorage.encryptString()` following the same `TOKEN_PREFIX` sentinel pattern used for the Steam refresh token in v0.1.
 
 **Core technologies:**
 - `Electron BrowserWindow` (built-in): Auth surface — CAPTCHA + Humble Guard handled by the browser with zero app-side logic required
@@ -186,7 +186,7 @@ The convergence of all three research files on this exact ordering — independe
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new packages confirmed; all required primitives verified present; BrowserWindow auth is established Electron pattern; safeStorage pattern mirrors v1.0 Steam |
+| Stack | HIGH | Zero new packages confirmed; all required primitives verified present; BrowserWindow auth is established Electron pattern; safeStorage pattern mirrors v0.1 Steam |
 | Features | HIGH | Ecosystem well-studied across 5 community tools; `steam_app_id` field confirmed in FailSpy source; 5 spec adjustments are concrete and actionable |
 | Architecture | HIGH | Codebase read directly; parallel `humble/` domain is structurally correct; IPC and store patterns match existing codebase exactly |
 | Pitfalls | HIGH for rate-limit/secrets/C1; MEDIUM for API stability | Steam rate-limit mechanics confirmed from multiple sources; Humble API fragility confirmed from 3 Lutris incidents; exact Humble Guard TTL undocumented |

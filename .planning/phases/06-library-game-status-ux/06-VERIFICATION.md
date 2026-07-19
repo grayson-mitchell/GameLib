@@ -143,7 +143,7 @@ No phase-declared probes found. SKIPPED — not a migration/tooling phase.
 
 The code review (`06-REVIEW.md`, reviewed 2026-07-03) identified issues separate from phase goal verification. Summarized for traceability:
 
-**CR-01 (Critical — regression):** The install-polling grace/cancel path (`startInstallPolling` lines 551–559 and the MAX_TICKS cap at lines 537–543) does NOT emit `gameStatusUpdate { status: 'done' }` when a user cancels Steam's install dialog. Phase 6 changed `removeFromQueue` to suppress `done` for Steam (expecting the ACF poller to emit it), but the ACF poller's grace/cancel path has no symmetrical `done` emit. Result: cancelled Steam installs leave a stuck `queued`/`installing` badge until app restart. Does NOT block GAME-05 or LIB-06 goals, but is a behavioral regression introduced by Phase 6's `downloadqueue.ts` suppression. Should be fixed before v1.1 ship.
+**CR-01 (Critical — regression):** The install-polling grace/cancel path (`startInstallPolling` lines 551–559 and the MAX_TICKS cap at lines 537–543) does NOT emit `gameStatusUpdate { status: 'done' }` when a user cancels Steam's install dialog. Phase 6 changed `removeFromQueue` to suppress `done` for Steam (expecting the ACF poller to emit it), but the ACF poller's grace/cancel path has no symmetrical `done` emit. Result: cancelled Steam installs leave a stuck `queued`/`installing` badge until app restart. Does NOT block GAME-05 or LIB-06 goals, but is a behavioral regression introduced by Phase 6's `downloadqueue.ts` suppression. Should be fixed before v0.2 ship.
 
 **WR-03 (Warning):** `handlePlay` at `GameCard:596` calls `sendKill(appName, runner)` when `isPlaying || isUpdating` without a `!isSteam` guard. Since Stop is hidden for Steam but the play icon is still clickable while playing, a user clicking Play on a playing Steam game triggers `sendKill` (which is a no-op for Steam). The click silently does nothing. Misleading affordance — should be fixed.
 
@@ -185,7 +185,7 @@ No code-level gaps blocking the stated phase goals. All ROADMAP success criteria
 
 **Pending action before closing:**
 - Human UAT items 1–4 above
-- CR-01 (stuck install-cancel badge) should be fixed before v1.1 ship — it is a Phase 6 regression
+- CR-01 (stuck install-cancel badge) should be fixed before v0.2 ship — it is a Phase 6 regression
 - Consider adding a tracking reference to `main.ts:580` FIXME to satisfy the debt-marker gate formally
 
 ---

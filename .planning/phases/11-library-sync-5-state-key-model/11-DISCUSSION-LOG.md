@@ -102,7 +102,7 @@
 |--------|-------------|----------|
 | Exclude from inventory | DRM-free-only entitlements skipped — strictly keys + unpicked Choice months | ✓ |
 | Count but don't list | Cache a per-order count without modeling them | |
-| Show as a separate group | Stateless section — scope creep against v1.2 out-of-scope | |
+| Show as a separate group | Stateless section — scope creep against v0.3 out-of-scope | |
 
 **User's choice:** Exclude from inventory (recommended)
 

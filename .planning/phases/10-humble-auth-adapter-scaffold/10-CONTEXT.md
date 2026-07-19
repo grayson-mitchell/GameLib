@@ -15,7 +15,7 @@ users can disconnect and remove their session data; and the C5 adapter boundary
 Humble API before any Phase 11 feature work proceeds**.
 
 Delivers HACCT-01, HACCT-02, HACCT-03. No library sync, no key views, no dedup — those
-are Phases 11–15. Humble is a keys domain, NOT a Runner (locked v1.2 decision).
+are Phases 11–15. Humble is a keys domain, NOT a Runner (locked v0.3 decision).
 
 </domain>
 
@@ -160,7 +160,7 @@ are Phases 11–15. Humble is a keys domain, NOT a Runner (locked v1.2 decision)
 - `.planning/ROADMAP.md` § "Phase 10: Humble Auth + Adapter Scaffold" — goal + 5 success criteria (incl. Linux no-keyring warning).
 - `.planning/REQUIREMENTS.md` § "Humble Account" — HACCT-01/02/03 wording.
 
-### v1.2 research basis (auth path, C5 boundary, API details)
+### v0.3 research basis (auth path, C5 boundary, API details)
 - `.planning/research/SUMMARY.md` — executive synthesis: zero new deps, C5 adapter isolation, `X-Requested-By: hb_android_app` on every request, 401-vs-403 handling. (Its "BrowserWindow-only auth" framing is superseded by D-05-revised: embedded WebView surface, main-process cookie capture unchanged.)
 - `.planning/research/ARCHITECTURE.md` — `src/backend/humble/` component breakdown (adapter.ts, user.ts, electronStores.ts, ipc_handler.ts) and the never-a-Runner constraint.
 - `.planning/research/PITFALLS.md` — C5 (API access denial history: Lutris 2022/2024/2025) and session-cookie handling rules (never logged, never in full IPC payloads).

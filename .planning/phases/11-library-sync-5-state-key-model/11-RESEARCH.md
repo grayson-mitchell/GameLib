@@ -69,7 +69,7 @@ cache, `humbleRevealedStore` for the disconnect-surviving flag), and a minimal r
 
 ### Locked Decisions
 
-> Numbering continues from Phase 10 (D-01..D-18) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 10 (D-01..D-18) to keep v0.3 decision IDs unambiguous.
 
 #### Phase 11 surface (where synced keys appear)
 - **D-19:** Phase 11 ships a **minimal keys list page** — title, state badge, expiration
@@ -114,7 +114,7 @@ cache, `humbleRevealedStore` for the disconnect-surviving flag), and a minimal r
   every platform.
 - **D-29:** **DRM-free download entitlements are excluded** from the inventory entirely —
   it is strictly keys + unpicked Choice months. Managing Humble-hosted installers is
-  locked out of v1.2 scope (PROJECT.md).
+  locked out of v0.3 scope (PROJECT.md).
 - **D-30 (write-ahead REVEALED flag, HSYNC-02):** Phase 11 builds the locally-persisted
   REVEALED flag store and honors it during classification (a key with the local flag and
   no `redeemed_key_value` classifies REVEALED, never regressing to UNREVEALED across

@@ -33,7 +33,7 @@ metrics:
 
 ## What Was Built
 
-Two surgical source changes and new unit tests fixing the QR-login -> Steam-library race (v1.0 audit blockers AUTH-01 / LIB-01):
+Two surgical source changes and new unit tests fixing the QR-login -> Steam-library race (v0.1 audit blockers AUTH-01 / LIB-01):
 
 **Root cause 1 (backend):** QR `authenticated` handler called `connectSteamUserClient` as fire-and-forget (`void`). When post-login `refreshLibrary('steam')` triggered `ensureConnected()`, it saw `this.connectingPromise === null` and started a **second** `connectSteamUserClient`. `connectSteamUserClient` always calls `this.client.logOff()` first -- killing the first client and resolving it with the 'Steam User' fallback, overwriting the real persona name in `userData`.
 

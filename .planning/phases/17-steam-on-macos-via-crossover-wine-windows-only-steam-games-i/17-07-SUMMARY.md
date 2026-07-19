@@ -46,6 +46,6 @@ MACSTEAM-01..06 confirmed in reality (not just unit tests): per-OS `isNative()` 
 
 ## Next
 
-Phase 17 ready for `/gsd-verify-work` (goal verification) and `/gsd:secure-phase` (threat-mitigation audit), then v1.4 continues with Phase 19.
+Phase 17 ready for `/gsd-verify-work` (goal verification) and `/gsd:secure-phase` (threat-mitigation audit), then v0.5 continues with Phase 19.
 
 ## Self-Check: PASSED

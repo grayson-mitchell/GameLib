@@ -1,7 +1,7 @@
 # Phase 19 — Plan Outline (manifest)
 
 **Phase:** 19 — crossover-compatibility-index-macos
-**Milestone:** v1.4 (Steam macOS Compatibility)
+**Milestone:** v0.5 (Steam macOS Compatibility)
 **Mode:** standard · **Generated:** 2026-07-14 (outline-only chunked run)
 
 > This is the outline manifest. One single-plan Task will be spawned per row below to write

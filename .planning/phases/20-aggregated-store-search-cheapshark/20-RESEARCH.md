@@ -654,7 +654,7 @@ buy handoff itself.
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|---------------|--------|
-| N/A — this is a net-new integration | CheapShark API v1.0, unchanged surface for years per multiple third-party client libraries still targeting the same base URL/shape (`cheapshark-ts`, Ruby gem, Postman collection all agree on the same field names as the live-verified response) | — | Low API-churn risk; the shape verified today is very likely stable for the life of this phase |
+| N/A — this is a net-new integration | CheapShark API v0.1, unchanged surface for years per multiple third-party client libraries still targeting the same base URL/shape (`cheapshark-ts`, Ruby gem, Postman collection all agree on the same field names as the live-verified response) | — | Low API-churn risk; the shape verified today is very likely stable for the life of this phase |
 
 **Deprecated/outdated:** Nothing found — CheapShark has no versioned-away endpoints relevant to
 this phase. The `/deals` (bulk deals-browse) endpoint exists but is explicitly out of scope per
@@ -706,7 +706,7 @@ low-blast-radius and degrade gracefully (worse UX, never wrong data).
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| Network access to `www.cheapshark.com` | STORESEARCH-01..08 (entire phase) | ✓ (live-verified from this research environment, 2026-07-14) | CheapShark API v1.0 | D-14's provider-failed retryable state IS the fallback — no code fallback needed, this is a hard runtime dependency by design (public price data has no local substitute) |
+| Network access to `www.cheapshark.com` | STORESEARCH-01..08 (entire phase) | ✓ (live-verified from this research environment, 2026-07-14) | CheapShark API v0.1 | D-14's provider-failed retryable state IS the fallback — no code fallback needed, this is a hard runtime dependency by design (public price data has no local substitute) |
 | `axios` | All backend HTTP calls | ✓ | 1.13.5 (already in `package.json`) | — |
 | Node/Electron main-process `fetch`/`axios` reachability from a packaged app (not just this dev sandbox) | Same as above | Not independently verified in this sandbox (only the research shell's network was tested) | — | Standard risk shared by every other external-API phase in this project (GOG catalog, Humble, Steam CM) — no phase-specific new risk introduced |
 

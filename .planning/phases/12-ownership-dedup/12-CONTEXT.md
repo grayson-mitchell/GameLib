@@ -15,14 +15,14 @@ entry as a game-details annotation instead of appearing as a duplicate entry any
 Delivers HDEDUP-01, HDEDUP-02. No Keys-Waiting / Giftable-Spares views (Phase 13), no
 reveal/claim actions (Phase 14), no store overlay (Phase 15). Dedup is a pure local
 computation — it makes ZERO Humble network requests. Humble remains a keys domain, NOT a
-Runner (locked v1.2 decision).
+Runner (locked v0.3 decision).
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-> Numbering continues from Phase 11 (D-01..D-34) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 11 (D-01..D-34) to keep v0.3 decision IDs unambiguous.
 
 ### Steam-entry annotation (HDEDUP-02 collapse)
 - **D-35:** The Humble-origin annotation lives on the **Steam game's details page only**

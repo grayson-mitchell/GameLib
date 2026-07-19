@@ -27,7 +27,7 @@ disposition:
     note: rm(dest,{force:true}) before symlink() makes the branch idempotent like mkdir(recursive)/open('w'). + retry-idempotency test.
   - id: WR-01 (symlink type arg omitted on Windows)
     action: deferred
-    note: Cross-platform hardening; v1.4 milestone is macOS-focused (POSIX symlinks need no type arg). Tracked for a Windows-hardening pass.
+    note: Cross-platform hardening; v0.5 milestone is macOS-focused (POSIX symlinks need no type arg). Tracked for a Windows-hardening pass.
   - id: WR-02 (backslash normalization in symlink target)
     action: deferred
     note: Same Windows-only concern; POSIX/macOS manifest targets use forward slashes. Tracked with WR-01.

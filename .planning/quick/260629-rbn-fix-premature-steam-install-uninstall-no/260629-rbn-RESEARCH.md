@@ -60,7 +60,7 @@ Let the ACF poller own Steam status + completion toasts; suppress the 4 prematur
 Decision needed (flag for planner): whether to add the optional completion toasts in the poller (recommended for parity — otherwise Steam installs complete silently). `[ASSUMED]` that a completion toast is desirable; confirm with user.
 
 ### Alternative considered (not recommended as primary)
-Bypass the DM queue entirely for Steam in `ipc_handler.ts` (branch `runner==='steam'` → call `SteamGame.install()` directly, skip `addToQueue`). Pro: removes all DM coupling in one place and incidentally fixes the cosmetic `'?? MB'` queue entry. Con: larger behavioral change (Steam no longer appears in the DM panel), touches frontend assumptions about queue membership / spinner, and diverges the shared IPC handler from upstream Heroic. Higher risk; keep as a v1.1 option, not this fix.
+Bypass the DM queue entirely for Steam in `ipc_handler.ts` (branch `runner==='steam'` → call `SteamGame.install()` directly, skip `addToQueue`). Pro: removes all DM coupling in one place and incidentally fixes the cosmetic `'?? MB'` queue entry. Con: larger behavioral change (Steam no longer appears in the DM panel), touches frontend assumptions about queue membership / spinner, and diverges the shared IPC handler from upstream Heroic. Higher risk; keep as a v0.2 option, not this fix.
 
 ## Don't Hand-Roll / Reuse What Exists
 
@@ -116,4 +116,4 @@ Existing `pollInstallOnce`/`pollUninstallOnce` tests already cover the real stat
 - `src/backend/downloadmanager/downloadqueue.ts` — `initQueue` (82-116), `removeFromQueue` (198-222), `processNotification` (282-333)
 - `src/backend/utils/uninstaller.ts` — `uninstallGameCallback` (94-141)
 - `src/backend/downloadmanager/ipc_handler.ts` — install routing (13-22)
-- `.planning/v1.0-MILESTONE-AUDIT.md` — GAME-02/03 tech-debt entries
+- `.planning/v0.1-MILESTONE-AUDIT.md` — GAME-02/03 tech-debt entries

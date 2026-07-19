@@ -318,7 +318,7 @@ export type Release = {
   "id": 1,
   "tag_name": "gamelib-v1.0.0",
   "name": "GameLib 1.0.0",
-  "html_url": "https://github.com/grayson-mitchell/GameLib/releases/tag/gamelib-v1.0",
+  "html_url": "https://github.com/grayson-mitchell/GameLib/releases/tag/gamelib-v0.1",
   "published_at": "2026-06-30T00:00:00Z",
   "prerelease": false,
   "type": "stable",

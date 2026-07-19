@@ -2,12 +2,12 @@
 title: Steam native install — GameLib downloads depots, Steam adopts the install
 trigger_condition: When the spike validates BOTH (a) Steam cleanly adopts a hand-written appmanifest .acf, and (b) a depot download path (steam-user in-process, or a C# DepotDownloader wrapper) produces correct files on disk. Unknown (b) alone is not enough — (a) is architecture-independent and gates the entire model.
 planted_date: 2026-07-14
-related_phase: 21 (v1.6 — Steam Native Install; promoted to roadmap 2026-07-14)
+related_phase: 21 (v0.7 — Steam Native Install; promoted to roadmap 2026-07-14)
 ---
 
 # Seed: Steam native install
 
-> **PROMOTED 2026-07-14 → Phase 21 (v1.6 — Steam Native Install).** Both spike unknowns
+> **PROMOTED 2026-07-14 → Phase 21 (v0.7 — Steam Native Install).** Both spike unknowns
 > validated (spikes 001 + 002). Kept for provenance; the live plan is the roadmap entry.
 
 ## The idea

@@ -1,14 +1,14 @@
-# Requirements: GameLib — v1.1 Polish & Enhancements + v1.2 Humble Bundle Integration
+# Requirements: GameLib — v0.2 Polish & Enhancements + v0.3 Humble Bundle Integration
 
-**Defined:** 2026-07-02 (v1.1) · 2026-07-05 (v1.2 appended)
+**Defined:** 2026-07-02 (v0.2) · 2026-07-05 (v0.3 appended)
 **Core Value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
 
-> v1.0 requirements (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01) shipped and are archived in `.planning/milestones/v1.0-REQUIREMENTS.md`. IDs below continue that numbering.
-> **v1.1 is still open** (Phase 9 + Phase 7 UAT outstanding). v1.2 requirements were appended below by explicit choice rather than archiving v1.1 first — both milestones share this file until v1.1 completes.
+> v0.1 requirements (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01) shipped and are archived in `.planning/milestones/v0.1-REQUIREMENTS.md`. IDs below continue that numbering.
+> **v0.2 is still open** (Phase 9 + Phase 7 UAT outstanding). v0.3 requirements were appended below by explicit choice rather than archiving v0.2 first — both milestones share this file until v0.2 completes.
 
-## v1.1 Requirements
+## v0.2 Requirements
 
-Requirements for the v1.1 milestone. Each maps to exactly one roadmap phase.
+Requirements for the v0.2 milestone. Each maps to exactly one roadmap phase.
 
 ### Branding & Docs
 
@@ -47,11 +47,11 @@ Requirements for the v1.1 milestone. Each maps to exactly one roadmap phase.
 
 ### Quality
 
-- [ ] **QA-01**: A formal Nyquist validation pass is completed and recorded for the shipped v1.0 phases
+- [ ] **QA-01**: A formal Nyquist validation pass is completed and recorded for the shipped v0.1 phases
 
-## v1.2 Requirements
+## v0.3 Requirements
 
-Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key management** — never re-buy or lose a Humble key — with ownership-aware dedup against the existing Steam library. Each maps to exactly one roadmap phase (Phase 10+). See `.planning/research/SUMMARY.md` for the research basis and the 6-phase build order.
+Requirements for the v0.3 Humble Bundle Integration milestone. Value is **key management** — never re-buy or lose a Humble key — with ownership-aware dedup against the existing Steam library. Each maps to exactly one roadmap phase (Phase 10+). See `.planning/research/SUMMARY.md` for the research basis and the 6-phase build order.
 
 ### Humble Account
 
@@ -89,9 +89,9 @@ Requirements for the v1.2 Humble Bundle Integration milestone. Value is **key ma
 - [ ] **HSTORE-01**: When browsing store surfaces, each title is badged Owned / Unclaimed-key-available / New based on ownership and key availability
 - [ ] **HSTORE-03**: An "expiring soon" surface flags keys nearing expiration, with optional OS notifications for newly-expiring keys
 
-## v1.4 Requirements
+## v0.5 Requirements
 
-Requirements for the v1.4 milestone — **Steam macOS Compatibility Runtime**. On macOS, Windows-only Steam games (no native Mac build) install and launch through the Windows Steam client running inside a dedicated GameLib-managed CrossOver/Wine bottle, instead of native `steam://` delegation. Minted during `/gsd:plan-phase 17` from the locked D-01..D-11 decisions (see `.planning/phases/17-.../17-CONTEXT.md`). Linux (Proton), Windows, native-Mac Steam, and GOG/Epic bottle behavior are explicitly out of scope / unchanged. Each maps to Phase 17.
+Requirements for the v0.5 milestone — **Steam macOS Compatibility Runtime**. On macOS, Windows-only Steam games (no native Mac build) install and launch through the Windows Steam client running inside a dedicated GameLib-managed CrossOver/Wine bottle, instead of native `steam://` delegation. Minted during `/gsd:plan-phase 17` from the locked D-01..D-11 decisions (see `.planning/phases/17-.../17-CONTEXT.md`). Linux (Proton), Windows, native-Mac Steam, and GOG/Epic bottle behavior are explicitly out of scope / unchanged. Each maps to Phase 17.
 
 ### Steam macOS Runtime
 
@@ -129,9 +129,9 @@ Serve every macOS library game a CrossOver medal badge — and a filter for it �
 - [ ] **CXIDX-12**: A macOS-only **CrossOver-rating library filter** — multi-select, opt-out, default-all-true, **filter-only (no sort)** — is added alongside the existing library filters, gated on `darwin` exactly like the existing `mac` platform toggle (D-17)
 - [ ] **CXIDX-13**: The install modal shows a **non-blocking warning** for `knownnottowork` (rating ≤2) titles on the macOS CrossOver-bottle install path that warns but **never gates** the Install button — the data is community-sourced and can be a false negative (D-18)
 
-## v1.5 Requirements
+## v0.6 Requirements
 
-Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-level sidebar destination where one title search returns prices across many storefronts, annotated with what the user already owns. Prototyped on CheapShark (public, keyless, **USD-only**); IsThereAnyDeal is the localised production target (see `.planning/research/questions.md` Q2). Minted during `/gsd-discuss-phase 20` from the locked D-01..D-13 decisions (see `.planning/phases/20-aggregated-store-search-cheapshark/20-CONTEXT.md`). The aggregated *discovery/browse* surface (multi-provider Deals) is explicitly out of scope — see `.planning/seeds/aggregated-discovery-multi-provider-deals.md`. Each maps to Phase 20.
+Requirements for the v0.6 milestone — **Aggregated Store Search**. A new top-level sidebar destination where one title search returns prices across many storefronts, annotated with what the user already owns. Prototyped on CheapShark (public, keyless, **USD-only**); IsThereAnyDeal is the localised production target (see `.planning/research/questions.md` Q2). Minted during `/gsd-discuss-phase 20` from the locked D-01..D-13 decisions (see `.planning/phases/20-aggregated-store-search-cheapshark/20-CONTEXT.md`). The aggregated *discovery/browse* surface (multi-provider Deals) is explicitly out of scope — see `.planning/seeds/aggregated-discovery-multi-provider-deals.md`. Each maps to Phase 20.
 
 ### Aggregated Store Search (Phase 20)
 
@@ -144,9 +144,9 @@ Requirements for the v1.5 milestone — **Aggregated Store Search**. A new top-l
 - [x] **STORESEARCH-07**: Clicking a result hands off to the user's external browser via `shell.openExternal()` (never the in-app `/store-page` WebView — GameLib must not wrap its own chrome around ~30 unvetted third-party checkout forms), using CheapShark's documented `redirect?dealID=` URL. No post-purchase machinery: the purchase lands on the next normal library sync (D-08/D-09/D-10)
 - [x] **STORESEARCH-08**: The screen shows an explanatory prompt before any query is typed, and distinguishes "no results" from "the provider failed" — a provider failure renders an inline, retryable error while leaving the search box usable (fail-soft, mirroring the Humble adapter) (D-14)
 
-## v1.6 Requirements
+## v0.7 Requirements
 
-Requirements for the v1.6 milestone — **Steam Native Install**. Replace the opaque `steam://install/{appId}` handoff with an in-process depot download GameLib owns: real progress, real errors, real recovery, surfaced through the same DownloadManager every other store uses. GameLib downloads depots over its authenticated `steam-user` CM connection, writes an `appmanifest_{appId}.acf` (`StateFlags = 1026`) the Steam client **adopts**; launch stays on `steam://` (DRM works) and Steam owns all future updates. De-risked end to end by spikes 001 (.acf adoption) + 002 (in-process depot download). Minted during `/gsd-plan-phase 21` from the locked D-01..D-15 decisions in `.planning/phases/21-steam-native-install/21-CONTEXT.md`. Each maps to Phase 21.
+Requirements for the v0.7 milestone — **Steam Native Install**. Replace the opaque `steam://install/{appId}` handoff with an in-process depot download GameLib owns: real progress, real errors, real recovery, surfaced through the same DownloadManager every other store uses. GameLib downloads depots over its authenticated `steam-user` CM connection, writes an `appmanifest_{appId}.acf` (`StateFlags = 1026`) the Steam client **adopts**; launch stays on `steam://` (DRM works) and Steam owns all future updates. De-risked end to end by spikes 001 (.acf adoption) + 002 (in-process depot download). Minted during `/gsd-plan-phase 21` from the locked D-01..D-15 decisions in `.planning/phases/21-steam-native-install/21-CONTEXT.md`. Each maps to Phase 21.
 
 ### Steam Native Install (Phase 21)
 
@@ -159,7 +159,7 @@ Requirements for the v1.6 milestone — **Steam Native Install**. Replace the op
 - [x] **SNI-07** (D-12/D-13/D-14): The feature ships behind a **user opt-in setting** (default OFF) on **all three desktop OSes**; OFF preserves today's `steam://install` handoff byte-for-byte; ON routes every Steam install through the depot engine with no per-case fallback.
 - [ ] **SNI-08** (D-15): On macOS, a bottle-eligible install **depot-downloads the Windows depot into the CrossOver bottle's `steamapps/`** (`os: 'windows'`, `getBottleSteamappsDir()` target, `isBottleReady()` gate) and the **bottled** Windows Steam adopts the `1026` manifest — unifying the install mechanism across native and bottle, with **no** Wine dispatch for the download itself.
 
-## v1.6 Requirements — Steam Full-Ownership Install (Phase 23)
+## v0.7 Requirements — Steam Full-Ownership Install (Phase 23)
 
 Phase 23 productionizes spike-003: GameLib authors a `StateFlags=4` (FullyInstalled) `appmanifest_{appId}.acf` the Steam client trusts with **no verify pass and no re-download**, owning the complete first install **and** resume — reversing D-2 for first install and superseding the "StateFlags=1026, never 4" rule (both were correct only while the download had no integrity guarantee; Phase 21's per-chunk sha1 gate makes a trustworthy `4` achievable). Falls back to Phase 21's `1026` verify-handoff only when completeness can't be proven. Minted during `/gsd-plan-phase 23` from locked decisions D-01..D-07 in `.planning/phases/23-steam-full-ownership-install-stateflags-4/23-CONTEXT.md`. Each maps to Phase 23. Depends on Phase 21.
 
@@ -188,7 +188,7 @@ Phase 25 raises Steam native-depot download throughput toward Steam-client parit
 
 ## Future Requirements
 
-Deferred beyond v1.1. Tracked but not in the current roadmap.
+Deferred beyond v0.2. Tracked but not in the current roadmap.
 
 ### Game Details
 
@@ -196,11 +196,11 @@ Deferred beyond v1.1. Tracked but not in the current roadmap.
 
 ### Settings
 
-- **API-01**: Copy-to-clipboard button on the API key field, Settings → API (ENH-001 — dropped from v1.1)
+- **API-01**: Copy-to-clipboard button on the API key field, Settings → API (ENH-001 — dropped from v0.2)
 
-### Humble Store (deferred from v1.2)
+### Humble Store (deferred from v0.3)
 
-- **HSTORE-02**: A read-only Humble bundle/deals listing is browsable in-app with "Buy on Humble" deep-links (deferred from v1.2 — key management prioritized over the store surface; separate bundle-listing data source)
+- **HSTORE-02**: A read-only Humble bundle/deals listing is browsable in-app with "Buy on Humble" deep-links (deferred from v0.3 — key management prioritized over the store surface; separate bundle-listing data source)
 
 ## Out of Scope
 
@@ -211,10 +211,10 @@ Explicitly excluded. Documented to prevent scope creep.
 | Other new platforms (Ubisoft Connect, itch.io, Xbox) | Steam first; other stores are a separate future milestone |
 | Replacing Steam client functionality (friends, community, overlay) | GameLib is a launcher, not a Steam client replacement |
 | Purchasing/checkout flows inside the Steam storefront view | Storefront is browse-only; buying happens in Steam's own web/client flow |
-| In-app Humble checkout / purchasing (v1.2) | Store surface is read-only + deep-links; buying happens on Humble's site |
-| One-click activation for non-Steam Humble key types (v1.2) | Each platform has its own auth/activation flow; HCLAIM-05 links out instead |
-| Automated / unattended bulk redemption of Humble keys (v1.2) | Triggers Steam rate-limit flagging (~10 failed/hr lockout); actions stay user-initiated + throttled (C1, C3) |
-| Managing DRM-free Humble downloads / Humble-hosted installers (v1.2) | Key-focused milestone; DRM-free download management is a separate future phase with its own research |
+| In-app Humble checkout / purchasing (v0.3) | Store surface is read-only + deep-links; buying happens on Humble's site |
+| One-click activation for non-Steam Humble key types (v0.3) | Each platform has its own auth/activation flow; HCLAIM-05 links out instead |
+| Automated / unattended bulk redemption of Humble keys (v0.3) | Triggers Steam rate-limit flagging (~10 failed/hr lockout); actions stay user-initiated + throttled (C1, C3) |
+| Managing DRM-free Humble downloads / Humble-hosted installers (v0.3) | Key-focused milestone; DRM-free download management is a separate future phase with its own research |
 
 ## Traceability
 
@@ -307,15 +307,15 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MHOST-04 | Phase 25 | Complete (hardware-verified 2026-07-19: hosts=3, err=0, ~10 MiB/s) |
 
 **Coverage:**
-- v1.1 requirements: 15 total
+- v0.2 requirements: 15 total
 - Mapped to phases: 15 (Phases 5–9)
 - Unmapped: 0 ✓
 
-- v1.2 requirements: 18 total (HSTORE-02 deferred to Future)
+- v0.3 requirements: 18 total (HSTORE-02 deferred to Future)
 - Mapped to phases: 18 (Phases 10–15)
 - Unmapped: 0 ✓
 
-- v1.6 requirements: 8 total (SNI-01..08, minted 2026-07-15 from D-01..D-15)
+- v0.7 requirements: 8 total (SNI-01..08, minted 2026-07-15 from D-01..D-15)
 - Mapped to phases: 8 (Phase 21)
 - Unmapped: 0 ✓
 
@@ -333,6 +333,6 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-05 — v1.2 traceability appended during roadmap creation (Phases 10–15)*
+*Last updated: 2026-07-05 — v0.3 traceability appended during roadmap creation (Phases 10–15)*
 *Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*
 *Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*

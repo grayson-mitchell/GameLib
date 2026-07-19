@@ -16,14 +16,14 @@ Delivers HVIEW-01, HVIEW-02. These views must exist before Phase 14, whose C2 gu
 redirects into Giftable Spares. No reveal/claim actions (Phase 14), no store overlay or
 OS notifications (Phase 15). The gift-link copy is the ONLY new interactive affordance
 this phase adds; everything else remains read-only. Humble remains a keys domain, NOT a
-Runner (locked v1.2 decision). Zero new Humble write-style API calls.
+Runner (locked v0.3 decision). Zero new Humble write-style API calls.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-> Numbering continues from Phase 12 (D-35..D-48) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 12 (D-35..D-48) to keep v0.3 decision IDs unambiguous.
 
 ### Tab structure & navigation
 - **D-49:** The Humble Keys page becomes **3 tabs: "Keys waiting" / "Giftable spares" /
@@ -214,7 +214,7 @@ Runner (locked v1.2 decision). Zero new Humble write-style API calls.
 ## Deferred Ideas
 
 - **In-app gift-link generation** (if research confirms Humble requires a generate call):
-  rejected for v1.2 as a C5-risk write endpoint; the deep-link fallback covers the need.
+  rejected for v0.3 as a C5-risk write endpoint; the deep-link fallback covers the need.
   Revisit only if Humble documents the endpoint or the passive field proves unavailable
   AND deep-linking proves too weak in practice.
 - **WR-01..WR-04 accept-or-remediate decision** (from 12-REVIEW.md) — due before Phase 14

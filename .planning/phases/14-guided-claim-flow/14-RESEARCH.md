@@ -46,7 +46,7 @@
 - 403-cooldown duration reuse, retry UX on failed reveal, outcome vocabulary for audit records, undo affordance placement (row vs toast vs modal).
 
 ### Deferred Ideas (OUT OF SCOPE)
-- **Full audit-log viewer surface** (chronological activity list) — rejected for v1.2 (D-75 keeps annotations only); revisit if users ask for a claim history.
+- **Full audit-log viewer surface** (chronological activity list) — rejected for v0.3 (D-75 keeps annotations only); revisit if users ask for a claim history.
 - **Fuzzy claim-anyway inline bypass** — rejected (D-70); revisit only if the override round-trip proves annoying in real use.
 - **Active nudges for in-flight claims** (tab-count emphasis, startup reminder toast) — rejected (D-80); expiration/urgency alerting is Phase 15's domain (HSTORE-03).
 - **Phase 13 CR-01 gap closure** — not a Phase 14 deliverable, but a pre-phase gate; 13-REVIEW.md already contains the corrected implementation + test.
@@ -443,7 +443,7 @@ showDialogModal({
 ### Pitfall D: Reveal call racing a concurrent Humble sync
 **What goes wrong:** `library.ts`'s `sync()` freely rewrites `humbleLibraryStore` entries during a sync (progressive commit per order, per the existing `D-26`/`D-34` comments). A reveal/redeem's direct cache-projection patch (Pattern 4) reads-modifies-writes the same store keyed by `gamekey`. If a sync is mid-flight and commits a fresh `classifyOrder()` result for the SAME gamekey between the reveal handler's read and its write, the reveal's patch will stomp the sync's fresher data (or vice versa) — a classic read-modify-write race, on a store this codebase already treats carefully elsewhere (the `syncFence.ts` generation-counter exists for exactly this class of problem, but currently only fences sync-vs-disconnect, not sync-vs-reveal).
 **Why it happens:** This phase introduces the first non-sync writer of `humbleLibraryStore` entries at a granularity below "recompute everything" (dedup.ts's `recomputeOwnership` also writes per-entry, but always AFTER a sync's own writes complete in sequence, never concurrently with one).
-**How to avoid:** D-79 already serializes reveals to "one in-flight at a time," which helps but does not address a reveal racing an *unrelated* concurrent Humble sync. Recommend gating: either (a) the reveal handler checks `syncInFlight`-equivalent state and defers/rejects with a "sync in progress, try again in a moment" response, or (b) the patch re-reads the entry immediately before writing (already the pattern) and this is accepted as a narrow, low-probability window not worth blocking on for v1.2 — but the plan should make an explicit choice here rather than leaving it implicit.
+**How to avoid:** D-79 already serializes reveals to "one in-flight at a time," which helps but does not address a reveal racing an *unrelated* concurrent Humble sync. Recommend gating: either (a) the reveal handler checks `syncInFlight`-equivalent state and defers/rejects with a "sync in progress, try again in a moment" response, or (b) the patch re-reads the entry immediately before writing (already the pattern) and this is accepted as a narrow, low-probability window not worth blocking on for v0.3 — but the plan should make an explicit choice here rather than leaving it implicit.
 **Warning signs:** A reveal patch is silently overwritten by a sync's `classifyOrder` commit for the same gamekey landing microseconds later (would manifest as a briefly-correct-then-reverted UI state, hard to reproduce in manual testing).
 
 ## Code Examples

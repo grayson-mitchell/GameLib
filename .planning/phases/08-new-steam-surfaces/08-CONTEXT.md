@@ -60,7 +60,7 @@ This phase does NOT add new Steam capabilities beyond exposing existing library/
 - `src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx` — launch handling; adapt for Steam fire-and-forget "Launched in Steam" + auto-dismiss
 - `src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx` — install handling; adapt for Steam `steam://install` handoff + brief notice + auto-dismiss
 
-### Steam backend (existing, v1.0 — reference only)
+### Steam backend (existing, v0.1 — reference only)
 - `src/backend/storeManagers/steam/games.ts` — `launch()` (`steam://rungameid`), install/uninstall verbs, `buildSteamProtocolUrl`, `shell.openExternal` (lines ~37, 302, 333–358)
 - `src/frontend/state/ContextProvider.tsx` / `src/frontend/types.ts` (`steam` at line 100) — `steam.library: GameInfo[]` already exposed
 
@@ -78,7 +78,7 @@ This phase does NOT add new Steam capabilities beyond exposing existing library/
 
 ### Established Patterns
 - Console `allGames` is an explicit per-store spread (`epic.library`, `gog.library`, …) — Steam must be added there deliberately; it does not flow in automatically.
-- Steam status is owned by the **ACF poller** (v1.0), not the GameLib download manager — this is why Console install/launch for Steam are handoffs, not managed operations.
+- Steam status is owned by the **ACF poller** (v0.1), not the GameLib download manager — this is why Console install/launch for Steam are handoffs, not managed operations.
 - i18n: user-facing labels use `t('key', 'Default')`; new keys (e.g. `steam-store`, install/launch notices) follow existing conventions.
 
 ### Integration Points

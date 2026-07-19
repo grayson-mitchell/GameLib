@@ -163,6 +163,6 @@
 
 ## Deferred Ideas
 
-- In-app gift-link generation via undocumented write endpoint — rejected for v1.2 (C5 risk)
+- In-app gift-link generation via undocumented write endpoint — rejected for v0.3 (C5 risk)
 - WR-01..WR-04 accept-or-remediate decision (12-REVIEW.md) — due before Phase 14; WR-02/WR-04 become more visible once Spares ships
 - "Remember last tab" preference — rejected in favor of fixed Keys-waiting default

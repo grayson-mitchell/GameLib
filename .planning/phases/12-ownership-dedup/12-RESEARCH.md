@@ -19,7 +19,7 @@ Recompute triggers (D-47) hook into two existing, well-isolated integration poin
 
 ### Locked Decisions
 
-> Numbering continues from Phase 11 (D-01..D-34) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 11 (D-01..D-34) to keep v0.3 decision IDs unambiguous.
 
 **Steam-entry annotation (HDEDUP-02 collapse)**
 - **D-35:** The Humble-origin annotation lives on the **Steam game's details page only** (no library tile badge). Copy is **origin only**: "Includes a key from Humble Bundle: {bundle/order name}" — no purchase date. Bundle name comes from the order data already cached in Phase 11.
@@ -485,7 +485,7 @@ const humbleOwnershipOverrideStore = new CacheStore<
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
 | Playnite's `HumbleKeysLibrary` imports every Humble key as a separate library entry, with no dedup against owned platforms | GameLib collapses a matched REDEEMED Steam key onto its existing Steam library entry, annotated with Humble origin | This phase (HDEDUP-02) | Materially better UX than any surveyed existing Humble integration tool — this project's own prior research (`FEATURES.md` Q2) explicitly notes this is "a genuine gap in the ecosystem," not a solved problem being re-implemented |
-| Community-norm 70% `token_set_ratio` threshold for Humble ownership fuzzy matching | 85%+ threshold with a length-sensitive (non-token-set) algorithm and an explicit DLC-keyword guard | Locked in this project's v1.2 decisions (`STATE.md`: "Fuzzy-name fallback at 85%+ threshold (not community-norm 70%)") and refined in this research (algorithm family, not just threshold) | Both the threshold AND the underlying algorithm family diverge from what most community Humble tools do — this is a deliberate, documented improvement, not an oversight |
+| Community-norm 70% `token_set_ratio` threshold for Humble ownership fuzzy matching | 85%+ threshold with a length-sensitive (non-token-set) algorithm and an explicit DLC-keyword guard | Locked in this project's v0.3 decisions (`STATE.md`: "Fuzzy-name fallback at 85%+ threshold (not community-norm 70%)") and refined in this research (algorithm family, not just threshold) | Both the threshold AND the underlying algorithm family diverge from what most community Humble tools do — this is a deliberate, documented improvement, not an oversight |
 
 **Deprecated/outdated:** N/A — this phase introduces new functionality rather than replacing an existing one.
 

@@ -14,22 +14,22 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-### v1.0 — Steam Platform (Shipped 2026-06-29)
+### v0.1 — Steam Platform (Shipped 2026-06-29)
 
 - [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GameLib (completed 2026-06-27)
 - [x] **Phase 2: Steam Library** - Steam games appear in the unified library with metadata and install state (completed 2026-06-28)
 - [x] **Phase 3: Game Operations** - Users can launch, install, and uninstall Steam games from GameLib (completed 2026-06-28)
 - [x] **Phase 4: Branding** - App is identified and distributed as GameLib, not Heroic (completed 2026-06-28)
 
-### v1.1 — Polish & Enhancements
+### v0.2 — Polish & Enhancements
 
 - [x] **Phase 5: Branding & About Polish** - GameLib presents complete, accurate identity across tray, backend logs, docs, and the release notes link (completed 2026-07-02)
 - [x] **Phase 6: Library & Game Status UX** - Library grid surfaces real playtime and install size; a "Playing" badge tracks active Steam sessions (completed 2026-07-03)
 - [x] **Phase 7: Game Details Enrichment** - Game details page shows supported platforms and, on macOS, an AppleGamingWiki compatibility rating (completed 2026-07-03, manual UAT pending)
 - [x] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode (completed 2026-07-03)
-- [ ] **Phase 9: Quality Gate** - All v1.0 and v1.1 shipped phases pass a formal Nyquist validation pass
+- [ ] **Phase 9: Quality Gate** - All v0.1 and v0.2 shipped phases pass a formal Nyquist validation pass
 
-### v1.2 — Humble Bundle Integration
+### v0.3 — Humble Bundle Integration
 
 - [x] **Phase 10: Humble Auth + Adapter Scaffold** - Users can connect a Humble Bundle account from Manage Accounts with encrypted session persistence and a validated C5 API boundary (completed 2026-07-05)
 - [x] **Phase 11: Library Sync + 5-State Key Model** - Full Humble key inventory synced, classified into the 5-state model, and reliably cached with fail-soft behavior (completed 2026-07-06)
@@ -38,20 +38,20 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Guided Claim Flow** - Users safely reveal and activate Humble Steam keys with structural protection against key waste, accidental re-reveal, and rate-limit lockout (completed 2026-07-08)
 - [x] **Phase 15: Store Overlay + Expiration Alerts** - Store surfaces show Humble ownership badges; newly-expiring keys trigger OS notifications (completed 2026-07-10; re-verified 10/10 after gap closure — 15-05 CR-01 badge reachability, 15-06 WR-01/WR-02 composite dedup + i18n, follow-up WR-01 divergence fix baac4527; see 15-VERIFICATION.md)
 
-### v1.3 — Compatibility Data
+### v0.4 — Compatibility Data
 
 - [x] **Phase 16: CrossOver Compatibility Rating (CodeWeavers)** - The extra-info Crossover rating comes from live CodeWeavers compatibility data instead of the stale AppleGamingWiki source (completed 2026-07-10)
 
-### v1.4 — Steam macOS Compatibility Runtime
+### v0.5 — Steam macOS Compatibility Runtime
 
 - [x] **Phase 17: Steam on macOS via CrossOver/Wine** - Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle, instead of native steam:// delegation (all 16 plans executed + UAT approved 2026-07-13; completion PAUSED on code-review CR-01 data-loss BLOCKER — see 17-REVIEW.md → /gsd:plan-phase 17 --gaps) (completed 2026-07-13)
 - [x] **Phase 19: CrossOver Compatibility Index (macOS)** - Every game in the library carries a CrossOver medal badge and can be filtered by it, served offline from a CI-built index of CodeWeavers' daily dump instead of a per-game live scrape (completed 2026-07-14)
 
-### v1.5 — Aggregated Store Search
+### v0.6 — Aggregated Store Search
 
 - [x] **Phase 20: Aggregated Store Search (CheapShark)** - Search a title once and see what it costs across every store, with "you already own this" badges no price-comparison site can show (completed 2026-07-15)
 
-### v1.6 — Steam Native Install
+### v0.7 — Steam Native Install
 
 - [x] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (gaps found 2026-07-16 — SNI-01 depot directory/symlink handling failed verification; hardware UAT outstanding; see 21-VERIFICATION.md); gap plan 21-17 added 2026-07-19 to close D-UAT-09 — cancelled/incomplete native install mislabeled Installed/Play; see 21-UAT.md) (completed 2026-07-16)
 
@@ -251,7 +251,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ---
 
-## v1.1 Phase Details
+## v0.2 Phase Details
 
 ### Phase 5: Branding & About Polish
 
@@ -364,18 +364,18 @@ Plans:
 
 ### Phase 9: Quality Gate
 
-**Goal**: All v1.0 and v1.1 shipped phases are formally validated and any regressions are documented
+**Goal**: All v0.1 and v0.2 shipped phases are formally validated and any regressions are documented
 **Depends on**: Phases 5, 6, 7, 8
 **Requirements**: QA-01
 **Success Criteria** (what must be TRUE):
 
-  1. A recorded Nyquist validation pass exists covering all v1.0 phases (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01)
-  2. All v1.1 requirements are spot-checked as part of the validation pass
+  1. A recorded Nyquist validation pass exists covering all v0.1 phases (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01)
+  2. All v0.2 requirements are spot-checked as part of the validation pass
   3. Any regressions discovered during the pass are documented as issues or resolved before completion
 
 **Plans**: TBD
 
-## v1.2 Phase Details
+## v0.3 Phase Details
 
 ### Phase 10: Humble Auth + Adapter Scaffold
 
@@ -534,7 +534,7 @@ Plans:
 **Wave 2** (blocked on 15-02 — reads notified-state store + notify setting): 15-03
 **UI hint**: yes
 
-## v1.3 Phase Details
+## v0.4 Phase Details
 
 ### Phase 16: CrossOver Compatibility Rating (CodeWeavers)
 
@@ -564,7 +564,7 @@ Plans:
 - [x] 16-02-PLAN.md — Wire getInfoFromCodeweavers into getWikiGameInfo (Mac+Linux gate, self-heal, cache)
 - [x] 16-03-PLAN.md — Numeric CrossOver rating row + graceful miss state + applegamingwiki decoupling + i18n
 
-## v1.4 Phase Details
+## v0.5 Phase Details
 
 ### Phase 17: Steam on macOS via CrossOver/Wine
 
@@ -759,12 +759,12 @@ Plans:
 
 **UI hint**: yes
 
-## v1.5 Phase Details
+## v0.6 Phase Details
 
 ### Phase 20: Aggregated Store Search (CheapShark)
 
 **Goal:** From a new left-sidebar entry, search a title once and see what it costs across every store — with **"you already own this on GOG/Steam/Epic/Amazon/Humble"** badges that no price-comparison website can show. Ends the "open six tabs to find the cheapest key" problem.
-**Depends on:** Phase 12 (ownership dedup — supplies the title matcher). Independent of the v1.4 macOS/CrossOver line; can run in parallel.
+**Depends on:** Phase 12 (ownership dedup — supplies the title matcher). Independent of the v0.5 macOS/CrossOver line; can run in parallel.
 **Requirements:** STORESEARCH-01 .. STORESEARCH-08 (minted during /gsd-discuss-phase 20 from locked D-01..D-14)
 **Scope** (from /gsd-explore 2026-07-12 — see `.planning/notes/aggregated-store-search-foundations.md`; **decisions locked in `20-CONTEXT.md` supersede this scope where they differ — notably D-01 on matching and D-08 on the click destination**):
 
@@ -853,13 +853,13 @@ Plans:
 
 ---
 
-## v1.6 Phase Details
+## v0.7 Phase Details
 
 ### Phase 21: Steam Native Install (depot download)
 
 **Goal:** Steam games install through an in-process depot download GameLib owns — with real progress, real error surfaces, and recovery — instead of the opaque `steam://rungameid` handoff that returns nothing. GameLib downloads depot content over `steam-user`'s authenticated CM connection, writes an `appmanifest_{appId}.acf` the Steam client **adopts**, and launch stays with `steam://` so DRM keeps working. This closes the "Steam is the only store with no install progress and invisible failures" gap.
-**Depends on:** Phase 3 (Steam game operations — install/launch entry points, `state/InstallGameModal.ts`) and Phase 1 (Steam auth — the `steam-user` CM session this reuses). Independent of the v1.4 macOS/CrossOver line and of Phase 20.
-**Requirements:** SNI-01, SNI-02, SNI-03, SNI-04, SNI-05, SNI-06, SNI-07, SNI-08 (minted 2026-07-15 from locked D-01..D-15; see `.planning/REQUIREMENTS.md` §v1.6)
+**Depends on:** Phase 3 (Steam game operations — install/launch entry points, `state/InstallGameModal.ts`) and Phase 1 (Steam auth — the `steam-user` CM session this reuses). Independent of the v0.5 macOS/CrossOver line and of Phase 20.
+**Requirements:** SNI-01, SNI-02, SNI-03, SNI-04, SNI-05, SNI-06, SNI-07, SNI-08 (minted 2026-07-15 from locked D-01..D-15; see `.planning/REQUIREMENTS.md` §v0.7)
 **De-risked by spikes 001 + 002** (`.planning/spikes/`) — both VALIDATED against a real machine:
 
   1. **`.acf` adoption works** (spike 001). Steam verified a GameLib-written manifest, flipped `StateFlags` `1026` → `4` itself, downloaded **zero bytes**, and the game launched via `steam://rungameid`. The full model — GameLib writes the manifest → Steam adopts it → Steam launches — holds end to end.
@@ -931,14 +931,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-v1.0: 1 → 2 → 3 → 4 (complete)
-v1.1: 5 → 6 → 7 → 8 → 9
-v1.2: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
-v1.3: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
-v1.4: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime) → 18 (depends on Phase 17 bottle routing + Phase 7 platform data)
+v0.1: 1 → 2 → 3 → 4 (complete)
+v0.2: 5 → 6 → 7 → 8 → 9
+v0.3: 10 → 11 → 12 → 13 → 14 → 15 (Phase 15 depends on Phase 12; can run in parallel with Phase 14)
+v0.4: 16 (depends on Phase 7 extra-info rows; feasibility validated by spike 260710-nwb)
+v0.5: 17 (depends on Phase 3 Steam ops + Phase 7 platform data; macOS-only CrossOver/Wine runtime) → 18 (depends on Phase 17 bottle routing + Phase 7 platform data)
      19 (depends on Phase 16 only — independent of 17/18, can run in parallel)
-v1.5: 20 (depends on Phase 12 ownership dedup only — independent of the v1.4 macOS/CrossOver line, can run in parallel)
-v1.6: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+002 — .acf adoption + in-process depot download both VALIDATED)
+v0.6: 20 (depends on Phase 12 ownership dedup only — independent of the v0.5 macOS/CrossOver line, can run in parallel)
+v0.7: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+002 — .acf adoption + in-process depot download both VALIDATED)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|

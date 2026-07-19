@@ -13,7 +13,7 @@ Store browsing surfaces show Humble ownership context as additive badges, and us
 <decisions>
 ## Implementation Decisions
 
-> Numbering continues from Phase 14 to keep v1.2 decision IDs unambiguous. Phase 14 closed at D-77 per its context/verification artifacts — planner should confirm the last used ID in `.planning/phases/14-guided-claim-flow/` and renumber if this range collides.
+> Numbering continues from Phase 14 to keep v0.3 decision IDs unambiguous. Phase 14 closed at D-77 per its context/verification artifacts — planner should confirm the last used ID in `.planning/phases/14-guided-claim-flow/` and renumber if this range collides.
 
 ### Badge surfaces & states (HSTORE-01)
 - **D-78:** Ownership badges appear on the **native Discounts screen only** (`src/frontend/screens/Discounts/`, `DiscountCard` components). The Steam Store WebView is untouched — no script injection into Valve's pages.

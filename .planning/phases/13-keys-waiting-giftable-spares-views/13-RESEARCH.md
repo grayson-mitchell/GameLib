@@ -62,7 +62,7 @@ timestamp in a new `CacheStore` sibling to `humbleRevealedStore`/`humbleOwnershi
 
 ### Locked Decisions
 
-> Numbering continues from Phase 12 (D-35..D-48) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 12 (D-35..D-48) to keep v0.3 decision IDs unambiguous.
 
 **Tab structure & navigation**
 - **D-49:** The Humble Keys page becomes **3 tabs: "Keys waiting" / "Giftable spares" /
@@ -162,7 +162,7 @@ timestamp in a new `CacheStore` sibling to `humbleRevealedStore`/`humbleOwnershi
 
 ### Deferred Ideas (OUT OF SCOPE)
 - **In-app gift-link generation** (if research confirms Humble requires a generate call):
-  rejected for v1.2 as a C5-risk write endpoint; the deep-link fallback covers the need.
+  rejected for v0.3 as a C5-risk write endpoint; the deep-link fallback covers the need.
   Revisit only if Humble documents the endpoint or the passive field proves unavailable
   AND deep-linking proves too weak in practice.
 
@@ -566,7 +566,7 @@ deprecate; this is greenfield within an established page.
 
 1. **Does `https://www.humblebundle.com/downloads?key={gamekey}` reliably deep-link to a
    specific order's Keys & Entitlements row (vs. the generic `/home/keys` list)?**
-   - **RESOLVED (planning):** Plans ship the safe, confirmed static `https://www.humblebundle.com/home/keys` as the only deep-link target (13-04 acceptance criteria forbid interpolating key/machineName into the URL); the per-order `?key=` variant is not used in v1.2.
+   - **RESOLVED (planning):** Plans ship the safe, confirmed static `https://www.humblebundle.com/home/keys` as the only deep-link target (13-04 acceptance criteria forbid interpolating key/machineName into the URL); the per-order `?key=` variant is not used in v0.3.
    - What we know: Two independent, non-authoritative WebSearch results reference this URL
      shape in the context of Humble order/download pages; it is architecturally plausible
      (matches the `?key=` query-param convention Humble uses elsewhere, e.g. the gift-token
@@ -576,7 +576,7 @@ deprecate; this is greenfield within an established page.
      regular browser session (it should, since gifting always requires being logged in on
      humblebundle.com regardless of GameLib's own session).
    - Recommendation: Ship the safe, confirmed `https://www.humblebundle.com/home/keys` as the
-     deep-link target for v1.2. If a later plan wants the per-order convenience link, gate it
+     deep-link target for v0.3. If a later plan wants the per-order convenience link, gate it
      behind a `checkpoint:human-verify` task (open the URL once manually with a real gamekey)
      rather than trusting it silently.
 2. **Should the sync-status header (refresh button, last-synced text, error banner) be shared

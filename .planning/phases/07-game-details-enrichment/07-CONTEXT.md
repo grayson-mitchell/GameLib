@@ -20,7 +20,7 @@ deliverables:
 implement, not WHAT to build.
 
 Out of scope: DETAIL-03 (Linux/ProtonDB compatibility overlay) is explicitly
-deferred to post-v1.1. Do not build Linux compat UI in this phase.
+deferred to post-v0.2. Do not build Linux compat UI in this phase.
 
 </domain>
 
@@ -192,7 +192,7 @@ those before modifying behavior.
 ## Deferred Ideas
 
 - **DETAIL-03 — Linux / ProtonDB compatibility overlay.** Explicitly deferred to
-  post-v1.1 (recorded in REQUIREMENTS.md and STATE.md deferred items). Not this
+  post-v0.2 (recorded in REQUIREMENTS.md and STATE.md deferred items). Not this
   phase. Note: ProtonDB data is already wired for Steam via quick task
   `260630-ud4` (steamID = appName), so a future DETAIL-03 has a data source
   ready.

@@ -102,4 +102,4 @@ These are runtime/visual behaviors — fold into the next Phase 8 re-UAT pass:
 
 ## Notes
 - CONSOLE-02 (Steam update feedback on launch) remains deferred to backlog
-  (post-v1.1) — not part of this fix.
+  (post-v0.2) — not part of this fix.

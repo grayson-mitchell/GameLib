@@ -128,7 +128,7 @@ None. Manual visual UAT (guided flow firing from game-details button, library gr
 ## Next Phase Readiness
 
 - 17-07 can drive the guided flow from all three entry points (game-details button, library grid, install modal) since none of them were touched — they all reach the new global listener via the existing backend signal.
-- 17-07 UAT should also confirm whether the open question flagged above (no `loggedIn`-confirmation IPC) needs a follow-up plan, or whether a purely advisory login prompt is sufficient for v1.4.
+- 17-07 UAT should also confirm whether the open question flagged above (no `loggedIn`-confirmation IPC) needs a follow-up plan, or whether a purely advisory login prompt is sufficient for v0.5.
 - No blockers for 17-07.
 
 ---

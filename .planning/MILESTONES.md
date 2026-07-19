@@ -1,12 +1,12 @@
 # Milestones
 
-## v1.0 Steam Platform (Shipped: 2026-06-29)
+## v0.1 Steam Platform (Shipped: 2026-06-29)
 
 **Delivered:** GameLib — a Heroic Games Launcher fork that adds Steam as a first-class platform alongside Epic, GOG, and Amazon: authenticate, browse, install, launch, and uninstall Steam games from one unified launcher.
 
 **Phases completed:** 4 phases, 16 plans, 23 tasks (+ 5 quick tasks). Timeline: 2026-06-24 → 2026-06-29 (~5 days).
 
-**Audit:** passed — 14/14 requirements satisfied, 0 blockers (`.planning/milestones/v1.0-MILESTONE-AUDIT.md`).
+**Audit:** passed — 14/14 requirements satisfied, 0 blockers (`.planning/milestones/v0.1-MILESTONE-AUDIT.md`).
 
 **Key accomplishments:**
 
@@ -22,7 +22,7 @@
 - Eliminated premature install/uninstall notifications + status badge flash (runner-scoped guards so the ACF poller solely owns Steam status).
 - Plus: QR-login hang fix, Steam icon rendering, and game-details playtime display.
 
-**Known tech debt (deferred to v1.1):** no "playing" badge during a Steam session; `'?? MB'` size in the download-manager queue; LIB-03 playtime on library tiles (currently details page only); residual backend "Heroic" log/dialog strings; formal Nyquist validation.
+**Known tech debt (deferred to v0.2):** no "playing" badge during a Steam session; `'?? MB'` size in the download-manager queue; LIB-03 playtime on library tiles (currently details page only); residual backend "Heroic" log/dialog strings; formal Nyquist validation.
 
 **Human verification:** Phase 1 UAT 5/5 pass (real Steam account); Phase 2 human QA sign-off on real data; GameLib identity human-verified.
 

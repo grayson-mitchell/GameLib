@@ -1,4 +1,4 @@
-# Technology Stack: Humble Bundle Integration (v1.2)
+# Technology Stack: Humble Bundle Integration (v0.3)
 
 **Project:** GameLib — Humble Bundle store manager
 **Researched:** 2026-07-05
@@ -163,7 +163,7 @@ revealed-but-unactivated key from an unrevealed one; only the local flag does.
 
 ### Steam Ownership Cross-Reference
 
-**No new stack needed.** The existing `SteamLibraryManager` (v1.0) already exposes the
+**No new stack needed.** The existing `SteamLibraryManager` (v0.1) already exposes the
 Steam owned-game set. The Humble adapter calls into it directly:
 
 ```typescript
@@ -200,10 +200,10 @@ can surface low-confidence dedup.
 | `humblebundle` npm (v1.0.5) | Published May 2016. No Humble Guard, no cookie jar, no TypeScript. Using it would require rewriting its entire auth layer — provides zero value over writing the adapter from scratch. | From-scratch TypeScript adapter (see above) |
 | `axios-cookiejar-support` + `tough-cookie` | Not needed. The cookie is a single string value persisted in electron-store. Setting `Cookie: _simpleauth_sess=<value>` in axios headers is sufficient. A full cookie jar is over-engineering for one cookie. | Manual `Cookie` header in axios config |
 | Any Python Humble library | Wrong runtime. Electron executes Node.js. | From-scratch TypeScript adapter |
-| `electron-dl` or any download manager | v1.2 is key-management only — no DRM-free download support. Installing a download library now would create scope creep pressure. | Out of scope (future milestone) |
+| `electron-dl` or any download manager | v0.3 is key-management only — no DRM-free download support. Installing a download library now would create scope creep pressure. | Out of scope (future milestone) |
 | `puppeteer` / `playwright` | No need to drive a browser headlessly — Electron BrowserWindow is a first-class auth surface available in-process. Puppeteer adds 300+ MB to the install size. | Electron `BrowserWindow` built-in |
 | Any native module / node-gyp dep | Hard project constraint: must stay mergeable with Heroic upstream. Native modules break on Electron rebuild. | Pure-JS approach confirmed above |
-| `steamworks.js` / `greenworks` | Rejected in v1.0 research — AppId required, game-developer SDK not a launcher SDK | Already rejected — steam-user is the correct approach |
+| `steamworks.js` / `greenworks` | Rejected in v0.1 research — AppId required, game-developer SDK not a launcher SDK | Already rejected — steam-user is the correct approach |
 
 ---
 
@@ -283,7 +283,7 @@ Fuzzy name matching needed as fallback. Flag low-confidence matches to avoid fal
 |------|------------|-------|
 | BrowserWindow auth approach | HIGH | Standard Electron pattern; solves CAPTCHA/Humble Guard by design; used by GOG/Epic in Heroic |
 | `_simpleauth_sess` cookie extraction | HIGH | Electron `session.cookies.get()` API is documented and stable |
-| Cookie persistence via safeStorage | HIGH | Same pattern used for Steam refresh token in v1.0 |
+| Cookie persistence via safeStorage | HIGH | Same pattern used for Steam refresh token in v0.1 |
 | Order list endpoint | MEDIUM | Undocumented endpoint, confirmed working in multiple community tools; known to have been blocked in Lutris (likely header-based) |
 | Order detail endpoint | MEDIUM | Same as above |
 | `X-Requested-By` header effectiveness | MEDIUM | Required per 2017 reverse-engineering; humble-cli still works; Lutris failures correlate with omitting it |
@@ -309,5 +309,5 @@ Fuzzy name matching needed as fallback. Flag low-confidence matches to avoid fal
 - [saik0/humblebundle-python issue #15](https://github.com/saik0/humblebundle-python/issues/15) — CAPTCHA requirement confirmed; no programmatic workaround
 
 ---
-*Stack research for: Humble Bundle integration (v1.2 milestone)*
+*Stack research for: Humble Bundle integration (v0.3 milestone)*
 *Researched: 2026-07-05*

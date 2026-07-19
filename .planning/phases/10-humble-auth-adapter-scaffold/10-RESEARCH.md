@@ -230,7 +230,7 @@ src/frontend/screens/Login/
 └── index.tsx                # add Humble Runner tile (modify, not new file)
 ```
 
-Note: per ARCHITECTURE.md and the locked v1.2 decision, **do not** add `library.ts`, `dedup.ts`, `keys.ts`, or the Humble frontend screens subtree yet — those belong to Phases 11–15. Phase 10 touches only auth + adapter + Manage Accounts.
+Note: per ARCHITECTURE.md and the locked v0.3 decision, **do not** add `library.ts`, `dedup.ts`, `keys.ts`, or the Humble frontend screens subtree yet — those belong to Phases 11–15. Phase 10 touches only auth + adapter + Manage Accounts.
 
 ### Pattern 1: BrowserWindow Auth with Isolated Session Partition (D-05/D-07)
 **What:** Open a dedicated `BrowserWindow` with `webPreferences.session = session.fromPartition('humble-login')`, load `https://www.humblebundle.com/login`, and detect login completion by watching for the `_simpleauth_sess` cookie to appear rather than any DOM/URL signal.
@@ -374,7 +374,7 @@ export const humbleDisconnect = makeListenerCaller('humbleDisconnect')
 | CAPTCHA / Humble Guard handling | Any app-side CAPTCHA-solving or emailed-code scraping logic | Let the user complete both inside the BrowserWindow's real web form | Both are explicitly designed to be a no-op for the app (D-05, STACK.md) — building logic here would be solving an already-solved problem badly |
 | reconnect UX state machine | A generic multi-store "auth state" abstraction shared with Epic/GOG | A `humble` context slice, following the existing per-store slice pattern (`steam`, `gog`, `epic`) | The codebase already has one context slice per store; introducing a shared abstraction now is premature generalization for a single new consumer |
 
-**Key insight:** Every piece of this phase already has a working, in-repo reference implementation from the Steam integration (v1.0) or the Epic partition-wipe pattern. The engineering risk in Phase 10 is not "how do we build this" — it's "does the live Humble API actually accept these headers from our origin," which only the D-12 validation gate can answer.
+**Key insight:** Every piece of this phase already has a working, in-repo reference implementation from the Steam integration (v0.1) or the Epic partition-wipe pattern. The engineering risk in Phase 10 is not "how do we build this" — it's "does the live Humble API actually accept these headers from our origin," which only the D-12 validation gate can answer.
 
 ## Common Pitfalls
 
@@ -450,7 +450,7 @@ export { configStore }
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|-------------------|---------------|--------|
-| Steam Web OAuth / API-key based library access (rejected for Steam itself in v1.0) | steam-session refresh token, BrowserWindow for Humble | v1.0/v1.2 research | Not directly relevant to Phase 10 but confirms this codebase's general pattern: prefer the auth mechanism the platform's real client protocol/web form supports over reverse-engineered token exchange |
+| Steam Web OAuth / API-key based library access (rejected for Steam itself in v0.1) | steam-session refresh token, BrowserWindow for Humble | v0.1/v0.3 research | Not directly relevant to Phase 10 but confirms this codebase's general pattern: prefer the auth mechanism the platform's real client protocol/web form supports over reverse-engineered token exchange |
 | Community tools treating 401/403 identically | Distinguish session-expiry (401) from access-denial (403) with different recovery paths | Established as a hard requirement by D-08 and PITFALLS.md Pitfall 3, informed by the 3 Lutris incidents | Wrong handling here means a user whose account is fine gets told to re-login (401 UX) when the real problem is Humble blocking the app (403), or vice versa — the retry/backoff strategy differs |
 
 **Deprecated/outdated:**
@@ -562,7 +562,7 @@ export { configStore }
 ## Sources
 
 ### Primary (HIGH confidence)
-- `.planning/research/SUMMARY.md`, `.planning/research/ARCHITECTURE.md`, `.planning/research/STACK.md`, `.planning/research/PITFALLS.md`, `.planning/research/HUMBLE-SPEC-SOURCE.md` — in-repo v1.2 research basis, read in full for this phase
+- `.planning/research/SUMMARY.md`, `.planning/research/ARCHITECTURE.md`, `.planning/research/STACK.md`, `.planning/research/PITFALLS.md`, `.planning/research/HUMBLE-SPEC-SOURCE.md` — in-repo v0.3 research basis, read in full for this phase
 - `src/backend/storeManagers/steam/user.ts`, `src/backend/storeManagers/steam/electronStores.ts` — read directly; safeStorage/TOKEN_PREFIX/store-layout patterns
 - `src/backend/storeManagers/steam/__tests__/user.test.ts` — read directly; jest mock-boundary structure for the equivalent Humble tests
 - `src/backend/storeManagers/legendary/user.ts` — read directly; `session.fromPartition` + `clearStorageData/clearCache/clearAuthCache/clearHostResolverCache/clearData` wipe pattern, direct precedent for D-07/D-11

@@ -1,10 +1,10 @@
-# Feature Research: Humble Bundle Key Management (v1.2)
+# Feature Research: Humble Bundle Key Management (v0.3)
 
 **Domain:** Third-party key management integration in a multi-store game launcher
 **Researched:** 2026-07-05
 **Confidence:** HIGH (ecosystem well-studied; multiple community tool implementations examined)
 
-> This file replaces the v1.0 Steam Store Manager FEATURES.md. The v1.0 Steam feature
+> This file replaces the v0.1 Steam Store Manager FEATURES.md. The v0.1 Steam feature
 > analysis is preserved in the Phase 1–5 planning artifacts. This document covers
 > Humble Bundle key management only.
 
@@ -53,7 +53,7 @@ API (`tpkd_dict.all_tpks[n].steam_app_id`). This means for Steam-type keys, AppI
 matching is both available and authoritative. The matching hierarchy used in practice:
 
 1. **AppID primary** — check `steam_app_id` field in Humble key against `getOwnedApps()`
-   (already fetched by the existing Steam integration from v1.0). This is exact, no ambiguity.
+   (already fetched by the existing Steam integration from v0.1). This is exact, no ambiguity.
 2. **Fuzzy name fallback** — used when `steam_app_id` is absent (can happen with older
    bundles). Community norm: fuzzywuzzy `token_set_ratio` / `token_sort_ratio` at ~70%
    similarity threshold.
@@ -233,7 +233,7 @@ F2 — Claim-status classification
 
 F3 — Ownership-aware dedup
   └── requires: F1 (Humble library data, including steam_app_id field)
-  └── requires: existing Steam library (getOwnedApps() from v1.0 Steam integration)
+  └── requires: existing Steam library (getOwnedApps() from v0.1 Steam integration)
   └── blocks: F4 (owned_elsewhere filter), F6 (owned_elsewhere + UNREVEALED), F7 (owned badge)
 
 F4 — "Keys waiting" view
@@ -266,7 +266,7 @@ F9 — Non-Steam key handling
 
 ### Key Dependency Notes
 
-- **F3 depends on v1.0 Steam integration**: The `owned_elsewhere` flag uses `getOwnedApps()`
+- **F3 depends on v0.1 Steam integration**: The `owned_elsewhere` flag uses `getOwnedApps()`
   from the existing Steam store manager. If the Steam account is not connected, `owned_elsewhere`
   falls back to name-match-only or degrades gracefully to `false` (keys appear as unowned).
 - **F5 cannot auto-confirm REDEEMED**: Steam provides no callback. The "mark as redeemed"
@@ -355,5 +355,5 @@ F9 — Non-Steam key handling
 
 ---
 
-*Feature research for: Humble Bundle key management integration (GameLib v1.2)*
+*Feature research for: Humble Bundle key management integration (GameLib v0.3)*
 *Researched: 2026-07-05*

@@ -2,7 +2,7 @@
 
 **Domain:** Undocumented-API key management in an Electron + React + TypeScript launcher
 **Researched:** 2026-07-05
-**Milestone:** v1.2 Humble Bundle Integration
+**Milestone:** v0.3 Humble Bundle Integration
 **Confidence:** HIGH for Steam rate-limit mechanics and Electron secrets exposure; MEDIUM for Humble API fragility patterns (observed across community tools but not officially documented); MEDIUM for ToS risk assessment (no official Humble policy statement)
 
 ---
@@ -422,5 +422,5 @@ When pitfalls occur despite prevention.
 - [Electron Security — IPC and contextBridge patterns](https://www.electronjs.org/docs/latest/tutorial/security) — `contextIsolation`, renderer access controls, DevTools in production
 
 ---
-*Pitfalls research for: Humble Bundle key management integration in GameLib (v1.2)*
+*Pitfalls research for: Humble Bundle key management integration in GameLib (v0.3)*
 *Researched: 2026-07-05*

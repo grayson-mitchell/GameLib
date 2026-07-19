@@ -283,7 +283,7 @@ if (is.native) {
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|---------------|--------|
-| Windows-only Steam games on macOS: `steam://install`/`steam://rungameid` handed to the **native** Mac Steam client, which has no Windows depot to install/run | Same protocol verbs, but handed to a **bottled Windows** Steam client via Wine/CrossOver, which does have the Windows depot | This phase (v1.4) | Previously-broken/no-op install path becomes functional; `isNative()` becomes per-OS instead of a blanket `true` |
+| Windows-only Steam games on macOS: `steam://install`/`steam://rungameid` handed to the **native** Mac Steam client, which has no Windows depot to install/run | Same protocol verbs, but handed to a **bottled Windows** Steam client via Wine/CrossOver, which does have the Windows depot | This phase (v0.5) | Previously-broken/no-op install path becomes functional; `isNative()` becomes per-OS instead of a blanket `true` |
 | `hostInstallPlatform()` always reports the host OS as the installed platform | Must report `'Windows'` for bottle-installed games regardless of host OS | To be implemented this phase | Frontend `installPlatform` derivation and the D-08 bottle-indicator gate depend on this being correct |
 
 **Deprecated/outdated:** None — this is additive; the native `steam://` path is explicitly preserved unchanged for Mac-native games, Windows, and Linux (Proton) per the CONTEXT.md scope boundary.

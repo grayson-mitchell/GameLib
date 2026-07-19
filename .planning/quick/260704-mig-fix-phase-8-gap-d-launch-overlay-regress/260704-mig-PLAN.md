@@ -48,5 +48,5 @@ From the Phase 8 gap-closure re-UAT (`08-HUMAN-UAT.md`):
 - **Done:** Greyed placeholder shows the GameLib icon above the text in greyscale.
 
 ## Out of scope
-- CONSOLE-02 (Steam update feedback) — deferred to backlog (post-v1.1), not a
+- CONSOLE-02 (Steam update feedback) — deferred to backlog (post-v0.2), not a
   Phase 8 gap.

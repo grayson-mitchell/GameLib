@@ -1,6 +1,6 @@
 # GameLib — Living Retrospective
 
-## Milestone: v1.0 — Steam Platform
+## Milestone: v0.1 — Steam Platform
 
 **Shipped:** 2026-06-29
 **Phases:** 4 | **Plans:** 16 (+5 quick tasks)
@@ -25,7 +25,7 @@ Steam as a first-class platform in a Heroic fork: QR + credential/SteamGuard aut
 
 ### Patterns Established
 
-- **steam-session lifecycle is subtle:** QR, credential, and DeviceConfirmation flows all poll and can self-cancel; any flow that returns control to the UI mid-login MUST attach `authenticated`/`error`/`timeout` listeners for the session's whole lifetime (the QR flow did this; the credential flow didn't — that was the v1.0 bug).
+- **steam-session lifecycle is subtle:** QR, credential, and DeviceConfirmation flows all poll and can self-cancel; any flow that returns control to the UI mid-login MUST attach `authenticated`/`error`/`timeout` listeners for the session's whole lifetime (the QR flow did this; the credential flow didn't — that was the v0.1 bug).
 - **`steam://` is fire-and-forget:** never derive completion status from the protocol call; an ACF `StateFlags` poller is the source of truth.
 - **Guard shared cross-store code (DownloadManager) with `runner === 'steam'`** rather than forking it — keeps Epic/GOG/Amazon byte-for-byte unchanged and stays upstream-mergeable.
 
@@ -45,4 +45,4 @@ Steam as a first-class platform in a Heroic fork: QR + credential/SteamGuard aut
 
 | Milestone | Phases | Plans | Audit | Notable |
 |-----------|--------|-------|-------|---------|
-| v1.0 Steam Platform | 4 | 16 (+5 quick) | passed | 4-pass SteamGuard debug; instrument-first lesson |
+| v0.1 Steam Platform | 4 | 16 (+5 quick) | passed | 4-pass SteamGuard debug; instrument-first lesson |

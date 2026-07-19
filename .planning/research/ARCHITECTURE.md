@@ -387,5 +387,5 @@ Humble orders can be large (thousands of items from years of bundles). Progress 
 
 ---
 
-*Architecture research for: Humble Bundle integration in GameLib (v1.2 milestone)*
+*Architecture research for: Humble Bundle integration in GameLib (v0.3 milestone)*
 *Researched: 2026-07-05*

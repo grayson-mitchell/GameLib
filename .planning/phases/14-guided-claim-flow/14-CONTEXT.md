@@ -16,7 +16,7 @@ deep-link + "Mark as redeemed" confirmation (HCLAIM-03), a write-ahead local aud
 Delivers HCLAIM-01..05. This phase introduces the **first write-style Humble API call**
 in the codebase (the reveal request) — it goes through `adapter.ts` like everything else
 (C5). No store overlay, no expiration alerts/OS notifications (Phase 15). Humble remains
-a keys domain, NOT a Runner (locked v1.2 decision).
+a keys domain, NOT a Runner (locked v0.3 decision).
 
 **Pre-phase gates:** (1) Phase 13 is `gaps_found` — CR-01 (urgency-badge 24–48h date
 math) must close before Phase 14 ships on top of it; the fix is small and already
@@ -28,7 +28,7 @@ before this phase is RESOLVED here as D-71.
 <decisions>
 ## Implementation Decisions
 
-> Numbering continues from Phase 13 (D-49..D-64) to keep v1.2 decision IDs unambiguous.
+> Numbering continues from Phase 13 (D-49..D-64) to keep v0.3 decision IDs unambiguous.
 
 ### Claim flow shape
 - **D-65:** The flow runs in a **modal wizard**: a "Claim" button on the key row opens a
@@ -273,7 +273,7 @@ before this phase is RESOLVED here as D-71.
 <deferred>
 ## Deferred Ideas
 
-- **Full audit-log viewer surface** (chronological activity list) — rejected for v1.2
+- **Full audit-log viewer surface** (chronological activity list) — rejected for v0.3
   (D-75 keeps annotations only); revisit if users ask for a claim history.
 - **Fuzzy claim-anyway inline bypass** — rejected (D-70); revisit only if the override
   round-trip proves annoying in real use.

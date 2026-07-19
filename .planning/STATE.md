@@ -1,17 +1,19 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: — Steam macOS Compatibility Runtime
-status: ready_to_plan
-stopped_at: Phase 21 complete (17/17) — ready to discuss Phase 22
-last_updated: 2026-07-19T21:29:58.745Z
-last_activity: 2026-07-19
+milestone: v0.7
+milestone_name: — Steam Native Install
+status: in_progress
+stopped_at: Native-install arc (21-25) — Phase 23 partial (3/5 plans summarized), gated on Gate 1 hardware UAT; Phases 22 & 24 planned but unexecuted
+last_updated: 2026-07-20T00:00:00.000Z
+last_activity: 2026-07-20
 progress:
+  # Milestone v0.7 (Steam Native Install) = phases 21-25
   total_phases: 5
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 116
-  percent: 20
+  completed_phases: 2
+  total_plans: 43
+  completed_plans: 23
+  percent: 53
+  # Whole-project plan totals (matches progress.bar): 116/136 = 85%
 ---
 
 # Project State
@@ -21,24 +23,46 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 22 — multiple steam bottles
+**Current focus:** Phase 23 — Steam full-ownership install (StateFlags=4): finish plans 23-04/23-05 + clear Gate 1 hardware UAT
+
+> **Version renumber (2026-07-20):** the whole project was renumbered from the
+> inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
+> v1.N → v0.(N+1)). Milestones are now: **v0.1** Steam Platform · **v0.2** Polish ·
+> **v0.3** Humble · **v0.4** Compatibility Data · **v0.5** macOS Compat Runtime (17–19,
+> done) · **v0.6** Store Search · **v0.7** Steam Native Install (21–25, current).
+> The earlier v0.5-vs-v0.7 taxonomy split is resolved: macOS-compat = v0.5 (complete),
+> native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
 
-Phase: 22
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-07-19
+Phase: 23 (Steam full-ownership install, StateFlags=4)
+Plan: 3 of 5 summarized; 23-04/23-05 code landed via debug commits (cc77a9df/ddde970d/7fccfb2a/f963de8b), summaries not written
+Status: In progress — blocked on Gate 1 real-hardware UAT (see Blockers)
+Last activity: 2026-07-20
 
-## v1.4 Phase Map
+Other open native-install phases:
+- **Phase 22** (Steam Game Families / multiple bottles) — 8 plans written, 0 executed
+- **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — 10 plans written, 0 executed
+
+## Native-Install Arc Phase Map (21–25)
+
+| Phase | Name | Plans | Summaries | Status |
+|-------|------|-------|-----------|--------|
+| 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
+| 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | 📋 Planned, not executed |
+| 23 | Steam full-ownership install (StateFlags=4) | 5 | 3 | 🔄 In progress — 23-04/23-05 landed via debug commits; Gate 1 multi-depot StateFlags=4 PASS on real macOS (b7ebf7e2); remaining gate = 23-UAT.md Gate 1 pause/resume re-run (blocking-human) before Gates 2/3 |
+| 24 | macOS native Steam bridge (steam_api proxy) | 10 | 0 | 📋 Planned, not executed — feasibility PROVEN (spikes 004+005); needs resourcing |
+| 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
+
+## Earlier macOS-Compat Phase Map (17–19)
 
 | Phase | Name | Status |
 |-------|------|--------|
 | 17 | Steam on macOS via CrossOver/Wine | Complete & secured (2026-07-13) — 17 plans, UAT 7/7, VERIFICATION 6/6, code-review CR-01/WR resolved (17-17), SECURITY threats_open:0 (21/21) |
 | 18 | macOS 32-bit detection, badge & CrossOver routing | Complete (UAT 5/5, secured) |
-| 19 | CrossOver Compatibility Index (macOS) | Planned (2026-07-14) — 8 plans across 4 waves, reqs CXIDX-01..13, PATTERNS + threat models; plan-checker PASS after closing 2 blockers (D-02 gate enforcement, D-16 key-absence). Ready to execute |
+| 19 | CrossOver Compatibility Index (macOS) | Complete (2026-07-14) — 8/8 plans executed, index Action live on public fork; WR-05 live check still open |
 
-## v1.1 Phase Map
+## v0.2 Phase Map
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -48,7 +72,7 @@ Last activity: 2026-07-19
 | 8 | New Steam Surfaces | STORE-01, CONSOLE-01 | Not started |
 | 9 | Quality Gate | QA-01 | Not started |
 
-## v1.2 Phase Map
+## v0.3 Phase Map
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -61,13 +85,13 @@ Last activity: 2026-07-19
 
 ## Performance Metrics
 
-**Velocity (v1.0):**
+**Velocity (v0.1):**
 
 - Total plans completed: 116 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
-**By Phase (v1.0):**
+**By Phase (v0.1):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
@@ -90,7 +114,7 @@ Last activity: 2026-07-19
 | 20 | 7 | - | - |
 | 21 | 17 | - | - |
 
-**v1.0 Detail Log:**
+**v0.1 Detail Log:**
 
 | Phase 01 P03 | 8min | 3 tasks | 8 files |
 | Phase 02-steam-library P01 | 4min | 3 tasks | 5 files |
@@ -99,12 +123,12 @@ Last activity: 2026-07-19
 | Phase 02-steam-library P04 | 2min | 2 tasks | 4 files |
 | Phase 02-steam-library P05 | 5min | 3 tasks | 9 files |
 
-**v1.1 Trend:**
+**v0.2 Trend:**
 
 - Plans completed: 1
 - Trend: —
 
-**v1.1 Detail Log:**
+**v0.2 Detail Log:**
 
 | Phase 07 P01 | — | 4 tasks | 21 files (3 new components) |
 
@@ -154,13 +178,13 @@ Last activity: 2026-07-19
 ### Roadmap Evolution
 
 - Phase 08.1 inserted after Phase 8: Steam Delisted Games & Library Filters — delisted availability signal, 'Game no longer available' + install-disable, only-show filter modes (from Phase 8 UAT) (URGENT)
-- v1.2 roadmap created 2026-07-05: Phases 10–15, 18 requirements mapped. Dependency chain is non-negotiable (auth → sync → dedup → views → claim flow → store overlay). Phase 10 carries highest validation risk (live API confirmation of axios + cookie + X-Requested-By header reaching api/v1/user/order).
-- Phase 16 added 2026-07-10 under new milestone **v1.3 — Compatibility Data**: CrossOver Compatibility Rating (CodeWeavers) — replace the extra-info Crossover rating's stale AppleGamingWiki source (from quick 260710-l27) with a live CodeWeavers slug-lookup backend. Feasibility validated by spike 260710-nwb (66.7% naive / ~83.3% with slugify fixes). Locked constraints: content-based hit/miss detection (soft-404 = HTTP 200), apostrophe-drop + roman-numeral slugify fixes, on-demand reference-style lookups (no bulk crawl). Depends on Phase 7 extra-info rows.
-- Phase 17 added 2026-07-10 under new milestone **v1.4 — Steam macOS Compatibility Runtime**: Steam on macOS via CrossOver/Wine — Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle instead of native `steam://` delegation. **Locked architecture:** run Windows Steam *in a bottle* (reuse WineSelector/CrossoverBottle plumbing); do NOT wine-run individual game exes (rejected — DRM-free only). Reverses Phase 3 GAME-04 **for macOS only**: `SteamGame.isNative()` becomes per-OS (`is_mac_native`), and the `state/InstallGameModal.ts:35` short-circuit must stop firing `steam://install` for non-mac-native games on macOS. Linux keeps Proton delegation unchanged. Depends on Phase 3 + Phase 7. Requirements/success criteria TBD in discuss/plan.
+- v0.3 roadmap created 2026-07-05: Phases 10–15, 18 requirements mapped. Dependency chain is non-negotiable (auth → sync → dedup → views → claim flow → store overlay). Phase 10 carries highest validation risk (live API confirmation of axios + cookie + X-Requested-By header reaching api/v1/user/order).
+- Phase 16 added 2026-07-10 under new milestone **v0.4 — Compatibility Data**: CrossOver Compatibility Rating (CodeWeavers) — replace the extra-info Crossover rating's stale AppleGamingWiki source (from quick 260710-l27) with a live CodeWeavers slug-lookup backend. Feasibility validated by spike 260710-nwb (66.7% naive / ~83.3% with slugify fixes). Locked constraints: content-based hit/miss detection (soft-404 = HTTP 200), apostrophe-drop + roman-numeral slugify fixes, on-demand reference-style lookups (no bulk crawl). Depends on Phase 7 extra-info rows.
+- Phase 17 added 2026-07-10 under new milestone **v0.5 — Steam macOS Compatibility Runtime**: Steam on macOS via CrossOver/Wine — Windows-only Steam games (no native Mac build) install and launch on macOS through the Windows Steam client running inside a GameLib-managed CrossOver/Wine bottle instead of native `steam://` delegation. **Locked architecture:** run Windows Steam *in a bottle* (reuse WineSelector/CrossoverBottle plumbing); do NOT wine-run individual game exes (rejected — DRM-free only). Reverses Phase 3 GAME-04 **for macOS only**: `SteamGame.isNative()` becomes per-OS (`is_mac_native`), and the `state/InstallGameModal.ts:35` short-circuit must stop firing `steam://install` for non-mac-native games on macOS. Linux keeps Proton delegation unchanged. Depends on Phase 3 + Phase 7. Requirements/success criteria TBD in discuss/plan.
 
-- Phase 18 added 2026-07-12 (v1.4) from /gsd-explore: **macOS 32-bit detection, badge & CrossOver routing** — detect a Steam game's mac build arch and route 32-bit-only mac games to CrossOver/Wine (32-bit dropped in Catalina/2019) with an OS/arch badge beside the game logo. **Locked approach:** hybrid detection — `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`; match `"macos"` + legacy `"osx"`) as pre-install hint, plus post-install Mach-O check (`lipo -archs`). Missing `osarch` is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flag trap). Routes via existing `isBottleEligible()`/D-11. Steam-only V1. Pre-work: runtime `getProductInfo` dump to lock parser. See `.planning/notes/steam-mac-arch-detection-decisions.md`, todo `steam-getproductinfo-appinfo-dump.md`. Depends on Phase 17 + Phase 7.
+- Phase 18 added 2026-07-12 (v0.5) from /gsd-explore: **macOS 32-bit detection, badge & CrossOver routing** — detect a Steam game's mac build arch and route 32-bit-only mac games to CrossOver/Wine (32-bit dropped in Catalina/2019) with an OS/arch badge beside the game logo. **Locked approach:** hybrid detection — `osarch` via `steam-user` `getProductInfo` PICS appinfo (`config.launch[N].config.osarch`; match `"macos"` + legacy `"osx"`) as pre-install hint, plus post-install Mach-O check (`lipo -archs`). Missing `osarch` is NOT assumed 32-bit (avoids Steam's documented false-32-bit-flag trap). Routes via existing `isBottleEligible()`/D-11. Steam-only V1. Pre-work: runtime `getProductInfo` dump to lock parser. See `.planning/notes/steam-mac-arch-detection-decisions.md`, todo `steam-getproductinfo-appinfo-dump.md`. Depends on Phase 17 + Phase 7.
 
-- Phase 21 added 2026-07-14 under new milestone **v1.6 — Steam Native Install** (from /gsd-explore + spikes 001/002): replace the opaque `steam://rungameid` install handoff with an **in-process depot download GameLib owns** — real progress, real errors, recovery. GameLib downloads depots over `steam-user`'s authenticated CM connection and writes an `appmanifest_{appId}.acf` the Steam client **adopts**; launch stays with `steam://` (DRM works); **Steam owns updates, GameLib owns only the first install** (D-2). **Fully de-risked against a real machine:** spike 001 — Steam adopts a hand-written `.acf` (`StateFlags 1026`→`4`, zero-byte install, game launches); spike 002 — 171/171 files downloaded in-process, byte-identical to Steam, **pure-JS LZMA sufficient (no native module)** → C# DepotDownloader wrapper rejected. Locked: `StateFlags=1026` not `4`; depot selection = package-level ownership (two channels + DLC-app enumeration + language filter, 11/11 verified); reimplement `steam-user`'s broken `getManifest` filenames + chunk download (~100 lines); 64-bit IDs are strings (never `@node-steam/vdf.parse`); retry chunks across content servers. Pre-work: audit `@node-steam/vdf` call sites; confirm launch on a hard-DRM title. See `.planning/spikes/MANIFEST.md`, `.planning/notes/steam-depot-install-architecture.md`. Depends on Phase 3 + Phase 1.
+- Phase 21 added 2026-07-14 under new milestone **v0.7 — Steam Native Install** (from /gsd-explore + spikes 001/002): replace the opaque `steam://rungameid` install handoff with an **in-process depot download GameLib owns** — real progress, real errors, recovery. GameLib downloads depots over `steam-user`'s authenticated CM connection and writes an `appmanifest_{appId}.acf` the Steam client **adopts**; launch stays with `steam://` (DRM works); **Steam owns updates, GameLib owns only the first install** (D-2). **Fully de-risked against a real machine:** spike 001 — Steam adopts a hand-written `.acf` (`StateFlags 1026`→`4`, zero-byte install, game launches); spike 002 — 171/171 files downloaded in-process, byte-identical to Steam, **pure-JS LZMA sufficient (no native module)** → C# DepotDownloader wrapper rejected. Locked: `StateFlags=1026` not `4`; depot selection = package-level ownership (two channels + DLC-app enumeration + language filter, 11/11 verified); reimplement `steam-user`'s broken `getManifest` filenames + chunk download (~100 lines); 64-bit IDs are strings (never `@node-steam/vdf.parse`); retry chunks across content servers. Pre-work: audit `@node-steam/vdf` call sites; confirm launch on a hard-DRM title. See `.planning/spikes/MANIFEST.md`, `.planning/notes/steam-depot-install-architecture.md`. Depends on Phase 3 + Phase 1.
 
 - Phase 25 added 2026-07-19 (from resolved debug `steam-install-slow-start`, Thread C): **Steam depot download multi-host fan-out (throughput)** — raise native-depot throughput toward Steam-client parity by fanning chunk attempt-0 across the ~6 healthy CDN hosts `getContentServers` already returns, instead of `pickHost` confining all ~32 workers to the single top-scored host (rotates only on failure; with decode now clean/`err=0`, nothing fails → one host, `avgMs~360`, ~1.5–2.9 MiB/s). Acceptance = before/after hardware throughput measurement (`grep "chunk-stream stats" ~/Library/Logs/gamelib/gamelib.log`, expect sustained `hosts>1`). Must not regress decode, host-health scoring, stall retry, or cancel/abort. Optional bundled cleanup: excise the dormant CDN-auth phantom machinery. Code: `pickHost`/host-health in `depot.ts`/`decompress.ts`/`hostHealth`. Context in memory `steam-install-slow-start-outcome`.
 
@@ -180,18 +204,18 @@ Recent decisions affecting current work:
 - [Phase ?]: pendingFetches.add() before await in fetchMetadataIfNeeded (T-2-03 dedup)
 - [Phase 02-04]: Gate makeLibrary steam inclusion on steam?.username (not library length) for correct D-02 first-sync empty state
 - [Phase 02-04]: steamLogin uses refreshLibrary({ runInBackground: true, library: 'steam' }) per D-01; blocking handleSuccessfulLogin removed
-- [v1.1 DETAIL-02]: AppleGamingWiki integration is macOS-only and Mac-games-only; ProtonDB/Linux follow-up is DETAIL-03, explicitly deferred to post-v1.1
-- [v1.1 STORE-01]: Steam storefront tab is browse-only; purchasing stays in Steam's own client/web flow
+- [v0.2 DETAIL-02]: AppleGamingWiki integration is macOS-only and Mac-games-only; ProtonDB/Linux follow-up is DETAIL-03, explicitly deferred to post-v0.2
+- [v0.2 STORE-01]: Steam storefront tab is browse-only; purchasing stays in Steam's own client/web flow
 - [Phase 07 DETAIL-01]: Steam `fetchMetadataIfNeeded` now captures appdetails `platforms` → `is_mac_native`/`is_linux_native`; flags persisted in `SteamMetadataCacheEntry` and re-seeded on `refresh()` so they survive resync/restart. Windows is the implicit baseline (no flag)
 - [Phase 07 DETAIL-01]: platform icons are runner-agnostic (FontAwesome brand glyphs), rendered in the Install-info TabPanel
 - [Phase 07 DETAIL-02]: rating-source setting (`appleRatingSource`: crossover|wine, default crossover) uses the `configStore` + `ContextProvider` pattern — NOT `useSetting`/`SettingsContext`, which isn't populated outside the Settings tree where GamePage/AppleWikiInfo render. Toggle lives in the Accessibility screen, gated to macOS
 - [Phase 07 DETAIL-02]: ~~overlay gate is `platform==='darwin' && gameInfo.is_mac_native` (D-13)~~ **SUPERSEDED by Phase 7 UAT (2026-07-04):** the AppleGamingWiki CrossOver/Wine rating measures how a WINDOWS game runs on macOS via a translation layer — Mac-native games need no such rating. Gate is now `platform==='darwin' && !gameInfo.is_mac_native` (show on Windows games on macOS). Overlay still always shows an "Unrated" pill when no rating (D-12, user-confirmed); `GamePicture`'s generic `overlay` prop unchanged
 - [Phase 07 tier→color]: rating tiers mapped to `_colors.scss` `--status-*` tokens (Perfect/Playable→success, Runs/Borderline→warning, Unplayable→danger, empty→default); vocabulary is free-form upstream so unknown values fall back to neutral
-- [v1.2 Humble auth]: BrowserWindow + session.cookies is the only viable auth path — Humble's /processlogin requires reCAPTCHA; programmatic login is impossible. Zero new npm packages required.
-- [v1.2 Humble adapter]: C5 adapter isolation is non-negotiable — all Humble HTTP calls through adapter.ts; X-Requested-By: hb_android_app header required on every request (omitting this is the likely cause of all three Lutris integration failures)
-- [v1.2 claim flow]: Primary activation URL is store.steampowered.com/account/registerkey?key= NOT steam://open/activateproduct (does not pre-fill key; unreliable on Linux Flatpak/Snap)
-- [v1.2 dedup threshold]: Fuzzy-name fallback at 85%+ threshold (not community-norm 70%) — DLC titles false-positive match base games at lower thresholds and false positives waste gift links
-- [v1.2 Humble not a Runner]: 'humble' is NOT added to the Runner union type — keys domain is not a game platform; no LibraryManager methods required
+- [v0.3 Humble auth]: BrowserWindow + session.cookies is the only viable auth path — Humble's /processlogin requires reCAPTCHA; programmatic login is impossible. Zero new npm packages required.
+- [v0.3 Humble adapter]: C5 adapter isolation is non-negotiable — all Humble HTTP calls through adapter.ts; X-Requested-By: hb_android_app header required on every request (omitting this is the likely cause of all three Lutris integration failures)
+- [v0.3 claim flow]: Primary activation URL is store.steampowered.com/account/registerkey?key= NOT steam://open/activateproduct (does not pre-fill key; unreliable on Linux Flatpak/Snap)
+- [v0.3 dedup threshold]: Fuzzy-name fallback at 85%+ threshold (not community-norm 70%) — DLC titles false-positive match base games at lower thresholds and false positives waste gift links
+- [v0.3 Humble not a Runner]: 'humble' is NOT added to the Runner union type — keys domain is not a game platform; no LibraryManager methods required
 - [Phase 10]: D-13 revised confirmed correct in practice: Humble identity endpoint (/api/v1/user/info) hard-404s on the real account tested; had identity remained a hard gate criterion, Phase 10 would never have passed
 - [Phase 10]: D-14 ses.fetch() fallback on persist:humble prepared but not activated — axios reached the live Humble API successfully on first clean run after schema fix; fallback seam stays dormant
 - [Phase 10]: Frontend connected-state must be gated on an explicit isLoggedIn boolean, never on optional profile fields like username — root cause of the Task 2 UAT tile-never-flips bug (e2236bc1)
@@ -280,7 +304,7 @@ Recent decisions affecting current work:
 | 260628-pi7 | Show Steam last-played + total time on game details page (rtime_last_played) | 2026-06-28 | [260628-pi7-show-steam-last-played-on-game-details-p](.planning/quick/260628-pi7-show-steam-last-played-on-game-details-p/) |
 | 260629-9ly | Fix QR-login → Steam-library race: assign QR background CM connect to connectingPromise (dedupe), gate frontend finalization on truthy poll.username | 2026-06-29 | [260629-9ly-fix-qr-login-library-race](.planning/quick/260629-9ly-fix-qr-login-library-race/) |
 | 260629-rbn | Fix premature Steam install/uninstall notifications + status:done badge flash (GAME-02/03): runner==='steam' guards suppress premature DM/uninstaller emissions so the ACF poller solely owns Steam status + fires confirmed completion toasts | 2026-06-29 | [260629-rbn-fix-premature-steam-install-uninstall-no](.planning/quick/260629-rbn-fix-premature-steam-install-uninstall-no/) |
-| 260630-ths | Decouple fork versioning from upstream Heroic: package.json version→1.0.0 + upstream base field (2.22.0 @ b5b5cad3), rename v1.0 tag→gamelib-v1.0, add UPSTREAM.md | 2026-06-30 | [260630-ths-decouple-fork-versioning-from-upstream-h](.planning/quick/260630-ths-decouple-fork-versioning-from-upstream-h/) |
+| 260630-ths | Decouple fork versioning from upstream Heroic: package.json version→1.0.0 + upstream base field (2.22.0 @ b5b5cad3), rename v0.1 tag→gamelib-v0.1, add UPSTREAM.md | 2026-06-30 | [260630-ths-decouple-fork-versioning-from-upstream-h](.planning/quick/260630-ths-decouple-fork-versioning-from-upstream-h/) |
 | 260630-ud4 | Wire Steam AppID directly into ProtonDB lookup: use app_name as steamID when runner==='steam', skipping the wiki round-trip (backend + submenu + compat row) | 2026-06-30 | [260630-ud4-wire-steam-appid-directly-into-protondb-](.planning/quick/260630-ud4-wire-steam-appid-directly-into-protondb-/) |
 | 260630-uod | Fix pre-push lint crash: ignore **/*.cjs in eslint flat config so Node CJS scripts aren't typed-linted (exposed 93 pre-existing Steam-code lint errors) | 2026-06-30 | [260630-uod-fix-pre-push-lint-failure-ignore-cjs-in-](.planning/quick/260630-uod-fix-pre-push-lint-failure-ignore-cjs-in-/) |
 | 260630-uxp | Clear 93 lint errors in Steam store-manager code (gfs named imports, no-unused-vars ^_ convention, Function→callback type, unnecessary assertions) — pnpm lint/codecheck exit 0, 128 tests pass | 2026-06-30 | [260630-uxp-fix-93-pre-existing-lint-errors-in-steam](.planning/quick/260630-uxp-fix-93-pre-existing-lint-errors-in-steam/) |
@@ -314,17 +338,17 @@ Recent decisions affecting current work:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Game Details | DETAIL-03: Linux ProtonDB compat overlay | Post-v1.1 | v1.1 requirements |
-| Settings | API-01: Copy-to-clipboard on API key field | Post-v1.1 | v1.1 requirements |
-| Console / Steam | CONSOLE-02: Steam update feedback in Console launch — when a Steam game needs an update, GameLib shows "Launched in Steam" and dismisses while Steam silently updates; user has no in-app signal. Needs own design (Steam does not report update state back). From Phase 8 UAT (finding E). | Post-v1.1 | Phase 8 UAT (2026-07-04) |
+| Game Details | DETAIL-03: Linux ProtonDB compat overlay | Post-v0.2 | v0.2 requirements |
+| Settings | API-01: Copy-to-clipboard on API key field | Post-v0.2 | v0.2 requirements |
+| Console / Steam | CONSOLE-02: Steam update feedback in Console launch — when a Steam game needs an update, GameLib shows "Launched in Steam" and dismisses while Steam silently updates; user has no in-app signal. Needs own design (Steam does not report update state back). From Phase 8 UAT (finding E). | Post-v0.2 | Phase 8 UAT (2026-07-04) |
 | Console / macOS | KNOWN LIMITATION — Launching a Steam game from Console mode on macOS shows a brief desktop-Space animation before the game appears. Cause: Console mode uses native fullscreen (its own macOS Space) so swipe-to-Space works; macOS must leave that Space when the game's window appears elsewhere. Not fixable from Electron without setSimpleFullScreen, which removes the swipe-able Space and has focus/chrome rough edges (prototyped + rejected in Phase 8 UAT test 11). `activate:false` on the steam:// handoff was tried and kept but does not remove the flash. Accepted as-is. | Accepted (won't fix) | Phase 8 UAT (2026-07-04) |
-| Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v1.2 | v1.2 requirements (separate data source; key management prioritized) |
+| Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v0.3 | v0.3 requirements (separate data source; key management prioritized) |
 
 ## Session Continuity
 
-Last session: 2026-07-19T10:38:59.997Z
-Stopped at: Completed 21-17-PLAN.md
-Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v1.6 completion.
+Last session: 2026-07-20
+Stopped at: Phase 21 closed (21-17); Phase 25 complete + HW-verified (2026-07-19); Phase 23 in progress (3/5 summarized, Gate 1 pause/resume re-run outstanding) on branch fix/steam-native-install-stability
+Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |

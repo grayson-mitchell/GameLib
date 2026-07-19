@@ -34,7 +34,7 @@ in" warning.
 ## Notes
 
 - Pre-existing bug, not Phase 17 scope; surfaced during the 17-07 UAT.
-- Steam store remains browse-only (no login gate), consistent with the v1.1
+- Steam store remains browse-only (no login gate), consistent with the v0.2
   STORE-01 decision.
 - Runtime re-check pending in the running dev app.
 

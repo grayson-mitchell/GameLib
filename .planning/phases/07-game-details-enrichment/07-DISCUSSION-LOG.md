@@ -134,4 +134,4 @@
 
 ## Deferred Ideas
 
-- DETAIL-03 — Linux/ProtonDB compatibility overlay. Deferred to post-v1.1. ProtonDB data already wired for Steam (quick task 260630-ud4).
+- DETAIL-03 — Linux/ProtonDB compatibility overlay. Deferred to post-v0.2. ProtonDB data already wired for Steam (quick task 260630-ud4).
