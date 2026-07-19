@@ -12,8 +12,24 @@ function createAbortController(id: string): AbortController {
 function callAbortController(id: string) {
   if (abortControllers.has(id)) {
     const abortController = abortControllers.get(id)!
-    if (abortController && !abortController.signal.aborted) {
-      return abortController.abort()
+    if (abortController) {
+      // debug/steam-cancel-abort-thread-a: a controller that was FOUND but is
+      // already aborted is an idempotent no-op, not a failure — a caller can
+      // legitimately call this twice for the same id in the same cancel
+      // (e.g. downloadqueue.ts's stopCurrentDownload() calls
+      // callAbortController(appName) directly, then also calls
+      // SteamGame.stop(), which calls callAbortController(this.appId) again
+      // for the identical id). Previously this fell through to the
+      // "Could not find a matching abort controller" error log below even
+      // though the controller WAS found — a misleading false alarm on every
+      // double-abort, observed on real hardware as an [ERROR][Backend] log
+      // during an otherwise-successful cancel. Only a GENUINE lookup miss
+      // (id never registered, or already deleteAbortController'd) should
+      // reach the error log now.
+      if (!abortController.signal.aborted) {
+        abortController.abort()
+      }
+      return
     }
   }
 
@@ -27,7 +43,24 @@ function callAbortController(id: string) {
 }
 
 function callAllAbortControllers() {
-  for (const key in abortControllers.keys()) {
+  // debug/steam-install-slow-start (Thread D-1/D-2 investigation): this used to
+  // be `for (const key in abortControllers.keys())` — `for...in` enumerates
+  // enumerable STRING-KEYED PROPERTIES of an object, not the values a Map
+  // iterator yields, and a `MapIterator` has no enumerable own properties. This
+  // loop body NEVER ran — `callAllAbortControllers()` was a complete no-op.
+  // Only reachable from `handleExit()` (backend/utils.ts, the app-quit
+  // handler), so every in-flight download's AbortController was left
+  // un-aborted on quit: `abortController.signal.aborted` stayed `false`, so
+  // `callRunner` (launcher.ts)'s `.catch` handler classified an
+  // externally-`killPattern`/`pkill`-terminated child process as a genuine
+  // `res.error` instead of `res.abort` — a real, if narrow, quit-time status
+  // misclassification for every runner (GOG/Legendary/Nile) that goes through
+  // `runRunnerCommand`/`callRunner`, independent of the D-1 destroyed-window fix.
+  // Iterate a snapshot of the keys (an array), not the live Map iterator, so
+  // `callAbortController`'s own `abortControllers.delete` calls (via
+  // `deleteAbortController`, invoked from `callRunner`'s `.finally`) can't
+  // invalidate iteration.
+  for (const key of Array.from(abortControllers.keys())) {
     callAbortController(key)
   }
 }

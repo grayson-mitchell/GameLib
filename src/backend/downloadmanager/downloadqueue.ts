@@ -89,10 +89,50 @@ function addToFinished(element: DMQueueElement, status: DMStatus) {
 #### Public ####
 */
 
-async function initQueue() {
+/**
+ * @param isStartup debug/steam-install-slow-start (Thread B): true ONLY for
+ *   the single call main.ts makes 5s after app launch. A persisted Steam
+ *   queue head must never be auto-started by that unattended call — Steam
+ *   native (and off-path) installs are surfaced as resumable instead,
+ *   mirroring the Steam startup gate's own "surfacing as resumable, NOT
+ *   auto-resuming" contract (library.ts's scanDownloadingAppIds loop), which
+ *   covers installs Steam itself drives but has no effect on GameLib's own
+ *   DownloadManager queue restart-auto-start. GOG/Epic/Amazon keep their
+ *   existing, intended auto-resume-on-launch behavior — this flag only ever
+ *   changes behavior for `runner === 'steam'`. Every OTHER caller (the
+ *   Resume button's resumeCurrentDownload, a fresh addToQueue while idle,
+ *   the online-reconnect auto-resume) leaves this at its default `false`,
+ *   so an explicit user/app action always processes a deferred Steam item
+ *   normally.
+ */
+async function initQueue(isStartup = false) {
   let element = getFirstQueueElement()
 
   while (element) {
+    if (isStartup && element.params.runner === 'steam') {
+      // Defer without mutating the persisted queue entry. Re-point
+      // currentElement at it (it may currently reference an earlier,
+      // already-completed item processed by THIS same startup call) so
+      // pause/cancel/resume controls target the right element; queueState
+      // is normalized to 'idle' below, which the frontend already renders
+      // identically to 'paused' (isPaused = ['idle','paused'].includes) —
+      // i.e. a "Resume download" affordance, not an active download.
+      currentElement = element
+      logInfo(
+        [
+          element.params.appName,
+          'is a persisted Steam queue head — surfacing as resumable, NOT auto-resuming on launch (debug/steam-install-slow-start Thread B)'
+        ],
+        LogPrefix.DownloadManager
+      )
+      sendFrontendMessage(
+        'changedDMQueueInformation',
+        downloadManager.get('queue', []),
+        queueState
+      )
+      break
+    }
+
     const queuedElements = downloadManager.get('queue', [])
     element.startTime = Date.now()
     queuedElements[0] = element
@@ -215,7 +255,24 @@ async function addToQueue(element: DMQueueElement) {
   }
 }
 
-function removeFromQueue(appName: string) {
+/**
+ * @param forceStatusUpdate debug/steam-cancel-abort-thread-a: when true,
+ *   sends the 'done' status update UNCONDITIONALLY, even for a Steam
+ *   `runner` — bypassing the "ACF poller emits the real done" suppression
+ *   below. Only ever passed `true` by cancelCurrentDownload (below), which
+ *   is BY DEFINITION always a deliberate user cancel: a native Steam install
+ *   that gets cancelled never starts an ACF poller at all (games.ts's
+ *   runNativeDepotDownload returns `{status: 'abort'}` before reaching its
+ *   startInstallPolling call), so nothing else would ever clear this game's
+ *   "installing"/"downloading" badge — the user-reported Thread A symptom.
+ *   This clears it IMMEDIATELY, synchronously with the cancel click, instead
+ *   of waiting for the in-flight install() promise to actually unwind
+ *   (bounded now by the fetchChunk signal-threading fix, but still not
+ *   instant). Defaults to false, preserving the exact previous behavior for
+ *   every other call site (natural completion via initQueue, where the
+ *   poller genuinely will fire for a successful Steam install).
+ */
+function removeFromQueue(appName: string, forceStatusUpdate = false) {
   if (appName && downloadManager.has('queue')) {
     const elements = downloadManager.get('queue', [])
     const index = elements.findIndex(
@@ -224,7 +281,8 @@ function removeFromQueue(appName: string) {
     // Capture runner BEFORE splice so the steam guard below can reference it.
     // splice/delete/set and changedDMQueueInformation MUST remain unconditional
     // so the queue always clears (cancel path included) — GAME-02.
-    const removedRunner = index !== -1 ? elements[index]?.params.runner : undefined
+    const removedRunner =
+      index !== -1 ? elements[index]?.params.runner : undefined
     if (index !== -1) {
       elements.splice(index, 1)
       downloadManager.delete('queue')
@@ -232,7 +290,7 @@ function removeFromQueue(appName: string) {
     }
 
     // Steam: ACF poller emits the real done — suppress it here to prevent badge flash.
-    if (removedRunner !== 'steam') {
+    if (removedRunner !== 'steam' || forceStatusUpdate) {
       sendGameStatusUpdate({
         appName,
         status: 'done'
@@ -260,13 +318,18 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
     if (Array.isArray(currentElement.params.installDlcs)) {
       const dlcsToRemove = currentElement.params.installDlcs
       for (const dlc of dlcsToRemove) {
-        removeFromQueue(dlc)
+        removeFromQueue(dlc, true)
       }
     }
     if (isRunning()) {
       stopCurrentDownload()
     }
-    removeFromQueue(currentElement.params.appName)
+    // debug/steam-cancel-abort-thread-a: forceStatusUpdate=true — this call
+    // is BY DEFINITION a deliberate user cancel (see removeFromQueue's doc
+    // comment), so the "installing"/"downloading" badge must clear now,
+    // not depend on an ACF poller that a cancelled native install never
+    // starts.
+    removeFromQueue(currentElement.params.appName, true)
 
     if (removeDownloaded) {
       const { appName, runner } = currentElement.params

@@ -52,7 +52,9 @@ jest.mock('backend/logger', () => ({
 }))
 
 const gameStopMock = jest.fn().mockResolvedValue(undefined)
-const gameGetGameInfoMock = jest.fn().mockReturnValue({ folder_name: undefined })
+const gameGetGameInfoMock = jest
+  .fn()
+  .mockReturnValue({ folder_name: undefined })
 
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
@@ -159,9 +161,8 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     // Fresh import — this is the exact module-load moment the fix's
     // currentElement seed matters for. initQueue() is NEVER called here,
     // mirroring the pre-5s-timer window on a real app restart.
-    const { cancelCurrentDownload, getQueueInformation } = await import(
-      '../downloadqueue'
-    )
+    const { cancelCurrentDownload, getQueueInformation } =
+      await import('../downloadqueue')
 
     expect(getQueueInformation().elements).toHaveLength(1)
 
@@ -177,9 +178,8 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     __store.queue = [makeQueueElement('1091500')]
     __store.finished = []
 
-    const { pauseCurrentDownload, getQueueInformation } = await import(
-      '../downloadqueue'
-    )
+    const { pauseCurrentDownload, getQueueInformation } =
+      await import('../downloadqueue')
 
     pauseCurrentDownload()
 
@@ -197,7 +197,9 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     const { cancelCurrentDownload, pauseCurrentDownload, getQueueInformation } =
       await import('../downloadqueue')
 
-    expect(() => cancelCurrentDownload({ removeDownloaded: false })).not.toThrow()
+    expect(() =>
+      cancelCurrentDownload({ removeDownloaded: false })
+    ).not.toThrow()
     expect(() => pauseCurrentDownload()).not.toThrow()
     expect(getQueueInformation().elements).toHaveLength(0)
   })
@@ -206,12 +208,277 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     __store.queue = [makeQueueElement('1295660'), makeQueueElement('1091500')]
     __store.finished = []
 
-    const { removeFromQueue, getQueueInformation } = await import('../downloadqueue')
+    const { removeFromQueue, getQueueInformation } =
+      await import('../downloadqueue')
 
     removeFromQueue('1091500')
 
     const remaining = getQueueInformation().elements
     expect(remaining).toHaveLength(1)
     expect(remaining[0].params.appName).toBe('1295660')
+  })
+})
+
+/**
+ * debug/steam-install-slow-start (Thread B): regression coverage for
+ * "an interrupted native Steam install auto-resumes on next launch" — expected
+ * behavior is manual-resume-only.
+ *
+ * Root cause: main.ts calls `initQueue()` unconditionally 5s after every app
+ * launch. initQueue()'s while loop immediately calls installQueueElement()/
+ * updateQueueElement() on whatever survived at the persisted queue head —
+ * i.e. it silently restarts a mid-download item, regardless of runner. This
+ * is a SEPARATE mechanism from the Steam startup gate in library.ts (which
+ * only surfaces a passive `steamResumePending` UI flag from an ACF scan) —
+ * fixing the gate alone does not stop this auto-start.
+ *
+ * Fix: initQueue(isStartup) — when isStartup is true (the ONLY call main.ts
+ * makes) and the queue head's runner is 'steam', the loop defers instead of
+ * starting it: no installQueueElement call, queueState stays 'idle' (which
+ * the frontend already renders as a "Resume download" affordance identical
+ * to 'paused' — DownloadManagerItem.tsx's `isPaused = ['idle','paused']
+ * .includes(state)`), currentElement is (re)pointed at the deferred item so
+ * pause/cancel/resume controls keep working. GOG/Epic/Amazon are unaffected
+ * — isStartup only ever changes behavior for `runner === 'steam'`, and every
+ * other initQueue() call site (resumeCurrentDownload, addToQueue's
+ * isIdle() kick, the online-reconnect auto-resume) leaves isStartup at its
+ * default `false`.
+ */
+describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-resume on launch for Steam', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+    // jest.clearAllMocks() also clears the mockReturnValue set at file-load
+    // time (unlike mockClear() called in isolation) — processNotification
+    // (only reachable via this describe block's real initQueue() calls,
+    // unlike the other describe blocks here) needs a defined getGameInfo()
+    // result to destructure `title` from.
+    gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
+  })
+
+  it('initQueue(true) (the app-startup call) does NOT call installQueueElement for a persisted Steam queue head', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { installQueueElement } = await import('../utils')
+    const { initQueue, getQueueInformation } = await import('../downloadqueue')
+
+    await initQueue(true)
+
+    expect(installQueueElement).not.toHaveBeenCalled()
+    // Deferred, not removed — still there for the user to explicitly resume.
+    expect(getQueueInformation().elements).toHaveLength(1)
+    expect(getQueueInformation().elements[0].params.appName).toBe('1091500')
+  })
+
+  it('initQueue(true) leaves queueState idle/paused for a deferred Steam item — frontend renders this identically to "Resume download"', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { initQueue, getQueueInformation } = await import('../downloadqueue')
+
+    await initQueue(true)
+
+    expect(['idle', 'paused']).toContain(getQueueInformation().state)
+  })
+
+  it('a deferred Steam item is still cancelable after initQueue(true) — currentElement correctly points at it, not a stale earlier item', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { initQueue, cancelCurrentDownload, getQueueInformation } =
+      await import('../downloadqueue')
+
+    await initQueue(true)
+    cancelCurrentDownload({ removeDownloaded: false })
+
+    expect(getQueueInformation().elements).toHaveLength(0)
+  })
+
+  it('initQueue(true) DOES auto-start a persisted GOG queue head — no regression for GOG/Epic/Amazon', async () => {
+    const gogElement = makeQueueElement('gog-game')
+    gogElement.params.runner = 'gog'
+    __store.queue = [gogElement]
+    __store.finished = []
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const { initQueue } = await import('../downloadqueue')
+
+    await initQueue(true)
+
+    expect(installQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: 'gog-game', runner: 'gog' })
+    )
+  })
+
+  it('a Steam item deferred by initQueue(true) IS processed by a subsequent explicit resumeCurrentDownload() (isStartup defaults to false)', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const { initQueue, resumeCurrentDownload } =
+      await import('../downloadqueue')
+
+    await initQueue(true)
+    expect(installQueueElement).not.toHaveBeenCalled()
+
+    resumeCurrentDownload()
+    // resumeCurrentDownload fires initQueue() fire-and-forget (void) — flush
+    // the microtask queue so its internal awaits resolve before asserting.
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(installQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091500' })
+    )
+  })
+
+  it('a fresh addToQueue while idle (isIdle() kick) uses isStartup=false — an explicit user action is never blocked by a deferred Steam head', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const { initQueue, addToQueue } = await import('../downloadqueue')
+    await initQueue(true)
+    expect(installQueueElement).not.toHaveBeenCalled()
+
+    // Re-adding the SAME appName+runner already at the queue head hits
+    // addToQueue's elementIndex>=0 "update" branch (avoids the unrelated
+    // getGameInfo/getInstallInfo lookup the "new element" branch performs,
+    // which this file's libraryManagerMap mock does not stub) while still
+    // exercising the isIdle() kick this test targets.
+    await addToQueue(makeQueueElement('1091500'))
+    await new Promise((resolve) => setImmediate(resolve))
+
+    // The isIdle() kick inside addToQueue calls initQueue() with the default
+    // isStartup=false, so it processes the queue head (still the deferred
+    // Steam item, FIFO) normally rather than re-deferring it.
+    expect(installQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091500' })
+    )
+  })
+})
+
+/**
+ * debug/steam-cancel-abort-thread-a: regression coverage for the "cancels a
+ * native Steam download... but the game stays showing 'downloading'" symptom.
+ *
+ * Root cause (one of three, this one in downloadqueue.ts): removeFromQueue's
+ * "Steam: ACF poller emits the real done — suppress it here" guard assumed a
+ * poller would ALWAYS eventually clear the badge for a Steam runner — true
+ * for a successful native install (a poller starts right before
+ * runNativeDepotDownload returns), but FALSE for a cancelled one (games.ts's
+ * runNativeDepotDownload returns `{status: 'abort'}` on a cancelled outcome
+ * BEFORE it ever reaches the startInstallPolling call). With no poller ever
+ * started, nothing else clears the "installing"/"downloading" badge for a
+ * cancelled Steam native install.
+ *
+ * The fix: removeFromQueue takes an optional `forceStatusUpdate` parameter;
+ * cancelCurrentDownload (BY DEFINITION always a deliberate user cancel)
+ * passes `true`, bypassing the steam-suppression guard. initQueue's own
+ * natural-completion removeFromQueue call (line 116, untouched) keeps the
+ * default `false` — still deferring to the poller for a successful install.
+ */
+describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Steam native install badge clearing', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+  })
+
+  it('cancelCurrentDownload for a STEAM runner clears the badge (sendGameStatusUpdate status:"done") even though no ACF poller ever started', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    // debug/steam-cancel-abort-thread-a: sendGameStatusUpdate must be
+    // re-imported from the SAME fresh module registry as downloadqueue.ts
+    // after jest.resetModules() — a static top-level import would bind to a
+    // stale mock instance from before the reset and never observe this
+    // test's calls.
+    const { sendGameStatusUpdate } = await import('../../utils')
+    const { cancelCurrentDownload } = await import('../downloadqueue')
+
+    cancelCurrentDownload({ removeDownloaded: false })
+
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091500', status: 'done' })
+    )
+  })
+
+  it('the DLC sub-removal loop inside cancelCurrentDownload ALSO force-clears the badge for each Steam DLC appName actually present in the queue', async () => {
+    const head = makeQueueElement('1091500')
+    head.params.installDlcs = ['1091501', '1091502']
+    // Both DLC sub-items must actually be present as their OWN steam-runner
+    // queue entries for removedRunner === 'steam' to be genuinely exercised
+    // (a not-found removal already sends the update regardless of
+    // forceStatusUpdate, which would not prove this fix).
+    __store.queue = [
+      head,
+      makeQueueElement('1091501'),
+      makeQueueElement('1091502')
+    ]
+    __store.finished = []
+
+    const { sendGameStatusUpdate } = await import('../../utils')
+    const { cancelCurrentDownload } = await import('../downloadqueue')
+
+    cancelCurrentDownload({ removeDownloaded: false })
+
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091501', status: 'done' })
+    )
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091502', status: 'done' })
+    )
+  })
+
+  it('regression guard: removeFromQueue WITHOUT forceStatusUpdate (the natural-completion call site, initQueue) still suppresses the badge clear for a Steam runner — unchanged, still defers to the ACF poller', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { sendGameStatusUpdate } = await import('../../utils')
+    const { removeFromQueue } = await import('../downloadqueue')
+
+    // Calling with the default (no second argument) mirrors initQueue's own
+    // call site (element.params.appName) — must NOT force-clear the badge.
+    removeFromQueue('1091500')
+
+    expect(sendGameStatusUpdate).not.toHaveBeenCalled()
+  })
+
+  it('removeFromQueue with forceStatusUpdate=true clears the badge for a Steam runner on demand', async () => {
+    __store.queue = [makeQueueElement('1091500')]
+    __store.finished = []
+
+    const { sendGameStatusUpdate } = await import('../../utils')
+    const { removeFromQueue } = await import('../downloadqueue')
+
+    removeFromQueue('1091500', true)
+
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '1091500', status: 'done' })
+    )
+  })
+
+  it('a non-Steam runner is unaffected by forceStatusUpdate — always cleared regardless (no behavior change for GOG/Epic/Amazon)', async () => {
+    const gogElement = makeQueueElement('gog-game')
+    gogElement.params.runner = 'gog'
+    __store.queue = [gogElement]
+    __store.finished = []
+
+    const { sendGameStatusUpdate } = await import('../../utils')
+    const { removeFromQueue } = await import('../downloadqueue')
+
+    removeFromQueue('gog-game') // forceStatusUpdate omitted -- non-steam already always clears
+
+    expect(sendGameStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: 'gog-game', status: 'done' })
+    )
   })
 })

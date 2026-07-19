@@ -87,6 +87,15 @@ async function installQueueElement(params: InstallParams): Promise<{
   }
 
   let deferredToSetup = false
+  // debug/steam-cancel-abort-thread-a: a cancelled native Steam install ALSO
+  // never starts an ACF poller — runNativeDepotDownload (games.ts) returns
+  // `{status: 'abort'}` on a cancelled outcome BEFORE reaching its
+  // startInstallPolling call, which only runs on a successful outcome. If
+  // nothing else clears the transient 'installing' badge for this case (the
+  // same class of gap Phase 17's deferredToSetup exception below already
+  // fixed for bottle guided-setup deferrals), the game is stuck showing
+  // "downloading"/"installing" forever — the user-reported Thread A symptom.
+  let wasAborted = false
   try {
     downloadFixesFor(appName, runner)
 
@@ -104,6 +113,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     const { status, error } = installResult
 
     deferredToSetup = installResult.deferredToSetup ?? false
+    wasAborted = status === 'abort'
 
     if (status === 'error') {
       errorMessage(error ?? '')
@@ -120,7 +130,10 @@ async function installQueueElement(params: InstallParams): Promise<{
     // EXCEPTION (Phase 17): a bottle guided-setup deferral installed nothing and
     // started no poller, so nothing else will clear the transient 'installing'
     // badge — clear it here so the game doesn't appear stuck "installing".
-    if (runner !== 'steam' || deferredToSetup) {
+    //
+    // EXCEPTION (debug/steam-cancel-abort-thread-a): a cancelled native
+    // install also started no poller — see wasAborted's doc comment above.
+    if (runner !== 'steam' || deferredToSetup || wasAborted) {
       sendGameStatusUpdate({
         appName,
         runner,

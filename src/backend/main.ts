@@ -535,7 +535,10 @@ addOneTimeListener('frontendReady', () => {
 
   if (isSnap) {
     const snapWarning: Electron.MessageBoxOptions = {
-      title: i18next.t('box.warning.snap.title', 'GameLib is running as a Snap'),
+      title: i18next.t(
+        'box.warning.snap.title',
+        'GameLib is running as a Snap'
+      ),
       message: i18next.t('box.warning.snap.message', {
         defaultValue:
           'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}GameLib will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since GameLib cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install GameLib as a Flatpak, DEB or from the AppImage.',
@@ -569,7 +572,11 @@ addOneTimeListener('frontendReady', () => {
 
   setTimeout(() => {
     logInfo('Starting the Download Queue', LogPrefix.Backend)
-    initQueue()
+    // debug/steam-install-slow-start (Thread B): isStartup=true — the only
+    // call site that must NOT auto-start a persisted Steam queue head (see
+    // initQueue's doc comment in downloadqueue.ts). GOG/Epic/Amazon keep
+    // auto-resuming here unchanged.
+    initQueue(true)
   }, 5000)
 })
 
@@ -912,16 +919,16 @@ addHandler('getZoomUserInfo', async () => ZoomUser.getUserDetails())
 addHandler('steamStartQR', async () => SteamUser.startQRLogin())
 addHandler('steamPollQR', async () => SteamUser.pollQRLogin())
 addHandler('steamPollCredential', async () => SteamUser.pollCredentialLogin())
-addHandler(
-  'steamStartCredentials',
-  async (event, { username, password }) =>
-    SteamUser.startCredentialLogin(username, password)
+addHandler('steamStartCredentials', async (event, { username, password }) =>
+  SteamUser.startCredentialLogin(username, password)
 )
 addHandler('steamSubmitGuard', async (event, code) =>
   SteamUser.submitSteamGuardCode(code)
 )
 addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
-addHandler('checkSteamInstalled', async () => SteamUser.isSteamClientInstalled())
+addHandler('checkSteamInstalled', async () =>
+  SteamUser.isSteamClientInstalled()
+)
 addHandler('getSteamSyncedAt', () => steamSyncStore.get('syncedAt') ?? null)
 addHandler('getSteamInstallSize', async (event, appId) =>
   getSteamInstallSize(appId)
@@ -942,9 +949,7 @@ addListener('logoutSteam', () => SteamUser.logout())
 // loginusers.vdf/sentry, so there is no login state to surface here.
 // steamBottleStatus therefore reports only `provisioned` + `bottleName`
 // (WR-02, 17-17: the always-false `loggedIn` signal was removed).
-addHandler('steamBottleProvision', async (event, args) =>
-  provisionBottle(args)
-)
+addHandler('steamBottleProvision', async (event, args) => provisionBottle(args))
 addHandler('isSteamBottleProvisioned', async () => isBottleProvisioned())
 addHandler('steamBottleStatus', async () => ({
   provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
