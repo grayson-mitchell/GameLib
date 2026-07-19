@@ -124,6 +124,20 @@ export const WEIGHTEDLOAD_PRIOR_DIVISOR = 50
  *  INITIAL preference, never overrides sustained observed unreliability. */
 export const PRIOR_HALFLIFE_SAMPLES = MIN_SAMPLES_FOR_UNHEALTHY
 
+/** Debug/steam-install-slow-start (Thread C, Phase 25): caps how many of the
+ *  top-scored healthy hosts attempt-0 fans concurrent chunk workers across.
+ *  Root cause this fixes: the composite-score sort (above) discards seed
+ *  rotation once scores differentiate -- every attempt-0 call converges on
+ *  `ordered[0]`, so all concurrent workers hammer the single top-scored host
+ *  even when several hosts are genuinely healthy (cycle-5's diagnosis showed
+ *  6 hosts in the pool, only 1 ever attempted at attempt-0). Kept small (3)
+ *  so fan-out stays confined to the genuinely-good hosts -- mirrors cycle-5's
+ *  local-vs-CDN-fallback weightedload gap, where only the low-weightedload
+ *  local edges should absorb the bulk of first-attempt load; a merely-
+ *  healthy-but-mediocre host still only receives fan-out share, never a
+ *  disproportionate one. */
+export const TOP_N_FANOUT = 3
+
 /** Converts a directory `weightedload` value into a 0..1 PRIOR score, higher
  *  is better (mirrors the empirical `score` scale below so the two blend
  *  meaningfully). Exported for direct unit testing of the calibration. */
@@ -263,8 +277,19 @@ export class HostHealthTracker {
    * directory-preferred (local, low-weightedload) hosts. Either way,
    * deprioritization into the unhealthy bucket only emerges as real attempt
    * history accumulates against specific hosts, independent of any prior.
+   *
+   * Debug/steam-install-slow-start (Thread C, Phase 25): `workerSlot` is an
+   * optional per-worker index (0-based, e.g. a chunk-pool worker's own slot
+   * within its `Array.from({ length: workerCount }, ...)` pool) used ONLY on
+   * `attemptIndex === 0`, to fan concurrent workers' FIRST attempt across the
+   * top `TOP_N_FANOUT` healthy hosts instead of every worker converging on
+   * `ordered[0]`. Every attempt beyond 0 (failure-driven retry/rotation) and
+   * the circuit breaker above are completely untouched by this parameter --
+   * omitting it (every pre-Phase-25 caller/test) defaults it to 0, which,
+   * combined with `healthy[0 % N] === healthy[0] === ordered[0]`, reproduces
+   * the exact pre-Phase-25 selection byte-for-byte.
    */
-  pickHost(hosts: string[], seed: number, attemptIndex: number): string {
+  pickHost(hosts: string[], seed: number, attemptIndex: number, workerSlot = 0): string {
     if (!hosts.length) {
       throw new Error('HostHealthTracker.pickHost: empty hosts list')
     }
@@ -287,6 +312,17 @@ export class HostHealthTracker {
     // back of the queue -- so a transient CDN-wide outage (every host
     // temporarily unhealthy) still has a candidate list to retry against.
     const ordered = [...healthy, ...unhealthy]
+
+    // Phase 25 fan-out: ONLY on the first attempt, and only when there are
+    // genuinely more than one healthy host to spread across, distribute
+    // workers by their slot index over the top-N healthy hosts. Every other
+    // case (attemptIndex > 0, or N <= 1, e.g. 0-1 healthy hosts) falls
+    // through to the pre-Phase-25 ordered[attemptIndex % ordered.length]
+    // selection, unchanged.
+    const N = Math.min(TOP_N_FANOUT, healthy.length)
+    if (attemptIndex === 0 && N > 1) {
+      return healthy[workerSlot % N]
+    }
     return ordered[attemptIndex % ordered.length]
   }
 
