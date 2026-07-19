@@ -221,6 +221,26 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
       return { status: 'error' }
     }
+
+    // debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch gap):
+    // checkWineBeforeLaunch's self-heal above persists any corrected
+    // wineVersion via GameConfig.get(gameInfo.app_name).setSetting(...) — a
+    // store a Steam bottle-eligible game's actual dispatch never reads
+    // (dispatchToBottledSteam re-derives gameSettings fresh from
+    // getSteamBottleSettings(), which is backed by steamBottleConfigStore,
+    // not GameConfig). Without this, a self-heal here is a silent no-op for
+    // the bottle and every subsequent install/launch/uninstall dispatch keeps
+    // using the same broken wine. Mirrors provisionBottle()'s own
+    // re-persist-after-checkWineBeforeLaunch step for its synthetic-appName
+    // validation call. Steam's isNative() is false ONLY for a bottle-eligible
+    // game, so this block is unreachable for native Steam games (Linux/
+    // Windows) and for every other runner.
+    if (runner === 'steam') {
+      const { persistBottleWineVersion } = await import(
+        'backend/storeManagers/steam/bottle'
+      )
+      persistBottleWineVersion(gameSettings.wineVersion)
+    }
   }
 
   await runBeforeLaunchScript(gameInfo, gameSettings, logWriter)

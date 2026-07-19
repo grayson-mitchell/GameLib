@@ -278,6 +278,26 @@ export function getSteamBottleSettings(): GameSettings {
   }
 }
 
+/**
+ * debug/steam-bottle-game-no-launch (Pitfall 6, real-game-launch case):
+ * checkWineBeforeLaunch's self-heal persists a corrected wineVersion via
+ * `GameConfig.get(gameInfo.app_name).setSetting('wineVersion', ...)` — a
+ * store getSteamBottleSettings() never reads. provisionBottle() (step 6
+ * above) already works around this for its OWN synthetic-appName validation
+ * call by re-persisting the result into steamBottleConfigStore itself; the
+ * same gap exists at the REAL per-game launch checkpoint
+ * (launcher.ts's launchEventCallback), which checkWineBeforeLaunch's
+ * generic appName-keyed self-heal can never reach. Exported so launcher.ts
+ * can call this immediately after a successful checkWineBeforeLaunch for a
+ * Steam bottle-eligible game, mirroring provisionBottle's own pattern —
+ * without this, a self-healed wine correction is silently dropped and every
+ * subsequent dispatchToBottledSteam() call (install/launch/uninstall) keeps
+ * reading the SAME broken wineVersion via getSteamBottleSettings().
+ */
+export function persistBottleWineVersion(wineVersion: WineInstallation): void {
+  steamBottleConfigStore.set('wineVersion', wineVersion)
+}
+
 // GAP 5: bottled-Steam installer process names to raise to the front. The
 // guided provisioning installer is `SteamSetup.exe`; a per-game bottled install
 // surfaces the bottled Windows Steam client `steam.exe`. Deliberately NOT the

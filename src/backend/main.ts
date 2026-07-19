@@ -40,6 +40,7 @@ import { NileUser } from './storeManagers/nile/user'
 import { ZoomUser } from './storeManagers/zoom/user'
 import { SteamUser } from './storeManagers/steam/user'
 import { stopRunningPoll } from './storeManagers/steam/library'
+import { library as steamLibrary } from './storeManagers/steam/state'
 import {
   steamBottleConfigStore,
   steamSyncStore
@@ -990,10 +991,24 @@ addHandler('readConfig', async (event, configClass) => {
 })
 
 addHandler('requestAppSettings', () => GlobalConfig.get().getSettings())
-addHandler(
-  'requestGameSettings',
-  async (_e, appName) => await GameConfig.get(appName).getSettings()
-)
+addHandler('requestGameSettings', async (_e, appName) => {
+  // debug/steam-bottle-game-no-launch: a bottle-eligible Steam game's real
+  // settings live behind SteamGame.getSettings() -> getSteamBottleSettings()
+  // (a DEDICATED store, never GameConfig). Calling GameConfig.get(appName)
+  // directly here bypassed that routing entirely — the frontend GamePage
+  // detail (InstalledInfo.tsx) surfaced the generic per-appId GameConfig's
+  // wine (defaulting to the global engine, e.g. Game Porting Toolkit on
+  // macOS) instead of the CrossOver bottle. requestGameSettings has no
+  // `runner` parameter (IPC signature is appName-only), so detect a Steam
+  // game via the in-memory Steam library Map (steam/state.ts) and route
+  // through the SAME runner-aware path every other correct call site already
+  // uses (e.g. launcher.ts's `game.getSettings()`); every other runner keeps
+  // the prior GameConfig.get(appName).getSettings() behavior unchanged.
+  if (steamLibrary.has(appName)) {
+    return libraryManagerMap['steam'].getGame(appName).getSettings()
+  }
+  return GameConfig.get(appName).getSettings()
+})
 
 addHandler('toggleDXVK', async (event, { appName, action }) =>
   GameConfig.get(appName)
