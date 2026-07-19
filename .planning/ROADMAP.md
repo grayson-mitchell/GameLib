@@ -841,7 +841,7 @@ Plans:
 
 **Requirements:** MHOST-01, MHOST-02, MHOST-03, MHOST-04 (minted 2026-07-19; see `.planning/REQUIREMENTS.md` § Phase 25 Requirements)
 **Depends on:** Phase 24
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -849,7 +849,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1)*
 - [x] 25-02-PLAN.md — thread worker-slot through fetchChunk + both concurrency pools + integration test (MHOST-02/03)
 **Wave 3** *(blocked on Wave 2 — hardware checkpoint)*
-- [ ] 25-03-PLAN.md — real-hardware before/after throughput measurement (checkpoint:human-verify) (MHOST-04)
+- [x] 25-03-PLAN.md — real-hardware before/after throughput measurement (checkpoint:human-verify) (MHOST-04)
 
 ---
 
