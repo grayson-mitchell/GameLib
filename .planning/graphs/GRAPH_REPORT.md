@@ -1,16 +1,16 @@
-# Graph Report - GameLib  (2026-07-14)
+# Graph Report - GameLib  (2026-07-20)
 
 ## Corpus Check
-- 798 files · ~1,149,565 words
+- 866 files · ~1,256,689 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4018 nodes · 7308 edges · 325 communities (184 shown, 141 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 60 edges (avg confidence: 0.55)
+- 4500 nodes · 8323 edges · 351 communities (204 shown, 147 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 91 edges (avg confidence: 0.63)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f2e0a2f3`
+- Built from commit: `52409123`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -48,7 +48,7 @@
 - Roadmap: GameLib
 - compilerOptions
 - index.tsx
-- .get
+- SideloadGame
 - library.ts
 - nonesteamgame.ts
 - index.tsx
@@ -101,8 +101,8 @@
 - Pattern Assignments
 - Pattern Assignments
 - Pattern Assignments
-- Implementation Decisions
-- Implications for Roadmap
+- ReleaseDate.tsx
+- index.tsx
 - GameLib
 - App.tsx
 - package.json
@@ -118,47 +118,106 @@
 - Implementation Decisions
 - Phase 11 — UI Design Contract: Library Sync + 5-State Key Model
 - Phase 14: Guided Claim Flow - Context
-- Phase 15: Store Overlay + Expiration Alerts - Context
+- installLocation.ts
 - Domain Pitfalls: Humble Bundle Key Management Integration
 - Technology Stack: Humble Bundle Integration (v1.2)
-- classify.ts
-- dedup.test.ts
+- NileUser
+- index.ts
 - index.tsx
 - Phase 4 Plan 01: GameLib Branding Rename Summary
+- eslint
+- filesize
+- Scores.tsx
+- StoreSearchRow.test.tsx
+- main.ts
+- startPlausible
+- StoreSearchScreen.test.tsx
+- badges.ts
+- cheapshark.ts
+- user.test.ts
+- uninstaller.ts
 - ZoomGame
 - gamepad.ts
 - settings.ts
+- menu.ts
+- WineVersionSelector.tsx
+- GlobalConfigV0
 - electronStores.ts
 - index.ts
 - eos_overlay.ts
 - SteamLibraryManager
-- index.ts
+- index.tsx
 - pci_ids.ts
+- ContextProvider.tsx
 - legendary.ts
 - types.ts
+- author
+- storeSearchBadges.test.ts
+- storeMapping.ts
+- linux.ts
+- utils.ts
+- PlaytimeSync.tsx
+- fileAttributes.ts
+- intro.js-react
+- @types/react-dom
+- lzma.d.ts
 - electron.ts
 - genericSpawnWrapper
 - index.tsx
 - index.tsx
-- index.tsx
+- game_manager.ts
 - wine.ts
+- EnableEsync.tsx
+- poolTestWorker.js
+- SteamBottleSetup.tsx
+- EnableFSR.tsx
+- getHowLongToBeat
+- easydl
+- electron-builder
+- author
+- repository
+- versionNames
+- linux.ts
+- @fontsource/rubik
+- LegendaryUser
+- @fortawesome/react-fontawesome
+- @hello-pangea/dnd
+- i18next-fs-backend
+- intro.js
+- intro.js-react
 - library.ts
 - GameContext.tsx
 - index.tsx
+- @node-steam/vdf
+- plist
+- react-dom
+- react-markdown
+- recharts
+- semver
+- simple-keyboard
+- steam-session
+- steam-shortcut-editor
+- zustand
+- index.tsx
+- index.tsx
+- index.tsx
+- @fontsource/cabin
+- LegendaryUser
+- @fortawesome/free-regular-svg-icons
+- lzma
+- electron-store
+- zstddec
+- react-devtools
 - include
-- steam.ts
 - downloadHelperBinaries.ts
 - expirationAlerts.test.ts
 - ipc_handler.ts
-- windows.ts
-- index.tsx
 - index.tsx
 - helpers.ts
 - DotsMenu.tsx
 - Contributor Covenant Code of Conduct
 - devDependencies
 - index.tsx
-- user.test.ts
 - runtimes.ts
 - hasStatus.ts
 - index.tsx
@@ -166,7 +225,6 @@
 - index.test.tsx
 - index.tsx
 - crossover-compat-lookup.mjs
-- index.ts
 - index.tsx
 - AppleWikiInfo.tsx
 - index.tsx
@@ -178,7 +236,6 @@
 - TypeCheckedStoreFrontend
 - index.tsx
 - HumbleOriginInfo.test.tsx
-- index.tsx
 - .refresh
 - CrossOver Bottle Create-Probe — Findings
 - probe-cxbottle.sh
@@ -187,9 +244,7 @@
 - dom-additions.ts
 - extra-mock-function.ts
 - WineManagerSettingsModal.tsx
-- SteamBottleSetup.tsx
 - Upstream Tracking
-- LegendaryUser
 - MacArchBadge.tsx
 - index.tsx
 - InstallGameModal.ts
@@ -204,16 +259,12 @@
 - Support Heroic Development
 - downloadCount.js
 - update-flathub.ts
-- others.ts
 - urgencyBadge.test.ts
-- utils.test.ts
 - utils.test.ts
 - utils.test.ts
 - index.tsx
 - CacheStore
 - useLaunchOptions.ts
-- InstalledInfo.tsx
-- ReleaseDate.tsx
 - SteamBottleSetup.styles.test.ts
 - InstallProgress.ts
 - HEROIC GAMES LAUNCHER
@@ -226,58 +277,38 @@
 - index.tsx
 - index.tsx
 - index.tsx
-- Scores.tsx
 - index.tsx
 - index.tsx
 - CONTRIBUTING.md
-- electron-vite
-- classnames
-- electron
-- electron-builder
-- electron-store
 - launchEventCallback
 - eslint.config.mjs
-- cross-env
 - eslint-import-resolver-typescript
 - eslint-plugin-import-x
 - eslint-plugin-react
 - eslint-plugin-react-hooks
-- fastest-levenshtein
 - @fortawesome/free-brands-svg-icons
-- @fortawesome/free-solid-svg-icons
 - fs-extra
-- @hello-pangea/dnd
 - husky
 - post-checkout
 - post-merge
 - pre-commit
 - pre-push
-- i18next-fs-backend
-- i18next-http-backend
 - i18next-parser
 - ini
-- intro.js
 - jest
 - @mui/material
 - node-gyp
-- plist
 - react-router-dom
 - rehype-raw
 - sanitize-filename
 - sanitize-html
-- semver
 - shlex
 - short-uuid
-- simple-keyboard
 - source-map-support
 - @xhayper/discord-rpc
-- zod
-- zustand
 - @playwright/test
 - prettier
-- react-devtools
 - @testing-library/dom
-- @testing-library/jest-dom
 - tmp
 - ts-jest
 - ts-prune
@@ -289,7 +320,6 @@
 - @types/jest
 - @types/plist
 - @types/react
-- @types/react-dom
 - @types/react-router-dom
 - @types/sanitize-html
 - @types/semver
@@ -310,28 +340,22 @@
 - constants.ts
 - wiki_game_info.ts
 - UploadedLogFiles.ts
-- @testing-library/user-event
 - normalize.ts
 - ratingMap.test.ts
-- NileUser
-- startPlausible
 - eslint-config-prettier
-- react-markdown
-- recharts
-- steam-session
 - steam-user
 
 ## God Nodes (most connected - your core abstractions)
-1. `sendFrontendMessage()` - 70 edges
-2. `GlobalState` - 56 edges
-3. `AsyncIPCFunctions` - 54 edges
+1. `sendFrontendMessage()` - 78 edges
+2. `AsyncIPCFunctions` - 57 edges
+3. `GlobalState` - 56 edges
 4. `GOGLibraryManager` - 40 edges
 5. `LegendaryGame` - 33 edges
 6. `prepareWineLaunch()` - 32 edges
-7. `isOnline()` - 31 edges
+7. `isOnline()` - 32 edges
 8. `scripts` - 30 edges
 9. `GOGGame` - 30 edges
-10. `prepareLaunch()` - 28 edges
+10. `SteamGame` - 30 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `genericSpawnWrapper()` --references--> `child_process`  [EXTRACTED]
@@ -350,28 +374,32 @@
 - 3-file cycle: `src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/SyncSaves/index.tsx -> src/frontend/screens/Settings/index.tsx`
 - 4-file cycle: `src/frontend/screens/Settings/components/DisableUMU.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/DisableUMU.tsx`
 - 4-file cycle: `src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/sections/SyncSaves/index.tsx -> src/frontend/screens/Settings/index.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AutoVKD3D.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoVKD3D.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/CrossoverBottle.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/CrossoverBottle.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/EnableMsync.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/EnableMsync.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/PreferSystemLibs.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/PreferSystemLibs.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/SteamRuntime.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/SteamRuntime.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/WinePrefix.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/WinePrefix.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/WineVersionSelector.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/WineVersionSelector.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
-- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
 - 5-file cycle: `src/frontend/screens/Settings/components/CrossoverBottle.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/CrossoverBottle.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/CrossoverBottle.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/CrossoverBottle.tsx`
 - 5-file cycle: `src/frontend/screens/Settings/components/CrossoverBottle.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/CrossoverBottle.tsx`
 - 5-file cycle: `src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVK.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVK.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoVKD3D.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoVKD3D.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoVKD3D.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GamesSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoVKD3D.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/AutoVKD3D.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/GeneralSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/AutoVKD3D.tsx`
+- 5-file cycle: `src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx -> src/frontend/screens/Settings/index.tsx -> src/frontend/screens/Settings/sections/index.tsx -> src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx -> src/frontend/screens/Settings/components/index.ts -> src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx`
 
-## Communities (325 total, 141 thin omitted)
+## Communities (351 total, 147 thin omitted)
 
 ### Community 0 - "launcher.ts"
-Cohesion: 0.08
-Nodes (61): showDialogBoxModalAuto(), appNameFromCommandParts(), callRunner(), commandsRunning, filterGameSettingsForLog(), getCrossoverBottleFolder(), getKnownFixesEnvVariables(), getRunnerCallWithoutCredentials() (+53 more)
+Cohesion: 0.24
+Nodes (9): AppInstallDirInfo, fetchInstalldir(), listSteamLibraryTargets(), resolveOverride(), resolveSteamInstallTarget(), safeFallbackId(), sanitizeInstalldir(), SteamInstallTarget (+1 more)
+
+### Community 1 - "GOGLibraryManager"
+Cohesion: 0.07
+Nodes (9): currentStubs, defaultStubs, runGogdlCommandStub(), GOGLibraryManager, deletePresence(), PresencePayload, setPresence(), authLogSanitizer() (+1 more)
 
 ### Community 2 - "misc.ts"
 Cohesion: 0.03
@@ -381,73 +409,69 @@ Nodes (72): authAmazon, authGOG, callTool, changeLanguage, checkDiskSpace, check
 Cohesion: 0.15
 Nodes (3): json5, json5, NileLibraryManager
 
-### Community 4 - "config.ts"
-Cohesion: 0.05
-Nodes (55): BackendEvents, getSteamCompatFolder(), GlobalConfig, GlobalConfigV0, handleProgressUpdate(), addRecentGame(), getRecentGames(), maxRecentGames() (+47 more)
-
 ### Community 5 - "main.ts"
-Cohesion: 0.07
-Nodes (45): isAppImage, isCLIConsoleMode, isCLIFullscreen, isCLINoGui, isFlatpak, isSnap, Manifest, configStore (+37 more)
+Cohesion: 0.08
+Nodes (36): AppCommonName, assertNumericAppId(), buildDepotPlan(), canWriteFullOwnership(), ContentServerHostMeta, delay(), DepotDownloadOutcome, DepotDownloadResult (+28 more)
 
 ### Community 7 - "CacheStore"
-Cohesion: 0.10
-Nodes (7): GOGGame, deletePresence(), PresencePayload, setPresence(), setup(), authLogSanitizer(), getPathDiskSize()
+Cohesion: 0.12
+Nodes (7): GOGGame, runSetupCommand(), setup(), getFileSize, getPathDiskSize(), parseSize(), spawnAsync()
 
 ### Community 8 - "ipc.ts"
 Cohesion: 0.07
-Nodes (58): AntiCheatInfo, AppSettings, ButtonOptions, ConnectivityStatus, DialogType, CatalogFeature, CatalogGenre, CatalogLocaleSettings (+50 more)
+Nodes (57): AntiCheatInfo, AppSettings, ButtonOptions, ConnectivityStatus, DialogType, CatalogLocaleSettings, CatalogProduct, DiskSpaceData (+49 more)
 
 ### Community 9 - "types.ts"
-Cohesion: 0.04
-Nodes (57): About, AltExeLaunchOption, AntiCheat, AntiCheatReference, AppleGamingWikiInfo, BaseLaunchOption, CodeweaversInfo, DLCLaunchOption (+49 more)
+Cohesion: 0.03
+Nodes (58): About, AltExeLaunchOption, AntiCheat, AntiCheatReference, AppleGamingWikiInfo, BaseLaunchOption, CodeweaversInfo, DLCLaunchOption (+50 more)
 
 ### Community 10 - "index.test.tsx"
 Cohesion: 0.05
-Nodes (34): HumbleClaimWizard(), Props, Step, collectElements(), findByClassNamePart(), harness(), HookHarness, mockApi (+26 more)
+Nodes (35): HumbleClaimWizard(), Props, Step, collectElements(), findByClassNamePart(), harness(), HookHarness, mockApi (+27 more)
 
 ### Community 11 - "protocol.ts"
-Cohesion: 0.07
-Nodes (40): TypeCheckedStoreBackend, getWinePath(), RunnerProps, setupWineEnvVars(), LogLevel, LogPrefix, MaxLogLevelLength, MaxLogPrefixLength (+32 more)
+Cohesion: 0.13
+Nodes (19): openNewBrowserGameWindow(), DXMT, TODO: should we store just the version instead of the file name?, installOrUpdateTool(), TODO: go back to using latest once we implement the WINEDLLPATH_PREPEND, FIXME: Do we want to use `settingsWithWineVersion` here?, FIXME: How does the instance version matter? Even with 1.2, newer DXVK seems to, TODO: implement proper use of the -builtin using the WINEDLLPATH_PREPEND (+11 more)
 
 ### Community 13 - "Changelog"
 Cohesion: 0.04
 Nodes (48): 1.10.1, 1.10.2, 1.10.3, 1.7.0, 1.8.0, 1.8.0-rc1, 1.8.0-rc2, 1.9.0 (+40 more)
 
 ### Community 14 - "Phase 08.1: Steam Delisted Games & Library Filters — Research"
-Cohesion: 0.23
-Nodes (11): genericSpawnWrapper(), SpawnWrapperOptions, SpawnWrapperReturn, getMemoryInfo(), PartialMemoryInfo, getMemoryInfo_linux(), getActiveAndWiredPages(), getMemoryInfo_macos() (+3 more)
+Cohesion: 0.09
+Nodes (34): BackendEvents, GlobalConfig, getMainWindow(), Menu, handleProgressUpdate(), findGame(), handleLaunch(), handlePing() (+26 more)
 
 ### Community 15 - "isOnline"
-Cohesion: 0.22
-Nodes (11): anticheatDataPath, createMD5(), downloadAntiCheatData(), gameAnticheatInfo(), connectivityEmitter, initOnlineMonitor(), ping(), pingSites() (+3 more)
+Cohesion: 0.33
+Nodes (8): getDxvkUrl(), getVkd3dUrl(), any_gpu_supports_version(), get_nvngx_path(), get_supported_vulkan_versions(), get_vulkan_instance_version(), vulkanHelperBin, VulkanVersion
 
 ### Community 16 - "Phase 13: Keys-Waiting + Giftable-Spares Views - Research"
-Cohesion: 0.29
-Nodes (6): runAfterLaunchScript(), runBeforeLaunchScript(), runScriptForGame(), LogWriter, LogOptions, updateRedist()
+Cohesion: 0.15
+Nodes (15): getSteamCompatFolder(), GlobalConfigV0, AllowedWineFlags, getCrossover(), getCustomWinePaths(), getDefaultWine(), getGamePortingToolkitWine(), getLinuxWineSet() (+7 more)
 
 ### Community 17 - "Phase 17: Steam on macOS via CrossOver/Wine - Research"
-Cohesion: 0.25
-Nodes (10): DiskInfo, getDiskInfo(), isWritable(), findFirstExistingPath(), getDiskInfo_unix(), isWritable_unix(), AccessControlEntry, getDiskInfo_windows() (+2 more)
+Cohesion: 0.08
+Nodes (55): appNameFromCommandParts(), callRunner(), commandsRunning, getCrossoverBottleFolder(), getRunnerCallWithoutCredentials(), getWinePath(), installFixes(), prepareWineLaunch() (+47 more)
 
 ### Community 18 - "utils.ts"
-Cohesion: 0.05
-Nodes (58): appFolder, configFolder, configPath, defaultUmuPath, defaultWinePrefix, defaultWinePrefixDir, fakeEpicExePath, fixAsarPath() (+50 more)
+Cohesion: 0.29
+Nodes (6): InstallResult, LibraryManager, RemoveArgs, GameInfo, GOGCloudSavesLocation, GameMetadataInner
 
 ### Community 19 - "helpers.ts"
 Cohesion: 0.05
 Nodes (42): abort, connectivityChanged, createNewWindow, getAchievements, getAmazonUserInfo, getAvailableCyberpunkMods, getConnectivityStatus, getCustomCSS (+34 more)
 
 ### Community 20 - "sendFrontendMessage"
-Cohesion: 0.12
-Nodes (32): NotifyType, addToFinished(), addToQueue(), cancelCurrentDownload(), downloadManager, getFirstQueueElement(), getQueueInformation(), initQueue() (+24 more)
+Cohesion: 0.08
+Nodes (41): anticheatDataPath, createMD5(), downloadAntiCheatData(), gameAnticheatInfo(), addToFinished(), addToQueue(), cancelCurrentDownload(), currentElement (+33 more)
 
 ### Community 21 - "bottle.ts"
-Cohesion: 0.08
-Nodes (41): activeRaiseTimers, BottledSteamResult, BottledSteamVerb, bottleWineArch(), CX_ROOT, dispatchToBottledSteam(), getBottleDir(), getBottleSteamExePath() (+33 more)
+Cohesion: 0.07
+Nodes (47): activeRaiseTimers, BottledSteamResult, BottledSteamVerb, bottleWineArch(), CX_ROOT, dispatchToBottledSteam(), getBottleDir(), getBottleSteamappsDir() (+39 more)
 
 ### Community 22 - "library.test.ts"
 Cohesion: 0.05
-Nodes (26): auditData, libraryData, localRedeemedData, mockAdapterRevealKey, mockAuditStore, mockDetectAndNotifyExpirationTransitions, mockGetCredentials, mockGetCsrfToken (+18 more)
+Nodes (28): invalidateSyncGeneration(), auditData, libraryData, localRedeemedData, mockAdapterRevealKey, mockAuditStore, mockDetectAndNotifyExpirationTransitions, mockGetCredentials (+20 more)
 
 ### Community 23 - "index.tsx"
 Cohesion: 0.13
@@ -455,7 +479,7 @@ Nodes (8): AddGameButtonProps, CHARS, EmptyLibraryMessage(), Props, TODO: we can
 
 ### Community 24 - "index.ts"
 Cohesion: 0.15
-Nodes (21): AuthCommand, LegendaryAppName, LegendaryPlatform, NonEmptyString, FIXME: This doesn't feel right, URI, URL, ValidWinePrefix (+13 more)
+Nodes (23): AuthCommand, LegendaryAppName, LegendaryPlatform, NonEmptyString, PositiveInteger, FIXME: This doesn't feel right, URI, URL (+15 more)
 
 ### Community 25 - "gog.ts"
 Cohesion: 0.06
@@ -470,12 +494,12 @@ Cohesion: 0.07
 Nodes (22): BranchSelectorProps, BuildSelectorProps, Props, GameLanguageSelector(), GameLanguageSelectorProps, DiskSpaceInfo, DownloadDialog(), getDefaultInstallPath() (+14 more)
 
 ### Community 28 - "Phase 10: Humble Auth + Adapter Scaffold - Discussion Log"
-Cohesion: 0.24
-Nodes (9): tokenPath, zoomSupportPath, configStore, installedGamesStore, installInfoStore, libraryStore, installedGames, library (+1 more)
+Cohesion: 0.26
+Nodes (12): healReconciledFileModes(), directoryVerified(), expectedSha(), reconcilePartialState(), ReconcileResult, regularFileVerified(), symlinkVerified(), zeroSizeVerified() (+4 more)
 
 ### Community 29 - "dependencies"
 Cohesion: 0.15
-Nodes (13): axios, electron-updater, filesize, @fontsource/cabin, @fortawesome/react-fontawesome, intro.js-react, dependencies, axios (+5 more)
+Nodes (13): axios, classnames, @fontsource/cabin, @fortawesome/react-fontawesome, i18next-http-backend, @mui/icons-material, dependencies, axios (+5 more)
 
 ### Community 30 - "Architecture Research — Humble Bundle Integration"
 Cohesion: 0.15
@@ -489,9 +513,13 @@ Nodes (34): { compilerOptions }, dom, dom.iterable, esnext, **/__mocks__/**, sig
 Cohesion: 0.07
 Nodes (15): do_not_show_file(), main(), nvidia_missing(), nvidia_version(), NvidiaWindow, Ok button press.      `do_not_show`: whether the Do not show again checkbox is c, Try to find NVIDIA driver version from modinfo.      Returns a tuple of the full, Returns whether NVIDIA 32 is missing or not. (+7 more)
 
+### Community 34 - "SideloadGame"
+Cohesion: 0.09
+Nodes (25): CdnAuthTokenCache, attemptFailureReason(), ChunkAttemptEvent, ChunkAttemptOutcome, ChunkDecodeError, ChunkFetchAbortedError, ChunkHttpError, decode() (+17 more)
+
 ### Community 35 - "library.ts"
-Cohesion: 0.11
-Nodes (35): classifyOrder(), describeMissingExpirationTpks(), extractExpiration(), isFreezeEligible(), isTerminal(), appendAudit(), clearOwnershipOverride(), compositeKey() (+27 more)
+Cohesion: 0.10
+Nodes (34): recomputeOwnership(), AuditRecord, HumbleKeyInternal, humbleRevealedStore, appendAudit(), clearOwnershipOverride(), compositeKey(), doRevealKey() (+26 more)
 
 ### Community 36 - "nonesteamgame.ts"
 Cohesion: 0.15
@@ -507,87 +535,87 @@ Nodes (30): directRedeemEntitlementOrder, drmFreeOnlyOrder, ebookBundleOrder, ma
 
 ### Community 39 - "nile.ts"
 Cohesion: 0.08
-Nodes (28): OriginalStore, Store, tmpStoreRootDirectory, FIXME: Not sure if this is correct, seems like this key is only used once, FIXME: This is currently not type-checked properly, StoreOptions, StoreStructure, TypeCheckedStore (+20 more)
+Nodes (27): OriginalStore, Store, tmpStoreRootDirectory, FIXME: Not sure if this is correct, seems like this key is only used once, FIXME: This is currently not type-checked properly, StoreOptions, StoreStructure, TypeCheckedStore (+19 more)
 
 ### Community 40 - "index.tsx"
 Cohesion: 0.09
 Nodes (11): react, react, AutoDXVK(), AutoDXVKNVAPI(), AutoVKD3D(), CrossoverBottle(), ListItemProps, WineVersionListItem (+3 more)
 
 ### Community 41 - "Pattern Assignments"
-Cohesion: 0.23
-Nodes (4): Migration, MigrationSystem, exists(), LegendaryGlobalConfigFolderMigration
+Cohesion: 0.11
+Nodes (4): hostSteamDepotOs(), SteamGame, markSteamInstallIncomplete(), promptI386Recovery()
 
 ### Community 42 - "menu.ts"
-Cohesion: 0.08
-Nodes (27): cancelDownload, getDMQueueInformation, handleDMQueueInformation, install, pauseCurrentDownload, removeFromDMQueue, resumeCurrentDownload, updateGame (+19 more)
-
-### Community 43 - "index.ts"
-Cohesion: 0.27
-Nodes (9): GameMetadataOverride, gameOverridesStore, attachOverrides(), getAllGameOverrides(), getGameOverrides(), overridesImagesDir, removeImagesForApp(), removeImagesMatching() (+1 more)
+Cohesion: 0.11
+Nodes (18): cancelDownload, getDMQueueInformation, handleDMQueueInformation, install, pauseCurrentDownload, removeFromDMQueue, resumeCurrentDownload, updateGame (+10 more)
 
 ### Community 44 - "adapter.ts"
-Cohesion: 0.14
-Nodes (25): AccountIdentitySchema, buildHeaders(), coerceJsonBody(), describeSchemaFailure(), extractHttpErrorResponse(), firstHeaderValue(), GamekeyEntrySchema, GamekeysArraySchema (+17 more)
+Cohesion: 0.13
+Nodes (26): AccountIdentitySchema, buildHeaders(), coerceJsonBody(), describeSchemaFailure(), extractHttpErrorResponse(), firstHeaderValue(), GamekeyEntrySchema, GamekeysArraySchema (+18 more)
+
+### Community 45 - "SideloadGame"
+Cohesion: 0.18
+Nodes (12): CachedToken, CDNAuthTokenClient, CdnAuthTokenSchema, decode(), decodeCdnAuthTokenResponse(), describeRawBody(), encode(), loadCdnAuthTokenSchema() (+4 more)
 
 ### Community 46 - "library.ts"
-Cohesion: 0.11
-Nodes (33): notify(), buildDigestCopy(), detectAndNotifyExpirationTransitions(), Notification, getBottleSteamappsDir(), getSteamBottleSettings(), steamSyncStore, AcfSource (+25 more)
+Cohesion: 0.10
+Nodes (37): ContentManifestModule, isNativeInstallInFlight(), AcfSource, activePolls, activeUninstallPolls, buildBottleInstalledMap(), buildIncompleteInstallSet(), buildInstalledMap() (+29 more)
 
 ### Community 47 - "humble.ts"
-Cohesion: 0.10
-Nodes (23): buildDiscountBadgeMaps(), DiscountBadge, normalize(), resolveDiscountBadge(), HumbleExpirationDisplay, byExpiringSoonest(), GROUP_ORDER, groupAndSortKeys() (+15 more)
+Cohesion: 0.11
+Nodes (19): HumbleExpirationDisplay, byExpiringSoonest(), GROUP_ORDER, groupAndSortKeys(), HumbleKeyGroupId, BADGE_ELIGIBLE_STATES, getUrgencyTier(), UrgencyCountdownParts (+11 more)
 
 ### Community 48 - "index.ts"
 Cohesion: 0.08
 Nodes (21): getGameInfo(), getInstallInfo(), getLegendaryConfig(), handleRunnersPlatforms(), TODO: I'd say we should refactor this to be two different IPC calls, makes type, size, amazonCategories, checkLaunchOptionsAndLaunch() (+13 more)
 
+### Community 49 - "Modification Patterns (Existing Files)"
+Cohesion: 0.13
+Nodes (26): NotifyType, showDialogBoxModalAuto(), GameConfig, filterGameSettingsForLog(), getKnownFixesEnvVariables(), launchCleanup(), prepareLaunch(), setupEnvVars() (+18 more)
+
 ### Community 50 - "index.tsx"
-Cohesion: 0.08
-Nodes (16): Props, Props, Props, Props, SvgButton(), TextInputField(), TextInputFieldProps, TextInputWithIconField() (+8 more)
+Cohesion: 0.10
+Nodes (19): checkSteamInstalled, getSteamInstallSize, getSteamSyncedAt, getSteamUserInfo, handleSteamBottleSetupRequired, handleSteamClientSetupRequired, handleSteamMetadataSyncing, isSteamBottleProvisioned (+11 more)
 
 ### Community 51 - "Phase 8 — UI Design Contract: New Steam Surfaces"
-Cohesion: 0.31
-Nodes (7): ContextMenu(), Item, Props, getCardStatus(), getImageFormatting(), Card, GameCard()
+Cohesion: 0.14
+Nodes (26): gogdlAuthConfig, gogdlConfigPath, gogRedistPath, gogSupportPath, achievementStore, apiInfoCache, configStore, installedGamesStore (+18 more)
 
 ### Community 52 - "v1.1 Requirements"
 Cohesion: 0.25
 Nodes (6): child_process, crypto, { default: axios }, fs, os, package
 
+### Community 53 - "SettingsContext.tsx"
+Cohesion: 0.24
+Nodes (13): getCometVersion(), getGogdlVersion(), getLegendaryVersion(), getNileVersion(), getHeroicVersion(), getSystemInfo(), GPUInfo, FIXME: Technically the user could be on a server with more than one (+5 more)
+
 ### Community 54 - "scripts"
 Cohesion: 0.07
 Nodes (30): scripts, build-crossover-index, codecheck, debug:react, dist:flatpak, dist:linux, dist:mac, dist:win (+22 more)
 
-### Community 55 - "index.ts"
-Cohesion: 0.33
-Nodes (8): getDxvkUrl(), getVkd3dUrl(), any_gpu_supports_version(), get_nvngx_path(), get_supported_vulkan_versions(), get_vulkan_instance_version(), vulkanHelperBin, VulkanVersion
-
 ### Community 56 - "Pattern Assignments"
-Cohesion: 0.48
-Nodes (5): hasExecutable(), getGpuInfo_linux(), getLspciInfo(), GPUInfoSchema, NOTE: The actual returned value contains a lot more properties that were
-
-### Community 57 - "LegendaryGame"
-Cohesion: 0.13
-Nodes (3): PositiveInteger, BaseLegendaryCommand, LegendaryGame
+Cohesion: 0.09
+Nodes (8): SelectFieldProps, Props, DEFAULT_GRID_DIMENSIONS, DEFAULT_GRID_STYLES, Props, TabPanelProps, UpdateComponent(), UpdateComponentProps
 
 ### Community 58 - "SteamGame"
-Cohesion: 0.11
-Nodes (6): tellBottledSteamToInstall(), tellBottledSteamToLaunch(), tellBottledSteamToUninstall(), buildSteamProtocolUrl(), SteamGame, promptI386Recovery()
+Cohesion: 0.22
+Nodes (9): defaultStats(), HostAttemptOutcome, HostHealthTracker, HostStatsSnapshot, isUnhealthy(), MutableHostStats, PRIOR_HALFLIFE_SAMPLES, priorScoreFromWeightedLoad() (+1 more)
 
 ### Community 59 - "games.ts"
-Cohesion: 0.15
-Nodes (16): steamLibraryStore, SteamMetadataCacheEntry, steamMetadataStore, extractVersionTokens(), getSteamInstallSize(), macArchFromMinOS(), MACOS_CODENAME_VERSION, MacOsVersion (+8 more)
+Cohesion: 0.10
+Nodes (22): steamBottleConfigStore, steamLibraryStore, SteamMetadataCacheEntry, steamMetadataStore, steamSyncStore, extractVersionTokens(), getSteamInstallSize(), macArchFromMinOS() (+14 more)
 
 ### Community 60 - "GlobalState.tsx"
 Cohesion: 0.11
 Nodes (24): configStore, downloadManagerStore, gameOverridesStore, gogConfigStore, gogInstalledGamesStore, gogLibraryStore, humbleConfigStore, libraryStore (+16 more)
 
 ### Community 61 - "Pattern Assignments"
-Cohesion: 0.29
-Nodes (6): InstallResult, LibraryManager, RemoveArgs, GameInfo, GOGCloudSavesLocation, GameMetadataInner
+Cohesion: 0.19
+Nodes (19): OrderDetail, ABSOLUTE_EXPIRATION_FIELDS, classifyOrder(), classifyTpk(), describeMissingExpirationTpks(), describeSkippedEntitlements(), describeZeroKeyOrder(), extractExpiration() (+11 more)
 
 ### Community 62 - "Implementation Decisions"
-Cohesion: 0.33
-Nodes (4): GamesList(), Props, scrollCardIntoView(), Props
+Cohesion: 0.09
+Nodes (21): applyEDepotFileModes(), DepotDownloadFailure, downloadDepotFiles(), downloadFileChunks(), downloadSingleFile(), applyDepotFileFlags(), ApplyDepotFileFlagsResult, applyPosixAttributes() (+13 more)
 
 ### Community 63 - "humble.ts"
 Cohesion: 0.07
@@ -597,21 +625,17 @@ Nodes (26): handleHumbleAuthState, handleHumbleKeysUpdated, handleHumbleSyncProg
 Cohesion: 0.53
 Nodes (4): CrossoverIndex, crossoverIndexSchema, makeEntries(), makeValidPayload()
 
-### Community 65 - "Pattern Assignments"
-Cohesion: 0.40
-Nodes (4): getOsInfo(), FIXME: I'd like to return the OS's codename ("Monterey", "Ventura", and, osInfo_linux(), stripQuotes()
-
 ### Community 66 - "Phase 1 — UI Design Contract: Steam Authentication"
-Cohesion: 0.33
-Nodes (3): Props, Tier, Rendered
+Cohesion: 0.08
+Nodes (17): Props, Props, Props, Props, SvgButton(), TextInputField(), TextInputFieldProps, TextInputWithIconField() (+9 more)
 
 ### Community 67 - "Pattern Assignments"
-Cohesion: 0.40
-Nodes (5): upstream, baseCommit, baseVersion, project, repository
+Cohesion: 0.12
+Nodes (7): AfterLaunchScriptPath(), AlternativeExe(), BeforeLaunchScriptPath(), ShowFPS(), GamesSettings(), getStartingTab(), windowsPlatforms
 
 ### Community 68 - "Pattern Assignments"
-Cohesion: 0.70
-Nodes (4): removeFixFile(), removePrefix(), removeSettingsAndLogs(), uninstallGameCallback()
+Cohesion: 0.23
+Nodes (10): nileConfigPath, nileInstalled, nileLibrary, nileUserData, currentStubs, defaultStubs, runNileCommandStub(), configStore (+2 more)
 
 ### Community 69 - "desktop-launch"
 Cohesion: 0.10
@@ -622,28 +646,36 @@ Cohesion: 0.12
 Nodes (29): buildNameKeyIndex(), buildSteamIdIndex(), Candidate, CANDIDATES, canonicalName(), classifyBaseGames(), CollisionResult, compareVersion() (+21 more)
 
 ### Community 71 - "user.ts"
-Cohesion: 0.14
-Nodes (12): registerHumbleIpcHandlers(), HumbleLibrary, invalidateSyncGeneration(), simulateDisconnect(), ActiveWatch, decryptCookie(), encryptCookie(), encryptionAvailable() (+4 more)
+Cohesion: 0.12
+Nodes (21): launchEventCallback(), runAfterLaunchScript(), runBeforeLaunchScript(), RunnerProps, runScriptForGame(), LogLevel, LogPrefix, MaxLogLevelLength (+13 more)
 
 ### Community 72 - "user.test.ts"
 Cohesion: 0.08
 Nodes (23): mockClearAuthCache, mockClearCache, mockClearData, mockClearHostResolverCache, mockClearStorageData, mockConfigStore, mockCookiesGet, mockDecryptString (+15 more)
 
 ### Community 73 - "SteamUser"
-Cohesion: 0.11
-Nodes (8): STEAM_INSTALL_PATHS, steamSupportPath, configStore, decryptToken(), encryptionAvailable(), encryptToken(), NOTE: password is passed to steam-session but never written to configStore, SteamUser
+Cohesion: 0.07
+Nodes (23): ensureSteamClientReady(), EnsureSteamClientReadyResult, hasLibraryFoldersVdf(), startGuidedClientInstall(), StartGuidedInstallResult, StartGuidedInstallStatus, SteamClientReadyStatus, STEAM_INSTALL_PATHS (+15 more)
 
 ### Community 74 - "index.tsx"
-Cohesion: 0.06
-Nodes (16): FlagPosition, languageFlags, languageLabels, Props, SelectFieldProps, Props, TabPanelProps, UpdateComponent() (+8 more)
+Cohesion: 0.09
+Nodes (12): FlagPosition, languageFlags, languageLabels, Props, Props, WarningMessage(), TODO: Send signal to BE to abort the promise, useAwaited() (+4 more)
 
 ### Community 75 - "Implementation Decisions"
-Cohesion: 0.40
-Nodes (3): DEFAULT_GRID_DIMENSIONS, DEFAULT_GRID_STYLES, Props
+Cohesion: 0.19
+Nodes (8): ownedSteamLibrary, steamOwnedBatmanArkhamKnight, steamOwnedCactus, steamOwnedFramed, steamOwnedGameX, steamOwnedIntoTheBreach, steamOwnedPortal2, steamOwnedStardew
+
+### Community 76 - "Info"
+Cohesion: 0.11
+Nodes (21): decodeChunk(), LzmaModule, sha1(), DecompressPool, DecompressPoolOpts, isReadyMessage(), PendingTask, QueuedTask (+13 more)
+
+### Community 77 - "Warnings"
+Cohesion: 0.17
+Nodes (16): getGpuInfo(), PartialGpuInfo, deviceNameCache, DeviceNameCacheKey, lookupDeviceString(), lookupVendorString(), pciIdDnsQuery(), populateDeviceAndVendorName() (+8 more)
 
 ### Community 78 - "3. Functional requirements"
-Cohesion: 0.67
-Nodes (3): author, email, name
+Cohesion: 0.14
+Nodes (20): getAvailableVersions(), getVersionsProps, installProps, installVersion(), workDir, fetchProps, fetchReleases(), getFolderSize() (+12 more)
 
 ### Community 79 - "adapter.test.ts"
 Cohesion: 0.09
@@ -658,12 +690,16 @@ Cohesion: 0.09
 Nodes (22): Alternatives Rejected, Architecture, Architecture Fit, Authentication, Confidence Assessment, Constraints, Conventions, Decision Summary (+14 more)
 
 ### Community 83 - "Phase 2 — UI Design Contract: Steam Library"
-Cohesion: 0.67
-Nodes (3): repository, type, url
+Cohesion: 0.24
+Nodes (9): tokenPath, zoomSupportPath, configStore, installedGamesStore, installInfoStore, libraryStore, installedGames, library (+1 more)
 
 ### Community 84 - "Pattern Assignments"
-Cohesion: 0.67
-Nodes (3): versionNames, beta, stable
+Cohesion: 0.16
+Nodes (15): configStore, humbleAuditStore, humbleGiftedAtStore, humbleLibraryStore, humbleLocalRedeemedStore, humbleNotifiedExpirationStore, HumbleOrderCacheEntryInternal, humbleOwnershipOverrideStore (+7 more)
+
+### Community 87 - "ReleaseDate.tsx"
+Cohesion: 0.10
+Nodes (9): initialContext, Props, Description(), Props, Props, Props, convertDate(), ReleaseDate() (+1 more)
 
 ### Community 89 - "GameLib"
 Cohesion: 0.09
@@ -671,7 +707,7 @@ Nodes (22): Building GameLib Binaries, Building with VS Code, Credits, Developme
 
 ### Community 90 - "App.tsx"
 Cohesion: 0.09
-Nodes (11): router, decodeHTML(), MessageBoxModal(), MessageBoxModalProps, DialogHandler(), Help(), Props, AnalyticsDialog() (+3 more)
+Nodes (9): router, DialogHandler(), Help(), Props, Phase, AnalyticsDialog(), TODO: Added here so we don't lose the translation for when we add this back, UploadedLogFileItem (+1 more)
 
 ### Community 91 - "package.json"
 Cohesion: 0.15
@@ -682,24 +718,64 @@ Cohesion: 0.19
 Nodes (13): Tour(), TourProps, TourStep, TourButton(), TourButtonProps, SidebarTour(), LibraryTour(), defaultState (+5 more)
 
 ### Community 95 - "index.tsx"
-Cohesion: 0.33
-Nodes (4): InfoBox(), Props, PopoverComponent(), PopoverComponentProps
+Cohesion: 0.40
+Nodes (3): gameGetGameInfoMock, gameStopMock, __store
 
 ### Community 96 - "library.ts"
 Cohesion: 0.08
 Nodes (23): addNewApp, changeGameVersionPinnedStatus, getAllGameOverrides, getCrossoverIndex, getGameMetadataOverride, getGameOverride, getGameSdl, handleCrossoverIndexChanged (+15 more)
 
-### Community 107 - "classify.ts"
-Cohesion: 0.23
-Nodes (14): OrderDetail, ABSOLUTE_EXPIRATION_FIELDS, classifyTpk(), describeSkippedEntitlements(), describeZeroKeyOrder(), fieldNames(), hasKeyEvidence(), isDirectRedeemEntitlement() (+6 more)
+### Community 98 - "Phase 2: Steam Library - Context"
+Cohesion: 0.21
+Nodes (6): registerHumbleIpcHandlers(), HumbleLibrary, decryptCookie(), encryptCookie(), encryptionAvailable(), HumbleUser
 
-### Community 108 - "dedup.test.ts"
-Cohesion: 0.16
-Nodes (15): DLC_KEYWORDS, EDITION_SUFFIXES, fuzzyMatch(), isDlcFalsePositiveRisk(), normalizeTitle(), recomputeOwnership(), titleSimilarity(), ownedSteamLibrary (+7 more)
+### Community 99 - "Pattern Assignments"
+Cohesion: 0.23
+Nodes (11): genericSpawnWrapper(), SpawnWrapperOptions, SpawnWrapperReturn, getMemoryInfo(), PartialMemoryInfo, getMemoryInfo_linux(), getActiveAndWiredPages(), getMemoryInfo_macos() (+3 more)
+
+### Community 100 - "Phase 8: New Steam Surfaces Verification Report (Gap-Closure Re-Verification)"
+Cohesion: 0.22
+Nodes (8): ArrayBufferDownloadOptions, CommonDownloadOptions, downloadFile(), DownloadOptions, JsonDownloadOptions, JSONValue, NOTE: This does nothing if `writeToFile` isn't provided, TextDownloadOptions
+
+### Community 104 - "installLocation.ts"
+Cohesion: 0.25
+Nodes (10): DiskInfo, getDiskInfo(), isWritable(), findFirstExistingPath(), getDiskInfo_unix(), isWritable_unix(), AccessControlEntry, getDiskInfo_windows() (+2 more)
+
+### Community 107 - "NileUser"
+Cohesion: 0.25
+Nodes (3): CdnAuthTokenRequestMessage, CdnAuthTokenResponseMessage, steam-user/protobufs/generated/_load.js
 
 ### Community 109 - "index.tsx"
 Cohesion: 0.12
 Nodes (13): i18next, t(), Achievements(), Props, Genres(), GenresProps, handleInstall(), handleModal() (+5 more)
+
+### Community 114 - "StoreSearchRow.test.tsx"
+Cohesion: 0.05
+Nodes (50): Props, StoreSearchBreakdown(), Props, StoreSearchRow(), buildOwnedBadgeLabel(), formatUsdPrice(), OwnedBadgeLabel, STORE_DISPLAY_NAME (+42 more)
+
+### Community 116 - "startPlausible"
+Cohesion: 0.50
+Nodes (3): Plausible(), PlausibleEventProps, startPlausible()
+
+### Community 117 - "StoreSearchScreen.test.tsx"
+Cohesion: 0.40
+Nodes (8): AppManifestParams, assertNumericBuildid(), assertNumericId(), buildAppManifestText(), buildInstalledDepotsBlock(), InstalledDepotEntry, vdfEscape(), writeAppManifest()
+
+### Community 118 - "badges.ts"
+Cohesion: 0.21
+Nodes (14): buildDiscountBadgeMaps(), DiscountBadge, normalize(), resolveDiscountBadge(), resolveStoreSearchBadges(), StoreOwnershipMatch, DLC_KEYWORDS, EDITION_SUFFIXES (+6 more)
+
+### Community 119 - "cheapshark.ts"
+Cohesion: 0.30
+Nodes (12): buildHeaders(), buildRedirectUrl(), CheapSharkGameDetail, CheapSharkGameSearchResult, CheapSharkStore, getGameDeals(), getStoreMap(), mapGameDeals() (+4 more)
+
+### Community 120 - "user.test.ts"
+Cohesion: 0.17
+Nodes (11): mockConfigStore, mockDecryptString, mockEncryptString, mockExistsSync, mockIsEncryptionAvailable, MockLoginSession, mockSessionInstance, mockSteamUserInstance (+3 more)
+
+### Community 121 - "uninstaller.ts"
+Cohesion: 0.70
+Nodes (4): removeFixFile(), removePrefix(), removeSettingsAndLogs(), uninstallGameCallback()
 
 ### Community 123 - "gamepad.ts"
 Cohesion: 0.13
@@ -709,29 +785,37 @@ Nodes (7): initGamepad(), checkGenius1(), checkGameCube(), checkN64Clone1(), che
 Cohesion: 0.10
 Nodes (19): changeTrayColor, egsSync, getCometVersion, getEosOverlayStatus, getGogdlVersion, getLatestEosOverlayVersion, getLegendaryVersion, getLogContent (+11 more)
 
+### Community 125 - "menu.ts"
+Cohesion: 0.15
+Nodes (12): addShortcut, addToSteam, changeInstallPath, disableEosOverlay, enableEosOverlay, installEosOverlay, isAddedToSteam, isEosOverlayEnabled (+4 more)
+
+### Community 126 - "WineVersionSelector.tsx"
+Cohesion: 0.27
+Nodes (9): GameMetadataOverride, gameOverridesStore, attachOverrides(), getAllGameOverrides(), getGameOverrides(), overridesImagesDir, removeImagesForApp(), removeImagesMatching() (+1 more)
+
+### Community 127 - "GlobalConfigV0"
+Cohesion: 0.47
+Nodes (4): handleSteamClientSetupRequiredSignal(), SteamClientSetupReason, SteamClientSetupState, useSteamClientSetup
+
 ### Community 128 - "electronStores.ts"
-Cohesion: 0.16
-Nodes (15): AuditRecord, configStore, humbleAuditStore, humbleGiftedAtStore, HumbleKeyInternal, humbleLibraryStore, humbleLocalRedeemedStore, humbleNotifiedExpirationStore (+7 more)
+Cohesion: 0.31
+Nodes (7): ContextMenu(), Item, Props, getCardStatus(), getImageFormatting(), Card, GameCard()
 
 ### Community 129 - "index.ts"
-Cohesion: 0.23
-Nodes (9): addShortcuts(), convertPngToICNS(), generateMacOsApp(), removeShortcuts(), shortcutFiles(), FIXME: This doesn't respect the `RemoveArgs` passed to it, libraryStore, killPattern() (+1 more)
+Cohesion: 0.40
+Nodes (4): CatalogFeature, CatalogGenre, CatalogPrice, CatalogRating
 
 ### Community 130 - "eos_overlay.ts"
-Cohesion: 0.29
-Nodes (14): currentVersionPath(), defaultInstallPath(), disable(), enable(), getLatestVersion(), getStatus(), getWinePrefixFolder(), install() (+6 more)
+Cohesion: 0.27
+Nodes (16): currentVersionPath(), defaultInstallPath(), disable(), enable(), getLatestVersion(), getStatus(), getWinePrefixFolder(), install() (+8 more)
 
 ### Community 131 - "SteamLibraryManager"
-Cohesion: 0.13
-Nodes (6): buildBottleInstalledMap(), buildInstalledMap(), hostInstallPlatform(), installPlatformForSource(), scanDownloadingAppIds(), SteamLibraryManager
+Cohesion: 0.40
+Nodes (5): upstream, baseCommit, baseVersion, project, repository
 
-### Community 132 - "index.ts"
-Cohesion: 0.28
-Nodes (12): getCometVersion(), getGogdlVersion(), getLegendaryVersion(), getNileVersion(), getHeroicVersion(), formatSystemInfo(), getSystemInfo(), GPUInfo (+4 more)
-
-### Community 133 - "pci_ids.ts"
+### Community 134 - "ContextProvider.tsx"
 Cohesion: 0.17
-Nodes (16): getGpuInfo(), PartialGpuInfo, deviceNameCache, DeviceNameCacheKey, lookupDeviceString(), lookupVendorString(), pciIdDnsQuery(), populateDeviceAndVendorName() (+8 more)
+Nodes (9): defaultThemes, initOnlineMonitor(), initShortcuts(), App, Backend, container, root, themeClass (+1 more)
 
 ### Community 135 - "legendary.ts"
 Cohesion: 0.11
@@ -741,9 +825,21 @@ Nodes (18): AssetInfo, CustomAttributeType, CustomAttributeValue, DLCInfo, GameI
 Cohesion: 0.10
 Nodes (19): Category, ContextType, CrossoverRatingFilters, DialogModalOptions, DMQueue, ExternalLinkDialogOptions, FilterMode, GameContextType (+11 more)
 
+### Community 141 - "utils.ts"
+Cohesion: 0.33
+Nodes (4): GamesList(), Props, scrollCardIntoView(), Props
+
+### Community 143 - "fileAttributes.ts"
+Cohesion: 0.33
+Nodes (4): InfoBox(), Props, PopoverComponent(), PopoverComponentProps
+
+### Community 146 - "intro.js-react"
+Cohesion: 0.48
+Nodes (5): hasExecutable(), getGpuInfo_linux(), getLspciInfo(), GPUInfoSchema, NOTE: The actual returned value contains a lot more properties that were
+
 ### Community 149 - "electron.ts"
 Cohesion: 0.11
-Nodes (10): app, appBasePath, BrowserWindow, dialog, ipcMain, Menu, nativeImage, TODO: What should we return here? (+2 more)
+Nodes (9): app, appBasePath, BrowserWindow, dialog, ipcMain, nativeImage, TODO: What should we return here?, screen (+1 more)
 
 ### Community 150 - "genericSpawnWrapper"
 Cohesion: 0.11
@@ -751,47 +847,79 @@ Nodes (25): assertNonEmpty(), canonicalName(), Collision, compareVersion(), dedu
 
 ### Community 151 - "index.tsx"
 Cohesion: 0.15
-Nodes (5): Props, RunnerToStore, Props, ToggleSwitch(), UninstallModalProps
+Nodes (6): Props, LibraryFilters(), RunnerToStore, Props, ToggleSwitch(), UninstallModalProps
 
 ### Community 152 - "index.tsx"
-Cohesion: 0.11
-Nodes (6): Props, Props, Props, Props, Props, SettingsButton()
+Cohesion: 0.10
+Nodes (9): Props, getInstallPlatformIcon(), InstalledInfo(), Props, Props, Props, Props, Props (+1 more)
 
-### Community 153 - "index.tsx"
-Cohesion: 0.12
-Nodes (7): AfterLaunchScriptPath(), AlternativeExe(), BeforeLaunchScriptPath(), ShowFPS(), GamesSettings(), getStartingTab(), windowsPlatforms
+### Community 153 - "game_manager.ts"
+Cohesion: 0.09
+Nodes (11): configStore, tsStore, TypeCheckedStoreBackend, createMainWindow(), isFrameless(), Migration, MigrationSystem, NOTE: This intentionally runs migrations sequentially to avoid race conditions (+3 more)
 
 ### Community 154 - "wine.ts"
 Cohesion: 0.11
 Nodes (17): downloadRuntime, handleProgressOfWineManager, handleProgressOfWinetricks, handleWinetricksInstalling, handleWineVersionsUpdated, installWineVersion, isRuntimeInstalled, refreshWineVersionInfo (+9 more)
 
+### Community 155 - "EnableEsync.tsx"
+Cohesion: 0.29
+Nodes (4): FakeChildProcess, FakeStream, NOTE: every mock implementation below is (re-)assigned fresh in, runner
+
+### Community 156 - "poolTestWorker.js"
+Cohesion: 0.31
+Nodes (9): { createDecipheriv, createHash }, decodeChunk(), decodeError(), decompressChunk(), lzma, { parentPort }, sha1(), steamDecrypt() (+1 more)
+
+### Community 157 - "SteamBottleSetup.tsx"
+Cohesion: 0.43
+Nodes (3): resolveSteamBottleEngine(), Phase, SteamBottleSetup()
+
+### Community 158 - "EnableFSR.tsx"
+Cohesion: 0.10
+Nodes (22): decryptFilename(), steamDecrypt(), CHUNK_FETCH_HEADERS, DepotConfig, DepotDescriptor, DepotEntry, DepotManifestEntry, DepotSelectOpts (+14 more)
+
+### Community 159 - "getHowLongToBeat"
+Cohesion: 0.33
+Nodes (3): Props, Tier, Rendered
+
+### Community 162 - "author"
+Cohesion: 0.67
+Nodes (3): author, email, name
+
+### Community 163 - "repository"
+Cohesion: 0.67
+Nodes (3): repository, type, url
+
+### Community 164 - "versionNames"
+Cohesion: 0.67
+Nodes (3): versionNames, beta, stable
+
 ### Community 173 - "library.ts"
-Cohesion: 0.11
-Nodes (17): LegendaryCommand, legendaryMetadata, legendaryUserInfo, thirdPartyInstalled, currentStubs, defaultStubs, runLegendaryCommandStub(), gameInfoStore (+9 more)
+Cohesion: 0.10
+Nodes (18): LegendaryCommand, epicRedistPath, legendaryMetadata, legendaryUserInfo, thirdPartyInstalled, currentStubs, defaultStubs, runLegendaryCommandStub() (+10 more)
 
 ### Community 174 - "GameContext.tsx"
-Cohesion: 0.12
-Nodes (6): initialContext, Props, Props, Description(), Props, Props
+Cohesion: 0.22
+Nodes (9): MainButton(), Props, baseIs, collectText(), renderTree(), baseIs, collectText(), renderLabel() (+1 more)
 
 ### Community 175 - "index.tsx"
 Cohesion: 0.15
 Nodes (9): GameSettingsModalType, Props, SettingsModalWrapper(), LogBoxProps, GameOverride, GlobalStateV2, useGlobalState(), useGlobalStateKeys() (+1 more)
 
+### Community 186 - "index.tsx"
+Cohesion: 0.67
+Nodes (3): decodeHTML(), MessageBoxModal(), MessageBoxModalProps
+
 ### Community 205 - "include"
 Cohesion: 0.12
 Nodes (15): e2e/**/*.js, e2e/**/*.ts, e2e/**/*.tsx, electron.vite.config.ts, eslint.config.mjs, flathub/**/*.ts, meta/**/*.ts, playwright.config.ts (+7 more)
-
-### Community 206 - "steam.ts"
-Cohesion: 0.12
-Nodes (15): checkSteamInstalled, getSteamInstallSize, getSteamSyncedAt, getSteamUserInfo, handleSteamBottleSetupRequired, handleSteamMetadataSyncing, isSteamBottleProvisioned, logoutSteam (+7 more)
 
 ### Community 207 - "downloadHelperBinaries.ts"
 Cohesion: 0.28
 Nodes (14): compareDownloadedTags(), downloadAsset(), downloadComet(), DownloadedBinary, downloadEpicIntegration(), downloadFile(), downloadGithubAssets(), downloadGogdl() (+6 more)
 
 ### Community 241 - "expirationAlerts.test.ts"
-Cohesion: 0.14
-Nodes (10): mockEnvironment, mockGetMainWindow, mockGetSettings, MockNotification, mockNotificationCtor, mockNotificationShow, mockNotifiedExpirationStore, mockSendFrontendMessage (+2 more)
+Cohesion: 0.12
+Nodes (14): notify(), buildDigestCopy(), detectAndNotifyExpirationTransitions(), mockEnvironment, mockGetMainWindow, mockGetSettings, MockNotification, mockNotificationCtor (+6 more)
 
 ### Community 242 - "ipc_handler.ts"
 Cohesion: 0.25
@@ -800,10 +928,6 @@ Nodes (10): getDecryptedApiKey(), readStoredApiKey(), decryptApiKey(), encryptAp
 ### Community 244 - "index.tsx"
 Cohesion: 0.15
 Nodes (7): fixFilter(), LibrarySearchBar(), RUNNER_TO_STORE, ProgressDialog(), Props, Props, Props
-
-### Community 245 - "index.tsx"
-Cohesion: 0.17
-Nodes (9): defaultThemes, initOnlineMonitor(), initShortcuts(), App, Backend, container, root, themeClass (+1 more)
 
 ### Community 246 - "helpers.ts"
 Cohesion: 0.25
@@ -819,15 +943,11 @@ Nodes (12): 1. Correction, 2. Warning, 3. Temporary Ban, 4. Permanent Ban, Attri
 
 ### Community 263 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): eslint, @eslint/js, fast-xml-parser, devDependencies, eslint, @eslint/js, fast-xml-parser, sass (+5 more)
+Nodes (13): cross-env, @eslint/js, fast-xml-parser, devDependencies, cross-env, @eslint/js, fast-xml-parser, sass (+5 more)
 
 ### Community 284 - "index.tsx"
-Cohesion: 0.18
-Nodes (8): convertToTime(), DownloadManagerItem(), options, Props, Point, ProgressHeader(), roundToNearestHundredth(), Props
-
-### Community 308 - "user.test.ts"
-Cohesion: 0.17
-Nodes (11): mockConfigStore, mockDecryptString, mockEncryptString, mockExistsSync, mockIsEncryptionAvailable, MockLoginSession, mockSessionInstance, mockSteamUserInstance (+3 more)
+Cohesion: 0.14
+Nodes (12): convertToTime(), DownloadManagerItem(), options, Props, NOTE: do not gate cancel on gameInfo.folder_name. Steam GameInfo never, classifyDMItemStatus(), DMItemStatusInfo, ProgressHeader() (+4 more)
 
 ### Community 309 - "runtimes.ts"
 Cohesion: 0.32
@@ -850,16 +970,12 @@ Cohesion: 0.22
 Nodes (8): CachedImage(), CachedImageProps, Props, Harness, ImgElement, mount(), RenderProps, rerender()
 
 ### Community 324 - "index.tsx"
-Cohesion: 0.18
-Nodes (4): DefaultSteamPath(), UseDarkTrayIcon(), UseFramelessWindow(), WinePrefixesBasePath()
+Cohesion: 0.15
+Nodes (5): DefaultSteamPath(), HideChangelogOnStartup(), UseDarkTrayIcon(), UseFramelessWindow(), WinePrefixesBasePath()
 
 ### Community 368 - "crossover-compat-lookup.mjs"
 Cohesion: 0.36
 Nodes (8): extractVideoGameJsonLd(), isSoft404(), KNOWN_GOOD, lookupTitle(), main(), SAMPLE_TITLES, sleep(), slugify()
-
-### Community 369 - "index.ts"
-Cohesion: 0.22
-Nodes (8): ArrayBufferDownloadOptions, CommonDownloadOptions, downloadFile(), DownloadOptions, JsonDownloadOptions, JSONValue, NOTE: This does nothing if `writeToFile` isn't provided, TextDownloadOptions
 
 ### Community 370 - "index.tsx"
 Cohesion: 0.22
@@ -929,10 +1045,6 @@ Nodes (6): backend/config, BrowserWindow, Electron, GlobalConfig, FIXME: This fi
 Cohesion: 0.29
 Nodes (4): WineManagerUISettings, Props, WineItem, WineManager()
 
-### Community 446 - "SteamBottleSetup.tsx"
-Cohesion: 0.43
-Nodes (3): resolveSteamBottleEngine(), Phase, SteamBottleSetup()
-
 ### Community 447 - "Upstream Tracking"
 Cohesion: 0.29
 Nodes (6): Merge frontier, Remotes, Syncing upstream, Tag namespacing, Upstream Tracking, Version model
@@ -942,8 +1054,8 @@ Cohesion: 0.40
 Nodes (3): LoginWarningProps, validStoredUrl(), WebView()
 
 ### Community 475 - "InstallGameModal.ts"
-Cohesion: 0.33
-Nodes (3): InstallGameModalState, OpenInstallGameModalParams, useInstallGameModal
+Cohesion: 0.21
+Nodes (9): InstallGameModalState, installSteamGame(), openInstallGameModal(), OpenInstallGameModalParams, startSteamInstall(), useInstallGameModal, SteamInstallLocationState, SteamLibraryOption (+1 more)
 
 ### Community 476 - "SteamBottleSetup.ts"
 Cohesion: 0.53
@@ -985,14 +1097,6 @@ Nodes (3): daysFromNow(), hoursFromNow(), NOW
 Cohesion: 0.67
 Nodes (3): findLaunchOptionIndex(), useLaunchOptions(), UseLaunchOptionsProps
 
-### Community 569 - "InstalledInfo.tsx"
-Cohesion: 0.67
-Nodes (3): getInstallPlatformIcon(), InstalledInfo(), Props
-
-### Community 570 - "ReleaseDate.tsx"
-Cohesion: 0.67
-Nodes (3): convertDate(), ReleaseDate(), ReleaseDateProps
-
 ### Community 571 - "SteamBottleSetup.styles.test.ts"
 Cohesion: 0.50
 Nodes (3): componentDir, scssPath, tsxPath
@@ -1002,12 +1106,8 @@ Cohesion: 0.67
 Nodes (3): StoreType, useInstallProgress(), useInstallProgressRaw
 
 ### Community 724 - "launchEventCallback"
-Cohesion: 0.10
-Nodes (31): gogdlAuthConfig, gogdlConfigPath, gogRedistPath, gogSupportPath, currentStubs, defaultStubs, runGogdlCommandStub(), achievementStore (+23 more)
-
-### Community 761 - "simple-keyboard"
-Cohesion: 0.23
-Nodes (10): nileConfigPath, nileInstalled, nileLibrary, nileUserData, currentStubs, defaultStubs, runNileCommandStub(), configStore (+2 more)
+Cohesion: 0.04
+Nodes (79): isAppImage, isCLIConsoleMode, isCLIFullscreen, isCLINoGui, isFlatpak, isSnap, Manifest, appFolder (+71 more)
 
 ### Community 764 - "@xhayper/discord-rpc"
 Cohesion: 0.21
@@ -1021,29 +1121,25 @@ Nodes (4): baseTransform(), normalizeExactLowercase(), normalizePunctuationAndEd
 Cohesion: 0.33
 Nodes (4): envMock, getCodeweaversFromIndexMock, getListOfGamesMocks, isCrossoverIndexEligibleMock
 
-### Community 848 - "startPlausible"
-Cohesion: 0.50
-Nodes (3): Plausible(), PlausibleEventProps, startPlausible()
-
 ## Knowledge Gaps
-- **1229 isolated node(s):** `trailingComma`, `tabWidth`, `semi`, `singleQuote`, `axios` (+1224 more)
+- **1337 isolated node(s):** `trailingComma`, `tabWidth`, `semi`, `singleQuote`, `axios` (+1332 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **141 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **147 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `clearCache()` connect `LegendaryUser` to `utils.ts`, `GlobalState.tsx`, `main.ts`, `library.ts`?**
-  _High betweenness centrality (0.200) - this node is a cross-community bridge._
-- **Why does `gogLibraryStore` connect `GlobalState.tsx` to `LegendaryUser`?**
-  _High betweenness centrality (0.199) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `NileGameManager`, `Technology Stack: Humble Bundle Integration (v1.2)`, `index.tsx`, `classnames`, `electron-store`, `react-markdown`, `recharts`, `steam-session`, `Pattern Assignments`, `Implementation Decisions`, `Implications for Roadmap`, `steam-user`, `package.json`, `Phase 7: Game Details Enrichment - Discussion Log`, `fastest-levenshtein`, `Pattern Assignments`, `@fortawesome/free-brands-svg-icons`, `fs-extra`, `@hello-pangea/dnd`, `Implementation Decisions`, `@fortawesome/free-solid-svg-icons`, `Phase 2: Steam Library - Context`, `Pattern Assignments`, `Phase 8: New Steam Surfaces Verification Report (Gap-Closure Re-Verification)`, `i18next-fs-backend`, `i18next-http-backend`, `Implementation Decisions`, `ini`, `intro.js`, `Phase 11 — UI Design Contract: Library Sync + 5-State Key Model`, `Phase 14: Guided Claim Flow - Context`, `@mui/material`, `Phase 15: Store Overlay + Expiration Alerts - Context`, `plist`, `Domain Pitfalls: Humble Bundle Key Management Integration`, `react-router-dom`, `rehype-raw`, `sanitize-filename`, `sanitize-html`, `semver`, `shlex`, `short-uuid`, `source-map-support`, `zod`, `zustand`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `clearCache()` connect `launchEventCallback` to `GlobalState.tsx`, `library.ts`, `LegendaryUser`?**
+  _High betweenness centrality (0.095) - this node is a cross-community bridge._
+- **Why does `gogLibraryStore` connect `GlobalState.tsx` to `launchEventCallback`?**
+  _High betweenness centrality (0.095) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `NileGameManager`, `PlaytimeSync.tsx`, `easydl`, `@fontsource/rubik`, `@fortawesome/react-fontawesome`, `@hello-pangea/dnd`, `i18next-fs-backend`, `intro.js`, `intro.js-react`, `index.tsx`, `@node-steam/vdf`, `plist`, `react-dom`, `react-markdown`, `recharts`, `semver`, `simple-keyboard`, `steam-session`, `steam-shortcut-editor`, `zustand`, `@fortawesome/free-regular-svg-icons`, `lzma`, `electron-store`, `zstddec`, `steam-user`, `package.json`, `Phase 7: Game Details Enrichment - Discussion Log`, `Pattern Assignments`, `@fortawesome/free-brands-svg-icons`, `fs-extra`, `Implementation Decisions`, `Implementation Decisions`, `Phase 11 — UI Design Contract: Library Sync + 5-State Key Model`, `Phase 14: Guided Claim Flow - Context`, `ini`, `Technology Stack: Humble Bundle Integration (v1.2)`, `index.ts`, `@mui/material`, `filesize`, `react-router-dom`, `main.ts`, `rehype-raw`, `sanitize-filename`, `sanitize-html`, `shlex`, `short-uuid`, `source-map-support`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
 - **What connects `trailingComma`, `tabWidth`, `semi` to the rest of the system?**
-  _1229 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `launcher.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07981220657276995 - nodes in this community are weakly interconnected._
+  _1337 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `GOGLibraryManager` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07205387205387205 - nodes in this community are weakly interconnected._
 - **Should `misc.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.02631578947368421 - nodes in this community are weakly interconnected._
+- **Should `NileGameManager` be split into smaller, more focused modules?**
+  _Cohesion score 0.14624505928853754 - nodes in this community are weakly interconnected._
