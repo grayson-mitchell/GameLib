@@ -8,9 +8,11 @@ jest.mock('../logger')
 describe('progress_bar', () => {
   const window = {
     webContents: {
-      send: jest.fn()
+      send: jest.fn(),
+      isDestroyed: jest.fn().mockReturnValue(false)
     },
-    setProgressBar: jest.fn()
+    setProgressBar: jest.fn(),
+    isDestroyed: jest.fn().mockReturnValue(false)
   }
 
   // stub windows
@@ -24,8 +26,14 @@ describe('progress_bar', () => {
   })
 
   // spy on `setProgressBar` method
+  // debug/steam-install-slow-start (Thread D-1): `resetMocks: true` strips
+  // any `.mockReturnValue()` set at describe-body-eval time before every test
+  // body runs, so `isDestroyed` must be (re)assigned fresh here too, not just
+  // once above (same gotcha documented in `__mocks__/electron.ts`).
   beforeEach(() => {
     window.setProgressBar = jest.fn()
+    window.webContents.isDestroyed = jest.fn().mockReturnValue(false)
+    window.isDestroyed = jest.fn().mockReturnValue(false)
   })
 
   describe('on gameStatusUpdate with status="queued"', () => {
