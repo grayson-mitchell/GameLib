@@ -613,6 +613,26 @@ launched Steam.
 >
 > **Routing:** MAJOR launch/uninstall correctness divergence → `/gsd-debug` (root-cause first — my
 > code-read guess was wrong once already), then Phase-21 gap plan (batch with D-UAT-09).
+>
+> **✅ DEBUGGED 2026-07-19 (session `.planning/debug/steam-bottle-game-no-launch.md`) — two compounding
+> defects found + fixed in the working tree (uncommitted @ adced885+):**
+> 1. `main.ts` `requestGameSettings` called `GameConfig.get(appName).getSettings()` directly instead of
+>    the runner-aware `libraryManagerMap[runner].getGame(appName).getSettings()` → skipped
+>    `SteamGame.getSettings()`'s bottle branch → detail tab showed the global wine (GPTK) not the bottle.
+>    **Fix: route Steam appIds through the runner-aware getSettings.**
+> 2. `checkWineBeforeLaunch`'s self-heal re-persisted the corrected `wineVersion` via
+>    `GameConfig.get(...).setSetting(...)` — a store `getSteamBottleSettings()` never reads (the exact
+>    "Pitfall 6" gap `provisionBottle` already works around for its synthetic appId, but never patched at
+>    the real per-game launch path) → every bottle dispatch (install/launch/**uninstall**) reused the
+>    broken wine → Play/Uninstall no-op/revert. **Fix: export `persistBottleWineVersion()` (bottle.ts) +
+>    call it after a successful `checkWineBeforeLaunch` for `runner==='steam'` (launcher.ts).**
+>    Self-verified: tsc clean, backend suite 1463/1463.
+>
+> **HW verification (2026-07-19, clean rebuild):** Fix #1 ✅ CONFIRMED — detail tab now shows CrossOver,
+> not GPTK. Fix #2 (Play/Uninstall dispatch) ⏳ NOT verified — user stopped after confirming fix #1 and
+> deleted the Portal 2 bottle files (12 GB + `appmanifest_620.acf`) to reclaim disk, so no test subject
+> remains. **Fix #2's launch/uninstall verification DEFERRED to a future bottle install.** Note: the
+> ~30s-then-revert uninstall the user saw was on the PRE-restart stale backend; not retested on the fix.
 
 ## Summary Table (fill in after all items are run)
 
