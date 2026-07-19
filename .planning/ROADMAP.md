@@ -53,7 +53,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.6 — Steam Native Install
 
-- [x] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (gaps found 2026-07-16 — SNI-01 depot directory/symlink handling failed verification; hardware UAT outstanding; see 21-VERIFICATION.md) (completed 2026-07-16)
+- [x] **Phase 21: Steam Native Install (depot download)** - Steam games install through an in-process depot download GameLib owns — real progress, real errors, recovery — instead of the opaque steam://rungameid handoff; Steam adopts the install and keeps owning updates (gaps found 2026-07-16 — SNI-01 depot directory/symlink handling failed verification; hardware UAT outstanding; see 21-VERIFICATION.md); gap plan 21-17 added 2026-07-19 to close D-UAT-09 — cancelled/incomplete native install mislabeled Installed/Play; see 21-UAT.md) (completed 2026-07-16)
 
 ## Phase Details
 
