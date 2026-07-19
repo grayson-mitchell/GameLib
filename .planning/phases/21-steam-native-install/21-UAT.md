@@ -12,7 +12,7 @@ open_macos_bug_items: 1
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
-open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; HW re-verify via item 1d DEFERRED → Windows post-prod), D-UAT-10 (OPEN — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven → /gsd-debug)]
+open_findings: [D-UAT-05 (RESOLVED — fix 4267eba0 real-HW verified 2026-07-19: cancel responsive, item leaves queue, no re-wedge on restart), D-UAT-06 (RESOLVED — Cyberpunk rode past plan-build 2026-07-19, no CM-drop/cancelled masking), D-UAT-07 (code-fixed ab0500c6, pending HW re-verify), D-UAT-08 (RESOLVED — fix 64d5afcc real-HW verified 2026-07-19: Cyberpunk sub-app depot keys fetch + stream past plan-build), D-UAT-09 (CODE-FIXED 2026-07-20 — gap plan 21-17 + WR-01/WR-02 (commits 718b4bfe, e635a4b3); verifier 4/4 must-haves; HW re-verify via item 1d DEFERRED → Windows post-prod), D-UAT-10 (DEFERRED tracked-debt 2026-07-20 — bottle-installed Steam game not launchable/uninstallable from GameLib; shows GPTK; adoption half PASSED; root cause UNKNOWN, first is_mac_native guess disproven; macOS-only, revisit via /gsd-debug or later phase; NOT blocking Phase 21)]
 run_via: "/gsd:verify-work 21"
 last_updated: 2026-07-20
 ---
@@ -679,11 +679,12 @@ Phase 23 Gate 1, 2026-07-19). These become a post-production UAT checklist, trac
 
 **Confirmed on macOS hardware:** 1a, 1b PASS; 2a PASS (10GB+ memory bound); D-UAT-05/06/08 resolved.
 
-**NOT Windows-deferrable — remains open on macOS:**
+**NOT Windows-deferrable — DEFERRED as tracked known-issue (user decision 2026-07-20):**
 - **Item 3 / D-UAT-10** — bottled Steam adoption: install+adoption ✅ but **launch/uninstall broken (shows
   GPTK, root cause UNKNOWN)**. This is a CrossOver-bottle path that does not exist on Windows *and* is an
-  **unresolved bug**, not merely an unrun test. It cannot ride the Windows deferral — it needs a macOS
-  `/gsd-debug` session (or an explicit decision to descope bottled-Steam launch from v1.4).
+  **unresolved bug**, not merely an unrun test. Per user decision 2026-07-20 it is **deferred as tracked
+  debt** (not blocking Phase 21) — revisit via a macOS `/gsd-debug` session or a later phase. Bottled-Steam
+  launch/uninstall remains broken until then.
 
 ---
 *Prepared: 2026-07-16 by Plan 21-12 (autonomous prep). Awaiting human execution on real hardware.*
