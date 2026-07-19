@@ -1,128 +1,158 @@
 ---
 phase: 21-steam-native-install
-reviewed: 2026-07-16T10:49:33Z
+reviewed: 2026-07-19T10:43:58Z
 depth: standard
-scope: gap-closure (21-15 worker-thread decompress pool, 21-16 waiting-for-restart UX)
-files_reviewed: 9
+scope: gap-closure (21-17 D-UAT-09 — incomplete install mislabeled Installed/Play)
+diff_base: 452ec85c^
+files_reviewed: 7
 files_reviewed_list:
-  - electron.vite.config.ts
   - src/backend/storeManagers/steam/depot.ts
-  - src/backend/storeManagers/steam/depot/decompress.ts
-  - src/backend/storeManagers/steam/depot/decompressPool.ts
-  - src/backend/storeManagers/steam/depot/decompressWorker.ts
-  - src/backend/storeManagers/steam/depot/select.ts
+  - src/backend/storeManagers/steam/games.ts
   - src/backend/storeManagers/steam/library.ts
   - src/frontend/hooks/constants.ts
+  - src/frontend/hooks/hasStatus.ts
   - src/frontend/screens/Game/GamePage/components/GameStatus.tsx
+  - src/frontend/screens/Game/GamePage/components/MainButton.tsx
 findings:
   critical: 0
-  warning: 2
-  info: 3
+  warning: 3
+  info: 2
   total: 5
-warnings_resolved:
-  - "WR-01 — resolved in 56aba291 (drainQueueInline on zero-worker collapse + regression test)"
-  - "WR-02 — resolved in a32e098e (log replaceWorker failures)"
-status: warnings_resolved
+status: issues_found
 ---
 
-# Phase 21: Code Review Report (gap closure 21-15 / 21-16)
+# Phase 21: Code Review Report
 
-**Reviewed:** 2026-07-16T10:49:33Z
-**Depth:** standard
-**Files Reviewed:** 9
-**Status:** warnings_resolved (WR-01/WR-02 fixed 2026-07-16; Info items IN-01/02/03 left as-is)
-
-> Scope: only the Phase 21 gap-closure changes (worker-thread decompress pool + waiting-for-restart UX). The rest of Phase 21 was reviewed in the prior 28-file pass; this file was regenerated for the gap-closure re-review per the workflow's `review_path`.
+**Reviewed:** 2026-07-19T10:43:58Z
+**Depth:** standard (--gaps-only, scoped to 21-17 diff `452ec85c^..a03c1ad8`)
+**Files Reviewed:** 7
+**Status:** issues_found
 
 ## Summary
 
-The four scope concerns were each traced end-to-end:
+Reviewed the 21-17 gap-closure (closes D-UAT-09). The change set has four moving parts:
+(1) `isFullyInstalledStateFlags` centralizing the bit-4 completeness predicate,
+(2) `markSteamInstallIncomplete` marking a same-session cancel as resumable,
+(3) an abort-aware depot `finalize` that forces `outcome: 'cancelled'`, and
+(4) frontend "Finish in Steam"/resume gating in MainButton/GameStatus/hasStatus.
 
-- **sha1 integrity gate off-thread:** SOUND. `decodeChunk` (decompress.ts:88) is the single source of the `sha1(data) === expectedSha` and `length === cbOriginal` gates, and it runs identically inline and inside the worker (`handleDecodeMessage` → `decodeChunk`). Neither path can return unverified bytes; tests decompressPool.test.ts:105/121 lock this.
-- **Transferable-buffer correctness:** SOUND. The encrypted chunk is copied into a fresh `ArrayBuffer` (`toOwnArrayBuffer`) before transfer, so the caller's buffer is never detached; the decryption key is copied and NEVER placed in the transfer list (decompressPool.ts:287 transfers only `encryptedArrayBuffer`); the worker slices its result to a fresh bounded `ArrayBuffer` before posting back and never posts the key back.
-- **Timeout / worker-replacement races & shutdown leak-safety:** the idempotent `handleWorkerFailure` guard (`workers.includes`), the pending-delete-before-terminate ordering, the `allWorkers` sweep, and the `inFlightReplacements` await in `shutdown()` are correctly reasoned — no double-settle, no double-replacement, no worker-count growth, no leak across the normal `downloadDepotFiles` `finally { shutdown() }`. One residual gap in the *queued* (not dispatched) path is WR-01.
-- **Build wiring:** CORRECT. `electron.vite.config.ts:42-50` emits `decompressWorker.js` as a second named rollup entry co-located with `main.js` in `build/main/`, matching `resolveWorkerPath()`'s `path.join(__dirname, 'decompressWorker.js')` for both dev and packaged output.
-- **Status-context plumbing:** REACHABLE and tested. `pollInstallOnce` emits `context: 'steam-waiting-for-restart'` for StateFlags exactly 1026 (library.ts:1012-1020; `readAcfState` classifies 1026 as `state:'downloading'`) → `handleGameStatus` re-pushes (no early-return, context differs — GlobalState.tsx:960) → `hasStatus` maps `context` → `statusContext` (hasStatus.ts:116) → both `getStatusLabel` (constants.ts:32) and `GameStatus.getInstallLabel` (GameStatus.tsx:93) render the passive hint. Backend branch covered by library.test.ts:1746/1767.
-- **Depot-selection logging (select.ts):** CLEAN. Every log line emits only app/depot ids, manifest gids, sizes, and os/arch/language/branch strings — no decryption key, token, or SteamID64/LastOwner. The two `logWarning` sites in depot.ts (326, 923) carry only appIds and a finalize error object.
+The core safety invariant — **never render Play for an incomplete install** — holds on every
+path I traced, because both the same-session marker and the on-disk 1026 ACF keep
+`is_installed` false. The predicate centralization is a clean, correct refactor (NaN inputs
+fail closed via `NaN & 4 === 0`, matching prior behavior).
 
-No BLOCKER-class defects (no data-loss, secret leak, injection, or common-path crash). Two robustness gaps in the worker pool and three minor items follow.
+The defects found are durability/consistency gaps in the *labeling* half of the fix, not the
+safety half. The most important is that a mid-session library `refresh()` silently wipes the
+same-session `steamResumePending` marker, reverting "Finish in Steam" back to a bare "Install".
+
+No structural-findings block was provided, so this report is narrative-only.
+
+## Narrative Findings (AI reviewer)
 
 ## Warnings
 
-### WR-01: Queued decode tasks can orphan (permanent install hang) when the pool drains to zero live workers
+### WR-01: Mid-session `refresh()` wipes the same-session incomplete marker, reverting "Finish in Steam" to "Install"
 
-**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:322-339` (queue path), `242-250` (`releaseWorker`), `219-240` (`replaceWorker`)
+**File:** `src/backend/storeManagers/steam/library.ts:575-618` (interacts with `markSteamInstallIncomplete` at `342-356`)
+**Issue:**
+`markSteamInstallIncomplete` sets `install: { ...existing.install, steamResumePending: true }`
+in memory and persists it. But `refresh()` does `library.clear()` (line 575) and rebuilds every
+`GameInfo` from scratch — the `install` object it constructs (lines 609-618) is derived purely
+from the ACF scan and **never re-seeds `steamResumePending`**. The method's own header comment
+(lines 565-569) explicitly notes this resync "can be triggered mid-session (e.g. the
+launch-completion 'done' status)". So after a same-session cancel, the first mid-session
+`refresh()` erases the marker. `is_installed` stays correctly `false` (finalize wrote a 1026
+manifest, so `buildInstalledMap` excludes it — the Play-safety invariant survives), but:
+- MainButton falls through from "Finish in Steam" back to the generic **"Install"** label.
+- `hasStatus` no longer derives `statusContext === 'steam-incomplete'`, so GameStatus reverts to
+  the generic "This game is not installed" copy.
 
-**Issue:** The queue is load-bearing and routinely non-empty: `downloadDepotFiles` runs up to `FILE_CONCURRENCY` (8) files × `CHUNK_CONCURRENCY` (4) = **up to 32 concurrent `decode()` calls against a pool of at most `min(cpus, 8)` workers**, so 24+ tasks sit in `this.queue` on an 8-core host (and nearly all of them on a 1-core VM, where `size` resolves to 1).
-
-Queued tasks are drained only by `releaseWorker()` (called on task completion or a *successful* `replaceWorker()`). There is no timeout on a queued task — the per-task timer is armed only in `dispatch()` once a worker is assigned — and `decode()`'s inline-fallback check (`this.workers.length === 0`, line 318) applies only to *newly arriving* calls; it never re-routes tasks already in `this.queue`. So if the pool reaches `workers.length === 0` while `queue.length > 0` **and** `replaceWorker()` spawns keep failing (EMFILE / ENOMEM / transient worker-entry load failure — the same resource exhaustion that kills workers en masse), the queued task promises never settle. `downloadSingleFile` awaits them forever: the install hangs with the UI stuck on "Installing…", no error, no completion, no `finalizeToSteam`. Worst on low-core hosts (pool size 1), where a single failed replacement after one timeout strands the entire remaining queue.
-
-**Fix:** When the pool can no longer serve queued work, drain it inline instead of leaking it:
+This is precisely the D-UAT-09 symptom the plan set out to eliminate, resurfacing after any
+resync. Clicking Install still resumes correctly, so it is a UX regression of the fix, not a
+data/safety failure — hence WARNING, not BLOCKER. The existing tests (library.test.ts Test E)
+cover `markSteamInstallIncomplete` in isolation but none assert the flag survives `refresh()`, so
+the gap is untested.
+**Fix:** Preserve the resumable flag across resync — re-seed it from the prior in-memory entry (or
+from the interrupted-ACF detection). Capture the prior value before `library.clear()`:
 ```ts
-private async replaceWorker(): Promise<void> {
-  if (this.inlineFallback || this.shuttingDown) return
-  try {
-    const worker = await this.spawnWorker(this.resolveWorkerPath())
-    if (this.shuttingDown) { await worker.terminate().catch(() => undefined); return }
-    this.workers.push(worker)
-    this.releaseWorker(worker)
-  } catch {
-    if (this.workers.length === 0) this.drainQueueInline() // don't strand queued tasks
-  }
-}
+// before library.clear(): const priorResume = new Map(
+//   Array.from(library.values()).map(g => [g.app_name, g.install?.steamResumePending]))
+install: installedData
+  ? { install_path: ..., install_size: ..., platform: ... }
+  : priorResume.get(appIdStr)
+    ? { steamResumePending: true }
+    : {},
+```
+Alternatively, run the startup interrupted-ACF scan at the tail of `refresh()` so any 1026-on-disk
+manifest deterministically re-flags `steamResumePending`.
 
-private drainQueueInline(): void {
-  for (const t of this.queue.splice(0)) {
-    this.inlineDecode(t.encrypted, t.key, t.expectedSha, t.cbOriginal).then(t.resolve, t.reject)
-  }
+### WR-02: Aborted zero-depot install returns `{ status: 'done' }`, bypassing `markSteamInstallIncomplete`
+
+**File:** `src/backend/storeManagers/steam/depot.ts:2072-2077`
+**Issue:**
+```ts
+if (!plan.depots.length) {
+  await finalize()          // forces outcome:'cancelled' when opts.signal.aborted
+  return { status: 'done' } // ...but reports 'done' regardless of the abort
+}
+```
+If the signal is aborted after `buildDepotPlan` resolves with zero depots, `finalize` correctly
+writes a `cancelled`/1026 manifest, but the function still returns `done`. In
+`games.ts:runNativeDepotDownload` that `done` skips the `outcome.status === 'cancelled'` branch
+(line 913), so `markSteamInstallIncomplete` is never called and the flow proceeds to start ACF
+polling as if the install succeeded. The Play-safety invariant still holds (the 1026 ACF keeps
+`is_installed` false on the next scan), but the abort→cancelled→mark chain the plan relies on is
+broken for this edge, and the user's cancel is reported as a completed install. This contradicts
+the abort-awareness that lines 2119 and 2152 add on the other two return paths.
+**Fix:** Honor the abort on the early return, mirroring the main path:
+```ts
+if (!plan.depots.length) {
+  await finalize()
+  return opts.signal?.aborted === true
+    ? { status: 'cancelled' }
+    : { status: 'done' }
 }
 ```
 
-### WR-02: Silent pool capacity collapse — replacement failures are swallowed with no log
+### WR-03: `markSteamInstallIncomplete` flips `is_installed` to false unconditionally, without confirming on-disk state
 
-**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:235-239`
-
-**Issue:** `replaceWorker()`'s failure is caught by a bare `catch {}` with no log, so the pool can quietly degrade 8 → 0 workers with zero output. This is the pool introduced specifically to fix UAT-reported slowness (D-UAT-03); a silent capacity collapse (and the WR-01 hang it precedes) leaves an operator investigating a hung/slow install with nothing to correlate — the opposite of the observability intent behind the sibling 21-16 logging work.
-
-**Fix:** Log at warn level when a replacement fails / the pool hits zero workers:
-```ts
-} catch (err) {
-  logWarning(
-    ['DecompressPool: worker replacement failed; pool now at', `${this.workers.length} worker(s)`,
-     (err as Error)?.message ?? ''],
-    LogPrefix.Steam
-  )
-}
-```
+**File:** `src/backend/storeManagers/steam/library.ts:342-356`
+**Issue:**
+The helper hard-sets `is_installed: false` for whatever entry it is handed, on the assumption the
+caller only invokes it from the cancelled branch of a fresh native install. That assumption is
+currently true (install is gated behind `!is_installed` in the UI), but the helper is an exported,
+reusable surface with no guard of its own. If it is ever called — or the cancelled branch is ever
+reached — for an appId whose files are actually fully present on disk (a re-install/verify/resume
+of an already-complete title that the user cancels), it will mislabel a genuinely-installed game
+as not-installed and force a spurious resume. Given the D-UAT-09 lineage of mislabeling installed
+games, this is worth hardening.
+**Fix:** Either document the precondition as a hard contract at the call site, or make the helper
+self-consistent by only flipping `is_installed` when the on-disk ACF is not bit-4 set (reuse
+`readAcfState` + `isFullyInstalledStateFlags`), leaving a truly-complete manifest untouched.
 
 ## Info
 
-### IN-01: `os.cpus()` returning an empty array silently disables the pool
+### IN-01: Redundant `!is.installing && !is.queued` guards in MainButton's new branch
 
-**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:96`
+**File:** `src/frontend/screens/Game/GamePage/components/MainButton.tsx:217-223`
+**Issue:** The new "Finish in Steam" block is reached only after the earlier `if (is.installing)`
+(line 201) and `if (is.queued)` (line 151) branches have already `return`ed, so `!is.installing`
+and `!is.queued` here can never be false. Harmless but dead defensive conditions that can mislead
+a future reader into thinking those states are still live at this point.
+**Fix:** Drop the two redundant clauses, or add a comment noting they are defensive only.
 
-**Issue:** `this.size = opts.size ?? Math.min(os.cpus().length, 8)`. Some sandboxed/containerized hosts return `os.cpus() === []`, yielding `size === 0`. `init()` spawns zero workers (no error, so `inlineFallback` stays `false`), and every `decode()` runs inline on the main thread. Behavior stays correct, but the off-main-thread optimization silently no-ops with no log on exactly the low-resource hosts most likely to need it.
+### IN-02: Two different predicates express the same "incomplete" UI decision
 
-**Fix:** `this.size = opts.size ?? Math.max(1, Math.min(os.cpus().length || 1, 8))` and/or log the chosen size.
-
-### IN-02: Redundant double-copy of the depot key per dispatched chunk
-
-**File:** `src/backend/storeManagers/steam/depot/decompressPool.ts:277`
-
-**Issue:** `toOwnArrayBuffer(Buffer.from(task.key))` copies the key twice (`Buffer.from` allocates+copies, then `.slice()` copies again). Correct and safe (key is never transferred), just wasteful per chunk. `toOwnArrayBuffer(task.key)` alone already yields an independent, non-transferred `ArrayBuffer`.
-
-**Fix:** `const keyArrayBuffer = toOwnArrayBuffer(task.key)`.
-
-### IN-03: worker_threads-from-asar loading should be verified against the packaged build
-
-**File:** `electron.vite.config.ts:42-50`, `src/backend/storeManagers/steam/depot/decompressPool.ts:101-103`
-
-**Issue:** Build wiring is correct, but the residual risk is runtime-only: `new Worker(<path inside app.asar>)` plus its dynamic `import('lzma')` (and WASM asset) must load from the packaged asar, not just the unpacked dev `build/`. Static review cannot confirm this; on failure the pool falls back inline (graceful, but the fix no-ops silently).
-
-**Fix:** Add a packaged-build smoke test / startup log asserting `init()` produced live workers (not an inline fallback); `asarUnpack` the `lzma` WASM asset if the packaged worker cannot load it.
+**File:** `src/frontend/screens/Game/GamePage/components/GameStatus.tsx:139` vs `MainButton.tsx:217-223`
+**Issue:** GameStatus keys off `statusContext === 'steam-incomplete'` while MainButton keys off
+`gameInfo.install?.steamResumePending`. Both ultimately derive from `steamResumePending`
+(GameStatus's context is produced by `hasStatus` from that same field), so they agree today. But
+they read through two different code paths (`hasStatus` derivation vs the raw prop), so a future
+change to either path can desync the label between the button and the status line.
+**Fix:** Standardize both components on one predicate for the incomplete-install case.
 
 ---
 
-_Reviewed: 2026-07-16T10:49:33Z_
+_Reviewed: 2026-07-19T10:43:58Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
