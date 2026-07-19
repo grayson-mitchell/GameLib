@@ -90,6 +90,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['build/', '**/*.js', '**/*.cjs', 'eslint.config.mjs']
+    ignores: ['build/', '**/*.js', '**/*.cjs', '**/*.mjs']
   }
 )
