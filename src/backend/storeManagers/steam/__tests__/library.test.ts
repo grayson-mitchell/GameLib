@@ -30,7 +30,9 @@ import SteamLibraryManager, {
   machOArchsOf,
   verdictFromArchs,
   locateMachOBinary,
-  verifyMacArchGroundTruth
+  verifyMacArchGroundTruth,
+  isFullyInstalledStateFlags,
+  markSteamInstallIncomplete
 } from '../library'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
@@ -1984,6 +1986,129 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     )
     // Native scan must never consult the bottle path resolver
     expect(getBottleSteamappsDir).not.toHaveBeenCalled()
+  })
+})
+
+// ── D-UAT-09 (21-17): isFullyInstalledStateFlags() + detector regression lock ─
+
+describe('isFullyInstalledStateFlags()', () => {
+  it('Test A: bit 4 set (4, 6, 516) -> true; bit 4 clear (1026, 2) -> false', () => {
+    expect(isFullyInstalledStateFlags(4)).toBe(true)
+    expect(isFullyInstalledStateFlags(6)).toBe(true) // bit 4 set alongside bit 2
+    expect(isFullyInstalledStateFlags(516)).toBe(true) // bit 4 set alongside bit 512
+    expect(isFullyInstalledStateFlags(1026)).toBe(false) // the GameLib handoff literal — bit 4 unset
+    expect(isFullyInstalledStateFlags(2)).toBe(false)
+  })
+})
+
+describe('detector regression lock (D-UAT-09): buildInstalledMap / readAcfState route through isFullyInstalledStateFlags', () => {
+  it('Test B: buildInstalledMap over a mixed 1026/4 fixture returns ONLY the bit-4 appId', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'appmanifest_100.acf',
+      'appmanifest_200.acf'
+    ])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock)
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '100',
+          StateFlags: '1026',
+          installdir: 'incomplete-game',
+          SizeOnDisk: '0'
+        }
+      })
+      .mockReturnValueOnce({
+        AppState: {
+          appid: '200',
+          StateFlags: '4',
+          installdir: 'complete-game',
+          SizeOnDisk: '500'
+        }
+      })
+
+    const result = await buildInstalledMap()
+
+    expect(result.has(100)).toBe(false)
+    expect(result.has(200)).toBe(true)
+  })
+
+  it('Test B: readAcfState returns "downloading" for a 1026 fixture and "installed" for a 4 fixture', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '100',
+        StateFlags: '1026',
+        installdir: 'incomplete-game',
+        SizeOnDisk: '0'
+      }
+    })
+
+    const incomplete = await readAcfState('100')
+    expect(incomplete.state).toBe('downloading')
+
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '200',
+        StateFlags: '4',
+        installdir: 'complete-game',
+        SizeOnDisk: '500'
+      }
+    })
+
+    const complete = await readAcfState('200')
+    expect(complete.state).toBe('installed')
+  })
+})
+
+// ── D-UAT-09 (21-17): markSteamInstallIncomplete() — same-session cancel ─────
+
+describe('markSteamInstallIncomplete()', () => {
+  beforeEach(() => {
+    library.clear()
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(steamLibraryStore.set as jest.Mock).mockClear()
+  })
+
+  it('Test E: flips is_installed to false and steamResumePending to true, persists, and pushes to the frontend', () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: { install_path: '/steam/steamapps/common/csgo' },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    markSteamInstallIncomplete('730')
+
+    expect(library.get('730')?.is_installed).toBe(false)
+    expect(library.get('730')?.install?.steamResumePending).toBe(true)
+    // Prior install fields must survive the merge, not be clobbered.
+    expect(library.get('730')?.install?.install_path).toBe(
+      '/steam/steamapps/common/csgo'
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: '730',
+        is_installed: false,
+        install: expect.objectContaining({ steamResumePending: true })
+      })
+    )
+  })
+
+  it('Test E: is a no-op (never throws) when the appId has no in-memory library entry', () => {
+    library.clear()
+    expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
   })
 })
 

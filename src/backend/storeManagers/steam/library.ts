@@ -330,6 +330,34 @@ export async function resumeInterruptedSteamInstall(
   }
 }
 
+/**
+ * D-UAT-09 (21-17): marks a Steam library entry as incomplete/resumable
+ * after a SAME-SESSION native depot-download cancel (games.ts's
+ * runNativeDepotDownload cancelled branch) — the one cancel path init()'s
+ * startup-surface scan (above) does NOT cover, since the process never
+ * restarted. Mirrors init()'s startup-surface pattern (surface as
+ * resumable, never auto-drive) and reuses the existing steamResumePending
+ * field (types.ts) rather than inventing a new one. Persists immediately
+ * (GAP-17-BOTTLE-STORE-DIVERGENCE precedent — see pollInstallOnce's
+ * 'installed' branch) so a restart mid-cancel can't read a stale
+ * is_installed:true from steamLibraryStore. A no-op (never throws) when the
+ * appId has no in-memory library entry — matches every other per-appId
+ * surfacing helper in this file.
+ */
+export function markSteamInstallIncomplete(appId: string): void {
+  const existing = library.get(appId)
+  if (!existing) return
+
+  const updated: GameInfo = {
+    ...existing,
+    is_installed: false,
+    install: { ...existing.install, steamResumePending: true }
+  }
+  library.set(appId, updated)
+  steamLibraryStore.set('games', Array.from(library.values()))
+  sendFrontendMessage('pushGameToLibrary', updated)
+}
+
 export default class SteamLibraryManager implements LibraryManager {
   /**
    * On startup: load the cached library immediately, SURFACE (never
@@ -750,6 +778,19 @@ export default class SteamLibraryManager implements LibraryManager {
 }
 
 /**
+ * D-UAT-09 (21-17): the single completeness predicate every install-state
+ * detector must call — bit 4 (0x4 = FullyInstalled) is a BITMASK check, NOT
+ * equality (Pitfall 6); the strict-1026 GAMELIB_HANDOFF_STATE_FLAGS literal
+ * elsewhere in this file is a DIFFERENT, unrelated check (exact handoff
+ * value, not this bitmask). Centralizing this decision means no future
+ * detector can diverge from the other three and spoof "installed" from a
+ * partial/interrupted manifest (T-21-17-01, regression-locked by tests).
+ */
+export function isFullyInstalledStateFlags(stateFlags: number): boolean {
+  return (stateFlags & 4) !== 0
+}
+
+/**
  * Reads all Steam library paths and returns a Map from AppID (number) to
  * install data for games whose ACF StateFlags has bit 4 set
  * (0x4 = FullyInstalled). Skips missing directories and corrupt ACF files
@@ -788,8 +829,7 @@ export async function buildInstalledMap(): Promise<
 
         const appid = parseInt(state.appid, 10)
         const stateFlags = parseInt(state.StateFlags, 10)
-        // Bit 4 (0x4) = FullyInstalled — bitmask, NOT equality (Pitfall 6)
-        const isInstalled = (stateFlags & 4) !== 0
+        const isInstalled = isFullyInstalledStateFlags(stateFlags)
 
         if (isInstalled && !isNaN(appid)) {
           installed.set(appid, {
@@ -1176,7 +1216,7 @@ export async function readAcfState(
       if (!state) continue
 
       const stateFlags = parseInt(state.StateFlags, 10)
-      if ((stateFlags & 4) !== 0) {
+      if (isFullyInstalledStateFlags(stateFlags)) {
         return {
           state: 'installed',
           stateFlags,
@@ -1237,8 +1277,7 @@ export async function buildBottleInstalledMap(): Promise<
 
       const appid = parseInt(state.appid, 10)
       const stateFlags = parseInt(state.StateFlags, 10)
-      // Bit 4 (0x4) = FullyInstalled — bitmask, NOT equality (Pitfall 6)
-      const isInstalled = (stateFlags & 4) !== 0
+      const isInstalled = isFullyInstalledStateFlags(stateFlags)
 
       if (isInstalled && !isNaN(appid)) {
         installed.set(appid, {

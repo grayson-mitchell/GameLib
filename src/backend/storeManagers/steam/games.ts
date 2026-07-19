@@ -33,7 +33,8 @@ import {
 import {
   startInstallPolling,
   startUninstallPolling,
-  resumeInterruptedSteamInstall
+  resumeInterruptedSteamInstall,
+  markSteamInstallIncomplete
 } from './library'
 import {
   isBottleReady,
@@ -910,6 +911,13 @@ export default class SteamGame implements Game {
       )
 
       if (outcome.status === 'cancelled') {
+        // D-UAT-09 (21-17): init()'s startup-surface scan only catches an
+        // interrupted install on the NEXT process restart — a same-session
+        // cancel (this branch) is never surfaced any other way. Mark the
+        // library entry incomplete/resumable now so the frontend never
+        // renders a stale is_installed:true/Play for the rest of THIS
+        // session (Task 2 reads is_installed + steamResumePending).
+        markSteamInstallIncomplete(this.appId)
         return { status: 'abort' }
       }
 

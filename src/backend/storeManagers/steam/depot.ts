@@ -2032,18 +2032,29 @@ export async function downloadSteamDepots(
   // opts-omitted defaults.
   let lastResult: DepotDownloadResult | undefined
 
-  const finalize = (): Promise<void> =>
-    finalizeToSteam(appId, {
+  // D-UAT-09 (21-17): an aborted signal forces the outcome threaded into
+  // finalizeToSteam to 'cancelled' regardless of what lastResult.outcome
+  // says — closes the race where a user cancel landing after the last
+  // in-loop signal check would otherwise let downloadDepotFiles's own
+  // 'completed' outcome flow straight through to canWriteFullOwnership.
+  // canWriteFullOwnership itself is untouched (still requires
+  // outcome==='completed'); this is the single call site deciding what
+  // outcome value it ever sees.
+  const finalize = (): Promise<void> => {
+    const cancelled =
+      lastResult?.outcome === 'cancelled' || opts.signal?.aborted === true
+    return finalizeToSteam(appId, {
       targetSteamappsDir: opts.targetSteamappsDir,
       installdir: opts.installdir,
       name: displayName,
       depots: attempted,
       buildid,
-      outcome: lastResult?.outcome,
+      outcome: cancelled ? 'cancelled' : lastResult?.outcome,
       failures: lastResult?.failures,
       allFilesVerified: lastResult?.allFilesVerifiedThisRun,
       allModesApplied: lastResult?.allModesApplied
     })
+  }
 
   try {
     const plan = await buildDepotPlan(appId, opts)
@@ -2105,7 +2116,7 @@ export async function downloadSteamDepots(
     // attempt, before returning control (D-07 no-race guarantee).
     await finalize()
 
-    if (result.outcome === 'cancelled') {
+    if (result.outcome === 'cancelled' || opts.signal?.aborted === true) {
       return { status: 'cancelled' }
     }
     if (result.failures.length) {
