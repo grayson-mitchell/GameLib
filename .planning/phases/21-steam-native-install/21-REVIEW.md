@@ -53,6 +53,8 @@ No structural-findings block was provided, so this report is narrative-only.
 
 ### WR-01: Mid-session `refresh()` wipes the same-session incomplete marker, reverting "Finish in Steam" to "Install"
 
+**Status: RESOLVED** (2026-07-20, commit `718b4bfe`) — Took the review's "alternative" on-disk-derivation path rather than the in-memory carry-over. Added `buildIncompleteInstallSet()` (the durable on-disk complement to `buildInstalledMap`, sharing the `isFullyInstalledStateFlags` predicate — no duplicated bit logic) and consult it in `refresh()` to re-seed `steamResumePending` for any bit-4-unset native ACF. The flag is now derived durably from disk, surviving any number of resyncs; `is_installed` stays false for these (Play-safety invariant preserved) and a fully-installed ACF still yields `is_installed=true` + Play. Regression test added in `library.test.ts` proving the flag survives `refresh()` (incomplete → resume-pending, complete → no resume-pending).
+
 **File:** `src/backend/storeManagers/steam/library.ts:575-618` (interacts with `markSteamInstallIncomplete` at `342-356`)
 **Issue:**
 `markSteamInstallIncomplete` sets `install: { ...existing.install, steamResumePending: true }`
@@ -87,6 +89,8 @@ Alternatively, run the startup interrupted-ACF scan at the tail of `refresh()` s
 manifest deterministically re-flags `steamResumePending`.
 
 ### WR-02: Aborted zero-depot install returns `{ status: 'done' }`, bypassing `markSteamInstallIncomplete`
+
+**Status: RESOLVED** (2026-07-20, commit `e635a4b3`) — Applied the review's suggested fix: the zero-depot early return now honors the abort (`return opts.signal?.aborted === true ? { status: 'cancelled' } : { status: 'done' }`), mirroring the main path (L2119) and the thrown-error path (L2152). This routes an aborted zero-depot install through the same abort→cancelled→`markSteamInstallIncomplete` chain in `games.ts` (is_installed=false, steamResumePending=true), consistent with the other two abort return paths. `finalize()` already forced the honest 1026 manifest; behavior is otherwise identical.
 
 **File:** `src/backend/storeManagers/steam/depot.ts:2072-2077`
 **Issue:**
