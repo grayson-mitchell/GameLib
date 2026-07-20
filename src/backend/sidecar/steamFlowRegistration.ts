@@ -29,6 +29,22 @@
  */
 
 import { ipcMain } from './electronStub'
+// Load-bearing FIRST import (Phase 27 Plan 05 circular-dep fix): force
+// `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the direct
+// `steam/library`/`steam/games` imports below resolve. `storeManagers/index.ts`
+// imports `steam/library` at its OWN top and only THEN constructs its eager
+// `libraryManagerMap` (`new SteamLibraryManager()` ...), so entering through it
+// lets `steam/library.ts` finish defining its class export first. Entering
+// through `steam/library` DIRECTLY (as this file's own imports below do) makes
+// `steam/library`'s transitive `utils.ts -> storeManagers/index.ts` chain
+// re-enter `index.ts` while `steam/library` is still mid-evaluation — so
+// `index.ts`'s `new SteamLibraryManager()` sees an undefined class and throws
+// `SteamLibraryManager is not a constructor`, crashing the sidecar on boot
+// (only in the esbuild bundle's init order; ts-jest's differs, which is why
+// 27-04's tests passed). This mirrors 27-02's own convention of routing every
+// `libraryManagerMap` access through `storeManagers/index.ts`, never the
+// individual manager modules.
+import '../storeManagers'
 import SteamLibraryManager from '../storeManagers/steam/library'
 import SteamGame from '../storeManagers/steam/games'
 import type { LaunchParams, StatusPromise } from 'common/types'

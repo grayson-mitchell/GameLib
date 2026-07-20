@@ -10,39 +10,25 @@
  * `Module._load` hook that redirects `require('electron')` -> electronStub
  * AND `require('electron-store')` -> fileStore MUST be installed BEFORE
  * `./handlers` is imported, because `backend/constants/paths.ts` calls
- * `app.getPath()` at MODULE SCOPE and `backend/electron_store.ts`
- * constructs `new Store()` at MODULE SCOPE (20 files route through it) —
- * intercepting only 'electron' leaves that second wall standing.
+ * `app.getPath()` at MODULE SCOPE and `backend/electron_store.ts` /
+ * `backend/cache.ts` construct `new Store()` at MODULE SCOPE (20+ files route
+ * through them) — intercepting only 'electron' leaves that second wall standing.
+ *
+ * The hook lives in `./installElectronHook` (imported FIRST below), NOT inline
+ * here: ES modules evaluate every static import before a module's own
+ * executable statements, so an inline hook-install statement would run AFTER
+ * `import './handlers'` had already constructed store managers against the real
+ * electron-store — crashing the sidecar on boot (Phase 27 Plan 05 blank-screen
+ * fix; see installElectronHook.ts for the full rationale).
  */
 
-import Module from 'node:module'
+// ---- Step 1: install the require hook — MUST be the first import so it runs
+//              before `./handlers` (below) pulls in the backend module graph. --
+import './installElectronHook'
+
 import type { Readable, Writable } from 'node:stream'
 import * as electronStub from './electronStub'
-import FileStore from './fileStore'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
-
-// ---- Step 1: install the require hook — BEFORE any backend import below ----
-
-interface ModuleWithLoad {
-  _load: (request: string, parent: unknown, isMain: boolean) => unknown
-}
-
-const moduleWithLoad = Module as unknown as ModuleWithLoad
-const originalLoad = moduleWithLoad._load.bind(moduleWithLoad)
-
-moduleWithLoad._load = (
-  request: string,
-  parent: unknown,
-  isMain: boolean
-): unknown => {
-  if (request === 'electron') {
-    return electronStub
-  }
-  if (request === 'electron-store') {
-    return { __esModule: true, default: FileStore }
-  }
-  return originalLoad(request, parent, isMain)
-}
 
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 

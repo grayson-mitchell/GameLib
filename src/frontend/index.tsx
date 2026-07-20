@@ -39,8 +39,24 @@ window.addEventListener('error', (ev: ErrorEvent) => {
 // `root.render`) also depends on this being hydrated by the time React renders.
 // Top-level await is safe here: this is the entry module, nothing imports it. No-ops
 // (resolves immediately) under Electron.
+//
+// Guarded (Phase 27 Plan 05): NEVER let a sidecar/transport failure prevent React from
+// mounting. `root.render()` is later in this module body, AFTER this await -- an
+// unguarded rejection here would abort module evaluation and leave the Tauri window
+// showing a permanent BLANK screen with no diagnostics (the original 27-05 blank-screen
+// symptom). On failure we log loudly and render with an empty snapshot: GlobalState's
+// synchronous store reads then fall back to defaults (degraded but visible), and the real
+// error is inspectable in the webview devtools console instead of hidden behind a blank page.
 if (isTauri()) {
-  await hydrateStoreSnapshot()
+  try {
+    await hydrateStoreSnapshot()
+  } catch (error) {
+    console.error(
+      '[GameLib] sidecar store-snapshot hydration failed; mounting with an empty ' +
+        'snapshot (stores will read defaults). Underlying error:',
+      error
+    )
+  }
 }
 
 const DEFAULT_THEME = 'midnightMirage'
