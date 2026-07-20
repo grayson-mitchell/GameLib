@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "games": [
+    {
+      "appId": "206020",
+      "title": "Avernum 4",
+      "note": "2 steam_api imports (SteamAPI_Init/SteamAPI_Shutdown) -- spike 007, VALIDATED"
+    },
+    {
+      "appId": "63000",
+      "title": "HOARD",
+      "note": "7 steam_api imports incl. SteamAPI_RestartAppIfNecessary -- spike 008, PARTIAL (bridge drives the gate correctly; game itself does not self-enforce)"
+    }
+  ]
+}
