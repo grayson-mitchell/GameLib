@@ -16,10 +16,7 @@
  * their Node/Electron access behind a lazily-invoked, guarded `require()` for the same
  * reason -- see those files' own comments).
  */
-import {
-  invoke as tauriInvoke,
-  isTauri
-} from '@tauri-apps/api/core'
+import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen as tauriListen, type UnlistenFn } from '@tauri-apps/api/event'
 import {
   SIDECAR_INVOKE,
@@ -28,7 +25,27 @@ import {
   FRONTEND_MESSAGE_EVENT
 } from 'common/types/sidecarTransport'
 
-export { isTauri }
+/**
+ * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
+ *
+ * `@tauri-apps/api/core`'s own `isTauri()` checks ONLY `window.isTauri` — a
+ * convenience flag that is NOT reliably present in every Tauri v2 webview. When it
+ * is absent, that helper returns `false`, so `tauriAttach` never attaches
+ * `window.api`, `ipc.ts`/`misc.ts` fall through to their Electron-only `require()`
+ * branch, and the renderer throws (or renders blank) inside a real Tauri window.
+ *
+ * `__TAURI_INTERNALS__` is the ground-truth object the Tauri runtime ALWAYS injects
+ * (it is what `invoke`/`listen` themselves use), so we treat EITHER signal as
+ * proof-of-Tauri. In Electron/plain-browser neither is present, so this correctly
+ * returns `false` and the byte-identical Electron path is preserved.
+ */
+export function isTauri(): boolean {
+  const w = globalThis as unknown as {
+    isTauri?: unknown
+    __TAURI_INTERNALS__?: unknown
+  }
+  return Boolean(w.isTauri) || typeof w.__TAURI_INTERNALS__ !== 'undefined'
+}
 
 /**
  * Mirrors `makeHandlerInvoker`'s req/resp shape: `invoke(channel, args) -> Promise<Ret>`.

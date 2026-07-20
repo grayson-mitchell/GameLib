@@ -25,24 +25,33 @@ jest.mock('@tauri-apps/api/event', () => ({
   listen: jest.fn()
 }))
 
-import { invoke as coreInvoke, isTauri as coreIsTauri } from '@tauri-apps/api/core'
+import { invoke as coreInvoke } from '@tauri-apps/api/core'
 import { listen as eventListen } from '@tauri-apps/api/event'
 import { makeHandlerInvoker, frontendListenerSlot } from '../ipc'
 import { snapshotGet, hydrateStoreSnapshot } from '../tauriTransport'
 
 const mockedInvoke = coreInvoke as jest.MockedFunction<typeof coreInvoke>
 const mockedListen = eventListen as jest.MockedFunction<typeof eventListen>
-const mockedIsTauri = coreIsTauri as jest.MockedFunction<typeof coreIsTauri>
 
 describe('Tauri renderer bridge contract (spike 012 parity)', () => {
+  // tauriTransport's own `isTauri()` (Phase 27 Plan 05) detects the Tauri context via
+  // `globalThis.__TAURI_INTERNALS__` (the runtime's ground-truth injection), not a mockable
+  // core flag. Simulate a real Tauri webview so ipc.ts's factories take the Tauri path
+  // instead of falling through to their guarded Electron branch (require('electron'),
+  // mocked to throw above).
+  beforeAll(() => {
+    ;(globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {}
+  })
+
+  afterAll(() => {
+    delete (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
+  })
+
   beforeEach(() => {
     // jest.config.js sets `resetMocks: true`, which wipes each jest.fn()'s
-    // implementation (not just its call history) before every test -- re-establish
-    // isTauri() === true each time, or ipc.ts's factories silently fall through to
-    // their guarded Electron branch (require('electron'), mocked to throw above).
+    // implementation (not just its call history) before every test.
     mockedInvoke.mockReset()
     mockedListen.mockReset()
-    mockedIsTauri.mockReset().mockReturnValue(true)
   })
 
   it('round-trips an invoke call through makeHandlerInvoker via a mock sidecar (req/resp shape preserved)', async () => {

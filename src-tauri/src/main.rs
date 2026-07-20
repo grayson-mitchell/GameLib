@@ -180,18 +180,58 @@ async fn sidecar_store_snapshot(
 
 // ---- Sidecar lifecycle + stdout reader ----
 
-/// Spawn `node <sidecar-entry>` with piped stdio. The entry is the bundle 27-02 emits via
-/// `build:sidecar` (build/main/sidecar.js). Path is relative to the shell's working directory
-/// (src-tauri in dev); override with GAMELIB_SIDECAR_ENTRY for packaged/resource layouts.
+/// Resolve the sidecar entry to an ABSOLUTE path. Previously this was the cwd-relative
+/// `../build/main/sidecar.js`, which silently missed under `tauri dev` (the dev binary's cwd
+/// is not guaranteed to be `src-tauri/`). Baking the path from `CARGO_MANIFEST_DIR` at compile
+/// time makes it cwd-independent for dev; `GAMELIB_SIDECAR_ENTRY` still overrides for
+/// packaged/resource layouts.
+fn resolve_sidecar_entry() -> String {
+    if let Ok(entry) = std::env::var("GAMELIB_SIDECAR_ENTRY") {
+        return entry;
+    }
+    format!("{}/../build/main/sidecar.js", env!("CARGO_MANIFEST_DIR"))
+}
+
+/// Spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a spawn/path
+/// failure is visible in the `tauri dev` terminal (previously the whole leg was invisible: a
+/// piped stdout consumed by the reader thread and no diagnostics meant even a healthy sidecar —
+/// or a silent spawn failure — produced zero terminal output).
 fn spawn_sidecar() -> std::io::Result<Child> {
-    let entry = std::env::var("GAMELIB_SIDECAR_ENTRY")
-        .unwrap_or_else(|_| "../build/main/sidecar.js".to_string());
-    Command::new("node")
-        .arg(entry)
+    let entry = resolve_sidecar_entry();
+    let cwd = std::env::current_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "<unknown>".into());
+    let exists = std::path::Path::new(&entry).exists();
+    eprintln!("[shell] spawning sidecar: node \"{entry}\"");
+    eprintln!("[shell]   cwd={cwd}");
+    eprintln!("[shell]   entry_exists={exists}");
+    let child = Command::new("node")
+        .arg(&entry)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()
+        .stderr(Stdio::piped())
+        .spawn();
+    match &child {
+        Ok(_) => eprintln!("[shell] sidecar process spawned OK"),
+        Err(e) => eprintln!(
+            "[shell] FAILED to spawn sidecar (is `node` on PATH? does the entry exist?): {e}"
+        ),
+    }
+    child
+}
+
+/// Forward the sidecar's own stderr to the shell's stderr, line-prefixed, so a Node crash
+/// (stack trace) is visible in the `tauri dev` terminal.
+fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
+    thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            match line {
+                Ok(l) => eprintln!("[sidecar:err] {l}"),
+                Err(_) => break,
+            }
+        }
+    });
 }
 
 /// Reader thread: routes each stdout line from the sidecar. A line with `ok` is a
@@ -215,11 +255,16 @@ fn start_reader(
             }
             if trimmed == READY_SENTINEL {
                 // Sidecar bootstrapped; commands may already be queued and will now flow.
+                eprintln!("[shell] sidecar signalled READY ({READY_SENTINEL})");
                 continue;
             }
             let value: Value = match serde_json::from_str(trimmed) {
                 Ok(v) => v,
-                Err(_) => continue, // non-JSON diagnostic line; ignore
+                // non-JSON diagnostic line (console.log etc.) — surface it, don't drop it.
+                Err(_) => {
+                    eprintln!("[sidecar:out] {trimmed}");
+                    continue;
+                }
             };
 
             // Response frame: correlate by id.
@@ -281,6 +326,10 @@ fn main() {
                 .stdout
                 .take()
                 .ok_or("sidecar stdout unavailable")?;
+            let stderr = child
+                .stderr
+                .take()
+                .ok_or("sidecar stderr unavailable")?;
 
             let state = Arc::new(SidecarState {
                 stdin: Mutex::new(stdin),
@@ -290,7 +339,24 @@ fn main() {
             });
 
             start_reader(app.handle().clone(), state.clone(), stdout);
+            start_stderr_forwarder(stderr);
             app.manage(state);
+
+            // Dev-only: force the webview devtools open (the dev webview exposes no
+            // right-click inspect on macOS) so renderer errors are inspectable, and
+            // confirm the webview window actually exists.
+            #[cfg(debug_assertions)]
+            {
+                match app.get_webview_window("main") {
+                    Some(window) => {
+                        window.open_devtools();
+                        eprintln!("[shell] devtools opened for 'main' webview (debug build)");
+                    }
+                    None => eprintln!(
+                        "[shell] WARN: no 'main' webview window found — devtools not opened"
+                    ),
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

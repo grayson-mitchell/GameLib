@@ -36,10 +36,14 @@ function readWindowStub() {
 describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
   afterEach(() => {
     jest.resetModules()
+    // Phase 27 Plan 05: tauriTransport's isTauri() now keys off this ground-truth global.
+    delete (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
   })
 
   it('attaches window.api + the 6 preload globals synchronously on import when isTauri() is true', async () => {
     installWindowStub()
+    // Simulate a real Tauri webview: isTauri() detects the runtime-injected internals object.
+    ;(globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {}
     jest.doMock('@tauri-apps/api/core', () => ({
       isTauri: () => true,
       invoke: jest.fn()

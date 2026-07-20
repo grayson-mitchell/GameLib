@@ -30,8 +30,26 @@
 import api from './api'
 import { isTauri } from './tauriTransport'
 
-if (isTauri()) {
+const tauriDetected = isTauri()
+
+// Startup environment diagnostic (Phase 27 Plan 05): a false negative here is the exact
+// cause of the `window.api is undefined` blank screen, so log the detection signals up
+// front. Visible in the Tauri dev webview devtools console.
+console.log('[GameLib] renderer env detection:', {
+  isTauri: tauriDetected,
+  hasTauriInternals:
+    typeof (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !==
+    'undefined',
+  hasWindowIsTauri: Boolean((globalThis as { isTauri?: unknown }).isTauri)
+})
+
+if (tauriDetected) {
   window.api = api
+  console.log(
+    '[GameLib] window.api attached for Tauri (readConfig present:',
+    typeof window.api.readConfig,
+    ')'
+  )
   // Tauri-safe fallbacks for the 6 globals the Electron preload normally computes from
   // `backend/constants/environment.ts` (Node-only: os.cpus(), graceful-fs,
   // process.env/argv -- no browser equivalent inside a webview). Neither Steam Deck nor

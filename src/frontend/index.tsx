@@ -1,13 +1,20 @@
-// BLOCKER-1 (27-01) / T-27-07: must be the FIRST import in this file. ES modules resolve
-// every static import in a file, in declaration order, before any of that file's own
+// Phase 27 Plan 05: install the on-page error surface FIRST (zero-import module), so its
+// global error/unhandledrejection handlers are live before any other module in the bundle
+// evaluates and can render import-time throws to #root instead of a silent blank page (the
+// Tauri dev webview has no devtools/inspect). Placed above tauriAttach: it pulls in nothing,
+// so it does not disturb tauriAttach's own "runs before GlobalState" ordering requirement.
+import './bootErrorSurface'
+
+// BLOCKER-1 (27-01) / T-27-07: must be the FIRST *meaningful* import in this file. ES modules
+// resolve every static import in a file, in declaration order, before any of that file's own
 // top-level statements run -- and `preload/tauriAttach`'s attach-window.api side effect
 // must complete before `./helpers/electronStores` (transitively imported by
 // `./state/GlobalState`, imported below) evaluates: that module constructs several
 // `TypeCheckedStoreFrontend`s at ITS OWN module scope, each of which calls
 // `window.api.storeNew(...)` synchronously the moment it is first imported. Being this
-// file's first-declared import guarantees its (Electron/Node-free) dependency subtree
-// evaluates before every sibling import below. No-ops entirely under Electron -- the real
-// preload script already attached window.api, in its own separate execution context,
+// file's first-declared meaningful import guarantees its (Electron/Node-free) dependency
+// subtree evaluates before every sibling import below. No-ops entirely under Electron -- the
+// real preload script already attached window.api, in its own separate execution context,
 // before this renderer bundle's JS ever starts running.
 import '../preload/tauriAttach'
 
@@ -49,7 +56,21 @@ window.addEventListener('error', (ev: ErrorEvent) => {
 // error is inspectable in the webview devtools console instead of hidden behind a blank page.
 if (isTauri()) {
   try {
-    await hydrateStoreSnapshot()
+    // Race against a timeout so a wedged transport (dead sidecar, unregistered command)
+    // becomes a visible degraded render within a few seconds instead of hanging the mount
+    // forever behind a blank screen.
+    await Promise.race([
+      hydrateStoreSnapshot(),
+      new Promise<never>((_resolve, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error('sidecar store-snapshot hydration timed out after 8000ms')
+            ),
+          8000
+        )
+      )
+    ])
   } catch (error) {
     console.error(
       '[GameLib] sidecar store-snapshot hydration failed; mounting with an empty ' +
