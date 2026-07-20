@@ -138,3 +138,15 @@ None - no external service configuration required.
 ---
 *Phase: 26-steam-key-redemption*
 *Completed: 2026-07-20*
+
+## Self-Check: PASSED
+
+- FOUND: src/frontend/types.ts
+- FOUND: src/frontend/state/ContextProvider.tsx
+- FOUND: src/frontend/state/GlobalState.tsx
+- FOUND: src/frontend/App.tsx
+- FOUND: src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts
+- FOUND: src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx
+- FOUND: src/frontend/components/UI/RedeemSteamKeyDialog/__tests__/copy.test.ts
+- FOUND: commit a883c771
+- FOUND: commit 0e288382
