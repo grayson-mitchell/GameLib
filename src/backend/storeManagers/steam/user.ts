@@ -653,8 +653,28 @@ export class SteamUser {
       // Unknown -> 'invalid' wrongly tells the user a valid key "doesn't look
       // right". Map it to the generic 'error' outcome (connectivity copy).
       if (typeof e?.purchaseResultDetails !== 'number') {
+        // WR-02: status-only diagnostic so genuine unexpected failures are
+        // traceable. NEVER log the raw key (T-26-01) — only store/outcome and
+        // the error shape (message/name), which never contain the key.
+        logWarning(
+          [
+            `Steam redeemKey failed without a purchase result: store=${store} outcome=error name=${
+              e?.name ?? 'unknown'
+            } message=${e?.message ?? 'none'}`
+          ],
+          LogPrefix.Steam
+        )
         return { store, outcome: 'error', message: 'redeem-failed' }
       }
+      // WR-02: log the rejected purchase-result status before classifying.
+      // classifyPurchaseResult's own log cannot distinguish a resolved vs a
+      // rejected redeemKey; this line records that the promise rejected.
+      logWarning(
+        [
+          `Steam redeemKey rejected with purchase result: store=${store} purchaseResultDetails=${e.purchaseResultDetails}`
+        ],
+        LogPrefix.Steam
+      )
       return this.classifyPurchaseResult(
         store,
         e.purchaseResultDetails,
