@@ -576,6 +576,19 @@ interface FrontendMessages {
   // bottle-eligible game is un-provisioned; the global listener (17-06)
   // subscribes to this to drive the guided-setup flow.
   steamBottleSetupRequired: (payload: { appName: string }) => void
+  // Phase 24 (24-06), D-05/D-06: pushed by helperProcess.ts's
+  // ensureBridgeHelperReady() when the shared native Steam-bridge helper is
+  // not ready (unreachable within the poll budget, or up but not inited
+  // against a live Steam session -- 'not-inited' is a DISTINCT reason from
+  // 'unreachable', review finding #7). Registered here -- the first
+  // producer wave -- so sendFrontendMessage('steamBridgeSetupRequired', ...)
+  // typechecks at first use (finding #1). 24-08 is the first CONSUMER (adds
+  // fallbackAvailable to the payload it sends).
+  steamBridgeSetupRequired: (payload: {
+    appName: string
+    reason?: string
+    fallbackAvailable?: boolean
+  }) => void
   // Phase 21 (21-10), D-10/D-11: pushed by clientSetup.ts's
   // ensureSteamClientReady() (native depot-download opt-in ON, non-bottle
   // path) when the Steam CLIENT itself is either absent ('install') or
