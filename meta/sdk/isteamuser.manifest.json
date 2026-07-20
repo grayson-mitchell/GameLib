@@ -50,6 +50,13 @@
       "returns": "UserStatsSummary_t",
       "structSize": 16,
       "note": "SRET EXERCISE ONLY -- synthetic slot, NOT a real Steamworks method. Exists solely to exercise the generator's hidden-return-pointer (sret) marshaling for struct returns > 8 bytes (D-09/Pitfall 3)."
+    },
+    {
+      "slot": 7,
+      "name": "SetUint64Test_TESTONLY",
+      "params": [{ "name": "hSteamID", "type": "uint64" }],
+      "returns": "void",
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exists solely to exercise the generator's single-8-byte-param (uint64) ret N computation, distinct from the two-int-param case (D-09/Pitfall 3)."
     }
   ]
 }
