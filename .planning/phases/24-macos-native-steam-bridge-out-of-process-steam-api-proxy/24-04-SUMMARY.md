@@ -99,3 +99,9 @@ None - no external service configuration required. (No live CrossOver/cxbottle i
 ---
 *Phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy*
 *Completed: 2026-07-20*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/24-macos-native-steam-bridge-out-of-process-steam-api-proxy/24-04-SUMMARY.md`
+- FOUND: commit `94459b14` (Task 1)
+- FOUND: commit `0bbcf08c` (docs: summary)
