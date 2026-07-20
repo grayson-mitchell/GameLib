@@ -44,3 +44,7 @@ playwright-report
 # (deterministic, code-reviewable, pinned to the manifest sdkVersion). Only
 # the built PE binary (compiled at packaging time, Plan 24-07) is ignored.
 native/steam-bridge/generated/*.dll
+
+# Phase 24 Plan 07 (R5): the pinned zig toolchain meta/downloadZig.ts
+# extracts is a build-time-only tool, never bundled/committed.
+/.build-tools/
