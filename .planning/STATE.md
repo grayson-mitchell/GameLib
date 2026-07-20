@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: verifying
-stopped_at: Completed 26-05-PLAN.md
-last_updated: "2026-07-20T03:12:34.221Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 26 was final phase)
+last_updated: 2026-07-20T03:36:37.727Z
 last_activity: 2026-07-20
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 6
+  completed_plans: 122
   percent: 20
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 26 — steam-key-redemption
+**Current focus:** Milestone complete
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 26 (steam-key-redemption) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
+Phase: 26
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-07-20
 
 Other open native-install phases:
@@ -86,7 +86,7 @@ Other open native-install phases:
 
 **Velocity (v0.1):**
 
-- Total plans completed: 116 (phases 1-4)
+- Total plans completed: 121 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -112,6 +112,7 @@ Other open native-install phases:
 | 19 | 8 | - | - |
 | 20 | 7 | - | - |
 | 21 | 17 | - | - |
+| 26 | 5 | - | - |
 
 **v0.1 Detail Log:**
 
