@@ -58,6 +58,28 @@ async function createGameLogWriter(
   )
 }
 
+/**
+ * Headless-safe writer initialization (Phase 27 Plan 04 deviation — Rule 3,
+ * blocking). Assigns `heroicLogWriter` directly, skipping the Electron-app-
+ * only side effects `init()` below performs: `GlobalConfig.get()` (assumes
+ * an already-initialized `userData` config directory/file — a real
+ * Electron app guarantees this before app code runs, a headless sidecar
+ * process does not), the one-time system-info dump (shells out to
+ * hardware/binary-version probes via a fire-and-forget async chain that can
+ * outlive a short-lived caller — e.g. a test process tearing down before it
+ * resolves), and the `settingChanged` event listener (meaningless without
+ * GlobalConfig). Used ONLY by the headless sidecar
+ * (`backend/sidecar/bootstrap.ts`) so the REAL `logInfo`/`logWarning`/
+ * `logError` calls throughout the backend's existing code (reused unchanged
+ * by the sidecar's curated Steam flows, Plan 04's own objective) have a
+ * writer to dereference, without pulling in Electron-app-only startup
+ * machinery the sidecar doesn't have. `init()` itself is completely
+ * unmodified — the Electron main process's own startup path is unaffected.
+ */
+function initHeadless(): void {
+  heroicLogWriter = new LogWriter(getLogFilePath({}), false, false)
+}
+
 function init() {
   // Add a basic error handler to our stdout/stderr. If we don't do this,
   // the main `process.on('uncaughtException', ...)` handler catches them (and
@@ -105,6 +127,7 @@ function init() {
 
 export {
   init,
+  initHeadless,
   logDebug,
   logInfo,
   logWarning,

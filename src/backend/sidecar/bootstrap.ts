@@ -52,6 +52,27 @@ import {
   pushFrontendMessage,
   requestOpenExternal
 } from './sidecarRpc'
+// Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
+// `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
+// read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
+// "Steam client not ready..." warning, games.ts's launch() "launching
+// appId..." info line, buildSteamProtocolUrl's guard-rejection warning)
+// dereference a module-private `heroicLogWriter` that is ONLY ever assigned
+// by that module's exported `init()`/`initHeadless()`. The headless sidecar
+// has no Electron-app startup hook, so every one of those log calls threw
+// `Cannot read properties of undefined (reading 'logInfo')` the instant a
+// real flow handler ran (discovered by Task 2's own end-to-end test). Uses
+// `initHeadless()` (added by this same deviation, `backend/logger/index.ts`)
+// rather than the real `init()` Electron's main process calls: `init()`
+// pulls in `GlobalConfig.get()` (assumes an already-initialized `userData`
+// config file — a real Electron app guarantees this, this headless process
+// does not) and fires a fire-and-forget system-info dump (shells out to
+// hardware/binary-version probes; its async chain can outlive a short-lived
+// caller, e.g. a test process tearing down before it resolves).
+// `initHeadless()` assigns the SAME `heroicLogWriter` singleton via the
+// SAME real `LogWriter` class, skipping only those two Electron-app-only
+// side effects — not a reimplementation of logging itself.
+import { initHeadless as initLogger } from '../logger'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -63,10 +84,20 @@ import {
  * production use (`src/sidecar/index.ts`) relies on the
  * `process.stdin`/`process.stdout` defaults.
  */
+let loggerInitialized = false
+
 export function init(
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
+  // Idempotent — bootstrap.test.ts / skeletonFlows.test.ts each call this
+  // function multiple times per file (fresh streams per test); production
+  // calls it once per process, same as the Electron main process's own
+  // single `init()`/`initHeadless()` startup call.
+  if (!loggerInitialized) {
+    initLogger()
+    loggerInitialized = true
+  }
   startRpcServer(input, output)
   electronStub.bindTransport({
     openExternal: requestOpenExternal,
