@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-06-PLAN.md
-last_updated: "2026-07-20T07:38:22.553Z"
+stopped_at: Completed 24-07-PLAN.md
+last_updated: "2026-07-20T08:46:22.472Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -183,6 +183,7 @@ Other open native-install phases:
 | Phase 24 P04 | 20min | 1 tasks | 2 files |
 | Phase 24 P05 | ~20min | 2 tasks | 5 files |
 | Phase 24 P06 | 35min | 3 tasks | 5 files |
+| Phase 24 P07 | 35min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -310,6 +311,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 24-05]: SHIM_EXPORTED_SYMBOLS in shimGenerate.ts is a reviewed literal copy of meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET (not a cross-boundary import) -- src/'s tsconfig include:[src] excludes meta/, and the compiled .dll ships without its source .def at packaged runtime
 - [Phase ?]: [Phase 24-05]: placeShimForGame() takes shimSourcePath as an injectable option defaulting to the real builtBridgeShimPath import -- tests inject a tmpdir fixture without mocking a module-level path const, while a source-grep test proves the production default is the real BLOCKER 2 shared location
 - [Phase 24-06]: Status union uses 'not-inited' (not the suggested 'needs-spawn') to accurately name HEALTH-ok-but-WHOAMI-not-ok; poll returns early once HEALTH first answers since InitFlat already ran before the accept loop (D-04)
+- [Phase 24]: Phase 24-07: pinned zig 0.16.0 for aarch64-macos (verified live against ziglang.org/download/index.json); zig lands in .build-tools/zig, never public/bin
+- [Phase 24]: Phase 24-07: buildSteamBridgeShims.ts independently reconstructs public/bin/${arch}/darwin paths instead of importing paths.ts (which imports Electron's app at load time and would crash under plain node)
+- [Phase 24]: Phase 24-07: zig cc -shared requires an explicit -lws2_32 link flag for the shim's winsock2.h usage -- confirmed by running the real compile gate
 
 ### Pending Todos
 
@@ -376,8 +380,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T07:38:22.542Z
-Stopped at: Completed 24-06-PLAN.md
+Last session: 2026-07-20T08:46:22.466Z
+Stopped at: Completed 24-07-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
