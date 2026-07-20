@@ -4,7 +4,7 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Completed 26-01-PLAN.md
-last_updated: "2026-07-20T02:54:09.588Z"
+last_updated: "2026-07-20T02:58:43.143Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 26 (steam-key-redemption) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -173,6 +173,7 @@ Other open native-install phases:
 | Phase 21 P17 | 30min | 2 tasks | 10 files |
 | Phase 26 P01 | 15min | 2 tasks | 3 files |
 | Phase 26 P02 | 8min | 1 tasks | 2 files |
+| Phase 26 P03 | 8min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -286,6 +287,7 @@ Recent decisions affecting current work:
 - [Phase 26]: Phase 26-01: redeemKey tests isolate classification logic via jest.spyOn(SteamUser, ensureConnected/getClient) rather than replaying the full auth flow
 - [Phase 26-02]: Test file placed in src/frontend/helpers/__tests__/ (not colocated per plan) because both src/frontend/jest.config.js and src/backend/jest.config.js enforce testMatch requiring __tests__ dirs — A colocated test file is never discovered by Jest regardless of CLI pattern; matches existing codebase convention
 - [Phase 26-02]: Avoided literal '{5}' substring in steamKeyValidation.ts comments — Acceptance-criteria grep for {5} is a whole-file check; same lesson as Phase 21-02's @node-steam/vdf comment exclusion
+- [Phase 26-03]: SteamUser.redeemKey's real signature (store:'steam', key:string) matched the planned IPC payload type exactly — no adaptation needed; no new refresh/recompute plumbing added, 26-04 reuses existing refreshLibrary IPC path
 
 ### Pending Todos
 
@@ -351,7 +353,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T02:54:01.387Z
+Last session: 2026-07-20T02:58:05.047Z
 Stopped at: Completed 26-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
