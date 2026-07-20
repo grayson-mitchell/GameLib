@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 26-01-PLAN.md
-last_updated: "2026-07-20T02:58:43.143Z"
+stopped_at: Completed 26-04-PLAN.md
+last_updated: "2026-07-20T03:06:43.659Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 26 (steam-key-redemption) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -174,6 +174,7 @@ Other open native-install phases:
 | Phase 26 P01 | 15min | 2 tasks | 3 files |
 | Phase 26 P02 | 8min | 1 tasks | 2 files |
 | Phase 26 P03 | 8min | 1 tasks | 3 files |
+| Phase 26 P04 | 25min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -288,6 +289,8 @@ Recent decisions affecting current work:
 - [Phase 26-02]: Test file placed in src/frontend/helpers/__tests__/ (not colocated per plan) because both src/frontend/jest.config.js and src/backend/jest.config.js enforce testMatch requiring __tests__ dirs — A colocated test file is never discovered by Jest regardless of CLI pattern; matches existing codebase convention
 - [Phase 26-02]: Avoided literal '{5}' substring in steamKeyValidation.ts comments — Acceptance-criteria grep for {5} is a whole-file check; same lesson as Phase 21-02's @node-steam/vdf comment exclusion
 - [Phase 26-03]: SteamUser.redeemKey's real signature (store:'steam', key:string) matched the planned IPC payload type exactly — no adaptation needed; no new refresh/recompute plumbing added, 26-04 reuses existing refreshLibrary IPC path
+- [Phase 26]: [Phase 26-04]: Used ContextProvider's refreshLibrary({ library: 'steam' }) context wrapper instead of window.api.refreshLibrary — the plan's interface note had the wrong call target; window.api.refreshLibrary takes a bare Runner string, not an options object, and the context wrapper is what actually updates steam.library in React state
+- [Phase 26]: [Phase 26-04]: Non-success redeem outcomes keep the key input visible/editable (typing clears the outcome) rather than hiding the form, so users can retry inline without closing the modal (D-06/D-08)
 
 ### Pending Todos
 
@@ -353,8 +356,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T02:58:05.047Z
-Stopped at: Completed 26-01-PLAN.md
+Last session: 2026-07-20T03:06:43.653Z
+Stopped at: Completed 26-04-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
