@@ -305,6 +305,24 @@ computes `resolve(app.getAppPath()…)`, and the resolved helper path
 first — a session that already hit the not-ready gate may have marked the AppID bridge-failed for that
 run; `markBridgeFailedThisSession` clears on restart).
 
+### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
+
+Surfaced 2026-07-21 during Gate 2–4 setup; **not caused by Phase 24 and not Phase 24 acceptance items.**
+User decision: set aside, run the gates on the packaged app, revisit separately.
+
+- **E-01 — Steam login lost when switching builds (app-identity split).** Two parallel userData stores
+  exist: `~/Library/Application Support/gamelib/` (dev build — Electron app name `gamelib`) and
+  `.../GameLib/` (packaged app — electron-builder `productName: GameLib`). `package.json` has no
+  `productName`, so the dev and packaged builds use different identities → the safeStorage-encrypted
+  Steam refresh token saved under one is unreadable under the other → appears logged out on switch.
+  **Mitigation for gate testing:** use ONLY the packaged `dist/mac-arm64/GameLib.app` and log into Steam
+  once there. Candidate real fix (project-wide, out of Phase 24 scope): set `productName` so both builds
+  share one identity/userData.
+- **E-02 — Crash during Steam re-login.** No crash dump written; `gamelib.log` had no login-flow lines
+  before it stopped, so cause is uncaptured. Steam auth path (Phase 17 area), pre-existing, unrelated to
+  the bridge. Needs the error text + stack from the launch console to diagnose → route to `/gsd-debug`
+  if it recurs.
+
 ## Summary Table (fill in after all gates are run)
 
 | # | Gate | Requirement | Result | Notes |
