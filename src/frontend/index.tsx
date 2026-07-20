@@ -1,3 +1,16 @@
+// BLOCKER-1 (27-01) / T-27-07: must be the FIRST import in this file. ES modules resolve
+// every static import in a file, in declaration order, before any of that file's own
+// top-level statements run -- and `preload/tauriAttach`'s attach-window.api side effect
+// must complete before `./helpers/electronStores` (transitively imported by
+// `./state/GlobalState`, imported below) evaluates: that module constructs several
+// `TypeCheckedStoreFrontend`s at ITS OWN module scope, each of which calls
+// `window.api.storeNew(...)` synchronously the moment it is first imported. Being this
+// file's first-declared import guarantees its (Electron/Node-free) dependency subtree
+// evaluates before every sibling import below. No-ops entirely under Electron -- the real
+// preload script already attached window.api, in its own separate execution context,
+// before this renderer bundle's JS ever starts running.
+import '../preload/tauriAttach'
+
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 import HttpApi from 'i18next-http-backend'
 import { lazy, Suspense } from 'react'
@@ -13,12 +26,22 @@ import { configStore } from './helpers/electronStores'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { defaultThemes } from './components/UI/ThemeSelector'
 import Loading from './screens/Loading'
+import { isTauri, hydrateStoreSnapshot } from '../preload/tauriTransport'
 
 initOnlineMonitor()
 
 window.addEventListener('error', (ev: ErrorEvent) => {
   window.api.logError(ev.error)
 })
+
+// Must resolve before the first synchronous store read below (`configStore.get_nodefault`)
+// -- the Steam login-gate in GlobalState's constructor (later in this file, via
+// `root.render`) also depends on this being hydrated by the time React renders.
+// Top-level await is safe here: this is the entry module, nothing imports it. No-ops
+// (resolves immediately) under Electron.
+if (isTauri()) {
+  await hydrateStoreSnapshot()
+}
 
 const DEFAULT_THEME = 'midnightMirage'
 

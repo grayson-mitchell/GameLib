@@ -59,7 +59,17 @@ export const processShortcut = makeListenerCaller('processShortcut')
 export const handleGoToScreen = frontendListenerSlot('openScreen')
 export const handleShowDialog = frontendListenerSlot('showDialog')
 
-import Store from 'electron-store'
+// Type-only -- erased at compile time (see the lazy `require('electron-store')` comment
+// below for why this module must not statically import the real value).
+import type Store from 'electron-store'
+import {
+  isTauri,
+  registerStore,
+  snapshotGet,
+  snapshotHas,
+  snapshotSet,
+  snapshotDelete
+} from '../tauriTransport'
 // FUTURE WORK
 // here is how the store methods can be refactored
 // in order to set nodeIntegration: false
@@ -85,14 +95,34 @@ interface StoreMap {
 const stores: StoreMap = {}
 
 export const storeNew = function (storeName: string, options: Store.Options<Record<string, unknown>>) {
-  stores[storeName] = new Store(options)
+  if (isTauri()) {
+    registerStore(storeName)
+    return
+  }
+  // Lazy, guarded `require` -- see ipc.ts's ipcRenderer comment for why: electron-store is
+  // Node-only (fs-backed via `conf`) and must not be a static import value if this module
+  // is ever reached from the Tauri renderer bundle (BLOCKER-1 / T-27-07).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ElectronStore = require('electron-store') as typeof Store
+  stores[storeName] = new ElectronStore(options)
 }
 
-export const storeSet = (storeName: string, key: string, value?: unknown) => stores[storeName].set(key, value)
+export const storeSet = (storeName: string, key: string, value?: unknown) => {
+  if (isTauri()) {
+    snapshotSet(storeName, key, value)
+    return
+  }
+  stores[storeName].set(key, value)
+}
 
-export const storeHas = (storeName: string, key: string) => stores[storeName].has(key)
+export const storeHas = (storeName: string, key: string) => {
+  if (isTauri()) {
+    return snapshotHas(storeName, key)
+  }
+  return stores[storeName].has(key)
+}
 
-// T-10-12 / WR-09: stored credentials must never be readable from renderer
+// T-10-12 / WR-09 / T-27-06: stored credentials must never be readable from renderer
 // code. This bridge is generic and key-unfiltered by design, which would let
 // any renderer script (e.g. XSS via themes/custom CSS) exfiltrate a stored
 // session with one call — `storeGet('humbleConfigStore', 'sessionCookie')`
@@ -100,6 +130,9 @@ export const storeHas = (storeName: string, key: string) => stores[storeName].ha
 // Deny-list known credential keys here in the preload, so the block holds for
 // every renderer caller, not just our own typed store wrappers. The UI only
 // needs isLoggedIn/userData/expired/encryptionDegraded — never the secrets.
+// Preserved verbatim for the Tauri snapshot path too (tauriTransport.ts's own
+// SECRET_STORE_KEYS copy gates snapshotGet/snapshotHas directly -- this check gates both
+// paths from here as well, defense in depth).
 const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
   humbleConfigStore: ['sessionCookie'],
   steamConfigStore: ['refreshToken']
@@ -118,10 +151,19 @@ export const storeGet = (storeName: string, key: string, defaultValue?: unknown)
     )
     return undefined
   }
+  if (isTauri()) {
+    return snapshotGet(storeName, key, defaultValue)
+  }
   return stores[storeName].get(key, defaultValue)
 }
 
-export const storeDelete = (storeName: string, key: string) => stores[storeName].delete(key)
+export const storeDelete = (storeName: string, key: string) => {
+  if (isTauri()) {
+    snapshotDelete(storeName, key)
+    return
+  }
+  stores[storeName].delete(key)
+}
 
 export const getWikiGameInfo = makeHandlerInvoker('getWikiGameInfo')
 export const fetchPlaytimeFromServer = makeHandlerInvoker('getPlaytimeFromRunner')
