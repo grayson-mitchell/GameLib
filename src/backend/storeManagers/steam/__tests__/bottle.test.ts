@@ -10,6 +10,12 @@
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
+// Real (unmocked) fs — used ONLY to grep bottle.ts's own source text for the
+// R6 "no Windows Steam installer reference in provisionBridgeBottle" guard
+// below. Distinct local name so it never collides with the mocked
+// `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
+import { readFileSync as readRealFile } from 'node:fs'
+import { join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
@@ -28,7 +34,11 @@ import {
   tellBottledSteamToInstall,
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
-  __stopBottledRaiseLoops
+  __stopBottledRaiseLoops,
+  DEFAULT_BRIDGE_BOTTLE_NAME,
+  isBridgeBottleReady,
+  getBridgeBottleSettings,
+  provisionBridgeBottle
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -990,6 +1000,259 @@ describe('bottle.ts', () => {
       expect(jest.getTimerCount()).toBe(0)
 
       jest.useRealTimers()
+    })
+  })
+
+  // ── 24-04: dedicated bridge bottle provisioning ───────────────────────────
+  describe('bridge bottle (24-04)', () => {
+    test('DEFAULT_BRIDGE_BOTTLE_NAME is distinct from DEFAULT_STEAM_BOTTLE_NAME (Pitfall 1)', () => {
+      expect(DEFAULT_BRIDGE_BOTTLE_NAME).not.toBe(DEFAULT_STEAM_BOTTLE_NAME)
+      expect(DEFAULT_BRIDGE_BOTTLE_NAME).toBe('GameLibSteamBridge')
+    })
+
+    test('provisionBridgeBottle source contains NO SteamSetup.exe / STEAM_SETUP_EXE_URL reference (R6 grep guard)', () => {
+      const source = readRealFile(joinPath(__dirname, '../bottle.ts'), 'utf8')
+      const fnStart = source.indexOf(
+        'export async function provisionBridgeBottle'
+      )
+      expect(fnStart).toBeGreaterThan(-1)
+      // provisionBridgeBottle is the LAST export in bottle.ts — slicing to
+      // EOF isolates exactly its own source text (docstring + body).
+      const fnSource = source.slice(fnStart)
+      expect(fnSource).not.toContain('SteamSetup.exe')
+      expect(fnSource).not.toContain('STEAM_SETUP_EXE_URL')
+    })
+
+    describe('isBridgeBottleReady', () => {
+      test('is true when cxbottle.conf exists for the bridge bottle — even with NO steam.exe present (R6: never requires a bottled Steam client)', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (path.includes('cxbottle.conf')) return true
+          return false
+        })
+
+        expect(isBridgeBottleReady()).toBe(true)
+        expect(isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME)).toBe(true)
+      })
+
+      test('is false when the bridge bottle has not been created', () => {
+        mockedExistsSync.mockReturnValue(false)
+
+        expect(isBridgeBottleReady()).toBe(false)
+      })
+
+      test('resolves DEFAULT_BRIDGE_BOTTLE_NAME by default, not the stored Phase 17 bottle name', () => {
+        const seenPaths: string[] = []
+        mockedExistsSync.mockImplementation((path: string) => {
+          seenPaths.push(path)
+          return false
+        })
+        mockedGetNodefault.mockReturnValue(DEFAULT_STEAM_BOTTLE_NAME)
+
+        isBridgeBottleReady()
+
+        expect(
+          seenPaths.some((p) => p.includes(DEFAULT_BRIDGE_BOTTLE_NAME))
+        ).toBe(true)
+        expect(
+          seenPaths.some(
+            (p) =>
+              p.includes(DEFAULT_STEAM_BOTTLE_NAME) &&
+              !p.includes(DEFAULT_BRIDGE_BOTTLE_NAME)
+          )
+        ).toBe(false)
+      })
+    })
+
+    describe('getBridgeBottleSettings', () => {
+      test('resolves the bridge bottle name, not GameLibSteam', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+
+        const settings = getBridgeBottleSettings()
+
+        expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+        expect(settings.wineCrossoverBottle).not.toBe(DEFAULT_STEAM_BOTTLE_NAME)
+      })
+
+      test('never reads the stored steamBottleConfigStore bottle-name override', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+        mockedGetNodefault.mockReturnValue('some-other-bottle')
+
+        const settings = getBridgeBottleSettings()
+
+        expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+      })
+    })
+
+    describe('provisionBridgeBottle', () => {
+      test('rejects an unsafe bottle name and does NOT call cxbottle', async () => {
+        mockedGetNodefault.mockReturnValue(undefined)
+
+        const result = await provisionBridgeBottle({ bottleName: 'a/../b' })
+
+        expect(result.status).toBe('error')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('D-08: rejects a non-CrossOver wineVersion (toolkit/GPTK) before any cxbottle call', async () => {
+        const gptk: WineInstallation = {
+          bin: '/usr/bin/gptk-wine',
+          name: 'Game Porting Toolkit',
+          type: 'toolkit'
+        }
+
+        const result = await provisionBridgeBottle({ wineVersion: gptk })
+
+        expect(result.status).toBe('error')
+        expect(result.error).toMatch(/crossover/i)
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('D-08: accepts a CrossOver wineVersion', async () => {
+        const crossover: WineInstallation = {
+          bin: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
+          name: 'CrossOver',
+          type: 'crossover'
+        }
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBridgeBottle({ wineVersion: crossover })
+
+        expect(result.status).toBe('done')
+      })
+
+      test('short-circuits to {status:"done"} when the bridge bottle already exists — no cxbottle call', async () => {
+        mockedExistsSync.mockImplementation((path: string) =>
+          path.includes('cxbottle.conf')
+        )
+
+        const result = await provisionBridgeBottle()
+
+        expect(result).toEqual({ status: 'done' })
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('creates the bridge bottle via cxbottle --create --template win10_64 (argv-form)', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBridgeBottle()
+
+        expect(result.status).toBe('done')
+        expect(mockedSpawnAsync).toHaveBeenCalledWith(
+          expect.stringContaining('cxbottle'),
+          expect.arrayContaining([
+            '--create',
+            '--bottle',
+            DEFAULT_BRIDGE_BOTTLE_NAME,
+            '--template',
+            'win10_64'
+          ])
+        )
+      })
+
+      test('uses a custom bottleName when provided', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBridgeBottle({
+          bottleName: 'CustomBridge'
+        })
+
+        expect(result.status).toBe('done')
+        expect(mockedSpawnAsync).toHaveBeenCalledWith(
+          expect.stringContaining('cxbottle'),
+          expect.arrayContaining(['--bottle', 'CustomBridge'])
+        )
+      })
+
+      test('never calls downloadFile — no Windows Steam installer is fetched (R6)', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        await provisionBridgeBottle()
+
+        expect(mockedDownloadFile).not.toHaveBeenCalled()
+        expect(mockedRunWineCommand).not.toHaveBeenCalled()
+      })
+
+      test('returns an error when cxbottle create does not produce cxbottle.conf', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockResolvedValue({
+          code: 1,
+          stdout: '',
+          stderr: 'boom'
+        })
+
+        const result = await provisionBridgeBottle()
+
+        expect(result.status).toBe('error')
+      })
+
+      test('returns an error when cxbottle create throws', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
+
+        const result = await provisionBridgeBottle()
+
+        expect(result.status).toBe('error')
+        expect(result.error).toContain('spawn failed')
+      })
+
+      test('kills the wineserver (best-effort) after a successful create, scoped to the bridge bottle prefix', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation(async (bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        await provisionBridgeBottle()
+
+        const wineserverCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
+          String(bin).includes('wineserver')
+        )
+        expect(wineserverCall).toBeDefined()
+        expect(wineserverCall?.[1]).toEqual(['-k'])
+        expect(wineserverCall?.[2]?.env?.WINEPREFIX).toContain(
+          DEFAULT_BRIDGE_BOTTLE_NAME
+        )
+      })
     })
   })
 })

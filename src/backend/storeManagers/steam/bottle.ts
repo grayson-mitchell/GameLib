@@ -44,6 +44,16 @@ import {
 } from './constants'
 import { steamBottleConfigStore } from './electronStores'
 
+// ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
+// D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
+// bottle from the Phase 17 DEFAULT_STEAM_BOTTLE_NAME bottle above — every
+// spike ran inside that bottle, which already contains a full bottled
+// Windows Steam client, directly conflicting with R6's "no Windows Steam
+// client in the bottle" acceptance bar. Distinct name so
+// getBridgeBottleSettings()/isBridgeBottleReady() can never accidentally
+// resolve the Phase 17 bottle.
+export const DEFAULT_BRIDGE_BOTTLE_NAME = 'GameLibSteamBridge'
+
 // CrossOver's cxbottle CLI binary — resolved location per the 17-01 spike
 // (spike/steam-bottle/FINDINGS.md MECHANISM DECISION). Locked, not derived.
 const CXBOTTLE_BIN =
@@ -921,4 +931,141 @@ export function tellBottledSteamToUninstall(
   appId: string
 ): Promise<BottledSteamResult> {
   return dispatchToBottledSteam('uninstall', appId)
+}
+
+// ── 24-04: dedicated bridge bottle provisioning ─────────────────────────────
+
+/**
+ * The bridge bottle's readiness signal — DELIBERATELY narrower than
+ * isBottleReady(): the bridge bottle never contains a bottled Steam client
+ * (R6), so "ready" can only ever mean "the CrossOver bottle itself has been
+ * created" (the same cxbottle.conf-existence signal isBottleProvisioned()
+ * already uses), never "+ a bottled Windows Steam client exists". Reusing
+ * isBottleReady() here would leave the bridge bottle perpetually
+ * non-ready, since no Windows Steam client is ever installed on this path.
+ */
+export function isBridgeBottleReady(bottleName?: string): boolean {
+  const name = bottleName ?? DEFAULT_BRIDGE_BOTTLE_NAME
+  return isBottleProvisioned(name)
+}
+
+/**
+ * Composes a GameSettings-shaped object for the dedicated bridge bottle,
+ * mirroring getSteamBottleSettings() but always resolving
+ * DEFAULT_BRIDGE_BOTTLE_NAME — never the Phase 17 bottle (Pitfall 1 / R4
+ * routing precondition). One shared bridge bottle (D-03 "share as much as
+ * possible"), so — unlike getSteamBottleSettings() — no per-install override
+ * is read back from steamBottleConfigStore; the bridge bottle's name/engine
+ * are not user-configurable this phase.
+ */
+export function getBridgeBottleSettings(): GameSettings {
+  const globalSettings = GlobalConfig.get().getSettings()
+  return {
+    ...globalSettings,
+    wineCrossoverBottle: DEFAULT_BRIDGE_BOTTLE_NAME,
+    wineVersion: globalSettings.wineVersion
+  }
+}
+
+/**
+ * Creates the dedicated, SHARED bridge bottle (D-03) via the same LOCKED
+ * cxbottle --create --template win10_64 mechanism provisionBottle() uses
+ * above, but — unlike provisionBottle() — this function never downloads or
+ * runs any Windows Steam client installer artifact. R6's acceptance bar is a
+ * bridge bottle provably free of a Windows Steam client; this function is
+ * grep-verifiable as containing no reference to that installer artifact or
+ * its download URL constant (Pitfall 1).
+ *
+ * D-08: CrossOver-only lifecycle. A caller-supplied non-CrossOver
+ * wineVersion (GPTK/toolkit/plain Wine) is rejected outright — mirrors the
+ * Phase 17/18 non-crossover rejection posture (folded todo
+ * steam-bottle-gptk-engine-produces-broken-bottle.md, T-24-09) rather than
+ * silently creating a broken bottle.
+ *
+ * Idempotent: isBridgeBottleReady() (cxbottle.conf existence — the bridge
+ * bottle's own readiness signal, distinct from isBottleReady()'s
+ * conf-plus-Steam-client check) short-circuits a repeat call.
+ */
+export async function provisionBridgeBottle(opts?: {
+  bottleName?: string
+  wineVersion?: WineInstallation
+}): Promise<ProvisionBottleResult> {
+  const rawName = opts?.bottleName ?? DEFAULT_BRIDGE_BOTTLE_NAME
+  const bottleName = sanitizeBottleName(rawName)
+
+  // (1) Reject unsafe names before any path/argv construction (T-24-06,
+  // the same sanitizeBottleName chokepoint T-17-01 established).
+  if (!bottleName) {
+    logError(
+      `provisionBridgeBottle: rejected unsafe bottle name "${rawName}" (T-24-06)`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Invalid bottle name: "${rawName}"` }
+  }
+
+  // (2) D-08: CrossOver-only. Reject a non-CrossOver engine before any side
+  // effect — do not silently create a broken GPTK/toolkit bottle (T-24-09).
+  if (opts?.wineVersion && opts.wineVersion.type !== 'crossover') {
+    logError(
+      `provisionBridgeBottle: rejected non-CrossOver engine "${opts.wineVersion.type}" for bottle "${bottleName}" (D-08)`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `The bridge bottle requires a CrossOver engine, got "${opts.wineVersion.type}"`
+    }
+  }
+
+  // (3) Idempotent short-circuit — bridge bottle already created.
+  if (isBridgeBottleReady(bottleName)) {
+    return { status: 'done' }
+  }
+
+  // (4) CREATE via the SAME locked cxbottle mechanism provisionBottle()
+  // uses (argv form only, arguments as discrete words) — win10_64 template.
+  try {
+    const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
+      '--create',
+      '--bottle',
+      bottleName,
+      '--template',
+      'win10_64'
+    ])
+    if (!isBottleProvisioned(bottleName)) {
+      logError(
+        [
+          'provisionBridgeBottle: cxbottle create did not produce cxbottle.conf for',
+          bottleName,
+          `(code=${code}):`,
+          stderr
+        ],
+        LogPrefix.Steam
+      )
+      return {
+        status: 'error',
+        error: `Failed to create CrossOver bridge bottle "${bottleName}"`
+      }
+    }
+  } catch (error) {
+    logError(
+      ['provisionBridgeBottle: cxbottle create threw', error],
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `Failed to create CrossOver bridge bottle "${bottleName}": ${String(error)}`
+    }
+  }
+
+  // (5) Tooling hygiene (SPEC constraint — avoid cxstart, kill wineserver
+  // between runs): best-effort cleanup after creation so a fresh bottle
+  // never leaves a wedged wineserver behind. Never fails provisioning.
+  await killBottleWineServer(bottleName)
+
+  logInfo(
+    `provisionBridgeBottle: bridge bottle "${bottleName}" created (no Windows Steam client installed — R6)`,
+    LogPrefix.Steam
+  )
+
+  return { status: 'done' }
 }
