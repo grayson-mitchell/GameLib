@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 26 context gathered
-last_updated: "2026-07-20T02:06:52.080Z"
-last_activity: 2026-07-20 -- Phase 26 planning complete
+stopped_at: Completed 26-01-PLAN.md
+last_updated: "2026-07-20T02:49:05.652Z"
+last_activity: 2026-07-20
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 23 code-complete (23-05 summarized, Gate 1 hardware PASS). Remaining to close: Gates 2 & 3 hardware UAT (DEFERRED by user 2026-07-20). Next executable work: Phase 22 or 24.
+**Current focus:** Phase 26 — steam-key-redemption
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 23 (Steam full-ownership install, StateFlags=4)
-Plan: 4 of 5 summarized. 23-05 formalized 2026-07-20 (single-flight guard + pause/resume, Tasks 1-2 code + Task 3 Gate 1 hardware PASS; 296/296 tests). Only 23-04 remains open — its deliverable is the D-07 UAT gate, blocked on Gates 2 & 3 (deferred).
+Phase: 26 (steam-key-redemption) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-20 -- Phase 26 planning complete
+Last activity: 2026-07-20
 
 Other open native-install phases:
 
@@ -171,6 +171,7 @@ Other open native-install phases:
 | Phase 25 P01 | 12min | 2 tasks | 2 files |
 | Phase 25 P02 | ~20min | 3 tasks | 4 files |
 | Phase 21 P17 | 30min | 2 tasks | 10 files |
+| Phase 26 P01 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -280,6 +281,8 @@ Recent decisions affecting current work:
 - [Phase 21]: downloadSteamDepots finalize() forces outcome to cancelled when lastResult.outcome==='cancelled' OR opts.signal?.aborted===true, closing an async-interleaving class that could otherwise let a completed outcome reach canWriteFullOwnership
 - [Phase 21]: markSteamInstallIncomplete() mirrors init()'s startup-surface pattern for a SAME-SESSION native cancel (the one gap init() doesn't cover), reusing the existing steamResumePending field
 - [Phase 21]: steam-incomplete is a distinct statusContext value from steam-waiting-for-restart/steam-paused — applies when NOT currently installing but an incomplete manifest exists; hasStatus.ts's notInstalled branch now threads statusContext for the first time
+- [Phase 26]: Phase 26-01: classifyPurchaseResult's details param typed as SteamUserLib.EPurchaseResult (not number) to satisfy no-unsafe-enum-comparison lint rule
+- [Phase 26]: Phase 26-01: redeemKey tests isolate classification logic via jest.spyOn(SteamUser, ensureConnected/getClient) rather than replaying the full auth flow
 
 ### Pending Todos
 
@@ -345,8 +348,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T01:29:11.304Z
-Stopped at: Phase 26 context gathered
+Last session: 2026-07-20T02:49:05.646Z
+Stopped at: Completed 26-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
