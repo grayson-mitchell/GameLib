@@ -1,0 +1,16 @@
+// Phase 24 (24-09), R7/D-05: styling for the two supplementary message
+// lines inside the explicit bridge-failure dialog (the Dialog chrome itself
+// is already styled by frontend/components/UI/Dialog — mirrors
+// SteamBottleSetup.tsx's consent-phase Dialog, which also carries no extra
+// rules of its own beyond these kinds of inline message classes).
+.steamBridgeSetupReason {
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.steamBridgeSetupError {
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--status-danger, var(--status-warning));
+}

@@ -36,6 +36,12 @@ export const steamClientSetupRecheck = makeHandlerInvoker(
 export const handleSteamClientSetupRequired = frontendListenerSlot(
   'steamClientSetupRequired'
 )
+
+// Phase 24 (24-09), R7/D-05: bridge-failure dialog signal — one-way push
+// (24-06/24-08 emit, 24-09 subscribes), mirrors the bottle/client slots above.
+export const handleSteamBridgeSetupRequired = frontendListenerSlot(
+  'steamBridgeSetupRequired'
+)
 // One-way push — backend emits while background metadata/art fetch is running.
 export const handleSteamMetadataSyncing = frontendListenerSlot(
   'steamMetadataSyncing'

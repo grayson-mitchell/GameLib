@@ -46,6 +46,7 @@ import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
+import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -1075,6 +1076,17 @@ class GlobalState extends PureComponent<Props> {
     // listener above (macOS CrossOver bottle flow).
     window.api.handleSteamClientSetupRequired(
       handleSteamClientSetupRequiredSignal
+    )
+
+    // Phase 24 (24-09), R7/D-05: single global listener that opens the
+    // EXPLICIT bridge-failure dialog whenever the backend emits
+    // `steamBridgeSetupRequired` (24-06/24-08) — fires from the bridge
+    // install/launch routing branches (installBridgeGame/launchBridgeGame)
+    // in SteamGame. Distinct from both listeners above: this is the macOS
+    // native Steam-bridge failure surface, offering fall-back-to-bottled or
+    // cancel — never a silent auto-fallback, never a dead end.
+    window.api.handleSteamBridgeSetupRequired(
+      handleSteamBridgeSetupRequiredSignal
     )
 
     window.api.handleSteamMetadataSyncing((e, { syncing }) => {

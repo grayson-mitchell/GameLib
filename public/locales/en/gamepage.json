@@ -21,6 +21,18 @@
             "uncheckRunSteam": "On the final Steam installer screen, UNTICK \"Run Steam\" before clicking Finish — GameLib will start Steam itself once the bottle is ready."
         }
     },
+    "bridge": {
+        "setup": {
+            "cancel": "Cancel",
+            "fallback": "Fall back to bottled Steam",
+            "fallbackError": "Falling back to bottled Steam failed: {{error}}",
+            "fallbackNotFound": "Could not find this game to fall back to bottled Steam.",
+            "fallingBack": "Falling back...",
+            "message": "GameLib could not use the native Steam bridge for this game. You can fall back to the proven bottled-Steam path (a full Windows Steam client running in a dedicated CrossOver/Wine bottle) instead.",
+            "reason": "Reason: {{reason}}",
+            "title": "Steam bridge unavailable"
+        }
+    },
     "clientSetup": {
         "consent": {
             "title": "Set up the Steam client",

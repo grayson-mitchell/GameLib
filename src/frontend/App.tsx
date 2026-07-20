@@ -26,6 +26,7 @@ import AnalyticsDialog from './screens/Settings/components/AnalyticsDialog'
 import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
+import SteamBridgeSetup from './screens/Game/GamePage/components/SteamBridgeSetup'
 import SteamInstallLocationPicker from './screens/Game/GamePage/components/SteamInstallLocationPicker'
 
 function Root() {
@@ -99,6 +100,7 @@ function Root() {
               <InstallGameWrapper />
               <SteamBottleSetup />
               <SteamClientSetup />
+              <SteamBridgeSetup />
               <SteamInstallLocationPicker />
               <SettingsModalWrapper />
               <ExternalLinkDialog />
