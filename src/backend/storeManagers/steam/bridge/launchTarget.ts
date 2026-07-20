@@ -15,12 +15,17 @@
  * hard-fail the caller's launch() flow.
  *
  * `appinfo.config.launch` is a real Steam PICS map keyed by numeric-string
- * index ("0", "1", ...), not a JS array -- iterated via Object.values(),
- * filtered to the entry whose OWN `config.oslist === 'windows'` (the same
- * oslist vocabulary games.ts's hostSteamDepotOs() note already documents).
- * The first matching entry wins (a multi-entry windows launch config -- e.g.
- * VR vs non-VR variants -- is out of scope for the acceptance set; Avernum 4
- * and Hoard each ship exactly one).
+ * index ("0", "1", ...), not a JS array -- iterated via Object.values().
+ * We prefer the entry whose OWN `config.oslist === 'windows'` (the same
+ * oslist vocabulary games.ts's hostSteamDepotOs() note already documents),
+ * but FALL BACK to a single untagged entry (no `oslist`) -- D-UAT-24-03:
+ * older Windows-only titles (e.g. Spiderweb's Avernum 5) ship exactly one
+ * launch entry with no oslist at all, so an explicit-windows-only filter
+ * found nothing and the whole bridge install/launch failed. Bridge games are
+ * bottle-eligible (no usable native build), so an untagged entry IS the
+ * Windows launch; we deliberately never fall back to a mac/linux-TAGGED
+ * entry. The first matching entry wins (multi-entry windows configs -- e.g.
+ * VR vs non-VR variants -- remain out of scope; Avernum 4/Hoard ship one).
  */
 
 import { join } from 'node:path'
@@ -82,9 +87,19 @@ export async function resolveBridgeLaunchExe(
     const appinfo = entry?.appinfo as unknown as AppLaunchInfo | undefined
 
     const launchEntries = Object.values(appinfo?.config?.launch ?? {})
-    const windowsEntry = launchEntries.find(
-      (candidate) => candidate?.config?.oslist === 'windows'
-    )
+    // Prefer an explicit windows-tagged entry; fall back to a single untagged
+    // entry (no oslist) for Windows-only titles that don't tag it at all
+    // (D-UAT-24-03). Never fall back to a mac/linux-tagged entry.
+    const windowsEntry =
+      launchEntries.find(
+        (candidate) =>
+          candidate?.executable && candidate.config?.oslist === 'windows'
+      ) ??
+      launchEntries.find(
+        (candidate) =>
+          candidate?.executable &&
+          (candidate.config?.oslist == null || candidate.config.oslist === '')
+      )
 
     if (!windowsEntry?.executable) {
       logWarning(

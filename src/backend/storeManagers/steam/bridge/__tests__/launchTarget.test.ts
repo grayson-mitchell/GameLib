@@ -98,6 +98,52 @@ describe('resolveBridgeLaunchExe', () => {
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLibSteamBridge')
   })
 
+  it('falls back to a single UNTAGGED launch entry (no oslist) for Windows-only titles -- D-UAT-24-03 (Avernum 5)', async () => {
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(206040, {
+          config: {
+            installdir: 'Avernum 5',
+            launch: {
+              // Old Spiderweb Windows-only title: one entry, no oslist tag.
+              '0': { executable: 'Avernum 5.exe' }
+            }
+          }
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe('206040')
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 5', 'Avernum 5.exe')
+    )
+  })
+
+  it('prefers an explicit windows entry over an untagged sibling', async () => {
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(206040, {
+          config: {
+            installdir: 'Avernum 5',
+            launch: {
+              '0': { executable: 'untagged.exe' },
+              '1': { executable: 'Avernum5.exe', config: { oslist: 'windows' } }
+            }
+          }
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any
+    )
+
+    const result = await resolveBridgeLaunchExe('206040')
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 5', 'Avernum5.exe')
+    )
+  })
+
   it('returns undefined when the only launch entry is linux/macos (no windows launch target) -- never throws', async () => {
     jest.mocked(SteamUser.getClient).mockReturnValue(
       makeFakeClient({
