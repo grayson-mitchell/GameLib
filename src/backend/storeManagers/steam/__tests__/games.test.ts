@@ -17,7 +17,8 @@ import SteamGame, {
   getSteamInstallSize,
   parseSteamMacMinOSVersion,
   macArchFromMinOS,
-  markBridgeFailedThisSession
+  markBridgeFailedThisSession,
+  __resetBridgeFailedSessionForTests
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -42,6 +43,7 @@ import { bridgeAllowlist } from '../bridge/allowlist'
 import { placeShimForGame } from '../bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
+import { runWineCommand } from 'backend/launcher'
 import {
   createAbortController,
   callAbortController,
@@ -212,6 +214,12 @@ jest.mock('../bridge/launchTarget', () => ({
 // consumed by launch()'s bridge branch (Task 3).
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
+}))
+
+// ── backend/launcher.ts mock — runWineCommand, dynamically imported by
+// launchBridgeGame() (Task 3), mirrors bottle.test.ts's own mock shape.
+jest.mock('backend/launcher', () => ({
+  runWineCommand: jest.fn()
 }))
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
@@ -1057,6 +1065,156 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       { activate: false }
     )
     expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+  })
+})
+
+// ── Phase 24 Plan 08 (R4/R6/R7, finding #3): allowlist-based bridge launch
+// routing — ensureBridgeHelperReady() readiness gate + resolveBridgeLaunchExe()
+// exe resolution + direct runWineCommand (never tellBottledSteamToLaunch).
+
+describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/finding-3)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+  const RESOLVED_EXE_PATH =
+    '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+
+  beforeEach(() => {
+    __resetBridgeFailedSessionForTests()
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(bridgeAllowlist.has as jest.Mock).mockReset()
+    ;(tellBottledSteamToLaunch as jest.Mock).mockReset()
+    ;(ensureBridgeHelperReady as jest.Mock).mockReset()
+    ;(resolveBridgeLaunchExe as jest.Mock).mockReset()
+    ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    })
+    ;(runWineCommand as jest.Mock).mockReset().mockResolvedValue({
+      stdout: '',
+      stderr: ''
+    })
+  })
+
+  afterEach(() => {
+    // Restore the module-mock's declared defaults (isMac:false, isLinux:true)
+    // — several LATER describe blocks in this file (e.g. stop()/install()
+    // GAME-02) never touch envMock themselves and rely on the ambient
+    // isMac:false default, so this block must not leave isMac:true trailing
+    // into whatever test runs next in file order.
+    envMock.isMac = false
+    envMock.isWindows = false
+    envMock.isLinux = true
+  })
+
+  it('allowlisted launch: ensureBridgeHelperReady -> resolveBridgeLaunchExe -> runWineCommand with the RESOLVED exe path + getBridgeBottleSettings (NOT tellBottledSteamToLaunch, no <gameExePath> placeholder)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandParts: [RESOLVED_EXE_PATH],
+        gameSettings: { wineCrossoverBottle: 'GameLibSteamBridge' },
+        wait: false
+      })
+    )
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(result).toBe(true)
+  })
+
+  it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
+    // A dedicated appId, never reused elsewhere in this file, so this
+    // test's bridgeFailedThisSession mutation cannot leak into other tests.
+    const FAILING_APP_ID = '888888'
+    library.set(FAILING_APP_ID, makeEntry({ title: 'Failing Bridge Game' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'unreachable',
+      ready: false
+    })
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(FAILING_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: FAILING_APP_ID,
+        reason: 'unreachable',
+        fallbackAvailable: true
+      }
+    )
+
+    // A subsequent launch() re-invocation (e.g. the D-05 fallback dialog's
+    // own re-invocation) must now skip the bridge entirely (finding #3) and
+    // route to the existing bottled path instead.
+    const secondResult = await game.launch({} as any)
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(FAILING_APP_ID)
+    expect(secondResult).toBe(true)
+  })
+
+  it('resolveBridgeLaunchExe returns undefined — launch() does NOT run a bare/undefined path, marks bridge-failed, fires steamBridgeSetupRequired', async () => {
+    const NO_EXE_APP_ID = '777777'
+    library.set(NO_EXE_APP_ID, makeEntry({ title: 'No Windows Launch Entry' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
+
+    const game = new SteamGame(NO_EXE_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: NO_EXE_APP_ID,
+        reason: 'launch-exe-not-resolved',
+        fallbackAvailable: true
+      }
+    )
+    expect(result).toBe(false)
+  })
+
+  it('regression: a non-allowlisted title never calls ensureBridgeHelperReady/resolveBridgeLaunchExe/runWineCommand — existing bottled launch flow unchanged', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
   })
 })
 
@@ -1966,6 +2124,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
 
   beforeEach(() => {
+    __resetBridgeFailedSessionForTests()
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -2013,6 +2172,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
   afterEach(() => {
     startInstallPollingSpy.mockRestore()
+    // Restore the module-mock's declared defaults — see the identical note
+    // in the launch() bridge-routing describe block above.
+    envMock.isMac = false
+    envMock.isWindows = false
+    envMock.isLinux = true
   })
 
   it('allowlisted + bottle-eligible: install() routes to installBridgeGame (bridge bottle target + shimGenerate called), NOT tellBottledSteamToInstall', async () => {
@@ -2463,6 +2627,80 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       `steam://uninstall/${APP_ID}`
     )
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+  })
+})
+
+// ── Phase 24 Plan 08 (R4/R6): allowlist-based bridge uninstall routing —
+// removes the game from the DEDICATED bridge bottle directly (no Steam
+// client to dispatch a verb to on this path), never touching the Phase 17
+// GameLibSteam bottle.
+
+describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+  const RESOLVED_EXE_PATH =
+    '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+
+  beforeEach(() => {
+    __resetBridgeFailedSessionForTests()
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(bridgeAllowlist.has as jest.Mock).mockReset()
+    ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
+    ;(resolveBridgeLaunchExe as jest.Mock).mockReset()
+    ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    })
+    ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
+      (bottleName: string) =>
+        bottleName === 'GameLibSteamBridge'
+          ? '/mock/bridge/bottle/steamapps'
+          : '/mock/bottle/steamapps'
+    )
+  })
+
+  afterEach(() => {
+    // Restore the module-mock's declared defaults — see the identical note
+    // in the launch() bridge-routing describe block above.
+    envMock.isMac = false
+    envMock.isWindows = false
+    envMock.isLinux = true
+  })
+
+  it('allowlisted uninstall: removes the game from the bridge bottle (resolveBridgeLaunchExe consulted), NOT tellBottledSteamToUninstall — Phase 17 GameLibSteam bottle untouched', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.uninstall({} as any)
+
+    expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(result).toEqual({ stdout: '', stderr: '' })
+    expect(library.get(APP_ID)?.is_installed).toBe(false)
+  })
+
+  it('regression: a non-allowlisted title uninstall() is unchanged from Phase 17 (never consults resolveBridgeLaunchExe)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToUninstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
+    expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
   })
 })
 

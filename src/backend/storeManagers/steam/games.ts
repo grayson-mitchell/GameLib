@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { shell } from 'electron'
 import { existsSync } from 'graceful-fs'
+import { rmSync } from 'node:fs'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import {
   ExtraInfo,
   GameInfo,
@@ -111,6 +113,19 @@ const bridgeFailedThisSession = new Set<string>()
  */
 export function markBridgeFailedThisSession(appId: string): void {
   bridgeFailedThisSession.add(appId)
+}
+
+/**
+ * Test-only reset for bridgeFailedThisSession — mirrors helperProcess.ts's
+ * `__resetBridgeHelperStateForTests()` convention (24-06). Unit tests that
+ * deliberately drive a bridge failure (BLOCKER 1 provisioning failure,
+ * launch readiness failure, etc.) mark real module-scoped state that would
+ * otherwise leak into every later test sharing the same appId; call this in
+ * a `beforeEach`/`afterEach` rather than relying on every test picking a
+ * never-reused dedicated appId.
+ */
+export function __resetBridgeFailedSessionForTests(): void {
+  bridgeFailedThisSession.clear()
 }
 
 /**
@@ -910,7 +925,108 @@ export default class SteamGame implements Game {
       return { status: 'error', error: shimError }
     }
 
+    // Deviation (Rule 2, discovered during Task 3): the `pollerSource:
+    // 'bottle'` passed to installDepotDownload above starts a poller that
+    // watches the PHASE 17 GameLibSteam bottle's steamapps root
+    // (library.ts's AcfSource is 'native'|'bottle' only — 'bottle' is
+    // hardcoded to getSteamBottleSettings(), never the bridge bottle). That
+    // poller will never find this appId's manifest there and is harmless
+    // dead weight (finding #10's ACF-is-dead-weight acknowledgment extends
+    // to this too — reusing the shared engine unchanged is still the
+    // correct low-risk choice, not forked here). The REAL completion
+    // signal for the bridge path is this synchronous flip below — depot
+    // download AND shim placement have already both succeeded by this
+    // point, so is_installed is set directly (mirrors library.ts's
+    // pollInstallOnce() 'installed' branch shape) rather than waiting on a
+    // poller that can never observe this bottle.
+    const installRoot = this.resolveBridgeGameInstallRoot(exePath)
+    if (installRoot) {
+      this.markBridgeGameInstalled(installRoot)
+    }
+
     return { status: 'done' }
+  }
+
+  /**
+   * Given a resolved bridge launch exe path (resolveBridgeLaunchExe, Task
+   * 1), derives the game's own install ROOT directory —
+   * `steamapps/common/<installdir>` — via resolve()+relative() containment
+   * (never path.join/string-prefix — the project's own established "path.join
+   * is not containment" lesson, mirrored from shimGenerate.ts's
+   * isContainedWithin). Returns undefined if exePath does not resolve
+   * inside the bridge bottle's `common/` dir at all — should be
+   * unreachable in practice since resolveBridgeLaunchExe only ever returns
+   * paths it built from that SAME root, but this is a defensive check, not
+   * an assumption of trust.
+   */
+  private resolveBridgeGameInstallRoot(exePath: string): string | undefined {
+    const bottleName = getBridgeBottleSettings().wineCrossoverBottle
+    const commonRoot = resolve(getBottleSteamappsDir(bottleName), 'common')
+    const resolvedExePath = resolve(exePath)
+    const relFromCommon = relative(commonRoot, resolvedExePath)
+    const installdirSegment = relFromCommon.split(sep)[0]
+
+    if (
+      !installdirSegment ||
+      relFromCommon.startsWith('..') ||
+      isAbsolute(relFromCommon)
+    ) {
+      return undefined
+    }
+
+    return join(commonRoot, installdirSegment)
+  }
+
+  /**
+   * Directly flips is_installed:true for a completed bridge install —
+   * mirrors library.ts's pollInstallOnce() 'installed'-branch shape
+   * (`{ ...existing, is_installed: true, install: { install_path,
+   * install_size, platform } }` + persist + pushGameToLibrary), since the
+   * bridge path has no ACF poller that can observe completion (see the
+   * deviation note in installBridgeGame above).
+   */
+  private markBridgeGameInstalled(installPath: string): void {
+    const existing = library.get(this.appId)
+    if (existing) {
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: true,
+        install: {
+          install_path: installPath,
+          install_size: '',
+          platform: 'Windows'
+        }
+      }
+      library.set(this.appId, updated)
+      steamLibraryStore.set('games', Array.from(library.values()))
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: this.appId,
+      runner: 'steam',
+      status: 'done'
+    })
+  }
+
+  /**
+   * Directly flips is_installed:false for a bridge uninstall — the bridge
+   * bottle has no ACF poller either (uninstallBridgeGame below performs a
+   * real, synchronous file removal, so this is the correct completion
+   * signal, not an ACF observation). Mirrors forceUninstall()'s keep-entry
+   * shape (never library.delete's the entry).
+   */
+  private markBridgeGameUninstalled(): void {
+    const existing = library.get(this.appId)
+    if (existing) {
+      const updated: GameInfo = {
+        ...existing,
+        is_installed: false,
+        install: {}
+      }
+      library.set(this.appId, updated)
+      steamLibraryStore.set('games', Array.from(library.values()))
+      sendFrontendMessage('pushGameToLibrary', updated)
+    }
   }
 
   /**
@@ -1259,6 +1375,15 @@ export default class SteamGame implements Game {
   ): Promise<boolean> {
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
+      // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
+      // FIRST check inside this block, mirroring install()'s own bridge
+      // sub-branch above (BLOCKER 1 rationale: the bridge has its own
+      // readiness gate, ensureBridgeHelperReady(), independent of the
+      // unrelated Phase 17 GameLibSteam bottle's own state).
+      if (this.isBridgeEligible()) {
+        return this.launchBridgeGame()
+      }
+
       if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of launching`,
@@ -1296,6 +1421,84 @@ export default class SteamGame implements Game {
     // game's own window. Ignored on Linux (no effect on Steam Deck game mode).
     await shell.openExternal(url, { activate: false })
     return true
+  }
+
+  /**
+   * Phase 24 Plan 08 (R4/R6/R7): allowlisted-title bridge launch path. Runs
+   * the game's OWN resolved Windows `.exe` (resolveBridgeLaunchExe, Task 1)
+   * directly via `runWineCommand` against the dedicated bridge bottle
+   * (getBridgeBottleSettings, 24-04) — NEVER `tellBottledSteamToLaunch` /
+   * `dispatchToBottledSteam`, since the bridge bottle has no bottled Steam
+   * client to `-applaunch` through (RESEARCH Pattern 4's single largest
+   * routing-shape delta).
+   *
+   * Gated on `ensureBridgeHelperReady()` (24-06) FIRST — D-05/D-06: no game
+   * is ever launched with no live Steam identity. On EITHER a not-ready
+   * helper OR an unresolvable launch target, this marks the appId
+   * bridge-failed-this-session (finding #3) and fires
+   * `steamBridgeSetupRequired` itself (defensive — never assumes the
+   * signal was already fired upstream) before returning `false` — never
+   * optimistically flips any running state.
+   */
+  private async launchBridgeGame(): Promise<boolean> {
+    const helperReady = await ensureBridgeHelperReady(this.appId)
+    if (!helperReady.ready) {
+      logWarning(
+        `SteamGame: bridge helper not ready for appId ${this.appId} (status=${helperReady.status}) — not launching (no no-identity launch, D-05/D-06)`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: helperReady.status,
+        fallbackAvailable: true
+      })
+      return false
+    }
+
+    const exePath = await resolveBridgeLaunchExe(this.appId)
+    if (!exePath) {
+      logWarning(
+        `SteamGame: could not resolve a Windows launch executable for appId ${this.appId} — not launching a bare/undefined path`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'launch-exe-not-resolved',
+        fallbackAvailable: true
+      })
+      return false
+    }
+
+    logInfo(
+      `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath})`,
+      LogPrefix.Steam
+    )
+    try {
+      const { runWineCommand } = await import('backend/launcher')
+      await runWineCommand({
+        commandParts: [exePath],
+        gameSettings: getBridgeBottleSettings(),
+        wait: false,
+        protonVerb: 'run',
+        startFolder: dirname(exePath),
+        skipPrefixCheckIKnowWhatImDoing: true
+      })
+      return true
+    } catch (error) {
+      logWarning(
+        [`SteamGame: bridge launch failed for appId ${this.appId}`, error],
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'bridge-launch-failed',
+        fallbackAvailable: true
+      })
+      return false
+    }
   }
 
   async moveInstall(_newInstallPath: string): Promise<InstallResult> {
@@ -1342,6 +1545,13 @@ export default class SteamGame implements Game {
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
+      // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
+      // FIRST check inside this block, mirroring install()/launch()'s own
+      // bridge sub-branches above.
+      if (this.isBridgeEligible()) {
+        return this.uninstallBridgeGame()
+      }
+
       if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
@@ -1381,6 +1591,69 @@ export default class SteamGame implements Game {
     // install polling. State is never optimistically flipped here (D-02).
     startUninstallPolling(this.appId)
 
+    return { stdout: '', stderr: '' }
+  }
+
+  /**
+   * Phase 24 Plan 08 (R4/R6): allowlisted-title bridge uninstall path.
+   * Unlike the Phase 17 bottled-Steam-client dispatch above, the bridge
+   * bottle has no Steam client to hand a `steam://uninstall` verb to at
+   * all (R6 — no Windows Steam client in the bridge bottle) — GameLib owns
+   * removal directly, consistent with the files-on-disk ownership model
+   * the bridge install path already commits to (finding #10). Removes
+   * ONLY the game's own install root inside the DEDICATED bridge bottle
+   * (getBridgeBottleSettings, 24-04) — never touches the Phase 17
+   * GameLibSteam bottle.
+   *
+   * Resolves the install root the SAME way installBridgeGame() does
+   * (resolveBridgeGameInstallRoot, via resolveBridgeLaunchExe) rather than
+   * a second, divergent path-derivation — reuse, not a parallel
+   * implementation.
+   */
+  private async uninstallBridgeGame(): Promise<ExecResult> {
+    const exePath = await resolveBridgeLaunchExe(this.appId)
+    if (!exePath) {
+      logWarning(
+        `SteamGame: uninstallBridgeGame could not resolve the bridge install location for appId ${this.appId} — nothing to remove`,
+        LogPrefix.Steam
+      )
+      this.markBridgeGameUninstalled()
+      return { stdout: '', stderr: '' }
+    }
+
+    const installRoot = this.resolveBridgeGameInstallRoot(exePath)
+    if (!installRoot) {
+      logWarning(
+        `SteamGame: uninstallBridgeGame rejected an exe path outside the bridge bottle's common/ dir for appId ${this.appId}`,
+        LogPrefix.Steam
+      )
+      return {
+        stdout: '',
+        stderr: `Refused to uninstall: unsafe path for appId ${this.appId}`
+      }
+    }
+
+    try {
+      rmSync(installRoot, { recursive: true, force: true })
+    } catch (error) {
+      logWarning(
+        [
+          `SteamGame: uninstallBridgeGame failed to remove "${installRoot}" for appId ${this.appId}`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+      return {
+        stdout: '',
+        stderr: `Failed to remove bridge install: ${String(error)}`
+      }
+    }
+
+    logInfo(
+      `SteamGame: removed bridge install for appId ${this.appId} at "${installRoot}"`,
+      LogPrefix.Steam
+    )
+    this.markBridgeGameUninstalled()
     return { stdout: '', stderr: '' }
   }
 
