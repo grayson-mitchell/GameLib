@@ -9,3 +9,13 @@
 **/GalaxyCommunication.exe
 **/EpicGamesLauncher.exe
 .release_tags
+
+# Phase 24 Plan 07 (R5, D-07): built by meta/buildSteamBridgeShims.ts at
+# packaging time -- never committed (mirrors the other binaries above).
+# steam_api.pdb / steam_api_shim.lib are zig cc -shared's own debug-symbol
+# and import-library byproducts of the steam_api.dll compile gate.
+**/steam-bridge-helper
+**/steam_api.dll
+**/steam_api.pdb
+**/steam_api_shim.lib
+**/steam_appid.txt
