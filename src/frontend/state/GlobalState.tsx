@@ -121,6 +121,7 @@ interface StateProps {
   connectivity: { status: ConnectivityStatus; retryIn: number }
   dialogModalOptions: DialogModalOptions
   externalLinkDialogOptions: ExternalLinkDialogOptions
+  showRedeemKeyDialog: boolean
   sideloadedLibrary: GameInfo[]
   hideChangelogsOnStartup: boolean
   lastChangelogShown: string | null
@@ -303,6 +304,7 @@ class GlobalState extends PureComponent<Props> {
     sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', [])),
     dialogModalOptions: { showDialog: false },
     externalLinkDialogOptions: { showDialog: false },
+    showRedeemKeyDialog: false,
     hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
     lastChangelogShown: JSON.parse(storage.getItem('last_changelog') || 'null'),
     helpItems: {},
@@ -561,6 +563,10 @@ class GlobalState extends PureComponent<Props> {
 
   handleExternalLinkDialog = (value: ExternalLinkDialogOptions) => {
     this.setState({ externalLinkDialogOptions: value })
+  }
+
+  handleRedeemKeyDialog = (show: boolean) => {
+    this.setState({ showRedeemKeyDialog: show })
   }
 
   handleLibraryTopSection = (value: LibraryTopSectionOptions) => {
@@ -1489,6 +1495,8 @@ class GlobalState extends PureComponent<Props> {
           showDialogModal: this.handleShowDialogModal,
           showResetDialog: this.showResetDialog,
           handleExternalLinkDialog: this.handleExternalLinkDialog,
+          showRedeemKeyDialog: this.state.showRedeemKeyDialog,
+          handleRedeemKeyDialog: this.handleRedeemKeyDialog,
           hideChangelogsOnStartup: hideChangelogsOnStartup,
           setHideChangelogsOnStartup: this.setHideChangelogsOnStartup,
           lastChangelogShown: lastChangelogShown,

@@ -133,6 +133,8 @@ export interface ContextType {
   showResetDialog: () => void
   externalLinkDialogOptions: ExternalLinkDialogOptions
   handleExternalLinkDialog: (options: ExternalLinkDialogOptions) => void
+  showRedeemKeyDialog: boolean
+  handleRedeemKeyDialog: (show: boolean) => void
   sideloadedLibrary: GameInfo[]
   hideChangelogsOnStartup: boolean
   setHideChangelogsOnStartup: (value: boolean) => void

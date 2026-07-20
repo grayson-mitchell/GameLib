@@ -103,6 +103,8 @@ const initialContext: ContextType = {
   showResetDialog: () => null,
   externalLinkDialogOptions: { showDialog: false },
   handleExternalLinkDialog: () => null,
+  showRedeemKeyDialog: false,
+  handleRedeemKeyDialog: () => null,
   hideChangelogsOnStartup: false,
   setHideChangelogsOnStartup: () => null,
   lastChangelogShown: null,
