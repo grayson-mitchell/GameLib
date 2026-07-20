@@ -21,6 +21,15 @@ protocols:
     schemes:
       - gamelib
 
+# Auto-update feed for electron-updater. Without this, electron-builder derives
+# the feed from package.json's `repository` field, which still points at Heroic
+# upstream (Heroic 2.x > GameLib 0.x always triggers a bogus "update available"
+# popup that downloads Heroic's installer). Point it at the GameLib fork instead.
+publish:
+  provider: github
+  owner: grayson-mitchell
+  repo: GameLib
+
 win:
   artifactName: ${productName}-${version}-Setup-${arch}.${ext}
   icon: build/win_icon.ico
