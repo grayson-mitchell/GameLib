@@ -143,7 +143,11 @@ jest.mock('child_process', () => ({
 // into the confirm path.
 jest.mock('electron', () => ({
   dialog: { showMessageBox: jest.fn() },
-  app: { getPath: jest.fn().mockReturnValue('/tmp/mock-path') },
+  app: {
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
+    getAppPath: () => '/tmp/mock-path'
+  },
   shell: { openExternal: jest.fn() }
 }))
 

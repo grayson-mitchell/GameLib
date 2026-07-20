@@ -60,10 +60,19 @@ export const sharedWinePrefix = join(defaultWinePrefixDir, 'shared')
 export const defaultWinePrefix = join(defaultWinePrefixDir, 'default')
 export const fixesPath = join(appFolder, 'fixes')
 
+// Anchor on app.getAppPath() (project root in dev, asar root when packaged)
+// rather than counting `..` from __dirname: electron-vite code-splits the
+// main bundle into build/main/chunks/*, so __dirname is build/main/chunks
+// (not build/main), and the old `resolve(__dirname, '..', ...)` math landed
+// one level off -- e.g. build/public/bin instead of build/bin -- ENOENT'ing
+// every bundled asset (helper, shim, icon, preload, locales). getAppPath() is
+// depth-independent and already the established fix for the sibling
+// build/preload lookup in main_window.ts. Non-packaged points at the source
+// `public/` tree (where build-steam-bridge stages the helper); packaged/CI
+// points at the flattened `build/` output root.
 export const publicDir = resolve(
-  __dirname,
-  '..',
-  app.isPackaged || process.env.CI === 'e2e' ? '' : '../public'
+  app.getAppPath(),
+  app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'
 )
 
 export const fakeEpicExePath = fixAsarPath(

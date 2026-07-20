@@ -45,7 +45,9 @@ import type { WineInstallation, GameSettings } from 'common/types'
 
 jest.mock('electron', () => ({
   app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path')
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
+    getAppPath: () => '/tmp/mock-path'
   }
 }))
 

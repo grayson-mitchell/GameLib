@@ -98,7 +98,10 @@ jest.mock('electron', () => ({
     openExternal: jest.fn()
   },
   app: {
-    getPath: jest.fn().mockReturnValue('/tmp/mock-path')
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    // Plain method (not jest.fn()) so it survives resetMocks -- publicDir in
+    // constants/paths.ts resolves it at module-load time (see __mocks__/electron.ts).
+    getAppPath: () => '/tmp/mock-path'
   },
   dialog: {
     showMessageBox: jest.fn()
