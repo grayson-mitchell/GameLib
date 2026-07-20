@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 26-04-PLAN.md
-last_updated: "2026-07-20T03:06:43.659Z"
+status: verifying
+stopped_at: Completed 26-05-PLAN.md
+last_updated: "2026-07-20T03:12:34.221Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 26 (steam-key-redemption) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-20
 
 Other open native-install phases:
@@ -175,6 +175,7 @@ Other open native-install phases:
 | Phase 26 P02 | 8min | 1 tasks | 2 files |
 | Phase 26 P03 | 8min | 1 tasks | 3 files |
 | Phase 26 P04 | 25min | 2 tasks | 7 files |
+| Phase 26 P05 | ~10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,7 @@ Recent decisions affecting current work:
 - [Phase 26-03]: SteamUser.redeemKey's real signature (store:'steam', key:string) matched the planned IPC payload type exactly — no adaptation needed; no new refresh/recompute plumbing added, 26-04 reuses existing refreshLibrary IPC path
 - [Phase 26]: [Phase 26-04]: Used ContextProvider's refreshLibrary({ library: 'steam' }) context wrapper instead of window.api.refreshLibrary — the plan's interface note had the wrong call target; window.api.refreshLibrary takes a bare Runner string, not an options object, and the context wrapper is what actually updates steam.library in React state
 - [Phase 26]: [Phase 26-04]: Non-success redeem outcomes keep the key input visible/editable (typing clears the outcome) rather than hiding the form, so users can retry inline without closing the modal (D-06/D-08)
+- [Phase 26-05]: Direct-invocation Jest harness for SidebarLinks (mock react/react-router-dom/react-i18next, stub SidebarItem/QuitButton/frontend-helpers) rather than jsdom — No jsdom/react-test-renderer installed; matches HumbleOriginInfo.test.tsx/StoreSearchScreen.test.tsx precedent
 
 ### Pending Todos
 
@@ -356,8 +358,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T03:06:43.653Z
-Stopped at: Completed 26-04-PLAN.md
+Last session: 2026-07-20T03:12:34.215Z
+Stopped at: Completed 26-05-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
