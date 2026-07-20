@@ -9,6 +9,25 @@ export interface SteamUserData {
   steamId?: string // SteamID64 — optional, used for display
 }
 
+// Phase 26 (26-01): SteamUser.redeemKey()'s discriminated result shape. Every
+// EPurchaseResult value (8) classifies into exactly one of these 4 outcome
+// buckets (SPEC REQ5). `store` is a hidden, store-aware-ready parameter
+// (REQ-26-06/D-05) — defaulted to 'steam' by callers, only 'steam' is wired
+// today, no visible store selector exists yet.
+export type RedeemKeyOutcome =
+  | 'success'
+  | 'already-owned'
+  | 'invalid'
+  | 'rate-limited'
+  | 'error'
+
+export interface RedeemKeyResult {
+  store: 'steam'
+  outcome: RedeemKeyOutcome
+  packageList?: Record<string, string> // packageID -> display name, from redeemKey()
+  message?: string // present on 'error' (e.g. 'not-connected')
+}
+
 // Phase 17 (17-02): dedicated Steam CrossOver bottle settings, persisted in
 // its own `steamBottleConfigStore` — NOT a phantom GameConfig entry (see
 // RESEARCH.md "Alternatives Considered"). Shared by
