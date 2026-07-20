@@ -666,7 +666,7 @@ export class SteamUser {
    */
   private static classifyPurchaseResult(
     store: 'steam',
-    details: number,
+    details: SteamUserLib.EPurchaseResult,
     packageList: Record<string, string>
   ): RedeemKeyResult {
     let outcome: RedeemKeyOutcome

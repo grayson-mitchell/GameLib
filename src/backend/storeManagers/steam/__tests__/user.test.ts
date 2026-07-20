@@ -101,9 +101,25 @@ const mockSteamUserInstance = {
   }),
   once: jest.fn((event: string, cb: (...args: any[]) => any) => {
     steamUserOnHandlers[event] = cb
-  })
+  }),
+  redeemKey: jest.fn()
 }
-const MockSteamUserLib = jest.fn(() => mockSteamUserInstance)
+const MockSteamUserLib = jest.fn(() => mockSteamUserInstance) as any
+// EPurchaseResult is a plain namespaced object on the SteamUser constructor at
+// runtime (SteamUser.EPurchaseResult = require('./resources/EPurchaseResult.js'),
+// verified in RESEARCH.md) — mirror that shape on the mock constructor so
+// classifyPurchaseResult's SteamUserLib.EPurchaseResult.Unknown reference
+// resolves in tests exactly like it does against the real installed package.
+MockSteamUserLib.EPurchaseResult = {
+  Unknown: -1,
+  OK: 0,
+  AlreadyOwned: 9,
+  RegionLockedKey: 13,
+  InvalidKey: 14,
+  DuplicatedKey: 15,
+  BaseGameRequired: 24,
+  OnCooldown: 53
+}
 
 jest.mock('steam-user', () => MockSteamUserLib)
 
@@ -111,6 +127,7 @@ jest.mock('steam-user', () => MockSteamUserLib)
 import { SteamUser } from '../user'
 import { safeStorage } from 'electron'
 import { existsSync } from 'graceful-fs'
+import { logInfo, logWarning, logError } from 'backend/logger'
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('SteamUser', () => {
@@ -169,6 +186,10 @@ describe('SteamUser', () => {
       personas: { '76561197900000000': { player_name: 'TestUser' } }
     })
     mockSteamUserInstance.logOff.mockImplementation(() => {})
+    // resetMocks: true clears redeemKey's mock implementation every test —
+    // re-arm the mock function itself (individual tests set their own
+    // mockResolvedValue/mockRejectedValue).
+    mockSteamUserInstance.redeemKey.mockReset()
   })
 
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
@@ -976,6 +997,130 @@ describe('SteamUser', () => {
       const result = await SteamUser.ensureConnected()
       expect(result).toBe(true)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── REQ-26-02/04/05/06: redeemKey() ────────────────────────────────────────
+
+  describe('redeemKey()', () => {
+    let ensureConnectedSpy: jest.SpyInstance
+    let getClientSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      // Isolate redeemKey()'s own logic from the connection-establishment
+      // flow already covered by the ensureConnected()/startQRLogin() describe
+      // blocks above — spy the two seams redeemKey() consults so each test
+      // exercises only the resolve/reject classification behavior.
+      ensureConnectedSpy = jest
+        .spyOn(SteamUser, 'ensureConnected')
+        .mockResolvedValue(true)
+      getClientSpy = jest
+        .spyOn(SteamUser, 'getClient')
+        .mockReturnValue(mockSteamUserInstance as any)
+    })
+
+    afterEach(() => {
+      ensureConnectedSpy.mockRestore()
+      getClientSpy.mockRestore()
+    })
+
+    test('OK (0): resolves and classifies as success, carries store + packageList', async () => {
+      mockSteamUserInstance.redeemKey.mockResolvedValue({
+        purchaseResultDetails: 0,
+        packageList: { '123': 'Some Game' }
+      })
+
+      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+      expect(result).toEqual({
+        store: 'steam',
+        outcome: 'success',
+        packageList: { '123': 'Some Game' }
+      })
+    })
+
+    const rejectCases: Array<{
+      name: string
+      details: number
+      bucket: 'already-owned' | 'invalid' | 'rate-limited'
+    }> = [
+      { name: 'AlreadyOwned', details: 9, bucket: 'already-owned' },
+      { name: 'RegionLockedKey', details: 13, bucket: 'invalid' },
+      { name: 'InvalidKey', details: 14, bucket: 'invalid' },
+      { name: 'DuplicatedKey', details: 15, bucket: 'invalid' },
+      { name: 'BaseGameRequired', details: 24, bucket: 'invalid' },
+      { name: 'OnCooldown', details: 53, bucket: 'rate-limited' },
+      { name: 'Unknown', details: -1, bucket: 'invalid' }
+    ]
+
+    test.each(rejectCases)(
+      '$name ($details): rejects and classifies as $bucket',
+      async ({ details, bucket, name }) => {
+        const err = Object.assign(new Error(name), {
+          purchaseResultDetails: details,
+          packageList: {}
+        })
+        mockSteamUserInstance.redeemKey.mockRejectedValue(err)
+
+        const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+        expect(result.store).toBe('steam')
+        expect(result.outcome).toBe(bucket)
+      }
+    )
+
+    test('rejected Error with no purchaseResultDetails falls back to Unknown -> invalid', async () => {
+      mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
+
+      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+      expect(result.store).toBe('steam')
+      expect(result.outcome).toBe('invalid')
+    })
+
+    test('not connected (ensureConnected false): returns outcome "error" and never calls client.redeemKey', async () => {
+      ensureConnectedSpy.mockResolvedValue(false)
+
+      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+      expect(result).toEqual({
+        store: 'steam',
+        outcome: 'error',
+        message: 'not-connected'
+      })
+      expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
+    })
+
+    test('not connected (null client): returns outcome "error" and never calls client.redeemKey', async () => {
+      getClientSpy.mockReturnValue(null)
+
+      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+      expect(result.outcome).toBe('error')
+      expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
+    })
+
+    test('never logs the raw key value', async () => {
+      const secretKey = 'SUPER-SECRET-KEY-VALUE-12345'
+      mockSteamUserInstance.redeemKey.mockResolvedValue({
+        purchaseResultDetails: 0,
+        packageList: {}
+      })
+
+      await SteamUser.redeemKey('steam', secretKey)
+
+      const mockedLogInfo = jest.mocked(logInfo)
+      const mockedLogWarning = jest.mocked(logWarning)
+      const mockedLogError = jest.mocked(logError)
+      const allLogArgs = [
+        ...mockedLogInfo.mock.calls,
+        ...mockedLogWarning.mock.calls,
+        ...mockedLogError.mock.calls
+      ]
+        .flat(Infinity)
+        .map((arg) => String(arg))
+
+      expect(allLogArgs.some((arg) => arg.includes(secretKey))).toBe(false)
     })
   })
 })
