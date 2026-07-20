@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 27-03-PLAN.md
-last_updated: "2026-07-20T12:36:51.804Z"
+stopped_at: Completed 27-04-PLAN.md
+last_updated: "2026-07-20T13:10:59.002Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 146
-  completed_plans: 134
+  completed_plans: 135
   percent: 83
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 27 (tauri-shell-walking-skeleton) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -189,6 +189,7 @@ Other open native-install phases:
 | Phase 27 P01 | 9min | 3 tasks | 16 files |
 | Phase 27 P02 | 50min | 3 tasks | 21 files |
 | Phase 27 P03 | 30min | 3 tasks | 10 files |
+| Phase 27 P04 | ~75min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -330,6 +331,7 @@ Recent decisions affecting current work:
 - [Phase 27]: 27-03: split window.api attach into a dedicated Node/Electron-free module (tauriAttach.ts) rather than reusing preload/index.ts, avoiding pulling contextBridge/backend-constants-environment into the Tauri renderer bundle
 - [Phase 27]: 27-03: ipc.ts/misc.ts use lazy guarded require('electron')/require('electron-store') instead of static imports, since a static import compiles to an unconditional top-level require() that would throw if bundled into the Tauri renderer
 - [Phase 27]: 27-03: registered a new Preload jest project (src/preload/jest.config.js) -- src/preload had zero test discoverability before this plan
+- [Phase 27]: 27-04: added backend/logger's initHeadless() (real LogWriter, no GlobalConfig/system-info-dump side effects) as a purely additive export for the headless sidecar; Electron's own init() and main.ts startup path are unmodified
 
 ### Pending Todos
 
@@ -396,8 +398,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T12:36:51.796Z
-Stopped at: Completed 27-03-PLAN.md
+Last session: 2026-07-20T13:10:58.996Z
+Stopped at: Completed 27-04-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
