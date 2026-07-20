@@ -13,6 +13,7 @@ import ContextProvider from './state/ContextProvider'
 import { ControllerHints, Help, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
 import ExternalLinkDialog from './components/UI/ExternalLinkDialog'
+import RedeemSteamKeyDialog from './components/UI/RedeemSteamKeyDialog'
 import WindowControls from './components/UI/WindowControls'
 import classNames from 'classnames'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
@@ -101,6 +102,7 @@ function Root() {
               <SteamInstallLocationPicker />
               <SettingsModalWrapper />
               <ExternalLinkDialog />
+              <RedeemSteamKeyDialog />
               <LogFileUploadDialog />
               <UploadedLogFilesList />
               <Outlet />
