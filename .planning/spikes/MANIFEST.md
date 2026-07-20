@@ -194,3 +194,34 @@ Investigation/feasibility only — not building the bridge.
 > Toolchain: no mingw-w64 installable here (Homebrew only dry-runs in this env) — PE builds used
 > **`zig cc -target x86-windows-gnu`** (self-contained mingw sysroot). Bottle run:
 > `CX_BOTTLE=<bottle> <CrossOver>/bin/wine "C:\prog.exe"`.
+
+---
+
+## Idea C — Rust/Tauri rearchitecture (feasibility of a hard fork off Heroic)
+
+**Distinct idea line.** Test whether GameLib could be re-based from Electron+React+TS onto
+**Rust + Tauri v2**. This deliberately **breaks the locked "stay mergeable with Heroic upstream"
+constraint** (CLAUDE.md) — the user chose **"divorce is on the table"** (2026-07-20): the spikes
+test pure feasibility/cost of a rewrite, *not* mergeability preservation. The real question is not
+"is Tauri nicer" but **"can GameLib's existing guts (Node backend + `steam-user` + React UI) come
+along, or is this a ground-up rewrite?"**
+
+Stack today (verified): Electron ^41.1.1, React ^18.3.1, electron-vite build, `steam-user` ^5.3.0
+(pure JS), `electron-store` ^8.2.0, safeStorage token encryption, `shell.openExternal` for
+`steam://`. Rust/cargo **is** installed locally; no Tauri CLI yet. Backend is the standard Heroic
+architecture: typed IPC surface (`common/types/ipc.ts`), six store managers, download manager, wine
+manager, dialog, launcher.
+
+### Requirements (Idea C — emerging)
+
+- **Divorce accepted.** Spikes assume a hard fork; loss of upstream Heroic merge is a chosen cost,
+  not a blocker to design around. *(User decision 2026-07-20.)*
+
+### Spikes (Idea C)
+
+| # | Name | Type | Validates | Verdict | Tags |
+|---|------|------|-----------|---------|------|
+| 009 | node-backend-headless-sidecar | standard | Given a real backend slice, when run under plain node with electron stubbed (as a Tauri sidecar forces), then observe which Electron-main APIs it hard-depends on — bounding the port | ⚠ PARTIAL (sidecar viable: 80% of files electron-free, but electron-store + 220 IPC endpoints + 44-file platform seam must be rewritten) | tauri, rust, backend, electron, sidecar |
+| 010 | steam-user-rust-vs-sidecar | comparison | Given Steam CM auth + owned-apps + depot download, when tested Rust-native (steam-vent) vs Node sidecar, then determine if the Steam differentiator can go Rust or must stay Node | PENDING | tauri, rust, steam, steam-user, sidecar |
+| 011 | electron-api-parity-in-tauri | standard | Given the Electron APIs 009 surfaces, when mapped to Tauri v2 plugins, then build a minimal Tauri app proving the riskiest equivalents (encrypted token store; steam:// launch) work | PENDING | tauri, rust, electron-api, parity |
+| 012 | react-frontend-under-tauri | standard | Given GameLib's React renderer + preload bridge, when hosted in a Tauri v2 webview with the bridge shimmed, then the real UI renders and one round-trip IPC call succeeds | PENDING | tauri, rust, react, frontend, ipc |

@@ -1,0 +1,20 @@
+{
+  "import_time_electron_apis": {
+    "app": 9,
+    "ipcRenderer": 3,
+    "ipcMain": 1,
+    "shell": 1
+  },
+  "distinct_apis": 4,
+  "total_touches": 14,
+  "faulted": true,
+  "fault": {
+    "message": "Electron Store: You need to call `.initRenderer()` from the main process.",
+    "stackTop": [
+      "Error: Electron Store: You need to call `.initRenderer()` from the main process.",
+      "    at new ElectronStore (/Users/graysonmitchell/Projects/GameLib/node_modules/electron-store/index.js:43:11)",
+      "    at new we (/Users/graysonmitchell/Projects/GameLib/build/main/chunks/index-CRG9M-Qp.js:7:8777)"
+    ]
+  },
+  "note": "These APIs run at module-evaluation time (before whenReady). A Tauri sidecar cannot defer them — each needs a shim or a refactor."
+}

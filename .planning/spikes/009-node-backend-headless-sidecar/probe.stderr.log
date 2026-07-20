@@ -1,0 +1,7 @@
+[probe] loading backend bundle head-less: /Users/graysonmitchell/Projects/GameLib/build/main/main.js
+[probe] electron runtime is ABSENT (as in a Tauri sidecar)
+
+
+=== HEADLESS STARTUP PROBE RESULT ===
+
+[probe] verdict signal: backend FAULTED at startup with electron absent.
