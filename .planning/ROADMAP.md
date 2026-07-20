@@ -965,10 +965,10 @@ v0.7: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 
 ---
 
-### Phase 26: Steam Key Redemption (candidate)
+### Phase 26: Steam Key Redemption
 
 **Goal:** Let a user redeem a Steam product key into their own Steam library **from inside GameLib**, without ever typing it into the Steam client. Starts with a manual entry point — paste any loose Steam key (Fanatical / GMG / physical box / gifted) → GameLib activates it via `steam-user.redeemKey()` on the already-authenticated CM session → the newly-owned game appears in the library. Then generalizes to any-store loose keys, and (as a follow-on) chains Humble reveal → redeem so revealed Steam keys land in Steam automatically.
-**Status:** CANDIDATE — surfaced by /gsd-explore 2026-07-20; not yet scheduled into a milestone. Manual entry point is the first vertical slice (user has spare test keys to verify against).
+**Status:** Surfaced by /gsd-explore 2026-07-20; registered as a phase 2026-07-20. Manual entry point is the first vertical slice (user has spare test keys to verify against).
 **Depends on:** Phase 1 (Steam auth — reuses the `steam-user` CM session in `src/backend/storeManagers/steam/user.ts`) and Phase 2/12 (library ownership + `recomputeOwnership()` refresh, ownership dedup). The Humble auto-redeem increment additionally depends on Phase 14 (`doRevealKey`).
 **Grounding verified 2026-07-20** (see `.planning/notes/steam-key-redemption-reveal-vs-activation.md`):
 

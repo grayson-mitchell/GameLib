@@ -239,3 +239,37 @@ DoctorMcKay's GitHub issues/wiki and community reports on Steam's activation rat
 (the commonly cited figure is ~50 failed activations/hour → ~1h lockout — verify, don't
 assume). Ideally: with the user's spare test keys, observe a real success and a real
 already-owned/invalid response and record the exact returned values.
+
+---
+
+## Q7 — Can GameLib redeem a GOG key, and can key format reliably route a key to the right store?
+
+**Raised:** 2026-07-20 (/gsd-spec-phase 26 — clarification on unified multi-store key redemption)
+**Blocks:** A future "redeem any key" generalization / a GOG-redemption phase — NOT Phase 26 (Steam-only, by decision)
+**Context:** `.planning/phases/26-steam-key-redemption/26-SPEC.md`, `.planning/seeds/gog-key-redemption.md`
+
+### The problem
+
+Phase 26 ships a Steam-only redeem via `steam-user.redeemKey()`. The natural next thought is
+a single "paste any key" box that detects the store from the key and routes to the right
+activation. Two unknowns block that:
+
+1. **Store-by-format detection is unreliable.** Steam's `XXXXX-XXXXX-XXXXX` (5-5-5) shape is
+   recognizable but **not exclusive** — Origin/EA, Uplay/Ubisoft, Rockstar, and Bethesda keys
+   share it, and GOG has no single canonical pattern (multiple historical formats). Format is
+   a hint, never a reliable router.
+2. **GameLib has no GOG redemption backend.** GOG integration is `gogdl` + OAuth for
+   library/install, not code redemption. Redeeming a GOG code goes through GOG's own redeem
+   endpoint (`gog.com/redeem` and its underlying API) — entirely new work.
+
+### How to answer it
+
+- Determine GOG's redeem mechanism: is there an API endpoint the existing authenticated GOG
+  session (Heroic/GameLib's GOG OAuth) can call to redeem a code, or is it web-only (would
+  need an embedded flow)? Check Heroic upstream + community for prior art.
+- Enumerate GOG code formats actually in circulation and assess whether any deterministic
+  Steam-vs-GOG discriminator exists (likely: no — plan for an explicit store choice instead
+  of auto-detection).
+- Decide the UX: explicit store selector (leverages Phase 26's store-aware-ready UI) vs.
+  best-effort detect-with-confirm. Detection-only auto-routing is almost certainly a
+  non-starter given the collisions above.
