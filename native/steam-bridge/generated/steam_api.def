@@ -1,0 +1,14 @@
+LIBRARY steam_api
+EXPORTS
+SteamAPI_Init
+SteamAPI_InitFlat
+SteamAPI_Shutdown
+SteamAPI_RestartAppIfNecessary
+SteamAPI_IsSteamRunning
+SteamAPI_RunCallbacks
+SteamAPI_RegisterCallback
+SteamAPI_UnregisterCallback
+SteamAPI_RegisterCallResult
+SteamAPI_UnregisterCallResult
+SteamAPI_SteamUser_v023
+SteamAPI_SteamFriends_v018

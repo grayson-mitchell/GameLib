@@ -38,3 +38,9 @@ flatpak-build
 .env
 
 playwright-report
+
+# macOS native Steam bridge (Phase 24, D-07) -- the shim SOURCE
+# (native/steam-bridge/generated/*.c/*.def) is generated but COMMITTED
+# (deterministic, code-reviewable, pinned to the manifest sdkVersion). Only
+# the built PE binary (compiled at packaging time, Plan 24-07) is ignored.
+native/steam-bridge/generated/*.dll

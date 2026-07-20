@@ -74,6 +74,20 @@ export const galaxyCommunicationExePath = fixAsarPath(
   join(publicDir, 'bin', 'x64', 'win32', 'GalaxyCommunication.exe')
 )
 
+// Phase 24 (macOS native Steam bridge, D-07/BLOCKER 2): the SINGLE shared
+// bundled location for the compiled steam_api.dll shim. Plan 24-07
+// (packaging) builds the generated native/steam-bridge/generated/
+// steam_api_shim.c source into this exact path at package/build time; Plan
+// 24-05 (per-bottle runtime placement) reads/copies FROM this exact path.
+// Arch-parameterized (process.arch, not hardcoded 'x64') to mirror
+// steamBridgeHelperPath's (24-06) per-host-arch bundling shape, even though
+// the shim DLL itself is always PE32 i386 (it runs inside a Wine bottle,
+// not natively) -- the path segment groups it alongside the arch-specific
+// native helper under the same packaged-bundle layout.
+export const builtBridgeShimPath = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'steam_api.dll')
+)
+
 export const webviewPreloadPath = fixAsarPath(
   join('file://', publicDir, 'webviewPreload.js')
 )
