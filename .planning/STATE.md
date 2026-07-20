@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-08-PLAN.md
-last_updated: "2026-07-20T11:24:03.217Z"
+stopped_at: Completed 27-02-PLAN.md
+last_updated: "2026-07-20T12:02:54.403Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 146
-  completed_plans: 131
+  completed_plans: 133
   percent: 83
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 27 (tauri-shell-walking-skeleton) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -187,6 +187,7 @@ Other open native-install phases:
 | Phase 24 P08 | 45min | 3 tasks | 4 files |
 | Phase 24 P09 | 40min | 2 tasks | 8 files |
 | Phase 27 P01 | 9min | 3 tasks | 16 files |
+| Phase 27 P02 | 50min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -323,6 +324,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 24-09: i18n keys go in gamepage.json (namespace file), not translation.json as literally named in plan -- verified against SteamBottleSetup precedent
 - [Phase ?]: 24-09: fallback dialog re-invokes window.api.install()/window.api.launch() directly (D-04 shape) -- D-11 on-demand bottle provisioning inherited for free via existing steamBottleSetupRequired guard chain
 - [Phase ?]: [Phase 27-01]: Sidecar transport framed as stdio JSON-RPC (not a loopback TCP port) per T-27-01 — Wine on macOS shares the host netns so a loopback port would be reachable by bottled processes; the parent<->child stdio pipe is private. Contract in src/common/types/sidecarTransport.ts (string ids for 64-bit safety), imported by the Rust shell, sidecar (27-02) and renderer bridge (27-03).
+- [Phase 27]: [Phase 27-02] userData path = join(appData, 'GameLib') in pathShim.ts — matches the 'GameLib' literal already used throughout paths.ts; real Electron app.getName()-derived value can't be observed from a headless sidecar
+- [Phase 27]: [Phase 27-02] Fixed a pre-existing order-sensitive circular dependency in storeManagers/index.ts's eager libraryManagerMap construction — converted top-level libraryManagerMap imports to lazy await import()/require() at use sites across 12 files, matching the codebase's existing bottle.ts/games.ts convention; required for backend/storeManagers/steam/library.ts to import headlessly under the sidecar
 
 ### Pending Todos
 
@@ -389,8 +392,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T11:23:34.787Z
-Stopped at: Completed 24-08-PLAN.md
+Last session: 2026-07-20T12:02:54.396Z
+Stopped at: Completed 27-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
