@@ -984,5 +984,12 @@ v0.7: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
   2. **Any-store loose keys** — same path, generalized entry surface.
   3. **Auto-redeem revealed Humble keys** — chain reveal → redeem (Steam-platform rows only). See `.planning/seeds/humble-auto-redeem-into-steam.md`.
 
-**Requirements:** TBD (to be minted at plan time)
-**Plans:** not yet planned
+**Requirements:** REQ-26-01 .. REQ-26-06 (minted 2026-07-20 from SPEC.md REQ1-REQ6: entry point / backend wrapper+IPC / format validation / success outcome / non-success outcomes / store-aware-ready)
+**Plans:** 5 plans across 4 waves (planned 2026-07-20)
+
+Plans:
+- [ ] 26-01-PLAN.md — Backend redeemKey wrapper + EPurchaseResult classifier + shared types + tests (handles reject-on-failure; 8-value enum -> 4 buckets)
+- [ ] 26-02-PLAN.md — Client-side format validator (light-touch pure fn, not 5-5-5) + test
+- [ ] 26-03-PLAN.md — redeemSteamKey IPC three-file wiring (ipc.ts / preload / main.ts handler)
+- [ ] 26-04-PLAN.md — Context toggle + RedeemSteamKeyDialog modal (inline outcomes, success name, refreshLibrary, graceful View-in-library) + App mount
+- [ ] 26-05-PLAN.md — Login-gated "Redeem a Steam key" sidebar item under Settings + gating test
