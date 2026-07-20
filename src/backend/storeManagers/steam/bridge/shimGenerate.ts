@@ -39,15 +39,21 @@ const NUMERIC_APP_ID = /^\d+$/
 
 const BRIDGE_SHIM_FILENAME = 'steam_api.dll'
 
-// Mirrors meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET -- the single source
-// of truth for what 24-01's generator (and 24-07's packaging build) emits
-// into the compiled shim's export table. `src/` cannot statically import
-// `meta/` (tsconfig `include` is `["src"]` only, and the compiled `.dll`
-// ships without its source `.def` at packaged runtime -- BLOCKER 2 is
-// only a contract for the BINARY path, not the source tree), so this is a
-// reviewed, literal copy rather than a derived import. An SDK bump/export
-// change in the generator (D-07: regenerate + review the source diff)
-// must update this list in the same review pass.
+// Mirrors meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET PLUS the two
+// per-interface accessor exports `generateDefFile` appends
+// (`...accessorExports`, meta/gen_vtables.ts) -- the single source of
+// truth for what 24-01's generator (and 24-07's packaging build) emits
+// into the compiled shim's export table (12 symbols total: 10 flat +
+// SteamAPI_SteamUser_v023 + SteamAPI_SteamFriends_v018, matching
+// native/steam-bridge/generated/steam_api.def exactly). `src/` cannot
+// statically import `meta/` (tsconfig `include` is `["src"]` only, and the
+// compiled `.dll` ships without its source `.def` at packaged runtime --
+// BLOCKER 2 is only a contract for the BINARY path, not the source tree),
+// so this is a reviewed, literal copy rather than a derived import. An SDK
+// bump/export change in the generator (D-07: regenerate + review the
+// source diff) -- including adding/renaming an interface accessor -- must
+// update this list in the same review pass (CR-02: a stale copy here
+// wrongly rejects every game that imports an interface accessor).
 const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_Init',
   'SteamAPI_InitFlat',
@@ -58,7 +64,9 @@ const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_RegisterCallback',
   'SteamAPI_UnregisterCallback',
   'SteamAPI_RegisterCallResult',
-  'SteamAPI_UnregisterCallResult'
+  'SteamAPI_UnregisterCallResult',
+  'SteamAPI_SteamUser_v023',
+  'SteamAPI_SteamFriends_v018'
 ])
 
 export type PlaceShimResult =
