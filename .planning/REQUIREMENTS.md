@@ -385,7 +385,7 @@ Phase 27 (Tauri Shell Walking Skeleton). Minted 2026-07-20 from the ROADMAP goal
 
 - [x] **REQ-27-01**: A native Tauri v2 shell launches on macOS and hosts GameLib's existing, unmodified Vite React renderer in its webview.
 - [x] **REQ-27-02**: The existing Node backend runs as a Tauri sidecar process (bundled Node), spawned and supervised by the Rust shell; it starts headless — with the import-time Electron coupling shimmed (path resolution + a minimal `electron-store` replacement) — and signals ready.
-- [ ] **REQ-27-03**: The renderer's `window.api` is served by re-pointing the three preload factories (`makeHandlerInvoker`/`makeListenerCaller`/`frontendListenerSlot`) onto a Tauri↔sidecar transport, preserving the `invoke`/`send`/`on` contract shapes — with zero changes to the 379 `window.api.*` call-sites.
+- [x] **REQ-27-03**: The renderer's `window.api` is served by re-pointing the three preload factories (`makeHandlerInvoker`/`makeListenerCaller`/`frontendListenerSlot`) onto a Tauri↔sidecar transport, preserving the `invoke`/`send`/`on` contract shapes — with zero changes to the 379 `window.api.*` call-sites.
 - [ ] **REQ-27-04**: One real read flow works end-to-end — the Steam library list renders in the Tauri window, sourced from the real `steam-user`/store-manager path in the sidecar (not mocked).
 - [ ] **REQ-27-05**: One real action flow works end-to-end — a Steam launch fires a real `steam://` handoff via the `tauri-plugin-opener` parity path.
 - [x] **REQ-27-06**: The slice runs as a macOS dev build, the existing Electron build still works (additive/reversible), and the ported-vs-stubbed seam boundary is documented so later phases can port the remaining ~217 IPC endpoints incrementally.
