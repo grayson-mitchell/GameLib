@@ -103,6 +103,32 @@ export function is64BitRegisterReturn(method: MethodSignature): boolean {
 }
 
 /**
+ * CR-01: a `const char*` return is fundamentally NOT a register-return
+ * value -- a register-return only marshals up to 8 raw bytes across the
+ * process boundary, and those 8 bytes cannot be a valid pointer into the
+ * OTHER process's address space. `GetPersonaName` (and any future
+ * string-returning method) must instead stage the received string bytes
+ * in a shim-owned static buffer and return a pointer into THAT buffer --
+ * matching how the real Steamworks `GetPersonaName` returns a pointer to
+ * SDK-internally-owned memory. This predicate routes such methods, inside
+ * `emitVtableStub`, to the string-owned-buffer branch instead of the
+ * generic register-return path.
+ */
+export function isStringReturn(method: MethodSignature): boolean {
+  return !isSretReturn(method) && method.returns === 'const char*'
+}
+
+/**
+ * Byte capacity of the shim-owned static buffer a string-returning stub
+ * copies its wire-received bytes into (plus a NUL terminator written at
+ * `retlen`, so the usable transact buffer is one byte smaller). 256 is
+ * generous headroom over Steamworks' documented persona-name ceiling
+ * (`k_cchPersonaNameMax` = 128 bytes including NUL) while staying far
+ * under the frame-level `MAX_FRAME_BYTES` cap (protocol.ts / T-24-03).
+ */
+export const STRING_RETURN_BUF_BYTES = 256
+
+/**
  * ret N -- total byte width of the non-`this` parameters PLUS 4 bytes for a
  * hidden sret pointer, if present. Computed for EVERY declared slot,
  * marshaled or stubbed (Pitfall 2).
@@ -228,6 +254,7 @@ function emitVtableStub(
 ): string {
   const retN = computeRetN(method)
   const sret = isSretReturn(method)
+  const stringReturn = isStringReturn(method)
   const funcName = `vt_${manifest.interface}_${method.name}`
 
   const realParams = method.params
@@ -241,12 +268,43 @@ function emitVtableStub(
 
   const descParams = method.params.map((p) => `${p.type} ${p.name}`).join(', ')
   const sretDesc = sret ? ' (SRET -- hidden return pointer)' : ''
+  const stringDesc = stringReturn
+    ? ' (STRING RETURN -- shim-owned buffer, CR-01)'
+    : ''
   const noteLine = method.note ? `// NOTE: ${method.note}\n` : ''
   const header =
     `// slot ${method.slot}: ${method.name}(${descParams}) -> ${method.returns} ` +
-    `| __thiscall ret ${retN}${sretDesc}\n${noteLine}`
+    `| __thiscall ret ${retN}${sretDesc}${stringDesc}\n${noteLine}`
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
+
+  if (stringReturn) {
+    // CR-01: a register-return const char* cannot marshal a remote
+    // pointer -- the helper sends the raw string bytes (length implied by
+    // the response frame, protocol.ts), and this stub must copy those
+    // bytes into memory IT owns, then return a pointer into that buffer
+    // (matching the real Steamworks contract of returning a pointer to
+    // SDK-internally-owned memory). A transact failure (including a
+    // string longer than the buffer, which bridge_transact rejects by
+    // returning 0) falls back to an empty string, never a garbage/NULL
+    // dereference-on-return-that-happens-to-be-uninitialized-stack.
+    return (
+      header +
+      `static char ${funcName}_buf[STRING_RETURN_BUF_BYTES];\n` +
+      `static const char * __attribute__((thiscall)) ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `${argBufDecl}\n` +
+      `  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;\n` +
+      `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen)) {\n` +
+      `    ${funcName}_buf[0] = '\\0';\n` +
+      `    return ${funcName}_buf;\n` +
+      `  }\n` +
+      `  memcpy(${funcName}_buf, retbuf, retlen);\n` +
+      `  ${funcName}_buf[retlen] = '\\0';\n` +
+      `  return ${funcName}_buf;\n` +
+      `}\n`
+    )
+  }
 
   if (sret) {
     const structSize = method.structSize ?? 0
@@ -350,6 +408,13 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 #include <stdlib.h>
 
 #define BRIDGE_PORT 54550
+
+// CR-01: byte capacity of each string-returning stub's shim-owned static
+// return buffer -- emitted directly from the generator's
+// STRING_RETURN_BUF_BYTES constant, so this generated file and the value
+// emitVtableStub() sizes each stub's transact buffer against can never
+// drift apart.
+#define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}
 
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;

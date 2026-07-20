@@ -29,6 +29,13 @@
 
 #define BRIDGE_PORT 54550
 
+// CR-01: byte capacity of each string-returning stub's shim-owned static
+// return buffer -- emitted directly from the generator's
+// STRING_RETURN_BUF_BYTES constant, so this generated file and the value
+// emitVtableStub() sizes each stub's transact buffer against can never
+// drift apart.
+#define STRING_RETURN_BUF_BYTES 256
+
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;
 
@@ -188,14 +195,19 @@ static struct FakeSteamUser023 g_steamuser023_instance = { g_steamuser023_vtbl }
 
 // === SteamFriends018 (ordinal 2, sdkVersion pinned-2026-07-18-rlabrecque-SteamworksSDK-master) ===
 
-// slot 0: GetPersonaName() -> const char* | __thiscall ret 0
+// slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends018_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * __attribute__((thiscall)) vt_SteamFriends018_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(2, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  const char * ret; memcpy(&ret, retbuf, 4);
-  return ret;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(2, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends018_GetPersonaName_buf[0] = '\0';
+    return vt_SteamFriends018_GetPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends018_GetPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends018_GetPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends018_GetPersonaName_buf;
 }
 
 // slot 1: SetPersonaNameTest_TESTONLY(const char* pchPersonaName) -> bool | __thiscall ret 4
