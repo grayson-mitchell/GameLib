@@ -100,6 +100,10 @@ Bundled helper confirmed at:
 — `Mach-O 64-bit executable arm64`, mode `755`, 53696 bytes; `steam_api.dll` + `steam_appid.txt`
 present in the same directory (electron-builder.yml line 56 packs `build/bin/${arch}/darwin/*`,
 `asarUnpack: build/bin/**/*` unpacks it). This is the artifact under test for Gates 1–4.
+**Rebuilt 2026-07-21 after the Avernum 4 → Avernum 6 allowlist swap** (commit `9bcfb6c0`): the inlined
+bridge allowlist in the packaged bundle (`app.asar` → `build/main/chunks/index-*.js`) was verified to
+contain exactly two active entries — `appId:"206060"` (Avernum 6) and `appId:"63000"` (HOARD); `206020`
+survives only as descriptive note text, not as an entry. The bundled helper remains present after rebuild.
 
 ---
 
