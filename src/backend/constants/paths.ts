@@ -88,6 +88,20 @@ export const builtBridgeShimPath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'steam_api.dll')
 )
 
+// Phase 24 Plan 06 (R2/R5, D-03): the bundled location of the compiled
+// native arm64 host helper binary (native/steam-bridge/helper/bridge_helper.c,
+// Plan 24-02). Plan 24-07 (packaging) compiles the C source into this exact
+// path at build time; helperProcess.ts (this plan) spawns it from here.
+// Arch-parameterized (process.arch, not hardcoded 'x64') like
+// builtBridgeShimPath above -- the helper is a native arm64 Mach-O binary,
+// unlike the existing win32 cross-platform constants which don't vary by
+// host arch. No electron-builder.yml change is needed: mac.files already
+// includes `build/bin/${arch}/darwin/*` and asarUnpack already includes
+// `build/bin/**/*` (24-RESEARCH.md Pattern 5, independently verified).
+export const steamBridgeHelperPath = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'steam-bridge-helper')
+)
+
 export const webviewPreloadPath = fixAsarPath(
   join('file://', publicDir, 'webviewPreload.js')
 )
