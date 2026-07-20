@@ -2,18 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: in_progress
-stopped_at: Native-install arc (21-25) — Phase 23 code-complete (4/5 summarized, 23-05 formalized); Gate 1 hardware UAT PASSED, Gates 2 & 3 DEFERRED by user (2026-07-20); Phases 22 & 24 planned but unexecuted
-last_updated: 2026-07-20T00:00:00.000Z
+status: completed
+stopped_at: Phase 26 context gathered
+last_updated: "2026-07-20T01:29:11.315Z"
 last_activity: 2026-07-20
 progress:
-  # Milestone v0.7 (Steam Native Install) = phases 21-25
   total_phases: 5
-  completed_phases: 2
-  total_plans: 43
-  completed_plans: 24
-  percent: 56
-  # Whole-project plan totals (matches progress.bar): 116/136 = 85%
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 6
+  percent: 20
 ---
 
 # Project State
@@ -41,6 +39,7 @@ Status: Code-complete; NOT phase-complete — REQ-23-07 open pending Gates 2 & 3
 Last activity: 2026-07-20
 
 Other open native-install phases:
+
 - **Phase 22** (Steam Game Families / multiple bottles) — 8 plans written, 0 executed
 - **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — 10 plans written, 0 executed
 
@@ -346,8 +345,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20
-Stopped at: Phase 21 closed (21-17); Phase 25 complete + HW-verified (2026-07-19); Phase 23 in progress (3/5 summarized, Gate 1 pause/resume re-run outstanding) on branch fix/steam-native-install-stability
+Last session: 2026-07-20T01:29:11.304Z
+Stopped at: Phase 26 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
