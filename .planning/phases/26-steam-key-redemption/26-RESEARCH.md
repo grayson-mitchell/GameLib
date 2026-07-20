@@ -498,12 +498,14 @@ installed version's changelog area of the README. No migration/deprecation conce
 
 ## Open Questions
 
-1. **Should `DuplicatedKey`/`RegionLockedKey`/`BaseGameRequired` get their own message copy, or literally the same "invalid key" string as `InvalidKey`?**
+> Both resolved during planning (2026-07-20) — the plans adopt the recommendations below verbatim. Neither leaves ambiguity for the executor.
+
+1. **(RESOLVED — 26-01 adopts the per-enum phrasing within the "invalid" bucket)** Should `DuplicatedKey`/`RegionLockedKey`/`BaseGameRequired` get their own message copy, or literally the same "invalid key" string as `InvalidKey`?
    - What we know: SPEC fixes 4 UX buckets (success/already-owned/invalid/rate-limited); all three of these values are legitimately distinct reasons a key didn't work.
    - What's unclear: Whether "distinct message per outcome" (D-08) is meant to fork all the way down to per-enum-value copy, or just per-bucket.
    - Recommendation: Default to bucket-level copy (4 strings) per SPEC's literal boundary, but allow the enum value to still drive slightly different phrasing within the "invalid" bucket (e.g. `InvalidKey` → "This key doesn't look right", `DuplicatedKey` → "This key has already been redeemed", `RegionLockedKey` → "This key isn't valid for your region") — cheap to do since the classifier already has the specific enum value, costs nothing architecturally, and reads better to the user. Not a blocking decision for planning; a plan task can just enumerate the mapping table from Pattern 3.
 
-2. **Does a `packageList` name always title-match cleanly enough to resolve the D-07 jump link, or should the jump link be dropped from v1 if no match is found?**
+2. **(RESOLVED — 26-04 implements match-or-degrade-gracefully; no live-key dependency for planning)** Does a `packageList` name always title-match cleanly enough to resolve the D-07 jump link, or should the jump link be dropped from v1 if no match is found?
    - What we know: `fuzzyMatch`/`normalizeTitle` exist and are proven at 85%+ threshold for cross-store matching elsewhere in the codebase.
    - What's unclear: No live redeem has been tested yet (the user has spare test keys per SPEC REQ2's acceptance criterion, but this research session did not execute a live redeem).
    - Recommendation: Implement the match-or-degrade-gracefully behavior from Pitfall 3; treat "no match found → show name without jump link" as the acceptable fallback, not a bug, and verify against the user's real test keys during execution (SPEC REQ2/REQ4 acceptance criteria already call for this).

@@ -1,8 +1,8 @@
 ---
 phase: 26
 slug: steam-key-redemption
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-20
 ---
@@ -75,11 +75,13 @@ created: 2026-07-20
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (SidebarLinks test, validator test)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (plan-checker confirmed all 8 tasks carry a jest/tsc/grep verify)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — SidebarLinks test (26-05 Task 2) + validator test (26-02 Task 1) addressed inline
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+> `wave_0_complete` stays `false` until execution actually writes the two new test files (26-02, 26-05); flip it during execute-phase.
+
+**Approval:** approved 2026-07-20 (plan-checker VERIFICATION PASSED — Dimension 8 green)

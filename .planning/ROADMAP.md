@@ -738,23 +738,28 @@ Plans:
 Plans:
 
 **Wave 1** (parallel — no file overlap):
+
 - [ ] 24-01-PLAN.md — R1 vtable+flat shim generator (D-09 GameLib-authored manifest, D-10 TypeScript, __thiscall/ret N/sret) + committed generated .c/.def (D-07)
 - [ ] 24-02-PLAN.md — R2 native helper (dlopen libsteam_api.dylib, InitFlat-once, single AppID 480, loopback-only persistent channel) + shared wire protocol.ts
 - [ ] 24-03-PLAN.md — R4 zod-validated bundled allowlist (D-01/D-02) with Avernum 4 + Hoard
 - [ ] 24-04-PLAN.md — NEW CrossOver-only bridge bottle (D-08) with no SteamSetup (R6 no-steam.exe) + getBridgeBottleSettings
 
 **Wave 2** (parallel):
+
 - [ ] 24-05-PLAN.md — R3 objdump import scan + automatic per-bottle shim placement (needs 24-01, 24-04)
 - [ ] 24-06-PLAN.md — R2/R7 shared-helper lifecycle (D-03) + ensureBridgeHelperReady readiness signal (D-06) + steamBridgeHelperPath (needs 24-02)
 - [ ] 24-07-PLAN.md — R5 packaging: pinned zig download + clang helper + zig cc PE shim into public/bin/${arch}/darwin (needs 24-01, 24-02)
 
 **Wave 3**:
+
 - [ ] 24-08-PLAN.md — R4/R7 games.ts routing (isBridgeEligible, install/launch/uninstall bridge branches, direct-.exe launch, readiness gate, D-05 signal) (needs 24-03/04/05/06)
 
 **Wave 4**:
+
 - [ ] 24-09-PLAN.md — R7/D-05 frontend fallback dialog seam + D-11 on-demand provision (needs 24-08)
 
 **Wave 5** (human-HW-gated, autonomous:false):
+
 - [ ] 24-10-PLAN.md — R5/R6 packaged-build + Avernum 4 + Hoard playable single-player acceptance → 24-UAT.md (needs 24-07/08/09)
 
 **UI hint**: yes
@@ -845,10 +850,15 @@ Plans:
 
 Plans:
 **Wave 1**
+
 - [x] 25-01-PLAN.md — pickHost attempt-0 top-N fan-out + TOP_N_FANOUT constant + unit tests (MHOST-01/03)
+
 **Wave 2** *(blocked on Wave 1)*
+
 - [x] 25-02-PLAN.md — thread worker-slot through fetchChunk + both concurrency pools + integration test (MHOST-02/03)
+
 **Wave 3** *(blocked on Wave 2 — hardware checkpoint)*
+
 - [x] 25-03-PLAN.md — real-hardware before/after throughput measurement (checkpoint:human-verify) (MHOST-04)
 
 ---
@@ -988,8 +998,19 @@ v0.7: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
 **Plans:** 5 plans across 4 waves (planned 2026-07-20)
 
 Plans:
+**Wave 1**
+
 - [ ] 26-01-PLAN.md — Backend redeemKey wrapper + EPurchaseResult classifier + shared types + tests (handles reject-on-failure; 8-value enum -> 4 buckets)
 - [ ] 26-02-PLAN.md — Client-side format validator (light-touch pure fn, not 5-5-5) + test
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 26-03-PLAN.md — redeemSteamKey IPC three-file wiring (ipc.ts / preload / main.ts handler)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 26-04-PLAN.md — Context toggle + RedeemSteamKeyDialog modal (inline outcomes, success name, refreshLibrary, graceful View-in-library) + App mount
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 26-05-PLAN.md — Login-gated "Redeem a Steam key" sidebar item under Settings + gating test
