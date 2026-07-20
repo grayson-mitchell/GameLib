@@ -2,6 +2,11 @@
   "version": 1,
   "games": [
     {
+      "appId": "206040",
+      "title": "Avernum 5",
+      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4/6 -- expected minimal steam_api footprint (Init/Shutdown). Added as the immediately-testable Gate 3 target: not previously installed, so a fresh GameLib install exercises the full bridge install path (Avernum 6/HOARD are blocked by D-UAT-24-02, already-installed via non-bridge paths). Import coverage confirmed via 24-05 importScan at install."
+    },
+    {
       "appId": "206060",
       "title": "Avernum 6",
       "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4 -- expected minimal steam_api footprint (Init/Shutdown). Replaces Avernum 4 (206020), which does not run under CrossOver. Import coverage confirmed via 24-05 importScan at install (24-10 Gate 3)."
