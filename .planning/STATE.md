@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-01-PLAN.md
-last_updated: "2026-07-20T05:18:11.059Z"
+stopped_at: Completed 24-03-PLAN.md
+last_updated: "2026-07-20T05:25:52.615Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -179,6 +179,7 @@ Other open native-install phases:
 | Phase 26 P05 | ~10min | 2 tasks | 2 files |
 | Phase 24 P01 | 25min | 3 tasks | 10 files |
 | Phase 24 P02 | 20min | 2 tasks | 3 files |
+| Phase 24 P03 | 10min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -299,6 +300,8 @@ Recent decisions affecting current work:
 - [Phase 24]: [Phase 24-01] R1 vtable generator: test file placed at meta/__tests__/gen_vtables.test.ts (not the frontmatter's literal path) to match meta/jest.config.js's testMatch and 24-PATTERNS.md's stated analog location
 - [Phase 24]: [Phase 24-01] Flat SteamAPI_* export set is a fixed acceptance-set superset constant (FLAT_EXPORTS_SUPERSET), not manifest-derived, per R3's acknowledged divergence (review finding #9); builtBridgeShimPath exported from paths.ts as the BLOCKER-2 shared bundled-shim-location contract for 24-05/24-07
 - [Phase ?]: [Phase 24-02]: bridge_helper.c degrades instead of exit()ing on InitFlat failure (divergence from spike 005b) so CONTROL HEALTH (process-up) stays observable separately from WHOAMI (init-succeeded-against-live-session) — the two-state readiness contract the 24-06 probe consumes (finding #7); protocol.ts frame layout reverse-validated against the committed generated shim's bridge_transact() so TS decoder and live wire agree byte-for-byte; MAX_FRAME_BYTES=65536 single-sourced across the TS decoder and the C read loop (fixed static buffer, bounds-checked before recv, T-24-03)
+- [Phase 24]: [Phase 24-03]: Avernum 4 = AppID 206020, HOARD = AppID 63000 (resolved via public Steam store API; spike sources contained no AppID literal, only game names/dev names cross-checked against the READMEs)
+- [Phase 24]: [Phase 24-03]: allowlist.ts uses readFileSync+JSON.parse+.parse() at module load (not a direct JSON import) per the plan's key_links spec, keeping the fail-loud load path independently testable
 
 ### Pending Todos
 
@@ -364,8 +367,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T05:17:13.759Z
-Stopped at: Completed 24-01-PLAN.md
+Last session: 2026-07-20T05:25:52.604Z
+Stopped at: Completed 24-03-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

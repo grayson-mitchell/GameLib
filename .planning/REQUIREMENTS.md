@@ -341,7 +341,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-24-01 | Phase 24 | Complete (2026-07-20, Plan 24-01) |
 | REQ-24-02 | Phase 24 | Complete (2026-07-20, Plan 24-02 — source/structural; live-Steam round-trip deferred to Plan 24-10) |
 | REQ-24-03 | Phase 24 | Pending |
-| REQ-24-04 | Phase 24 | Pending |
+| REQ-24-04 | Phase 24 | Partial (2026-07-20, Plan 24-03 — bundled/zod-validated allowlist data + has(appId) lookup only; games.ts routing composition deferred to Plan 24-08) |
 | REQ-24-05 | Phase 24 | Pending |
 | REQ-24-06 | Phase 24 | Pending |
 | REQ-24-07 | Phase 24 | Pending |
