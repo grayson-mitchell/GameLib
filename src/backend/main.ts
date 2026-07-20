@@ -926,9 +926,18 @@ addHandler('steamStartCredentials', async (event, { username, password }) =>
 addHandler('steamSubmitGuard', async (event, code) =>
   SteamUser.submitSteamGuardCode(code)
 )
-addHandler('redeemSteamKey', async (event, { store, key }) =>
-  SteamUser.redeemKey(store, key)
-)
+addHandler('redeemSteamKey', async (event, payload) => {
+  // WR-03: main-process trust boundary for a security-sensitive secret. The
+  // renderer payload is untrusted at runtime despite its type contract —
+  // reject a malformed shape (non-'steam' store, non-string / empty key)
+  // before delegating to steam-user rather than forwarding garbage across.
+  const store = payload?.store
+  const key = payload?.key
+  if (store !== 'steam' || typeof key !== 'string' || key.length === 0) {
+    return { store: 'steam', outcome: 'error', message: 'invalid-request' }
+  }
+  return SteamUser.redeemKey(store, key)
+})
 addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
 addHandler('checkSteamInstalled', async () =>
   SteamUser.isSteamClientInstalled()
