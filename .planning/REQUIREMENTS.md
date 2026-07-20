@@ -379,6 +379,21 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 **D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
 
+## v0.8 Requirements — Rust/Tauri Rearchitecture (exploratory)
+
+Phase 27 (Tauri Shell Walking Skeleton). Minted 2026-07-20 from the ROADMAP goal + spike blueprint (009–012). Each maps to Phase 27.
+
+- [ ] **REQ-27-01**: A native Tauri v2 shell launches on macOS and hosts GameLib's existing, unmodified Vite React renderer in its webview.
+- [ ] **REQ-27-02**: The existing Node backend runs as a Tauri sidecar process (bundled Node), spawned and supervised by the Rust shell; it starts headless — with the import-time Electron coupling shimmed (path resolution + a minimal `electron-store` replacement) — and signals ready.
+- [ ] **REQ-27-03**: The renderer's `window.api` is served by re-pointing the three preload factories (`makeHandlerInvoker`/`makeListenerCaller`/`frontendListenerSlot`) onto a Tauri↔sidecar transport, preserving the `invoke`/`send`/`on` contract shapes — with zero changes to the 379 `window.api.*` call-sites.
+- [ ] **REQ-27-04**: One real read flow works end-to-end — the Steam library list renders in the Tauri window, sourced from the real `steam-user`/store-manager path in the sidecar (not mocked).
+- [ ] **REQ-27-05**: One real action flow works end-to-end — a Steam launch fires a real `steam://` handoff via the `tauri-plugin-opener` parity path.
+- [ ] **REQ-27-06**: The slice runs as a macOS dev build, the existing Electron build still works (additive/reversible), and the ported-vs-stubbed seam boundary is documented so later phases can port the remaining ~217 IPC endpoints incrementally.
+
+- Phase 27 requirements: 6 total (REQ-27-01..06, minted 2026-07-20 from ROADMAP goal + spike blueprint 009–012)
+- Mapped to phases: 6 (Phase 27)
+- Unmapped: 0 ✓
+
 ---
 *Requirements defined: 2026-07-02*
 *Last updated: 2026-07-05 — v0.3 traceability appended during roadmap creation (Phases 10–15)*
@@ -386,3 +401,4 @@ Which phases cover which requirements. Populated during roadmap creation.
 *Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*
 *Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 Complete (Plan 24-01), REQ-24-02 Complete source/structural (Plan 24-02; live-Steam round-trip deferred to Plan 24-10), REQ-24-04 Complete (Plan 24-08)*
 *Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*
+*Last updated: 2026-07-20 — Phase 27 (REQ-27-01..06) minted during /gsd-plan-phase 27 from ROADMAP goal + Idea-C spike blueprint (009–012); v0.8 rearchitecture track opened*
