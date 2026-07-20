@@ -2,11 +2,11 @@
 phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy
 plan: 10
 artifact: uat
-status: pending
+status: in_progress
 requirements: [R1, R5, R6]
 total_gates: 4
-pending_gates: 4
-passed_gates: 0
+pending_gates: 3
+passed_gates: 1
 failed_gates: 0
 run_via: "/gsd-execute-phase 24 --wave 5 --interactive"
 prepared: 2026-07-21
@@ -144,11 +144,23 @@ A FAIL here localizes an ABI/generator bug BEFORE the game gates.
 signed-in SteamID64 (proves slot offset + `__thiscall` + `ret N` + EDX:EAX 64-bit return at runtime),
 served through the production helper. Value matches the live account's SteamID64 exactly (string equality).
 
-**Result:** PENDING
-**Observed SteamID64:** _(record — must string-equal your real signed-in SteamID64)_
-**Observed persona (if run):** _(record if `GetPersonaName()` leg was exercised)_
-**How harness was pointed at the production helper:** _(record)_
-**Evidence:** _(harness stdout / `vtable_out.txt` path)_
+**Result:** ✅ PASS — 2026-07-21, real Apple-Silicon Mac, native Steam signed in.
+**Observed SteamID64:** `76561197995867096` (via `ISteamUser::GetSteamID`, slot 2, MSVC `__thiscall`,
+through the GENERATED shim's vtable) — **string-equal** to the real signed-in SteamID64 from
+`config/loginusers.vdf` (`MostRecent "1"` account). Auto-compared by the runner → PASS.
+**Observed persona (if run):** not run — the harness exercises only the `GetSteamID` (slot 2) leg;
+`GetPersonaName` was not dispatched here. (Identity persona is separately covered by Gate 4 Part B.)
+**How harness was pointed at the production helper:** the unmodified 006 `harness.c` was built to
+`harness.exe` (`zig cc -target x86-windows-gnu`) and paired with the PRODUCTION generated
+`public/bin/arm64/darwin/steam_api.dll` (24-01 source, 24-07 zig-built) inside the `GameLibSteam`
+bottle; the PRODUCTION `public/bin/arm64/darwin/steam-bridge-helper` (24-02) was started standalone
+(cwd carries `steam_appid.txt`=480) and reached `LISTEN 127.0.0.1:54550`. Shim + helper agree on port
+54550 and slot 2 = `GetSteamID`, so no harness edits were needed — the round-trip crossed the real
+loopback channel to the shipping helper.
+**Evidence:** harness stdout `VTABLE_GAME_PATH ISteamUser::GetSteamID (slot 2, MSVC __thiscall) =
+76561197995867096`; bottle `C:\vtable_out.txt` = `GetSteamID=76561197995867096`; helper reached
+`LISTEN 127.0.0.1:54550`. Runner: `scratchpad/gate1-vtable-roundtrip.sh` (adapts spike 006 to the
+production artifacts).
 
 ---
 
@@ -262,7 +274,7 @@ finding #6); bottle has no Windows Steam client.
 | 0a | codecheck (tsc) | — | ✅ PASS | Clean, exit 0 (2026-07-21). |
 | 0b | Full jest suite | — | ✅ PASS (Phase 24 scope) | 1813/1813 tests pass; 102/103 suites. 2 out-of-scope reds: Phase 27 `bootstrap.test.ts` circular import + pre-existing `library.ts` leaked timer. Neither is a Phase 24 regression. |
 | 0c | Packaged `.app` + bundled helper | R5 | ✅ PASS | `dist/mac-arm64/GameLib.app`; helper `Mach-O arm64` at `…/app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`. |
-| 1 | R1 vtable round-trip | R1 | PENDING | 006-style harness: generated shim → production helper → C++ virtual `GetSteamID()` = real SteamID64. |
+| 1 | R1 vtable round-trip | R1 | ✅ PASS | Generated shim vtable slot 2 `GetSteamID()` → production helper → real SteamID64 `76561197995867096` (string-equal). 2026-07-21. |
 | 2 | R5 packaged bundled-helper | R5 | PENDING | Helper path inside the `.app` bundle; no staged binary. |
 | 3 | R6 Avernum 6 | R6 | PENDING | Substituted for Avernum 4 (206020→206060; Avernum 4 doesn't run in CrossOver). Playable via bridge; init-through-bridge; Part B may be N/A (min imports); no steam.exe in bottle. Needs rebuilt packaged app (allowlist inlined at build). |
 | 4 | R6 Hoard | R6 | PENDING | Playable via bridge; init + identity served (7 imports); no steam.exe in bottle. |
