@@ -16,7 +16,8 @@ import SteamGame, {
   parseSteamStorageRequirement,
   getSteamInstallSize,
   parseSteamMacMinOSVersion,
-  macArchFromMinOS
+  macArchFromMinOS,
+  markBridgeFailedThisSession
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -26,7 +27,10 @@ import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
   getSteamBottleSettings,
-  getBottleSteamappsDir
+  getBottleSteamappsDir,
+  isBridgeBottleReady,
+  getBridgeBottleSettings,
+  provisionBridgeBottle
 } from '../bottle'
 import { library, pendingFetches } from '../state'
 import type { GameInfo } from 'common/types'
@@ -34,6 +38,10 @@ import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
 import { downloadSteamDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
 import { resolveSteamInstallTarget } from '../installLocation'
+import { bridgeAllowlist } from '../bridge/allowlist'
+import { placeShimForGame } from '../bridge/shimGenerate'
+import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
+import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import {
   createAbortController,
   callAbortController,
@@ -173,7 +181,37 @@ jest.mock('../bottle', () => ({
   tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
-  getBottleSteamappsDir: jest.fn()
+  getBottleSteamappsDir: jest.fn(),
+  // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
+  // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
+  isBridgeBottleReady: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
+  provisionBridgeBottle: jest.fn()
+}))
+
+// ── bridge/allowlist.ts mock (24-03) — controls isBridgeEligible()'s
+// bridgeAllowlist.has(appId) lookup without pulling in the real bundled
+// bridge-allowlist.json/zod validation.
+jest.mock('../bridge/allowlist', () => ({
+  bridgeAllowlist: { has: jest.fn() }
+}))
+
+// ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
+// shim-placement hook.
+jest.mock('../bridge/shimGenerate', () => ({
+  placeShimForGame: jest.fn()
+}))
+
+// ── bridge/launchTarget.ts mock (24-08 Task 1) — resolveBridgeLaunchExe used
+// by both installBridgeGame() (Task 2) and launch()'s bridge branch (Task 3).
+jest.mock('../bridge/launchTarget', () => ({
+  resolveBridgeLaunchExe: jest.fn()
+}))
+
+// ── bridge/helperProcess.ts mock (24-06) — ensureBridgeHelperReady() gate
+// consumed by launch()'s bridge branch (Task 3).
+jest.mock('../bridge/helperProcess', () => ({
+  ensureBridgeHelperReady: jest.fn()
 }))
 
 // ── nativeInstallSetting.ts mock (Plan 03's D-13 opt-in read seam) — plain
@@ -1904,6 +1942,196 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       appName: APP_ID
     })
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+})
+
+// ── Phase 24 Plan 08 (R4/R7, BLOCKER 1, finding #3): allowlist-based bridge
+// routing — isBridgeEligible() composition (isBottleEligible() &&
+// bridgeAllowlist.has(appId) && !bridgeFailedThisSession.has(appId)) and
+// installBridgeGame()'s inline bridge-bottle provisioning + shim placement.
+// The bridge bottle target (GameLibSteamBridge) is DISTINCT from the Phase
+// 17 GameLibSteam bottle the SNI-08 describe block above exercises.
+
+describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/finding-3)', () => {
+  let startInstallPollingSpy: jest.SpyInstance
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
+  const RESOLVED_TARGET = {
+    targetSteamappsDir: '/mock/native/steamapps',
+    installdir: 'Avernum 4'
+  }
+  const RESOLVED_EXE_PATH =
+    '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleReady as jest.Mock).mockReset()
+    ;(tellBottledSteamToInstall as jest.Mock).mockReset()
+    ;(bridgeAllowlist.has as jest.Mock).mockReset()
+    ;(isBridgeBottleReady as jest.Mock).mockReset()
+    ;(provisionBridgeBottle as jest.Mock).mockReset()
+    ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    })
+    ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
+      (bottleName: string) =>
+        bottleName === 'GameLibSteamBridge'
+          ? BRIDGE_STEAMAPPS_DIR
+          : '/mock/bottle/steamapps'
+    )
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(
+      RESOLVED_TARGET
+    )
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+    ;(createAbortController as jest.Mock).mockReturnValue({
+      signal: 'mock-signal'
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+      RESOLVED_EXE_PATH
+    )
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'placed',
+      shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`
+    })
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+  })
+
+  it('allowlisted + bottle-eligible: install() routes to installBridgeGame (bridge bottle target + shimGenerate called), NOT tellBottledSteamToInstall', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(provisionBridgeBottle).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
+      targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
+      installdir: RESOLVED_TARGET.installdir,
+      os: 'windows',
+      signal: 'mock-signal'
+    })
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('non-allowlisted bottle-eligible: install() takes the existing bottled path unchanged (regression)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('BLOCKER 1: bridge bottle not ready — provisionBridgeBottle is called BEFORE any depot download; on success proceeds to depot download', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+    ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(provisionBridgeBottle).toHaveBeenCalled()
+    expect(downloadSteamDepots).toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.objectContaining({ reason: 'bridge-bottle-provision-failed' })
+    )
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('BLOCKER 1: bridge bottle provisioning FAILURE fires steamBridgeSetupRequired and returns deferredToSetup:true — no depot download attempted', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+    ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+      status: 'error',
+      error: 'cxbottle create failed'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(provisionBridgeBottle).toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: APP_ID,
+        reason: 'bridge-bottle-provision-failed',
+        fallbackAvailable: true
+      }
+    )
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it('isBridgeEligible() is false when the allowlist lacks the appId, even though the game is bottle-eligible', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(isBridgeBottleReady).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('finding #3 (fallback bypass): after markBridgeFailedThisSession(appId), install() routes to the bottled path despite the appId being allowlisted + bottle-eligible', async () => {
+    // A dedicated appId — never reused elsewhere in this file — so this
+    // test's markBridgeFailedThisSession() mutation of the module-scoped
+    // bridgeFailedThisSession Set cannot leak into any other test.
+    const FALLBACK_TEST_APP_ID = '999999'
+    library.set(FALLBACK_TEST_APP_ID, makeEntry({ title: 'Fallback Test' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    markBridgeFailedThisSession(FALLBACK_TEST_APP_ID)
+
+    const game = new SteamGame(FALLBACK_TEST_APP_ID)
+    const result = await game.install({} as any)
+
+    expect(provisionBridgeBottle).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(
+      FALLBACK_TEST_APP_ID
+    )
+    expect(result).toEqual({ status: 'done' })
   })
 })
 

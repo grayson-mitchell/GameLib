@@ -42,12 +42,20 @@ import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall,
   getSteamBottleSettings,
-  getBottleSteamappsDir
+  getBottleSteamappsDir,
+  isBridgeBottleReady,
+  getBridgeBottleSettings,
+  provisionBridgeBottle
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import { resolveSteamInstallTarget } from './installLocation' // Plan 09 seam
+// Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
+import { bridgeAllowlist } from './bridge/allowlist'
+import { placeShimForGame } from './bridge/shimGenerate'
+import { resolveBridgeLaunchExe } from './bridge/launchTarget'
+import { ensureBridgeHelperReady } from './bridge/helperProcess'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
@@ -81,6 +89,29 @@ interface NativeInstallEntry {
  * can never permanently block a later re-install of that appId.
  */
 const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
+
+/**
+ * Phase 24 Plan 08 (R7, review finding #3 — fallback-bypass): appIds whose
+ * bridge path has already failed THIS SESSION (bridge-bottle provisioning
+ * failure, depot/shim placement failure, or an unreachable/not-inited
+ * helper at launch). `isBridgeEligible()` below consults this set so a
+ * user's D-05 fallback re-invocation of install()/launch() routes to the
+ * existing bottled-Steam branch instead of looping back into the SAME
+ * failing bridge (T-24-17). Session-scoped only (never persisted) — a fresh
+ * GameLib process gets a clean slate to retry the bridge for an appId whose
+ * earlier failure may have been transient (e.g. Steam not yet signed in).
+ */
+const bridgeFailedThisSession = new Set<string>()
+
+/**
+ * Marks appId as bridge-failed for the remainder of this GameLib process.
+ * Called from every terminal bridge-failure branch in install()/launch()
+ * (installBridgeGame below; launch()'s bridge branch, Task 3) — never
+ * reset except by process restart.
+ */
+export function markBridgeFailedThisSession(appId: string): void {
+  bridgeFailedThisSession.add(appId)
+}
 
 /**
  * T-23-14 read seam: true if a native depot download is currently tracked
@@ -637,6 +668,16 @@ export default class SteamGame implements Game {
 
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
+      // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
+      // FIRST check inside this block, BEFORE the Phase 17 isBottleReady()
+      // gate below, because the bridge bottle has its own dedicated
+      // readiness/provisioning path (installBridgeGame -> isBridgeBottleReady
+      // / provisionBridgeBottle, 24-04) that must not be blocked by the
+      // unrelated Phase 17 GameLibSteam bottle's own state (BLOCKER 1).
+      if (this.isBridgeEligible()) {
+        return this.installBridgeGame(args)
+      }
+
       if (!isBottleReady()) {
         logInfo(
           `SteamGame: appId ${this.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
@@ -760,6 +801,116 @@ export default class SteamGame implements Game {
       os: 'windows',
       pollerSource: 'bottle'
     })
+  }
+
+  /**
+   * Phase 24 Plan 08 (R3/R4/R7, D-01): allowlisted-title bridge install
+   * path — a sibling of installBottleNative() above, but targeting the
+   * DEDICATED bridge bottle (24-04, `GameLibSteamBridge`) instead of the
+   * Phase 17 `GameLibSteam` bottle. Reuses the SAME installDepotDownload()
+   * engine both installNative()/installBottleNative() already share, with
+   * the write target swapped to the bridge bottle's OWN steamapps/ dir and
+   * os hard-coded 'windows', then places the generated shim as a
+   * post-download hook (shimGenerate's placeShimForGame(), 24-05) — no
+   * manual copy step (R3).
+   *
+   * BLOCKER 1: the SOLE caller of provisionBridgeBottle() (24-04). When the
+   * bridge bottle has not been created yet, provisioning happens INLINE,
+   * here, as part of the ordinary Install click — a fast `cxbottle
+   * --create` with no SteamSetup.exe/download/login, so no consent dialog
+   * is needed. Only a provisioning FAILURE defers to
+   * steamBridgeSetupRequired — so the bridge bottle is always reachable
+   * through the normal Install flow, never left permanently unreachable
+   * waiting on a setup step that never fires.
+   *
+   * Finding #10 (accepted divergence): the reused depot engine writes an
+   * appmanifest.acf for a Steam client to adopt — the bridge bottle has no
+   * Steam client to adopt it, so that ACF is harmless dead weight on this
+   * path (the files-on-disk + direct-launch model is what the bridge
+   * relies on, with per-chunk sha1 already making the files
+   * self-sufficient). Reusing the engine unchanged is the correct
+   * low-risk choice this phase — not forked here.
+   *
+   * Any terminal failure (provisioning, depot download, unresolved launch
+   * exe, or shim placement) marks this appId bridge-failed-this-session
+   * (finding #3, markBridgeFailedThisSession above) so a later D-05
+   * fallback re-invocation of install() reaches the existing bottled path
+   * instead of looping back into the same failing bridge (T-24-17).
+   */
+  private async installBridgeGame(
+    args: InstallArgs
+  ): Promise<InstallResult> {
+    if (!isBridgeBottleReady()) {
+      logInfo(
+        `SteamGame: bridge bottle not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
+        LogPrefix.Steam
+      )
+      const provisionResult = await provisionBridgeBottle()
+      if (provisionResult.status !== 'done') {
+        logWarning(
+          `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,
+          LogPrefix.Steam
+        )
+        markBridgeFailedThisSession(this.appId)
+        sendFrontendMessage('steamBridgeSetupRequired', {
+          appName: this.appId,
+          reason: 'bridge-bottle-provision-failed',
+          fallbackAvailable: true
+        })
+        return { status: 'done', deferredToSetup: true }
+      }
+    }
+
+    const targetSteamappsDir = getBottleSteamappsDir(
+      getBridgeBottleSettings().wineCrossoverBottle
+    )
+    const downloadResult = await this.installDepotDownload(args, {
+      targetSteamappsDirOverride: targetSteamappsDir,
+      os: 'windows',
+      pollerSource: 'bottle'
+    })
+
+    if (downloadResult.status !== 'done') {
+      markBridgeFailedThisSession(this.appId)
+      return downloadResult
+    }
+
+    // R3: place the shim automatically — no manual copy step. Resolves the
+    // real installed exe path via resolveBridgeLaunchExe (finding #2)
+    // rather than guessing/joining an unverified name.
+    const exePath = await resolveBridgeLaunchExe(this.appId)
+    if (!exePath) {
+      logWarning(
+        `SteamGame: installBridgeGame could not resolve a Windows launch executable for appId ${this.appId} — shim not placed`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'launch-exe-not-resolved',
+        fallbackAvailable: true
+      })
+      return {
+        status: 'error',
+        error: `Could not resolve a Windows launch executable for appId ${this.appId}`
+      }
+    }
+
+    const shimResult = await placeShimForGame(this.appId, exePath)
+    if (shimResult.status === 'error' || shimResult.status === 'shim-not-built') {
+      const shimError =
+        shimResult.status === 'shim-not-built'
+          ? 'Bridge shim has not been built yet (packaging step pending)'
+          : shimResult.error
+      logWarning(
+        `SteamGame: installBridgeGame shim placement failed for appId ${this.appId}: ${shimError}`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      return { status: 'error', error: shimError }
+    }
+
+    return { status: 'done' }
   }
 
   /**
@@ -1000,6 +1151,25 @@ export default class SteamGame implements Game {
     // routing goes live the moment 18-03 caches a '32' verdict.
     if (meta?.mac_arch === '32') return true
     return meta?.platformsCaptured === true && meta?.is_mac_native === false
+  }
+
+  /**
+   * Phase 24 Plan 08 (D-01/D-02, R4): true only for an allowlisted,
+   * bottle-eligible title that has NOT already failed the bridge earlier
+   * this session (finding #3 — bridgeFailedThisSession, module-scoped
+   * above). Composes `isBottleEligible()` exactly the way
+   * `isSteamNativeInstallEnabled()` already composes inside the same gate
+   * — a third instance of the same in-file pattern, not a new one
+   * (24-PATTERNS.md). A non-allowlisted bottle-eligible title is unaffected
+   * — it falls through to the existing D-15/D-13 opt-in branches below
+   * (regression, R7).
+   */
+  private isBridgeEligible(): boolean {
+    return (
+      this.isBottleEligible() &&
+      bridgeAllowlist.has(this.appId) &&
+      !bridgeFailedThisSession.has(this.appId)
+    )
   }
 
   /**
