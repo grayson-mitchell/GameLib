@@ -55,7 +55,11 @@ import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
-import type { SteamBottleConfig, SteamUserData } from './steam'
+import type {
+  RedeemKeyResult,
+  SteamBottleConfig,
+  SteamUserData
+} from './steam'
 import type {
   ClaimAnnotation,
   HumbleAuthState,
@@ -251,6 +255,10 @@ interface AsyncIPCFunctions {
     password: string
   }) => Promise<{ status: 'done' | 'guard_required' | 'error' }>
   steamSubmitGuard: (code: string) => Promise<{ status: 'done' | 'error' }>
+  redeemSteamKey: (payload: {
+    store: 'steam'
+    key: string
+  }) => Promise<RedeemKeyResult>
   getSteamUserInfo: () => Promise<SteamUserData | undefined>
   checkSteamInstalled: () => Promise<boolean>
   getSteamSyncedAt: () => Promise<number | null>

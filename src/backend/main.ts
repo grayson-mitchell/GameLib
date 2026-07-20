@@ -926,6 +926,9 @@ addHandler('steamStartCredentials', async (event, { username, password }) =>
 addHandler('steamSubmitGuard', async (event, code) =>
   SteamUser.submitSteamGuardCode(code)
 )
+addHandler('redeemSteamKey', async (event, { store, key }) =>
+  SteamUser.redeemKey(store, key)
+)
 addHandler('getSteamUserInfo', async () => SteamUser.getUserDetails())
 addHandler('checkSteamInstalled', async () =>
   SteamUser.isSteamClientInstalled()
