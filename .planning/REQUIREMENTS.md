@@ -206,7 +206,7 @@ Phase 24 ships an out-of-process `steam_api` bridge wired into GameLib's real ma
 ### macOS Native Steam Bridge (Phase 24)
 
 - [x] **REQ-24-01**: C++ vtable + flat shim generator — a generator produces the bottle-side `steam_api.dll` shim from a pinned Steamworks SDK version (GameLib-authored manifest, D-09), covering both the flat `SteamAPI_*` exports and the C++ interface vtables, explicitly `__thiscall`, with correct `ret N` stack cleanup and hidden-return-pointer (sret) handling for struct returns >8 bytes. — DONE 2026-07-20: `meta/gen_vtables.ts` + `meta/sdk/*.manifest.json`, 30 passing unit tests, committed generated `.c`/`.def` source (D-07); see 24-01-SUMMARY.md. Runtime ABI compile-gate proof deferred to Plan 24-07/24-10.
-- [ ] **REQ-24-02**: Native host helper with persistent channel — a native arm64 helper loads `libsteam_api.dylib`, initializes once against the running Mac Steam, and serves marshaled requests over a persistent loopback channel.
+- [x] **REQ-24-02**: Native host helper with persistent channel — a native arm64 helper loads `libsteam_api.dylib`, initializes once against the running Mac Steam, and serves marshaled requests over a persistent loopback channel. — DONE 2026-07-20 (source/structural): `native/steam-bridge/helper/bridge_helper.c` (single `dlopen` + single `SteamAPI_InitFlat` before the accept loop, `INADDR_LOOPBACK`-only bind, persistent read loop serving ≥2 sequential requests without re-init, CONTROL HEALTH/WHOAMI two-state readiness) + `src/backend/storeManagers/steam/bridge/protocol.ts` shared wire frame (MAX_FRAME_BYTES cap), 21 passing tests; `clang -fsyntax-only -Wall -Wextra` clean. See 24-02-SUMMARY.md. Live-Steam init + real-SteamID64 round-trip are R2's human-HW rows deferred to Plan 24-10; helper compiled at packaging time in Plan 24-07.
 - [ ] **REQ-24-03**: Per-bottle shim auto-generation — the correct `steam_api.dll` shim is produced and placed into a bridge-eligible game's bottle automatically as part of bottle setup, exporting exactly the symbols that game imports.
 - [ ] **REQ-24-04**: Allowlist-based routing — GameLib decides bridge-vs-fallback per title using a curated allowlist of known-good AppIDs (D-01/D-02).
 - [ ] **REQ-24-05**: Bundled, in-app packaging — the native helper ships inside the packaged GameLib app and functions from a packaged build on the developer's own Apple-Silicon Mac.
@@ -339,7 +339,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-26-05 | Phase 26 | Complete |
 | REQ-26-06 | Phase 26 | Complete |
 | REQ-24-01 | Phase 24 | Complete (2026-07-20, Plan 24-01) |
-| REQ-24-02 | Phase 24 | Pending |
+| REQ-24-02 | Phase 24 | Complete (2026-07-20, Plan 24-02 — source/structural; live-Steam round-trip deferred to Plan 24-10) |
 | REQ-24-03 | Phase 24 | Pending |
 | REQ-24-04 | Phase 24 | Pending |
 | REQ-24-05 | Phase 24 | Pending |
@@ -384,5 +384,5 @@ Which phases cover which requirements. Populated during roadmap creation.
 *Last updated: 2026-07-05 — v0.3 traceability appended during roadmap creation (Phases 10–15)*
 *Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*
 *Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*
-*Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 marked Complete (Plan 24-01)*
+*Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 Complete (Plan 24-01), REQ-24-02 Complete source/structural (Plan 24-02; live-Steam round-trip deferred to Plan 24-10)*
 *Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*
