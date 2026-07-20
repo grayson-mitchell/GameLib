@@ -45,7 +45,8 @@ export default function SidebarLinks() {
     humble,
     platform,
     refreshLibrary,
-    handleExternalLinkDialog
+    handleExternalLinkDialog,
+    handleRedeemKeyDialog
   } = useContext(ContextProvider)
 
   const inWebviewScreen =
@@ -265,6 +266,15 @@ export default function SidebarLinks() {
           </div>
         )}
       </div>
+      {steam.username && (
+        <SidebarItem
+          elementType="button"
+          onClick={() => handleRedeemKeyDialog(true)}
+          icon={faKey}
+          label={t('sidebar.redeemSteamKey', 'Redeem a Steam key')}
+          dataTour="sidebar-redeem-steam-key"
+        />
+      )}
       <SidebarItem
         url="/console"
         icon={faTv}
