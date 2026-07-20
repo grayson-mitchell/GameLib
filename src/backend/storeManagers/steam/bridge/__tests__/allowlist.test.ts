@@ -7,8 +7,10 @@ import {
 
 // Real AppIDs (confirmed against the Steam store API, cross-referenced
 // against the spike READMEs' developer names -- Spiderweb Software /
-// Avernum 4, Big Sandwich Games / HOARD):
-const AVERNUM_4_APP_ID = '206020'
+// Avernum 6, Big Sandwich Games / HOARD). Avernum 6 (206060) replaced
+// Avernum 4 (206020) in the acceptance set: Avernum 4 does not run under
+// CrossOver, so it can never pass the bridge on macOS (24-10 Gate 3).
+const AVERNUM_6_APP_ID = '206060'
 const HOARD_APP_ID = '63000'
 
 function makeValidPayload() {
@@ -74,8 +76,8 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('has() returns true for Avernum 4 (acceptance-set title)', () => {
-    expect(bridgeAllowlist.has(AVERNUM_4_APP_ID)).toBe(true)
+  test('has() returns true for Avernum 6 (acceptance-set title)', () => {
+    expect(bridgeAllowlist.has(AVERNUM_6_APP_ID)).toBe(true)
   })
 
   test('has() returns true for HOARD (acceptance-set title)', () => {

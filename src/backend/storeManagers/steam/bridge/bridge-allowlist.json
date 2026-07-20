@@ -2,9 +2,9 @@
   "version": 1,
   "games": [
     {
-      "appId": "206020",
-      "title": "Avernum 4",
-      "note": "2 steam_api imports (SteamAPI_Init/SteamAPI_Shutdown) -- spike 007, VALIDATED"
+      "appId": "206060",
+      "title": "Avernum 6",
+      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4 -- expected minimal steam_api footprint (Init/Shutdown). Replaces Avernum 4 (206020), which does not run under CrossOver. Import coverage confirmed via 24-05 importScan at install (24-10 Gate 3)."
     },
     {
       "appId": "63000",

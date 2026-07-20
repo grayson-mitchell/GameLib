@@ -160,7 +160,7 @@ Source: 24-10-PLAN.md Task 3. Trust boundary T-24-11 (bundled helper provenance)
 
 **Steps:**
 1. Launch the PACKAGED `.app` (not a dev `yarn`/`vite` run).
-2. Launch an allowlisted game (Avernum 4 or Hoard) so the bridge helper is spawned.
+2. Launch an allowlisted game (Avernum 6 or Hoard) so the bridge helper is spawned.
 3. In Activity Monitor / logs, inspect the running `steam-bridge-helper` process's executable path.
 
 **Expected result:** The running helper's path resolves **inside** the packaged `.app` bundle
@@ -173,31 +173,46 @@ externally staged helper is present or used.
 
 ---
 
-## Gate 3 — R6 Avernum 4 single-player launch through the bridge
+## Gate 3 — R6 Avernum 6 single-player launch through the bridge
 
-Source: 24-10-PLAN.md Task 4. Avernum 4 imports only 2 symbols (Init/Shutdown) — see finding #6.
+Source: 24-10-PLAN.md Task 4. **Substitution (2026-07-21, user decision):** the plan named **Avernum 4**
+(206020), but Avernum 4 does not run under CrossOver, so it can never reach playable single-player
+through the bridge on macOS. It is replaced by its Spiderweb engine sibling **Avernum 6** (206060,
+Windows-only per the Steam store API — `mac:false`), which occupies the same minimal-`steam_api`-footprint
+role (expected `SteamAPI_Init`/`Shutdown`, like Avernum 4's spike-007 set). The allowlist was updated
+accordingly (`bridge-allowlist.json`: 206020 → 206060). See finding #6 for why a minimal-import game's
+identity proof leans on Gate 1 rather than the game itself.
+
+**Import-coverage pre-check (do at install, before judging the gate):** because Avernum 6 has no prior
+spike, confirm its `steam_api` imports are a subset of the shim's exports. At install, GameLib's 24-05
+`importScan` (`objdump --private-headers` on `Avernum6.exe`) enumerates its imports; if `shimGenerate`
+reports an uncovered symbol, that is a *coverage* gap (regenerate the shim to add it), NOT an ABI/bridge
+FAIL. Record the enumerated import set here.
 
 **Preconditions:**
-- Packaged GameLib (Gate 0c); native Mac Steam signed in; Avernum 4 owned on the account.
+- Packaged GameLib **rebuilt after the allowlist change** (so the bundled, inlined allowlist contains
+  206060 — the pre-swap build has Avernum 4 baked in and will not route Avernum 6 to the bridge); native
+  Mac Steam signed in; Avernum 6 owned on the account.
 - Bridge bottle path (no bottled Windows Steam client).
 
 **Steps:**
-1. From the packaged GameLib, install (if needed) and launch **Avernum 4** on macOS.
+1. From the packaged GameLib, install (if needed) and launch **Avernum 6** on macOS.
 2. Confirm the game reaches main menu / playable single-player.
 3. **Part A (init through the bridge):** confirm logs show `SteamAPI_Init` / `SteamAPI_InitFlat`
    succeeded THROUGH the bridge (the flat init crossed the loopback channel to the helper).
-4. **Part B (identity served):** IF Avernum 4 makes an identity call, confirm logs show the real
-   signed-in SteamID64 + correct persona crossed the bridge. **NOTE (finding #6):** a 2-import game
+4. **Part B (identity served):** IF Avernum 6 makes an identity call, confirm logs show the real
+   signed-in SteamID64 + correct persona crossed the bridge. **NOTE (finding #6):** a minimal-import game
    may NEVER request SteamID/persona — in that case Part B is legitimately **N/A** here, and the
    real-identity proof is Gate 1 (the vtable round-trip, which does not depend on the game calling the
-   vtable). Do NOT record FAIL for Part B solely because a 2-import game never asked for identity.
-5. Inspect Avernum 4's bridge bottle: confirm **NO** `steam.exe` / Windows Steam client is present
+   vtable). Do NOT record FAIL for Part B solely because a minimal-import game never asked for identity.
+5. Inspect Avernum 6's bridge bottle: confirm **NO** `steam.exe` / Windows Steam client is present
    (e.g. `ls` the bottle's `drive_c/Program Files (x86)/Steam/`).
 
-**Expected result:** Avernum 4 reaches playable single-player via the bridge; Part A init-through-bridge
+**Expected result:** Avernum 6 reaches playable single-player via the bridge; Part A init-through-bridge
 logged; Part B identity served if requested (else N/A per finding #6); bottle has no Windows Steam client.
 
 **Result:** PENDING
+**Enumerated `steam_api` imports (24-05 importScan):** _(record — confirm subset of shim exports)_
 **Part A (init through bridge):** _(PASS/FAIL — log excerpt)_
 **Part B (identity served):** _(PASS / N/A — SteamID64 + persona if served)_
 **Bottle listing (no steam.exe):** _(record `ls` output)_
@@ -207,8 +222,9 @@ logged; Part B identity served if requested (else N/A per finding #6); bottle ha
 
 ## Gate 4 — R6 Hoard single-player launch through the bridge
 
-Source: 24-10-PLAN.md Task 5. Hoard exercises a larger accessor surface (7 imports) than Avernum 4 (2)
-— a real vtable `ret N` regression would surface here first (Pitfall 2), corroborating Gate 1.
+Source: 24-10-PLAN.md Task 5. Hoard exercises a larger accessor surface (7 imports) than the
+minimal-import gate game (Avernum 6, expected 2) — a real vtable `ret N` regression would surface here
+first (Pitfall 2), corroborating Gate 1.
 
 **Preconditions:**
 - Packaged GameLib (Gate 0c); native Mac Steam signed in; Hoard owned on the account.
@@ -244,7 +260,7 @@ finding #6); bottle has no Windows Steam client.
 | 0c | Packaged `.app` + bundled helper | R5 | ✅ PASS | `dist/mac-arm64/GameLib.app`; helper `Mach-O arm64` at `…/app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`. |
 | 1 | R1 vtable round-trip | R1 | PENDING | 006-style harness: generated shim → production helper → C++ virtual `GetSteamID()` = real SteamID64. |
 | 2 | R5 packaged bundled-helper | R5 | PENDING | Helper path inside the `.app` bundle; no staged binary. |
-| 3 | R6 Avernum 4 | R6 | PENDING | Playable via bridge; init-through-bridge; Part B may be N/A (2 imports); no steam.exe in bottle. |
+| 3 | R6 Avernum 6 | R6 | PENDING | Substituted for Avernum 4 (206020→206060; Avernum 4 doesn't run in CrossOver). Playable via bridge; init-through-bridge; Part B may be N/A (min imports); no steam.exe in bottle. Needs rebuilt packaged app (allowlist inlined at build). |
 | 4 | R6 Hoard | R6 | PENDING | Playable via bridge; init + identity served (7 imports); no steam.exe in bottle. |
 
 **Gate status:** 4 human-HW gates PENDING. Phase 24 is not complete until Gates 1–4 all PASS
