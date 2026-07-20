@@ -8,7 +8,7 @@
 **Wave 2** — sidecar + renderer bridge (parallel, zero file overlap):
 
 - [ ] `27-02-PLAN.md` — Sidecar bootstrap: pathShim + minimal file-backed store + electron-module stub installed before backend import; stdio JSON-RPC server; READY signal; headless-boot test. (REQ-27-02)
-- [ ] `27-03-PLAN.md` — Renderer bridge: re-point the 3 preload factories + the synchronous store-snapshot bridge (the 4th primitive) onto Tauri; route the 5 direct-electron files; hydrate snapshot at mount; headless contract test (0 electron symbols, 379 call-sites untouched). (REQ-27-03)
+- [ ] `27-03-PLAN.md` — Renderer bridge: attach `window.api` + 6 globals to the Tauri webview (guard `preload/index.ts` under `isTauri()` since contextBridge is Electron-only); re-point the 3 preload factories + the synchronous store-snapshot bridge (the 4th primitive) onto Tauri; hydrate snapshot before React mounts; headless contract test (0 electron symbols, 379 call-sites untouched). (REQ-27-03)
 
 **Wave 3** — the two E2E flows:
 
