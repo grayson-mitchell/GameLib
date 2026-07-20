@@ -337,6 +337,41 @@ native/old-bottle install — install **Avernum 6** (Windows-only, 206060, not y
 GameLib so the full bridge install path runs (provision `GameLibSteamBridge` → download Windows depot →
 `importScan` → place shim → launch). Route the two gaps to `/gsd-plan-phase 24 --gaps`.
 
+### D-UAT-24-03 (MAJOR — found 2026-07-21, real macOS; root fix landed, full recovery needs a gap cycle) — bridge fails for Windows-only titles with an UNTAGGED launch entry; sticky bridge-failed flag then cascades
+
+**Reported (Avernum 5, 206040, installed fresh to exercise the bridge):** install threw "steam bridge
+unavailable"; retry "installed fine"; pressing Play does nothing (button greys <1s, reverts).
+
+**Root cause (fixed, commit `f0b7e82c`):** `resolveBridgeLaunchExe` required `config.oslist === 'windows'`
+exactly. Avernum 5's PICS `config.launch` entry has **no oslist tag** (old Spiderweb Windows-only title),
+so `find()` returned nothing → `no windows launch entry found` → the bridge install could not place the
+shim → install failed. Fix: prefer an explicit windows-tagged entry, else fall back to a single UNTAGGED
+entry (never a mac/linux-tagged one). Avernum 4/Hoard never caught this — both tag `oslist=windows`.
+
+**Cascade (still open → gap cycle):**
+1. **Sticky bridge-failed flag.** The failed first install called `markBridgeFailedThisSession(206040)`;
+   `isBridgeEligible()` consults that set, so for the rest of the session both install AND launch skip the
+   bridge. The retry install therefore ran the **native depot** path (StateFlags=4), and Play ran the
+   **bottled-Steam** path (`steam.exe -applaunch 206040` in `GameLibSteam`, where the game isn't) → no-op
+   (`raiseFrontmostBottledProcess: no matching process`). A single recoverable failure poisons the whole
+   session until restart; it should clear on a successful (re)install.
+2. **Wrong install record.** The native fallback recorded `install.install_path = …/GameLibSteam/…`
+   (wrong bottle) while the files actually landed in `…/GameLibSteamBridge/…`.
+3. **Shim not placed.** The `steam_api.dll` next to `Avernum 5.exe` is the **game's own** (118368 bytes,
+   no `54550`), NOT GameLib's bridge shim (805888 bytes) — because shim placement only happens on the
+   bridge install path, which failed.
+
+**Verified working underneath all this:** bridge helper spawn + `SteamAPI_Init` + real SteamID + `LISTEN`
+54550 (from the HOARD/Avernum attempts), bridge-bottle provisioning (`GameLibSteamBridge` created), depot
+download into the bridge bottle. The mechanism is sound; the **appinfo-launch resolution + failure
+recovery + install/launch routing** are what broke.
+
+**Recovery to retest:** rebuild (done, `electron-vite build`), fully **restart GameLib** (loads the fix +
+clears the sticky flag), then do a **clean reinstall** of Avernum 5 so the bridge path re-runs and places
+the real shim — the current install is messy (game's dll, wrong record) and uninstall is itself broken
+(D-UAT-24-02), so the messy state must be cleared manually first. **Route the cascade (sticky-flag
+recovery, install-record correctness, D-UAT-24-02 launch/uninstall) to `/gsd-plan-phase 24 --gaps`.**
+
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
 Surfaced 2026-07-21 during Gate 2–4 setup; **not caused by Phase 24 and not Phase 24 acceptance items.**
