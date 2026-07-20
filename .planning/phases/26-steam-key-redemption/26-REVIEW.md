@@ -22,7 +22,16 @@ findings:
   warning: 3
   info: 2
   total: 5
-status: issues_found
+status: warnings_resolved
+resolution:
+  resolved_at: 2026-07-20
+  resolved: [WR-01, WR-02, WR-03]
+  out_of_scope: [IN-01, IN-02]
+  note: >-
+    All 3 Warnings fixed and committed atomically on
+    fix/steam-native-install-stability. Info items IN-01/IN-02 intentionally
+    left open (out of scope for this fix pass). Verification: user.test.ts
+    62/62 green, tsc --noEmit clean, eslint 0 errors on edited files.
 ---
 
 # Phase 26: Code Review Report
@@ -64,6 +73,12 @@ and backend input validation; two Info items are UX/semantic notes.
 
 ### WR-01: Connectivity/unexpected failures during redeem are mislabeled as "invalid key"
 
+**Status:** RESOLVED (2026-07-20, commit 9170f912). The catch block now classifies
+only rejections carrying a numeric `purchaseResultDetails`; transport/timeout/
+unexpected rejections return the generic `'error'` outcome. The test at
+`user.test.ts:1072` was updated to expect `'error'`, plus non-numeric-details
+coverage was added.
+
 **File:** `src/backend/storeManagers/steam/user.ts:646-653`
 **Issue:** The `redeemKey` catch block assumes every rejection carries a
 `purchaseResultDetails`. `steam-user`'s `redeemKey` (apps.js) wraps the request
@@ -98,6 +113,11 @@ otherwise return the `'error'` outcome so the user sees the connectivity copy.
 
 ### WR-02: redeem catch block swallows all errors with no diagnostic logging
 
+**Status:** RESOLVED (2026-07-20, commit 81b02430). Both catch branches now emit a
+status-only `logWarning` (store/outcome/error name+message and
+`purchaseResultDetails`), mirroring `submitSteamGuardCode`. The raw key is never
+logged — verified by the existing `user.test.ts` "never logs the raw key" test.
+
 **File:** `src/backend/storeManagers/steam/user.ts:646-653`
 **Issue:** The catch path emits no log at all before returning a classified
 result. Combined with WR-01, a genuine unexpected failure (e.g. steam-user
@@ -114,6 +134,11 @@ elsewhere in the file. The fix in WR-01 already adds a `logWarning` for the
 no-details branch; add an equivalent status-only log for the classified branch.
 
 ### WR-03: Backend IPC handler performs no input validation on the trust boundary
+
+**Status:** RESOLVED (2026-07-20, commit 09ecada9). The `redeemSteamKey` handler now
+guards the destructured payload (rejects non-`'steam'` store, non-string/empty
+key) and returns `{ store: 'steam', outcome: 'error', message: 'invalid-request' }`
+before delegating to `SteamUser.redeemKey`.
 
 **File:** `src/backend/main.ts:929-931`
 **Issue:** `addHandler('redeemSteamKey', async (event, { store, key }) =>
