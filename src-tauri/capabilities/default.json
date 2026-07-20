@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for the GameLib shell: core defaults plus the opener plugin (the shell.openExternal / steam:// parity path). The four app-defined relay commands (sidecar_invoke, sidecar_send, open_external, sidecar_store_snapshot) are registered via invoke_handler and do not require capability permissions in Tauri v2.",
+  "windows": ["main"],
+  "permissions": ["core:default", "opener:default", "opener:allow-open-url"]
+}

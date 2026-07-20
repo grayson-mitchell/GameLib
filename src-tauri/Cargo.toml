@@ -1,0 +1,23 @@
+[package]
+name = "gamelib-shell"
+version = "0.7.0"
+description = "GameLib Tauri v2 shell (Phase 27 walking skeleton) — hosts the electron-vite renderer, spawns the Node sidecar, relays renderer↔sidecar transport + steam:// opens."
+edition = "2021"
+rust-version = "1.77.2"
+
+# Binary crate: the desktop shell entrypoint lives in src/main.rs.
+# (No mobile lib target — the skeleton is macOS desktop only.)
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
