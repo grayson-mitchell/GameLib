@@ -267,6 +267,44 @@ finding #6); bottle has no Windows Steam client.
 
 ---
 
+## UAT Findings
+
+### D-UAT-24-01 (BLOCKER — found + FIXED 2026-07-21, real macOS) — bridge helper ENOENT: `publicDir` mis-resolved by electron-vite chunking
+
+**Reported (Gate 4 / HOARD attempt):** clicked Play on already-installed HOARD → "steam bridge
+unavailable" error; the D-05 fallback offered but the game did not run; a second Play showed no error
+but also did not start.
+
+**Root cause (from `~/Library/Logs/GameLib/gamelib.log`):**
+```
+spawnHelperIfNeeded: spawning the shared bridge helper from .../build/public/bin/arm64/darwin/steam-bridge-helper (D-03)
+bridge helper process error Error: spawn .../build/public/bin/arm64/darwin/steam-bridge-helper ENOENT
+ensureBridgeHelperReady: bridge helper unreachable within the poll budget for appId 63000 (D-06)
+SteamGame: bridge helper not ready for appId 63000 (status=unreachable) — not launching (D-05/D-06)
+```
+The helper binary is fine (Gate 1 proved it end-to-end). The bug was purely path resolution:
+`constants/paths.ts` computed `publicDir = resolve(__dirname, '..', …)`, which assumes `__dirname`
+is `build/main`. electron-vite code-splits the main bundle into `build/main/chunks/*`, so `__dirname`
+is `build/main/chunks` (one level deeper) and every hop shifted — `public` became `build/public` (dev),
+and the packaged path pointed at `build/main/bin` instead of `build/bin`. This silently mis-resolved
+**every** bundled asset (helper, shim, icon, preload, locales), and the packaged app (Gate 2) would
+have failed identically. The "unreachable" gate then correctly refused to launch (no no-identity
+launch, D-05/D-06) — so the D-05/D-06 failure surface behaved as designed; the defect was upstream.
+
+**Fix (commit `87c0ef82`):** anchor `publicDir` on `app.getAppPath()` (project root in dev, asar root
+when packaged) + the `build/` output root — depth-independent, mirroring the existing
+`main_window.ts:72` `build/preload` lookup. Helper now resolves to `<repo>/public/bin/…` (dev) and
+`<asar>.unpacked/build/bin/…` (packaged), both of which exist. 3 steam test suites had inline electron
+mocks missing `getAppPath` (real Electron always has it); added a plain-method `getAppPath` to each.
+
+**Verification:** full jest suite back to baseline (1813/1813 tests, 102/103 suites — only the unrelated
+Phase 27 `bootstrap.test.ts` red); `codecheck` clean. Packaged app **rebuilt** — the built chunk now
+computes `resolve(app.getAppPath()…)`, and the resolved helper path
+(`app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`) exists; no stale `build/main/bin`.
+**Gates 2–4 retest PENDING** on the rebuilt app (fully quit + relaunch `dist/mac-arm64/GameLib.app`
+first — a session that already hit the not-ready gate may have marked the AppID bridge-failed for that
+run; `markBridgeFailedThisSession` clears on restart).
+
 ## Summary Table (fill in after all gates are run)
 
 | # | Gate | Requirement | Result | Notes |
