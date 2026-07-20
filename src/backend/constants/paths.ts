@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
 import { homedir } from 'os'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import { env } from 'process'
 import { dirSync } from 'tmp'
 import { isSnap } from './environment'
@@ -60,10 +60,16 @@ export const sharedWinePrefix = join(defaultWinePrefixDir, 'shared')
 export const defaultWinePrefix = join(defaultWinePrefixDir, 'default')
 export const fixesPath = join(appFolder, 'fixes')
 
-export const publicDir = resolve(
-  __dirname,
-  '..',
-  app.isPackaged || process.env.CI === 'e2e' ? '' : '../public'
+// IMPORTANT: do NOT derive this from __dirname. When the main-process bundle
+// code-splits (build/main/chunks/*.js), __dirname points at build/main/chunks,
+// so resolve(__dirname,'..') lands on build/main instead of build — which makes
+// loadFile look for build/main/index.html (white screen) and windowIcon resolve
+// to build/main/icon.png. app.getAppPath() is the project root in dev and the
+// asar root when packaged, so it's stable regardless of chunking (same fix the
+// preload path already uses in main_window.ts).
+export const publicDir = join(
+  app.getAppPath(),
+  app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'
 )
 
 export const fakeEpicExePath = fixAsarPath(
