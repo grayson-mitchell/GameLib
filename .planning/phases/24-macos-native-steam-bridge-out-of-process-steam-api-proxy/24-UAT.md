@@ -305,6 +305,38 @@ computes `resolve(app.getAppPath()…)`, and the resolved helper path
 first — a session that already hit the not-ready gate may have marked the AppID bridge-failed for that
 run; `markBridgeFailedThisSession` clears on restart).
 
+### D-UAT-24-02 (MAJOR — found 2026-07-21, real macOS) — bridge launch no-ops when the game is "installed" via a NON-bridge path (bridge bottle never provisioned)
+
+**Reported (HOARD / Gate 4, on the D-UAT-24-01-fixed build):** clicking Play shows no error; the button
+greys for <1s then reverts; game never starts.
+
+**What works now (D-UAT-24-01 fix confirmed end-to-end):** the bridge helper spawns from the correct
+path, `SteamAPI_Init` loads `steamclient.dylib`, caches the real SteamID `76561197995867096`, and
+`LISTEN`s on `127.0.0.1:54550`. `resolveBridgeLaunchExe` resolves HOARD → `Reuben.exe`. So the bridge
+infrastructure is alive.
+
+**Root cause:** HOARD's GameLib record is `is_installed: true`, `mac_arch: "32"`, `platform: "Mac"`,
+`install_path = ~/Library/Application Support/Steam/steamapps/common/Hoard` — i.e. it is "installed" only
+as the **32-bit native Mac** build (unusable on Apple Silicon, which is why it is correctly
+bottle/bridge-eligible). It was **never installed through the bridge**, so the `GameLibSteamBridge` bottle
+does not exist (`~/…/CrossOver/Bottles/` has only Epic/GOG/GameLibSteam) and there is no Windows depot +
+placed shim. `launch()` routes to the bridge, builds the bridge-bottle exe path
+(`…/GameLibSteamBridge/…/Hoard/win32/Reuben.exe`), and fire-and-forgets `runWineCommand({ wait:false })`
+at a **non-existent exe in a non-existent bottle** → wine exits instantly, empty `launch.log`, button
+reverts. (A stray Windows HOARD copy also exists in the old Phase-17 `GameLibSteam` bottle, unrelated to
+the bridge path.)
+
+**Two gaps:** (1) "installed" for a bridge-eligible game is satisfied by a non-bridge install (native
+32-bit Mac, or old bottle) that the bridge cannot launch — the install-state model and the bridge launch
+target disagree; (2) `launch()` does not verify the resolved exe / bridge bottle exists before firing
+wine — it should provision+install into the bridge bottle (24-08 inline-provision contract) or surface
+the D-05 `steamBridgeSetupRequired` dialog, not silently no-op.
+
+**Immediate workaround for gate testing:** exercise the bridge with a game that has **no** competing
+native/old-bottle install — install **Avernum 6** (Windows-only, 206060, not yet installed) fresh from
+GameLib so the full bridge install path runs (provision `GameLibSteamBridge` → download Windows depot →
+`importScan` → place shim → launch). Route the two gaps to `/gsd-plan-phase 24 --gaps`.
+
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
 Surfaced 2026-07-21 during Gate 2–4 setup; **not caused by Phase 24 and not Phase 24 acceptance items.**
