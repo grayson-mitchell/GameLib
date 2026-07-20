@@ -16,7 +16,12 @@ module.exports = {
     '<rootDir>/coverage'
   ],
   coverageReporters: ['text', 'html'],
-  projects: ['<rootDir>/src/backend', '<rootDir>/src/frontend', '<rootDir>/meta'],
+  projects: [
+    '<rootDir>/src/backend',
+    '<rootDir>/src/frontend',
+    '<rootDir>/src/preload',
+    '<rootDir>/meta'
+  ],
 
   rootDir: '.'
 }
