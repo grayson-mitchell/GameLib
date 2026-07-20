@@ -14,6 +14,15 @@ question requires otherwise.
   of the real install — `file`, `nm -gU`, plist/config reads — captured inline as evidence.
   Appropriate when the question is a fact ("does this native surface exist / can this cross the
   boundary"), not a feeling.
+- **Rearchitecture / portability spikes (Tauri line, 009–012):** two flavors.
+  (a) *Coupling probes* — hook `Module._load` to swap `require('electron')` for a **Proxy recorder**
+  and load the real built bundle (`build/main/main.js`) under bare `node`; the ordered touch-list +
+  fault point is the evidence of runtime coupling (009). A tolerant recorder (coerces to benign
+  values) reveals deeper import-time surface than a strict one.
+  (b) *Rust parity probes* — a plain `cargo` binary (no Tauri CLI needed) that exercises the same OS
+  facility a Tauri plugin wraps (`keyring` → macOS Keychain for safeStorage; `/usr/bin/open` +
+  registered scheme for `shell.openExternal`). `.gitignore` the `target/` dir; commit `Cargo.toml` +
+  `src/` + the run output. Grounded verdicts = real Keychain round-trips, real crate builds.
 - **Native handshake spikes (bridge line, 005):** single-file `clang -arch arm64` helper that
   **`dlopen`s the on-disk Steam dylib and `dlsym`s only the symbols found via `nm -gU`** — no SDK
   headers, no link-time Valve dependency. Emit an ISO-timestamped forensic event log (stderr +
@@ -66,6 +75,10 @@ question requires otherwise.
   **wedges the bottle's `wineserver`**, silently swallowing later `wine` output. Use `bin/wine`, and
   run `.../bin/wineserver -k` between runs to reset. Real 32-bit Windows games live under the bottle
   at `.../GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps/common/<game>/`.
+- **Rust toolchain (Tauri line, 009–012):** `cargo`/`rustc` **are** installed locally (1.94.x). The
+  `keyring` crate (feature `apple-native`) builds and round-trips the macOS Keychain with no extra
+  setup. No Tauri CLI is installed — and it isn't needed for feasibility probes; a bare `cargo`
+  binary exercising the underlying OS facility is sufficient and cheaper.
 - **Real-game drop-in shims (bridge line, 007/008):** to replace a game's `steam_api.dll`, first
   enumerate its exact import set — `/usr/bin/objdump --private-headers "<game>.exe" | grep -A40
   'DLL Name: steam_api'` — and export **every** one via a `.def` (a missing export = the process
