@@ -233,4 +233,25 @@ manager, dialog, launcher.
 | 009 | node-backend-headless-sidecar | standard | Given a real backend slice, when run under plain node with electron stubbed (as a Tauri sidecar forces), then observe which Electron-main APIs it hard-depends on — bounding the port | ⚠ PARTIAL (sidecar viable: 80% of files electron-free, but electron-store + 220 IPC endpoints + 44-file platform seam must be rewritten) | tauri, rust, backend, electron, sidecar |
 | 010 | steam-user-rust-vs-sidecar | comparison | Given Steam CM auth + owned-apps + depot download, when tested Rust-native (steam-vent) vs Node sidecar, then determine if the Steam differentiator can go Rust or must stay Node | ✓ WINNER = Node sidecar (steam-user runs headless in 341ms, 0 electron imports; steam-vent 0.5.0 is auth-only + experimental, no depot/CDN) | tauri, rust, steam, steam-user, sidecar |
 | 011 | electron-api-parity-in-tauri | standard | Given the Electron APIs 009 surfaces, when mapped to Tauri v2 plugins, then build a minimal Tauri app proving the riskiest equivalents (encrypted token store; steam:// launch) work | ✓ VALIDATED (13/16 full parity; safeStorage→Keychain + steam:// launch PROVEN LIVE in compiled Rust; only session/powerSaveBlocker are minor shims) | tauri, rust, electron-api, parity |
-| 012 | react-frontend-under-tauri | standard | Given GameLib's React renderer + preload bridge, when hosted in a Tauri v2 webview with the bridge shimmed, then the real UI renders and one round-trip IPC call succeeds | PENDING | tauri, rust, react, frontend, ipc |
+| 012 | react-frontend-under-tauri | standard | Given GameLib's React renderer + preload bridge, when hosted in a Tauri v2 webview with the bridge shimmed, then the real UI renders and one round-trip IPC call succeeds | ✓ VALIDATED (renderer decoupled by design: 379 window.api calls, 1 direct ipcRenderer; whole surface = 3 preload factories; rebuilt live on mock-Tauri transport, 0 electron symbols) | tauri, rust, react, frontend, ipc |
+
+> **Overall Idea C feasibility (spikes 009–012):** A Rust/Tauri rearchitecture is **FEASIBLE but is
+> a deliberate reshape, not a free lunch** — and the divorce from Heroic upstream is its dominant
+> strategic cost, not a technical one. Shape proven across all four legs: **Tauri/Rust shell + Rust
+> platform seam + bundled Node sidecar for business logic (incl. the Steam differentiator) + the
+> existing React UI**. Cheapest→most expensive:
+> - **Frontend (012): cheapest.** 379 `window.api` calls are untouched; the port is 3 preload factory
+>   functions (+5 stray direct-electron renderer files). Proven live on a mock-Tauri transport.
+> - **Steam (010): free.** `steam-user` + the depot pipeline (001/002/003) already run headless with
+>   0 electron imports; keep as a Node sidecar. Rust-native (`steam-vent`) is auth-only/experimental.
+> - **Platform seam (011): bounded, no blockers.** 13/16 Electron APIs have full Tauri v2 parity;
+>   safeStorage→Keychain and steam:// launch proven live in compiled Rust; only `session` +
+>   `powerSaveBlocker` need small shims.
+> - **Backend re-plumb (009): the headline cost.** 80% of backend files port as-is, but the 20% seam
+>   is real work: replace `electron-store` (20 files) and **re-plumb all 220 IPC endpoints** onto a
+>   sidecar/Tauri protocol, plus the 44-file lifecycle/dialog/tray/updater cluster.
+>
+> **Net:** no idea-killer surfaced. The blocker to *starting* is not "can it be done" but "is losing
+> Heroic upstream merge worth a large IPC-transport re-plumb for a smaller/faster binary + a Rust
+> platform layer." Toolchain note: cargo/rustc present; `keyring` builds & round-trips the macOS
+> Keychain; no Tauri CLI installed (not needed for these probes).
