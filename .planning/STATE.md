@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-03-PLAN.md
-last_updated: "2026-07-20T06:45:04.411Z"
+stopped_at: Completed 24-05-PLAN.md
+last_updated: "2026-07-20T07:09:53.952Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -181,6 +181,7 @@ Other open native-install phases:
 | Phase 24 P02 | 20min | 2 tasks | 3 files |
 | Phase 24 P03 | 10min | 1 tasks | 3 files |
 | Phase 24 P04 | 20min | 1 tasks | 2 files |
+| Phase 24 P05 | ~20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -305,6 +306,8 @@ Recent decisions affecting current work:
 - [Phase 24]: [Phase 24-03]: allowlist.ts uses readFileSync+JSON.parse+.parse() at module load (not a direct JSON import) per the plan's key_links spec, keeping the fail-loud load path independently testable
 - [Phase 24-04]: isBridgeBottleReady() checks cxbottle.conf existence only (not steam.exe) -- the bridge bottle must never contain a bottled Windows Steam client (R6), so reusing isBottleReady()'s steam.exe check would make it permanently non-ready
 - [Phase 24-04]: getBridgeBottleSettings() always resolves DEFAULT_BRIDGE_BOTTLE_NAME with no stored per-install override -- one shared bridge bottle (D-03), not user-configurable this phase
+- [Phase ?]: [Phase 24-05]: SHIM_EXPORTED_SYMBOLS in shimGenerate.ts is a reviewed literal copy of meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET (not a cross-boundary import) -- src/'s tsconfig include:[src] excludes meta/, and the compiled .dll ships without its source .def at packaged runtime
+- [Phase ?]: [Phase 24-05]: placeShimForGame() takes shimSourcePath as an injectable option defaulting to the real builtBridgeShimPath import -- tests inject a tmpdir fixture without mocking a module-level path const, while a source-grep test proves the production default is the real BLOCKER 2 shared location
 
 ### Pending Todos
 
@@ -371,8 +374,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T06:45:04.404Z
-Stopped at: Completed 24-03-PLAN.md
+Last session: 2026-07-20T07:09:53.946Z
+Stopped at: Completed 24-05-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
