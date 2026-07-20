@@ -203,3 +203,39 @@ original motivation for the feature.
 Read the actual `Steam3Session.cs` and `ContentDownloader.cs` on current `master` (not a summary).
 Confirm the exact field name and the guard condition. Ideally: build the wrapper, inject a
 `steam-session` refresh token, confirm a download starts with no credential prompt.
+
+---
+
+## Q6 — What is Steam's invalid-key activation cooldown, and what is the full `EPurchaseResult` failure taxonomy?
+
+**Raised:** 2026-07-20 (/gsd-explore — Steam key redemption via `redeemKey`)
+**Blocks:** Phase 26 (Steam Key Redemption) — the manual entry point's guardrails and error UX
+**Context:** `.planning/notes/steam-key-redemption-reveal-vs-activation.md`
+
+### The problem
+
+`steam-user.redeemKey()` activates a key on the authenticated account with no client UI.
+But Steam **rate-limits invalid-key activations**: too many bad keys in a window trips a
+temporary activation cooldown on the *account* (not the app). A naive manual entry point
+that passes raw user input straight to `redeemKey` can get the user's account throttled
+after a handful of typos or already-used keys. We need to design guardrails, but the exact
+thresholds and the full result taxonomy are unknown from the outside.
+
+Two things to pin down:
+
+1. **The cooldown rule.** How many failed activations trip it, over what window, and how
+   long the lockout lasts. How does the cooldown itself surface — a distinct
+   `EPurchaseResult`, a specific `EResult`/error, or a silent failure?
+2. **The `EPurchaseResult` taxonomy.** Enumerate the values `redeemKey` returns and map
+   each to a UX branch: success (show `packageList` name → `recomputeOwnership()`),
+   already-owned, invalid/malformed key, region-locked, key-already-used, rate-limited,
+   and any others. This is what the manual UX switches on.
+
+### How to answer it
+
+Read `steam-user`'s `EPurchaseResult` enum and the `redeemKey` implementation (which
+`EResult`/`EPurchaseResult` it maps from `CMsgClientPurchaseResponse`). Cross-check against
+DoctorMcKay's GitHub issues/wiki and community reports on Steam's activation rate limit
+(the commonly cited figure is ~50 failed activations/hour → ~1h lockout — verify, don't
+assume). Ideally: with the user's spare test keys, observe a real success and a real
+already-owned/invalid response and record the exact returned values.
