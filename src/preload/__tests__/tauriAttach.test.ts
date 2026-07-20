@@ -60,8 +60,13 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
     expect(win.isE2ETesting).toBe(false)
   })
 
-  it('does nothing when isTauri() is false (Electron path is unaffected)', async () => {
+  it('leaves an already-attached window.api untouched when not in Tauri (Electron path unaffected)', async () => {
     installWindowStub()
+    // Simulate Electron: the real preload's contextBridge already set window.api before the
+    // renderer bundle runs. No __TAURI_INTERNALS__ => isTauri() false. tauriAttach must NOT
+    // overwrite the existing api nor apply the Tauri global fallbacks.
+    const electronApi = { sentinel: 'electron-preload-api' }
+    ;(readWindowStub() as { api?: unknown }).api = electronApi
     jest.doMock('@tauri-apps/api/core', () => ({
       isTauri: () => false,
       invoke: jest.fn()
@@ -70,7 +75,25 @@ describe('tauriAttach (BLOCKER-1 fix, 27-01)', () => {
     await import('../tauriAttach')
 
     const win = readWindowStub()
-    expect(win.api).toBeUndefined()
-    expect(win.isSteamDeckGameMode).toBeUndefined()
+    expect(win.api).toBe(electronApi) // not overwritten
+    expect(win.isSteamDeckGameMode).toBeUndefined() // Tauri fallbacks not applied
+  })
+
+  it('attaches window.api even when isTauri() is false, as long as no api is already present (Tauri detection false-negative robustness)', async () => {
+    installWindowStub()
+    // No __TAURI_INTERNALS__ (isTauri() false) AND no pre-existing window.api: this models a
+    // real Tauri webview where runtime detection failed. The `!apiAlreadyPresent` clause must
+    // still attach so window.api is defined before the app reads it (the Phase 27 Plan 05 fix).
+    jest.doMock('@tauri-apps/api/core', () => ({
+      isTauri: () => false,
+      invoke: jest.fn()
+    }))
+
+    await import('../tauriAttach')
+
+    const win = readWindowStub()
+    expect(typeof win.api).toBe('object')
+    expect(win.platform).toBe('darwin')
+    expect(win.isSteamDeckGameMode).toBe(false)
   })
 })

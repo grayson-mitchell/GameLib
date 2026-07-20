@@ -30,23 +30,43 @@
 import api from './api'
 import { isTauri } from './tauriTransport'
 
-const tauriDetected = isTauri()
+// Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
+// confirm this attach module evaluates BEFORE the renderer renders / lazy-loads App (whose
+// `frontend/helpers/index.ts` reads `window.api.readConfig` at module scope). If this line
+// is absent from the console, the attach never ran; if present, the attach ran and any
+// remaining `window.api` failure is a detection/attach-condition problem, not ordering.
+console.log('[GameLib] tauriAttach evaluating (pre-detect)')
 
-// Startup environment diagnostic (Phase 27 Plan 05): a false negative here is the exact
-// cause of the `window.api is undefined` blank screen, so log the detection signals up
-// front. Visible in the Tauri dev webview devtools console.
+const tauriDetected = isTauri()
+const apiAlreadyPresent = typeof window.api !== 'undefined'
+
+// Attach when EITHER Tauri is detected OR `window.api` is not already present. The second
+// clause is the load-bearing robustness fix (Phase 27 Plan 05): under Electron the real
+// preload's `contextBridge.exposeInMainWorld('api', ...)` has ALREADY set `window.api`
+// before this renderer bundle runs, so `apiAlreadyPresent` is true and we correctly no-op
+// (Electron path byte-identical). Under Tauri there is NO preload, so `window.api` is
+// undefined here regardless of whether `isTauri()` detection succeeds — attaching on
+// `!apiAlreadyPresent` therefore eliminates the `isTauri()` false-negative that otherwise
+// leaves `window.api` unset and blanks the screen.
+const shouldAttach = tauriDetected || !apiAlreadyPresent
+
+// Startup environment diagnostic — a detection/attach false-negative is the exact cause of
+// the `window.api is undefined` blank screen, so log the signals up front (visible in the
+// Tauri dev webview devtools console).
 console.log('[GameLib] renderer env detection:', {
   isTauri: tauriDetected,
   hasTauriInternals:
     typeof (globalThis as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ !==
     'undefined',
-  hasWindowIsTauri: Boolean((globalThis as { isTauri?: unknown }).isTauri)
+  hasWindowIsTauri: Boolean((globalThis as { isTauri?: unknown }).isTauri),
+  apiAlreadyPresent,
+  willAttach: shouldAttach
 })
 
-if (tauriDetected) {
+if (shouldAttach) {
   window.api = api
   console.log(
-    '[GameLib] window.api attached for Tauri (readConfig present:',
+    '[GameLib] window.api attached (readConfig present:',
     typeof window.api.readConfig,
     ')'
   )
