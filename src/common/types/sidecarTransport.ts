@@ -1,0 +1,126 @@
+/**
+ * Sidecar transport contract (Phase 27 — Tauri walking skeleton).
+ *
+ * Single source of truth for the JSON-RPC framing shared by the three legs of the
+ * Tauri rearchitecture:
+ *   - the Rust shell (27-01, `src-tauri/src/main.rs`) — spawns the sidecar, relays frames;
+ *   - the Node sidecar RPC server (27-02) — the existing backend behind a stdio JSON-RPC loop;
+ *   - the renderer bridge (27-03, `src/preload/ipc.ts` factories re-pointed onto Tauri commands).
+ *
+ * Framing decision (per 27-CONTEXT "Claude's discretion"): stdio JSON-RPC over the
+ * parent↔child pipe, NOT a loopback TCP port. Rationale (threat T-27-01): Wine on macOS
+ * shares the host network namespace, so a loopback port would be reachable by bottled
+ * processes; a private stdio pipe is not.
+ *
+ * The contract preserves the exact call/return shapes of the three preload factories in
+ * `src/preload/ipc.ts` so the 379 `window.api.*` call-sites never change:
+ *   - makeHandlerInvoker(channel) → invoke(channel, ...args) → Promise<Ret>  (req/resp)
+ *   - makeListenerCaller(channel) → send(channel, ...args)                   (fire-and-forget)
+ *   - frontendListenerSlot(channel) → on(channel, listener) → unsubscribe    (backend→frontend push)
+ *
+ * This module is TYPES + CONSTANTS ONLY. It must contain no runtime logic and must not
+ * import from 'electron' — it is imported by the renderer, the sidecar, and (as the naming
+ * reference) the Rust shell.
+ */
+
+/**
+ * Discriminates the three request kinds a renderer can send across the transport.
+ * - 'invoke'       → req/resp (maps to the old `ipcRenderer.invoke`)
+ * - 'send'         → fire-and-forget (maps to the old `ipcRenderer.send`)
+ * - 'openExternal' → the `shell.openExternal` parity path (steam:// opens via tauri-plugin-opener)
+ */
+export type SidecarRpcKind = 'invoke' | 'send' | 'openExternal'
+
+/**
+ * A request frame written from the Rust shell to the sidecar's stdin (one JSON object per line).
+ *
+ * `id` is ALWAYS a string — Steam uses 64-bit ids and JavaScript numbers cannot hold them
+ * without precision loss, so every id crosses the wire as a decimal/opaque string.
+ *
+ * `channel` is the IPC channel name (a key of AsyncIPCFunctions / SyncIPCFunctions), preserved
+ * verbatim from the existing preload contract. `args` mirror the channel's parameter tuple.
+ */
+export interface SidecarRpcRequest {
+  /** Correlation id for matching the response. String-safe for 64-bit values. */
+  id: string
+  /** Which transport verb this frame represents. */
+  kind: SidecarRpcKind
+  /** The IPC channel name (or, for 'openExternal', the parity command target). */
+  channel: string
+  /** The channel's argument tuple, forwarded unchanged. */
+  args: unknown[]
+}
+
+/**
+ * A response frame written from the sidecar's stdout back to the Rust shell, correlated by `id`.
+ *
+ * `ok` is the success discriminant: on `true`, `result` holds the resolved value (mirrors the
+ * Promise returned by `makeHandlerInvoker`); on `false`, `error` holds a serialized error message.
+ * Only 'invoke' requests produce a response; 'send' and 'openExternal' are fire-and-forget.
+ */
+export interface SidecarRpcResponse {
+  /** Correlation id matching the originating SidecarRpcRequest. */
+  id: string
+  /** Success discriminant. */
+  ok: boolean
+  /** Present when `ok` is true — the resolved invoke result. */
+  result?: unknown
+  /** Present when `ok` is false — a serialized error message. */
+  error?: string
+}
+
+/**
+ * An unsolicited notification frame the sidecar pushes to the Rust shell (backend→frontend push),
+ * which the shell re-emits to the webview as the FRONTEND_MESSAGE_EVENT Tauri event.
+ *
+ * This is the transport form of the old `ipcRenderer.on(channel, listener)` backend push
+ * (`frontendListenerSlot`). It carries no `id` because it is not a reply to any request.
+ */
+export interface SidecarNotification {
+  /** Notification discriminant — the only kind in the skeleton is a frontend message push. */
+  kind: 'frontendMessage'
+  /** The FrontendMessages channel name the renderer listener is keyed on. */
+  channel: string
+  /** The push payload tuple, forwarded unchanged to the renderer listener. */
+  args: unknown[]
+}
+
+/**
+ * Sentinel line the sidecar prints to stdout exactly once, after it has installed its Electron
+ * shims and finished importing the backend modules, to signal the Rust shell that it is ready to
+ * accept request frames. The shell must not write requests before observing this line.
+ */
+export const READY_SENTINEL = '__GAMELIB_SIDECAR_READY__' as const
+
+/**
+ * Tauri command name the renderer invokes for a req/resp `invoke` call.
+ * The Rust `#[command]` of the same (snake_case) name writes a SidecarRpcRequest{kind:'invoke'}
+ * and awaits the matching SidecarRpcResponse by id.
+ */
+export const SIDECAR_INVOKE = 'sidecar_invoke' as const
+
+/**
+ * Tauri command name the renderer invokes for a fire-and-forget `send` call.
+ * Writes a SidecarRpcRequest{kind:'send'}; no response is awaited.
+ */
+export const SIDECAR_SEND = 'sidecar_send' as const
+
+/**
+ * Tauri command name for the `shell.openExternal` parity path (steam:// opens).
+ * The Rust `#[command]` shells the URL through tauri-plugin-opener.
+ */
+export const OPEN_EXTERNAL = 'open_external' as const
+
+/**
+ * Tauri command name for the renderer's synchronous store snapshot bridge.
+ * Returns the minimal store snapshot the skeleton read path needs (electron-store parity),
+ * so the renderer's synchronous `configStore`-style reads resolve without a round-trip per key.
+ */
+export const SIDECAR_STORE_SNAPSHOT = 'sidecar_store_snapshot' as const
+
+/**
+ * Tauri event name the Rust shell emits to the webview for every SidecarNotification it reads
+ * from the sidecar's stdout. The renderer bridge (27-03) subscribes via Tauri `listen` and
+ * dispatches to the per-channel listeners registered through `frontendListenerSlot`.
+ */
+export const FRONTEND_MESSAGE_EVENT = 'frontend_message' as const
