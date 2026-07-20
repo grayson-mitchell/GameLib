@@ -1,0 +1,27 @@
+{
+  "interface": "SteamFriends018",
+  "ordinal": 2,
+  "sdkVersion": "pinned-2026-07-18-rlabrecque-SteamworksSDK-master",
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetPersonaName",
+      "params": [],
+      "returns": "const char*"
+    },
+    {
+      "slot": 1,
+      "name": "SetPersonaNameTest_TESTONLY",
+      "params": [{ "name": "pchPersonaName", "type": "const char*" }],
+      "returns": "bool",
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-pointer-param ret N computation (D-09/Pitfall 3)."
+    },
+    {
+      "slot": 2,
+      "name": "GetSmallFriendsGroupIcon_TESTONLY",
+      "params": [{ "name": "friendsGroupID", "type": "int32" }],
+      "returns": "int32",
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-4-byte-param, register-return case (D-09/Pitfall 3)."
+    }
+  ]
+}

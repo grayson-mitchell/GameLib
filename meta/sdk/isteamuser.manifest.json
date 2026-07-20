@@ -1,0 +1,55 @@
+{
+  "interface": "SteamUser023",
+  "ordinal": 1,
+  "sdkVersion": "pinned-2026-07-18-rlabrecque-SteamworksSDK-master",
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetHSteamUser",
+      "params": [],
+      "returns": "HSteamUser"
+    },
+    {
+      "slot": 1,
+      "name": "BLoggedOn",
+      "params": [],
+      "returns": "bool"
+    },
+    {
+      "slot": 2,
+      "name": "GetSteamID",
+      "params": [],
+      "returns": "CSteamID"
+    },
+    {
+      "slot": 3,
+      "name": "BSetDurationControlOnlineState",
+      "params": [{ "name": "eNewState", "type": "int32" }],
+      "returns": "bool"
+    },
+    {
+      "slot": 4,
+      "name": "SetTwoIntTest_TESTONLY",
+      "params": [
+        { "name": "a", "type": "int32" },
+        { "name": "b", "type": "int32" }
+      ],
+      "returns": "void",
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exists solely to exercise the generator's two-4-byte-param ret N computation (D-09/Pitfall 3)."
+    },
+    {
+      "slot": 5,
+      "name": "GetVoiceOptimalSampleRate",
+      "params": [],
+      "returns": "uint32"
+    },
+    {
+      "slot": 6,
+      "name": "GetUserStatsSummary_TESTONLY",
+      "params": [],
+      "returns": "UserStatsSummary_t",
+      "structSize": 16,
+      "note": "SRET EXERCISE ONLY -- synthetic slot, NOT a real Steamworks method. Exists solely to exercise the generator's hidden-return-pointer (sret) marshaling for struct returns > 8 bytes (D-09/Pitfall 3)."
+    }
+  ]
+}
