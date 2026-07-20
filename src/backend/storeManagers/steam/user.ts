@@ -646,10 +646,20 @@ export class SteamUser {
     } catch (err) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const e = err as any
-      const details =
-        e?.purchaseResultDetails ?? SteamUserLib.EPurchaseResult.Unknown
-      const packageList = e?.packageList ?? {}
-      return this.classifyPurchaseResult(store, details, packageList)
+      // WR-01: Only a rejection carrying a NUMERIC EPurchaseResult is a genuine
+      // Steam purchase verdict. A transport/timeout/unexpected failure (e.g. the
+      // 90s internal timeout in steam-user's redeemKey, or a mid-call CM
+      // disconnect) carries no purchaseResultDetails — classifying THAT as
+      // Unknown -> 'invalid' wrongly tells the user a valid key "doesn't look
+      // right". Map it to the generic 'error' outcome (connectivity copy).
+      if (typeof e?.purchaseResultDetails !== 'number') {
+        return { store, outcome: 'error', message: 'redeem-failed' }
+      }
+      return this.classifyPurchaseResult(
+        store,
+        e.purchaseResultDetails,
+        e.packageList ?? {}
+      )
     }
   }
 

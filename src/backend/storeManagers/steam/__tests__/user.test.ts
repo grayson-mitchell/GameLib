@@ -1069,13 +1069,32 @@ describe('SteamUser', () => {
       }
     )
 
-    test('rejected Error with no purchaseResultDetails falls back to Unknown -> invalid', async () => {
+    // WR-01: a rejection with NO purchaseResultDetails is a transport/timeout/
+    // unexpected failure, NOT a purchase verdict. It must map to 'error' (the
+    // connectivity copy) rather than 'invalid' — otherwise a network drop while
+    // redeeming a valid key wrongly tells the user the key "doesn't look right".
+    test('rejected Error with no purchaseResultDetails -> transport failure classified as "error"', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
       const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
-      expect(result.outcome).toBe('invalid')
+      expect(result.outcome).toBe('error')
+      expect(result.message).toBe('redeem-failed')
+    })
+
+    // WR-01: a non-numeric purchaseResultDetails is also not a genuine
+    // EPurchaseResult verdict — treat it as a transport failure, not 'invalid'.
+    test('rejected Error with non-numeric purchaseResultDetails -> "error"', async () => {
+      const err = Object.assign(new Error('weird'), {
+        purchaseResultDetails: 'not-a-number'
+      })
+      mockSteamUserInstance.redeemKey.mockRejectedValue(err)
+
+      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+
+      expect(result.store).toBe('steam')
+      expect(result.outcome).toBe('error')
     })
 
     test('not connected (ensureConnected false): returns outcome "error" and never calls client.redeemKey', async () => {
