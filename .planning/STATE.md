@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-07-PLAN.md
-last_updated: "2026-07-20T08:46:22.472Z"
+stopped_at: Completed 24-08-PLAN.md
+last_updated: "2026-07-20T09:42:45.692Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-07-20
 
@@ -184,6 +184,7 @@ Other open native-install phases:
 | Phase 24 P05 | ~20min | 2 tasks | 5 files |
 | Phase 24 P06 | 35min | 3 tasks | 5 files |
 | Phase 24 P07 | 35min | 2 tasks | 7 files |
+| Phase 24 P08 | 45min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -314,6 +315,9 @@ Recent decisions affecting current work:
 - [Phase 24]: Phase 24-07: pinned zig 0.16.0 for aarch64-macos (verified live against ziglang.org/download/index.json); zig lands in .build-tools/zig, never public/bin
 - [Phase 24]: Phase 24-07: buildSteamBridgeShims.ts independently reconstructs public/bin/${arch}/darwin paths instead of importing paths.ts (which imports Electron's app at load time and would crash under plain node)
 - [Phase 24]: Phase 24-07: zig cc -shared requires an explicit -lws2_32 link flag for the shim's winsock2.h usage -- confirmed by running the real compile gate
+- [Phase 24]: isBridgeEligible() composed as the FIRST sub-branch inside install()/launch()/uninstall()'s isBottleEligible() block, ahead of the Phase 17 isBottleReady() gate (BLOCKER 1)
+- [Phase 24]: Bridge install/uninstall completion signaled by a direct is_installed flip, not the shared ACF poller -- library.ts's AcfSource has no bridge-bottle variant
+- [Phase 24]: markBridgeFailedThisSession(appId) + isBridgeEligible() session-set check (finding #3) so a D-05 fallback re-invocation skips the failing bridge
 
 ### Pending Todos
 
@@ -380,8 +384,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T08:46:22.466Z
-Stopped at: Completed 24-07-PLAN.md
+Last session: 2026-07-20T09:42:45.686Z
+Stopped at: Completed 24-08-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
