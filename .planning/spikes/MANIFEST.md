@@ -216,12 +216,21 @@ manager, dialog, launcher.
 
 - **Divorce accepted.** Spikes assume a hard fork; loss of upstream Heroic merge is a chosen cost,
   not a blocker to design around. *(User decision 2026-07-20.)*
+- **Target shape = Tauri/Rust shell + Rust platform seam + bundled Node sidecar for business logic.**
+  NOT a Rust rewrite. 80% of backend files are Electron-free and port to a Node sidecar as-is. *(009)*
+- **Keep `steam-user` as a Node sidecar; do NOT rewrite the Steam CM/depot stack in Rust.** The
+  differentiator (spikes 001/002/003) already runs headless (0 electron imports, loads in 341 ms).
+  The only mature Rust crate (`steam-vent` 0.5.0) is auth-only + experimental — no PICS/depot/CDN.
+  A Rust port re-opens spike 002's byte-identical depot pipeline for no near-term gain. *(010)*
+- **The platform seam is the real cost, and it is bounded & enumerated:** replace `electron-store`
+  (20 files), re-plumb all **220 IPC endpoints** (158 handlers + 62 listeners) onto a sidecar/Tauri
+  protocol, and port the 44-file lifecycle/dialog/tray/updater/protocol cluster. *(009)*
 
 ### Spikes (Idea C)
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 009 | node-backend-headless-sidecar | standard | Given a real backend slice, when run under plain node with electron stubbed (as a Tauri sidecar forces), then observe which Electron-main APIs it hard-depends on — bounding the port | ⚠ PARTIAL (sidecar viable: 80% of files electron-free, but electron-store + 220 IPC endpoints + 44-file platform seam must be rewritten) | tauri, rust, backend, electron, sidecar |
-| 010 | steam-user-rust-vs-sidecar | comparison | Given Steam CM auth + owned-apps + depot download, when tested Rust-native (steam-vent) vs Node sidecar, then determine if the Steam differentiator can go Rust or must stay Node | PENDING | tauri, rust, steam, steam-user, sidecar |
+| 010 | steam-user-rust-vs-sidecar | comparison | Given Steam CM auth + owned-apps + depot download, when tested Rust-native (steam-vent) vs Node sidecar, then determine if the Steam differentiator can go Rust or must stay Node | ✓ WINNER = Node sidecar (steam-user runs headless in 341ms, 0 electron imports; steam-vent 0.5.0 is auth-only + experimental, no depot/CDN) | tauri, rust, steam, steam-user, sidecar |
 | 011 | electron-api-parity-in-tauri | standard | Given the Electron APIs 009 surfaces, when mapped to Tauri v2 plugins, then build a minimal Tauri app proving the riskiest equivalents (encrypted token store; steam:// launch) work | PENDING | tauri, rust, electron-api, parity |
 | 012 | react-frontend-under-tauri | standard | Given GameLib's React renderer + preload bridge, when hosted in a Tauri v2 webview with the bridge shimmed, then the real UI renders and one round-trip IPC call succeeds | PENDING | tauri, rust, react, frontend, ipc |
