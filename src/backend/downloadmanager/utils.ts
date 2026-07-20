@@ -1,4 +1,3 @@
-import { libraryManagerMap } from 'backend/storeManagers'
 import { logError, LogPrefix, logWarning } from 'backend/logger'
 import {
   downloadFile,
@@ -31,6 +30,10 @@ async function installQueueElement(params: InstallParams): Promise<{
     build,
     branch
   } = params
+  // Imported lazily to break a circular dependency (downloadmanager/utils.ts
+  // <-> storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('backend/storeManagers')
   const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
 
   if (!isOnline()) {
@@ -148,6 +151,8 @@ async function updateQueueElement(params: InstallParams): Promise<{
   error?: string | undefined
 }> {
   const { appName, runner } = params
+  // Lazy import — see the load-bearing comment in installQueueElement above.
+  const { libraryManagerMap } = await import('backend/storeManagers')
   const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
 
   if (!isOnline()) {

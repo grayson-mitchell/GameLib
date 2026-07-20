@@ -1,9 +1,12 @@
-import { libraryManagerMap } from '../../storeManagers'
 import { spawnSync } from 'node:child_process'
 import { getCometBin } from 'backend/utils'
 import { join } from 'path'
 
 async function getLegendaryVersion(): Promise<string> {
+  // Imported lazily to break a circular dependency (helperBinaries/index.ts
+  // <-> storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('../../storeManagers')
   const { stdout, error, abort } = await libraryManagerMap[
     'legendary'
   ].runRunnerCommand(
@@ -29,6 +32,8 @@ async function getLegendaryVersion(): Promise<string> {
 }
 
 async function getGogdlVersion(): Promise<string> {
+  // Lazy import — see the load-bearing comment on getLegendaryVersion() above.
+  const { libraryManagerMap } = await import('../../storeManagers')
   const { stdout, error } = await libraryManagerMap['gog'].runRunnerCommand(
     ['--version'],
     {
@@ -51,6 +56,8 @@ async function getCometVersion(): Promise<string> {
 }
 
 async function getNileVersion(): Promise<string> {
+  // Lazy import — see the load-bearing comment on getLegendaryVersion() above.
+  const { libraryManagerMap } = await import('../../storeManagers')
   const { stdout, error } = await libraryManagerMap['nile'].runRunnerCommand(
     ['--version'],
     {

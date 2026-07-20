@@ -54,7 +54,6 @@ import shlex from 'shlex'
 import { isOnline } from './online_monitor'
 import { showDialogBoxModalAuto } from './dialog/dialog'
 import { legendarySetup } from './storeManagers/legendary/setup'
-import { libraryManagerMap } from 'backend/storeManagers'
 import * as VDF from '@node-steam/vdf'
 import { readFileSync, writeFileSync } from 'fs'
 import { LegendaryCommand } from './storeManagers/legendary/commands'
@@ -111,6 +110,10 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   skipVersionCheck,
   args
 }) => {
+  // Imported lazily to break a circular dependency (launcher.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('backend/storeManagers')
   const game = libraryManagerMap[runner].getGame(appName)
   const gameInfo = game.getGameInfo()
 
@@ -538,6 +541,8 @@ async function prepareLaunch(
     'Launching',
     `"${gameInfo.title}" (${gameInfo.runner})`
   ])
+  // Lazy import — see the load-bearing comment in launchEventCallback above.
+  const { libraryManagerMap } = await import('backend/storeManagers')
   const native = libraryManagerMap[gameInfo.runner]
     .getGame(gameInfo.app_name)
     .isNative()
@@ -1946,8 +1951,19 @@ function getRunnerCallWithoutCredentials(
   env: Record<string, string> | NodeJS.ProcessEnv = {},
   runnerPath: string
 ): string {
-  if (!Array.isArray(command))
+  if (!Array.isArray(command)) {
+    // Required lazily (synchronous CJS require) to break a circular
+    // dependency (launcher.ts <-> storeManagers/index.ts) — see the
+    // load-bearing comment on getGame() in backend/utils.ts. This function
+    // is synchronous, so `await import()` isn't an option here.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { libraryManagerMap } = require('backend/storeManagers') as {
+      libraryManagerMap: {
+        legendary: { commandToArgsArray: (c: LegendaryCommand) => string[] }
+      }
+    }
     command = libraryManagerMap['legendary'].commandToArgsArray(command)
+  }
 
   const modifiedCommand = [...command]
   // Redact sensitive arguments (Authorization Code for Legendary, token for GOGDL)

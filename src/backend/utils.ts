@@ -49,7 +49,6 @@ import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
 import { validWine, runWineCommand } from './launcher'
-import { libraryManagerMap } from 'backend/storeManagers'
 import {
   installWineVersion,
   updateWineVersionInfos,
@@ -89,6 +88,18 @@ import type { Game } from 'common/types/game_manager'
 const execAsync = promisify(exec)
 
 function getGame(id: string, runner: Runner): Game {
+  // Required lazily (synchronous CJS require, not a top-level import) to
+  // break a circular dependency (utils.ts <-> storeManagers/index.ts) — see
+  // the load-bearing comment in storeManagers/gog/user.ts. getGame() is a
+  // widely-used SYNCHRONOUS export (shortcuts/tools/wiki_game_info
+  // ipc_handlers etc. all call it expecting a Game, not a Promise<Game>), so
+  // an async `import()` here isn't an option -- require() defers resolution
+  // to call time exactly like `import()` would, without changing the
+  // function's signature.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { libraryManagerMap } = require('./storeManagers') as {
+    libraryManagerMap: Record<Runner, { getGame: (id: string) => Game }>
+  }
   return libraryManagerMap[runner].getGame(id)
 }
 
@@ -381,10 +392,16 @@ function clearCache(
     installStore.clear()
     libraryStore.clear()
     gameInfoStore.clear()
-    libraryManagerMap['legendary'].runRunnerCommand(
-      { subcommand: 'cleanup' },
-      { abortId: 'legandary-cleanup' }
-    )
+    // Imported lazily to break a circular dependency (utils.ts <->
+    // storeManagers/index.ts) — see the load-bearing comment in
+    // storeManagers/gog/user.ts. Fire-and-forget, matching the previous
+    // (also unawaited) synchronous call.
+    void import('./storeManagers').then(({ libraryManagerMap }) => {
+      libraryManagerMap['legendary'].runRunnerCommand(
+        { subcommand: 'cleanup' },
+        { abortId: 'legandary-cleanup' }
+      )
+    })
   }
   if (library === 'nile' || !library) {
     nileInstallStore.clear()

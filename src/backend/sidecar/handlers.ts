@@ -11,8 +11,8 @@
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) because 'health' is a new placeholder channel, not one of
- * the existing `AsyncIPCFunctions` entries — and no file under
- * src/backend/sidecar may import from 'electron' (Task 1 acceptance
+ * the existing `AsyncIPCFunctions` entries — and no file under this
+ * directory may import the real electron module (Task 1 acceptance
  * criterion), which `backend/ipc.ts` itself does.
  */
 

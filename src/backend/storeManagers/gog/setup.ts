@@ -15,7 +15,6 @@ import {
   logWarning
 } from 'backend/logger'
 import { getWinePath, runWineCommand, verifyWinePrefix } from '../../launcher'
-import { libraryManagerMap } from '..'
 import { readFile } from 'node:fs/promises'
 import shlex from 'shlex'
 import {
@@ -78,6 +77,10 @@ async function setup(
   installInfo?: InstalledInfo,
   installRedist = true
 ): Promise<void> {
+  // Imported lazily to break a circular dependency (gog/setup.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('..')
   const gameInfo = libraryManagerMap['gog'].getGameInfo(appName)
   if (installInfo && gameInfo) {
     gameInfo.install = installInfo

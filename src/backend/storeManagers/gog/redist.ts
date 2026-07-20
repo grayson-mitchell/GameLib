@@ -10,13 +10,12 @@ import {
   GOGv1Manifest,
   GOGv2Manifest
 } from 'common/types/gog'
-import { libraryManagerMap } from '..'
 import { GlobalConfig } from 'backend/config'
 import {
   addToQueue,
   getQueueInformation
 } from 'backend/downloadmanager/downloadqueue'
-import { DMQueueElement } from 'common/types'
+import { DMQueueElement, GameInfo } from 'common/types'
 import { GOGUser } from './user'
 import { isOnline } from 'backend/online_monitor'
 import { axiosClient } from 'backend/utils'
@@ -112,6 +111,16 @@ async function pushRedistUpdateToQueue() {
 }
 
 export function createRedistDMQueueElement(): DMQueueElement {
+  // Required lazily (synchronous CJS require, not a top-level import) to
+  // break a circular dependency (gog/redist.ts <-> storeManagers/index.ts)
+  // — see the load-bearing comment on getGame() in backend/utils.ts. This
+  // function is synchronous, so `await import()` isn't an option here.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { libraryManagerMap } = require('..') as {
+    libraryManagerMap: {
+      gog: { getGame: (id: string) => { getGameInfo: () => GameInfo } }
+    }
+  }
   const gameInfo = libraryManagerMap['gog'].getGame('gog-redist').getGameInfo()
   const newElement: DMQueueElement = {
     params: {
@@ -201,6 +210,10 @@ export async function updateRedist(redistToSync: string[]): Promise<{
   })
 
   const redistLogWriter = new LogWriter(logPath, false, false)
+  // Imported lazily to break a circular dependency (gog/redist.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('..')
   const res = await libraryManagerMap['gog'].runRunnerCommand(commandParts, {
     abortId: 'gog-redist',
     logMessagePrefix: 'GOG REDIST:',

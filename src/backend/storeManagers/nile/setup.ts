@@ -6,7 +6,6 @@ import {
   logWarning,
   getRunnerLogWriter
 } from 'backend/logger'
-import { libraryManagerMap } from '..'
 import { GameConfig } from 'backend/game_config'
 import {
   checkWineBeforeLaunch,
@@ -23,6 +22,10 @@ export default async function setup(
   appName: string,
   installedPath?: string
 ): Promise<void> {
+  // Imported lazily to break a circular dependency (nile/setup.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('..')
   const gameInfo = libraryManagerMap['nile'].getGameInfo(appName)
   if (!gameInfo) {
     logError([`Could not find game info for ${appName}. Skipping setup`])

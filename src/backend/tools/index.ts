@@ -46,7 +46,6 @@ import {
 } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
 import { createAbortController } from '../utils/aborthandler/aborthandler'
-import { libraryManagerMap } from '../storeManagers'
 import { sendFrontendMessage } from '../ipc'
 import {
   DAYS,
@@ -562,6 +561,10 @@ export const Winetricks = {
     args: string[],
     returnOutput = false
   ) => {
+    // Imported lazily to break a circular dependency (tools/index.ts <->
+    // storeManagers/index.ts) — see the load-bearing comment in
+    // storeManagers/gog/user.ts.
+    const { libraryManagerMap } = await import('../storeManagers')
     const gameSettings = await libraryManagerMap[runner]
       .getGame(appName)
       .getSettings()
@@ -889,6 +892,9 @@ export async function runWineCommandOnGame(
     return { stdout: '', stderr: '' }
   }
 
+  // Lazy import — see the load-bearing comment on the sibling call in
+  // Winetricks.runWithArgs above.
+  const { libraryManagerMap } = await import('../storeManagers')
   const game = libraryManagerMap[runner].getGame(appName)
   if (game.isNative()) {
     logError('runWineCommand called on native game!', LogPrefix.Gog)

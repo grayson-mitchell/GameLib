@@ -6,7 +6,6 @@ import { join } from 'path'
 import { logError, LogPrefix, logWarning } from 'backend/logger'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { sendGameStatusUpdate } from 'backend/utils'
-import { libraryManagerMap } from '../..'
 import { LegendaryCommand } from '../commands'
 import { ValidWinePrefix } from '../commands/base'
 import { Path } from 'backend/schemas'
@@ -74,6 +73,10 @@ async function updateInfo() {
     return
   }
 
+  // Imported lazily to break a circular dependency (eos_overlay.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('../..')
   await libraryManagerMap['legendary'].runRunnerCommand(
     { subcommand: 'status' },
     {
@@ -93,6 +96,9 @@ async function install() {
     runner: 'legendary',
     status: isInstalled() ? 'updating' : 'installing'
   })
+
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
 
   let downloadSize = 0
   // Run download without -y to get the install size
@@ -168,6 +174,8 @@ async function remove(): Promise<boolean> {
     return false
   }
 
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
   await libraryManagerMap['legendary'].runRunnerCommand(
     {
       '-y': true,
@@ -209,6 +217,8 @@ async function enable(
   }
   if (prefix) command['--prefix'] = prefix
 
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
   await libraryManagerMap['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     logMessagePrefix: 'Enabling EOS Overlay'
@@ -228,6 +238,8 @@ async function disable(appName: string) {
   }
   if (prefix) command['--prefix'] = prefix
 
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
   await libraryManagerMap['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     logMessagePrefix: 'Disabling EOS Overlay'
@@ -255,6 +267,8 @@ async function isEnabled(appName?: string): Promise<boolean> {
   }
   if (prefix) command['--prefix'] = prefix
 
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
   await libraryManagerMap['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     onOutput: (data: string) => {
@@ -280,6 +294,8 @@ async function getWinePrefixFolder(
 ): Promise<ValidWinePrefix | null | false> {
   if (!isLinux || !appName) return null
 
+  // Lazy import — see the load-bearing comment on updateInfo() above.
+  const { libraryManagerMap } = await import('../..')
   const { winePrefix, wineVersion } = await libraryManagerMap[runner]
     .getGame(appName)
     .getSettings()

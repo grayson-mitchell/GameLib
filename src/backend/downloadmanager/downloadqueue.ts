@@ -1,8 +1,13 @@
-import { libraryManagerMap } from 'backend/storeManagers'
 import { TypeCheckedStoreBackend } from './../electron_store'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
-import { DMQueueElement, DMStatus, DownloadManagerState } from 'common/types'
+import {
+  DMQueueElement,
+  DMStatus,
+  DownloadManagerState,
+  Runner
+} from 'common/types'
+import type { LibraryManager } from 'common/types/game_manager'
 import { installQueueElement, updateQueueElement } from './utils'
 import { sendFrontendMessage } from '../ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
@@ -18,6 +23,23 @@ const downloadManager = new TypeCheckedStoreBackend('downloadManager', {
   cwd: 'store',
   name: 'download-manager'
 })
+
+/**
+ * Required lazily (synchronous CJS require, not a top-level import) to break
+ * a circular dependency (downloadqueue.ts <-> storeManagers/index.ts) — see
+ * the load-bearing comment in storeManagers/gog/user.ts. Shared by this
+ * file's synchronous functions (cancelCurrentDownload/stopCurrentDownload/
+ * processNotification), which can't use `await import()`; the async
+ * functions below use `await import('backend/storeManagers')` directly
+ * instead.
+ */
+function getLibraryManagerMapSync(): Record<Runner, LibraryManager> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const required = require('backend/storeManagers') as {
+    libraryManagerMap: Record<Runner, LibraryManager>
+  }
+  return required.libraryManagerMap
+}
 
 /*
 #### Private ####
@@ -192,6 +214,10 @@ async function addToQueue(element: DMQueueElement) {
   if (elementIndex >= 0) {
     elements[elementIndex] = element
   } else {
+    // Imported lazily to break a circular dependency (downloadqueue.ts <->
+    // storeManagers/index.ts) — see the load-bearing comment in
+    // storeManagers/gog/user.ts.
+    const { libraryManagerMap } = await import('backend/storeManagers')
     const gameInfo = libraryManagerMap[element.params.runner].getGameInfo(
       element.params.appName
     )
@@ -333,8 +359,8 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
 
     if (removeDownloaded) {
       const { appName, runner } = currentElement.params
-      const { folder_name } = libraryManagerMap[runner]
-        .getGame(appName)
+      const { folder_name } = getLibraryManagerMapSync()
+        [runner].getGame(appName)
         .getGameInfo()
       if (folder_name) {
         removeFolder(currentElement.params.path, folder_name)
@@ -365,7 +391,7 @@ function resumeCurrentDownload() {
 function stopCurrentDownload() {
   const { appName, runner } = currentElement!.params
   callAbortController(appName)
-  libraryManagerMap[runner].getGame(appName).stop(false)
+  getLibraryManagerMapSync()[runner].getGame(appName).stop(false)
 }
 
 // notify the user based on the status of the element and the status of the queue
@@ -377,8 +403,8 @@ function processNotification(element: DMQueueElement, status: DMStatus) {
   ) {
     return
   }
-  const { title } = libraryManagerMap[element.params.runner]
-    .getGame(element.params.appName)
+  const { title } = getLibraryManagerMapSync()
+    [element.params.runner].getGame(element.params.appName)
     .getGameInfo()
 
   if (status === 'abort') {

@@ -5,7 +5,6 @@ import { GOGLoginData } from 'common/types'
 import { configStore } from './electronStores'
 import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
-import { libraryManagerMap } from '../index'
 import { clearCache } from 'backend/utils'
 import { app } from 'electron'
 import { gogdlAuthConfig } from './constants'
@@ -34,6 +33,14 @@ export class GOGUser {
     logInfo('Logging using GOG credentials', LogPrefix.Gog)
 
     // Gets token from GOG basaed on authorization code
+    // Imported lazily to break a circular dependency (gog/user.ts <->
+    // storeManagers/index.ts): 'index' eagerly constructs every store
+    // manager at module scope, including `new SteamLibraryManager()`, which
+    // faults with "is not a constructor" whenever anything importing this
+    // file is itself required BEFORE storeManagers/index.ts has finished
+    // resolving (e.g. a headless sidecar requiring
+    // backend/storeManagers/steam/library.ts directly — Phase 27 Plan 02).
+    const { libraryManagerMap } = await import('../index')
     const { stdout } = await libraryManagerMap['gog'].runRunnerCommand(
       ['auth', '--code', code],
       {
@@ -112,6 +119,9 @@ export class GOGUser {
       })
       return
     }
+    // Lazy import — see the load-bearing comment on the sibling call in
+    // login() above (breaks the gog/user.ts <-> storeManagers/index.ts cycle).
+    const { libraryManagerMap } = await import('../index')
     const { stdout } = await libraryManagerMap['gog'].runRunnerCommand(
       ['auth'],
       {

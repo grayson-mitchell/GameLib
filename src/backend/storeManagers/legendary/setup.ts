@@ -1,5 +1,4 @@
 import { join } from 'path'
-import { libraryManagerMap } from '..'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { enable, getStatus, isEnabled } from './eos_overlay/eos_overlay'
 import { split } from 'shlex'
@@ -11,6 +10,10 @@ import { isLinux } from 'backend/constants/environment'
 import LogWriter from 'backend/logger/log_writer'
 
 export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
+  // Imported lazily to break a circular dependency (legendary/setup.ts <->
+  // storeManagers/index.ts) — see the load-bearing comment in
+  // storeManagers/gog/user.ts.
+  const { libraryManagerMap } = await import('..')
   const gameInfo = libraryManagerMap['legendary'].getGame(appName).getGameInfo()
   if (!gameInfo) {
     return
