@@ -57,6 +57,7 @@ import {
   provisionBottle
 } from './storeManagers/steam/bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './storeManagers/steam/constants'
+import { shutdownBridgeHelper } from './storeManagers/steam/bridge/helperProcess'
 import { registerHumbleIpcHandlers } from './humble/ipc_handler'
 import { runHumbleValidation } from './humble/validation'
 import { HumbleLibrary } from './humble/library'
@@ -686,6 +687,10 @@ app.on('window-all-closed', () => {
 // window-all-closed does not quit.
 app.on('before-quit', () => {
   stopRunningPoll()
+  // Phase 24 Plan 06 (finding #8): tear down the shared, long-lived native
+  // Steam-bridge helper so it never orphans on quit. No-op when no bridge
+  // game was launched this session (helper never spawned).
+  shutdownBridgeHelper()
 })
 
 app.on('open-url', (event, url) => {
