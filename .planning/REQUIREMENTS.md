@@ -199,6 +199,20 @@ Phase 26 adds manual Steam CD-key/gift redemption to GameLib: a login-gated entr
 - [x] **REQ-26-05**: Outcome handling (non-success) — already-owned, invalid/bad-key, and rate-limited/cooldown results map to distinct user-facing messages, never collapsed into one generic "failed."
 - [x] **REQ-26-06**: Store-aware-ready UI (forward-compat) — the redeem surface and data flow carry a `store` parameter/field so a future store can be added without a rewrite; only the Steam path is wired today (no multi-store or format-based auto-routing).
 
+## Phase 24 Requirements — macOS Native Steam Bridge (Out-of-Process steam_api Proxy)
+
+Phase 24 ships an out-of-process `steam_api` bridge wired into GameLib's real macOS launch path: a bottle-side PE32 `steam_api.dll` shim marshals Steamworks calls over localhost TCP to a native arm64 helper that loads the real `libsteam_api.dylib` and proxies the one signed-in native Mac Steam, so allowlisted Windows-only Steam games run and play single-player against that single client. Minted 2026-07-20 during `/gsd-execute-phase 24` from 24-SPEC.md R1–R7 (retroactively recorded here — the traceability rows were not written at plan time). Each maps to Phase 24. Depends on the Phase 17/22 bottled-Steam infrastructure (retained as fallback) and Phase 21/23 depot-download engine (reused for bridge-game install).
+
+### macOS Native Steam Bridge (Phase 24)
+
+- [x] **REQ-24-01**: C++ vtable + flat shim generator — a generator produces the bottle-side `steam_api.dll` shim from a pinned Steamworks SDK version (GameLib-authored manifest, D-09), covering both the flat `SteamAPI_*` exports and the C++ interface vtables, explicitly `__thiscall`, with correct `ret N` stack cleanup and hidden-return-pointer (sret) handling for struct returns >8 bytes. — DONE 2026-07-20: `meta/gen_vtables.ts` + `meta/sdk/*.manifest.json`, 30 passing unit tests, committed generated `.c`/`.def` source (D-07); see 24-01-SUMMARY.md. Runtime ABI compile-gate proof deferred to Plan 24-07/24-10.
+- [ ] **REQ-24-02**: Native host helper with persistent channel — a native arm64 helper loads `libsteam_api.dylib`, initializes once against the running Mac Steam, and serves marshaled requests over a persistent loopback channel.
+- [ ] **REQ-24-03**: Per-bottle shim auto-generation — the correct `steam_api.dll` shim is produced and placed into a bridge-eligible game's bottle automatically as part of bottle setup, exporting exactly the symbols that game imports.
+- [ ] **REQ-24-04**: Allowlist-based routing — GameLib decides bridge-vs-fallback per title using a curated allowlist of known-good AppIDs (D-01/D-02).
+- [ ] **REQ-24-05**: Bundled, in-app packaging — the native helper ships inside the packaged GameLib app and functions from a packaged build on the developer's own Apple-Silicon Mac.
+- [ ] **REQ-24-06**: Single-player launch parity for the acceptance set — Avernum 4 and Hoard launch through GameLib via the bridge and reach playable single-player with the real SteamID64 + persona, with no Windows Steam client in the bottle.
+- [ ] **REQ-24-07**: Clean fallback + coexistence with Phase 22 — the bottled-Steam path remains fully functional for non-allowlisted titles; a bridge failure for an allowlisted title surfaces a clear, non-silent error/fallback (D-05/D-11).
+
 ## Future Requirements
 
 Deferred beyond v0.2. Tracked but not in the current roadmap.
@@ -324,6 +338,13 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-26-04 | Phase 26 | Complete |
 | REQ-26-05 | Phase 26 | Complete |
 | REQ-26-06 | Phase 26 | Complete |
+| REQ-24-01 | Phase 24 | Complete (2026-07-20, Plan 24-01) |
+| REQ-24-02 | Phase 24 | Pending |
+| REQ-24-03 | Phase 24 | Pending |
+| REQ-24-04 | Phase 24 | Pending |
+| REQ-24-05 | Phase 24 | Pending |
+| REQ-24-06 | Phase 24 | Pending |
+| REQ-24-07 | Phase 24 | Pending |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -350,6 +371,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 - Mapped to phases: 6 (Phase 26)
 - Unmapped: 0 ✓
 
+- Phase 24 requirements: 7 total (REQ-24-01..07, minted from 24-SPEC.md R1–R7; traceability recorded 2026-07-20 during /gsd-execute-phase 24)
+- Mapped to phases: 7 (Phase 24)
+- Unmapped: 0 ✓
+
 **D-XX -> REQ mapping (Phase 23):** D-01 -> REQ-23-01 . D-02 -> REQ-23-02 . D-03 -> REQ-23-03 . D-04 -> REQ-23-04 . D-05 -> REQ-23-05 . D-06 -> REQ-23-06 . D-07 -> REQ-23-07
 
 **D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
@@ -359,4 +384,5 @@ Which phases cover which requirements. Populated during roadmap creation.
 *Last updated: 2026-07-05 — v0.3 traceability appended during roadmap creation (Phases 10–15)*
 *Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*
 *Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*
+*Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 marked Complete (Plan 24-01)*
 *Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: milestone_complete
-stopped_at: Milestone complete (Phase 26 was final phase)
-last_updated: 2026-07-20T03:36:37.727Z
+status: executing
+stopped_at: Completed 24-01-PLAN.md
+last_updated: "2026-07-20T04:47:58.622Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 122
+  completed_plans: 6
   percent: 20
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Milestone complete
+**Current focus:** Phase 24 — macos-native-steam-bridge-out-of-process-steam-api-proxy
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Milestone complete
+Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
+Plan: 2 of 10
+Status: Ready to execute
 Last activity: 2026-07-20
 
 Other open native-install phases:
@@ -177,6 +177,7 @@ Other open native-install phases:
 | Phase 26 P03 | 8min | 1 tasks | 3 files |
 | Phase 26 P04 | 25min | 2 tasks | 7 files |
 | Phase 26 P05 | ~10min | 2 tasks | 2 files |
+| Phase 24 P01 | 25min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -294,6 +295,8 @@ Recent decisions affecting current work:
 - [Phase 26]: [Phase 26-04]: Used ContextProvider's refreshLibrary({ library: 'steam' }) context wrapper instead of window.api.refreshLibrary — the plan's interface note had the wrong call target; window.api.refreshLibrary takes a bare Runner string, not an options object, and the context wrapper is what actually updates steam.library in React state
 - [Phase 26]: [Phase 26-04]: Non-success redeem outcomes keep the key input visible/editable (typing clears the outcome) rather than hiding the form, so users can retry inline without closing the modal (D-06/D-08)
 - [Phase 26-05]: Direct-invocation Jest harness for SidebarLinks (mock react/react-router-dom/react-i18next, stub SidebarItem/QuitButton/frontend-helpers) rather than jsdom — No jsdom/react-test-renderer installed; matches HumbleOriginInfo.test.tsx/StoreSearchScreen.test.tsx precedent
+- [Phase 24]: [Phase 24-01] R1 vtable generator: test file placed at meta/__tests__/gen_vtables.test.ts (not the frontmatter's literal path) to match meta/jest.config.js's testMatch and 24-PATTERNS.md's stated analog location
+- [Phase 24]: [Phase 24-01] Flat SteamAPI_* export set is a fixed acceptance-set superset constant (FLAT_EXPORTS_SUPERSET), not manifest-derived, per R3's acknowledged divergence (review finding #9); builtBridgeShimPath exported from paths.ts as the BLOCKER-2 shared bundled-shim-location contract for 24-05/24-07
 
 ### Pending Todos
 
@@ -359,8 +362,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-20T03:12:34.215Z
-Stopped at: Completed 26-05-PLAN.md
+Last session: 2026-07-20T04:47:58.616Z
+Stopped at: Completed 24-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
