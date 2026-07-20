@@ -186,6 +186,19 @@ Phase 25 raises Steam native-depot download throughput toward Steam-client parit
 
 **Deferred (not a Phase 25 requirement):** the optional CDN-auth phantom excision (`cdnAuth.ts`, ~611 lines, ~68 refs entangled in `fetchChunk`) is descoped to its own follow-up quick-task/phase. Rationale: it touches `fetchChunk`'s signature in the same place as MHOST-02's new param (RESEARCH Assumptions Log A3 flags the conflated-diff/bisect risk), it is inert dead code with zero behavior change for real hosts, and it is a separate tsc/lint/test unit (~15 `cdnAuth.test.ts` cases). Sequencing it after Phase 25 lands and is hardware-verified keeps the throughput fix's diff clean and bisectable.
 
+## Phase 26 Requirements — Steam Key Redemption
+
+Phase 26 adds manual Steam CD-key/gift redemption to GameLib: a login-gated entry point opens a modal that format-validates a key client-side, then calls a backend `SteamUser.redeemKey(store, key)` wrapper (over the authenticated CM session) via a `redeemSteamKey` IPC method, mapping each `EPurchaseResult` into a distinct user-facing outcome. Minted 2026-07-20 during `/gsd-plan-phase 26` from 26-SPEC.md REQ1–REQ6 (retroactively recorded here during `/gsd-execute-phase 26` — the traceability rows were not written at plan time). Each maps to Phase 26. Depends on the Phase 21/23 authenticated Steam session infrastructure.
+
+### Steam Key Redemption (Phase 26)
+
+- [x] **REQ-26-01**: A user-reachable, login-gated Steam key entry point — a "Redeem a Steam key" sidebar item shown only when a Steam session exists (`steam.username`), opening the manual key input dialog.
+- [x] **REQ-26-02**: A backend redeem wrapper + IPC — `SteamUser.redeemKey(store, key)` ensures the CM connection then redeems the key, exposed to the renderer via the `redeemSteamKey` IPC method, returning a `RedeemKeyResult` discriminated outcome + package info.
+- [x] **REQ-26-03**: Client-side format validation — `normalizeKey` + `isObviouslyMalformed` reject empty/whitespace and structurally-invalid input inline before any IPC/network call, without over-rejecting valid Steam keys.
+- [x] **REQ-26-04**: Outcome handling (success) — a success `EPurchaseResult` surfaces the redeemed package/game name and refreshes the Steam library so the game appears as owned without an app restart.
+- [x] **REQ-26-05**: Outcome handling (non-success) — already-owned, invalid/bad-key, and rate-limited/cooldown results map to distinct user-facing messages, never collapsed into one generic "failed."
+- [x] **REQ-26-06**: Store-aware-ready UI (forward-compat) — the redeem surface and data flow carry a `store` parameter/field so a future store can be added without a rewrite; only the Steam path is wired today (no multi-store or format-based auto-routing).
+
 ## Future Requirements
 
 Deferred beyond v0.2. Tracked but not in the current roadmap.
@@ -305,6 +318,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MHOST-02 | Phase 25 | Complete |
 | MHOST-03 | Phase 25 | Complete |
 | MHOST-04 | Phase 25 | Complete (hardware-verified 2026-07-19: hosts=3, err=0, ~10 MiB/s) |
+| REQ-26-01 | Phase 26 | Complete |
+| REQ-26-02 | Phase 26 | Complete |
+| REQ-26-03 | Phase 26 | Complete |
+| REQ-26-04 | Phase 26 | Complete |
+| REQ-26-05 | Phase 26 | Complete |
+| REQ-26-06 | Phase 26 | Complete |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -327,6 +346,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 - Mapped to phases: 4 (Phase 25)
 - Unmapped: 0 ✓
 
+- Phase 26 requirements: 6 total (REQ-26-01..06, minted from 26-SPEC.md REQ1–REQ6; traceability recorded 2026-07-20 during /gsd-execute-phase 26)
+- Mapped to phases: 6 (Phase 26)
+- Unmapped: 0 ✓
+
 **D-XX -> REQ mapping (Phase 23):** D-01 -> REQ-23-01 . D-02 -> REQ-23-02 . D-03 -> REQ-23-03 . D-04 -> REQ-23-04 . D-05 -> REQ-23-05 . D-06 -> REQ-23-06 . D-07 -> REQ-23-07
 
 **D-XX -> SNI mapping (Phase 21):** D-01/D-02/D-03 -> SNI-03 . D-04(write) -> SNI-02 . D-04/D-05/D-06/D-07 -> SNI-04 . D-08/D-09 -> SNI-05 . D-10/D-11 -> SNI-06 . D-12/D-13/D-14 -> SNI-07 . D-14(engine) -> SNI-01 . D-15 -> SNI-08
@@ -336,3 +359,4 @@ Which phases cover which requirements. Populated during roadmap creation.
 *Last updated: 2026-07-05 — v0.3 traceability appended during roadmap creation (Phases 10–15)*
 *Last updated: 2026-07-17 — Phase 23 (REQ-23-01..07) minted during /gsd-plan-phase 23 from D-01..D-07*
 *Last updated: 2026-07-19 — Phase 25 (MHOST-01..04) minted during /gsd-plan-phase 25 from ROADMAP goal + acceptance criteria*
+*Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*
