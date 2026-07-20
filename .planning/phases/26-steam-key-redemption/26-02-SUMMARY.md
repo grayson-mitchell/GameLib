@@ -116,3 +116,11 @@ None - no external service configuration required.
 ---
 *Phase: 26-steam-key-redemption*
 *Completed: 2026-07-20*
+
+## Self-Check: PASSED
+
+- FOUND: src/frontend/helpers/steamKeyValidation.ts
+- FOUND: src/frontend/helpers/__tests__/steamKeyValidation.test.ts
+- FOUND: .planning/phases/26-steam-key-redemption/26-02-SUMMARY.md
+- FOUND: commit a3fa3c0f
+- FOUND: commit aae5db68

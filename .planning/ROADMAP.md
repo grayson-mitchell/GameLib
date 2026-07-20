@@ -995,13 +995,13 @@ v0.7: 21 (depends on Phase 3 Steam ops + Phase 1 auth; de-risked by spikes 001+0
   3. **Auto-redeem revealed Humble keys** — chain reveal → redeem (Steam-platform rows only). See `.planning/seeds/humble-auto-redeem-into-steam.md`.
 
 **Requirements:** REQ-26-01 .. REQ-26-06 (minted 2026-07-20 from SPEC.md REQ1-REQ6: entry point / backend wrapper+IPC / format validation / success outcome / non-success outcomes / store-aware-ready)
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 26-01-PLAN.md — Backend redeemKey wrapper + EPurchaseResult classifier + shared types + tests (handles reject-on-failure; 8-value enum -> 4 buckets)
-- [ ] 26-02-PLAN.md — Client-side format validator (light-touch pure fn, not 5-5-5) + test
+- [x] 26-02-PLAN.md — Client-side format validator (light-touch pure fn, not 5-5-5) + test
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
