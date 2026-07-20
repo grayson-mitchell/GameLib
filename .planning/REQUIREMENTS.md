@@ -211,7 +211,7 @@ Phase 24 ships an out-of-process `steam_api` bridge wired into GameLib's real ma
 - [ ] **REQ-24-04**: Allowlist-based routing — GameLib decides bridge-vs-fallback per title using a curated allowlist of known-good AppIDs (D-01/D-02).
 - [ ] **REQ-24-05**: Bundled, in-app packaging — the native helper ships inside the packaged GameLib app and functions from a packaged build on the developer's own Apple-Silicon Mac.
 - [ ] **REQ-24-06**: Single-player launch parity for the acceptance set — Avernum 4 and Hoard launch through GameLib via the bridge and reach playable single-player with the real SteamID64 + persona, with no Windows Steam client in the bottle. — Plan 24-04 (2026-07-20) built the R6 precondition: `provisionBridgeBottle()` creates a distinct `GameLibSteamBridge` bottle that never downloads/runs a Windows Steam installer (grep-verified). Live "no steam.exe present" hardware confirmation + actual Avernum4/Hoard launch parity remain deferred to Plan 24-10.
-- [ ] **REQ-24-07**: Clean fallback + coexistence with Phase 22 — the bottled-Steam path remains fully functional for non-allowlisted titles; a bridge failure for an allowlisted title surfaces a clear, non-silent error/fallback (D-05/D-11).
+- [ ] **REQ-24-07**: Clean fallback + coexistence with Phase 22 — the bottled-Steam path remains fully functional for non-allowlisted titles; a bridge failure for an allowlisted title surfaces a clear, non-silent error/fallback (D-05/D-11). — Partial (2026-07-20, Plan 24-06): `ensureBridgeHelperReady()` built the D-06 observable-readiness precondition — a bounded CONTROL HEALTH+WHOAMI poll returns a `ready`/`not-inited`/`unreachable` result and fires `steamBridgeSetupRequired` on any non-ready outcome, so a bridge failure is detectable rather than silently assumed-success. The D-05 fallback dialog UI + `games.ts` routing/fallback-trigger wiring remain deferred to Plan 24-08.
 
 ## Future Requirements
 
@@ -344,7 +344,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-24-04 | Phase 24 | Partial (2026-07-20, Plan 24-03 — bundled/zod-validated allowlist data + has(appId) lookup only; games.ts routing composition deferred to Plan 24-08; Plan 24-04 adds getBridgeBottleSettings() as the bottle-resolution half of the routing precondition) |
 | REQ-24-05 | Phase 24 | Pending |
 | REQ-24-06 | Phase 24 | Partial (2026-07-20, Plan 24-04 — dedicated no-Windows-Steam-client bridge bottle provisioning primitive only; live HW confirmation + actual game launch parity deferred to Plan 24-10) |
-| REQ-24-07 | Phase 24 | Pending |
+| REQ-24-07 | Phase 24 | Partial (2026-07-20, Plan 24-06 — ensureBridgeHelperReady() D-06 observable-readiness seam only; D-05 fallback dialog + games.ts routing deferred to Plan 24-08) |
 
 **Coverage:**
 - v0.2 requirements: 15 total

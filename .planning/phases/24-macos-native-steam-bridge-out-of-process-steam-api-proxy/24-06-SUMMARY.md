@@ -124,3 +124,9 @@ None -- no external service configuration, no package installs (0 new npm depend
 ---
 *Phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy*
 *Completed: 2026-07-20*
+
+## Self-Check: PASSED
+
+- Created/modified files verified present on disk: `src/backend/constants/paths.ts`, `src/common/types/ipc.ts`, `src/backend/storeManagers/steam/bridge/helperProcess.ts`, `src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts`, `src/backend/main.ts`, `.planning/phases/24-macos-native-steam-bridge-out-of-process-steam-api-proxy/24-06-SUMMARY.md` -- all FOUND.
+- Commit hashes verified in `git log`: `49ceb401` (Task 1), `dcb8bcc0` (Task 2), `318fe299` (Task 3), `804b9608` (SUMMARY) -- all FOUND.
+- Automated verify re-run: `pnpm jest .../helperProcess.test.ts` -> 9/9 pass; `pnpm codecheck` -> clean; `grep steamBridgeSetupRequired src/common/types/ipc.ts` and `grep shutdownBridgeHelper src/backend/main.ts` -> both FOUND; full steam suite (`pnpm jest src/backend/storeManagers/steam`) -> 787/787 pass, 22/22 suites, zero regressions.
