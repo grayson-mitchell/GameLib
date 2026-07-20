@@ -2,12 +2,14 @@
 phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy
 plan: 10
 artifact: uat
-status: in_progress
+status: blocked
 requirements: [R1, R5, R6]
 total_gates: 4
-pending_gates: 3
+pending_gates: 0
 passed_gates: 1
 failed_gates: 0
+blocked_gates: 3
+blocked_reason: "Gates 2-4 (R5/R6) blocked on a bridge install/launch integration bug cluster (D-UAT-24-02/03/04/05); route to /gsd-plan-phase 24 --gaps. Gate 1 (R1) PASS; low-level bridge mechanism proven."
 run_via: "/gsd-execute-phase 24 --wave 5 --interactive"
 prepared: 2026-07-21
 last_updated: 2026-07-21
@@ -372,6 +374,44 @@ the real shim — the current install is messy (game's dll, wrong record) and un
 (D-UAT-24-02), so the messy state must be cleared manually first. **Route the cascade (sticky-flag
 recovery, install-record correctness, D-UAT-24-02 launch/uninstall) to `/gsd-plan-phase 24 --gaps`.**
 
+### D-UAT-24-04 (BLOCKER — found 2026-07-21, real macOS) — bridge shim NEVER overwrites the game's own `steam_api.dll` (existence-guarded placement)
+
+**Found** after the D-UAT-24-03 resolver fix let the install reach shim placement. Log:
+`placeShimForGame: shim already present at "…/Avernum 5/steam_api.dll" … (idempotent, no-op)` — but the
+file there is the **game's own** `steam_api.dll` (118368 bytes, no `54550`), not GameLib's shim (805888).
+
+**Root cause:** `shimGenerate.ts:148` guards placement with `if (existsSync(shimPath)) return` — pure
+file **existence**. The game's depot ships its own `steam_api.dll` at exactly `shimPath`, and the depot
+download runs **before** `placeShimForGame`, so the guard **always** short-circuits and the real bridge
+shim is never copied over the game's copy. The entire purpose of the shim is to **replace** the game's
+`steam_api.dll`; the existence guard makes it a no-op for every game that bundles one (≈ all of them).
+The acceptance spikes placed the shim by hand, so this never showed until the real GameLib install flow.
+**Fix direction:** place by identity, not existence — overwrite unless the target is already byte-identical
+to `builtBridgeShimPath` (compare size/hash), after the coverage check. This is the fundamental
+"does the bridge engage at all" bug.
+
+### D-UAT-24-05 (MAJOR — found 2026-07-21, real macOS) — bridge install reverts to "Install" (install-poll doesn't detect the bridge-bottle manifest)
+
+**Reported:** clicking Install on Avernum 5 completes, then the button reverts to **Install** (not
+installed). **Log:** `Writing StateFlags=4 full-ownership manifest for appId 206040` (ACF **is** written
+to the bridge bottle, confirmed on disk: `StateFlags "4"`, `installdir "Avernum 5"`) — yet
+`install polling for appId 206040 stopped after grace window (20 ticks) — no manifest detected; user may
+have cancelled`. The post-install poll looks for the manifest in the wrong location (native Steam library
+vs the `GameLibSteamBridge` bottle steamapps), so it concludes not-installed and the badge reverts.
+**Fix direction:** the bridge/bottle install's readiness poll must read the bridge-bottle ACF it just
+wrote (`getBottleSteamappsDir(bridgeBottle)`), not the native library path.
+
+### VERDICT (2026-07-21): bridge mechanism proven; install→shim→launch integration needs a gap cycle
+
+Gate 1 (R1 vtable round-trip) **PASS**. The low-level bridge is sound (helper spawn + `SteamAPI_Init` +
+real SteamID + `LISTEN` 54550; bridge-bottle provisioning; depot download all verified live). But the
+GameLib integration layer has a **cluster** of defects the two hand-picked acceptance games never exposed:
+D-UAT-24-01 (publicDir, FIXED `87c0ef82`), D-UAT-24-02 (launch no-op / install-state for already-installed,
+open), D-UAT-24-03 (untagged launch entry — root FIXED `f0b7e82c`; sticky-flag cascade + install-record,
+open), D-UAT-24-04 (shim never overwrites the game's dll, open, BLOCKER), D-UAT-24-05 (install-poll wrong
+manifest location, open). **Gates 2/3/4 (R5/R6) cannot pass until the cluster is fixed →
+`/gsd-plan-phase 24 --gaps`** (coordinated fixes + tests + review, not one-off live patches).
+
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
 Surfaced 2026-07-21 during Gate 2–4 setup; **not caused by Phase 24 and not Phase 24 acceptance items.**
@@ -398,8 +438,8 @@ User decision: set aside, run the gates on the packaged app, revisit separately.
 | 0b | Full jest suite | — | ✅ PASS (Phase 24 scope) | 1813/1813 tests pass; 102/103 suites. 2 out-of-scope reds: Phase 27 `bootstrap.test.ts` circular import + pre-existing `library.ts` leaked timer. Neither is a Phase 24 regression. |
 | 0c | Packaged `.app` + bundled helper | R5 | ✅ PASS | `dist/mac-arm64/GameLib.app`; helper `Mach-O arm64` at `…/app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`. |
 | 1 | R1 vtable round-trip | R1 | ✅ PASS | Generated shim vtable slot 2 `GetSteamID()` → production helper → real SteamID64 `76561197995867096` (string-equal). 2026-07-21. |
-| 2 | R5 packaged bundled-helper | R5 | PENDING | Helper path inside the `.app` bundle; no staged binary. |
-| 3 | R6 Avernum 6 | R6 | PENDING | Substituted for Avernum 4 (206020→206060; Avernum 4 doesn't run in CrossOver). Playable via bridge; init-through-bridge; Part B may be N/A (min imports); no steam.exe in bottle. Needs rebuilt packaged app (allowlist inlined at build). |
+| 2 | R5 packaged bundled-helper | R5 | ⛔ BLOCKED | Cannot reach — bridge launch integration broken (D-UAT-24-02/03/04/05). Gap cycle. |
+| 3 | R6 Avernum 5/6 | R6 | ⛔ BLOCKED | Bridge shim never overwrites the game's own steam_api.dll (D-UAT-24-04) + install reverts (D-UAT-24-05) + launch misroutes (D-UAT-24-03 cascade). Gap cycle. |
 | 4 | R6 Hoard | R6 | PENDING | Playable via bridge; init + identity served (7 imports); no steam.exe in bottle. |
 
 **Gate status:** 4 human-HW gates PENDING. Phase 24 is not complete until Gates 1–4 all PASS
