@@ -54,7 +54,10 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
+#include <signal.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -97,6 +100,16 @@
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
+
+// WR-02: bounds how long a single recv() call will block waiting for more
+// bytes of an in-progress frame. Generous relative to a legitimate
+// request's real latency (pump_callbacks alone sleeps up to 150ms) so this
+// never fires during normal operation, but bounded so a partial-send stall
+// (crashed bottle mid-frame, wedged/malicious loopback peer) cannot freeze
+// the shared helper -- and therefore every OTHER bridge game and readiness
+// probe (WR-01's serialized accept loop makes an unbounded stall here
+// especially costly) -- forever.
+#define RECV_TIMEOUT_SECONDS 5
 
 // === libsteam_api.dylib flat surface (dlsym'd once, held for process life) ===
 
@@ -228,8 +241,18 @@ static void init_steam_api_once(void) {
 
   char err[1024] = {0};
   int r = InitFlat(err);
-  g_user = GetUser();
-  g_friends = GetFriends();
+  // WR-04: only invoke the interface accessors once InitFlat itself
+  // reports success. Calling GetUser()/GetFriends() when r != 0 (Steam
+  // not running/signed in) is outside the documented Steamworks contract
+  // -- if the real dylib dereferences not-yet-initialized internal global
+  // state inside these accessors on a failed init, it can crash the
+  // helper instead of returning NULL, defeating the "process up, no
+  // session" HEALTH/WHOAMI split (finding #7) this whole init path exists
+  // to preserve. g_user/g_friends stay NULL on init failure.
+  if (r == 0) {
+    g_user = GetUser();
+    g_friends = GetFriends();
+  }
 
   g_inited = (r == 0 && g_user != NULL && g_friends != NULL);
   if (!g_inited) {
@@ -251,25 +274,43 @@ static void init_steam_api_once(void) {
 // only requires >=2 SEQUENTIAL requests, no concurrency this phase) ===
 
 /* Reads exactly `len` bytes into `buf`, looping over short reads. Returns 1
- * on success, 0 on EOF/error (caller must treat this as "close the
- * connection", never retry indefinitely). */
+ * on success, 0 on real EOF/error (caller must treat this as "close the
+ * connection", never retry indefinitely). WR-05: a signal-interrupted
+ * syscall (`errno == EINTR`) is recoverable and is retried, NOT treated as
+ * EOF -- only `k == 0` (real EOF) or a non-EINTR error (including the
+ * WR-02 SO_RCVTIMEO timeout, which surfaces as EAGAIN/EWOULDBLOCK and is
+ * deliberately terminal here, not retried). */
 static int recv_all(int fd, void *buf, size_t len) {
   uint8_t *p = (uint8_t *)buf;
   size_t got = 0;
   while (got < len) {
     ssize_t k = recv(fd, p + got, len - got, 0);
-    if (k <= 0) return 0;
+    if (k < 0) {
+      if (errno == EINTR) continue;
+      return 0;
+    }
+    if (k == 0) return 0; // real EOF
     got += (size_t)k;
   }
   return 1;
 }
 
+/* WR-05: same EINTR-retry discipline as recv_all -- an interrupted send()
+ * is retried, not treated as a closed connection. WR-03: SIGPIPE is
+ * ignored process-wide at startup (main()), so a send() to a peer that has
+ * already closed its end returns -1/EPIPE here (handled like any other
+ * terminal send error) instead of raising SIGPIPE and killing the shared
+ * helper. */
 static int send_all(int fd, const void *buf, size_t len) {
   const uint8_t *p = (const uint8_t *)buf;
   size_t sent = 0;
   while (sent < len) {
     ssize_t k = send(fd, p + sent, len - sent, 0);
-    if (k <= 0) return 0;
+    if (k < 0) {
+      if (errno == EINTR) continue;
+      return 0;
+    }
+    if (k == 0) return 0;
     sent += (size_t)k;
   }
   return 1;
@@ -421,6 +462,15 @@ static void serve_connection(int fd) {
 }
 
 int main(void) {
+  // WR-03: ignore SIGPIPE process-wide before any socket I/O happens. Its
+  // default disposition terminates the process, and writing to a socket
+  // whose peer has already closed (e.g. a bridge game/bottle exiting
+  // mid-request) raises it on macOS -- without this, that single peer's
+  // disconnect would kill the shared long-lived helper out from under
+  // every OTHER in-flight bridge game. send_all() above already treats
+  // the resulting EPIPE like any other terminal send error.
+  signal(SIGPIPE, SIG_IGN);
+
   if (!load_steam_api()) return 2;
   init_steam_api_once();
 
@@ -451,6 +501,16 @@ int main(void) {
   for (;;) {
     int c = accept(s, NULL, NULL);
     if (c < 0) continue;
+    // WR-02: bound how long recv_all() will block on this connection
+    // waiting for more bytes of an in-progress frame -- a partial-send
+    // stall (crashed peer mid-frame) times out and closes the connection
+    // (recv_all treats the resulting EAGAIN/EWOULDBLOCK as terminal, not
+    // EINTR-retried) instead of wedging the whole shared, serially-served
+    // helper indefinitely.
+    struct timeval recvTimeout;
+    recvTimeout.tv_sec = RECV_TIMEOUT_SECONDS;
+    recvTimeout.tv_usec = 0;
+    setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, sizeof recvTimeout);
     serve_connection(c);
   }
 }
