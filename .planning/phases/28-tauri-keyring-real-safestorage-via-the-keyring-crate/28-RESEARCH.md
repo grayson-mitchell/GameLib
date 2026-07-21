@@ -522,12 +522,21 @@ abandoned one).
 
 ## Open Questions
 
-1. **Exact macOS OSStatus → `keyring::Error` variant mapping for "user denied the prompt" vs. "keychain locked" vs. "no keychain at all."**
+> **Status (updated 2026-07-22 during `/gsd-plan-phase 28`):** Question 1 is DEFERRED TO EXECUTION
+> (resolved by hardware observation in plan 28-06); Question 2 is RESOLVED at planning time
+> (plan 28-02). See each item below.
+
+1. **Exact macOS OSStatus → `keyring::Error` variant mapping for "user denied the prompt" vs. "keychain locked" vs. "no keychain at all."** — **DEFERRED TO EXECUTION** (planning, 2026-07-22)
+   - Resolution path: plan `28-02` Task 1 prints the full `{:?}` debug of every non-`NoEntry` `keyring::Error`; plan `28-06` Task 2 step 2 requires a human to click **Deny** on a real Keychain prompt and record that output verbatim; plan `28-06` Task 3 writes the observed variant into `28-PROOF.md` as the answer, and records a gap for `/gsd-plan-phase 28 --gaps` if the observed variant means 28-04's classification needs adjusting.
+   - Why this is safe to defer: 28-04's classification only needs to separate `NoEntry` (healthy, no token yet) from everything else (treat as unavailable → clean signed-out). That split does not depend on which specific non-`NoEntry` variant macOS produces, so no planned code branches on the unknown.
    - What we know: the crate's public `Error` enum has 7 non-exhaustive variants; `PlatformFailure` wraps "runtime failure in the underlying platform storage system," `NoStorageAccess` is "underlying secure storage holding saved items could not be accessed."
    - What's unclear: whether these map 1:1 to specific `errSecUserCanceled`/`errSecInteractionNotAllowed`/`errSecAuthFailed` OSStatus codes, or whether all three flatten to the same variant.
    - Recommendation: during implementation, write a small manual/human-verify step — trigger a real "Deny" on a Keychain prompt on the dev machine and log the exact `Error` debug-format output — before finalizing D-06's classification logic. This is cheap (one manual click) and removes A1's uncertainty entirely.
 
-2. **Should the pre-existing `openExternal` dropped-frame gap be fixed as its own frame kind, or folded into the new generic `rustInvoke` channel?**
+2. **Should the pre-existing `openExternal` dropped-frame gap be fixed as its own frame kind, or folded into the new generic `rustInvoke` channel?** — **RESOLVED: minimal fix** (planning, 2026-07-22)
+   - Decision: `openExternal` gets its own dedicated `kind == "openExternal"` reader branch in `start_reader()` and keeps fire-and-forget semantics; it is NOT converted into a `rustInvoke` request/response call. Recorded in plan `28-02`'s `<objective>` and implemented by `28-02` Task 2.
+   - Rationale: converting it would change `electronStub.shell.openExternal`'s contract and ripple into the Phase 27 launch flow, which is outside this phase's stated boundary. The minimal fix closes the verified silent drop without a behavior change. Additionally `28-02` Task 2 adds an explicit `else` diagnostic for any unrecognized frame kind, so the class of bug (a frame kind nobody listens for) cannot recur silently.
+   - To be restated with rationale in `28-PROOF.md` § "Decisions taken under discretion" (plan `28-06` Task 3).
    - What we know: `openExternal` today is fire-and-forget (no response expected by the sidecar) and is currently non-functional on the Rust side (Pitfall 2). The new `rustInvoke` kind is request/response.
    - What's unclear: whether fixing `openExternal` by literally converting it to a `rustInvoke`-shaped call (so launch failures could surface a real error back to the sidecar/renderer, which they currently cannot) is in scope for this phase, or whether a minimal fix (just add the missing `kind == "openExternal"` dispatch branch, keep it fire-and-forget) is preferred to keep the diff scoped to Phase 28's stated boundary (keyring + the new channel).
    - Recommendation: the planner should decide explicitly rather than let it fall out incidentally. Minimal fix (add the missing dispatch branch, keep fire-and-forget semantics) is lower-risk and keeps this phase's diff bounded to its stated scope; converting `openExternal` to request/response is arguably better long-term but is scope creep unless the user explicitly wants it folded in.

@@ -1044,7 +1044,7 @@ Plans:
 - [ ] 28-03-PLAN.md — `TokenStore` seam; Electron path moved verbatim, `user.ts` routed through it (wave 1)
 - [ ] 28-04-PLAN.md — `SidecarKeyringTokenStore` + honest `safeStorage` stub + bootstrap wiring (wave 2)
 - [ ] 28-05-PLAN.md — Electron-untouched byte-comparison proof + by-construction source gates (wave 3)
-- [ ] 28-06-PLAN.md — Hardware verification checkpoint + `28-PROOF.md` + SEAM.md update (wave 4)
+- [ ] 28-06-PLAN.md — Self-check scaffolding, hardware verification checkpoint, `28-PROOF.md` + SEAM.md update, scaffolding removal (wave 4)
 
 ---
 

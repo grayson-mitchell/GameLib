@@ -92,6 +92,9 @@ Wave 0 dependency. Wave 0 files are scheduled inside the plans that consume them
 Task 3; 28-03 Task 3; 28-04 Task 3; 28-05 Task 1). One addition beyond this document's original list:
 `src/backend/sidecar/__tests__/keyringTokenStore.test.ts` (plan 28-04) carries the sidecar-side
 keyring error classification for REQ-28-06, keeping it out of the Electron-side
-`tokenStore.test.ts` (plan 28-03) so the two plans own disjoint files. No Rust `cargo test` target is
+`tokenStore.test.ts` (plan 28-03) so the two plans own disjoint files. It is scheduled as plan 28-04's
+**Task 1** (red) ahead of the implementation in Task 2 (green), matching plan 28-01's red→green ordering.
+Plan 28-06 Task 1 adds an env-gated Rust self-check purely as a trigger for the manual round-trip; plan
+28-06 **Task 4 removes it again**, grep-gated to zero, so no diagnostic flag ships. No Rust `cargo test` target is
 added — the Rust side stays a `cargo build` compile-gate plus plan 28-06's blocking human checkpoint,
 matching this project's Phase 24 Gates 0-3 precedent.
