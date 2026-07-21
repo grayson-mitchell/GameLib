@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-12-PLAN.md
-last_updated: "2026-07-21T02:19:32.237Z"
+stopped_at: Completed 24-13-PLAN.md
+last_updated: "2026-07-21T02:48:07.408Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 150
-  completed_plans: 137
+  completed_plans: 138
   percent: 83
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 3 of 14
+Plan: 4 of 14
 Status: Ready to execute
 Last activity: 2026-07-21
 
@@ -192,6 +192,7 @@ Other open native-install phases:
 | Phase 27 P04 | ~75min | 2 tasks | 5 files |
 | Phase 24 P11 | 10min | 1 tasks | 2 files |
 | Phase 24 P12 | 20min | 1 tasks | 2 files |
+| Phase 24 P13 | ~25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -336,6 +337,9 @@ Recent decisions affecting current work:
 - [Phase 27]: 27-04: added backend/logger's initHeadless() (real LogWriter, no GlobalConfig/system-info-dump side effects) as a purely additive export for the headless sidecar; Electron's own init() and main.ts startup path are unmodified
 - [Phase 24]: [Phase 24-11]: D-UAT-24-04 fixed via byte-identity guard (size then sha256) replacing pure existsSync existence guard in placeShimForGame — The existence guard always short-circuited because the game's depot-shipped steam_api.dll is already present at shimPath by the time placeShimForGame runs; overwrite-by-identity restores the intended bridge-shim placement, with the shim-not-built check moved above the identity check and coverage/containment guards unchanged
 - [Phase 24]: [Phase 24-12]: getBridgeBottleSteamappsRoot() mirrors getBottleSteamappsRoot() exactly (dedicated small function per root) rather than a parameterized getSteamappsRootFor(source) helper -- keeps each root trivially auditable per RESEARCH.md Pitfall 2 (never conflate native/bottle/bridge roots)
+- [Phase 24]: 24-13: installBridgeGame polls the bridge bottle (pollerSource:'bridge', 24-12's AcfSource) instead of the unrelated Phase 17 GameLibSteam bottle — closes D-UAT-24-05
+- [Phase 24]: 24-13: clearBridgeFailedThisSession(appId) un-poisons a session-sticky bridge failure on a successful (re)install — install() and launch() routing no longer stay permanently stuck on one earlier recoverable failure (D-UAT-24-03 cascade a)
+- [Phase 24]: 24-13: launchBridgeGame verifies the resolved exe exists on disk (+ bridge bottle ready) before firing runWineCommand — a bridge-eligible game installed via a non-bridge path now surfaces steamBridgeSetupRequired instead of a silent wine no-op (D-UAT-24-02); treated as recoverable, not a bridge failure, so it does not markBridgeFailedThisSession
 
 ### Pending Todos
 
@@ -402,8 +406,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T02:19:32.229Z
-Stopped at: Completed 24-12-PLAN.md
+Last session: 2026-07-21T02:48:07.401Z
+Stopped at: Completed 24-13-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
