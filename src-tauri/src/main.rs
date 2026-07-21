@@ -27,6 +27,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -47,6 +48,14 @@ const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Keychain service/account identifying the Steam refresh token entry this shell owns
+/// (Phase 28, D-01: keyring-native storage, not OSCrypt-compatible ciphertext). These are
+/// production-stable identifiers — they must NOT be spike 011's throwaway
+/// `com.gamelib.spike011` probe values, which were deliberately named to be obviously
+/// disposable and were deleted (`delete_credential`) after every spike run.
+const KEYRING_SERVICE: &str = "com.gamelib.launcher";
+const KEYRING_ACCOUNT: &str = "steam-refresh-token";
 
 /// A request frame written to the sidecar's stdin (one JSON object per line).
 /// Mirrors SidecarRpcRequest. `id` is always a string (64-bit-safe).
@@ -176,6 +185,87 @@ async fn sidecar_store_snapshot(
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+// ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
+
+/// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
+/// The Keychain `service`/`account` are the compile-time `KEYRING_SERVICE`/`KEYRING_ACCOUNT`
+/// constants ONLY — never sourced from `args` (threat T-28-03: the sidecar must not be able
+/// to address an arbitrary Keychain entry). Error mapping follows this file's existing flat
+/// `String` convention (`.map_err(|e| e.to_string())`, see `open_external` above); a bare
+/// `keyring::Error` variant is never returned as-is.
+fn dispatch_rust_channel(channel: &str, args: &[Value]) -> Result<Value, String> {
+    match channel {
+        "keyring_get" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
+            Ok(entry) => match entry.get_password() {
+                Ok(secret) => Ok(Value::String(secret)),
+                // No entry yet is a healthy, expected first-run state — NOT an
+                // unavailable backend (Pitfall 1 / D-06). Must not be reported as an error.
+                Err(keyring::Error::NoEntry) => Ok(Value::Null),
+                Err(e) => {
+                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    Err(format!("keyring:unavailable:{e}"))
+                }
+            },
+            Err(e) => {
+                eprintln!("[shell] keyring {channel} failed: {e:?}");
+                Err(format!("keyring:unavailable:{e}"))
+            }
+        },
+        "keyring_set" => {
+            let secret = match args.first().and_then(|v| v.as_str()) {
+                Some(s) => s,
+                None => return Err("keyring:bad-args".into()),
+            };
+            match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
+                Ok(entry) => match entry.set_password(secret) {
+                    Ok(()) => Ok(Value::Bool(true)),
+                    Err(e) => {
+                        // Never log the secret itself (threat T-28-04) — channel + error only.
+                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        Err(format!("keyring:unavailable:{e}"))
+                    }
+                },
+                Err(e) => {
+                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    Err(format!("keyring:unavailable:{e}"))
+                }
+            }
+        }
+        "keyring_delete" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
+            Ok(entry) => match entry.delete_credential() {
+                // Deleting an already-absent entry is success, not an error.
+                Ok(()) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                Err(e) => {
+                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    Err(format!("keyring:unavailable:{e}"))
+                }
+            },
+            Err(e) => {
+                eprintln!("[shell] keyring {channel} failed: {e:?}");
+                Err(format!("keyring:unavailable:{e}"))
+            }
+        },
+        "keyring_available" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
+            Ok(entry) => match entry.get_password() {
+                // Backend works, whether or not a token is currently stored.
+                Ok(_) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                // A *successful* report of unavailability (D-06's honest-unavailable signal),
+                // not an error — the caller asked "is it available", and the honest answer
+                // here is "no".
+                Err(e) => {
+                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    Ok(Value::Bool(false))
+                }
+            },
+            Err(e) => {
+                eprintln!("[shell] keyring {channel} failed: {e:?}");
+                Ok(Value::Bool(false))
+            }
+        },
+        _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
+    }
 }
 
 // ---- Sidecar lifecycle + stdout reader ----
