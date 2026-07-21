@@ -35,7 +35,7 @@ import {
 import { open } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { logWarning } from 'backend/logger'
+import { logWarning, logInfo } from 'backend/logger'
 import {
   buildDepotPlan,
   downloadSteamDepots,
@@ -3302,6 +3302,163 @@ describe('downloadDepotFiles', () => {
 
       setIntervalSpy.mockRestore()
       clearIntervalSpy.mockRestore()
+    })
+  })
+
+  describe('EDepotFileFlag census logging (23-06, G-23-02 trace instrumentation)', () => {
+    /** Finds the single `steam-flags-census` logInfo call for `appId`+`stage`
+     *  among ALL calls recorded during the test (across however many
+     *  concurrent/sequential downloadDepotFiles runs happened) — the
+     *  appId=/stage= tags in the log line are what let a test attribute a
+     *  census line to the specific run that produced it. */
+    function findCensusLine(appId: string, stage: string): string {
+      const calls = jest.mocked(logInfo).mock.calls
+      const match = calls.find(([msg]) => {
+        if (typeof msg !== 'string') return false
+        return (
+          msg.includes('steam-flags-census') &&
+          msg.includes(`stage=${stage}`) &&
+          msg.includes(`appId=${appId}`)
+        )
+      })
+      if (!match) {
+        throw new Error(
+          `no steam-flags-census log line found for appId=${appId} stage=${stage}`
+        )
+      }
+      return match[0] as string
+    }
+
+    function buildNoFlagsPlan(appId: string, content: Buffer): DepotPlan {
+      const file: DepotPlanFile = {
+        filename: 'plain.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: `sha-noflags-${appId}`, cb_original: content.length, offset: 0 }
+        ]
+        // flags: undefined — H1's signature.
+      }
+      return {
+        appId,
+        name: 'NoFlagsGame',
+        depots: [
+          { depotId: `d-noflags-${appId}`, gid: `g-noflags-${appId}`, key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: content.length
+      }
+    }
+
+    function buildExecPlan(appId: string, content: Buffer): DepotPlan {
+      const file: DepotPlanFile = {
+        filename: 'exec.bin',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [
+          { sha: `sha-exec-${appId}`, cb_original: content.length, offset: 0 }
+        ],
+        flags: 32 // Executable
+      }
+      return {
+        appId,
+        name: 'ExecGame',
+        depots: [
+          { depotId: `d-exec-${appId}`, gid: `g-exec-${appId}`, key: Buffer.from('key'), files: [file] }
+        ],
+        totalBytes: content.length
+      }
+    }
+
+    it('reports chmodAttempts=0 in its download-complete census for an all-flags-undefined plan, and chmodAttempts=1 for a one-executable-file plan', async () => {
+      const contentNoFlags = Buffer.from('no-flags-payload')
+      const contentExec = Buffer.from('exec-payload')
+      jest
+        .mocked(fetchChunk)
+        .mockImplementation(async (_hosts, _depotId, chunk) =>
+          String(chunk.sha).startsWith('sha-noflags')
+            ? contentNoFlags
+            : contentExec
+        )
+
+      const noFlagsPlan = buildNoFlagsPlan('census-no-flags', contentNoFlags)
+      await downloadDepotFiles(noFlagsPlan, {
+        targetSteamappsDir: dir,
+        installdir: 'CensusNoFlagsGame',
+        hosts: HOSTS
+      })
+      expect(
+        findCensusLine('census-no-flags', 'download-complete')
+      ).toMatch(/chmodAttempts=0/)
+
+      const execPlan = buildExecPlan('census-exec', contentExec)
+      await downloadDepotFiles(execPlan, {
+        targetSteamappsDir: dir,
+        installdir: 'CensusExecGame',
+        hosts: HOSTS
+      })
+      expect(
+        findCensusLine('census-exec', 'download-complete')
+      ).toMatch(/chmodAttempts=1/)
+    })
+
+    it('CONCURRENCY: two downloadDepotFiles runs for DIFFERENT appIds executing concurrently each report their own uncorrupted chmodAttempts, in either start order — the test that would fail against module-level counters', async () => {
+      const contentNoFlags = Buffer.from('no-flags-concurrency-payload')
+      const contentExec = Buffer.from('exec-concurrency-payload')
+
+      jest.mocked(fetchChunk).mockImplementation(async (_hosts, _depotId, chunk) => {
+        // Small, asymmetric delays so both runs' chunk fetches genuinely
+        // overlap in time rather than resolving one-after-the-other.
+        const isNoFlags = String(chunk.sha).startsWith('sha-noflags')
+        await new Promise((r) => setTimeout(r, isNoFlags ? 15 : 5))
+        return isNoFlags ? contentNoFlags : contentExec
+      })
+
+      async function runBothOrders(
+        startNoFlagsFirst: boolean,
+        suffix: string
+      ): Promise<void> {
+        const noFlagsAppId = `concurrency-no-flags-${suffix}`
+        const execAppId = `concurrency-exec-${suffix}`
+        const noFlagsPlan = buildNoFlagsPlan(noFlagsAppId, contentNoFlags)
+        const execPlan = buildExecPlan(execAppId, contentExec)
+
+        const runNoFlags = () =>
+          downloadDepotFiles(noFlagsPlan, {
+            targetSteamappsDir: dir,
+            installdir: `ConcurrencyNoFlagsGame-${suffix}`,
+            hosts: HOSTS
+          })
+        const runExec = () =>
+          downloadDepotFiles(execPlan, {
+            targetSteamappsDir: dir,
+            installdir: `ConcurrencyExecGame-${suffix}`,
+            hosts: HOSTS
+          })
+
+        // Overlapping in time: both promises are created (and their async
+        // work started) before either is awaited.
+        if (startNoFlagsFirst) {
+          const p1 = runNoFlags()
+          const p2 = runExec()
+          await Promise.all([p1, p2])
+        } else {
+          const p1 = runExec()
+          const p2 = runNoFlags()
+          await Promise.all([p1, p2])
+        }
+
+        expect(
+          findCensusLine(noFlagsAppId, 'download-complete')
+        ).toMatch(/chmodAttempts=0/)
+        expect(
+          findCensusLine(execAppId, 'download-complete')
+        ).toMatch(/chmodAttempts=1/)
+      }
+
+      // Both start orders — proves neither direction leaks a chmod count
+      // across the two concurrent runs.
+      await runBothOrders(true, 'order-a')
+      await runBothOrders(false, 'order-b')
     })
   })
 })

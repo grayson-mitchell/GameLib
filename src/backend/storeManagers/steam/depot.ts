@@ -55,6 +55,7 @@ import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
+import { summarizeDepotFlags, formatDepotFlagsCensus } from './depot/flagsCensus'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -62,20 +63,41 @@ const NUMERIC_ID = /^\d+$/
 /** EDepotFileFlag bit values, per steam-user's own authoritative enum
  *  (node_modules/steam-user/enums/EDepotFileFlag.js) — Directory = 64,
  *  Symlink = 512. Hardcoded here rather than imported since steam-user does
- *  not export this enum from its public entrypoint (CR-01 gap closure, 21-13). */
-const DIRECTORY_FLAG = 64
-const SYMLINK_FLAG = 512
+ *  not export this enum from its public entrypoint (CR-01 gap closure, 21-13).
+ *  Exported (23-06) so depot/flagsCensus.ts's census summarizer imports
+ *  these rather than re-literalling the numeric bit values. */
+export const DIRECTORY_FLAG = 64
+export const SYMLINK_FLAG = 512
 // SPIKE 003 finding: EDepotFileFlag.Executable (32) / CustomExecutable (128).
 // Steam's 1026 verify pass sets the +x bit from these flags; the StateFlags=4
 // full-ownership path skips verify, so GameLib must apply them itself or the
 // game binary lands non-executable and launch fails with macOS `os error 256`.
-const EXECUTABLE_FLAG = 32
-const CUSTOM_EXECUTABLE_FLAG = 128
+export const EXECUTABLE_FLAG = 32
+export const CUSTOM_EXECUTABLE_FLAG = 128
 // Phase 23 (23-01, D-06): ReadOnly/Hidden — the other half of the same gap.
 // Steam's 1026 verify pass would also set these; StateFlags=4 skips verify,
 // so GameLib must apply them itself via depot/fileAttributes.ts.
-const READONLY_FLAG = 8
-const HIDDEN_FLAG = 16
+export const READONLY_FLAG = 8
+export const HIDDEN_FLAG = 16
+
+/**
+ * Per-`downloadDepotFiles`-invocation chmod/mode-application counters (23-06,
+ * G-23-02 trace instrumentation). MUST be created fresh for every invocation
+ * — NEVER module-level. `downloadDepotFiles` is single-flight PER APPID
+ * (23-05), not globally single-flight, so two concurrent installs for
+ * different appIds are supported, regression-tested product behavior; a
+ * module-level counter would let one run's chmods silently corrupt another
+ * run's count (the exact cross-run leak T-23-27 exists to prevent — 23-08
+ * turns `chmodAttempts` into the fail-closed input for the StateFlags=4/1026
+ * decision).
+ */
+export interface DepotModeCounters {
+  /** Incremented only on the branch that actually calls `chmod(dest, 0o755)`. */
+  chmodAttempts: number
+  /** Incremented on every entry to `applyEDepotFileModes`, regardless of
+   *  which branch (if any) fires. */
+  modeCallsites: number
+}
 
 export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
@@ -630,7 +652,22 @@ export async function buildDepotPlan(
       `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (0 depots)`,
       LogPrefix.Steam
     )
-    return { appId, depots: [], totalBytes: 0, name: displayName, buildid }
+    const emptyPlan: DepotPlan = {
+      appId,
+      depots: [],
+      totalBytes: 0,
+      name: displayName,
+      buildid
+    }
+    // 23-06: census logged on the returned plan before it leaves plan-build —
+    // paired with downloadDepotFiles' stage=download-entry census so a
+    // flags-dropping serialization boundary is directly observable (H5).
+    logInfo(
+      `steam-flags-census stage=plan-build appId=${appId} depots=0 ` +
+        formatDepotFlagsCensus(summarizeDepotFlags(emptyPlan)),
+      LogPrefix.Steam
+    )
+    return emptyPlan
   }
 
   const parser = await loadContentManifestParser()
@@ -653,7 +690,17 @@ export async function buildDepotPlan(
     LogPrefix.Steam
   )
 
-  return { appId, depots, totalBytes, name: displayName, buildid }
+  const plan: DepotPlan = { appId, depots, totalBytes, name: displayName, buildid }
+  // 23-06: census logged on the returned plan before it leaves plan-build —
+  // paired with downloadDepotFiles' stage=download-entry census so a
+  // flags-dropping serialization boundary is directly observable (H5).
+  logInfo(
+    `steam-flags-census stage=plan-build appId=${appId} depots=${depots.length} ` +
+      formatDepotFlagsCensus(summarizeDepotFlags(plan)),
+    LogPrefix.Steam
+  )
+
+  return plan
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1081,7 +1128,12 @@ async function downloadSingleFile(
    *  bare `?:`) so it stays a plain `number` under strict mode. Optional,
    *  additive: omitting it — every pre-Phase-25 caller/test — combines as 0.
    */
-  fileWorkerSlot: number = 0
+  fileWorkerSlot: number = 0,
+  /** 23-06 (G-23-02 trace instrumentation): this RUN's own mode-application
+   *  counters, forwarded to applyEDepotFileModes. Optional, additive:
+   *  omitting it (every pre-23-06 caller/test) leaves mode-application
+   *  behavior byte-for-byte unchanged — counting is side-channel only. */
+  counters?: DepotModeCounters
 ): Promise<void> {
   const dest = resolveContainedPath(installRoot, file.filename)
   await mkdir(dirname(dest), { recursive: true })
@@ -1193,7 +1245,7 @@ async function downloadSingleFile(
   // a silent success (T-23-03) — a mode failure must be visible to the
   // completeness gate the same way a SHA1 mismatch already is.
   if (file.flags) {
-    const modeResult = await applyEDepotFileModes(dest, file.flags)
+    const modeResult = await applyEDepotFileModes(dest, file.flags, counters)
     if (!modeResult.ok) {
       throw new Error(
         `downloadDepotFiles: failed to apply file mode flags for ${file.filename}: ${modeResult.error}`
@@ -1214,12 +1266,21 @@ async function downloadSingleFile(
  * chmod step (matches the pre-23-03 code); a ReadOnly/Hidden failure is
  * surfaced via applyDepotFileFlags's own { ok, error } shape, letting each
  * caller decide its own DepotDownloadFailure wording.
+ *
+ * `counters` (23-06, G-23-02 trace instrumentation) is optional and purely
+ * additive — a side-channel counter increment, never a behavior change.
+ * `modeCallsites` increments on every call regardless of branch; `chmodAttempts`
+ * increments only on the branch that actually calls `chmod(dest, 0o755)`.
  */
 async function applyEDepotFileModes(
   dest: string,
-  flags: number
+  flags: number,
+  counters?: DepotModeCounters
 ): Promise<{ ok: boolean; error?: string }> {
+  if (counters) counters.modeCallsites++
+
   if (flags & (EXECUTABLE_FLAG | CUSTOM_EXECUTABLE_FLAG)) {
+    if (counters) counters.chmodAttempts++
     await chmod(dest, 0o755)
   }
 
@@ -1247,11 +1308,18 @@ async function applyEDepotFileModes(
  * path must never be handed to chmod/attrib.exe, since `file.flags` is
  * truthy for those entries too (e.g. `Directory | ReadOnly` = 72) and a
  * `chmod(dirPath, 0o444)` would strip a directory's traversable bit.
+ *
+ * `counters` (23-06, G-23-02 trace instrumentation) is an OPTIONAL trailing
+ * param — omitting it (library.ts's own startup-resume call site, unchanged
+ * by this plan) leaves behavior byte-for-byte identical; `downloadDepotFiles`
+ * threads its own per-run counters through here so the download-complete
+ * census also reflects modes applied while healing reconciled files.
  */
 export async function healReconciledFileModes(
   plan: DepotPlan,
   installRoot: string,
-  jobFiles: Set<DepotPlanFile>
+  jobFiles: Set<DepotPlanFile>,
+  counters?: DepotModeCounters
 ): Promise<{ allModesHealed: boolean; failures: DepotDownloadFailure[] }> {
   const failures: DepotDownloadFailure[] = []
   let allModesHealed = true
@@ -1261,7 +1329,7 @@ export async function healReconciledFileModes(
       if (jobFiles.has(file) || !file.flags) continue
       if (file.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)) continue
       const dest = resolveContainedPath(installRoot, file.filename)
-      const modeResult = await applyEDepotFileModes(dest, file.flags)
+      const modeResult = await applyEDepotFileModes(dest, file.flags, counters)
       if (!modeResult.ok) {
         allModesHealed = false
         failures.push({
@@ -1305,6 +1373,23 @@ export async function downloadDepotFiles(
     'common',
     opts.installdir
   )
+
+  // 23-06: census logged on the RECEIVED plan at download entry — paired
+  // with buildDepotPlan's own stage=plan-build census so a flags-dropping
+  // serialization boundary between plan-build and download is directly
+  // observable (H5). Emitting the SAME census at both points is the point.
+  logInfo(
+    `steam-flags-census stage=download-entry appId=${plan.appId} ` +
+      formatDepotFlagsCensus(summarizeDepotFlags(plan)),
+    LogPrefix.Steam
+  )
+
+  // 23-06: fresh per-invocation mode-application counters (G-23-02 trace
+  // instrumentation) — NEVER module-level (see DepotModeCounters doc comment;
+  // 23-05's per-appId single-flight means two different appIds can be
+  // downloading concurrently, and module-level counters would let one run's
+  // chmods corrupt another's count).
+  const modeCounters: DepotModeCounters = { chmodAttempts: 0, modeCallsites: 0 }
 
   try {
     // Phase 23 (23-03, D-04): reconcile on-disk state BEFORE building the
@@ -1364,7 +1449,8 @@ export async function downloadDepotFiles(
     const { failures: healFailures } = await healReconciledFileModes(
       plan,
       installRoot,
-      jobFiles
+      jobFiles,
+      modeCounters
     )
     failures.push(...healFailures)
 
@@ -1653,7 +1739,11 @@ export async function downloadDepotFiles(
                 // Phase 25 (multi-host fan-out): this file's own slot in the
                 // FILE_CONCURRENCY pool, combined inside downloadSingleFile
                 // -> downloadFileChunks with the chunk pool's own index.
-                fileWorkerSlot
+                fileWorkerSlot,
+                // 23-06: this RUN's own mode-application counters (G-23-02
+                // trace instrumentation) — scoped per invocation, see
+                // DepotModeCounters doc comment.
+                modeCounters
               )
             } catch (err) {
               failures.push({
@@ -1681,6 +1771,23 @@ export async function downloadDepotFiles(
     // Phase 23 (23-02, D-01): a job left in `queue` means the run aborted
     // before every planned file was even attempted — never "verified".
     const allJobsAttempted = queue.length === 0
+
+    // 23-06: final census, now including the RUNTIME counters that only
+    // exist once the download has actually run — chmodAttempts/modeCallsites
+    // discriminate H3 (modes applied then lost) from H1/H4, and
+    // jobCount/reconciledSkipped discriminate H4 (reconciler + heal loop both
+    // skipped the same files via their respective `!file.flags` guards).
+    const finalCensus = summarizeDepotFlags(plan)
+    logInfo(
+      `steam-flags-census stage=download-complete appId=${plan.appId} ` +
+        formatDepotFlagsCensus(finalCensus, {
+          chmodAttempts: modeCounters.chmodAttempts,
+          modeCallsites: modeCounters.modeCallsites,
+          jobCount: jobs.length,
+          reconciledSkipped: finalCensus.totalFiles - jobs.length
+        }),
+      LogPrefix.Steam
+    )
 
     return {
       outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
