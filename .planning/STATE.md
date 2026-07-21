@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
+status: verifying
 stopped_at: Completed 24-17-PLAN.md
-last_updated: "2026-07-21T09:40:22.486Z"
-last_activity: 2026-07-21 -- Phase 23 planning complete
+last_updated: "2026-07-21T10:05:36.807Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 23
   completed_phases: 20
   total_plans: 158
-  completed_plans: 143
+  completed_plans: 144
   percent: 87
 ---
 
@@ -35,8 +35,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 27 (complete)
 Plan: 5 of 5 complete
-Status: Ready to execute
-Last activity: 2026-07-21 -- Completed quick task 260721-u77: fallback tile art fit not trimmed
+Status: Phase complete — ready for verification
+Last activity: 2026-07-21
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -50,7 +50,14 @@ Last activity: 2026-07-21 -- Completed quick task 260721-u77: fallback tile art 
 
 - **Phase 23** — full-ownership install: gaps `G-23-01`/`G-23-02` open (native install
   applies no execute bits; Denuvo launch needed a manual `chmod +x`). Gate 3 never run.
-  REQ-23-07 stays open. `/gsd-plan-phase 23 --gaps`
+  **23-06 executed (2026-07-21):** added permanent `steam-flags-census` log instrumentation
+  (`depot/flagsCensus.ts`) at plan-build/download-entry/download-complete + per-invocation
+  chmod counters, and wrote `23-TRACE.md`'s H1-H5 hypothesis matrix with offline forensic
+  evidence — trace-only, no fix (user-locked ordering). 23-TRACE.md also flags that the Gate
+  1/Gate 2 reference installs (HUMANKIND, Cyberpunk 2077) have degraded on disk since their
+  UAT recordings — a fresh install is likely needed for 23-07's clean live-run census. Next:
+  23-07 (live-run recording) → 23-08 (the gated fix). REQ-23-07 stays open.
+  `/gsd-plan-phase 23 --gaps`
 
 - **Tauri seam** — port the real `safeStorage` keyring (spike 011's `keyring` crate path).
   This is what blocks Phase 27 UAT steps 2/3, and it must land BEFORE any token-writing
@@ -78,7 +85,7 @@ Closed/parked native-install phases:
 |-------|------|-------|-----------|--------|
 | 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
 | 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | ⛔ **PARKED 2026-07-21 — superseded by Phase 24.** Bridge's one shared bottle (D-03) eliminates the per-family bottle matrix; plans retained unexecuted (`22-multiple-steam-bottles/PARKED.md`) |
-| 23 | Steam full-ownership install (StateFlags=4) | 5 | 4 | 🔄 Code-complete, NOT phase-complete — 23-05 formalized 2026-07-20 (single-flight guard + pause/resume, 296/296 tests); Gate 1 multi-depot StateFlags=4 PASS on real macOS (2026-07-19). Only 23-04 open: Gates 2 (hard-DRM) & 3 (interrupt-resume) hardware UAT **DEFERRED by user** (2026-07-20). REQ-23-07 stays open until both pass (`/gsd-verify-work 23`) |
+| 23 | Steam full-ownership install (StateFlags=4) | 10 | 6 | 🔄 In progress, NOT phase-complete — Gate 1 PASS (2026-07-19); Gate 2 CONDITIONAL PASS (2026-07-21, HUMANKIND Denuvo launch proven but only after a manual `chmod +x` workaround — blocker gap **G-23-02**, native install applies no execute bits); Gate 3 pending. Gap **G-23-01** (KCD2 `Blocked`-depot-key aborts whole install) also open. **23-06 executed** (trace-before-fix): added permanent `steam-flags-census` instrumentation (plan-build/download-entry/download-complete) + `23-TRACE.md` H1-H5 hypothesis matrix — no fix yet, per user-locked ordering. Next: 23-07 (live-run recording) → 23-08 (the gated fix). REQ-23-07 stays open until Gate 2 re-runs clean and Gate 3 passes (`/gsd-verify-work 23`) |
 | 24 | macOS native Steam bridge (steam_api proxy) | 17 | 17 | ✅ Complete 2026-07-21 — Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16 closed shim-overwrite/install-poll + CrossOver-launch/library-sync clusters; secure-phase done (threats_open:0). Gate 4 (Hoard) out of scope — bridge proxies only ISteamUser + ISteamFriends. Open: human retest of Avernum 5 launch |
 | 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
 
@@ -328,6 +335,7 @@ Recent decisions affecting current work:
 - [Phase 23-03]: Directory(64)/Symlink(512)/zero-size manifest entries reconcile by existence/target-match, never sha1 — sha1File/resolveContainedPath exported from depot.ts for reuse by depot/reconcile.ts (deliberate circular import, empirically safe under CJS/ts-jest since every cross-reference is a function-body call, never top-level state)
 - [Phase 23-03]: Startup resume's allModesApplied mirrors allFilesVerified rather than re-running a mode-reapplication pass — downloadSingleFile applies EDepotFileFlag modes immediately after each file's own sha1 check during the original download session, so a file reconcile trusts as verified already had correct modes applied
 - [Phase 23-03]: A reconciliation-time error inside downloadDepotFiles (e.g. path traversal) falls back to the full pre-23-03 job list rather than aborting the run; a startup buildDepotPlan/reconcile failure falls back to the honest-empty depots:[] finalize — reconciliation is purely additive, never a new failure mode, and init() never crashes
+- [Phase 23-06]: G-23-02 (0/18,809 HUMANKIND files landed +x) gets trace-before-fix instrumentation only (user-locked) — permanent steam-flags-census logging at plan-build/download-entry/download-complete plus per-invocation (never module-level) chmodAttempts/modeCallsites counters, proven safe under concurrent different-appId installs. 23-TRACE.md's H1-H5 hypothesis matrix + offline forensics feed 23-07's live run; no fix designed here, and 23-08 (the fix) is explicitly gated on that verdict
 - [Phase ?]: TOP_N_FANOUT=3, calibrated per PATTERNS.md guidance for fan-out width
 - [Phase ?]: pickHost workerSlot fan-out only applies at attemptIndex===0 && N>1; retries/circuit-breaker unaffected
 - [Phase 25-02]: fetchChunk/downloadFileChunks/downloadSingleFile gained defaulted trailing workerSlot/fileWorkerSlot: number = 0 params so combination arithmetic type-checks under strict mode; combined slot = fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot per RESEARCH.md A2
