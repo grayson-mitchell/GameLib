@@ -1036,14 +1036,14 @@ Plans:
 **Depends on:** Phase 27 (`electronStub.ts` seam, `src-tauri/src/main.rs` command pattern) and spike 011.
 **Requirements:** REQ-28-01, REQ-28-02, REQ-28-03, REQ-28-04, REQ-28-05, REQ-28-06, REQ-28-07
 **Ordering constraint (load-bearing, not a preference):** This phase MUST land before any channel that WRITES a token is wired. The sidecar and Electron share one store by design (`pathShim` resolves `userData` to the same folder), so under the current stub `encryptToken()` writes `TOKEN_PREFIX` + plaintext, Electron then fails to Keychain-decrypt it and silently signs the user out of the real app. See `27-.../SEAM.md` §2.
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 28-01-PLAN.md — Transport contract + sidecar-side `rustInvoke` request/response channel (wave 1)
 - [x] 28-02-PLAN.md — Rust: `keyring` crate + `dispatch_rust_channel` + reader-branch fix for dropped frames (wave 1)
-- [ ] 28-03-PLAN.md — `TokenStore` seam; Electron path moved verbatim, `user.ts` routed through it (wave 1)
+- [x] 28-03-PLAN.md — `TokenStore` seam; Electron path moved verbatim, `user.ts` routed through it (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
