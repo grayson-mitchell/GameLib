@@ -115,7 +115,8 @@ Gates 2-4 RETEST. `dist:mac` re-ran `build-steam-bridge` + `electron-vite build`
 off a tree whose `shimGenerate.ts`/`library.ts`/`games.ts` are last-touched by the three gap-fix commits
 (`88d20973`/`e07e85b3`/`b4bc94e8`), so the 24-11/24-12/24-13 fixes are compiled in. Verified in the
 packaged bundle: main chunk `build/main/chunks/index-o7jUYCjZ.js` contains `GameLibSteamBridge` + the
-bridge poll-source wiring; allowlist inlined = `206060` + `63000` only; bundled helper `Mach-O arm64`
+bridge poll-source wiring; allowlist inlined = **`206040` (Avernum 5) + `206060` (Avernum 6) + `63000`
+(HOARD)** — three active entries; bundled helper `Mach-O arm64`
 53696 B + bridge shim `steam_api.dll` PE32 **805888 B** + `steam_appid.txt`=480 all present at
 `…/app.asar.unpacked/build/bin/arm64/darwin/`. NOTE: this build bakes in 4 still-uncommitted working-tree
 changes (the `bridge/allowlist.ts` packaged-JSON-import fix — keep; and a `downloadqueue.ts`/`launcher.ts`/
@@ -500,6 +501,27 @@ gates** — it re-points Gates 2/3/4 (R5/R6) from ⛔ BLOCKED back to `PENDING (
 24-11/24-12/24-13)` with rebuild + clean-reinstall preconditions and per-fix verification hooks, so a
 fresh human-hardware run on real Apple-Silicon hardware can attribute each result to a specific fix.
 Any FAIL on retest routes to a further gap cycle.
+
+### RETEST RUN 1 (2026-07-21 ~16:03, packaged .app rebuilt at 15:01, HEAD 8afd58e9) — gap-cycle fixes CONFIRMED working; two NEW blockers surfaced
+
+Fresh install of **Avernum 5 (206040)** through GameLib's bridge path on real Apple-Silicon hardware.
+
+**✅ Gap-cycle fixes verified LIVE (gamelib.log 16:03:00–16:03:13):**
+- **D-UAT-24-04 (24-11 shim overwrite) PASS** — `placeShimForGame: overwrote steam_api.dll for appId 206040 at ".../GameLibSteamBridge/.../Avernum 5/steam_api.dll" (2 imported symbol(s) covered)`. On-disk confirm: shim = **805888 bytes**, `grep -ac 127.0.0.1` = 1 (bridge shim, not the game's own).
+- **D-UAT-24-05 (24-12 bridge install poll) PASS** — `starting install polling … source bridge` → `install polling complete … badge flipped to installed`. `Writing StateFlags=4 … manifest` into the bridge bottle.
+- **24-13 launch existence-gate PASS** — exe existed → launched via bridge instead of no-op: `launching appId 206040 via the Steam bridge (.../Avernum 5/Avernum 5.exe)`.
+- Depot download into the bridge bottle, full `Data/` dir + real 7.8MB PE32 exe present. Bridge helper alive + `LISTEN 127.0.0.1:54550`.
+
+**⛔ NEW-1 (BLOCKER) D-UAT-24-06 — bridge launch uses GPTK, not CrossOver → game exits instantly.**
+`launchBridgeGame` calls `runWineCommand({ gameSettings: getBridgeBottleSettings(), wait:false })`.
+`getBridgeBottleSettings()` (bottle.ts:286-287) returns `wineVersion: storedWineVersion ?? globalSettings.wineVersion`; no bridge CrossOver wine is stored, so it falls back to the GLOBAL default `Game-Porting-Toolkit-latest` (GPTK) — logged `Checking if wine version exists: Game-Porting-Toolkit-latest` right before launch. The bridge bottle was CREATED by `cxbottle` (CrossOver) and `Avernum 5.exe` is **32-bit (PE32 Intel 80386)**; GPTK running a CrossOver bottle + 32-bit exe fails instantly. Evidence: launch.log EMPTY (`wait:false` swallows output), no game process alive (only `winedevice.exe` + helper), helper logged ZERO connection activity for the 16:03 launch (shim never reached `SteamAPI_Init`). **Fix direction:** the bridge launch must resolve a CrossOver WineInstallation (the runtime that created the bottle), the way Phase 17's bottled-Steam launch self-heals (`checkWineBeforeLaunch` / `persistBottleWineVersion`), not inherit the global GPTK default.
+
+**⚠ NEW-2 (MAJOR) D-UAT-24-07 — periodic library sync clobbers the bridge-installed badge.**
+Install poll correctly flips the badge to "installed", but the periodic Steam library sync (`fetched 378 owned games` / `Steam library sync complete`, fires again post-launch at 16:03:18) re-derives install state WITHOUT reading the bridge-bottle ACF, resetting `is_installed:false` → button flashes Play→Install→Play and ultimately reverts to **Install**. 24-12 taught the install POLL to read the bridge bottle; the periodic SYNC / library-load path still doesn't. **Fix direction:** the Steam library install-state derivation (not just the install poll) must consult the bridge-bottle ACF (`getBridgeBottleSteamappsRoot`) for bridge-eligible titles.
+
+**Also observed:** `steam_appid.txt` is absent next to `Avernum 5.exe` (helper carries identity 480; unclear yet if the game's own path needs it — revisit after NEW-1). Uninstall of a bridge game succeeds on the backend (`removed bridge install … Finished uninstalling`) but the frontend "Uninstalling" pill doesn't clear because `markBridgeGameUninstalled` emits `pushGameToLibrary` but no `gameStatusUpdate: done` (cosmetic; folded into D-UAT-24-07 sync/status family).
+
+**Disposition:** the install→shim→poll cluster (24-11/12/13) is CLOSED and hardware-verified. Gates 3/4 remain **BLOCKED** on NEW-1 (bridge launch runtime) — no game has yet reached playable single-player through the bridge. Route NEW-1/NEW-2 to a follow-up gap cycle (`/gsd-plan-phase 24 --gaps`) or `/gsd-debug`.
 
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
