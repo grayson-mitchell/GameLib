@@ -939,6 +939,15 @@ class GlobalState extends PureComponent<Props> {
       return await this.refresh(library, checkForUpdates)
     } catch (error) {
       window.api.logError(`Library refresh failed: ${String(error)}`)
+      // debug/steam-relogin-no-autorefresh: this method's own guard above
+      // (`if (this.state.refreshing) return`) means a failure here — from
+      // ANY store, not just the one that just errored — permanently wedges
+      // every future refreshLibrary() call (including the automatic
+      // post-login refresh AND the manual Refresh button in ActionIcons,
+      // which calls this exact method) until something outside this
+      // function happens to reset `refreshing`. Reset it here so a failed
+      // refresh never blocks the next attempt.
+      this.setState({ refreshing: false })
     }
   }
 

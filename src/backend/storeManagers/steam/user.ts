@@ -146,7 +146,40 @@ export class SteamUser {
       LogPrefix.Steam
     )
 
-    return Boolean(this.client?.steamID)
+    if (this.client?.steamID) return true
+
+    // debug/steam-relogin-no-autorefresh: connectSteamUserClient's own 15s
+    // timeout is calibrated for the LOGIN UX (give up waiting for a persona
+    // name and show a placeholder) — it resolves via a fallback the instant
+    // 15s elapses even if 'loggedOn' simply hasn't fired YET, which is a real
+    // possibility for a cold CM reconnect immediately following an abrupt
+    // process kill (a dev rebuild+relaunch, or any ungraceful quit that never
+    // ran client.logOff()). That fallback resolution does NOT tear down the
+    // client — its 'loggedOn'/'error' .once() listeners are still attached —
+    // so the connection can genuinely succeed moments later with nothing left
+    // to notice. Give the SAME still-live client one bounded grace window to
+    // finish before this functional "is Steam connected" gate (unlike the
+    // login flow's display-name fallback) gives up and skips the library
+    // fetch entirely.
+    const client = this.client
+    if (!client) return false
+    const graceStart = Date.now()
+    const connectedLate = await new Promise<boolean>((resolve) => {
+      const grace = setTimeout(() => resolve(false), 20000)
+      client.once('loggedOn', () => {
+        clearTimeout(grace)
+        resolve(Boolean(client.steamID))
+      })
+      client.once('error', () => {
+        clearTimeout(grace)
+        resolve(false)
+      })
+    })
+    logInfo(
+      `[Timing] SteamUser.ensureConnected: grace-window wait took an additional ${Date.now() - graceStart}ms, connected=${connectedLate}`,
+      LogPrefix.Steam
+    )
+    return connectedLate
   }
 
   // ── AUTH-04: Logout ────────────────────────────────────────────────────────
