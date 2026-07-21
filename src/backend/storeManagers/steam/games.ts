@@ -129,6 +129,22 @@ export function __resetBridgeFailedSessionForTests(): void {
 }
 
 /**
+ * D-UAT-24-03 cascade (a) — un-poisons the session for appId after a
+ * successful bridge (re)install. `isBridgeEligible()` consults
+ * `bridgeFailedThisSession` for BOTH install() and launch() routing, so a
+ * single earlier recoverable failure (e.g. a transient depot-download
+ * error) previously stayed sticky for the rest of the process even after a
+ * later install attempt actually succeeded — permanently routing that
+ * appId's install AND launch down the native/bottled fallback instead of
+ * the now-working bridge. Called from installBridgeGame's success path
+ * only; a FAILED install still calls markBridgeFailedThisSession and must
+ * NOT call this.
+ */
+export function clearBridgeFailedThisSession(appId: string): void {
+  bridgeFailedThisSession.delete(appId)
+}
+
+/**
  * T-23-14 read seam: true if a native depot download is currently tracked
  * (live OR tearing down) for this appId. Exposes a minimal boolean over
  * nativeInstallsInFlight — never the mutable registry itself — so library.ts's
@@ -882,7 +898,7 @@ export default class SteamGame implements Game {
     const downloadResult = await this.installDepotDownload(args, {
       targetSteamappsDirOverride: targetSteamappsDir,
       os: 'windows',
-      pollerSource: 'bottle'
+      pollerSource: 'bridge'
     })
 
     if (downloadResult.status !== 'done') {
@@ -925,24 +941,30 @@ export default class SteamGame implements Game {
       return { status: 'error', error: shimError }
     }
 
-    // Deviation (Rule 2, discovered during Task 3): the `pollerSource:
-    // 'bottle'` passed to installDepotDownload above starts a poller that
-    // watches the PHASE 17 GameLibSteam bottle's steamapps root
-    // (library.ts's AcfSource is 'native'|'bottle' only — 'bottle' is
-    // hardcoded to getSteamBottleSettings(), never the bridge bottle). That
-    // poller will never find this appId's manifest there and is harmless
-    // dead weight (finding #10's ACF-is-dead-weight acknowledgment extends
-    // to this too — reusing the shared engine unchanged is still the
-    // correct low-risk choice, not forked here). The REAL completion
-    // signal for the bridge path is this synchronous flip below — depot
-    // download AND shim placement have already both succeeded by this
-    // point, so is_installed is set directly (mirrors library.ts's
-    // pollInstallOnce() 'installed' branch shape) rather than waiting on a
-    // poller that can never observe this bottle.
+    // 24-13 (D-UAT-24-05 wiring, was Rule-2 deviation during Task 3): the
+    // `pollerSource: 'bridge'` passed to installDepotDownload above starts a
+    // poller that watches the BRIDGE bottle's OWN steamapps root
+    // (library.ts's AcfSource now includes 'bridge', 24-12's
+    // getBridgeBottleSteamappsRoot()) — previously this was hardcoded to
+    // `'bottle'`, which watches the unrelated Phase 17 GameLibSteam bottle
+    // and NEVER observes this appId's manifest, so the install would time
+    // out / never be reflected. The poller reading the correct bottle is
+    // now a genuine (if redundant) completion signal, not dead weight — but
+    // the REAL completion signal for the bridge path remains this
+    // synchronous flip below: depot download AND shim placement have
+    // already both succeeded by this point, so is_installed is set directly
+    // (mirrors library.ts's pollInstallOnce() 'installed' branch shape)
+    // rather than relying solely on the poller.
     const installRoot = this.resolveBridgeGameInstallRoot(exePath)
     if (installRoot) {
       this.markBridgeGameInstalled(installRoot)
     }
+
+    // D-UAT-24-03 cascade (a): a successful (re)install un-poisons the
+    // session so a subsequent isBridgeEligible() check (install OR launch)
+    // for this appId routes back to the bridge instead of staying stuck on
+    // an earlier recoverable failure.
+    clearBridgeFailedThisSession(this.appId)
 
     return { status: 'done' }
   }
@@ -1088,7 +1110,7 @@ export default class SteamGame implements Game {
     opts: {
       targetSteamappsDirOverride?: string
       os: string
-      pollerSource?: 'bottle'
+      pollerSource?: 'bottle' | 'bridge'
     }
   ): Promise<InstallResult> {
     const existing = nativeInstallsInFlight.get(this.appId)
@@ -1125,7 +1147,7 @@ export default class SteamGame implements Game {
     opts: {
       targetSteamappsDirOverride?: string
       os: string
-      pollerSource?: 'bottle'
+      pollerSource?: 'bottle' | 'bridge'
     }
   ): Promise<InstallResult> {
     const controller = createAbortController(this.appId)
@@ -1466,6 +1488,31 @@ export default class SteamGame implements Game {
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: this.appId,
         reason: 'launch-exe-not-resolved',
+        fallbackAvailable: true
+      })
+      return false
+    }
+
+    // D-UAT-24-02: a bridge-eligible game can be is_installed:true via a
+    // native 32-bit Mac build or an old (Phase 17) bottle install, so the
+    // bridge bottle/exe this method resolves above may never have actually
+    // been placed on disk. Firing runWineCommand({wait:false}) at a
+    // non-existent exe in a non-existent bottle is a silent no-op — wine
+    // exits instantly, launch.log stays empty, the Play button reverts with
+    // no explanation. Verify the resolved exe genuinely exists (and,
+    // defensively, that the bridge bottle itself is ready) BEFORE ever
+    // firing wine. This is a RECOVERABLE install-state mismatch, not a
+    // bridge failure — do NOT markBridgeFailedThisSession here, since that
+    // would poison the session against the very bridge install the
+    // resulting dialog steers the user toward.
+    if (!isBridgeBottleReady() || !existsSync(exePath)) {
+      logWarning(
+        `SteamGame: appId ${this.appId} is bridge-eligible and marked installed, but the bridge bottle/exe is absent on disk (installed via a non-bridge path) — not firing wine at a non-existent exe (D-UAT-24-02)`,
+        LogPrefix.Steam
+      )
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'bridge-not-installed',
         fallbackAvailable: true
       })
       return false

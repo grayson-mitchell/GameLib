@@ -18,6 +18,7 @@ import SteamGame, {
   parseSteamMacMinOSVersion,
   macArchFromMinOS,
   markBridgeFailedThisSession,
+  clearBridgeFailedThisSession,
   __resetBridgeFailedSessionForTests
 } from '../games'
 import SteamLibraryManager from '../library'
@@ -44,6 +45,7 @@ import { placeShimForGame } from '../bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
 import { ensureBridgeHelperReady } from '../bridge/helperProcess'
 import { runWineCommand } from 'backend/launcher'
+import { existsSync } from 'graceful-fs'
 import {
   createAbortController,
   callAbortController,
@@ -1105,6 +1107,13 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       stdout: '',
       stderr: ''
     })
+    // 24-13 (D-UAT-24-02): launchBridgeGame's on-disk existence gate.
+    // Default both to true/ready so the pre-existing happy-path tests below
+    // (which never mention the exe-existence guard) keep exercising a
+    // "bridge genuinely installed" state; the dedicated D-UAT-24-02 test
+    // overrides existsSync to false.
+    ;(isBridgeBottleReady as jest.Mock).mockReset().mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReset().mockReturnValue(true)
   })
 
   afterEach(() => {
@@ -1202,6 +1211,63 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     )
     expect(result).toBe(false)
+  })
+
+  it('D-UAT-24-02: helper ready + resolveBridgeLaunchExe returns a path, but the exe is absent on disk (installed via a non-bridge path) — runWineCommand is NOT called, steamBridgeSetupRequired fired with reason bridge-not-installed, markBridgeFailedThisSession NOT applied (bridge stays eligible for a later install-through-bridge retry)', async () => {
+    const NOT_INSTALLED_APP_ID = '666666'
+    library.set(
+      NOT_INSTALLED_APP_ID,
+      makeEntry({ title: 'Installed via native/old-bottle path' })
+    )
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const game = new SteamGame(NOT_INSTALLED_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(existsSync).toHaveBeenCalledWith(RESOLVED_EXE_PATH)
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: NOT_INSTALLED_APP_ID,
+        reason: 'bridge-not-installed',
+        fallbackAvailable: true
+      }
+    )
+    expect(result).toBe(false)
+
+    // Not a bridge FAILURE — markBridgeFailedThisSession must NOT have been
+    // applied, so a later install-through-the-bridge retry is not poisoned.
+    // Proven black-box: a subsequent launch() with the exe now present
+    // reaches runWineCommand rather than falling back to the bottled path.
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    const secondResult = await game.launch({} as any)
+    expect(runWineCommand).toHaveBeenCalledTimes(1)
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    expect(secondResult).toBe(true)
+  })
+
+  it('D-UAT-24-02: helper ready + exe resolved + exe exists on disk + bridge bottle ready — happy path unchanged (runWineCommand fires)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(runWineCommand).toHaveBeenCalledTimes(1)
+    expect(result).toBe(true)
   })
 
   it('regression: a non-allowlisted title never calls ensureBridgeHelperReady/resolveBridgeLaunchExe/runWineCommand — existing bottled launch flow unchanged', async () => {
@@ -2200,6 +2266,87 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
     expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH)
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('D-UAT-24-05 wiring: installBridgeGame polls the BRIDGE bottle (pollerSource:"bridge"), never "bottle" (which watches the unrelated Phase 17 GameLibSteam bottle and would never observe this manifest)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      source: 'bridge',
+      isNativeHandoff: true
+    })
+    expect(startInstallPollingSpy).not.toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ source: 'bottle' })
+    )
+  })
+
+  it('D-UAT-24-03 cascade (b): a completed bridge install records install.install_path UNDER the bridge bottle (GameLibSteamBridge), never the Phase 17 GameLibSteam bottle', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    const stored = library.get(APP_ID)
+    expect(stored?.install.install_path).toContain(BRIDGE_STEAMAPPS_DIR)
+    expect(stored?.install.install_path).toContain('common')
+    expect(stored?.install.install_path).not.toContain('/mock/bottle/steamapps')
+  })
+
+  it('D-UAT-24-03 cascade (a): a successful bridge install calls clearBridgeFailedThisSession — proven by exercising the exported un-poison hook: after markBridgeFailedThisSession + clearBridgeFailedThisSession for the SAME appId, a subsequent install() reaches the bridge again rather than the bottled fallback', async () => {
+    const RETRY_APP_ID = '555555'
+    library.set(RETRY_APP_ID, makeEntry({ title: 'Retry After Clear' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    // Simulate an earlier recoverable bridge failure this session (e.g. a
+    // prior launch() failure, finding #3) that installBridgeGame's success
+    // path (`clearBridgeFailedThisSession(this.appId)`, games.ts) is
+    // responsible for un-poisoning.
+    markBridgeFailedThisSession(RETRY_APP_ID)
+    clearBridgeFailedThisSession(RETRY_APP_ID)
+
+    const game = new SteamGame(RETRY_APP_ID)
+    const result = await game.install({} as any)
+
+    // Reaching downloadSteamDepots (the bridge's own depot-download engine)
+    // proves isBridgeEligible() was true for this appId — i.e. the earlier
+    // bridgeFailedThisSession marking no longer applies.
+    expect(downloadSteamDepots).toHaveBeenCalled()
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('a FAILED bridge install (depot download error) still marks bridge-failed and does NOT clear it — a subsequent install() for the same appId still routes to the bottled fallback', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
+      status: 'error',
+      error: 'depot download failed'
+    })
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const firstResult = await game.install({} as any)
+    expect(firstResult).toEqual({
+      status: 'error',
+      error: 'depot download failed'
+    })
+    expect(placeShimForGame).not.toHaveBeenCalled()
+
+    // A subsequent install() call for the SAME appId must stay routed to
+    // the bottled fallback — the failure was never cleared.
+    const secondGame = new SteamGame(APP_ID)
+    const secondResult = await secondGame.install({} as any)
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(secondResult).toEqual({ status: 'done' })
   })
 
   it('non-allowlisted bottle-eligible: install() takes the existing bottled path unchanged (regression)', async () => {
