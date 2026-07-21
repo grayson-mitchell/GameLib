@@ -1938,6 +1938,15 @@ export async function pollUninstallOnce(
 
   if (result.state === 'absent') {
     const existing = library.get(appId)
+    // debug/uninstall-game-vanishes: temporary diagnostic — confirms whether
+    // the in-memory `library` Map actually holds an entry for this appId at
+    // the moment the ACF is confirmed absent. If this ever logs "MISS", the
+    // pushGameToLibrary update below is skipped entirely and the frontend
+    // never learns the game is now uninstalled via this path.
+    logInfo(
+      `Steam: uninstall-poll absent tick for appId ${appId} — library.get() ${existing ? 'HIT' : 'MISS'} (library.size=${library.size})`,
+      LogPrefix.Steam
+    )
     if (existing) {
       const updated: GameInfo = {
         ...existing,
@@ -1949,6 +1958,10 @@ export async function pollUninstallOnce(
       // refreshInstallState() for rationale).
       steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
+      logInfo(
+        `Steam: uninstall-poll pushed pushGameToLibrary for appId ${appId} (is_installed=false, is_delisted=${!!updated.is_delisted})`,
+        LogPrefix.Steam
+      )
     }
     sendFrontendMessage('gameStatusUpdate', {
       appName: appId,
