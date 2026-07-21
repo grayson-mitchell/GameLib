@@ -63,6 +63,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 **v0.8 — Tauri Shell** (walking-skeleton spike; STATE.md's `milestone:` frontmatter has not yet been advanced past v0.7 as of 2026-07-21 — see note under Phase 27)
 
 - [x] **Phase 27: Tauri Shell Walking Skeleton** - Rust/Tauri v2 shell + stdio JSON-RPC sidecar + renderer bridge proven end-to-end against the real Steam store-manager code (read flow + launch flow), with a SEAM.md ported-vs-stubbed boundary for the incremental port (completed 2026-07-21, 5/5 plans)
+- [ ] **Phase 28: Tauri keyring (real safeStorage)** - Swap the plaintext-passthrough stub for spike 011's `keyring` crate path so the sidecar shares the Electron build's OS-Keychain ciphertext; unblocks Phase 27 UAT steps 2/3. **Must land before any token-writing channel is wired** (shared store — the stub would silently sign the user out of the real app)
+- [ ] **Phase 29: Tauri store layer** - Grow the sidecar store past the two skeleton stores to cover the ~18 files routing through `electron_store.ts`, so later slices have config to read
+- [ ] **Phase 30: IPC re-plumb slice 1 (install/uninstall/update-check)** - First user-facing domain slice of the ~217 unported endpoints, following SEAM.md's incremental-port checklist
+- [ ] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need
+- [ ] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume
+- [ ] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly
+- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork
+- [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
 
 ## Phase Details
 
@@ -1018,6 +1026,103 @@ Plans:
 - [x] `27-05-PLAN.md` — `SEAM.md` ported-vs-stubbed boundary + incremental-port checklist; human-verify the native macOS dev build (window renders real UI, sidecar-populated Steam library, steam:// launch fires, Electron `npm start` still works). (REQ-27-06)
 
 **UI hint**: yes
+
+---
+
+### Phase 28: Tauri keyring — real `safeStorage` via the `keyring` crate
+
+**Goal:** Replace the walking skeleton's plaintext-passthrough `safeStorage` stub with spike 011's proven `keyring` crate path (`apple-native` feature, byte-identical round-trip), so the sidecar reads and writes the same OS-Keychain ciphertext the Electron build does. This unblocks Phase 27's UAT steps 2/3 (the Tauri window currently shows an empty, signed-out library even when Electron is signed in, because the stub's `isEncryptionAvailable()` lies and `decryptToken()` base64-decodes real Keychain ciphertext into garbage).
+**Depends on:** Phase 27 (`electronStub.ts` seam, `src-tauri/src/main.rs` command pattern) and spike 011.
+**Requirements:** TBD — mint at `/gsd-plan-phase 28`
+**Ordering constraint (load-bearing, not a preference):** This phase MUST land before any channel that WRITES a token is wired. The sidecar and Electron share one store by design (`pathShim` resolves `userData` to the same folder), so under the current stub `encryptToken()` writes `TOKEN_PREFIX` + plaintext, Electron then fails to Keychain-decrypt it and silently signs the user out of the real app. See `27-.../SEAM.md` §2.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 28 to break down)
+
+---
+
+### Phase 29: Tauri store layer — generalize the sidecar store beyond the two skeleton stores
+
+**Goal:** Grow `fileStore.ts` / the `sidecar:store-snapshot` handler from the two stores Phase 27's read path needed (`configStore`, `steamConfigStore`) into a real store layer covering the ~18 files that route through `electron_store.ts`, so later IPC slices have config to read instead of each one extending the snapshot ad hoc. Decide here between a fuller `fileStore.ts` and a Tauri/Rust-side store — SEAM.md flags the full swap as its own phase-sized unit, not a shim.
+**Depends on:** Phase 28 (secret-bearing store values must round-trip through the real keyring first).
+**Requirements:** TBD — mint at `/gsd-plan-phase 29`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 29 to break down)
+
+---
+
+### Phase 30: Tauri IPC re-plumb slice 1 — install, uninstall, update-check
+
+**Goal:** Port the first user-facing domain slice of the ~217 unported IPC endpoints onto the sidecar, following SEAM.md's incremental-port checklist: a curated `<domain>FlowRegistration.ts` importing only the real backend code the flow needs, real behavior in `electronStub.ts` bound to real Tauri commands for any newly-required Electron API, and the slice proven E2E in the Tauri build. Install/uninstall/update-check is the natural next slice — it reuses the skeleton's own read + action pattern and is the highest user-facing value per endpoint.
+**Depends on:** Phase 29 (store layer), Phase 27 (`steamFlowRegistration.ts` pattern).
+**Requirements:** TBD — mint at `/gsd-plan-phase 30`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 30 to break down)
+
+---
+
+### Phase 31: Tauri IPC re-plumb slice 2 — settings and config
+
+**Goal:** Port the settings/config endpoint cluster onto the sidecar, including the `dialog` API surface those flows depend on (Tauri `dialog` plugin — 9 files per spike 009's touch-count). Second of three mechanical re-plumb slices.
+**Depends on:** Phase 30 (slice-1 pattern proven at volume), Phase 29 (store layer).
+**Requirements:** TBD — mint at `/gsd-plan-phase 31`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 31 to break down)
+
+---
+
+### Phase 32: Tauri IPC re-plumb slice 3 — downloads and queue
+
+**Goal:** Port the download-manager/queue endpoint cluster onto the sidecar — the progress-notification-heavy slice, which exercises the `frontendMessage` → `frontend_message` push path at real volume rather than the single `pushGameToLibrary` case the skeleton proved. Third of three mechanical re-plumb slices.
+**Depends on:** Phase 30 (install flow — the queue's producer).
+**Requirements:** TBD — mint at `/gsd-plan-phase 32`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 32 to break down)
+
+---
+
+### Phase 33: Tauri lifecycle cluster — app, dialog, window, notifications, tray, protocol
+
+**Goal:** Give real Tauri behavior to the 44-file lifecycle cluster that the skeleton left stubbed or no-op: `app` lifecycle beyond `getPath`/`getName` (26 files), full `BrowserWindow`/window management (7), the remaining `shell` methods (`showItemInFolder`/`trashItem`/`openPath`, 5), `nativeImage` (4), `Notification` (3), plus tray, protocol registration, and the updater hooks. `session` and `powerSaveBlocker` are the two soft spots spike 011 flagged with no full Tauri v2 parity — scope them explicitly (resolve, shim, or accept) rather than discovering them at cutover.
+**Depends on:** Phases 30–32 (the endpoint surface those clusters serve must exist first).
+**Requirements:** TBD — mint at `/gsd-plan-phase 33`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 33 to break down)
+
+---
+
+### Phase 34: Tauri packaging — Windows and Linux builds, signing, auto-update
+
+**Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
+**Depends on:** Phase 33 (an app that runs before an app that ships).
+**Requirements:** TBD — mint at `/gsd-plan-phase 34`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34 to break down)
+
+---
+
+### Phase 35: Electron cutover — remove the Electron build
+
+**Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first).
+**Requirements:** TBD — mint at `/gsd-plan-phase 35`
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 35 to break down)
 
 ## Progress
 

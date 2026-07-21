@@ -128,7 +128,7 @@
 
 ## v0.8 Tauri Shell (In progress — no ship date)
 
-**Scope:** Phase 27 — a walking-skeleton spike proving a Tauri v2 (Rust shell + headless Node sidecar + stdio JSON-RPC transport) rearchitecture end-to-end against GameLib's real Steam store-manager code, while leaving the existing Electron build completely untouched.
+**Scope:** Phase 27 — a walking-skeleton spike proving a Tauri v2 (Rust shell + headless Node sidecar + stdio JSON-RPC transport) rearchitecture end-to-end against GameLib's real Steam store-manager code, while leaving the existing Electron build completely untouched — **extended 2026-07-22 with Phases 28–35, the incremental port that follows it:** 28 real `safeStorage` keyring, 29 sidecar store layer, 30–32 IPC re-plumb domain slices (install/uninstall/update-check, settings/config, downloads/queue), 33 the lifecycle cluster, 34 Windows/Linux packaging, 35 Electron cutover. Every phase except 35 ends with both builds working (REQ-27-06's additive/reversible invariant); 28 is order-constrained ahead of any token-writing channel because the sidecar and Electron share one store.
 
 **Status:** Phase 27 (Tauri Shell Walking Skeleton) is **complete — 5/5 plans**, all with matching SUMMARY.md, completed 2026-07-21. `SEAM.md` documents the ported-vs-stubbed boundary and an incremental-port checklist; the real `safeStorage` keyring port (spike 011's `keyring` crate path) is the next blocking increment before any token-writing channel can be wired, per STATE.md's "Open work" list.
 
