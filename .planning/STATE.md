@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: verifying
-stopped_at: Completed 24-17-PLAN.md
-last_updated: "2026-07-21T10:05:36.807Z"
+stopped_at: Phase 28 context gathered
+last_updated: "2026-07-21T21:54:38.328Z"
 last_activity: 2026-07-21
 progress:
-  total_phases: 23
-  completed_phases: 20
-  total_plans: 158
-  completed_plans: 144
-  percent: 87
+  total_phases: 5
+  completed_phases: 3
+  total_plans: 52
+  completed_plans: 46
+  percent: 60
 ---
 
 # Project State
@@ -456,8 +456,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T07:00:13.854Z
-Stopped at: Completed 24-17-PLAN.md
+Last session: 2026-07-21T21:54:38.322Z
+Stopped at: Phase 28 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
