@@ -24,12 +24,16 @@
  */
 
 /**
- * Discriminates the three request kinds a renderer can send across the transport.
+ * Discriminates the four request kinds that can cross the transport.
  * - 'invoke'       → req/resp (maps to the old `ipcRenderer.invoke`)
  * - 'send'         → fire-and-forget (maps to the old `ipcRenderer.send`)
  * - 'openExternal' → the `shell.openExternal` parity path (steam:// opens via tauri-plugin-opener)
+ * - 'rustInvoke'   → sidecar→Rust req/resp (Phase 28 D-05). Direction asymmetry: `rustInvoke`
+ *   frames only ever travel sidecar→Rust; the Rust shell must never send a `rustInvoke`
+ *   request INTO the sidecar, which is why `isValidRequest()` in sidecarRpc.ts deliberately
+ *   does NOT accept it as an inbound kind (T-28-03b).
  */
-export type SidecarRpcKind = 'invoke' | 'send' | 'openExternal'
+export type SidecarRpcKind = 'invoke' | 'send' | 'openExternal' | 'rustInvoke'
 
 /**
  * A request frame written from the Rust shell to the sidecar's stdin (one JSON object per line).
@@ -117,6 +121,41 @@ export const OPEN_EXTERNAL = 'open_external' as const
  * so the renderer's synchronous `configStore`-style reads resolve without a round-trip per key.
  */
 export const SIDECAR_STORE_SNAPSHOT = 'sidecar_store_snapshot' as const
+
+/**
+ * SidecarRpcKind discriminant for the sidecar→Rust request/response channel (Phase 28 D-05).
+ * Direction asymmetry: `rustInvoke` frames only ever travel sidecar→Rust; the Rust shell
+ * must never send a `rustInvoke` request INTO the sidecar (T-28-03b) — see SidecarRpcKind's
+ * own doc comment above.
+ */
+export const RUST_INVOKE_KIND = 'rustInvoke' as const
+
+/** Rust-side channel name: read the Steam refresh token from the OS Keychain via `keyring`. */
+export const RUST_KEYRING_GET = 'keyring_get' as const
+
+/** Rust-side channel name: write the Steam refresh token to the OS Keychain via `keyring`. */
+export const RUST_KEYRING_SET = 'keyring_set' as const
+
+/** Rust-side channel name: delete the Steam refresh token entry from the OS Keychain. */
+export const RUST_KEYRING_DELETE = 'keyring_delete' as const
+
+/** Rust-side channel name: probe Keychain availability without assuming a static answer. */
+export const RUST_KEYRING_AVAILABLE = 'keyring_available' as const
+
+/**
+ * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
+ * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
+ * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
+ */
+export const RUST_INVOKE_CHANNELS = [
+  RUST_KEYRING_GET,
+  RUST_KEYRING_SET,
+  RUST_KEYRING_DELETE,
+  RUST_KEYRING_AVAILABLE
+] as const
+
+/** The set of channel names `requestRustInvoke()` is allowed to target. */
+export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]
 
 /**
  * Marker prefixed to the `error` of any invoke response rejected solely because the channel
