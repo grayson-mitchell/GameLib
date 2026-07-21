@@ -67,7 +67,27 @@ plus references throughout §3).
 - **`safeStorage`** — plain passthrough (`Buffer.from(plainText, 'utf-8')` / `toString('utf-8')`),
   NOT the real OS Keychain. Spike 011 already proved the real path (`keyring` crate,
   `apple-native` feature, byte-identical round-trip) — wiring it is deferred, tracked as T-27-05
-  accepted-passthrough. No token persistence is exercised by this skeleton's two flows.
+  accepted-passthrough.
+
+  > **Live-verified consequence (27-05 hardware run): this stub blocks Steam sign-in entirely.**
+  > The original claim that "no token persistence is exercised by this skeleton's two flows" is
+  > **wrong in the read direction**. An existing refresh token — written by real Electron
+  > `safeStorage` and tagged with `TOKEN_PREFIX` — is read back by `steam/user.ts`'s
+  > `decryptToken()` at connect time. The stub's `isEncryptionAvailable()` returns `true`
+  > (untrue), so `decryptToken` trusts it, base64-decodes real Keychain ciphertext, and yields
+  > garbage. Result: the sidecar cannot authenticate, and the Tauri window shows an empty,
+  > signed-out library even when the Electron build is signed in. UAT steps 2 and 3 are BLOCKED
+  > on this.
+  >
+  > **⚠️ Write-direction trap for whoever ports the login channels.** The sidecar and Electron
+  > share one store (`pathShim` resolves `userData` to the same folder — by design). Under this
+  > stub, `encryptToken()` writes `TOKEN_PREFIX` + **plaintext**. Electron will then attempt a
+  > Keychain decrypt of plaintext, fail, and silently sign the user out of the real app —
+  > corrupting a working session. This cannot fire today (no login channel is registered), but
+  > **port the keyring BEFORE wiring any channel that writes a token.** Making the stub honest
+  > (`isEncryptionAvailable: () => false`) is a one-line stopgap that converts both failures into
+  > a clean signed-out state; it was deliberately NOT applied in 27-05 (the keyring port is the
+  > real fix and this file is the record).
 - **`fileStore.ts`** — covers only the store shape the flows actually touch (`configStore`,
   `steamConfigStore`); it is not a general `electron-store` replacement and does not implement
   every method real `electron-store` exposes project-wide.
@@ -149,3 +169,50 @@ above.
 5. Re-run this document's own acceptance shape: list the newly wired channel(s) under §1, move
    them out of the deferred table in §3, and re-verify `npm run tauri:dev` + `npm start` both work
    (the additive/reversible invariant, REQ-27-06 pattern) before calling the slice done.
+
+---
+
+## Load-Bearing Invariants (learned the hard way in the 27-05 live run)
+
+Two non-obvious rules the skeleton depends on. Both were discovered only by running the real
+build — every automated test passed while the window rendered blank.
+
+### A. `window.api` attachment order is a DEPENDENCY, not a convention
+
+The renderer has no Electron preload under Tauri, so `preload/tauriAttach.ts` must assign
+`window.api` before any module that reads it at module scope (`frontend/helpers/index.ts` captures
+`window.api.readConfig`; `frontend/helpers/electronStores.ts` calls `window.api.storeNew` from
+constructors at module scope).
+
+Declaring the attach as the entry's first import in `index.tsx` is **not sufficient in a built
+bundle.** Source order governs modules; Rollup's *chunking* governs what actually executes first.
+In the failing build, Rollup inlined `tauriAttach` into the entry chunk while `helpers/index.ts`
+landed in a shared chunk the entry chunk imports — and an imported chunk is evaluated in full
+before any of the importing chunk's own module bodies. The attach ran second, `window.api` was
+undefined, and the module-scope read threw *inside the module graph*, producing a silent blank
+window (it surfaced as a rejected dynamic import, which the on-page error surface cannot catch).
+
+**Rule:** any module that touches `window.api` at module scope must `import '../../preload/tauriAttach'`
+itself. Evaluation order between a module and its dependency is fixed by the spec regardless of
+chunk boundaries. Do not rely on entry-file import order. Symptom of a violation: blank window,
+`undefined is not an object (evaluating 'window.api.<anything>')`, and NO `[GameLib] tauriAttach
+evaluating` line in the console.
+
+### B. Unported channels must stay non-fatal
+
+Much of the frontend invokes IPC at module scope with an uncaught `.then()` (e.g.
+`frontend/state/UploadedLogFiles.ts` → `getUploadedLogFiles()`). Under Electron those can never
+reject — every handler exists. Against this sidecar, which registers only a curated handful of
+channels, each one rejects as an unhandled rejection during boot. Treating those as fatal makes the
+skeleton unusable until all ~217 endpoints are ported, i.e. it defeats the point of a walking
+skeleton.
+
+**Contract:** `sidecarRpc.ts` tags handler-missing rejections with `UNPORTED_CHANNEL_MARKER`
+(`common/types/sidecarTransport.ts`). The response is still `ok: false` — the promise rejects
+honestly, only the *reason* is classified. `frontend/bootErrorSurface.ts` matches that marker and
+logs a warning instead of painting over the page, and additionally never clobbers an
+already-mounted app. As channels are ported, these warnings disappear on their own.
+
+Note `bootErrorSurface.ts` duplicates the marker as a literal rather than importing it: that
+module's zero-import property is what guarantees its handlers register before anything they need to
+catch — precisely the invariant rule A shows is fragile. Keep the two in sync by hand.
