@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: ready_to_plan
-stopped_at: Phase 24 complete (16/17) — ready to discuss Phase 25
-last_updated: 2026-07-21T07:41:37.740Z
+stopped_at: Phase 27 complete (5/5) — Tauri walking skeleton renders live on macOS; UAT steps 2/3 blocked on the deferred safeStorage keyring
+last_updated: 2026-07-21T21:30:00.000Z
 last_activity: 2026-07-21
 progress:
   total_phases: 23
-  completed_phases: 19
+  completed_phases: 20
   total_plans: 153
-  completed_plans: 142
-  percent: 83
+  completed_plans: 143
+  percent: 93
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 25 — steam depot download multi host fan out throughput
+**Current focus:** Phase 27 complete — Tauri shell walking skeleton (next: Phase 22 or 23 gap closure, see below)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 25
-Plan: Not started
-Status: Ready to plan
+Phase: 27 (complete)
+Plan: 5 of 5 complete
+Status: Phase complete — no phase currently in flight
 Last activity: 2026-07-21
+
+> **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
+> (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
+> several counts: Phase 25 completed 2026-07-19, Phase 26 completed 2026-07-20, and
+> Phase 27 (Tauri walking skeleton) had been planned AND was 4/5 executed. Corrected
+> after closing 27-05. Note `ROADMAP.md` currently contains only the Phase 27 section, so
+> `gsd-sdk query roadmap.analyze` returns empty and mis-identifies the current phase —
+> rebuild the roadmap before relying on that verb.
+
+**Open work, in rough priority order:**
+
+- **Phase 23** — full-ownership install: gaps `G-23-01`/`G-23-02` open (native install
+  applies no execute bits; Denuvo launch needed a manual `chmod +x`). Gate 3 never run.
+  REQ-23-07 stays open. `/gsd-plan-phase 23 --gaps`
+- **Phase 22** — Steam Game Families / multiple bottles: 8 plans written, 0 executed.
+- **Tauri seam** — port the real `safeStorage` keyring (spike 011's `keyring` crate path).
+  This is what blocks Phase 27 UAT steps 2/3, and it must land BEFORE any token-writing
+  channel is wired, or the sidecar will corrupt the Electron app's saved session. See
+  `.planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` § Stubbed.
+- **Cross-phase verification debt** — 30 items across 9 files (`/gsd-audit-uat`).
 
 Other open native-install phases:
 
