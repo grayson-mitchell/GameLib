@@ -110,6 +110,17 @@ present in the same directory (electron-builder.yml line 56 packs `build/bin/${a
 bridge allowlist in the packaged bundle (`app.asar` → `build/main/chunks/index-*.js`) was verified to
 contain exactly two active entries — `appId:"206060"` (Avernum 6) and `appId:"63000"` (HOARD); `206020`
 survives only as descriptive note text, not as an entry. The bundled helper remains present after rebuild.
+**REBUILT AGAIN 2026-07-21 15:01 post-gap-cycle (HEAD `8afd58e9`)** — this is the artifact for the
+Gates 2-4 RETEST. `dist:mac` re-ran `build-steam-bridge` + `electron-vite build` + `electron-builder`
+off a tree whose `shimGenerate.ts`/`library.ts`/`games.ts` are last-touched by the three gap-fix commits
+(`88d20973`/`e07e85b3`/`b4bc94e8`), so the 24-11/24-12/24-13 fixes are compiled in. Verified in the
+packaged bundle: main chunk `build/main/chunks/index-o7jUYCjZ.js` contains `GameLibSteamBridge` + the
+bridge poll-source wiring; allowlist inlined = `206060` + `63000` only; bundled helper `Mach-O arm64`
+53696 B + bridge shim `steam_api.dll` PE32 **805888 B** + `steam_appid.txt`=480 all present at
+`…/app.asar.unpacked/build/bin/arm64/darwin/`. NOTE: this build bakes in 4 still-uncommitted working-tree
+changes (the `bridge/allowlist.ts` packaged-JSON-import fix — keep; and a `downloadqueue.ts`/`launcher.ts`/
+`utils.ts` packaged-`require()`-resolution crash fix from a concurrent debug session, status
+awaiting_human_verify) — both are packaged-bundle fixes, appropriate for a UAT build, flagged for provenance.
 
 ---
 
@@ -200,8 +211,11 @@ externally staged helper is present or used.
 **Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
 - **D-UAT-24-04 (24-11, shim overwrite-by-identity):** after the install this gate depends on,
   confirm the `steam_api.dll` next to the game exe in the bridge bottle is the 805888-byte bridge
-  shim, NOT the game's own ~118368-byte copy (`ls -l` size check, or `grep -a 54550` the binary for
-  the bridge's loopback port literal — present in the shim, absent from the game's own dll).
+  shim, NOT the game's own ~118368-byte copy. **Authoritative check = file size** (`stat -f %z` →
+  805888 = bridge shim; ~118368 = game's own). Secondary: `grep -ac 127.0.0.1 <dll>` — the bridge
+  shim embeds the loopback address (count 1), the game's own dll does not (count 0). (NOTE: the
+  earlier `grep 54550` port check is a false negative — the port is not stored as ASCII in the shim;
+  use size or 127.0.0.1.)
 - **D-UAT-24-05 (24-12, bridge AcfSource):** the install badge for the acceptance game STAYS
   "Installed" after the poll grace window and does not revert to "Install" (proves the poll read the
   bridge-bottle StateFlags=4 manifest, not the wrong root).
@@ -263,8 +277,10 @@ logged; Part B identity served if requested (else N/A per finding #6); bottle ha
 
 **Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
 - **D-UAT-24-04 (24-11, shim overwrite-by-identity):** the `steam_api.dll` next to `Avernum6.exe` in
-  the bridge bottle is the 805888-byte bridge shim, NOT Avernum 6's own ~118368-byte copy (size check,
-  or `grep -a 54550` the binary for the bridge loopback port literal).
+  the bridge bottle is the 805888-byte bridge shim, NOT Avernum 6's own ~118368-byte copy.
+  **Authoritative check = file size** (`stat -f %z` → 805888 = bridge shim; ~118368 = game's own);
+  secondary `grep -ac 127.0.0.1 <dll>` (bridge shim = 1, game's own = 0). (`grep 54550` is a false
+  negative — port not stored as ASCII.)
 - **D-UAT-24-05 (24-12, bridge AcfSource):** the Install badge STAYS "Installed" after the install
   poll grace window and does not revert to "Install" (proves the poll read the bridge-bottle
   StateFlags=4 manifest for 206060, not the native/Phase-17-bottle root).
@@ -314,8 +330,10 @@ finding #6); bottle has no Windows Steam client.
 
 **Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
 - **D-UAT-24-04 (24-11, shim overwrite-by-identity):** the `steam_api.dll` next to `Reuben.exe` in the
-  bridge bottle is the 805888-byte bridge shim, NOT HOARD's own ~118368-byte copy (size check, or
-  `grep -a 54550` the binary for the bridge loopback port literal).
+  bridge bottle is the 805888-byte bridge shim, NOT HOARD's own ~118368-byte copy.
+  **Authoritative check = file size** (`stat -f %z` → 805888 = bridge shim; ~118368 = game's own);
+  secondary `grep -ac 127.0.0.1 <dll>` (bridge shim = 1, game's own = 0). (`grep 54550` is a false
+  negative — port not stored as ASCII.)
 - **D-UAT-24-05 (24-12, bridge AcfSource):** the Install badge STAYS "Installed" after the install
   poll grace window and does not revert to "Install" (proves the poll read the bridge-bottle
   StateFlags=4 manifest for 63000, not the native-32-bit-Mac or Phase-17-bottle record).
