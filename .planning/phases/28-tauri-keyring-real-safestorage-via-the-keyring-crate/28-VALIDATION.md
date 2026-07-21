@@ -89,7 +89,7 @@ created: 2026-07-22
 
 **Approval:** planned 2026-07-22 — every task in plans 28-01..06 carries an `<automated>` verify or a
 Wave 0 dependency. Wave 0 files are scheduled inside the plans that consume them (28-01 Task 2 before
-Task 3; 28-03 Task 3; 28-04 Task 3; 28-05 Task 1). One addition beyond this document's original list:
+Task 3; 28-03 Task 3; 28-04 Task 1; 28-05 Task 1). One addition beyond this document's original list:
 `src/backend/sidecar/__tests__/keyringTokenStore.test.ts` (plan 28-04) carries the sidecar-side
 keyring error classification for REQ-28-06, keeping it out of the Electron-side
 `tokenStore.test.ts` (plan 28-03) so the two plans own disjoint files. It is scheduled as plan 28-04's

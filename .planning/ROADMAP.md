@@ -1039,11 +1039,22 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 28-01-PLAN.md — Transport contract + sidecar-side `rustInvoke` request/response channel (wave 1)
 - [ ] 28-02-PLAN.md — Rust: `keyring` crate + `dispatch_rust_channel` + reader-branch fix for dropped frames (wave 1)
 - [ ] 28-03-PLAN.md — `TokenStore` seam; Electron path moved verbatim, `user.ts` routed through it (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 28-04-PLAN.md — `SidecarKeyringTokenStore` + honest `safeStorage` stub + bootstrap wiring (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 28-05-PLAN.md — Electron-untouched byte-comparison proof + by-construction source gates (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 28-06-PLAN.md — Self-check scaffolding, hardware verification checkpoint, `28-PROOF.md` + SEAM.md update, scaffolding removal (wave 4)
 
 ---
@@ -1056,6 +1067,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 29 to break down)
 
 ---
@@ -1068,6 +1080,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 30 to break down)
 
 ---
@@ -1080,6 +1093,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 31 to break down)
 
 ---
@@ -1092,6 +1106,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 32 to break down)
 
 ---
@@ -1104,6 +1119,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 33 to break down)
 
 ---
@@ -1116,6 +1132,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 34 to break down)
 
 ---
@@ -1128,6 +1145,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 35 to break down)
 
 ## Progress
