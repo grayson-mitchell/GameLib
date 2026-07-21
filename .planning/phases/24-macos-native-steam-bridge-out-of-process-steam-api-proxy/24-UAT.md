@@ -527,6 +527,16 @@ Install poll correctly flips the badge to "installed", but the periodic Steam li
 
 **Disposition:** the install→shim→poll cluster (24-11/12/13) is CLOSED and hardware-verified. Gates 3/4 remain **BLOCKED** on NEW-1 (bridge launch runtime) — no game has yet reached playable single-player through the bridge. Route NEW-1/NEW-2 to a follow-up gap cycle (`/gsd-plan-phase 24 --gaps`) or `/gsd-debug`.
 
+### RETEST RUN 2 (2026-07-21 ~17:16, packaged .app rebuilt at 17:01 with gap cycle 2) — bridge LAUNCH now works end-to-end
+
+Launched **Avernum 5 (206040)** from the rebuilt .app.
+
+**✅ D-UAT-24-06 (24-15 CrossOver runtime) CLOSED — hardware-confirmed.** gamelib.log 17:16:52: `Checking if wine version exists: CrossOver (bridge bottle runtime)` → `Running Wine command: .../Avernum 5/Avernum 5.exe`. The game LAUNCHED under CrossOver wine (no GPTK `alloc_pages_vprot` abort) and reached its initial dialog THROUGH THE BRIDGE. Avernum 5 then crashed post-dialog — **its own CrossOver-compat issue (same family as Avernum 4), NOT a bridge defect** (user-confirmed; Avernum 6/HOARD expected to run fine). This is the first game to reach in-bridge UI on macOS — the launch-runtime blocker is gone.
+
+**✅ D-UAT-24-07 (24-16 badge durability):** badge behaved (user proceeded to launch without the Play→Install flapping observed in Run 1).
+
+**⚠ NEW D-UAT-24-08 (MAJOR, non-blocking) — shared bridge helper is not killed on app quit; lingers and blocks new binds.** gamelib.log 17:16:51: the app spawned a fresh helper which hit `bridge helper: FATAL bind 127.0.0.1:54550 failed` → `bridge helper exited (code=4)`. Root: the D-03 shared helper **PID 42319, spawned at 15:24, survived every subsequent app quit/relaunch** and still holds `127.0.0.1:54550 (LISTEN)` (confirmed via `lsof`). The game still worked because its shim connected to that lingering helper — but this is fragile: a new session's helper can never bind while a stale one lives, and if the stale one had died there'd be no helper. **Fix direction:** kill the shared helper on app quit (lifecycle teardown) AND/OR have `ensureBridgeHelperReady()`/`spawnHelperIfNeeded` detect a healthy existing helper on 54550 and REUSE it instead of spawning a duplicate that FATALs on bind. **Mitigation for remaining gates:** `pkill -f steam-bridge-helper` before each cold launch. Route to a follow-up gap cycle / `/gsd-debug`.
+
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
 Surfaced 2026-07-21 during Gate 2–4 setup; **not caused by Phase 24 and not Phase 24 acceptance items.**
