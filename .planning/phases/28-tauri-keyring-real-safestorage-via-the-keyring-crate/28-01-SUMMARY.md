@@ -125,6 +125,13 @@ None - no external service configuration required. This plan touches no Electron
 - Plan 28-02 can now implement the Rust-side `dispatch_rust_channel` match arms (`keyring_get`/`keyring_set`/`keyring_delete`/`keyring_available`) and wire the new reader branch in `src-tauri/src/main.rs`'s `start_reader()`, using this plan's frame shape as the fixed contract.
 - No blockers. `npm run codecheck` and the full `src/backend/sidecar/__tests__` suite (bootstrap + skeletonFlows + rustInvokeChannel, 16 tests) are green.
 
+## Self-Check: PASSED
+
+All created/modified files exist: `src/common/types/sidecarTransport.ts`,
+`src/backend/sidecar/sidecarRpc.ts`, `src/backend/sidecar/__tests__/rustInvokeChannel.test.ts`,
+`.planning/phases/28-tauri-keyring-real-safestorage-via-the-keyring-crate/28-01-SUMMARY.md`.
+All 4 commits verified present in `git log`: `750719dc`, `531944ed`, `f48e448e`, `e3ad1ac9`.
+
 ---
 *Phase: 28-tauri-keyring-real-safestorage-via-the-keyring-crate*
 *Completed: 2026-07-22*
