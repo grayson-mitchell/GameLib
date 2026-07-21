@@ -27,6 +27,7 @@ import type { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import {
   OPEN_EXTERNAL,
+  UNPORTED_CHANNEL_MARKER,
   type SidecarRpcRequest,
   type SidecarRpcResponse,
   type SidecarNotification
@@ -58,10 +59,15 @@ function isValidRequest(value: unknown): value is SidecarRpcRequest {
 async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
   const handler = handlerRegistry.get(request.channel)
   if (!handler) {
+    // Tagged as an expected seam gap rather than a malfunction: in the walking skeleton
+    // only a curated handful of channels are registered, so every one of the ~217 unported
+    // endpoints lands here by design (SEAM.md § Deferred). The renderer uses this marker to
+    // avoid treating a documented gap as a fatal bootstrap error. The response is still
+    // ok:false — the promise rejects honestly, only its *reason* is classified.
     const response: SidecarRpcResponse = {
       id: request.id,
       ok: false,
-      error: `No handler registered for channel '${request.channel}'`
+      error: `${UNPORTED_CHANNEL_MARKER} No handler registered for channel '${request.channel}'`
     }
     writeLine(response)
     return

@@ -16,12 +16,47 @@
  * No-op in normal operation; harmless under Electron.
  */
 
+/**
+ * Mirrors `UNPORTED_CHANNEL_MARKER` in `common/types/sidecarTransport.ts`.
+ *
+ * Deliberately duplicated as a literal instead of imported: this module's zero-import
+ * property is load-bearing (see the header) and was proven so the hard way — Rollup's
+ * chunking reorders module evaluation across chunk boundaries, so every import here is a
+ * chance for these handlers to register too late to catch the very errors they exist for.
+ * A one-word string is a cheap price for keeping that guarantee absolute. If the constant
+ * ever changes, this must change with it.
+ */
+const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]'
+
 function renderBootError(context: string, error: unknown): void {
   try {
     const message =
       error instanceof Error
         ? `${error.name}: ${error.message}\n\n${error.stack ?? '(no stack)'}`
         : String(error)
+
+    // An unported channel is a documented seam gap, not a bootstrap failure. Much of the
+    // frontend invokes channels at module scope with an uncaught `.then()` — harmless under
+    // Electron (every handler exists), an unhandled rejection against the skeleton sidecar.
+    // Hijacking the page for those would make the walking skeleton unusable until all ~217
+    // endpoints are ported, which is precisely what this phase defers. Log and move on.
+    if (message.includes(UNPORTED_CHANNEL_MARKER)) {
+      console.warn(
+        `[GameLib] unported channel called during ${context} — expected seam gap ` +
+          `(see SEAM.md § Deferred), continuing:`,
+        message
+      )
+      return
+    }
+
+    // Never clobber an already-mounted app. Once React has rendered, a late error belongs in
+    // the console, not painted over a working UI — this surface exists for the pre-mount
+    // blank-page case where there is nothing else to look at.
+    const root = document.getElementById('root')
+    if (root && root.childElementCount > 0) {
+      console.error(`[GameLib] post-mount error (${context}):`, error)
+      return
+    }
     const escaped = message.replace(/[&<>]/g, (c) =>
       c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'
     )

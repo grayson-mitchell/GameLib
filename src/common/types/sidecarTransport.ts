@@ -119,6 +119,24 @@ export const OPEN_EXTERNAL = 'open_external' as const
 export const SIDECAR_STORE_SNAPSHOT = 'sidecar_store_snapshot' as const
 
 /**
+ * Marker prefixed to the `error` of any invoke response rejected solely because the channel
+ * has no handler registered in the sidecar — i.e. one of the ~217 endpoints this phase
+ * deliberately leaves unported (see SEAM.md § Deferred), NOT a malfunction.
+ *
+ * This distinction is load-bearing for the renderer. Much of the existing frontend invokes
+ * channels at module scope with an uncaught `.then()` (e.g.
+ * `frontend/state/UploadedLogFiles.ts` → `getUploadedLogFiles()`), which under Electron can
+ * never reject because every handler exists. Against the skeleton sidecar those same calls
+ * reject and surface as unhandled rejections at boot. Without this marker the renderer
+ * cannot tell them apart from a genuine bootstrap failure, and the on-page error surface
+ * hijacks the whole page for what is really an expected, documented seam gap.
+ *
+ * Rejection semantics are deliberately preserved (the promise still rejects, honestly) —
+ * this only classifies the reason.
+ */
+export const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]' as const
+
+/**
  * Tauri event name the Rust shell emits to the webview for every SidecarNotification it reads
  * from the sidecar's stdout. The renderer bridge (27-03) subscribes via Tauri `listen` and
  * dispatches to the per-channel listeners registered through `frontendListenerSlot`.

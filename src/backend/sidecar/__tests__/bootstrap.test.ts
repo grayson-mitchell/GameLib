@@ -16,7 +16,10 @@
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { handlerRegistry } from '../electronStub'
-import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import {
+  READY_SENTINEL,
+  UNPORTED_CHANNEL_MARKER
+} from 'common/types/sidecarTransport'
 
 /** Buffers newline-delimited output from a PassThrough into discrete lines. */
 function collectLines(stream: PassThrough): string[] {
@@ -81,6 +84,39 @@ describe('sidecar bootstrap (headless boot)', () => {
       ok: true,
       result: 'ok'
     })
+  })
+
+  // Behavior 2b (27-05 regression): an invoke for one of the ~217 deliberately-unported
+  // channels must reject with the UNPORTED_CHANNEL_MARKER tag, not a bare message. The
+  // renderer's on-page error surface keys off that marker to distinguish a documented seam
+  // gap from a real bootstrap failure; without it, any module-scope `.then()` on an unported
+  // channel (e.g. getUploadedLogFiles) paints over the whole app at boot.
+  it('tags an unported-channel invoke as an expected seam gap', async () => {
+    const input = new PassThrough()
+    const output = new PassThrough()
+    const lines = collectLines(output)
+
+    init(input, output)
+    input.write(
+      `${JSON.stringify({
+        id: 'test-unported-1',
+        kind: 'invoke',
+        channel: 'getUploadedLogFiles',
+        args: []
+      })}\n`
+    )
+
+    await flush()
+
+    const responseLine = lines.find((line) =>
+      line.includes('"id":"test-unported-1"')
+    )
+    expect(responseLine).toBeDefined()
+    const response = JSON.parse(responseLine as string)
+    // Still an honest rejection -- only the reason is classified.
+    expect(response.ok).toBe(false)
+    expect(response.error).toContain(UNPORTED_CHANNEL_MARKER)
+    expect(response.error).toContain('getUploadedLogFiles')
   })
 
   // Behavior 3: importing REAL backend modules under the installed stub does
