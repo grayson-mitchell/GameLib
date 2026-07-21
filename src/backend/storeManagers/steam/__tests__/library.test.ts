@@ -14,6 +14,7 @@
 import SteamLibraryManager, {
   buildInstalledMap,
   buildBottleInstalledMap,
+  buildBridgeInstalledMap,
   readAcfState,
   startInstallPolling,
   stopInstallPolling,
@@ -60,6 +61,7 @@ import {
   getSteamBottleSettings,
   getBridgeBottleSettings,
   isBottleProvisioned,
+  isBridgeBottleReady,
   tellBottledSteamToInstall
 } from '../bottle'
 import {
@@ -190,6 +192,7 @@ jest.mock('../bottle', () => ({
   getSteamBottleSettings: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   isBottleProvisioned: jest.fn(),
+  isBridgeBottleReady: jest.fn(),
   tellBottledSteamToInstall: jest.fn()
 }))
 
@@ -782,6 +785,121 @@ describe('SteamLibraryManager', () => {
     })
   })
 
+  // ── D-UAT-24-07: refresh() must ALSO be bridge-aware ────────────────────────
+  // The periodic library sync previously derived install-state from ONLY the
+  // native + Phase 17 bottle maps — a bridge-installed game (24-12's install
+  // poll already flips is_installed:true at install time) got clobbered back
+  // to not-installed on the very next sync, causing the Play→Install→Play
+  // badge flap (24-UAT.md RETEST RUN 1 NEW-2).
+
+  describe('SteamLibraryManager.refresh() bridge reconciliation (D-UAT-24-07)', () => {
+    const envMock = jest.requireMock('backend/constants/environment')
+
+    beforeEach(() => {
+      envMock.isMac = true
+      envMock.isLinux = false
+      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest
+        .mocked(getBridgeBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+      jest
+        .mocked(getBottleSteamappsDir)
+        .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
+      jest
+        .mocked(getFileSize)
+        .mockImplementation((bytes: unknown) => `${bytes} B`)
+      // Native scan finds nothing by default — only the bridge root has manifests.
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+    })
+
+    afterEach(() => {
+      envMock.isMac = false
+      envMock.isLinux = true
+    })
+
+    it('reports is_installed:true (platform Windows) for a game installed ONLY under the bridge root when isBridgeBottleReady() is true, and STAYS installed across a second refresh (no revert)', async () => {
+      jest.mocked(isBridgeBottleReady).mockReturnValue(true)
+      ;(existsSync as jest.Mock).mockImplementation(
+        (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
+      )
+      ;(readdirSync as jest.Mock).mockImplementation((dir: string) =>
+        dir === BRIDGE_BOTTLE_STEAMAPPS_ROOT ? ['appmanifest_206040.acf'] : []
+      )
+      ;(readFileSync as jest.Mock).mockReturnValue('content')
+      ;(vdf.parse as jest.Mock).mockReturnValue({
+        AppState: {
+          appid: '206040',
+          StateFlags: '4',
+          installdir: 'Avernum 5',
+          SizeOnDisk: '9000'
+        }
+      })
+
+      const apps = [makeOwnedApp(206040, 'Avernum 5', 15)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      let calls = jest.mocked(sendFrontendMessage).mock.calls
+      let pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206040'
+      )?.[1] as any
+
+      // RED before the fix: pushed.is_installed was false (native+bottle-only
+      // scan found nothing). GREEN after the fix: bridge fallback is consulted.
+      expect(pushed?.is_installed).toBe(true)
+      expect(pushed?.install).toEqual(
+        expect.objectContaining({
+          install_path: join(
+            BRIDGE_BOTTLE_STEAMAPPS_ROOT,
+            'common',
+            'Avernum 5'
+          ),
+          install_size: '9000 B',
+          // Pitfall 3 (D-UAT-24-07-B): a bridge install must always report
+          // 'Windows', never the host 'Mac'.
+          platform: 'Windows'
+        })
+      )
+
+      // Second refresh — D-UAT-24-07: must NOT clobber the badge back to false.
+      jest.mocked(sendFrontendMessage).mockClear()
+      await manager.refresh()
+
+      calls = jest.mocked(sendFrontendMessage).mock.calls
+      pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206040'
+      )?.[1] as any
+
+      expect(pushed?.is_installed).toBe(true)
+    })
+
+    it('performs NO bridge reconciliation when isBridgeBottleReady() returns false (byte-for-byte native/bottle-only behavior preserved)', async () => {
+      jest.mocked(isBridgeBottleReady).mockReturnValue(false)
+      // If the bridge path were consulted, readdirSync would be called on the
+      // bridge root too — assert it's never scanned.
+      ;(existsSync as jest.Mock).mockReturnValue(false)
+      ;(readdirSync as jest.Mock).mockReturnValue([])
+
+      const apps = [makeOwnedApp(206040, 'Avernum 5', 15)]
+      const fakeClient = makeFakeClient(apps)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
+      jest.mocked(steamLibraryStore.get).mockReturnValue([])
+
+      await manager.refresh()
+
+      const calls = jest.mocked(sendFrontendMessage).mock.calls
+      const pushed = calls.find(
+        ([_msg, info]) => (info as any).app_name === '206040'
+      )?.[1] as any
+
+      expect(pushed?.is_installed).toBe(false)
+      expect(readdirSync).not.toHaveBeenCalledWith(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
+    })
+  })
+
   // ── WR-01 (21-17): refresh() re-seeds steamResumePending from on-disk ACF ──
   // Before the fix, refresh() derived each GameInfo's install object purely
   // from buildInstalledMap() (bit-4-set only). A mid-session resync
@@ -1227,6 +1345,114 @@ describe('SteamLibraryManager', () => {
 
         expect(sendFrontendMessage).not.toHaveBeenCalled()
         expect(library.get('570')!.is_installed).toBe(false)
+      })
+    })
+
+    // ── D-UAT-24-07: refreshInstallState() must ALSO be bridge-aware ─────────
+    // The focus/post-launch reconciliation had the identical native+bottle-only
+    // blind spot as refresh() — a bridge-installed game's badge got clobbered
+    // back to false on focus/post-launch reconciliation too.
+
+    describe('bridge reconciliation (D-UAT-24-07)', () => {
+      const envMock = jest.requireMock('backend/constants/environment')
+
+      beforeEach(() => {
+        envMock.isMac = true
+        envMock.isLinux = false
+        jest.mocked(isBottleProvisioned).mockReturnValue(false)
+        jest
+          .mocked(getBridgeBottleSettings)
+          .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+        jest
+          .mocked(getBottleSteamappsDir)
+          .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
+      })
+
+      afterEach(() => {
+        envMock.isMac = false
+        envMock.isLinux = true
+      })
+
+      it('does NOT clobber a bridge-installed game back to is_installed:false (flips to installed, platform Windows) when isBridgeBottleReady() is true', async () => {
+        jest.mocked(isBridgeBottleReady).mockReturnValue(true)
+        library.set('206040', {
+          runner: 'steam',
+          app_name: '206040',
+          title: 'Avernum 5',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Native scan finds nothing; bridge scan finds the manifest.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue([
+          'appmanifest_206040.acf'
+        ])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '206040',
+            StateFlags: '4',
+            installdir: 'Avernum 5',
+            SizeOnDisk: '9000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'pushGameToLibrary',
+          expect.objectContaining({
+            app_name: '206040',
+            is_installed: true,
+            install: expect.objectContaining({ platform: 'Windows' })
+          })
+        )
+      })
+
+      it('performs NO bridge reconciliation when isBridgeBottleReady() returns false', async () => {
+        jest.mocked(isBridgeBottleReady).mockReturnValue(false)
+        library.set('206040', {
+          runner: 'steam',
+          app_name: '206040',
+          title: 'Avernum 5',
+          is_installed: false,
+          install: {},
+          art_cover: '',
+          art_square: '',
+          extra: { reqs: [] },
+          canRunOffline: true,
+          installable: true
+        } as any)
+
+        // Even though the bridge path mocks WOULD report installed, the gate
+        // must prevent buildBridgeInstalledMap() (and readdirSync) from ever
+        // being consulted.
+        jest.mocked(getSteamLibraries).mockResolvedValue([])
+        ;(existsSync as jest.Mock).mockReturnValue(true)
+        ;(readdirSync as jest.Mock).mockReturnValue([
+          'appmanifest_206040.acf'
+        ])
+        ;(readFileSync as jest.Mock).mockReturnValue('content')
+        ;(vdf.parse as jest.Mock).mockReturnValue({
+          AppState: {
+            appid: '206040',
+            StateFlags: '4',
+            installdir: 'Avernum 5',
+            SizeOnDisk: '9000'
+          }
+        })
+
+        await manager.refreshInstallState()
+
+        expect(sendFrontendMessage).not.toHaveBeenCalled()
+        expect(library.get('206040')!.is_installed).toBe(false)
       })
     })
   })
@@ -2399,6 +2625,66 @@ describe('buildBottleInstalledMap()', () => {
     })
 
     const result = await buildBottleInstalledMap()
+
+    expect(result.size).toBe(0)
+  })
+})
+
+// ── D-UAT-24-07 (24-16): buildBridgeInstalledMap() ────────────────────────────
+// Bridge-bottle-scoped sibling of buildBottleInstalledMap() — rooted at the
+// DEDICATED bridge bottle (GameLibSteamBridge) via getBridgeBottleSteamappsRoot()
+// instead of the Phase 17 bottle, so a bridge-installed game's badge survives
+// the periodic library sync and focus reconciliation (D-UAT-24-07).
+
+describe('buildBridgeInstalledMap()', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getBridgeBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(BRIDGE_BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('returns an empty Map when the bridge bottle steamapps dir does not exist', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const result = await buildBridgeInstalledMap()
+
+    expect(result.size).toBe(0)
+  })
+
+  it('marks a bridge-installed appId (StateFlags bit 4 set), rooted at the bridge bottle steamapps dir', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '206040',
+        StateFlags: '4',
+        installdir: 'Avernum 5',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await buildBridgeInstalledMap()
+
+    expect(result.has(206040)).toBe(true)
+    expect(result.get(206040)?.installPath).toBe(
+      join(BRIDGE_BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 5')
+    )
+    // Bridge map build must never consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('skips a corrupt bridge ACF file without throwing (T-2-01)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_206040.acf'])
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+
+    const result = await buildBridgeInstalledMap()
 
     expect(result.size).toBe(0)
   })
