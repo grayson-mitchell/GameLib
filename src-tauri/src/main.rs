@@ -92,15 +92,23 @@ impl SidecarState {
         self.counter.fetch_add(1, Ordering::Relaxed).to_string()
     }
 
-    /// Serialize a request frame and write it (newline-terminated) to the sidecar's stdin.
-    fn write_frame(&self, req: &SidecarRpcRequest) -> Result<(), String> {
-        let line = serde_json::to_string(req).map_err(|e| e.to_string())?;
+    /// Serialize an arbitrary `serde_json::Value` and write it (newline-terminated) to the
+    /// sidecar's stdin. Used both for outbound request frames (via `write_frame` below) and
+    /// for `rustInvoke` response frames written back on the same pipe (Phase 28).
+    fn write_raw(&self, value: &Value) -> Result<(), String> {
+        let line = serde_json::to_string(value).map_err(|e| e.to_string())?;
         let mut stdin = self.stdin.lock().map_err(|e| e.to_string())?;
         stdin
             .write_all(line.as_bytes())
             .and_then(|_| stdin.write_all(b"\n"))
             .and_then(|_| stdin.flush())
             .map_err(|e| e.to_string())
+    }
+
+    /// Serialize a request frame and write it (newline-terminated) to the sidecar's stdin.
+    fn write_frame(&self, req: &SidecarRpcRequest) -> Result<(), String> {
+        let value = serde_json::to_value(req).map_err(|e| e.to_string())?;
+        self.write_raw(&value)
     }
 
     /// Write an 'invoke' frame and block until the correlated response (or timeout).
@@ -324,9 +332,13 @@ fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
     });
 }
 
-/// Reader thread: routes each stdout line from the sidecar. A line with `ok` is a
-/// SidecarRpcResponse (fulfil the pending invoke by id); a line with kind == "frontendMessage"
-/// is a SidecarNotification (re-emit as FRONTEND_MESSAGE_EVENT).
+/// Reader thread: routes each stdout line from the sidecar. Four frame shapes are
+/// recognized: a line with `ok` is a SidecarRpcResponse (fulfil the pending invoke by id);
+/// `kind == "frontendMessage"` is a SidecarNotification (re-emit as FRONTEND_MESSAGE_EVENT);
+/// `kind == "rustInvoke"` is a sidecar-initiated request answered by `dispatch_rust_channel`
+/// on a spawned worker thread (Phase 28 — keyring calls); `kind == "openExternal"` opens the
+/// URL via the same facility `open_external` uses, fire-and-forget. Any other frame kind is
+/// logged via an explicit diagnostic rather than silently dropped.
 fn start_reader(
     app: AppHandle,
     state: Arc<SidecarState>,
@@ -398,7 +410,66 @@ fn start_reader(
                     FRONTEND_MESSAGE_EVENT,
                     FrontendMessagePayload { channel, args },
                 );
+                continue;
             }
+
+            let kind = value.get("kind").and_then(|v| v.as_str());
+
+            // Sidecar-initiated request: dispatch to the keyring/native-facility handler and
+            // write the correlated response back on the same stdin pipe. Dispatched on a
+            // spawned worker thread rather than inline — a Keychain access prompt blocks
+            // until the user responds, and handling it on the reader thread would stall
+            // every other sidecar response behind it (threat T-28-05, head-of-line blocking),
+            // timing out unrelated pending `invoke`s at INVOKE_TIMEOUT.
+            if kind == Some("rustInvoke") {
+                let id = value
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let channel = value
+                    .get("channel")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let args = value
+                    .get("args")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                let worker_state = state.clone();
+                thread::spawn(move || {
+                    let result = dispatch_rust_channel(&channel, &args);
+                    let response = match result {
+                        Ok(v) => serde_json::json!({ "id": id, "ok": true, "result": v }),
+                        Err(e) => serde_json::json!({ "id": id, "ok": false, "error": e }),
+                    };
+                    let _ = worker_state.write_raw(&response);
+                });
+                continue;
+            }
+
+            // Sidecar-initiated fire-and-forget open request: the pre-existing gap this
+            // phase closes (27-02-SUMMARY.md: "the frame is currently silently ignored on
+            // the Rust side"). Minimal fix — kept fire-and-forget, no response frame written
+            // (Open Question 2, resolved: converting this to a rustInvoke request/response
+            // call would change electronStub.shell.openExternal's contract, out of scope).
+            if kind == Some("openExternal") {
+                if let Some(url) = value.get("args").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|v| v.as_str()) {
+                    if let Err(e) = app.opener().open_url(url, None::<&str>) {
+                        eprintln!("[shell] openExternal failed: {e}");
+                    }
+                } else {
+                    eprintln!("[shell] openExternal frame missing a string URL in args[0]");
+                }
+                continue;
+            }
+
+            // Unrecognized frame kind — log a diagnostic (kind/id only, never args/result
+            // per threat T-28-04) instead of silently dropping it, so this class of gap
+            // cannot recur unnoticed.
+            let id = value.get("id").and_then(|v| v.as_str());
+            eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
         }
     });
 }
