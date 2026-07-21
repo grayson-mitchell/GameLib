@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 28 context gathered
-last_updated: "2026-07-21T22:52:04.433Z"
-last_activity: 2026-07-21 -- Phase 28 planning complete
+stopped_at: Completed 28-01-PLAN.md
+last_updated: "2026-07-21T23:09:00.451Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 5
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 27 complete — Tauri shell walking skeleton (next: Phase 23 gap closure, see below)
+**Current focus:** Phase 28 — tauri-keyring-real-safestorage-via-the-keyring-crate
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 27 (complete)
-Plan: 5 of 5 complete
+Phase: 28 (tauri-keyring-real-safestorage-via-the-keyring-crate) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-21 -- Phase 28 planning complete
+Last activity: 2026-07-21
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -234,6 +234,7 @@ Closed/parked native-install phases:
 | Phase 24 P15 | 12min | 1 tasks | 2 files |
 | Phase 24 P16 | 25min | 2 tasks | 4 files |
 | Phase 24 P17 | 20min | 2 tasks | 2 files |
+| Phase 28 P01 | 35min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -388,6 +389,7 @@ Recent decisions affecting current work:
 - [Phase 24]: getBridgeBottleSettings() resolves CrossOver wine via a sibling of CXBOTTLE_BIN (sync helper), not the async getCrossover() detector, keeping the getter synchronous for its existing callers
 - [Phase 24]: 24-16: refresh()/refreshInstallState() consult buildBridgeInstalledMap() (native > Phase 17 bottle > bridge precedence) so a bridge-installed game's badge survives the periodic sync and focus reconciliation; installPlatformForSource('bridge') now returns Windows; markBridgeGameUninstalled emits gameStatusUpdate done to clear the Uninstalling pill (D-UAT-24-07)
 - [Phase 24-17]: isBridgeAuthoritativeForInstallState() deliberately excludes games.ts's transient bridgeFailedThisSession from the library-level eligibility notion — only durable eligibility (bridgeAllowlist + mac/arch gate) drives persisted install-state, since a single recoverable session failure must never permanently flip is_installed
+- [Phase 28]: Plan 28-01: sidecar->Rust rustInvoke request/response channel added (requestRustInvoke, RUST_INVOKE_CHANNELS allowlist, 60s timeout); T-28-03/T-28-03b/T-28-05 mitigated at the transport layer
 
 ### Pending Todos
 
@@ -456,8 +458,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T21:54:38.322Z
-Stopped at: Phase 28 context gathered
+Last session: 2026-07-21T23:09:00.443Z
+Stopped at: Completed 28-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
