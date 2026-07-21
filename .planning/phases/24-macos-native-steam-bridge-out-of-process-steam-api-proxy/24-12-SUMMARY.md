@@ -88,3 +88,11 @@ None - no external service configuration required.
 ---
 *Phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy*
 *Completed: 2026-07-21*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/storeManagers/steam/library.ts
+- FOUND: src/backend/storeManagers/steam/__tests__/library.test.ts
+- FOUND: .planning/phases/24-macos-native-steam-bridge-out-of-process-steam-api-proxy/24-12-SUMMARY.md
+- FOUND commit: e07e85b3 (Task 1)
+- FOUND commit: ea25b88e (SUMMARY.md)
