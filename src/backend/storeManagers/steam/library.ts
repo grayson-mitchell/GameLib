@@ -31,6 +31,7 @@ import SteamGame, { isNativeInstallInFlight } from './games'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
+  getBridgeBottleSettings,
   isBottleProvisioned
 } from './bottle'
 import {
@@ -47,10 +48,13 @@ import { sanitizeInstalldir } from './installLocation'
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
  * 'native' (default) preserves all pre-Phase-17 behavior; 'bottle' scans the
- * dedicated CrossOver bottle's own steamapps dir instead (RESEARCH.md Pitfall 2
- * — the two roots must never be conflated).
+ * dedicated Phase 17 CrossOver bottle's (GameLibSteam) own steamapps dir
+ * instead; 'bridge' scans the SEPARATE dedicated bridge bottle
+ * (GameLibSteamBridge, D-UAT-24-05) — the bridge install writes its
+ * StateFlags=4 ACF there, not into the native or Phase 17 bottle root. All
+ * three roots must never be conflated (RESEARCH.md Pitfall 2).
  */
-export type AcfSource = 'native' | 'bottle'
+export type AcfSource = 'native' | 'bottle' | 'bridge'
 
 /** Shared options shape for both install/uninstall poller start functions.
  *  `isNativeHandoff` is install-poller-only (ignored by startUninstallPolling)
@@ -69,6 +73,20 @@ type PollOptions = {
  */
 function getBottleSteamappsRoot(): string {
   return getBottleSteamappsDir(getSteamBottleSettings().wineCrossoverBottle)
+}
+
+/**
+ * Resolves the DEDICATED bridge bottle's (GameLibSteamBridge) own steamapps
+ * dir from getBridgeBottleSettings() — the bridge install writes its
+ * StateFlags=4 appmanifest there, so the post-install poll must read from
+ * this exact root, not the native libraries and not the Phase 17
+ * getBottleSteamappsRoot() bottle (D-UAT-24-05: the poll previously looked in
+ * the wrong location and timed out despite a correctly-written manifest).
+ * Mirrors getBottleSteamappsRoot() but is a distinct, never-conflated root
+ * (RESEARCH.md Pitfall 2).
+ */
+export function getBridgeBottleSteamappsRoot(): string {
+  return getBottleSteamappsDir(getBridgeBottleSettings().wineCrossoverBottle)
 }
 
 // DETAIL-01 gap-fix: Steam installs the depot for the host OS, so the installed
@@ -1251,8 +1269,12 @@ const BYTES_PER_MIB = 1024 * 1024
  * `source` selects which steamapps root(s) to scan:
  *  - 'native' (default): every native library path from getSteamLibraries()
  *    — exactly the pre-Phase-17 behavior, byte-for-byte unchanged.
- *  - 'bottle': the single dedicated CrossOver bottle steamapps root
- *    (RESEARCH.md Pitfall 2 — never conflated with the native roots).
+ *  - 'bottle': the single dedicated Phase 17 CrossOver bottle (GameLibSteam)
+ *    steamapps root (RESEARCH.md Pitfall 2 — never conflated with the other
+ *    roots).
+ *  - 'bridge': the single dedicated bridge bottle (GameLibSteamBridge)
+ *    steamapps root (D-UAT-24-05) — where the bridge install actually writes
+ *    its StateFlags=4 ACF; never conflated with 'native'/'bottle'.
  *
  * Corrupt/unreadable manifests are skipped without throwing (T-2-01 / T-17-05).
  * Exported for unit testing.
@@ -1278,7 +1300,11 @@ export async function readAcfState(
   const steamappsDirs =
     source === 'bottle'
       ? [getBottleSteamappsRoot()]
-      : (await getSteamLibraries()).map((libPath) => join(libPath, 'steamapps'))
+      : source === 'bridge'
+        ? [getBridgeBottleSteamappsRoot()]
+        : (await getSteamLibraries()).map((libPath) =>
+            join(libPath, 'steamapps')
+          )
 
   for (const steamappsDir of steamappsDirs) {
     if (!existsSync(steamappsDir)) continue
@@ -1377,8 +1403,8 @@ export async function buildBottleInstalledMap(): Promise<
  *                   gameStatusUpdate { status: 'done' }, stops the poll
  *   'absent'      → no-op (grace/cap logic lives in startInstallPolling's callback)
  *
- * `source` selects the native (default) or bottle-scoped ACF root — see
- * readAcfState() for the distinction.
+ * `source` selects the native (default), bottle-scoped, or bridge-bottle-
+ * scoped ACF root — see readAcfState() for the distinction.
  *
  * Exported for unit testing.
  */

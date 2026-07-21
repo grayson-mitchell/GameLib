@@ -58,6 +58,7 @@ import {
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
+  getBridgeBottleSettings,
   isBottleProvisioned,
   tellBottledSteamToInstall
 } from '../bottle'
@@ -187,6 +188,7 @@ jest.mock('../electronStores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
   isBottleProvisioned: jest.fn(),
   tellBottledSteamToInstall: jest.fn()
 }))
@@ -241,6 +243,17 @@ const WIN32_BOTTLE_STEAMAPPS_ROOT = join(
   '/Users/tester/Library/Application Support/CrossOver/Bottles',
   'GameLibSteam',
   'drive_c/Program Files/Steam/steamapps'
+)
+
+/**
+ * Bridge bottle steamapps root used across the 'bridge' source tests
+ * (D-UAT-24-05). Distinct bottle name (GameLibSteamBridge) from the Phase 17
+ * bottle (GameLibSteam) — proves the two bottle roots are never conflated.
+ */
+const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteamBridge',
+  'drive_c/Program Files (x86)/Steam/steamapps'
 )
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
@@ -2113,6 +2126,104 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     )
     // Native scan must never consult the bottle path resolver
     expect(getBottleSteamappsDir).not.toHaveBeenCalled()
+  })
+})
+
+// ── D-UAT-24-05 (24-12): readAcfState('bridge') — bridge-bottle-scoped ACF
+// root, distinct from both 'native' and the Phase 17 'bottle' root ─────────
+
+describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getBridgeBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+    // Distinguish by bottle name so a test can mock BOTH getSteamBottleSettings
+    // (Phase 17 'bottle') and getBridgeBottleSettings ('bridge') at once
+    // without one root's mocked value clobbering the other's.
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockImplementation((bottleName: string) =>
+        bottleName === 'GameLibSteamBridge'
+          ? BRIDGE_BOTTLE_STEAMAPPS_ROOT
+          : BOTTLE_STEAMAPPS_ROOT
+      )
+  })
+
+  it('reads a StateFlags=4 manifest placed under the mocked bridge bottle steamapps root and returns state:"installed"', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '206040',
+        StateFlags: '4',
+        installdir: 'Avernum 5',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('206040', 'bridge')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(BRIDGE_BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 5')
+    )
+    // Bridge scan must never consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" when the bridge bottle steamapps dir does not exist (no throw)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const result = await readAcfState('206040', 'bridge')
+
+    expect(result.state).toBe('absent')
+  })
+
+  it('returns state:"absent" for an ACF present only in the native root — proves no conflation with "native"', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path === '/steam' || path === join('/steam', 'steamapps')
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bridge')
+
+    expect(result.state).toBe('absent')
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" for an ACF present only in the bridge root when read under "native" or "bottle" — proves no reverse conflation', async () => {
+    // Bridge root has the manifest, but the native/bottle scans must not see it.
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '206040',
+        StateFlags: '4',
+        installdir: 'Avernum 5',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    const nativeResult = await readAcfState('206040', 'native')
+    expect(nativeResult.state).toBe('absent')
+
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    const bottleResult = await readAcfState('206040', 'bottle')
+    expect(bottleResult.state).toBe('absent')
   })
 })
 
