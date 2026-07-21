@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: ready_to_plan
-stopped_at: Phase 27 complete (5/5) — Tauri walking skeleton renders live on macOS; UAT steps 2/3 blocked on the deferred safeStorage keyring
-last_updated: 2026-07-21T21:30:00.000Z
-last_activity: 2026-07-21
+status: executing
+stopped_at: Completed 24-17-PLAN.md
+last_updated: "2026-07-21T09:40:22.486Z"
+last_activity: 2026-07-21 -- Phase 23 planning complete
 progress:
   total_phases: 23
   completed_phases: 20
-  total_plans: 153
+  total_plans: 158
   completed_plans: 143
-  percent: 93
+  percent: 87
 ---
 
 # Project State
@@ -35,8 +35,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 27 (complete)
 Plan: 5 of 5 complete
-Status: Phase complete — no phase currently in flight
-Last activity: 2026-07-21
+Status: Ready to execute
+Last activity: 2026-07-21 -- Phase 23 planning complete
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -51,10 +51,12 @@ Last activity: 2026-07-21
 - **Phase 23** — full-ownership install: gaps `G-23-01`/`G-23-02` open (native install
   applies no execute bits; Denuvo launch needed a manual `chmod +x`). Gate 3 never run.
   REQ-23-07 stays open. `/gsd-plan-phase 23 --gaps`
+
 - **Tauri seam** — port the real `safeStorage` keyring (spike 011's `keyring` crate path).
   This is what blocks Phase 27 UAT steps 2/3, and it must land BEFORE any token-writing
   channel is wired, or the sidecar will corrupt the Electron app's saved session. See
   `.planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` § Stubbed.
+
 - **Cross-phase verification debt** — 30 items across 9 files (`/gsd-audit-uat`).
 
 Closed/parked native-install phases:
@@ -63,6 +65,7 @@ Closed/parked native-install phases:
   by Phase 24.** The bridge's single shared bottle removes the per-family bottle matrix
   this phase existed to manage. 8 plans retained unexecuted; see
   `.planning/phases/22-multiple-steam-bottles/PARKED.md`
+
 - **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — ✅ Complete
   2026-07-21 (17 plans). Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16
   closed the shim-overwrite/install-poll and launch/sync clusters. Gate 4 (Hoard) out of
