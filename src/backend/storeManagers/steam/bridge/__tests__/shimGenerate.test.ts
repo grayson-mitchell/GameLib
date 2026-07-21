@@ -122,6 +122,30 @@ describe('shimGenerate', () => {
     )
   })
 
+  it('OVERWRITES a byte-different file already at shimPath (D-UAT-24-04: the game\'s own depot-shipped steam_api.dll must not survive)', async () => {
+    // Pre-seed a byte-different "game's own dll" stub at the shim
+    // destination -- this is the exact scenario D-UAT-24-04 found: the
+    // depot download runs BEFORE placeShimForGame and leaves its own
+    // steam_api.dll sitting at shimPath.
+    writeFileSync(shimDestPath(), 'x'.repeat(100))
+    mockedScanSteamApiImports.mockResolvedValue({
+      status: 'ok',
+      symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+    })
+
+    const result = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+
+    expect(result).toEqual({ status: 'placed', shimPath: shimDestPath() })
+    expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
+      'fake-compiled-pe32-dll-bytes'
+    )
+    // The coverage check still ran before the overwrite (not skipped just
+    // because a file was already present).
+    expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
+  })
+
   it('is idempotent -- a second call does not error and the shim is present exactly once', async () => {
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',
@@ -162,6 +186,23 @@ describe('shimGenerate', () => {
       expect(result.error).toContain('SteamAPI_ISteamRemoteStorage_v016')
     }
     expect(existsSync(shimDestPath())).toBe(false)
+  })
+
+  it('rejects placement on coverage failure and leaves a pre-seeded, byte-different target file UNMODIFIED (never overwrite with an insufficient shim)', async () => {
+    writeFileSync(shimDestPath(), 'the-games-own-steam_api.dll-bytes')
+    mockedScanSteamApiImports.mockResolvedValue({
+      status: 'ok',
+      symbols: ['SteamAPI_Init', 'SteamAPI_ISteamRemoteStorage_v016']
+    })
+
+    const result = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+
+    expect(result.status).toBe('error')
+    expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
+      'the-games-own-steam_api.dll-bytes'
+    )
   })
 
   it('rejects a non-numeric appId before any copy operation', async () => {
@@ -215,6 +256,20 @@ describe('shimGenerate', () => {
     expect(result).toEqual({ status: 'shim-not-built' })
     expect(mockedScanSteamApiImports).not.toHaveBeenCalled()
     expect(existsSync(shimDestPath())).toBe(false)
+  })
+
+  it('returns "shim-not-built" even when a game dll is already present at shimPath (missing-source check runs before the identity check)', async () => {
+    writeFileSync(shimDestPath(), 'the-games-own-steam_api.dll-bytes')
+
+    const result = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: join(root, 'never-built', 'steam_api.dll')
+    })
+
+    expect(result).toEqual({ status: 'shim-not-built' })
+    expect(mockedScanSteamApiImports).not.toHaveBeenCalled()
+    expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
+      'the-games-own-steam_api.dll-bytes'
+    )
   })
 
   it('falls back to the real builtBridgeShimPath import when no shimSourcePath override is given (BLOCKER 2 default)', async () => {

@@ -7,8 +7,9 @@
  *
  * Sanitize-then-place shape mirrors `bottle.ts`'s `provisionBottle()`
  * (24-PATTERNS.md "shimGenerate.ts"): reject unsafe inputs before ANY
- * path/copy operation, then an idempotent existence-guard before doing
- * real work.
+ * path/copy operation, then an idempotent byte-IDENTITY guard (D-UAT-24-04,
+ * fixed 24-11 -- was a pure existence guard that always short-circuited)
+ * before doing real work.
  *
  * ACKNOWLEDGED DIVERGENCE (review finding #9, must_haves): the placed
  * shim is 24-01's single SUPERSET `steam_api.def` (`FLAT_EXPORTS_SUPERSET`
@@ -25,7 +26,8 @@
  * at packaging) -- that is a typed `'shim-not-built'` result, not a throw.
  */
 
-import { copyFileSync, existsSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, statSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { builtBridgeShimPath } from 'backend/constants/paths'
@@ -87,16 +89,56 @@ function isContainedWithin(rootAbsPath: string, candidateAbsPath: string): boole
 }
 
 /**
+ * True iff the file at `pathA` is byte-identical to the file at `pathB`
+ * (size compare first, then sha256 digest compare only on a size match).
+ * D-UAT-24-04: replaces a pure `existsSync` existence guard, which let the
+ * game's own depot-shipped `steam_api.dll` (~118368 bytes) permanently
+ * block placement of the real bridge shim (~805888 bytes) -- the bridge
+ * never engaged for any game that ships its own steam_api.dll (effectively
+ * all of them). Wrapped in try/catch so an fs race (e.g. the target
+ * disappearing between the `existsSync` check and the stat/read here) can
+ * never throw the placement path -- it falls through to "not identical",
+ * which is the safe default (re-run the coverage-checked overwrite).
+ */
+function isByteIdentical(pathA: string, pathB: string): boolean {
+  try {
+    const sizeA = statSync(pathA).size
+    const sizeB = statSync(pathB).size
+    if (sizeA !== sizeB) {
+      return false
+    }
+    const hashA = createHash('sha256').update(readFileSync(pathA)).digest('hex')
+    const hashB = createHash('sha256').update(readFileSync(pathB)).digest('hex')
+    return hashA === hashB
+  } catch {
+    return false
+  }
+}
+
+/**
  * Places the shared, superset-exporting `steam_api.dll` shim next to a
- * bridge-eligible game's own `.exe` inside the bridge bottle. Idempotent
- * (a second call with the shim already present is a no-op success), and
- * every input is guarded before any path/copy operation:
+ * bridge-eligible game's own `.exe` inside the bridge bottle, OVERWRITING
+ * whatever is already at that path unless it is already byte-identical to
+ * the built shim. Every input is guarded before any path/copy operation:
  *  1. appId must be numeric (T-24-06).
  *  2. bottleName (default: the shared bridge bottle) must sanitize clean
  *     (T-24-06, same `sanitizeBottleName` chokepoint `provisionBridgeBottle`
  *     uses).
  *  3. `gameExePath` must resolve INSIDE that bottle's directory --
  *     rejects a path escaping the bottle before touching the filesystem.
+ *
+ * D-UAT-24-04 (BLOCKER, fixed 24-11): the guard is by IDENTITY, not
+ * existence. The game's depot download runs BEFORE this function and ships
+ * its own `steam_api.dll` at exactly `shimPath` -- a pure
+ * `if (existsSync(shimPath)) return` guard therefore ALWAYS short-circuited
+ * and the real bridge shim never replaced the game's own copy, so the
+ * bridge never engaged at runtime. Now: if a file is present at `shimPath`
+ * and it is already byte-identical to the built shim, placement is a no-op
+ * success (`already-placed`, no needless churn). Otherwise -- including
+ * when the game's own, byte-DIFFERENT `steam_api.dll` is present -- the
+ * import-coverage check still runs first, and only on a covered pass does
+ * `copyFileSync` OVERWRITE the target with the trusted, superset-exporting
+ * shim from `shimSourcePath`.
  *
  * `shimSourcePath` defaults to the real, shared `builtBridgeShimPath`
  * (BLOCKER 2) -- callers never need to pass it; the parameter exists so
@@ -141,18 +183,9 @@ export async function placeShimForGame(
 
   const shimPath = join(dirname(resolvedExePath), BRIDGE_SHIM_FILENAME)
 
-  // Idempotent guard FIRST (mirrors provisionBottle's cache-reuse
-  // `if (!existsSync(...))` shape) -- a shim already present next to the
-  // .exe is success without re-scanning imports or touching the built
-  // binary at all.
-  if (existsSync(shimPath)) {
-    logInfo(
-      `placeShimForGame: shim already present at "${shimPath}" for appId ${appId} (idempotent, no-op)`,
-      LogPrefix.Steam
-    )
-    return { status: 'already-placed', shimPath }
-  }
-
+  // Resolve the trusted source FIRST -- a missing built shim is still a
+  // clean typed result even when a game dll is already present at
+  // shimPath (moved above the identity check, D-UAT-24-04).
   const shimSourcePath = opts?.shimSourcePath ?? builtBridgeShimPath
   if (!existsSync(shimSourcePath)) {
     // Dev-time expected state: 24-07 (packaging) builds the .dll into
@@ -163,6 +196,20 @@ export async function placeShimForGame(
       LogPrefix.Steam
     )
     return { status: 'shim-not-built' }
+  }
+
+  // Identity guard (D-UAT-24-04, replaces the old pure-existence
+  // short-circuit): the shim is already OURS iff a file is present at
+  // shimPath AND it is byte-identical to the built shim -- only then is
+  // placement a true no-op. A byte-different file at shimPath (most
+  // commonly the game's own depot-shipped steam_api.dll) falls through to
+  // the coverage-checked overwrite below.
+  if (existsSync(shimPath) && isByteIdentical(shimPath, shimSourcePath)) {
+    logInfo(
+      `placeShimForGame: shim already present and byte-identical at "${shimPath}" for appId ${appId} (idempotent, no-op)`,
+      LogPrefix.Steam
+    )
+    return { status: 'already-placed', shimPath }
   }
 
   const importResult = await scanSteamApiImports(appId, resolvedExePath)
@@ -184,6 +231,7 @@ export async function placeShimForGame(
     }
   }
 
+  const wasPresent = existsSync(shimPath)
   try {
     copyFileSync(shimSourcePath, shimPath)
   } catch (error) {
@@ -195,7 +243,7 @@ export async function placeShimForGame(
   }
 
   logInfo(
-    `placeShimForGame: placed steam_api.dll for appId ${appId} at "${shimPath}" (${importResult.symbols.length} imported symbol(s) covered)`,
+    `placeShimForGame: ${wasPresent ? 'overwrote' : 'placed'} steam_api.dll for appId ${appId} at "${shimPath}" (${importResult.symbols.length} imported symbol(s) covered)`,
     LogPrefix.Steam
   )
   return { status: 'placed', shimPath }
