@@ -18,11 +18,13 @@
  * the skeleton (27-CONTEXT) — these are safe no-op stand-ins, not
  * reimplementations. Only `app.getPath` (paths.ts's import-time wall),
  * `ipcMain` (the RPC dispatch surface handlers.ts registers against),
- * `safeStorage` (byte round-trip, T-27-05 accepted passthrough),
  * `shell.openExternal` (the E2E action-flow parity path), and
  * `BrowserWindow.getAllWindows()` (the `sendFrontendMessage` push path
  * `backend/ipc.ts` already implements via `getMainWindow()`) have real
  * behavior — everything else only needs to not throw at import time.
+ * `safeStorage` is the one exception below (Phase 28): its Steam
+ * refresh-token callers were graduated onto `getTokenStore()` instead, so
+ * `safeStorage` itself is intentionally left dead here (throws on use).
  */
 
 import { getPath } from './pathShim'
@@ -131,13 +133,22 @@ export class Notification {
   close(): void {}
 }
 
-// ---- safeStorage (T-27-05: minimal passthrough — keyring deferred per CONTEXT) ---
+// ---- safeStorage (Phase 28 graduated this API: real Keychain storage now lives in
+// SidecarKeyringTokenStore, installed by bootstrap.ts via setTokenStore(); safeStorage
+// itself is intentionally left dead in the sidecar — see steam/tokenStore.ts) ---
 
 export const safeStorage = {
-  isEncryptionAvailable: (): boolean => true,
-  encryptString: (plainText: string): Buffer =>
-    Buffer.from(plainText, 'utf-8'),
-  decryptString: (encrypted: Buffer): string => encrypted.toString('utf-8')
+  isEncryptionAvailable: (): boolean => false,
+  encryptString: (): Buffer => {
+    throw new Error(
+      'safeStorage is not available in the sidecar — use getTokenStore() (see steam/tokenStore.ts)'
+    )
+  },
+  decryptString: (): string => {
+    throw new Error(
+      'safeStorage is not available in the sidecar — use getTokenStore() (see steam/tokenStore.ts)'
+    )
+  }
 }
 
 // ---- shell -------------------------------------------------------------------------

@@ -38,6 +38,8 @@ import {
   pushFrontendMessage,
   requestOpenExternal
 } from './sidecarRpc'
+import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
+import { SidecarKeyringTokenStore } from './keyringTokenStore'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -89,5 +91,10 @@ export function init(
     openExternal: requestOpenExternal,
     pushFrontendMessage
   })
+  // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
+  // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
+  // only fire from the RPC loop below, never at module-import time) so no handler ever
+  // observes the default ElectronTokenStore in the sidecar build.
+  installTokenStore(new SidecarKeyringTokenStore())
   output.write(`${READY_SENTINEL}\n`)
 }
