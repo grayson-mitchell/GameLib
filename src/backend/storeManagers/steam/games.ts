@@ -1036,6 +1036,13 @@ export default class SteamGame implements Game {
    * real, synchronous file removal, so this is the correct completion
    * signal, not an ACF observation). Mirrors forceUninstall()'s keep-entry
    * shape (never library.delete's the entry).
+   *
+   * D-UAT-24-07 fold-in: also emits a gameStatusUpdate 'done', mirroring
+   * markBridgeGameInstalled() above — without it, the frontend's
+   * "Uninstalling" pill never clears even though the backend uninstall
+   * succeeded. Emitted OUTSIDE the `if (existing)` guard (same placement as
+   * markBridgeGameInstalled's) so the pill clears regardless of whether the
+   * library entry happens to be present.
    */
   private markBridgeGameUninstalled(): void {
     const existing = library.get(this.appId)
@@ -1049,6 +1056,11 @@ export default class SteamGame implements Game {
       steamLibraryStore.set('games', Array.from(library.values()))
       sendFrontendMessage('pushGameToLibrary', updated)
     }
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: this.appId,
+      runner: 'steam',
+      status: 'done'
+    })
   }
 
   /**

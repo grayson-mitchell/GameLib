@@ -2852,6 +2852,49 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
     expect(tellBottledSteamToUninstall).toHaveBeenCalledWith(APP_ID)
   })
+
+  // ── D-UAT-24-07 fold-in: markBridgeGameUninstalled() must emit a
+  // gameStatusUpdate 'done' — the backend uninstall succeeded, but without
+  // this the frontend "Uninstalling" pill never cleared (24-UAT.md RETEST
+  // RUN 1 "Also observed").
+
+  it('D-UAT-24-07 fold-in: a completed bridge uninstall emits gameStatusUpdate {status:"done"} (clears the Uninstalling pill) AND pushGameToLibrary with is_installed:false', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, is_installed: false })
+    )
+  })
+
+  it('D-UAT-24-07 fold-in: gameStatusUpdate {status:"done"} still fires even when the library entry is absent for that appId (resolveBridgeLaunchExe returns undefined — nothing to remove)', async () => {
+    library.delete(APP_ID)
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
+
+    const game = new SteamGame(APP_ID)
+    await game.uninstall({} as any)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: APP_ID,
+      runner: 'steam',
+      status: 'done'
+    })
+    // No library entry existed, so no pushGameToLibrary for this appId.
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID })
+    )
+  })
 })
 
 // ── LIB-06: parseSteamStorageRequirement ─────────────────────────────────────
