@@ -4,7 +4,7 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Completed 28-01-PLAN.md
-last_updated: "2026-07-21T23:09:00.451Z"
+last_updated: "2026-07-21T23:15:40.419Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 28 (tauri-keyring-real-safestorage-via-the-keyring-crate) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-21
 
@@ -235,6 +235,7 @@ Closed/parked native-install phases:
 | Phase 24 P16 | 25min | 2 tasks | 4 files |
 | Phase 24 P17 | 20min | 2 tasks | 2 files |
 | Phase 28 P01 | 35min | 3 tasks | 3 files |
+| Phase 28 P02 | 30min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -390,6 +391,8 @@ Recent decisions affecting current work:
 - [Phase 24]: 24-16: refresh()/refreshInstallState() consult buildBridgeInstalledMap() (native > Phase 17 bottle > bridge precedence) so a bridge-installed game's badge survives the periodic sync and focus reconciliation; installPlatformForSource('bridge') now returns Windows; markBridgeGameUninstalled emits gameStatusUpdate done to clear the Uninstalling pill (D-UAT-24-07)
 - [Phase 24-17]: isBridgeAuthoritativeForInstallState() deliberately excludes games.ts's transient bridgeFailedThisSession from the library-level eligibility notion — only durable eligibility (bridgeAllowlist + mac/arch gate) drives persisted install-state, since a single recoverable session failure must never permanently flip is_installed
 - [Phase 28]: Plan 28-01: sidecar->Rust rustInvoke request/response channel added (requestRustInvoke, RUST_INVOKE_CHANNELS allowlist, 60s timeout); T-28-03/T-28-03b/T-28-05 mitigated at the transport layer
+- [Phase ?]: 28-02: openExternal gets minimal fire-and-forget fix, not rustInvoke conversion (Open Question 2 resolved at planning)
+- [Phase 28]: 28-02: KEYRING_SERVICE=com.gamelib.launcher / KEYRING_ACCOUNT=steam-refresh-token chosen as production-stable Keychain identifiers, distinct from spike 011's throwaway values
 
 ### Pending Todos
 
@@ -458,7 +461,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T23:09:00.443Z
+Last session: 2026-07-21T23:14:54.621Z
 Stopped at: Completed 28-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |

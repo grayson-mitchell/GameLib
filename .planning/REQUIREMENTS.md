@@ -392,7 +392,7 @@ Phase 27 (Tauri Shell Walking Skeleton). Minted 2026-07-20 from the ROADMAP goal
 
 Phase 28 (Tauri keyring — real `safeStorage` via the `keyring` crate). Minted 2026-07-22 from 28-CONTEXT.md D-01..D-08. Each maps to Phase 28.
 
-- [ ] **REQ-28-01**: The sidecar persists and retrieves the Steam refresh token as a keyring-native macOS Keychain entry via the `keyring` crate (`apple-native`), round-tripping byte-identical. Chromium OSCrypt ciphertext is explicitly NOT reimplemented. *(D-01)*
+- [x] **REQ-28-01**: The sidecar persists and retrieves the Steam refresh token as a keyring-native macOS Keychain entry via the `keyring` crate (`apple-native`), round-tripping byte-identical. Chromium OSCrypt ciphertext is explicitly NOT reimplemented. *(D-01)*
 - [ ] **REQ-28-02**: The sidecar never writes `TOKEN_STORE_KEY` into the `configStore` shared with Electron — enforced by construction, not by discipline — and Electron's stored token is provably byte-identical before and after a Tauri run. *(D-04)*
 - [ ] **REQ-28-03**: No token migration is performed; the Tauri build starts signed-out and a future fresh login writes a keyring-native token. *(D-02)*
 - [ ] **REQ-28-04**: The phase ships a verifiable proof pair — a synthetic keyring round-trip and an "Electron session untouched" check. There is no user-visible change; **Phase 27 UAT steps 2/3 remain DEFERRED** to whichever phase ports the login channel, superseding the ROADMAP Phase 28 entry's "unblocks Phase 27's UAT steps 2/3" claim. *(D-03)*
