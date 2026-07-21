@@ -1,8 +1,8 @@
-import { safeStorage } from 'electron'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
-import { STEAM_INSTALL_PATHS, TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
+import { STEAM_INSTALL_PATHS } from './constants'
+import { getTokenStore } from './tokenStore'
 import { platform } from 'process'
 import type {
   RedeemKeyOutcome,
@@ -11,45 +11,6 @@ import type {
 } from 'common/types/steam'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
 import SteamUserLib from 'steam-user'
-
-// ── Encryption helpers ────────────────────────────────────────────────────────
-
-function encryptionAvailable(): boolean {
-  try {
-    return safeStorage.isEncryptionAvailable()
-  } catch {
-    return false
-  }
-}
-
-function encryptToken(plain: string): string {
-  if (!plain) return ''
-  if (!encryptionAvailable()) {
-    logWarning(
-      'safeStorage unavailable — storing Steam refresh token in plaintext',
-      LogPrefix.Steam
-    )
-    return plain
-  }
-  const ciphertext = safeStorage.encryptString(plain).toString('base64')
-  return `${TOKEN_PREFIX}${ciphertext}`
-}
-
-function decryptToken(stored: string): string {
-  if (!stored) return ''
-  if (!stored.startsWith(TOKEN_PREFIX)) {
-    // Legacy plaintext fallback
-    return stored
-  }
-  if (!encryptionAvailable()) return ''
-  try {
-    const buf = Buffer.from(stored.slice(TOKEN_PREFIX.length), 'base64')
-    return safeStorage.decryptString(buf)
-  } catch (err) {
-    logWarning(['Failed to decrypt Steam refresh token:', err], LogPrefix.Steam)
-    return ''
-  }
-}
 
 // ── SteamUser static class ────────────────────────────────────────────────────
 
@@ -222,10 +183,7 @@ export class SteamUser {
   // ── Credentials ────────────────────────────────────────────────────────────
 
   static async getCredentials(): Promise<{ refreshToken: string } | undefined> {
-    const stored = configStore.get_nodefault(TOKEN_STORE_KEY)
-    if (!stored || typeof stored !== 'string') return undefined
-
-    const token = decryptToken(stored)
+    const token = await getTokenStore().getToken()
     if (!token) return undefined
     return { refreshToken: token }
   }
@@ -234,8 +192,7 @@ export class SteamUser {
 
   private static async finishAuth(refreshToken: string): Promise<string> {
     // Store credentials immediately — don't block on the steam-user CM connection.
-    const encrypted = encryptToken(refreshToken)
-    configStore.set(TOKEN_STORE_KEY, encrypted)
+    await getTokenStore().setToken(refreshToken)
     configStore.set('isLoggedIn', true)
 
     // Connect steam-user to get the persona name. If this fails the user is still
@@ -398,10 +355,9 @@ export class SteamUser {
 
       const response = await session.startWithQR()
 
-      session.once('authenticated', () => {
+      session.once('authenticated', async () => {
         try {
-          const encrypted = encryptToken(session.refreshToken)
-          configStore.set(TOKEN_STORE_KEY, encrypted)
+          await getTokenStore().setToken(session.refreshToken)
           configStore.set('isLoggedIn', true)
 
           // Mark done synchronously so pollQRLogin() returns 'done' as soon as

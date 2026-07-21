@@ -808,9 +808,11 @@ describe('SteamUser', () => {
     })
 
     test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
-      // Fire authenticated synchronously — stores creds, sets qrSessionState='done',
-      // and (with the fix) assigns this.connectingPromise.
-      sessionOnHandlers['authenticated']()
+      // Fire authenticated — stores creds via the awaited TokenStore seam, sets
+      // qrSessionState='done', and (with the fix) assigns this.connectingPromise.
+      // The handler is async (getTokenStore().setToken() is awaited), so the
+      // test must await it before asserting on qrSessionState/pollQRLogin.
+      await sessionOnHandlers['authenticated']()
 
       // pollQRLogin must return 'done' with username undefined — the background
       // CM connect is still in-flight so the persona name has not arrived yet.
@@ -846,8 +848,10 @@ describe('SteamUser', () => {
       const origSteamID = mockSteamUserInstance.steamID
       mockSteamUserInstance.steamID = null as any
 
-      // Fire authenticated — with the fix, this.connectingPromise is set synchronously.
-      sessionOnHandlers['authenticated']()
+      // Fire authenticated — with the fix, this.connectingPromise is set once the
+      // awaited TokenStore seam's setToken() resolves. The handler is async, so
+      // await it before asserting on connectingPromise/qrSessionState below.
+      await sessionOnHandlers['authenticated']()
 
       // Clear construction/call counts so we can assert "no new client" below.
       MockSteamUserLib.mockClear()
