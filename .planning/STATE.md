@@ -4,12 +4,12 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Completed 27-04-PLAN.md
-last_updated: "2026-07-20T13:10:59.002Z"
-last_activity: 2026-07-20
+last_updated: "2026-07-21T00:55:30.576Z"
+last_activity: 2026-07-21 -- Phase 24 planning complete
 progress:
   total_phases: 23
   completed_phases: 19
-  total_plans: 146
+  total_plans: 150
   completed_plans: 135
   percent: 83
 ---
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 27 — tauri-shell-walking-skeleton
+**Current focus:** Phase 24 — macos-native-steam-bridge-out-of-process-steam-api-proxy
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 27 (tauri-shell-walking-skeleton) — EXECUTING
-Plan: 5 of 5
+Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
+Plan: 1 of 10
 Status: Ready to execute
-Last activity: 2026-07-20
+Last activity: 2026-07-21 -- Phase 24 planning complete
 
 Other open native-install phases:
 
