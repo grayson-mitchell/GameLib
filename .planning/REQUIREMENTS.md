@@ -390,9 +390,22 @@ Phase 27 (Tauri Shell Walking Skeleton). Minted 2026-07-20 from the ROADMAP goal
 - [x] **REQ-27-05**: One real action flow works end-to-end — a Steam launch fires a real `steam://` handoff via the `tauri-plugin-opener` parity path.
 - [x] **REQ-27-06**: The slice runs as a macOS dev build, the existing Electron build still works (additive/reversible), and the ported-vs-stubbed seam boundary is documented so later phases can port the remaining ~217 IPC endpoints incrementally.
 
+Phase 28 (Tauri keyring — real `safeStorage` via the `keyring` crate). Minted 2026-07-22 from 28-CONTEXT.md D-01..D-08. Each maps to Phase 28.
+
+- [ ] **REQ-28-01**: The sidecar persists and retrieves the Steam refresh token as a keyring-native macOS Keychain entry via the `keyring` crate (`apple-native`), round-tripping byte-identical. Chromium OSCrypt ciphertext is explicitly NOT reimplemented. *(D-01)*
+- [ ] **REQ-28-02**: The sidecar never writes `TOKEN_STORE_KEY` into the `configStore` shared with Electron — enforced by construction, not by discipline — and Electron's stored token is provably byte-identical before and after a Tauri run. *(D-04)*
+- [ ] **REQ-28-03**: No token migration is performed; the Tauri build starts signed-out and a future fresh login writes a keyring-native token. *(D-02)*
+- [ ] **REQ-28-04**: The phase ships a verifiable proof pair — a synthetic keyring round-trip and an "Electron session untouched" check. There is no user-visible change; **Phase 27 UAT steps 2/3 remain DEFERRED** to whichever phase ports the login channel, superseding the ROADMAP Phase 28 entry's "unblocks Phase 27's UAT steps 2/3" claim. *(D-03)*
+- [ ] **REQ-28-05**: A reusable sidecar→Rust request/response channel exists (correlated request with a real return path), with the keyring calls as its first consumer, and the pre-existing silently-dropped sidecar→Rust frame path is fixed rather than left broken. *(D-05, D-07, D-10)*
+- [ ] **REQ-28-06**: When the Keychain is locked, access is denied, or no backend exists, `isEncryptionAvailable()` reports **false**, token reads yield empty, the app reaches a clean signed-out state with a logged warning, and the sidecar never persists a plaintext token. *(D-06)*
+- [ ] **REQ-28-07**: No dev escape hatch ships — no env-var or in-memory fallback for Keychain access. Keychain re-prompts on unsigned rebuilds are accepted behavior; both `npm start` (Electron) and `npm run tauri:dev` still work, with zero changes to the 379 `window.api.*` call-sites. *(D-08 + additive/reversible invariant)*
+
 - Phase 27 requirements: 6 total (REQ-27-01..06, minted 2026-07-20 from ROADMAP goal + spike blueprint 009–012)
-- Mapped to phases: 6 (Phase 27)
+- Phase 28 requirements: 7 total (REQ-28-01..07, minted 2026-07-22 from 28-CONTEXT.md D-01..D-08)
+- Mapped to phases: 13 (Phase 27: 6, Phase 28: 7)
 - Unmapped: 0 ✓
+
+**D-XX -> REQ mapping (Phase 28):** D-01 -> REQ-28-01 · D-04 -> REQ-28-02 · D-02 -> REQ-28-03 · D-03 -> REQ-28-04 · D-05/D-07/D-10 -> REQ-28-05 · D-06 -> REQ-28-06 · D-08 -> REQ-28-07. D-09 and D-11 are discretion points shaping REQ-28-01/02/06, not standalone requirements.
 
 ---
 *Requirements defined: 2026-07-02*
@@ -402,3 +415,4 @@ Phase 27 (Tauri Shell Walking Skeleton). Minted 2026-07-20 from the ROADMAP goal
 *Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 Complete (Plan 24-01), REQ-24-02 Complete source/structural (Plan 24-02; live-Steam round-trip deferred to Plan 24-10), REQ-24-04 Complete (Plan 24-08)*
 *Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*
 *Last updated: 2026-07-20 — Phase 27 (REQ-27-01..06) minted during /gsd-plan-phase 27 from ROADMAP goal + Idea-C spike blueprint (009–012); v0.8 rearchitecture track opened*
+*Last updated: 2026-07-22 — Phase 28 (REQ-28-01..07) minted during /gsd-plan-phase 28 from 28-CONTEXT.md D-01..D-08; REQ-28-04 records that D-03 supersedes the ROADMAP Phase 28 "unblocks Phase 27 UAT 2/3" claim*
