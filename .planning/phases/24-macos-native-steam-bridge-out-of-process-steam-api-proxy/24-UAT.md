@@ -2,14 +2,14 @@
 phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy
 plan: 10
 artifact: uat
-status: blocked
+status: pending_retest
 requirements: [R1, R5, R6]
 total_gates: 4
-pending_gates: 0
+pending_gates: 3
 passed_gates: 1
 failed_gates: 0
-blocked_gates: 3
-blocked_reason: "Gates 2-4 (R5/R6) blocked on a bridge install/launch integration bug cluster (D-UAT-24-02/03/04/05); route to /gsd-plan-phase 24 --gaps. Gate 1 (R1) PASS; low-level bridge mechanism proven."
+blocked_gates: 0
+blocked_reason: "RESOLVED by gap-closure plans 24-11/24-12/24-13 (shim overwrite-by-identity, bridge AcfSource install poll, install-poll wiring + sticky-flag clear + launch existence-gate). Gates 2-4 (R5/R6) re-pointed to PENDING by 24-14 for a fresh human-hardware retest citing the specific fix per gate. Gate 1 (R1) PASS; low-level bridge mechanism proven."
 run_via: "/gsd-execute-phase 24 --wave 5 --interactive"
 prepared: 2026-07-21
 last_updated: 2026-07-21
@@ -25,9 +25,13 @@ Steam client). Per `24-VALIDATION.md`'s Manual-Only Verifications table, these f
 automated: they require a packaged `.app`, a live signed-in native Mac Steam, real owned games, and
 the developer's own Apple-Silicon hardware.
 
-**Status: NOT YET RUN.** This document is the prepared gate list + recording template (mirroring the
-`21-UAT.md`/`23-UAT.md` precedent). Every `Result` below is `PENDING` until a human runs the
-corresponding flow on real hardware and records the outcome here.
+**Status: Gate 0/1 PASS; Gates 2-4 PENDING RETEST.** This document is the prepared gate list +
+recording template (mirroring the `21-UAT.md`/`23-UAT.md` precedent). Gates 2-4 were originally
+BLOCKED on a bridge install→shim→launch integration bug cluster (D-UAT-24-02/03/04/05); gap-closure
+plans 24-11/24-12/24-13 closed that cluster, and gap-closure plan 24-14 re-pointed Gates 2-4 back to
+`PENDING` here for a fresh human-hardware retest. Every `Result` below is `PENDING` until a human runs
+the corresponding flow on real hardware (on a rebuilt `.app`, after a clean reinstall — see each
+gate's "Retest preconditions") and records the outcome here.
 
 **Requirements gated by this document:** R1, R5, R6 (per 24-10-PLAN.md frontmatter). The phase is not
 complete until all four gates PASS. Any FAIL routes to `/gsd-plan-phase 24 --gaps`.
@@ -175,6 +179,14 @@ Source: 24-10-PLAN.md Task 3. Trust boundary T-24-11 (bundled helper provenance)
 - The packaged `.app` produced in Gate 0c.
 - Any dev GameLib instance quit; **any externally staged `steam-bridge-helper` removed from PATH /
   working dirs** (so a staged binary cannot masquerade as the bundled one).
+- **Retest preconditions (post gap-cycle):** the packaged `.app` MUST be REBUILT after 24-11
+  (shim overwrite-by-identity), 24-12 (bridge AcfSource for install poll), and 24-13
+  (install-poll wiring + sticky-flag clear + launch existence-gate) have landed — a pre-fix
+  build does not contain any of the three fixes. Before retest, clear the messy pre-fix install
+  state left by the earlier BLOCKED run: remove the `GameLibSteamBridge` bottle's stale
+  install record for the acceptance appId (and the bottle itself if it contains a half-installed
+  game with the game's own `steam_api.dll` still in place) so the retest exercises a CLEAN
+  reinstall through GameLib, not a resume of the broken pre-fix state.
 
 **Steps:**
 1. Launch the PACKAGED `.app` (not a dev `yarn`/`vite` run).
@@ -185,7 +197,20 @@ Source: 24-10-PLAN.md Task 3. Trust boundary T-24-11 (bundled helper provenance)
 (`…/app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`), NOT a dev/staged path. No
 externally staged helper is present or used.
 
-**Result:** PENDING
+**Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
+- **D-UAT-24-04 (24-11, shim overwrite-by-identity):** after the install this gate depends on,
+  confirm the `steam_api.dll` next to the game exe in the bridge bottle is the 805888-byte bridge
+  shim, NOT the game's own ~118368-byte copy (`ls -l` size check, or `grep -a 54550` the binary for
+  the bridge's loopback port literal — present in the shim, absent from the game's own dll).
+- **D-UAT-24-05 (24-12, bridge AcfSource):** the install badge for the acceptance game STAYS
+  "Installed" after the poll grace window and does not revert to "Install" (proves the poll read the
+  bridge-bottle StateFlags=4 manifest, not the wrong root).
+- **D-UAT-24-02/03 (24-13, install-poll wiring + launch existence-gate):** Play launches the real
+  `steam-bridge-helper` process (this gate's own subject) without a prior single failure poisoning
+  the session — i.e. this is the first Play attempt in a fresh session AND it succeeds without
+  needing a restart.
+
+**Result:** PENDING (retest after gap cycle 24-11/24-12/24-13)
 **Observed helper process path:** _(record — must be inside the `.app` bundle)_
 **Evidence:** _(Activity Monitor screenshot path / log line)_
 
@@ -212,6 +237,13 @@ FAIL. Record the enumerated import set here.
   206060 — the pre-swap build has Avernum 4 baked in and will not route Avernum 6 to the bridge); native
   Mac Steam signed in; Avernum 6 owned on the account.
 - Bridge bottle path (no bottled Windows Steam client).
+- **Retest preconditions (post gap-cycle):** the packaged `.app` MUST be REBUILT after 24-11
+  (shim overwrite-by-identity), 24-12 (bridge AcfSource for install poll), and 24-13
+  (install-poll wiring + sticky-flag clear + launch existence-gate) have landed. Before retest,
+  clear the messy pre-fix install state for Avernum 6 (and the Avernum 5 exploration artifacts noted
+  in D-UAT-24-03/04/05): remove any stale `GameLibSteamBridge` bottle install record and the bottle's
+  on-disk game directory for the acceptance appId, so the retest is a CLEAN reinstall THROUGH GameLib
+  (provision → depot into bridge bottle → shim → badge → launch), not a resume of broken pre-fix state.
 
 **Steps:**
 1. From the packaged GameLib, install (if needed) and launch **Avernum 6** on macOS.
@@ -229,7 +261,19 @@ FAIL. Record the enumerated import set here.
 **Expected result:** Avernum 6 reaches playable single-player via the bridge; Part A init-through-bridge
 logged; Part B identity served if requested (else N/A per finding #6); bottle has no Windows Steam client.
 
-**Result:** PENDING
+**Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
+- **D-UAT-24-04 (24-11, shim overwrite-by-identity):** the `steam_api.dll` next to `Avernum6.exe` in
+  the bridge bottle is the 805888-byte bridge shim, NOT Avernum 6's own ~118368-byte copy (size check,
+  or `grep -a 54550` the binary for the bridge loopback port literal).
+- **D-UAT-24-05 (24-12, bridge AcfSource):** the Install badge STAYS "Installed" after the install
+  poll grace window and does not revert to "Install" (proves the poll read the bridge-bottle
+  StateFlags=4 manifest for 206060, not the native/Phase-17-bottle root).
+- **D-UAT-24-02/03 (24-13, install-poll wiring + launch existence-gate):** Play launches the real
+  `Avernum6.exe` (non-empty `launch.log`, game reaches main menu) on the FIRST attempt in a fresh
+  session — a prior single bridge failure elsewhere in the session must not have poisoned this launch
+  (sticky-flag clear verified working).
+
+**Result:** PENDING (retest after gap cycle 24-11/24-12/24-13)
 **Enumerated `steam_api` imports (24-05 importScan):** _(record — confirm subset of shim exports)_
 **Part A (init through bridge):** _(PASS/FAIL — log excerpt)_
 **Part B (identity served):** _(PASS / N/A — SteamID64 + persona if served)_
@@ -247,6 +291,13 @@ first (Pitfall 2), corroborating Gate 1.
 **Preconditions:**
 - Packaged GameLib (Gate 0c); native Mac Steam signed in; Hoard owned on the account.
 - Bridge bottle path (no bottled Windows Steam client).
+- **Retest preconditions (post gap-cycle):** the packaged `.app` MUST be REBUILT after 24-11
+  (shim overwrite-by-identity), 24-12 (bridge AcfSource for install poll), and 24-13
+  (install-poll wiring + sticky-flag clear + launch existence-gate) have landed. Before retest,
+  clear the messy pre-fix HOARD install state (D-UAT-24-01/02 found HOARD "installed" only as an
+  unusable native 32-bit Mac build, never through the bridge, plus a stray Windows copy in the old
+  Phase 17 `GameLibSteam` bottle): remove the stale HOARD install record and any bottle artifacts for
+  appId 63000 so the retest is a CLEAN reinstall THROUGH GameLib's bridge path.
 
 **Steps:**
 1. From the packaged GameLib, install (if needed) and launch **Hoard** on macOS.
@@ -261,7 +312,19 @@ first (Pitfall 2), corroborating Gate 1.
 Part B real SteamID64 + persona served (Hoard is the game most likely to actually exercise identity —
 finding #6); bottle has no Windows Steam client.
 
-**Result:** PENDING
+**Per-fix verification hooks (attribute pass/fail to a specific gap-cycle fix):**
+- **D-UAT-24-04 (24-11, shim overwrite-by-identity):** the `steam_api.dll` next to `Reuben.exe` in the
+  bridge bottle is the 805888-byte bridge shim, NOT HOARD's own ~118368-byte copy (size check, or
+  `grep -a 54550` the binary for the bridge loopback port literal).
+- **D-UAT-24-05 (24-12, bridge AcfSource):** the Install badge STAYS "Installed" after the install
+  poll grace window and does not revert to "Install" (proves the poll read the bridge-bottle
+  StateFlags=4 manifest for 63000, not the native-32-bit-Mac or Phase-17-bottle record).
+- **D-UAT-24-02/03 (24-13, install-poll wiring + launch existence-gate):** Play launches the real
+  `Reuben.exe` — not the fire-and-forget no-op at a non-existent bridge-bottle path originally
+  reported (D-UAT-24-02) — and does so on the first attempt without a prior session failure poisoning
+  this launch (sticky-flag clear verified working).
+
+**Result:** PENDING (retest after gap cycle 24-11/24-12/24-13)
 **Part A (init through bridge):** _(PASS/FAIL — log excerpt)_
 **Part B (identity served):** _(PASS/FAIL — SteamID64 + persona)_
 **Bottle listing (no steam.exe):** _(record `ls` output)_
@@ -401,16 +464,24 @@ vs the `GameLibSteamBridge` bottle steamapps), so it concludes not-installed and
 **Fix direction:** the bridge/bottle install's readiness poll must read the bridge-bottle ACF it just
 wrote (`getBottleSteamappsDir(bridgeBottle)`), not the native library path.
 
-### VERDICT (2026-07-21): bridge mechanism proven; install→shim→launch integration needs a gap cycle
+### VERDICT (2026-07-21, updated by gap-closure plan 24-14): bridge mechanism proven; install→shim→launch integration cluster CLOSED — Gates 2-4 re-pointed to PENDING retest
 
 Gate 1 (R1 vtable round-trip) **PASS**. The low-level bridge is sound (helper spawn + `SteamAPI_Init` +
-real SteamID + `LISTEN` 54550; bridge-bottle provisioning; depot download all verified live). But the
-GameLib integration layer has a **cluster** of defects the two hand-picked acceptance games never exposed:
-D-UAT-24-01 (publicDir, FIXED `87c0ef82`), D-UAT-24-02 (launch no-op / install-state for already-installed,
-open), D-UAT-24-03 (untagged launch entry — root FIXED `f0b7e82c`; sticky-flag cascade + install-record,
-open), D-UAT-24-04 (shim never overwrites the game's dll, open, BLOCKER), D-UAT-24-05 (install-poll wrong
-manifest location, open). **Gates 2/3/4 (R5/R6) cannot pass until the cluster is fixed →
-`/gsd-plan-phase 24 --gaps`** (coordinated fixes + tests + review, not one-off live patches).
+real SteamID + `LISTEN` 54550; bridge-bottle provisioning; depot download all verified live). The
+GameLib integration layer had a **cluster** of defects the two hand-picked acceptance games never
+exposed: D-UAT-24-01 (publicDir, FIXED `87c0ef82`), D-UAT-24-02 (launch no-op / install-state for
+already-installed, **CLOSED by 24-13** — `launchBridgeGame` existence-gate before `runWineCommand`),
+D-UAT-24-03 (untagged launch entry — root FIXED `f0b7e82c`; sticky-flag cascade + install-record
+**CLOSED by 24-13** — `clearBridgeFailedThisSession` un-poisons on success), D-UAT-24-04 (shim never
+overwrites the game's dll, BLOCKER, **CLOSED by 24-11** — byte-identity overwrite guard replaces the
+existence guard), D-UAT-24-05 (install-poll wrong manifest location, **CLOSED by 24-12/24-13** — new
+`'bridge'` AcfSource + `getBridgeBottleSteamappsRoot()`, wired into `installBridgeGame`'s
+`pollerSource`). All three gap plans (24-11/24-12/24-13) landed with green `codecheck` + jest and
+individual task commits (`88d20973`, `e07e85b3`, `b4bc94e8`). **This plan (24-14) does not re-run the
+gates** — it re-points Gates 2/3/4 (R5/R6) from ⛔ BLOCKED back to `PENDING (retest after gap cycle
+24-11/24-12/24-13)` with rebuild + clean-reinstall preconditions and per-fix verification hooks, so a
+fresh human-hardware run on real Apple-Silicon hardware can attribute each result to a specific fix.
+Any FAIL on retest routes to a further gap cycle.
 
 ### Environment issues (separate from Phase 24 acceptance — tracked, not bridge defects)
 
@@ -438,12 +509,14 @@ User decision: set aside, run the gates on the packaged app, revisit separately.
 | 0b | Full jest suite | — | ✅ PASS (Phase 24 scope) | 1813/1813 tests pass; 102/103 suites. 2 out-of-scope reds: Phase 27 `bootstrap.test.ts` circular import + pre-existing `library.ts` leaked timer. Neither is a Phase 24 regression. |
 | 0c | Packaged `.app` + bundled helper | R5 | ✅ PASS | `dist/mac-arm64/GameLib.app`; helper `Mach-O arm64` at `…/app.asar.unpacked/build/bin/arm64/darwin/steam-bridge-helper`. |
 | 1 | R1 vtable round-trip | R1 | ✅ PASS | Generated shim vtable slot 2 `GetSteamID()` → production helper → real SteamID64 `76561197995867096` (string-equal). 2026-07-21. |
-| 2 | R5 packaged bundled-helper | R5 | ⛔ BLOCKED | Cannot reach — bridge launch integration broken (D-UAT-24-02/03/04/05). Gap cycle. |
-| 3 | R6 Avernum 5/6 | R6 | ⛔ BLOCKED | Bridge shim never overwrites the game's own steam_api.dll (D-UAT-24-04) + install reverts (D-UAT-24-05) + launch misroutes (D-UAT-24-03 cascade). Gap cycle. |
-| 4 | R6 Hoard | R6 | PENDING | Playable via bridge; init + identity served (7 imports); no steam.exe in bottle. |
+| 2 | R5 packaged bundled-helper | R5 | PENDING (retest) | Gap cycle 24-11/24-12/24-13 closed D-UAT-24-02/03/04/05 (shim overwrite, bridge AcfSource poll, launch existence-gate, sticky-flag clear). Re-pointed for fresh retest by 24-14. |
+| 3 | R6 Avernum 5/6 | R6 | PENDING (retest) | Shim-overwrite (24-11) + install-poll (24-12) + install/launch wiring (24-13) fixes landed for D-UAT-24-04/05/03-cascade. Re-pointed for fresh retest by 24-14. |
+| 4 | R6 Hoard | R6 | PENDING (retest) | Launch no-op (D-UAT-24-02) closed by 24-13's existence-gate; shim/poll fixes (24-11/24-12) also apply. Re-pointed for fresh retest by 24-14. |
 
-**Gate status:** 4 human-HW gates PENDING. Phase 24 is not complete until Gates 1–4 all PASS
-(21-UAT.md/23-UAT.md precedent). Any FAIL → `/gsd-plan-phase 24 --gaps`.
+**Gate status:** Gate 0 PASS, Gate 1 (R1) PASS. Gates 2–4 (R5/R6) PENDING retest — re-pointed from
+BLOCKED by gap-closure plan 24-14 now that 24-11/24-12/24-13 closed the install→shim→launch
+integration cluster. Phase 24 is not complete until Gates 1–4 all PASS (21-UAT.md/23-UAT.md
+precedent). Any FAIL on retest → a further `/gsd-plan-phase 24 --gaps` cycle.
 
 ---
 *Prepared: 2026-07-21 by Plan 24-10 (Wave 5, `--interactive`). Automated pre-req (Gate 0a/0b) recorded
