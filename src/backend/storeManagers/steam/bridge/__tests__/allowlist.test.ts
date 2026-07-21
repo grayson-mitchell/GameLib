@@ -80,8 +80,13 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(bridgeAllowlist.has(AVERNUM_6_APP_ID)).toBe(true)
   })
 
-  test('has() returns true for HOARD (acceptance-set title)', () => {
-    expect(bridgeAllowlist.has(HOARD_APP_ID)).toBe(true)
+  // HOARD (63000) was removed from the allowlist 2026-07-21: it imports 8 bare
+  // interface accessors (SteamUser/Utils/Friends/Apps/Matchmaking/Networking/
+  // RemoteStorage/UserStats) but the shim+helper cover only ISteamUser+ISteamFriends,
+  // so it crashes on the first unimplemented accessor (SteamUtils). Deferred pending
+  // multi-interface bridge coverage (24-UAT D-UAT-24-09). Not offered as a bridge title.
+  test('has() returns false for HOARD (deferred — bridge lacks its interfaces, D-UAT-24-09)', () => {
+    expect(bridgeAllowlist.has(HOARD_APP_ID)).toBe(false)
   })
 
   test('has() returns false for an absent numeric appId', () => {
