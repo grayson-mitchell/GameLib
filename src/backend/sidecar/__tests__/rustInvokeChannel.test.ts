@@ -1,14 +1,13 @@
 /**
  * Transport-shape test for the sidecar→Rust `rustInvoke` request/response channel
- * (Phase 28 Plan 01 — Task 2).
+ * (Phase 28 Plan 01 — Task 2/3).
  *
  * Proves the TypeScript-side framing only: `requestRustInvoke()` emits a well-formed
  * `rustInvoke` frame, correlates a synthetic Rust-written response by `id`, times out on
  * silence, and refuses non-allowlisted channels without emitting a frame. There is no real
  * Rust process in Jest — every "Rust response" here is a synthetic line written directly
  * into the input `PassThrough`, simulating what `src-tauri/src/main.rs`'s reader thread
- * would write back (plan 28-02's job). This test is expected to FAIL until Task 3 implements
- * `requestRustInvoke()` and the response-to-self disambiguation in `handleFrame()`.
+ * would write back (plan 28-02's job).
  *
  * Follows `bootstrap.test.ts`'s real-stream convention: `stream.PassThrough` pairs, no
  * mocking of `node:fs`/`electron`, `collectLines()`/`flush()` helpers copied verbatim.
@@ -16,7 +15,8 @@
 
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
-import { RUST_KEYRING_GET } from 'common/types/sidecarTransport'
+import { requestRustInvoke } from '../sidecarRpc'
+import { RUST_KEYRING_GET, type RustInvokeChannel } from 'common/types/sidecarTransport'
 
 /** Buffers newline-delimited output from a PassThrough into discrete lines. */
 function collectLines(stream: PassThrough): string[] {
@@ -52,9 +52,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const lines = collectLines(output)
     init(input, output)
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { requestRustInvoke } = require('../sidecarRpc')
-    void requestRustInvoke(RUST_KEYRING_GET, [])
+    const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
     const rustInvokeLines = lines.filter((line) => line.includes('"kind":"rustInvoke"'))
@@ -65,6 +63,10 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     expect(Array.isArray(parsed.args)).toBe(true)
     expect(typeof parsed.id).toBe('string')
     expect(parsed.id.length).toBeGreaterThan(0)
+
+    // Settle the pending promise so no timer/rejection leaks past this test.
+    input.write(`${JSON.stringify({ id: parsed.id, ok: true, result: null })}\n`)
+    await expect(promise).resolves.toBeNull()
   })
 
   // Behavior 2: a synthetic {ok:true} response resolves the returned Promise.
@@ -74,8 +76,6 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const lines = collectLines(output)
     init(input, output)
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { requestRustInvoke } = require('../sidecarRpc')
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
@@ -94,8 +94,6 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const lines = collectLines(output)
     init(input, output)
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { requestRustInvoke } = require('../sidecarRpc')
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
 
@@ -182,11 +180,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const lines = collectLines(output)
     init(input, output)
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { requestRustInvoke } = require('../sidecarRpc')
-
     await expect(
-      requestRustInvoke('rm -rf /' as never, [])
+      requestRustInvoke('rm -rf /' as RustInvokeChannel, [])
     ).rejects.toThrow()
 
     await flush()
@@ -202,8 +197,6 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     const output = new PassThrough()
     init(input, output)
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { requestRustInvoke } = require('../sidecarRpc')
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     const assertion = expect(promise).rejects.toThrow('timed out')
 
