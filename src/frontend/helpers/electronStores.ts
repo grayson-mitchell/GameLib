@@ -1,3 +1,11 @@
+// Phase 27 Plan 05 (blank-screen fix): real dependency edge on the Tauri attach module —
+// this file constructs TypeCheckedStoreFrontends at module scope (bottom of file), each of
+// whose constructors calls `window.api.storeNew(...)` synchronously. Same reasoning as
+// `frontend/helpers/index.ts`: the renderer entry's import order does not survive Rollup's
+// chunking, so the ordering requirement must be expressed as an actual import. Idempotent;
+// no-ops under Electron.
+import '../../preload/tauriAttach'
+
 import { Get } from 'type-fest'
 
 import {

@@ -1,3 +1,19 @@
+// Phase 27 Plan 05 (blank-screen fix): a REAL dependency edge on the Tauri attach module,
+// not merely an ordering convention in the renderer entry. This file reads `window.api.*`
+// at module scope (below), so `window.api` must already exist when this module evaluates.
+//
+// index.tsx declaring `import '../preload/tauriAttach'` as its first import is NOT enough
+// once the bundle is chunked: Rollup inlined tauriAttach into the ENTRY chunk while this
+// file landed in a SHARED chunk that the entry chunk imports — and ES modules evaluate an
+// imported chunk in full before any of the importing chunk's own module bodies. The attach
+// therefore ran AFTER this file, `window.api` was undefined, and the module-scope read
+// below threw inside the module graph, leaving a silent blank Tauri window.
+//
+// An explicit import is the only ordering guarantee that survives chunking: evaluation
+// order between a module and its dependency is fixed by the spec, whatever Rollup does with
+// chunk boundaries. The attach module is idempotent and no-ops under Electron.
+import '../../preload/tauriAttach'
+
 import {
   GameInfo,
   InstallProgress,
