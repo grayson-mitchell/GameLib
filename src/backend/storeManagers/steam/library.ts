@@ -45,6 +45,7 @@ import {
 } from './depot'
 import { reconcilePartialState } from './depot/reconcile'
 import { sanitizeInstalldir } from './installLocation'
+import { bridgeAllowlist } from './bridge/allowlist'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -111,6 +112,42 @@ function hostInstallPlatform(): InstallPlatform {
 function installPlatformForSource(source: AcfSource): InstallPlatform {
   if (source === 'bottle' || source === 'bridge') return 'Windows'
   return hostInstallPlatform()
+}
+
+/**
+ * D-UAT-24-02 (core, gap-closure plan 24-17): for a bridge-eligible Steam
+ * title, install-state must be AUTHORITATIVE TO THE BRIDGE BOTTLE — a native
+ * macOS build and/or a Phase 17 `GameLibSteam` bottle install must NOT
+ * satisfy is_installed for that appId, because Play routes a bridge-eligible
+ * title through the bridge launch path regardless of where a non-bridge copy
+ * lives. Without this, a bridge-eligible game "installed" only natively or
+ * in the Phase 17 bottle shows Play, Play routes to the bridge, and the
+ * bridge bottle doesn't contain the game — dead-ending at "steam bridge not
+ * available" (hardware-confirmed: Avernum 6 / Hoard, 24-UAT.md).
+ *
+ * Mirrors games.ts's `isBridgeEligible()` composition — `isBottleEligible()`
+ * (isMac + mac_arch==='32' OR (platformsCaptured===true AND
+ * is_mac_native===false)) AND `bridgeAllowlist.has(appId)` — reading
+ * `steamMetadataStore` directly rather than importing games.ts, so the
+ * existing library.ts <-> games.ts import cycle is not deepened.
+ *
+ * DELIBERATELY EXCLUDES games.ts's `bridgeFailedThisSession` — that set is
+ * module-scoped/transient/unexported session state (a single recoverable
+ * bridge failure), not durable eligibility. Importing it would deepen the
+ * cycle, and a transient session failure must never permanently flip
+ * install-state (which persists to steamLibraryStore) — only the DURABLE
+ * eligibility signal (allowlist + mac + arch) belongs here.
+ *
+ * Never throws on a missing metadata cache entry — `meta` is undefined for
+ * an app never fetched, in which case the mac/arch gate is false and this
+ * returns false (falls through to the existing native/bottle precedence).
+ */
+function isBridgeAuthoritativeForInstallState(appIdStr: string): boolean {
+  if (!isMac) return false
+  if (!bridgeAllowlist.has(appIdStr)) return false
+  const meta = steamMetadataStore.get(appIdStr)
+  if (meta?.mac_arch === '32') return true
+  return meta?.platformsCaptured === true && meta?.is_mac_native === false
 }
 
 /**
@@ -618,17 +655,28 @@ export default class SteamLibraryManager implements LibraryManager {
       const nativeInstalledData = installedMap.get(app.appid)
       const bottleInstalledData = bottleInstalledMap?.get(app.appid)
       const bridgeInstalledData = bridgeInstalledMap?.get(app.appid)
-      // Precedence: native wins, then Phase 17 bottle, then bridge — never
-      // double-count/conflate the three roots (mirrors refreshInstallState()'s
-      // reconciliation; D-UAT-24-07 adds the bridge tier last so native/bottle
-      // behavior is byte-for-byte unchanged when they match).
-      const installedData =
-        nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData
-      const source: AcfSource = nativeInstalledData
-        ? 'native'
-        : bottleInstalledData
-          ? 'bottle'
-          : 'bridge'
+      // D-UAT-24-02 (24-17): for a bridge-eligible title, install-state is
+      // authoritative to the bridge bottle ONLY — native/Phase-17-bottle
+      // copies must not shadow the bridge (they'd show Play while the
+      // bridge bottle doesn't have the game, dead-ending the launch).
+      // Precedence for NON-eligible titles is unchanged: native wins, then
+      // Phase 17 bottle, then bridge — never double-count/conflate the
+      // three roots (mirrors refreshInstallState()'s reconciliation;
+      // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
+      // byte-for-byte unchanged when they match).
+      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
+        appIdStr
+      )
+      const installedData = bridgeAuthoritative
+        ? bridgeInstalledData
+        : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
+      const source: AcfSource = bridgeAuthoritative
+        ? 'bridge'
+        : nativeInstalledData
+          ? 'native'
+          : bottleInstalledData
+            ? 'bottle'
+            : 'bridge'
       const cachedMeta = steamMetadataStore.get(appIdStr)
 
       const gameInfo: GameInfo = {
@@ -810,15 +858,26 @@ export default class SteamLibraryManager implements LibraryManager {
       const nativeInstalledData = installedMap.get(appId)
       const bottleInstalledData = bottleInstalledMap?.get(appId)
       const bridgeInstalledData = bridgeInstalledMap?.get(appId)
-      // Precedence: native wins, then Phase 17 bottle, then bridge — never
+      // D-UAT-24-02 (24-17): same bridge-authoritative selection as
+      // refresh() — a bridge-eligible title reconciles ONLY against the
+      // bridge map, so a stale native/Phase-17-bottle-only badge gets
+      // correctly flipped to not-installed rather than surviving focus
+      // reconciliation. Precedence for non-eligible titles is unchanged:
+      // native wins, then Phase 17 bottle, then bridge — never
       // double-count/conflate the three roots.
-      const installedData =
-        nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData
-      const source: AcfSource = nativeInstalledData
-        ? 'native'
-        : bottleInstalledData
-          ? 'bottle'
-          : 'bridge'
+      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
+        appIdStr
+      )
+      const installedData = bridgeAuthoritative
+        ? bridgeInstalledData
+        : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
+      const source: AcfSource = bridgeAuthoritative
+        ? 'bridge'
+        : nativeInstalledData
+          ? 'native'
+          : bottleInstalledData
+            ? 'bottle'
+            : 'bridge'
       const isNowInstalled = !!installedData
 
       if (gameInfo.is_installed !== isNowInstalled) {
