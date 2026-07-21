@@ -36,6 +36,16 @@ import {
   askForceUninstall,
   getGame
 } from './utils'
+// Static top-level import (not a lazy `require()`) of the alias
+// 'backend/storeManagers'. Only dereferenced INSIDE function bodies below
+// (never at this module's top level), so the launcher.ts <->
+// storeManagers/index.ts cycle is safe the same way downloadqueue.ts's is —
+// see the comment there (debug/download-queue-require-crash). Fixes the
+// same class of bug: electron-vite's production build leaves a literal,
+// unresolvable `require("backend/storeManagers")` in the emitted chunk for
+// synchronous require() calls, even though it resolves the alias fine for
+// static `import`/`import()`.
+import { libraryManagerMap } from 'backend/storeManagers'
 import {
   createGameLogWriter,
   getRunnerLogWriter,
@@ -1952,16 +1962,6 @@ function getRunnerCallWithoutCredentials(
   runnerPath: string
 ): string {
   if (!Array.isArray(command)) {
-    // Required lazily (synchronous CJS require) to break a circular
-    // dependency (launcher.ts <-> storeManagers/index.ts) — see the
-    // load-bearing comment on getGame() in backend/utils.ts. This function
-    // is synchronous, so `await import()` isn't an option here.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { libraryManagerMap } = require('backend/storeManagers') as {
-      libraryManagerMap: {
-        legendary: { commandToArgsArray: (c: LegendaryCommand) => string[] }
-      }
-    }
     command = libraryManagerMap['legendary'].commandToArgsArray(command)
   }
 

@@ -7,7 +7,6 @@ import {
   DownloadManagerState,
   Runner
 } from 'common/types'
-import type { LibraryManager } from 'common/types/game_manager'
 import { installQueueElement, updateQueueElement } from './utils'
 import { sendFrontendMessage } from '../ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
@@ -18,28 +17,25 @@ import { getSteamInstallSize } from 'backend/storeManagers/steam/games'
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
 import { onConnectivityChange } from 'backend/online_monitor'
+// Static top-level import (not a lazy `require()`/`await import()`) of the
+// alias 'backend/storeManagers'. `libraryManagerMap` is only ever
+// dereferenced INSIDE function bodies below (cancelCurrentDownload/
+// stopCurrentDownload/processNotification/addToQueue), never at this
+// module's top level, so Rollup's live-binding handling of the
+// downloadqueue.ts <-> storeManagers/index.ts cycle is safe: by the time any
+// of these functions actually runs, both modules have finished evaluating.
+// This also fixes debug/download-queue-require-crash — electron-vite's
+// production build resolves the alias for static `import`/`import()` but
+// leaves a literal, unresolvable `require("backend/storeManagers")` in the
+// emitted chunk, which crashed every sync call (cancel/stop/completion).
+// Other call sites already prove this pattern is safe for synchronous access
+// (e.g. utils/uninstaller.ts's `libraryManagerMap[runner].getGame(appName)`).
+import { libraryManagerMap } from 'backend/storeManagers'
 
 const downloadManager = new TypeCheckedStoreBackend('downloadManager', {
   cwd: 'store',
   name: 'download-manager'
 })
-
-/**
- * Required lazily (synchronous CJS require, not a top-level import) to break
- * a circular dependency (downloadqueue.ts <-> storeManagers/index.ts) — see
- * the load-bearing comment in storeManagers/gog/user.ts. Shared by this
- * file's synchronous functions (cancelCurrentDownload/stopCurrentDownload/
- * processNotification), which can't use `await import()`; the async
- * functions below use `await import('backend/storeManagers')` directly
- * instead.
- */
-function getLibraryManagerMapSync(): Record<Runner, LibraryManager> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const required = require('backend/storeManagers') as {
-    libraryManagerMap: Record<Runner, LibraryManager>
-  }
-  return required.libraryManagerMap
-}
 
 /*
 #### Private ####
@@ -214,10 +210,6 @@ async function addToQueue(element: DMQueueElement) {
   if (elementIndex >= 0) {
     elements[elementIndex] = element
   } else {
-    // Imported lazily to break a circular dependency (downloadqueue.ts <->
-    // storeManagers/index.ts) — see the load-bearing comment in
-    // storeManagers/gog/user.ts.
-    const { libraryManagerMap } = await import('backend/storeManagers')
     const gameInfo = libraryManagerMap[element.params.runner].getGameInfo(
       element.params.appName
     )
@@ -359,8 +351,8 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
 
     if (removeDownloaded) {
       const { appName, runner } = currentElement.params
-      const { folder_name } = getLibraryManagerMapSync()
-        [runner].getGame(appName)
+      const { folder_name } = libraryManagerMap[runner]
+        .getGame(appName)
         .getGameInfo()
       if (folder_name) {
         removeFolder(currentElement.params.path, folder_name)
@@ -391,7 +383,7 @@ function resumeCurrentDownload() {
 function stopCurrentDownload() {
   const { appName, runner } = currentElement!.params
   callAbortController(appName)
-  getLibraryManagerMapSync()[runner].getGame(appName).stop(false)
+  libraryManagerMap[runner].getGame(appName).stop(false)
 }
 
 // notify the user based on the status of the element and the status of the queue
@@ -403,8 +395,8 @@ function processNotification(element: DMQueueElement, status: DMStatus) {
   ) {
     return
   }
-  const { title } = getLibraryManagerMapSync()
-    [element.params.runner].getGame(element.params.appName)
+  const { title } = libraryManagerMap[element.params.runner]
+    .getGame(element.params.appName)
     .getGameInfo()
 
   if (status === 'abort') {

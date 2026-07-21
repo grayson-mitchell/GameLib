@@ -37,6 +37,7 @@ import {
   libraryStore as GOGlibraryStore
 } from './storeManagers/gog/electronStores'
 import gogPresence from './storeManagers/gog/presence'
+import { libraryManagerMap } from './storeManagers'
 import {
   installStore as nileInstallStore,
   libraryStore as nileLibraryStore
@@ -88,18 +89,16 @@ import type { Game } from 'common/types/game_manager'
 const execAsync = promisify(exec)
 
 function getGame(id: string, runner: Runner): Game {
-  // Required lazily (synchronous CJS require, not a top-level import) to
-  // break a circular dependency (utils.ts <-> storeManagers/index.ts) — see
-  // the load-bearing comment in storeManagers/gog/user.ts. getGame() is a
-  // widely-used SYNCHRONOUS export (shortcuts/tools/wiki_game_info
-  // ipc_handlers etc. all call it expecting a Game, not a Promise<Game>), so
-  // an async `import()` here isn't an option -- require() defers resolution
-  // to call time exactly like `import()` would, without changing the
-  // function's signature.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { libraryManagerMap } = require('./storeManagers') as {
-    libraryManagerMap: Record<Runner, { getGame: (id: string) => Game }>
-  }
+  // Uses the static top-level `import { libraryManagerMap } from './storeManagers'`
+  // above, NOT a synchronous `require('./storeManagers')`: electron-vite/Rollup
+  // leaves a bare require() of a module specifier unresolved in the production
+  // bundle (it only rewrites static import/import()), so require('./storeManagers')
+  // threw "Cannot find module './storeManagers'" at runtime from the packaged
+  // chunk. The binding is dereferenced only here at call time, so the
+  // utils.ts <-> storeManagers/index.ts circular dependency is unaffected (live
+  // binding; mirrors downloadqueue.ts / launcher.ts / uninstaller.ts). getGame()
+  // stays a synchronous export — its callers (shortcuts/tools/wiki_game_info
+  // ipc_handlers etc.) expect a Game, not a Promise<Game>.
   return libraryManagerMap[runner].getGame(id)
 }
 
