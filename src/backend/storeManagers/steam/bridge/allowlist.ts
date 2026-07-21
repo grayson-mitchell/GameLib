@@ -24,9 +24,16 @@
  * boundary must never crash the routing decision.
  */
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { z } from 'zod'
+// Static JSON import (tsconfig `resolveJsonModule: true`) so the curated
+// allowlist is INLINED into the main-process bundle by rollup. The prior
+// `readFileSync(join(__dirname, 'bridge-allowlist.json'))` broke at runtime:
+// electron-vite emits the main process as build/main/chunks/index-*.js and
+// does NOT copy the sibling .json next to the compiled chunk, so __dirname
+// resolution threw ENOENT and crashed startup. A static import guarantees the
+// data is present in the bundle while preserving the fail-loud `.parse()`
+// posture below (a malformed asset still throws at module load).
+import bridgeAllowlistJson from './bridge-allowlist.json'
 
 // Pattern repeated verbatim across bottle.ts:826, clientSetup.ts:40 -- reuse
 // the SAME regex value/name, do not redefine a divergent one.
@@ -48,14 +55,10 @@ export const bridgeAllowlistSchema = z.object({
 export type BridgeAllowlist = z.infer<typeof bridgeAllowlistSchema>
 
 function loadBridgeAllowlist(): BridgeAllowlist {
-  const raw = readFileSync(
-    join(__dirname, 'bridge-allowlist.json'),
-    'utf-8'
-  )
   // `.parse()` (not `.safeParse()`) is deliberate -- a malformed bundled
   // allowlist must throw at module load (fail-loud, D-02's curated/reviewed
   // posture), not be silently swallowed into an empty/partial list.
-  return bridgeAllowlistSchema.parse(JSON.parse(raw))
+  return bridgeAllowlistSchema.parse(bridgeAllowlistJson)
 }
 
 const bridgeAllowlistData = loadBridgeAllowlist()
