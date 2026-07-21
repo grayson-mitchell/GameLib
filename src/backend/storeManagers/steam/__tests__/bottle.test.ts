@@ -1087,6 +1087,61 @@ describe('bottle.ts', () => {
 
         expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
       })
+
+      // ── D-UAT-24-06 (24-15 gap closure) ─────────────────────────────────
+      // The bridge bottle is created by cxbottle (CrossOver); the LAUNCH
+      // getter must resolve that same CrossOver runtime, never inherit the
+      // GPTK/toolkit global default — otherwise a 32-bit bridge game exe
+      // aborts instantly under GPTK's wine64-only loader.
+      const gptkGlobalWine: WineInstallation = {
+        bin: '/Applications/Game Porting Toolkit.app/.../wine64',
+        name: 'Game-Porting-Toolkit-latest',
+        type: 'toolkit'
+      }
+
+      test('D-UAT-24-06: resolves a CrossOver WineInstallation (not the GPTK global default) when CrossOver is present on disk', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: gptkGlobalWine }) as GameSettings
+        })
+        mockedExistsSync.mockImplementation((path: string) =>
+          path.endsWith('/CrossOver/bin/wine')
+        )
+
+        const settings = getBridgeBottleSettings()
+
+        expect(settings.wineVersion.type).toBe('crossover')
+        expect(settings.wineVersion.bin).toMatch(/\/CrossOver\/bin\/wine$/)
+        expect(settings.wineVersion.wineserver).toMatch(
+          /\/CrossOver\/bin\/wineserver$/
+        )
+        expect(settings.wineVersion).not.toEqual(gptkGlobalWine)
+        expect(settings.wineVersion.type).not.toBe('toolkit')
+      })
+
+      test('D-UAT-24-06: falls back to globalSettings.wineVersion when CrossOver is absent from disk', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: gptkGlobalWine }) as GameSettings
+        })
+        mockedExistsSync.mockReturnValue(false)
+
+        const settings = getBridgeBottleSettings()
+
+        expect(settings.wineVersion).toEqual(gptkGlobalWine)
+      })
+
+      test('D-UAT-24-06: stays synchronous and still sets wineCrossoverBottle to the bridge default', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: gptkGlobalWine }) as GameSettings
+        })
+        mockedExistsSync.mockImplementation((path: string) =>
+          path.endsWith('/CrossOver/bin/wine')
+        )
+
+        const result = getBridgeBottleSettings()
+
+        expect(result).not.toBeInstanceOf(Promise)
+        expect(result.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+      })
     })
 
     describe('provisionBridgeBottle', () => {
