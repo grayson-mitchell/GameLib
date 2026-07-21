@@ -276,6 +276,71 @@ fn dispatch_rust_channel(channel: &str, args: &[Value]) -> Result<Value, String>
     }
 }
 
+// ---- Boot-time keyring self-check (Phase 28-06 Task 2 hardware-verification trigger) ----
+
+/// Distinct Keychain account suffix the self-check writes to. Never the production
+/// `KEYRING_ACCOUNT` entry — see `keyring_self_check`'s docstring (T-28-12).
+const SELFCHECK_ACCOUNT_SUFFIX: &str = "-selfcheck";
+
+/// SCAFFOLDING (28-06 Task 1) — removed by 28-06 Task 4 (self-check implementation)
+///
+/// Performs a real macOS Keychain round-trip (set -> get -> byte-compare -> delete) against
+/// `KEYRING_SERVICE` / `KEYRING_ACCOUNT` + the literal `-selfcheck` suffix, so it never reads or
+/// writes the production entry. Exists solely as a deliberate trigger for the plan 28-06 Task 2
+/// human checkpoint: there is no login channel in this Tauri build yet (D-03), so nothing
+/// naturally exercises a keyring write. Prints each step and the final byte-comparison verdict
+/// to stderr with a `[shell][keyring-selfcheck]` prefix; on any error, prints the full `{:?}`
+/// debug of the `keyring::Error`. Only the synthetic self-check value is ever printed — never
+/// the production entry's value (T-28-04).
+fn keyring_self_check() {
+    let account = format!("{KEYRING_ACCOUNT}{SELFCHECK_ACCOUNT_SUFFIX}");
+    let value = format!(
+        "gamelib-selfcheck-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    eprintln!(
+        "[shell][keyring-selfcheck] starting: service={KEYRING_SERVICE} account={account}"
+    );
+
+    let entry = match Entry::new(KEYRING_SERVICE, &account) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("[shell][keyring-selfcheck] FAILED creating entry: {e:?}");
+            return;
+        }
+    };
+
+    eprintln!("[shell][keyring-selfcheck] set: writing synthetic value {value:?}");
+    if let Err(e) = entry.set_password(&value) {
+        eprintln!("[shell][keyring-selfcheck] FAILED on set_password: {e:?}");
+        return;
+    }
+    eprintln!("[shell][keyring-selfcheck] set: OK");
+
+    eprintln!("[shell][keyring-selfcheck] get: reading back");
+    let read_back = match entry.get_password() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("[shell][keyring-selfcheck] FAILED on get_password: {e:?}");
+            return;
+        }
+    };
+
+    let identical = read_back == value;
+    eprintln!(
+        "[shell][keyring-selfcheck] verdict: byte-identical={identical} (wrote {value:?}, read {read_back:?})"
+    );
+
+    eprintln!("[shell][keyring-selfcheck] delete: cleaning up");
+    match entry.delete_credential() {
+        Ok(()) => eprintln!("[shell][keyring-selfcheck] delete: OK"),
+        Err(e) => eprintln!("[shell][keyring-selfcheck] FAILED on delete_credential: {e:?}"),
+    }
+}
+
 // ---- Sidecar lifecycle + stdout reader ----
 
 /// Resolve the sidecar entry to an ABSOLUTE path. Previously this was the cwd-relative
@@ -502,6 +567,18 @@ fn main() {
             start_reader(app.handle().clone(), state.clone(), stdout);
             start_stderr_forwarder(stderr);
             app.manage(state);
+
+            // SCAFFOLDING (28-06 Task 1) — removed by 28-06 Task 4 (env-var read)
+            // This env var is a DIAGNOSTIC TRIGGER, not a D-08 escape hatch (T-28-13): it
+            // cannot select a storage backend, enable a fallback, or alter the production
+            // token path — it only gates a synthetic round-trip against a `-selfcheck`
+            // Keychain account, never the production KEYRING_ACCOUNT entry.
+            let keyring_selfcheck_enabled =
+                std::env::var("GAMELIB_KEYRING_SELFCHECK").as_deref() == Ok("1");
+            // SCAFFOLDING (28-06 Task 1) — removed by 28-06 Task 4 (self-check call site)
+            if keyring_selfcheck_enabled {
+                keyring_self_check();
+            }
 
             // Dev-only: force the webview devtools open (the dev webview exposes no
             // right-click inspect on macOS) so renderer errors are inspectable, and
