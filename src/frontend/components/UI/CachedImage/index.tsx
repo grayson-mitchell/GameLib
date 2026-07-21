@@ -73,7 +73,10 @@ const CachedImage = (props: Props) => {
       onError={onError}
       className={classNames(props.className, {
         loaded,
-        loading: !loaded
+        loading: !loaded,
+        // Lets callers style placeholder/fallback art differently from real
+        // cover art (e.g. fit-to-tile instead of crop-to-fill).
+        usingFallback: fallbackIndex >= 0
       })}
     />
   )

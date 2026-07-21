@@ -80,6 +80,7 @@ function harness(): Harness {
 
 type ImgElement = ReactElement<{
   src?: string
+  className?: string
   onError: (e: unknown) => void
   onLoad: (e: unknown) => void
 }>
@@ -183,5 +184,19 @@ describe('CachedImage fallback chain', () => {
     const propsC: RenderProps = { src: 'c.jpg', fallback: ['b.svg'] }
     rerender(propsC) // effect fires this render (resets slot for the next read)
     expect(rerender(propsC).props.src).toBe('c.jpg')
+  })
+
+  it('marks the img with usingFallback only while a fallback source is shown', () => {
+    const props: RenderProps = { src: 'a.jpg', fallback: ['missing.svg'] }
+    const first = mount(props)
+    expect(first.props.className).not.toContain('usingFallback')
+
+    fireError(first)
+    expect(rerender(props).props.className).toContain('usingFallback')
+
+    // A new primary src resets the chain, so the marker must clear too.
+    const propsC: RenderProps = { src: 'c.jpg', fallback: ['missing.svg'] }
+    rerender(propsC) // effect fires this render (resets slot for the next read)
+    expect(rerender(propsC).props.className).not.toContain('usingFallback')
   })
 })

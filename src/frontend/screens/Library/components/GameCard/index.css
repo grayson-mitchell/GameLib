@@ -100,6 +100,13 @@
   width: 100%;
 }
 
+/* Placeholder art (no cover available) is sized to fit the tile whole —
+   cropping it to fill, the way real cover art is treated, trims the artwork. */
+.gameCard .gameImg.usingFallback,
+.gameCard.justPlayed .justPlayedImg.usingFallback {
+  object-fit: contain;
+}
+
 .gameCard .gameLogo {
   position: absolute;
   top: 50%;
