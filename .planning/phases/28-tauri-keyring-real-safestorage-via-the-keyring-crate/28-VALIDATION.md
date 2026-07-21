@@ -1,8 +1,8 @@
 ---
 phase: 28
 slug: tauri-keyring-real-safestorage-via-the-keyring-crate
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-22
 ---
@@ -87,4 +87,11 @@ created: 2026-07-22
 - [ ] Feedback latency < 60s at task level
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planned 2026-07-22 — every task in plans 28-01..06 carries an `<automated>` verify or a
+Wave 0 dependency. Wave 0 files are scheduled inside the plans that consume them (28-01 Task 2 before
+Task 3; 28-03 Task 3; 28-04 Task 3; 28-05 Task 1). One addition beyond this document's original list:
+`src/backend/sidecar/__tests__/keyringTokenStore.test.ts` (plan 28-04) carries the sidecar-side
+keyring error classification for REQ-28-06, keeping it out of the Electron-side
+`tokenStore.test.ts` (plan 28-03) so the two plans own disjoint files. No Rust `cargo test` target is
+added — the Rust side stays a `cargo build` compile-gate plus plan 28-06's blocking human checkpoint,
+matching this project's Phase 24 Gates 0-3 precedent.
