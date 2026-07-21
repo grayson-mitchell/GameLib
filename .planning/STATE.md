@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 27 complete — Tauri shell walking skeleton (next: Phase 22 or 23 gap closure, see below)
+**Current focus:** Phase 27 complete — Tauri shell walking skeleton (next: Phase 23 gap closure, see below)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -51,26 +51,32 @@ Last activity: 2026-07-21
 - **Phase 23** — full-ownership install: gaps `G-23-01`/`G-23-02` open (native install
   applies no execute bits; Denuvo launch needed a manual `chmod +x`). Gate 3 never run.
   REQ-23-07 stays open. `/gsd-plan-phase 23 --gaps`
-- **Phase 22** — Steam Game Families / multiple bottles: 8 plans written, 0 executed.
 - **Tauri seam** — port the real `safeStorage` keyring (spike 011's `keyring` crate path).
   This is what blocks Phase 27 UAT steps 2/3, and it must land BEFORE any token-writing
   channel is wired, or the sidecar will corrupt the Electron app's saved session. See
   `.planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` § Stubbed.
 - **Cross-phase verification debt** — 30 items across 9 files (`/gsd-audit-uat`).
 
-Other open native-install phases:
+Closed/parked native-install phases:
 
-- **Phase 22** (Steam Game Families / multiple bottles) — 8 plans written, 0 executed
-- **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — 10 plans written, 0 executed
+- **Phase 22** (Steam Game Families / multiple bottles) — ⛔ **PARKED 2026-07-21, superseded
+  by Phase 24.** The bridge's single shared bottle removes the per-family bottle matrix
+  this phase existed to manage. 8 plans retained unexecuted; see
+  `.planning/phases/22-multiple-steam-bottles/PARKED.md`
+- **Phase 24** (macOS native Steam bridge, out-of-process steam_api proxy) — ✅ Complete
+  2026-07-21 (17 plans). Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16
+  closed the shim-overwrite/install-poll and launch/sync clusters. Gate 4 (Hoard) out of
+  scope — the bridge proxies only ISteamUser + ISteamFriends. Remaining: human retest of
+  the Avernum 5 launch on the rebuilt .app
 
 ## Native-Install Arc Phase Map (21–25)
 
 | Phase | Name | Plans | Summaries | Status |
 |-------|------|-------|-----------|--------|
 | 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
-| 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | 📋 Planned, not executed |
+| 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | ⛔ **PARKED 2026-07-21 — superseded by Phase 24.** Bridge's one shared bottle (D-03) eliminates the per-family bottle matrix; plans retained unexecuted (`22-multiple-steam-bottles/PARKED.md`) |
 | 23 | Steam full-ownership install (StateFlags=4) | 5 | 4 | 🔄 Code-complete, NOT phase-complete — 23-05 formalized 2026-07-20 (single-flight guard + pause/resume, 296/296 tests); Gate 1 multi-depot StateFlags=4 PASS on real macOS (2026-07-19). Only 23-04 open: Gates 2 (hard-DRM) & 3 (interrupt-resume) hardware UAT **DEFERRED by user** (2026-07-20). REQ-23-07 stays open until both pass (`/gsd-verify-work 23`) |
-| 24 | macOS native Steam bridge (steam_api proxy) | 10 | 0 | 📋 Planned, not executed — feasibility PROVEN (spikes 004+005); needs resourcing |
+| 24 | macOS native Steam bridge (steam_api proxy) | 17 | 17 | ✅ Complete 2026-07-21 — Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-16 closed shim-overwrite/install-poll + CrossOver-launch/library-sync clusters; secure-phase done (threats_open:0). Gate 4 (Hoard) out of scope — bridge proxies only ISteamUser + ISteamFriends. Open: human retest of Avernum 5 launch |
 | 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
 
 ## Earlier macOS-Compat Phase Map (17–19)
@@ -375,7 +381,7 @@ Recent decisions affecting current work:
 - Phase 7 manual UAT on macOS (real Steam account): overlay visibility on Mac/Windows-only games, "Unrated" pill, CrossOver↔Wine toggle drives both surfaces, pill click-through, runner-agnostic platform icons.
 - Phase 10 live validation gate (before Phase 11 begins): empirically confirm axios + Cookie: _simpleauth_sess + X-Requested-By: hb_android_app reaches api/v1/user/order from Electron main process. Fallback = BrowserWindow webRequest proxy.
 - Steam bottle setup offers GPTK/Wine engines that produce a broken bottle (macOS): non-CrossOver `wineVersion` selections silently fail — `cxbottle` creates the bottle but the `toolkit`/`wine` run-path (launcher.ts:434-442) drops the CX_BOTTLE binding and runs against a different prefix; readiness never passes. Fix: filter Steam WineSelector to CrossOver engines and/or reject non-crossover in provisionBottle. See `.planning/todos/pending/steam-bottle-gptk-engine-produces-broken-bottle.md`.
-- Productionize the macOS native Steam bridge (out-of-process `steam_api` proxy): feasibility PROVEN end-to-end (spikes 004+005 — drop-in `steam_api.dll` in the real GameLibSteam bottle returns the real SteamID from live native Mac Steam, zero Windows Steam client). Phase 22's preferred successor; deferred/needs resourcing. Next frontier = C++ vtable ABI for unmodified games. See `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md` + `spike-findings-gamelib` skill.
+- Productionize the macOS native Steam bridge (out-of-process `steam_api` proxy): feasibility PROVEN end-to-end (spikes 004+005 — drop-in `steam_api.dll` in the real GameLibSteam bottle returns the real SteamID from live native Mac Steam, zero Windows Steam client). DONE — shipped as Phase 24 (complete 2026-07-21), which also superseded and parked Phase 22. Next frontier = C++ vtable ABI for unmodified games + the 6 unproxied interfaces (Utils/Apps/UserStats/RemoteStorage/Matchmaking/Networking). See `.planning/todos/pending/2026-07-18-productionize-macos-native-steam-bridge-out-of-process-steam.md` + `spike-findings-gamelib` skill.
 - Steam native install progress polish (speed, ETA, paused-state): the native-installer-OFF `steam://install` path already surfaces a live download % (verified live 2026-07-19 via Playwright drive — `progressUpdate{runner:'steam'}` reaches the renderer). Polish gaps only: no download speed, `eta` hardcoded empty (`library.ts:1295`), and a Steam-paused download freezes the bar with no paused hint (only `StateFlags==1026` is special-cased). Plus stale `games.ts:604` docstring. Shared poller — guard bottle-path regression. See `.planning/todos/pending/2026-07-19-steam-native-install-progress-speed-eta-paused-state.md`.
 
 ### Blockers/Concerns
