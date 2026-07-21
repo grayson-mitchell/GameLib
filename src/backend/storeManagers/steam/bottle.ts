@@ -950,6 +950,30 @@ export function isBridgeBottleReady(bottleName?: string): boolean {
 }
 
 /**
+ * D-UAT-24-06 gap closure (24-15): resolves the CrossOver WineInstallation
+ * that CREATED the bridge bottle — derived from the already-locked
+ * CXBOTTLE_BIN root (sibling `wine` binary, exactly the path
+ * backend/utils/compatibility_layers.ts's getCrossover() computes) — rather
+ * than importing that async detector (which would force this getter async
+ * and ripple to its synchronous callers, see module docstring above).
+ *
+ * Returns undefined when CrossOver's `wine` binary is not present on disk
+ * (dev/CI/non-macOS), so the caller can fall back to globalSettings.wineVersion.
+ */
+function resolveBridgeCrossoverWine(): WineInstallation | undefined {
+  const crossoverWineBin = join(dirname(CXBOTTLE_BIN), 'wine')
+  if (!existsSync(crossoverWineBin)) {
+    return undefined
+  }
+  return {
+    bin: crossoverWineBin,
+    name: 'CrossOver (bridge bottle runtime)',
+    type: 'crossover',
+    wineserver: WINESERVER_BIN
+  }
+}
+
+/**
  * Composes a GameSettings-shaped object for the dedicated bridge bottle,
  * mirroring getSteamBottleSettings() but always resolving
  * DEFAULT_BRIDGE_BOTTLE_NAME — never the Phase 17 bottle (Pitfall 1 / R4
@@ -957,13 +981,22 @@ export function isBridgeBottleReady(bottleName?: string): boolean {
  * possible"), so — unlike getSteamBottleSettings() — no per-install override
  * is read back from steamBottleConfigStore; the bridge bottle's name/engine
  * are not user-configurable this phase.
+ *
+ * D-UAT-24-06: `wineVersion` must resolve the CrossOver runtime that CREATED
+ * this bottle via cxbottle (D-08 CrossOver-only lifecycle) — never
+ * globalSettings.wineVersion, which on a machine with Game Porting Toolkit
+ * (GPTK) set as the global default resolves to GPTK's 64-bit-only `wine64`.
+ * GPTK has no 32-bit `wine` loader, so a 32-bit bridge game exe aborts
+ * instantly (`alloc_pages_vprot` assertion) instead of launching. Falls back
+ * to globalSettings.wineVersion only when CrossOver is not present on disk —
+ * identical to today's behavior for dev/CI/non-macOS.
  */
 export function getBridgeBottleSettings(): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
   return {
     ...globalSettings,
     wineCrossoverBottle: DEFAULT_BRIDGE_BOTTLE_NAME,
-    wineVersion: globalSettings.wineVersion
+    wineVersion: resolveBridgeCrossoverWine() ?? globalSettings.wineVersion
   }
 }
 
