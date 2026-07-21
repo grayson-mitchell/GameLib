@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 24-15-PLAN.md
-last_updated: "2026-07-21T04:49:02.857Z"
+stopped_at: Completed 24-16-PLAN.md
+last_updated: "2026-07-21T04:59:46.709Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 152
-  completed_plans: 140
+  completed_plans: 141
   percent: 83
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 24 (macos-native-steam-bridge-out-of-process-steam-api-proxy) — EXECUTING
-Plan: 6 of 14
+Plan: 7 of 14
 Status: Ready to execute
 Last activity: 2026-07-21
 
@@ -195,6 +195,7 @@ Other open native-install phases:
 | Phase 24 P13 | ~25min | 2 tasks | 2 files |
 | Phase 24 P14 | 15min | 1 tasks | 1 files |
 | Phase 24 P15 | 12min | 1 tasks | 2 files |
+| Phase 24 P16 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -344,6 +345,7 @@ Recent decisions affecting current work:
 - [Phase 24]: 24-13: launchBridgeGame verifies the resolved exe exists on disk (+ bridge bottle ready) before firing runWineCommand — a bridge-eligible game installed via a non-bridge path now surfaces steamBridgeSetupRequired instead of a silent wine no-op (D-UAT-24-02); treated as recoverable, not a bridge failure, so it does not markBridgeFailedThisSession
 - [Phase 24]: Gates 2-4 in 24-UAT.md re-pointed from BLOCKED to PENDING retest, with per-fix verification hooks citing 24-11/24-12/24-13 gap closures; frontmatter status fields updated to match (Rule 1 consistency fix)
 - [Phase 24]: getBridgeBottleSettings() resolves CrossOver wine via a sibling of CXBOTTLE_BIN (sync helper), not the async getCrossover() detector, keeping the getter synchronous for its existing callers
+- [Phase 24]: 24-16: refresh()/refreshInstallState() consult buildBridgeInstalledMap() (native > Phase 17 bottle > bridge precedence) so a bridge-installed game's badge survives the periodic sync and focus reconciliation; installPlatformForSource('bridge') now returns Windows; markBridgeGameUninstalled emits gameStatusUpdate done to clear the Uninstalling pill (D-UAT-24-07)
 
 ### Pending Todos
 
@@ -410,8 +412,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T04:49:02.850Z
-Stopped at: Completed 24-15-PLAN.md
+Last session: 2026-07-21T04:59:46.702Z
+Stopped at: Completed 24-16-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
