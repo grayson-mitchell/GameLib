@@ -103,3 +103,10 @@ None - no external service configuration required.
 ---
 *Phase: 24-macos-native-steam-bridge-out-of-process-steam-api-proxy*
 *Completed: 2026-07-21*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/24-macos-native-steam-bridge-out-of-process-steam-api-proxy/24-16-SUMMARY.md`
+- FOUND: commit `467bf6ab` (Task 1: library.ts)
+- FOUND: commit `5b0b64f6` (Task 2: games.ts)
+- FOUND: commit `7743328f` (docs: summary)
