@@ -109,6 +109,32 @@ mechanism, not a login channel. See `28-PROOF.md` § 4. The login-channel port
 (`startQRLogin`/`startCredentialLogin`) is the next natural slice; see the deferred-backlog row
 below.
 
+### Steam QR login + native install slice (real, Phase 30) — CLOSED, moved out of §3
+
+**Ported in Phase 30** (`tauri-ipc-re-plumb-slice-1-install-uninstall-update-check`, plans
+30-01..30-03). Full enumerated list in
+`.planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-PORTED-CHANNELS.md`.
+
+- **`steamAuthFlowRegistration.ts`** — `checkSteamInstalled`/`steamStartQR`/`steamPollQR`, real
+  `SteamUser` behavior, the refresh token proven to round-trip through
+  `SidecarKeyringTokenStore`'s real `rustInvoke` wire protocol and never surface in a store
+  snapshot. QR only — credential/SteamGuard/TOTP/logout branches stay deferred (D-02).
+- **`installFlowRegistration.ts`** — `install`/`uninstall`/`updateGame`/`checkGameUpdates`/
+  `listSteamLibraryTargets`, covering the native depot-download install branch only (D-07). `install`
+  is a direct `SteamGame.install()` bypass, not a `downloadqueue.ts` port (D-05a); `uninstall`/
+  `checkGameUpdates` reuse Electron's own runner-generic handlers unchanged, all runners (D-05b/D-12).
+- **`gameStatusUpdate`** push — rides the existing generic `frontendMessage` → `frontend_message`
+  relay, the third rider after `pushGameToLibrary` (Phase 27) and `storeChanged` (Phase 29). Needed
+  **zero Rust changes**.
+- **`dialog_open`** `rustInvoke` channel (plan 30-03) — real `dialog.showOpenDialog` behavior in
+  `electronStub.ts`, backed by `tauri-plugin-dialog`'s `blocking_pick_folder()`. Only the
+  open-directory path; the other five `dialog.*` members stay unported (Phase 31).
+
+**Claim level (D-04/REQ-30-03): "wired and unit-proven", NOT "hardware-proven".** The live human QR
+scan is deferred, and because the install slice's own reachability precondition is a populated
+library, the install slice's hardware proof is deferred with it — as one named UAT item in
+`30-HUMAN-UAT.md` covering both.
+
 ### The store layer (real, Phase 29) — CLOSED, moved out of §2/§3
 
 **Generalized from a two-store stub to a full read/write layer in Phase 29**
@@ -186,21 +212,24 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
 | 1 | `app` (lifecycle beyond getPath/getName) | 26 | Real Tauri lifecycle equivalents (`tauri::App`, window events) for `main.ts`/`main_window.ts`/updater/tray/protocol registration |
-| 2 | `dialog` | 9 | Tauri `dialog` plugin (open/save/message boxes) |
+| 2 | `dialog` | 9 | **Narrowed, Phase 30:** open-directory ported via `dialog_open` (`tauri-plugin-dialog`'s `blocking_pick_folder()`); the remaining five members (`showErrorBox`, `showMessageBox`, `showMessageBoxSync`, `showOpenDialogSync`, `showSaveDialog`) are deferred to Phase 31 |
 | 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts |
 | 4 | `shell` (remaining methods) | 5 | `showItemInFolder`/`trashItem`/`openPath` via Tauri `opener`/`fs` plugins |
-| 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | The keyring port (Phase 28) makes this SAFE to wire now (D-04/D-06 close the shared-store corruption trap by construction); this is the change that actually unblocks Phase 27 UAT steps 2/3, which Phase 28 explicitly did not do (see `28-PROOF.md` § 4) |
+| 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
 | 6 | `nativeImage` | 4 | Tauri `image`/icon APIs, only needed once tray/notifications are ported |
 | 7 | `Notification` | 3 | Tauri `notification` plugin |
 | 8 | `session`/`screen`/`net`/`Menu` | 2 each | `session`/`powerSaveBlocker` are the two "soft spots" spike 011 flagged with no full Tauri v2 parity yet — explicitly out of scope until Tauri closes that gap |
 | 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | Case-by-case Tauri equivalents; low volume, low urgency |
 
-**The IPC re-plumb (the headline cost):** ~217 of the 220 total IPC endpoints (158 `addHandler` +
+**The IPC re-plumb (the headline cost):** ~208 of the 220 total IPC endpoints (158 `addHandler` +
 62 `addListener`, `AsyncIPCFunctions` ≈335 typed entries per spike 009) remain on the Electron
 `ipcMain`/`ipcRenderer` transport, unported. This skeleton wired exactly 4 (`refreshLibrary`,
-`pushGameToLibrary` push, `launch`, `sidecar:store-snapshot`). Porting the rest is mechanical per
-endpoint (curate a sidecar invoke handler like `steamFlowRegistration.ts` did) but large in
-volume — pick the next slice by user-facing value, not API-touch-count alone.
+`pushGameToLibrary` push, `launch`, `sidecar:store-snapshot`); Phase 30 wired 9 more
+(`checkSteamInstalled`, `steamStartQR`, `steamPollQR`, `install`, `uninstall`, `updateGame`,
+`checkGameUpdates`, `listSteamLibraryTargets`, `gameStatusUpdate` push — enumerated in
+`30-PORTED-CHANNELS.md`), for 13 wired total. Porting the rest is mechanical per endpoint (curate a
+sidecar invoke handler like `steamFlowRegistration.ts` did) but large in volume — pick the next
+slice by user-facing value, not API-touch-count alone.
 
 **The `electron-store` project-wide swap:** this WAS the phase-sized unit of work predicted
 above, and it is now done — Phase 29 generalized `fileStore.ts` into a full read/write store
@@ -264,6 +293,20 @@ above.
   Rust's role stays "the platform seam" (keyring, opener — see `### safeStorage (real, Phase 28)`
   above), not "the database". Do not re-litigate this in a later phase without a concrete new
   requirement `tauri-plugin-store` uniquely satisfies.
+- **D-03 (Phase 30) — two-token divergence (ACCEPTED, document-only).** Signing in under Tauri
+  does not sign you in under Electron: the sidecar stores a keyring-native Keychain entry,
+  Electron stores Chromium OSCrypt ciphertext in `configStore`. Correct consequence of Phase 28
+  D-01, not a bug. Convergence rejected (would require hand-rolling OSCrypt in the sidecar).
+  Mirrored in `src/backend/sidecar/keyringTokenStore.ts`'s docstring. No new proof artifact.
+- **D-05a (Phase 30) — install is a direct `SteamGame` bypass, NOT a `downloadqueue.ts` port.**
+  Reason from 30-02: the queue's only Steam-relevant behavior is a status push plus install
+  sizing (two direct calls); everything else is runner-irrelevant or Phase 32's cluster.
+  **Phase 32 inherits this boundary** and should build its own curated queue port when it
+  needs pause/resume/cancel.
+- **D-05b/D-12 (Phase 30) — `uninstall`/`checkGameUpdates` reuse the runner-generic handlers
+  unchanged, all runners.** Reason: `libraryManagerMap`'s import cost is already sunk via
+  `steamFlowRegistration.ts`'s load-bearing first import (verified), so a Steam-only reshape buys
+  zero import savings and only forks Tauri's behavior from Electron's.
 
 ---
 
