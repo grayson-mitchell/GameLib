@@ -67,7 +67,10 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../storeManagers/steam/user')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { getRegisteredStore } from '../../electron_store'
+import {
+  getRegisteredStore,
+  TypeCheckedStoreBackend
+} from '../../electron_store'
 import { ensureStoresRegistered } from '../storeRegistration'
 import { handlerRegistry } from '../electronStub'
 import CacheStore from '../../cache'
@@ -345,8 +348,6 @@ describe('boot set', () => {
  */
 describe('WR-08: duplicate store registration', () => {
   it('keeps the FIRST registered instance and reports the duplicate on stderr', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { TypeCheckedStoreBackend } = require('../../electron_store')
     const first = getRegisteredStore('configStore')
     expect(first).toBeDefined()
 
