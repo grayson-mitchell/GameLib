@@ -1094,11 +1094,14 @@ Plans:
 **Goal:** Port the first user-facing domain slice of the ~217 unported IPC endpoints onto the sidecar, following SEAM.md's incremental-port checklist: a curated `<domain>FlowRegistration.ts` importing only the real backend code the flow needs, real behavior in `electronStub.ts` bound to real Tauri commands for any newly-required Electron API, and the slice proven E2E in the Tauri build. Install/uninstall/update-check is the natural next slice — it reuses the skeleton's own read + action pattern and is the highest user-facing value per endpoint.
 **Depends on:** Phase 29 (store layer), Phase 27 (`steamFlowRegistration.ts` pattern).
 **Requirements:** REQ-30-01, REQ-30-02, REQ-30-03, REQ-30-04, REQ-30-05, REQ-30-06, REQ-30-07, REQ-30-08, REQ-30-09
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 30 to break down)
+- [ ] 30-01-PLAN.md — Port the Steam QR login channels onto the sidecar (D-01 ordering prerequisite) [wave 1]
+- [ ] 30-02-PLAN.md — install/uninstall/updateGame/checkGameUpdates/listSteamLibraryTargets on the sidecar, native depot branch [wave 2]
+- [ ] 30-03-PLAN.md — Real openDialog via a new dialog_open rustInvoke channel; logged notify() no-op [wave 1]
+- [ ] 30-04-PLAN.md — SEAM.md update, enumerated ported-channel list, deferred UAT item, both-builds smoke [wave 3]
 
 ---
 
