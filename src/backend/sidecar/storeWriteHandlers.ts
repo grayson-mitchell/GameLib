@@ -30,8 +30,10 @@ import * as sidecarRpc from './sidecarRpc'
 import { getRegisteredStore } from '../electron_store'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
 import {
+  CACHE_STORE_NAME_PATTERN,
   isAllowedStoreField,
   isSafeKeyPath,
+  RECOGNIZED_CACHE_STORE_NAMES,
   STORE_UNIVERSE
 } from 'common/types/storePolicy'
 import {
@@ -41,15 +43,6 @@ import {
   STORE_CHANGED_CHANNEL,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
-
-/**
- * A syntactically plausible dynamic (cache-)store name: letters, digits, `_`, `-`,
- * 1-64 chars. Mirrors `handlers.ts`'s own `CACHE_STORE_NAME_PATTERN` (T-29-13) — kept
- * as a separate local const rather than imported, since `handlers.ts`'s copy is not
- * exported and the two files serve different (read vs write) sides of the same D-13
- * cache-store concept.
- */
-const CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 /** Minimal shape both a registered typed store and a raw cache-backed `Store` satisfy. */
 interface WritableStoreBackend {

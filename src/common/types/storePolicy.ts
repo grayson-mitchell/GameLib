@@ -173,11 +173,33 @@ const BOOT_SET_CACHE_STORE_NAMES: readonly string[] = [
   'zoom_library'
 ]
 
-/** Recognized cache-store names — the boot-set four plus the denied one. */
-const RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [
+/**
+ * Recognized cache-store names — the boot-set four plus the denied one.
+ *
+ * WR-02 (Phase 29 code review): exported so the WRITE path (`storeWriteHandlers.ts`)
+ * can gate `storeNew` on it. Before that, `storeNew` constructed a real `Store` for ANY
+ * name matching `CACHE_STORE_NAME_PATTERN`, letting a renderer script create unbounded
+ * `${userData}/store_cache/<name>.json` junk files that guard (c) then made permanently
+ * unwritable — a pure DoS vector with no legitimate consumer.
+ */
+export const RECOGNIZED_CACHE_STORE_NAMES: readonly string[] = [
   ...BOOT_SET_CACHE_STORE_NAMES,
   ...DENIED_CACHE_STORES
 ]
+
+/**
+ * A syntactically plausible dynamic (cache-)store name: letters, digits, `_`, `-`,
+ * 1-64 chars (T-29-13).
+ *
+ * WR-10 (Phase 29 code review): single-sourced here. It used to be declared TWICE, in
+ * `sidecar/handlers.ts` (read side) and `sidecar/storeWriteHandlers.ts` (write side),
+ * with a comment saying the duplication was deliberate. Since this pattern is the only
+ * thing keeping an RPC-supplied name from reaching `resolveStorePath()`, the two copies
+ * drifting apart would be a path-traversal risk, not a style nit. Both files already
+ * import this module, so there is no cost to sharing it. No `g` flag — a shared regex
+ * with `lastIndex` state would be its own hazard.
+ */
+export const CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 /**
  * `isAllowedStoreField(storeName, key)` — FAIL CLOSED.

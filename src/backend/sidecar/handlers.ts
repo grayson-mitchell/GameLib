@@ -33,6 +33,11 @@ import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
 import {
   BOOT_SET_STORES,
+  // WR-10: T-29-13's dynamic-store-name pattern is single-sourced in storePolicy.ts.
+  // It used to be declared once here and once in storeWriteHandlers.ts; since it is the
+  // only thing keeping an RPC-supplied name from reaching `resolveStorePath()`, the two
+  // copies drifting apart would be a path-traversal risk.
+  CACHE_STORE_NAME_PATTERN,
   STORE_UNIVERSE,
   filterStoreSnapshot
 } from 'common/types/storePolicy'
@@ -135,9 +140,6 @@ ipcMain.handle(STORE_SNAPSHOT_CHANNEL, async () => {
   }
   return snapshot
 })
-
-/** T-29-13: a syntactically plausible dynamic-store name (letters, digits, `_`, `-`, 1-64 chars). */
-const CACHE_STORE_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 // D-03: lazy per-store hydrate for the tier that isn't part of the eager
 // snapshot. Applies the IDENTICAL filter as the eager path above (T-29-14 —
