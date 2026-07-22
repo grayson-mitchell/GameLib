@@ -81,6 +81,7 @@
  * `electron` module.
  */
 
+import { logError, LogPrefix } from 'backend/logger'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 
 import { ipcMain } from './electronStub'
@@ -107,6 +108,7 @@ import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
 import { sendGameStatusUpdate } from '../utils'
 import type { InstallParams, Runner, UpdateParams } from 'common/types'
+import type { InstallResult } from 'common/types/game_manager'
 
 /**
  * Registers the five install-slice invoke handlers. Called once from
@@ -117,7 +119,10 @@ import type { InstallParams, Runner, UpdateParams } from 'common/types'
 export function registerInstallFlows(): void {
   ipcMain.handle(
     'install',
-    async (_event: unknown, ...args: unknown[]): Promise<void> => {
+    async (
+      _event: unknown,
+      ...args: unknown[]
+    ): Promise<{ status: InstallResult['status'] }> => {
       const params = (args[0] ?? {}) as InstallParams
       const { appName, runner, path } = params
 
@@ -142,19 +147,65 @@ export function registerInstallFlows(): void {
         folder: path
       })
 
-      // SteamGame.install()'s own branch dispatch reaches installNative ->
-      // installDepotDownload (D-07) unmodified. No depot logic reimplemented
-      // here.
-      await new SteamGame(appName).install({
-        path,
-        platformToInstall: params.platformToInstall,
-        installDlcs: params.installDlcs,
-        sdlList: params.sdlList,
-        installLanguage: params.installLanguage,
-        branch: params.branch,
-        build: params.build,
-        dependencies: params.dependencies
+      // CR-02: Electron's installQueueElement (downloadmanager/utils.ts)
+      // pushes 'installing' before the real work starts, so the badge leaves
+      // "queued" — reproduced here.
+      sendGameStatusUpdate({
+        appName,
+        runner,
+        status: 'installing',
+        folder: path
       })
+
+      let deferredToSetup = false
+      let wasAborted = false
+      try {
+        // SteamGame.install()'s own branch dispatch reaches installNative ->
+        // installDepotDownload (D-07) unmodified. No depot logic reimplemented
+        // here.
+        const result = await new SteamGame(appName).install({
+          path,
+          platformToInstall: params.platformToInstall,
+          installDlcs: params.installDlcs,
+          sdlList: params.sdlList,
+          installLanguage: params.installLanguage,
+          branch: params.branch,
+          build: params.build,
+          dependencies: params.dependencies
+        })
+
+        // CR-02: SteamGame.install() resolves {status:'error'|'abort'|'done'}
+        // WITHOUT throwing — the return value must be inspected, not discarded,
+        // or a failed/aborted install resolves `ok: true` with the badge stuck
+        // on "queued"/"installing" forever (same class as
+        // debug/steam-cancel-abort-thread-a and the Phase 17 deferredToSetup fix).
+        deferredToSetup = result.deferredToSetup ?? false
+        wasAborted = result.status === 'abort'
+
+        if (result.status === 'error') {
+          logError(
+            ['Installation of', appName, 'failed with:', result.error ?? ''],
+            LogPrefix.Backend
+          )
+        }
+
+        return { status: result.status }
+      } catch (error) {
+        // An unexpected throw also starts no ACF poller — clear the badge
+        // before propagating so the caller's rejection doesn't also leave a
+        // permanently stuck "installing" status.
+        sendGameStatusUpdate({ appName, runner, status: 'done' })
+        throw error
+      } finally {
+        // Steam: the ACF poller emits the real 'done' — suppress it here to
+        // avoid the installing->done->installing flash (GAME-02). EXCEPTIONS
+        // (Phase 17 deferredToSetup, debug/steam-cancel-abort-thread-a
+        // wasAborted): no poller ever starts for those two cases, so nothing
+        // else will clear the transient 'installing' badge.
+        if (deferredToSetup || wasAborted) {
+          sendGameStatusUpdate({ appName, runner, status: 'done' })
+        }
+      }
     }
   )
 

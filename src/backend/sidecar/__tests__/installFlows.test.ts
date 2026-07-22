@@ -373,6 +373,159 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(steamGameMocks.update).not.toHaveBeenCalled()
   })
 
+  // CR-02: a failed install (`{status: 'error'}`, resolved not thrown) must
+  // surface that failure on the invoke's own result — the return value can no
+  // longer be discarded (previously the invoke resolved `ok: true` with no
+  // way for the caller to learn the install failed). Matches
+  // installQueueElement's own contract: it pushes 'installing' up front and
+  // (for a plain, non-abort error) does NOT push an extra terminal 'done' —
+  // only `wasAborted`/`deferredToSetup` do, reproduced faithfully below.
+  it('CR-02: a resolved {status: "error"} install surfaces the error on the result instead of resolving success', async () => {
+    steamGameMocks.install.mockResolvedValue({
+      status: 'error',
+      error: 'depot download failed'
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-error-1', 'install', [
+      {
+        appName: '999002',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'install-error-1') as
+      | { ok: boolean; result?: { status: string } }
+      | undefined
+    // The RPC-level invoke still resolves (the handler doesn't throw for a
+    // resolved {status:'error'}), but the RESULT payload now surfaces the
+    // real status — the caller can no longer mistake this for success.
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toMatchObject({ status: 'error' })
+    expect(response?.result?.status).not.toBe('done')
+
+    const statusFrames = frames.filter(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'gameStatusUpdate'
+    ) as Array<{ args?: unknown[] }>
+    const statuses = statusFrames.map(
+      (frame) => ((frame.args ?? [])[0] as { status?: string })?.status
+    )
+    // 'installing' now leaves the badge off "queued" (CR-02 item 1). No
+    // additional 'done' fires here — a plain (non-abort) error starts no
+    // poller either, but that stuck-badge gap is upstream in
+    // installQueueElement itself (out of this slice's scope); this bypass
+    // reproduces that contract exactly rather than diverging from it.
+    expect(statuses).toEqual(['queued', 'installing'])
+  })
+
+  // CR-02: an aborted install (`{status: 'abort'}`) also starts no ACF
+  // poller — the same terminal-done push must fire.
+  it('CR-02: a resolved {status: "abort"} install pushes a terminal done', async () => {
+    steamGameMocks.install.mockResolvedValue({ status: 'abort' })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-abort-1', 'install', [
+      {
+        appName: '999003',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'install-abort-1') as
+      | { ok: boolean; result?: { status: string } }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toMatchObject({ status: 'abort' })
+
+    const statuses = frames
+      .filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'gameStatusUpdate'
+      )
+      .map(
+        (frame) =>
+          ((frame.args as unknown[])?.[0] as { status?: string })?.status
+      )
+    expect(statuses).toEqual(['queued', 'installing', 'done'])
+  })
+
+  // CR-02: a deferred-to-setup install (bottle guided setup, Phase 17) also
+  // starts no ACF poller — the same terminal-done push must fire even though
+  // result.status is already 'done'.
+  it('CR-02: a resolved {status: "done", deferredToSetup: true} install pushes a terminal done', async () => {
+    steamGameMocks.install.mockResolvedValue({
+      status: 'done',
+      deferredToSetup: true
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-deferred-1', 'install', [
+      {
+        appName: '999004',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'install-deferred-1'
+    ) as { ok: boolean; result?: { status: string } } | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toMatchObject({ status: 'done' })
+
+    const statuses = frames
+      .filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'gameStatusUpdate'
+      )
+      .map(
+        (frame) =>
+          ((frame.args as unknown[])?.[0] as { status?: string })?.status
+      )
+    expect(statuses).toEqual(['queued', 'installing', 'done'])
+  })
+
+  // CR-02 regression guard: the NORMAL success path (no deferredToSetup, no
+  // abort) must NOT push an extra terminal 'done' — the real ACF poller owns
+  // that transition (GAME-02 installing->done->installing flash guard).
+  it('CR-02 regression guard: a normal successful install does not push an extra terminal done', async () => {
+    steamGameMocks.install.mockResolvedValue({ status: 'done' })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-normal-1', 'install', [
+      {
+        appName: '999005',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const statuses = frames
+      .filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'gameStatusUpdate'
+      )
+      .map(
+        (frame) =>
+          ((frame.args as unknown[])?.[0] as { status?: string })?.status
+      )
+    expect(statuses).toEqual(['queued', 'installing'])
+  })
+
   // Test 4: uninstall resolves and delegates to the runner-generic
   // uninstallGameCallback (registered UNCHANGED, D-05b).
   it('Test 4: uninstall resolves and delegates to the real uninstallGameCallback', async () => {
