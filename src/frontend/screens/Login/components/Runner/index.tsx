@@ -27,10 +27,20 @@ export default function Runner(props: RunnerProps) {
 
   async function handleLogout() {
     setIsLoggingOut(true)
-    await props.logoutAction()
-    // FIXME: only delete local storage relate to one store, or only delete if logged out from both
-    //window.localStorage.clear()
-    setIsLoggingOut(false)
+    try {
+      await props.logoutAction()
+    } catch (error) {
+      // G-30-01: a logout action must never latch the button in "Logging
+      // out..." forever. Most logoutAction implementations (see
+      // GlobalState.tsx's per-platform logout methods) do not currently
+      // throw, but this guard is the honest floor for any that do (now or
+      // in the future) -- surface it and let `finally` recover the button.
+      console.error('[GameLib] logoutAction failed:', error)
+    } finally {
+      // FIXME: only delete local storage relate to one store, or only delete if logged out from both
+      //window.localStorage.clear()
+      setIsLoggingOut(false)
+    }
   }
 
   function handleLogin() {
