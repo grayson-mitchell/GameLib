@@ -245,7 +245,10 @@ export function registerInstallFlows(): void {
 
   ipcMain.handle(
     'updateGame',
-    async (_event: unknown, ...args: unknown[]): Promise<void> => {
+    async (
+      _event: unknown,
+      ...args: unknown[]
+    ): Promise<{ status: InstallResult['status'] }> => {
       const params = (args[0] ?? {}) as UpdateParams
       const { appName, runner } = params
 
@@ -263,7 +266,22 @@ export function registerInstallFlows(): void {
         // The same direct-bypass shape as `install` (D-05a) — calls the
         // exact method Electron's downloadmanager/utils.ts's
         // updateQueueElement calls, unmodified.
-        await new SteamGame(appName).update()
+        //
+        // WR-04: SteamGame.update() resolves {status:'error', ...} WITHOUT
+        // throwing (it is a pre-existing stub today that ALWAYS returns error).
+        // Discarding the return value made every update under Tauri resolve
+        // `ok: true` while doing nothing. Mirror updateQueueElement: log the
+        // failure and hand the status back to the caller.
+        const result = await new SteamGame(appName).update()
+
+        if (result.status === 'error') {
+          logError(
+            ['Update of', appName, 'failed with:', result.error ?? ''],
+            LogPrefix.Backend
+          )
+        }
+
+        return { status: result.status }
       } finally {
         sendGameStatusUpdate({ appName, runner, status: 'done' })
       }
