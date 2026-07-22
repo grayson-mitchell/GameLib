@@ -357,7 +357,23 @@ function load(filePath: string): Record<string, unknown> {
   if (!existsSync(filePath)) return {}
   try {
     const raw = readFileSync(filePath, 'utf-8')
-    return raw.trim() ? JSON.parse(raw) : {}
+    if (!raw.trim()) return {}
+    const parsed: unknown = JSON.parse(raw)
+    // CR-05 (Phase 29 code review): `JSON.parse` succeeds for `null`, `"str"`, `12`,
+    // `true` and arrays, so the `catch` below never fired for those and `cell.data`
+    // became a NON-OBJECT. `data === null` plus `options.defaults` then threw
+    // "Cannot set properties of null" INSIDE the constructor — at module scope of
+    // `storeRegistration.ts`'s imports, i.e. the sidecar failed to boot; and a
+    // primitive silently discarded every write. Only *unparseable* JSON was covered
+    // before, so the documented "a corrupt file is never fatal" guarantee did not
+    // actually hold.
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      process.stderr.write(
+        '[sidecar/fileStore] a store file parsed to a non-object — treating it as an empty store\n'
+      )
+      return {}
+    }
+    return parsed as Record<string, unknown>
   } catch {
     // Mirrors electron-store's clearInvalidConfig behavior — a corrupt
     // file is treated as an empty store rather than a fatal error.

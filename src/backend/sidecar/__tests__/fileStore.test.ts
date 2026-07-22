@@ -214,4 +214,37 @@ describe('sidecar fileStore', () => {
     const reloaded = new FileStore({ cwd })
     expect(reloaded.store).toEqual({})
   })
+
+  // CR-05: PARSEABLE-but-wrong-type JSON was the uncovered half of the "corrupt file
+  // is never fatal" guarantee. `null` + options.defaults threw inside the constructor
+  // (at module scope of storeRegistration.ts's imports -> the sidecar failed to boot);
+  // a primitive silently discarded every write.
+  it.each([
+    ['null', 'null'],
+    ['a string', '"just a string"'],
+    ['a number', '12'],
+    ['a boolean', 'true'],
+    ['an array', '[1, 2, 3]']
+  ])(
+    'CR-05: a store file containing %s is treated as an empty store, never fatal',
+    (_label, contents) => {
+      const cwd = `nonobject_json_test_${contents.replace(/\W/g, '')}`
+      const seed = new FileStore({ cwd })
+      seed.set('bootstrap', true) // ensures the directory exists
+      writeFileSync(join(getPath('userData'), cwd, 'config.json'), contents)
+      __resetFileStoreRegistry()
+
+      // With defaults present — the exact shape that threw at construction.
+      expect(
+        () => new FileStore({ cwd, defaults: { seeded: 'value' } })
+      ).not.toThrow()
+      __resetFileStoreRegistry()
+
+      const store = new FileStore({ cwd })
+      expect(store.store).toEqual({})
+      // Writes must actually land, not be silently swallowed by a primitive.
+      expect(() => store.set('afterCorruption', 'ok')).not.toThrow()
+      expect(store.get('afterCorruption')).toBe('ok')
+    }
+  )
 })
