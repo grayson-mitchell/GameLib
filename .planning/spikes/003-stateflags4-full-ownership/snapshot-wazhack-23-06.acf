@@ -1,0 +1,29 @@
+"AppState"
+{
+	"appid"		"264160"
+	"Universe"		"1"
+	"StateFlags"		"4"
+	"installdir"		"WazHack"
+	"name"		"WazHack"
+	"LastUpdated"		"1784448387"
+	"SizeOnDisk"		"117426878"
+	"buildid"		"9044149"
+	"LastOwner"		"76561197995867096"
+	"BytesToDownload"		"117426878"
+	"BytesDownloaded"		"117426878"
+	"AutoUpdateBehavior"		"0"
+	"InstalledDepots"
+	{
+		"264162"
+		{
+			"manifest"		"3306037234848478854"
+			"size"		"117426878"
+		}
+	}
+	"UserConfig"
+	{
+	}
+	"MountedDepots"
+	{
+	}
+}

@@ -1,0 +1,49 @@
+"AppState"
+{
+	"appid"		"1091500"
+	"Universe"		"1"
+	"name"		"Cyberpunk 2077"
+	"StateFlags"		"36"
+	"installdir"		"Cyberpunk 2077"
+	"lastupdated"		"1784449557"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"89902191642"
+	"StagingSize"		"0"
+	"buildid"		"20383525"
+	"LastOwner"		"76561197995867096"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"0"
+	"BytesStaged"		"0"
+	"TargetBuildID"		"20383525"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"1460472"
+		{
+			"manifest"		"5981221262164233110"
+			"size"		"65191070252"
+		}
+		"2060314"
+		{
+			"manifest"		"965414302594932117"
+			"size"		"192986359"
+		}
+		"2224089"
+		{
+			"manifest"		"2868368683526045092"
+			"size"		"24518135031"
+			"dlcappid"		"2138330"
+		}
+	}
+	"UserConfig"
+	{
+	}
+	"MountedConfig"
+	{
+	}
+}

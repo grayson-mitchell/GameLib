@@ -1,0 +1,44 @@
+"AppState"
+{
+	"appid"		"1124300"
+	"Universe"		"1"
+	"name"		"HUMANKIND™"
+	"StateFlags"		"4"
+	"installdir"		"Humankind"
+	"lastupdated"		"1784577520"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"37592580261"
+	"StagingSize"		"0"
+	"buildid"		"23181593"
+	"LastOwner"		"76561197995867096"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"0"
+	"BytesStaged"		"0"
+	"TargetBuildID"		"23181593"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"1124302"
+		{
+			"manifest"		"7581361316124851545"
+			"size"		"37342725351"
+		}
+		"1124303"
+		{
+			"manifest"		"4307787678226630570"
+			"size"		"249854910"
+			"dlcappid"		"1633650"
+		}
+	}
+	"UserConfig"
+	{
+	}
+	"MountedConfig"
+	{
+	}
+}

@@ -4,13 +4,15 @@ plan: 05
 artifact: uat
 status: testing
 total_items: 3
-pending_items: 2
-passed_items: 1
+pending_items: 1
+passed_items: 2
 failed_items: 0
 blocked_items: 0
+open_gaps: [G-23-01, G-23-02]
+notes: "Gate 2 PASS is CONDITIONAL — Denuvo launch proven but required a manual +x workaround (blocker gap G-23-02, native install applies no execute bits). Phase NOT closable until G-23-02 fixed + Gate 2 re-run clean, and Gate 3 run."
 requirements: [REQ-23-07]
 run_via: "/gsd:verify-work 23"
-last_updated: 2026-07-19
+last_updated: 2026-07-21
 ---
 
 # Phase 23 — Steam Full-Ownership Install (StateFlags=4): Real-Hardware UAT
@@ -243,13 +245,61 @@ Source: 23-04-PLAN.md Task 2 (D-07.2). Closes: spike-001's open DRM caveat (also
 **Expected result:** Adoption succeeds identically to Gate 1 (`StateFlags=4`, no verify/re-download),
 and the title launches with DRM intact — no re-validation, no DRM-triggered repair/re-download.
 
-**Result:** PENDING
-**Title/AppID used:** _(record here)_
-**DRM type confirmed:** _(Denuvo / VMProtect / other — cite source, e.g. pcgamingwiki)_
-**Install path used:** _(native macOS / CrossOver bottle)_
-**`.acf` field dump:** _(paste inspect-acf.mjs output or snapshot path)_
-**Verify/re-download observed?** _(yes/no)_
-**Launch confirmed with DRM intact?** _(yes/no — describe any DRM-related dialog/error if it occurred)_
+**Result:** IN PROGRESS — attempt 1 (Kingdom Come: Deliverance II) DIVERGED before adoption;
+retrying with HUMANKIND (see below).
+
+**Attempt 1 — Kingdom Come: Deliverance II (appId 1771300), Denuvo, native depot path (2026-07-21):**
+DIVERGENCE — install failed during plan-build, before any `.acf` was written, so the hard-DRM
+*launch* hypothesis was never reached. GameLib resolved keys/manifests for depots 1771302 (~199MB)
+and 1771303 (~82GB main content) successfully, then Steam's CM returned **EResult 40 (`Blocked` —
+region/content blocked)** on the decryption-key request for depot **1771304 (~735MB)**. GameLib
+classifies EResult 40 as non-retryable (`depotErrors.ts:52` `NON_RETRYABLE_ERESULTS`), so it failed
+fast (~256ms, no retries) and aborted the WHOLE install with user-facing copy "This game's content
+isn't available to download right now."
+
+Log evidence (`~/Library/Logs/GameLib/gamelib.log`, 22:01:29):
+`Installation of 1771300 failed with: ... (couldn't get decryption key for depot 1771304 (app 1771300): Blocked)`
+
+Notes:
+- Depot 1771304 was selected because it appears in an owned package's `depotids`
+  (`select.ts:174` ownership gate). This is NOT an owner-appId (D-UAT-08) bug — 1771304 is a
+  base-app depot and the key was correctly requested under appId 1771300.
+- Root observation: **owning a depot (package `depotids`) ≠ Steam issuing its decryption key** —
+  for region/DRM-gated depots Steam re-checks at key-request time and can return `Blocked`.
+- Open question (does NOT block the Gate 2 retry): is depot 1771304 *required*, or an
+  optional/region-alternate depot the official client would skip? If the official Steam client
+  installs KCD2 fully on this account without 1771304 → GameLib's "fail the whole install on one
+  blocked owned depot" is a defect (should skip-and-warn on a non-essential blocked depot). Captured
+  as gap `G-23-01` below. This is title/region-specific, so a different hard-DRM title still gives a
+  valid Gate 2 result.
+
+**Attempt 2 — HUMANKIND (appId 1124300), Denuvo, NATIVE depot path (2026-07-21):**
+**Result:** PASS (DRM hypothesis) — CONDITIONAL on G-23-02 fix. StateFlags=4 adoption + Denuvo launch
+both confirmed; the launch required a manual +x workaround (G-23-02), so this is not yet a clean
+end-to-end native-install pass. Re-run WITHOUT the manual chmod once G-23-02 is fixed.
+**Title/AppID used:** HUMANKIND (1124300)
+**DRM type confirmed:** Denuvo Anti-tamper (Sega/Amplitude; Gamepressure + PCGamingWiki "big list of third-party DRM on Steam")
+**Install path used:** NATIVE macOS depot path (HUMANKIND ships a native Apple-Silicon `.app` — NOT bottle; corrects the earlier Windows-only assumption)
+**Steps 1–4:** PASS — installed to `~/Library/Application Support/Steam/steamapps/common/Humankind`,
+`appmanifest_1124300.acf` written, `StateFlags 4`, no verify/re-download observed.
+**Launch:** FAIL — GameLib reported "Failed to start process for this game: OS error 256". Root cause
+confirmed on disk: **0 of 18,809 installed files carry the execute bit.** The main binary
+`Humankind.app/Contents/MacOS/Humankind` and the nested helper
+`Contents/Frameworks/ZFGameBrowser.app/Contents/MacOS/ZFGameBrowser` both landed `-rw-r--r--`.
+GameLib's own code documents this exact symptom (`depot.ts:71,1188`): a missing +x fails macOS launch
+with `os error 256`. The StateFlags=4 native path is supposed to apply the manifest's EDepotFileFlag
+modes (`applyEDepotFileModes`, chmod 0o755 when `flags & (EXECUTABLE_FLAG|CUSTOM_EXECUTABLE_FLAG)`,
+depot.ts:1195/1222) but applied NOTHING here → gap G-23-02.
+**Workaround applied (2026-07-21):** manually `chmod +x` the two real executables above to unblock the
+launch step and reach the DRM test. This does NOT fix the underlying defect (the install itself still
+produces non-executable binaries).
+**Verify/re-download observed?** No (steps 1–4).
+**Launch confirmed with DRM intact?** YES (2026-07-21, after manual chmod +x workaround) — HUMANKIND
+launched past "os error 256", **Denuvo accepted the GameLib-installed / Steam-adopted (StateFlags=4)
+file set with no re-validation, no DRM error dialog, and reached the main menu.** This proves D-07.2's
+hard-DRM hypothesis: a Denuvo title trusts a GameLib-authored StateFlags=4 install. Caveat: the launch
+was only reachable after manually setting +x (G-23-02) — the native install itself is not yet
+end-to-end launchable without that fix.
 
 ---
 
@@ -321,16 +371,50 @@ reconciliation genuinely could not prove completeness — record which), the gam
 | # | Gate | Requirement | Result | Notes |
 |---|------|-------------|--------|-------|
 | 1 | Multi-depot StateFlags=4 (no verify/re-download) | REQ-23-07 (D-07.1) | ✅ **PASS (HW)** | Hardware-confirmed 2026-07-19: `StateFlags=4`, Steam adopted multi-depot install with no verify/re-download, launched. Plan 23-05 fix (single-flight guard + pause/resume abort + reconciliation) held; Phase 25 fan-out cleared the download-time blocker so steps 4–6 could complete. |
-| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | PENDING | Blocked behind Gate 1's hardware re-run (need a clean completing install first) |
-| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Blocked behind Gate 1's hardware re-run |
+| 2 | Hard-DRM launch under StateFlags=4 | REQ-23-07 (D-07.2) | ✅ PASS (HW, conditional) | HUMANKIND (1124300, Denuvo) installed to StateFlags=4, no verify/re-download, **Denuvo launched to main menu** — DRM hypothesis proven. Conditional: launch needed a manual +x workaround (blocker gap G-23-02, native install applies no execute bits). Attempt 1 (KCD2) diverged on a `Blocked` depot key (gap G-23-01). Re-run clean after G-23-02 fix. |
+| 3 | Interrupt-resume reconciled StateFlags=4 + launch + no re-download + no bottle auto-open | REQ-23-07 (D-07.3) + D-04 | PENDING | Gate 1's hardware re-run now PASS; ready to run |
 
-**Gate status:** NOT CLOSED. Gate 1's diagnosed defect has a code fix landed and regression-tested
-(Plan 23-05), but the real-hardware re-run is still an outstanding human step — 0 of 3 gates have a
-recorded hardware PASS. Phase 23 cannot be marked complete/verified until every gate is PASS on real
-hardware. Next step: human runs Gate 1's re-run steps above (delete stale `appmanifest_990080.acf`,
-install Hogwarts Legacy or Cyberpunk 2077 via GameLib's native path, confirm single monotonic
-percent through a pause/resume cycle, confirm `StateFlags=4` completion + launch); any residual
-flicker or divergence routes back to `/gsd-plan-phase 23 --gaps`.
+## Gaps
+
+```yaml
+- id: G-23-01
+  truth: "A native depot install completes when the user owns the game, even if one owned depot's decryption key is Blocked (region/DRM-gated)"
+  status: open
+  reason: "KCD2 (appId 1771300) install aborted entirely because Steam returned EResult 40 (Blocked) for depot 1771304's decryption key. GameLib selected 1771304 via the package-ownership gate (select.ts:174), but owning a depot != Steam granting its key. classifyDepotError treats EResult 40 as non-retryable and fails the WHOLE install (depotErrors.ts:52), rather than skipping a non-essential blocked depot and continuing."
+  severity: unknown  # major IF 1771304 is optional/region-alternate (official client skips it); not-a-bug IF 1771304 is required and genuinely region-blocked for this account
+  surfaced_by: gate-2 (attempt 1, KCD2)
+  decisive_diagnostic: "Install KCD2 in the official Steam client on this account/region; observe whether depot 1771304 downloads. Blocked there too => genuine region block (not a GameLib bug). Downloads fine => GameLib over-selection/hard-fail defect."
+  artifacts:
+    - "src/backend/storeManagers/steam/depot/select.ts:174 (ownership gate includes owned-but-key-blocked depot)"
+    - "src/backend/storeManagers/steam/depotErrors.ts:52 (EResult 40 non-retryable -> whole-install abort)"
+    - "~/Library/Logs/GameLib/gamelib.log 22:01:29 (couldn't get decryption key for depot 1771304 (app 1771300): Blocked)"
+  missing:
+    - "Decide policy: should a Blocked key on a non-essential owned depot skip-and-warn (continue install) rather than abort? Requires distinguishing required vs optional/region-alternate depots at selection time."
+
+- id: G-23-02
+  truth: "A native macOS game installed via the StateFlags=4 full-ownership path is launchable (its Mach-O executables land with the execute bit)"
+  status: open
+  severity: blocker  # any native macOS (and likely Linux) game is unlaunchable via native install
+  reason: "HUMANKIND (1124300) installed to StateFlags=4 cleanly (steps 1-4 pass) but 0 of 18,809 files carry +x. Main binary Humankind.app/Contents/MacOS/Humankind landed -rw-r--r--; macOS launch fails with 'os error 256'. The StateFlags=4 path (which skips Steam's own verify pass) is supposed to apply the manifest's EDepotFileFlag modes via applyEDepotFileModes (chmod 0o755 on EXECUTABLE_FLAG=32/CUSTOM_EXECUTABLE_FLAG=128) but applied nothing for this install."
+  surfaced_by: gate-2 (attempt 2, HUMANKIND, native path)
+  open_question: "Gate 1 (Cyberpunk 2077, also native macOS) recorded a successful launch on 2026-07-19 — why did modes apply there but not here? Possible: Gate 1 launch went via Steam UI (which would re-apply modes) rather than a GameLib native-install cold launch; OR HUMANKIND's decompression/write path differs; OR manifest flags are absent per-file. Resolve before trusting Gate 1's launch half."
+  artifacts:
+    - "src/backend/storeManagers/steam/depot.ts:1195 (if (file.flags) guard -> applyEDepotFileModes) — flags empty for all files here"
+    - "src/backend/storeManagers/steam/depot.ts:524-531 (flags: f.flags copied from steam-user content_manifest parser mappings)"
+    - "src/backend/storeManagers/steam/depot.ts:71,1188 (code's own note: missing +x => macOS os error 256)"
+    - "on-disk: ~/Library/Application Support/Steam/steamapps/common/Humankind (0/18809 files +x before manual chmod)"
+  decisive_diagnostic: "Trace whether file.flags is populated (log flags for the main binary's manifest entry) AND whether downloadSingleFile's applyEDepotFileModes runs on the zstd-decompression write path. Route via /gsd-debug."
+  missing:
+    - "The native StateFlags=4 install must apply +x to executable-flagged files (and likely a safety net for macOS .app Contents/MacOS/ executables). Verify per-file manifest flags reach applyEDepotFileModes on the actual (decompression) write path."
+```
+
+**Gate status:** NOT CLOSED. 2 of 3 gates have a hardware PASS (Gate 1 2026-07-19; Gate 2 2026-07-21,
+conditional). Gate 2's Denuvo-launch hypothesis is proven, but the launch only worked after a manual
++x workaround — blocker gap **G-23-02** (native StateFlags=4 install applies NO execute bits → every
+native macOS game is unlaunchable) must be fixed and Gate 2 re-run clean. Gap **G-23-01** (KCD2
+`Blocked` depot key aborts the whole install) also open. Gate 3 (interrupt-resume) still to run — note
+its launch step will also hit G-23-02 until fixed. Phase 23 cannot be marked complete/verified until
+G-23-02 is fixed, Gate 2 re-runs clean, and Gate 3 passes. Gaps route to `/gsd-debug` / `/gsd-plan-phase 23 --gaps`.
 
 **Windows/Linux coverage:** Explicitly deferred, not dropped (per D-07 in `23-CONTEXT.md`). Not
 tracked in this document — file a follow-up todo if/when that work is scheduled.

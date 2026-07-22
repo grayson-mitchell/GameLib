@@ -336,24 +336,32 @@ jest.mock('electron-store', () => ({
 
 **If this table is empty:** N/A — three assumptions logged above, all low-risk and independently verifiable by the planner with a fresh grep.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All four were answered by the post-research decision round (29-CONTEXT.md D-13/D-14/D-15)
+> and by `/gsd-plan-phase 29`. Resolutions are noted inline below; nothing here is still open.
+
 
 1. **Do the 19 CacheStore-backed dynamic stores count toward D-02's "every store round-trips" bar, or is D-02 scoped strictly to `ValidStoreName`?**
+   - **RESOLVED: D-13.** The four boot-set names (`legendary_library`, `gog_library`, `nile_library`, `zoom_library`) are IN the bar and are covered by plan 29-04's walk test; the other ~15 ride D-03's lazy tier without a coverage guarantee.
    - What we know: they flow through the identical `storeNew`/`storeGet`/`storeSet`/`storeDelete` sidecar surface; 4 of them (`legendary_library`, `gog_library`, `nile_library`, `zoom_library`) are read synchronously in `GlobalState`'s constructor today (part of the real boot set).
    - What's unclear: 29-CONTEXT.md's own text ("all ~18 `ValidStoreName` stores") only mentions the typed set.
    - Recommendation: the planner should explicitly widen D-02's completion bar to include at minimum the 4 boot-set CacheStore names, and ideally all 19, in the coverage test — otherwise a "phase complete" claim would be measurably false against what the frontend actually does at boot.
 
 2. **How should `wineDownloaderInfoStore`, `downloadManager`, and `migrationsStore` be made constructible in the sidecar without reintroducing the heavier business-logic modules Phase 27 avoided?**
+   - **RESOLVED: D-15 (extraction), plan 29-02.** All three move into thin `electronStores.ts` modules. Planning added a FOURTH extraction for `uploadedLogs` (`src/backend/logger/electronStores.ts`) for the same reason, so `storeRegistration.ts` imports zero host modules and D-02's bar needs no exclusion. `migrationsStore` is NOT excluded — the recommendation to drop it was superseded.
    - What we know: all three are declared inside modules with real business-logic side effects (Wine download pipeline, `libraryManagerMap`, a lazily-constructed migration singleton respectively).
    - What's unclear: whether extraction into a dedicated `electronStores.ts` (a genuine refactor of existing modules, arguably justified as "the file this store's construction should have always lived in") is in scope for this phase, or whether accepting the heavier import is preferable.
    - Recommendation: extract `wineDownloaderInfoStore` and `downloadManager` into sibling `electronStores.ts` files (low-risk, mechanical — the store declarations have no dependency on the rest of their host module's logic); leave `migrationsStore` out of the eager tier entirely (nothing reads it from the renderer today) with a documented one-line reason in the coverage test.
 
 3. **Should `fileStore.ts`'s in-memory caching model change to re-read-on-access (matching `conf`) or to a path-keyed singleton?**
+   - **RESOLVED: D-14 — path-keyed.** Plan 29-01 implements a path-keyed shared data cell (`cellRegistry`); re-read-on-access was rejected for adding a disk read to a synchronous mount-time path.
    - What we know: either fixes the `steamConfigStore`/`steamBottleConfigStore` collision (Pitfall 3); re-read-on-access is a smaller diff but adds a disk read to every `.get()`/`.has()` call (currently zero-cost after construction); a path-keyed singleton adds a small registry but preserves the current all-in-memory performance characteristic.
    - What's unclear: whether any call site depends on `fileStore.ts`'s current "in-memory, cheap repeated reads" performance characteristic strongly enough that read-on-every-access would be a regression (unlikely at this store's data volumes, but not measured).
    - Recommendation: the path-keyed singleton is very likely the better fix — it removes the divergent-copy risk entirely for ANY future same-path pair (not just this one instance), and it doesn't add disk I/O to hot-path reads. Flag to the planner as the default recommendation, not a coin flip.
 
 4. **Does D-08's allow-list also need to state a policy for the ~19 CacheStore-backed stores' fields, or are none of them secret?**
+   - **RESOLVED: plan 29-03.** `storePolicy.ts` defaults cache stores to `'*'` and carries an explicit `DENIED_CACHE_STORES` list containing `humble_library`, so its internal-only `revealedKeyValue`/`keyindex` entries cannot bypass `library.ts`'s `getKeys()` projection.
    - What we know: none of the CacheStore names identified (game/library caches, sync timestamps, Humble's revealed/audit/redeemed/gifted/ownership-override records) obviously carry a raw secret comparable to `refreshToken`/`sessionCookie`/`csrfToken`. Humble's `humbleLibraryStore` entries carry an internal-only `revealedKeyValue` field per `HumbleKeyInternal` (see `humble/electronStores.ts`'s own doc comment: "library.ts's getKeys() display projection strips these two fields before any IPC broadcast" — i.e., filtering already happens at the library-manager layer, not the store layer).
    - What's unclear: whether the store-layer allow-list should ALSO gate `humble_library`'s `revealedKeyValue`/`keyindex` fields as defense-in-depth (matching the two-layer pattern D-08 preserves for `refreshToken`/`csrfToken`), given this phase generalizes the exact kind of raw `raw_store`-style snapshot access that could bypass `library.ts`'s existing projection if a future caller reads the CacheStore's snapshot directly instead of going through `getKeys()`.
    - Recommendation: extend the allow-list's audit to explicitly note `humble_library`'s two internal-only fields as a DENIED-by-the-allow-list case, even though they are not literally `StoreStructure` fields — the CacheStore's raw entries flow through the same eventual sidecar surface once CacheStore names are folded into the generalized layer (Open Question 1).
