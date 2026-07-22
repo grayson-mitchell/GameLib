@@ -1,12 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the GameLib shell: core defaults plus the opener plugin (the shell.openExternal / steam:// parity path) and the dialog plugin's open-folder-picker path (dialog.showOpenDialog parity, plan 30-03). The four app-defined relay commands (sidecar_invoke, sidecar_send, open_external, sidecar_store_snapshot) are registered via invoke_handler and do not require capability permissions in Tauri v2.",
+  "description": "Default capability for the GameLib shell: core defaults plus the opener plugin (the shell.openExternal / steam:// parity path). Tauri v2 capabilities gate WEBVIEW->Rust IPC only; they are not consulted for Rust-side plugin API calls. The four app-defined relay commands (sidecar_invoke, sidecar_send, open_external, sidecar_store_snapshot) are registered via invoke_handler and do not require capability permissions. For the same reason the native file/folder picker (dialog.showOpenDialog parity, plan 30-03) needs NO dialog permission here: dispatch_rust_channel calls app.dialog().file() from Rust. Granting 'dialog:allow-open' would have exposed plugin:dialog|open directly to renderer JavaScript (including anything running in the store WebView surface) for zero benefit to the intended path — WR-03.",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "opener:default",
-    "opener:allow-open-url",
-    "dialog:allow-open"
-  ]
+  "permissions": ["core:default", "opener:default"]
 }
