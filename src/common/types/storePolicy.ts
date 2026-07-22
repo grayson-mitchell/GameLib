@@ -199,7 +199,19 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
     return false
   }
 
-  const policy = STORE_ALLOWLIST[storeName]
+  // CR-02 (Phase 29 code review): `STORE_ALLOWLIST` is a plain object literal, so a
+  // bare `STORE_ALLOWLIST[storeName]` resolves through `Object.prototype`. For a
+  // `storeName` of `constructor`/`toString`/`valueOf`/`hasOwnProperty`/... `policy`
+  // came back as a FUNCTION, not `undefined`, so the fail-closed branch below was
+  // skipped and `policy.includes(...)` THREW ("policy.includes is not a function").
+  // That is the opposite of this function's documented contract, and it throws on a
+  // path the renderer calls synchronously with no try/catch (`snapshotGet`/
+  // `snapshotHas`, tauriTransport.ts) — SEAM Load-Bearing Invariant A: a preload throw
+  // blanks the window. An own-property lookup restores fail-closed by construction for
+  // EVERY prototype-chain name, without special-casing individual key names.
+  const policy = Object.prototype.hasOwnProperty.call(STORE_ALLOWLIST, storeName)
+    ? STORE_ALLOWLIST[storeName]
+    : undefined
 
   if (policy === undefined) {
     // Not a typed store — only a recognized (non-denied) cache store passes, and only
@@ -212,6 +224,12 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
 
   if (policy === '*') {
     return true
+  }
+
+  // CR-02 belt-and-braces: never call `.includes` on something that is not an array.
+  // A malformed future entry must fail CLOSED, not raise into the renderer.
+  if (!Array.isArray(policy)) {
+    return false
   }
 
   const topLevelKey = key.split('.')[0]

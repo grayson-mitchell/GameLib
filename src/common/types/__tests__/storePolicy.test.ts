@@ -87,6 +87,33 @@ describe('allow-list', () => {
     expect(isAllowedStoreField('configStore', 'theme')).toBe(true)
   })
 
+  // CR-02 REGRESSION (Phase 29 code review): `notARealStore` happens to miss the
+  // prototype chain entirely, so the test below it did NOT cover the real hole.
+  // `STORE_ALLOWLIST` was a plain object literal, so `STORE_ALLOWLIST['constructor']`
+  // resolved to a FUNCTION through `Object.prototype` — the `policy === undefined`
+  // fail-closed branch was skipped and `policy.includes(...)` THREW. This function is
+  // called synchronously from preload with no try/catch, and a preload throw blanks
+  // the window (SEAM Load-Bearing Invariant A). It must return `false`, never raise.
+  it.each([
+    'constructor',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    '__proto__',
+    'prototype',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    'toLocaleString'
+  ])('CR-02: fails closed (never throws) for prototype-chain store name %p', (name) => {
+    expect(() => isAllowedStoreField(name, 'x')).not.toThrow()
+    expect(isAllowedStoreField(name, 'x')).toBe(false)
+  })
+
+  it('CR-02: filterStoreSnapshot is likewise inert for a prototype-chain store name', () => {
+    expect(() => filterStoreSnapshot('constructor', { a: 1 })).not.toThrow()
+    expect(filterStoreSnapshot('constructor', { a: 1 })).toEqual({})
+  })
+
   it('fails closed on an unknown store name', () => {
     expect(isAllowedStoreField('notARealStore', 'anything')).toBe(false)
   })
