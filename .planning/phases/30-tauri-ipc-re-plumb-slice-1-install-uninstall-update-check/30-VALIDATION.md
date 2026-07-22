@@ -85,7 +85,7 @@ attributing a failure to the IPC port.
 | 30-03-T3 | 30-03 | 1 | REQ-30-07, REQ-30-09 | T-30-11, T-30-14 | Dialog failures resolve canceled instead of throwing; notify() logs title only | unit | `npx jest src/backend/sidecar/__tests__/dialogStub.test.ts` | dialogStub.test.ts (new) | ✅ green |
 | 30-04-T1 | 30-04 | 3 | REQ-30-02, REQ-30-04, REQ-30-08 | T-30-17 | Load-Bearing Invariants section provably unedited | source assertion | `grep -c "30-PORTED-CHANNELS" .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | 30-PORTED-CHANNELS.md (new) | ✅ green |
 | 30-04-T2 | 30-04 | 3 | REQ-30-03 | T-30-15, T-30-16 | One deferred item naming both proofs; G-23-01/02 named as pre-existing | source assertion | `grep -c "G-23-01" .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md` | 30-HUMAN-UAT.md (new) | ✅ green |
-| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run tauri:dev` | n/a | AWAITING CHECKPOINT — this task is the blocking human-verify checkpoint this plan pauses at; not yet run |
+| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run tauri:dev` | n/a | ⚠️ PARTIAL — 3 of 4 human-observed conditions PASS (window painted, no `is not a constructor` error, UNPORTED_CHANNEL_MARKER flip confirmed); 1 FAIL (Steam login QR tab not reached — Manage Accounts renders but the logon button is unresponsive, filed as **G-30-01**, a known defect). See 30-HUMAN-UAT.md. |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -152,10 +152,24 @@ are documented in Manual-Only Verifications below, not deferred as gaps.
 - [x] Every test uses the three-way mock isolation pattern (no real userData writes)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** conditional-pass — all automated verifies for 30-01/30-02/30-03 and this plan's own
-Task 1/Task 2 are green (statuses above filled from real results, not planned intent). Final
-approval is gated on Task 3, the both-builds smoke-pass checkpoint (`npm start` +
-`npm run tauri:dev`), which has not yet run as of this document's finalization. This phase's
-overall claim level, per D-04/REQ-30-03, is **wired and unit-proven** — never "hardware-proven" —
-regardless of Task 3's outcome; see `30-HUMAN-UAT.md` for the deferred live-scan proof this
-claim-level statement covers.
+**Approval:** partial-pass, with one known open defect — NOT a clean approval. All automated
+verifies for 30-01/30-02/30-03 and this plan's own Task 1/Task 2 are green. Task 3 (the
+both-builds smoke-pass checkpoint) has now run and was human-observed: 3 of 4 conditions PASS
+(window painted, no `is not a constructor` error, the three newly-ported channels no longer
+`UNPORTED_CHANNEL_MARKER`-warn while a deliberately-unported channel still does) — these prove the
+additive/reversible invariant (REQ-30-09) holds and there is no regression to either build. The
+4th condition FAILS: the Steam login screen's Manage Accounts UI renders but its logon button is
+unresponsive, so the QR tab is never reached (**G-30-01**, a known defect, not merely an unproven
+item — see `30-HUMAN-UAT.md`). Because the install/uninstall E2E (30-02) is only reachable through
+a signed-in library, that E2E remains unreached as a direct consequence of G-30-01, not as an
+independent gap.
+
+This phase's overall claim level, per D-04/REQ-30-03, is **wired and unit-proven, never
+"hardware-proven"** — this remains true for every channel's registration and unit-test coverage.
+What changed is that the QR login *UI flow* is no longer merely "unproven": it is **known-broken**
+at the interaction layer under Tauri, a strictly worse status. `30-PORTED-CHANNELS.md` and
+`30-01-SUMMARY.md`'s channel-registration claims stand as accurate (registration + non-fatal
+rejection of unported channels is proven); no claim of a working end-to-end QR login flow under
+Tauri may be drawn from either. `nyquist_compliant: true` stands — every task shipped with an
+automated verify or a documented manual gate; the manual gate's outcome being partial does not
+retroactively make the *verification methodology* non-compliant.

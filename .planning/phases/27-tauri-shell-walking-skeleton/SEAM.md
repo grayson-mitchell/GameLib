@@ -130,10 +130,15 @@ below.
   `electronStub.ts`, backed by `tauri-plugin-dialog`'s `blocking_pick_folder()`. Only the
   open-directory path; the other five `dialog.*` members stay unported (Phase 31).
 
-**Claim level (D-04/REQ-30-03): "wired and unit-proven", NOT "hardware-proven".** The live human QR
-scan is deferred, and because the install slice's own reachability precondition is a populated
-library, the install slice's hardware proof is deferred with it — as one named UAT item in
-`30-HUMAN-UAT.md` covering both.
+**Claim level (D-04/REQ-30-03): "wired and unit-proven", NOT "hardware-proven".** Every channel
+above is registered on the sidecar and proven non-fatal (`UNPORTED_CHANNEL_MARKER` no longer
+fires for `checkSteamInstalled`/`steamStartQR`/`listSteamLibraryTargets`, human-confirmed 30-04
+Task 3). **Registration is not the same claim as "the flow works."** The Steam QR login UI flow
+is a **known defect** under Tauri, not merely deferred: the Manage Accounts screen renders but its
+logon button is unresponsive, so the QR tab is never reached (**G-30-01**, human-observed
+2026-07-22, `30-HUMAN-UAT.md`). Because the install slice's own reachability precondition is a
+populated library, the install slice's own hardware proof was not reached this session as a
+direct consequence of G-30-01 — this is not an independent gap.
 
 ### The store layer (real, Phase 29) — CLOSED, moved out of §2/§3
 

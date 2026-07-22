@@ -4,6 +4,16 @@
 cross-references by filename. It describes what actually shipped in 30-01..30-03, not this
 phase's original intent — verified against the three plan SUMMARY.md files.
 
+**Claim-scope note (added after 30-04 Task 3's human checkpoint, 2026-07-22):** every row below
+states that a channel is **registered on the sidecar and no longer marker-rejects** — this is
+proven (jest coverage plus the live checkpoint's `UNPORTED_CHANNEL_MARKER`-flip observation for
+`checkSteamInstalled`/`steamStartQR`/`listSteamLibraryTargets`). **Registration is not the same
+claim as "the UI flow that uses it works."** The Steam QR login UI flow specifically is
+known-broken under Tauri at the interaction layer (Manage Accounts renders, but the logon button
+is unresponsive and the QR tab is never reached) — filed as **G-30-01** in `30-HUMAN-UAT.md`. Do
+not read any row in the table below as a claim that the end-to-end flow using that channel works
+in the running app.
+
 ---
 
 ## Ported this phase
