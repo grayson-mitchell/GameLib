@@ -37,6 +37,7 @@ import type { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import {
   OPEN_EXTERNAL,
+  RUST_DIALOG_OPEN,
   RUST_INVOKE_CHANNELS,
   UNPORTED_CHANNEL_MARKER,
   type RustInvokeChannel,
@@ -56,10 +57,33 @@ const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB
  */
 const RUST_INVOKE_TIMEOUT_MS = 60_000
 
-/** id -> the pending Promise's settle functions + its timeout handle, for `rustInvoke`. */
+/**
+ * Channels whose completion is gated on a HUMAN, not on machine work, and which therefore must
+ * NOT carry `RUST_INVOKE_TIMEOUT_MS` (CR-04, Phase 30 code review).
+ *
+ * `dialog_open` blocks on a native modal the user has to interact with. Sixty seconds is well
+ * inside normal file-browsing time, and the failure was silent AND wrong: the rejection was
+ * swallowed by `electronStub.showOpenDialog`'s catch, which reports `{canceled: true}` — i.e.
+ * the sidecar claimed "the user cancelled" while the picker was still on screen. The user's
+ * later selection then arrived for an id already removed from `rustPending` and was dropped,
+ * so picking a folder simply did nothing, with no error surfaced anywhere in the UI.
+ *
+ * Head-of-line blocking is not a concern: Rust dispatches every `rustInvoke` on its own worker
+ * thread (T-28-05), and an unanswered entry here holds only a Map entry and an unref'd promise.
+ */
+const UNBOUNDED_RUST_CHANNELS: readonly string[] = [RUST_DIALOG_OPEN]
+
+/**
+ * id -> the pending Promise's settle functions + its timeout handle, for `rustInvoke`.
+ * `timer` is `null` for the `UNBOUNDED_RUST_CHANNELS` above.
+ */
 const rustPending = new Map<
   string,
-  { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }
+  {
+    resolve: (value: unknown) => void
+    reject: (error: Error) => void
+    timer: NodeJS.Timeout | null
+  }
 >()
 
 let outputStream: Writable = process.stdout
@@ -153,7 +177,7 @@ function handleFrame(line: string): void {
       return
     }
     rustPending.delete(id as string)
-    clearTimeout(pending.timer)
+    if (pending.timer) clearTimeout(pending.timer)
     if (response.ok) {
       pending.resolve(response.result)
     } else {
@@ -264,21 +288,25 @@ export function requestRustInvoke(
   }
   return new Promise((resolve, reject) => {
     const id = randomUUID()
-    const timer = setTimeout(() => {
-      rustPending.delete(id)
-      reject(new Error(`rustInvoke timed out after ${RUST_INVOKE_TIMEOUT_MS}ms: ${channel}`))
-    }, RUST_INVOKE_TIMEOUT_MS)
-    // Don't let a pending rustInvoke keep the process alive on its own -- the sidecar's
-    // stdin listener is what actually keeps the event loop running; this timer should
-    // never be the reason the process can't exit (e.g. Jest teardown, graceful shutdown).
-    timer.unref()
+    // CR-04: human-in-the-loop channels get no bound at all — see UNBOUNDED_RUST_CHANNELS.
+    let timer: NodeJS.Timeout | null = null
+    if (!UNBOUNDED_RUST_CHANNELS.includes(channel)) {
+      timer = setTimeout(() => {
+        rustPending.delete(id)
+        reject(new Error(`rustInvoke timed out after ${RUST_INVOKE_TIMEOUT_MS}ms: ${channel}`))
+      }, RUST_INVOKE_TIMEOUT_MS)
+      // Don't let a pending rustInvoke keep the process alive on its own -- the sidecar's
+      // stdin listener is what actually keeps the event loop running; this timer should
+      // never be the reason the process can't exit (e.g. Jest teardown, graceful shutdown).
+      timer.unref()
+    }
     rustPending.set(id, {
       resolve: (value: unknown) => {
-        clearTimeout(timer)
+        if (timer) clearTimeout(timer)
         resolve(value)
       },
       reject: (error: Error) => {
-        clearTimeout(timer)
+        if (timer) clearTimeout(timer)
         reject(error)
       },
       timer
