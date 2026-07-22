@@ -406,14 +406,25 @@ it('rejects an unknown store name... no crash, health still responds', async () 
 
 **If this table is empty:** N/A — see above.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `main.rs`'s `tauri::Builder` register `tauri-plugin-opener` via `.plugin(...)`, and is there an existing convention doc for adding a Tauri plugin to this project?**
+> Both questions below were closed during `/gsd-plan-phase 30`, after this document was
+> written. They are kept for provenance; the resolutions are authoritative.
+
+1. **RESOLVED** — **Does `main.rs`'s `tauri::Builder` register `tauri-plugin-opener` via `.plugin(...)`, and is there an existing convention doc for adding a Tauri plugin to this project?**
+   - **Resolution:** `30-PATTERNS.md` captured the registration call site directly —
+     `src-tauri/src/main.rs:477-479` — and `30-03-PLAN.md` cites it in its interfaces block.
+     No separate grep task is needed; the plugin-registration task can be written against
+     that excerpt.
    - What we know: `tauri-plugin-opener` is a `Cargo.toml` dependency and has capability permissions in `capabilities/default.json`.
    - What's unclear: the exact `main.rs` registration call site (not read this session — the relevant excerpt was not captured).
    - Recommendation: the planner should do a targeted `grep -n "plugin(" src-tauri/src/main.rs` as the first task of the `openDialog` Rust work, before writing the plugin-registration task.
 
-2. **Is `enableSteamNativeInstall` (the D-13 opt-in gating the whole native depot-download branch) already `true` in the shared, on-disk `configStore` the Tauri sidecar will read?**
+2. **RESOLVED** — **Is `enableSteamNativeInstall` (the D-13 opt-in gating the whole native depot-download branch) already `true` in the shared, on-disk `configStore` the Tauri sidecar will read?**
+   - **Resolution:** folded into `30-04-PLAN.md` Task 2 as an explicit UAT prerequisite step,
+     with a grep gate on the literal `enableSteamNativeInstall`. The deferred UAT item cannot
+     be written without confirming/setting the flag first, so the silent-legacy-branch risk
+     is closed at the point it would actually bite.
    - What we know: `isSteamNativeInstallEnabled()` reads `GlobalConfig.get().getSettings().enableSteamNativeInstall` from the SAME shared `userData` folder Electron and the Tauri sidecar both resolve to (SEAM.md's D-07 "cross-process write clobber ACCEPTED" constraint documents this sharing).
    - What's unclear: whether the developer's local persisted settings already have this flag `true` from prior Electron-side Phase 21/23/25 testing — if not, `SteamGame.install()` under Tauri would silently take the legacy `steam://install` branch instead of the depot-download branch this phase is supposed to prove.
    - Recommendation: the plan's E2E verification step should explicitly check/set this setting (even if Settings UI itself is Phase 31's territory, a direct `configStore.set('settings.enableSteamNativeInstall', true)` on the shared store, or a `checkpoint:human-verify` reminder, is warranted).

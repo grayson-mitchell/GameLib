@@ -1098,9 +1098,17 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 30-01-PLAN.md — Port the Steam QR login channels onto the sidecar (D-01 ordering prerequisite) [wave 1]
-- [ ] 30-02-PLAN.md — install/uninstall/updateGame/checkGameUpdates/listSteamLibraryTargets on the sidecar, native depot branch [wave 2]
 - [ ] 30-03-PLAN.md — Real openDialog via a new dialog_open rustInvoke channel; logged notify() no-op [wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 30-02-PLAN.md — install/uninstall/updateGame/checkGameUpdates/listSteamLibraryTargets on the sidecar, native depot branch [wave 2]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 30-04-PLAN.md — SEAM.md update, enumerated ported-channel list, deferred UAT item, both-builds smoke [wave 3]
 
 ---

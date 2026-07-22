@@ -85,7 +85,7 @@ attributing a failure to the IPC port.
 | 30-03-T3 | 30-03 | 1 | REQ-30-07, REQ-30-09 | T-30-11, T-30-14 | Dialog failures resolve canceled instead of throwing; notify() logs title only | unit | `npx jest src/backend/sidecar/__tests__/dialogStub.test.ts` | dialogStub.test.ts (new) | ⬜ pending |
 | 30-04-T1 | 30-04 | 3 | REQ-30-02, REQ-30-04, REQ-30-08 | T-30-17 | Load-Bearing Invariants section provably unedited | source assertion | `grep -c "30-PORTED-CHANNELS" .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | 30-PORTED-CHANNELS.md (new) | ⬜ pending |
 | 30-04-T2 | 30-04 | 3 | REQ-30-03 | T-30-15, T-30-16 | One deferred item naming both proofs; G-23-01/02 named as pre-existing | source assertion | `grep -c "G-23-01" .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md` | 30-HUMAN-UAT.md (new) | ⬜ pending |
-| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run build && npm run tauri:dev` | n/a | ⬜ pending |
+| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run tauri:dev` | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -137,7 +137,7 @@ are documented in Manual-Only Verifications below, not deferred as gaps.
 |----------|-------------|------------|-------------------|
 | `tauri-plugin-dialog` crate legitimacy | REQ-30-07 | `[ASSUMED]` per the Package Legitimacy Audit; slopcheck has unconfirmed cargo coverage | 30-03 Task 1 — verify publisher org and version on crates.io before `cargo add` |
 | Live QR scan → populated library → install E2E in the Tauri build | REQ-30-01, REQ-30-03, REQ-30-04 | Requires a phone with the Steam mobile app and a real Steam account; deferred per D-04 | Logged as **one** deferred UAT item in `30-HUMAN-UAT.md` naming both the scan and the install E2E it gates |
-| Both builds still launch after every plan | REQ-30-09 | Bundled-runtime behavior; esbuild/electron-vite bundling is not exercised by ts-jest | `npm start`, then `npm run build && npm run tauri:dev` (30-04 Task 3) |
+| Both builds still launch after every plan | REQ-30-09 | Bundled-runtime behavior; esbuild/electron-vite bundling is not exercised by ts-jest | `npm start`, then `npm run tauri:dev` — which already bundles (`electron-vite build && pnpm build:sidecar && tauri dev`); there is no separate `npm run build` script (30-04 Task 3) |
 | Module-init order of the two new `*FlowRegistration.ts` modules | REQ-30-06 | 27-05 crash class reproduces only in the bundle | Observe a clean `npm run tauri:dev` boot with no constructor error (30-04 Task 3) |
 
 ---
