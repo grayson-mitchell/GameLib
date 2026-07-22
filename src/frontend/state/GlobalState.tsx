@@ -47,6 +47,7 @@ import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
+import { isTauri } from '../../preload/tauriTransport'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -739,6 +740,39 @@ class GlobalState extends PureComponent<Props> {
   }
 
   steamLogout = async () => {
+    // G-30-01 fix: Steam sign-out is deliberately out of scope for the Tauri
+    // IPC re-plumb slice (30-CONTEXT.md D-02). `logoutSteam` is a
+    // fire-and-forget `send` (preload/ipc.ts's makeListenerCaller ->
+    // sidecar_send), and no listener is registered for it on the sidecar
+    // under Tauri (steamAuthFlowRegistration.ts deliberately excludes it,
+    // per its own docstring) -- so the call always "succeeds" from the
+    // caller's perspective while doing nothing server-side. Unlike an
+    // unported `invoke` channel (which at least rejects with
+    // UNPORTED_CHANNEL_MARKER), there is no rejection here to catch: `send`
+    // has no response protocol at all. Proceeding past this point anyway
+    // (as the Electron branch below does) optimistically wipes local state
+    // and reloads the page, which only masks the no-op -- after the reload,
+    // `steamConfigStore.userData` (never actually cleared) rehydrates the
+    // same signed-in identity, and the tile silently reverts to "Logout",
+    // presenting as an unresponsive button (the original G-30-01 symptom).
+    // Surface this honestly instead.
+    if (isTauri()) {
+      console.warn(
+        '[GameLib] logoutSteam is unavailable in this Tauri build (Phase ' +
+          '30 D-02 -- Steam sign-out is out of scope for this slice); no ' +
+          'action taken.'
+      )
+      this.handleShowDialogModal({
+        title: t('login.steam_logout_unavailable_title', 'Sign out unavailable'),
+        message: t(
+          'login.steam_logout_unavailable_message',
+          "Steam sign-out isn't available in this build yet. You'll remain signed in."
+        ),
+        buttons: [{ text: t('box.ok', 'OK') }]
+      })
+      return
+    }
+
     window.api.logoutSteam()
     this.setState({
       steam: {
