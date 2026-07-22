@@ -1,7 +1,7 @@
 ---
 phase: 30
 slug: tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
-status: planned
+status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-07-22
@@ -75,17 +75,17 @@ attributing a failure to the IPC port.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 30-01-T1 | 30-01 | 1 | REQ-30-01, REQ-30-02, REQ-30-06 | T-30-02, T-30-04 | Handlers take no renderer-supplied args; token seam untouched except its docstring | source assertion + typecheck | `npx tsc --noEmit && grep -c "ipcMain.handle(" src/backend/sidecar/steamAuthFlowRegistration.ts` | steamAuthFlowRegistration.ts (new) | ⬜ pending |
-| 30-01-T2 | 30-01 | 1 | REQ-30-01, REQ-30-09 | T-30-01, T-30-03 | refreshToken never enters a snapshot; unported auth channels stay non-fatal | unit | `npx jest src/backend/sidecar/__tests__/steamAuthFlows.test.ts` | steamAuthFlows.test.ts (new) | ⬜ pending |
-| 30-02-T1 | 30-02 | 2 | REQ-30-04 | T-30-07 | Runner-generic update check stays single-sourced; no electron import in the shared module | unit + typecheck | `npx tsc --noEmit && npx jest src/backend/sidecar/__tests__` | checkGameUpdates.ts (new) | ⬜ pending |
-| 30-02-T2 | 30-02 | 2 | REQ-30-04, REQ-30-06, REQ-30-08 | T-30-05, T-30-06 | Args pass unchanged into the audited `SteamGame.install()`; `uninstallGameCallback` registered unmodified | source assertion + typecheck | `npx tsc --noEmit && grep -c "ipcMain.handle(" src/backend/sidecar/installFlowRegistration.ts` | installFlowRegistration.ts (new) | ⬜ pending |
-| 30-02-T3 | 30-02 | 2 | REQ-30-05, REQ-30-09 | T-30-09 | gameStatusUpdate push proven; unported queue channel still marker-rejects | unit | `npx jest src/backend/sidecar/__tests__/installFlows.test.ts` | installFlows.test.ts (new) | ⬜ pending |
-| 30-03-T1 | 30-03 | 1 | REQ-30-07 | T-30-10, T-30-SC | `[ASSUMED]` crate human-verified before `cargo add` | manual (blocking-human) | n/a — checkpoint | n/a | ⬜ pending |
-| 30-03-T2 | 30-03 | 1 | REQ-30-07 | T-30-11, T-30-12, T-30-13 | Allowlist stays the gate; narrow capability; blocking picker off the reader thread | compile | `cd src-tauri && cargo check` | src-tauri/src/main.rs | ⬜ pending |
-| 30-03-T3 | 30-03 | 1 | REQ-30-07, REQ-30-09 | T-30-11, T-30-14 | Dialog failures resolve canceled instead of throwing; notify() logs title only | unit | `npx jest src/backend/sidecar/__tests__/dialogStub.test.ts` | dialogStub.test.ts (new) | ⬜ pending |
-| 30-04-T1 | 30-04 | 3 | REQ-30-02, REQ-30-04, REQ-30-08 | T-30-17 | Load-Bearing Invariants section provably unedited | source assertion | `grep -c "30-PORTED-CHANNELS" .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | 30-PORTED-CHANNELS.md (new) | ⬜ pending |
-| 30-04-T2 | 30-04 | 3 | REQ-30-03 | T-30-15, T-30-16 | One deferred item naming both proofs; G-23-01/02 named as pre-existing | source assertion | `grep -c "G-23-01" .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md` | 30-HUMAN-UAT.md (new) | ⬜ pending |
-| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run tauri:dev` | n/a | ⬜ pending |
+| 30-01-T1 | 30-01 | 1 | REQ-30-01, REQ-30-02, REQ-30-06 | T-30-02, T-30-04 | Handlers take no renderer-supplied args; token seam untouched except its docstring | source assertion + typecheck | `npx tsc --noEmit && grep -c "ipcMain.handle(" src/backend/sidecar/steamAuthFlowRegistration.ts` | steamAuthFlowRegistration.ts (new) | ✅ green |
+| 30-01-T2 | 30-01 | 1 | REQ-30-01, REQ-30-09 | T-30-01, T-30-03 | refreshToken never enters a snapshot; unported auth channels stay non-fatal | unit | `npx jest src/backend/sidecar/__tests__/steamAuthFlows.test.ts` | steamAuthFlows.test.ts (new) | ✅ green |
+| 30-02-T1 | 30-02 | 2 | REQ-30-04 | T-30-07 | Runner-generic update check stays single-sourced; no electron import in the shared module | unit + typecheck | `npx tsc --noEmit && npx jest src/backend/sidecar/__tests__` | checkGameUpdates.ts (new) | ✅ green |
+| 30-02-T2 | 30-02 | 2 | REQ-30-04, REQ-30-06, REQ-30-08 | T-30-05, T-30-06 | Args pass unchanged into the audited `SteamGame.install()`; `uninstallGameCallback` registered unmodified | source assertion + typecheck | `npx tsc --noEmit && grep -c "ipcMain.handle(" src/backend/sidecar/installFlowRegistration.ts` | installFlowRegistration.ts (new) | ✅ green |
+| 30-02-T3 | 30-02 | 2 | REQ-30-05, REQ-30-09 | T-30-09 | gameStatusUpdate push proven; unported queue channel still marker-rejects | unit | `npx jest src/backend/sidecar/__tests__/installFlows.test.ts` | installFlows.test.ts (new) | ✅ green |
+| 30-03-T1 | 30-03 | 1 | REQ-30-07 | T-30-10, T-30-SC | `[ASSUMED]` crate human-verified before `cargo add` | manual (blocking-human) | n/a — checkpoint | n/a | ✅ resolved (approved: 2.7.2, pinned as "2" — see 30-03-SUMMARY.md Checkpoint Resolution) |
+| 30-03-T2 | 30-03 | 1 | REQ-30-07 | T-30-11, T-30-12, T-30-13 | Allowlist stays the gate; narrow capability; blocking picker off the reader thread | compile | `cd src-tauri && cargo check` | src-tauri/src/main.rs | ✅ green |
+| 30-03-T3 | 30-03 | 1 | REQ-30-07, REQ-30-09 | T-30-11, T-30-14 | Dialog failures resolve canceled instead of throwing; notify() logs title only | unit | `npx jest src/backend/sidecar/__tests__/dialogStub.test.ts` | dialogStub.test.ts (new) | ✅ green |
+| 30-04-T1 | 30-04 | 3 | REQ-30-02, REQ-30-04, REQ-30-08 | T-30-17 | Load-Bearing Invariants section provably unedited | source assertion | `grep -c "30-PORTED-CHANNELS" .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | 30-PORTED-CHANNELS.md (new) | ✅ green |
+| 30-04-T2 | 30-04 | 3 | REQ-30-03 | T-30-15, T-30-16 | One deferred item naming both proofs; G-23-01/02 named as pre-existing | source assertion | `grep -c "G-23-01" .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md` | 30-HUMAN-UAT.md (new) | ✅ green |
+| 30-04-T3 | 30-04 | 3 | REQ-30-06, REQ-30-09 | T-30-09 | Both builds start; module-init order proven against the real bundle | manual (blocking) | `npm start`; `npm run tauri:dev` | n/a | AWAITING CHECKPOINT — this task is the blocking human-verify checkpoint this plan pauses at; not yet run |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -152,4 +152,10 @@ are documented in Manual-Only Verifications below, not deferred as gaps.
 - [x] Every test uses the three-way mock isolation pattern (no real userData writes)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** planned — statuses to be filled in by 30-04 Task 2 from real results.
+**Approval:** conditional-pass — all automated verifies for 30-01/30-02/30-03 and this plan's own
+Task 1/Task 2 are green (statuses above filled from real results, not planned intent). Final
+approval is gated on Task 3, the both-builds smoke-pass checkpoint (`npm start` +
+`npm run tauri:dev`), which has not yet run as of this document's finalization. This phase's
+overall claim level, per D-04/REQ-30-03, is **wired and unit-proven** — never "hardware-proven" —
+regardless of Task 3's outcome; see `30-HUMAN-UAT.md` for the deferred live-scan proof this
+claim-level statement covers.
