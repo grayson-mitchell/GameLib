@@ -129,6 +129,52 @@ describe('sidecar fileStore', () => {
     expect([...store]).toEqual([])
   })
 
+  it('CR-04: accessPropertiesByDotNotation:false keeps a URL key FLAT on disk', () => {
+    // Mirrors src/backend/logger/electronStores.ts's uploadedLogFileStore exactly —
+    // its keys are dpaste URLs (uploader.ts: `uploadedLogFileStore.set(url, data)`),
+    // which contain dots. Split on '.', the entry landed as
+    // {"https://dpaste": {"com/AB12": {…}}}, so getUploadedLogFiles() read
+    // `value.uploadedAt` as undefined -> NaN expiry -> the entry never expired.
+    const cwd = 'dot_notation_off_test'
+    const store = new FileStore({
+      cwd,
+      name: 'uploadedLogs',
+      accessPropertiesByDotNotation: false
+    })
+
+    const url = 'https://dpaste.com/AB12'
+    const uploadData = { name: 'gamelib.log', token: 'tok', uploadedAt: 1_700_000 }
+    store.set(url, uploadData)
+
+    expect(store.get(url)).toEqual(uploadData)
+    expect(store.has(url)).toBe(true)
+
+    // The on-disk shape must be flat — interchangeable with the file the Electron
+    // build's electron-store writes for this same store.
+    const raw = JSON.parse(
+      readFileSync(join(getPath('userData'), cwd, 'uploadedLogs.json'), 'utf-8')
+    )
+    expect(Object.keys(raw)).toEqual([url])
+    expect(raw[url]).toEqual(uploadData)
+
+    // getUploadedLogFiles() iterates raw_store top-level entries — each value must
+    // carry a real `uploadedAt`, not `undefined`.
+    for (const [, value] of Object.entries(store.store)) {
+      expect((value as { uploadedAt?: number }).uploadedAt).toBe(1_700_000)
+    }
+
+    store.delete(url)
+    expect(store.has(url)).toBe(false)
+    expect(store.store).toEqual({})
+  })
+
+  it('CR-04: the default (option absent) is still dot-notation, so nested paths keep working', () => {
+    const store = new FileStore({ cwd: 'dot_notation_default_test' })
+    store.set('a.b', 1)
+    expect(store.get('a.b')).toBe(1)
+    expect(store.store).toEqual({ a: { b: 1 } })
+  })
+
   it('CR-01: a `__proto__` key path segment cannot pollute Object.prototype', () => {
     const store = new FileStore({ cwd: 'proto_pollution_test' })
 

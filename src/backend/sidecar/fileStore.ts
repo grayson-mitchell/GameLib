@@ -60,12 +60,15 @@ import { getPath } from './pathShim'
 export interface FileStoreOptions {
   cwd?: string
   name?: string
-  // electron-store accepts additional options (defaults, schema,
-  // clearInvalidConfig, ...) that GameLib's call sites pass but this
-  // headless replacement does not need to act on. `defaults` IS honoured
-  // (see the constructor) — every other key is accepted for call-site
-  // compatibility and otherwise ignored.
+  // electron-store accepts additional options (schema, clearInvalidConfig,
+  // ...) that GameLib's call sites pass but this headless replacement does
+  // not need to act on. `defaults` and `accessPropertiesByDotNotation` ARE
+  // honoured (see the constructor) — every other key is accepted for
+  // call-site compatibility and otherwise ignored.
   defaults?: Record<string, unknown>
+  // CR-04: `false` makes every key a FLAT key (no dot-notation traversal),
+  // which is what `uploadedLogs` needs because its keys are dpaste URLs.
+  accessPropertiesByDotNotation?: boolean
   [key: string]: unknown
 }
 
@@ -176,12 +179,61 @@ function deleteAtPath(obj: Record<string, unknown>, path: string): void {
   if (cursor) delete cursor[last]
 }
 
+/**
+ * CR-04 (Phase 29 code review): flat (non-dot-notation) accessors, used when a store
+ * is constructed with `accessPropertiesByDotNotation: false`. Still refuses the
+ * disallowed segment names — `data['__proto__'] = v` reassigns the object's prototype
+ * even without any traversal.
+ */
+function getFlat(obj: Record<string, unknown>, key: string): unknown {
+  if (!isSafeKeyPath(key)) {
+    rejectUnsafePath('read')
+    return undefined
+  }
+  return Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined
+}
+
+function setFlat(
+  obj: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (!isSafeKeyPath(key)) {
+    rejectUnsafePath('write')
+    return
+  }
+  obj[key] = value
+}
+
+function deleteFlat(obj: Record<string, unknown>, key: string): void {
+  if (!isSafeKeyPath(key)) {
+    rejectUnsafePath('delete')
+    return
+  }
+  delete obj[key]
+}
+
 export default class FileStore {
   private readonly filePath: string
   private readonly cell: FileStoreCell
 
+  /**
+   * CR-04: electron-store's `accessPropertiesByDotNotation` option, which this class
+   * previously accepted into its index signature and then never acted on.
+   * `uploadedLogFileStore` (src/backend/logger/electronStores.ts) sets it to `false`
+   * ON PURPOSE because its KEYS ARE dpaste URLs (`uploadedLogFileStore.set(url, …)`,
+   * uploader.ts) — split on `.`, `https://dpaste.com/AB12` was written as
+   * `{"https://dpaste": {"com/AB12": {…}}}`. That broke the file's own headline
+   * guarantee (a sidecar-written value and an Electron-build-written value read back
+   * identically) and made `getUploadedLogFiles()` compute `NaN` expiry from a missing
+   * `uploadedAt`, so every malformed entry was returned to the renderer as "valid" and
+   * never expired. Defaults to `true`, matching electron-store.
+   */
+  private readonly dotNotation: boolean
+
   constructor(options: FileStoreOptions = {}) {
     this.filePath = resolveStorePath(options)
+    this.dotNotation = options.accessPropertiesByDotNotation !== false
 
     let cell = cellRegistry.get(this.filePath)
     if (!cell) {
@@ -200,8 +252,8 @@ export default class FileStore {
         !Array.isArray(options.defaults)
       ) {
         for (const [key, value] of Object.entries(options.defaults)) {
-          if (getAtPath(data, key) === undefined) {
-            setAtPath(data, key, value)
+          if (this.readAt(data, key) === undefined) {
+            this.writeAt(data, key, value)
           }
         }
       }
@@ -238,22 +290,47 @@ export default class FileStore {
     }
   }
 
+  /** CR-04: one place that branches on `accessPropertiesByDotNotation`. */
+  private readAt(obj: Record<string, unknown>, key: string): unknown {
+    return this.dotNotation ? getAtPath(obj, key) : getFlat(obj, key)
+  }
+
+  private writeAt(
+    obj: Record<string, unknown>,
+    key: string,
+    value: unknown
+  ): void {
+    if (this.dotNotation) {
+      setAtPath(obj, key, value)
+    } else {
+      setFlat(obj, key, value)
+    }
+  }
+
+  private removeAt(obj: Record<string, unknown>, key: string): void {
+    if (this.dotNotation) {
+      deleteAtPath(obj, key)
+    } else {
+      deleteFlat(obj, key)
+    }
+  }
+
   has(key: string): boolean {
-    return getAtPath(this.cell.data, key) !== undefined
+    return this.readAt(this.cell.data, key) !== undefined
   }
 
   get(key: string, defaultValue?: unknown): unknown {
-    const value = getAtPath(this.cell.data, key)
+    const value = this.readAt(this.cell.data, key)
     return value === undefined ? defaultValue : value
   }
 
   set(key: string, value: unknown): void {
-    setAtPath(this.cell.data, key, value)
+    this.writeAt(this.cell.data, key, value)
     this.persist()
   }
 
   delete(key: string): void {
-    deleteAtPath(this.cell.data, key)
+    this.removeAt(this.cell.data, key)
     this.persist()
   }
 
