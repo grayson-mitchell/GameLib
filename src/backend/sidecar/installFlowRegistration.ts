@@ -81,6 +81,8 @@
  * `electron` module.
  */
 
+import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
+
 import { ipcMain } from './electronStub'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
@@ -118,6 +120,17 @@ export function registerInstallFlows(): void {
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as InstallParams
       const { appName, runner, path } = params
+
+      // CR-01: this bypass (D-05a) only ever constructs a SteamGame. `install`
+      // is a runner-generic channel — frontend/helpers/library.ts calls it for
+      // every runner. Reject non-steam runners honestly instead of silently
+      // running the Steam depot installer against a foreign appName. Porting
+      // full `libraryManagerMap[runner]` dispatch is Phase 32's cluster.
+      if (runner !== 'steam') {
+        throw new Error(
+          `${UNPORTED_CHANNEL_MARKER} install: runner '${runner}' not ported`
+        )
+      }
 
       // The one thing addToQueue() did that the frontend's button state
       // depends on (D-05a) — reproduced as a single direct push, not a
@@ -177,6 +190,15 @@ export function registerInstallFlows(): void {
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as UpdateParams
       const { appName, runner } = params
+
+      // CR-01: identical defect to `install` above — reject non-steam
+      // runners honestly instead of running `new SteamGame(appName).update()`
+      // against a foreign appName.
+      if (runner !== 'steam') {
+        throw new Error(
+          `${UNPORTED_CHANNEL_MARKER} updateGame: runner '${runner}' not ported`
+        )
+      }
 
       sendGameStatusUpdate({ appName, runner, status: 'updating' })
       try {

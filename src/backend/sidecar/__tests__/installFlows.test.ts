@@ -316,6 +316,63 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     // this file imports SteamGame directly, no download-queue module at all.
   })
 
+  // CR-01: `install` must reject non-steam runners honestly instead of
+  // silently constructing a SteamGame and running the depot installer
+  // against a foreign appName.
+  it('CR-01: install rejects a non-steam runner and never constructs a SteamGame', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-nonsteam-1', 'install', [
+      {
+        appName: 'gog-app-1',
+        runner: 'gog',
+        gameInfo: {},
+        path: '/fake/gog/library'
+      }
+    ])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'install-nonsteam-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(response?.ok).toBe(false)
+    expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    expect(response?.error).toContain('gog')
+
+    expect(SteamGame as unknown as jest.Mock).not.toHaveBeenCalled()
+    expect(steamGameMocks.install).not.toHaveBeenCalled()
+
+    // No status frame should have been pushed either — the rejection happens
+    // before the D-05a 'queued' push.
+    const statusFrame = frames.find(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'gameStatusUpdate'
+    )
+    expect(statusFrame).toBeUndefined()
+  })
+
+  // CR-01: `updateGame` has the identical defect — same guard, same proof.
+  it('CR-01: updateGame rejects a non-steam runner and never constructs a SteamGame', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'update-nonsteam-1', 'updateGame', [
+      {
+        appName: 'gog-app-1',
+        runner: 'gog',
+        gameInfo: {}
+      }
+    ])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'update-nonsteam-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(response?.ok).toBe(false)
+    expect(response?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    expect(response?.error).toContain('gog')
+
+    expect(SteamGame as unknown as jest.Mock).not.toHaveBeenCalled()
+    expect(steamGameMocks.update).not.toHaveBeenCalled()
+  })
+
   // Test 4: uninstall resolves and delegates to the runner-generic
   // uninstallGameCallback (registered UNCHANGED, D-05b).
   it('Test 4: uninstall resolves and delegates to the real uninstallGameCallback', async () => {
