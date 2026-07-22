@@ -8,6 +8,36 @@ import {
 } from 'common/types/electron_store'
 import { Get } from 'type-fest'
 
+// REQ-29-01 / Pitfall 4: a `ValidStoreName` string is NOT the on-disk
+// filename — `options.cwd` + (`options.name` ?? 'config') governs that, and
+// `TypeCheckedStoreBackend`'s constructor drops its `name` parameter
+// entirely once `new Store(options)` is called. Any generic, name-keyed
+// dispatch (the sidecar's storeSet/storeGet handlers, plan 29-05) MUST
+// resolve the live instance through this registry and must NEVER
+// reconstruct a path/instance from the name string itself.
+export interface RegisteredStore {
+  instance: TypeCheckedStoreBackend<ValidStoreName>
+  options: Store.Options<StoreStructure[ValidStoreName]>
+}
+
+const storeRegistry = new Map<string, RegisteredStore>()
+
+export function getRegisteredStore(
+  name: string
+): TypeCheckedStoreBackend<ValidStoreName> | undefined {
+  return storeRegistry.get(name)?.instance
+}
+
+export function getRegisteredStoreOptions(
+  name: string
+): Store.Options<StoreStructure[ValidStoreName]> | undefined {
+  return storeRegistry.get(name)?.options
+}
+
+export function getRegisteredStoreNames(): string[] {
+  return [...storeRegistry.keys()]
+}
+
 export class TypeCheckedStoreBackend<
   Name extends ValidStoreName
 > implements TypeCheckedStore<Name> {
@@ -16,6 +46,10 @@ export class TypeCheckedStoreBackend<
   constructor(name: Name, options: Store.Options<StoreStructure[Name]>) {
     // @ts-expect-error This looks like a bug in electron-store's type definitions
     this.store = new Store(options)
+    storeRegistry.set(name, {
+      instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
+      options: options as Store.Options<StoreStructure[ValidStoreName]>
+    })
   }
 
   public has(key: string) {
