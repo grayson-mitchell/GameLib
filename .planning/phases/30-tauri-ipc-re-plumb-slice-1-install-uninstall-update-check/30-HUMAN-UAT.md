@@ -7,48 +7,84 @@ QR-login and install-slice channels is green (84 suites / 1759 tests, `src/backe
 but the QR login flow itself is now a **known defect**, not merely unproven. What follows is the
 actual human-observed result, not a still-pending deferral.
 
-## G-30-01 — Steam QR login logon button unresponsive under Tauri (KNOWN DEFECT)
+## G-30-01 — Steam tile "logon button unresponsive" — CORRECTED 2026-07-23, was a misdiagnosis
 
-**Status: FAIL, human-observed 2026-07-22 (30-04 Task 3 checkpoint).** This is a confirmed defect
-with a reproduction, not a deferred/unproven item.
+**Original status (2026-07-22): FAIL, filed as "Steam QR login logon button unresponsive under
+Tauri."** Follow-up debugging (`.planning/debug/resolved/steam-logon-button-tauri.md`) found the
+original framing below was a **misread of which control the tester actually clicked** — not a QR
+login-flow defect. Corrected description follows; the original bullets are preserved struck
+through for the record.
 
-### What was observed
+### What was actually happening
 
-The coordinator asked the human tester explicitly which of the four Task 3 conditions they
-actually observed, so the following is recorded exactly as reported, split by condition:
+The Tauri build reads Steam sign-in state from the same on-disk `steamConfigStore.userData` the
+Electron build already populated in this profile (377 owned games) — a real, already-authenticated
+session, not stale/corrupted state. The Steam tile therefore correctly rendered its **Logout**-style
+control, not the Login control the original report assumed. The tester clicked **Logout**, not a
+QR "logon" button — the QR tab was never reached because it is unreachable by design while already
+signed in, not because it is broken.
 
-1. Window painted a real UI (not blank) — **PASS, human-observed.**
-2. Steam login screen renders its QR tab — **FAIL, human-observed.** Verbatim report: *"manage
-   accounts show, logon button unresponsive."* The Manage Accounts UI does render, but the logon
-   button does not respond to interaction, and the QR tab was never reached/rendered as a result.
-3. No `is not a constructor` error in console — **PASS, human-observed** (the 27-05-class
-   regression did not reproduce).
-4. `UNPORTED_CHANNEL_MARKER` flip — **PASS, human-observed.** `checkSteamInstalled`/`steamStartQR`/
-   `listSteamLibraryTargets` no longer warn; a deliberately-unported channel still warns rather
-   than crashing.
+The real defect: `logoutSteam` is a fire-and-forget IPC `send` (`makeListenerCaller`, mirroring
+`ipcRenderer.send`), and Phase 30 D-02 explicitly scoped Steam sign-out **out of scope** for this
+slice — `steamAuthFlowRegistration.ts` deliberately registers no sidecar listener for it. Under
+Tauri, the click reaches `sidecarRpc.ts`'s `dispatchSend`, finds zero registered listeners, and
+returns having done nothing — silently and "successfully" (a `send` has no response protocol, so
+there is nothing to reject, unlike an unported `invoke` channel, which at least rejects with
+`UNPORTED_CHANNEL_MARKER`). `GlobalState.tsx`'s `steamLogout()` then optimistically clears local
+React state and calls `window.location.reload()` regardless — masking the no-op by reloading the
+page, after which the untouched `steamConfigStore.userData` rehydrates the same signed-in identity
+and the tile reverts to "Logout" again. Net effect: click Logout, page silently reloads, nothing
+actually changes, presenting as an unresponsive button. `Runner/index.tsx`'s `handleLogout` also
+had no `try/catch`, so any future genuine rejection would have latched the button in "Logging
+out..." forever.
 
-**Net result: 3 of 4 conditions PASS. The additive/reversible invariant and the no-regression
-claim (conditions 1, 3, 4) hold and are human-verified.** The Steam QR login path may **NOT** be
-claimed as working end-to-end under Tauri — registering a channel and it staying silent
-(condition 4) is not the same as the UI flow that depends on it actually working. Registration
-!= working flow.
+~~1. Window painted a real UI (not blank) — **PASS, human-observed.**~~ (still accurate, unaffected
+by this correction)
+~~2. Steam login screen renders its QR tab — **FAIL, human-observed.** Verbatim report: "manage
+accounts show, logon button unresponsive." The Manage Accounts UI does render, but the logon
+button does not respond to interaction, and the QR tab was never reached/rendered as a result.~~
+**Corrected:** the tile was rendering its already-authenticated Logout control, not a Login
+control; the tester's "logon button unresponsive" report was Logout, not a QR-flow logon button,
+and the QR tab was never expected to be reached in this session.
+~~3. No `is not a constructor` error in console — **PASS, human-observed** (the 27-05-class
+regression did not reproduce).~~ (still accurate, unaffected)
+~~4. `UNPORTED_CHANNEL_MARKER` flip — **PASS, human-observed.** `checkSteamInstalled`/`steamStartQR`/
+`listSteamLibraryTargets` no longer warn; a deliberately-unported channel still warns rather than
+crashing.~~ (still accurate, unaffected — and now confirmed genuinely irrelevant to this defect,
+since the actual bug is in `logoutSteam`'s `send`/listener path, not the three QR `invoke`
+channels this condition covers)
 
-### Reproduction
+**Net result: the QR login channels (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`) were never
+implicated.** The actual defect is Steam sign-out silently no-op'ing under Tauri (D-02 scoped this
+out deliberately) with no error surfaced to the user. Fix: `GlobalState.tsx`'s `steamLogout()` now
+detects `isTauri()` and shows an honest "Sign out unavailable in this build" dialog instead of
+pretending logout worked; `Runner/index.tsx`'s `handleLogout` now wraps `logoutAction()` in
+try/catch/finally so the button can never latch regardless of cause.
 
-1. `npm run tauri:dev` (bundles first — no separate build step exists).
-2. Reach the Steam login screen.
-3. Observe: Manage Accounts renders. Click the logon button.
-4. Observe: the button does not respond; the QR tab is never reached.
+**RESOLVED 2026-07-23 — human re-verification PASSED.** Verbatim: "yes, both get expected
+behaviors" — confirming (a) under Tauri, clicking Logout now shows the honest "sign-out isn't
+available in this build" dialog, with no page reload and no latch/glitch (tile still correctly
+reads Logout), and (b) under Electron (`npm start`), Steam Logout is unaffected and still genuinely
+signs out and reloads as before. G-30-01 is closed. See
+`.planning/debug/resolved/steam-logon-button-tauri.md` for the full investigation record.
 
-### Untested hypothesis for the follow-up debugger (NOT a finding — do not act on this without
-### separate investigation)
+### Reproduction (corrected)
 
-Because the three ported Steam auth channels (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`)
-are confirmed silent — no `UNPORTED_CHANNEL_MARKER` warning fires for any of them (condition 4
-above) — the unresponsive logon button likely depends on some **other** channel that is still
-unported or erroring, not the QR channels this phase ported. This is a hypothesis for whoever
-picks up the debug work next, not a conclusion reached by this plan. This plan does not
-investigate further — fixing the button is out of this plan's scope.
+1. `npm run tauri:dev` against a profile already signed in to Steam (e.g. one that previously
+   signed in under the Electron build, sharing the same on-disk config store).
+2. Reach the Steam login screen — the tile renders its Logout control (this is correct, expected
+   behavior for an already-authenticated session, not a bug).
+3. Click **Logout**.
+4. Before the fix: the page silently reloads and the tile still shows Logout — no visible
+   feedback, indistinguishable from "did nothing." After the fix: a dialog explains sign-out isn't
+   available in this build yet, and the button never optimistically wipes local state or reloads.
+
+### Original "untested hypothesis" section — RESOLVED, superseded by the above
+
+The original report speculated the unresponsive button "likely depends on some other channel that
+is still unported or erroring, not the QR channels this phase ported." This is now confirmed: the
+other channel is `logoutSteam`, and the QR channels this phase ported were never reached or
+implicated in this session at all — the tester was already authenticated and never needed them.
 
 ### Prerequisite for a future retest — confirm before starting
 
@@ -57,19 +93,25 @@ meaningful. If it is `false` (or unset), `SteamGame.install()` silently takes th
 `steam://install` branch instead of the native depot-download branch this phase exists to prove
 (30-RESEARCH.md Open Question 2).
 
-### The install/uninstall E2E remains gated on this defect, not independently proven
+### The install/uninstall E2E remains unreached this session — corrected reason
 
 Every acceptance criterion for the install/uninstall slice (30-02) is reachable only through a
-signed-in, populated library. Because the QR login button is broken, **the install/uninstall E2E
-was not reached and remains unproven** — this is not a second, separate open item; it is the same
-gate D-04's tension note originally named, now resolved from "deferred" to "blocked by a known
-defect." A reader must not conclude the install slice was independently hardware-proven — it was
-not reachable this session.
+signed-in, populated library. **Corrected:** this was NOT blocked by a broken QR login flow — the
+tester's session was already signed in (377 owned games, carried over from the same on-disk
+`steamConfigStore` the Electron build populated) and never needed the QR tab at all. The E2E
+simply was not attempted this session because the tester's next action was clicking Logout (see
+G-30-01 above), not navigating to the library. A future retest does not need to "fix G-30-01" as a
+precondition — it can skip sign-in entirely (the session is already authenticated) and proceed
+directly to the library/install steps below. A reader must not conclude the install slice was
+independently hardware-proven — it was not reachable this session, but for a much narrower reason
+than originally recorded.
 
-**Full tester steps, to be re-run once G-30-01 is fixed:**
+**Full tester steps, to be re-run (sign-in may already be satisfied — confirm the tile shows
+Logout before skipping step 3):**
 1. Confirm `enableSteamNativeInstall` is `true` in the shared config.
 2. `npm run tauri:dev`.
-3. Sign in via the QR tab (blocked today by G-30-01).
+3. If the tile shows a Login control, sign in via the QR tab. If it already shows Logout, the
+   session is already authenticated — do not click Logout, proceed to step 4.
 4. Confirm the library populates with the account's owned Steam titles.
 5. Click **Install** on a Steam title.
 6. Confirm the native folder picker opens (the `dialog_open` path backed by
@@ -95,8 +137,15 @@ is still open — do not file it as a new Phase 30 defect.
 ### Summary
 
 This phase's honest claim is **wired and unit-proven** for every channel it ports, and the
-additive/reversible invariant (no regression to either build) is human-verified. The Steam QR
-login flow is **known-broken** at the UI interaction layer under Tauri (**G-30-01**, logon button
-unresponsive) — a status strictly worse than "unproven," and the install/uninstall E2E it gates
-remains unreached as a direct consequence. Phase 23's G-23-01/G-23-02 remain named for whenever a
-retest reaches a real depot run.
+additive/reversible invariant (no regression to either build) is human-verified. The Steam **QR
+login flow itself was never actually exercised or found broken this session** — the tester was
+already authenticated (session carried over from the Electron build's on-disk store) and the tile
+correctly rendered its Logout control. **G-30-01, corrected 2026-07-23, RESOLVED 2026-07-23:** the
+real defect was `logoutSteam` silently no-op'ing under Tauri (deliberately unported per D-02) with
+no error surfaced to the user, not a QR-flow regression — see the corrected G-30-01 entry above and
+`.planning/debug/resolved/steam-logon-button-tauri.md`. The fix (`GlobalState.tsx`,
+`Runner/index.tsx`) is applied and human-verified live (both the Tauri honest-dialog path and the
+unaffected Electron path confirmed working as expected). The install/uninstall E2E remains
+unreached this session, but for the narrower reason that the tester clicked Logout rather than
+proceeding to the library — not because sign-in was broken. Phase 23's G-23-01/G-23-02 remain named
+for whenever a retest reaches a real depot run.
