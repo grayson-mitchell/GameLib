@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use keyring::Entry;
 use serde::Serialize;
@@ -81,8 +81,10 @@ struct FrontendMessagePayload {
 /// id counter. Wrapped in an Arc and `manage`d so the four commands can reach it.
 struct SidecarState {
     stdin: Mutex<ChildStdin>,
-    /// id -> one-shot sender the reader thread fulfils when the matching response arrives.
-    pending: Mutex<HashMap<String, Sender<Result<Value, String>>>>,
+    /// id -> (send Instant, one-shot sender) the reader thread fulfils when the matching
+    /// response arrives. The `Instant` is TEMPORARY [G-30-01] diagnostic plumbing (elapsed-ms
+    /// logging) — safe to revert to a bare `Sender` once G-30-01 is closed.
+    pending: Mutex<HashMap<String, (Instant, Sender<Result<Value, String>>)>>,
     counter: AtomicU64,
     /// Kept alive so the child is not reaped; the shell owns the sidecar's lifetime.
     _child: Mutex<Child>,
@@ -116,24 +118,41 @@ impl SidecarState {
     fn invoke(&self, channel: String, args: Vec<Value>) -> Result<Value, String> {
         let id = self.next_id();
         let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+        // TEMPORARY [G-30-01] diagnostic: records when this invoke was sent so the
+        // recv/timeout branches below (and the reader thread's correlation site) can log
+        // elapsed_ms. Revert alongside the rest of [G-30-01] once this gap is resolved.
+        let start = Instant::now();
         {
             let mut pending = self.pending.lock().map_err(|e| e.to_string())?;
-            pending.insert(id.clone(), tx);
+            pending.insert(id.clone(), (start, tx));
         }
         let req = SidecarRpcRequest {
             id: id.clone(),
             kind: "invoke",
-            channel,
+            channel: channel.clone(),
             args,
         };
+        eprintln!("[G-30-01] send id={id} channel={channel}");
         if let Err(e) = self.write_frame(&req) {
             self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+            eprintln!("[G-30-01] send FAILED id={id} channel={channel} error={e}");
             return Err(e);
         }
         match rx.recv_timeout(INVOKE_TIMEOUT) {
-            Ok(result) => result,
+            Ok(result) => {
+                let elapsed_ms = start.elapsed().as_millis();
+                eprintln!(
+                    "[G-30-01] recv id={id} channel={channel} elapsed_ms={elapsed_ms} outcome={}",
+                    if result.is_ok() { "ok" } else { "err" }
+                );
+                result
+            }
             Err(_) => {
                 self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                let elapsed_ms = start.elapsed().as_millis();
+                eprintln!(
+                    "[G-30-01] TIMEOUT id={id} channel={channel} elapsed_ms={elapsed_ms} INVOKE_TIMEOUT={INVOKE_TIMEOUT:?} — pending entry removed; a response arriving after this point will hit the DROPPED log below (CR-03 silent-drop, made loud)"
+                );
                 Err("sidecar invoke timed out".into())
             }
         }
@@ -392,18 +411,37 @@ fn start_reader(
                         .lock()
                         .ok()
                         .and_then(|mut p| p.remove(id));
-                    if let Some(tx) = sender {
-                        let ok = value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
-                        let outcome = if ok {
-                            Ok(value.get("result").cloned().unwrap_or(Value::Null))
-                        } else {
-                            Err(value
-                                .get("error")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("sidecar error")
-                                .to_string())
-                        };
-                        let _ = tx.send(outcome);
+                    let ok = value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+                    match sender {
+                        Some((start, tx)) => {
+                            // TEMPORARY [G-30-01] diagnostic.
+                            let elapsed_ms = start.elapsed().as_millis();
+                            eprintln!(
+                                "[G-30-01] correlated id={id} elapsed_ms={elapsed_ms} outcome={}",
+                                if ok { "ok" } else { "err" }
+                            );
+                            let outcome = if ok {
+                                Ok(value.get("result").cloned().unwrap_or(Value::Null))
+                            } else {
+                                Err(value
+                                    .get("error")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("sidecar error")
+                                    .to_string())
+                            };
+                            let _ = tx.send(outcome);
+                        }
+                        None => {
+                            // TEMPORARY [G-30-01] diagnostic: this is the CR-03 silent-drop
+                            // path (30-REVIEW.md) made loud. Reaching this arm means a response
+                            // arrived for an id with no pending sender — either it already timed
+                            // out at INVOKE_TIMEOUT (see the TIMEOUT log above) or the id is
+                            // otherwise unknown. Previously this was silently swallowed.
+                            eprintln!(
+                                "[G-30-01] DROPPED late/unknown response id={id} outcome={} — no pending sender (already timed out at INVOKE_TIMEOUT, or unknown id)",
+                                if ok { "ok" } else { "err" }
+                            );
+                        }
                     }
                 }
                 continue;

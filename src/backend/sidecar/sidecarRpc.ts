@@ -82,6 +82,14 @@ function isValidRequest(value: unknown): value is SidecarRpcRequest {
 }
 
 async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
+  // TEMPORARY [G-30-01] diagnostic: proves whether the frame reached the sidecar's dispatch
+  // at all, and whether the handler ran to completion. Written to stderr so it surfaces in the
+  // `tauri dev` terminal via main.rs's `start_stderr_forwarder` (`[sidecar:err]` prefix).
+  // Revert alongside the rest of [G-30-01] once this gap is resolved.
+  const startedAt = Date.now()
+  process.stderr.write(
+    `[G-30-01][sidecar] dispatchInvoke start id=${request.id} channel=${request.channel}\n`
+  )
   const handler = handlerRegistry.get(request.channel)
   if (!handler) {
     // Tagged as an expected seam gap rather than a malfunction: in the walking skeleton
@@ -94,12 +102,18 @@ async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
       ok: false,
       error: `${UNPORTED_CHANNEL_MARKER} No handler registered for channel '${request.channel}'`
     }
+    process.stderr.write(
+      `[G-30-01][sidecar] dispatchInvoke unhandled id=${request.id} channel=${request.channel} elapsed_ms=${Date.now() - startedAt}\n`
+    )
     writeLine(response)
     return
   }
   try {
     const result = await handler(undefined, ...request.args)
     const response: SidecarRpcResponse = { id: request.id, ok: true, result }
+    process.stderr.write(
+      `[G-30-01][sidecar] dispatchInvoke ok id=${request.id} channel=${request.channel} elapsed_ms=${Date.now() - startedAt}\n`
+    )
     writeLine(response)
   } catch (error) {
     const response: SidecarRpcResponse = {
@@ -107,6 +121,9 @@ async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
       ok: false,
       error: error instanceof Error ? error.message : String(error)
     }
+    process.stderr.write(
+      `[G-30-01][sidecar] dispatchInvoke error id=${request.id} channel=${request.channel} elapsed_ms=${Date.now() - startedAt} error=${response.error}\n`
+    )
     writeLine(response)
   }
 }
