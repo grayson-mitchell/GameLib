@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: verifying
+status: executing
 stopped_at: Phase 29 context gathered
-last_updated: "2026-07-22T04:48:29.402Z"
-last_activity: 2026-07-22
+last_updated: "2026-07-22T05:58:25.817Z"
+last_activity: 2026-07-22 -- Phase 29 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
@@ -35,8 +35,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 28 (tauri-keyring-real-safestorage-via-the-keyring-crate) — EXECUTING
 Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-07-22
+Status: Ready to execute
+Last activity: 2026-07-22 -- Phase 29 planning complete
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on

@@ -1068,12 +1068,23 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 29-01-PLAN.md — fileStore.ts fidelity: path-keyed shared cell (D-14), options.defaults, atomic persist (D-10), D-07 comment
 - [ ] 29-02-PLAN.md — extract the 3 heavy store declarations into thin modules (D-15) + name-keyed store registry
 - [ ] 29-03-PLAN.md — storePolicy.ts fail-closed allow-list (D-08), declared boot/lazy tiers (D-09/D-13), channel constants (D-12)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 29-04-PLAN.md — sidecar read path: storeRegistration.ts, generalized boot-set snapshot, lazy per-store fetch, walk-every-store coverage test
 - [ ] 29-05-PLAN.md — renderer bridge: tiered snapshot, D-04 lazy-miss marker + self-heal, storeChanged patching, allow-list on the Tauri path only
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 29-06-PLAN.md — sidecar write path: real storeSet/storeDelete/storeNew behind one choke point (D-05) + per-key change events (D-06) + Phase 28 D-04 guard
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 29-07-PLAN.md — SEAM.md re-baseline (checklist step 5), accepted-constraints record (D-07/D-01), phase gate + both-builds live check
 
 ---

@@ -1,8 +1,8 @@
 ---
 phase: 29
 slug: tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-22
 ---
@@ -108,12 +108,13 @@ store path under the real user profile.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] No test resolves a store path under the real user profile
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have automated verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] No test resolves a store path under the real user profile (asserted per test task; 29-07 Task 2 re-asserts the mock is present and forbids weakening it)
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-07-22 — gsd-plan-checker returned VERIFICATION PASSED on the
+revised plan set (commit `06ea73b4`), Dimension 8 PASS.
