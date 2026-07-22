@@ -960,7 +960,11 @@ addHandler('getSteamInstallSize', async (event, appId) =>
 addHandler('listSteamLibraryTargets', async () =>
   isSteamNativeInstallEnabled() ? listSteamLibraryTargets() : []
 )
-addListener('logoutSteam', () => SteamUser.logout())
+// SteamUser.logout() is async (D-09 gap fix — clears the refresh token
+// through the TokenStore seam, which may RPC to Rust in the sidecar build).
+// Matches this file's existing fire-and-forget IPC convention for async void
+// listeners (e.g. addListener('quit', async () => handleExit())).
+addListener('logoutSteam', async () => SteamUser.logout())
 
 // Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.
 // D-04: bottled-Steam auth stays opaque — GameLib never inspects

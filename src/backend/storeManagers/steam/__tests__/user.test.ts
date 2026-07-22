@@ -52,11 +52,18 @@ const mockConfigStore = {
   get: jest.fn(),
   get_nodefault: jest.fn(),
   set: jest.fn(),
+  delete: jest.fn(),
   clear: jest.fn()
 }
 jest.mock('../electronStores', () => ({
   configStore: mockConfigStore
 }))
+// NOTE: '../tokenStore' is intentionally NOT mocked here. logout() must
+// route the refresh token through the real TokenStore seam
+// (getTokenStore().clearToken() -> ElectronTokenStore.clearToken() ->
+// configStore.delete(TOKEN_STORE_KEY)), exercised against the mocked
+// configStore/safeStorage above — same approach the pre-existing
+// getCredentials()/finishAuth()/QR tests already use for setToken/getToken.
 
 // ── steam-session mock ────────────────────────────────────────────────────────
 // Capture on() handlers so tests can trigger events manually
@@ -146,6 +153,7 @@ describe('SteamUser', () => {
 
     // configStore mocks
     mockConfigStore.clear.mockImplementation(() => {})
+    mockConfigStore.delete.mockImplementation(() => {})
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
     mockConfigStore.set.mockImplementation(() => {})
 
@@ -307,23 +315,49 @@ describe('SteamUser', () => {
   })
 
   // ── AUTH-04: logout ────────────────────────────────────────────────────────
+  //
+  // D-09 gap fix (28-03): logout() must route the refresh token through the
+  // TokenStore seam (getTokenStore().clearToken() -> configStore.delete(
+  // TOKEN_STORE_KEY), TOKEN_STORE_KEY === 'refreshToken' per constants.ts)
+  // instead of a blanket configStore.clear() — and must still clear the
+  // remaining session keys (isLoggedIn, userData) explicitly so Electron's
+  // observable behavior is unchanged. logout() is now async because
+  // clearToken() may be an RPC round-trip to Rust in the sidecar build.
 
   describe('logout()', () => {
-    test('calls configStore.clear()', () => {
-      SteamUser.logout()
-      expect(mockConfigStore.clear).toHaveBeenCalledTimes(1)
+    test('does NOT call configStore.clear() (D-09 — must go through the seam, never a blanket wipe)', async () => {
+      await SteamUser.logout()
+      expect(mockConfigStore.clear).not.toHaveBeenCalled()
     })
 
-    test('does not throw when no steam-user client is connected', () => {
-      expect(() => SteamUser.logout()).not.toThrow()
+    test('clears the refresh token via configStore.delete("refreshToken") — the TokenStore seam target key', async () => {
+      await SteamUser.logout()
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
     })
 
-    test('isLoggedIn returns false after logout clears store', () => {
-      // Simulate the store being cleared
-      mockConfigStore.clear.mockImplementation(() => {
-        mockConfigStore.get_nodefault.mockReturnValue(undefined)
+    // Regression guard for the naive one-line swap
+    // (configStore.clear() -> getTokenStore().clearToken()): that swap alone
+    // stops clearing isLoggedIn/userData, so the user would appear to stay
+    // "logged in" after logout. This test fails under that naive fix and
+    // only passes when isLoggedIn/userData are ALSO explicitly cleared.
+    test('also explicitly clears isLoggedIn and userData session keys (not just the token)', async () => {
+      await SteamUser.logout()
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('userData')
+    })
+
+    test('does not throw when no steam-user client is connected', async () => {
+      await expect(SteamUser.logout()).resolves.not.toThrow()
+    })
+
+    test('isLoggedIn returns false after logout clears the isLoggedIn key', async () => {
+      // Simulate the targeted delete removing the key from the store
+      mockConfigStore.delete.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') {
+          mockConfigStore.get_nodefault.mockReturnValue(undefined)
+        }
       })
-      SteamUser.logout()
+      await SteamUser.logout()
       expect(SteamUser.isLoggedIn()).toBe(false)
     })
   })
@@ -351,7 +385,7 @@ describe('SteamUser', () => {
     test('configStore.set is never called with password or credentials keys', async () => {
       // This is asserted across all test methods that call set
       // We verify no call used 'password' as a key
-      SteamUser.logout()
+      await SteamUser.logout()
 
       const setCalls = mockConfigStore.set.mock.calls
       for (const [key] of setCalls) {
@@ -718,7 +752,7 @@ describe('SteamUser', () => {
 
     test('returns { status: "error" } when no active session', async () => {
       // Call logout to clear the session — logout() sets this.session = null
-      SteamUser.logout()
+      await SteamUser.logout()
       const result = await SteamUser.submitSteamGuardCode('12345')
       expect(result.status).toBe('error')
     })
@@ -932,18 +966,20 @@ describe('SteamUser', () => {
       await sessionOnHandlers['authenticated']?.()
 
       // Now logout
-      SteamUser.logout()
+      await SteamUser.logout()
       expect(mockSteamUserInstance.logOff).toHaveBeenCalled()
-      expect(mockConfigStore.clear).toHaveBeenCalled()
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('isLoggedIn')
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('userData')
     })
   })
 
   // ── LIB-01: reconnect on startup ───────────────────────────────────────────
 
   describe('ensureConnected()', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Reset the in-memory client to null so we exercise the reconnect path
-      SteamUser.logout()
+      await SteamUser.logout()
     })
 
     test('returns false when not logged in', async () => {

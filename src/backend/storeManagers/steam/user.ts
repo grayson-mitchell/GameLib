@@ -145,7 +145,22 @@ export class SteamUser {
 
   // ── AUTH-04: Logout ────────────────────────────────────────────────────────
 
-  static logout(): void {
+  /**
+   * D-09 gap fix (28-03 gap cycle): the refresh token MUST go through the
+   * TokenStore seam (getTokenStore().clearToken()) — never a direct
+   * configStore call — so a future Tauri build's keyring-backed store is
+   * cleared correctly instead of leaving a stale Keychain entry behind.
+   * `configStore.clear()` was replaced with targeted deletes of the specific
+   * session keys it used to wipe (isLoggedIn, userData) so the observable
+   * Electron behavior is unchanged — a blanket clear() would also nuke any
+   * other key ever added to this shared store (see electronStores.ts).
+   * clearToken() may be an async RPC round-trip to Rust in the sidecar build,
+   * so this method is async; addListener('logoutSteam', ...) in main.ts
+   * awaits it inside its own async wrapper, matching this file's existing
+   * fire-and-forget IPC convention (e.g. addListener('quit', async () =>
+   * handleExit())) — never a floating promise.
+   */
+  static async logout(): Promise<void> {
     if (this.client) {
       try {
         this.client.logOff()
@@ -169,7 +184,12 @@ export class SteamUser {
     SteamUser._credSettleCallbacks = []
     SteamUser.credSessionState = { status: 'error' }
     for (const cb of pendingCbs) cb({ status: 'error' })
-    configStore.clear()
+    // Token through the seam (D-09) first, then the remaining session keys
+    // configStore.clear() used to wipe — see electronStores.ts's configStore
+    // schema (isLoggedIn/userData are the only other keys ever written there).
+    await getTokenStore().clearToken()
+    configStore.delete('isLoggedIn')
+    configStore.delete('userData')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
 
