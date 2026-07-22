@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 30 context gathered
-last_updated: "2026-07-22T10:49:11.714Z"
+stopped_at: Completed 30-02-PLAN.md
+last_updated: "2026-07-22T11:08:46.589Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 30 (tauri-ipc-re-plumb-slice-1-install-uninstall-update-check) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-22
 
@@ -250,6 +250,7 @@ Closed/parked native-install phases:
 | Phase 29 P07 | ~45min | 3 tasks | 1 files |
 | Phase 30 P01 | 20min | 2 tasks | 4 files |
 | Phase 30 P03 | 9min | 3 tasks | 8 files |
+| Phase 30 P02 | 19min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -431,6 +432,8 @@ Recent decisions affecting current work:
 - [Phase 30]: Token-seam test calls getTokenStore().setToken() directly and asserts the resulting rustInvoke frame + synthetic Rust response (mirrors rustInvokeChannel.test.ts), rather than spying on requestRustInvoke
 - [Phase 30]: tauri-plugin-dialog pinned as "2" (caret-major) not literal 2.7.2, matching tauri-plugin-opener's existing convention (Cargo.lock records the exact 2.7.2 resolution)
 - [Phase 30]: electronStub.ts must never import backend/logger -- it reintroduces the app.getPath() import-time module wall; use console.warn instead in that one file
+- [Phase 30]: D-05a (Phase 30 Plan 02): direct SteamGame.install()/update() bypass, not a downloadqueue.ts port
+- [Phase 30]: D-05b/D-12 (Phase 30 Plan 02): uninstallGameCallback/checkGameUpdates reused UNCHANGED, all runners
 
 ### Pending Todos
 
@@ -499,8 +502,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T10:48:23.883Z
-Stopped at: Phase 30 context gathered
+Last session: 2026-07-22T11:08:46.582Z
+Stopped at: Completed 30-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
