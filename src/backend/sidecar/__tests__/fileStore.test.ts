@@ -96,6 +96,27 @@ describe('sidecar fileStore', () => {
     expect(JSON.parse(raw)).toEqual({ key: 'value' })
   })
 
+  // WR-11: `resolveStorePath()` performed no containment check of its own — the
+  // caller's regex was the only thing standing between an RPC-supplied `../../evil`
+  // and a write outside the config dir. Phase 18's lesson: join is not containment.
+  it.each([
+    [{ cwd: 'store', name: '../../evil' }],
+    [{ cwd: '../../..', name: 'evil' }],
+    [{ name: '../../../../../../tmp/evil' }],
+    [{ cwd: '/etc', name: 'passwd' }]
+  ])('WR-11: refuses a store path that escapes userData (%p)', (options) => {
+    expect(() => new FileStore(options)).toThrow(/outside userData/)
+  })
+
+  it('WR-11: an ABSOLUTE cwd inside userData is still accepted (game_overrides shape)', () => {
+    const store = new FileStore({
+      cwd: join(getPath('userData'), 'store'),
+      name: 'gameOverrides'
+    })
+    expect(() => store.set('overrides', { a: 1 })).not.toThrow()
+    expect(store.get('overrides')).toEqual({ a: 1 })
+  })
+
   it('WR-06: a persisted store file is 0o600 and its directory 0o700', () => {
     const cwd = 'perms_test'
     const store = new FileStore({ cwd })

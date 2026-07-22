@@ -16,10 +16,21 @@
  *
  * T-27-03 (Tampering — fileStore JSON path resolution): the on-disk path is
  * resolved ONLY from `pathShim.getPath('userData')` plus the constructor's
- * own `options.cwd`/`options.name` — both fixed at construction time by
- * backend code (e.g. `configStore = new TypeCheckedStoreBackend('configStore',
- * { cwd: 'store' })`), never from an RPC-supplied path. A malicious/malformed
- * request frame cannot redirect a write outside the GameLib config dir.
+ * own `options.cwd`/`options.name`, and `resolveStorePath()` ENFORCES that the
+ * result lands inside `userData` (resolve+relative containment). A
+ * malicious/malformed request frame cannot redirect a write outside the
+ * GameLib config dir.
+ *
+ * WR-11 (Phase 29 code review) — accuracy correction: this paragraph used to
+ * claim `cwd`/`name` are "both fixed at construction time by backend code …
+ * never from an RPC-supplied path". As of Phase 29 that is no longer strictly
+ * true: `storeWriteHandlers.ts`'s `resolveWritableStore()`/`storeNew` pass an
+ * RPC-supplied `storeName` into `new Store({ cwd: 'store_cache', name:
+ * storeName })`, which arrives here as `options.name`. Those callers validate
+ * the name (`CACHE_STORE_NAME_PATTERN` + `RECOGNIZED_CACHE_STORE_NAMES`), but
+ * the invariant no longer rests on the caller alone — `resolveStorePath()`
+ * now performs its own containment check, so the property holds even if a
+ * future caller forgets to validate.
  *
  * D-14 (in-process same-path sharing): `steamConfigStore` and
  * `steamBottleConfigStore` (src/backend/storeManagers/steam/electronStores.ts)
@@ -54,7 +65,7 @@ import {
   unlinkSync,
   writeFileSync
 } from 'graceful-fs'
-import { dirname, isAbsolute, join } from 'path'
+import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import { isSafeKeyPath } from 'common/types/storePolicy'
 import { getPath } from './pathShim'
 
@@ -95,12 +106,36 @@ export function __resetFileStoreRegistry(): void {
 function resolveStorePath(options: FileStoreOptions): string {
   const name = options.name ?? 'config'
   const { cwd } = options
-  const baseDir = cwd
-    ? isAbsolute(cwd)
-      ? cwd
-      : join(getPath('userData'), cwd)
-    : getPath('userData')
-  return join(baseDir, `${name}.json`)
+  const userData = getPath('userData')
+  const baseDir = cwd ? (isAbsolute(cwd) ? cwd : join(userData, cwd)) : userData
+  const full = resolve(join(baseDir, `${name}.json`))
+
+  // WR-11 (Phase 29 code review): defence-in-depth containment. This file's T-27-03
+  // header used to assert that `cwd`/`name` are ALWAYS fixed at construction time by
+  // backend code; as of Phase 29 that is no longer strictly true — `storeNew` and
+  // `resolveWritableStore` (storeWriteHandlers.ts) pass an RPC-supplied `storeName`
+  // into `new Store({ cwd: 'store_cache', name: storeName })`, which lands here as
+  // `options.name`. Those callers validate the name against
+  // `CACHE_STORE_NAME_PATTERN` + `RECOGNIZED_CACHE_STORE_NAMES`, but this function
+  // performed NO containment check of its own, so the caller's regex was the only
+  // thing standing between `../../evil` and a write outside the config dir.
+  //
+  // Phase 18's lesson applies: `path.join` is not containment — use resolve+relative.
+  // Every real call site resolves inside `userData` (including
+  // `game_overrides/electronStores.ts`, whose `cwd` is an ABSOLUTE
+  // `join(userDataPath, 'store')`), so this throws only on a genuine escape.
+  const relativeToUserData = relative(resolve(userData), full)
+  if (
+    relativeToUserData.startsWith('..') ||
+    isAbsolute(relativeToUserData) ||
+    relativeToUserData === ''
+  ) {
+    throw new Error(
+      '[sidecar/fileStore] refusing a store path that resolves outside userData'
+    )
+  }
+
+  return full
 }
 
 /**
