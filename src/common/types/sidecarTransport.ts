@@ -143,6 +143,14 @@ export const RUST_KEYRING_DELETE = 'keyring_delete' as const
 export const RUST_KEYRING_AVAILABLE = 'keyring_available' as const
 
 /**
+ * Rust-side channel name: open a native folder-picker dialog via the Tauri dialog plugin
+ * (Phase 30 Plan 03, D-09/REQ-30-07). Takes no path argument from the caller — the picked
+ * path comes FROM the OS dialog, never INTO it (T-30-11). Resolves the picked absolute path
+ * as a string, or `null` on cancel.
+ */
+export const RUST_DIALOG_OPEN = 'dialog_open' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -151,7 +159,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KEYRING_GET,
   RUST_KEYRING_SET,
   RUST_KEYRING_DELETE,
-  RUST_KEYRING_AVAILABLE
+  RUST_KEYRING_AVAILABLE,
+  RUST_DIALOG_OPEN
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

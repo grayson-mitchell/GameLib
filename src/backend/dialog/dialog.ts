@@ -1,4 +1,4 @@
-import { LogPrefix, logWarning } from 'backend/logger'
+import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 import { dialog, Notification } from 'electron'
 import { ButtonOptions, DialogType } from 'common/types'
 import { getMainWindow } from '../main_window'
@@ -68,6 +68,13 @@ function notify({ body, title }: NotifyType) {
 
     notify.on('click', () => mainWindow?.show())
     notify.show()
+  } else {
+    // REQ-30-07/D-09: a logged no-op, not a silent one -- names the title and the reason,
+    // never the body (avoids logging arbitrary notification content).
+    const reason = isSteamDeckGameMode
+      ? 'Steam Deck game mode'
+      : 'Notification unsupported'
+    logInfo(`notify(): skipped "${title}" (${reason})`, LogPrefix.Backend)
   }
 }
 

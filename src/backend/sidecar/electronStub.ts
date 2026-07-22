@@ -18,9 +18,11 @@
  * the skeleton (27-CONTEXT) — these are safe no-op stand-ins, not
  * reimplementations. Only `app.getPath` (paths.ts's import-time wall),
  * `ipcMain` (the RPC dispatch surface handlers.ts registers against),
- * `shell.openExternal` (the E2E action-flow parity path), and
+ * `shell.openExternal` (the E2E action-flow parity path),
  * `BrowserWindow.getAllWindows()` (the `sendFrontendMessage` push path
- * `backend/ipc.ts` already implements via `getMainWindow()`) have real
+ * `backend/ipc.ts` already implements via `getMainWindow()`), and
+ * `dialog.showOpenDialog` (Phase 30 Plan 03 — the native folder-picker path,
+ * forwarded to Rust's `dialog_open` rustInvoke channel) have real
  * behavior — everything else only needs to not throw at import time.
  * `safeStorage` is the one exception below (Phase 28): its Steam
  * refresh-token callers were graduated onto `getTokenStore()` instead, so
@@ -28,6 +30,15 @@
  */
 
 import { getPath } from './pathShim'
+import { requestRustInvoke } from './sidecarRpc'
+import { RUST_DIALOG_OPEN } from 'common/types/sidecarTransport'
+// NOTE: this file must NOT import 'backend/logger' (or anything else from the backend module
+// graph) -- backend/logger's import chain (game_config -> config -> compatibility_layers ->
+// constants/paths.ts) calls `app.getPath('appData')` at MODULE SCOPE, which requires the
+// Module._load hook (installElectronHook.ts) to already be installed. That hook installs
+// itself by requiring THIS file first (bootstrap.ts's doc comment), so importing backend/logger
+// here would reintroduce the exact "second wall" bootstrap.ts's docstring warns about, just one
+// file earlier in the chain. `console.warn` is used instead for the one error path below.
 
 // ---- Transport binding ------------------------------------------------------
 //
@@ -109,12 +120,45 @@ export const app = {
 }
 
 // ---- dialog --------------------------------------------------------------------
+//
+// showOpenDialog is the one `dialog.*` member with real behavior (Phase 30 Plan 03,
+// D-09/REQ-30-07): it forwards to the Rust shell's native folder picker via the existing
+// generic `requestRustInvoke()` channel. This is a deliberate, narrow exception to this
+// module's own "no knowledge of the RPC transport" rule above (which exists to avoid a
+// circular import between electronStub.ts and sidecarRpc.ts for the openExternal/
+// pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is imported directly here,
+// matching `keyringTokenStore.ts`'s call shape, because unlike openExternal/pushFrontendMessage
+// this is a one-directional call (electronStub -> sidecarRpc only) with no callback the other
+// way, so it does not reintroduce the bidirectional cycle bindTransport() was built to avoid.
+// The other five `dialog.*` members stay stubbed — the rest of the dialog surface is Phase 31.
 
 export const dialog = {
   showErrorBox: (): void => {},
   showMessageBox: async () => ({ response: 0, checkboxChecked: false }),
   showMessageBoxSync: (): number => 0,
-  showOpenDialog: async () => ({ canceled: true, filePaths: [] }),
+  showOpenDialog: async (
+    _window?: unknown,
+    options?: unknown
+  ): Promise<{ canceled: boolean; filePaths: string[] }> => {
+    try {
+      const result = await requestRustInvoke(RUST_DIALOG_OPEN, [options])
+      if (typeof result === 'string') {
+        return { canceled: false, filePaths: [result] }
+      }
+      // `null` (or anything else non-string) is the healthy cancel case.
+      return { canceled: true, filePaths: [] }
+    } catch (error) {
+      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention) --
+      // a rejection (timeout, unknown channel, permission denial) resolves as a clean cancel.
+      // console.warn, not logWarning: this file must not import 'backend/logger' (see the
+      // module-scope note above the imports).
+      console.warn(
+        `[electronStub] dialog.showOpenDialog(): ${RUST_DIALOG_OPEN} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+      return { canceled: true, filePaths: [] }
+    }
+  },
   showOpenDialogSync: (): undefined => undefined,
   showSaveDialog: async () => ({ canceled: true, filePath: undefined })
 }
