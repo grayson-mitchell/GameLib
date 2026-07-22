@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: verifying
-stopped_at: Completed 29-07-PLAN.md — Phase 29 (7/7 plans) complete, ready for verification
-last_updated: "2026-07-22T07:37:31.651Z"
+status: ready_to_plan
+stopped_at: Phase 29 complete (7/7) — ready to discuss Phase 30
+last_updated: 2026-07-22T08:19:31.256Z
 last_activity: 2026-07-22
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 52
-  completed_plans: 46
+  completed_plans: 157
   percent: 60
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 29 — tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw
+**Current focus:** Phase 30 — tauri ipc re plumb slice 1 install uninstall update check
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 29 (tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
+Phase: 30
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-22
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
@@ -122,7 +122,7 @@ Closed/parked native-install phases:
 
 **Velocity (v0.1):**
 
-- Total plans completed: 137 (phases 1-4)
+- Total plans completed: 144 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -150,6 +150,7 @@ Closed/parked native-install phases:
 | 21 | 17 | - | - |
 | 26 | 5 | - | - |
 | 24 | 16 | - | - |
+| 29 | 7 | - | - |
 
 **v0.1 Detail Log:**
 
