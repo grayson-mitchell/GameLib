@@ -114,6 +114,7 @@ import { init } from '../bootstrap'
 import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
 import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import { configStore } from 'backend/constants/key_value_stores'
 
 type Frame = Record<string, unknown>
 
@@ -164,6 +165,16 @@ function writeInvoke(
   args: unknown[]
 ): void {
   input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
+}
+
+/** Writes a well-formed `send` (fire-and-forget) request frame to the sidecar's stdin. */
+function writeSend(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
 describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
@@ -299,5 +310,144 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       // another test in this same file.
       steamConfigStore.clear()
     }
+  })
+
+  // Phase 29 Plan 06 (D-05/D-06/D-08): the real storeSet/storeDelete/storeNew write
+  // path. Every write in this describe block goes through the REAL RPC server against
+  // the SAME real (unmocked) configStore/steamConfigStore instances Test 4 above uses —
+  // safe for the identical reason: the `os` module override at the top of this file
+  // (see this file's header docstring) redirects their on-disk location to a disposable
+  // per-process tmp directory, never the developer's real config directory.
+  describe('storeSet', () => {
+    afterEach(() => {
+      // Isolated per-process tmp config dir (see the `os` module override at the top of
+      // this file) — clear() here only ever touches that disposable directory. Clears
+      // both stores touched anywhere in this describe block so no fixture leaks between
+      // tests.
+      configStore.clear()
+      steamConfigStore.clear()
+    })
+
+    // A renderer storeSet write persists through the registry and is visible in a
+    // FRESH snapshot fetch — not merely the renderer's own optimistic local value,
+    // which is exactly the gap this plan closes (29-RESEARCH Pitfall 1). The same write
+    // also announces itself as a storeChanged frontendMessage frame (D-06).
+    it('a storeSet write persists and is visible in a fresh snapshot fetch, and announces a storeChanged event', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-1', 'storeSet', ['configStore', 'theme', 'gsd-probe'])
+      await flush()
+
+      // FRESH snapshot fetch — a new invoke round-trip, not a read of any local state.
+      writeInvoke(input, 'snapshot-set-1', 'sidecar:store-snapshot', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'snapshot-set-1') as
+        | { ok: boolean; result: { configStore?: Record<string, unknown> } }
+        | undefined
+      expect(response?.ok).toBe(true)
+      expect(response?.result.configStore?.theme).toBe('gsd-probe')
+
+      const changed = frames.find(
+        (frame) =>
+          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
+      )
+      expect(changed).toBeDefined()
+      expect((changed?.args as unknown[])[0]).toEqual({
+        store: 'configStore',
+        key: 'theme',
+        value: 'gsd-probe',
+        deleted: false
+      })
+    })
+
+    // A storeDelete for the same key removes it from a subsequent snapshot and emits a
+    // storeChanged frame with deleted: true.
+    it('a storeDelete removes the key from a subsequent snapshot and emits a change event with deleted: true', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-2', 'storeSet', ['configStore', 'theme', 'gsd-probe-2'])
+      await flush()
+      writeSend(input, 'del-1', 'storeDelete', ['configStore', 'theme'])
+      await flush()
+
+      writeInvoke(input, 'snapshot-del-1', 'sidecar:store-snapshot', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'snapshot-del-1') as
+        | { ok: boolean; result: { configStore?: Record<string, unknown> } }
+        | undefined
+      expect(response?.ok).toBe(true)
+      expect(response?.result.configStore).not.toHaveProperty('theme')
+
+      const deleteEvent = frames.find(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'storeChanged' &&
+          ((frame.args as unknown[])[0] as { deleted?: boolean })?.deleted === true
+      )
+      expect(deleteEvent).toBeDefined()
+      expect((deleteEvent?.args as unknown[])[0]).toEqual({
+        store: 'configStore',
+        key: 'theme',
+        deleted: true
+      })
+    })
+
+    // PHASE 28 D-04 REGRESSION: a storeSet targeting steamConfigStore.refreshToken must
+    // be rejected — the real, on-disk token must stay byte-identical, and no
+    // storeChanged frame may be emitted for it. A plaintext write here would be
+    // Keychain-decrypt-failed by Electron and would silently sign the real user out.
+    it('PHASE 28 D-04 regression: a storeSet into steamConfigStore.refreshToken is rejected and leaves the real token byte-identical', async () => {
+      steamConfigStore.set('refreshToken', 'REAL-TOKEN-DO-NOT-OVERWRITE')
+      const before = steamConfigStore.get_nodefault('refreshToken')
+
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-attacker-1', 'storeSet', [
+        'steamConfigStore',
+        'refreshToken',
+        'ATTACKER'
+      ])
+      await flush()
+
+      const after = steamConfigStore.get_nodefault('refreshToken')
+      expect(after).toBe(before)
+      expect(after).toBe('REAL-TOKEN-DO-NOT-OVERWRITE')
+
+      const changed = frames.find(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'storeChanged' &&
+          ((frame.args as unknown[])[0] as { store?: string })?.store ===
+            'steamConfigStore'
+      )
+      expect(changed).toBeUndefined()
+    })
+
+    // Malformed store names (an unrecognized name and a traversal-shaped name) are
+    // inert: no change event, no write outside the temp home (guard (a)/(c) reject
+    // before any store resolution is ever attempted), and the RPC loop keeps serving —
+    // a subsequent health invoke still responds ok: true.
+    it('rejects an unknown store name and a traversal-shaped name — no change event, no crash, health still responds', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-bad-1', 'storeSet', ['not_a_store', 'theme', 'x'])
+      writeSend(input, 'set-bad-2', 'storeSet', ['../../evil', 'theme', 'x'])
+      await flush()
+
+      const changed = frames.filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
+      )
+      expect(changed.length).toBe(0)
+
+      writeInvoke(input, 'health-after-bad', 'health', [])
+      await flush()
+      const healthResponse = frames.find(
+        (frame) => frame.id === 'health-after-bad'
+      )
+      expect(healthResponse).toMatchObject({
+        id: 'health-after-bad',
+        ok: true,
+        result: 'ok'
+      })
+    })
   })
 })
