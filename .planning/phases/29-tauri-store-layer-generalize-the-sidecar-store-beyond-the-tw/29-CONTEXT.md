@@ -143,6 +143,50 @@ extending `sidecar:store-snapshot` ad hoc.
   `refreshToken` at the source (T-27-09 defense-in-depth — keep the
   defense-in-depth property, just make the policy single-sourced).
 
+### Post-research decisions (added 2026-07-22 after 29-RESEARCH.md)
+
+Research contradicted two assumptions this CONTEXT was written under. These three
+decisions were taken by the user after reading the findings and are **locked**.
+
+- **D-13 — `CacheStore` dynamic-named stores: cover the 4 in the boot set only.**
+  Research found the real boot set is ~15 stores (not 2), and includes four
+  `CacheStore`-backed stores whose names are **not** `ValidStoreName`s:
+  `legendary_library`, `gog_library`, `nile_library`, `zoom_library`. All four are
+  read synchronously before mount and silently return defaults under Tauri today.
+  They are IN scope for D-02's bar. The other ~15 dynamic `CacheStore` instances
+  are lazily accessed and ride D-03's lazy tier without an explicit coverage
+  guarantee. Rejected: all ~19 (the dynamic names aren't enumerable from
+  `StoreStructure`, so the test's enumeration would be weaker), and
+  `ValidStoreName`-only (would leave the 4 boot-set cache stores broken).
+
+- **D-14 — Fix the shared-file clobber with a path-keyed `FileStore` singleton.**
+  Research found `steamConfigStore` and `steamBottleConfigStore` resolve to the
+  **same on-disk file** (`steam_store/config.json` — both fall through to
+  electron-store's hardcoded `name: 'config'`). Real Electron survives this
+  because `conf` re-reads from disk on every access; `fileStore.ts` caches once at
+  construction and never re-reads, so the two instances clobber each other. This
+  phase ACTIVATES the bug by making `steamBottleConfigStore` live in the sidecar —
+  it is not pre-existing-and-dormant-forever, it is pre-existing-and-about-to-fire.
+
+  Fix: two `FileStore`s resolving to the same path share one instance. Contained
+  inside `fileStore.ts`, keeps reads synchronous. **In-process only** — the
+  cross-process case remains accepted by D-07. Rejected: re-read-on-access (adds a
+  disk read per access to a synchronous mount-time path), and giving the two
+  stores distinct `name` options (changes on-disk layout → needs an Electron-side
+  migration and moves existing users' bottle config; touches the shipped build).
+
+- **D-15 — Extract the three heavy store declarations into thin modules.**
+  `wineDownloaderInfoStore` (`wine/manager/utils.ts`), `downloadManager`
+  (`downloadmanager/downloadqueue.ts`), and `migrationsStore` (`migration/index.ts`)
+  are declared inside heavy host modules, so constructing them in the sidecar would
+  drag those modules' import-time side effects in — exactly the import-time-wall
+  class spike 009 documented. Move each `new TypeCheckedStoreBackend(...)`
+  declaration into its own thin module and have the host module import from there,
+  matching the shape the other 18 stores already have, so the coverage test can
+  import all 21 uniformly. Rejected: importing the host modules (import-time
+  side-effect risk), and excluding the three (`downloadManager` is exactly what
+  Phase 30's install/uninstall slice needs).
+
 ### Claude's Discretion
 
 - **D-09 — How the boot set is defined.** Hand-declared list vs derived from
