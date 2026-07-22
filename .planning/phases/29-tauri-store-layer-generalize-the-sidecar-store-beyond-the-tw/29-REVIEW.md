@@ -32,7 +32,33 @@ findings:
   warning: 12
   info: 5
   total: 23
-status: issues_found
+status: fixed
+fixed_at: 2026-07-22
+fix_scope: all Critical (CR-01..CR-06) and all Warning (WR-01..WR-12); Info OUT of scope
+resolution:
+  CR-01: fixed (f72fe92c)
+  CR-02: fixed (ffbf44d1)
+  CR-03: fixed (bf349afd)
+  CR-04: fixed (9a7dd9f3)
+  CR-05: fixed (6997c606)
+  CR-06: fixed (40823a5b)
+  WR-01: fixed (e1a1a10c)
+  WR-02: fixed (e1a1a10c)
+  WR-03: fixed (653f8992)
+  WR-04: fixed (398e9e2d)
+  WR-05: fixed (44bf754d)
+  WR-06: fixed (44bf754d)
+  WR-07: fixed (c12e2cec)
+  WR-08: fixed (cf26e09d)
+  WR-09: fixed (445704e4)
+  WR-10: fixed (040f6443)
+  WR-11: fixed (76a29fb3)
+  WR-12: fixed (0841a5eb)
+  IN-01: open (Info — out of fix scope)
+  IN-02: open (Info — out of fix scope)
+  IN-03: open (Info — out of fix scope)
+  IN-04: open (Info — out of fix scope)
+  IN-05: open (Info — out of fix scope)
 ---
 
 # Phase 29: Code Review Report
@@ -40,7 +66,43 @@ status: issues_found
 **Reviewed:** 2026-07-22
 **Depth:** standard
 **Files Reviewed:** 23
-**Status:** issues_found
+**Status:** fixed (all 6 Critical + all 12 Warning resolved 2026-07-22; 5 Info left open)
+
+## Resolution Status (2026-07-22)
+
+All Critical and Warning findings were fixed and committed atomically, one commit per
+finding (or per tightly-coupled pair). Each fix carries a regression test. Verification
+at the end of the pass: `npx jest` 111/111 suites, 2027/2027 tests green;
+`npx tsc --noEmit -p tsconfig.json` clean; `npx eslint` introduced no new errors.
+
+| ID | Status | Commit | Note |
+|----|--------|--------|------|
+| CR-01 | FIXED | `f72fe92c` | `DISALLOWED_KEY_PATH_SEGMENTS`/`isSafeKeyPath` single-sourced in `storePolicy.ts`; guards all three `fileStore` path helpers plus a new write-path guard (c′) |
+| CR-02 | FIXED | `ffbf44d1` | own-property lookup + `Array.isArray` belt-and-braces; parametrized test over the whole `Object.prototype` key set |
+| CR-03 | FIXED | `bf349afd` | `setAtPath`/`deleteAtPath` added to `tauriTransport`, used by `snapshotSet`/`snapshotDelete` and the `STORE_CHANGED` echo |
+| CR-04 | FIXED | `9a7dd9f3` | `accessPropertiesByDotNotation` honoured; URL-key flat-on-disk test |
+| CR-05 | FIXED | `6997c606` | `load()` shape validation; parametrized test over `null`/string/number/boolean/array |
+| CR-06 | FIXED | `40823a5b` | additive deny-list extension; also made `isSecretStoreKey` total (same CR-02 hazard on the Electron path) |
+| WR-01 | FIXED | `e1a1a10c` | guard (a) now tests `RECOGNIZED_CACHE_STORE_NAMES`, not a regex that matched everything |
+| WR-02 | FIXED | `e1a1a10c` | `storeNew` restricted to recognized cache stores; junk-file regression test |
+| WR-03 | FIXED | `653f8992` | write pair gated + renderer-visible `console.warn` |
+| WR-04 | FIXED | `398e9e2d` | `isWritableStoreField` — a subtractive `WRITE_DENIED_FIELDS` overlay on the read allow-list (one list, still fail-closed), excluding `configStore.settings`/`userHome`/`userInfo` and every `*.userData` |
+| WR-05 | FIXED | `44bf754d` | best-effort `unlinkSync` in the persist fallback |
+| WR-06 | FIXED | `44bf754d` | `0o600` on both writes, `0o700` on `mkdir`; mode re-asserted on every temp+rename |
+| WR-07 | FIXED | `c12e2cec` | both hydrate paths replace instead of merging |
+| WR-08 | FIXED | `cf26e09d` | first registration wins + stderr diagnostic |
+| WR-09 | FIXED | `445704e4` | dead `CACHE_STORE_POLICY` deleted; `DENIED_CACHE_STORES` consulted directly by both resolvers |
+| WR-10 | FIXED | `040f6443` | `CACHE_STORE_NAME_PATTERN` single-sourced in `storePolicy.ts` |
+| WR-11 | FIXED | `76a29fb3` | resolve+relative containment in `resolveStorePath()`; T-27-03 header rewritten to state the invariant accurately |
+| WR-12 | FIXED | `0841a5eb` | guard (c), WR-04 write-denied field, and a legitimate `legendary_library` write now covered (hostile-key and dot-notation cases landed with CR-01/CR-03) |
+| IN-01..IN-05 | OPEN | — | Info tier, deliberately out of this fix pass's scope |
+
+Deviation worth flagging: WR-04 was implemented as a subtractive `WRITE_DENIED_FIELDS`
+overlay rather than the separate `WRITE_ALLOWLIST` the finding suggested. An unknown
+field still fails `isAllowedStoreField` first, so the fail-closed property is preserved
+while leaving ONE hand-maintained list instead of two that can drift (which is IN-02's
+concern applied to the write side).
+
 
 ## Summary
 
