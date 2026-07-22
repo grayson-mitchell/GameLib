@@ -396,3 +396,43 @@ describe('CR-03: dot-notation write/read symmetry', () => {
     jest.restoreAllMocks()
   })
 })
+
+/**
+ * WR-03 REGRESSION (Phase 29 code review): the write pair was ungated while the read
+ * pair gated on `isAllowedStoreField`. An ungated write updated the renderer's snapshot
+ * optimistically, was rejected by sidecar guard (c) with a stderr line the renderer
+ * never sees, and the UI then showed a value that was not on disk until restart.
+ */
+describe('WR-03: snapshotSet/snapshotDelete are allow-list gated', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('a write to a non-allow-listed field warns in the renderer and does not update the snapshot', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    snapshotSet('gogConfigStore', 'credentials', { access_token: 'x' })
+    expect(warnSpy).toHaveBeenCalled()
+    expect(String(warnSpy.mock.calls[0][0])).toContain('blocked write')
+
+    // The optimistic local update must NOT have happened -- otherwise the UI would
+    // show a value the sidecar refused to persist.
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(snapshotGet('gogConfigStore', 'credentials')).toBeUndefined()
+  })
+
+  it('a write to an unknown store name is rejected too', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    snapshotSet('notARealStore', 'anything', 1)
+    snapshotDelete('notARealStore', 'anything')
+    expect(warnSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('an allow-listed write is NOT blocked', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    snapshotSet('configStore', 'theme', 'gsd')
+    for (const call of warnSpy.mock.calls) {
+      expect(String(call[0])).not.toContain('blocked write')
+    }
+    expect(snapshotGet('configStore', 'theme')).toBe('gsd')
+  })
+})

@@ -371,10 +371,35 @@ export function snapshotHas(storeName: string, key: string): boolean {
 }
 
 /**
+ * WR-03 (Phase 29 code review): the write pair must be gated by the SAME allow-list as
+ * `snapshotGet`/`snapshotHas`. Ungated, a write to a non-allow-listed field updated the
+ * renderer's snapshot optimistically, was rejected by sidecar guard (c) with a stderr
+ * line the renderer never sees, and the UI then showed a saved value that was not on
+ * disk until restart — 29-RESEARCH Pitfall 1 reproduced in a new location, and silent
+ * data loss for any future `StoreStructure` field added without a matching
+ * `STORE_ALLOWLIST` entry. Rejection now warns in the RENDERER, where the caller is.
+ */
+function rejectSnapshotWrite(
+  forCall: string,
+  storeName: string,
+  key: string
+): void {
+  console.warn(
+    `${forCall}: blocked write of "${key}" to "${storeName}" -- not in the Tauri ` +
+      'store-field allow-list; the sidecar would reject it, so the local snapshot is ' +
+      'deliberately NOT updated optimistically'
+  )
+}
+
+/**
  * Optimistically updates the local snapshot (so an immediate synchronous read after a set
  * observes it, electron-store parity) and forwards the write to the sidecar asynchronously.
  */
 export function snapshotSet(storeName: string, key: string, value?: unknown): void {
+  if (!isAllowedStoreField(storeName, key) || !isSafeKeyPath(key)) {
+    rejectSnapshotWrite('snapshotSet', storeName, key)
+    return
+  }
   if (!snapshot[storeName]) snapshot[storeName] = {}
   // CR-03: nested write, mirroring `getAtPath`'s nested read.
   setAtPath(snapshot[storeName], key, value)
@@ -383,6 +408,10 @@ export function snapshotSet(storeName: string, key: string, value?: unknown): vo
 
 /** Deletes locally and forwards the delete to the sidecar asynchronously. */
 export function snapshotDelete(storeName: string, key: string): void {
+  if (!isAllowedStoreField(storeName, key) || !isSafeKeyPath(key)) {
+    rejectSnapshotWrite('snapshotDelete', storeName, key)
+    return
+  }
   // CR-03: nested delete, mirroring `getAtPath`'s nested read.
   if (snapshot[storeName]) deleteAtPath(snapshot[storeName], key)
   send('storeDelete', [storeName, key])
