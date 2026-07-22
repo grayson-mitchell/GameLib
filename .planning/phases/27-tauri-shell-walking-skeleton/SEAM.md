@@ -60,39 +60,70 @@ Source of truth for the underlying numbers: `.planning/spikes/009-node-backend-h
 `grep -c "refreshLibrary\|pushGameToLibrary\|launch"` over this document ≥ 3 (see the list above
 plus references throughout §3).
 
+### `safeStorage` (real, Phase 28) — CLOSED, moved out of §2
+
+**Graduated from stubbed to ported in Phase 28** (`tauri-keyring-real-safestorage-via-the-keyring-crate`).
+Full proof pair recorded in `.planning/phases/28-tauri-keyring-real-safestorage-via-the-keyring-crate/28-PROOF.md`.
+
+- **Rust shell** (`src-tauri/src/main.rs`): `keyring` v3 (`apple-native` feature) backs a real
+  macOS Keychain entry at `KEYRING_SERVICE = "com.gamelib.launcher"` /
+  `KEYRING_ACCOUNT = "steam-refresh-token"`, dispatched via `dispatch_rust_channel()`
+  (`keyring_get`/`keyring_set`/`keyring_delete`/`keyring_available`).
+- **Transport**: a new, generic, symmetric sidecar→Rust `rustInvoke` request/response frame
+  (mirroring the existing Rust→sidecar `invoke` byte-for-byte, just reversed) — the reusable
+  infrastructure D-05 asked for, not a keyring-specific one-off. Dispatched on a spawned worker
+  thread (not the reader thread itself) so a blocking Keychain access prompt cannot head-of-line
+  block unrelated pending `invoke`s.
+- **Sidecar** (`src/backend/sidecar/keyringTokenStore.ts`): `SidecarKeyringTokenStore` implements
+  the `TokenStore` seam (`src/backend/storeManagers/steam/tokenStore.ts`) entirely over
+  `requestRustInvoke()`. It structurally cannot write `configStore`'s `TOKEN_STORE_KEY` — it does
+  not import `configStore` or the storage-key constants at all (REQ-28-02/D-04, enforced by
+  construction and hardware-proven byte-identical before/after in `28-PROOF.md` § 2 Step 4).
+- **Failure policy (D-06)**: `NoEntry` (no token stored yet) is the healthy first-run case, not a
+  failure. Every other outcome — including a real Deny click, hardware-confirmed to surface as
+  `keyring::Error::PlatformFailure` wrapping OSStatus `-128` (`errSecUserCanceled`), NOT
+  `NoStorageAccess` (closes RESEARCH Assumption A1 / Open Question 1) — collapses to a clean
+  signed-out state (`isAvailable()` → `false`, `getToken()` → `''`), one logged warning, and
+  **never** a plaintext write. No env-var or in-memory dev escape hatch exists (D-08/REQ-28-07).
+
+> **Historical failure note (27-05, kept for context) — CLOSED.** The passthrough stub described
+> below this line used to block Steam sign-in entirely and carried a live write-direction
+> corruption trap for whoever ported the login channel next. Both are now closed by the real
+> keyring port above; the note is retained verbatim as the historical record of why Phase 28 was
+> order-constrained ahead of any token-writing channel.
+>
+> Original text: the stub's plain passthrough (`Buffer.from(plainText, 'utf-8')` /
+> `toString('utf-8')`) made `isEncryptionAvailable()` lie (`true`), so `decryptToken()` at connect
+> time base64-decoded real Keychain ciphertext into garbage — the sidecar could not authenticate
+> and the Tauri window showed an empty, signed-out library even when Electron was signed in
+> (Phase 27 UAT steps 2/3 BLOCKED). The write-direction trap: because the sidecar and Electron
+> share one store (`pathShim` resolves `userData` to the same folder by design), a token WRITE
+> under the stub would have written `TOKEN_PREFIX` + plaintext, which Electron would then fail to
+> Keychain-decrypt and silently sign the user out of the real app — corrupting a working session.
+> This never fired in Phase 27 (no login channel was registered), but is exactly why "port the
+> keyring before wiring any token-writing channel" was locked as Phase 28's ordering constraint.
+
+**Phase 27 UAT steps 2/3 remain BLOCKED, NOT unblocked by Phase 28** — Phase 28 proved the storage
+mechanism, not a login channel. See `28-PROOF.md` § 4. The login-channel port
+(`startQRLogin`/`startCredentialLogin`) is the next natural slice; see the deferred-backlog row
+below.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
 
-- **`safeStorage`** — plain passthrough (`Buffer.from(plainText, 'utf-8')` / `toString('utf-8')`),
-  NOT the real OS Keychain. Spike 011 already proved the real path (`keyring` crate,
-  `apple-native` feature, byte-identical round-trip) — wiring it is deferred, tracked as T-27-05
-  accepted-passthrough.
-
-  > **Live-verified consequence (27-05 hardware run): this stub blocks Steam sign-in entirely.**
-  > The original claim that "no token persistence is exercised by this skeleton's two flows" is
-  > **wrong in the read direction**. An existing refresh token — written by real Electron
-  > `safeStorage` and tagged with `TOKEN_PREFIX` — is read back by `steam/user.ts`'s
-  > `decryptToken()` at connect time. The stub's `isEncryptionAvailable()` returns `true`
-  > (untrue), so `decryptToken` trusts it, base64-decodes real Keychain ciphertext, and yields
-  > garbage. Result: the sidecar cannot authenticate, and the Tauri window shows an empty,
-  > signed-out library even when the Electron build is signed in. UAT steps 2 and 3 are BLOCKED
-  > on this.
-  >
-  > **⚠️ Write-direction trap for whoever ports the login channels.** The sidecar and Electron
-  > share one store (`pathShim` resolves `userData` to the same folder — by design). Under this
-  > stub, `encryptToken()` writes `TOKEN_PREFIX` + **plaintext**. Electron will then attempt a
-  > Keychain decrypt of plaintext, fail, and silently sign the user out of the real app —
-  > corrupting a working session. This cannot fire today (no login channel is registered), but
-  > **port the keyring BEFORE wiring any channel that writes a token.** Making the stub honest
-  > (`isEncryptionAvailable: () => false`) is a one-line stopgap that converts both failures into
-  > a clean signed-out state; it was deliberately NOT applied in 27-05 (the keyring port is the
-  > real fix and this file is the record).
 - **`fileStore.ts`** — covers only the store shape the flows actually touch (`configStore`,
   `steamConfigStore`); it is not a general `electron-store` replacement and does not implement
   every method real `electron-store` exposes project-wide.
 - **`shell`** — only `openExternal` has real behavior (forwarded to the Rust opener);
-  `showItemInFolder`/`trashItem`/`openPath` are no-ops.
+  `showItemInFolder`/`trashItem`/`openPath` are no-ops. **Phase 28 fix:** the sidecar→Rust
+  `openExternal` frame was previously silently dropped on the Rust side (`start_reader()` had no
+  branch for it — see the historical `safeStorage` note above for how this was discovered).
+  `start_reader()` now has an explicit `kind == "openExternal"` branch that actually dispatches
+  the URL through the same opener facility `open_external` uses, fire-and-forget (Open Question 2,
+  resolved as a minimal fix — see `28-PROOF.md` § 5). Not hardware-verified end-to-end this phase
+  (no login channel exists yet to reach a launchable game) — see `28-PROOF.md` § 2 Step 5,
+  recorded as NOT VERIFIED rather than assumed.
 - **`BrowserWindow`** — only `getAllWindows()[0].webContents.send` has real behavior (the push
   path); no real window management exists in the sidecar process.
 - **Tauri-path preload globals** (`isSteamDeck`, `isFlatpak`, `platform`, etc., 27-03) — hardcoded/
@@ -108,8 +139,9 @@ plus references throughout §3).
 ## 3. Deferred (out of scope this phase, the incremental-port backlog)
 
 Ranked by spike 009's own 16-API touch-count (`app` ×26, `dialog` ×9, `BrowserWindow` ×7,
-`shell` ×5, `safeStorage` ×4, `nativeImage` ×4, `Notification` ×3, `session`/`screen`/`net`/
-`Menu` ×2, `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` ×1):
+`shell` ×5, `nativeImage` ×4, `Notification` ×3, `session`/`screen`/`net`/
+`Menu` ×2, `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` ×1). `safeStorage` is
+removed from this table — it graduated to §1 Ported in Phase 28.
 
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
@@ -117,7 +149,7 @@ Ranked by spike 009's own 16-API touch-count (`app` ×26, `dialog` ×9, `Browser
 | 2 | `dialog` | 9 | Tauri `dialog` plugin (open/save/message boxes) |
 | 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts |
 | 4 | `shell` (remaining methods) | 5 | `showItemInFolder`/`trashItem`/`openPath` via Tauri `opener`/`fs` plugins |
-| 5 | `safeStorage` (real keyring) | 4 | Swap the passthrough stub for spike 011's proven `keyring` crate path — the single highest-value near-term port given it gates real token persistence |
+| 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | The keyring port (Phase 28) makes this SAFE to wire now (D-04/D-06 close the shared-store corruption trap by construction); this is the change that actually unblocks Phase 27 UAT steps 2/3, which Phase 28 explicitly did not do (see `28-PROOF.md` § 4) |
 | 6 | `nativeImage` | 4 | Tauri `image`/icon APIs, only needed once tray/notifications are ported |
 | 7 | `Notification` | 3 | Tauri `notification` plugin |
 | 8 | `session`/`screen`/`net`/`Menu` | 2 each | `session`/`powerSaveBlocker` are the two "soft spots" spike 011 flagged with no full Tauri v2 parity yet — explicitly out of scope until Tauri closes that gap |
@@ -169,6 +201,13 @@ above.
 5. Re-run this document's own acceptance shape: list the newly wired channel(s) under §1, move
    them out of the deferred table in §3, and re-verify `npm run tauri:dev` + `npm start` both work
    (the additive/reversible invariant, REQ-27-06 pattern) before calling the slice done.
+6. If the new flow needs the sidecar to ASK Rust something and get a real answer back (not just
+   fire-and-forget), reuse the generic `rustInvoke` sidecar→Rust request/response channel Phase 28
+   built for the keyring calls (`requestRustInvoke()` in `src/backend/sidecar/sidecarRpc.ts`,
+   dispatched by `dispatch_rust_channel()` in `src-tauri/src/main.rs`) rather than inventing a new
+   correlated-request mechanism. This is the reusable pattern for any future API needing a real
+   Rust-side answer — `dialog`, `clipboard`, `notification`, `screen` were the motivating examples
+   when it was built.
 
 ---
 
