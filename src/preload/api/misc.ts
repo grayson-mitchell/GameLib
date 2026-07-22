@@ -96,7 +96,7 @@ const stores: StoreMap = {}
 
 export const storeNew = function (storeName: string, options: Store.Options<Record<string, unknown>>) {
   if (isTauri()) {
-    registerStore(storeName)
+    registerStore(storeName, options)
     return
   }
   // Lazy, guarded `require` -- see ipc.ts's ipcRenderer comment for why: electron-store is
@@ -130,9 +130,17 @@ export const storeHas = (storeName: string, key: string) => {
 // Deny-list known credential keys here in the preload, so the block holds for
 // every renderer caller, not just our own typed store wrappers. The UI only
 // needs isLoggedIn/userData/expired/encryptionDegraded — never the secrets.
-// Preserved verbatim for the Tauri snapshot path too (tauriTransport.ts's own
-// SECRET_STORE_KEYS copy gates snapshotGet/snapshotHas directly -- this check gates both
-// paths from here as well, defense in depth).
+//
+// D-08 (Phase 29 Plan 05): this DENY-list governs the ELECTRON path ONLY, and is
+// intentionally NOT the Tauri path's policy. The Tauri path enforces the fail-closed
+// ALLOW-list in `src/common/types/storePolicy.ts` (`isAllowedStoreField`) — see that
+// module's own header comment and `tauriTransport.ts`'s matching D-08 comment for the
+// full rationale. Flipping this shipped Electron build to fail-closed risks blocking a
+// legitimate read among the 379 `window.api.*` call-sites, which the additive/reversible
+// invariant forbids — so the two builds deliberately carry divergent secret policies
+// until the Electron cutover (Phase 35), the same interim-divergence pattern the Phase 28
+// D-11 precedent established for the keyring path. Do not "fix" this by unifying the two
+// policies early; that is Phase 35's job, not this plan's.
 const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
   humbleConfigStore: ['sessionCookie'],
   steamConfigStore: ['refreshToken']
