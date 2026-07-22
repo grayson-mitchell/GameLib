@@ -50,6 +50,40 @@ const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 
+/// Channels whose work is legitimately unbounded in wall-clock terms and therefore must NOT
+/// be subject to `INVOKE_TIMEOUT` (CR-03, Phase 30 code review).
+///
+/// A Steam depot download runs for minutes to hours; bounding it at 60s made the renderer see
+/// a spurious `sidecar invoke timed out` failure while the install kept running in the sidecar,
+/// and the real (late) response was then dropped by the reader thread as an unknown id. The
+/// renderer-side symptom was an unhandled rejection out of
+/// `frontend/state/InstallGameModal.ts`'s `void window.api.install(...)`.
+///
+/// `checkGameUpdates` fans out across six library managers, each shelling out to
+/// legendary/gogdl/nile, and can plausibly exceed 60s on a cold cache; `refreshLibrary` has the
+/// same shape. `uninstall` can take arbitrarily long on a large install directory.
+///
+/// The guardrail is not lost for the rest of the surface: every OTHER channel keeps the 60s
+/// bound, and a genuinely wedged long-running invoke now surfaces as a never-settling promise
+/// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
+/// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
+const LONG_RUNNING_CHANNELS: &[&str] = &[
+    "install",
+    "updateGame",
+    "uninstall",
+    "checkGameUpdates",
+    "refreshLibrary",
+];
+
+/// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
+fn timeout_for(channel: &str) -> Option<Duration> {
+    if LONG_RUNNING_CHANNELS.contains(&channel) {
+        None
+    } else {
+        Some(INVOKE_TIMEOUT)
+    }
+}
+
 /// Keychain service/account identifying the Steam refresh token entry this shell owns
 /// (Phase 28, D-01: keyring-native storage, not OSCrypt-compatible ciphertext). These are
 /// production-stable identifiers — they must NOT be spike 011's throwaway
@@ -115,6 +149,8 @@ impl SidecarState {
     /// Write an 'invoke' frame and block until the correlated response (or timeout).
     fn invoke(&self, channel: String, args: Vec<Value>) -> Result<Value, String> {
         let id = self.next_id();
+        // CR-03: resolve the per-channel bound BEFORE `channel` is moved into the frame.
+        let timeout = timeout_for(&channel);
         let (tx, rx) = mpsc_channel::<Result<Value, String>>();
         {
             let mut pending = self.pending.lock().map_err(|e| e.to_string())?;
@@ -130,12 +166,24 @@ impl SidecarState {
             self.pending.lock().ok().and_then(|mut p| p.remove(&id));
             return Err(e);
         }
-        match rx.recv_timeout(INVOKE_TIMEOUT) {
-            Ok(result) => result,
-            Err(_) => {
-                self.pending.lock().ok().and_then(|mut p| p.remove(&id));
-                Err("sidecar invoke timed out".into())
-            }
+        match timeout {
+            Some(bound) => match rx.recv_timeout(bound) {
+                Ok(result) => result,
+                Err(_) => {
+                    self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    Err("sidecar invoke timed out".into())
+                }
+            },
+            // Long-running channel: block until the sidecar answers. `recv()` still returns
+            // Err when the sender is dropped (sidecar died / pending entry removed), so this
+            // cannot hang forever on a dead sidecar.
+            None => match rx.recv() {
+                Ok(result) => result,
+                Err(_) => {
+                    self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    Err("sidecar closed before responding".into())
+                }
+            },
         }
     }
 }
