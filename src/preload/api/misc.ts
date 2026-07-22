@@ -141,16 +141,39 @@ export const storeHas = (storeName: string, key: string) => {
 // until the Electron cutover (Phase 35), the same interim-divergence pattern the Phase 28
 // D-11 precedent established for the keyring path. Do not "fix" this by unifying the two
 // policies early; that is Phase 35's job, not this plan's.
+// CR-06 (Phase 29 code review): the deny-list is EXTENDED here, additively, to the
+// three remaining fields `storePolicy.ts`'s own header identifies as secrets —
+// `humbleConfigStore.csrfToken` ("Main-process-only — never included in any
+// sendFrontendMessage payload or HumbleAuthState"), `gogConfigStore.credentials`
+// (GOGLoginData: access + refresh tokens) and `zoomConfigStore.credentials`
+// (ZoomCredentials). Until this change they were readable in the SHIPPING Electron
+// build by any renderer script (`window.api.storeGet('gogConfigStore','credentials')`).
+// The divergence rationale above is about not FLIPPING this path to an allow-list —
+// it does not justify leaving three known secrets off the deny-list, and adding three
+// names is strictly additive with no Phase 35 coupling. Verified against every
+// frontend call site: nothing in `src/frontend` reads `credentials` or `csrfToken`
+// (GlobalState.tsx reads only userData/isLoggedIn/expired/encryptionDegraded/username).
 const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
-  humbleConfigStore: ['sessionCookie'],
-  steamConfigStore: ['refreshToken']
+  humbleConfigStore: ['sessionCookie', 'csrfToken'],
+  steamConfigStore: ['refreshToken'],
+  gogConfigStore: ['credentials'],
+  zoomConfigStore: ['credentials']
 }
 
-const isSecretStoreKey = (storeName: string, key: string) =>
-  (SECRET_STORE_KEYS[storeName] ?? []).some(
+const isSecretStoreKey = (storeName: string, key: string) => {
+  // CR-02-class hazard on this path too: `SECRET_STORE_KEYS` is a plain object
+  // literal, so a bare `SECRET_STORE_KEYS[storeName]` for a prototype-chain name
+  // (`constructor`, `toString`, …) resolves to a FUNCTION, and `.some(...)` on it
+  // THROWS — from a preload function the renderer calls synchronously. An
+  // own-property lookup keeps this predicate total.
+  const secrets = Object.prototype.hasOwnProperty.call(SECRET_STORE_KEYS, storeName)
+    ? SECRET_STORE_KEYS[storeName]
+    : []
+  return secrets.some(
     // electron-store supports dot-notation paths — block subpath reads too.
     (secret) => key === secret || key.startsWith(`${secret}.`)
   )
+}
 
 export const storeGet = (storeName: string, key: string, defaultValue?: unknown) => {
   if (isSecretStoreKey(storeName, key)) {
