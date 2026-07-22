@@ -19,6 +19,7 @@
  */
 
 import { GlobalConfig } from 'backend/config'
+import { logWarning, LogPrefix } from 'backend/logger'
 import { autoUpdate, libraryManagerMap } from 'backend/storeManagers'
 
 export async function checkGameUpdates(): Promise<string[]> {
@@ -27,11 +28,25 @@ export async function checkGameUpdates(): Promise<string[]> {
   for (const runner of Object.keys(
     libraryManagerMap
   ) as (keyof typeof libraryManagerMap)[]) {
-    let gamesToUpdate = await libraryManagerMap[runner].listUpdateableGames()
-    if (autoUpdateGames) {
-      gamesToUpdate = autoUpdate(runner, gamesToUpdate)
+    // WR-05: per-runner isolation. This loop was extracted verbatim from main.ts,
+    // where it was unguarded: ONE runner whose CLI or credentials are missing
+    // rejected the whole call and discarded the results already collected from the
+    // other five. D-12 keeps this runner-generic in both builds, which makes the
+    // partial-failure case the normal case (a user signed into Steam only has no
+    // legendary/gogdl/nile credentials at all), so the results of the runners that
+    // DID answer must survive.
+    try {
+      let gamesToUpdate = await libraryManagerMap[runner].listUpdateableGames()
+      if (autoUpdateGames) {
+        gamesToUpdate = autoUpdate(runner, gamesToUpdate)
+      }
+      oldGames = [...oldGames, ...gamesToUpdate]
+    } catch (error) {
+      logWarning(
+        [`checkGameUpdates: ${runner} failed to list updateable games:`, error],
+        LogPrefix.Backend
+      )
     }
-    oldGames = [...oldGames, ...gamesToUpdate]
   }
 
   return oldGames

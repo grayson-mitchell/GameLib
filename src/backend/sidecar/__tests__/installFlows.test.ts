@@ -133,6 +133,7 @@ jest.mock('../../storeManagers/steam/games', () => {
 import { init } from '../bootstrap'
 import { getSteamLibraries } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
+import { libraryManagerMap } from 'backend/storeManagers'
 import SteamGame from '../../storeManagers/steam/games'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
@@ -555,9 +556,11 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(uninstallingFrame).toBeDefined()
   })
 
-  // Test 5: checkGameUpdates resolves a string[] across all runners — a
-  // manager whose CLI/credentials are absent must not make the whole call
-  // reject (D-12, all runners).
+  // Test 5: checkGameUpdates resolves a string[] across all runners (D-12,
+  // all runners) — a happy-path wiring assertion only. The per-runner
+  // isolation property this comment used to claim is proven by the WR-05
+  // test immediately below, not here: nothing in this test's mocked
+  // environment throws, so it would pass with or without that guard.
   it('Test 5: checkGameUpdates resolves a string[] without rejecting', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'updates-1', 'checkGameUpdates', [])
@@ -568,6 +571,48 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       | undefined
     expect(response?.ok).toBe(true)
     expect(Array.isArray(response?.result)).toBe(true)
+  })
+
+  // WR-05: Test 5 above documents per-runner isolation but cannot prove it —
+  // nothing in the mocked environment happens to throw, so it passes either
+  // way. This one actually makes one manager reject and asserts the other
+  // runners' already-collected results still come back.
+  it('WR-05: one runner rejecting must not discard the other runners’ update results', async () => {
+    const runners = Object.keys(
+      libraryManagerMap
+    ) as (keyof typeof libraryManagerMap)[]
+    const failingRunner = runners[0]
+
+    const spies = runners.map((runner) =>
+      jest
+        .spyOn(libraryManagerMap[runner], 'listUpdateableGames')
+        .mockImplementation(async () => {
+          if (runner === failingRunner) {
+            throw new Error(`${runner} CLI/credentials absent`)
+          }
+          return [`${runner}-updateable`]
+        })
+    )
+
+    try {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'updates-isolation-1', 'checkGameUpdates', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'updates-isolation-1'
+      ) as { ok: boolean; result?: unknown } | undefined
+
+      // The whole call must NOT reject just because one manager did.
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual(
+        runners
+          .filter((runner) => runner !== failingRunner)
+          .map((runner) => `${runner}-updateable`)
+      )
+    } finally {
+      spies.forEach((spy) => spy.mockRestore())
+    }
   })
 
   // Test 6 (Invariant B guard): a deliberately-unported queue channel still
