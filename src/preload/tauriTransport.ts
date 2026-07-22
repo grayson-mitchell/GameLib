@@ -198,7 +198,8 @@ export function registerStore(
 export async function hydrateStoreSnapshot(): Promise<void> {
   const result = await tauriInvoke<StoreSnapshot>(SIDECAR_STORE_SNAPSHOT)
   for (const [storeName, values] of Object.entries(result ?? {})) {
-    snapshot[storeName] = { ...(snapshot[storeName] ?? {}), ...values }
+    // WR-07: REPLACE, do not merge. See `hydrateStore` below for the rationale.
+    snapshot[storeName] = { ...values }
     hydrated.add(storeName)
   }
 }
@@ -221,7 +222,14 @@ export async function hydrateStore(storeName: string): Promise<void> {
       const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [
         storeName
       ])
-      snapshot[storeName] = { ...(snapshot[storeName] ?? {}), ...(result ?? {}) }
+      // WR-07 (Phase 29 code review): REPLACE the store's snapshot wholesale rather
+      // than merging into it. Merging meant a key removed on disk -- by the backend, a
+      // migration, or `store.clear()` -- stayed in the renderer's copy for the life of
+      // the window, and `snapshotGet` kept returning the stale value in preference to
+      // the caller's default. That also defeated the self-heal the D-06 change listener
+      // is supposed to guarantee for backend-side deletions. The sidecar's filtered
+      // payload is authoritative for the store it names.
+      snapshot[storeName] = { ...(result ?? {}) }
       hydrated.add(storeName)
     } catch (error) {
       console.error(

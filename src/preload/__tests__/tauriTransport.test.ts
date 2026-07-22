@@ -436,3 +436,27 @@ describe('WR-03: snapshotSet/snapshotDelete are allow-list gated', () => {
     expect(snapshotGet('configStore', 'theme')).toBe('gsd')
   })
 })
+
+/**
+ * WR-07 REGRESSION (Phase 29 code review): both hydrate paths merged
+ * (`{ ...(snapshot[storeName] ?? {}), ...values }`), so a key removed on disk stayed
+ * in the renderer's copy for the life of the window and `snapshotGet` kept returning
+ * the stale value in preference to the caller's default.
+ */
+describe('WR-07: hydration replaces a store snapshot rather than merging into it', () => {
+  it('a key absent from the eager snapshot payload is dropped from the renderer copy', async () => {
+    mockedInvoke.mockReset()
+    mockedInvoke.mockResolvedValueOnce({ configStore: { theme: 'dark', language: 'en' } })
+    await hydrateStoreSnapshot()
+    expect(snapshotGet('configStore', 'language')).toBe('en')
+
+    // A second hydrate whose payload no longer carries `language` (deleted on disk).
+    mockedInvoke.mockReset()
+    mockedInvoke.mockResolvedValueOnce({ configStore: { theme: 'dark' } })
+    await hydrateStoreSnapshot()
+
+    expect(snapshotGet('configStore', 'theme')).toBe('dark')
+    expect(snapshotHas('configStore', 'language')).toBe(false)
+    expect(snapshotGet('configStore', 'language', 'FALLBACK')).toBe('FALLBACK')
+  })
+})
