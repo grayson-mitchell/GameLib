@@ -160,3 +160,13 @@ None - no external service configuration required.
 ---
 *Phase: 29-tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw*
 *Completed: 2026-07-22*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/sidecar/storeWriteHandlers.ts
+- FOUND: src/backend/sidecar/handlers.ts
+- FOUND: src/backend/sidecar/__tests__/skeletonFlows.test.ts
+- FOUND: .planning/phases/29-tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw/29-06-SUMMARY.md
+- FOUND: commit faa7ac96 (Task 1)
+- FOUND: commit 6e5d7a25 (Task 2)
+- FOUND: commit f0caccfc (Task 3)
