@@ -331,10 +331,34 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // a modal OS prompt must not head-of-line block other pending rustInvokes). Returns the
         // picked path as a string, or `Value::Null` on cancel — never an error on cancel, which
         // is a normal user choice, not a failure.
-        "dialog_open" => match app.dialog().file().blocking_pick_folder() {
-            Some(path) => Ok(Value::String(path.to_string())),
-            None => Ok(Value::Null),
-        },
+        // WR-01: honor the forwarded Electron `OpenDialogOptions.properties`. The options
+        // object crosses the wire as `args[0]` and used to be ignored entirely, so EVERY
+        // caller got a directory picker — including the `properties: ['openFile']` call
+        // sites (Settings/CustomWineProton's Wine/Proton binary, SideloadDialog's exe +
+        // cover images, GameSubMenu) which then received a path that can never be a valid
+        // binary/image. Default stays "folder" so the plan-30-03 install-location path is
+        // unchanged when no properties are supplied.
+        "dialog_open" => {
+            let wants_file = args
+                .first()
+                .and_then(|v| v.get("properties"))
+                .and_then(|v| v.as_array())
+                .map(|props| {
+                    let has_dir = props.iter().any(|p| p.as_str() == Some("openDirectory"));
+                    let has_file = props.iter().any(|p| p.as_str() == Some("openFile"));
+                    has_file && !has_dir
+                })
+                .unwrap_or(false);
+            let picked = if wants_file {
+                app.dialog().file().blocking_pick_file()
+            } else {
+                app.dialog().file().blocking_pick_folder()
+            };
+            match picked {
+                Some(path) => Ok(Value::String(path.to_string())),
+                None => Ok(Value::Null),
+            }
+        }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
 }
