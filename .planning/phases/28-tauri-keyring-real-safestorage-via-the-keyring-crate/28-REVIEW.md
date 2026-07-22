@@ -24,7 +24,10 @@ findings:
   warning: 5
   info: 2
   total: 7
+warning_resolved: 1
 status: issues_found
+resolution:
+  WR-01: "Fixed 2026-07-22 in commit 45b6519f — logout() routes the refresh token through getTokenStore().clearToken() and explicitly clears isLoggedIn/userData via configStore.delete(), replacing the blanket configStore.clear(). logout() is now async; main.ts's addListener('logoutSteam', ...) updated to match. Regression test added in user.test.ts. WR-02..WR-05 and Info findings IN-01/IN-02 remain open, unchanged by this fix."
 ---
 
 # Phase 28: Code Review Report
@@ -76,7 +79,20 @@ this phase's planning docs.
 
 ## Warnings
 
-### WR-01: `SteamUser.logout()` was not migrated onto the `TokenStore` seam
+### WR-01: `SteamUser.logout()` was not migrated onto the `TokenStore` seam — FIXED
+
+**Status:** RESOLVED 2026-07-22, commit `45b6519f`. `logout()` now calls
+`await getTokenStore().clearToken()` for the token and `configStore.delete('isLoggedIn')`/
+`delete('userData')` for the remaining session keys (replacing the blanket `configStore.clear()`
+described below). `logout()` is now `async`; the one production caller
+(`main.ts`'s `addListener('logoutSteam', ...)`) was updated to await it via this file's existing
+async fire-and-forget IPC convention (e.g. `addListener('quit', async () => handleExit())`) — no
+floating promise. A regression test in `user.test.ts` asserts `isLoggedIn`/`userData` are still
+explicitly cleared, guarding against a naive one-line `clear()`→`clearToken()` swap that would
+otherwise silently stop clearing session state. Verified: `user.test.ts` 64/64,
+sidecar+tokenStore suites 52/52, `tsc --noEmit` clean, real Electron store md5 unchanged
+before/after (`958bf6829589f20a8de935ebf7c2502b`). See `28-VERIFICATION.md` gap 1 (resolved) for
+full re-verification detail. Original finding preserved below for context.
 
 **File:** `src/backend/storeManagers/steam/user.ts:148-174` (specifically line 172,
 `configStore.clear()`)
