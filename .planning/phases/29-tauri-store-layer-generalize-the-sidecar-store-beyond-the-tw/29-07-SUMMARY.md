@@ -256,3 +256,10 @@ None - no external service configuration required.
 ---
 *Phase: 29-tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw*
 *Completed: 2026-07-22*
+
+## Self-Check: PASSED
+
+- FOUND: .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md
+- FOUND: .planning/phases/29-tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw/29-07-SUMMARY.md
+- FOUND: commit b9f6f114 (Task 1)
+- FOUND: commit b69905de (this SUMMARY)
