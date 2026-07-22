@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 29-04-PLAN.md
-last_updated: "2026-07-22T07:12:45.744Z"
+status: verifying
+stopped_at: Completed 29-07-PLAN.md — Phase 29 (7/7 plans) complete, ready for verification
+last_updated: "2026-07-22T07:37:31.651Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 29 (tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-22
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
@@ -246,6 +246,7 @@ Closed/parked native-install phases:
 | Phase 29 P04 | 35min | 3 tasks | 3 files |
 | Phase 29 P05 | 40min | 3 tasks | 3 files |
 | Phase 29 P06 | ~30min | 3 tasks | 3 files |
+| Phase 29 P07 | ~45min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -421,6 +422,8 @@ Recent decisions affecting current work:
 - [Phase 29]: hydrated is tracked per store name (Set<string>), not per-key, matching the shape both the eager snapshot and lazy fetch actually return
 - [Phase ?]: Namespace-imported sidecarRpc for storeWriteHandlers.ts's single pushFrontendMessage call site, so the D-06 single-choke-point property is grep-verifiable
 - [Phase ?]: storeWriteHandlers.ts write-eligibility (D-08 isAllowedStoreField) is a stricter, independently-gated surface than storeNew's creation eligibility
+- [Phase 29]: SEAM.md re-baselined: store layer moved from stub language into a real §1 section; Accepted Constraints (Phase 29) records D-07/D-14/D-08/D-01 so none reads as an undocumented bug
+- [Phase 29]: 3d live-verification route substituted: original Settings-screen check hit an unrelated, pre-existing unported-channel hang (Phase 30 territory); verified via an equivalent write-path check (favourites) through the same 29-06 choke point instead
 
 ### Pending Todos
 
@@ -489,8 +492,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T07:11:34.243Z
-Stopped at: Completed 29-04-PLAN.md
+Last session: 2026-07-22T07:37:31.646Z
+Stopped at: Completed 29-07-PLAN.md — Phase 29 (7/7 plans) complete, ready for verification
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
