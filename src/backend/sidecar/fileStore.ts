@@ -54,6 +54,7 @@ import {
   writeFileSync
 } from 'graceful-fs'
 import { dirname, isAbsolute, join } from 'path'
+import { isSafeKeyPath } from 'common/types/storePolicy'
 import { getPath } from './pathShim'
 
 export interface FileStoreOptions {
@@ -98,7 +99,38 @@ function resolveStorePath(options: FileStoreOptions): string {
   return join(baseDir, `${name}.json`)
 }
 
+/**
+ * CR-01 (Phase 29 code review): key paths arrive here from renderer-controlled
+ * `storeSet`/`storeDelete` frames. `electron-store` — the module this file
+ * replaces — delegates path access to `dot-prop`, which rejects these three
+ * segment names outright (`dot-prop`'s own `disallowedKeys`). Replacing the
+ * library without carrying that guard forward reintroduced a prototype-
+ * pollution class the original was immune to: walking `cursor['__proto__']`
+ * lands the cursor on `Object.prototype`, and the final assignment then
+ * pollutes every object in the sidecar process — the same process that holds
+ * Steam session material and dispatches every RPC handler.
+ *
+ * The guard is applied in ALL THREE path helpers (read, write, delete) so a
+ * hostile key can neither probe nor mutate the prototype chain. The segment
+ * list itself is single-sourced from `common/types/storePolicy` (a pure,
+ * side-effect-free, Electron-free module) so this layer and the policy layer
+ * cannot drift apart on what "hostile key" means.
+ *
+ * `rejectUnsafePath` logs ONE stderr line naming the rejected operation. It
+ * never logs the key path or the value — these stores hold token material
+ * (T-28-04 convention).
+ */
+function rejectUnsafePath(op: string): void {
+  process.stderr.write(
+    `[sidecar/fileStore] rejected a ${op} with a disallowed key path segment\n`
+  )
+}
+
 function getAtPath(obj: Record<string, unknown>, path: string): unknown {
+  if (!isSafeKeyPath(path)) {
+    rejectUnsafePath('read')
+    return undefined
+  }
   return path.split('.').reduce<unknown>((acc, segment) => {
     if (acc && typeof acc === 'object') {
       return (acc as Record<string, unknown>)[segment]
@@ -112,6 +144,10 @@ function setAtPath(
   path: string,
   value: unknown
 ): void {
+  if (!isSafeKeyPath(path)) {
+    rejectUnsafePath('write')
+    return
+  }
   const segments = path.split('.')
   const last = segments.pop() as string
   let cursor = obj
@@ -126,6 +162,10 @@ function setAtPath(
 }
 
 function deleteAtPath(obj: Record<string, unknown>, path: string): void {
+  if (!isSafeKeyPath(path)) {
+    rejectUnsafePath('delete')
+    return
+  }
   const segments = path.split('.')
   const last = segments.pop() as string
   let cursor: Record<string, unknown> | undefined = obj

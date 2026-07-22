@@ -29,7 +29,11 @@ import { ipcMain } from './electronStub'
 import * as sidecarRpc from './sidecarRpc'
 import { getRegisteredStore } from '../electron_store'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
-import { isAllowedStoreField, STORE_UNIVERSE } from 'common/types/storePolicy'
+import {
+  isAllowedStoreField,
+  isSafeKeyPath,
+  STORE_UNIVERSE
+} from 'common/types/storePolicy'
 import {
   STORE_SET_CHANNEL,
   STORE_DELETE_CHANNEL,
@@ -125,6 +129,18 @@ export function applyStoreWrite(
   if (!isAllowedStoreField(storeName, key)) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — field not allow-listed, store '${storeName}' key '${key}'\n`
+    )
+    return
+  }
+
+  // Guard (c′): CR-01 defence-in-depth — refuse prototype-chain key path segments at
+  // the POLICY layer too, not only at the storage layer. `fileStore.ts` now rejects
+  // these itself, but the policy layer must not depend on that: `resolveWritableStore`
+  // returns a real `electron-store` under Electron, and any future storage backend
+  // would otherwise inherit the hole. Mirrors `dot-prop`'s `disallowedKeys`.
+  if (!isSafeKeyPath(key)) {
+    process.stderr.write(
+      `[storeWriteHandlers] rejected write — disallowed key path segment, store '${storeName}'\n`
     )
     return
   }

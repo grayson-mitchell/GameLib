@@ -422,6 +422,50 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       expect(changed).toBeUndefined()
     })
 
+    // CR-01 REGRESSION (Phase 29 code review): the review verified this exact frame
+    // end-to-end — `storeSet('timestampStore', '__proto__.polluted', 'PWNED')` passed
+    // guards (a)/(b)/(c) (timestampStore's policy is '*') and reached
+    // `FileStore.set()`, whose unguarded dot-notation walk landed the cursor on
+    // Object.prototype. Two independent guards now stop it: guard (c′) in
+    // `applyStoreWrite` and `isSafeKeyPath` in `fileStore.ts`'s path helpers.
+    it('CR-01 regression: a `__proto__`/`constructor`/`prototype` key path is rejected and cannot pollute Object.prototype', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-proto-1', 'storeSet', [
+        'timestampStore',
+        '__proto__.polluted',
+        'PWNED'
+      ])
+      writeSend(input, 'set-proto-2', 'storeSet', [
+        'configStore',
+        'settings.__proto__.polluted',
+        'PWNED'
+      ])
+      writeSend(input, 'set-proto-3', 'storeSet', [
+        'legendary_library',
+        'constructor.prototype.polluted',
+        'PWNED'
+      ])
+      await flush()
+
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
+      expect(Object.prototype).not.toHaveProperty('polluted')
+
+      // No change event may be announced for a rejected write, otherwise the
+      // renderer would treat the hostile key as persisted.
+      const changed = frames.filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
+      )
+      expect(changed.length).toBe(0)
+
+      // The RPC loop keeps serving after the rejections.
+      writeInvoke(input, 'health-after-proto', 'health', [])
+      await flush()
+      expect(frames.find((frame) => frame.id === 'health-after-proto')).toMatchObject(
+        { ok: true, result: 'ok' }
+      )
+    })
+
     // Malformed store names (an unrecognized name and a traversal-shaped name) are
     // inert: no change event, no write outside the temp home (guard (a)/(c) reject
     // before any store resolution is ever attempted), and the RPC loop keeps serving —

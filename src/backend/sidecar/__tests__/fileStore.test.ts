@@ -129,6 +129,29 @@ describe('sidecar fileStore', () => {
     expect([...store]).toEqual([])
   })
 
+  it('CR-01: a `__proto__` key path segment cannot pollute Object.prototype', () => {
+    const store = new FileStore({ cwd: 'proto_pollution_test' })
+
+    // The exact renderer-reachable payload from the review's verified chain:
+    // window.api.storeSet('timestampStore', '__proto__.polluted', 'PWNED').
+    store.set('__proto__.polluted', 'PWNED')
+    store.set('constructor.prototype.polluted', 'PWNED')
+    store.set('prototype.polluted', 'PWNED')
+
+    expect(
+      ({} as Record<string, unknown>)['polluted']
+    ).toBeUndefined()
+    expect(Object.prototype).not.toHaveProperty('polluted')
+    // The rejected write must also not land anywhere in the store's own data.
+    expect(store.store).toEqual({})
+
+    // Reads and deletes are guarded too — neither may traverse the chain.
+    expect(store.get('__proto__.polluted')).toBeUndefined()
+    expect(store.has('constructor')).toBe(false)
+    expect(() => store.delete('__proto__.polluted')).not.toThrow()
+    expect(Object.prototype).not.toHaveProperty('polluted')
+  })
+
   it('corrupt file: invalid on-disk JSON yields an empty store instead of throwing', () => {
     const cwd = 'corrupt_file_test'
     const dir = join(getPath('userData'), cwd)

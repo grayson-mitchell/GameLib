@@ -32,6 +32,33 @@
 import type { ValidStoreName } from './electron_store'
 
 /**
+ * CR-01 (Phase 29 code review): key path segments that may NEVER appear in a store
+ * key, in EITHER direction, on EITHER build.
+ *
+ * `electron-store` resolves dot-notation paths through `dot-prop`, which rejects
+ * exactly these three names (`dot-prop`'s own `disallowedKeys`). The sidecar's
+ * `FileStore` replacement re-implemented dot-notation traversal WITHOUT that guard,
+ * so a renderer-controlled `storeSet('timestampStore', '__proto__.polluted', …)`
+ * walked the cursor onto `Object.prototype` and polluted every object in the sidecar
+ * process — the process that holds Steam session material and dispatches every RPC
+ * handler. Single-sourced here so the storage layer (`fileStore.ts`), the sidecar
+ * write choke point (`storeWriteHandlers.ts`) and the renderer snapshot
+ * (`tauriTransport.ts`) cannot drift apart on what "hostile key" means.
+ */
+export const DISALLOWED_KEY_PATH_SEGMENTS: readonly string[] = [
+  '__proto__',
+  'prototype',
+  'constructor'
+]
+
+/** `true` iff no dot-segment of `key` is in `DISALLOWED_KEY_PATH_SEGMENTS`. */
+export function isSafeKeyPath(key: string): boolean {
+  return !key
+    .split('.')
+    .some((segment) => DISALLOWED_KEY_PATH_SEGMENTS.includes(segment))
+}
+
+/**
  * Per-store allow-list of TOP-LEVEL field names the renderer may read via the Tauri
  * store snapshot/fetch/set paths. Every one of `StoreStructure`'s 21 keys
  * (src/common/types/electron_store.ts) has an entry here.
