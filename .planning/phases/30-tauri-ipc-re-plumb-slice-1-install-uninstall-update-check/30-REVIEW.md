@@ -24,6 +24,15 @@ findings:
   warning: 7
   info: 4
   total: 15
+  fixed: 2
+  open: 13
+fixed_findings:
+  - id: CR-01
+    commit: 236638f6
+    note: "install/updateGame now reject runner !== 'steam' with UNPORTED_CHANNEL_MARKER rather than mis-installing. Scope-limited per D-05a; full libraryManagerMap dispatch remains Phase 32's work."
+  - id: CR-02
+    commit: 75bb3630
+    note: "install now pushes 'installing' after 'queued', captures SteamGame.install()'s InstallResult, logs on error, pushes terminal 'done' for deferredToSetup/abort, and returns {status} instead of discarding it."
 status: issues_found
 ---
 
