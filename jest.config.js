@@ -18,6 +18,7 @@ module.exports = {
   coverageReporters: ['text', 'html'],
   projects: [
     '<rootDir>/src/backend',
+    '<rootDir>/src/common',
     '<rootDir>/src/frontend',
     '<rootDir>/src/preload',
     '<rootDir>/meta'
