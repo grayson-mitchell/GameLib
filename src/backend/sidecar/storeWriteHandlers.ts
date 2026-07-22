@@ -69,7 +69,12 @@ function resolveWritableStore(storeName: string): WritableStoreBackend | undefin
     return registered as unknown as WritableStoreBackend
   }
 
-  if (CACHE_STORE_NAME_PATTERN.test(storeName)) {
+  // WR-01/WR-02: recognized cache-store names ONLY, and still syntactically validated
+  // — `storeName` reaches `Store`'s `name` option and therefore `resolveStorePath()`.
+  if (
+    RECOGNIZED_CACHE_STORE_NAMES.includes(storeName) &&
+    CACHE_STORE_NAME_PATTERN.test(storeName)
+  ) {
     return new Store({
       cwd: 'store_cache',
       name: storeName,
@@ -91,12 +96,21 @@ export function applyStoreWrite(
   key: string,
   value?: unknown
 ): void {
-  // Guard (a): storeName must be a declared store (STORE_UNIVERSE) or a syntactically
-  // plausible dynamic cache-store name — the same acceptance test `sidecar:store-fetch`
-  // (handlers.ts, T-29-13) applies on the read side.
+  // Guard (a): storeName must be a declared store (STORE_UNIVERSE) or a RECOGNIZED
+  // dynamic cache-store name.
+  //
+  // WR-01 (Phase 29 code review): this guard used to test the store name against
+  // `CACHE_STORE_NAME_PATTERN` (`/^[A-Za-z0-9_-]{1,64}$/`), which matches EVERY member
+  // of STORE_UNIVERSE and every other plausible name — it could only ever fire for a
+  // name containing `.`, `/`, a space, or >64 chars, while its comment claimed it was
+  // "the same acceptance test the read side applies", implying an allow-list check that
+  // did not exist. The real gate was guard (c) alone. Testing against
+  // `RECOGNIZED_CACHE_STORE_NAMES` makes the guard mean what it says. The four D-13
+  // names plus `humble_library` are the ONLY dynamic cache stores the frontend ever
+  // constructs (`new CacheStore(...)`, src/frontend/helpers/electronStores.ts).
   const isUniverseMember = (STORE_UNIVERSE as readonly string[]).includes(storeName)
-  const isSyntacticallyValidCacheName = CACHE_STORE_NAME_PATTERN.test(storeName)
-  if (!isUniverseMember && !isSyntacticallyValidCacheName) {
+  const isRecognizedCacheName = RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
+  if (!isUniverseMember && !isRecognizedCacheName) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — unrecognized store name '${storeName}' key '${key}'\n`
     )
@@ -236,9 +250,19 @@ export function registerStoreWriteHandlers(): void {
         return
       }
 
-      if (!CACHE_STORE_NAME_PATTERN.test(storeName)) {
+      // WR-02 (Phase 29 code review): this branch used to construct a real `Store` for
+      // ANY name matching `CACHE_STORE_NAME_PATTERN` — with no allow-list check, unlike
+      // the write path. A renderer script could therefore create unbounded
+      // `${userData}/store_cache/<name>.json` files, every one of which guard (c) then
+      // made permanently unwritable: a pure junk-file/DoS vector with no legitimate
+      // consumer. Restricted to the recognized cache-store names. The syntactic pattern
+      // is still checked FIRST so a traversal-shaped name is reported as such.
+      if (
+        !CACHE_STORE_NAME_PATTERN.test(storeName) ||
+        !RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
+      ) {
         process.stderr.write(
-          `[storeWriteHandlers] storeNew rejected an invalid store name: '${storeName}'\n`
+          `[storeWriteHandlers] storeNew rejected an unrecognized store name: '${storeName}'\n`
         )
         return
       }

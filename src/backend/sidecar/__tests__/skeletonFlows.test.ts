@@ -110,6 +110,9 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../storeManagers/steam/user')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { existsSync, readdirSync } from 'fs'
+import { join } from 'path'
+import { getPath } from '../pathShim'
 import { init } from '../bootstrap'
 import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
@@ -466,10 +469,31 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       )
     })
 
+    // WR-02 REGRESSION (Phase 29 code review): `storeNew` used to construct a real
+    // `Store` for ANY name matching `/^[A-Za-z0-9_-]{1,64}$/`, so a renderer script
+    // could create unbounded `${userData}/store_cache/<name>.json` junk files that
+    // guard (c) then made permanently unwritable. Only the recognized cache-store
+    // names may be constructed.
+    it('WR-02: storeNew for an unrecognized name creates no file under store_cache', async () => {
+      const cacheDir = join(getPath('userData'), 'store_cache')
+      const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
+
+      const { input } = startSidecar()
+      writeSend(input, 'new-junk-1', 'storeNew', ['attacker_junk_store', undefined])
+      writeSend(input, 'new-junk-2', 'storeNew', ['aaaaaaaaaaaaaaaaaaaaaaaa', undefined])
+      await flush()
+
+      const after = existsSync(cacheDir) ? readdirSync(cacheDir) : []
+      expect(after.filter((f) => f.startsWith('attacker_junk_store'))).toEqual([])
+      expect(after.filter((f) => f.startsWith('aaaaaaaa'))).toEqual([])
+      expect(after.length).toBe(before.length)
+    })
+
     // Malformed store names (an unrecognized name and a traversal-shaped name) are
-    // inert: no change event, no write outside the temp home (guard (a)/(c) reject
-    // before any store resolution is ever attempted), and the RPC loop keeps serving —
-    // a subsequent health invoke still responds ok: true.
+    // inert: no change event, no write outside the temp home (guard (a) now rejects an
+    // unrecognized name outright — WR-01 — before any store resolution is attempted),
+    // and the RPC loop keeps serving — a subsequent health invoke still responds
+    // ok: true.
     it('rejects an unknown store name and a traversal-shaped name — no change event, no crash, health still responds', async () => {
       const { input, frames } = startSidecar()
       writeSend(input, 'set-bad-1', 'storeSet', ['not_a_store', 'theme', 'x'])
