@@ -29,7 +29,7 @@ import {
   STORE_LAZY_MISS_MARKER,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
-import { isAllowedStoreField } from 'common/types/storePolicy'
+import { isAllowedStoreField, isSafeKeyPath } from 'common/types/storePolicy'
 
 /**
  * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
@@ -152,10 +152,13 @@ function ensureChangeListenerAttached(): void {
     if (!payload) return
     const { store, key, value, deleted } = payload
     if (!snapshot[store]) snapshot[store] = {}
+    // CR-03: the echo must patch the snapshot through the SAME nested path helpers
+    // the read side uses, otherwise it re-creates the flat/nested mismatch it exists
+    // to repair.
     if (deleted) {
-      delete snapshot[store][key]
+      deleteAtPath(snapshot[store], key)
     } else {
-      snapshot[store][key] = value
+      setAtPath(snapshot[store], key, value)
     }
   })
 }
@@ -238,6 +241,8 @@ function getAtPath(
   key: string
 ): unknown {
   if (!obj) return undefined
+  // CR-01: never traverse a prototype-chain segment, even on a read.
+  if (!isSafeKeyPath(key)) return undefined
   // electron-store dot-notation parity (misc.ts's storeGet supports subpaths).
   return key.split('.').reduce<unknown>((acc, segment) => {
     if (acc && typeof acc === 'object') {
@@ -245,6 +250,53 @@ function getAtPath(
     }
     return undefined
   }, obj)
+}
+
+/**
+ * CR-03 (Phase 29 code review): the WRITE side must be the exact inverse of `getAtPath`
+ * above. It was not — `snapshotSet` did a FLAT `snapshot[storeName][key] = value` while
+ * every read resolved the key through `key.split('.')`. Shipped call sites that write
+ * dot keys (`configStore.set('games.hidden'|'games.favourites'|'games.customCategories', …)`
+ * in GlobalState.tsx, and every frontend `CacheStore.set()`, which writes a
+ * `` `__timestamp.${key}` `` entry) therefore read back the PRE-write hydrated value for
+ * the rest of the session: a hidden game un-hid itself, and a freshly written cache
+ * entry could never be read back in-session. Only a restart repaired it, because the
+ * sidecar's `FileStore` does split on dots, so disk was always correct.
+ *
+ * Carries CR-01's disallowed-segment guard (single-sourced from `storePolicy`) so the
+ * renderer snapshot cannot be prototype-polluted either.
+ */
+function setAtPath(
+  obj: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (!isSafeKeyPath(key)) return
+  const segments = key.split('.')
+  const last = segments.pop() as string
+  let cursor = obj
+  for (const segment of segments) {
+    const next = cursor[segment]
+    if (typeof next !== 'object' || next === null) {
+      cursor[segment] = {}
+    }
+    cursor = cursor[segment] as Record<string, unknown>
+  }
+  cursor[last] = value
+}
+
+function deleteAtPath(obj: Record<string, unknown>, key: string): void {
+  if (!isSafeKeyPath(key)) return
+  const segments = key.split('.')
+  const last = segments.pop() as string
+  let cursor: Record<string, unknown> | undefined = obj
+  for (const segment of segments) {
+    if (!cursor || typeof cursor[segment] !== 'object' || cursor[segment] === null) {
+      return
+    }
+    cursor = cursor[segment] as Record<string, unknown>
+  }
+  if (cursor) delete cursor[last]
 }
 
 /**
@@ -324,12 +376,14 @@ export function snapshotHas(storeName: string, key: string): boolean {
  */
 export function snapshotSet(storeName: string, key: string, value?: unknown): void {
   if (!snapshot[storeName]) snapshot[storeName] = {}
-  snapshot[storeName][key] = value
+  // CR-03: nested write, mirroring `getAtPath`'s nested read.
+  setAtPath(snapshot[storeName], key, value)
   send('storeSet', [storeName, key, value])
 }
 
 /** Deletes locally and forwards the delete to the sidecar asynchronously. */
 export function snapshotDelete(storeName: string, key: string): void {
-  if (snapshot[storeName]) delete snapshot[storeName][key]
+  // CR-03: nested delete, mirroring `getAtPath`'s nested read.
+  if (snapshot[storeName]) deleteAtPath(snapshot[storeName], key)
   send('storeDelete', [storeName, key])
 }

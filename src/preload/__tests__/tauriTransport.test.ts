@@ -43,6 +43,8 @@ import { makeHandlerInvoker, frontendListenerSlot } from '../ipc'
 import {
   snapshotGet,
   snapshotHas,
+  snapshotSet,
+  snapshotDelete,
   hydrateStoreSnapshot,
   registerStore
 } from '../tauriTransport'
@@ -344,5 +346,53 @@ describe('allow-list', () => {
       expect(String(call[0])).not.toContain('blocked')
     }
     expect(result === 'DEFAULT' || result === undefined).toBe(true)
+  })
+})
+
+/**
+ * CR-03 REGRESSION (Phase 29 code review): `snapshotSet` wrote FLAT
+ * (`snapshot[storeName][key] = value`) while every read resolved the key through
+ * `key.split('.')`. The two were not inverses, so the shipped dot-key call sites --
+ * `configStore.set('games.hidden'|'games.favourites'|'games.customCategories', …)`
+ * (GlobalState.tsx) and every frontend `CacheStore.set()` (which writes a
+ * `__timestamp.<key>` entry, electronStores.ts:116) -- read back the PRE-write value
+ * for the rest of the session. A hidden game un-hid itself; a freshly written cache
+ * entry could never be read back in-session.
+ */
+describe('CR-03: dot-notation write/read symmetry', () => {
+  it('a dot-notation write is readable through the nested read path in the same session', () => {
+    snapshotSet('configStore', 'games.hidden', [{ appName: 'a', title: 'A' }])
+    expect(snapshotGet('configStore', 'games.hidden')).toEqual([
+      { appName: 'a', title: 'A' }
+    ])
+    expect(snapshotHas('configStore', 'games.hidden')).toBe(true)
+    // The nested container itself must be a real object, not a flat `'games.hidden'` key.
+    expect(snapshotGet('configStore', 'games')).toEqual({
+      hidden: [{ appName: 'a', title: 'A' }]
+    })
+  })
+
+  it('sibling dot-keys under the same parent coexist (write must merge, not replace)', () => {
+    snapshotSet('configStore', 'games.hidden', ['h'])
+    snapshotSet('configStore', 'games.favourites', ['f'])
+    expect(snapshotGet('configStore', 'games.hidden')).toEqual(['h'])
+    expect(snapshotGet('configStore', 'games.favourites')).toEqual(['f'])
+  })
+
+  it('a dot-notation delete removes only that leaf and is observable through the read path', () => {
+    snapshotSet('configStore', 'games.hidden', ['h'])
+    snapshotSet('configStore', 'games.favourites', ['f'])
+    snapshotDelete('configStore', 'games.hidden')
+    expect(snapshotHas('configStore', 'games.hidden')).toBe(false)
+    expect(snapshotGet('configStore', 'games.favourites')).toEqual(['f'])
+  })
+
+  it('CR-01: a hostile dot-key write through the snapshot cannot pollute Object.prototype', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+    snapshotSet('timestampStore', '__proto__.polluted', 'PWNED')
+    snapshotSet('configStore', 'games.constructor.prototype.polluted', 'PWNED')
+    expect(({} as Record<string, unknown>)['polluted']).toBeUndefined()
+    expect(Object.prototype).not.toHaveProperty('polluted')
+    jest.restoreAllMocks()
   })
 })
