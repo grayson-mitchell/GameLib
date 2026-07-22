@@ -400,12 +400,25 @@ Phase 28 (Tauri keyring — real `safeStorage` via the `keyring` crate). Minted 
 - [x] **REQ-28-06**: When the Keychain is locked, access is denied, or no backend exists, `isEncryptionAvailable()` reports **false**, token reads yield empty, the app reaches a clean signed-out state with a logged warning, and the sidecar never persists a plaintext token. *(D-06)*
 - [x] **REQ-28-07**: No dev escape hatch ships — no env-var or in-memory fallback for Keychain access. Keychain re-prompts on unsigned rebuilds are accepted behavior; both `npm start` (Electron) and `npm run tauri:dev` still work, with zero changes to the 379 `window.api.*` call-sites. *(D-08 + additive/reversible invariant)*
 
+Phase 29 (Tauri store layer — generalize the sidecar store beyond the two skeleton stores). Minted 2026-07-22 during `/gsd-plan-phase 29` from 29-CONTEXT.md D-01..D-15 (ROADMAP read `TBD — mint at /gsd-plan-phase 29`). IDs and meanings are consistent with `29-VALIDATION.md`'s Per-Task Verification Map. Each maps to Phase 29.
+
+- [ ] **REQ-29-01**: Every `ValidStoreName` in `StoreStructure` (21) plus the four boot-set `CacheStore`-backed dynamic names (`legendary_library`, `gog_library`, `nile_library`, `zoom_library`) constructs inside the sidecar process and round-trips `get`/`set`/`delete`/`raw_store` through `fileStore.ts`, proven by an automated test that walks the enumeration. The three heavy declaration sites (`wineDownloaderInfoStore`, `downloadManager`, `migrationsStore`) are extracted into thin modules so they are importable without their host modules' import-time side effects. *(D-01, D-02, D-13, D-15)*
+- [ ] **REQ-29-02**: Renderer hydration is tiered — a declared boot set ships eagerly in the `sidecar:store-snapshot` payload; every other store is lazy. A synchronous read of a not-yet-hydrated store returns the caller's `defaultValue`, logs a distinct greppable marker, and kicks off an async per-store hydrate so the next read is correct. Non-fatal (SEAM Invariant B). *(D-03, D-04, D-09)*
+- [ ] **REQ-29-03**: Real `storeSet`/`storeDelete`/`storeNew` handlers are registered in the sidecar (today the `send`-kind frames vanish into an empty listener array), every sidecar-side write funnels through a single choke point, and that choke point emits a per-key `{ store, key, value }` change event over the existing `sendFrontendMessage` → `frontend_message` relay which the renderer applies to its snapshot. Channel naming stays consistent with `common/types/sidecarTransport.ts`. *(D-05, D-06, D-12)*
+- [ ] **REQ-29-04**: The Tauri path's secret policy is an **allow-list** (undeclared field ⇒ excluded), single-sourced and enforced identically by the eager snapshot handler, the lazy per-store fetch handler, the write handlers, and the renderer bridge. `humbleConfigStore.csrfToken`, `steamConfigStore.refreshToken`, `humbleConfigStore.sessionCookie`, and `gogConfigStore.credentials`/`zoomConfigStore.credentials` are excluded by name. `src/preload/api/misc.ts`'s Electron-path deny-list stays byte-identical, with an explicit divergence comment at both sites. *(D-08)*
+- [ ] **REQ-29-05**: The accepted cross-process write-clobber constraint (a concurrently running Electron build and Tauri build against the same userData folder can silently erase each other's config writes) is written down in both `SEAM.md` and a `fileStore.ts` code comment, and `SEAM.md` is re-baselined so `fileStore.ts` / the store snapshot move out of §2/§3 into §1. *(D-07)*
+- [ ] **REQ-29-06**: Two `TypeCheckedStoreBackend` instances that resolve to the same on-disk path (`steamConfigStore` and `steamBottleConfigStore` both land on `steam_store/config.json`) share one in-memory `FileStore` cell and cannot clobber each other's writes in-process; `fileStore.ts` additionally honours `options.defaults` and persists atomically (temp file + rename). *(D-02, D-10, D-11, D-14)*
+- [ ] **REQ-29-07**: The additive/reversible invariant holds — `npm start` (Electron) and `npm run tauri:dev` both still work after every plan, with the Electron build's behavior unchanged except for D-15's mechanical re-export, and zero changes to the 379 `window.api.*` call-sites. *(REQ-27-06 pattern + hard constraint)*
+
 - Phase 27 requirements: 6 total (REQ-27-01..06, minted 2026-07-20 from ROADMAP goal + spike blueprint 009–012)
 - Phase 28 requirements: 7 total (REQ-28-01..07, minted 2026-07-22 from 28-CONTEXT.md D-01..D-08)
-- Mapped to phases: 13 (Phase 27: 6, Phase 28: 7)
+- Phase 29 requirements: 7 total (REQ-29-01..07, minted 2026-07-22 from 29-CONTEXT.md D-01..D-15)
+- Mapped to phases: 20 (Phase 27: 6, Phase 28: 7, Phase 29: 7)
 - Unmapped: 0 ✓
 
 **D-XX -> REQ mapping (Phase 28):** D-01 -> REQ-28-01 · D-04 -> REQ-28-02 · D-02 -> REQ-28-03 · D-03 -> REQ-28-04 · D-05/D-07/D-10 -> REQ-28-05 · D-06 -> REQ-28-06 · D-08 -> REQ-28-07. D-09 and D-11 are discretion points shaping REQ-28-01/02/06, not standalone requirements.
+
+**D-XX -> REQ mapping (Phase 29):** D-01/D-02/D-13/D-15 -> REQ-29-01 · D-03/D-04/D-09 -> REQ-29-02 · D-05/D-06/D-12 -> REQ-29-03 · D-08 -> REQ-29-04 · D-07 -> REQ-29-05 · D-02/D-10/D-11/D-14 -> REQ-29-06 · hard-constraint (additive/reversible) -> REQ-29-07.
 
 ---
 *Requirements defined: 2026-07-02*
@@ -415,4 +428,5 @@ Phase 28 (Tauri keyring — real `safeStorage` via the `keyring` crate). Minted 
 *Last updated: 2026-07-20 — Phase 24 (REQ-24-01..07) minted during /gsd-execute-phase 24 from 24-SPEC.md R1–R7; REQ-24-01 Complete (Plan 24-01), REQ-24-02 Complete source/structural (Plan 24-02; live-Steam round-trip deferred to Plan 24-10), REQ-24-04 Complete (Plan 24-08)*
 *Last updated: 2026-07-20 — Phase 26 (REQ-26-01..06) traceability recorded during /gsd-execute-phase 26 (rows were missing from plan time — reconciled from 26-SPEC.md REQ1–REQ6)*
 *Last updated: 2026-07-20 — Phase 27 (REQ-27-01..06) minted during /gsd-plan-phase 27 from ROADMAP goal + Idea-C spike blueprint (009–012); v0.8 rearchitecture track opened*
+*Last updated: 2026-07-22 — Phase 29 (REQ-29-01..07) minted during /gsd-plan-phase 29 from 29-CONTEXT.md D-01..D-15; ROADMAP Phase 29 `Requirements: TBD` line replaced*
 *Last updated: 2026-07-22 — Phase 28 (REQ-28-01..07) minted during /gsd-plan-phase 28 from 28-CONTEXT.md D-01..D-08; REQ-28-04 records that D-03 supersedes the ROADMAP Phase 28 "unblocks Phase 27 UAT 2/3" claim*
