@@ -48,19 +48,31 @@ ensureStoresRegistered()
 // ---- Store layer read path (Plan 04, D-02 / D-03 / D-08) -------------------
 
 /**
- * D-13: the four dynamically-named `CacheStore` names carried inside
+ * D-13's four dynamically-named `CacheStore` names carried inside
  * `BOOT_SET_STORES`/`STORE_UNIVERSE` that are NOT `ValidStoreName`s —
  * mirrors `storePolicy.ts`'s own (unexported) boot-set cache-store name
  * list. Declared here rather than exported from `storePolicy.ts`, to avoid
  * widening that module's export surface for this single internal consumer;
  * both lists are short, stable, and greppable (D-13's own
  * declared-not-derived rationale).
+ *
+ * PLUS `wikigameinfo` — discovered by this plan's own coverage test (Task
+ * 3), not anticipated by 29-RESEARCH: `wikigameinfo` IS declared as a
+ * `ValidStoreName` in `StoreStructure` (electron_store.ts), but
+ * `wiki_game_info/electronStore.ts` constructs it as a `CacheStore`, not a
+ * `TypeCheckedStoreBackend` — so it never self-registers into
+ * `electron_store.ts`'s typed registry (plan 29-02) despite its type
+ * declaration. It resolves through the exact same cache-shaped
+ * construction as the D-13 four; the only difference is it sits in
+ * `LAZY_STORES`, not `BOOT_SET_STORES`, so it is reachable only through the
+ * lazy fetch handler below, never the eager snapshot.
  */
-const D13_CACHE_STORE_NAMES: readonly string[] = [
+const CACHE_BACKED_STORE_NAMES: readonly string[] = [
   'legendary_library',
   'gog_library',
   'nile_library',
-  'zoom_library'
+  'zoom_library',
+  'wikigameinfo'
 ]
 
 /**
@@ -70,12 +82,12 @@ const D13_CACHE_STORE_NAMES: readonly string[] = [
  *
  *   - A `ValidStoreName` resolves through the registry (plan 29-02) — the
  *     live instance's `raw_store`.
- *   - One of the four D-13 cache-store names resolves through the EXACT
+ *   - A name in `CACHE_BACKED_STORE_NAMES` resolves through the EXACT
  *     construction shape `backend/cache.ts` uses for every dynamically-named
  *     `CacheStore` (`{ cwd: 'store_cache', name, clearInvalidConfig: true }`).
  *     The sidecar's `Module._load`-substituted `FileStore` shares its D-14
  *     path-keyed cell with the real `CacheStore` instance constructed by the
- *     corresponding `electronStores.ts` module, so this always reads the
+ *     corresponding store-declaration module, so this always reads the
  *     identical on-disk data rather than a fresh, unrelated read.
  *   - Anything else (a registration gap, or a name a caller's own
  *     validation let through that isn't actually served here) yields `{}`
@@ -88,7 +100,7 @@ function resolveRawStore(name: string): Record<string, unknown> {
     return registered.raw_store as Record<string, unknown>
   }
 
-  if (D13_CACHE_STORE_NAMES.includes(name)) {
+  if (CACHE_BACKED_STORE_NAMES.includes(name)) {
     const cacheBackedStore = new Store({
       cwd: 'store_cache',
       name,
