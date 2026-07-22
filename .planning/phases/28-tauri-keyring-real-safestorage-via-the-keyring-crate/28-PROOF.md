@@ -238,8 +238,10 @@ convenience from being mistaken for an acceptable production pattern later.
 The self-check trigger (`GAMELIB_KEYRING_SELFCHECK`, `keyring_self_check`/`keyring_self_check_seed`/
 `keyring_self_check_verify`, `SELFCHECK_ACCOUNT_SUFFIX`, and the scratch-file helpers) was
 scaffolding with an owner from the start (banner-marked `SCAFFOLDING (28-06 Task 1)` in three
-places) and has been fully removed in this same plan, commit `<TASK4_COMMIT>` (see
-`28-06-SUMMARY.md` for the actual hash). The round-trip verdict and the `keyring::Error` debug
-output above were captured BEFORE removal and are the durable, reproducible record — a future
-reader who wants to reproduce the round-trip must temporarily re-add an equivalent trigger; none
-exists in the shipped shell as of this commit.
+places) and has been fully removed in this same plan, commit `a1966f7b`
+("fix(28-06): remove keyring self-check scaffolding from main.rs"). The round-trip verdict and
+the `keyring::Error` debug output above were captured BEFORE removal and are the durable,
+reproducible record — a future reader who wants to reproduce the round-trip must temporarily
+re-add an equivalent trigger; none exists in the shipped shell as of this commit.
+`cargo build` confirmed clean with zero warnings and zero remaining `selfcheck` references
+after removal.
