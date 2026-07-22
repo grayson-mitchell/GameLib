@@ -31,6 +31,7 @@ use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
@@ -203,7 +204,11 @@ async fn sidecar_store_snapshot(
 /// to address an arbitrary Keychain entry). Error mapping follows this file's existing flat
 /// `String` convention (`.map_err(|e| e.to_string())`, see `open_external` above); a bare
 /// `keyring::Error` variant is never returned as-is.
-fn dispatch_rust_channel(channel: &str, args: &[Value]) -> Result<Value, String> {
+///
+/// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
+/// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
+/// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
+fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Result<Value, String> {
     match channel {
         "keyring_get" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
             Ok(entry) => match entry.get_password() {
@@ -271,6 +276,16 @@ fn dispatch_rust_channel(channel: &str, args: &[Value]) -> Result<Value, String>
                 eprintln!("[shell] keyring {channel} failed: {e:?}");
                 Ok(Value::Bool(false))
             }
+        },
+        // Native folder picker (Phase 30 Plan 03, D-09/REQ-30-07): blocks the calling thread
+        // until the user picks or cancels, so callers MUST dispatch this on a spawned worker
+        // thread, never the reader thread (T-30-13 — same reasoning as the keyring arms above,
+        // a modal OS prompt must not head-of-line block other pending rustInvokes). Returns the
+        // picked path as a string, or `Value::Null` on cancel — never an error on cancel, which
+        // is a normal user choice, not a failure.
+        "dialog_open" => match app.dialog().file().blocking_pick_folder() {
+            Some(path) => Ok(Value::String(path.to_string())),
+            None => Ok(Value::Null),
         },
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
@@ -438,8 +453,9 @@ fn start_reader(
                     .cloned()
                     .unwrap_or_default();
                 let worker_state = state.clone();
+                let worker_app = app.clone();
                 thread::spawn(move || {
-                    let result = dispatch_rust_channel(&channel, &args);
+                    let result = dispatch_rust_channel(&channel, &args, &worker_app);
                     let response = match result {
                         Ok(v) => serde_json::json!({ "id": id, "ok": true, "result": v }),
                         Err(e) => serde_json::json!({ "id": id, "ok": false, "error": e }),
@@ -477,6 +493,7 @@ fn start_reader(
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let mut child = spawn_sidecar()?;
             let stdin = child
