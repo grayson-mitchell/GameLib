@@ -4,8 +4,8 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Phase 29 context gathered
-last_updated: "2026-07-22T05:58:25.817Z"
-last_activity: 2026-07-22 -- Phase 29 planning complete
+last_updated: "2026-07-22T06:08:35.968Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 5
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 28 — tauri-keyring-real-safestorage-via-the-keyring-crate
+**Current focus:** Phase 29 — tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 28 (tauri-keyring-real-safestorage-via-the-keyring-crate) — EXECUTING
-Plan: 6 of 6
+Phase: 29 (tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-07-22 -- Phase 29 planning complete
+Last activity: 2026-07-22
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -240,6 +240,7 @@ Closed/parked native-install phases:
 | Phase 28 P04 | 45min | 3 tasks | 4 files |
 | Phase 28 P05 | 35min | 1 tasks | 1 files |
 | Phase 28 P06 | 45min | 2 tasks | 3 files |
+| Phase 29 P01 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -404,6 +405,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Corrected the plan's stale filename assumption for the Steam configStore file (config.json, not steamConfigStore.json) and added the skeletonFlows.test.ts-style electron/electron-store mock redirection so electronUntouched.test.ts proves the REAL production configStore path is untouched, not a synthetic tmpdir-backed mock
 - [Phase 28]: Phase 28 hardware checkpoint: macOS Keychain Deny surfaces as keyring::Error::PlatformFailure wrapping OSStatus -128 (errSecUserCanceled), not NoStorageAccess — closes RESEARCH Assumption A1; no code fix needed since classification is already NoEntry-vs-everything-else, variant-agnostic.
 - [Phase 28]: Regression fixed (92c29a5e): Phase 27's skeletonFlows.test.ts + 28-05's electronUntouched.test.ts were driving the developer's REAL production Electron configStore; skeletonFlows Test 4 destroyed the real Steam refresh token mid-phase. Both suites made strictly read-only / isolated.
+- [Phase 29]: fileStore D-14 fix implemented as a path-keyed cellRegistry (Map<filePath,{data}>) rather than singleton FileStore instances, so new FileStore() still returns a distinct object per call while sharing the underlying data
+- [Phase 29]: fileStore.ts options.defaults (D-02b) seeds unset keys under loaded data at cell-creation time only and is never persisted to disk at construction, deviating intentionally from electron-store/conf
 
 ### Pending Todos
 
@@ -472,7 +475,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T04:48:29.391Z
+Last session: 2026-07-22T06:08:35.963Z
 Stopped at: Phase 29 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |

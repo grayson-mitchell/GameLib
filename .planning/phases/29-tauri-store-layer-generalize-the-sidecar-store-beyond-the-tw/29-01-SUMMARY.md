@@ -99,6 +99,7 @@ None - no external service configuration required.
 - `options.defaults` and atomic persist are available for any store construction site that needs them.
 - The new unit suite (`npx jest src/backend/sidecar/__tests__/fileStore.test.ts`) and the full sidecar suite (`npx jest src/backend/sidecar` — 6 suites, 46 tests) both pass, including `electronUntouched.test.ts` (real-config-directory safety proof), confirming no regression to the `cache.ts` consumer or existing sidecar flows.
 - No blockers for 29-02 (next plan in the wave).
+- **REQ-29-05 caveat:** per 29-VALIDATION.md's per-task verification map, REQ-29-05 is jointly owned by this plan AND 29-07 — this plan satisfies the "D-07 documented in `fileStore.ts`" half; 29-07 still owes the "SEAM.md re-baselined so `fileStore.ts`/the store snapshot move out of §2/§3 into §1" half. REQUIREMENTS.md's checkbox was marked complete by this plan's frontmatter per the standard executor protocol (requirements are extracted from the executing plan's own frontmatter) — 29-07 must still perform the SEAM.md re-baseline for the requirement's full text to be genuinely satisfied; flag this at phase-level verification if 29-07 has not yet run.
 
 ---
 *Phase: 29-tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw*
