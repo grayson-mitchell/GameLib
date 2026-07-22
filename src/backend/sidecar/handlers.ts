@@ -35,6 +35,7 @@ import { ipcMain } from './electronStub'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
+import { registerDialogFlows } from './dialogFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -59,6 +60,10 @@ ipcMain.handle('health', async () => 'ok')
 registerSteamFlows()
 registerSteamAuthFlows()
 registerInstallFlows()
+// WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
+// is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
+// caller (`main.ts`) is not in the sidecar's import graph.
+registerDialogFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

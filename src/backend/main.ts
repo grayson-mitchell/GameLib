@@ -95,6 +95,7 @@ import { Path } from './schemas'
 
 import { uninstallGameCallback } from './utils/uninstaller'
 import { checkGameUpdates } from './utils/checkGameUpdates'
+import { openDialogCallback } from './utils/openDialog'
 import { handleProtocol, shouldHideWindowForProtocolArgs } from './protocol'
 import {
   init as initLogger,
@@ -1109,17 +1110,16 @@ addHandler('launch', (event, args): StatusPromise => {
   return launchEventCallback(args)
 })
 
+// WR-02: body factored into `backend/utils/openDialog.ts` so the Tauri sidecar's
+// `dialogFlowRegistration.ts` serves the SAME implementation instead of leaving the
+// channel unported (and plan 30-03's picker unreachable).
 addHandler('openDialog', async (e, args) => {
   const mainWindow = getMainWindow()
   if (!mainWindow) {
     return false
   }
 
-  const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, args)
-  if (!canceled) {
-    return filePaths[0]
-  }
-  return false
+  return openDialogCallback(mainWindow, args)
 })
 
 addListener('showItemInFolder', async (e, item) => showItemInFolder(item))
