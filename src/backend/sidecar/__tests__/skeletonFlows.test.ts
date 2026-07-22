@@ -3,9 +3,20 @@
  * (Phase 27 Plan 04 — Task 2).
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
- * real-tmpdir black-box pattern — the shims under test read/write the real
- * OS config directory, same as production) against injected
+ * real-shim black-box pattern — the shims under test are the actual
+ * electronStub.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs.
+ *
+ * **GAP FIX (2026-07-22):** this suite's config directory is NOT the real OS
+ * config directory. Test 4 below writes fixture data (including a fake
+ * refreshToken) through the real configStore/fileStore module instance, and a
+ * previous incident (see `electronUntouched.test.ts`'s header) proved that
+ * doing so against a developer's REAL
+ * `~/Library/Application Support/GameLib/` is an active data-loss hazard. The
+ * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
+ * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * (preserving this suite's fidelity), while the location it reads/writes can
+ * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('electron-store', ...)` below
  * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
@@ -45,6 +56,31 @@
  */
 
 import { PassThrough } from 'node:stream'
+
+// ── os — GAP FIX (2026-07-22): Test 4 below writes fixture data (including a
+// fake refreshToken) through the real, unmocked configStore/fileStore module
+// instance to prove the snapshot handler filters it out. That module resolves
+// its on-disk path from `homedir()` (pathShim.ts -> resolveAppDataDir), and on
+// darwin there is no HOME/XDG_CONFIG_HOME override — left unmocked, this would
+// write directly into the developer's REAL
+// `~/Library/Application Support/GameLib/steam_store/config.json`, the exact
+// file a previous version of `electronUntouched.test.ts` destroyed (see that
+// file's header). Overriding `homedir()` to a disposable per-process tmp
+// directory keeps the real electronStub/fileStore code paths under test (the
+// whole point of this suite) while making it structurally impossible for any
+// test in this file to touch real user data.
+jest.mock('os', () => {
+  const actual = jest.requireActual('os')
+  const path = jest.requireActual('path')
+  return {
+    ...actual,
+    homedir: () =>
+      path.join(
+        actual.tmpdir(),
+        `gamelib-skeletonflows-test-home-${process.pid}`
+      )
+  }
+})
 
 // ── electron / electron-store — route Jest's own module resolution at the
 // REAL sidecar shims (see module docstring above) ───────────────────────────
@@ -223,7 +259,10 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // steamConfigStore.userData but never refreshToken.
   it('Test 4 (snapshot): sidecar:store-snapshot includes steamConfigStore.userData but never refreshToken', async () => {
     // Real (unmocked) electron-store-backed steamConfigStore — write test
-    // fixture data through the SAME module instance the handler reads.
+    // fixture data through the SAME module instance the handler reads. Safe:
+    // the `jest.mock('os', ...)` above redirects this module's on-disk
+    // location to a disposable per-process tmp directory, never the
+    // developer's real config directory.
     steamConfigStore.set('userData', {
       username: 'skeleton-tester',
       steamId: 'STEAMID_TEST'
@@ -254,8 +293,10 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         'refreshToken'
       )
     } finally {
-      // Real-tmpdir pattern touches the actual OS config dir — clean up the
-      // fixture data this test wrote so it never leaks into another run.
+      // Isolated per-process tmp config dir (see jest.mock('os', ...) above)
+      // — clear() here only ever touches that disposable directory, never
+      // real user data. Clean up so the fixture data doesn't leak into
+      // another test in this same file.
       steamConfigStore.clear()
     }
   })

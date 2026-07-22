@@ -1,6 +1,15 @@
 /**
  * Electron-untouched byte-comparison proof (Phase 28 Plan 05).
  *
+ * ── STRICTLY READ-ONLY. DO NOT ADD `.set()`/`.delete()`/`.clear()` CALLS HERE. ──
+ * A previous version of this suite snapshotted the real store in `beforeAll` and
+ * restored it in `afterAll`, seeding a synthetic write when no token was present.
+ * That restore never ran when the Jest worker was force-killed (this repo has a
+ * known leaked-timer crash in `storeManagers/steam/library.ts` that does exactly
+ * that), and it permanently destroyed a real developer's Steam session — their
+ * refresh token was wiped and `config.json` was left as `{}`. This suite must
+ * never write to the real store again, under any code path, for any reason.
+ *
  * Covers REQ-28-02/REQ-28-04/D-04: the sidecar's `SidecarKeyringTokenStore` — and the
  * `TokenStore` seam that selects it in a sidecar build — must never write, mutate, or delete
  * anything in the shared Electron `configStore`. This suite drives the REAL (unmocked)
@@ -12,9 +21,13 @@
  * **Load-bearing real-config-directory convention** (mirrors `skeletonFlows.test.ts`'s module
  * docstring and Test 4): `pathShim.ts` has no `HOME`/`XDG_CONFIG_HOME`/`APPDATA` override for
  * darwin, so `configStore` reads/writes the developer's REAL
- * `~/Library/Application Support/GameLib/steam_store/steamConfigStore.json`. This suite
- * snapshots the store's pre-existing contents in `beforeAll` and RESTORES (never `clear()`s)
- * them in `afterAll`, so a real Steam session on the machine running this suite is never lost.
+ * `~/Library/Application Support/GameLib/steam_store/config.json` — NOT `steamConfigStore.json`
+ * (the store's `name` argument, `'steamConfigStore'`, is never forwarded into electron-store's
+ * real `Store` options by `TypeCheckedStoreBackend`'s constructor — only `{ cwd: 'steam_store' }`
+ * is, so electron-store falls back to its own default filename, `config.json`). Because this
+ * suite may run against real user data, it only ever READS that file — never snapshots-and-
+ * restores it. Safety is proven by comparing the file's raw bytes (`fs.readFileSync`) before and
+ * after driving the sidecar; reading is inherently safe, so there is nothing to restore.
  *
  * The final two tests are a by-construction source gate (T-28-01/T-28-09): they read the
  * sidecar's own source files with comments stripped and assert the forbidden identifiers/lie
@@ -22,9 +35,8 @@
  * review.
  */
 
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { randomUUID } from 'node:crypto'
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL
 // sidecar shims (mirrors skeletonFlows.test.ts): without this, Jest's automatic
@@ -71,6 +83,10 @@ import {
   getTokenStore,
   ElectronTokenStore
 } from '../../storeManagers/steam/tokenStore'
+// Real (unmocked) pathShim — same module electronStub.ts / fileStore.ts resolve
+// paths through in production, used here ONLY to compute the real store file's
+// path for a read-only byte comparison. Never used to write.
+import { getPath } from '../pathShim'
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
@@ -110,44 +126,27 @@ function currentRefreshToken(): string | undefined {
   return steamConfigStore.get_nodefault('refreshToken')
 }
 
-// ── Real-config-directory snapshot/restore (module scope, not clear()) ─────
-let originalIsLoggedIn: boolean | undefined
-let originalRefreshToken: string | undefined
-let originalUserData: unknown
-let subjectToken: string
+// ── Real store file byte-comparison (read-only) ─────────────────────────────
+// Mirrors fileStore.ts's own `resolveStorePath`: name is never forwarded by
+// `TypeCheckedStoreBackend`, so electron-store's default filename applies.
+const REAL_STORE_PATH = join(getPath('userData'), 'steam_store', 'config.json')
+
+/**
+ * Reads the real on-disk store file's raw bytes, or `null` if it does not
+ * exist (the user's current state, and a fully valid "nothing to compare
+ * against went wrong" state). NEVER creates, writes, or deletes the file.
+ */
+function readRealStoreFileBytes(): Buffer | null {
+  if (!existsSync(REAL_STORE_PATH)) return null
+  return readFileSync(REAL_STORE_PATH)
+}
+
+let storeBytesBeforeSuite: Buffer | null
 
 beforeAll(() => {
-  const original = steamConfigStore.raw_store
-  originalIsLoggedIn = original.isLoggedIn
-  originalRefreshToken = original.refreshToken
-  originalUserData = original.userData
-
-  // If the developer's real store already has a refreshToken, use it as the
-  // byte-comparison subject (never touch it). Otherwise seed a synthetic
-  // sentinel so the comparison has a real subject to check against.
-  if (originalRefreshToken) {
-    subjectToken = originalRefreshToken
-  } else {
-    subjectToken = `electron-owned-sentinel-${randomUUID()}`
-    steamConfigStore.set('refreshToken', subjectToken)
-  }
-})
-
-afterAll(() => {
-  // Restore, never clear() — leaves the developer's real Steam session exactly
-  // as this suite found it.
-  if (originalRefreshToken !== undefined) {
-    steamConfigStore.set('refreshToken', originalRefreshToken)
-  } else {
-    steamConfigStore.delete('refreshToken')
-  }
-  if (originalUserData !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    steamConfigStore.set('userData', originalUserData as any)
-  }
-  if (originalIsLoggedIn !== undefined) {
-    steamConfigStore.set('isLoggedIn', originalIsLoggedIn)
-  }
+  // Read-only snapshot for the whole-suite byte-identity proof below. No
+  // `.set()`/`.delete()`/`.clear()` call exists anywhere in this file.
+  storeBytesBeforeSuite = readRealStoreFileBytes()
 })
 
 beforeEach(() => {
@@ -174,7 +173,6 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     await store.setToken('sidecar-only-token')
 
     expect(currentRefreshToken()).toBe(before)
-    expect(currentRefreshToken()).toBe(subjectToken)
   })
 
   it('getToken() leaves configStore.refreshToken byte-identical (===)', async () => {
@@ -271,6 +269,21 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
 
     expect(currentRefreshToken()).toBe(before)
     expect(fullSnapshot()).toBe(beforeFull)
+  })
+
+  it('the real store file on disk is byte-identical before and after the whole suite (fs.readFileSync proof)', () => {
+    // Stronger evidence than the in-memory `raw_store` projection above: reads
+    // the actual bytes electron-store persisted to disk. Absence-before /
+    // absence-after (the user's current state) is a valid pass; so is
+    // identical-bytes-before / identical-bytes-after.
+    const after = readRealStoreFileBytes()
+
+    if (storeBytesBeforeSuite === null) {
+      expect(after).toBeNull()
+    } else {
+      expect(after).not.toBeNull()
+      expect((after as Buffer).equals(storeBytesBeforeSuite)).toBe(true)
+    }
   })
 
   it('by-construction gate: keyringTokenStore.ts and bootstrap.ts never reference configStore/TOKEN_STORE_KEY/TOKEN_PREFIX (comments stripped)', () => {
