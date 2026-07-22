@@ -181,3 +181,83 @@ export const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]' as const
  * dispatches to the per-channel listeners registered through `frontendListenerSlot`.
  */
 export const FRONTEND_MESSAGE_EVENT = 'frontend_message' as const
+
+/**
+ * Store channel constants (Phase 29 Plan 03, D-12) — generalizes the sidecar store beyond
+ * the two skeleton stores (`configStore`/`steamConfigStore`). These are wire-protocol
+ * literals; changing any value below is a breaking change to whichever side (renderer or
+ * sidecar) is not updated in lockstep.
+ */
+
+/**
+ * `send`-kind (fire-and-forget) channel name for a single-key store write. ALREADY emitted
+ * by `tauriTransport.ts`'s `snapshotSet()` (`send('storeSet', [storeName, key, value])`) —
+ * this constant must match that literal exactly, or the renderer's existing writes silently
+ * orphan. Until plan 29-05 registers a sidecar-side listener for this channel, these frames
+ * vanish into an empty listener array with ZERO signal (29-RESEARCH Pitfall 1) — worse than
+ * an unported `invoke`, which at least rejects with `UNPORTED_CHANNEL_MARKER`.
+ */
+export const STORE_SET_CHANNEL = 'storeSet' as const
+
+/**
+ * `send`-kind (fire-and-forget) channel name for a single-key store delete. ALREADY emitted
+ * by `tauriTransport.ts`'s `snapshotDelete()` (`send('storeDelete', [storeName, key])`) —
+ * must match that literal exactly. Same unlistened-frame risk as `STORE_SET_CHANNEL` until
+ * plan 29-05 wires a listener.
+ */
+export const STORE_DELETE_CHANNEL = 'storeDelete' as const
+
+/**
+ * `send`-kind (fire-and-forget) channel name for registering a new store (mirrors
+ * `misc.ts`'s `storeNew` / `tauriTransport.ts`'s `registerStore()`). Same unlistened-frame
+ * risk as `STORE_SET_CHANNEL`/`STORE_DELETE_CHANNEL` until plan 29-05 wires a listener.
+ */
+export const STORE_NEW_CHANNEL = 'storeNew' as const
+
+/**
+ * `invoke`-kind INTERNAL RPC channel, ridden over the existing `SIDECAR_INVOKE`
+ * (`sidecar_invoke`) Tauri command, for D-03's lazy per-store hydrate: the renderer fetches
+ * one `LAZY_STORES` store's filtered snapshot on first access instead of every store being
+ * eagerly hydrated at boot. This is NOT a new Tauri command and requires no Rust change —
+ * it is dispatched exactly like any other sidecar RPC channel name.
+ */
+export const STORE_FETCH_CHANNEL = 'sidecar:store-fetch' as const
+
+/**
+ * Mirrors `src-tauri/src/main.rs`'s own snapshot-channel constant. DISTINCT from
+ * `SIDECAR_STORE_SNAPSHOT` (the renderer-facing Tauri COMMAND name the renderer invokes to
+ * request the snapshot) — this is the internal sidecar-side channel identifier for the same
+ * concept. Do not change either value; they are two different layers of the same feature,
+ * not synonyms of one another.
+ */
+export const STORE_SNAPSHOT_CHANNEL = 'sidecar:store-snapshot' as const
+
+/**
+ * `frontendMessage` push channel (D-06) carrying a single `StoreChangedPayload` argument,
+ * so the renderer's local snapshot cache can be kept in sync when a store value changes on
+ * the sidecar side without the renderer having written it itself. `pushFrontendMessage(channel,
+ * ...args)` and `main.rs`'s reader are already generic over the channel name (see
+ * `SidecarNotification` above), so wiring this channel requires ZERO Rust changes.
+ */
+export const STORE_CHANGED_CHANNEL = 'storeChanged' as const
+
+/**
+ * D-04's distinct, greppable warning marker for a lazy-store read that missed the
+ * synchronous snapshot (i.e. resolved to `undefined`/a stale default) and then
+ * self-corrected once the async `STORE_FETCH_CHANNEL` round-trip completed. Modelled on
+ * `UNPORTED_CHANNEL_MARKER` above. Deliberately NOT folded into generic logging — a
+ * silently-wrong-then-self-correcting read is only diagnosable from a log line carrying
+ * this exact marker.
+ */
+export const STORE_LAZY_MISS_MARKER = '[GAMELIB_STORE_LAZY_MISS]' as const
+
+/**
+ * Payload shape for a `STORE_CHANGED_CHANNEL` push. `key` is the top-level (or dot-notation)
+ * field that changed; `value` is present on a set, `deleted` is `true` on a delete.
+ */
+export interface StoreChangedPayload {
+  store: string
+  key: string
+  value?: unknown
+  deleted?: boolean
+}
