@@ -259,6 +259,59 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
 }
 
 /**
+ * WR-04 (Phase 29 code review): read-safety and write-safety are NOT the same
+ * predicate. The write path reused `isAllowedStoreField` verbatim, so "everything the
+ * renderer may read, it may write" — the converse of what guard (c)'s own comment
+ * claimed. `configStore.settings` is `AppSettings`, carrying `wineVersion.bin`,
+ * `wrapperOptions`, `launcherArgs` and `winePrefix` — executable paths and command
+ * lines consumed verbatim on the next game launch. Renderer write access there is
+ * effectively local code execution. `*.userData` and `configStore.userHome` are
+ * backend-owned identity/path state for the same reason.
+ *
+ * This is a SUBTRACTIVE overlay on the read allow-list rather than a second parallel
+ * allow-list ON PURPOSE: an unknown field is still write-rejected by DEFAULT (it fails
+ * `isAllowedStoreField` first), so the D-08 fail-closed property is preserved with ONE
+ * hand-maintained list instead of two that can drift.
+ *
+ * Every entry was verified against the frontend: nothing under `src/frontend` writes
+ * any of these fields. Settings changes route through the typed
+ * `requestAppSettings`/`setSetting` IPC, not through `storeSet`.
+ */
+export const WRITE_DENIED_FIELDS: Record<string, readonly string[]> = {
+  configStore: ['settings', 'userHome', 'userInfo'],
+  gogConfigStore: ['userData'],
+  zoomConfigStore: ['userData'],
+  steamConfigStore: ['userData'],
+  nileConfigStore: ['userData'],
+  humbleConfigStore: ['userData']
+}
+
+/**
+ * `isWritableStoreField(storeName, key)` — the WRITE-side predicate. FAIL CLOSED, and
+ * strictly narrower than `isAllowedStoreField`: a field must be readable AND not
+ * write-denied AND not carry a disallowed key path segment (CR-01).
+ */
+export function isWritableStoreField(storeName: string, key: string): boolean {
+  if (!isAllowedStoreField(storeName, key)) {
+    return false
+  }
+  if (!isSafeKeyPath(key)) {
+    return false
+  }
+  // Own-property lookup for the same CR-02 reason as `STORE_ALLOWLIST` above.
+  const denied = Object.prototype.hasOwnProperty.call(
+    WRITE_DENIED_FIELDS,
+    storeName
+  )
+    ? WRITE_DENIED_FIELDS[storeName]
+    : undefined
+  if (!denied) {
+    return true
+  }
+  return !denied.includes(key.split('.')[0])
+}
+
+/**
  * `filterStoreSnapshot(storeName, raw)` — returns a NEW object containing only the
  * entries of `raw` whose top-level key passes `isAllowedStoreField`. This is the ONE
  * function every snapshot handler, lazy-fetch handler, and renderer bridge read path

@@ -29,7 +29,11 @@ import {
   STORE_LAZY_MISS_MARKER,
   type StoreChangedPayload
 } from 'common/types/sidecarTransport'
-import { isAllowedStoreField, isSafeKeyPath } from 'common/types/storePolicy'
+import {
+  isAllowedStoreField,
+  isSafeKeyPath,
+  isWritableStoreField
+} from 'common/types/storePolicy'
 
 /**
  * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
@@ -396,7 +400,8 @@ function rejectSnapshotWrite(
  * observes it, electron-store parity) and forwards the write to the sidecar asynchronously.
  */
 export function snapshotSet(storeName: string, key: string, value?: unknown): void {
-  if (!isAllowedStoreField(storeName, key) || !isSafeKeyPath(key)) {
+  // WR-04: the WRITE predicate, strictly narrower than the read predicate.
+  if (!isWritableStoreField(storeName, key)) {
     rejectSnapshotWrite('snapshotSet', storeName, key)
     return
   }
@@ -408,7 +413,8 @@ export function snapshotSet(storeName: string, key: string, value?: unknown): vo
 
 /** Deletes locally and forwards the delete to the sidecar asynchronously. */
 export function snapshotDelete(storeName: string, key: string): void {
-  if (!isAllowedStoreField(storeName, key) || !isSafeKeyPath(key)) {
+  // WR-04: the WRITE predicate, strictly narrower than the read predicate.
+  if (!isWritableStoreField(storeName, key)) {
     rejectSnapshotWrite('snapshotDelete', storeName, key)
     return
   }

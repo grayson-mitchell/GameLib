@@ -15,6 +15,7 @@ import {
   LAZY_STORES,
   STORE_UNIVERSE,
   isAllowedStoreField,
+  isWritableStoreField,
   filterStoreSnapshot
 } from '../storePolicy'
 
@@ -176,5 +177,55 @@ describe('tier partition', () => {
     for (const name of BOOT_SET_CACHE_STORE_NAMES) {
       expect(BOOT_SET_STORES).toContain(name)
     }
+  })
+})
+
+/**
+ * WR-04 REGRESSION (Phase 29 code review): the read allow-list was reused verbatim as
+ * the write allow-list, so everything readable was renderer-writable — including
+ * `configStore.settings` (AppSettings: wineVersion.bin, wrapperOptions, launcherArgs,
+ * winePrefix, all consumed on the next game launch), which is effectively local code
+ * execution. Read safety and write safety are not the same predicate.
+ */
+describe('WR-04: write allow-list is strictly narrower than the read allow-list', () => {
+  it.each([
+    ['configStore', 'settings'],
+    ['configStore', 'settings.wineVersion.bin'],
+    ['configStore', 'userHome'],
+    ['configStore', 'userInfo'],
+    ['gogConfigStore', 'userData'],
+    ['steamConfigStore', 'userData'],
+    ['nileConfigStore', 'userData'],
+    ['humbleConfigStore', 'userData']
+  ])('%s.%s is readable but NOT writable', (storeName, key) => {
+    expect(isAllowedStoreField(storeName, key)).toBe(true)
+    expect(isWritableStoreField(storeName, key)).toBe(false)
+  })
+
+  it.each([
+    ['configStore', 'theme'],
+    ['configStore', 'games.hidden'],
+    ['configStore', 'language'],
+    ['timestampStore', 'anything'],
+    ['legendary_library', '__timestamp.library']
+  ])('%s.%s stays writable', (storeName, key) => {
+    expect(isWritableStoreField(storeName, key)).toBe(true)
+  })
+
+  it('a non-readable field is never writable (fail closed by construction)', () => {
+    expect(isWritableStoreField('steamConfigStore', 'refreshToken')).toBe(false)
+    expect(isWritableStoreField('gogConfigStore', 'credentials')).toBe(false)
+    expect(isWritableStoreField('notARealStore', 'anything')).toBe(false)
+    // zoomConfigStore's read allow-list is ['isLoggedIn','username'] — `userData` is
+    // not readable there at all, so it is write-rejected one layer earlier. Its
+    // WRITE_DENIED_FIELDS entry is forward-looking, not load-bearing today.
+    expect(isWritableStoreField('zoomConfigStore', 'userData')).toBe(false)
+  })
+
+  it('CR-01/CR-02: hostile key paths and prototype-chain store names are not writable, and never throw', () => {
+    expect(() => isWritableStoreField('constructor', 'x')).not.toThrow()
+    expect(isWritableStoreField('constructor', 'x')).toBe(false)
+    expect(isWritableStoreField('timestampStore', '__proto__.polluted')).toBe(false)
+    expect(isWritableStoreField('configStore', 'games.constructor.x')).toBe(false)
   })
 })
