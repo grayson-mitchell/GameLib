@@ -7,7 +7,10 @@
  * kept for `bootstrap.test.ts`'s Behavior 3 assertion), the curated Steam
  * read/action flow channels (`registerSteamFlows()`, `steamFlowRegistration.ts`),
  * the curated Steam QR-login channels (`registerSteamAuthFlows()`,
- * `steamAuthFlowRegistration.ts` — Phase 30 Plan 01, D-01/D-02/D-08), and the
+ * `steamAuthFlowRegistration.ts` — Phase 30 Plan 01, D-01/D-02/D-08), the
+ * curated install-slice channels (`registerInstallFlows()`,
+ * `installFlowRegistration.ts` — Phase 30 Plan 02,
+ * D-05a/D-05b/D-07/D-08/D-12), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -31,6 +34,7 @@ import Store from 'electron-store'
 import { ipcMain } from './electronStub'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
+import { registerInstallFlows } from './installFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -54,6 +58,7 @@ ipcMain.handle('health', async () => 'ok')
 
 registerSteamFlows()
 registerSteamAuthFlows()
+registerInstallFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
