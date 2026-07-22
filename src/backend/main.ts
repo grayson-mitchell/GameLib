@@ -94,6 +94,7 @@ import {
 import { Path } from './schemas'
 
 import { uninstallGameCallback } from './utils/uninstaller'
+import { checkGameUpdates } from './utils/checkGameUpdates'
 import { handleProtocol, shouldHideWindowForProtocolArgs } from './protocol'
 import {
   init as initLogger,
@@ -123,11 +124,7 @@ import { initTrayIcon } from './tray_icon/tray_icon'
 import { createMainWindow, getMainWindow, isFrameless } from './main_window'
 
 import { playtimeSyncQueue } from './storeManagers/gog/electronStores'
-import {
-  autoUpdate,
-  initStoreManagers,
-  libraryManagerMap
-} from './storeManagers'
+import { initStoreManagers, libraryManagerMap } from './storeManagers'
 import {
   setGameOverrides,
   getGameOverrides,
@@ -739,21 +736,7 @@ addHandler('runWineCommand', async (e, args) => runWineCommand(args))
 
 /// IPC handlers begin here.
 
-addHandler('checkGameUpdates', async (): Promise<string[]> => {
-  let oldGames: string[] = []
-  const { autoUpdateGames } = GlobalConfig.get().getSettings()
-  for (const runner of Object.keys(
-    libraryManagerMap
-  ) as (keyof typeof libraryManagerMap)[]) {
-    let gamesToUpdate = await libraryManagerMap[runner].listUpdateableGames()
-    if (autoUpdateGames) {
-      gamesToUpdate = autoUpdate(runner, gamesToUpdate)
-    }
-    oldGames = [...oldGames, ...gamesToUpdate]
-  }
-
-  return oldGames
-})
+addHandler('checkGameUpdates', checkGameUpdates)
 
 addHandler('getEpicGamesStatus', async () => isEpicServiceOffline())
 
