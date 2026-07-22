@@ -52,9 +52,10 @@ Source of truth for the underlying numbers: `.planning/spikes/009-node-backend-h
    branch (`buildSteamProtocolUrl` T-27-08 numeric-appId guard + `shell.openExternal`), bridged
    through `electronStub`'s `shell.openExternal` forwarder → `open_external` Tauri command →
    `tauri-plugin-opener` → `/usr/bin/open steam://rungameid/{id}`.
-4. **`sidecar:store-snapshot`** — sidecar-side handler serving `configStore` +
-   `steamConfigStore.raw_store` (refreshToken excluded at the source, T-27-09) — the store the
-   renderer's synchronous `window.api.storeGet(...)` bridge needs on first paint
+4. **`sidecar:store-snapshot`** — sidecar-side handler serving the eager `BOOT_SET_STORES`
+   (generalized in Phase 29 — see `### The store layer (real, Phase 29)` below; originally just
+   `configStore` + `steamConfigStore.raw_store`, refreshToken excluded at the source, T-27-09) —
+   the store the renderer's synchronous `window.api.storeGet(...)` bridge needs on first paint
    (`GlobalState.tsx`'s Steam login-gate read).
 
 `grep -c "refreshLibrary\|pushGameToLibrary\|launch"` over this document ≥ 3 (see the list above
@@ -108,13 +109,52 @@ mechanism, not a login channel. See `28-PROOF.md` § 4. The login-channel port
 (`startQRLogin`/`startCredentialLogin`) is the next natural slice; see the deferred-backlog row
 below.
 
+### The store layer (real, Phase 29) — CLOSED, moved out of §2/§3
+
+**Generalized from a two-store stub to a full read/write layer in Phase 29**
+(`tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw`). Full proof trail across
+`29-01-SUMMARY.md` through `29-06-SUMMARY.md`.
+
+- **`fileStore.ts`** (`src/backend/sidecar/fileStore.ts`) is no longer a two-store stub covering
+  only `configStore`/`steamConfigStore`. It is now a path-keyed shared data cell
+  (`cellRegistry` — closes D-14, the in-process `steamConfigStore`/`steamBottleConfigStore`
+  same-on-disk-path clobber), honours `options.defaults` (an on-disk value wins over a default),
+  and persists atomically (temp-file `writeFileSync` + `renameSync`, with a direct-write
+  fallback so a crash mid-persist can never truncate the file).
+- **`sidecar:store-snapshot`** now serves the DECLARED boot set from
+  `src/common/types/storePolicy.ts`'s `BOOT_SET_STORES` (11 typed stores + the four D-13
+  cache-store names), not a hardcoded `configStore`/`steamConfigStore` pair. A new
+  **`sidecar:store-fetch`** handler serves the lazy tier — every other `ValidStoreName` — one
+  store at a time, on renderer demand.
+- **`storeSet`/`storeDelete`/`storeNew`** are REAL registered handlers behind a single choke
+  point, `src/backend/sidecar/storeWriteHandlers.ts`'s `applyStoreWrite()` — previously these
+  three renderer-emitted frames vanished into an empty listener array with zero signal. A
+  successful write now emits **`storeChanged`**, a new `frontendMessage` push channel the
+  renderer patches its in-memory snapshot from — with ZERO Rust changes, because
+  `src-tauri/src/main.rs`'s `frontend_message` relay is already generic over the channel name.
+- **`src/backend/sidecar/storeRegistration.ts`**'s `ensureStoresRegistered()` is what makes
+  every store instance actually exist in the sidecar process (side-effect imports of every thin
+  store-declaration module). A store whose declaration module is missing from this file
+  silently reads as `{}` on both the eager snapshot and the lazy fetch path — the two documented
+  dead/gap entries (`fontsStore`, `zoomSyncStore`) and the cache-backed `wikigameinfo` special
+  case are recorded in that file's own comments.
+- The Tauri path's secret policy is now a single fail-closed ALLOW-LIST,
+  `src/common/types/storePolicy.ts`'s `STORE_ALLOWLIST`/`isAllowedStoreField()`/
+  `filterStoreSnapshot()`, replacing the three duplicated deny-lists that previously lived in
+  `tauriTransport.ts`, `misc.ts`, and the sidecar's own hand-strip in `handlers.ts`. Enforced
+  identically on both the read side (`filterStoreSnapshot`) and the write side (guard (c) of
+  `applyStoreWrite`).
+
+The `sidecar:store-snapshot` channel referenced in item 4 of "The four wired channels" above is
+this subsection's eager half; `sidecar:store-fetch`/`storeSet`/`storeDelete`/`storeNew`/
+`storeChanged` are the channels Phase 29 added on top of it.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
 
-- **`fileStore.ts`** — covers only the store shape the flows actually touch (`configStore`,
-  `steamConfigStore`); it is not a general `electron-store` replacement and does not implement
-  every method real `electron-store` exposes project-wide.
+- **`fileStore.ts`** — graduated to §1 in Phase 29; see `### The store layer (real, Phase 29)`
+  above.
 - **`shell`** — only `openExternal` has real behavior (forwarded to the Rust opener);
   `showItemInFolder`/`trashItem`/`openPath` are no-ops. **Phase 28 fix:** the sidecar→Rust
   `openExternal` frame was previously silently dropped on the Rust side (`start_reader()` had no
@@ -162,10 +202,15 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 endpoint (curate a sidecar invoke handler like `steamFlowRegistration.ts` did) but large in
 volume — pick the next slice by user-facing value, not API-touch-count alone.
 
-**The `electron-store` project-wide swap:** only the two stores this skeleton's read path needs
-(`configStore`, `steamConfigStore`) have a sidecar-side snapshot handler; the other ~18 files that
-route through `electron_store.ts` (spike 009's count) are untouched. Full swap to a Tauri/Rust
-store (or a fuller `fileStore.ts`) is a later phase, not a shim.
+**The `electron-store` project-wide swap:** this WAS the phase-sized unit of work predicted
+above, and it is now done — Phase 29 generalized `fileStore.ts` into a full read/write store
+layer covering every `ValidStoreName` plus the four D-13 cache stores (see
+`### The store layer (real, Phase 29)` in §1). What remains deferred: full `electron-store`
+semantics parity (schema validation, migrations — `fileStore.ts` still implements neither), a
+public `onDidChange`/reactive store API (Phase 29's `storeChanged` push is a fixed internal
+mechanism, not a general subscription API exposed to callers), and flipping the ELECTRON preload
+path (`misc.ts`'s `SECRET_STORE_KEYS` deny-list) onto the same fail-closed allow-list the Tauri
+path now uses — deferred to the Phase 35 Electron cutover per D-08 below.
 
 **The 44-file lifecycle/dialog/tray/updater/protocol cluster:** beyond `app.getPath`/`getName` and
 the opener path, none of this cluster has real Tauri-side behavior yet — see the ranked table
@@ -182,6 +227,46 @@ above.
 
 ---
 
+## Accepted Constraints (Phase 29)
+
+- **D-07 — cross-process write clobber (ACCEPTED).** Running the Electron build and the Tauri
+  build concurrently against the same `userData` folder can silently erase each other's config
+  writes: each process caches the whole JSON file in memory at construction and rewrites it
+  wholesale on every `set`. This is a dev-only situation — the shipped product is one app, never
+  both builds live at once against the same profile. Rejected alternatives: re-read-before-write
+  (adds latency to every hot-path `.get()` caller), an advisory lock file (adds a failure mode —
+  a stale lock from a crashed process — worse than the clobber it prevents), and a separate Tauri
+  `userData` folder (would break the shared-folder property D-01 depends on and Phase 28's
+  Keychain proof shape deliberately relied on). Recorded identically in
+  `src/backend/sidecar/fileStore.ts`'s module docstring.
+- **D-14 — in-process same-path sharing (FIXED).** `steamConfigStore` and
+  `steamBottleConfigStore` (`src/backend/storeManagers/steam/electronStores.ts`) both resolve to
+  `steam_store/config.json` (neither passes `options.name`; `fileStore.ts` defaults it to
+  `'config'`). Real Electron's `electron-store`/`conf` survives this because it re-reads the file
+  from disk on every access; `fileStore.ts` previously cached the loaded JSON once per instance,
+  so constructing `steamBottleConfigStore` would have armed a silent same-process clobber. Fixed
+  in Phase 29 Plan 01 with a path-keyed shared data cell (`cellRegistry`) — every `FileStore`
+  instance at the same resolved path now reads/writes the SAME in-memory object. In-process only
+  — the cross-process case remains D-07, above.
+- **D-08 — divergent secret policies (ACCEPTED, TEMPORARY).** The Tauri path
+  (`tauriTransport.ts`/`storeWriteHandlers.ts`) enforces a fail-closed ALLOW-LIST
+  (`src/common/types/storePolicy.ts`'s `STORE_ALLOWLIST`); the Electron path (`misc.ts`) keeps
+  its original 2-key `SECRET_STORE_KEYS` deny-list, kept byte-identical because flipping the
+  shipped build to fail-closed today risks blocking a legitimate read among the 379
+  `window.api.*` call-sites — an untested blast radius this phase deliberately did not take on.
+  Both sites carry a cross-referencing comment naming this divergence. Converge at the Electron
+  cutover (Phase 35), per the Phase 28 D-11 precedent for the same class of deferred
+  reunification.
+- **D-01 — persistence stays in the Node sidecar (LOCKED).** Rust / `tauri-plugin-store` was
+  evaluated and rejected for Phase 29's store-layer generalization: it would make every sidecar
+  store read async and cross-process, forcing a refactor of every synchronous module-scope
+  `.get()` caller across the many files that route through `electron_store.ts`/`fileStore.ts`.
+  Rust's role stays "the platform seam" (keyring, opener — see `### safeStorage (real, Phase 28)`
+  above), not "the database". Do not re-litigate this in a later phase without a concrete new
+  requirement `tauri-plugin-store` uniquely satisfies.
+
+---
+
 ## Incremental-Port Checklist (for the next phase that extends this seam)
 
 1. Pick the next channel(s) from spike 009's ranked table above (prefer high-value user-facing
@@ -195,9 +280,11 @@ above.
    stubs (real `dialog`, real `safeStorage`, etc.), give that API real behavior in `electronStub.ts`
    bound to a real Tauri command in `src-tauri/src/main.rs` (mirrors `openExternal`'s
    forward-to-transport pattern) rather than leaving it a silent no-op.
-4. If the new flow needs additional persisted config, extend `sidecar:store-snapshot` (or add a
-   new sidecar-store handler) rather than swapping `electron-store` project-wide in one shot —
-   that full swap is its own phase-sized unit of work per spike 009.
+4. If the new flow needs additional persisted config, declare the store in `storePolicy.ts`'s
+   tier lists (`BOOT_SET_STORES`/`LAZY_STORES`) and allow-list (`STORE_ALLOWLIST`), and add its
+   declaration module to `storeRegistration.ts`'s side-effect import list — do NOT hand-extend
+   `sidecar:store-snapshot` or `sidecar:store-fetch` ad hoc; both are now generic and read the
+   declared lists (Phase 29).
 5. Re-run this document's own acceptance shape: list the newly wired channel(s) under §1, move
    them out of the deferred table in §3, and re-verify `npm run tauri:dev` + `npm start` both work
    (the additive/reversible invariant, REQ-27-06 pattern) before calling the slice done.
