@@ -38,6 +38,7 @@ import {
   // only thing keeping an RPC-supplied name from reaching `resolveStorePath()`, the two
   // copies drifting apart would be a path-traversal risk.
   CACHE_STORE_NAME_PATTERN,
+  DENIED_CACHE_STORES,
   STORE_UNIVERSE,
   filterStoreSnapshot
 } from 'common/types/storePolicy'
@@ -107,6 +108,19 @@ const CACHE_BACKED_STORE_NAMES: readonly string[] = [
  *     Invariant B), and the diagnostic NEVER carries a value (T-29-18).
  */
 function resolveRawStore(name: string): Record<string, unknown> {
+  // WR-09 (Phase 29 code review): the deny list is consulted HERE, not only inside
+  // `filterStoreSnapshot`. `humble_library` is absent from both
+  // `CACHE_BACKED_STORE_NAMES` and `STORE_UNIVERSE`, so this function already returned
+  // `{}` for it and the deny check read as live while being unreachable — it would have
+  // silently stopped being decoration the day someone added the name to a handler list.
+  // Checking first makes the control load-bearing regardless of those lists.
+  if (DENIED_CACHE_STORES.includes(name)) {
+    process.stderr.write(
+      `[sidecar/handlers] refusing to snapshot denied cache store '${name}' — returning {}\n`
+    )
+    return {}
+  }
+
   const registered = getRegisteredStore(name)
   if (registered) {
     return registered.raw_store as Record<string, unknown>

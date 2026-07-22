@@ -143,15 +143,27 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
  * `CacheStore`s (src/backend/cache.ts, src/frontend/helpers/electronStores.ts) are NOT
  * `ValidStoreName`s — they are constructed with an arbitrary filename string through
  * `window.api.storeNew` (`{ cwd: 'store_cache', name: <filename>, clearInvalidConfig: true }`)
- * and carry dynamic, non-`StoreStructure` keys. They default to `'*'` (fully readable)
- * because their entries are ownership/library-cache data with no secret fields — EXCEPT
- * the one name listed in `DENIED_CACHE_STORES` below.
+ * and carry dynamic, non-`StoreStructure` keys. A RECOGNIZED cache store is `'*'`
+ * (fully readable) because its entries are ownership/library-cache data with no secret
+ * fields — EXCEPT the names listed in `DENIED_CACHE_STORES` below.
+ *
+ * WR-09 (Phase 29 code review): the former `CACHE_STORE_POLICY = '*'` const that used
+ * to sit here was exported and never imported anywhere. It is deleted rather than kept
+ * as decoration; the `'*'` policy for recognized cache stores is expressed directly in
+ * `isAllowedStoreField` below.
  */
-export const CACHE_STORE_POLICY = '*' as const
 
 /**
  * Cache store names that are denied wholesale from any renderer-visible snapshot, even
- * though `CACHE_STORE_POLICY` is `'*'` for cache stores in general.
+ * though recognized cache stores are `'*'` in general.
+ *
+ * WR-09: this list is LOAD-BEARING, not decoration. `humble_library` is not in
+ * `handlers.ts`'s `CACHE_BACKED_STORE_NAMES` and not in `STORE_UNIVERSE`, so
+ * `resolveRawStore('humble_library')` already returned `{}` before the deny check was
+ * ever consulted — which meant the control read as live while actually being
+ * unreachable, and would have silently stopped being decoration the day someone added
+ * `humble_library` to a handler list. `resolveRawStore` / `resolveWritableStore` now
+ * consult it directly, so a future handler-list addition cannot reopen the leak.
  *
  * `humble_library` (29-RESEARCH.md § Open Question 4): its entries carry internal-only
  * `revealedKeyValue`/`keyindex` fields that `src/backend/humble/library.ts`'s `getKeys()`
@@ -237,7 +249,7 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
 
   if (policy === undefined) {
     // Not a typed store — only a recognized (non-denied) cache store passes, and only
-    // because CACHE_STORE_POLICY is '*'.
+    // because a recognized cache store's policy is '*'.
     return (
       RECOGNIZED_CACHE_STORE_NAMES.includes(storeName) &&
       !DENIED_CACHE_STORES.includes(storeName)

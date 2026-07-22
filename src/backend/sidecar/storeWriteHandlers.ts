@@ -31,6 +31,7 @@ import { getRegisteredStore } from '../electron_store'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
 import {
   CACHE_STORE_NAME_PATTERN,
+  DENIED_CACHE_STORES,
   isSafeKeyPath,
   isWritableStoreField,
   RECOGNIZED_CACHE_STORE_NAMES,
@@ -59,6 +60,12 @@ interface WritableStoreBackend {
  * frame; the cache-store branch below is the ONLY construction shape it will ever use.
  */
 function resolveWritableStore(storeName: string): WritableStoreBackend | undefined {
+  // WR-09: the deny list is load-bearing on the write path too — a denied cache store
+  // has no resolvable write target, independently of guard (c).
+  if (DENIED_CACHE_STORES.includes(storeName)) {
+    return undefined
+  }
+
   const registered = getRegisteredStore(storeName)
   if (registered) {
     // TypeCheckedStoreBackend's generic `set<KeyType>`/`delete<KeyType>` signatures are
