@@ -14,7 +14,6 @@ import {
 
 import { getAvailableVersions, installVersion } from './downloader/main'
 import { sendFrontendMessage } from '../../ipc'
-import { TypeCheckedStoreBackend } from 'backend/electron_store'
 import {
   createAbortController,
   deleteAbortController
@@ -24,14 +23,9 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { GlobalConfig } from '../../config'
 import { join } from 'path'
 import { backendEvents } from 'backend/backend_events'
+import { wineDownloaderInfoStore } from './electronStores'
 
-export const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
-  'wineDownloaderInfoStore',
-  {
-    cwd: 'store',
-    name: 'wine-downloader-info'
-  }
-)
+export { wineDownloaderInfoStore }
 
 function getLatestLocalVersions(): Record<string, string | undefined> {
   const localWines = wineDownloaderInfoStore.get('wine-releases', [])

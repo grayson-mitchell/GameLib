@@ -2,17 +2,11 @@ import { app } from 'electron'
 import { open } from 'fs/promises'
 import { z } from 'zod'
 
-import { TypeCheckedStoreBackend } from '../electron_store'
 import { getLogFilePath, logError, logInfo, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 
 import type { UploadedLogData } from 'common/types'
-
-const uploadedLogFileStore = new TypeCheckedStoreBackend('uploadedLogs', {
-  cwd: 'store',
-  name: 'uploadedLogs',
-  accessPropertiesByDotNotation: false
-})
+import { uploadedLogFileStore } from './electronStores'
 
 async function sendRequestToApi(
   formData: FormData | string,

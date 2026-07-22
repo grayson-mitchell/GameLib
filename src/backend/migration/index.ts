@@ -1,7 +1,7 @@
-import { TypeCheckedStoreBackend } from '../electron_store'
 import { logError, logInfo } from '../logger'
 
 import { LegendaryGlobalConfigFolderMigration } from './migrations/legendary'
+import { migrationsStore } from './electronStores'
 
 import type { TypeCheckedStore } from 'common/types/electron_store'
 
@@ -14,10 +14,7 @@ export default class MigrationSystem {
   static #instance: MigrationSystem
 
   constructor() {
-    this.migrationsStore = new TypeCheckedStoreBackend('migrationsStore', {
-      cwd: 'store',
-      name: 'migrations'
-    })
+    this.migrationsStore = migrationsStore
   }
 
   public static get(): MigrationSystem {

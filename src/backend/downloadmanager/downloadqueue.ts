@@ -1,4 +1,3 @@
-import { TypeCheckedStoreBackend } from './../electron_store'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
 import {
@@ -31,11 +30,7 @@ import { onConnectivityChange } from 'backend/online_monitor'
 // Other call sites already prove this pattern is safe for synchronous access
 // (e.g. utils/uninstaller.ts's `libraryManagerMap[runner].getGame(appName)`).
 import { libraryManagerMap } from 'backend/storeManagers'
-
-const downloadManager = new TypeCheckedStoreBackend('downloadManager', {
-  cwd: 'store',
-  name: 'download-manager'
-})
+import { downloadManager } from './electronStores'
 
 /*
 #### Private ####
