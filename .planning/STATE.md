@@ -4,7 +4,7 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Completed 29-04-PLAN.md
-last_updated: "2026-07-22T06:59:30.598Z"
+last_updated: "2026-07-22T07:12:45.744Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 29 (tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-07-22
 
@@ -245,6 +245,7 @@ Closed/parked native-install phases:
 | Phase 29 P03 | ~20min | 3 tasks | 5 files |
 | Phase 29 P04 | 35min | 3 tasks | 3 files |
 | Phase 29 P05 | 40min | 3 tasks | 3 files |
+| Phase 29 P06 | ~30min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -418,6 +419,8 @@ Recent decisions affecting current work:
 - [Phase 29]: resolveRawStore() resolves wikigameinfo (a declared ValidStoreName actually built as a CacheStore) through the same cache-shaped construction as the D-13 boot cache stores, not the typed registry
 - [Phase 29]: D-08 divergence made explicit at both sites: tauriTransport.ts's snapshotGet/snapshotHas gate on storePolicy.ts's single-sourced isAllowedStoreField() allow-list; misc.ts's Electron-branch SECRET_STORE_KEYS deny-list is untouched, commented as intentionally divergent until Phase 35
 - [Phase 29]: hydrated is tracked per store name (Set<string>), not per-key, matching the shape both the eager snapshot and lazy fetch actually return
+- [Phase ?]: Namespace-imported sidecarRpc for storeWriteHandlers.ts's single pushFrontendMessage call site, so the D-06 single-choke-point property is grep-verifiable
+- [Phase ?]: storeWriteHandlers.ts write-eligibility (D-08 isAllowedStoreField) is a stricter, independently-gated surface than storeNew's creation eligibility
 
 ### Pending Todos
 
@@ -486,7 +489,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T06:59:18.871Z
+Last session: 2026-07-22T07:11:34.243Z
 Stopped at: Completed 29-04-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
