@@ -335,3 +335,36 @@ describe('boot set', () => {
     expect(snapshot).not.toHaveProperty('downloadManager')
   })
 })
+
+/**
+ * WR-08 REGRESSION (Phase 29 code review): `TypeCheckedStoreBackend`'s constructor
+ * unconditionally did `storeRegistry.set(name, …)`, so a second construction under the
+ * same `ValidStoreName` silently re-pointed every name-keyed dispatch — and therefore
+ * the whole renderer-driven write path — at a different instance, with no warning.
+ * Now that the registry is load-bearing for writes, first registration wins.
+ */
+describe('WR-08: duplicate store registration', () => {
+  it('keeps the FIRST registered instance and reports the duplicate on stderr', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { TypeCheckedStoreBackend } = require('../../electron_store')
+    const first = getRegisteredStore('configStore')
+    expect(first).toBeDefined()
+
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    let lines: string[] = []
+    try {
+      const second = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
+      lines = stderrSpy.mock.calls.map((call) => String(call[0]))
+      expect(getRegisteredStore('configStore')).toBe(first)
+      expect(getRegisteredStore('configStore')).not.toBe(second)
+    } finally {
+      stderrSpy.mockRestore()
+    }
+
+    expect(
+      lines.some((line) => line.includes("duplicate registration for 'configStore'"))
+    ).toBe(true)
+  })
+})

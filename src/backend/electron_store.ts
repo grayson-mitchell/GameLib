@@ -46,10 +46,23 @@ export class TypeCheckedStoreBackend<
   constructor(name: Name, options: Store.Options<StoreStructure[Name]>) {
     // @ts-expect-error This looks like a bug in electron-store's type definitions
     this.store = new Store(options)
-    storeRegistry.set(name, {
-      instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
-      options: options as Store.Options<StoreStructure[ValidStoreName]>
-    })
+    // WR-08 (Phase 29 code review): FIRST registration wins. This used to be an
+    // unconditional `set`, so a second construction under the same `ValidStoreName`
+    // silently re-pointed every name-keyed dispatch (`getRegisteredStore`, and
+    // therefore the whole renderer-driven write path) at a different instance with no
+    // warning at all. Now that the registry is load-bearing for writes,
+    // last-writer-wins is not an acceptable default; a duplicate is a real defect and
+    // must at least be greppable.
+    if (storeRegistry.has(name)) {
+      process.stderr.write(
+        `[electron_store] duplicate registration for '${name}' — keeping the first instance\n`
+      )
+    } else {
+      storeRegistry.set(name, {
+        instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>,
+        options: options as Store.Options<StoreStructure[ValidStoreName]>
+      })
+    }
   }
 
   public has(key: string) {
