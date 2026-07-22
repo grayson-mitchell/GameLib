@@ -469,6 +469,90 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       )
     })
 
+    // WR-12 (Phase 29 code review): guard (c) — the very control this phase claims to
+    // have added — had NO test coverage at all. The write suite covered guard (b)
+    // (refreshToken) and malformed store names only.
+    it('WR-12: guard (c) rejects a non-allow-listed field and emits no change event', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-secret-1', 'storeSet', [
+        'humbleConfigStore',
+        'csrfToken',
+        'ATTACKER'
+      ])
+      writeSend(input, 'set-secret-2', 'storeSet', [
+        'gogConfigStore',
+        'credentials',
+        { access_token: 'ATTACKER' }
+      ])
+      // WR-04: readable but NOT writable — executable paths consumed on next launch.
+      writeSend(input, 'set-settings-1', 'storeSet', [
+        'configStore',
+        'settings.wineVersion.bin',
+        '/tmp/evil.sh'
+      ])
+      await flush()
+
+      const changed = frames.filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' && frame.channel === 'storeChanged'
+      )
+      expect(changed.length).toBe(0)
+
+      // Nothing landed in a fresh snapshot either.
+      writeInvoke(input, 'snapshot-secret-1', 'sidecar:store-snapshot', [])
+      await flush()
+      const response = frames.find((frame) => frame.id === 'snapshot-secret-1') as
+        | {
+            ok: boolean
+            result: Record<string, Record<string, unknown> | undefined>
+          }
+        | undefined
+      expect(response?.ok).toBe(true)
+      expect(response?.result.humbleConfigStore).not.toHaveProperty('csrfToken')
+      expect(response?.result.gogConfigStore).not.toHaveProperty('credentials')
+      expect(response?.result.configStore).not.toHaveProperty('settings')
+    })
+
+    // WR-12: a LEGITIMATE dynamic cache-store write must still persist — the guards
+    // above must not have made the recognized cache stores collateral damage.
+    it('WR-12: a legendary_library cache-store write persists and announces a change event', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'set-cache-1', 'storeSet', [
+        'legendary_library',
+        'library',
+        [{ app_name: 'probe' }]
+      ])
+      // The frontend CacheStore always follows a set with a dot-keyed timestamp write.
+      writeSend(input, 'set-cache-2', 'storeSet', [
+        'legendary_library',
+        '__timestamp.library',
+        'Tue Jul 22 2026'
+      ])
+      await flush()
+
+      writeInvoke(input, 'snapshot-cache-1', 'sidecar:store-snapshot', [])
+      await flush()
+      const response = frames.find((frame) => frame.id === 'snapshot-cache-1') as
+        | { ok: boolean; result: { legendary_library?: Record<string, unknown> } }
+        | undefined
+      expect(response?.ok).toBe(true)
+      expect(response?.result.legendary_library?.library).toEqual([
+        { app_name: 'probe' }
+      ])
+      expect(response?.result.legendary_library?.__timestamp).toEqual({
+        library: 'Tue Jul 22 2026'
+      })
+
+      const changed = frames.filter(
+        (frame) =>
+          frame.kind === 'frontendMessage' &&
+          frame.channel === 'storeChanged' &&
+          ((frame.args as unknown[])[0] as { store?: string })?.store ===
+            'legendary_library'
+      )
+      expect(changed.length).toBe(2)
+    })
+
     // WR-02 REGRESSION (Phase 29 code review): `storeNew` used to construct a real
     // `Store` for ANY name matching `/^[A-Za-z0-9_-]{1,64}$/`, so a renderer script
     // could create unbounded `${userData}/store_cache/<name>.json` junk files that
