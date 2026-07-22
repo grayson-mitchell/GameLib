@@ -29,6 +29,7 @@ import Store from 'electron-store'
 import { ipcMain } from './electronStub'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
+import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
 import {
   BOOT_SET_STORES,
@@ -44,6 +45,12 @@ ipcMain.handle('health', async () => 'ok')
 
 registerSteamFlows()
 ensureStoresRegistered()
+// D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
+// every store instance exists, or a legitimate write would be rejected as an unknown
+// store — hence AFTER ensureStoresRegistered(). These are `send`-kind (fire-and-forget)
+// registrations, so unlike an `invoke` channel there is no response frame and no promise
+// to reject, which is exactly why the missing registration was invisible before this phase.
+registerStoreWriteHandlers()
 
 // ---- Store layer read path (Plan 04, D-02 / D-03 / D-08) -------------------
 
