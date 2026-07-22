@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 30-02-PLAN.md
-last_updated: "2026-07-22T11:08:46.589Z"
+status: verifying
+stopped_at: Completed 30-04-PLAN.md (partial pass, G-30-01 open)
+last_updated: "2026-07-22T18:15:48.453Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 30 (tauri-ipc-re-plumb-slice-1-install-uninstall-update-check) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-22
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
@@ -251,6 +251,7 @@ Closed/parked native-install phases:
 | Phase 30 P01 | 20min | 2 tasks | 4 files |
 | Phase 30 P03 | 9min | 3 tasks | 8 files |
 | Phase 30 P02 | 19min | 3 tasks | 5 files |
+| Phase 30 P04 | ~25min (+ multi-hour checkpoint pause) | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -434,6 +435,7 @@ Recent decisions affecting current work:
 - [Phase 30]: electronStub.ts must never import backend/logger -- it reintroduces the app.getPath() import-time module wall; use console.warn instead in that one file
 - [Phase 30]: D-05a (Phase 30 Plan 02): direct SteamGame.install()/update() bypass, not a downloadqueue.ts port
 - [Phase 30]: D-05b/D-12 (Phase 30 Plan 02): uninstallGameCallback/checkGameUpdates reused UNCHANGED, all runners
+- [Phase 30]: Task 3 both-builds checkpoint: partial pass (3/4 human-observed conditions); Steam QR login logon button unresponsive under Tauri filed as known defect G-30-01, not merely deferred — Additive/reversible invariant confirmed no-regression; QR login UI flow is known-broken, worse than unproven, so claim discipline required filing a defect rather than re-deferring
 
 ### Pending Todos
 
@@ -447,6 +449,7 @@ Recent decisions affecting current work:
 
 - Pre-push hook (`prettier` + `i18n --fail-on-update`) fails on **pre-existing repo debt** unrelated to Phase 7: ~141 files fail `prettier --check .` (likely a Prettier version bump; `pnpm-lock.yaml` already modified) and the locale files have orphaned-key drift. Phase 7 was pushed with `--no-verify` after independently verifying tsc/lint/tests. A separate housekeeping pass (`pnpm prettier --write .` + `pnpm i18n`) would clear it.
 - Phase 23 Plan 05 Task 3 (checkpoint:human-verify, gate=blocking-human): 23-UAT.md Gate 1 real-hardware re-run pending — human must install a multi-depot title (Hogwarts Legacy 990080 or Cyberpunk 2077 1091500) on real macOS hardware after deleting the stale appmanifest_990080.acf, confirm single monotonic progress percent through a pause/resume cycle, and confirm StateFlags=4 completion + launch. Code fix (single-flight guard + reconciliation) is landed and regression-tested (commits cc77a9df/ddde970d/7fccfb2a/f963de8b); this is the only remaining Phase 23 gap before Gates 2/3 can proceed.
+- G-30-01: Steam QR login logon button unresponsive under Tauri (Manage Accounts renders, QR tab never reached) — install/uninstall E2E for Phase 30 unreached as a direct consequence; see 30-HUMAN-UAT.md for reproduction and untested hypothesis
 
 ### Quick Tasks Completed
 
@@ -502,8 +505,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T11:08:46.582Z
-Stopped at: Completed 30-02-PLAN.md
+Last session: 2026-07-22T18:15:48.447Z
+Stopped at: Completed 30-04-PLAN.md (partial pass, G-30-01 open)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
