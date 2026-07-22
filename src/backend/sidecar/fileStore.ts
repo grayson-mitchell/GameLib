@@ -51,6 +51,7 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  unlinkSync,
   writeFileSync
 } from 'graceful-fs'
 import { dirname, isAbsolute, join } from 'path'
@@ -267,7 +268,10 @@ export default class FileStore {
   private persist(): void {
     const dir = dirname(this.filePath)
     if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true })
+      // WR-06: 0o700 — these directories hold `steam_store/config.json` and
+      // `humble_store/config.json`, i.e. safeStorage ciphertext and, when
+      // `encryptionDegraded` is set, plaintext session material.
+      mkdirSync(dir, { recursive: true, mode: 0o700 })
     }
     const serialized = JSON.stringify(this.cell.data, null, 2)
     const tmpPath = `${this.filePath}.tmp-${process.pid}`
@@ -276,7 +280,14 @@ export default class FileStore {
       // crash mid-persist cannot truncate/corrupt the config file — the
       // rename is atomic on the same filesystem, and readers only ever see
       // either the old complete file or the new complete file.
-      writeFileSync(tmpPath, serialized)
+      //
+      // WR-06: explicit 0o600. The default (0o666 & ~umask, typically 0o644)
+      // left token-bearing store files world-readable — and because
+      // temp+rename REPLACES the inode, any hardened mode a prior process or
+      // the user applied to the real file was silently reset on every
+      // persist. Setting the mode on the temp file means the replacement
+      // inode is created private and is never briefly world-readable.
+      writeFileSync(tmpPath, serialized, { mode: 0o600 })
       renameSync(tmpPath, this.filePath)
     } catch (err) {
       // T-29-02/T-29-03: never lose a persist — fall back to a direct write.
@@ -286,7 +297,18 @@ export default class FileStore {
           err instanceof Error ? err.message : String(err)
         }\n`
       )
-      writeFileSync(this.filePath, serialized)
+      writeFileSync(this.filePath, serialized, { mode: 0o600 })
+      // WR-05: if `writeFileSync(tmpPath)` SUCCEEDED and `renameSync` was what
+      // failed (cross-device, EPERM, an AV lock on Windows), the temp file is
+      // still there. The name is pid-stable, so that is one orphan per store
+      // file per process accumulating in the user's config directory forever.
+      // Best-effort — a failure to unlink must never mask the successful
+      // persist above.
+      try {
+        unlinkSync(tmpPath)
+      } catch {
+        /* best effort: the temp file may not exist, which is the common case */
+      }
     }
   }
 

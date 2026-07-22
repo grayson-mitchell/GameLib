@@ -24,7 +24,13 @@ jest.mock('os', () => {
 })
 
 // ── Imports AFTER the os mock ────────────────────────────────────────────────
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync
+} from 'fs'
 import { getPath } from '../pathShim'
 import FileStore, { __resetFileStoreRegistry } from '../fileStore'
 
@@ -88,6 +94,65 @@ describe('sidecar fileStore', () => {
     const raw = readFileSync(join(dir, configFile as string), 'utf-8')
     expect(() => JSON.parse(raw)).not.toThrow()
     expect(JSON.parse(raw)).toEqual({ key: 'value' })
+  })
+
+  it('WR-06: a persisted store file is 0o600 and its directory 0o700', () => {
+    const cwd = 'perms_test'
+    const store = new FileStore({ cwd })
+    store.set('token', 'ciphertext')
+
+    const dir = join(getPath('userData'), cwd)
+    // eslint-disable-next-line no-bitwise
+    expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
+    // eslint-disable-next-line no-bitwise
+    expect(statSync(dir).mode & 0o777).toBe(0o700)
+
+    // A REWRITE must not widen the mode back out — temp+rename replaces the inode,
+    // so the mode has to be set on the temp file each time.
+    store.set('token', 'ciphertext-2')
+    // eslint-disable-next-line no-bitwise
+    expect(statSync(join(dir, 'config.json')).mode & 0o777).toBe(0o600)
+  })
+
+  it('WR-05: a failing rename leaves no orphan .tmp file behind', () => {
+    const cwd = 'orphan_tmp_test'
+    const store = new FileStore({ cwd })
+    store.set('seed', 1) // ensures the directory exists
+
+    const dir = join(getPath('userData'), cwd)
+    const fs = jest.requireActual('graceful-fs')
+    const renameSpy = jest
+      .spyOn(fs, 'renameSync')
+      .mockImplementation(() => {
+        throw new Error('EXDEV: cross-device link not permitted')
+      })
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    let stderrCalls: string[] = []
+    try {
+      store.set('afterFailure', 'value')
+      stderrCalls = stderrSpy.mock.calls.map((call) => String(call[0]))
+    } finally {
+      renameSpy.mockRestore()
+      stderrSpy.mockRestore()
+    }
+
+    // Proves the mock actually fired — otherwise this test would pass vacuously
+    // against the success path.
+    expect(
+      stderrCalls.some((line) => line.includes('atomic persist (temp+rename) failed'))
+    ).toBe(true)
+
+    // The direct-write fallback must still have persisted the value ...
+    expect(JSON.parse(readFileSync(join(dir, 'config.json'), 'utf-8'))).toEqual({
+      seed: 1,
+      afterFailure: 'value'
+    })
+    // ... and must not have left a pid-stable temp file behind, which would
+    // accumulate one orphan per store file per process in the user's config dir.
+    expect(readdirSync(dir).filter((f) => f.includes('.tmp-'))).toEqual([])
   })
 
   it('dot-notation: set/get/has/delete traverse nested paths', () => {
