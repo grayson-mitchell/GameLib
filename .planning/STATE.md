@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 28-05-PLAN.md
-last_updated: "2026-07-21T23:53:16.040Z"
-last_activity: 2026-07-21
+status: verifying
+stopped_at: Completed 28-06-PLAN.md (phase 28 complete, 6/6 plans)
+last_updated: "2026-07-22T02:22:36.944Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 5
   completed_phases: 3
@@ -35,8 +35,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 28 (tauri-keyring-real-safestorage-via-the-keyring-crate) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-07-21
+Status: Phase complete — ready for verification
+Last activity: 2026-07-22
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -239,6 +239,7 @@ Closed/parked native-install phases:
 | Phase 28 P03 | 40min | 3 tasks | 4 files |
 | Phase 28 P04 | 45min | 3 tasks | 4 files |
 | Phase 28 P05 | 35min | 1 tasks | 1 files |
+| Phase 28 P06 | 45min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -401,6 +402,8 @@ Recent decisions affecting current work:
 - [Phase 28]: Aliased bootstrap.ts's setTokenStore import as installTokenStore to satisfy the plan's literal single-occurrence grep acceptance criterion
 - [Phase 28]: keyringTokenStore.ts's docstring avoids the literal identifiers configStore/TOKEN_STORE_KEY/TOKEN_PREFIX anywhere in the file, since its own structural test asserts a whole-file regex
 - [Phase ?]: Corrected the plan's stale filename assumption for the Steam configStore file (config.json, not steamConfigStore.json) and added the skeletonFlows.test.ts-style electron/electron-store mock redirection so electronUntouched.test.ts proves the REAL production configStore path is untouched, not a synthetic tmpdir-backed mock
+- [Phase 28]: Phase 28 hardware checkpoint: macOS Keychain Deny surfaces as keyring::Error::PlatformFailure wrapping OSStatus -128 (errSecUserCanceled), not NoStorageAccess — closes RESEARCH Assumption A1; no code fix needed since classification is already NoEntry-vs-everything-else, variant-agnostic.
+- [Phase 28]: Regression fixed (92c29a5e): Phase 27's skeletonFlows.test.ts + 28-05's electronUntouched.test.ts were driving the developer's REAL production Electron configStore; skeletonFlows Test 4 destroyed the real Steam refresh token mid-phase. Both suites made strictly read-only / isolated.
 
 ### Pending Todos
 
@@ -469,8 +472,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-21T23:53:16.031Z
-Stopped at: Completed 28-05-PLAN.md
+Last session: 2026-07-22T02:22:36.939Z
+Stopped at: Completed 28-06-PLAN.md (phase 28 complete, 6/6 plans)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

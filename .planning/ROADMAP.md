@@ -63,7 +63,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **v0.8 — Tauri Shell** (walking-skeleton spike; STATE.md's `milestone:` frontmatter has not yet been advanced past v0.7 as of 2026-07-21 — see note under Phase 27)
 
 - [x] **Phase 27: Tauri Shell Walking Skeleton** - Rust/Tauri v2 shell + stdio JSON-RPC sidecar + renderer bridge proven end-to-end against the real Steam store-manager code (read flow + launch flow), with a SEAM.md ported-vs-stubbed boundary for the incremental port (completed 2026-07-21, 5/5 plans)
-- [ ] **Phase 28: Tauri keyring (real safeStorage)** - Swap the plaintext-passthrough stub for spike 011's `keyring` crate path so the sidecar stores its token in the real OS Keychain (keyring-native, not OSCrypt-compatible — see D-01; does NOT unblock Phase 27 UAT 2/3 — see D-03). **Must land before any token-writing channel is wired** (shared store — the stub would silently sign the user out of the real app)
+- [x] **Phase 28: Tauri keyring (real safeStorage)** - Swap the plaintext-passthrough stub for spike 011's `keyring` crate path so the sidecar stores its token in the real OS Keychain (keyring-native, not OSCrypt-compatible — see D-01; does NOT unblock Phase 27 UAT 2/3 — see D-03). **Must land before any token-writing channel is wired** (shared store — the stub would silently sign the user out of the real app) (completed 2026-07-22)
 - [ ] **Phase 29: Tauri store layer** - Grow the sidecar store past the two skeleton stores to cover the ~18 files routing through `electron_store.ts`, so later slices have config to read
 - [ ] **Phase 30: IPC re-plumb slice 1 (install/uninstall/update-check)** - First user-facing domain slice of the ~217 unported endpoints, following SEAM.md's incremental-port checklist
 - [ ] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need
@@ -1036,7 +1036,7 @@ Plans:
 **Depends on:** Phase 27 (`electronStub.ts` seam, `src-tauri/src/main.rs` command pattern) and spike 011.
 **Requirements:** REQ-28-01, REQ-28-02, REQ-28-03, REQ-28-04, REQ-28-05, REQ-28-06, REQ-28-07
 **Ordering constraint (load-bearing, not a preference):** This phase MUST land before any channel that WRITES a token is wired. The sidecar and Electron share one store by design (`pathShim` resolves `userData` to the same folder), so under the current stub `encryptToken()` writes `TOKEN_PREFIX` + plaintext, Electron then fails to Keychain-decrypt it and silently signs the user out of the real app. See `27-.../SEAM.md` §2.
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -1055,7 +1055,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 28-06-PLAN.md — Self-check scaffolding, hardware verification checkpoint, `28-PROOF.md` + SEAM.md update, scaffolding removal (wave 4)
+- [x] 28-06-PLAN.md — Self-check scaffolding, hardware verification checkpoint, `28-PROOF.md` + SEAM.md update, scaffolding removal (wave 4)
 
 ---
 
