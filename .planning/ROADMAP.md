@@ -1064,7 +1064,7 @@ Plans:
 **Goal:** Grow `fileStore.ts` / the `sidecar:store-snapshot` handler from the two stores Phase 27's read path needed (`configStore`, `steamConfigStore`) into a real store layer covering the ~18 files that route through `electron_store.ts`, so later IPC slices have config to read instead of each one extending the snapshot ad hoc. Decide here between a fuller `fileStore.ts` and a Tauri/Rust-side store — SEAM.md flags the full swap as its own phase-sized unit, not a shim.
 **Depends on:** Phase 28 (secret-bearing store values must round-trip through the real keyring first).
 **Requirements:** REQ-29-01, REQ-29-02, REQ-29-03, REQ-29-04, REQ-29-05, REQ-29-06, REQ-29-07 (minted 2026-07-22 during `/gsd-plan-phase 29` from 29-CONTEXT.md D-01..D-15)
-**Plans:** 4/7 plans executed
+**Plans:** 5/7 plans executed
 
 Plans:
 
@@ -1077,7 +1077,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 29-04-PLAN.md — sidecar read path: storeRegistration.ts, generalized boot-set snapshot, lazy per-store fetch, walk-every-store coverage test
-- [ ] 29-05-PLAN.md — renderer bridge: tiered snapshot, D-04 lazy-miss marker + self-heal, storeChanged patching, allow-list on the Tauri path only
+- [x] 29-05-PLAN.md — renderer bridge: tiered snapshot, D-04 lazy-miss marker + self-heal, storeChanged patching, allow-list on the Tauri path only
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
