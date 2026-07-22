@@ -164,10 +164,17 @@ export function registerInstallFlows(): void {
         // installDepotDownload (D-07) unmodified. No depot logic reimplemented
         // here.
         const result = await new SteamGame(appName).install({
-          path,
+          // WR-06: Electron's installQueueElement normalizes both of these before
+          // handing them to the store manager (downloadmanager/utils.ts) — the
+          // apostrophe strip because the path is interpolated into shell-ish command
+          // construction downstream, and the empty-entry filter because a blank
+          // sdlList entry changes the SDL selection semantics. The bypass used to
+          // forward both raw; it now applies the identical normalization so the two
+          // builds cannot diverge on it.
+          path: (path ?? '').replaceAll("'", ''),
           platformToInstall: params.platformToInstall,
           installDlcs: params.installDlcs,
-          sdlList: params.sdlList,
+          sdlList: (params.sdlList ?? []).filter((el) => el !== ''),
           installLanguage: params.installLanguage,
           branch: params.branch,
           build: params.build,
