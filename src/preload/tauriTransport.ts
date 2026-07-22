@@ -22,8 +22,14 @@ import {
   SIDECAR_INVOKE,
   SIDECAR_SEND,
   SIDECAR_STORE_SNAPSHOT,
-  FRONTEND_MESSAGE_EVENT
+  FRONTEND_MESSAGE_EVENT,
+  STORE_FETCH_CHANNEL,
+  STORE_NEW_CHANNEL,
+  STORE_CHANGED_CHANNEL,
+  STORE_LAZY_MISS_MARKER,
+  type StoreChangedPayload
 } from 'common/types/sidecarTransport'
+import { isAllowedStoreField } from 'common/types/storePolicy'
 
 /**
  * Robust Tauri-context detection (Phase 27 Plan 05 blank-screen fix).
@@ -107,42 +113,123 @@ type StoreSnapshot = Record<string, Record<string, unknown>>
 const snapshot: StoreSnapshot = {}
 
 /**
- * T-10-12 / WR-09 / T-27-06: mirror `misc.ts`'s `SECRET_STORE_KEYS` deny-list verbatim so a
- * compromised renderer script cannot exfiltrate a credential via the synchronous snapshot
- * path either. Defense in depth -- the sidecar's `SIDECAR_STORE_SNAPSHOT` handler must also
- * never include these keys in the payload it returns (a later plan's concern; this deny-list
- * holds regardless of what the sidecar sends).
+ * D-03: which store names have a confirmed-fresh copy in `snapshot` -- either from the
+ * eager `hydrateStoreSnapshot()` boot call, or a completed per-store `hydrateStore()`.
+ * `registerStore()` seeds `snapshot[name] = {}` immediately on registration, so presence
+ * in `snapshot` alone cannot distinguish "genuinely empty" from "not fetched yet" --
+ * `hydrated` is the one signal D-04 uses to tell those apart.
  */
-const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
-  humbleConfigStore: ['sessionCookie'],
-  steamConfigStore: ['refreshToken']
+const hydrated = new Set<string>()
+
+/** D-03: de-dupes concurrent `hydrateStore()` calls for the same store (T-29-22). */
+const inflight = new Map<string, Promise<void>>()
+
+/** D-04: warn at most once per store+key pair, so a hot render loop cannot flood the console. */
+const lazyMissWarned = new Set<string>()
+
+/** D-06: guards the one-time, lazy `STORE_CHANGED_CHANNEL` subscription below. */
+let changeListenerAttached = false
+
+/**
+ * D-06: subscribes once to `STORE_CHANGED_CHANNEL` and patches the in-memory snapshot in
+ * place on every push, so the renderer's copy cannot silently diverge from what the
+ * sidecar actually persisted -- this closes the loop even for the optimistic writer
+ * itself (an optimistic `snapshotSet` that ends up differing from the persisted value
+ * self-heals once this push arrives). Deliberately NOT re-filtered by
+ * `isAllowedStoreField` on the way in -- the sidecar's own emitter already filtered the
+ * payload on the way out (plan 29-06); a second gate here would be redundant, not safer.
+ *
+ * Attached LAZILY, on first `registerStore()` call, so this module never calls Tauri's
+ * `listen()` outside a real Tauri webview (this module is also reached, inertly, from
+ * non-Tauri bundles via `misc.ts`).
+ */
+function ensureChangeListenerAttached(): void {
+  if (changeListenerAttached) return
+  changeListenerAttached = true
+
+  listen(STORE_CHANGED_CHANNEL, (...args: unknown[]) => {
+    const payload = args[0] as StoreChangedPayload | undefined
+    if (!payload) return
+    const { store, key, value, deleted } = payload
+    if (!snapshot[store]) snapshot[store] = {}
+    if (deleted) {
+      delete snapshot[store][key]
+    } else {
+      snapshot[store][key] = value
+    }
+  })
 }
 
-const isSecretStoreKey = (storeName: string, key: string) =>
-  (SECRET_STORE_KEYS[storeName] ?? []).some(
-    // electron-store supports dot-notation paths -- block subpath reads too.
-    (secret) => key === secret || key.startsWith(`${secret}.`)
-  )
-
-/** Registers a store name so snapshotGet/snapshotHas know to look for it (mirrors storeNew). */
-export function registerStore(storeName: string): void {
+/**
+ * Registers a store name so snapshotGet/snapshotHas know to look for it (mirrors
+ * misc.ts's storeNew), and forwards the registration to the sidecar over
+ * `STORE_NEW_CHANNEL` with the caller's construction `options`, so the sidecar can build
+ * a matching instance there. Registration ALONE must not mark the store hydrated -- doing
+ * so would permanently defeat D-04's lazy-miss fallback for any lazy store, since
+ * `hydrated` is the only gate that fallback checks.
+ */
+export function registerStore(
+  storeName: string,
+  options?: Record<string, unknown>
+): void {
+  ensureChangeListenerAttached()
   if (!snapshot[storeName]) {
     snapshot[storeName] = {}
   }
+  send(STORE_NEW_CHANNEL, [storeName, options])
 }
 
 /**
  * Calls the `SIDECAR_STORE_SNAPSHOT` Tauri command once and fills the in-memory snapshot
- * map. Must be awaited before React mounts (index.tsx) -- the Steam login-gate
- * (GlobalState.tsx:238) and the CacheStore reads (GlobalState.tsx:178/203) read
- * synchronously during GlobalState's constructor. Skeleton scope: `configStore` +
- * `steamConfigStore` (27-CONTEXT "Claude's discretion" -- the two stores the skeleton's
- * read flow touches).
+ * map, marking every store name present in the result as hydrated (D-03). Must be
+ * awaited before React mounts (index.tsx) -- the Steam login-gate (GlobalState.tsx:238)
+ * and the CacheStore reads (GlobalState.tsx:178/203) read synchronously during
+ * GlobalState's constructor. This is the EAGER tier -- `BOOT_SET_STORES`
+ * (src/common/types/storePolicy.ts). Anything not in that set is a lazy store, hydrated
+ * on demand by `hydrateStore()` below.
  */
 export async function hydrateStoreSnapshot(): Promise<void> {
   const result = await tauriInvoke<StoreSnapshot>(SIDECAR_STORE_SNAPSHOT)
   for (const [storeName, values] of Object.entries(result ?? {})) {
     snapshot[storeName] = { ...(snapshot[storeName] ?? {}), ...values }
+    hydrated.add(storeName)
+  }
+}
+
+/**
+ * D-03: lazy per-store hydrate. Fetches one `LAZY_STORES` store's filtered snapshot on
+ * demand via `STORE_FETCH_CHANNEL` (ridden over the existing `SIDECAR_INVOKE` command --
+ * no new Tauri command required) and merges it into the in-memory snapshot. De-dupes
+ * concurrent callers for the same store through `inflight`. A rejecting fetch is caught
+ * and logged, NEVER rethrown -- SEAM Invariant B: a throw here (this is fired with `void`
+ * from a synchronous read) can blank the window, the same failure class as the 27-05
+ * boot-time crash.
+ */
+export async function hydrateStore(storeName: string): Promise<void> {
+  const existing = inflight.get(storeName)
+  if (existing) return existing
+
+  const task = (async () => {
+    try {
+      const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [
+        storeName
+      ])
+      snapshot[storeName] = { ...(snapshot[storeName] ?? {}), ...(result ?? {}) }
+      hydrated.add(storeName)
+    } catch (error) {
+      console.error(
+        `hydrateStore: fetch of "${storeName}" failed; leaving the snapshot degraded ` +
+          'for this store',
+        error
+      )
+    }
+  })()
+
+  inflight.set(storeName, task)
+  try {
+    await task
+  } finally {
+    inflight.delete(storeName)
   }
 }
 
@@ -160,26 +247,75 @@ function getAtPath(
   }, obj)
 }
 
-/** Synchronous read from the hydrated snapshot -- proven in Task 3. */
+/**
+ * D-04: records+warns at most once per store+key pair that a lazy miss occurred, and
+ * kicks off (never awaits) the self-correcting hydrate.
+ */
+function reportLazyMiss(storeName: string, key: string, forCall: string): void {
+  const missKey = `${storeName}.${key}`
+  if (!lazyMissWarned.has(missKey)) {
+    lazyMissWarned.add(missKey)
+    console.warn(
+      `${STORE_LAZY_MISS_MARKER} ${forCall}("${storeName}", "${key}") missed an ` +
+        'un-hydrated store; returning the caller default and hydrating asynchronously'
+    )
+  }
+  void hydrateStore(storeName)
+}
+
+/**
+ * Synchronous read from the in-memory snapshot (D-03: boot-set stores are populated by
+ * `hydrateStoreSnapshot()`, lazy stores by `hydrateStore()` on first miss).
+ *
+ * D-08: gates on `isAllowedStoreField` -- the TAURI path's fail-closed ALLOW-list
+ * (src/common/types/storePolicy.ts), replacing the module's former local hardcoded
+ * secret-key deny-list. `src/preload/api/misc.ts`'s Electron branch keeps its
+ * own deny-list deliberately and divergently until the Electron cutover (Phase 35) --
+ * see that file's own D-08 comment (the Phase 28 D-11 precedent for why a documented,
+ * commented divergence between two paths is the correct interim state, not a bug to
+ * "fix" by unifying them early).
+ *
+ * D-04: a synchronous read of a NOT-YET-HYDRATED store returns `defaultValue` rather
+ * than throwing or blocking (SEAM Invariant B) -- logs one greppable
+ * `STORE_LAZY_MISS_MARKER` warning per store+key pair, fires an async `hydrateStore()`
+ * so the NEXT read is correct, and never throws. This is an accepted risk: it admits a
+ * silently-wrong first read that self-corrects, which is only diagnosable because the
+ * marker is distinct and greppable -- modelled on `UNPORTED_CHANNEL_MARKER`, and
+ * deliberately NOT folded into generic logging.
+ */
 export function snapshotGet(
   storeName: string,
   key: string,
   defaultValue?: unknown
 ): unknown {
-  if (isSecretStoreKey(storeName, key)) {
+  if (!isAllowedStoreField(storeName, key)) {
     console.warn(
-      `snapshotGet: blocked read of credential key "${key}" from "${storeName}"`
+      `snapshotGet: blocked read of "${key}" from "${storeName}" -- not in the Tauri ` +
+        'store-field allow-list'
     )
     return undefined
   }
+
   const value = getAtPath(snapshot[storeName], key)
+  if (value === undefined && !hydrated.has(storeName)) {
+    reportLazyMiss(storeName, key, 'snapshotGet')
+    return defaultValue
+  }
+
   return value === undefined ? defaultValue : value
 }
 
-/** Synchronous has-check from the hydrated snapshot. */
+/** Synchronous has-check from the in-memory snapshot -- same D-04/D-08 gating as `snapshotGet`. */
 export function snapshotHas(storeName: string, key: string): boolean {
-  if (isSecretStoreKey(storeName, key)) return false
-  return getAtPath(snapshot[storeName], key) !== undefined
+  if (!isAllowedStoreField(storeName, key)) return false
+
+  const found = getAtPath(snapshot[storeName], key) !== undefined
+  if (!found && !hydrated.has(storeName)) {
+    reportLazyMiss(storeName, key, 'snapshotHas')
+    return false
+  }
+
+  return found
 }
 
 /**
