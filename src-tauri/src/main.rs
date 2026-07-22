@@ -434,25 +434,42 @@ fn start_reader(
 
             // Response frame: correlate by id.
             if value.get("ok").is_some() {
-                if let Some(id) = value.get("id").and_then(|v| v.as_str()) {
-                    let sender = state
-                        .pending
-                        .lock()
-                        .ok()
-                        .and_then(|mut p| p.remove(id));
-                    if let Some(tx) = sender {
-                        let ok = value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
-                        let outcome = if ok {
-                            Ok(value.get("result").cloned().unwrap_or(Value::Null))
-                        } else {
-                            Err(value
-                                .get("error")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("sidecar error")
-                                .to_string())
-                        };
-                        let _ = tx.send(outcome);
+                // WR-07: never drop a response frame without a trace. This file's own stated
+                // convention (see the unrecognized-frame branch at the bottom of this loop) is
+                // "log a diagnostic instead of silently dropping it, so this class of gap
+                // cannot recur unnoticed" — the response path used to violate it, which is
+                // exactly how a timed-out-then-completed invoke stayed invisible.
+                // Diagnostics carry the id only, never `result`/`error` bodies (T-28-04).
+                match value.get("id").and_then(|v| v.as_str()) {
+                    Some(id) => {
+                        let sender = state
+                            .pending
+                            .lock()
+                            .ok()
+                            .and_then(|mut p| p.remove(id));
+                        match sender {
+                            Some(tx) => {
+                                let ok =
+                                    value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+                                let outcome = if ok {
+                                    Ok(value.get("result").cloned().unwrap_or(Value::Null))
+                                } else {
+                                    Err(value
+                                        .get("error")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("sidecar error")
+                                        .to_string())
+                                };
+                                let _ = tx.send(outcome);
+                            }
+                            None => eprintln!(
+                                "[shell] response for unknown/timed-out id={id} (dropped)"
+                            ),
+                        }
                     }
+                    None => eprintln!(
+                        "[shell] response frame with a missing or non-string id (dropped)"
+                    ),
                 }
                 continue;
             }
