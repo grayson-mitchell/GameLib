@@ -32,6 +32,17 @@ import {
  *
  * No env-var, in-memory, or plaintext fallback exists here (D-08/REQ-28-07) — a Keychain
  * failure is a failure, full stop; there is no dev escape hatch.
+ *
+ * **Phase 30 D-03 — the two-token divergence is ACCEPTED.** Signing in under Tauri does
+ * NOT sign you in under Electron: the sidecar stores its refresh token in a keyring-native
+ * macOS Keychain entry (this class, via its Rust invoke bridge), while the Electron build
+ * stores Chromium OSCrypt ciphertext in the shared `configStore` (see
+ * `backend/storeManagers/steam/tokenStore.ts`). This is the correct, by-construction
+ * consequence of Phase 28 D-01 (the sidecar's `TokenStore` implementation is Keychain-
+ * native, not OSCrypt-compatible) — it is not a bug, and convergence would require
+ * hand-rolling OSCrypt in the sidecar, which Phase 28 D-01 already rejected. See
+ * `.planning/phases/27-tauri-shell-walking-skeleton/SEAM.md`'s "Accepted Constraints"
+ * section (entry added by Phase 30 Plan 04) for the cross-referenced record.
  */
 export class SidecarKeyringTokenStore implements TokenStore {
   async isAvailable(): Promise<boolean> {
