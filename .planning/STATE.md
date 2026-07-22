@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 29 context gathered
-last_updated: "2026-07-22T06:08:35.968Z"
+stopped_at: Completed 29-02-PLAN.md
+last_updated: "2026-07-22T06:15:50.961Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 29 (tauri-store-layer-generalize-the-sidecar-store-beyond-the-tw) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-07-22
 
@@ -241,6 +241,7 @@ Closed/parked native-install phases:
 | Phase 28 P05 | 35min | 1 tasks | 1 files |
 | Phase 28 P06 | 45min | 2 tasks | 3 files |
 | Phase 29 P01 | 8min | 2 tasks | 2 files |
+| Phase 29 P02 | 15min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -407,6 +408,8 @@ Recent decisions affecting current work:
 - [Phase 28]: Regression fixed (92c29a5e): Phase 27's skeletonFlows.test.ts + 28-05's electronUntouched.test.ts were driving the developer's REAL production Electron configStore; skeletonFlows Test 4 destroyed the real Steam refresh token mid-phase. Both suites made strictly read-only / isolated.
 - [Phase 29]: fileStore D-14 fix implemented as a path-keyed cellRegistry (Map<filePath,{data}>) rather than singleton FileStore instances, so new FileStore() still returns a distinct object per call while sharing the underlying data
 - [Phase 29]: fileStore.ts options.defaults (D-02b) seeds unset keys under loaded data at cell-creation time only and is never persisted to disk at construction, deviating intentionally from electron-store/conf
+- [Phase 29]: D-15 extended to a fourth store (uploadedLogFileStore) beyond the original three, so storeRegistration.ts (29-04) imports zero host modules
+- [Phase 29]: storeRegistry records {instance, options} pairs (not just the instance) so name-keyed dispatch never re-derives cwd/name from the ValidStoreName string (Pitfall 4)
 
 ### Pending Todos
 
@@ -475,8 +478,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T06:08:35.963Z
-Stopped at: Phase 29 context gathered
+Last session: 2026-07-22T06:15:50.954Z
+Stopped at: Completed 29-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
