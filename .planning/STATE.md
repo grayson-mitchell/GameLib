@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: verifying
-stopped_at: Completed 30-04-PLAN.md (partial pass, G-30-01 open)
-last_updated: "2026-07-22T18:15:48.453Z"
-last_activity: 2026-07-22
+status: executing
+stopped_at: "Completed 30-05-PLAN.md (Gap 1 closed: install spinner clears on returned error)"
+last_updated: "2026-07-23T00:32:26.178Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 3
@@ -34,9 +34,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 30 (tauri-ipc-re-plumb-slice-1-install-uninstall-update-check) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-07-22
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-23
 
 > **STATE drift corrected 2026-07-21.** This file previously read "Phase 24 complete
 > (16/17) — ready to discuss Phase 25" with `Current focus: Phase 25`, which was stale on
@@ -252,6 +252,7 @@ Closed/parked native-install phases:
 | Phase 30 P03 | 9min | 3 tasks | 8 files |
 | Phase 30 P02 | 19min | 3 tasks | 5 files |
 | Phase 30 P04 | ~25min (+ multi-hour checkpoint pause) | 3 tasks | 4 files |
+| Phase 30 P05 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -436,6 +437,8 @@ Recent decisions affecting current work:
 - [Phase 30]: D-05a (Phase 30 Plan 02): direct SteamGame.install()/update() bypass, not a downloadqueue.ts port
 - [Phase 30]: D-05b/D-12 (Phase 30 Plan 02): uninstallGameCallback/checkGameUpdates reused UNCHANGED, all runners
 - [Phase 30]: Task 3 both-builds checkpoint: partial pass (3/4 human-observed conditions); Steam QR login logon button unresponsive under Tauri filed as known defect G-30-01, not merely deferred — Additive/reversible invariant confirmed no-regression; QR login UI flow is known-broken, worse than unproven, so claim discipline required filing a defect rather than re-deferring
+- [Phase 30]: A returned {status:'error'} from SteamGame.install() now always pushes a terminal gameStatusUpdate('done'), mirroring Electron's removeFromQueue(forceStatusUpdate=true)
+- [Phase 30]: Client-not-ready sentinel excluded from the new showDialogBoxModalAuto call to avoid colliding with ensureSteamClientReady's existing steamClientSetupRequired prompt
 
 ### Pending Todos
 
@@ -505,8 +508,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-22T18:15:48.447Z
-Stopped at: Completed 30-04-PLAN.md (partial pass, G-30-01 open)
+Last session: 2026-07-23T00:32:26.172Z
+Stopped at: Completed 30-05-PLAN.md (Gap 1 closed: install spinner clears on returned error)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

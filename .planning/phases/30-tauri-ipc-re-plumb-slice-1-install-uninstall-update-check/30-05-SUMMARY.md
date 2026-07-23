@@ -98,3 +98,12 @@ None - no external service configuration required.
 ---
 *Phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/sidecar/installFlowRegistration.ts
+- FOUND: src/backend/sidecar/__tests__/installFlows.test.ts
+- FOUND: .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-05-SUMMARY.md
+- FOUND: commit 34214fda (test: RED)
+- FOUND: commit 4ee96b3f (feat: GREEN)
+- FOUND: commit 5de77579 (docs: summary)
