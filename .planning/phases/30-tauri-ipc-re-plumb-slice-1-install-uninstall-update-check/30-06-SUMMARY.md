@@ -128,3 +128,7 @@ None - no external service configuration required.
 *Phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check*
 *Plan: 06*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+
+All created files verified present on disk; all 5 commit hashes (`a6981ffa`, `d6e7942a`, `c70c7385`, `14f4a6cd`, `83771455`) verified present in `git log --oneline --all`.
