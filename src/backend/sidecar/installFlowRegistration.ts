@@ -1,6 +1,7 @@
 /**
- * Curated install/uninstall/update-check channel registration (Phase 30 Plan
- * 02, D-05a/D-05b/D-07/D-08/D-12).
+ * Curated install/uninstall/update-check channel registration (originally
+ * Phase 30 Plan 02, D-05a/D-05b/D-07/D-08/D-12; `install`/`updateGame`
+ * re-routed onto the real download queue in Phase 32 Plan 02, D-01).
  *
  * Registers exactly five invoke handlers the Tauri build's install-slice
  * needs onto electronStub's `ipcMain` recorder, importing the REAL backend
@@ -8,37 +9,33 @@
  * prove the real logic runs behind the new transport, not a
  * reimplementation):
  *
- *   - `install` -> a DIRECT `SteamGame.install()` bypass (D-05a), NOT a port
- *     of `downloadmanager`'s download-queue orchestrator module. That
- *     module's only Steam-relevant behavior the frontend depends on is a
- *     `sendGameStatusUpdate({status: 'queued'})` push before the real work
- *     starts — reproduced here as a single direct call. Everything else that
- *     module does (GOG-redist fan-out, legendary DLC fan-out,
- *     pause/resume/cancel, the Download Manager screen's own queue state) is
- *     runner-irrelevant to Steam or explicitly Phase 32's cluster; porting it
- *     would drag `initQueue`'s import-time side effects and the
- *     `downloadManager` store into the sidecar for zero behavioral gain on
- *     this slice. `SteamGame.install()`'s
- *     own branch dispatch reaches `installNative` -> `installDepotDownload`
- *     (D-07: the only in-scope branch) unmodified; the bottle/bridge branches
- *     stay reachable in the class but are non-fatal/unexercised here per SEAM
- *     Invariant B.
- *   - `updateGame` -> the same direct-bypass shape as `install`, calling
- *     `SteamGame.update()` (the exact method Electron's own
- *     `downloadmanager/utils.ts`'s `updateQueueElement` calls) with a matching
- *     `sendGameStatusUpdate` 'updating'/'done' transition. Note:
- *     `SteamGame.update()` itself is a pre-existing Phase-2 stub
- *     (`storeManagers/steam/games.ts:1719`) that always returns
- *     `{status:'error'}` on BOTH builds today — this is not a Phase 30
- *     regression, it is calling the identical unmodified method Electron
- *     calls.
+ *   - `install` -> enqueues via the real `addToQueue()`
+ *     (`downloadmanager/downloadqueue.ts`), matching Electron's own
+ *     `downloadmanager/ipc_handler.ts` shape exactly (D-01, restoring
+ *     Electron parity). Retires the Phase 30 D-05a direct
+ *     `SteamGame.install()` bypass this file used to run — that bypass's
+ *     hand-rolled `sendGameStatusUpdate('queued'/'installing')` pushes and
+ *     the `deferredToSetup`/`wasAborted`/`hadError` try/catch/finally
+ *     status-suppression logic are DELETED, not wrapped: `addToQueue()` ->
+ *     `initQueue()` -> `installQueueElement()`
+ *     (`downloadmanager/utils.ts`) already reproduces every one of those
+ *     transitions unmodified, so hand-rolling a second copy here would be a
+ *     duplicate implementation, not a port. Resolves `Promise<void>` once
+ *     the element is QUEUED (`addToQueue()` has no return value) — NOT once
+ *     the install finishes, and NOT a reconstructed `{status}` shape. The
+ *     legendary DLC fan-out loop `ipc_handler.ts` also runs is omitted
+ *     (not Steam-relevant to this slice); `downloadqueue.ts` itself stays
+ *     runner-generic (D-02) — this file does not narrow it to Steam.
+ *   - `updateGame` -> the identical re-route shape, deriving
+ *     `params.path`/`platformToInstall` from `gameInfo.install` exactly like
+ *     `ipc_handler.ts`'s own `updateGame` handler, then `addToQueue()`.
  *   - `uninstall` -> `uninstallGameCallback` (`backend/utils/uninstaller.ts`)
  *     reused UNCHANGED (D-05b). It already emits its own
  *     `uninstalling`/`done` status updates and already suppresses the
  *     duplicate Steam toast (GAME-03) — no reshaping needed.
  *   - `checkGameUpdates` -> the shared `checkGameUpdates` function
- *     (`backend/utils/checkGameUpdates.ts`, Task 1 of this plan) reused
- *     UNCHANGED, all runners (D-12, follows D-05b).
+ *     (`backend/utils/checkGameUpdates.ts`) reused UNCHANGED, all runners
+ *     (D-12, follows D-05b).
  *   - `listSteamLibraryTargets` -> mirrors Electron's own gate
  *     (`main.ts`'s `isSteamNativeInstallEnabled() ? listSteamLibraryTargets()
  *     : []`) exactly. This is the ACTUAL minimum read-gate the install
@@ -53,27 +50,25 @@
  *     (Invariant B keeps the rejection non-fatal, but the flow never
  *     progresses).
  *
- * `uninstallGameCallback`/`checkGameUpdates` both "genuinely span multiple
- * store managers" (checklist step 2's own curated-import carve-out) via
- * `libraryManagerMap`, which each imports for itself — that import is
+ * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
+ * multiple store managers" (checklist step 2's own curated-import carve-out)
+ * via `libraryManagerMap`, which each imports for itself — that import is
  * correct, not a discipline violation (RESEARCH Q2 confirmed the cost is
  * already sunk in the sidecar via `steamFlowRegistration.ts`'s load-bearing
- * first import below).
- *
- * Deliberately does NOT import `getSteamInstallSize` — the download-queue
- * orchestrator's only use of it (its `addToQueue` function) was to populate
- * `DMQueueElement.params.size` for the Download Manager screen's own queue
- * row display (Phase 32's cluster, not ported here); `GameStatus` (the
- * `sendGameStatusUpdate` payload this file pushes) carries no `size` field,
- * so there is no seam in this bypass for that value to flow through.
+ * first import below; RESEARCH D-01 confirms `downloadqueue.ts`'s own
+ * import-time side effects are an accepted, already-prepared-for cost —
+ * Phase 29 D-15 extracted `downloadManager`'s store declaration for exactly
+ * this).
  *
  * Deliberately does NOT register any `DownloadDialog` channel
  * (`requestAppSettings`, `requestGameSettings`, `checkDiskSpace`,
- * `getGameOverride`, `getGameSdl`, `getPrivateBranchPassword`) or any queue
- * channel (`getDMQueueInformation`, `removeFromDMQueue`,
- * `pauseCurrentDownload`, `resumeCurrentDownload`, `cancelDownload`) — all
- * confirmed unreachable on the Steam depot path or explicitly Phase 32's
- * cluster. They stay unregistered and keep rejecting non-fatally with
+ * `getGameOverride`, `getGameSdl`, `getPrivateBranchPassword`) — confirmed
+ * unreachable on the Steam depot path. The five queue-management channels
+ * (`getDMQueueInformation`, `removeFromDMQueue`, `pauseCurrentDownload`,
+ * `resumeCurrentDownload`, `cancelDownload`) are registered by the separate
+ * `downloadQueueFlowRegistration.ts` module (Phase 32 Plan 01, D-02) — not
+ * this one, to keep queue-management and install-lifecycle apart. Any
+ * `DownloadDialog` channel invoke still keeps rejecting non-fatally with
  * `UNPORTED_CHANNEL_MARKER` per SEAM.md Load-Bearing Invariant B.
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
@@ -81,35 +76,29 @@
  * `electron` module.
  */
 
-import { logError, LogPrefix } from 'backend/logger'
-import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
-import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
-
 import { ipcMain } from './electronStub'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
 // force `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the
-// direct `steam/games`/`steam/installLocation` imports below resolve.
+// direct `steam/installLocation` import below resolves.
 // `storeManagers/index.ts` imports `steam/library` at its OWN top (which
 // transitively pulls in `steam/games`) and only THEN constructs its eager
 // `libraryManagerMap` (`new SteamLibraryManager()` ...), so entering through
 // it lets every steam/* module finish defining its class export first.
-// Entering through `steam/games`/`steam/installLocation` DIRECTLY (as this
-// file's own imports below do) risks the same re-entrant `index.ts`
-// mid-evaluation crash `steamFlowRegistration.ts`'s docstring documents
+// Entering through `steam/installLocation` DIRECTLY (as this file's own
+// import below does) risks the same re-entrant `index.ts` mid-evaluation
+// crash `steamFlowRegistration.ts`'s docstring documents
 // (`SteamLibraryManager is not a constructor`, esbuild-bundle-only, ts-jest's
 // init order differs) — this fix is per-file, not "once is enough", because
 // each curated registration module is its own independent entry point into
 // the bundle's module graph.
 import '../storeManagers'
-import SteamGame from '../storeManagers/steam/games'
 import { uninstallGameCallback } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
-import { sendGameStatusUpdate } from '../utils'
-import type { InstallParams, Runner, UpdateParams } from 'common/types'
-import type { InstallResult } from 'common/types/game_manager'
+import { addToQueue } from '../downloadmanager/downloadqueue'
+import type { DMQueueElement, InstallParams, Runner, UpdateParams } from 'common/types'
 
 /**
  * Registers the five install-slice invoke handlers. Called once from
@@ -120,119 +109,26 @@ import type { InstallResult } from 'common/types/game_manager'
 export function registerInstallFlows(): void {
   ipcMain.handle(
     'install',
-    async (
-      _event: unknown,
-      ...args: unknown[]
-    ): Promise<{ status: InstallResult['status'] }> => {
+    async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as InstallParams
-      const { appName, runner, path } = params
 
-      // CR-01: this bypass (D-05a) only ever constructs a SteamGame. `install`
-      // is a runner-generic channel — frontend/helpers/library.ts calls it for
-      // every runner. Reject non-steam runners honestly instead of silently
-      // running the Steam depot installer against a foreign appName. Porting
-      // full `libraryManagerMap[runner]` dispatch is Phase 32's cluster.
-      if (runner !== 'steam') {
-        throw new Error(
-          `${UNPORTED_CHANNEL_MARKER} install: runner '${runner}' not ported`
-        )
+      // Electron parity (D-01, ipc_handler.ts:13-22): build the
+      // DMQueueElement and enqueue via the real addToQueue(). No runner
+      // guard — downloadqueue.ts is runner-generic (D-02), and
+      // installQueueElement/updateQueueElement (downloadmanager/utils.ts)
+      // already reproduce every queued/installing/done status transition
+      // and the deferredToSetup/wasAborted/error-surfacing behavior the
+      // retired Phase 30 D-05a bypass used to hand-roll here. addToQueue()
+      // has no return value — resolve void once QUEUED, not once installed.
+      const dmQueueElement: DMQueueElement = {
+        params,
+        type: 'install',
+        addToQueueTime: Date.now(),
+        endTime: 0,
+        startTime: 0
       }
 
-      // The one thing addToQueue() did that the frontend's button state
-      // depends on (D-05a) — reproduced as a single direct push, not a
-      // queue port.
-      sendGameStatusUpdate({
-        appName,
-        runner,
-        status: 'queued',
-        folder: path
-      })
-
-      // CR-02: Electron's installQueueElement (downloadmanager/utils.ts)
-      // pushes 'installing' before the real work starts, so the badge leaves
-      // "queued" — reproduced here.
-      sendGameStatusUpdate({
-        appName,
-        runner,
-        status: 'installing',
-        folder: path
-      })
-
-      let deferredToSetup = false
-      let wasAborted = false
-      let hadError = false
-      try {
-        // SteamGame.install()'s own branch dispatch reaches installNative ->
-        // installDepotDownload (D-07) unmodified. No depot logic reimplemented
-        // here.
-        const result = await new SteamGame(appName).install({
-          // WR-06: Electron's installQueueElement normalizes both of these before
-          // handing them to the store manager (downloadmanager/utils.ts) — the
-          // apostrophe strip because the path is interpolated into shell-ish command
-          // construction downstream, and the empty-entry filter because a blank
-          // sdlList entry changes the SDL selection semantics. The bypass used to
-          // forward both raw; it now applies the identical normalization so the two
-          // builds cannot diverge on it.
-          path: (path ?? '').replaceAll("'", ''),
-          platformToInstall: params.platformToInstall,
-          installDlcs: params.installDlcs,
-          sdlList: (params.sdlList ?? []).filter((el) => el !== ''),
-          installLanguage: params.installLanguage,
-          branch: params.branch,
-          build: params.build,
-          dependencies: params.dependencies
-        })
-
-        // CR-02: SteamGame.install() resolves {status:'error'|'abort'|'done'}
-        // WITHOUT throwing — the return value must be inspected, not discarded,
-        // or a failed/aborted install resolves `ok: true` with the badge stuck
-        // on "queued"/"installing" forever (same class as
-        // debug/steam-cancel-abort-thread-a and the Phase 17 deferredToSetup fix).
-        deferredToSetup = result.deferredToSetup ?? false
-        wasAborted = result.status === 'abort'
-
-        if (result.status === 'error') {
-          hadError = true
-          logError(
-            ['Installation of', appName, 'failed with:', result.error ?? ''],
-            LogPrefix.Backend
-          )
-
-          // Gap 1 (30-05): surface a genuine depot failure to the user — but
-          // suppress the dialog for the client-not-ready case, since
-          // ensureSteamClientReady already fired the steamClientSetupRequired
-          // push for that path (a second modal would collide with the setup
-          // prompt).
-          const isClientNotReady = (result.error ?? '').startsWith(
-            'Steam client not ready'
-          )
-          if (!isClientNotReady) {
-            showDialogBoxModalAuto({
-              title: 'Installation failed',
-              message: result.error ?? '',
-              type: 'ERROR'
-            })
-          }
-        }
-
-        return { status: result.status }
-      } catch (error) {
-        // An unexpected throw also starts no ACF poller — clear the badge
-        // before propagating so the caller's rejection doesn't also leave a
-        // permanently stuck "installing" status.
-        sendGameStatusUpdate({ appName, runner, status: 'done' })
-        throw error
-      } finally {
-        // Steam: the ACF poller emits the real 'done' — suppress it here to
-        // avoid the installing->done->installing flash (GAME-02). EXCEPTIONS
-        // (Phase 17 deferredToSetup, debug/steam-cancel-abort-thread-a
-        // wasAborted, Gap 1 (30-05) hadError): no poller ever starts for
-        // these three cases, so nothing else will clear the transient
-        // 'installing' badge.
-        if (deferredToSetup || wasAborted || hadError) {
-          sendGameStatusUpdate({ appName, runner, status: 'done' })
-        }
-      }
+      await addToQueue(dmQueueElement)
     }
   )
 
@@ -265,46 +161,26 @@ export function registerInstallFlows(): void {
 
   ipcMain.handle(
     'updateGame',
-    async (
-      _event: unknown,
-      ...args: unknown[]
-    ): Promise<{ status: InstallResult['status'] }> => {
+    async (_event: unknown, ...args: unknown[]): Promise<void> => {
       const params = (args[0] ?? {}) as UpdateParams
-      const { appName, runner } = params
-
-      // CR-01: identical defect to `install` above — reject non-steam
-      // runners honestly instead of running `new SteamGame(appName).update()`
-      // against a foreign appName.
-      if (runner !== 'steam') {
-        throw new Error(
-          `${UNPORTED_CHANNEL_MARKER} updateGame: runner '${runner}' not ported`
-        )
-      }
-
-      sendGameStatusUpdate({ appName, runner, status: 'updating' })
-      try {
-        // The same direct-bypass shape as `install` (D-05a) — calls the
-        // exact method Electron's downloadmanager/utils.ts's
-        // updateQueueElement calls, unmodified.
-        //
-        // WR-04: SteamGame.update() resolves {status:'error', ...} WITHOUT
-        // throwing (it is a pre-existing stub today that ALWAYS returns error).
-        // Discarding the return value made every update under Tauri resolve
-        // `ok: true` while doing nothing. Mirror updateQueueElement: log the
-        // failure and hand the status back to the caller.
-        const result = await new SteamGame(appName).update()
-
-        if (result.status === 'error') {
-          logError(
-            ['Update of', appName, 'failed with:', result.error ?? ''],
-            LogPrefix.Backend
-          )
+      const {
+        gameInfo: {
+          install: { platform, install_path }
         }
+      } = params
 
-        return { status: result.status }
-      } finally {
-        sendGameStatusUpdate({ appName, runner, status: 'done' })
+      // Electron parity (D-01, ipc_handler.ts:46-62): identical re-route
+      // shape to `install` above — derive path/platformToInstall from
+      // gameInfo.install, then enqueue via addToQueue().
+      const dmQueueElement: DMQueueElement = {
+        params: { ...params, path: install_path!, platformToInstall: platform! },
+        type: 'update',
+        addToQueueTime: Date.now(),
+        endTime: 0,
+        startTime: 0
       }
+
+      await addToQueue(dmQueueElement)
     }
   )
 
