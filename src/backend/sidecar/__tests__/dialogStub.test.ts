@@ -131,7 +131,7 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
   })
 })
 
-describe('electronStub dialog.showMessageBox (Phase 31 Plan 04, CR-01 de-scope)', () => {
+describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real multi-button)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -151,34 +151,94 @@ describe('electronStub dialog.showMessageBox (Phase 31 Plan 04, CR-01 de-scope)'
     warnSpy.mockRestore()
   })
 
-  it('resolves the safe sentinel { response: -1, checkboxChecked: false } for a multi-button confirm, never { response: 0 }, and never rejects', async () => {
+  it('resolves { response: 0, checkboxChecked: false } when requestRustInvoke resolves true (buttons[0] clicked)', async () => {
+    program = { type: 'resolve', value: true }
+
     await expect(
       dialog.showMessageBox(undefined, {
         type: 'warning',
         title: 'Force uninstall?',
         message: 'This will delete local files',
-        buttons: ['Confirm', 'Cancel']
+        buttons: ['Confirm', 'Cancel'],
+        cancelId: 1
       })
-    ).resolves.toEqual({ response: -1, checkboxChecked: false })
-  })
-
-  it('never calls requestRustInvoke / forwards to RUST_DIALOG_MESSAGE (de-wired, no auto-confirm)', async () => {
-    await dialog.showMessageBox(undefined, { message: 'Message' })
-
-    expect(callLog).toHaveLength(0)
+    ).resolves.toEqual({ response: 0, checkboxChecked: false })
     expect(
       callLog.some((entry) => entry.channel === RUST_DIALOG_MESSAGE)
-    ).toBe(false)
+    ).toBe(true)
   })
 
-  it('emits one console.warn naming showMessageBox', async () => {
-    await dialog.showMessageBox(undefined, { message: 'Message' })
+  it('resolves { response: 1, checkboxChecked: false } when requestRustInvoke resolves false (buttons[1] clicked)', async () => {
+    program = { type: 'resolve', value: false }
 
+    await expect(
+      dialog.showMessageBox(undefined, {
+        type: 'warning',
+        title: 'Force uninstall?',
+        message: 'This will delete local files',
+        buttons: ['Confirm', 'Cancel'],
+        cancelId: 1
+      })
+    ).resolves.toEqual({ response: 1, checkboxChecked: false })
+  })
+
+  it('fails safe to the caller-declared cancelId 0 on transport rejection (askForceUninstall shape: destructive is buttons[1])', async () => {
+    program = {
+      type: 'reject',
+      error: new Error('rustInvoke: timeout')
+    }
+
+    await expect(
+      dialog.showMessageBox(undefined, {
+        buttons: [i18nLike('box.no'), i18nLike('box.yes')],
+        cancelId: 0
+      })
+    ).resolves.toEqual({ response: 0, checkboxChecked: false })
+  })
+
+  it('fails safe to the caller-declared cancelId 1 on transport rejection (promptI386Recovery shape: destructive is buttons[0])', async () => {
+    program = {
+      type: 'reject',
+      error: new Error('rustInvoke: timeout')
+    }
+
+    await expect(
+      dialog.showMessageBox(undefined, {
+        buttons: [i18nLike('box.steam.mac32Detected.confirm'), i18nLike('box.cancel')],
+        cancelId: 1
+      })
+    ).resolves.toEqual({ response: 1, checkboxChecked: false })
+  })
+
+  it('never rejects/throws on transport error -- the returned promise always resolves', async () => {
+    program = {
+      type: 'reject',
+      error: new Error('rustInvoke: channel not allowed: dialog_message')
+    }
+
+    await expect(
+      dialog.showMessageBox(undefined, {
+        buttons: ['Confirm', 'Cancel'],
+        cancelId: 1
+      })
+    ).resolves.toBeDefined()
     expect(warnSpy).toHaveBeenCalledTimes(1)
     const [warningArg] = warnSpy.mock.calls[0]
     expect(String(warningArg)).toContain('showMessageBox')
   })
+
+  it('showMessageBoxSync still logs and defaults to 0 (no-op unchanged)', () => {
+    const result = dialog.showMessageBoxSync()
+
+    expect(result).toBe(0)
+  })
 })
+
+// Small local stand-in so this test file doesn't need a real i18next dependency -- these tests
+// only care about button LABELS being opaque strings, not their translated content.
+function i18nLike(key: string): string {
+  return key
+}
 
 describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
   beforeEach(() => {
