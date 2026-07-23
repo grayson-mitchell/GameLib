@@ -210,7 +210,11 @@ window.setTheme = async (themeClass: string) => {
 
   document.body.className = themeClass
 
-  if (navigator.windowControlsOverlay.visible) {
+  // `navigator.windowControlsOverlay` is undefined in the Tauri WKWebView (it is a
+  // Chromium/Electron-only surface), so guard the access — mirrors App.tsx's
+  // `navigator['windowControlsOverlay']?.visible`. Without the `?.` this throws an
+  // unhandled "undefined is not an object" rejection at startup under `tauri:dev`.
+  if (navigator.windowControlsOverlay?.visible) {
     const titlebarOverlay = Object.fromEntries(
       ['height', 'color', 'symbol-color']
         .map((item) => [
