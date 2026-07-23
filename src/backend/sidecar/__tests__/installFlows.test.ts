@@ -374,14 +374,13 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(steamGameMocks.update).not.toHaveBeenCalled()
   })
 
-  // CR-02: a failed install (`{status: 'error'}`, resolved not thrown) must
-  // surface that failure on the invoke's own result — the return value can no
-  // longer be discarded (previously the invoke resolved `ok: true` with no
-  // way for the caller to learn the install failed). Matches
-  // installQueueElement's own contract: it pushes 'installing' up front and
-  // (for a plain, non-abort error) does NOT push an extra terminal 'done' —
-  // only `wasAborted`/`deferredToSetup` do, reproduced faithfully below.
-  it('CR-02: a resolved {status: "error"} install surfaces the error on the result instead of resolving success', async () => {
+  // CR-02 + Gap 1 (30-05): a failed install (`{status: 'error'}`, resolved
+  // not thrown) must surface that failure on the invoke's own result AND
+  // clear the badge — a returned error starts no ACF poller (same reasoning
+  // as wasAborted/deferredToSetup below), so this slice now owns pushing the
+  // terminal 'done' itself, matching Electron's own
+  // `removeFromQueue(..., forceStatusUpdate=true)`.
+  it('CR-02/Gap-1: a resolved {status: "error"} install surfaces the error on the result AND clears the badge', async () => {
     steamGameMocks.install.mockResolvedValue({
       status: 'error',
       error: 'depot download failed'
@@ -415,12 +414,82 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     const statuses = statusFrames.map(
       (frame) => ((frame.args ?? [])[0] as { status?: string })?.status
     )
-    // 'installing' now leaves the badge off "queued" (CR-02 item 1). No
-    // additional 'done' fires here — a plain (non-abort) error starts no
-    // poller either, but that stuck-badge gap is upstream in
-    // installQueueElement itself (out of this slice's scope); this bypass
-    // reproduces that contract exactly rather than diverging from it.
-    expect(statuses).toEqual(['queued', 'installing'])
+    // Gap 1 fix: a returned error now clears the badge via a terminal 'done'
+    // push, the same way wasAborted/deferredToSetup already do — otherwise
+    // the Tauri library button spins forever on a headless-not-ready or
+    // genuinely-failed install.
+    expect(statuses).toEqual(['queued', 'installing', 'done'])
+  })
+
+  // Gap 1 (30-05): a genuine (non client-setup) depot failure must surface a
+  // visible error to the user via showDialogBoxModalAuto's 'showDialog'
+  // relay frame.
+  it('Gap-1: a genuine depot failure emits a showDialog ERROR frame with the error text', async () => {
+    steamGameMocks.install.mockResolvedValue({
+      status: 'error',
+      error: 'depot download failed'
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-error-2', 'install', [
+      {
+        appName: '999002',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const dialogFrame = frames.find(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'showDialog'
+    ) as { args?: unknown[] } | undefined
+    expect(dialogFrame).toBeDefined()
+    const [, message, type] = (dialogFrame?.args ?? []) as [
+      string,
+      string,
+      string
+    ]
+    expect(type).toBe('ERROR')
+    expect(message).toContain('depot download failed')
+  })
+
+  // Gap 1 (30-05): the client-not-ready case must clear the badge WITHOUT a
+  // duplicate showDialog — ensureSteamClientReady already fires the
+  // steamClientSetupRequired push for the needs-install/needs-launch case, so
+  // a second modal here would collide with the setup prompt.
+  it('Gap-1: a client-not-ready error clears the badge without a duplicate showDialog', async () => {
+    steamGameMocks.install.mockResolvedValue({
+      status: 'error',
+      error: 'Steam client not ready for appId 999002'
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-error-3', 'install', [
+      {
+        appName: '999002',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const statusFrames = frames.filter(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'gameStatusUpdate'
+    ) as Array<{ args?: unknown[] }>
+    const statuses = statusFrames.map(
+      (frame) => ((frame.args ?? [])[0] as { status?: string })?.status
+    )
+    expect(statuses).toEqual(['queued', 'installing', 'done'])
+
+    const dialogFrame = frames.find(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'showDialog'
+    )
+    expect(dialogFrame).toBeUndefined()
   })
 
   // CR-02: an aborted install (`{status: 'abort'}`) also starts no ACF
