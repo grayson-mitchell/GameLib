@@ -245,23 +245,35 @@ mechanism-proven but NOT yet live-proven.** Run against `npm run tauri:dev` with
 
 ### 1. Live Tauri install retest (G-30-02 / 30-07 fix)
 expected: Clicking Install on a Steam title whose CM socket is present-but-unresponsive reaches a terminal state within the bound — the "installing" badge clears and an ERROR dialog surfaces — instead of spinning on "installing" forever. A healthy, fast-resolving install is unaffected.
-result: pending
-note: This is the exact symptom that failed the post-30-05 retest (Test 1). 30-07 targets the third, never-settling outcome 30-05 could not cover. Must be witnessed live.
+result: issue
+reported: "4. fails" — live Tauri retest 2026-07-23, install spinner STILL hangs forever after the 30-07 timeout fix + WR-01/02/03 bound tuning.
+severity: major
+gap_id: G-30-02
+disposition: PARKED to Phase 33 (user directive 2026-07-23)
+note: 30-07 implemented the diagnosed remedy (bound every pre-download CM await + resolveSteamInstallTarget) and is unit-proven (1004 tests), but the live badge still never clears. The real live trigger is on a path the pre-download withTimeout wrapping does not reach — see `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md` "PARKED → Phase 33" section for diagnose-only starting points (install branch native-vs-bottle, pre-resolveSteamInstallTarget awaits, sidecar handler-level watchdog).
 
 ### 2. Full Install → Uninstall E2E on real Steam depot content (Test 4)
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
-result: pending
-blocked_by: test 1
-reason: "Was blocked by the install hang; unblocks once item 1 is confirmed live. Phase's headline claim has never been observed succeeding end-to-end on hardware."
+result: blocked
+blocked_by: G-30-02
+disposition: PARKED to Phase 33
+reason: "Blocked by the install hang (item 1); cannot be reached until G-30-02 is fixed. Phase's headline claim has never been observed succeeding end-to-end on hardware. Parked with G-30-02."
 
 ### Retest Summary (post 30-07)
 
 total: 2
 passed: 0
-issues: 0
-pending: 2
+issues: 1
+pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
+
+**Result (2026-07-23 post-30-07 live retest):** G-30-02 REOPENED again — the install spinner still
+hangs forever on a live Tauri build despite the 30-07 pre-download timeout fix and its WR-01/02/03
+tuning. Per user directive, **G-30-02 (and the Test 4 E2E it blocks) is PARKED to Phase 33.** Phase
+30 remains NOT hardware-proven for the Steam install slice under Tauri; its honest claim stays
+"wired and unit-proven," not "install works live." All other Phase 30 items (QR channels, Settings,
+dialog picker, both-builds smoke, CR-03/04, Electron sync) passed their live retests earlier.
 
 **Advisory follow-ups from 30-07 code review — RESOLVED 2026-07-23 (commits `8894e10e`, `aa5aba43`,
 `all_fixed`, see `30-REVIEW-FIX.md`):** WR-01/WR-02/WR-03 were applied as one coherent bound-design

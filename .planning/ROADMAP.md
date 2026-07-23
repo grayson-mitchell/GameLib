@@ -1157,9 +1157,18 @@ Plans:
 **Requirements:** TBD — mint at `/gsd-plan-phase 33`
 **Plans:** 0 plans
 
+**Parked-in from Phase 30 — G-30-02 (Tauri Steam install-spinner hang):** clicking Install on a
+Steam title under `npm run tauri:dev` hangs the "installing" badge forever. Phase 30's 30-07 fix
+bounded every pre-download CM await (unit-proven, 1004 tests) but the live retest 2026-07-23 STILL
+hangs — the real trigger is on a path the pre-download `withTimeout` wrapping does not reach. Parked
+here by user directive 2026-07-23. Start from `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md`
+("PARKED → Phase 33" section: check install branch native-vs-bottle, awaits before
+`resolveSteamInstallTarget`, and add a sidecar handler-level `await install()` watchdog as the robust
+belt-and-suspenders fix). Blocks the Phase 30 Install→Uninstall E2E (Test 4).
+
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 33 to break down)
+- [ ] TBD (run /gsd-plan-phase 33 to break down) — include G-30-02 install-hang closure (see parked note above)
 
 ---
 

@@ -1,10 +1,39 @@
 ---
-status: diagnosed
+status: parked
+parked_to_phase: 33
 trigger: "G-30-02 — live human retest 2026-07-23 on `npm run tauri:dev`, enableSteamNativeInstall:true, signed-in library: clicking Install on a Steam title leaves the spinner spinning forever. The 30-05 fix (which cleared a RETURNED {status:'error'}) did NOT hold on the live build. Find the path 30-05 did not cover."
 created: 2026-07-23T00:00:00Z
-updated: 2026-07-23T00:00:00Z
+updated: 2026-07-23T04:00:00Z
 goal: find_root_cause_only
 ---
+
+## PARKED 2026-07-23 → Phase 33
+
+**The 30-07 fix did NOT close this live.** Plan 30-07 implemented exactly this session's diagnosed
+remedy — every pre-download steam-user CM await (`getProductInfo` via fetchInstalldir/fetchAppInfo/
+getOwnedSets/fetchDlcInfos, `getDepotDecryptionKey`+`getRawManifest`, `getContentServers`) plus the
+`resolveSteamInstallTarget` phase is now wrapped in a `withTimeout` that REJECTS, and the WR-01/02/03
+follow-ups (commits `8894e10e`, `aa5aba43`) tuned the bounds (25s single / 50s outer / 90s bulk,
+timeouts non-retryable). Mechanism is unit-proven (1004 tests green). **Yet the live Tauri retest
+2026-07-23 STILL hangs the "installing" badge forever** (user: "4. fails").
+
+**Conclusion: the real live trigger is on a path the pre-download `withTimeout` wrapping does not
+reach.** Diagnose-only starting points for whoever resumes this in Phase 33 (NOT yet investigated):
+- Which install branch actually runs live — `installNative` vs `installBottleNative`? If the bottle
+  path (`installBottleNative`) is taken, it may not route through the wrapped `runNativeDepotDownload`
+  pre-download phase at all.
+- Does execution even reach `resolveSteamInstallTarget`? A never-settling await BEFORE it — e.g.
+  `ensureConnected` parking, or the sidecar `dispatchInvoke`/`install` handler never actually
+  invoking `SteamGame.install()` under Tauri — would hang identically and bypass every wrapper.
+- Is the hang before the awaits fire — i.e. the handler pushes 'installing' then never enters the
+  bounded code (a synchronous or IPC-dispatch stall), so no `withTimeout` is ever armed.
+- Confirm the wrapped `depot.ts`/`installLocation.ts`/`games.ts` functions are the ones on the LIVE
+  Tauri code path (bundle/sidecar build), not shadowed by a stale sidecar binary.
+
+Belt-and-suspenders the earlier gap analysis already flagged and 30-07 did NOT implement: a watchdog
+around the sidecar handler's `await install()` in `installFlowRegistration.ts` that force-pushes a
+terminal 'done' + ERROR if install() hasn't settled within a bound — this guarantees the badge can
+never hang regardless of WHICH downstream await parks, and is the most robust fix to carry into 33.
 
 ## Current Focus
 
