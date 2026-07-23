@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 33 context gathered
-last_updated: "2026-07-23T22:24:17.961Z"
+stopped_at: Completed 33-04-PLAN.md
+last_updated: "2026-07-23T22:42:47.681Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 33 (tauri-lifecycle-cluster-app-dialog-window-notifications-tray) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -280,6 +280,7 @@ Closed/parked native-install phases:
 | Phase 33 P01 | ~20min | 3 tasks | 2 files |
 | Phase 33 P02 | ~25min | 2 tasks | 3 files |
 | Phase 33 P03 | 15min | 3 tasks | 5 files |
+| Phase 33 P04 | ~40min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -484,6 +485,8 @@ Recent decisions affecting current work:
 - [Phase ?]: ensureConnected D-02 fix uses AppID 753 (Steam's own client) as the canary probe target and mirrors the existing cold-connect grace-window idiom for relog's bounded fallback
 - [Phase 33-03]: Extended the existing dialog_message Rust arm in place (data-shape change) rather than adding a new match arm/channel
 - [Phase 33-03]: Used explicit per-caller cancelId fail-safe instead of a positional last-index heuristic -- askForceUninstall and promptI386Recovery have opposite destructive-button orders
+- [Phase 33]: shell.trashItem stays a logged no-op (D-05): tauri-plugin-fs 2.5.1 has no trash capability, confirmed by reading its source directly -- no vetted plugin to wire
+- [Phase 33]: app.exit/quit both forward to RUST_APP_EXIT (AppHandle::exit); app.relaunch forwards to RUST_APP_RELAUNCH (AppHandle::restart) -- fixes the zombie-sidecar gap so the real Tauri process actually exits/relaunches
 
 ### Pending Todos
 
@@ -553,8 +556,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T22:23:30.979Z
-Stopped at: Phase 33 context gathered
+Last session: 2026-07-23T22:42:47.675Z
+Stopped at: Completed 33-04-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

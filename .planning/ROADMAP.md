@@ -1169,7 +1169,7 @@ Plans:
 **Goal:** Give real Tauri behavior to the 44-file lifecycle cluster that the skeleton left stubbed or no-op: `app` lifecycle beyond `getPath`/`getName` (26 files), full `BrowserWindow`/window management (7), the remaining `shell` methods (`showItemInFolder`/`trashItem`/`openPath`, 5), `nativeImage` (4), `Notification` (3), plus tray, protocol registration, and the updater hooks. `session` and `powerSaveBlocker` are the two soft spots spike 011 flagged with no full Tauri v2 parity — scope them explicitly (resolve, shim, or accept) rather than discovering them at cutover.
 **Depends on:** Phases 30–32 (the endpoint surface those clusters serve must exist first).
 **Requirements:** REQ-33-01, REQ-33-02, REQ-33-03, REQ-33-04, REQ-33-05, REQ-33-06, REQ-33-07, REQ-33-08, REQ-33-09, REQ-33-10, REQ-33-11
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 **Parked-in from Phase 30 — G-30-02 (Tauri Steam install-spinner hang):** clicking Install on a
 Steam title under `npm run tauri:dev` hangs the "installing" badge forever. Phase 30's 30-07 fix
@@ -1209,7 +1209,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 33-04-PLAN.md — cheap-wins cluster: `Notification` + `shell` methods + `app` lifecycle real (D-05); `session`/`powerSaveBlocker` logged no-ops (D-08/D-09)
+- [x] 33-04-PLAN.md — cheap-wins cluster: `Notification` + `shell` methods + `app` lifecycle real (D-05); `session`/`powerSaveBlocker` logged no-ops (D-08/D-09)
 - [ ] 33-05-PLAN.md — D-13 live-hardware-proof checkpoint for the G-30-02 install-hang fix (`npm run tauri:dev`)
 
 **Wave 3** *(blocked on Wave 2 completion)*
