@@ -146,40 +146,86 @@ so they are held `pending`. Run against `npm run tauri:dev` with `enableSteamNat
 
 ### 1. Live Tauri install retest (Gap 1 / 30-05 fix)
 expected: Clicking Install on a Steam title that can't proceed headless (or genuinely fails) clears the "installing" badge back to Install; a visible ERROR dialog appears for a genuine failure, and no dialog (badge still clears) for the client-not-ready case.
-result: [pending]
+result: issue
+reported: "no, spinner remains spinning once clicked"
+severity: major
+note: 30-05 fix did NOT resolve the spinner hang on a live Tauri build — badge never leaves 'installing'. Same user-visible symptom as original UAT Test 4.
 
 ### 2. Live Tauri Settings retest (Gap 2 / 30-06 fix)
 expected: The Settings screen renders real config under `npm run tauri:dev` instead of a permanent UpdateComponent spinner, for both a fresh load and a load that fails/rejects.
-result: [pending]
+result: pass
 
 ### 3. Native folder-picker dialog (dialog_open / tauri-plugin-dialog)
 expected: A real openDialog call site (CustomWineProton binary picker, SideloadDialog, PathSelectionBox) opens an actual native macOS picker, honors openFile vs openDirectory (WR-01), and returns the picked path in Electron's exact `{canceled, filePaths}` shape.
-result: [pending]
+result: pass
+note: Folder-picker mode exercised live and behaved as expected. File-mode (openFile) path not separately exercised this session, but folder path confirms dialog_open wiring + path return shape.
 
 ### 4. Full Install → Uninstall E2E on real Steam depot content
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
-result: [pending]
+result: blocked
+blocked_by: prior-phase
+reason: "blocked by the install hang, same as test 1 — install never leaves 'installing', so download start / done transition / uninstall cannot be reached"
 
 ### 5. Both-builds smoke re-confirmation after 30-05/30-06
 expected: `npm start` and `npm run tauri:dev` both still launch clean with no new console errors after the two gap-closure fixes (re-runs the 30-04 Task 3 checkpoint against current HEAD).
-result: [pending]
+result: pass
+note: Both Electron (`npm start`) and Tauri (`npm run tauri:dev`) boot clean on current HEAD — additive/reversible invariant holds after 30-05/30-06.
 
 ### 6. CR-03/CR-04 long-running-channel timeout removal
 expected: A Steam depot install running >60s under Tauri does not hit `sidecar invoke timed out`; a folder picker left open >60s still honors the eventual selection.
-result: [pending]
+result: pass
+note: No 60s `sidecar invoke timed out` observed; folder picker left open >60s still accepted the late selection. CR-03/CR-04 timeout removal confirmed live.
 
 ### 7. Electron Steam sync recovery (Test 9 disambiguation)
 expected: Under `npm start`, after re-signing in to Steam (refreshing the OSCrypt token), Steam library sync succeeds again — confirming the Test 9 failure was the diagnosed token-divergence issue, not a Phase 30 regression.
-result: [pending]
+result: pass
+note: After re-sign-in under Electron, Steam library sync recovered and listed owned titles. Confirms original UAT Test 9 was environmental token-divergence, NOT a Phase 30 regression — closed as not-a-defect.
 
 ## Retest Summary
 
 total: 7
-passed: 0
-issues: 0
-pending: 7
+passed: 5
+issues: 1
+pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
+
+**Result (2026-07-23 live retest):** Gap 2 (Settings, 30-06) CLOSED live. dialog_open picker, both-builds smoke, CR-03/CR-04 timeout removal, and Electron sync recovery all PASS live. **Gap 1 (install spinner, 30-05) did NOT hold — the "installing" badge still hangs forever on a live Tauri build (Test 1), which also blocks the Install→Uninstall E2E (Test 4).** New gap G-30-02 opened for re-diagnosis; the 30-05 code fix cleared the returned-`{status:'error'}` case in jest but the live build still hangs, so the real live trigger is a path 30-05 did not cover.
+
+## Gaps (retest cycle)
+
+<!-- YAML for plan-phase --gaps consumption -->
+- truth: "Clicking Install on a Steam title under Tauri always reaches a terminal state — the 'installing' badge clears (client-not-ready) or an ERROR dialog appears (genuine failure); it never hangs forever."
+  status: failed
+  reason: "User reported (live retest Test 1): no, spinner remains spinning once clicked. Also blocks Install→Uninstall E2E (Test 4)."
+  severity: major
+  test: 1
+  gap_id: G-30-02
+  root_cause: "Outcome (b) — a never-settling await inside SteamGame.install(). The native pre-download phase makes bare, un-timed steam-user getProductInfo() PICS calls (first fetchInstalldir via resolveSteamInstallTarget, then fetchAppInfo/getOwnedSets/fetchDlcInfos in buildDepotPlan). steam-user's getProductInfo neither times out nor rejects when the CM socket is present-but-unresponsive; it queues the job and the Promise never settles. Under Tauri the client is rehydrated from the persisted store (377-game library) and ensureConnected's fast-path returns true on any truthy client.steamID without revalidating the socket, so a click-time getProductInfo can park forever. install() therefore never returns AND never throws → the sidecar handler's await never settles → neither its finally (30-05's hadError) nor its catch runs → no terminal 'done' is ever pushed → spinner stuck on 'installing'."
+  why_30_05_missed_it: "30-05 only added terminal handling for the two ways install() can SETTLE — a returned {status:'error'} (finally hadError) and a thrown error (catch). A never-settling await is a third outcome where install() doesn't settle at all, so neither guard can fire. 30-05's jest tests stay green because they mock the depot/steam-user layer and resolve install() instantly."
+  artifacts:
+    - path: "src/backend/storeManagers/steam/installLocation.ts"
+      issue: "lines 147-179, 220-243 — fetchInstalldir's `await client.getProductInfo(...)` is the FIRST un-timed PICS await on the path; its try/catch is powerless against a never-settling promise"
+    - path: "src/backend/storeManagers/steam/depot.ts"
+      issue: "lines 412/430/447 (getOwnedSets/fetchAppInfo/fetchDlcInfos via withPlanBuildRetry) — additional un-timed PICS awaits; withPlanBuildRetry only retries on throw, never on a hung await"
+    - path: "src/backend/storeManagers/steam/games.ts"
+      issue: "lines 1157-1265 — runNativeDepotDownload has no overall deadline; parks before any return, so its finally cleanup and status never run"
+    - path: "src/backend/sidecar/installFlowRegistration.ts"
+      issue: "lines 168-234 — handler awaits install(); terminal 'done' fires only after that await settles; 30-05's hadError/catch cannot fire for a non-settling await"
+    - path: "src/backend/storeManagers/steam/user.ts"
+      issue: "lines 70-143 — ensureConnected fast-path returns true on truthy client.steamID without socket revalidation — the enabling condition for a stale-connection getProductInfo hang"
+  missing:
+    - "Bound the pre-download steam-user PICS/manifest awaits (getProductInfo, getContentServers) — or runNativeDepotDownload / installDepotDownload as a whole — in a Promise.race timeout that REJECTS (mirroring ensureConnected's own 15s/20s bounds), converting a never-answered CM job into a RETURNED {status:'error'} or throw that 30-05's existing finally/catch already clears"
+    - "Belt-and-suspenders: add a watchdog/timeout around the handler's `await install()` in installFlowRegistration.ts that pushes a terminal 'done' + ERROR dialog if install() hasn't settled within a bound — guarantees the badge can never hang regardless of any future un-timed downstream await"
+    - "Harden ensureConnected to revalidate a live socket before the fast-path returns, so a stale sidecar connection triggers a real reconnect instead of a silent hang"
+  debug_session: .planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md
+
+- truth: "Install→Uninstall E2E completes (queued→installing→done, then Uninstall reverts to Install)."
+  status: blocked
+  reason: "Blocked by G-30-02 — install never leaves 'installing', so the E2E cannot be reached. Not separately diagnosed; will re-run once G-30-02 is fixed."
+  severity: major
+  test: 4
+  blocked_by: G-30-02
 
 ### Summary
 
