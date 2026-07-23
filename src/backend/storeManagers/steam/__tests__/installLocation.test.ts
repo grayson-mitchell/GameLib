@@ -18,6 +18,7 @@ import {
   listSteamLibraryTargets,
   resolveSteamInstallTarget
 } from '../installLocation'
+import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { SteamUser } from '../user'
 
 jest.mock('backend/logger', () => ({
@@ -201,6 +202,40 @@ describe('resolveSteamInstallTarget', () => {
     })
 
     expect(result.installdir).toBe(`app_${APP_ID}`)
+  })
+
+  it('WR-01: a never-settling installdir getProductInfo does NOT hard-fail — fetchInstalldir bounds it, catches, and resolveSteamInstallTarget RESOLVES with a safe fallback dir (never rejects)', async () => {
+    jest.useFakeTimers()
+    try {
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+      jest.mocked(SteamUser.getClient).mockReturnValue(
+        makeFakeClient({
+          // Simulates a stale-but-present CM socket: the installdir PICS
+          // lookup never answers. fetchInstalldir's OWN withTimeout must bound
+          // it and its catch must degrade to a benign undefined -> safe
+          // fallback dir. This inner no-hard-fail contract is exactly what
+          // WR-01's strictly-larger OUTER bound (games.ts) preserves: the
+          // inner fallback must win its own race, not be pre-empted into a
+          // fatal "pre-download timed out".
+          getProductInfo: jest.fn().mockReturnValue(new Promise(() => {}))
+        }) as never
+      )
+
+      const pending = resolveSteamInstallTarget(APP_ID, {
+        path: '',
+        platformToInstall: 'Windows'
+      })
+
+      // Advance past the inner fetchInstalldir bound (STEAM_PICS_TIMEOUT_MS).
+      await jest.advanceTimersByTimeAsync(STEAM_PICS_TIMEOUT_MS + 1000)
+
+      const result = await pending
+      // RESOLVED, not rejected: install proceeds with the safe fallback dir.
+      expect(result.installdir).toBe(`app_${APP_ID}`)
+      expect(result.targetSteamappsDir).toBe(join('/lib/only', 'steamapps'))
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('T-21-05: rejects a non-numeric appId before any PICS lookup, still resolves via fallback installdir', async () => {

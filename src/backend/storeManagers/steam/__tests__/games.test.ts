@@ -40,6 +40,7 @@ import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
 import { downloadSteamDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
 import { resolveSteamInstallTarget } from '../installLocation'
+import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { placeShimForGame } from '../bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
@@ -1733,7 +1734,11 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
         error: expect.stringContaining('timed out')
       })
 
-      await jest.advanceTimersByTimeAsync(30000)
+      // WR-01: the outer belt-and-suspenders bound is STEAM_PICS_TIMEOUT_MS * 2
+      // (strictly larger than any inner per-CM-call bound, so an inner graceful
+      // fallback always wins its own race). Advance past that outer bound so
+      // the never-settling resolution trips the outer timer.
+      await jest.advanceTimersByTimeAsync(STEAM_PICS_TIMEOUT_MS * 2 + 5000)
       await assertion
 
       expect(downloadSteamDepots).not.toHaveBeenCalled()

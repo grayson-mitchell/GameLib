@@ -1198,9 +1198,21 @@ export default class SteamGame implements Game {
         // and guarantees the badge can never hang from this phase. Converted
         // to the returned-error contract 30-05's finally/catch already
         // clears — never let this propagate as an unhandled throw.
+        //
+        // WR-01: this outer bound is STRICTLY LARGER than any bound inside
+        // resolveSteamInstallTarget (fetchInstalldir's per-call
+        // STEAM_PICS_TIMEOUT_MS). If it shared the same bound, this outer
+        // timer — armed first — would always elapse before fetchInstalldir's
+        // inner timer, pre-empting fetchInstalldir's DELIBERATE no-hard-fail
+        // fallback (installLocation.ts:130-188: a hung installdir lookup must
+        // degrade to a safe fallback dir name, NOT fail the whole install)
+        // and converting a recoverable transient CM hang into a fatal
+        // "Steam pre-download timed out". A larger outer bound lets the inner
+        // graceful fallback always win its own race; the outer only trips on a
+        // non-CM await (the belt-and-suspenders case it exists for).
         resolved = await withTimeout(
           resolveSteamInstallTarget(this.appId, args), // Plan 09
-          STEAM_PICS_TIMEOUT_MS,
+          STEAM_PICS_TIMEOUT_MS * 2,
           'resolveSteamInstallTarget'
         )
       } catch (err) {
