@@ -112,12 +112,40 @@ jest.mock('../../storeManagers/steam/state', () => ({
   library: new Map()
 }))
 
+// ── backend/utils/systeminfo mock (Phase 31 Plan 01) — `getSystemInfo`
+// (ported this plan) transitively shells out to several REAL subprocesses
+// (helperBinaries' version-check execs, macOS's `sysctl`/`vm_stat` via
+// getMemoryInfo, etc.) — a real, non-deterministic, platform-dependent
+// dependency this unit suite must not carry (unmocked, this suite's real
+// spawns raced past Jest's teardown / past `flush()`'s bounded wait window,
+// "You are trying to `import` a file after the Jest environment has been
+// torn down"). Mocked at this single boundary, exactly like the
+// `backend/storeManagers`/`backend/storeManagers/steam/state` boundaries
+// above — this suite proves the CHANNEL WIRING reaches the real
+// `getSystemInfo` export, not the OS-probing internals underneath it ────────
+jest.mock('backend/utils/systeminfo', () => ({
+  getSystemInfo: jest.fn(),
+  formatSystemInfo: jest.fn()
+}))
+
+// ── backend/utils/os/path mock (Phase 31 Plan 01) — `hasExecutable`
+// (ported this plan) shells out to a real `which`/`where` subprocess via
+// `child_process.spawn`. Mocked for the same determinism reason as
+// `helperBinaries` above — this suite proves the CHANNEL WIRING reaches the
+// real function, not the subprocess's own behavior ──────────────────────────
+jest.mock('backend/utils/os/path', () => ({
+  searchForExecutableOnPath: jest.fn(),
+  hasExecutable: jest.fn().mockResolvedValue(true)
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { init } from '../bootstrap'
 import { GlobalConfig } from 'backend/config'
 import { GameConfig } from 'backend/game_config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { library as steamLibrary } from '../../storeManagers/steam/state'
+import { getSystemInfo as mockedGetSystemInfo } from 'backend/utils/systeminfo'
+import { hasExecutable as mockedHasExecutable } from 'backend/utils/os/path'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings, GameSettings } from 'common/types'
 
@@ -125,10 +153,19 @@ const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedGameConfigGet = GameConfig.get as jest.Mock
 const mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
 
-/** Points the mocked GlobalConfig.get() at a fresh settings object. */
+/**
+ * Points the mocked GlobalConfig.get() at a fresh settings object, carrying
+ * `setSetting`/`set`/`flush` spies alongside `getSettings` — Phase 31 Plan 01
+ * extends this suite's write-path coverage (`setSetting`, `writeConfig`),
+ * both of which reach these three additional methods on the real
+ * `GlobalConfigV0` class.
+ */
 function mockAppSettings(partial: Partial<AppSettings>) {
   mockedGlobalConfigGet.mockReturnValue({
-    getSettings: () => partial as AppSettings
+    getSettings: () => partial as AppSettings,
+    setSetting: jest.fn(),
+    set: jest.fn(),
+    flush: jest.fn()
   })
 }
 
@@ -183,13 +220,30 @@ function writeInvoke(
   input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
 }
 
+/**
+ * Writes a well-formed `send` (fire-and-forget) request frame to the
+ * sidecar's stdin (copied from `skeletonFlows.test.ts:174-181` — Phase 31
+ * Plan 01's "one genuinely new test-infrastructure need" per 31-RESEARCH.md:
+ * `setSetting` is a `send`-kind channel, and this suite previously only
+ * exercised `invoke`-kind channels via `writeInvoke`).
+ */
+function writeSend(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
+}
+
 describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   beforeEach(() => {
     steamLibrary.clear()
     mockAppSettings({ language: 'en', enableSteamNativeInstall: false })
     mockedGameConfigGet.mockReset().mockReturnValue({
       getSettings: async () =>
-        ({ wineVersion: { name: 'fallback' } }) as unknown as GameSettings
+        ({ wineVersion: { name: 'fallback' } }) as unknown as GameSettings,
+      setSetting: jest.fn()
     })
     mockedSteamGetGame.mockReset().mockReturnValue({
       getSettings: async () =>
@@ -277,6 +331,264 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
     )
     expect(healthResponse).toMatchObject({
       id: 'health-after-disk-space',
+      ok: true,
+      result: 'ok'
+    })
+  })
+})
+
+describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeConfig)', () => {
+  beforeEach(() => {
+    steamLibrary.clear()
+    mockAppSettings({ language: 'en', enableSteamNativeInstall: false })
+    mockedGameConfigGet.mockReset().mockReturnValue({
+      getSettings: async () =>
+        ({ wineVersion: { name: 'fallback' } }) as unknown as GameSettings,
+      setSetting: jest.fn()
+    })
+    mockedSteamGetGame.mockReset().mockReturnValue({
+      getSettings: async () =>
+        ({ wineVersion: { name: 'steam-routed' } }) as unknown as GameSettings
+    })
+  })
+
+  // Must-have: a Settings toggle persists under the sidecar — the global
+  // branch. `setSetting` is a `send` (fire-and-forget) channel: there is no
+  // response frame to inspect (31-RESEARCH.md Pitfall 2), so the only
+  // meaningful assertion is that the underlying GlobalConfig.setSetting mock
+  // was actually invoked with the right arguments.
+  it('setSetting (send) for appName "default" reaches GlobalConfig.get().setSetting with (key, value)', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'set-setting-global-1', 'setSetting', [
+      { appName: 'default', key: 'maxWorkers', value: 2 }
+    ])
+    await flush()
+
+    const globalConfigInstance = mockedGlobalConfigGet() as {
+      setSetting: jest.Mock
+    }
+    expect(globalConfigInstance.setSetting).toHaveBeenCalledWith(
+      'maxWorkers',
+      2
+    )
+  })
+
+  // Must-have: a per-game Settings toggle persists under the sidecar — the
+  // GameConfig branch. Mirrors the real UI ordering (useSettingsContext's
+  // mount-time requestAppSettings/requestGameSettings always resolve before
+  // any user-driven setSetting can fire) per 31-RESEARCH.md Pitfall 4's
+  // ordering precondition, even though this suite's GameConfig.get() is
+  // fully mocked (no real gamesConfigPath filesystem dependency to warm).
+  it('setSetting (send) for a non-default appName reaches GameConfig.get(appName).setSetting with (key, value)', async () => {
+    const { input } = startSidecar()
+    writeInvoke(input, 'warm-app-settings-1', 'requestAppSettings', [])
+    await flush()
+
+    writeSend(input, 'set-setting-game-1', 'setSetting', [
+      { appName: 'Game123', key: 'language', value: 'fr' }
+    ])
+    await flush()
+
+    expect(mockedGameConfigGet).toHaveBeenCalledWith('Game123')
+    const gameConfigInstance = mockedGameConfigGet('Game123') as {
+      setSetting: jest.Mock
+    }
+    expect(gameConfigInstance.setSetting).toHaveBeenCalledWith(
+      'language',
+      'fr'
+    )
+  })
+
+  // Must-have: writeConfig persists a global ThemeSelector config change
+  // through Phase 29's configStore store layer. `writeConfig` is an invoke
+  // channel — assert the response resolves ok:true (not the unported
+  // marker) AND that the real `writeConfig()` function (backend/utils.ts)
+  // reached GlobalConfig.get().set()/flush() (the mocked target).
+  it('writeConfig (invoke) for appName "default" resolves ok:true and reaches the real writeConfig() function', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'write-config-1', 'writeConfig', [
+      { appName: 'default', config: { maxWorkers: 4 } }
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'write-config-1') as
+      | { ok: boolean; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+
+    const globalConfigInstance = mockedGlobalConfigGet() as {
+      set: jest.Mock
+      flush: jest.Mock
+    }
+    expect(globalConfigInstance.set).toHaveBeenCalledWith(
+      expect.objectContaining({ maxWorkers: 4 })
+    )
+    expect(globalConfigInstance.flush).toHaveBeenCalled()
+  })
+
+  // T-31-01 (secret-safety): a setSetting for a normal settings key routes
+  // ONLY through GlobalConfig.setSetting — never through GlobalConfig.set()/
+  // flush() (the writeConfig-only methods) or any other store-touching
+  // surface. Confines the write path to the narrow, single-purpose method a
+  // secrets audit already has to reason about, rather than the broader
+  // config-replace surface writeConfig uses.
+  it('T-31-01: setSetting routes exclusively through GlobalConfig.setSetting, never GlobalConfig.set()/flush()', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'set-setting-secret-guard', 'setSetting', [
+      { appName: 'default', key: 'steamGridDbApiKey', value: 'not-a-token' }
+    ])
+    await flush()
+
+    const globalConfigInstance = mockedGlobalConfigGet() as {
+      setSetting: jest.Mock
+      set: jest.Mock
+      flush: jest.Mock
+    }
+    expect(globalConfigInstance.setSetting).toHaveBeenCalledWith(
+      'steamGridDbApiKey',
+      'not-a-token'
+    )
+    expect(globalConfigInstance.set).not.toHaveBeenCalled()
+    expect(globalConfigInstance.flush).not.toHaveBeenCalled()
+  })
+})
+
+describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
+  beforeEach(() => {
+    steamLibrary.clear()
+    mockAppSettings({ language: 'en', enableSteamNativeInstall: false })
+    mockedGameConfigGet.mockReset().mockReturnValue({
+      getSettings: async () =>
+        ({ wineVersion: { name: 'fallback' } }) as unknown as GameSettings,
+      setSetting: jest.fn()
+    })
+    mockedSteamGetGame.mockReset().mockReturnValue({
+      getSettings: async () =>
+        ({ wineVersion: { name: 'steam-routed' } }) as unknown as GameSettings,
+      isNative: () => true
+    })
+    // resetMocks:true (shared root config) wipes the `backend/utils/systeminfo`/
+    // `backend/utils/os/path` factory implementations declared at the top of this
+    // file before EVERY test — re-establish them here, same pattern as
+    // `skeletonFlows.test.ts`'s own beforeEach re-establishment of `getSteamLibraries`.
+    jest.mocked(mockedGetSystemInfo).mockResolvedValue({
+      isFlatpak: false
+    } as unknown as Awaited<ReturnType<typeof mockedGetSystemInfo>>)
+    jest.mocked(mockedHasExecutable).mockResolvedValue(true)
+  })
+
+  it('getMaxCpus resolves a real number, not the unported marker', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'max-cpus-1', 'getMaxCpus', [])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'max-cpus-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(typeof response?.result).toBe('number')
+  })
+
+  it('showUpdateSetting resolves a real boolean, not the unported marker', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'show-update-setting-1', 'showUpdateSetting', [])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'show-update-setting-1'
+    ) as { ok: boolean; result?: unknown; error?: string } | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(typeof response?.result).toBe('boolean')
+  })
+
+  it('getLogContent resolves without the unported marker (empty string for a nonexistent log)', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'log-content-1', 'getLogContent', [{}])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'log-content-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(typeof response?.result).toBe('string')
+  })
+
+  it('getSystemInfo resolves without the unported marker and reaches the real (mocked) getSystemInfo(cache)', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'system-info-1', 'getSystemInfo', [false])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'system-info-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(response?.result).toMatchObject({ isFlatpak: false })
+    expect(mockedGetSystemInfo).toHaveBeenCalledWith(false)
+  })
+
+  it('hasExecutable resolves a real boolean, not the unported marker', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'has-executable-1', 'hasExecutable', ['node'])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'has-executable-1'
+    ) as { ok: boolean; result?: unknown; error?: string } | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(typeof response?.result).toBe('boolean')
+  })
+
+  it('isNative routes through libraryManagerMap[runner].getGame(appName).isNative(), not the unported marker', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'is-native-1', 'isNative', [
+      { appName: '999001', runner: 'steam' }
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'is-native-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(response?.result).toBe(true)
+    expect(mockedSteamGetGame).toHaveBeenCalledWith('999001')
+  })
+
+  // Invariant B (REQ-31-07): getUserInfo (Epic-only) and readConfig
+  // (Legendary-only) are deliberately NOT ported this phase (31-RESEARCH.md
+  // Q1 — neither is reached by the Settings screen) — they must keep
+  // rejecting non-fatally, and the RPC loop must keep serving afterward.
+  it('Invariant B guard: getUserInfo and readConfig (deliberately unported) still reject non-fatally, and the RPC loop keeps serving', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'user-info-1', 'getUserInfo', [])
+    writeInvoke(input, 'read-config-1', 'readConfig', ['library'])
+    await flush()
+
+    const userInfoResponse = frames.find(
+      (frame) => frame.id === 'user-info-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(userInfoResponse?.ok).toBe(false)
+    expect(userInfoResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+
+    const readConfigResponse = frames.find(
+      (frame) => frame.id === 'read-config-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(readConfigResponse?.ok).toBe(false)
+    expect(readConfigResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+
+    writeInvoke(input, 'health-after-generic-reads', 'health', [])
+    await flush()
+    const healthResponse = frames.find(
+      (frame) => frame.id === 'health-after-generic-reads'
+    )
+    expect(healthResponse).toMatchObject({
+      id: 'health-after-generic-reads',
       ok: true,
       result: 'ok'
     })

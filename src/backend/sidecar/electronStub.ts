@@ -29,9 +29,37 @@
  * `safeStorage` itself is intentionally left dead here (throws on use).
  */
 
+import { release as osRelease } from 'os'
+
 import { getPath } from './pathShim'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_DIALOG_OPEN } from 'common/types/sidecarTransport'
+
+// ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
+// wiring `getSystemInfo`) -------------------------------------------------------
+//
+// Electron augments the global `process` object with a handful of extra
+// methods when running inside the Electron main process (`getSystemVersion`,
+// `resourcesPath`, etc.) — outside Electron (this sidecar's plain Node
+// process) none of these exist. `backend/utils/systeminfo/index.ts` (shared,
+// UNCHANGED Electron code, per this module's own "prove the real logic runs"
+// convention) calls `process.getSystemVersion()` unconditionally — under the
+// sidecar this threw `process.getSystemVersion is not a function`, crashing
+// EVERY `getSystemInfo` invocation (Rule 1 bug, not a test-only artifact —
+// this would have crashed in the shipped Tauri build identically to how it
+// crashed the settingsFlows.test.ts unit test that first exercised it).
+// Polyfilled here, once, at import time — `os.release()` is Node's closest
+// built-in analog (the host OS's kernel/build release string). Guarded so a
+// real Electron environment's own implementation is never clobbered if this
+// file were ever require()'d there.
+if (
+  typeof (process as NodeJS.Process & { getSystemVersion?: () => string })
+    .getSystemVersion !== 'function'
+) {
+  ;(
+    process as NodeJS.Process & { getSystemVersion: () => string }
+  ).getSystemVersion = () => osRelease()
+}
 // NOTE: this file must NOT import 'backend/logger' (or anything else from the backend module
 // graph) -- backend/logger's import chain (game_config -> config -> compatibility_layers ->
 // constants/paths.ts) calls `app.getPath('appData')` at MODULE SCOPE, which requires the
