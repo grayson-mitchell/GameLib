@@ -91,6 +91,7 @@ blocked: 0
     - "In the sidecar install handler, treat a returned {status:'error'} (and needs-install/needs-launch deferral) the same way Electron's installQueueElement does — emit terminal gameStatusUpdate('done') and surface the error so the badge always leaves 'installing'"
     - "Confirm via Tauri sidecar log which trigger fires (ensureSteamClientReady not-ready vs depot failure); ensure steamClientSetupRequired is wired under Tauri"
     - "Correct the UAT expectation: the Steam Game-Page Install button opens no folder picker by design"
+  fix_plan: 30-05
   debug_session: .planning/debug/steam-install-spinner-hangs-tauri.md
 
 - truth: "The Settings screen is reachable under Tauri, and its file/path pickers open a native picker honoring the requested mode (file vs folder)"
@@ -112,6 +113,8 @@ blocked: 0
     - "Port requestAppSettings (and requestGameSettings) to the sidecar (belongs to Phase 31's settings-config cluster; this UAT proves Settings is unreachable until it lands), OR"
     - "Harden both getSettings() call sites: wrap in try/catch and fall back to a usable default config / error state instead of leaving currentConfig/contextValues null forever"
     - "Note: the openDialog file-vs-folder-mode question (Test 8) stays unverifiable until Settings renders"
+    - "Retest caveat: 30-06 ports only the READ side. Under Tauri, setSetting (write) remains an unported silent-noop send channel (Phase 31) — a changed setting will NOT persist. Do not treat non-persisting writes as a new defect during the Test 8 retest."
+  fix_plan: 30-06
   debug_session: .planning/debug/settings-unreachable-tauri.md
 
 - truth: "Under the Electron build (npm start), Steam library sync still succeeds exactly as before Phase 30 (additive/reversible invariant — no regression)"
