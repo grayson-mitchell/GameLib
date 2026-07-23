@@ -3,6 +3,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore } from './tokenStore'
+import { withTimeout } from './withTimeout'
 import { platform } from 'process'
 import type {
   RedeemKeyOutcome,
@@ -11,6 +12,26 @@ import type {
 } from 'common/types/steam'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
 import SteamUserLib from 'steam-user'
+
+// ── D-02 (Phase 33-02): ensureConnected canary + relog revalidation ─────────
+//
+// CANARY_APP_ID = 753 is the Steam client's own AppID — a minimal,
+// universally-owned probe app that requires no per-user ownership check, so
+// the canary getProductInfo call never fails for reasons unrelated to CM
+// socket health.
+//
+// CANARY_TIMEOUT_MS is deliberately far below STEAM_PICS_TIMEOUT_MS (25s,
+// withTimeout.ts) — a healthy CM answers a single-app getProductInfo in well
+// under a second; 5s already generously covers network jitter before we
+// suspect a stale socket.
+//
+// RELOG_GRACE_MS mirrors the existing cold-connect grace window below
+// (~20s) — client.relog()'s own bounded 4s force-teardown fallback
+// (steam-user 09-logon.js) plus its exponential-backoff reconnect
+// comfortably fits inside this window.
+const CANARY_APP_ID = 753
+const CANARY_TIMEOUT_MS = 5000
+const RELOG_GRACE_MS = 20000
 
 // ── SteamUser static class ────────────────────────────────────────────────────
 
@@ -69,15 +90,80 @@ export class SteamUser {
    */
   static async ensureConnected(): Promise<boolean> {
     if (this.client?.steamID) {
-      // [Timing] debug/steam-install-slow-start: fast path — already connected,
-      // no CM round-trip paid here. Logged so a runtime trace can rule this
-      // step in/out per-install (temporary instrumentation, remove after root
-      // cause of the ~30s pre-download latency is confirmed).
-      logInfo(
-        '[Timing] SteamUser.ensureConnected: already connected (fast path, 0ms)',
-        LogPrefix.Steam
-      )
-      return true
+      const client = this.client
+      try {
+        // D-02: a populated client.steamID alone is NOT proof of a live CM
+        // connection — a silently-dropped socket (NAT timeout, dead TCP with
+        // no FIN/RST ever delivered) leaves steamID populated indefinitely
+        // (verified against installed steam-user v5.3.0 source,
+        // 09-logon.js). Race a cheap canary call, bounded well below
+        // STEAM_PICS_TIMEOUT_MS, so the healthy common case still resolves
+        // near-instantly. Tradeoff note (mirrors every other withTimeout
+        // site in depot.ts): if this canary times out, the queued request is
+        // abandoned locally, not network-cancelled — a pre-accepted,
+        // already-consistent tradeoff, not new to this fix.
+        await withTimeout(
+          client.getProductInfo([CANARY_APP_ID], [], true),
+          CANARY_TIMEOUT_MS,
+          'ensureConnected canary'
+        )
+        logInfo(
+          '[Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)',
+          LogPrefix.Steam
+        )
+        return true
+      } catch (canaryErr) {
+        logWarning(
+          [
+            'Steam: ensureConnected canary failed — socket may be stale, attempting relog:',
+            canaryErr
+          ],
+          LogPrefix.Steam
+        )
+
+        let relogStarted = true
+        try {
+          // client.relog() tears down the half-open socket (its own bounded
+          // 4s force-teardown fallback) and reconnects using the stored
+          // refresh/access token — no user interaction (verified
+          // 09-logon.js:604-624). Guarded because relog() throws
+          // synchronously if steamID is falsy or the prior login was not
+          // token-based; on throw we fall through to the cold-connect path
+          // below rather than crashing.
+          client.relog()
+        } catch (relogErr) {
+          relogStarted = false
+          logWarning(
+            [
+              'Steam: client.relog() threw — falling through to cold-connect path:',
+              relogErr
+            ],
+            LogPrefix.Steam
+          )
+        }
+
+        if (relogStarted) {
+          const relogStart = Date.now()
+          const relogResult = await new Promise<boolean>((resolve) => {
+            const grace = setTimeout(() => resolve(false), RELOG_GRACE_MS)
+            client.once('loggedOn', () => {
+              clearTimeout(grace)
+              resolve(Boolean(client.steamID))
+            })
+            client.once('error', () => {
+              clearTimeout(grace)
+              resolve(false)
+            })
+          })
+          logInfo(
+            `[Timing] SteamUser.ensureConnected: relog grace-window wait took ${Date.now() - relogStart}ms, connected=${relogResult}`,
+            LogPrefix.Steam
+          )
+          return relogResult
+        }
+        // relog() threw synchronously — fall through to the existing
+        // cold-connect path below rather than returning here.
+      }
     }
     if (!this.isLoggedIn()) return false
 
