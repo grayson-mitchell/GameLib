@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: Gap-closure plan 31-04 executed (CR-01 + WR-01 closed); WR-02/WR-03 remain accepted out-of-scope WARNINGs
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-07-23T09:26:40.742Z"
-last_activity: 2026-07-23 -- Phase 31 gap-closure plan 31-04 executed (CR-01 de-wire + WR-01 containment)
+status: planning
+stopped_at: Phase 32 context gathered
+last_updated: "2026-07-23T10:03:21.390Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 31 — tauri-ipc-re-plumb-slice-2-settings-and-config
+**Current focus:** Phase 32 — tauri ipc re plumb slice 3 downloads and queue
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 31 (tauri-ipc-re-plumb-slice-2-settings-and-config) — 31-01..31-04 all executed (4/4 plans, 4/4 summaries on disk)
-Plan: 4 of 4
-Status: Gap-closure plan 31-04 executed (CR-01 + WR-01 closed); WR-02/WR-03 remain accepted out-of-scope WARNINGs
-Last activity: 2026-07-23 -- Phase 31 gap-closure plan 31-04 executed (CR-01 de-wire + WR-01 containment)
+Phase: 32
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-23
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
 > file to "Plan: 2 of 4" immediately after 31-04's execution — itself stale drift, since
@@ -137,7 +137,7 @@ Closed/parked native-install phases:
 
 **Velocity (v0.1):**
 
-- Total plans completed: 144 (phases 1-4)
+- Total plans completed: 148 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -166,6 +166,7 @@ Closed/parked native-install phases:
 | 26 | 5 | - | - |
 | 24 | 16 | - | - |
 | 29 | 7 | - | - |
+| 31 | 4 | - | - |
 
 **v0.1 Detail Log:**
 
@@ -535,8 +536,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T09:24:53.816Z
-Stopped at: Completed 31-01-PLAN.md
+Last session: 2026-07-23T10:03:21.381Z
+Stopped at: Phase 32 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
