@@ -66,7 +66,18 @@ jest.mock('../../online_monitor', () => ({
 
 jest.mock('i18next', () => ({
   __esModule: true,
-  default: { t: (_key: string, fallback = '') => fallback }
+  default: {
+    t: (
+      _key: string,
+      fallback = '',
+      options?: Record<string, string | number>
+    ) =>
+      options
+        ? fallback.replace(/{{(\w+)}}/g, (match, token) =>
+            token in options ? String(options[token]) : match
+          )
+        : fallback
+  }
 }))
 
 jest.mock('graceful-fs', () => ({
@@ -87,6 +98,8 @@ import { installQueueElement } from '../utils'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
+import { showDialogBoxModalAuto } from '../../dialog/dialog'
+import { logWarning } from 'backend/logger'
 import type { InstallParams } from 'common/types'
 
 function makeParams(overrides: Partial<InstallParams> = {}): InstallParams {
@@ -149,17 +162,51 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     )
   })
 
-  it('regression guard: a genuine ERROR (status: "error", never a user cancel) is unaffected by this fix — pre-existing behavior for a real failure is unchanged', async () => {
+  it('WR-01/D-10: a genuine ERROR (status: "error", never a user cancel) NOW force-clears the "installing" badge — the pre-33-01 gap that let the live install-hang persist despite the wasAborted fix', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
     const result = await installQueueElement(makeParams())
 
     expect(result.status).toBe('error')
-    // wasAborted is only set true for status === 'abort' -- an 'error'
-    // outcome takes the exact same (pre-existing, unchanged) path as before
-    // this cycle's fix.
-    expect(sendGameStatusUpdateMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'done' })
+    expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appName: '1091500',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+  })
+
+  it('D-03: a Steam install error ALSO raises a failure dialog via showDialogBoxModalAuto (one coherent error story)', async () => {
+    installMock.mockResolvedValue({
+      status: 'error',
+      error: 'Steam connection stale, try again'
+    })
+
+    await installQueueElement(makeParams())
+
+    expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ERROR',
+        message: expect.stringContaining('Steam connection stale, try again')
+      })
+    )
+  })
+
+  it('WR-02/D-11: a non-Steam install with installDlcs populated logs a guarded warning instead of silently dropping the DLCs', async () => {
+    installMock.mockResolvedValue({ status: 'done' })
+
+    await installQueueElement(
+      makeParams({
+        runner: 'gog',
+        gameInfo: { app_name: '1091500', runner: 'gog' } as never,
+        installDlcs: ['dlc-1', 'dlc-2']
+      })
+    )
+
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('installDlcs'),
+      expect.anything()
     )
   })
 
