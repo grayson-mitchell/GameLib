@@ -103,3 +103,9 @@ None - no external service configuration required.
 ---
 *Phase: 31-tauri-ipc-re-plumb-slice-2-settings-and-config*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+
+All 6 files confirmed present (`sidecarTransport.ts`, `main.rs`, `electronStub.ts`,
+`dialogStub.test.ts`, this SUMMARY, `deferred-items.md`); all 4 commit hashes
+(`8260df5c`, `7fd3c758`, `30d02371`, `1e65b932`) confirmed present in `git log --oneline --all`.
