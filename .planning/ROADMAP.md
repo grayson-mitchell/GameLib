@@ -1146,13 +1146,13 @@ Plans:
 **Goal:** Port the download-manager/queue endpoint cluster onto the sidecar — the progress-notification-heavy slice, which exercises the `frontendMessage` → `frontend_message` push path at real volume rather than the single `pushGameToLibrary` case the skeleton proved. Third of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (install flow — the queue's producer).
 **Requirements:** REQ-32-01..08 (minted 2026-07-23 during `/gsd-plan-phase 32` from 32-CONTEXT.md D-01..D-06)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 32-01-PLAN.md — Port the five queue-management channels as the new curated `downloadQueueFlowRegistration.ts` (send/invoke transport-kind split), prove `progressUpdate`/`changedDMQueueInformation` ride the generic relay, suppress D-05 boot auto-resume
+- [x] 32-01-PLAN.md — Port the five queue-management channels as the new curated `downloadQueueFlowRegistration.ts` (send/invoke transport-kind split), prove `progressUpdate`/`changedDMQueueInformation` ride the generic relay, suppress D-05 boot auto-resume
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
