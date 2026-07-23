@@ -1146,7 +1146,7 @@ Plans:
 **Goal:** Port the download-manager/queue endpoint cluster onto the sidecar — the progress-notification-heavy slice, which exercises the `frontendMessage` → `frontend_message` push path at real volume rather than the single `pushGameToLibrary` case the skeleton proved. Third of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (install flow — the queue's producer).
 **Requirements:** REQ-32-01..08 (minted 2026-07-23 during `/gsd-plan-phase 32` from 32-CONTEXT.md D-01..D-06)
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 
@@ -1156,7 +1156,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 32-02-PLAN.md — Re-route `install`/`updateGame` through `addToQueue()`, retiring the Phase 30 D-05a direct bypass (resolve `Promise<void>`)
+- [x] 32-02-PLAN.md — Re-route `install`/`updateGame` through `addToQueue()`, retiring the Phase 30 D-05a direct bypass (resolve `Promise<void>`)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 

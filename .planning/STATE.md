@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 32-01-PLAN.md
-last_updated: "2026-07-23T18:03:56.942Z"
+stopped_at: Completed 32-02-PLAN.md
+last_updated: "2026-07-23T18:35:34.185Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 32 (tauri-ipc-re-plumb-slice-3-downloads-and-queue) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -274,6 +274,7 @@ Closed/parked native-install phases:
 | Phase 31 P01 | 45min | 3 tasks | 4 files |
 | Phase 31 P04 | 20min | 3 tasks | 7 files |
 | Phase 32 P01 | 30min | 2 tasks | 5 files |
+| Phase 32 P02 | ~30min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -470,6 +471,7 @@ Recent decisions affecting current work:
 - [Phase 31]: Per-game setSetting/writeConfig now enforce a resolve+relative path-containment guard (WR-01) — appName is attacker-influenceable and was routed unguarded into a filesystem path; mirrors the proven library.ts locateMachOBinary containment idiom.
 - [Phase 32]: D-05 boot-resume log deferred via setImmediate with a try/catch console fallback (heroicLogWriter isn't assigned until bootstrap.ts's init() runs, which happens after the ./handlers import completes)
 - [Phase 32]: installFlows.test.ts's stale Invariant B example swapped from getDMQueueInformation (now legitimately ported by 32-01, REQ-32-04) to checkDiskSpace
+- [Phase 32]: D-01 (Phase 32-02) interpreted as full Electron parity for install/updateGame — Dropped the Phase 30 non-steam-runner guard entirely — RESEARCH.md's own D-01/D-02 wording calls for the runner-generic ipc_handler.ts shape, and storeManagers/index.ts already force-constructs all six library managers regardless
 
 ### Pending Todos
 
@@ -539,8 +541,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T18:03:56.937Z
-Stopped at: Completed 32-01-PLAN.md
+Last session: 2026-07-23T18:35:34.179Z
+Stopped at: Completed 32-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
