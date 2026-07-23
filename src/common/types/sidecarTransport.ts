@@ -176,6 +176,37 @@ export const RUST_DIALOG_SAVE = 'dialog_save' as const
 export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
 
 /**
+ * Rust-side channel name: reveal a path in the OS file manager via `tauri-plugin-opener`'s
+ * `reveal_item_in_dir` (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
+ * `shell.showItemInFolder()`. Fire-and-forget from the caller's perspective (electronStub does
+ * not await it), but a real request/response `rustInvoke` frame under the hood so failures are
+ * observable (logged), never silent.
+ */
+export const RUST_SHELL_SHOW_ITEM_IN_FOLDER = 'shell_show_item_in_folder' as const
+
+/**
+ * Rust-side channel name: open a path with the default (or specified) program via
+ * `tauri-plugin-opener`'s `open_path` (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
+ * `shell.openPath()`. Mirrors real Electron's `shell.openPath` contract: resolves an empty
+ * string on success, or a human-readable error string on failure — never rejects.
+ */
+export const RUST_SHELL_OPEN_PATH = 'shell_open_path' as const
+
+/**
+ * Rust-side channel name: exit the real Tauri process via `AppHandle::exit()` (Phase 33 Plan 04,
+ * D-05 app lifecycle essentials). Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. The two
+ * sidecar-reachable call sites (`resetHeroic()`, the `handleExit`-shaped uninstall/quit path) are
+ * both deliberate user/exit actions (T-33-12, accepted DoS disposition).
+ */
+export const RUST_APP_EXIT = 'app_exit' as const
+
+/**
+ * Rust-side channel name: restart the real Tauri process via `AppHandle::restart()` (Phase 33
+ * Plan 04, D-05 app lifecycle essentials). Backs `electronStub.ts`'s `app.relaunch()`.
+ */
+export const RUST_APP_RELAUNCH = 'app_relaunch' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -188,7 +219,11 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_DIALOG_OPEN,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_SAVE,
-  RUST_NOTIFICATION_SHOW
+  RUST_NOTIFICATION_SHOW,
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+  RUST_SHELL_OPEN_PATH,
+  RUST_APP_EXIT,
+  RUST_APP_RELAUNCH
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

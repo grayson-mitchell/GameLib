@@ -34,10 +34,14 @@ import { release as osRelease } from 'os'
 import { getPath } from './pathShim'
 import { requestRustInvoke } from './sidecarRpc'
 import {
+  RUST_APP_EXIT,
+  RUST_APP_RELAUNCH,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
-  RUST_NOTIFICATION_SHOW
+  RUST_NOTIFICATION_SHOW,
+  RUST_SHELL_OPEN_PATH,
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER
 } from 'common/types/sidecarTransport'
 
 // ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
@@ -135,6 +139,13 @@ export const ipcMain = {
 
 // ---- app ---------------------------------------------------------------------
 
+// app.quit()/exit()/relaunch() (Phase 33 Plan 04, D-05 app lifecycle essentials): forward a
+// real exit/relaunch request to Tauri's AppHandle via RUST_APP_EXIT/RUST_APP_RELAUNCH, mirroring
+// shell.openExternal's fire-and-forget void-forwarding shape below -- neither the two real
+// sidecar-reachable callers (resetHeroic's relaunch+quit, the handleExit-shaped uninstall/quit
+// exit path) await these or check a return value, so a best-effort forward (never throws, logs
+// on failure) is sufficient. Without this the sidecar's own no-op left a zombie process: the
+// real Tauri window/process never actually exited or relaunched.
 export const app = {
   getPath,
   getName: (): string => 'GameLib',
@@ -145,9 +156,30 @@ export const app = {
   whenReady: (): Promise<void> => Promise.resolve(),
   on: () => app,
   once: () => app,
-  quit: (): void => {},
-  exit: (): void => {},
-  relaunch: (): void => {},
+  quit: (): void => {
+    requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
+      console.warn(
+        `[electronStub] app.quit(): ${RUST_APP_EXIT} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  exit: (): void => {
+    requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
+      console.warn(
+        `[electronStub] app.exit(): ${RUST_APP_EXIT} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  relaunch: (): void => {
+    requestRustInvoke(RUST_APP_RELAUNCH, []).catch((error) => {
+      console.warn(
+        `[electronStub] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
   requestSingleInstanceLock: (): boolean => true,
   setAsDefaultProtocolClient: (): boolean => true
 }
@@ -376,16 +408,43 @@ export const shell = {
   openExternal: async (url: string): Promise<void> => {
     transport?.openExternal(url)
   },
-  // D-04 (REQ-31-04): upgraded from a silent no-op to a logged one -- a caller relying on the
-  // OS file-manager reveal getting neither the reveal nor a signal that it didn't happen is a
-  // debugging trap. Real reveal support is deferred to Phase 33.
-  showItemInFolder: (_fullPath: string): void => {
+  // Phase 33 Plan 04 (D-05): upgraded from the D-04 logged no-op to a real forward, backed by
+  // tauri-plugin-opener's reveal_item_in_dir (RUST_SHELL_SHOW_ITEM_IN_FOLDER). Fire-and-forget
+  // (mirrors real Electron's void-returning API) -- never throws; a transport failure is logged,
+  // never silent.
+  showItemInFolder: (fullPath: string): void => {
+    requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, [fullPath]).catch((error) => {
+      console.warn(
+        `[electronStub] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  // D-05: stays a LOGGED no-op (never silent) -- tauri-plugin-fs 2.5.1 (the only first-party
+  // candidate audited in 33-RESEARCH) has no trash/recycle-bin capability at all in this
+  // version (confirmed by reading its source directly), so there is no vetted first-party Tauri
+  // plugin to forward to. Declared as an accepted gap for Plan 06's 33-PORTED-CHANNELS.md.
+  trashItem: async (): Promise<void> => {
     console.warn(
-      '[electronStub] shell.showItemInFolder(): logged no-op (D-04, deferred to Phase 33) -- reveal-in-file-manager is not yet forwarded to Rust'
+      '[electronStub] shell.trashItem(): logged no-op (D-05, Phase 33) -- no vetted Tauri v2 trash-capable plugin found; item is NOT moved to the OS trash'
     )
   },
-  trashItem: async (): Promise<void> => {},
-  openPath: async (): Promise<string> => ''
+  // Phase 33 Plan 04 (D-05): real forward via tauri-plugin-opener's open_path
+  // (RUST_SHELL_OPEN_PATH). Mirrors real Electron's shell.openPath contract: resolves an empty
+  // string on success, or a human-readable error string on failure -- never rejects.
+  openPath: async (path: string): Promise<string> => {
+    try {
+      await requestRustInvoke(RUST_SHELL_OPEN_PATH, [path])
+      return ''
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(
+        `[electronStub] shell.openPath(): ${RUST_SHELL_OPEN_PATH} failed:`,
+        message
+      )
+      return message
+    }
+  }
 }
 
 // ---- BrowserWindow (push-message path only — no real window management) --------
@@ -404,6 +463,25 @@ const fakeWindow = {
 
 export const BrowserWindow = {
   getAllWindows: () => [fakeWindow]
+}
+
+// ---- session (D-09, accepted no-op) -------------------------------------------------
+//
+// Was previously not exported at all (an `import { session } from 'electron'` destructure
+// against this stub resolved to `undefined`) -- per 33-RESEARCH, confirmed no Steam-reachable
+// code path in the sidecar's curated import graph touches Electron's `session` API (its only
+// real callers, `humble/user.ts`/`legendary/user.ts`'s `session.fromPartition()` for the
+// Epic/Humble embedded browser-login flows, are neither reachable from steam-user's headless
+// client). Exporting a logged stub -- rather than leaving the import silently `undefined` --
+// means a future reachable call fails loudly with a clear log line instead of an opaque
+// "Cannot read properties of undefined" TypeError (D-09, accept + document).
+export const session = {
+  fromPartition: (_partition: string): unknown => {
+    console.warn(
+      '[electronStub] session.fromPartition(): logged no-op (D-09, accepted gap) -- session partitions are not available in the sidecar'
+    )
+    return {}
+  }
 }
 
 // ---- Remaining main-process surfaces (safe no-ops; out of scope per 27-CONTEXT) --
@@ -440,8 +518,18 @@ export const protocol = {
   handle: (): void => {}
 }
 
+// D-08: accepted no-op (per 33-RESEARCH, no maintained Tauri v2 wake-lock plugin meets the
+// "cheap and maintained" bar -- tauri-plugin-nosleep/tauri-plugin-keepawake both rejected for
+// maintenance-recency reasons). Upgraded to LOG so the gap is never silent -- the system may
+// sleep during long depot downloads under Tauri, a documented minor UX regression vs Electron,
+// revisit at the Phase 35 cutover.
 export const powerSaveBlocker = {
-  start: (): number => -1,
+  start: (): number => {
+    console.warn(
+      '[electronStub] powerSaveBlocker.start(): logged no-op (D-08, accepted gap) -- no maintained Tauri v2 wake-lock plugin; the system may sleep during a long download'
+    )
+    return -1
+  },
   stop: (): void => {},
   isStarted: (): boolean => false
 }

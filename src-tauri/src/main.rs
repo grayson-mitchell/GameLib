@@ -439,6 +439,50 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             builder.show().map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
+        // Reveal a path in the OS file manager (Phase 33 Plan 04, D-05) via
+        // `tauri-plugin-opener`'s `reveal_item_in_dir` (already installed for `open_external`).
+        // Backs `electronStub.ts`'s `shell.showItemInFolder()`. The path originates from
+        // in-app backend callers, not renderer free-text (T-33-11) -- forwarded to the vetted
+        // opener plugin's own scoping, not a raw shell-out.
+        "shell_show_item_in_folder" => {
+            let path = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or("shell_show_item_in_folder:bad-args")?;
+            app.opener()
+                .reveal_item_in_dir(path)
+                .map_err(|e| e.to_string())?;
+            Ok(Value::Null)
+        }
+        // Open a path with the default program (Phase 33 Plan 04, D-05) via
+        // `tauri-plugin-opener`'s `open_path`. Backs `electronStub.ts`'s `shell.openPath()`.
+        // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
+        "shell_open_path" => {
+            let path = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or("shell_open_path:bad-args")?;
+            app.opener()
+                .open_path(path, None::<&str>)
+                .map_err(|e| e.to_string())?;
+            Ok(Value::Null)
+        }
+        // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
+        // `AppHandle::exit()`. Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. Only two
+        // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
+        // path) -- both deliberate user/exit actions (T-33-12, accepted DoS disposition).
+        "app_exit" => {
+            app.exit(0);
+            Ok(Value::Null)
+        }
+        // Restart the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
+        // `AppHandle::restart()`. Backs `electronStub.ts`'s `app.relaunch()`. `restart()` never
+        // returns (`-> !`) -- it either restarts the process directly (main thread) or blocks
+        // this spawned worker thread until the process exits (background thread), which is safe
+        // since the whole process is about to go away regardless.
+        "app_relaunch" => {
+            app.restart();
+        }
         // Native save-file dialog (Phase 31 Plan 02, D-03/REQ-31-03): same `Option<FilePath>`
         // shape as `dialog_open`'s pick_folder/pick_file arm -- `Some(path)` is the chosen path,
         // `None` is a healthy user cancel (never an error). Runs on the same spawned worker
