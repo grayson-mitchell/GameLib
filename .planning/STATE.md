@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: verifying
-stopped_at: Completed 32-03-PLAN.md
-last_updated: "2026-07-23T18:41:10.676Z"
+status: ready_to_plan
+stopped_at: Phase 32 complete (3/3) — ready to discuss Phase 33
+last_updated: 2026-07-23T18:58:00.314Z
 last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 52
-  completed_plans: 46
+  completed_plans: 171
   percent: 60
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 32 — tauri-ipc-re-plumb-slice-3-downloads-and-queue
+**Current focus:** Phase 33 — tauri lifecycle cluster app dialog window notifications tray
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 32 (tauri-ipc-re-plumb-slice-3-downloads-and-queue) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 33
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-23
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
@@ -137,7 +137,7 @@ Closed/parked native-install phases:
 
 **Velocity (v0.1):**
 
-- Total plans completed: 148 (phases 1-4)
+- Total plans completed: 151 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -167,6 +167,7 @@ Closed/parked native-install phases:
 | 24 | 16 | - | - |
 | 29 | 7 | - | - |
 | 31 | 4 | - | - |
+| 32 | 3 | - | - |
 
 **v0.1 Detail Log:**
 

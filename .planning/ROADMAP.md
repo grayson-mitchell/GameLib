@@ -1180,9 +1180,25 @@ here by user directive 2026-07-23. Start from `.planning/debug/steam-install-spi
 `resolveSteamInstallTarget`, and add a sidecar handler-level `await install()` watchdog as the robust
 belt-and-suspenders fix). Blocks the Phase 30 Install→Uninstall E2E (Test 4).
 
+**Carried in from Phase 32 code review (32-REVIEW.md, all latent on the not-yet-shipped Tauri build)
+— fold into the G-30-02 install work above:**
+- **WR-01** — retiring the Phase 30 D-05a bypass (32-02) means a genuine Steam install *error* no
+  longer force-clears the "installing" badge or shows a failure dialog: the shared
+  `installQueueElement` force-clear condition (`downloadmanager/utils.ts:139`,
+  `runner !== 'steam' || deferredToSetup || wasAborted`) excludes plain `status === 'error'`.
+  Currently unreachable (G-30-02 blocks any Tauri install from progressing) and untested. NOTE: a
+  "fix" here means deciding whether to keep strict Electron parity (no special error handling) or
+  restore the bypass's richer error surface — a design call, not a mechanical patch. Verifier
+  recommends resolving it together with the G-30-02 install-error path.
+- **WR-02** — dropping the non-steam-runner guard for "full Electron parity" (32-02) also dropped
+  Electron `ipc_handler.ts`'s Legendary/Epic DLC fan-out loop, so a sidecar Epic install with
+  `installDlcs` populated silently drops the DLCs. Port the fan-out or re-scope the parity claim.
+- **WR-03** — no test drives an `error`/`abort` resolution through the real `install`/`updateGame`
+  invoke channels (the coverage gap that let WR-01 ship). Add when the error path is next touched.
+
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 33 to break down) — include G-30-02 install-hang closure (see parked note above)
+- [ ] TBD (run /gsd-plan-phase 33 to break down) — include G-30-02 install-hang closure (see parked note above) + Phase 32 WR-01/WR-02/WR-03 (see carry-in above)
 
 ---
 
