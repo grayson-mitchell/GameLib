@@ -134,6 +134,53 @@ or is responsible for fixing:
 If either gap is hit during a future retest, record it as confirmation the pre-existing condition
 is still open — do not file it as a new Phase 30 defect.
 
+---
+
+## Retest cycle — post 30-05 / 30-06 gap closure (2026-07-23)
+
+**Source:** `30-VERIFICATION.md` (status: human_needed). The two gap-closure plans landed
+(30-05 install-badge spinner fix, 30-06 settings-unreachable fix) and closed their root causes at
+the code level (jest + `tsc` + `cargo check` all green, 2019/2019 `src/` tests). None of the
+headline user-facing claims below have been witnessed on a live Tauri build *since* these fixes,
+so they are held `pending`. Run against `npm run tauri:dev` with `enableSteamNativeInstall: true`.
+
+### 1. Live Tauri install retest (Gap 1 / 30-05 fix)
+expected: Clicking Install on a Steam title that can't proceed headless (or genuinely fails) clears the "installing" badge back to Install; a visible ERROR dialog appears for a genuine failure, and no dialog (badge still clears) for the client-not-ready case.
+result: [pending]
+
+### 2. Live Tauri Settings retest (Gap 2 / 30-06 fix)
+expected: The Settings screen renders real config under `npm run tauri:dev` instead of a permanent UpdateComponent spinner, for both a fresh load and a load that fails/rejects.
+result: [pending]
+
+### 3. Native folder-picker dialog (dialog_open / tauri-plugin-dialog)
+expected: A real openDialog call site (CustomWineProton binary picker, SideloadDialog, PathSelectionBox) opens an actual native macOS picker, honors openFile vs openDirectory (WR-01), and returns the picked path in Electron's exact `{canceled, filePaths}` shape.
+result: [pending]
+
+### 4. Full Install → Uninstall E2E on real Steam depot content
+expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
+result: [pending]
+
+### 5. Both-builds smoke re-confirmation after 30-05/30-06
+expected: `npm start` and `npm run tauri:dev` both still launch clean with no new console errors after the two gap-closure fixes (re-runs the 30-04 Task 3 checkpoint against current HEAD).
+result: [pending]
+
+### 6. CR-03/CR-04 long-running-channel timeout removal
+expected: A Steam depot install running >60s under Tauri does not hit `sidecar invoke timed out`; a folder picker left open >60s still honors the eventual selection.
+result: [pending]
+
+### 7. Electron Steam sync recovery (Test 9 disambiguation)
+expected: Under `npm start`, after re-signing in to Steam (refreshing the OSCrypt token), Steam library sync succeeds again — confirming the Test 9 failure was the diagnosed token-divergence issue, not a Phase 30 regression.
+result: [pending]
+
+## Retest Summary
+
+total: 7
+passed: 0
+issues: 0
+pending: 7
+skipped: 0
+blocked: 0
+
 ### Summary
 
 This phase's honest claim is **wired and unit-proven** for every channel it ports, and the

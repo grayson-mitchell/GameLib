@@ -33,6 +33,20 @@ fixed_findings:
   - id: CR-02
     commit: 75bb3630
     note: "install now pushes 'installing' after 'queued', captures SteamGame.install()'s InstallResult, logs on error, pushes terminal 'done' for deferredToSetup/abort, and returns {status} instead of discarding it."
+gap_closure_reviewed: 2026-07-23T00:00:00Z
+gap_closure_depth: standard
+gap_closure_files_reviewed: 5
+gap_closure_files_reviewed_list:
+  - src/backend/sidecar/installFlowRegistration.ts
+  - src/backend/sidecar/settingsFlowRegistration.ts
+  - src/backend/sidecar/handlers.ts
+  - src/frontend/hooks/useSettingsContext.ts
+  - src/frontend/screens/Settings/index.tsx
+gap_closure_findings:
+  critical: 0
+  warning: 2
+  info: 2
+  total: 4
 status: issues_found
 ---
 
@@ -464,5 +478,174 @@ Checked and found correct — recording so a re-review does not redo the work:
 ---
 
 _Reviewed: 2026-07-22_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+
+## Gap-Closure Review (30-05 / 30-06)
+
+**Reviewed:** 2026-07-23
+**Depth:** standard
+**Files Reviewed:** 5 (`src/backend/sidecar/installFlowRegistration.ts`,
+`src/backend/sidecar/settingsFlowRegistration.ts`, `src/backend/sidecar/handlers.ts`,
+`src/frontend/hooks/useSettingsContext.ts`, `src/frontend/screens/Settings/index.tsx`)
+**Diff base:** `955e95de..HEAD`
+**Status:** issues_found (no new Critical; 2 new Warnings, 2 new Info)
+
+### Summary
+
+30-05 (`hadError` flag in `installFlowRegistration.ts`'s `install` handler) and 30-06
+(`settingsFlowRegistration.ts` + hardened frontend settings call sites) were reviewed
+against the diff, cross-checked against their PLAN/SUMMARY claims, and re-run:
+`npx jest src/backend/sidecar/__tests__/installFlows.test.ts
+src/backend/sidecar/__tests__/settingsFlows.test.ts
+src/frontend/hooks/__tests__/useSettingsContext.fallback.test.tsx` — 23/23 pass, and
+`npx tsc --noEmit` is clean, both matching the SUMMARY's claims (not just trusted from
+the SUMMARY text — independently re-executed here).
+
+Both prior-open CR-01/CR-02 findings from the original 30-01..04 review are the ones
+30-05 builds directly on top of (CR-02's `deferredToSetup`/`wasAborted` guard is
+extended with `hadError`); neither is re-litigated here. CR-01 (runner-ignoring
+install/updateGame) and CR-03/CR-04 (60s timeout classes) remain untouched by this
+gap-closure pair and are still open as filed above.
+
+**Focus-area findings (per the review brief):**
+
+- **sidecar send-vs-invoke semantics:** both new channels
+  (`requestAppSettings`/`requestGameSettings`) are registered via `ipcMain.handle` and
+  exposed on the preload side via `makeHandlerInvoker` (`preload/api/settings.ts:3-4`)
+  — true invoke semantics, not the silently-dropped `send`/`makeListenerCaller` shape.
+  Confirmed no new channel in this gap-closure pair relies on the `send`-channel
+  silent-failure footgun (`setSetting`, which does use `makeListenerCaller`, is
+  correctly left unported — deferred to Phase 31 per the plan's own scope, not
+  touched here).
+- **error-path completeness (install):** traced all four `install` outcomes end to
+  end — returned `{status:'error'}` (genuine failure and client-not-ready sentinel),
+  `wasAborted`, `deferredToSetup`, and a thrown exception. Each now emits exactly one
+  terminal `gameStatusUpdate('done')` (verified against the new tests AND by reading
+  `dispatchInvoke`'s generic catch in `sidecarRpc.ts:124-135`, which cannot double-fire
+  a handler's own internal status pushes). See WR-30-05-01 below for one latent,
+  currently-unreachable edge case in this reasoning.
+- **`showDialogBoxModalAuto` import-safety re-verified independently (not just taken on
+  the plan's word):** traced `dialog.ts` → `getMainWindow()` (`backend/main_window.ts`)
+  → `BrowserWindow` from `'electron'`. Under the sidecar, `bootstrap.ts`'s
+  `Module._load` hook substitutes `electronStub.ts` for every `require('electron')` in
+  the module graph (not just direct sidecar-file imports), so `BrowserWindow` resolves
+  to the stub's `{ getAllWindows: () => [fakeWindow] }`, whose `webContents.send`
+  forwards to `transport?.pushFrontendMessage(...)`. Confirmed via
+  `electronStub.ts:198-225`. No crash risk from the new `showDialogBoxModalAuto` call —
+  the plan's "import-safe" claim holds, and is now traced rather than assumed.
+- **frontend fallback masking genuine errors:** see WR-30-06-01 below — this is the one
+  area where the gap-closure fix, while correctly closing the permanent-spinner bug,
+  introduces a new (lower-severity) quality gap the brief specifically asked to check for.
+
+### Warnings
+
+#### WR-30-05-01: `showDialogBoxModalAuto` sits inside the handler's own try body with no local guard — a hypothetical throw there would double-fire the terminal 'done'
+
+**File:** `src/backend/sidecar/installFlowRegistration.ts:209-215` (call site),
+interacting with the `catch`/`finally` at lines 219-234
+**Issue:** The new `showDialogBoxModalAuto({...})` call executes inside the handler's
+`try` block, after `hadError = true` has already been set. If that call were ever to
+throw — it currently cannot, per the trace above, but nothing in this file locally
+documents or enforces that invariant — the exception would be caught by the handler's
+own `catch (error)` block, which pushes `sendGameStatusUpdate({status:'done'})` and
+re-throws; the `finally` block then runs unconditionally afterward, and since
+`hadError` is already `true`, it pushes a **second** `'done'`. This is a latent
+double-status-push path with zero test coverage (both new tests set up
+`showDialogBoxModalAuto`'s happy path only). The failure mode is UI noise/flicker, not
+a crash or data loss, and is currently unreachable given `electronStub.ts`'s
+guarantees — but the reasoning that makes it unreachable lives in a different file
+than the code that would trigger it, which is a fragile place for an implicit
+contract to live uninforced.
+**Fix:** Wrap the surfacing call in its own try/catch that only logs, matching the
+"never throw to the caller" convention this codebase already uses for the equivalent
+class of surfacing helper (`electronStub.ts`'s own `dialog.showOpenDialog` catch, which
+explicitly documents "Never throw to the caller... mirrors keyringTokenStore.ts's
+total-method convention"):
+```ts
+if (!isClientNotReady) {
+  try {
+    showDialogBoxModalAuto({
+      title: 'Installation failed',
+      message: result.error ?? '',
+      type: 'ERROR'
+    })
+  } catch (dialogError) {
+    logError(['showDialogBoxModalAuto failed for', appName, ':', dialogError], LogPrefix.Backend)
+  }
+}
+```
+
+#### WR-30-06-01: Both hardened frontend call sites conflate "unported channel" with "genuine backend failure" — a real config-load bug degrades silently with no user-visible signal
+
+**File:** `src/frontend/screens/Settings/index.tsx:70-80`;
+`src/frontend/hooks/useSettingsContext.ts:60-73`
+**Issue:** Both new `catch` blocks treat every rejection identically: log a
+`console.warn` (invisible to a typical user — devtools console is not something most
+players open) and silently substitute an empty/default config. This is the correct
+behavior for the documented case (`UNPORTED_CHANNEL_MARKER` under Tauri, or Phase 31's
+remaining unported channels) — but it is indistinguishable, from the user's
+perspective, from a **genuine** backend failure: e.g. a corrupted `config.json`
+throwing inside `GlobalConfig.get().getSettings()` (a real, previously-seen failure
+mode per `game_config.ts`'s own corrupted-config handling), a `GameConfig.get(appName)`
+throwing on a malformed per-game config file, or any other runtime exception. In all of
+those cases the user simply sees a Settings screen silently reset to defaults with no
+indication anything went wrong, which could mask real data-integrity problems (a
+misconfigured install path silently reverting to `undefined`/fallback values without
+the user ever being told their configuration failed to load). This is the exact
+"fallback masking genuine errors" class the review brief asked to check for.
+**Fix:** Distinguish the two cases before choosing how loudly to surface the failure —
+at minimum, check whether the error message contains `UNPORTED_CHANNEL_MARKER` (already
+exported from `common/types/sidecarTransport`) and only silently degrade for that
+documented case; for anything else, escalate beyond `console.warn` (e.g. a one-time
+`showDialogBoxModalAuto`-equivalent toast/banner via whatever frontend error-surface
+mechanism `bootErrorSurface` already establishes, referenced in the plan's own action
+text but not actually implemented at either call site):
+```ts
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!message.includes(UNPORTED_CHANNEL_MARKER)) {
+    // A genuine failure, not the documented not-yet-ported case — surface it.
+    console.error('requestAppSettings failed unexpectedly:', error)
+    // TODO: user-visible non-blocking notice, not just a console line
+  } else {
+    console.warn('requestAppSettings unported under this build, falling back to {}:', error)
+  }
+  setCurrentConfig({})
+}
+```
+
+### Info
+
+#### IN-30-06-01: `requestGameSettings` performs no runtime validation on `args[0]`, mirroring the already-filed IN-01 pattern
+
+**File:** `src/backend/sidecar/settingsFlowRegistration.ts:67-77`
+**Issue:** `const appName = args[0] as string` is an unchecked type assertion. A
+malformed invoke frame (`args: []`) yields `appName === undefined`;
+`steamLibrary.has(undefined)` safely returns `false` (Map.has tolerates any key), but
+the fallback `GameConfig.get(undefined)` then builds `path = join(gamesConfigPath,
+undefined + '.json')` → a literal `"undefined.json"` path (string coercion), rather
+than an honest rejection. Low real-world likelihood (the only caller is the trusted
+preload bridge with a typed signature), but it is the same class of gap already filed
+as IN-01 against `installFlowRegistration.ts`'s `install`/`updateGame`, now reproduced
+in the new file.
+**Fix:** `if (typeof appName !== 'string' || !appName) throw new Error('requestGameSettings: missing appName')` before the `steamLibrary.has` check.
+
+#### IN-30-05-02: No test covers `result.status === 'error'` with `result.error === undefined` — yields a blank-message ERROR dialog
+
+**File:** `src/backend/sidecar/installFlowRegistration.ts:206-215`
+**Issue:** `(result.error ?? '').startsWith('Steam client not ready')` evaluates to
+`false` when `result.error` is `undefined` (since `''.startsWith(...)` is `false`), so
+the dialog fires with `message: ''` — an ERROR dialog with an empty body. Cosmetically
+poor (a user sees a blank error popup with no explanation) but not incorrect: the badge
+still clears correctly via `hadError`. Neither of the two new tests (`installFlows.test.ts`)
+exercises this specific combination.
+**Fix:** Fall back to a generic message when `result.error` is absent, e.g.
+`message: result.error || 'Installation failed for an unknown reason.'`, and add a test
+asserting the fallback text appears.
+
+---
+
+_Gap-closure review appended: 2026-07-23_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
