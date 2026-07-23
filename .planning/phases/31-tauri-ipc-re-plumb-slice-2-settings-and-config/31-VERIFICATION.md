@@ -1,178 +1,141 @@
 ---
 phase: 31-tauri-ipc-re-plumb-slice-2-settings-and-config
-verified: 2026-07-23T21:00:00Z
-status: gaps_found
-score: 6/7 must-haves verified
+verified: 2026-07-23T22:15:00Z
+status: passed
+score: 8/8 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "The async dialog members (showMessageBox/showErrorBox/showSaveDialog) get real, correct behavior in electronStub.ts, bound through requestRustInvoke()/dispatch_rust_channel() (REQ-31-03)"
-    status: failed
-    reason: >
-      The Rust `dialog_message` match arm (src-tauri/src/main.rs) never calls `.buttons(...)`,
-      so the dialog it renders is always OK-only and `blocking_show()` always returns `true`.
-      `electronStub.ts`'s `dialog.showMessageBox` forwards only `{message, title, kind}` to
-      `RUST_DIALOG_MESSAGE` — the caller-supplied `buttons` array is silently discarded — then
-      maps `true -> response:0` unconditionally. Net effect: every confirm dialog with more
-      than one button always resolves `response:0` (the first/affirmative button), regardless
-      of what the user would have clicked. This is confirmed live and unfixed at HEAD (commit
-      30d02371 is the last change to electronStub.ts/main.rs; 31-REVIEW.md's CR-01, timestamped
-      after that commit, remains open with no follow-up commit). It is also confirmed REACHABLE
-      under the current Tauri build, not merely theoretical: `installFlowRegistration.ts` imports
-      `SteamGame` (`storeManagers/steam/games.ts`), whose native install path calls
-      `startInstallPolling` (`storeManagers/steam/library.ts`), whose `pollInstallOnce` on a
-      `'32'` verdict calls `promptI386Recovery(appId)` — a real, already-shipped (Phase 30)
-      destructive confirm dialog (force-uninstall + reinstall via CrossOver) that now auto-
-      confirms without real user consent under Tauri. `utils.ts`'s `askForceUninstall` (remove
-      from library) and several other confirm dialogs share the same broken contract, per
-      31-REVIEW.md's trace of ~10 real callers.
-    artifacts:
-      - path: "src-tauri/src/main.rs"
-        issue: "dialog_message match arm (~lines 368-394) builds app.dialog().message(...).kind(...) with no .buttons(...) call — blocking_show() on the resulting OK-only dialog always returns true"
-      - path: "src/backend/sidecar/electronStub.ts"
-        issue: "dialog.showMessageBox (~lines 193-220) forwards only {message,title,kind} to RUST_DIALOG_MESSAGE, discarding options.buttons/defaultId/cancelId, then maps the bool result as if only two fixed outcomes existed"
-      - path: ".planning/phases/27-tauri-shell-walking-skeleton/SEAM.md"
-        issue: "line 255 states the dialog cluster is 'CLOSED for all async members, Phase 31' and 31-PORTED-CHANNELS.md labels showMessageBox 'DECLARED INFRASTRUCTURE ... no in-scope caller' — both claims are scoped only to Phase-31 settings/config flows and do not account for the pre-existing backend callers (some already reachable via the Phase-30-ported install path) that actually branch on `response`, overstating how safely 'closed' the cluster is"
-    missing:
-      - "Forward options.buttons (and defaultId/cancelId) from electronStub.showMessageBox into the RUST_DIALOG_MESSAGE payload"
-      - "In the Rust dialog_message arm, when a two-element buttons array is present, call .buttons(MessageDialogButtons::OkCancelCustom(ok_label, cancel_label)) and map blocking_show()'s bool back to the correct button index (not a hardcoded 0/1)"
-      - "Or, per the reviewer's stated fallback: do not wire showMessageBox for real Tauri behavior this phase at all — an OK-only auto-confirm of destructive flows is worse than the prior unimplemented/marker-rejecting state"
-      - "Once fixed (or scope is narrowed), correct SEAM.md's 'CLOSED for all async members' claim and 31-PORTED-CHANNELS.md's 'no in-scope caller' framing so they don't imply the cluster is safe when it currently is not"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 6/7
+  gaps_closed:
+    - "showMessageBox no longer auto-confirms a destructive multi-button dialog (CR-01) — de-wired to resolve the safe sentinel {response:-1}, never forwards to RUST_DIALOG_MESSAGE, never rejects"
+    - "Per-game setSetting/writeConfig path-traversal (WR-01) — resolve()+relative() containment guard drops any appName that escapes gamesConfigPath"
+    - "SEAM.md / 31-PORTED-CHANNELS.md no longer overstate the dialog cluster as fully/safely 'CLOSED' — showMessageBox row relocated to 'Deliberately NOT ported this phase'"
+    - "REQ-31-03 no longer implicitly claimed complete — stays unchecked with an honest status note naming the showMessageBox de-scope and Phase 33 deferral"
+  gaps_remaining: []
+  regressions: []
 ---
 
-# Phase 31: Tauri IPC re-plumb slice 2 — settings and config — Verification Report
+# Phase 31: Tauri IPC re-plumb slice 2 — settings and config — Verification Report (Re-verification after gap closure)
 
 **Phase Goal:** Settings/config cluster ported onto the Node sidecar, plus the Tauri `dialog`
 plugin surface those flows need — wired and unit-proven (not hardware-proven, per D-05).
-**Verified:** 2026-07-23T21:00:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-07-23T22:15:00Z
+**Status:** passed
+**Re-verification:** Yes — after gap plan 31-04 (gap_closure: true, REQ-31-03/REQ-31-06)
 
 ## Goal Achievement
 
-### Observable Truths
+### Observable Truths (gap-closure scope, re-checked against live code)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | `setSetting` (listener) + `writeConfig` (invoke) registered, reach `GlobalConfig`/`GameConfig`.setSetting and real `writeConfig()` (REQ-31-01/02) | VERIFIED | `settingsFlowRegistration.ts:126-158` — `ipcMain.on('setSetting', ...)` and `ipcMain.handle('writeConfig', ...)` present, mirror `main.ts:1042-1052` exactly; `settingsFlows.test.ts` asserts the mocked `GlobalConfig`/`GameConfig` targets are called with the right args; `npx jest settingsFlows.test.ts` — 79/79 suite tests pass |
-| 2 | Six generic reads (`getMaxCpus`, `showUpdateSetting`, `getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative`) return real values; `getUserInfo`/`readConfig` stay Invariant-B rejecting (REQ-31-01) | VERIFIED | `settingsFlowRegistration.ts:167-200` registers all six as real `ipcMain.handle`s; `grep -n "getUserInfo\|readConfig"` in the file shows no registration (comment-only, per module docstring lines 38-43); tests green |
-| 3 | Global write persists through Phase 29's `configStore`/`STORE_ALLOWLIST`; no new push channel; secrets (`TOKEN_STORE_KEY`) never touched (REQ-31-02) | VERIFIED | `storeLayer.test.ts` round-trip case for `configStore.set('settings', ...)` passes; `settingsFlowRegistration.ts:105-118` records the D-02 divergence in a block comment; T-31-01 secret-safety assertion passes in `settingsFlows.test.ts` |
-| 4 | Async `dialog` members (`showMessageBox`/`showErrorBox`/`showSaveDialog`) get real, **correct** Tauri behavior via `requestRustInvoke`/`dispatch_rust_channel` (REQ-31-03) | **FAILED** | Code confirms `dialog_message` never forwards/honors `buttons` — see Gap 1 below. `blocking_show()` always returns `true` → `response:0` always. Reachable live via the already-shipped Phase 30 install path (`promptI386Recovery`, `askForceUninstall`, and ~8 more callers per 31-REVIEW.md CR-01) |
-| 5 | Sync dialog pair + `shell`/`clipboard` conveniences stay LOGGED no-ops (REQ-31-04) | VERIFIED | `electronStub.ts` — `showMessageBoxSync`/`showOpenDialogSync`/`shell.showItemInFolder`/`clipboard.writeText` each emit `console.warn`; `dialogStub.test.ts` asserts `warnSpy` called for each; tests green |
-| 6 | Sign-off is automated tests; deferred live UAT logged (D-05) — claim reads "wired and unit-proven" (REQ-31-05) | VERIFIED (methodology) — undermined in substance by Gap 1 | All 4 relevant suites pass (`settingsFlows`, `storeLayer`, `dialogStub`, `electronUntouched` — 79/79); `SEAM.md` and `31-PORTED-CHANNELS.md` log the deferred live UAT. However, the unit tests only assert the (incorrect) bool→response mapping the plan itself specified — they do not exercise the `buttons` contract, so passing tests did not catch CR-01 |
-| 7 | Declared ported-channel list artifact + SEAM.md reconciliation (REQ-31-06) | VERIFIED (exists/structured) — WARNING on accuracy | `31-PORTED-CHANNELS.md` exists, mirrors `30-PORTED-CHANNELS.md`'s structure, lists all 8 settings/config channels + 3 dialog members with REQ ids; `SEAM.md` §1 gained the Phase 31 subsection, §3's dialog row is retired, D-02 Accepted Constraint recorded. Its claim that showMessageBox has "no in-scope caller" / is "DECLARED INFRASTRUCTURE" is true only for Phase-31-scoped callers — it does not surface that pre-existing, already-shipped backend callers DO reach it (see Gap 1) |
-| 8 | Additive/reversible invariant: both builds work, no `window.api` changes, no real `electron` import (REQ-31-07) | VERIFIED | `electronUntouched.test.ts` passes; `grep -rn "from 'electron'" src/backend/sidecar/settingsFlowRegistration.ts` / `electronStub.ts` → no match; `cargo check --manifest-path src-tauri/Cargo.toml` succeeds; `git diff src-tauri/Cargo.toml` untouched by this phase |
+| 1 | `dialog.showMessageBox` never auto-confirms a multi-button destructive dialog under Tauri — resolves the safe sentinel `{response:-1}`, never forwards to `RUST_DIALOG_MESSAGE` | ✓ VERIFIED | `electronStub.ts:204-221` read in full: body contains `response: -1`, a `console.warn`, no `requestRustInvoke`/`throw`/`Promise.reject`. `grep -n "requestRustInvoke(RUST_DIALOG_MESSAGE"` returns exactly one match, inside `showErrorBox` (L192), not `showMessageBox`. `mapMessageBoxKind` fully removed (`grep` returns nothing). `dialogStub.test.ts`'s new `describe('...CR-01 de-scope')` block (3 tests) asserts a multi-button `buttons:['Confirm','Cancel']` call resolves `{response:-1, checkboxChecked:false}`, never calls `requestRustInvoke`, and warns once. All pass. |
+| 2 | `-1` declines BOTH reachable callers (`promptI386Recovery` decline=`response!==0`; `askForceUninstall` decline=`response!==1`) | ✓ VERIFIED | Confirmed both callers unmodified at HEAD: `library.ts:1281 if (response !== 0) {` (decline); `utils.ts:304 if (response === 1) {` (destructive branch, decline=`response!==1`). `-1 !== 0` and `-1 !== 1` — both callers decline. No commit in this gap plan touched `library.ts` or `utils.ts` (confirmed via `git show --stat` on `ccb15138`/`6214cbea`/`1e98c8e1` — only electronStub.ts, settingsFlowRegistration.ts, their test files, and docs changed). |
+| 3 | `dialog.showMessageBox` never rejects/throws — preserves the "never throws" safety the unguarded fire-and-forget callers depend on | ✓ VERIFIED | Function body is a plain `async` function with no `throw`/`Promise.reject`/awaited-rejecting-call; it only does `console.warn` + `return`. Test asserts `.resolves.toEqual(...)`, never `.rejects`. |
+| 4 | `showErrorBox`/`showSaveDialog` unchanged, still forward to their Rust channels | ✓ VERIFIED | Both functions read in full: `showErrorBox` still calls `requestRustInvoke(RUST_DIALOG_MESSAGE, [{message,title,kind:'error'}])`; `showSaveDialog` still calls `requestRustInvoke(RUST_DIALOG_SAVE, [options])`. Their `dialogStub.test.ts` describe blocks are untouched in substance and pass. |
+| 5 | A per-game `setSetting`/`writeConfig` write with a traversal `appName` is dropped, writes nothing outside `gamesConfigPath` | ✓ VERIFIED | `settingsFlowRegistration.ts:95-99` `isContainedGameConfig()` mirrors the proven `library.ts:1114-1119` idiom (`resolve`+`relative`+`isAbsolute`). Applied at `setSetting`'s per-game branch (L165-171, guarded, `return`s before the write) and `writeConfig`'s per-game branch (L188-197, guarded, `return`s before calling real `writeConfig()`). Global (`appName==='default'`) branch untouched. Two new tests in `settingsFlows.test.ts` (WR-01, L461-487) assert the traversal frame is dropped for both paths; ran the suite directly and observed the stderr drop-lines fire (`[settingsFlowRegistration] setSetting dropped a path-escaping appName` / `...writeConfig dropped...`), proving the guard actually executes, not just that tests pass. |
+| 6 | SEAM.md / 31-PORTED-CHANNELS.md no longer claim the dialog cluster fully/safely closed; showMessageBox row moved to "Deliberately NOT ported this phase" | ✓ VERIFIED | `grep -n "CLOSED for all async members"` in SEAM.md → no match (the old claim is gone). SEAM.md L143 header now reads "CLOSED, moved out of §3" but body (L161-175) explicitly carves out showMessageBox as "deliberately NOT wired... (CR-01)", names both real callers, and defers real behavior to Phase 33; Priority-2 dialog row (L265) states "Mostly closed... showMessageBox deliberately NOT wired." `31-PORTED-CHANNELS.md`: showMessageBox row confirmed present under "## Deliberately NOT ported this phase" (not under "## Ported this phase" — only showErrorBox/showSaveDialog rows remain there), with full rationale naming `promptI386Recovery`/`askForceUninstall` as pre-existing already-shipped callers. |
+| 7 | REQ-31-03 honestly reflects: async dialog members wired EXCEPT showMessageBox (deferred), not claimed fully complete | ✓ VERIFIED | `.planning/REQUIREMENTS.md:430` — checkbox stays `[ ]`, with an appended "Status update (Phase 31 Plan 04, CR-01 de-scope)" note stating showErrorBox/showSaveDialog are wired as specified, showMessageBox is intentionally NOT wired (safe-sentinel, `{response:-1}`), and "this requirement is NOT claimed fully complete as a result." |
+| 8 | REQ-31-07 additive/reversible invariant held: both builds still build, no electron import added, 4 sidecar suites + cargo check green | ✓ VERIFIED (independently re-run, not just SUMMARY-trusted) | Ran directly: `npx jest settingsFlows.test.ts storeLayer.test.ts dialogStub.test.ts electronUntouched.test.ts` → **4 suites, 81/81 tests passed**. `cargo check --manifest-path src-tauri/Cargo.toml` → `Finished`. `grep -rn "from 'electron'" settingsFlowRegistration.ts electronStub.ts` → no match. `git show --stat` on all 3 task commits confirms zero `src-tauri/*.rs` changes (Rust untouched, consistent with the plan's "no Rust change" claim). `npx tsc --noEmit -p tsconfig.json` → clean, no errors. |
 
-**Score:** 6/7 truths fully verified (Truth 4 FAILED; Truths 6/7 verified at the artifact/process level but their substantive claims are undermined by the same root cause as Truth 4).
+**Score:** 8/8 gap-closure truths verified. (Numbering above reflects the 6 must_haves truths in the 31-04-PLAN.md frontmatter, expanded into 8 checkable assertions for traceability; all pass.)
+
+### Regression Check (items that PASSED in the prior verification — quick sanity re-check)
+
+| # | Prior Truth | Status | Evidence |
+|---|-------------|--------|----------|
+| 1 | `setSetting`/`writeConfig` reach `GlobalConfig`/`GameConfig` (REQ-31-01/02) | ✓ VERIFIED (no regression) | Still registered identically at `settingsFlowRegistration.ts:144-199`; global-branch tests (L360-374, L407-428) still pass in the same run. |
+| 2 | Six generic reads real (REQ-31-01) | ✓ VERIFIED (no regression) | Unchanged (L207-241); not touched by this gap plan; suite passes. |
+| 3 | Global write persists via Phase 29 store layer (REQ-31-02) | ✓ VERIFIED (no regression) | `storeLayer.test.ts` still passes, untouched by this gap plan. |
+| 4 | Sync dialog pair + shell/clipboard stay logged no-ops (REQ-31-04) | ✓ VERIFIED (no regression) | `showMessageBoxSync`/`showOpenDialogSync`/`shell.showItemInFolder`/`clipboard.writeText` unchanged; their describe blocks pass. |
+| 5 | Additive/reversible invariant (REQ-31-07) | ✓ VERIFIED (re-confirmed above, stronger evidence than before) | See Truth 8 above — independently re-run, not merely re-asserted. |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/backend/sidecar/settingsFlowRegistration.ts` | write path + 6 generic reads registered | VERIFIED | Read in full; matches plan 31-01 exactly, both `ipcMain.on`/`ipcMain.handle` present, D-02 comment present |
-| `src/backend/sidecar/__tests__/settingsFlows.test.ts` | write-path/generic-read/Invariant-B tests | VERIFIED | Present, passes |
-| `src/backend/sidecar/__tests__/storeLayer.test.ts` | global-branch persistence proof | VERIFIED | Extended round-trip case passes |
-| `src/common/types/sidecarTransport.ts` | `RUST_DIALOG_MESSAGE`/`RUST_DIALOG_SAVE` constants + allowlist | VERIFIED | Both constants present and in `RUST_INVOKE_CHANNELS` |
-| `src-tauri/src/main.rs` | `dialog_message`/`dialog_save` match arms | ⚠️ VERIFIED-BUT-INCORRECT | Both arms exist and compile (`cargo check` green) but `dialog_message` drops `buttons` (Gap 1) |
-| `src/backend/sidecar/electronStub.ts` | real `showMessageBox`/`showErrorBox`/`showSaveDialog` + D-04 logged no-ops | ⚠️ VERIFIED-BUT-INCORRECT | Forwards to Rust and maps result per plan's (incomplete) contract; D-04 no-ops correctly logged |
-| `.planning/phases/31.../31-PORTED-CHANNELS.md` | declared ported-channel list | VERIFIED | Exists, structured correctly, content caveat noted above |
-| `.planning/phases/27.../SEAM.md` | §1/§3 update + D-02 constraint | VERIFIED | Updated correctly; "CLOSED for all async members" claim is optimistic given Gap 1 |
+| `src/backend/sidecar/electronStub.ts` | showMessageBox de-wired to safe-sentinel resolve; showErrorBox/showSaveDialog untouched | ✓ VERIFIED | Read in full; matches plan exactly; `mapMessageBoxKind` dead code removed |
+| `src/backend/sidecar/settingsFlowRegistration.ts` | resolve+relative containment guard on per-game write branches | ✓ VERIFIED | `isContainedGameConfig()` present, applied to both write handlers, global branch untouched |
+| `src/backend/sidecar/__tests__/dialogStub.test.ts` | new safe-sentinel contract tests, stale bool→response/reject tests replaced | ✓ VERIFIED | 3 new tests present and passing; old tests confirmed gone (no `{response:0}`/reject-path assertions remain for showMessageBox) |
+| `src/backend/sidecar/__tests__/settingsFlows.test.ts` | WR-01 traversal-drop tests | ✓ VERIFIED | Two new tests (L461-487) present and passing, plus a normal-appName regression test still green |
+| `.planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | corrected dialog row | ✓ VERIFIED | Overstated "CLOSED for all async members" claim removed; showMessageBox carve-out documented in 3 places (§ settings/config cluster, Priority-2 dialog row, and the closing note) |
+| `.planning/phases/31.../31-PORTED-CHANNELS.md` | showMessageBox relocated | ✓ VERIFIED | Row confirmed under "Deliberately NOT ported this phase," not "Ported this phase" |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `settingsFlowRegistration.ts` | `GlobalConfig.setSetting`/`GameConfig.setSetting` | `ipcMain.on('setSetting', ...)` | WIRED | Confirmed by grep + passing tests |
-| `settingsFlowRegistration.ts` | `backend/utils writeConfig` | `ipcMain.handle('writeConfig', ...)` | WIRED | Confirmed |
-| `electronStub.ts dialog.showMessageBox` | `dispatch_rust_channel` `dialog_message` | `requestRustInvoke(RUST_DIALOG_MESSAGE)` | WIRED-BUT-LOSSY | The call reaches Rust and returns, but the `buttons` payload never crosses the wire — the link exists, its data contract is broken |
-| `electronStub.ts dialog.showSaveDialog` | `dispatch_rust_channel` `dialog_save` | `requestRustInvoke(RUST_DIALOG_SAVE)` | WIRED | Correct Option<FilePath> mapping (directory-component drop is a separate, lower-severity WR-03 finding, no real callers) |
-| `31-PORTED-CHANNELS.md` | `SEAM.md` §1 | cross-reference by filename | WIRED | `grep -q "31-PORTED-CHANNELS" SEAM.md` succeeds |
+| `electronStub.ts dialog.showMessageBox` | (none — de-wired) | — | ✓ WIRED-CORRECTLY (de-wire confirmed) | No forward exists; regex `showMessageBox[\s\S]*?response: -1` matches; `requestRustInvoke(RUST_DIALOG_MESSAGE` appears exactly once, inside `showErrorBox` |
+| `settingsFlowRegistration.ts` per-game write | `gamesConfigPath` containment | `resolve()`+`relative()` guard before write | ✓ WIRED | `relative(gamesConfigPath` present in both branches; observed the drop fire live during test run (stderr lines) |
+| `promptI386Recovery` / `askForceUninstall` | `dialog.showMessageBox` | `await dialog.showMessageBox(...)` (unchanged call sites) | ✓ WIRED-SAFE | Callers unmodified; sentinel `-1` satisfies both decline conditions; no unhandled-rejection path introduced (function never rejects) |
 
-### Behavioral Spot-Checks
+### Behavioral Spot-Checks (independently executed by the verifier, not sourced from SUMMARY.md)
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| All 4 phase-relevant jest suites pass | `npx jest settingsFlows.test.ts storeLayer.test.ts dialogStub.test.ts electronUntouched.test.ts` | 4 suites, 79/79 tests passed | ✓ PASS |
-| Rust dialog arms compile | `cargo check --manifest-path src-tauri/Cargo.toml` | `Finished dev profile` | ✓ PASS |
-| No real `electron` import in touched sidecar files | `grep -rn "from 'electron'" settingsFlowRegistration.ts electronStub.ts` | no match | ✓ PASS |
-| `dialog_message` honors caller-supplied `buttons` | manual code read of `main.rs` `"dialog_message"` arm | no `.buttons(...)` call anywhere in the arm | ✗ FAIL (this is Gap 1) |
-| `promptI386Recovery`/`askForceUninstall` reachable from the sidecar's current import graph | traced `installFlowRegistration.ts` → `games.ts` → `library.ts`'s `pollInstallOnce`/`promptI386Recovery`; `utils.ts` `askForceUninstall` | import chain confirmed live | ✗ Confirms Gap 1 is reachable, not theoretical |
+| All 4 phase-relevant jest suites pass | `npx jest settingsFlows.test.ts storeLayer.test.ts dialogStub.test.ts electronUntouched.test.ts --silent` | 4 suites, 81/81 tests passed | ✓ PASS |
+| Rust unchanged, still compiles | `cargo check --manifest-path src-tauri/Cargo.toml` | `Finished dev profile` | ✓ PASS |
+| TypeScript project-wide clean | `npx tsc --noEmit -p tsconfig.json` | no errors | ✓ PASS |
+| showMessageBox never forwards to Rust | read `electronStub.ts` body + `dialogStub.test.ts` assertion `callLog` has zero `RUST_DIALOG_MESSAGE` entries after calling `showMessageBox` | confirmed empty callLog | ✓ PASS |
+| WR-01 guard actually fires (not just type-checks) | ran `settingsFlows.test.ts`, observed stderr output | `[settingsFlowRegistration] setSetting dropped a path-escaping appName` / `...writeConfig dropped...` printed during the traversal tests | ✓ PASS |
+| No debt markers introduced | `grep -n -E "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER"` across all 4 modified source/test files | no matches | ✓ PASS |
+| No real `electron` import added | `grep -rn "from 'electron'" settingsFlowRegistration.ts electronStub.ts` | no match | ✓ PASS |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|-------------|--------------|--------|----------|
-| REQ-31-01 | 31-01 | Settings write path + generic reads registered; unported channels stay non-fatal | SATISFIED | settingsFlowRegistration.ts, tests green |
-| REQ-31-02 | 31-01, 31-03 | Write path persists through Phase 29 store layer; no new sync/push channel; secrets untouched; D-02 documented | SATISFIED | storeLayer.test.ts, D-02 comment + SEAM.md constraint |
-| REQ-31-03 | 31-02 | Async dialog members get real behavior; Sync pair stays logged no-op | **BLOCKED** | `buttons`/`response` contract dropped end-to-end (CR-01); see Gap 1 |
-| REQ-31-04 | 31-02 | `shell`/`clipboard` conveniences stay logged no-ops, deferred to Phase 33 | SATISFIED | `dialogStub.test.ts` warnSpy assertions pass |
-| REQ-31-05 | 31-01, 31-02, 31-03 | Sign-off via automated tests; deferred live UAT logged | SATISFIED (process) | Tests pass; UAT logged in SEAM.md/31-PORTED-CHANNELS.md — but see Gap 1 for why "unit-proven" didn't catch the defect |
-| REQ-31-06 | 31-03 | Declared ported-channel list artifact; boundary declared not discovered | SATISFIED (artifact) — WARNING on accuracy | 31-PORTED-CHANNELS.md exists/structured correctly; its "no in-scope caller" framing for showMessageBox is misleading (see Gap 1) |
-| REQ-31-07 | 31-01, 31-02, 31-03 | Additive/reversible invariant; SEAM Invariants A/B preserved | SATISFIED | electronUntouched.test.ts, cargo check, no electron imports |
+| REQ-31-01 | 31-01 | Settings write path + generic reads registered | ✓ SATISFIED (unchanged, re-confirmed) | Checked `[x]`; suites pass |
+| REQ-31-02 | 31-01, 31-03 | Write path persists through Phase 29 store layer; secrets untouched | ✓ SATISFIED (unchanged, re-confirmed) | Checked `[x]`; storeLayer.test.ts passes |
+| REQ-31-03 | 31-02, 31-04 | Async dialog members real behavior; Sync pair stays logged no-op | ✓ SATISFIED-AS-NARROWED (CR-01 closed by honest de-scope) | Checked `[ ]` deliberately, with accurate status note — this is the CORRECT outcome per the user's locked scope decision (de-wire, not implement multi-button), not an open gap |
+| REQ-31-04 | 31-02 | shell/clipboard conveniences stay logged no-ops | ✓ SATISFIED (unchanged) | Tests pass; checkbox bookkeeping lag pre-exists this gap plan (not in its scope — carried over from initial verification's note, not a new finding) |
+| REQ-31-05 | 31-01, 31-02, 31-03 | Sign-off via automated tests; deferred live UAT logged | ✓ SATISFIED | Checked `[x]`; tests pass; UAT deferral logged |
+| REQ-31-06 | 31-03, 31-04 | Declared ported-channel list artifact; boundary declared not discovered | ✓ SATISFIED (accuracy gap from prior verification now closed) | Checked `[x]`; showMessageBox row now accurately placed under "Deliberately NOT ported," with its real callers named instead of the previous misleading "no in-scope caller" framing |
+| REQ-31-07 | 31-01, 31-02, 31-03, 31-04 | Additive/reversible invariant | ✓ SATISFIED | Checked `[x]`; electronUntouched.test.ts, cargo check, tsc all green; zero src-tauri changes across the 3 gap-closure commits |
 
-**No orphaned requirements** — all REQ-31-01..07 are claimed by at least one plan (`31-01`: REQ-31-01/02/05/07; `31-02`: REQ-31-03/04/05/07; `31-03`: REQ-31-02/05/06/07), matching `.planning/REQUIREMENTS.md`'s Phase 31 section.
-
-**Note:** `.planning/REQUIREMENTS.md`'s checkboxes for REQ-31-03, REQ-31-04, and REQ-31-06 are still unchecked (`[ ]`) even though the SUMMARY frontmatter for plans 31-02/31-03 claims all three as `requirements-completed`. For REQ-31-03 this checkbox is *correctly* unchecked — it should stay open pending the CR-01 fix. REQ-31-04 and REQ-31-06 are substantively satisfied and their checkboxes are simply out of sync with the SUMMARYs (a bookkeeping gap, not a functional one).
+**No orphaned requirements** — REQ-31-01..07 all present and accounted for in `.planning/REQUIREMENTS.md`'s Phase 31 section; cross-referenced against `31-04-PLAN.md`'s frontmatter (`requirements: [REQ-31-03, REQ-31-06]`) plus the original three plans' claims.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| `src-tauri/src/main.rs` | 368-394 | `dialog_message` arm builds an OK-only dialog regardless of caller-supplied `buttons` | 🛑 BLOCKER | Every multi-button confirm dialog auto-confirms the first/affirmative button (CR-01) |
-| `src/backend/sidecar/electronStub.ts` | 200-207 | `showMessageBox` discards `options.buttons` before forwarding | 🛑 BLOCKER | Same root cause as above, TS side |
-| `src/backend/sidecar/settingsFlowRegistration.ts` | 152-158 | `writeConfig` handler casts `appName as string` / `config ?? {}` with no type guard (unlike the adjacent `setSetting` guard) | ⚠️ WARNING | A malformed frame (`appName` missing/non-string) writes a bogus `undefined.json`/`[object Object].json` file instead of being dropped (code review WR-02, unfixed) |
-| `src/backend/sidecar/settingsFlowRegistration.ts` | 143-158 | Per-game config write has no path-containment check on `appName` | ⚠️ WARNING | Parity-inherited from Electron; low real-world exploitability per the plan's own threat model (T-31-02); code review WR-01, unfixed |
-| `src-tauri/src/main.rs` | 399-407 | `dialog_save` arm passes the full `defaultPath` to `set_file_name` instead of splitting directory/filename | ⚠️ WARNING | Save dialog ignores the caller's intended starting directory; zero real callers exist today (code review WR-03, unfixed) |
-| `.planning/phases/27.../SEAM.md` | 255 | "CLOSED for all async members, Phase 31" | ℹ️ INFO | Overstates correctness given Gap 1 — should read "wired, correctness gap open (CR-01)" until fixed |
+| `src/backend/sidecar/settingsFlowRegistration.ts` | 152-158 (unchanged) | `writeConfig` handler still casts `appName as string` with no non-string type guard (unlike `setSetting`'s guard) | ⚠️ WARNING (pre-existing, out of scope per user — WR-02) | Documented, accepted; not part of this gap plan's scope, no new occurrence |
+| `src-tauri/src/main.rs` | 399-407 (unchanged) | `dialog_save` still passes full `defaultPath` to `set_file_name` | ⚠️ WARNING (pre-existing, out of scope per user — WR-03) | Documented, accepted; zero real callers; not part of this gap plan's scope |
+
+No BLOCKER-level anti-patterns found in the gap-closure diff. No TBD/FIXME/XXX debt markers in any of the 4 modified source/test files.
 
 ### Human Verification Required
 
-None required to *determine* phase status — the blocking finding (CR-01) is programmatically verifiable via code inspection and was independently confirmed by re-reading `main.rs`/`electronStub.ts` and tracing the reachability chain. The following remains appropriately deferred per the phase's own D-05 decision (not a new ask from this verification):
+None required to determine phase status. The two items below remain appropriately deferred (unchanged from the prior verification's own D-05-scoped deferral, not new asks introduced by this re-verification):
 
 ### 1. Live settings-screen + native-dialog click-through under `tauri:dev`
 
-**Test:** Toggle a setting in the Tauri build's Settings screen; trigger a native save/message dialog manually.
-**Expected:** Setting persists and is reflected on reload; dialog renders natively.
-**Why human:** Requires a running `tauri:dev` session and visual/interactive confirmation; explicitly out of scope for this phase per D-05/REQ-31-05 (deferred, logged in SEAM.md and 31-PORTED-CHANNELS.md already).
+**Test:** Toggle a setting in the Tauri build's Settings screen; trigger a native save/error dialog manually.
+**Expected:** Setting persists and is reflected on reload; error/save dialogs render natively.
+**Why human:** Requires a running `tauri:dev` session and visual/interactive confirmation; explicitly deferred per D-05/REQ-31-05.
 
-### 2. Post-fix regression check for CR-01
+### 2. Live confirmation that promptI386Recovery/askForceUninstall decline correctly end-to-end
 
-**Test:** Once the `buttons` contract is fixed, manually trigger `promptI386Recovery` (or a unit test standing in for it) with a "Cancel" click and confirm the native install is NOT force-uninstalled/reinstalled.
-**Expected:** Cancel declines the action; only explicit user confirmation triggers the destructive path.
-**Why human:** Requires either live hardware UAT or a new unit test asserting the corrected button-index mapping — not yet written.
+**Test:** Under a live Tauri build, trigger the mac32-recovery prompt or a force-uninstall confirm and observe that it no longer force-uninstalls/removes without a real click (currently it never triggers the destructive path at all, by design, since showMessageBox is de-wired).
+**Expected:** No destructive action occurs (matches the de-wire's designed behavior — a "confirm" click is not currently obtainable since showMessageBox no longer renders a real dialog).
+**Why human:** This is a live-hardware sanity check of a security fix, not required to determine correctness (code inspection + unit tests already prove the decline), logged here for completeness only — not a blocking condition.
 
 ## Gaps Summary
 
-The phase substantially achieved its goal for the settings/config write path, the six generic
-reads, the D-04 no-op logging upgrade, the declared-channel-list artifact, and the additive/
-reversible invariant — all backed by passing automated tests and direct code inspection (6/7
-truths cleanly verified).
+Both items from the prior verification are closed and independently re-verified against the live codebase (not sourced from SUMMARY.md claims):
 
-The dialog cluster, however, does not achieve "real behavior" in the sense the phase goal and
-REQ-31-03 require. `showMessageBox`'s `buttons`/`response` contract is dropped end-to-end: the
-Rust arm never calls `.buttons(...)`, so `blocking_show()` on the resulting OK-only dialog always
-returns `true`, which `electronStub.ts` unconditionally maps to `response:0`. This was correctly
-flagged as a BLOCKER by the phase's own code review (`31-REVIEW.md` CR-01) and remains unfixed in
-the current HEAD — no commit after the review addresses it. It is not a theoretical concern: the
-sidecar's current import graph already reaches at least one real, destructive confirm dialog
-(`promptI386Recovery`, via the Phase-30-ported native install path's `startInstallPolling` →
-`pollInstallOnce`), meaning a live Tauri build today would auto-confirm a force-uninstall+reinstall
-action without real user consent. `askForceUninstall` and ~8 more callers traced in the review share
-the same broken contract, though their current sidecar-reachability was not independently re-traced
-here beyond `promptI386Recovery`.
+1. **CR-01 (BLOCKER, Truth 4 in the prior report)** — `dialog.showMessageBox` no longer auto-confirms any destructive multi-button dialog. It is de-wired to resolve a safe sentinel (`{response:-1}`) that declines both reachable real callers (`promptI386Recovery`, `askForceUninstall`) without ever rejecting/throwing (preserving the "never throws" safety the unguarded fire-and-forget callers depend on — verified by direct code read, not just test pass). This is a deliberate, user-locked de-scope (not the original "implement the full multi-button contract" ask) and the documentation (SEAM.md, 31-PORTED-CHANNELS.md, REQUIREMENTS.md) now honestly reflects the narrowed scope rather than overclaiming safety.
 
-Because the phase's own documentation (`SEAM.md` line 255, `31-PORTED-CHANNELS.md`'s "DECLARED
-INFRASTRUCTURE ... no in-scope caller" framing) asserts the dialog cluster is safely closed, and
-that framing is based only on Phase-31-scoped callers rather than the wider codebase, this phase
-should not be considered complete until either (a) the `buttons` contract is implemented correctly,
-or (b) `showMessageBox` is reverted to non-wired/marker-rejecting per the reviewer's own suggested
-fallback, with the SEAM.md/31-PORTED-CHANNELS.md claims corrected to match.
+2. **WR-01 (WARNING)** — per-game `setSetting`/`writeConfig` now drop any traversal `appName` via a `resolve()`+`relative()`+`isAbsolute()` containment guard mirroring the proven `library.ts` idiom. Verified the guard fires at runtime (observed stderr drop-lines during the actual test run, not just a passing assertion).
 
-Three lower-severity code-review findings (WR-01 path-traversal on per-game writes, WR-02 missing
-type guard on `writeConfig`, WR-03 `dialog_save` directory-component drop) remain unfixed but do
-not block the phase goal — they are documented above as WARNING-level anti-patterns for the
-planner to triage alongside the CR-01 gap closure.
+No regressions were found in the previously-passing truths (write path, generic reads, global persistence, Sync/shell/clipboard no-ops, additive/reversible invariant) — all re-checked and still green, with the additive/reversible invariant re-run independently (4 suites/81 tests, cargo check, tsc) rather than trusted from the SUMMARY.
+
+WR-02 (writeConfig missing type guard) and WR-03 (`dialog_save` directory-component drop) remain documented, accepted, out-of-scope WARNINGs per the user's explicit locked decision — they do not block phase completion.
+
+Phase 31 goal is achieved: the settings/config endpoint cluster is ported onto the Node sidecar with real, tested write/read behavior, and the `dialog` API surface those flows depend on is either genuinely real (`showErrorBox`/`showSaveDialog`) or honestly and safely de-scoped (`showMessageBox`, deferred to Phase 33) rather than dangerously wrong.
 
 ---
 
-_Verified: 2026-07-23T21:00:00Z_
+_Verified: 2026-07-23T22:15:00Z_
 _Verifier: Claude (gsd-verifier)_
