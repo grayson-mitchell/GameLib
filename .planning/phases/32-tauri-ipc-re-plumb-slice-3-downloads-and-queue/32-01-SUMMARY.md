@@ -136,3 +136,15 @@ None - no external service configuration required.
 ---
 *Phase: 32-tauri-ipc-re-plumb-slice-3-downloads-and-queue*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+- FOUND: src/backend/sidecar/downloadQueueFlowRegistration.ts
+- FOUND: src/backend/sidecar/__tests__/downloadQueueFlows.test.ts
+- FOUND: src/backend/sidecar/handlers.ts
+- FOUND: src/backend/sidecar/__tests__/installFlows.test.ts
+- FOUND: .planning/phases/32-tauri-ipc-re-plumb-slice-3-downloads-and-queue/32-01-SUMMARY.md
+- FOUND: .planning/phases/32-tauri-ipc-re-plumb-slice-3-downloads-and-queue/deferred-items.md
+- FOUND commit: f2cc7d6d (Task 1, RED)
+- FOUND commit: af98f220 (Task 2, GREEN)
+- FOUND commit: 0075a1c7 (docs: summary)
