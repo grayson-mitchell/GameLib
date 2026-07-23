@@ -245,3 +245,62 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     )
   })
 })
+
+describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('a never-settling install() force-terminates once the watchdog bound elapses, routing down the same terminal-error surface (badge-clear + dialog)', async () => {
+    jest.useFakeTimers()
+    installMock.mockReturnValue(new Promise(() => {}))
+
+    const resultPromise = installQueueElement(makeParams())
+    const assertion = resultPromise.then((result) => {
+      expect(result.status).toBe('error')
+      expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appName: '1091500',
+          runner: 'steam',
+          status: 'done'
+        })
+      )
+      expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'ERROR' })
+      )
+    })
+
+    // Advance well past every known pre-download bound (50s + 90s×3 retries
+    // = 320s) and past the watchdog bound itself.
+    await jest.advanceTimersByTimeAsync(10 * 60 * 1000)
+    await assertion
+  })
+
+  it('an install() that resolves well before the watchdog bound is unaffected — no watchdog trip, result passes through unchanged', async () => {
+    jest.useFakeTimers()
+    installMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ status: 'done' }), 30000)
+        })
+    )
+
+    const resultPromise = installQueueElement(makeParams())
+    const assertion = resultPromise.then((result) => {
+      expect(result.status).toBe('done')
+    })
+
+    await jest.advanceTimersByTimeAsync(30000)
+    await assertion
+  })
+})
