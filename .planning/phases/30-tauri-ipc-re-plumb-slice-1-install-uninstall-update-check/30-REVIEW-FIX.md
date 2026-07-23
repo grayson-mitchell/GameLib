@@ -1,186 +1,127 @@
 ---
 phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
-fixed_at: 2026-07-23T00:00:00Z
+fixed_at: 2026-07-23T03:14:19Z
 review_path: .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-REVIEW.md
 iteration: 1
-findings_in_scope: 11
-fixed: 9
-skipped: 2
-status: partial
+findings_in_scope: 3
+fixed: 3
+skipped: 0
+status: all_fixed
 ---
 
-# Phase 30: Code Review Fix Report
+# Phase 30: Code Review Fix Report (30-07 gap-closure re-review, G-30-02)
 
-**Fixed at:** 2026-07-23
-**Source review:** `.planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-REVIEW.md`
+**Fixed at:** 2026-07-23T03:14:19Z
+**Source review:** .planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-REVIEW.md
 **Iteration:** 1
-**Scope:** critical_warning (CR-01..04, WR-01..07). Info findings IN-01..04 were out of scope and are untouched.
+
+> Note: this report is for the FOCUSED re-review of gap-closure plan 30-07's
+> `withTimeout` delta (3 warnings, 1 info). It replaces the earlier REVIEW-FIX.md
+> written for the now-superseded Tauri-IPC-file-set review (11 findings). Those
+> earlier fixes remain in git history; only the report document was replaced.
 
 **Summary:**
-- Findings in scope: 11
-- Fixed: 9
-- Skipped: 2 (both already fixed before this run — verified, not re-applied)
+- Findings in scope: 3 (WR-01, WR-02, WR-03 — critical_warning scope; IN-01 is Info, out of scope)
+- Fixed: 3
+- Skipped: 0
 
-All 9 fix commits landed on `fix/steam-native-install-stability`, one commit per finding,
-`323753a5..81f5303a`.
-
-**Verification performed per fix:**
-- `cargo check` (with the frontendDist stub dir present) — clean, for every Rust change.
-- `rustfmt --emit stdout` parse check on `main.rs` after each Rust edit.
-- `tsc --noEmit` (whole project) — clean after each TypeScript change.
-- `jest src/backend/sidecar` — 10 suites / 125 tests green (including `electronUntouched.test.ts`,
-  which enforces the "no file under `src/backend/sidecar/` imports the real electron module" rule
-  that constrained the WR-02 fix).
-- `esbuild` sidecar bundle rebuild — 893 KB, **no unresolved alias/relative `require()` survived**
-  (the repo's recurring `sync-require-alias-unresolved-in-build` gotcha), and `openDialog` is
-  present in the bundle.
-- `graphify update .` run after the code changes (5249 nodes, 9756 edges).
+The three warnings all concern the tuning/layering of the single 25s pre-download
+timeout bound and were applied as ONE coherent design (per the review's coherence
+guidance), not in isolation. Because WR-02 and WR-03 are inseparable in the same two
+files (`withTimeout.ts` + `depot.ts`) and share the same bound-design contract, they
+were committed together; WR-01 (an independent games.ts layering change) was committed
+separately. The streaming download phase remains UNBOUNDED (CR-03/CR-04 invariant
+untouched). IN-01 (leftover `[Timing]` diagnostics) was deliberately left alone — Info
+severity, out of the critical_warning scope.
 
 ## Fixed Issues
 
-### CR-03: 60-second hard invoke timeout applied to long-running install/update channels
+### WR-02: Timeout errors treated as retryable (real bound ~3x25s) + WR-03: 25s false-trips large-library PICS
 
-**Files modified:** `src-tauri/src/main.rs`
-**Commit:** `02280fa3`
-**Applied fix:** Added `LONG_RUNNING_CHANNELS` (`install`, `updateGame`, `uninstall`,
-`checkGameUpdates`, `refreshLibrary`) and `timeout_for(channel) -> Option<Duration>`.
-`SidecarState::invoke` now resolves the bound before the channel is moved into the request frame
-and uses `rx.recv()` (unbounded) for the `None` case. A dead sidecar still fails fast, because
-dropping the sender wakes `recv()` with a disconnect error — mapped to
-`"sidecar closed before responding"`. Every other channel keeps the 60s guardrail.
+**Files modified:** `src/backend/storeManagers/steam/withTimeout.ts`, `src/backend/storeManagers/steam/depot.ts`, `src/backend/storeManagers/steam/__tests__/withTimeout.test.ts`, `src/backend/storeManagers/steam/__tests__/depot.test.ts`
+**Commit:** 8894e10e
+**Applied fix:**
 
-### CR-04: `dialog_open` inherits the 60-second rustInvoke timeout
+WR-02 (single-attempt on timeout):
+- `withTimeout.ts` now stamps its timeout `Error` with `{ isTimeout: true }` and exports
+  a `TimeoutError` type + `isTimeoutError()` type guard.
+- `withPlanBuildRetry` (depot.ts) fail-fast condition extended to
+  `isNonRetryableDepotError(err) || isTimeoutError(err)`, so a hung CM call rejects after
+  ONE bound instead of burning `PLAN_BUILD_MAX_ATTEMPTS` (~3x) against the same stale
+  fast-path socket. This restores the documented single-deadline behavior.
+- The `STEAM_PICS_TIMEOUT_MS` doc comment was corrected to state the real single-attempt
+  worst case (no longer ~3x).
 
-**Files modified:** `src/backend/sidecar/sidecarRpc.ts`
-**Commit:** `ab303338`
-**Applied fix:** Added `UNBOUNDED_RUST_CHANNELS = [RUST_DIALOG_OPEN]`. `requestRustInvoke` skips
-`setTimeout` entirely for those channels; `rustPending`'s `timer` is now `NodeJS.Timeout | null`
-and both `clearTimeout` sites are guarded. The old behavior was worse than a plain failure —
-`electronStub.showOpenDialog`'s catch converted the timeout into a silent
-`{canceled: true, filePaths: []}` while the picker was still on screen.
+WR-03 (dedicated bulk bound):
+- Added `STEAM_PICS_BULK_TIMEOUT_MS = 90000` for the BULK/many-appid PICS fetches
+  (`getOwnedSets` over every package license; `fetchDlcInfos` over the full DLC id list),
+  which node-steam-user issue #144 (cited in CLAUDE.md) flags as legitimately slow. These
+  two call sites now use the larger bound; the single-app paths (`fetchAppInfo`,
+  `fetchInstalldir`, `getDepotDecryptionKey`, `getRawManifest`) keep the 25s
+  `STEAM_PICS_TIMEOUT_MS`. The "cannot false-trip" doc claim was softened per the review.
 
-### WR-01: `dialog.showOpenDialog` ignored its `options` — always a folder picker
+Tests:
+- `withTimeout.test.ts`: new cases assert the `isTimeout` marker + `isTimeoutError()`
+  discrimination (does not over-broaden onto ECONNRESET/plain values), and that the bulk
+  bound is strictly larger than the single-app bound.
+- `depot.test.ts`: the two existing G-30-02 "never-settling" tests were updated from
+  `toHaveBeenCalledTimes(PLAN_BUILD_MAX_ATTEMPTS)` to `toHaveBeenCalledTimes(1)` — this
+  encodes and proves the WR-02 single-attempt behavior.
 
-**Files modified:** `src-tauri/src/main.rs`
-**Commit:** `122b1a75`
-**Applied fix:** The `dialog_open` arm now inspects the forwarded `args[0].properties` and calls
-`blocking_pick_file()` when `openFile` is present without `openDirectory`, otherwise
-`blocking_pick_folder()`. Default remains "folder", so plan 30-03's install-location path is
-unchanged when no properties are supplied. This unblocks the real `properties: ['openFile']`
-call sites (CustomWineProton's Wine/Proton binary, SideloadDialog's exe + cover images,
-GameSubMenu, Tools, PathSelectionBox).
+### WR-01: Nested equal-bound withTimeout overrides fetchInstalldir's no-hard-fail contract
 
-### WR-02: plan 30-03's dialog path was unreachable — `openDialog` unregistered in the sidecar
+**Files modified:** `src/backend/storeManagers/steam/games.ts`, `src/backend/storeManagers/steam/__tests__/games.test.ts`, `src/backend/storeManagers/steam/__tests__/installLocation.test.ts`
+**Commit:** aa5aba43
+**Applied fix:**
 
-**Files modified:** `src/backend/utils/openDialog.ts` (new),
-`src/backend/sidecar/dialogFlowRegistration.ts` (new), `src/backend/sidecar/handlers.ts`,
-`src/backend/main.ts`
-**Commit:** `81f5303a`
-**Applied fix:** Extracted `main.ts`'s handler body into a shared `openDialogCallback` (the same
-single-implementation discipline `checkGameUpdates.ts` follows, so the two builds cannot fork on
-picker behavior), and added a curated `registerDialogFlows()` module called from `handlers.ts`.
-`main.ts` keeps its Electron-specific `if (!mainWindow) return false` guard; the sidecar passes
-`undefined`, which `electronStub.showOpenDialog` ignores.
+Chose the review's Option A (strictly larger outer bound) over Option B (drop the wrapper),
+preserving the belt-and-suspenders guard against a FUTURE un-timed non-CM await while
+fixing the masking. The outer `withTimeout` around `resolveSteamInstallTarget` in games.ts
+now uses `STEAM_PICS_TIMEOUT_MS * 2` (50s), strictly larger than the inner
+`fetchInstalldir` per-call bound (25s). Because the outer timer is armed first, an equal
+bound always elapsed before the inner one and converted `fetchInstalldir`'s DELIBERATE
+no-hard-fail fallback (a hung installdir lookup must degrade to a safe fallback dir name,
+never fail the install) into a fatal "Steam pre-download timed out". With a larger outer
+bound the inner graceful fallback always wins its own race; the outer only trips on a
+non-CM await (its intended belt-and-suspenders case).
 
-Two project constraints shaped this fix:
-- The electron import lives in `backend/utils/openDialog.ts`, **outside** `src/backend/sidecar/`
-  — that directory may not name the electron module even in a type-only position, so the
-  registration module calls through a widened cast, mirroring `installFlowRegistration.ts`'s
-  existing treatment of `uninstallGameCallback`'s Electron `Event` parameter.
-- Both new files use static top-level imports (no synchronous `require()` of alias/relative
-  paths), and the rebuilt sidecar bundle was checked to confirm no literal unresolvable require
-  survived.
+Tests:
+- `installLocation.test.ts`: new WR-01 case proves a never-settling installdir
+  `getProductInfo` is bounded by `fetchInstalldir`'s inner timer and RESOLVES
+  `resolveSteamInstallTarget` with a safe fallback dir (never rejects) — the inner
+  non-masking contract the outer larger bound preserves.
+- `games.test.ts`: the existing G-30-02 "never-settling resolveSteamInstallTarget" test
+  advanced fake timers by a hardcoded 30000ms tied to the OLD 25s bound; with the doubled
+  outer bound the outer timer no longer fired at 30s, so the test hung at jest's 5s
+  timeout and leaked fake-timer state into 15 downstream tests (single-flight + bridge
+  routing). Updated to advance by `STEAM_PICS_TIMEOUT_MS * 2 + 5000` (referencing the
+  constant so it stays robust), which restored all 16 tests.
 
-### WR-03: `dialog:allow-open` widened the webview's capability surface
+## Verification
 
-**Files modified:** `src-tauri/capabilities/default.json`
-**Commit:** `b130e72d`
-**Applied fix:** Removed both `dialog:allow-open` (which exposed `plugin:dialog|open` to renderer
-JavaScript while doing nothing for the Rust-side `app.dialog().file()` call) and the redundant
-`opener:allow-open-url`. `permissions` is now `["core:default", "opener:default"]`. The
-description was rewritten to state the Tauri v2 rule explicitly. Verified by `cargo check`
-(the capability file is parsed by `generate_context!`).
+- `npx tsc --noEmit`: clean (exit 0), full project.
+- `npx jest src/backend/storeManagers/steam/ src/backend/sidecar/`: 37 suites / 1004 tests
+  pass. (A `library.ts:1147` leaked-timer force-exit warning appears but is the KNOWN
+  pre-existing install-poller teardown issue — `readAcfState` firing after the
+  `getSteamLibraries` mock is torn down — unrelated to these files; all tests pass.)
 
-### WR-04: `updateGame` discarded the update result
+## Notes for human / live retest
 
-**Files modified:** `src/backend/sidecar/installFlowRegistration.ts`
-**Commit:** `c6e57e4c`
-**Applied fix:** The handler now captures `SteamGame.update()`'s `InstallResult`, logs
-`result.error` via `logError` when `status === 'error'` (mirroring `updateQueueElement`), and
-returns `{status}` instead of `void`. Return type widened to
-`Promise<{ status: InstallResult['status'] }>`.
-
-### WR-05: `checkGameUpdates` had no per-runner error isolation
-
-**Files modified:** `src/backend/utils/checkGameUpdates.ts`,
-`src/backend/sidecar/__tests__/installFlows.test.ts`
-**Commit:** `061d395f`
-**Applied fix:** Wrapped the per-runner body in `try/catch` with a `logWarning`, so one runner
-whose CLI/credentials are missing no longer discards the results already collected from the other
-five. Added a test that spies on every `libraryManagerMap[runner].listUpdateableGames`, makes the
-first one reject, and asserts the invoke still resolves `ok: true` with exactly the other runners'
-results. Also corrected Test 5's misleading comment, which claimed to prove this property but
-could not.
-
-### WR-06: `install` dropped Electron's argument sanitation
-
-**Files modified:** `src/backend/sidecar/installFlowRegistration.ts`
-**Commit:** `4fadfc54`
-**Applied fix:** The bypass now applies `installQueueElement`'s identical normalization:
-`path: (path ?? '').replaceAll("'", '')` and
-`sdlList: (params.sdlList ?? []).filter((el) => el !== '')`.
-
-### WR-07: Rust dropped correlated responses for unknown ids with no diagnostic
-
-**Files modified:** `src-tauri/src/main.rs`
-**Commit:** `124404f1`
-**Applied fix:** The response branch now `match`es explicitly: a missing pending sender logs
-`[shell] response for unknown/timed-out id={id} (dropped)`, and a missing/non-string `id` logs
-`[shell] response frame with a missing or non-string id (dropped)`. Diagnostics carry the id
-only, never `result`/`error` bodies (T-28-04). This brings the response path in line with the
-file's own stated convention at the unrecognized-frame branch.
-
-## Skipped Issues
-
-### CR-01: `install` handler ignores `runner` and always constructs a `SteamGame`
-
-**File:** `src/backend/sidecar/installFlowRegistration.ts:116-146`
-**Reason:** skipped — already fixed before this run (REVIEW.md frontmatter records commit
-`236638f6`). **Verified in the current source:** both `install` and `updateGame` throw
-`` `${UNPORTED_CHANNEL_MARKER} <channel>: runner '<runner>' not ported` `` when
-`runner !== 'steam'`, and the two `CR-01:` tests in `installFlows.test.ts` assert the rejection
-happens before any `SteamGame` is constructed and before the `queued` status push. No further
-change applied.
-
-### CR-02: `install` emits `queued` and never a terminal status
-
-**File:** `src/backend/sidecar/installFlowRegistration.ts:125-145`
-**Reason:** skipped — already fixed before this run (REVIEW.md frontmatter records commit
-`75bb3630`). **Verified in the current source:** the handler pushes `installing` after `queued`,
-captures the `InstallResult`, logs `status === 'error'`, pushes a terminal `done` in a `catch`
-and (for `deferredToSetup` / `wasAborted`) in a `finally`, and returns `{status}`. Four `CR-02:`
-tests cover error / abort / deferredToSetup / no-extra-done-on-success. No further change applied.
-
-## Notes for the verifier
-
-- **Logic-fix flag (human verification recommended):** CR-03 and CR-04 change *when a promise is
-  allowed to never settle*. Both pass `cargo check` / `tsc` / the sidecar suite, but neither tier
-  of automated verification can prove the runtime behavior on real hardware. The concrete UAT is:
-  start a Steam depot install that runs longer than 60s under Tauri and confirm the renderer no
-  longer sees `sidecar invoke timed out`; and leave the folder picker open for >60s and confirm
-  the selection is still honored.
-- **WR-02 is now live code on both builds.** `openDialog` previously rejected with
-  `UNPORTED_CHANNEL_MARKER` under Tauri; every `window.api.openDialog(...)` call site is now
-  reachable there. Combined with WR-01, the `openFile` call sites should be exercised at least
-  once during UAT.
-- **Pre-existing prettier drift left alone.** `sidecarRpc.ts` and `installFlows.test.ts` were
-  already not prettier-clean at the phase baseline (`323753a5`); running `prettier --write` would
-  have mixed unrelated reformatting hunks into these commits, so it was deliberately not applied.
-- Info findings IN-01..IN-04 remain open (out of scope for `critical_warning`). IN-01 in
-  particular is cheap and adjacent to the CR-01/CR-02 guards already in place.
+- The defect G-30-02 is LIVE-ONLY per the standing memory note (jest proves the mechanism,
+  not the live closure). These fixes tighten the mechanism (single-attempt, correct
+  layering, bulk headroom) but the real proof is a live Test1/Test4 retest of an install
+  on Tauri — recommend running that before considering G-30-02 closed.
+- The specific bound VALUES are tuning judgments worth confirming live: outer =
+  `STEAM_PICS_TIMEOUT_MS * 2` (50s), bulk = 90s. They are safely above realistic healthy
+  latency per the review, but a large-library user on a slow connection is the case #144
+  warns about — worth a real-world sanity check.
+- IN-01 (leftover `[Timing]` diagnostics incl. the per-install content-server directory
+  dump at depot.ts:2122-2125) remains OUT of scope here but is still owed a removal/gating
+  before merge, consistent with the standing memory note that temp diagnostic logging must
+  be reverted before merge.
 
 ---
 
-_Fixed: 2026-07-23_
+_Fixed: 2026-07-23T03:14:19Z_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
