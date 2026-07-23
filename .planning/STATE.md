@@ -4,8 +4,8 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Phase 33 context gathered
-last_updated: "2026-07-23T21:31:50.201Z"
-last_activity: 2026-07-23 -- Phase 33 planning complete
+last_updated: "2026-07-23T22:11:12.244Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 33 — tauri lifecycle cluster app dialog window notifications tray
+**Current focus:** Phase 33 — tauri-lifecycle-cluster-app-dialog-window-notifications-tray
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 33
-Plan: Not started
+Phase: 33 (tauri-lifecycle-cluster-app-dialog-window-notifications-tray) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-23 -- Phase 33 planning complete
+Last activity: 2026-07-23
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
 > file to "Plan: 2 of 4" immediately after 31-04's execution — itself stale drift, since
@@ -277,6 +277,7 @@ Closed/parked native-install phases:
 | Phase 32 P01 | 30min | 2 tasks | 5 files |
 | Phase 32 P02 | ~30min | 2 tasks | 3 files |
 | Phase 32 P03 | ~15min | 2 tasks | 3 files |
+| Phase 33 P01 | ~20min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -475,6 +476,8 @@ Recent decisions affecting current work:
 - [Phase 32]: installFlows.test.ts's stale Invariant B example swapped from getDMQueueInformation (now legitimately ported by 32-01, REQ-32-04) to checkDiskSpace
 - [Phase 32]: D-01 (Phase 32-02) interpreted as full Electron parity for install/updateGame — Dropped the Phase 30 non-steam-runner guard entirely — RESEARCH.md's own D-01/D-02 wording calls for the runner-generic ipc_handler.ts shape, and storeManagers/index.ts already force-constructs all six library managers regardless
 - [Phase 32-03]: Doc-closure triad names both G-30-01 and G-30-02 as doubly-gated live-E2E blockers (D-06), never reusing Phase 30/31's single-blocker wording; documents the 32-02 deviation (dropped non-steam-runner guard) as delivered state
+- [Phase 33]: 33-01: Kept the install watchdog runner-agnostic (8min) rather than steam-only gated, per 33-RESEARCH's lower-risk recommendation
+- [Phase 33]: 33-01: Failure dialog fires only on status:'error' (resolved or thrown), never on 'abort' -- a user cancel is not a failure
 
 ### Pending Todos
 
@@ -544,7 +547,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T20:30:48.012Z
+Last session: 2026-07-23T22:10:31.547Z
 Stopped at: Phase 33 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
