@@ -1000,17 +1000,17 @@ describe('buildDepotPlan', () => {
         buildDepotPlan(APP_ID, BASE_OPTS)
       ).rejects.toThrow(/getProductInfo timed out/)
 
-      // Advance past every bounded attempt (STEAM_PICS_TIMEOUT_MS x
-      // PLAN_BUILD_MAX_ATTEMPTS) plus the real delay() backoff between
-      // attempts — advanceTimersByTimeAsync flushes microtasks between each
-      // due timer so the retry loop's ensureConnected()/delay() calls are
-      // stepped through along with the withTimeout rejections.
+      // Advance well past the single bound. WR-02: a withTimeout timeout is
+      // marked isTimeout and treated as NON-retryable by withPlanBuildRetry —
+      // retrying would only re-hang identically against the same stale
+      // fast-path socket — so the first bound rejects terminally.
       await jest.advanceTimersByTimeAsync(300000)
       await rejection
 
-      expect(fakeClient.getProductInfo).toHaveBeenCalledTimes(
-        PLAN_BUILD_MAX_ATTEMPTS
-      )
+      // WR-02: exactly ONE attempt, not PLAN_BUILD_MAX_ATTEMPTS — the hang is
+      // not retried, restoring the documented single pre-download deadline.
+      expect(fakeClient.getProductInfo).toHaveBeenCalledTimes(1)
+      expect(PLAN_BUILD_MAX_ATTEMPTS).toBeGreaterThan(1) // sanity: the bound this test proves we did NOT hit
     })
 
     it('a healthy (fast-resolving) getProductInfo is unaffected — buildDepotPlan completes normally (happy path unchanged)', async () => {
@@ -1061,9 +1061,9 @@ describe('buildDepotPlan', () => {
       await jest.advanceTimersByTimeAsync(300000)
       await rejection
 
-      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
-        PLAN_BUILD_MAX_ATTEMPTS
-      )
+      // WR-02: single attempt — a mid-plan hang is bounded once and fails
+      // fast, not retried PLAN_BUILD_MAX_ATTEMPTS times.
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(1)
     })
   })
 })

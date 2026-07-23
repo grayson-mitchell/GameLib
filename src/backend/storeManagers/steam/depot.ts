@@ -56,7 +56,12 @@ import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
 import { summarizeDepotFlags, formatDepotFlagsCensus } from './depot/flagsCensus'
-import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
+import {
+  withTimeout,
+  isTimeoutError,
+  STEAM_PICS_TIMEOUT_MS,
+  STEAM_PICS_BULK_TIMEOUT_MS
+} from './withTimeout'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -380,7 +385,13 @@ async function withPlanBuildRetry<T>(
       // of burning all PLAN_BUILD_MAX_ATTEMPTS attempts (and the misleading
       // "connection dropped" copy classifyDepotError previously fell back to
       // after 3 pointless reconnects) on an error retrying can never fix.
-      if (isNonRetryableDepotError(err)) {
+      // WR-02: a withTimeout timeout is also non-retryable. The retry's
+      // `await SteamUser.ensureConnected()` returns instantly on the stale
+      // fast-path socket (client.steamID still populated), so every retry
+      // re-issues the same CM call against the same dead socket and re-hangs
+      // a full bound — burning PLAN_BUILD_MAX_ATTEMPTS x bound instead of the
+      // documented single deadline. Fail fast after ONE bound instead.
+      if (isNonRetryableDepotError(err) || isTimeoutError(err)) {
         throw err
       }
       if (attempt === PLAN_BUILD_MAX_ATTEMPTS) break
@@ -410,12 +421,14 @@ async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
     .map((l) => (l as { package_id?: number }).package_id)
     .filter((id): id is number => typeof id === 'number')
 
-  // G-30-02 (30-07): bounded so a stale-but-present CM socket rejects within
-  // STEAM_PICS_TIMEOUT_MS instead of parking this await forever — the reject
-  // is a normal retryable throw withPlanBuildRetry already handles.
+  // G-30-02 (30-07): bounded so a stale-but-present CM socket rejects instead
+  // of parking this await forever. WR-03: this is a BULK PICS fetch over every
+  // package license — node-steam-user #144 flags large-library population as
+  // legitimately slow, so it uses the larger STEAM_PICS_BULK_TIMEOUT_MS to
+  // avoid false-tripping a healthy-but-slow large-library user.
   const { packages } = await withTimeout(
     client.getProductInfo([], packageIds, true),
-    STEAM_PICS_TIMEOUT_MS,
+    STEAM_PICS_BULK_TIMEOUT_MS,
     'getOwnedSets getProductInfo'
   )
 
@@ -457,10 +470,11 @@ async function fetchDlcInfos(
   const dlcIds = dlcAppIds(appinfo)
   if (!dlcIds.length) return {}
 
-  // G-30-02 (30-07): bounded — see getOwnedSets above.
+  // G-30-02 (30-07): bounded — see getOwnedSets above. WR-03: many-appid bulk
+  // fetch over the full DLC id list, so it uses STEAM_PICS_BULK_TIMEOUT_MS too.
   const { apps } = await withTimeout(
     client.getProductInfo(dlcIds, [], true),
-    STEAM_PICS_TIMEOUT_MS,
+    STEAM_PICS_BULK_TIMEOUT_MS,
     'fetchDlcInfos getProductInfo'
   )
   const out: Record<string, SteamAppInfo> = {}

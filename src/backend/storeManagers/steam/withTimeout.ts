@@ -12,17 +12,54 @@
 // anywhere downstream.
 
 /**
- * 25s — chosen because a healthy PICS getProductInfo round-trip is
- * sub-second to low-single-digit seconds (see the `[Timing] fetchInstalldir` /
- * `buildDepotPlan/<label>` logs already in depot.ts/installLocation.ts), while
- * `ensureConnected`'s own worst-case cold-connect + grace window is ~35s
- * (user.ts:70-144). 25s sits comfortably below that ~35s ceiling yet far
- * above any healthy call, so it cannot false-trip a legitimately
- * slow-but-progressing PICS fetch on a poor connection. Because CR-03/CR-04
- * removed the 60s outer sidecar-invoke deadline, this per-call bound is now
- * the install's only pre-download deadline.
+ * 25s — the per-call bound for a SINGLE-app PICS getProductInfo / a single
+ * depot getDepotDecryptionKey|getRawManifest round-trip, where a healthy
+ * round-trip is sub-second to low-single-digit seconds (see the
+ * `[Timing] fetchInstalldir` / `buildDepotPlan/<label>` logs already in
+ * depot.ts/installLocation.ts). `ensureConnected`'s own worst-case
+ * cold-connect + grace window is ~35s (user.ts:70-144); 25s sits below that.
+ *
+ * WR-02: a `withTimeout` timeout is now marked `isTimeout` and treated as
+ * NON-retryable by `withPlanBuildRetry` (it would re-hang identically against
+ * the same stale fast-path socket every attempt — see depot.ts). So this bound
+ * is the install's ACTUAL single pre-download deadline for a hung single-app
+ * call, not ~3x it. Because CR-03/CR-04 removed the 60s outer sidecar-invoke
+ * deadline, this per-call bound is the only pre-download deadline.
+ *
+ * WR-03: this single-app bound is NOT calibrated for the bulk/large-library
+ * case (getProductInfo over every package license), which node-steam-user
+ * issue #144 flags as legitimately slow — use STEAM_PICS_BULK_TIMEOUT_MS for
+ * those many-appid fetches instead.
  */
 export const STEAM_PICS_TIMEOUT_MS = 25000
+
+/**
+ * 90s — the dedicated bound for BULK / many-appid PICS fetches
+ * (`getOwnedSets` over every package license, `fetchDlcInfos` over an app's
+ * full DLC id list). node-steam-user issue #144 (called out in CLAUDE.md)
+ * documents PICS cache population for large libraries as a known
+ * legitimately-slow operation, so the single-app STEAM_PICS_TIMEOUT_MS would
+ * false-trip a healthy-but-slow large-library user. This larger bound sits
+ * well above realistic healthy large-library latency while still guaranteeing
+ * a stale socket cannot park the install forever. Since WR-02 makes a timeout
+ * single-attempt (non-retryable), this bound is not multiplied by retries.
+ */
+export const STEAM_PICS_BULK_TIMEOUT_MS = 90000
+
+/** Marker property stamped on the Error `withTimeout` rejects with. The
+ *  plan-build retry layer (withPlanBuildRetry, depot.ts) checks this to fail
+ *  FAST on a timeout: a hung CM call re-hangs identically every attempt
+ *  against the same stale fast-path socket, so retrying only multiplies the
+ *  deadline (WR-02). */
+export interface TimeoutError extends Error {
+  isTimeout: true
+}
+
+export function isTimeoutError(err: unknown): err is TimeoutError {
+  return (
+    !!err && typeof err === 'object' && (err as { isTimeout?: unknown }).isTimeout === true
+  )
+}
 
 /**
  * Races `promise` against a `ms`-bounded timer. Resolves/rejects exactly as
@@ -42,7 +79,14 @@ export async function withTimeout<T>(
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${ms}ms`))
+      // WR-02: stamp `isTimeout` so withPlanBuildRetry (depot.ts) fails FAST
+      // instead of burning PLAN_BUILD_MAX_ATTEMPTS on a hang that re-hangs
+      // identically against the same stale fast-path socket every attempt.
+      reject(
+        Object.assign(new Error(`${label} timed out after ${ms}ms`), {
+          isTimeout: true as const
+        })
+      )
     }, ms)
   })
   try {

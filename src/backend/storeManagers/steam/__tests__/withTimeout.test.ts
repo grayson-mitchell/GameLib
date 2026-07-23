@@ -5,11 +5,47 @@
  * (unlike most of depot.test.ts), so full jest fake timers are safe here
  * without the real-timer-dependent-suite caveats documented in depot.test.ts.
  */
-import { withTimeout } from '../withTimeout'
+import {
+  withTimeout,
+  isTimeoutError,
+  STEAM_PICS_TIMEOUT_MS,
+  STEAM_PICS_BULK_TIMEOUT_MS
+} from '../withTimeout'
 
 describe('withTimeout', () => {
   afterEach(() => {
     jest.useRealTimers()
+  })
+
+  it('WR-02: stamps the timeout Error with isTimeout so the retry layer can fail fast, and isTimeoutError recognizes only that error', async () => {
+    jest.useFakeTimers()
+    const neverSettles = new Promise<string>(() => {})
+
+    const race = withTimeout(neverSettles, 5000, 'getOwnedSets getProductInfo')
+    // Attach the assertion BEFORE advancing so the rejection is handled.
+    const assertion = race.then(
+      () => {
+        throw new Error('expected withTimeout to reject on timeout')
+      },
+      (err) => {
+        expect(isTimeoutError(err)).toBe(true)
+        expect((err as { isTimeout?: unknown }).isTimeout).toBe(true)
+      }
+    )
+
+    await jest.advanceTimersByTimeAsync(5000)
+    await assertion
+
+    // A plain error / non-timeout value is NOT classified as a timeout — the
+    // retry fail-fast must not over-broaden onto genuine transient drops.
+    expect(isTimeoutError(new Error('ECONNRESET'))).toBe(false)
+    expect(isTimeoutError({ isTimeout: false })).toBe(false)
+    expect(isTimeoutError(null)).toBe(false)
+    expect(isTimeoutError('timed out')).toBe(false)
+  })
+
+  it('WR-03: the bulk PICS bound is strictly larger than the single-app bound (large-library #144 headroom)', () => {
+    expect(STEAM_PICS_BULK_TIMEOUT_MS).toBeGreaterThan(STEAM_PICS_TIMEOUT_MS)
   })
 
   it('resolves with the wrapped promise value when it settles before the bound (happy path — transparent, protects the Electron path)', async () => {
