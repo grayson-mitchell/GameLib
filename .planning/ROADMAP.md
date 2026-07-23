@@ -1126,8 +1126,13 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 31-01-PLAN.md — Settings write path (setSetting/writeConfig) + six confirmed generic reads registered on the sidecar [wave 1]
 - [ ] 31-02-PLAN.md — Real async dialog members (showMessageBox/showErrorBox/showSaveDialog) via rustInvoke + D-04 shell/clipboard logged no-ops [wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 31-03-PLAN.md — 31-PORTED-CHANNELS.md + SEAM.md section 1/3 reconciliation + D-02 accepted-divergence constraint [wave 2]
 
 ---
