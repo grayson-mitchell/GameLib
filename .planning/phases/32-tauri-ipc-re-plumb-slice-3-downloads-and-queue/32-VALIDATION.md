@@ -1,9 +1,9 @@
 ---
 phase: 32
 slug: tauri-ipc-re-plumb-slice-3-downloads-and-queue
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-23
 ---
 
@@ -80,11 +80,11 @@ created: 2026-07-23
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies (docs + dual-build smoke are the declared Manual-Only exceptions)
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (`downloadQueueFlows.test.ts` + relay-reach assertions)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 90s (full suite)
-- [ ] `nyquist_compliant: true` set in frontmatter (flip once Wave 0 test files exist and the map is fully green-able)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (docs + dual-build smoke are the declared Manual-Only exceptions)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (`downloadQueueFlows.test.ts` + relay-reach assertions — created RED in 32-01 Task 1, made GREEN in 32-01 Task 2 / 32-02 Task 2)
+- [x] No watch-mode flags
+- [x] Feedback latency < 90s (full suite)
+- [x] `nyquist_compliant: true` set in frontmatter (Wave 0 test file scaffolded by 32-01 Task 1; map is fully green-able)
 
-**Approval:** pending
+**Approval:** approved 2026-07-23

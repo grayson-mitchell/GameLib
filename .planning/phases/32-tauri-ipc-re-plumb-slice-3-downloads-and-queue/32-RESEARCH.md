@@ -658,7 +658,14 @@ re-verify (a single grep) immediately before implementation.
      to running the real backend code" framing) and add a regression test asserting each status
      string is pushed exactly once per install, not twice.
 
-2. **Does `resumeCurrentDownload()`'s `initQueue()` call correctly target a Steam item that was
+2. **(RESOLVED — 2026-07-23)** Same-session pause→resume `currentElement` re-target is now
+   covered by an explicit test in `downloadQueueFlows.test.ts` (Plan 32-01 Task 1 "queue-op
+   pause→resume SEQUENCE" behavior/acceptance bullet): a same-session `pauseCurrentDownload()` →
+   `resumeCurrentDownload()` asserts resume re-enters `initQueue()` on the correct (non-stale)
+   `currentElement` via the plain Resume-button path, distinct from `downloadqueue.test.ts:317`'s
+   `isStartup=true` startup-deferral coverage. Original question retained below for provenance.
+
+   **Does `resumeCurrentDownload()`'s `initQueue()` call correctly target a Steam item that was
    `pauseCurrentDownload()`'d (not cancelled) — i.e. does `currentElement` still point at the
    right queue head after a pause?**
    - What we know: `pauseCurrentDownload()` calls `stopCurrentDownload()` (which aborts) but does
