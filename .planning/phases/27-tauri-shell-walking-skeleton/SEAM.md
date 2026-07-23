@@ -267,6 +267,56 @@ The `sidecar:store-snapshot` channel referenced in item 4 of "The four wired cha
 this subsection's eager half; `sidecar:store-fetch`/`storeSet`/`storeDelete`/`storeNew`/
 `storeChanged` are the channels Phase 29 added on top of it.
 
+### Lifecycle cluster: dialog/Notification/shell/app + G-30-02 install-hang fix (real, Phase 33) — CLOSED, moved out of §3
+
+**Ported in Phase 33** (`tauri-lifecycle-cluster-app-dialog-window-notifications-tray`, plans
+33-01..33-05). Full enumerated list in
+`.planning/phases/33-tauri-lifecycle-cluster-app-dialog-window-notifications-tray/33-PORTED-CHANNELS.md`.
+Unlike Phase 30/31/32, this phase does not add to the sidecar-endpoint tally below — it is a
+cluster-completion phase, not another IPC-endpoint slice.
+
+- **`dialog.showMessageBox`** — real multi-button behavior via `MessageDialogButtons::OkCancelCustom`
+  on the existing `RUST_DIALOG_MESSAGE` `rustInvoke` channel, retiring the Phase 31 Plan 04 CR-01
+  `{response:-1}` safe-sentinel stopgap. Per-caller `cancelId` fail-safe (D-07): `askForceUninstall`
+  and `promptI386Recovery` each declare their OWN safe button index — a shared positional heuristic
+  would have been wrong for one of them, since their two real destructive-confirm button orders are
+  opposite. Never rejects (total-method convention extended).
+- **`Notification`** — first real behavior this phase, via the new first-party
+  `tauri-plugin-notification` Cargo/npm plugin. `isSupported()` → `true`; `.show()` forwards
+  title/body through a new `notification_show` `rustInvoke` channel.
+- **`shell.showItemInFolder`/`openPath`** — real, via two new `rustInvoke` channels backed by
+  `tauri-plugin-opener` (already installed for `open_external`) — no new Cargo dependency needed.
+  `shell.trashItem` stays a LOGGED no-op (see Accepted Constraints below) — no vetted Tauri v2 plugin
+  has trash capability, confirmed by reading the installed `tauri-plugin-fs` 2.5.1 crate source.
+- **`app.quit`/`exit`/`relaunch`** — real, via two new `rustInvoke` channels (`RUST_APP_EXIT`/
+  `RUST_APP_RELAUNCH`) forwarding to Tauri's `AppHandle::exit()`/`restart()`. Fixes the "zombie
+  sidecar" gap where the real Tauri process never actually exited or relaunched. Tray, custom-protocol
+  registration, and updater hooks remain deferred (see §3 row 1, annotated Phase 34/35) — this closes
+  only the lifecycle-essentials slice of the `app` cluster, not the whole 26-file touch-count.
+- **The G-30-02 install-hang fix (headline item, hardware-proven live)** — the parked install-hang
+  (Phase 30) is resolved: `installQueueElement`'s finally-guard now clears the badge and shows a
+  failure dialog on Steam `status:'error'`, a bounded watchdog force-terminates a never-settling
+  `.install()` await, and `ensureConnected()` self-heals a stale-but-rehydrated CM socket via a
+  bounded canary probe + `client.relog()`. Proven on real hardware under `npm run tauri:dev` (D-13
+  gate, 33-05): a Steam install (Baldur's Gate II: Enhanced Edition) never hung, reached
+  `Connectivity: online`, and completed. Three latent Tauri-parity gaps were found and fixed DURING
+  this live gate (not in the original 33-01..33-04 plan text) — see Accepted Constraints below for
+  the `net`/connectivity item; the notification-capability-grant and `windowControlsOverlay` fixes
+  are recorded in `33-PORTED-CHANNELS.md`, not repeated here as they add no new deferred-backlog row.
+- **`net`/connectivity — moved toward real.** `initOnlineMonitor()` is now wired into the sidecar's
+  own `bootstrap.ts` `init()` (once-guarded), not only Electron's `main.ts` `app.whenReady()` which
+  the headless sidecar never runs; the electron stub's `net.isOnline()` now exists and falls through
+  to the real axios `pingSites()` check. Before this fix (found during the 33-05 live gate, not
+  planned in 33-01..33-04), the sidecar was permanently "offline" and every install failed fast with
+  "App offline, skipping install" — this is why §3 row 8 below is annotated, not fully closed
+  (`screen`/`Menu` remain untouched; only `net`'s online-monitor half moved).
+
+**Claim level (Phase 33): mixed.** The `dialog`/`Notification`/`shell`/`app` forwards are
+"wired and unit-proven" (jest: `dialogStub.test.ts`, `lifecycleStub.test.ts`), same claim level as
+Phase 31/32. The G-30-02 fix and the three live-gate gap fixes are **hardware-proven** — the first
+time this document can make that stronger claim for any row, via the 33-05 D-13 human-approved
+live gate.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
@@ -303,15 +353,15 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
-| 1 | `app` (lifecycle beyond getPath/getName) | 26 | Real Tauri lifecycle equivalents (`tauri::App`, window events) for `main.ts`/`main_window.ts`/updater/tray/protocol registration |
-| 2 | `dialog` | 9 | **Mostly closed, Phase 31 — `showMessageBox` deliberately NOT wired (CR-01, Phase 31 Plan 04).** `showErrorBox`/`showSaveDialog` are real (`dialog_message`/`dialog_save` rustInvoke channels), joining `dialog_open` (Phase 30). `showMessageBox` is a safe-sentinel logged no-op (resolves `{response:-1}`, never forwards, never rejects) — forwarding to Rust's OK-only dialog would auto-confirm destructive multi-button backend confirms (`promptI386Recovery`, `askForceUninstall`); real multi-button behavior deferred to Phase 33 (lifecycle/dialog cluster). `showMessageBoxSync`/`showOpenDialogSync` also remain deferred — logged no-ops, sync-over-async, Phase 33 |
-| 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts |
-| 4 | `shell` (remaining methods) | 5 | `showItemInFolder`/`trashItem`/`openPath` via Tauri `opener`/`fs` plugins |
+| 1 | `app` (lifecycle beyond getPath/getName) | 26 | **Partially closed, Phase 33** — `quit`/`exit`/`relaunch` are now real (`AppHandle::exit()`/`restart()` via new `rustInvoke` channels), fixing the "zombie sidecar" gap. Still deferred: updater hooks and tray/protocol registration (`main.ts`/`main_window.ts`'s remaining lifecycle surface) — target **Phase 34/35** |
+| 2 | `dialog` | 9 | **Fully closed, Phase 33.** `showMessageBox` now real multi-button (`MessageDialogButtons::OkCancelCustom`, per-caller `cancelId` fail-safe, D-07) — retires the Phase 31 CR-01 safe-sentinel stopgap. Joins `showErrorBox`/`showSaveDialog` (Phase 31) and `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, no in-scope caller re-examined this phase, target **Phase 35** |
+| 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts — target **Phase 34/35** |
+| 4 | `shell` (remaining methods) | 5 | **Mostly closed, Phase 33** — `showItemInFolder`/`openPath` now real via `tauri-plugin-opener`. `trashItem` stays a LOGGED no-op (Accepted Constraint below, no vetted Tauri v2 plugin has trash capability) — target **Phase 35 revisit** |
 | 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
-| 6 | `nativeImage` | 4 | Tauri `image`/icon APIs, only needed once tray/notifications are ported |
-| 7 | `Notification` | 3 | Tauri `notification` plugin |
-| 8 | `session`/`screen`/`net`/`Menu` | 2 each | `session`/`powerSaveBlocker` are the two "soft spots" spike 011 flagged with no full Tauri v2 parity yet — explicitly out of scope until Tauri closes that gap |
-| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | Case-by-case Tauri equivalents; low volume, low urgency |
+| 6 | `nativeImage` | 4 | Tauri `image`/icon APIs, only needed once tray/notifications need custom icons (the Phase 33 notification port uses no custom image) — target **Phase 34/35** |
+| 7 | `Notification` | 3 | **Fully closed, Phase 33** — real via the new `tauri-plugin-notification` plugin (`isSupported()` → `true`, `.show()` forwards title/body) |
+| 8 | `session`/`screen`/`net`/`Menu` | 2 each | **Partially closed, Phase 33** — `net`'s online-monitor half moved toward real (`initOnlineMonitor()` wired into sidecar `bootstrap.ts`, `net.isOnline()` added to the stub); `session` stays a LOGGED no-op (Accepted Constraint below, D-09). `screen`/`Menu` untouched — target **Phase 34/35** |
+| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | **`powerSaveBlocker` upgraded to a LOGGED no-op this phase** (Accepted Constraint below, D-08); `clipboard`/`protocol`/`Tray`/`ipcMain` (remaining) untouched — case-by-case Tauri equivalents, low volume, low urgency, target **Phase 34/35** |
 
 **The IPC re-plumb (the headline cost):** ~208 of the 220 total IPC endpoints (158 `addHandler` +
 62 `addListener`, `AsyncIPCFunctions` ≈335 typed entries per spike 009) remain on the Electron
@@ -342,15 +392,17 @@ mechanism, not a general subscription API exposed to callers), and flipping the 
 path (`misc.ts`'s `SECRET_STORE_KEYS` deny-list) onto the same fail-closed allow-list the Tauri
 path now uses — deferred to the Phase 35 Electron cutover per D-08 below.
 
-**The 44-file lifecycle/dialog/tray/updater/protocol cluster:** beyond `app.getPath`/`getName` and
-the opener path, none of this cluster has real Tauri-side behavior yet — see the ranked table
-above.
+**The 44-file lifecycle/dialog/tray/updater/protocol cluster:** beyond `app.getPath`/`getName`, the
+opener path, and Phase 33's dialog/Notification/shell/app-lifecycle closures (see the ranked table
+above and the Phase 33 §1 subsection), tray/protocol/updater/multi-window/`nativeImage` still have
+no real Tauri-side behavior.
 
-**Also deferred (per 27-CONTEXT, unchanged this phase):**
+**Also deferred (per 27-CONTEXT):**
 - Windows/Linux Tauri packaging, auto-update, code signing, notarization.
 - Electron removal from the repo — the Electron build (`npm start`) stays intact and byte-identical.
-- `session`/`powerSaveBlocker` parity shims, multi-account flows, the macOS Steam bridge (Idea B,
-  Phase 24 — an unrelated arc).
+- `session`/`powerSaveBlocker` — **upgraded to LOGGED no-ops in Phase 33** (D-08/D-09, Accepted
+  Constraints below); still no real Tauri v2 parity behind either. Multi-account flows and the
+  macOS Steam bridge (Idea B, Phase 24) remain unrelated, untouched arcs.
 - `launcher.ts`'s full Wine/GameConfig/DownloadManager pipeline and the other 5 store managers
   (GOG/Legendary/Nile/Zoom/Sideload) — `steamFlowRegistration.ts` deliberately imports only
   `SteamLibraryManager`/`SteamGame`, not `storeManagers/index.ts`'s `libraryManagerMap`.
@@ -426,6 +478,22 @@ above.
   for the Tauri UI's own correctness. Cross-referenced in `settingsFlowRegistration.ts`'s block
   comment above the write path. Converge at the Phase 35 Electron cutover, per the Phase 28 D-11
   precedent for the same class of deferred reunification.
+- **D-08/D-09 (Phase 33) — `session`/`powerSaveBlocker` accepted parity gaps (ACCEPTED, TEMPORARY).**
+  Spike 011 flagged both as "soft spots" with no full Tauri v2 parity available. Phase 33 did not
+  close either — it upgraded both from silent-or-absent to LOGGED no-ops so a future reachable call
+  fails loudly (a `console.warn` naming the gap) instead of an opaque `undefined`/`TypeError`.
+  `session` was previously not even exported by `electronStub.ts`; it now has a `fromPartition()`
+  stub. `powerSaveBlocker.start` now logs instead of silently doing nothing. Neither has real Tauri
+  behavior. Revisit at Phase 35 if/when Tauri v2 closes the parity gap upstream. Full enumerated
+  detail in `33-PORTED-CHANNELS.md`.
+- **D-11 (Phase 33) — WR-02 non-Steam DLC fan-out re-scope (ACCEPTED, document-only).** The
+  sidecar's `installQueueElement` install path is Steam-focused, not runner-generic for DLCs. A
+  non-Steam runner (Epic/GOG/Amazon) reaching this path with `installDlcs` populated logs a
+  `logWarning` naming the re-scope explicitly (`downloadmanager/utils.ts`) rather than silently
+  dropping the DLC fan-out. This is a declared boundary matching the phase's stated Steam-focused
+  scope, not a discovered gap — the Epic/GOG DLC fan-out logic itself is unported and untouched.
+  Not scheduled for a future phase; revisit only if a non-Steam DLC install becomes a real user
+  flow requirement.
 
 ---
 
