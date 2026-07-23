@@ -107,6 +107,25 @@ jest.mock('electron-store', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
+// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
+// (which drives the real, unmocked RPC/handler graph) never makes a real network call.
+jest.mock('axios', () => {
+  const mockInstance = {
+    get: jest.fn(() => Promise.resolve({ data: {} })),
+    head: jest.fn(() => Promise.resolve({ status: 200 }))
+  }
+  return {
+    __esModule: true,
+    default: {
+      head: jest.fn(() => Promise.resolve({ status: 200 })),
+      create: jest.fn(() => mockInstance)
+    }
+  }
+})
+
 // ── backend/constants/environment mock — pins a deterministic branch
 // regardless of the host OS running this test (mirrors installFlows.test.ts /
 // settingsFlows.test.ts) ─────────────────────────────────────────────────────

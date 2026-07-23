@@ -77,6 +77,27 @@ jest.mock('electron-store', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
+// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
+// (which drives the real, unmocked RPC/handler graph, including the real `backend/utils` below)
+// never makes a real network call; `.create` is also stubbed for `backend/utils.ts`'s
+// module-scope `axiosClient` singleton (real here, per the `jest.requireActual` below).
+jest.mock('axios', () => {
+  const mockInstance = {
+    get: jest.fn(() => Promise.resolve({ data: {} })),
+    head: jest.fn(() => Promise.resolve({ status: 200 }))
+  }
+  return {
+    __esModule: true,
+    default: {
+      head: jest.fn(() => Promise.resolve({ status: 200 })),
+      create: jest.fn(() => mockInstance)
+    }
+  }
+})
+
 // ── backend/utils — preserve every real export (notably sendGameStatusUpdate,
 // the D-06 push this suite asserts on) except getSteamLibraries, which would
 // otherwise scan a real on-disk Steam install in CI ─────────────────────────

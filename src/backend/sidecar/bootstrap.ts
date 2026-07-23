@@ -40,6 +40,15 @@ import {
 } from './sidecarRpc'
 import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
+// Deviation (Rule 1 — bug, found live during the 33-05 install-hang gate,
+// fix/steam-native-install-stability): `initOnlineMonitor()` was previously wired ONLY at
+// `main.ts`'s `app.whenReady()`, which the headless sidecar never runs. With no init, `isOnline()`
+// (backend/online_monitor.ts) read `undefined === 'online'` forever, so
+// `downloadmanager/utils.ts`'s pre-install guard rejected EVERY Steam install instantly with
+// "App offline, skipping install" even when fully online. Paired with the sidecar
+// `net.isOnline()` stub (electronStub.ts) so the very first status check falls through to the
+// real `pingSites()` ping instead of pinning `'offline'` permanently.
+import { initOnlineMonitor } from '../online_monitor'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -73,6 +82,15 @@ import { initHeadless as initLogger } from '../logger'
  * `process.stdin`/`process.stdout` defaults.
  */
 let loggerInitialized = false
+// Guards initOnlineMonitor() (fix/steam-native-install-stability, 33-05 live-gate gap): unlike
+// loggerInitialized's target (initLogger() is naturally idempotent — it just reassigns a
+// singleton), initOnlineMonitor() calls `addListener`/`addHandler`, which push onto
+// electronStub's `ipcMain.on` listener arrays every call. Without this guard, each repeated
+// init() (bootstrap.test.ts / skeletonFlows.test.ts call it many times per file with fresh
+// streams; production calls it once) would register another `connectivity-changed`/
+// `set-connectivity-online` listener, firing `setStatus()` (and a fresh `pingSites()` ping) once
+// per accumulated registration on every subsequent event.
+let onlineMonitorInitialized = false
 
 export function init(
   input: Readable = process.stdin,
@@ -96,5 +114,15 @@ export function init(
   // only fire from the RPC loop below, never at module-import time) so no handler ever
   // observes the default ElectronTokenStore in the sidecar build.
   installTokenStore(new SidecarKeyringTokenStore())
+  // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
+  // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
+  // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
+  // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
+  // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
+  // ask for it.
+  if (!onlineMonitorInitialized) {
+    initOnlineMonitor()
+    onlineMonitorInitialized = true
+  }
   output.write(`${READY_SENTINEL}\n`)
 }

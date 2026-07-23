@@ -11,7 +11,20 @@
  *
  * Follows `bootstrap.test.ts`'s real-stream convention: `stream.PassThrough` pairs, no
  * mocking of `node:fs`/`electron`, `collectLines()`/`flush()` helpers copied verbatim.
+ *
+ * `backend/online_monitor` is mocked for the same reason `bootstrap.test.ts` mocks it
+ * (fix/steam-native-install-stability, 33-05 live-gate gap): `init()` now calls the real
+ * `initOnlineMonitor()`, which reads `net.isOnline()` from `electron` -- absent on this file's
+ * default Jest automock (`src/backend/__mocks__/electron.ts`). See `bootstrap.test.ts`'s
+ * header for the full rationale; `onlineMonitorWiring.test.ts` is the dedicated suite that
+ * exercises the real, unmocked wiring.
  */
+jest.mock('../../online_monitor', () => ({
+  initOnlineMonitor: jest.fn(),
+  isOnline: jest.fn(() => true),
+  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
+  onConnectivityChange: jest.fn()
+}))
 
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
