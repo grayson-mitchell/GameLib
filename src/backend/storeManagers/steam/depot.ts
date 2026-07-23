@@ -56,6 +56,7 @@ import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
 import { classifyDepotError, isNonRetryableDepotError } from './depotErrors'
 import { summarizeDepotFlags, formatDepotFlagsCensus } from './depot/flagsCensus'
+import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -409,7 +410,14 @@ async function getOwnedSets(client: SteamUserDepotClient): Promise<OwnedSets> {
     .map((l) => (l as { package_id?: number }).package_id)
     .filter((id): id is number => typeof id === 'number')
 
-  const { packages } = await client.getProductInfo([], packageIds, true)
+  // G-30-02 (30-07): bounded so a stale-but-present CM socket rejects within
+  // STEAM_PICS_TIMEOUT_MS instead of parking this await forever — the reject
+  // is a normal retryable throw withPlanBuildRetry already handles.
+  const { packages } = await withTimeout(
+    client.getProductInfo([], packageIds, true),
+    STEAM_PICS_TIMEOUT_MS,
+    'getOwnedSets getProductInfo'
+  )
 
   const apps = new Set<number>()
   const depots = new Set<number>()
@@ -427,7 +435,12 @@ async function fetchAppInfo(
   client: SteamUserDepotClient,
   numericAppId: number
 ): Promise<SteamAppInfo> {
-  const { apps } = await client.getProductInfo([numericAppId], [], true)
+  // G-30-02 (30-07): bounded — see getOwnedSets above.
+  const { apps } = await withTimeout(
+    client.getProductInfo([numericAppId], [], true),
+    STEAM_PICS_TIMEOUT_MS,
+    'fetchAppInfo getProductInfo'
+  )
   const entry = apps?.[numericAppId]
   if (!entry) {
     throw new Error(
@@ -444,7 +457,12 @@ async function fetchDlcInfos(
   const dlcIds = dlcAppIds(appinfo)
   if (!dlcIds.length) return {}
 
-  const { apps } = await client.getProductInfo(dlcIds, [], true)
+  // G-30-02 (30-07): bounded — see getOwnedSets above.
+  const { apps } = await withTimeout(
+    client.getProductInfo(dlcIds, [], true),
+    STEAM_PICS_TIMEOUT_MS,
+    'fetchDlcInfos getProductInfo'
+  )
   const out: Record<string, SteamAppInfo> = {}
   for (const id of dlcIds) {
     const entry = apps?.[id]
@@ -521,26 +539,43 @@ async function fetchDepotPlanEntry(
   const numericDepotId = Number(descriptor.id)
   const numericOwnerAppId = Number(descriptor.ownerAppId)
 
-  const key = await new Promise<Buffer>((resolve, reject) => {
-    client.getDepotDecryptionKey(numericOwnerAppId, numericDepotId, (err, k) =>
-      err
-        ? reject(wrapDepotKeyError(err, descriptor, 'decryption key'))
-        : resolve(k)
-    )
-  })
+  // G-30-02 (30-07, checker finding #3 extension): these bare callback-Promise
+  // CM round-trips are the SAME call-class as getProductInfo above — a socket
+  // going stale MID-buildDepotPlan (after the earlier getProductInfo calls
+  // already succeeded) could otherwise hang here just as easily. Bounded so a
+  // stale-but-present CM socket rejects within STEAM_PICS_TIMEOUT_MS instead
+  // of parking this await forever.
+  const key = await withTimeout(
+    new Promise<Buffer>((resolve, reject) => {
+      client.getDepotDecryptionKey(
+        numericOwnerAppId,
+        numericDepotId,
+        (err, k) =>
+          err
+            ? reject(wrapDepotKeyError(err, descriptor, 'decryption key'))
+            : resolve(k)
+      )
+    }),
+    STEAM_PICS_TIMEOUT_MS,
+    `fetchDepotPlanEntry:${descriptor.id} getDepotDecryptionKey`
+  )
 
-  const raw = await new Promise<Buffer>((resolve, reject) => {
-    client.getRawManifest(
-      numericOwnerAppId,
-      numericDepotId,
-      descriptor.manifest,
-      'public',
-      (err, m) =>
-        err
-          ? reject(wrapDepotKeyError(err, descriptor, 'manifest'))
-          : resolve(m)
-    )
-  })
+  const raw = await withTimeout(
+    new Promise<Buffer>((resolve, reject) => {
+      client.getRawManifest(
+        numericOwnerAppId,
+        numericDepotId,
+        descriptor.manifest,
+        'public',
+        (err, m) =>
+          err
+            ? reject(wrapDepotKeyError(err, descriptor, 'manifest'))
+            : resolve(m)
+      )
+    }),
+    STEAM_PICS_TIMEOUT_MS,
+    `fetchDepotPlanEntry:${descriptor.id} getRawManifest`
+  )
 
   const parsed = parser.parse(raw)
   const files: DepotPlanFile[] = (parsed.files ?? []).map((f) => ({
@@ -2066,12 +2101,18 @@ async function getContentServerHosts(
   // BEFORE downloadDepotFiles's first byte — previously unmeasured, and a candidate
   // for the "stuck at 0%" gap the buildDepotPlan-only timing couldn't account for.
   const start = Date.now()
-  const servers = await new Promise<RawContentServer[]>(
-    (resolvePromise, reject) => {
+  // G-30-02 (30-07, checker finding #3 extension): bounded — same call-class
+  // and rationale as fetchDepotPlanEntry's getDepotDecryptionKey/getRawManifest
+  // above; a stale CM socket here would otherwise hang the pre-download phase
+  // just as easily as a stale getProductInfo call.
+  const servers = await withTimeout(
+    new Promise<RawContentServer[]>((resolvePromise, reject) => {
       client.getContentServers(numericAppId, (err, s) =>
         err ? reject(err) : resolvePromise(s)
       )
-    }
+    }),
+    STEAM_PICS_TIMEOUT_MS,
+    'getContentServerHosts getContentServers'
   )
   // [Timing] debug/steam-install-slow-start diagnostic lead (a) — ONE-TIME raw
   // dump of the directory response BEFORE we reduce it below. Kept (cycle 5):

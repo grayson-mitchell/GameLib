@@ -19,6 +19,7 @@ import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
+import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 
 /** Numeric-only guard for appId before any PICS lookup (T-21-05 — reused from
  *  games.ts's buildSteamProtocolUrl / bottle.ts's dispatchToBottledSteam). */
@@ -158,7 +159,14 @@ async function fetchInstalldir(appId: string): Promise<string | undefined> {
   const start = Date.now()
   try {
     const numericAppId = Number(appId)
-    const { apps } = await client.getProductInfo([numericAppId], [], true)
+    // G-30-02 (30-07): bounded so a stale-but-present CM socket rejects
+    // within STEAM_PICS_TIMEOUT_MS instead of parking this await forever —
+    // the catch below already turns any reject into a benign `undefined`.
+    const { apps } = await withTimeout(
+      client.getProductInfo([numericAppId], [], true),
+      STEAM_PICS_TIMEOUT_MS,
+      'fetchInstalldir getProductInfo'
+    )
     const entry = apps?.[numericAppId]
     const appinfo = entry?.appinfo as unknown as AppInstallDirInfo | undefined
     logInfo(

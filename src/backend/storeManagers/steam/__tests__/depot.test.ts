@@ -969,6 +969,103 @@ describe('buildDepotPlan', () => {
       }
     })
   })
+
+  // ── G-30-02 (30-07 gap closure) ────────────────────────────────────────
+  // A never-settling steam-user CM call (getProductInfo OR
+  // getDepotDecryptionKey/getRawManifest — the same bare, un-timed
+  // callback-Promise call-class) must no longer hang buildDepotPlan forever.
+  // FAKE-TIMER DISCIPLINE: scoped to this describe block ONLY (see the
+  // suite-wide note at the progress-heartbeat block below, which documents
+  // why full fake timers are avoided elsewhere in this file — real
+  // DecompressPool worker_threads). buildDepotPlan/fetchDepotPlanEntry never
+  // touch DecompressPool, so fake timers are safe here in isolation.
+  describe('G-30-02: pre-download CM calls are bounded by withTimeout', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('a never-settling getProductInfo makes buildDepotPlan REJECT within the bounded window instead of hanging', async () => {
+      jest.useFakeTimers()
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      // fetchAppInfo (the first withPlanBuildRetry step in buildDepotPlan)
+      // never settles on every attempt — simulates a CM socket that is
+      // present but unresponsive to every PICS request.
+      jest
+        .mocked(fakeClient.getProductInfo)
+        .mockImplementation(() => new Promise(() => {}))
+
+      const rejection = expect(
+        buildDepotPlan(APP_ID, BASE_OPTS)
+      ).rejects.toThrow(/getProductInfo timed out/)
+
+      // Advance past every bounded attempt (STEAM_PICS_TIMEOUT_MS x
+      // PLAN_BUILD_MAX_ATTEMPTS) plus the real delay() backoff between
+      // attempts — advanceTimersByTimeAsync flushes microtasks between each
+      // due timer so the retry loop's ensureConnected()/delay() calls are
+      // stepped through along with the withTimeout rejections.
+      await jest.advanceTimersByTimeAsync(300000)
+      await rejection
+
+      expect(fakeClient.getProductInfo).toHaveBeenCalledTimes(
+        PLAN_BUILD_MAX_ATTEMPTS
+      )
+    })
+
+    it('a healthy (fast-resolving) getProductInfo is unaffected — buildDepotPlan completes normally (happy path unchanged)', async () => {
+      // Deliberately NO fake timers here — this proves the wrapper is
+      // transparent on the healthy path with real timers, protecting the
+      // Electron build's install flow.
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([])
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      expect(plan.depots).toEqual([])
+    })
+
+    it('EXTENDED coverage (checker finding #3): a never-settling getDepotDecryptionKey on the fetchDepotPlanEntry path also produces a bounded reject, NOT a hang — a socket going stale MID-buildDepotPlan is bounded too', async () => {
+      jest.useFakeTimers()
+      const fakeClient = makeFakeClient()
+      jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+      jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as never)
+      // getProductInfo (fetchAppInfo/getOwnedSets/fetchDlcInfos) resolves
+      // normally so execution actually REACHES the depot-manifest fetch —
+      // only fetchDepotPlanEntry's getDepotDecryptionKey hangs, simulating
+      // the socket going stale mid-buildDepotPlan (after the earlier PICS
+      // calls already succeeded).
+      jest
+        .mocked(selectAllDepots)
+        .mockReturnValue([
+          {
+            id: '111',
+            manifest: '9007199254740993',
+            size: 0,
+            ownerAppId: '12345'
+          }
+        ])
+      jest
+        .mocked(fakeClient.getDepotDecryptionKey)
+        .mockImplementation(() => {
+          // Bare callback-Promise CM call that never calls its callback —
+          // simulates the exact hang class this gap closure bounds.
+        })
+
+      const rejection = expect(
+        buildDepotPlan(APP_ID, BASE_OPTS)
+      ).rejects.toThrow(/getDepotDecryptionKey timed out/)
+
+      await jest.advanceTimersByTimeAsync(300000)
+      await rejection
+
+      expect(fakeClient.getDepotDecryptionKey).toHaveBeenCalledTimes(
+        PLAN_BUILD_MAX_ATTEMPTS
+      )
+    })
+  })
 })
 
 /**
