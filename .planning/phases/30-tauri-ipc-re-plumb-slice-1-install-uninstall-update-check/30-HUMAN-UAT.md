@@ -263,13 +263,19 @@ pending: 2
 skipped: 0
 blocked: 0
 
-**Advisory follow-ups from 30-07 code review (30-REVIEW.md — non-blocking, do not gate the live
-retest on these):** WR-01 — the outer 25s `withTimeout` on `resolveSteamInstallTarget` shares the
-inner `fetchInstalldir` bound, so on a `fetchInstalldir` hang the outer timer can convert a benign
-dir-name fallback into a hard failure (give the outer a strictly larger bound or drop it). WR-02 —
-timeout errors carry no `eresult`, so they burn 3 retries → real bound ~75s not 25s. WR-03 — 25s may
-false-trip a healthy-but-slow large-library `getProductInfo` (known issue #144). IN-01 — leftover
-`[Timing]` diagnostics + per-install `JSON.stringify(servers)` dump in touched functions.
+**Advisory follow-ups from 30-07 code review — RESOLVED 2026-07-23 (commits `8894e10e`, `aa5aba43`,
+`all_fixed`, see `30-REVIEW-FIX.md`):** WR-01/WR-02/WR-03 were applied as one coherent bound-design
+change — `withTimeout` now stamps timeout errors `{isTimeout:true}` so `withPlanBuildRetry` fails
+FAST (single bound, not ~3×); bulk/many-appid PICS fetches (`getOwnedSets`/`fetchDlcInfos`) get a
+dedicated `STEAM_PICS_BULK_TIMEOUT_MS = 90000` for the #144 legitimately-slow case while single-app
+paths keep 25s; and the outer `resolveSteamInstallTarget` bound is now `STEAM_PICS_TIMEOUT_MS * 2`
+(50s), strictly larger than the inner `fetchInstalldir` bound so the inner no-hard-fail fallback
+always wins its own race. 37 suites / 1004 tests pass, `tsc --noEmit` clean.
+**Live-retest note:** the new bound values (50s outer, 90s bulk) are tuning judgments — during the
+live retest, sanity-check them against a genuinely large owned library (377 games in this profile)
+to confirm no false-trip on a healthy-but-slow PICS fetch. IN-01 (leftover `[Timing]` diagnostics +
+per-install `JSON.stringify(servers)` dump) was left in place — Info-level, out of scope for this
+fix pass.
 
 ### Summary
 
