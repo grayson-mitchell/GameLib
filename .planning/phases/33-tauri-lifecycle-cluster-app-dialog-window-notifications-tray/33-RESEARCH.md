@@ -751,7 +751,10 @@ relog() {
 
 **If this table is empty:** N/A — see entries above.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three were carried into the plans (33-01/33-02/33-03) during planning + pattern-mapping.
+> Left here for provenance with the resolution inline.
 
 1. **Does the D-10 badge-clear fix alone (without the watchdog/D-02) make the live D-13 retest
    pass?**
@@ -760,27 +763,28 @@ relog() {
    - What's unclear: whether some OTHER never-settling await (not yet identified) also contributes
      — the debug report's own diagnose-only items (stale sidecar binary, bottle-vs-native branch)
      were not independently re-verified in this research pass.
-   - Recommendation: implement all three (D-01b watchdog, D-02 relog, D-10 badge-clear) as
-     CONTEXT.md already directs (defense in depth), then use the D-13 live retest to observe WHICH
-     failure mode (if any) still occurs, rather than trying to pre-determine sufficiency here.
+   - **RESOLVED:** defense-in-depth adopted — all three land (D-10 badge-clear + D-01b watchdog in
+     Plan 33-01, D-02 relog in Plan 33-02). Sufficiency is deliberately settled by the D-13 live
+     retest (Plan 33-05), not pre-determined; the watchdog guarantees the badge can never hang
+     regardless of which await parks.
 
 2. **Should the watchdog be gated to `runner === 'steam'` or left runner-generic?**
    - What we know: `installQueueElement` is genuinely shared with Electron and all runners; no
      evidence of a similar hang class in non-Steam runners was found in this pass.
    - What's unclear: whether GOG/Legendary installs have their own slow-but-legitimate phases this
      research did not audit that a runner-generic watchdog bound might not accommodate.
-   - Recommendation: prefer runner-generic with a generous bound (simpler, no new conditional); if
-     the planner is uncomfortable without auditing every other runner's install timing, gate to
-     `runner === 'steam'` instead — either satisfies D-01/D-11's constraints.
+   - **RESOLVED:** Plan 33-01 uses a runner-generic watchdog with a generous bound (simpler, no new
+     conditional); satisfies D-01/D-11.
 
 3. **Exact `cancelId` retrofit for `askForceUninstall`/`promptI386Recovery`.**
    - What we know: their current safe indices (0 and 1 respectively) were read directly from
      source.
    - What's unclear: whether Electron's real `dialog.showMessageBox` type definitions in this
      codebase's `common/types` already support a `cancelId` field, or whether it needs adding.
-   - Recommendation: check `common/types/ipc.ts`/wherever `ButtonOptions`/`showMessageBox`'s
-     options type is declared during planning; if `cancelId` isn't already typed, add it as part
-     of this phase's D-06/D-07 work.
+   - **RESOLVED:** verified against source during pattern-mapping — `askForceUninstall`
+     (`backend/utils.ts`, destructive=index 1 → `cancelId:0`), `promptI386Recovery`
+     (`steam/library.ts`, destructive=index 0 → `cancelId:1`). Plan 33-03 assigns explicit
+     per-caller `cancelId` values (not a positional heuristic) and adds the type field if absent.
 
 ## Environment Availability
 

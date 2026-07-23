@@ -1168,8 +1168,8 @@ Plans:
 
 **Goal:** Give real Tauri behavior to the 44-file lifecycle cluster that the skeleton left stubbed or no-op: `app` lifecycle beyond `getPath`/`getName` (26 files), full `BrowserWindow`/window management (7), the remaining `shell` methods (`showItemInFolder`/`trashItem`/`openPath`, 5), `nativeImage` (4), `Notification` (3), plus tray, protocol registration, and the updater hooks. `session` and `powerSaveBlocker` are the two soft spots spike 011 flagged with no full Tauri v2 parity — scope them explicitly (resolve, shim, or accept) rather than discovering them at cutover.
 **Depends on:** Phases 30–32 (the endpoint surface those clusters serve must exist first).
-**Requirements:** TBD — mint at `/gsd-plan-phase 33`
-**Plans:** 0 plans
+**Requirements:** REQ-33-01, REQ-33-02, REQ-33-03, REQ-33-04, REQ-33-05, REQ-33-06, REQ-33-07, REQ-33-08, REQ-33-09, REQ-33-10, REQ-33-11
+**Plans:** 6 plans
 
 **Parked-in from Phase 30 — G-30-02 (Tauri Steam install-spinner hang):** clicking Install on a
 Steam title under `npm run tauri:dev` hangs the "installing" badge forever. Phase 30's 30-07 fix
@@ -1182,6 +1182,7 @@ belt-and-suspenders fix). Blocks the Phase 30 Install→Uninstall E2E (Test 4).
 
 **Carried in from Phase 32 code review (32-REVIEW.md, all latent on the not-yet-shipped Tauri build)
 — fold into the G-30-02 install work above:**
+
 - **WR-01** — retiring the Phase 30 D-05a bypass (32-02) means a genuine Steam install *error* no
   longer force-clears the "installing" badge or shows a failure dialog: the shared
   `installQueueElement` force-clear condition (`downloadmanager/utils.ts:139`,
@@ -1190,15 +1191,30 @@ belt-and-suspenders fix). Blocks the Phase 30 Install→Uninstall E2E (Test 4).
   "fix" here means deciding whether to keep strict Electron parity (no special error handling) or
   restore the bypass's richer error surface — a design call, not a mechanical patch. Verifier
   recommends resolving it together with the G-30-02 install-error path.
+
 - **WR-02** — dropping the non-steam-runner guard for "full Electron parity" (32-02) also dropped
   Electron `ipc_handler.ts`'s Legendary/Epic DLC fan-out loop, so a sidecar Epic install with
   `installDlcs` populated silently drops the DLCs. Port the fan-out or re-scope the parity claim.
+
 - **WR-03** — no test drives an `error`/`abort` resolution through the real `install`/`updateGame`
   invoke channels (the coverage gap that let WR-01 ship). Add when the error path is next touched.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 33 to break down) — include G-30-02 install-hang closure (see parked note above) + Phase 32 WR-01/WR-02/WR-03 (see carry-in above)
+**Wave 1**
+
+- [ ] 33-01-PLAN.md — G-30-02 install-error terminal surface: extend `installQueueElement` finally-guard to clear the badge on Steam `status==='error'` (WR-01/D-10) + failure dialog (D-03) + `.install()` watchdog (D-01b); WR-02 non-Steam DLC guard (D-11); error-path regression test (WR-03/D-12)
+- [ ] 33-02-PLAN.md — G-30-02 CM-socket revalidation: `ensureConnected` canary + `client.relog()` (D-02) + surgical PICS-bound gap-audit (D-01a)
+- [ ] 33-03-PLAN.md — `dialog.showMessageBox` real multi-button (D-06) with fail-safe-to-decline `cancelId` (D-07); retrofit `askForceUninstall`/`promptI386Recovery`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 33-04-PLAN.md — cheap-wins cluster: `Notification` + `shell` methods + `app` lifecycle real (D-05); `session`/`powerSaveBlocker` logged no-ops (D-08/D-09)
+- [ ] 33-05-PLAN.md — D-13 live-hardware-proof checkpoint for the G-30-02 install-hang fix (`npm run tauri:dev`)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 33-06-PLAN.md — `33-PORTED-CHANNELS.md` + SEAM §1/§3 update; WR-02 re-scope declaration (checklist step 5/6, D-09)
 
 ---
 
