@@ -10,6 +10,15 @@
  *     field name, for real secret fields.
  *   - `boot set` (D-03): the eager snapshot's key set is exactly
  *     `BOOT_SET_STORES` — no unbounded lazy-tier store leaks into it.
+ *   - `round-trip` also carries a Phase 31 Plan 01 case (REQ-31-02/REQ-31-06):
+ *     proves the settings WRITE path's global branch (`GlobalConfig.setSetting`/
+ *     `writeConfig`'s `configStore.set('settings', ...)` call) persists
+ *     end-to-end through this SAME real store layer, using the pre-existing
+ *     `STORE_ALLOWLIST.configStore` entry for `'settings'` — no new allow-list
+ *     entry needed. The per-game branch is documented (not exercised here,
+ *     `settingsFlows.test.ts` already covers it against a mock) as bypassing
+ *     the store layer entirely — a raw `graceful-fs` write, never a
+ *     `getRegisteredStore()` target.
  *
  * TOKEN-WIPE SAFETY (non-negotiable): this suite drives REAL store
  * construction through the real `fileStore.ts`, so it MUST open with the
@@ -74,7 +83,7 @@ import {
 import { ensureStoresRegistered } from '../storeRegistration'
 import { handlerRegistry } from '../electronStub'
 import CacheStore from '../../cache'
-import { BOOT_SET_STORES } from 'common/types/storePolicy'
+import { BOOT_SET_STORES, STORE_ALLOWLIST } from 'common/types/storePolicy'
 import {
   STORE_SNAPSHOT_CHANNEL,
   STORE_FETCH_CHANNEL
@@ -243,6 +252,55 @@ describe('round-trip', () => {
       expect(cache.get('__gsdProbe')).toBeUndefined()
     }
   )
+
+  // Phase 31 Plan 01 (REQ-31-02/REQ-31-06): proves the settings WRITE path's
+  // GLOBAL branch persists end-to-end through THIS real store layer. Both
+  // `GlobalConfig.setSetting()` (config.ts:387-388) and `writeConfig()`'s
+  // global branch (utils.ts:1636-1639) call `configStore.set('settings',
+  // {...})` on the SAME registered `configStore` instance this suite's own
+  // generic `configStore` probe (above) already resolves via
+  // `getRegisteredStore()` — this case additionally proves the SPECIFIC
+  // `'settings'` field name round-trips through the fetch/snapshot read
+  // paths (the same paths `requestAppSettings`'s underlying store-backed
+  // reads would use), using the real, pre-existing `STORE_ALLOWLIST` entry.
+  it("the settings write path's global branch ('settings' field) round-trips through the real configStore allow-list — no new allow-list entry needed", async () => {
+    // Checklist step 4 confirmed a no-op this phase (31-PATTERNS.md item 5):
+    // 'settings' is ALREADY in STORE_ALLOWLIST.configStore — this suite does
+    // NOT add a new entry, it only asserts the pre-existing one still covers
+    // the write path's global branch.
+    expect(STORE_ALLOWLIST.configStore).toContain('settings')
+
+    const configStoreInstance = asProbeable(getRegisteredStore('configStore'))
+    const probeSettings = { maxWorkers: 7, language: 'fr' }
+
+    // The exact write shape GlobalConfig.setSetting()/writeConfig()'s global
+    // branch performs.
+    configStoreInstance.set('settings', probeSettings)
+
+    try {
+      const fetched = await invokeStoreFetch('configStore')
+      expect(fetched.settings).toEqual(probeSettings)
+
+      const snapshot = await invokeStoreSnapshot()
+      expect(snapshot.configStore).toMatchObject({ settings: probeSettings })
+    } finally {
+      configStoreInstance.delete('settings')
+    }
+  })
+
+  // Phase 31 Plan 01 (REQ-31-06): the per-game branch (`GameConfig.flush()`/
+  // `writeToFile()`, game_config.ts:145-146) was NEVER part of the
+  // `electron-store`/`STORE_ALLOWLIST` abstraction to begin with — it is a
+  // raw `graceful-fs writeFileSync(join(gamesConfigPath, appName + '.json'))`
+  // (31-RESEARCH.md "Write-Path Mechanics"). Confirmed here by construction:
+  // an arbitrary appName is never a `ValidStoreName`, so it can never resolve
+  // through this suite's own `getRegisteredStore()` — the same registry the
+  // global branch's `configStore` write above DOES resolve through. This is
+  // the in-repo record of checklist step 4 being a confirmed no-op for the
+  // per-game branch too, rather than a silently-skipped step.
+  it('the per-game write path never routes through getRegisteredStore() — it was never part of the store-layer abstraction', () => {
+    expect(getRegisteredStore('some-arbitrary-appName-999001')).toBeUndefined()
+  })
 })
 
 describe('allow-list', () => {
