@@ -68,7 +68,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 30: IPC re-plumb slice 1 (install/uninstall/update-check)** - First user-facing domain slice of the ~217 unported endpoints, following SEAM.md's incremental-port checklist (completed 2026-07-22)
 - [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
 - [x] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume (completed 2026-07-23)
-- [ ] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly
+- [x] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly (completed 2026-07-23)
 - [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork
 - [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
 
@@ -1169,7 +1169,7 @@ Plans:
 **Goal:** Give real Tauri behavior to the 44-file lifecycle cluster that the skeleton left stubbed or no-op: `app` lifecycle beyond `getPath`/`getName` (26 files), full `BrowserWindow`/window management (7), the remaining `shell` methods (`showItemInFolder`/`trashItem`/`openPath`, 5), `nativeImage` (4), `Notification` (3), plus tray, protocol registration, and the updater hooks. `session` and `powerSaveBlocker` are the two soft spots spike 011 flagged with no full Tauri v2 parity — scope them explicitly (resolve, shim, or accept) rather than discovering them at cutover.
 **Depends on:** Phases 30–32 (the endpoint surface those clusters serve must exist first).
 **Requirements:** REQ-33-01, REQ-33-02, REQ-33-03, REQ-33-04, REQ-33-05, REQ-33-06, REQ-33-07, REQ-33-08, REQ-33-09, REQ-33-10, REQ-33-11
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 **Parked-in from Phase 30 — G-30-02 (Tauri Steam install-spinner hang):** clicking Install on a
 Steam title under `npm run tauri:dev` hangs the "installing" badge forever. Phase 30's 30-07 fix
@@ -1214,7 +1214,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 33-06-PLAN.md — `33-PORTED-CHANNELS.md` + SEAM §1/§3 update; WR-02 re-scope declaration (checklist step 5/6, D-09)
+- [x] 33-06-PLAN.md — `33-PORTED-CHANNELS.md` + SEAM §1/§3 update; WR-02 re-scope declaration (checklist step 5/6, D-09)
 
 ---
 

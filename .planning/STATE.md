@@ -4,7 +4,7 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Completed 33-04-PLAN.md
-last_updated: "2026-07-23T22:42:47.681Z"
+last_updated: "2026-07-23T23:46:26.447Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 33 (tauri-lifecycle-cluster-app-dialog-window-notifications-tray) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -281,6 +281,7 @@ Closed/parked native-install phases:
 | Phase 33 P02 | ~25min | 2 tasks | 3 files |
 | Phase 33 P03 | 15min | 3 tasks | 5 files |
 | Phase 33 P04 | ~40min | 3 tasks | 8 files |
+| Phase 33 P06 | ~15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -487,6 +488,8 @@ Recent decisions affecting current work:
 - [Phase 33-03]: Used explicit per-caller cancelId fail-safe instead of a positional last-index heuristic -- askForceUninstall and promptI386Recovery have opposite destructive-button orders
 - [Phase 33]: shell.trashItem stays a logged no-op (D-05): tauri-plugin-fs 2.5.1 has no trash capability, confirmed by reading its source directly -- no vetted plugin to wire
 - [Phase 33]: app.exit/quit both forward to RUST_APP_EXIT (AppHandle::exit); app.relaunch forwards to RUST_APP_RELAUNCH (AppHandle::restart) -- fixes the zombie-sidecar gap so the real Tauri process actually exits/relaunches
+- [Phase 33]: Declared the 3 gate gap-fixes (notification capability grant, sidecar online-monitor wiring, windowControlsOverlay guard) found during the 33-05 live gate as first-class rows in 33-PORTED-CHANNELS.md alongside the planned 33-01..33-04 work
+- [Phase 33]: Distinguished proof levels explicitly: dialog/Notification/shell/app forwards are wired-and-unit-proven; the G-30-02 fix and 3 gate gap-fixes are hardware-proven live via the 33-05 D-13 gate
 
 ### Pending Todos
 
@@ -556,7 +559,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T22:42:47.675Z
+Last session: 2026-07-23T23:45:36.132Z
 Stopped at: Completed 33-04-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
