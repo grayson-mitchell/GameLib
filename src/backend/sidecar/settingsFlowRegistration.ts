@@ -45,6 +45,7 @@
 
 import { existsSync, readFileSync } from 'graceful-fs'
 import { cpus } from 'os'
+import { isAbsolute, relative, resolve } from 'path'
 
 import { ipcMain } from './electronStub'
 // Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
@@ -78,7 +79,24 @@ import { getLogFilePath } from '../logger/paths'
 import { getSystemInfo } from '../utils/systeminfo'
 import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
+import { gamesConfigPath } from '../constants/paths'
 import type { AppSettings } from 'common/types'
+
+/**
+ * WR-01 (Phase 31 Plan 04) path-containment guard for the per-game write
+ * branch of `setSetting`/`writeConfig`. `appName` is attacker-influenceable
+ * text routed into a filesystem path (`join(gamesConfigPath, appName +
+ * '.json')` — see `game_config.ts:36,48`), so a traversal `appName` (e.g.
+ * `'../../etc/passwd'`) could otherwise escape `gamesConfigPath`. Mirrors the
+ * `resolve()`+`relative()` containment idiom already proven at
+ * `library.ts:1114-1119` (`locateMachOBinary`) — `join()` alone is NOT
+ * containment, it does not prevent `'../../'` traversal.
+ */
+function isContainedGameConfig(appName: string): boolean {
+  const target = resolve(gamesConfigPath, appName + '.json')
+  const rel = relative(gamesConfigPath, target)
+  return !(rel.startsWith('..') || isAbsolute(rel))
+}
 
 /**
  * Registers the two settings-read invoke handlers. Called once from
@@ -141,6 +159,15 @@ export function registerSettingsFlows(): void {
     if (appName === 'default') {
       GlobalConfig.get().setSetting(key as keyof AppSettings, value)
     } else {
+      // WR-01: drop a path-escaping appName before it reaches
+      // `GameConfig.get(appName)` (which joins appName into a filesystem
+      // path with no containment of its own — game_config.ts:36).
+      if (!isContainedGameConfig(appName)) {
+        process.stderr.write(
+          '[settingsFlowRegistration] setSetting dropped a path-escaping appName\n'
+        )
+        return
+      }
       GameConfig.get(appName).setSetting(key, value)
     }
   })
@@ -153,6 +180,20 @@ export function registerSettingsFlows(): void {
     const { appName, config } = (payload ?? {}) as {
       appName?: string
       config?: Partial<AppSettings>
+    }
+    // WR-01: drop a path-escaping appName before the real writeConfig() runs
+    // (it joins appName into a filesystem path with no containment of its
+    // own — game_config.ts:48 / utils.ts writeConfig). Global branch
+    // (appName === 'default') is unaffected.
+    if (
+      typeof appName === 'string' &&
+      appName !== 'default' &&
+      !isContainedGameConfig(appName)
+    ) {
+      process.stderr.write(
+        '[settingsFlowRegistration] writeConfig dropped a path-escaping appName\n'
+      )
+      return
     }
     return writeConfig(appName as string, config ?? {})
   })

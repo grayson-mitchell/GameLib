@@ -452,6 +452,39 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
     expect(globalConfigInstance.set).not.toHaveBeenCalled()
     expect(globalConfigInstance.flush).not.toHaveBeenCalled()
   })
+
+  // WR-01 (Phase 31 Plan 04): a traversal appName on the per-game setSetting
+  // branch is dropped BEFORE it reaches GameConfig.get(appName).setSetting —
+  // mirrors storeLayer.test.ts:374's traversal-drop assertion precedent.
+  // `setSetting` is a `send` channel (no response frame), so the only
+  // meaningful assertion is that the underlying mock was never invoked.
+  it('WR-01: setSetting (send) for a traversal appName is dropped — GameConfig.get(...).setSetting is never called', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'set-setting-traversal-1', 'setSetting', [
+      { appName: '../../etc/passwd', key: 'language', value: 'fr' }
+    ])
+    await flush()
+
+    expect(mockedGameConfigGet).not.toHaveBeenCalledWith('../../etc/passwd')
+  })
+
+  // WR-01 (Phase 31 Plan 04): a traversal appName on the per-game writeConfig
+  // branch is dropped BEFORE the real writeConfig() runs — no write outside
+  // gamesConfigPath, and the invoke still resolves without throwing (a
+  // dropped frame is not an error).
+  it('WR-01: writeConfig (invoke) for a traversal appName is dropped — resolves without throwing and never reaches GameConfig', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'write-config-traversal-1', 'writeConfig', [
+      { appName: '../../etc/passwd', config: { language: 'fr' } }
+    ])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'write-config-traversal-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(response?.ok).toBe(true)
+    expect(mockedGameConfigGet).not.toHaveBeenCalledWith('../../etc/passwd')
+  })
 })
 
 describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {

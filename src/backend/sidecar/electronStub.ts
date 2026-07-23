@@ -201,10 +201,10 @@ export const dialog = {
       )
     }
   },
-  showMessageBox: async (): Promise<{
-    response: number
-    checkboxChecked: boolean
-  }> => {
+  showMessageBox: async (
+    _windowOrOptions?: unknown,
+    _maybeOptions?: unknown
+  ): Promise<{ response: number; checkboxChecked: boolean }> => {
     // Deliberately un-ported (Phase 31 Plan 04, CR-01 de-scope) -- see the dialog-block
     // docstring above for the full rationale. Never forwards to RUST_DIALOG_MESSAGE, never
     // rejects/throws. Resolves the safe sentinel `{ response: -1 }`: -1 is neither 0
