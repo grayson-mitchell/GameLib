@@ -1,6 +1,8 @@
 /**
- * Unit tests for the sidecar's real `dialog.showOpenDialog` folder-picker path (Phase 30
- * Plan 03 — Task 3), plus a by-construction proof that `notify()`'s no-op is logged.
+ * Unit tests for the sidecar's real `dialog.*` forwarding paths (Phase 30 Plan 03's
+ * `showOpenDialog` folder-picker, Phase 31 Plan 02's `showMessageBox`/`showErrorBox`/
+ * `showSaveDialog`), plus the D-04 logged-no-op upgrades (shell.showItemInFolder,
+ * clipboard.writeText) and a by-construction proof that `notify()`'s no-op is logged.
  *
  * There is no real Rust process here — `requestRustInvoke` (from `../sidecarRpc`) is mocked
  * with a small in-memory per-channel program, mirroring `keyringTokenStore.test.ts`'s
@@ -9,7 +11,7 @@
  *
  * `jest.mock('electron', ...)` routes Jest's own module resolution at the REAL `electronStub.ts`
  * (mirrors `skeletonFlows.test.ts`/`electronUntouched.test.ts`'s three-way mock preamble) so
- * `dialog.showOpenDialog`'s actual forwarding logic runs, not the generic backend-wide
+ * the dialog members' actual forwarding logic runs, not the generic backend-wide
  * `src/backend/__mocks__/electron.ts` manual mock. `jest.mock('os', ...)` keeps any import-time
  * path resolution inside electronStub.ts's module graph away from the developer's real config
  * directory (same gotcha `electronUntouched.test.ts`'s header documents).
@@ -43,13 +45,15 @@ jest.mock('../sidecarRpc', () => ({
 
 // NOTE: electronStub.ts deliberately does NOT import 'backend/logger' (it would reintroduce
 // the app.getPath() import-time wall bootstrap.ts's docstring warns about -- see the note above
-// electronStub.ts's imports) -- its one error path uses `console.warn` directly, spied on below.
+// electronStub.ts's imports) -- its error paths use `console.warn` directly, spied on below.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { dialog } from '../electronStub'
+import { clipboard, dialog, shell } from '../electronStub'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
+  RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
+  RUST_DIALOG_SAVE,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
 
@@ -125,19 +129,208 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
     const [warningArg] = warnSpy.mock.calls[0]
     expect(String(warningArg)).toContain(RUST_DIALOG_OPEN)
   })
+})
 
-  it('the other five dialog.* stub members are unchanged', async () => {
-    expect(dialog.showErrorBox()).toBeUndefined()
-    await expect(dialog.showMessageBox()).resolves.toEqual({
-      response: 0,
-      checkboxChecked: false
+describe('electronStub dialog.showMessageBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+  beforeEach(() => {
+    program = null
+    callLog = []
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
+      callLog.push({ channel, args })
+      if (!program) {
+        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+      }
+      return program.type === 'resolve'
+        ? Promise.resolve(program.value)
+        : Promise.reject(program.error)
     })
-    expect(dialog.showMessageBoxSync()).toBe(0)
-    expect(dialog.showOpenDialogSync()).toBeUndefined()
-    await expect(dialog.showSaveDialog()).resolves.toEqual({
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  it('RUST_DIALOG_MESSAGE is a member of RUST_INVOKE_CHANNELS', () => {
+    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_MESSAGE)).toBe(true)
+  })
+
+  it('maps a true blocking_show() result to { response: 0, checkboxChecked: false } and forwards via RUST_DIALOG_MESSAGE', async () => {
+    program = { type: 'resolve', value: true }
+
+    const result = await dialog.showMessageBox(undefined, {
+      type: 'info',
+      title: 'Title',
+      message: 'Message'
+    })
+
+    expect(result).toEqual({ response: 0, checkboxChecked: false })
+    expect(callLog).toHaveLength(1)
+    expect(callLog[0].channel).toBe(RUST_DIALOG_MESSAGE)
+  })
+
+  it('maps a false blocking_show() result to { response: 1, checkboxChecked: false }', async () => {
+    program = { type: 'resolve', value: false }
+
+    const result = await dialog.showMessageBox(undefined, { message: 'Message' })
+
+    expect(result).toEqual({ response: 1, checkboxChecked: false })
+  })
+
+  it('resolves a safe default and warns (never throws) when requestRustInvoke rejects', async () => {
+    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
+
+    await expect(
+      dialog.showMessageBox(undefined, { message: 'Message' })
+    ).resolves.toEqual({ response: 1, checkboxChecked: false })
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain(RUST_DIALOG_MESSAGE)
+  })
+})
+
+describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+  beforeEach(() => {
+    program = null
+    callLog = []
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
+      callLog.push({ channel, args })
+      if (!program) {
+        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+      }
+      return program.type === 'resolve'
+        ? Promise.resolve(program.value)
+        : Promise.reject(program.error)
+    })
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  it('forwards to RUST_DIALOG_MESSAGE with an error kind and resolves undefined', async () => {
+    program = { type: 'resolve', value: true }
+
+    const result = await dialog.showErrorBox('Title', 'Content')
+
+    expect(result).toBeUndefined()
+    expect(callLog).toHaveLength(1)
+    expect(callLog[0].channel).toBe(RUST_DIALOG_MESSAGE)
+    expect(callLog[0].args[0]).toMatchObject({ kind: 'error' })
+  })
+
+  it('never throws and warns when requestRustInvoke rejects', async () => {
+    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
+
+    await expect(dialog.showErrorBox('Title', 'Content')).resolves.toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain(RUST_DIALOG_MESSAGE)
+  })
+})
+
+describe('electronStub dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+  beforeEach(() => {
+    program = null
+    callLog = []
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
+      callLog.push({ channel, args })
+      if (!program) {
+        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+      }
+      return program.type === 'resolve'
+        ? Promise.resolve(program.value)
+        : Promise.reject(program.error)
+    })
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  it('RUST_DIALOG_SAVE is a member of RUST_INVOKE_CHANNELS', () => {
+    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_SAVE)).toBe(true)
+  })
+
+  it('maps a picked path to { canceled: false, filePath } and forwards via RUST_DIALOG_SAVE', async () => {
+    program = { type: 'resolve', value: '/Users/dev/save.json' }
+
+    const result = await dialog.showSaveDialog(undefined, { defaultPath: 'save.json' })
+
+    expect(result).toEqual({ canceled: false, filePath: '/Users/dev/save.json' })
+    expect(callLog).toEqual([
+      { channel: RUST_DIALOG_SAVE, args: [{ defaultPath: 'save.json' }] }
+    ])
+  })
+
+  it('maps a null (cancelled) result to { canceled: true, filePath: undefined }', async () => {
+    program = { type: 'resolve', value: null }
+
+    const result = await dialog.showSaveDialog(undefined, {})
+
+    expect(result).toEqual({ canceled: true, filePath: undefined })
+  })
+
+  it('resolves { canceled: true } and warns (never throws) when requestRustInvoke rejects', async () => {
+    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
+
+    await expect(dialog.showSaveDialog(undefined, {})).resolves.toEqual({
       canceled: true,
       filePath: undefined
     })
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain(RUST_DIALOG_SAVE)
+  })
+})
+
+describe('electronStub dialog Sync members stay logged no-ops (D-03)', () => {
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  it('showMessageBoxSync stays a logged no-op returning the documented safe default', () => {
+    expect(dialog.showMessageBoxSync()).toBe(0)
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('showOpenDialogSync stays a logged no-op returning the documented safe default', () => {
+    expect(dialog.showOpenDialogSync()).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('electronStub shell/clipboard D-04 logged no-ops (REQ-31-04)', () => {
+  beforeEach(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    warnSpy.mockRestore()
+  })
+
+  it('shell.showItemInFolder logs a warning instead of silently no-oping', () => {
+    shell.showItemInFolder('/Users/dev/Games/game.exe')
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain('showItemInFolder')
+    expect(String(warningArg)).toContain('D-04')
+  })
+
+  it('clipboard.writeText logs a warning instead of silently no-oping', () => {
+    clipboard.writeText('some text')
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    const [warningArg] = warnSpy.mock.calls[0]
+    expect(String(warningArg)).toContain('clipboard.writeText')
+    expect(String(warningArg)).toContain('D-04')
   })
 })
 
