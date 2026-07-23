@@ -31,7 +31,7 @@ use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
@@ -355,6 +355,72 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 app.dialog().file().blocking_pick_folder()
             };
             match picked {
+                Some(path) => Ok(Value::String(path.to_string())),
+                None => Ok(Value::Null),
+            }
+        }
+        // Native message/error dialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05): backs both
+        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Maps
+        // `blocking_show()`'s bool onto `Value::Bool` — electronStub maps `true`->response:0,
+        // `false`->response:1. Default kind is Info when unspecified; the showErrorBox caller
+        // always sends `kind:"error"`. Runs on the existing spawned worker thread (same
+        // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
+        "dialog_message" => {
+            let message = args
+                .first()
+                .and_then(|v| v.get("message"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let kind = args
+                .first()
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .map(|s| match s {
+                    "error" => MessageDialogKind::Error,
+                    "warning" => MessageDialogKind::Warning,
+                    _ => MessageDialogKind::Info,
+                })
+                .unwrap_or(MessageDialogKind::Info);
+            let mut builder = app.dialog().message(message).kind(kind);
+            if let Some(title) = args
+                .first()
+                .and_then(|v| v.get("title"))
+                .and_then(|v| v.as_str())
+            {
+                builder = builder.title(title);
+            }
+            Ok(Value::Bool(builder.blocking_show()))
+        }
+        // Native save-file dialog (Phase 31 Plan 02, D-03/REQ-31-03): same `Option<FilePath>`
+        // shape as `dialog_open`'s pick_folder/pick_file arm -- `Some(path)` is the chosen path,
+        // `None` is a healthy user cancel (never an error). Runs on the same spawned worker
+        // thread.
+        "dialog_save" => {
+            let mut builder = app.dialog().file();
+            if let Some(file_name) = args
+                .first()
+                .and_then(|v| v.get("defaultPath"))
+                .and_then(|v| v.as_str())
+            {
+                builder = builder.set_file_name(file_name);
+            }
+            if let Some(filters) = args
+                .first()
+                .and_then(|v| v.get("filters"))
+                .and_then(|v| v.as_array())
+            {
+                for filter in filters {
+                    let name = filter.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let extensions: Vec<&str> = filter
+                        .get("extensions")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.iter().filter_map(|e| e.as_str()).collect())
+                        .unwrap_or_default();
+                    builder = builder.add_filter(name, &extensions);
+                }
+            }
+            match builder.blocking_save_file() {
                 Some(path) => Ok(Value::String(path.to_string())),
                 None => Ok(Value::Null),
             }

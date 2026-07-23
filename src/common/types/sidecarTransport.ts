@@ -151,6 +151,23 @@ export const RUST_KEYRING_AVAILABLE = 'keyring_available' as const
 export const RUST_DIALOG_OPEN = 'dialog_open' as const
 
 /**
+ * Rust-side channel name: show a native message/error dialog via the Tauri dialog plugin
+ * (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05). Backs both `dialog.showMessageBox` and
+ * `dialog.showErrorBox` (the latter forwards with an error `kind`). Resolves the underlying
+ * `blocking_show()` bool result — electronStub maps `true`→`response:0`, `false`→`response:1`;
+ * there is no v2 checkbox-return equivalent (documented accepted gap, zero real callers read
+ * `checkboxChecked`).
+ */
+export const RUST_DIALOG_MESSAGE = 'dialog_message' as const
+
+/**
+ * Rust-side channel name: open a native save-file dialog via the Tauri dialog plugin
+ * (Phase 31 Plan 02, D-03/REQ-31-03). Resolves the picked absolute path as a string, or `null`
+ * on cancel — the same `Option<FilePath>` shape as `RUST_DIALOG_OPEN`.
+ */
+export const RUST_DIALOG_SAVE = 'dialog_save' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -160,7 +177,9 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KEYRING_SET,
   RUST_KEYRING_DELETE,
   RUST_KEYRING_AVAILABLE,
-  RUST_DIALOG_OPEN
+  RUST_DIALOG_OPEN,
+  RUST_DIALOG_MESSAGE,
+  RUST_DIALOG_SAVE
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
