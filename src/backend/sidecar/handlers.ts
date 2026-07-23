@@ -10,7 +10,9 @@
  * `steamAuthFlowRegistration.ts` — Phase 30 Plan 01, D-01/D-02/D-08), the
  * curated install-slice channels (`registerInstallFlows()`,
  * `installFlowRegistration.ts` — Phase 30 Plan 02,
- * D-05a/D-05b/D-07/D-08/D-12), and the
+ * D-05a/D-05b/D-07/D-08/D-12), the curated settings-read channels
+ * (`registerSettingsFlows()`, `settingsFlowRegistration.ts` — Phase 30 Plan
+ * 06, gap closure for Gap 2 / UAT Test 8), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -35,6 +37,7 @@ import { ipcMain } from './electronStub'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
+import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
@@ -60,6 +63,7 @@ ipcMain.handle('health', async () => 'ok')
 registerSteamFlows()
 registerSteamAuthFlows()
 registerInstallFlows()
+registerSettingsFlows()
 // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
 // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
 // caller (`main.ts`) is not in the sidecar's import graph.
