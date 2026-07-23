@@ -498,13 +498,26 @@ export const screen = {
   })
 }
 
+// isOnline (fix/steam-native-install-stability, gap found during 33-05 live gate): real
+// Electron's `net.isOnline()` is a coarse OS-reachability pre-check consulted by
+// `backend/online_monitor.ts`'s `initOnlineMonitor()` to pick the INITIAL connectivity status
+// before its own authoritative `pingSites()` (axios HEAD against github/epic/gog/cloudflare)
+// ever runs. Returning `true` here is deliberate, not a lie: it only lets initOnlineMonitor fall
+// through to `setStatus('check-online')`, which immediately kicks off the real ping -- the
+// actual online/offline signal the rest of the app relies on. Returning `false` instead would
+// permanently pin the sidecar's status to `'offline'` (online_monitor.ts's `else` branch never
+// re-pings on its own), which is exactly the bug this fixes: `isOnline()` in
+// `downloadmanager/utils.ts` read `undefined === 'online'` (false) forever because this member
+// did not exist, so every Steam install request under Tauri failed instantly with "App offline,
+// skipping install" even though the machine (and Steam) were fully online.
 export const net = {
   request: () => ({
     on: (): void => {},
     end: (): void => {},
     write: (): void => {},
     setHeader: (): void => {}
-  })
+  }),
+  isOnline: (): boolean => true
 }
 
 export const Menu = {
