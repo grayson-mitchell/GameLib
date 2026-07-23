@@ -1,8 +1,8 @@
 ---
 phase: 31
 slug: tauri-ipc-re-plumb-slice-2-settings-and-config
-status: draft
-nyquist_compliant: false
+status: populated
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-23
 ---
@@ -42,7 +42,13 @@ created: 2026-07-23
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-31-XX | T-31-XX / — | {expected secure behavior or "N/A"} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 31-01-01 | 01 | 1 | REQ-31-01, REQ-31-02 | T-31-01, T-31-02 | Write path confined to config domain (GlobalConfig/GameConfig.setSetting); never routes TOKEN_STORE_KEY into configStore; type-guards non-string appName/key before raw per-game write | unit | `npx jest src/backend/sidecar/__tests__/settingsFlows.test.ts` | ✅ extend | ⬜ pending |
+| 31-01-02 | 01 | 1 | REQ-31-01, REQ-31-07 | — | Six generic reads resolve real values; getUserInfo/readConfig stay non-fatally rejecting (Invariant B) | unit | `npx jest src/backend/sidecar/__tests__/settingsFlows.test.ts` | ✅ extend | ⬜ pending |
+| 31-01-03 | 01 | 1 | REQ-31-02, REQ-31-06 | — | Global writeConfig persists through existing configStore allow-list; no new store declaration | unit | `npx jest src/backend/sidecar/__tests__/storeLayer.test.ts` | ✅ extend | ⬜ pending |
+| 31-02-01 | 02 | 1 | REQ-31-03 | T-31-04 | Two RUST_DIALOG_* channels added only to the existing rustInvoke allowlist; Rust arms compile; no new capability | build | `cargo check --manifest-path src-tauri/Cargo.toml` | ✅ existing | ⬜ pending |
+| 31-02-02 | 02 | 1 | REQ-31-03, REQ-31-04 | T-31-03 | Async dialog members forward to Rust and map results with safe-default catch (never throw); showSaveDialog path is user-chosen; Sync pair + shell/clipboard stay logged no-ops | unit | `npx jest src/backend/sidecar/__tests__/dialogStub.test.ts` | ✅ extend | ⬜ pending |
+| 31-03-01 | 03 | 2 | REQ-31-06 | T-31-05 | Declared ported-channel list; claim scoped to wired/unit-proven not hardware-proven | doc | `grep -q showMessageBox .planning/phases/31-tauri-ipc-re-plumb-slice-2-settings-and-config/31-PORTED-CHANNELS.md` | ❌ W0 (new doc) | ⬜ pending |
+| 31-03-02 | 03 | 2 | REQ-31-02, REQ-31-05, REQ-31-07 | T-31-05 | SEAM reconciled; D-02 divergence recorded; deferred UAT logged; Invariants A/B unchanged | doc | `grep -q 31-PORTED-CHANNELS .planning/phases/27-tauri-shell-walking-skeleton/SEAM.md` | ✅ existing | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
