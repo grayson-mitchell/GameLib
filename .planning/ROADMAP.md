@@ -66,7 +66,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 28: Tauri keyring (real safeStorage)** - Swap the plaintext-passthrough stub for spike 011's `keyring` crate path so the sidecar stores its token in the real OS Keychain (keyring-native, not OSCrypt-compatible — see D-01; does NOT unblock Phase 27 UAT 2/3 — see D-03). **Must land before any token-writing channel is wired** (shared store — the stub would silently sign the user out of the real app) (completed 2026-07-22)
 - [x] **Phase 29: Tauri store layer** - Grow the sidecar store past the two skeleton stores to cover the ~18 files routing through `electron_store.ts`, so later slices have config to read (completed 2026-07-22)
 - [x] **Phase 30: IPC re-plumb slice 1 (install/uninstall/update-check)** - First user-facing domain slice of the ~217 unported endpoints, following SEAM.md's incremental-port checklist (completed 2026-07-22)
-- [ ] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe marker-reject with real multi-button behavior deferred to Phase 33)
+- [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
 - [ ] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume
 - [ ] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly
 - [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork
@@ -1122,7 +1122,7 @@ Plans:
 **Goal:** Port the settings/config endpoint cluster onto the sidecar, including the `dialog` API surface those flows depend on (Tauri `dialog` plugin — 9 files per spike 009's touch-count). Second of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (slice-1 pattern proven at volume), Phase 29 (store layer).
 **Requirements:** REQ-31-01..07 (7 total — minted 2026-07-23 from 31-CONTEXT.md D-01..D-05)
-**Plans:** 4 plans (3 executed + 1 gap-closure)
+**Plans:** 4/4 plans complete
 
 Plans:
 
@@ -1137,7 +1137,7 @@ Plans:
 
 **Gap closure (from 31-VERIFICATION.md CR-01 + WR-01)**
 
-- [ ] 31-04-PLAN.md — De-wire showMessageBox to a safe marker-reject (CR-01, no destructive auto-confirm) + path-containment guard on per-game config write (WR-01) + SEAM.md/31-PORTED-CHANNELS.md/REQ-31-03 correction; real multi-button dialog deferred to Phase 33 [wave 1]
+- [x] 31-04-PLAN.md — De-wire showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) (CR-01, no destructive auto-confirm) + path-containment guard on per-game config write (WR-01) + SEAM.md/31-PORTED-CHANNELS.md/REQ-31-03 correction; real multi-button dialog deferred to Phase 33 [wave 1]
 
 ---
 

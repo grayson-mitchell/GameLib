@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
+status: Gap-closure plan 31-04 executed (CR-01 + WR-01 closed); WR-02/WR-03 remain accepted out-of-scope WARNINGs
 stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-07-23T09:09:51.382Z"
-last_activity: 2026-07-23 -- Phase 31 planning complete
+last_updated: "2026-07-23T09:26:40.742Z"
+last_activity: 2026-07-23 -- Phase 31 gap-closure plan 31-04 executed (CR-01 de-wire + WR-01 containment)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -33,10 +33,19 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 31 (tauri-ipc-re-plumb-slice-2-settings-and-config) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-23 -- Phase 31 planning complete
+Phase: 31 (tauri-ipc-re-plumb-slice-2-settings-and-config) — 31-01..31-04 all executed (4/4 plans, 4/4 summaries on disk)
+Plan: 4 of 4
+Status: Gap-closure plan 31-04 executed (CR-01 + WR-01 closed); WR-02/WR-03 remain accepted out-of-scope WARNINGs
+Last activity: 2026-07-23 -- Phase 31 gap-closure plan 31-04 executed (CR-01 de-wire + WR-01 containment)
+
+> **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
+> file to "Plan: 2 of 4" immediately after 31-04's execution — itself stale drift, since
+> `state.advance-plan` was working off the pre-existing "Plan: 1 of 4" / "stopped_at:
+> Completed 31-01-PLAN.md" values, which predate this session and never accounted for
+> 31-02/31-03 already being executed (both have SUMMARY.md on disk). Corrected above to
+> 4 of 4 by checking `.planning/phases/31-.../` directly (31-01..31-04-SUMMARY.md all
+> present) rather than trusting the blind counter increment — same precedent as the
+> Phase-30 plan-counter note below.
 
 > **Plan-counter note:** the "Plan: 2 of 7" value this file carried immediately
 > before 30-07's execution was itself stale drift (predates this session) —
@@ -262,6 +271,7 @@ Closed/parked native-install phases:
 | Phase 30 P06 | 20min | 3 tasks | 7 files |
 | Phase 30 P07 | 25min | 2 tasks | 8 files |
 | Phase 31 P01 | 45min | 3 tasks | 4 files |
+| Phase 31 P04 | 20min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -454,6 +464,8 @@ Recent decisions affecting current work:
 - [Phase ?]: setSetting registered via ipcMain.on, never .handle -- a send channel registered as a handler fails 100% silently at runtime
 - [Phase ?]: getUserInfo/readConfig deliberately NOT ported -- neither is reached by the Settings screen (Epic-only / Legendary-only respectively)
 - [Phase ?]: process.getSystemVersion polyfilled in electronStub.ts via os.release() rather than modifying the shared backend/utils/systeminfo module
+- [Phase 31]: showMessageBox de-wired to a safe RESOLVED sentinel {response:-1}, never rejects (Phase 31 Plan 04, CR-01) — Rust's dialog is OK-only; forwarding it to a multi-button destructive confirm auto-confirmed the destructive branch for already-shipped callers (promptI386Recovery, askForceUninstall). A reject-based de-wire would crash the sidecar (unguarded fire-and-forget awaits, no unhandledRejection guard) -- resolve is the only safe fix.
+- [Phase 31]: Per-game setSetting/writeConfig now enforce a resolve+relative path-containment guard (WR-01) — appName is attacker-influenceable and was routed unguarded into a filesystem path; mirrors the proven library.ts locateMachOBinary containment idiom.
 
 ### Pending Todos
 
@@ -523,7 +535,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T04:43:09.834Z
+Last session: 2026-07-23T09:24:53.816Z
 Stopped at: Completed 31-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
