@@ -492,6 +492,59 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(dialogFrame).toBeUndefined()
   })
 
+  // G-30-02 (30-07 gap closure): the pre-download CM/phase timeout wrappers
+  // (withTimeout, games.ts's runNativeDepotDownload) now produce this exact
+  // {status:'error', error:'Steam pre-download timed out: ...'} shape on a
+  // stale CM socket. This locks that the timeout-origin error rides 30-05's
+  // EXISTING finally/catch guard with ZERO new handler code — same as any
+  // other genuine depot failure (Gap-1 above), not the client-not-ready case.
+  it('G-30-02: a timeout-origin {status:"error"} install (stale CM socket) reaches [queued,installing,done] AND emits a showDialog ERROR frame via the EXISTING 30-05 guard', async () => {
+    steamGameMocks.install.mockResolvedValue({
+      status: 'error',
+      error:
+        'Steam pre-download timed out: Error: resolveSteamInstallTarget timed out after 25000ms'
+    })
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-timeout-1', 'install', [
+      {
+        appName: '999004',
+        runner: 'steam',
+        gameInfo: {},
+        path: '/fake/steam/library'
+      }
+    ])
+    await flush()
+
+    const response = frames.find(
+      (frame) => frame.id === 'install-timeout-1'
+    ) as { ok: boolean; result?: { status: string } } | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toMatchObject({ status: 'error' })
+
+    const statusFrames = frames.filter(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'gameStatusUpdate'
+    ) as Array<{ args?: unknown[] }>
+    const statuses = statusFrames.map(
+      (frame) => ((frame.args ?? [])[0] as { status?: string })?.status
+    )
+    expect(statuses).toEqual(['queued', 'installing', 'done'])
+
+    const dialogFrame = frames.find(
+      (frame) =>
+        frame.kind === 'frontendMessage' && frame.channel === 'showDialog'
+    ) as { args?: unknown[] } | undefined
+    expect(dialogFrame).toBeDefined()
+    const [, message, type] = (dialogFrame?.args ?? []) as [
+      string,
+      string,
+      string
+    ]
+    expect(type).toBe('ERROR')
+    expect(message).toContain('timed out')
+  })
+
   // CR-02: an aborted install (`{status: 'abort'}`) also starts no ACF
   // poller — the same terminal-done push must fire.
   it('CR-02: a resolved {status: "abort"} install pushes a terminal done', async () => {

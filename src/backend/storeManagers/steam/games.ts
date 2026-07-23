@@ -53,6 +53,7 @@ import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import { resolveSteamInstallTarget } from './installLocation' // Plan 09 seam
+import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
 import { placeShimForGame } from './bridge/shimGenerate'
@@ -1188,7 +1189,30 @@ export default class SteamGame implements Game {
       }
 
       const resolveTargetStart = Date.now()
-      const resolved = await resolveSteamInstallTarget(this.appId, args) // Plan 09
+      let resolved: Awaited<ReturnType<typeof resolveSteamInstallTarget>>
+      try {
+        // G-30-02 (30-07): belt-and-suspenders bound around the pre-download
+        // resolution PHASE itself — guards against a future un-timed
+        // pre-download await that is NOT a CM primitive (those are already
+        // bounded individually inside resolveSteamInstallTarget/depot.ts),
+        // and guarantees the badge can never hang from this phase. Converted
+        // to the returned-error contract 30-05's finally/catch already
+        // clears — never let this propagate as an unhandled throw.
+        resolved = await withTimeout(
+          resolveSteamInstallTarget(this.appId, args), // Plan 09
+          STEAM_PICS_TIMEOUT_MS,
+          'resolveSteamInstallTarget'
+        )
+      } catch (err) {
+        logWarning(
+          `SteamGame: resolveSteamInstallTarget timed out/failed for appId ${this.appId}: ${String(err)}`,
+          LogPrefix.Steam
+        )
+        return {
+          status: 'error',
+          error: `Steam pre-download timed out: ${String(err)}`
+        }
+      }
       logInfo(
         `[Timing] runNativeDepotDownload: resolveSteamInstallTarget took ${Date.now() - resolveTargetStart}ms for appId ${this.appId}`,
         LogPrefix.Steam

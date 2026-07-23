@@ -1705,6 +1705,50 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     expect(createAbortController).toHaveBeenCalledWith(APP_ID)
     expect(deleteAbortController).toHaveBeenCalledWith(APP_ID)
   })
+
+  // ── G-30-02 (30-07 gap closure) ──────────────────────────────────────────
+  // A never-settling resolveSteamInstallTarget (the pre-download resolution
+  // PHASE, belt-and-suspenders bound on top of Task 1's per-CM-call bounds)
+  // must resolve runNativeDepotDownload to {status:'error'} within the
+  // bounded window instead of hanging install() forever.
+  describe('G-30-02: pre-download phase (resolveSteamInstallTarget) is bounded', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('a never-settling resolveSteamInstallTarget makes install() resolve to {status:"error"} within the bounded window, not hang', async () => {
+      jest.useFakeTimers()
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(resolveSteamInstallTarget as jest.Mock).mockReturnValue(
+        new Promise(() => {
+          // Never settles — simulates a stale-but-present CM socket parking
+          // this PICS-backed resolution forever.
+        })
+      )
+
+      const game = new SteamGame(APP_ID)
+      const resultPromise = game.install({} as any)
+      const assertion = expect(resultPromise).resolves.toEqual({
+        status: 'error',
+        error: expect.stringContaining('timed out')
+      })
+
+      await jest.advanceTimersByTimeAsync(30000)
+      await assertion
+
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+    })
+
+    it('a fast-resolving resolveSteamInstallTarget is unaffected (happy path unchanged, protects the Electron build)', async () => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+    })
+  })
 })
 
 // ── Phase 23 (23-05, T-23-12/T-23-13): single-flight guard + fail-safe ──────
