@@ -48,6 +48,7 @@ jest.mock('../sidecarRpc', () => ({
 import {
   Notification,
   app,
+  net,
   powerSaveBlocker,
   session,
   shell
@@ -254,6 +255,26 @@ describe('electronStub app.exit / app.quit / app.relaunch (Phase 33 Plan 04, D-0
     await flushMicrotasks()
     expect(warnSpy).toHaveBeenCalledTimes(1)
     expect(String(warnSpy.mock.calls[0][0])).toContain(RUST_APP_RELAUNCH)
+  })
+})
+
+describe('electronStub net.isOnline (fix/steam-native-install-stability, 33-05 live-gate gap)', () => {
+  // `initOnlineMonitor()` (backend/online_monitor.ts) reads `net.isOnline()` to pick its
+  // INITIAL connectivity status before its own authoritative `pingSites()` ping ever runs --
+  // this member did not exist on the sidecar's electron stub at all, so the destructured
+  // `import { net } from 'electron'` resolved `net.isOnline` to `undefined`, and calling it
+  // threw a TypeError the very first time `initOnlineMonitor()` ran under the sidecar.
+  it('exists and returns true, letting initOnlineMonitor fall through to the real ping', () => {
+    expect(typeof net.isOnline).toBe('function')
+    expect(net.isOnline()).toBe(true)
+  })
+
+  it('request() member is unchanged (still a safe no-op transport stub)', () => {
+    const req = net.request()
+    expect(() => req.on()).not.toThrow()
+    expect(() => req.end()).not.toThrow()
+    expect(() => req.write()).not.toThrow()
+    expect(() => req.setHeader()).not.toThrow()
   })
 })
 
