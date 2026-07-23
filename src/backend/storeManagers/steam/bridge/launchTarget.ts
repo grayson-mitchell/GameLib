@@ -33,6 +33,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { sanitizeInstalldir } from '../installLocation'
 import { getBridgeBottleSettings, getBottleSteamappsDir } from '../bottle'
+import { withTimeout, STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 
 // Pattern repeated verbatim across bottle.ts, clientSetup.ts,
 // installLocation.ts, allowlist.ts, importScan.ts, shimGenerate.ts -- reuse
@@ -82,7 +83,20 @@ export async function resolveBridgeLaunchExe(
 
   try {
     const numericAppId = Number(appId)
-    const { apps } = await client.getProductInfo([numericAppId], [], true)
+    // D-01a gap-audit fix (Phase 33-02): this call is reached on the macOS
+    // bridge INSTALL path (games.ts installBridgeGame -> resolveBridgeLaunchExe,
+    // to place the launch shim post-download) as well as the launch/uninstall
+    // paths -- it was a bare, un-timed steam-user CM await identical in shape
+    // to the pre-30-07 install-hang bug (installLocation.ts's own
+    // fetchInstalldir already bounds the SAME getProductInfo call shape).
+    // Bounded here so a stale-but-present CM socket rejects within
+    // STEAM_PICS_TIMEOUT_MS instead of parking this await forever; the catch
+    // below already turns any reject into a benign `undefined`.
+    const { apps } = await withTimeout(
+      client.getProductInfo([numericAppId], [], true),
+      STEAM_PICS_TIMEOUT_MS,
+      'resolveBridgeLaunchExe getProductInfo'
+    )
     const entry = apps?.[numericAppId]
     const appinfo = entry?.appinfo as unknown as AppLaunchInfo | undefined
 

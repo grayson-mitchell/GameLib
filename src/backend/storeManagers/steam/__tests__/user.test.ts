@@ -103,6 +103,11 @@ const mockSteamUserInstance = {
   getPersonas: jest.fn().mockResolvedValue({
     personas: { '76561197900000000': { player_name: 'TestUser' } }
   }),
+  // D-02 (Phase 33-02): ensureConnected's canary probe + relog revalidation.
+  // getProductInfo defaults to a healthy resolve (canary OK); individual
+  // tests override with a rejection/hang to exercise the relog fallback.
+  getProductInfo: jest.fn().mockResolvedValue({ apps: {} }),
+  relog: jest.fn(),
   on: jest.fn((event: string, cb: (...args: any[]) => any) => {
     steamUserOnHandlers[event] = cb
   }),
@@ -198,6 +203,12 @@ describe('SteamUser', () => {
     // re-arm the mock function itself (individual tests set their own
     // mockResolvedValue/mockRejectedValue).
     mockSteamUserInstance.redeemKey.mockReset()
+    // D-02 (Phase 33-02): re-arm the canary probe to its healthy default
+    // (resetMocks: true clears it every test) — individual ensureConnected
+    // canary/relog tests override with a rejection to exercise the stale
+    // path. relog() defaults to a no-op; tests assert it was/wasn't called.
+    mockSteamUserInstance.getProductInfo.mockResolvedValue({ apps: {} })
+    mockSteamUserInstance.relog.mockImplementation(() => {})
   })
 
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
@@ -1037,6 +1048,132 @@ describe('SteamUser', () => {
       const result = await SteamUser.ensureConnected()
       expect(result).toBe(true)
       expect(mockSteamUserInstance.logOn).not.toHaveBeenCalled()
+    })
+  })
+
+  // ── D-02 (Phase 33-02): ensureConnected canary + relog revalidation ────────
+  //
+  // Establishes a connected client (steamID truthy) via QR login — matching
+  // the "does not reconnect..." setup above — then drives the
+  // getProductInfo/relog()/once('loggedOn'|'error') seams to exercise the
+  // four behaviors from the plan: healthy short-circuit, stale-canary
+  // self-heal via relog, bounded (never-hangs) grace timeout, and error
+  // during relog.
+
+  describe('ensureConnected() — canary + relog revalidation (D-02)', () => {
+    beforeEach(async () => {
+      // Reset to a clean, connected client before each test in this block.
+      await SteamUser.logout()
+      mockSessionInstance.startWithQR.mockResolvedValue({
+        qrChallengeUrl: 'steam://test',
+        actionRequired: true
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      await SteamUser.startQRLogin()
+      await sessionOnHandlers['authenticated']?.()
+      await new Promise((r) => process.nextTick(r)) // let background CM connect settle
+      mockSteamUserInstance.logOn.mockClear()
+    })
+
+    test('Test 1 — healthy fast path preserved: canary resolves within bound -> returns true without calling relog()', async () => {
+      mockSteamUserInstance.getProductInfo.mockResolvedValue({ apps: {} })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(true)
+      expect(mockSteamUserInstance.getProductInfo).toHaveBeenCalledWith(
+        [753],
+        [],
+        true
+      )
+      expect(mockSteamUserInstance.relog).not.toHaveBeenCalled()
+    })
+
+    test('Test 2 — stale socket self-heals: canary rejects -> relog() called -> loggedOn within grace -> returns true', async () => {
+      mockSteamUserInstance.getProductInfo.mockRejectedValue(
+        new Error('canary timeout')
+      )
+      mockSteamUserInstance.relog.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(mockSteamUserInstance.relog).toHaveBeenCalledTimes(1)
+      expect(result).toBe(true)
+    })
+
+    test('Test 3 — bounded, never hangs: canary rejects, relog() called, neither loggedOn nor error fires within grace -> returns false', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      try {
+        mockSteamUserInstance.getProductInfo.mockRejectedValue(
+          new Error('canary timeout')
+        )
+        mockSteamUserInstance.relog.mockImplementation(() => {
+          // intentionally never fires 'loggedOn' or 'error' — simulates a
+          // relog attempt that never settles within the grace window.
+        })
+
+        const resultPromise = SteamUser.ensureConnected()
+        // Flush the canary rejection's microtasks so relog() has been
+        // called and the grace-window setTimeout has been scheduled.
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(mockSteamUserInstance.relog).toHaveBeenCalledTimes(1)
+
+        jest.advanceTimersByTime(20001)
+        const result = await resultPromise
+
+        expect(result).toBe(false)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('Test 4 — error during relog: canary rejects, relog() called, error fires -> returns false', async () => {
+      mockSteamUserInstance.getProductInfo.mockRejectedValue(
+        new Error('canary timeout')
+      )
+      mockSteamUserInstance.relog.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['error']?.(new Error('relog failed'))
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(false)
+    })
+
+    test('relog() throws synchronously -> falls through to the cold-connect path instead of crashing', async () => {
+      mockSteamUserInstance.getProductInfo.mockRejectedValue(
+        new Error('canary timeout')
+      )
+      mockSteamUserInstance.relog.mockImplementation(() => {
+        throw new Error('Cannot relog if not already connected')
+      })
+      // Cold-connect path needs isLoggedIn + a stored refresh token.
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        return undefined
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+      expect(result).toBe(true)
     })
   })
 
