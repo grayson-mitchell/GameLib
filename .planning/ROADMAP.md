@@ -1121,7 +1121,7 @@ Plans:
 
 **Goal:** Port the settings/config endpoint cluster onto the sidecar, including the `dialog` API surface those flows depend on (Tauri `dialog` plugin — 9 files per spike 009's touch-count). Second of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (slice-1 pattern proven at volume), Phase 29 (store layer).
-**Requirements:** TBD — mint at `/gsd-plan-phase 31`
+**Requirements:** REQ-31-01..07 (7 total — minted 2026-07-23 from 31-CONTEXT.md D-01..D-05)
 **Plans:** 0 plans
 
 Plans:
