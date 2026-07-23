@@ -467,8 +467,8 @@ export const BrowserWindow = {
 
 // ---- session (D-09, accepted no-op) -------------------------------------------------
 //
-// Was previously not exported at all (an `import { session } from 'electron'` destructure
-// against this stub resolved to `undefined`) -- per 33-RESEARCH, confirmed no Steam-reachable
+// Was previously not exported at all (an `import { session } ...` destructure against this
+// stub's real module resolved to `undefined`) -- per 33-RESEARCH, confirmed no Steam-reachable
 // code path in the sidecar's curated import graph touches Electron's `session` API (its only
 // real callers, `humble/user.ts`/`legendary/user.ts`'s `session.fromPartition()` for the
 // Epic/Humble embedded browser-login flows, are neither reachable from steam-user's headless

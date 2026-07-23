@@ -15,6 +15,11 @@
  * `src/backend/__mocks__/electron.ts` manual mock. `jest.mock('os', ...)` keeps any import-time
  * path resolution inside electronStub.ts's module graph away from the developer's real config
  * directory (same gotcha `electronUntouched.test.ts`'s header documents).
+ *
+ * `shell.showItemInFolder` graduated from a D-04 logged no-op to real forwarding in Phase 33
+ * Plan 04 (D-05) -- its coverage moved to `lifecycleStub.test.ts`, which mocks `requestRustInvoke`
+ * for every test in that file (this file's D-04 describe block below only spies on
+ * `console.warn`, so a call that now actually forwards would throw here).
  */
 
 import { readFileSync } from 'fs'
@@ -48,7 +53,7 @@ jest.mock('../sidecarRpc', () => ({
 // electronStub.ts's imports) -- its error paths use `console.warn` directly, spied on below.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { clipboard, dialog, shell } from '../electronStub'
+import { clipboard, dialog } from '../electronStub'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_DIALOG_MESSAGE,
@@ -361,22 +366,16 @@ describe('electronStub dialog Sync members stay logged no-ops (D-03)', () => {
   })
 })
 
-describe('electronStub shell/clipboard D-04 logged no-ops (REQ-31-04)', () => {
+// `shell.showItemInFolder`'s D-04 coverage was here until Phase 33 Plan 04 graduated it to real
+// forwarding (D-05) -- see `lifecycleStub.test.ts` for its current coverage. `clipboard.writeText`
+// is untouched by Phase 33 and stays a logged no-op.
+describe('electronStub clipboard D-04 logged no-op (REQ-31-04)', () => {
   beforeEach(() => {
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   afterEach(() => {
     warnSpy.mockRestore()
-  })
-
-  it('shell.showItemInFolder logs a warning instead of silently no-oping', () => {
-    shell.showItemInFolder('/Users/dev/Games/game.exe')
-
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-    const [warningArg] = warnSpy.mock.calls[0]
-    expect(String(warningArg)).toContain('showItemInFolder')
-    expect(String(warningArg)).toContain('D-04')
   })
 
   it('clipboard.writeText logs a warning instead of silently no-oping', () => {
