@@ -645,7 +645,12 @@ re-verify (a single grep) immediately before implementation.
 
 ## Open Questions
 
-1. **Should the manual `sendGameStatusUpdate` calls in `installFlowRegistration.ts`'s current
+1. **(RESOLVED — 2026-07-23, see 32-02 Task 1/2)** The planner adopted the recommendation:
+   32-02 Task 2 deletes the manual `sendGameStatusUpdate` pushes as part of the re-route (not
+   wrapped), and 32-02 Task 1 adds the single-push regression test asserting each status string
+   is pushed exactly once per install. Original question retained below for provenance.
+
+   **Should the manual `sendGameStatusUpdate` calls in `installFlowRegistration.ts`'s current
    `install`/`updateGame` handlers be deleted entirely, or kept as a defensive duplicate?**
    - What we know: `installQueueElement`/`updateQueueElement` (reached once re-routed through
      `addToQueue`/`initQueue`) already send the identical 'queued'→'installing'→'done'

@@ -1150,8 +1150,16 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 32-01-PLAN.md — Port the five queue-management channels as the new curated `downloadQueueFlowRegistration.ts` (send/invoke transport-kind split), prove `progressUpdate`/`changedDMQueueInformation` ride the generic relay, suppress D-05 boot auto-resume
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 32-02-PLAN.md — Re-route `install`/`updateGame` through `addToQueue()`, retiring the Phase 30 D-05a direct bypass (resolve `Promise<void>`)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 32-03-PLAN.md — Declare `32-PORTED-CHANNELS.md` (incl. `changedDMQueueInformation`, D-04 pause caveat, D-05 deferral) + `32-HUMAN-UAT.md` (doubly-gated G-30-01/G-30-02) + SEAM §3→§1 move
 
 ---
