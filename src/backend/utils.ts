@@ -298,7 +298,11 @@ export async function askForceUninstall(game: Game) {
       'box.error.folder-not-found.title',
       'Game folder appears to be deleted, do you want to remove the game from the installed list?'
     ),
-    buttons: [i18next.t('box.no'), i18next.t('box.yes')]
+    buttons: [i18next.t('box.no'), i18next.t('box.yes')],
+    // D-07 fail-safe (Phase 33 Plan 03): buttons[1] ("yes") is the destructive branch
+    // (forceUninstall) -- an explicit cancelId declares buttons[0] ("no") as the safe
+    // decline so a degraded/timed-out dialog never auto-confirms the deletion.
+    cancelId: 0
   })
 
   if (response === 1) {

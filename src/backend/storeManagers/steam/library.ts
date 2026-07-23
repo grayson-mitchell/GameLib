@@ -1275,7 +1275,13 @@ export async function promptI386Recovery(appId: string): Promise<void> {
     buttons: [
       i18next.t('box.steam.mac32Detected.confirm', 'Reinstall via CrossOver'),
       i18next.t('box.cancel', 'Cancel')
-    ]
+    ],
+    // D-07 fail-safe (Phase 33 Plan 03): buttons[0] ("Reinstall via CrossOver") is the
+    // destructive branch (force-uninstall + reinstall) -- an explicit cancelId declares
+    // buttons[1] ("Cancel") as the safe decline so a degraded/timed-out dialog never
+    // auto-confirms the recovery. A positional "last index" heuristic would coincidentally
+    // match here, but this is stated explicitly per 33-RESEARCH Pitfall 4.
+    cancelId: 1
   })
 
   if (response !== 0) {

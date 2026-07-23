@@ -203,21 +203,50 @@ export const dialog = {
   },
   showMessageBox: async (
     _windowOrOptions?: unknown,
-    _maybeOptions?: unknown
+    maybeOptions?: unknown
   ): Promise<{ response: number; checkboxChecked: boolean }> => {
-    // Deliberately un-ported (Phase 31 Plan 04, CR-01 de-scope) -- see the dialog-block
-    // docstring above for the full rationale. Never forwards to RUST_DIALOG_MESSAGE, never
-    // rejects/throws. Resolves the safe sentinel `{ response: -1 }`: -1 is neither 0
-    // (promptI386Recovery's destructive branch) nor 1 (askForceUninstall's destructive
-    // branch), so it declines both reachable callers. Real multi-button behavior deferred to
-    // Phase 33.
-    console.warn(
-      '[electronStub] dialog.showMessageBox(): deliberately un-ported this phase (Phase 31 ' +
-        'Plan 04, CR-01 de-scope) -- resolves a safe sentinel { response: -1 } instead of ' +
-        'auto-confirming a destructive multi-button confirm; real multi-button behavior ' +
-        'deferred to Phase 33'
-    )
-    return { response: -1, checkboxChecked: false }
+    // Real multi-button forward (Phase 33 Plan 03, D-06/D-07) -- retires the Phase 31 Plan 04
+    // CR-01 `{ response: -1 }` safe-sentinel stopgap. Mirrors showOpenDialog's
+    // forward-to-transport shape: try { requestRustInvoke(RUST_DIALOG_MESSAGE) } catch { safe
+    // default }. Handles both call forms electron's real API supports --
+    // `(window, options)` and `(options)` -- by preferring maybeOptions when present.
+    //
+    // D-07 fail-safe-to-decline: safeIndex is the CALLER's own declared `cancelId`, never a
+    // positional "last index" heuristic (33-RESEARCH Pitfall 4 -- provably wrong for
+    // askForceUninstall, whose destructive button is index 1, not the last index when
+    // buttons.length is 2... the two happen to coincide there, but promptI386Recovery's
+    // destructive button IS index 0 while a "last index" guess would default to 1 -- unsafe).
+    // ANY transport error/timeout resolves `{ response: safeIndex }` -- never `-1`, never
+    // reject/throw (total-method convention; an unguarded reject crashes the sidecar, see
+    // memory: sidecar-dialog-reject-crashes).
+    const options = (maybeOptions ?? _windowOrOptions) as
+      | {
+          buttons?: string[]
+          cancelId?: number
+          message?: string
+          title?: string
+          type?: string
+        }
+      | undefined
+    const safeIndex = options?.cancelId ?? (options?.buttons?.length ?? 1) - 1
+    try {
+      const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
+        {
+          message: options?.message,
+          title: options?.title,
+          kind: options?.type,
+          buttons: options?.buttons
+        }
+      ])
+      // result: true -> buttons[0] clicked (response 0), false -> buttons[1] clicked (response 1)
+      return { response: result === false ? 1 : 0, checkboxChecked: false }
+    } catch (error) {
+      console.warn(
+        `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
+        error instanceof Error ? error.message : String(error)
+      )
+      return { response: safeIndex, checkboxChecked: false }
+    }
   },
   showMessageBoxSync: (): number => {
     console.warn(
