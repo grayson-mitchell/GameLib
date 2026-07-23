@@ -1,187 +1,141 @@
 ---
 phase: 31-tauri-ipc-re-plumb-slice-2-settings-and-config
-reviewed: 2026-07-23T08:17:15Z
+reviewed: 2026-07-23T09:33:51Z
 depth: standard
-files_reviewed: 7
+files_reviewed: 4
 files_reviewed_list:
-  - src-tauri/src/main.rs
-  - src/backend/sidecar/__tests__/dialogStub.test.ts
-  - src/backend/sidecar/__tests__/settingsFlows.test.ts
-  - src/backend/sidecar/__tests__/storeLayer.test.ts
   - src/backend/sidecar/electronStub.ts
   - src/backend/sidecar/settingsFlowRegistration.ts
-  - src/common/types/sidecarTransport.ts
+  - src/backend/sidecar/__tests__/dialogStub.test.ts
+  - src/backend/sidecar/__tests__/settingsFlows.test.ts
 findings:
-  critical: 1
-  warning: 3
-  info: 2
-  total: 6
+  critical: 0
+  warning: 2
+  info: 1
+  total: 3
 status: issues_found
 ---
 
-# Phase 31: Code Review Report
+# Phase 31: Code Review Report (Gap-Closure Re-Review)
 
-**Reviewed:** 2026-07-23T08:17:15Z
+**Reviewed:** 2026-07-23T09:33:51Z
 **Depth:** standard
-**Files Reviewed:** 7
+**Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the settings/config WRITE path port (`settingsFlowRegistration.ts`), the async
-dialog cluster added to `electronStub.ts` (`showMessageBox`/`showErrorBox`/`showSaveDialog`),
-the Rust dialog dispatch arms in `main.rs` (`dialog_message`/`dialog_save`), the shared
-transport contract, and the three test suites.
+This is a re-review of commits `ccb15138` (CR-01: de-wire `dialog.showMessageBox`) and `6214cbea` (WR-01: path-containment guard on `setSetting`/`writeConfig`'s per-game write branch). Both fixes were traced against their actual call sites (not just their own file) and both hold up as **correct and effective** for the scenarios they were designed to close:
 
-The write-path plumbing itself is sound: wire formats match the real frontend call sites
-(`writeConfig({appName, config})`, `setSetting({appName, key, value})`, `isNative({appName, runner})`
-are all single-object payloads — verified against `ThemeSelector`, `useSettingsContext`,
-`GamesSettings`), the store allow-list correctly excludes secrets on both snapshot and
-lazy-fetch paths, and `setSetting` is correctly registered via `ipcMain.on` (not `handle`).
+- **CR-01 verified correct:** `dialog.showMessageBox` now unconditionally resolves `{ response: -1, checkboxChecked: false }`, never forwards to `RUST_DIALOG_MESSAGE`, and never throws/rejects (no `await`, no promise chain that can reject — the body is a synchronous `console.warn` + object literal wrapped in an `async` function). Traced both documented live callers: `promptI386Recovery` (`storeManagers/steam/library.ts:1266,1281`, decline = `response !== 0`) and `askForceUninstall` (`utils.ts:294,304`, decline = `response !== 1`) — `-1` correctly declines both. `mapMessageBoxKind` was correctly removed as dead code alongside the RUST_DIALOG_MESSAGE forwarding it only served.
+- **WR-01 verified correct:** `isContainedGameConfig()` uses genuine `resolve()`+`relative()` containment (not a `join()`/`startsWith()` string check), which correctly rejects traversal (`../../etc/passwd`), absolute paths, and the prefix-collision case (`gamesConfigPath-evil`) that a naive string-prefix check would wrongly allow — verified by hand-tracing `path.relative()`'s behavior for all three cases. The guard's target computation (`resolve(gamesConfigPath, appName + '.json')`) matches `game_config.ts:36,48`'s actual write-path construction (`join(gamesConfigPath, appName + '.json')`) exactly, so the containment check and the real write path can't diverge. Both `setSetting` (a `send` channel) and `writeConfig` (an `invoke` channel) are dispatched through `sidecarRpc.ts`'s `dispatchSend`/`dispatchInvoke`, both of which wrap the listener/handler call in `try/catch` — so even a pathological `appName` that makes `resolve()` throw synchronously (e.g. an embedded NUL byte, which Node's `path` module rejects) fails closed (dropped/rejected) rather than crashing the sidecar or reaching the filesystem.
 
-However, the dialog cluster contains a **BLOCKER**: the `dialog_message` Rust arm drops the
-Electron `buttons` array and renders an OK-only dialog, so `blocking_show()` always returns
-`true`, which `electronStub` maps to `response: 0` — auto-confirming every backend confirm
-dialog, including destructive ones (force-uninstall+reinstall, remove-from-library). The
-"accepted gap" comment misjudges the blast radius by discussing only `checkboxChecked` while
-`response` is the field ~10 backend callers actually branch on. Three WARNINGs and two INFO
-items round out the report.
-
-## Critical Issues
-
-### CR-01: `showMessageBox` confirm dialogs auto-confirm — `buttons`/`response` contract dropped end-to-end
-
-**File:** `src-tauri/src/main.rs:368-394`, `src/backend/sidecar/electronStub.ts:193-220`
-**Issue:**
-Backend confirm dialogs use `dialog.showMessageBox({ buttons: [confirmLabel, cancelLabel], ... })`
-and branch on the returned `response` index (0 = first button). At least these call sites do so,
-all reachable from the sidecar under Tauri:
-
-- `storeManagers/steam/library.ts:1266` `promptI386Recovery` — `response !== 0` = decline;
-  on `0` it **force-uninstalls the native copy and reinstalls via CrossOver** (destructive).
-- `utils.ts:294` `askForceUninstall` — removes the game from the installed list.
-- `utils.ts:256` `handleExit`, `utils.ts:768/903`, `updater.ts:35/61`, `protocol.ts:153` — all
-  read `response` to gate an action.
-
-The new transport does not preserve this contract:
-
-1. `electronStub.showMessageBox` (electronStub.ts:200-207) forwards only `{ message, title, kind }`
-   to `RUST_DIALOG_MESSAGE` — the `buttons` array is silently discarded.
-2. The Rust `dialog_message` arm (main.rs:368-394) builds `app.dialog().message(message).kind(kind)`
-   with **no `.buttons(...)`** call, so the plugin renders its default OK-only dialog.
-   `blocking_show()` on an OK-only dialog returns `true` unconditionally (there is no Cancel
-   button that can return `false`).
-3. `electronStub` maps `true → response: 0` (electronStub.ts:211).
-
-Net effect under the Tauri build: **every confirm dialog returns `response: 0`** — the first
-button, which for `promptI386Recovery`/`askForceUninstall` is the destructive/affirmative action.
-The user is never able to decline; destructive operations run without consent. For `handleExit`
-(button[0] = "No") the direction inverts instead, permanently blocking quit-with-pending-ops.
-
-The accepted-gap comment (electronStub.ts:208-210, sidecarTransport.ts:156-159) states "zero real
-callers read `checkboxChecked`" — true but irrelevant. The field callers actually read is
-`response`, and the mapping is wrong for any dialog with more than one button.
-
-**Fix:** Forward and honor `buttons`. In `electronStub.showMessageBox`, include
-`buttons: options?.buttons` (and `defaultId`/`cancelId`) in the forwarded payload. In the Rust
-`dialog_message` arm, when a two-element `buttons` array is present, set
-`.buttons(MessageDialogButtons::OkCancelCustom(ok_label, cancel_label))` and map
-`blocking_show()`'s bool back to the correct index (`true → index of the affirmative/OK button`,
-`false → index of the cancel button`) rather than a hardcoded `0`/`1`. If forwarding `buttons` is
-out of scope, the dialog cluster must not be wired for `showMessageBox` at all this phase, because
-an OK-only auto-confirm of destructive flows is worse than the prior unimplemented state.
-
-```ts
-// electronStub.ts — forward the button labels the caller supplied
-const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
-  {
-    message: options?.message,
-    title: options?.title,
-    kind: mapMessageBoxKind(options?.type),
-    buttons: options?.buttons // NEW — Rust decides Ok vs OkCancel from this
-  }
-])
-```
+Two gaps found while tracing the *actual* reachable surface of these fixes (not just the lines that changed) — neither undermines the fixes' core correctness, but both are real, demonstrable defects in completeness/consistency left unaddressed by this gap-closure round.
 
 ## Warnings
 
-### WR-01: Per-game config write path has no path-traversal containment
+### WR-A: `writeConfig`'s WR-01 guard is bypassed entirely by a non-string `appName`, unlike `setSetting`'s
 
-**File:** `src/backend/sidecar/settingsFlowRegistration.ts:143-145` and `152-158`
-**Issue:**
-Both write handlers route an untrusted `appName` into `GameConfig.get(appName)` /
-`writeConfig(appName, ...)`, which resolves to `join(gamesConfigPath, appName + '.json')`
-(`game_config.ts:36,48`) with no containment check. An `appName` such as
-`../../../../Library/Application Support/GameLib/config` escapes `GamesConfig/` and clobbers an
-arbitrary `.json` under the user profile via `flush()`. The team clearly treats this class as
-in-scope: `storeLayer.test.ts:374` explicitly asserts `invokeStoreFetch('../../etc/passwd')`
-returns `{}` — but that guard lives only on the store-fetch path, not on the config-write path
-this phase added. The exposure is parity-inherited from the Electron `setSetting`/`writeConfig`
-handlers and `appName` normally originates from first-party renderer code (Steam AppIDs), so
-real-world exploitability is low, but the inconsistency (one write surface guarded, the adjacent
-one not) is a latent defense-in-depth gap.
-**Fix:** Before the per-game branch in both handlers, reject any `appName` that is not a bare
-identifier — e.g. `resolve(gamesConfigPath, appName + '.json')` must still be inside
-`gamesConfigPath` (mirror the `resolve`+`relative` containment idiom already noted in project
-memory for `library.set`), otherwise drop the frame.
+**File:** `src/backend/sidecar/settingsFlowRegistration.ts:179-198`
 
-### WR-02: `writeConfig` handler omits the malformed-frame type guard that `setSetting` has
+**Issue:** The `writeConfig` handler's containment guard is conditioned on `typeof appName === 'string'`:
 
-**File:** `src/backend/sidecar/settingsFlowRegistration.ts:152-158`
-**Issue:**
-`setSetting` (lines 135-140) type-guards `appName`/`key` as strings and drops malformed frames
-"rather than throwing," per the stated `storeWriteHandlers.ts` convention. The `writeConfig`
-handler directly below performs no such guard — it blindly casts `writeConfig(appName as string, config ?? {})`.
-A frame missing `appName` yields `writeConfig(undefined, {})`, which (since `undefined !== 'default'`)
-falls into the per-game branch and writes a bogus `undefined.json`; a non-string `appName`
-(object/number) produces `[object Object].json` / `123.json`. Inconsistent hardening across two
-adjacent handlers with identical trust boundaries.
-**Fix:** Add the same `typeof appName !== 'string'` (and object-typed `config`) guard used by
-`setSetting`, returning/rejecting a malformed frame instead of writing it.
+```ts
+if (
+  typeof appName === 'string' &&
+  appName !== 'default' &&
+  !isContainedGameConfig(appName)
+) {
+  process.stderr.write(...)
+  return
+}
+return writeConfig(appName as string, config ?? {})
+```
 
-### WR-03: `dialog_save` drops the directory component of Electron's `defaultPath`
+If `appName` is missing (payload `{ config: {...} }` with no `appName` key) or is any non-string JSON value, the `typeof appName === 'string'` check short-circuits `false` and the entire guard — including the `appName !== 'default'` dispatch — is skipped. Execution falls straight through to `writeConfig(appName as string, config ?? {})` with a **type-unsafe cast**, and the real `writeConfig()` (`backend/utils.ts:1607`) then does:
 
-**File:** `src-tauri/src/main.rs:399-407`
-**Issue:**
-Electron's `showSaveDialog` `defaultPath` is a full path (directory + suggested filename) used to
-seed both the starting directory and the filename. The Rust arm passes it only to
-`set_file_name(file_name)`, so the directory component is discarded and the save dialog opens in
-the plugin's default location rather than the caller's intended directory. Callers passing an
-absolute `defaultPath` get the whole path stuffed into the filename field. Behavior degradation,
-not a crash.
-**Fix:** Split `defaultPath` into directory + filename; call `set_directory(dir)` for the parent
-and `set_file_name(basename)` for the leaf when `defaultPath` is an absolute/rooted path.
+```ts
+GameConfig.get(appName).config = config as GameSettings   // appName = undefined
+GameConfig.get(appName).flush()                            // writes gamesConfigPath/undefined.json
+```
+
+(`game_config.ts:48`: `join(gamesConfigPath, appName + '.json')` → `undefined + '.json'` → the literal filename `undefined.json`.) This does not escape `gamesConfigPath` (JSON values coerce to comma/bracket strings, not path separators, so it isn't a new traversal vector), but it is a real, demonstrable inconsistency: a malformed `writeConfig` request silently **succeeds** (`ok: true`) and writes a real file to a fixed, predictable filename inside the config directory, where `setSetting`'s sibling handler (12 lines above, same file) explicitly type-guards and **drops** the exact same malformed-payload shape:
+
+```ts
+if (typeof appName !== 'string' || typeof key !== 'string') {
+  process.stderr.write('...rejected a non-string appName or key\n')
+  return
+}
+```
+
+There is no test covering a missing/non-string `appName` on the `writeConfig` path (only the string-traversal case `'../../etc/passwd'` is tested at `settingsFlows.test.ts:475-487`).
+
+**Fix:** Guard `writeConfig` the same unconditional way `setSetting` does — reject non-string `appName` before the `'default'` dispatch, not only before the containment check:
+
+```ts
+ipcMain.handle('writeConfig', async (_event: unknown, payload: unknown) => {
+  const { appName, config } = (payload ?? {}) as {
+    appName?: unknown
+    config?: Partial<AppSettings>
+  }
+  if (typeof appName !== 'string') {
+    process.stderr.write(
+      '[settingsFlowRegistration] writeConfig rejected a non-string appName\n'
+    )
+    return
+  }
+  if (appName !== 'default' && !isContainedGameConfig(appName)) {
+    process.stderr.write(
+      '[settingsFlowRegistration] writeConfig dropped a path-escaping appName\n'
+    )
+    return
+  }
+  return writeConfig(appName, config ?? {})
+})
+```
+
+### WR-B: CR-01's "two live callers" rationale misses a third reachable `dialog.showMessageBox` call site
+
+**File:** `src/backend/sidecar/electronStub.ts:167-183` (rationale comment); actual call site at `src/backend/dialog/dialog.ts:45`
+
+**Issue:** The CR-01 doc comment states the fix is safe because there are exactly "two live callers" (`promptI386Recovery`, `askForceUninstall`), both of which `await` the call unguarded. That claim is incomplete. `showDialogBoxModalAuto` (`backend/dialog/dialog.ts:8-54`) is imported into the sidecar's module graph via `installFlowRegistration.ts:86` (`import { showDialogBoxModalAuto } from 'backend/dialog/dialog'`), and its `catch` fallback branch also calls `dialog.showMessageBox`:
+
+```ts
+} catch (error) {
+  ...
+  const window = getMainWindow()
+  switch (props.type) {
+    case 'ERROR':
+      dialog.showErrorBox(props.title, props.message)
+      break
+    default:
+      if (!window) break
+      dialog.showMessageBox(window, { title: props.title, message: props.message, buttons: ... })
+      break
+  }
+}
+```
+
+Traced reachability end-to-end under the sidecar:
+- `getMainWindow()` (`backend/main_window.ts:8-11`) falls back to `BrowserWindow.getAllWindows().at(0)`, which under `electronStub.ts:343-345` always returns the truthy `fakeWindow` — so the `if (!window) break` guard never blocks this branch under the sidecar.
+- The `try` block calls `sendFrontendMessage(...)` (`backend/ipc.ts:68-83`), which does **not** wrap `mainWindow.webContents.send(...)` in its own `try/catch`. Under the sidecar, `webContents.send` is `fakeWebContents.send` (`electronStub.ts:333-335`), which calls `transport?.pushFrontendMessage(...)` → `sidecarRpc.ts`'s `pushFrontendMessage` → `writeLine()` → `JSON.stringify(notification)`. A non-JSON-serializable arg (e.g. a circular reference or a `BigInt` reaching `props.buttons`) throws synchronously here, which propagates up through `sendFrontendMessage` into `showDialogBoxModalAuto`'s `catch`, which then calls `dialog.showMessageBox(window, {...})` — **without ever awaiting or reading its return value.**
+
+This third call site is not "awaited unguarded" as the rationale describes — it isn't awaited at all. That means the "await + no try/catch" framing used to justify the never-reject requirement doesn't cover this site's actual risk shape: if `showMessageBox` ever rejected (it doesn't, post-fix), the resulting unhandled promise rejection would still risk crashing the sidecar (no `process.on('unhandledRejection')` guard exists, per the same comment block's own admission). The fix's actual "never reject" property does still make this call site safe in practice, and since its return value is discarded, the CR-01 destructive-auto-confirm risk doesn't apply here either — but the documentation undercounts the reachable surface, which risks a Phase 33 "real multi-button behavior" implementation reasoning from an incomplete caller inventory (e.g. re-introducing a rejecting/throwing path without covering this third, un-awaited site).
+
+**Fix:** Update the rationale comment at `electronStub.ts:167-183` to include `showDialogBoxModalAuto`'s fallback branch (`dialog/dialog.ts:45`) as a third reachable-but-inert call site (inert because its return value is discarded), and add a regression test exercising `showDialogBoxModalAuto`'s catch-fallback path to lock in that it also never crashes the sidecar.
 
 ## Info
 
-### IN-01: `getSystemVersion` polyfill returns the kernel release, not the OS product version
+### IN-01: WR-01 test coverage exercises only the traversal case, not absolute-path or prefix-collision
 
-**File:** `src/backend/sidecar/electronStub.ts:59-66`
-**Issue:**
-Electron's `process.getSystemVersion()` returns the OS *product* version (e.g. macOS `14.5`,
-Windows `10.0.22631`). The polyfill substitutes `os.release()`, which returns the *kernel/build*
-release (e.g. Darwin `23.5.0`). `getSystemInfo` will therefore report a materially different OS
-version string on the Tauri build than on Electron — a data-fidelity divergence in the System
-Info panel, not a crash. The comment already acknowledges it as "closest analog"; flagging so the
-displayed-value drift is a conscious, documented divergence rather than an unnoticed one.
-**Fix:** If accurate OS version matters, resolve it per-platform (`sw_vers -productVersion` on
-macOS, `os.version()`/registry on Windows) or document the System Info version field as
-best-effort under Tauri.
+**File:** `src/backend/sidecar/__tests__/settingsFlows.test.ts:461-487`
 
-### IN-02: `isNative` handler does not validate `runner` before indexing `libraryManagerMap`
+**Issue:** Both new WR-01 tests use `appName: '../../etc/passwd'`. The `isContainedGameConfig` implementation is also relied on to reject an absolute `appName` (e.g. `/etc/passwd`) and the prefix-collision case the `resolve()`+`relative()` idiom was specifically chosen to defeat (e.g. `appName: '../GamesConfig-evil/x'`, where a naive `path.join(...).startsWith(gamesConfigPath)` check would wrongly allow it since the string `gamesConfigPath` is a literal prefix of `gamesConfigPath-evil`). These were verified correct by manual trace in this review, but there is no test locking that guarantee in for future refactors.
 
-**File:** `src/backend/sidecar/settingsFlowRegistration.ts:192-200`
-**Issue:**
-`libraryManagerMap[runner as keyof typeof libraryManagerMap].getGame(...)` throws
-`Cannot read properties of undefined (reading 'getGame')` when `runner` is absent or not a valid
-manager key. It rejects cleanly (the RPC loop catches it), so this is not fatal, and it is parity
-with the Electron handler at `main.ts:1567-1568` — but neither validates, so a malformed frame
-surfaces as an opaque TypeError string rather than a meaningful rejection.
-**Fix:** Guard `runner`/`appName` and reject with a descriptive message when `runner` is not a key
-of `libraryManagerMap`.
+**Fix:** Add two more cases to the WR-01 `describe` block: one with an absolute `appName`, one with a sibling-directory-prefix `appName` (e.g. `${basename(gamesConfigPath)}-evil/x`), each asserting `mockedGameConfigGet` is never called.
 
 ---
 
-_Reviewed: 2026-07-23T08:17:15Z_
+_Reviewed: 2026-07-23T09:33:51Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
