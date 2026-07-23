@@ -116,14 +116,18 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── backend/storeManagers mock — the only boundary cancelCurrentDownload/
-// stopCurrentDownload/processNotification touch; a plain jest.fn()-backed
-// stub proves the routing without any real SteamGame/depot/PICS involvement ─
+// ── backend/storeManagers mock — the boundary cancelCurrentDownload/
+// stopCurrentDownload/processNotification/addToQueue touch; a plain
+// jest.fn()-backed stub proves the routing without any real
+// SteamGame/depot/PICS involvement. `getGameInfo` (Plan 32-02 addition) is
+// the enqueue-time call `addToQueue()` itself makes (distinct from
+// `.getGame(appName).getGameInfo()`, which is a different call site) ────────
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
     steam: {
       getGame: jest.fn(),
-      getInstallInfo: jest.fn()
+      getInstallInfo: jest.fn(),
+      getGameInfo: jest.fn()
     }
   }
 }))
@@ -150,13 +154,18 @@ jest.mock('../../downloadmanager/utils', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { init } from '../bootstrap'
 import { libraryManagerMap } from 'backend/storeManagers'
-import { installQueueElement } from '../../downloadmanager/utils'
+import {
+  installQueueElement,
+  updateQueueElement
+} from '../../downloadmanager/utils'
 import { downloadManager } from '../../downloadmanager/electronStores'
 import { sendFrontendMessage } from '../../ipc'
 import type { DMQueueElement } from 'common/types'
 
 const mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
+const mockedSteamGetGameInfo = libraryManagerMap.steam.getGameInfo as jest.Mock
 const mockedInstallQueueElement = installQueueElement as jest.Mock
+const mockedUpdateQueueElement = updateQueueElement as jest.Mock
 
 type Frame = Record<string, unknown>
 
@@ -258,7 +267,16 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
         folder_name: undefined
       }))
     })
+    // addToQueue()'s own enqueue-time call — distinct from
+    // `.getGame(appName).getGameInfo()` above. Defaults to a plain (non-EA,
+    // non-Ubisoft) game so addToQueue() takes its steam-size-fetch branch.
+    mockedSteamGetGameInfo.mockReset().mockReturnValue({
+      title: 'Test Game',
+      isEAManaged: false,
+      isUbisoftManaged: false
+    })
     mockedInstallQueueElement.mockReset().mockResolvedValue({ status: 'done' })
+    mockedUpdateQueueElement.mockReset().mockResolvedValue({ status: 'done' })
   })
 
   // Must-have (REQ-32-04): getDMQueueInformation is invoke-kind — a response
@@ -425,6 +443,97 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
         f.kind === 'frontendMessage' && f.channel === 'changedDMQueueInformation'
     )
     expect(pushed.length).toBeGreaterThan(0)
+  })
+
+  // Must-have (REQ-32-01, Plan 32-02): install re-routes onto the real
+  // addToQueue() (Electron parity, D-01) instead of the Phase 30 D-05a direct
+  // SteamGame.install() bypass. Proof of the real enqueue path (not the
+  // bypass) is that `installQueueElement` (downloadmanager/utils) — a
+  // function the bypass NEVER called — was reached, with the invoke's own
+  // args flowing through as DMQueueElement.params. The invoke itself resolves
+  // `undefined` (Promise<void>, Pitfall 3), not a reconstructed `{status}`
+  // shape.
+  it('install (invoke) enqueues via the real addToQueue() — resolves undefined and reaches installQueueElement (not the retired SteamGame bypass)', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'install-enqueue-1', 'install', [
+      {
+        appName: '999010',
+        runner: 'steam',
+        path: '/fake/steam/library',
+        platformToInstall: 'Windows',
+        installDlcs: [],
+        sdlList: [],
+        gameInfo: { app_name: '999010', runner: 'steam', title: 'Test Game' }
+      }
+    ])
+    await flush()
+
+    const response = frames.find((f) => f.id === 'install-enqueue-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    // Promise<void> — resolves once QUEUED, not a synthetic {status} shape.
+    expect(response?.result).toBeUndefined()
+
+    // The enqueue side effect: installQueueElement is the function
+    // initQueue() calls for a queue-head 'install' element — this is ONLY
+    // reachable via addToQueue()->initQueue(), never via the retired direct
+    // SteamGame.install() bypass.
+    expect(mockedInstallQueueElement).toHaveBeenCalledTimes(1)
+    expect(mockedInstallQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: '999010', runner: 'steam' })
+    )
+
+    // single-push regression (RESEARCH.md Open Question 1): no leftover
+    // manual push duplicates the 'queued' status addToQueue() itself sends.
+    const queuedPushes = frames.filter(
+      (f) =>
+        f.kind === 'frontendMessage' &&
+        f.channel === 'gameStatusUpdate' &&
+        ((f.args as unknown[])?.[0] as { status?: string })?.status ===
+          'queued'
+    )
+    expect(queuedPushes).toHaveLength(1)
+  })
+
+  // Must-have (REQ-32-01, Plan 32-02): updateGame re-routes onto the real
+  // addToQueue() identically, deriving params.path/platformToInstall from
+  // gameInfo.install (ipc_handler.ts's own shape) — proof is reaching
+  // updateQueueElement (downloadmanager/utils), never the bypass's direct
+  // SteamGame.update() call.
+  it('updateGame (invoke) enqueues via the real addToQueue() — resolves undefined and reaches updateQueueElement with path/platformToInstall derived from gameInfo.install', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'update-enqueue-1', 'updateGame', [
+      {
+        appName: '999011',
+        runner: 'steam',
+        gameInfo: {
+          app_name: '999011',
+          runner: 'steam',
+          title: 'Test Game',
+          install: { platform: 'Windows', install_path: '/fake/steam/library' }
+        }
+      }
+    ])
+    await flush()
+
+    const response = frames.find((f) => f.id === 'update-enqueue-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(response?.result).toBeUndefined()
+
+    expect(mockedUpdateQueueElement).toHaveBeenCalledTimes(1)
+    expect(mockedUpdateQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appName: '999011',
+        runner: 'steam',
+        path: '/fake/steam/library',
+        platformToInstall: 'Windows'
+      })
+    )
   })
 
   // D-05: by-construction source gate. The runtime mock-call approach is
