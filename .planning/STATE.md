@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 31-03-PLAN.md
-last_updated: "2026-07-23T04:52:31.076Z"
-last_activity: 2026-07-23
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-07-23T09:09:51.382Z"
+last_activity: 2026-07-23 -- Phase 31 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
@@ -36,7 +36,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 31 (tauri-ipc-re-plumb-slice-2-settings-and-config) — EXECUTING
 Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-07-23
+Last activity: 2026-07-23 -- Phase 31 planning complete
 
 > **Plan-counter note:** the "Plan: 2 of 7" value this file carried immediately
 > before 30-07's execution was itself stale drift (predates this session) —
