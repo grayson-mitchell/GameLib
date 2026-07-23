@@ -140,6 +140,41 @@ logon button is unresponsive, so the QR tab is never reached (**G-30-01**, human
 populated library, the install slice's own hardware proof was not reached this session as a
 direct consequence of G-30-01 — this is not an independent gap.
 
+### settings/config + dialog cluster (real, Phase 31) — CLOSED, moved out of §3
+
+**Ported in Phase 31** (`tauri-ipc-re-plumb-slice-2-settings-and-config`, plans 31-01..31-02).
+Full enumerated list in
+`.planning/phases/31-tauri-ipc-re-plumb-slice-2-settings-and-config/31-PORTED-CHANNELS.md`.
+
+- **`settingsFlowRegistration.ts`** — the write path (`setSetting` as a `send`/listener via
+  `ipcMain.on`, never `.handle` — a `send` channel registered as a handler fails 100% silently;
+  `writeConfig` as an `invoke`), reaching `GlobalConfig.setSetting`/`GameConfig.setSetting` and the
+  real `writeConfig()` function. Six confirmed-reachable generic reads (`getMaxCpus`,
+  `showUpdateSetting`, `getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative`) registered
+  and returning real values. `getUserInfo`/`readConfig` deliberately stay unported — traced call
+  sites (31-RESEARCH.md Q1) proved neither is reached by the Steam Settings screen (Epic-only /
+  Legendary-only respectively), correcting the original D-01 candidate list.
+- **`RUST_DIALOG_MESSAGE`/`RUST_DIALOG_SAVE`** — two new allowlisted `rustInvoke` channels, with
+  matching `dispatch_rust_channel` match arms in `main.rs` calling `tauri-plugin-dialog`'s
+  `blocking_show()`/`blocking_save_file()`. `electronStub.ts`'s `dialog.showMessageBox`/
+  `showErrorBox`/`showSaveDialog` are now real, forwarding through this transport with a
+  never-throws safe-default catch. **DECLARED INFRASTRUCTURE, not flow-driven** (D-05 below):
+  31-RESEARCH.md Q2 traced every real call site of the five `dialog.*` members and found zero
+  Phase 31 settings/config flow reaches any of them; they were built anyway to close this
+  document's own §3 `dialog ×9` cluster completely. Proven by a direct `electronStub.dialog.*`
+  unit test (`dialogStub.test.ts`), never a settings-screen E2E.
+- **D-04 no-ops upgraded from silent to logged** — `dialog.showMessageBoxSync`/
+  `showOpenDialogSync` and `shell.showItemInFolder`/`clipboard.writeText` now emit `console.warn`
+  naming the no-op, D-04, and the Phase 33 deferral, instead of doing nothing with zero signal.
+
+**Claim level (D-05, Phase 31): "wired and unit-proven", NOT "hardware-proven".** Every channel
+above is registered on the sidecar (or, for the dialog trio, backed by real Tauri behavior) and
+proven by jest coverage (`settingsFlows.test.ts`, `storeLayer.test.ts`, `dialogStub.test.ts`).
+**Registration/real-behavior is not the same claim as "the Settings screen or a native dialog
+works end-to-end under `tauri:dev`."** The settings write/reflect flow and native dialog
+rendering have not been live-UAT'd this phase — that verification is deferred, mirroring Phase
+30's D-04 claim-level precedent for the QR login/install slice.
+
 ### The store layer (real, Phase 29) — CLOSED, moved out of §2/§3
 
 **Generalized from a two-store stub to a full read/write layer in Phase 29**
@@ -217,7 +252,7 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
 | 1 | `app` (lifecycle beyond getPath/getName) | 26 | Real Tauri lifecycle equivalents (`tauri::App`, window events) for `main.ts`/`main_window.ts`/updater/tray/protocol registration |
-| 2 | `dialog` | 9 | **Narrowed, Phase 30:** open-directory ported via `dialog_open` (`tauri-plugin-dialog`'s `blocking_pick_folder()`); the remaining five members (`showErrorBox`, `showMessageBox`, `showMessageBoxSync`, `showOpenDialogSync`, `showSaveDialog`) are deferred to Phase 31 |
+| 2 | `dialog` | 9 | **CLOSED for all async members, Phase 31.** `showMessageBox`/`showErrorBox`/`showSaveDialog` are now real (`dialog_message`/`dialog_save` rustInvoke channels), joining `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, Phase 33 |
 | 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts |
 | 4 | `shell` (remaining methods) | 5 | `showItemInFolder`/`trashItem`/`openPath` via Tauri `opener`/`fs` plugins |
 | 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
@@ -232,9 +267,13 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 `pushGameToLibrary` push, `launch`, `sidecar:store-snapshot`); Phase 30 wired 9 more
 (`checkSteamInstalled`, `steamStartQR`, `steamPollQR`, `install`, `uninstall`, `updateGame`,
 `checkGameUpdates`, `listSteamLibraryTargets`, `gameStatusUpdate` push — enumerated in
-`30-PORTED-CHANNELS.md`), for 13 wired total. Porting the rest is mechanical per endpoint (curate a
-sidecar invoke handler like `steamFlowRegistration.ts` did) but large in volume — pick the next
-slice by user-facing value, not API-touch-count alone.
+`30-PORTED-CHANNELS.md`); Phase 31 wired 8 more (`setSetting`, `writeConfig`, `getMaxCpus`,
+`showUpdateSetting`, `getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative` — enumerated in
+`31-PORTED-CHANNELS.md`), for 21 wired total. (`showMessageBox`/`showErrorBox`/`showSaveDialog`
+are `rustInvoke` channels, not sidecar `invoke`/`send` channels, and are counted alongside
+`dialog_open` outside this tally — same convention Phase 30 established.) Porting the rest is
+mechanical per endpoint (curate a sidecar invoke handler like `steamFlowRegistration.ts` did) but
+large in volume — pick the next slice by user-facing value, not API-touch-count alone.
 
 **The `electron-store` project-wide swap:** this WAS the phase-sized unit of work predicted
 above, and it is now done — Phase 29 generalized `fileStore.ts` into a full read/write store
@@ -312,6 +351,18 @@ above.
   unchanged, all runners.** Reason: `libraryManagerMap`'s import cost is already sunk via
   `steamFlowRegistration.ts`'s load-bearing first import (verified), so a Steam-only reshape buys
   zero import savings and only forks Tauri's behavior from Electron's.
+- **D-02 (Phase 31) — Tauri/Electron settings divergence (ACCEPTED, document-only).** The
+  sidecar persists settings locally through the real Phase 29 store layer (`configStore`/
+  `STORE_ALLOWLIST`, global branch) or a raw `graceful-fs` write (`GameConfig.flush()`, per-game
+  branch), and pushes no `settingsChanged` reflect notification to the Electron build. A setting
+  changed under Tauri is not live-reflected in a concurrently running Electron instance, and vice
+  versa. Consistent with the Phase 30 D-03 two-token divergence and the Phase 29 D-07
+  cross-process write-clobber acceptance — same class of "one app, never both builds live at once
+  against the same profile" reasoning. `useSettingsContext` already holds the just-written value
+  locally and never re-reads after `setSetting`, so no push channel is architecturally required
+  for the Tauri UI's own correctness. Cross-referenced in `settingsFlowRegistration.ts`'s block
+  comment above the write path. Converge at the Phase 35 Electron cutover, per the Phase 28 D-11
+  precedent for the same class of deferred reunification.
 
 ---
 
