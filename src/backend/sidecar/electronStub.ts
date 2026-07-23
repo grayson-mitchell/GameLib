@@ -33,7 +33,11 @@ import { release as osRelease } from 'os'
 
 import { getPath } from './pathShim'
 import { requestRustInvoke } from './sidecarRpc'
-import { RUST_DIALOG_OPEN } from 'common/types/sidecarTransport'
+import {
+  RUST_DIALOG_MESSAGE,
+  RUST_DIALOG_OPEN,
+  RUST_DIALOG_SAVE
+} from 'common/types/sidecarTransport'
 
 // ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
 // wiring `getSystemInfo`) -------------------------------------------------------
@@ -149,21 +153,77 @@ export const app = {
 
 // ---- dialog --------------------------------------------------------------------
 //
-// showOpenDialog is the one `dialog.*` member with real behavior (Phase 30 Plan 03,
-// D-09/REQ-30-07): it forwards to the Rust shell's native folder picker via the existing
-// generic `requestRustInvoke()` channel. This is a deliberate, narrow exception to this
-// module's own "no knowledge of the RPC transport" rule above (which exists to avoid a
-// circular import between electronStub.ts and sidecarRpc.ts for the openExternal/
-// pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is imported directly here,
-// matching `keyringTokenStore.ts`'s call shape, because unlike openExternal/pushFrontendMessage
-// this is a one-directional call (electronStub -> sidecarRpc only) with no callback the other
-// way, so it does not reintroduce the bidirectional cycle bindTransport() was built to avoid.
-// The other five `dialog.*` members stay stubbed — the rest of the dialog surface is Phase 31.
+// showOpenDialog (Phase 30 Plan 03, D-09/REQ-30-07) and showMessageBox/showErrorBox/
+// showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05) forward to the Rust shell's
+// native dialogs via the existing generic `requestRustInvoke()` channel. This is a
+// deliberate, narrow exception to this module's own "no knowledge of the RPC transport" rule
+// above (which exists to avoid a circular import between electronStub.ts and sidecarRpc.ts
+// for the openExternal/pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is
+// imported directly here, matching `keyringTokenStore.ts`'s call shape, because unlike
+// openExternal/pushFrontendMessage this is a one-directional call (electronStub -> sidecarRpc
+// only) with no callback the other way, so it does not reintroduce the bidirectional cycle
+// bindTransport() was built to avoid.
+//
+// The two Sync members (showMessageBoxSync/showOpenDialogSync) stay logged no-ops (D-03) --
+// synchronous dialogs cannot be forwarded across the async rustInvoke transport, so they log a
+// console.warn and return a safe default rather than silently doing nothing.
+
+/** Maps Electron's `MessageBoxOptions.type` onto the Rust `MessageDialogKind` string dispatch_rust_channel expects. */
+function mapMessageBoxKind(type: unknown): 'error' | 'warning' | 'info' {
+  if (type === 'error') return 'error'
+  if (type === 'warning') return 'warning'
+  return 'info'
+}
 
 export const dialog = {
-  showErrorBox: (): void => {},
-  showMessageBox: async () => ({ response: 0, checkboxChecked: false }),
-  showMessageBoxSync: (): number => 0,
+  showErrorBox: async (title?: string, content?: string): Promise<void> => {
+    try {
+      await requestRustInvoke(RUST_DIALOG_MESSAGE, [
+        { message: content, title, kind: 'error' }
+      ])
+    } catch (error) {
+      // Never throw to the caller (total-method convention) -- an error dialog that itself
+      // fails to render must not crash the caller's error-handling path.
+      console.warn(
+        `[electronStub] dialog.showErrorBox(): ${RUST_DIALOG_MESSAGE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    }
+  },
+  showMessageBox: async (
+    windowOrOptions?: unknown,
+    maybeOptions?: unknown
+  ): Promise<{ response: number; checkboxChecked: boolean }> => {
+    const options = (maybeOptions ?? windowOrOptions) as
+      | { message?: string; title?: string; type?: string }
+      | undefined
+    try {
+      const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
+        {
+          message: options?.message,
+          title: options?.title,
+          kind: mapMessageBoxKind(options?.type)
+        }
+      ])
+      // Rust's blocking_show() bool: true -> response:0 (the affirmative/only button), false ->
+      // response:1. There is no v2 checkbox-return equivalent (documented accepted gap; zero
+      // real callers read checkboxChecked).
+      return { response: result ? 0 : 1, checkboxChecked: false }
+    } catch (error) {
+      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention).
+      console.warn(
+        `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+      return { response: 1, checkboxChecked: false }
+    }
+  },
+  showMessageBoxSync: (): number => {
+    console.warn(
+      '[electronStub] dialog.showMessageBoxSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport; returns the default response (0)'
+    )
+    return 0
+  },
   showOpenDialog: async (
     _window?: unknown,
     options?: unknown
@@ -187,8 +247,32 @@ export const dialog = {
       return { canceled: true, filePaths: [] }
     }
   },
-  showOpenDialogSync: (): undefined => undefined,
-  showSaveDialog: async () => ({ canceled: true, filePath: undefined })
+  showOpenDialogSync: (): undefined => {
+    console.warn(
+      '[electronStub] dialog.showOpenDialogSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport'
+    )
+    return undefined
+  },
+  showSaveDialog: async (
+    _window?: unknown,
+    options?: unknown
+  ): Promise<{ canceled: boolean; filePath?: string }> => {
+    try {
+      const result = await requestRustInvoke(RUST_DIALOG_SAVE, [options])
+      if (typeof result === 'string') {
+        return { canceled: false, filePath: result }
+      }
+      // `null` (or anything else non-string) is the healthy cancel case.
+      return { canceled: true, filePath: undefined }
+    } catch (error) {
+      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention).
+      console.warn(
+        `[electronStub] dialog.showSaveDialog(): ${RUST_DIALOG_SAVE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+      return { canceled: true, filePath: undefined }
+    }
+  }
 }
 
 // ---- Notification ----------------------------------------------------------------
@@ -229,7 +313,14 @@ export const shell = {
   openExternal: async (url: string): Promise<void> => {
     transport?.openExternal(url)
   },
-  showItemInFolder: (): void => {},
+  // D-04 (REQ-31-04): upgraded from a silent no-op to a logged one -- a caller relying on the
+  // OS file-manager reveal getting neither the reveal nor a signal that it didn't happen is a
+  // debugging trap. Real reveal support is deferred to Phase 33.
+  showItemInFolder: (_fullPath: string): void => {
+    console.warn(
+      '[electronStub] shell.showItemInFolder(): logged no-op (D-04, deferred to Phase 33) -- reveal-in-file-manager is not yet forwarded to Rust'
+    )
+  },
   trashItem: async (): Promise<void> => {},
   openPath: async (): Promise<string> => ''
 }
@@ -293,7 +384,13 @@ export const powerSaveBlocker = {
 }
 
 export const clipboard = {
-  writeText: (): void => {},
+  // D-04 (REQ-31-04): upgraded from a silent no-op to a logged one -- see shell.showItemInFolder
+  // above for the rationale. Real clipboard-write support is deferred to Phase 33.
+  writeText: (_text: string): void => {
+    console.warn(
+      '[electronStub] clipboard.writeText(): logged no-op (D-04, deferred to Phase 33) -- clipboard writes are not yet forwarded to Rust'
+    )
+  },
   readText: (): string => ''
 }
 
