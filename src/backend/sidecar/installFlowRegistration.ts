@@ -83,6 +83,7 @@
 
 import { logError, LogPrefix } from 'backend/logger'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
+import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
 
 import { ipcMain } from './electronStub'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
@@ -159,6 +160,7 @@ export function registerInstallFlows(): void {
 
       let deferredToSetup = false
       let wasAborted = false
+      let hadError = false
       try {
         // SteamGame.install()'s own branch dispatch reaches installNative ->
         // installDepotDownload (D-07) unmodified. No depot logic reimplemented
@@ -190,10 +192,27 @@ export function registerInstallFlows(): void {
         wasAborted = result.status === 'abort'
 
         if (result.status === 'error') {
+          hadError = true
           logError(
             ['Installation of', appName, 'failed with:', result.error ?? ''],
             LogPrefix.Backend
           )
+
+          // Gap 1 (30-05): surface a genuine depot failure to the user — but
+          // suppress the dialog for the client-not-ready case, since
+          // ensureSteamClientReady already fired the steamClientSetupRequired
+          // push for that path (a second modal would collide with the setup
+          // prompt).
+          const isClientNotReady = (result.error ?? '').startsWith(
+            'Steam client not ready'
+          )
+          if (!isClientNotReady) {
+            showDialogBoxModalAuto({
+              title: 'Installation failed',
+              message: result.error ?? '',
+              type: 'ERROR'
+            })
+          }
         }
 
         return { status: result.status }
@@ -207,9 +226,10 @@ export function registerInstallFlows(): void {
         // Steam: the ACF poller emits the real 'done' — suppress it here to
         // avoid the installing->done->installing flash (GAME-02). EXCEPTIONS
         // (Phase 17 deferredToSetup, debug/steam-cancel-abort-thread-a
-        // wasAborted): no poller ever starts for those two cases, so nothing
-        // else will clear the transient 'installing' badge.
-        if (deferredToSetup || wasAborted) {
+        // wasAborted, Gap 1 (30-05) hadError): no poller ever starts for
+        // these three cases, so nothing else will clear the transient
+        // 'installing' badge.
+        if (deferredToSetup || wasAborted || hadError) {
           sendGameStatusUpdate({ appName, runner, status: 'done' })
         }
       }
