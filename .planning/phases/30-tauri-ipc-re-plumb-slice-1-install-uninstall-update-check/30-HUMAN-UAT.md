@@ -227,6 +227,50 @@ blocked: 1
   test: 4
   blocked_by: G-30-02
 
+---
+
+## Retest cycle — post 30-07 gap closure (G-30-02) (2026-07-23)
+
+**Source:** `30-VERIFICATION.md` (status: human_needed, 22/26 must-haves). Gap-closure plan 30-07
+landed and closes G-30-02 **at the code level**: a new `withTimeout.ts` Promise.race wrapper (25s
+bound) now wraps all 7 pre-download Steam CM call sites across `depot.ts`, `installLocation.ts`, and
+`games.ts`, converting a never-settling `getProductInfo`/`getDepotDecryptionKey`/`getRawManifest`/
+`getContentServers`/`resolveSteamInstallTarget` await into a REJECT that flows through 30-05's
+existing `hadError`/`finally`/`catch` machinery to a terminal `done`. The streaming download phase is
+confirmed NOT wrapped (CR-03/CR-04 long-install invariant preserved). Full regression: 114 suites /
+2028 tests pass, `tsc --noEmit` clean. **Because G-30-02 is a live-only defect (a never-settling
+promise against a real stale CM socket — a class jest mocks cannot reproduce), the fix is
+mechanism-proven but NOT yet live-proven.** Run against `npm run tauri:dev` with
+`enableSteamNativeInstall: true`.
+
+### 1. Live Tauri install retest (G-30-02 / 30-07 fix)
+expected: Clicking Install on a Steam title whose CM socket is present-but-unresponsive reaches a terminal state within the bound — the "installing" badge clears and an ERROR dialog surfaces — instead of spinning on "installing" forever. A healthy, fast-resolving install is unaffected.
+result: pending
+note: This is the exact symptom that failed the post-30-05 retest (Test 1). 30-07 targets the third, never-settling outcome 30-05 could not cover. Must be witnessed live.
+
+### 2. Full Install → Uninstall E2E on real Steam depot content (Test 4)
+expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
+result: pending
+blocked_by: test 1
+reason: "Was blocked by the install hang; unblocks once item 1 is confirmed live. Phase's headline claim has never been observed succeeding end-to-end on hardware."
+
+### Retest Summary (post 30-07)
+
+total: 2
+passed: 0
+issues: 0
+pending: 2
+skipped: 0
+blocked: 0
+
+**Advisory follow-ups from 30-07 code review (30-REVIEW.md — non-blocking, do not gate the live
+retest on these):** WR-01 — the outer 25s `withTimeout` on `resolveSteamInstallTarget` shares the
+inner `fetchInstalldir` bound, so on a `fetchInstalldir` hang the outer timer can convert a benign
+dir-name fallback into a hard failure (give the outer a strictly larger bound or drop it). WR-02 —
+timeout errors carry no `eresult`, so they burn 3 retries → real bound ~75s not 25s. WR-03 — 25s may
+false-trip a healthy-but-slow large-library `getProductInfo` (known issue #144). IN-01 — leftover
+`[Timing]` diagnostics + per-install `JSON.stringify(servers)` dump in touched functions.
+
 ### Summary
 
 This phase's honest claim is **wired and unit-proven** for every channel it ports, and the

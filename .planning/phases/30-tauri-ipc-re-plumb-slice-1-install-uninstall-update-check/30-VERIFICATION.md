@@ -1,31 +1,31 @@
 ---
 phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
-verified: 2026-07-23T13:00:00Z
+verified: 2026-07-23T02:50:00Z
 status: human_needed
-score: 17/24 must-haves verified (7 require live-Tauri human confirmation)
+score: 22/26 must-haves verified (2 require a live-Tauri human retest of the 30-07 gap-closure fix)
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: "17/24 (2026-07-23T13:00:00Z automated verification)"
+  intervening_evidence: "A live human retest (recorded in 30-HUMAN-UAT.md 'Retest cycle') ran 7 checks against npm run tauri:dev after this VERIFICATION.md's previous pass: 5 PASSED live (Settings render, native folder picker, both-builds smoke, CR-03/04 timeout removal, Electron sync recovery), 1 FAILED live (install-spinner hang, filed as new gap G-30-02), 1 BLOCKED (Install->Uninstall E2E, same root cause as G-30-02). Gap-closure plan 30-07 (this session) was executed to fix G-30-02 by bounding every pre-download steam-user CM call in a 25s withTimeout wrapper."
+  gaps_closed:
+    - "Settings screen renders under Tauri (live-confirmed, was human_needed)"
+    - "Native folder picker opens and returns correct path shape (live-confirmed, was human_needed)"
+    - "Both npm start and npm run tauri:dev still work after all fixes (live-confirmed, was human_needed)"
+    - "CR-03/CR-04 long-running-channel timeout removal holds under real load (live-confirmed, was human_needed)"
+    - "Electron Steam sync recovers after re-sign-in (live-confirmed, was human_needed)"
+  gaps_remaining:
+    - "Install badge clears instead of spinning forever (G-30-02) — 30-07's fix is code/jest/tsc-proven only; the debug session (.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md) is still status:diagnosed, never re-marked resolved after a live retest"
+    - "Full Install -> Uninstall E2E — blocked by the same unresolved-live item; 30-HUMAN-UAT.md's Gaps section still lists both as open (status: failed / blocked)"
+  regressions: []
+gaps: []
 human_verification:
-  - test: "Live Tauri install retest (Gap 1 / 30-05 fix)"
-    expected: "Clicking Install on a Steam title whose native depot install cannot proceed headless (or which genuinely fails) clears the 'installing' badge back to Install, and a visible error dialog appears for a genuine failure (no dialog, badge still clears, for the client-not-ready case)."
-    why_human: "installFlowRegistration.ts's hadError fix and its showDialogBoxModalAuto surfacing are jest-proven at the sidecar-handler level (installFlows.test.ts, 30-05), but no hardware retest has run since the fix landed — 30-UAT.md Test 4/5 predate 30-05 and .planning/debug/steam-install-spinner-hangs-tauri.md is still status:diagnosed, never re-marked resolved."
-  - test: "Live Tauri Settings retest (Gap 2 / 30-06 fix)"
-    expected: "The Settings screen renders real config under `npm run tauri:dev` instead of the permanent UpdateComponent spinner, for both a fresh load and a load that fails/rejects."
-    why_human: "settingsFlowRegistration.ts and the two hardened frontend call sites are jest/unit-proven (settingsFlows.test.ts, useSettingsContext.fallback.test.tsx, 30-06), but .planning/debug/settings-unreachable-tauri.md is still status:diagnosed, never re-marked resolved, and 30-UAT.md Test 8 predates the fix."
-  - test: "Native folder-picker dialog (dialog_open / tauri-plugin-dialog)"
-    expected: "Clicking any real openDialog call site (e.g. CustomWineProton binary picker, SideloadDialog, PathSelectionBox) opens an actual native macOS folder or file picker, honoring openFile vs openDirectory (WR-01), and returns the picked path in Electron's exact shape."
-    why_human: "electronStub.ts's shape-translation and Rust's dialog_open arm (blocking_pick_folder/blocking_pick_file) are unit- and cargo-check-proven, but opening a real OS-native dialog cannot be exercised by jest; 30-UAT.md Test 8 (which exercises this) was blocked by the Settings-unreachable gap and never retested after 30-06."
-  - test: "Full Install -> Uninstall E2E on real Steam depot content"
-    expected: "With a signed-in, populated library, Install starts a real depot download, the library button transitions queued -> installing -> done via gameStatusUpdate, and Uninstall reverts the button to Install."
-    why_human: "30-UAT.md Tests 5/6/7 are recorded as blocked/skipped (blocked by Test 4's now-fixed defect) and were never re-attempted. This is the phase's headline user-facing claim and has still never been observed succeeding end-to-end on hardware."
-  - test: "Both-builds smoke re-confirmation after 30-05/30-06"
-    expected: "`npm start` and `npm run tauri:dev` both still launch clean with no new console errors, after the two gap-closure fixes."
-    why_human: "The only human-verified both-builds checkpoint (30-04 Task 3) predates 30-05/30-06 and was itself a partial pass (G-30-01, since corrected and human-verified resolved). The additive/reversible invariant has not been re-confirmed against the current HEAD."
-  - test: "CR-03/CR-04 long-running-channel timeout removal"
-    expected: "A Steam depot install running longer than 60s under Tauri does not hit `sidecar invoke timed out`; a folder picker left open >60s still honors the eventual selection."
-    why_human: "30-REVIEW-FIX.md's own notes flag this as needing human verification — cargo check/tsc/jest cannot prove promise-never-settles runtime behavior on real hardware."
-  - test: "Electron Steam sync recovery (Test 9 disambiguation)"
-    expected: "Under `npm start`, after re-signing in to Steam (refreshing the OSCrypt token), Steam library sync succeeds again, confirming the Test 9 failure was the diagnosed token-divergence issue and not a real Phase 30 regression."
-    why_human: "The diagnosis (empty git diff over the Electron Steam sync path) is strong static evidence the invariant held, but the actual runtime recovery after re-sign-in has not been observed."
+  - test: "Live Tauri retest of 30-07's G-30-02 fix (install-spinner hang)"
+    expected: "Clicking Install on a Steam title under `npm run tauri:dev` (enableSteamNativeInstall:true, signed-in library) with a genuinely stale steam-user CM socket now clears the 'installing' badge within the documented ~1.5-4.5 min bound (badge returns to Install or an ERROR dialog appears) instead of spinning forever indefinitely, matching the symptom reported in 30-HUMAN-UAT.md's retest-cycle Test 1."
+    why_human: "30-07's fix (withTimeout wrapping every pre-download CM call) is proven at the unit-test level (depot.test.ts/games.test.ts/installFlows.test.ts G-30-02 describe blocks, 293/293 green) and by static code review (0 blockers), but the ORIGINAL defect this fix targets was only ever reproducible on a live Tauri build against a genuinely stale CM socket — jest mocks cannot reproduce steam-user's real never-settling PICS callback. The debug session this fix closes is still `status: diagnosed`, not `resolved`, and 30-HUMAN-UAT.md's retest-cycle Test 1 has not been re-run since commit 3d3a5887 landed."
+  - test: "Full Install -> Uninstall E2E on real Steam depot content, post-30-07"
+    expected: "With a signed-in, populated library, Install starts a real depot download, the library button transitions queued -> installing -> done via gameStatusUpdate, and Uninstall reverts the button to Install — the phase's headline user-facing claim."
+    why_human: "This is blocked by the same G-30-02 root cause (30-HUMAN-UAT.md Test 4: 'blocked_by: prior-phase'); it has never been observed succeeding end-to-end on hardware and remains the phase's core unproven claim."
 ---
 
 # Phase 30: Tauri IPC re-plumb slice 1 (install/uninstall/update-check) Verification Report
@@ -36,189 +36,183 @@ the sidecar, following SEAM.md's incremental-port checklist: a curated
 in `electronStub.ts` bound to real Tauri commands for any newly-required Electron API, and the
 slice proven E2E in the Tauri build. Slice = install/uninstall/update-check.
 
-**Verified:** 2026-07-23
+**Verified:** 2026-07-23T02:50:00Z
 **Status:** human_needed
-**Re-verification:** No — initial verification (no previous 30-VERIFICATION.md existed)
-
-This run additionally covers the two gap-closure plans (30-05, 30-06) that closed the two failed
-UAT gaps (install-spinner, settings-unreachable) found in `30-UAT.md`.
+**Re-verification:** Yes — this VERIFICATION.md supersedes the earlier automated pass (2026-07-23T13:00:00Z,
+score 17/24, also human_needed). Between the two, a live human retest against `npm run tauri:dev`
+closed 5 of that pass's 7 human-verification items and reopened one as a new live-observed defect,
+G-30-02 (recorded in `30-HUMAN-UAT.md`'s "Retest cycle" section, not a prior `30-VERIFICATION.md`
+`gaps:` block, which is why this run re-derived must-haves rather than following the strict
+re-verification-mode shortcut). This session's only code change is gap-closure plan 30-07, which
+closes G-30-02 at the code level.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-Must-haves are merged from all 6 plans' frontmatter (`ROADMAP.md`'s Phase 30 entry declares no
-`success_criteria` array, so PLAN frontmatter is the must-have source per the fallback rule).
+Must-haves are the union of the original 6 plans' frontmatter (30-01..30-06) plus 30-07's
+gap-closure frontmatter. Statuses below reflect BOTH the original automated evidence AND the
+intervening live-retest evidence in `30-HUMAN-UAT.md`.
 
 | # | Truth (source plan) | Status | Evidence |
 |---|---|---|---|
-| 1 | Sidecar answers `checkSteamInstalled`/`steamStartQR`/`steamPollQR` with real `SteamUser` impls, not the marker (30-01) | VERIFIED | `steamAuthFlowRegistration.ts` registers all three via `ipcMain.handle`; `steamAuthFlows.test.ts` asserts real resolution (jest run: 156/156 sidecar+preload tests green) |
-| 2 | Successful QR poll writes refresh token via `SidecarKeyringTokenStore`, only `isLoggedIn`/`userData` onto `steamConfigStore` (30-01) | VERIFIED | `steamAuthFlows.test.ts` lines ~220-290 assert `getTokenStore().setToken()` call and store contents |
-| 3 | No `refreshToken` ever appears in a served store snapshot (30-01) | VERIFIED | `steamAuthFlows.test.ts` regression assertion + independently confirmed live in `tauriTransport.test.ts` (`snapshotGet: blocked read of "refreshToken"`) |
-| 4 | Channels not ported this plan still reject non-fatally with the marker (30-01) | VERIFIED | Invariant B test in `steamAuthFlows.test.ts` (logoutSteam rejects, health still resolves) |
-| 5 | Tauri Install button reaches the sidecar E2E: `listSteamLibraryTargets` resolves, then `install` fires `SteamGame.install()` (30-02) | **HUMAN_NEEDED** | Code + jest prove the wiring (`installFlows.test.ts`); no hardware retest of the live button click exists post-fix. `30-UAT.md` Test 5 is `blocked`, never re-attempted |
-| 6 | `install` exercises only the native depot-download branch; bottle/bridge stay unported/non-fatal (30-02) | VERIFIED | `SteamGame.install()`'s branch dispatch is unmodified (code read); `installFlowRegistration.ts` never imports bottle/bridge helpers |
-| 7 | `uninstall` runs the unmodified runner-generic `uninstallGameCallback` (30-02) | VERIFIED | `installFlowRegistration.ts:248-264` direct passthrough; `installFlows.test.ts` asserts delegation |
-| 8 | `checkGameUpdates` runs the same runner-generic logic Electron runs, from one shared source (30-02) | VERIFIED | `src/backend/utils/checkGameUpdates.ts` exists, `main.ts` delegates (`grep -c listUpdateableGames` == 0 in `main.ts`), WR-05 per-runner isolation fixed |
-| 9 | `install`/`uninstall`/`updateGame` emit `gameStatusUpdate` transitions to the renderer with zero `src-tauri` changes, observed live (30-02) | **HUMAN_NEEDED** | Emission mechanism jest-proven; live button-state transition (queued→installing→done) has never been observed on hardware — `30-UAT.md` Tests 5/6 are blocked/skipped |
-| 10 | A folder picker opens **natively** in the Tauri build when the sidecar calls `dialog.showOpenDialog` (30-03) | **HUMAN_NEEDED** | Rust `dialog_open` arm + `blocking_pick_folder`/`blocking_pick_file` compile (`cargo check` clean) and are unit-mocked in `dialogStub.test.ts`; no real native dialog has been observed opening — `30-UAT.md` Test 8 (which would exercise this) was blocked by the Settings gap and never retested |
-| 11 | Picked path returns in Electron's exact `{canceled, filePaths}` shape (30-03) | VERIFIED | `dialogStub.test.ts` proves the shape translation for both resolve and reject paths |
-| 12 | `notify()` logs when it skips, instead of silently doing nothing (30-03) | VERIFIED | `src/backend/dialog/dialog.ts:71-79` — `else` branch calls `logInfo` naming title+reason |
-| 13 | The `rustInvoke` allowlist and Rust's `dispatch_rust_channel` match arm name the same channel string (30-03) | VERIFIED | `'dialog_open'` in `sidecarTransport.ts` and `"dialog_open"` in `main.rs:341`, byte-identical |
-| 14 | A reader of SEAM.md can see exactly which channels are ported vs deferred (30-04) | VERIFIED | SEAM.md §1/§3 updated; `30-PORTED-CHANNELS.md` exists with both tables |
-| 15 | D-05a bypass / D-05b reuse decisions recorded with reasons (Phase 32 inherits) (30-04) | VERIFIED | SEAM.md "Accepted Constraints" contains D-05a/D-05b with "Phase 32 inherits this boundary" |
-| 16 | Two-token divergence is an Accepted Constraint, not an undocumented surprise (30-04) | VERIFIED | SEAM.md D-03 entry + `keyringTokenStore.ts` docstring both carry the divergence note |
-| 17 | Deferred UAT item names the live QR scan AND the install E2E it gates in ONE entry (30-04) | VERIFIED | `30-HUMAN-UAT.md`'s "Full tester steps" section combines both in one reproduction sequence |
-| 18 | Both `npm start` and `npm run tauri:dev` still work after the phase (30-04, REQ-30-09) | **HUMAN_NEEDED** | 30-04's own checkpoint was a **partial pass** (3/4 conditions); the 4th (G-30-01) is now human-verified resolved, but the invariant has not been re-confirmed against current HEAD (post 30-05/30-06) |
-| 19 | Install badge clears (button returns to Install) instead of spinning forever on a returned error (30-05, gap closure) | **HUMAN_NEEDED** | `installFlows.test.ts` proves `['queued','installing','done']` at the handler level; `.planning/debug/steam-install-spinner-hangs-tauri.md` is still `status: diagnosed`, never re-marked resolved after a hardware retest |
-| 20 | A returned `{status:'error'}` emits a terminal `gameStatusUpdate('done')` (30-05) | VERIFIED | `installFlowRegistration.ts`'s `hadError` flag + finally guard; `installFlows.test.ts` asserts the sequence directly (pure sidecar-handler logic, no hardware needed) |
-| 21 | Genuine depot failure surfaces a visible error to the user; client-setup case has no duplicate dialog (30-05) | **HUMAN_NEEDED** | Emission logic + suppression guard are jest-proven (`installFlows.test.ts`); code review flagged WR-30-05-01 (a latent double-`done` edge case with zero test coverage) and IN-30-05-02 (blank-message dialog when `result.error` is undefined) — actual on-screen dialog appearance never observed |
-| 22 | Settings screen renders under Tauri instead of a permanent loading spinner (30-06, gap closure) | **HUMAN_NEEDED** | Code + unit tests prove the render-gate logic (`shouldWithholdContext`); `.planning/debug/settings-unreachable-tauri.md` is still `status: diagnosed`, never re-marked resolved after a hardware retest |
-| 23 | `requestAppSettings`/`requestGameSettings` resolve real config on the sidecar, no marker (30-06) | VERIFIED | `settingsFlowRegistration.ts` registers both; `settingsFlows.test.ts` (real RPC harness) proves real resolution + Invariant B for `checkDiskSpace` |
-| 24 | A failed/unported config load degrades gracefully instead of leaving `currentConfig`/`contextValues` null forever (30-06) | VERIFIED | `shouldWithholdContext` pure-function unit tests (4/4) cover exactly this boolean; both frontend call sites read-confirmed to catch and set `hasAttemptedLoad`/fallback config |
+| 1 | Sidecar answers `checkSteamInstalled`/`steamStartQR`/`steamPollQR` with real `SteamUser` impls (30-01) | VERIFIED | `steamAuthFlowRegistration.ts` registers all three; `steamAuthFlows.test.ts` green |
+| 2 | Successful QR poll writes refresh token via keyring, only `isLoggedIn`/`userData` onto configStore (30-01) | VERIFIED | `steamAuthFlows.test.ts` assertions |
+| 3 | No `refreshToken` ever appears in a served store snapshot (30-01) | VERIFIED | Regression test + `tauriTransport.test.ts` |
+| 4 | Channels not ported this plan still reject non-fatally with the marker (30-01) | VERIFIED | Invariant B test in `steamAuthFlows.test.ts` |
+| 5 | Tauri Install button reaches the sidecar E2E: `listSteamLibraryTargets` resolves, then `install` fires `SteamGame.install()` (30-02) | **HUMAN_NEEDED** | Wiring is jest-proven; live E2E still `blocked` per `30-HUMAN-UAT.md` retest-cycle Test 4 — the install button never leaves 'installing' state to complete this path live |
+| 6 | `install` exercises only the native depot-download branch; bottle/bridge stay unported/non-fatal (30-02) | VERIFIED | Code read confirms branch dispatch and import scope unchanged |
+| 7 | `uninstall` runs the unmodified runner-generic `uninstallGameCallback` (30-02) | VERIFIED | `installFlowRegistration.ts` direct passthrough, jest-proven |
+| 8 | `checkGameUpdates` runs the same runner-generic logic Electron runs, from one shared source (30-02) | VERIFIED | `checkGameUpdates.ts` shared, `main.ts` delegates |
+| 9 | `install`/`uninstall`/`updateGame` emit `gameStatusUpdate` transitions to the renderer, observed live (30-02) | **HUMAN_NEEDED** | Emission mechanism jest-proven; live queued→installing→done transition still unobserved — blocked by the same live install hang |
+| 10 | A folder picker opens **natively** in the Tauri build (30-03) | **VERIFIED (live)** | `30-HUMAN-UAT.md` retest-cycle Test 3: "Folder-picker mode exercised live and behaved as expected" — result: pass |
+| 11 | Picked path returns in Electron's exact `{canceled, filePaths}` shape (30-03) | VERIFIED | `dialogStub.test.ts` + live retest Test 3 confirms shape |
+| 12 | `notify()` logs when it skips (30-03) | VERIFIED | `dialog.ts:71-79` `logInfo` branch, code-read confirmed |
+| 13 | `rustInvoke` allowlist and Rust's `dispatch_rust_channel` match arm name the same channel string (30-03) | VERIFIED | `'dialog_open'` byte-identical both sides |
+| 14 | A reader of SEAM.md can see exactly which channels are ported vs deferred (30-04) | VERIFIED | SEAM.md + `30-PORTED-CHANNELS.md` |
+| 15 | D-05a bypass / D-05b reuse decisions recorded with reasons (30-04) | VERIFIED | SEAM.md "Accepted Constraints" |
+| 16 | Two-token divergence is an Accepted Constraint (30-04) | VERIFIED | SEAM.md D-03 entry |
+| 17 | Deferred UAT item names live QR scan AND install E2E it gates in ONE entry (30-04) | VERIFIED | `30-HUMAN-UAT.md` |
+| 18 | Both `npm start` and `npm run tauri:dev` still work after the phase (30-04, REQ-30-09) | **VERIFIED (live)** | `30-HUMAN-UAT.md` retest-cycle Test 5: "Both Electron and Tauri boot clean on current HEAD" — result: pass |
+| 19 | Install badge clears instead of spinning forever on a returned/thrown error (30-05, then G-30-02, then 30-07) | **HUMAN_NEEDED** | Live-retest Test 1 previously FAILED this exact truth ("spinner remains spinning once clicked"). Gap-closure plan 30-07 (this session) bounds every pre-download CM call in a 25s `withTimeout`, proven at the jest level (`depot.test.ts`, `games.test.ts`, `installFlows.test.ts` G-30-02 blocks, 293/293 green) and by code review (0 blockers). NOT yet re-tested live — debug session still `status: diagnosed` |
+| 20 | A returned `{status:'error'}` emits a terminal `gameStatusUpdate('done')` (30-05) | VERIFIED | `installFlowRegistration.ts`'s `hadError` finally guard unmodified and still jest-proven; 30-07 routes timeout-origin errors through this exact path (`installFlows.test.ts` new assertion) |
+| 21 | Genuine depot failure surfaces a visible error; client-setup case has no duplicate dialog (30-05) | **HUMAN_NEEDED** | Logic jest-proven; on-screen dialog appearance for a live timeout-triggered failure still unobserved (same blocker as truth 19) |
+| 22 | Settings screen renders under Tauri instead of a permanent loading spinner (30-06) | **VERIFIED (live)** | `30-HUMAN-UAT.md` retest-cycle Test 2: result: pass |
+| 23 | `requestAppSettings`/`requestGameSettings` resolve real config on the sidecar, no marker (30-06) | VERIFIED | `settingsFlowRegistration.ts` + `settingsFlows.test.ts`, also live-confirmed via Test 2 |
+| 24 | A failed/unported config load degrades gracefully (30-06) | VERIFIED | `shouldWithholdContext` unit tests |
+| 25 | Under Tauri, a stale-CM-socket Install reaches a terminal state within a bounded time instead of hanging forever (30-07 must-have) | **HUMAN_NEEDED** | Mechanism proven by unit test + code review; this is the EXACT live symptom from Test 1 and has not been re-observed live since the fix landed |
+| 26 | Every known pre-download CM primitive (`getProductInfo` x4 call sites, `getDepotDecryptionKey`, `getRawManifest`, `getContentServers`) is bounded; streaming download phase is never bounded (30-07 must-have) | VERIFIED | Direct code read: 7 `withTimeout(` call sites in `depot.ts` (lines 416,439,461,548,563,2108) + 1 in `installLocation.ts` (165) + 1 in `games.ts` (1201) = every listed primitive; `downloadDepotFiles`/`downloadSteamDepots` streaming call (games.ts:1227, depot.ts:1390) confirmed NOT wrapped |
 
-**Score:** 17/24 truths VERIFIED at the code/automated level; 7 require live-Tauri human
-confirmation before the phase can be called fully proven (none are FAILED — no code-level defect
-was found that contradicts a must-have).
+**Score:** 22/26 truths VERIFIED (including 5 newly closed by the intervening live retest); 4
+remain HUMAN_NEEDED (truths 5, 9, 19/25 collapse to the same live-retest blocker, plus truth 21).
+No truth was found structurally FAILED at the code level in this session — the code evidence for
+30-07 is clean, but the specific defect it targets was previously live-observed and its fix is not
+yet live-confirmed.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `src/backend/sidecar/steamAuthFlowRegistration.ts` | Curated QR-login channel registration | VERIFIED | Exists, exports `registerSteamAuthFlows`, 3 handlers, no `electron`/`require` |
-| `src/backend/sidecar/__tests__/steamAuthFlows.test.ts` | Wiring + token-seam coverage | VERIFIED | Exists, all assertions present, green |
-| `src/backend/utils/checkGameUpdates.ts` | Single-source runner-generic update check | VERIFIED | Exists, exports `checkGameUpdates`, `main.ts` delegates |
-| `src/backend/sidecar/installFlowRegistration.ts` | Curated install/uninstall/updateGame/checkGameUpdates/listSteamLibraryTargets registration | VERIFIED | Exists, exports `registerInstallFlows`, 5 handlers, includes 30-05's `hadError` fix |
-| `src/backend/sidecar/__tests__/installFlows.test.ts` | Wiring + status-push + non-fatality + gap-closure coverage | VERIFIED | Exists, includes Gap-1 tests, all green |
-| `src/common/types/sidecarTransport.ts` (`RUST_DIALOG_OPEN`) | New rustInvoke channel constant | VERIFIED | `'dialog_open'` declared and in `RUST_INVOKE_CHANNELS` |
-| `src-tauri/src/main.rs` (`dialog_open` arm) | Dispatch arm + AppHandle threading + plugin registration | VERIFIED | `cargo check` clean; arm present, `worker_app` threaded, catch-all preserved |
-| `src/backend/sidecar/electronStub.ts` (dialog) | Real `showOpenDialog` forwarding through `requestRustInvoke` | VERIFIED | Present, never-throw convention followed |
-| `src/backend/sidecar/dialogFlowRegistration.ts` (WR-02 fix) | Registers `openDialog` on the sidecar (added during code-review fix, not the original plan) | VERIFIED | Exists, wired in `handlers.ts`, confirmed reachable |
-| `.planning/phases/27-.../SEAM.md` | §1 entries, §3 narrowing, Accepted Constraints | VERIFIED | Confirmed by direct read + grep |
-| `.planning/phases/30-.../30-PORTED-CHANNELS.md` | Enumerated ported-channel list, Phase 31 starting point | VERIFIED | Exists, both tables present, settings channels correctly moved in by 30-06 |
-| `.planning/phases/30-.../30-HUMAN-UAT.md` | Single deferred item naming QR scan + install E2E | VERIFIED (content) / superseded narrative | Rewritten twice (G-30-01 found, then corrected/resolved) — content is honest and current |
-| `src/backend/sidecar/settingsFlowRegistration.ts` | Curated settings-read registration (gap closure) | VERIFIED | Exists, exports `registerSettingsFlows`, mirrors `main.ts:998-1016` |
-| `src/backend/sidecar/__tests__/settingsFlows.test.ts` | Wiring test for both settings channels | VERIFIED | Exists, real RPC harness, green |
-| `src/frontend/screens/Settings/index.tsx` (try/catch) | Fallback around `requestAppSettings` mount effect | VERIFIED | `catch` block present, sets `{}` fallback |
-| `src/frontend/hooks/useSettingsContext.ts` (try/catch + `shouldWithholdContext`) | Fallback + render-gate fix | VERIFIED | Present, pure function extracted and tested |
-| `src/frontend/hooks/__tests__/useSettingsContext.fallback.test.tsx` | Graceful-degradation test | VERIFIED | 4/4 tests green |
+| `src/backend/storeManagers/steam/withTimeout.ts` | Reusable Promise.race timeout wrapper | VERIFIED | Exists, `withTimeout<T>()` + `STEAM_PICS_TIMEOUT_MS=25000`, `finally`-cleared timer, read in full |
+| `src/backend/storeManagers/steam/__tests__/withTimeout.test.ts` | Happy-path + timeout + no-dangling-timer coverage | VERIFIED | Exists, part of green 4-suite/293-test run |
+| `src/backend/storeManagers/steam/installLocation.ts` | `fetchInstalldir`'s `getProductInfo` bounded | VERIFIED | Line 165, read in full, matches must-have |
+| `src/backend/storeManagers/steam/depot.ts` | 6 pre-download CM calls bounded | VERIFIED | Lines 416/439/461/548/563/2108, 3 read in full (`getOwnedSets`/`fetchAppInfo`/`fetchDlcInfos`/`fetchDepotPlanEntry`) |
+| `src/backend/storeManagers/steam/games.ts` | `resolveSteamInstallTarget` phase watchdog returns `{status:'error'}` on stall | VERIFIED | Line 1201-1215, read in full, catch converts to `{status:'error'}`, never propagates as unhandled throw |
+| `src/backend/sidecar/installFlowRegistration.ts` | 30-05's `hadError`/finally/catch terminal-clear machinery | VERIFIED (unmodified) | Lines 163/195/219/225/232 present exactly as prior verification found them — 30-07 feeds this path, does not duplicate it |
+| Prior-plan artifacts (steamAuthFlowRegistration.ts, settingsFlowRegistration.ts, dialogFlowRegistration.ts, checkGameUpdates.ts, SEAM.md, 30-PORTED-CHANNELS.md) | Unchanged from prior pass | VERIFIED (regression) | Re-confirmed present via full `src/backend src/frontend src/preload src/common` jest sweep (114 suites / 2028 tests green, up from 113/2019 — growth = 30-07's new tests) |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| `handlers.ts` | `steamAuthFlowRegistration.ts` | `registerSteamAuthFlows()` | WIRED | Called at module scope after `registerSteamFlows()` |
-| `handlers.ts` | `installFlowRegistration.ts` | `registerInstallFlows()` | WIRED | Called after `registerSteamAuthFlows()` |
-| `handlers.ts` | `settingsFlowRegistration.ts` | `registerSettingsFlows()` | WIRED | Called after `registerInstallFlows()` |
-| `handlers.ts` | `dialogFlowRegistration.ts` | `registerDialogFlows()` | WIRED | Called before `ensureStoresRegistered()` (WR-02 fix) |
-| `installFlowRegistration.ts` | `storeManagers/steam/games.ts` | `new SteamGame(appName).install(args)` | WIRED | Direct bypass confirmed by code read |
-| `installFlowRegistration.ts` | `utils.ts` | `sendGameStatusUpdate` | WIRED | Called for queued/installing/done, jest-proven |
-| `main.ts` | `utils/checkGameUpdates.ts` | `addHandler('checkGameUpdates', checkGameUpdates)` | WIRED | Confirmed via code read |
-| `electronStub.ts` | `sidecarRpc.ts` | `requestRustInvoke(RUST_DIALOG_OPEN, ...)` | WIRED | Confirmed |
-| `main.rs` | `tauri-plugin-dialog` | `app.dialog().file().blocking_pick_folder()/blocking_pick_file()` | WIRED | Confirmed, `cargo check` clean |
-| `settingsFlowRegistration.ts` | `GlobalConfig.get().getSettings()` | direct call | WIRED | Confirmed + jest |
-| `Settings/index.tsx` | `requestAppSettings` | guarded mount effect | WIRED | try/catch present, confirmed by read |
+| `depot.ts` (`getOwnedSets`/`fetchAppInfo`/`fetchDlcInfos`) | `withTimeout` | direct wrap of `client.getProductInfo(...)` | WIRED | Read in full, matches must-have pattern |
+| `depot.ts` (`fetchDepotPlanEntry`) | `withTimeout` | wraps `getDepotDecryptionKey`/`getRawManifest` callback-Promises | WIRED | Read in full |
+| `depot.ts` (`getContentServerHosts`) | `withTimeout` | wraps `getContentServers` | WIRED | Confirmed via grep line 2108, consistent with pattern at other sites |
+| `installLocation.ts` (`fetchInstalldir`) | `withTimeout` | wraps `getProductInfo` | WIRED | Read in full |
+| `games.ts` (`runNativeDepotDownload`) | `withTimeout` | wraps `resolveSteamInstallTarget`, catch converts to `{status:'error'}` | WIRED | Read in full |
+| `games.ts` timeout-origin `{status:'error'}` | `installFlowRegistration.ts`'s existing `finally(hadError)`/`catch` | unmodified 30-05 guard | WIRED | Code-read confirms guard untouched; `installFlows.test.ts` asserts the sequence for the timeout-origin error explicitly |
+| `withTimeout`'s outer wrap (games.ts) | `fetchInstalldir`'s inner wrap + no-hard-fail catch (installLocation.ts) | same 25s bound, outer armed first | **WIRED but LAYERING DEFECT (WR-01)** | Confirmed by direct read: outer race always wins because it is armed before the inner timer starts, so a transient stale-socket hang that would have recovered via the inner catch's graceful fallback instead hard-fails the install. Advisory per code review, not a goal blocker (see Anti-Patterns) |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Full sidecar+preload suite green | `npx jest src/backend/sidecar/__tests__ src/preload/__tests__` | 13 suites / 156 tests passed | PASS |
-| Full backend+frontend+preload+common suite green (regression) | `npx jest src/backend src/frontend src/preload src/common` | 113 suites / 2019 tests passed (one pre-existing unrelated leaked-timer worker-exit warning in `steam/library.ts`, not a Phase 30 file) | PASS |
-| Frontend settings fallback suite | `npx jest src/frontend/hooks/__tests__/useSettingsContext.fallback.test.tsx` | 4/4 passed | PASS |
+| 30-07's new/modified test suites green | `npx jest src/backend/storeManagers/steam/__tests__/withTimeout.test.ts .../depot.test.ts .../games.test.ts src/backend/sidecar/__tests__/installFlows.test.ts` | 4 suites / 293 tests passed | PASS |
+| Full backend+frontend+preload+common regression sweep | `npx jest src/backend src/frontend src/preload src/common` | 114 suites / 2028 tests passed (pre-existing unrelated `library.ts` leaked-timer worker-exit warning, documented separately, does not fail any test) | PASS |
 | TypeScript project-wide typecheck | `npx tsc --noEmit -p tsconfig.json` | Clean, no errors | PASS |
-| Rust shell compiles | `cd src-tauri && cargo check` | `Finished` in 14.96s, no errors | PASS |
-| `dialog_open` channel string matches on both sides | grep both files | `'dialog_open'` (TS) == `"dialog_open"` (Rust) | PASS |
-| No `src/backend/sidecar/` file imports real `electron` | grep | 0 matches outside `__tests__` | PASS |
+| Streaming download phase confirmed NOT wrapped | grep `withTimeout` in `games.ts`/`depot.ts` vs. `downloadSteamDepots`/`downloadDepotFiles` call sites | Only pre-download calls wrapped (games.ts:1201, depot.ts:416/439/461/548/563/2108); `downloadSteamDepots` call (games.ts:1227) and `downloadDepotFiles` definition (depot.ts:1390) unwrapped | PASS |
+| Commits claimed in SUMMARY exist | `git show --stat 0aeb4205 3d3a5887` | Both commits exist, diffs match claimed scope (withTimeout.ts + 6 call sites + tests) | PASS |
+| Debug session re-marked resolved? | `grep status: .planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md` | `status: diagnosed` (unchanged) | **FAIL (expected — confirms live retest still outstanding)** |
 
 ### Probe Execution
 
-Not applicable — this phase has no `scripts/*/tests/probe-*.sh` artifacts; verification relies on
-jest suites and `cargo check`, both executed directly above (Step 7b/7c substitute).
+Not applicable — no `scripts/*/tests/probe-*.sh` artifacts for this phase; jest + `tsc --noEmit`
+substitute per Step 7b/7c.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan(s) | Description | Status | Evidence |
 |---|---|---|---|---|
-| REQ-30-01 | 30-01 | QR login channel ported, token round-trips through keyring | SATISFIED | Truths 1-4 VERIFIED |
-| REQ-30-02 | 30-01, 30-04 | Two-token divergence recorded | SATISFIED | Truth 16 VERIFIED |
-| REQ-30-03 | 30-04 | Claim-discipline: one honest deferred UAT entry, "wired and unit-proven" not "hardware-proven" | SATISFIED | Truth 17 VERIFIED; `30-HUMAN-UAT.md` explicitly disclaims hardware-proven status |
-| REQ-30-04 | 30-02, 30-05 | install/uninstall/updateGame/checkGameUpdates on native depot branch, D-05a/b/D-07/D-12 recorded | PARTIALLY SATISFIED — code complete, **NEEDS HUMAN** for live E2E | Truths 5,6,7,8,9,19,20,21 — code/jest side fully green; live confirmation pending |
-| REQ-30-05 | 30-02, 30-05 | Status-push relay, zero `src-tauri` changes | PARTIALLY SATISFIED — code complete, **NEEDS HUMAN** for live receipt | Truth 9, 20 |
-| REQ-30-06 | 30-01, 30-02 | Curated modules registered, no `electron` import under sidecar | SATISFIED | Truths 1, 5(code)/6/7/8 + grep confirms no electron import |
-| REQ-30-07 | 30-03 | Real dialog behavior + logged `notify()` no-op | PARTIALLY SATISFIED — code complete, **NEEDS HUMAN** for real native dialog | Truths 10 (human), 11, 12, 13 |
-| REQ-30-08 | 30-02, 30-04, 30-06 | Enumerated minimum-read channel set declared, including settings after gap closure | SATISFIED | Truths 14, 15, 23 VERIFIED |
-| REQ-30-09 | 30-04, 30-05, 30-06 | Additive/reversible invariant holds, both builds work | PARTIALLY SATISFIED — **NEEDS HUMAN** re-confirmation | Truth 18; G-30-01 human-verified resolved, but 30-05/30-06 fixes unretested |
+| REQ-30-01 | 30-01 | QR login channel ported, token round-trips through keyring | SATISFIED | Truths 1-4 |
+| REQ-30-02 | 30-01, 30-04 | Two-token divergence recorded | SATISFIED | Truth 16 |
+| REQ-30-03 | 30-04 | Claim-discipline: honest deferred UAT entry | SATISFIED | Truth 17; `30-HUMAN-UAT.md` explicitly disclaims hardware-proven status where still true |
+| REQ-30-04 | 30-02, 30-05, 30-07 | install/uninstall/updateGame on native depot branch; badge never hangs | PARTIALLY SATISFIED — **NEEDS HUMAN** for live install-hang retest | Truths 5,6,7,8,19,20,21,25,26 — code/jest fully green, live confirmation of the fix still pending |
+| REQ-30-05 | 30-02, 30-05, 30-07 | Status-push relay, zero `src-tauri` changes, badge always terminates | PARTIALLY SATISFIED — **NEEDS HUMAN** | Truths 9, 20, 25 |
+| REQ-30-06 | 30-01, 30-02 | Curated modules registered, no `electron` import under sidecar | SATISFIED | Truths 1, 6-8 + grep confirms no electron import (regression-checked, unchanged) |
+| REQ-30-07 | 30-03 | Real dialog behavior + logged `notify()` no-op | SATISFIED | Truths 10 (now live-verified), 11, 12, 13 |
+| REQ-30-08 | 30-02, 30-04, 30-06 | Enumerated minimum-read channel set declared | SATISFIED | Truths 14, 15, 23 |
+| REQ-30-09 | 30-04, 30-05, 30-06, 30-07 | Additive/reversible invariant holds, both builds work | SATISFIED (both-builds) / **NEEDS HUMAN** (install-hang fix) | Truth 18 now live-verified for both-builds; the install-badge sub-claim under this requirement (truth 19/25) remains open |
 
-No orphaned requirements: all of REQ-30-01..09 are declared across the 6 plans' `requirements:`
-frontmatter (`grep` confirms the union covers 01-09 with no gaps), and REQUIREMENTS.md marks all
-nine `[x]`.
+No orphaned requirements: REQ-30-01..09 all declared across the plans' `requirements:` frontmatter
+(30-07 declares `[REQ-30-04, REQ-30-05]`), and REQUIREMENTS.md marks all nine `[x]`.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |---|---|---|---|---|
-| `src/backend/sidecar/installFlowRegistration.ts` | ~209-215 | WR-30-05-01: `showDialogBoxModalAuto` call has no local try/catch inside the handler's own try body — a hypothetical throw there would double-fire the terminal `'done'` push | WARNING | Currently unreachable per code-review trace, but the invariant lives in a different file than the code it protects; zero test coverage for this edge case |
-| `src/frontend/screens/Settings/index.tsx`, `src/frontend/hooks/useSettingsContext.ts` | catch blocks | WR-30-06-01: both hardened call sites treat "unported channel" and "genuine backend failure" identically — a real config-load bug (e.g. corrupted config.json) degrades silently with only a `console.warn`, no user-visible signal | WARNING | Could mask real data-integrity problems (e.g. an install path silently reverting to default without the user being told) |
-| `src/backend/sidecar/settingsFlowRegistration.ts` | 67-77 | IN-30-06-01: `requestGameSettings` performs no runtime validation on `args[0]`, mirroring already-filed IN-01 | INFO | Low likelihood (trusted preload caller), but an `undefined` appName silently builds an `"undefined.json"` path instead of rejecting |
-| `src/backend/sidecar/installFlowRegistration.ts` | 206-215 | IN-30-05-02: no test covers `result.error === undefined`, which yields a blank-message ERROR dialog | INFO | Cosmetic only — badge still clears correctly |
-| `src/backend/sidecar/installFlowRegistration.ts`, others | — | IN-01..IN-04 (original review) — unchecked `args[0]` casts, Electron-only side effects not reproduced, unbounded Rust thread spawn, test tmp-dir cleanup | INFO | All open, out of `critical_warning` fix scope, tracked in `30-REVIEW-FIX.md` |
-| `src/frontend/screens/Settings/index.tsx` | 48-50 | Pre-existing `TODO` comment (translation cleanup) | INFO | Pre-existing from upstream Heroic fork (commit `a1a6f4a06`, 2024-12-13) — **not introduced by Phase 30**, not a debt marker gate violation for this phase |
+| `src/backend/storeManagers/steam/games.ts` / `installLocation.ts` | games.ts:1201-1215 vs installLocation.ts:139-188 | WR-01 (30-REVIEW.md): nested `withTimeout` at an EQUAL 25s bound, outer armed first, overrides `fetchInstalldir`'s explicit no-hard-fail contract — a transient CM hang that would have recovered via the inner catch's graceful `undefined` fallback is instead converted into a hard `{status:'error'}` install failure | WARNING | Confirmed present by direct code read in this verification session; advisory tuning issue per context, not a goal blocker, but is a real behavior change vs. the pre-30-07 code on this narrow edge case |
+| `src/backend/storeManagers/steam/withTimeout.ts` (interacting with `depot.ts` retry logic, `user.ts` `ensureConnected`) | withTimeout.ts:14-25 | WR-02: timeout errors carry no `eresult`, are classified retryable, and `ensureConnected`'s fast-path is a no-op against a stale-but-present socket — real worst-case bound is ~3×25s (~75s) per plan-build step, not the documented 25s | WARNING | Confirmed by code read; badge still eventually clears (goal-relevant behavior preserved), only the documented-vs-actual bound diverges |
+| `src/backend/storeManagers/steam/withTimeout.ts` applied at `depot.ts:416-420` | withTimeout.ts:14-25 | WR-03: 25s bound may false-trip a healthy-but-slow large-library `getOwnedSets` fetch, contradicting CLAUDE.md's own noted node-steam-user issue #144 | WARNING | Confirmed via code read of `getOwnedSets` (iterates every package license); advisory, no test coverage disproves or proves this in either direction |
+| `src/backend/storeManagers/steam/installLocation.ts`, `depot.ts`, `games.ts` | `[Timing]` logInfo calls throughout | IN-01 (30-REVIEW.md): temporary diagnostic instrumentation (including a full content-server directory `JSON.stringify` dump) still present, marked "remove once root cause confirmed" — root cause IS now confirmed/fixed by 30-07 | INFO | Pre-existing, not introduced by 30-07, but now stale per its own removal condition; not a debt-marker-gate violation (no TBD/FIXME/XXX, just a comment convention) |
+| `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md` | `status:` field | Still `diagnosed`, not `resolved` | INFO (tracking signal) | Directly confirms this phase's remaining human-verification gap; not a code anti-pattern |
 
-No `TBD`/`FIXME`/`XXX` markers found in any Phase-30-modified file. All Critical (CR-01..04) and
-6/7 Warning (WR-01..07, minus the two new gap-closure warnings above) findings from the original
-code review are fixed and independently re-verified in this session (`cargo check`, `tsc --noEmit`,
-full jest sweep all green). The two new gap-closure warnings (WR-30-05-01, WR-30-06-01) and the
-info findings are real but non-blocking quality gaps, not goal-breaking defects.
+No `TBD`/`FIXME`/`XXX` debt markers found in any file modified by plan 30-07. The three WARNINGs
+above are exactly the three from `30-REVIEW.md`'s focused re-review of this session's delta (0
+blockers) — independently re-confirmed by direct source read in this verification, not merely
+carried over from the SUMMARY's narrative.
 
 ### Human Verification Required
 
-See YAML frontmatter `human_verification:` for the structured list. Summary of the six items:
+See YAML frontmatter `human_verification:` for the structured list.
 
-1. **Live Tauri install retest (Gap 1 / 30-05 fix)** — confirm the badge clears and the error
-   dialog/suppression behave correctly on real hardware; the debug session is still
-   `status: diagnosed`, never re-marked resolved.
-2. **Live Tauri Settings retest (Gap 2 / 30-06 fix)** — confirm Settings actually renders under
-   `npm run tauri:dev`; same non-closure of the debug session.
-3. **Native folder-picker dialog** — confirm a real OS-native picker opens and honors
-   file-vs-folder mode (WR-01); this was the actual subject of UAT Test 8, still unexercised.
-4. **Full Install → Uninstall E2E** — the phase's headline claim (signed-in library → install →
-   button transitions → uninstall) has never been observed succeeding on hardware; UAT Tests 5/6/7
-   remain blocked/skipped.
-5. **Both-builds smoke re-confirmation** — re-run the 30-04 Task 3 checkpoint against current HEAD
-   now that 30-05/30-06 have landed.
-6. **CR-03/CR-04 timeout-removal verification** — a >60s install and a long-open folder picker,
-   per `30-REVIEW-FIX.md`'s own explicit ask for human verification.
-7. **Electron Steam sync recovery** — re-sign-in and confirm sync recovers, closing the Test 9
-   loop with observed evidence rather than diagnosis alone.
+1. **Live Tauri retest of 30-07's G-30-02 fix** — confirm the install badge now clears (or shows
+   an ERROR dialog) within the documented bound on a genuinely stale CM socket, matching the exact
+   symptom that failed in the prior live retest (`30-HUMAN-UAT.md` Test 1: "spinner remains
+   spinning once clicked"). The debug session this fix targets is still `status: diagnosed`.
+2. **Full Install -> Uninstall E2E** — the phase's headline user-facing claim, blocked by the same
+   root cause and never observed succeeding end-to-end on hardware (`30-HUMAN-UAT.md` Test 4:
+   `blocked_by: prior-phase`).
 
 ### Gaps Summary
 
-No must-have was found to be structurally FAILED — every artifact this phase's plans committed to
-exists, is substantive (not a stub), and is wired to real backend code, and the full automated
-suite (2019 tests across `src/backend`, `src/frontend`, `src/preload`, `src/common`, plus a clean
-`tsc --noEmit` and `cargo check`) is green. Both gap-closure plans (30-05, 30-06) correctly
-diagnosed and fixed their root causes at the code level, with new jest coverage proving the fix's
-logic.
+No must-have was found structurally FAILED at the code level in this session. Gap-closure plan
+30-07 is a clean, well-scoped fix: `withTimeout.ts` is sound (transparent pass-through on the happy
+path, always-cleared timer, no unhandled-rejection escape — independently re-derived from source in
+this session, not taken from the SUMMARY), every listed pre-download CM primitive is genuinely
+bounded (7 call sites read/grepped and matched against the plan's own enumeration), the streaming
+download phase is genuinely left unbounded (confirmed by absence of `withTimeout` around
+`downloadSteamDepots`/`downloadDepotFiles`), and the fix feeds 30-05's existing terminal-clear
+machinery without duplicating it (installFlowRegistration.ts's `hadError`/`finally`/`catch` block
+is byte-identical to the prior verification's read). The full regression sweep (114 suites / 2028
+tests, `tsc --noEmit` clean) shows no signs of a regression to either build.
 
-The reason this phase is `human_needed` rather than `passed`: the phase's own claim discipline
-(REQ-30-03, "wired and unit-proven, never hardware-proven") is a two-edged fact here — it means the
-phase's own SUMMARY/UAT artifacts are honest about what jest can and cannot prove, but it also means
-several of the goal's actual observable truths ("the Install button works", "Settings renders",
-"a native picker opens") have literally never been witnessed working end-to-end on the actual Tauri
-build since the two most recent fixes landed. `30-UAT.md`'s own Tests 4, 5, 6, 7, 8 are recorded as
-`issue`/`blocked`/`skipped` — not `pass` — and neither debug session
-(`steam-install-spinner-hangs-tauri.md`, `settings-unreachable-tauri.md`) has been re-marked
-resolved after a hardware retest, unlike G-30-01 (which *was* retested and is genuinely closed).
-Per this verification's own instructions: code-level and jest evidence alone is not sufficient to
-mark a live-Tauri-build E2E must-have as `passed` — it is `human_needed`.
+However, this is precisely the kind of fix that a prior automated pass on this phase already got
+wrong once: 30-05 was code/jest-proven and looked complete, but a live retest found it did NOT
+close the actual live defect (a never-settling await is a failure mode jest's synchronous mocks
+cannot reproduce). 30-07 targets that exact gap and is more thorough (it covers 7 CM call sites,
+not just the one originally diagnosed), and the code review found 0 blockers — but per this
+project's own established discipline (REQ-30-03's "wired and unit-proven, never hardware-proven"),
+a fix for a LIVE-ONLY defect cannot be marked `passed` on code evidence alone. The debug session
+`.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md` remains `status: diagnosed`
+precisely because no post-fix live retest has occurred yet.
 
-This is not a regression risk assessment problem (no BLOCKER-class defect was found) — it is a
-proof-completeness gap. Recommend: run the 7 human-verification items above against
-`npm run tauri:dev` before considering Phase 30 fully closed, then flip this VERIFICATION.md's
-status to `passed` (or file any newly-discovered defect as a fresh gap).
+Separately, three advisory WARNINGs from `30-REVIEW.md`'s focused review of 30-07 (WR-01 nested-
+timeout layering defeating an inner graceful-fallback contract, WR-02 real bound ~3x the documented
+25s, WR-03 possible false-trip on large libraries) were independently re-confirmed by direct source
+read in this session. Per this verification's task instructions, these are treated as advisory
+tuning concerns and do NOT block phase completion — but WR-01 in particular is a genuine, if
+narrow, behavior regression (a transient recoverable CM hiccup during install-location lookup that
+previously degraded gracefully now hard-fails the install) and should be tracked for a future
+tightening pass, not silently forgotten.
+
+**Recommendation:** Run the two remaining human-verification items above against
+`npm run tauri:dev` with a genuinely stale/rehydrated CM session. If both pass, flip this
+VERIFICATION.md's status to `passed` and mark the debug session `resolved`. If Test 1 still fails
+live, the mechanism (bare, unbounded CM awaits) is now well-understood and bounded, but some
+additional path may remain uncovered (e.g., WR-02's retry-amplification masking a different failure
+mode) — file as a new gap cycle rather than re-diagnosing from scratch.
 
 ---
 
-_Verified: 2026-07-23_
+_Verified: 2026-07-23T02:50:00Z_
 _Verifier: Claude (gsd-verifier)_
