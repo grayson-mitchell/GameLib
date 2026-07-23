@@ -64,8 +64,20 @@ function Settings() {
   // Load Heroic's or game's config, only if not loaded already
   useEffect(() => {
     const getSettings = async () => {
-      const config = await window.api.requestAppSettings()
-      setCurrentConfig(config)
+      try {
+        const config = await window.api.requestAppSettings()
+        setCurrentConfig(config)
+      } catch (error) {
+        // SEAM Invariant B (30-06): requestAppSettings can reject with
+        // UNPORTED_CHANNEL_MARKER (unported channel) or any other runtime
+        // failure. Either way, degrade non-fatally instead of leaving
+        // currentConfig null forever (the permanent-spinner Gap 2 bug) — an
+        // empty-but-defined object is enough to clear this component's own
+        // `!currentConfig` render gate below. This catch branch never runs
+        // under Electron, where the await never rejects.
+        console.warn('requestAppSettings failed, falling back to {}:', error)
+        setCurrentConfig({})
+      }
     }
     getSettings()
   }, [])

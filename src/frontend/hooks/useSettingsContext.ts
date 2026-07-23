@@ -12,8 +12,30 @@ type Props = {
   runner?: Runner
 }
 
+/**
+ * Pure decision: should the render-gate withhold `contextValues` (return
+ * null) because a config load hasn't produced anything to show yet?
+ *
+ * 30-06 (SEAM Invariant B): the original guard was
+ * `Object.keys(config).length === 0` alone, which blocks forever if
+ * requestAppSettings/requestGameSettings rejects (an unported channel or any
+ * runtime failure) — the catch branch below sets `currentConfig` to `{}`
+ * (still empty), so the original guard would still return null forever.
+ * Adding `hasAttemptedLoad` is the smaller fix versus seeding a non-empty
+ * fake default: once a load has been ATTEMPTED (success OR failure), an
+ * empty config no longer withholds the context — it renders with whatever
+ * real (possibly empty) settings resolved.
+ */
+export function shouldWithholdContext(
+  config: Partial<AppSettings>,
+  hasAttemptedLoad: boolean
+): boolean {
+  return Object.keys(config).length === 0 && !hasAttemptedLoad
+}
+
 const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [currentConfig, setCurrentConfig] = useState<Partial<AppSettings>>({})
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   const { i18n } = useTranslation()
   const { platform } = useContext(ContextProvider)
   const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
@@ -30,10 +52,25 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   // Load Heroic's or game's config, only if not loaded already
   useEffect(() => {
     const getSettings = async () => {
-      const config = isDefault
-        ? await window.api.requestAppSettings()
-        : await window.api.requestGameSettings(appName)
-      setCurrentConfig(config)
+      try {
+        const config = isDefault
+          ? await window.api.requestAppSettings()
+          : await window.api.requestGameSettings(appName)
+        setCurrentConfig(config)
+      } catch (error) {
+        // SEAM Invariant B (30-06): degrade non-fatally on a rejected
+        // config load (unported channel marker or any other runtime
+        // failure) instead of leaving `currentConfig` at `{}` forever —
+        // see `shouldWithholdContext` above. This catch branch never runs
+        // under Electron, where the await never rejects.
+        console.warn(
+          `requestAppSettings/requestGameSettings failed for appName=${appName}:`,
+          error
+        )
+        setCurrentConfig({})
+      } finally {
+        setHasAttemptedLoad(true)
+      }
     }
     void getSettings()
   }, [appName, isDefault, i18n.language, settingsModalProps.isOpen])
@@ -58,7 +95,7 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
     isMacNative
   }
 
-  if (Object.keys(contextValues.config).length === 0) {
+  if (shouldWithholdContext(contextValues.config, hasAttemptedLoad)) {
     return null
   }
 
