@@ -14,6 +14,25 @@ import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import { storeMap } from 'common/utils'
 import { gogdlConfigPath } from 'backend/storeManagers/gog/constants'
 import { fixesPath } from 'backend/constants/paths'
+import {
+  withTimeout,
+  isTimeoutError
+} from 'backend/storeManagers/steam/withTimeout'
+
+/**
+ * D-01b (33-01): belt-and-suspenders bound around the WHOLE `.install()`
+ * await in `installQueueElement`, defense-in-depth for any never-settling
+ * downstream await that the pre-download PICS bounds (Phase 30 30-07) don't
+ * reach. Must sit comfortably ABOVE the summed pre-download bounds — 50s
+ * `resolveSteamInstallTarget` (STEAM_PICS_TIMEOUT_MS*2) + up to 90s×3
+ * `buildDepotPlan` retries (STEAM_PICS_BULK_TIMEOUT_MS *
+ * PLAN_BUILD_MAX_ATTEMPTS) = ~320s worst case — and must NEVER fire during
+ * the real (unbounded-by-design) depot download phase. Kept runner-agnostic
+ * per 33-RESEARCH (lower-risk: Electron's fresh CM connection has never
+ * hung this way), at 8 minutes — comfortably above the ~5.3min worst-case
+ * pre-download sum while still bounding a genuinely stuck install.
+ */
+const INSTALL_WATCHDOG_MS = 8 * 60 * 1000
 
 async function installQueueElement(params: InstallParams): Promise<{
   status: DMStatus
@@ -121,9 +140,8 @@ async function installQueueElement(params: InstallParams): Promise<{
   try {
     downloadFixesFor(appName, runner)
 
-    const installResult: InstallResult = await libraryManagerMap[runner]
-      .getGame(appName)
-      .install({
+    const installResult: InstallResult = await withTimeout(
+      libraryManagerMap[runner].getGame(appName).install({
         path: path.replaceAll("'", ''),
         installDlcs,
         sdlList: sdlList.filter((el) => el !== ''),
@@ -131,7 +149,10 @@ async function installQueueElement(params: InstallParams): Promise<{
         installLanguage,
         build,
         branch
-      })
+      }),
+      INSTALL_WATCHDOG_MS,
+      'installQueueElement install watchdog'
+    )
     const { status: resultStatus, error } = installResult
 
     deferredToSetup = installResult.deferredToSetup ?? false
@@ -145,7 +166,12 @@ async function installQueueElement(params: InstallParams): Promise<{
 
     return { status: resultStatus }
   } catch (error) {
-    installErrorReason = `${error}`
+    // D-01b: distinguish a genuine watchdog trip from an ordinary install
+    // rejection so the log/dialog gives a more actionable reason, but both
+    // converge on the exact same terminal-error path below.
+    installErrorReason = isTimeoutError(error)
+      ? 'install did not settle — connection may be stale'
+      : `${error}`
     status = 'error'
     errorMessage(installErrorReason)
     return { status: 'error' }
