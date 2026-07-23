@@ -29,6 +29,8 @@ in the running app.
 | `checkGameUpdates` | invoke | `installFlowRegistration.ts` | `checkGameUpdates()` (`src/backend/utils/checkGameUpdates.ts`, shared with Electron's `main.ts`, unchanged, all runners — D-05b/D-12) | REQ-30-04 |
 | `listSteamLibraryTargets` | invoke | `installFlowRegistration.ts` | `isSteamNativeInstallEnabled()` gate (mirrors Electron's own gate exactly) | REQ-30-04 |
 | `gameStatusUpdate` | push | rides the existing generic `frontendMessage` → `frontend_message` relay; source is `sendGameStatusUpdate()` (`src/backend/utils.ts:1351`) called directly from `installFlowRegistration.ts` | Zero Rust changes — the third rider after `pushGameToLibrary` (Phase 27) and `storeChanged` (Phase 29) | REQ-30-05 |
+| `requestAppSettings` | invoke | `settingsFlowRegistration.ts` | `GlobalConfig.get().getSettings()` (`main.ts:998` parity) | REQ-30-08 |
+| `requestGameSettings` | invoke | `settingsFlowRegistration.ts` | steam-library-routed: `libraryManagerMap['steam'].getGame(appName).getSettings()` if the in-memory Steam library Map has `appName`, else `GameConfig.get(appName).getSettings()` (`main.ts:1012-1015` parity, unchanged) | REQ-30-08 |
 
 Additionally, `dialog_open` (a `rustInvoke` channel, not a sidecar `invoke` channel) went real this
 phase via `installFlowRegistration.ts`'s sibling plan 30-03 — see SEAM.md §1 and the note at the
@@ -47,15 +49,21 @@ Each entry below still rejects non-fatally with `UNPORTED_CHANNEL_MARKER` per In
 - `getSteamUserInfo`
 - `logoutSteam`
 
-**The six `DownloadDialog` channels — `DownloadDialog` never mounts for `runner === 'steam'`
-(`InstallGameModal.ts:66-74` is a commented chokepoint), so none of its reads are on the Steam
-depot path this phase covers:**
-- `requestAppSettings`
-- `requestGameSettings`
+**Four of the original six `DownloadDialog` channels — `DownloadDialog` never mounts for
+`runner === 'steam'` (`InstallGameModal.ts:66-74` is a commented chokepoint), so none of its reads
+are on the Steam depot path this phase covers:**
 - `checkDiskSpace`
 - `getGameOverride`
 - `getGameSdl`
 - `getPrivateBranchPassword`
+
+**`requestAppSettings`/`requestGameSettings` moved OUT of this list in Plan 06 (gap closure,
+corrected rationale):** the original not-ported decision above justified itself only via the
+`DownloadDialog` call site and missed that the Settings screen (`Settings/index.tsx`) AND
+`useSettingsContext` BOTH call these two channels at mount, independent of `DownloadDialog` —
+leaving Settings permanently stuck on its loading gate under Tauri (UAT Test 8, Gap 2, see
+`.planning/debug/settings-unreachable-tauri.md`). They are now ported — see the "Ported this
+phase" table above. The WRITE side (`setSetting`/`writeConfig`) stays unported below.
 
 **Cosmetic, ignored by `SteamGame`:**
 - `getAlternativeWine` — `SteamGame` never reads `wineVersion`; `InstallModal/index.tsx:113`'s
