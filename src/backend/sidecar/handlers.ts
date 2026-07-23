@@ -39,6 +39,7 @@ import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
 import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
+import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -68,6 +69,12 @@ registerSettingsFlows()
 // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
 // caller (`main.ts`) is not in the sidecar's import graph.
 registerDialogFlows()
+// Phase 32 Plan 01: the five queue-management channels (pause/resume/cancel/
+// remove/inspect) — no ordering constraint relative to the other four calls
+// above (each module owns its own channel names, no cross-module runtime
+// dependency at registration time); placed alongside them, before
+// `ensureStoresRegistered()` (32-PATTERNS.md).
+registerDownloadQueueFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

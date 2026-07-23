@@ -737,19 +737,28 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     }
   })
 
-  // Test 6 (Invariant B guard): a deliberately-unported queue channel still
-  // rejects carrying UNPORTED_CHANNEL_MARKER, and the RPC loop keeps serving
-  // afterward (health still resolves).
-  it('Test 6 (Invariant B guard): getDMQueueInformation (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  // Test 6 (Invariant B guard): a deliberately-unported DownloadDialog channel
+  // still rejects carrying UNPORTED_CHANNEL_MARKER, and the RPC loop keeps
+  // serving afterward (health still resolves).
+  //
+  // UPDATED (Phase 32 Plan 01): `getDMQueueInformation` — this test's
+  // original example channel — is no longer unported. It is now registered
+  // for real by `downloadQueueFlowRegistration.ts` (REQ-32-04,
+  // `downloadQueueFlows.test.ts` covers its ported behavior). `checkDiskSpace`
+  // substitutes here as a channel this plan does not touch and that stays
+  // genuinely unported (mirrors `settingsFlows.test.ts`'s own canonical
+  // Invariant B example), so this test keeps proving the invariant rather
+  // than asserting something Phase 32 deliberately made false.
+  it('Test 6 (Invariant B guard): checkDiskSpace (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'queue-1', 'getDMQueueInformation', [])
+    writeInvoke(input, 'disk-space-1', 'checkDiskSpace', [])
     await flush()
 
-    const queueResponse = frames.find((frame) => frame.id === 'queue-1') as
-      | { ok: boolean; error?: string }
-      | undefined
-    expect(queueResponse?.ok).toBe(false)
-    expect(queueResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    const diskSpaceResponse = frames.find(
+      (frame) => frame.id === 'disk-space-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(diskSpaceResponse?.ok).toBe(false)
+    expect(diskSpaceResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
 
     writeInvoke(input, 'health-after-queue', 'health', [])
     await flush()
