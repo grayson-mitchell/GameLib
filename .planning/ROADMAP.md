@@ -67,7 +67,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 29: Tauri store layer** - Grow the sidecar store past the two skeleton stores to cover the ~18 files routing through `electron_store.ts`, so later slices have config to read (completed 2026-07-22)
 - [x] **Phase 30: IPC re-plumb slice 1 (install/uninstall/update-check)** - First user-facing domain slice of the ~217 unported endpoints, following SEAM.md's incremental-port checklist (completed 2026-07-22)
 - [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
-- [ ] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume
+- [x] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume (completed 2026-07-23)
 - [ ] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly
 - [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork
 - [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
@@ -1146,7 +1146,7 @@ Plans:
 **Goal:** Port the download-manager/queue endpoint cluster onto the sidecar — the progress-notification-heavy slice, which exercises the `frontendMessage` → `frontend_message` push path at real volume rather than the single `pushGameToLibrary` case the skeleton proved. Third of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (install flow — the queue's producer).
 **Requirements:** REQ-32-01..08 (minted 2026-07-23 during `/gsd-plan-phase 32` from 32-CONTEXT.md D-01..D-06)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 
@@ -1160,7 +1160,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 32-03-PLAN.md — Declare `32-PORTED-CHANNELS.md` (incl. `changedDMQueueInformation`, D-04 pause caveat, D-05 deferral) + `32-HUMAN-UAT.md` (doubly-gated G-30-01/G-30-02) + SEAM §3→§1 move
+- [x] 32-03-PLAN.md — Declare `32-PORTED-CHANNELS.md` (incl. `changedDMQueueInformation`, D-04 pause caveat, D-05 deferral) + `32-HUMAN-UAT.md` (doubly-gated G-30-01/G-30-02) + SEAM §3→§1 move
 
 ---
 
