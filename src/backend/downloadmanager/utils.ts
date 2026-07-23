@@ -89,6 +89,17 @@ async function installQueueElement(params: InstallParams): Promise<{
     )
   }
 
+  // WR-02/D-11 (33-01): the sidecar/native install path is Steam-focused —
+  // the Epic/GOG DLC fan-out that a non-Steam install() call previously
+  // silently dropped is an intentionally re-scoped boundary, not a bug. Log
+  // it as a guarded/declared case rather than letting it vanish silently.
+  if (runner !== 'steam' && installDlcs && installDlcs.length > 0) {
+    logWarning(
+      `installDlcs (${installDlcs.length} DLC(s)) present for non-Steam runner '${runner}' — the Steam-focused install path does not fan these out; Epic/GOG DLC install is intentionally out of scope (WR-02/D-11).`,
+      LogPrefix.DownloadManager
+    )
+  }
+
   let deferredToSetup = false
   // debug/steam-cancel-abort-thread-a: a cancelled native Steam install ALSO
   // never starts an ACF poller — runNativeDepotDownload (games.ts) returns
@@ -99,6 +110,14 @@ async function installQueueElement(params: InstallParams): Promise<{
   // fixed for bottle guided-setup deferrals), the game is stuck showing
   // "downloading"/"installing" forever — the user-reported Thread A symptom.
   let wasAborted = false
+  // 33-01/D-10: the settled terminal status, visible to the finally block
+  // below (a plain `const { status }` destructure inside the try block would
+  // be block-scoped and invisible down here). Also set from the catch block
+  // and from a watchdog trip (Task 2) so all three failure modes
+  // (never-settles / resolves error / throws) converge on the same
+  // terminal-error surface.
+  let status: DMStatus | undefined
+  let installErrorReason: string | undefined
   try {
     downloadFixesFor(appName, runner)
 
@@ -113,18 +132,22 @@ async function installQueueElement(params: InstallParams): Promise<{
         build,
         branch
       })
-    const { status, error } = installResult
+    const { status: resultStatus, error } = installResult
 
     deferredToSetup = installResult.deferredToSetup ?? false
-    wasAborted = status === 'abort'
+    wasAborted = resultStatus === 'abort'
+    status = resultStatus
+    installErrorReason = error
 
-    if (status === 'error') {
+    if (resultStatus === 'error') {
       errorMessage(error ?? '')
     }
 
-    return { status }
+    return { status: resultStatus }
   } catch (error) {
-    errorMessage(`${error}`)
+    installErrorReason = `${error}`
+    status = 'error'
+    errorMessage(installErrorReason)
     return { status: 'error' }
   } finally {
     // Steam: ACF poller emits the real done — suppress it here to prevent
@@ -136,11 +159,34 @@ async function installQueueElement(params: InstallParams): Promise<{
     //
     // EXCEPTION (debug/steam-cancel-abort-thread-a): a cancelled native
     // install also started no poller — see wasAborted's doc comment above.
-    if (runner !== 'steam' || deferredToSetup || wasAborted) {
+    //
+    // EXCEPTION (WR-01/D-10, 33-01): a Steam install that settles (or
+    // throws) as `status === 'error'` ALSO never starts an ACF poller —
+    // nothing else would ever clear the badge, which is the visible half of
+    // the G-30-02 live install-hang. Per D-03, this is paired with a
+    // failure dialog below so the badge-clear and the user-facing failure
+    // story land together as one coherent surface.
+    if (
+      runner !== 'steam' ||
+      deferredToSetup ||
+      wasAborted ||
+      status === 'error'
+    ) {
       sendGameStatusUpdate({
         appName,
         runner,
         status: 'done'
+      })
+    }
+    if (runner === 'steam' && status === 'error') {
+      showDialogBoxModalAuto({
+        title: i18next.t('box.error.title', 'Error'),
+        message: i18next.t(
+          'box.error.install.failed',
+          'The installation of {{title}} failed: {{error}}',
+          { title, error: installErrorReason || 'Unknown error' }
+        ),
+        type: 'ERROR'
       })
     }
   }
