@@ -304,3 +304,49 @@ describe('installQueueElement — D-01b: belt-and-suspenders install watchdog', 
     await assertion
   })
 })
+
+describe('installQueueElement — WR-03/D-12: error-path regression coverage', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('an install() call that THROWS/REJECTS (not just resolves {status:"error"}) is unaffected by the coverage gap that let WR-01 ship — badge clears AND a failure dialog is raised via the same catch-block path', async () => {
+    installMock.mockRejectedValue(new Error('ECONNRESET'))
+
+    const result = await installQueueElement(makeParams())
+
+    expect(result.status).toBe('error')
+    expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appName: '1091500',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+    expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'ERROR' })
+    )
+  })
+
+  it('a "abort" resolution (user cancel) is unaffected by the D-10/D-01b additions — no dialog raised for a user-initiated cancel, only badge-clear', async () => {
+    installMock.mockResolvedValue({ status: 'abort' })
+
+    const result = await installQueueElement(makeParams())
+
+    expect(result.status).toBe('abort')
+    expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appName: '1091500',
+        runner: 'steam',
+        status: 'done'
+      })
+    )
+    expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
+  })
+})
