@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 31 context gathered
-last_updated: "2026-07-23T04:13:48.659Z"
-last_activity: 2026-07-23 -- Phase 31 planning complete
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-07-23T04:43:09.841Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 5
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 30 — tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
+**Current focus:** Phase 31 — tauri-ipc-re-plumb-slice-2-settings-and-config
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,10 +33,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 30 (tauri-ipc-re-plumb-slice-1-install-uninstall-update-check) — EXECUTING
-Plan: 7 of 7
+Phase: 31 (tauri-ipc-re-plumb-slice-2-settings-and-config) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-23 -- Phase 31 planning complete
+Last activity: 2026-07-23
 
 > **Plan-counter note:** the "Plan: 2 of 7" value this file carried immediately
 > before 30-07's execution was itself stale drift (predates this session) —
@@ -261,6 +261,7 @@ Closed/parked native-install phases:
 | Phase 30 P05 | 10min | 2 tasks | 2 files |
 | Phase 30 P06 | 20min | 3 tasks | 7 files |
 | Phase 30 P07 | 25min | 2 tasks | 8 files |
+| Phase 31 P01 | 45min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -450,6 +451,9 @@ Recent decisions affecting current work:
 - [Phase 30]: useSettingsContext render-gate relaxed via hasAttemptedLoad flag (extracted as pure shouldWithholdContext) instead of seeding a fake non-empty default config — Smaller, more honest fix per plan's own escape hatch; avoids masking a genuinely-empty-but-successful settings response
 - [Phase 30]: Frontend fallback test extracts the hook's pure render-gate decision instead of using React Testing Library — Project's frontend jest config has no jsdom/react-test-renderer installed; installing one is excluded from auto-fix authority (Rule 3 package-install carve-out); followed existing hasStatus.reconcile.test.ts precedent in the same directory
 - [Phase 30]: Bound every pre-download steam-user CM call (getProductInfo/getDepotDecryptionKey/getRawManifest/getContentServers) plus resolveSteamInstallTarget in a 25s withTimeout to close G-30-02 (install-spinner hang) — A stale-but-present CM socket never rejects on its own; timeout rejections feed the EXISTING withPlanBuildRetry + 30-05 finally/catch machinery, so zero new terminal-status logic was needed
+- [Phase ?]: setSetting registered via ipcMain.on, never .handle -- a send channel registered as a handler fails 100% silently at runtime
+- [Phase ?]: getUserInfo/readConfig deliberately NOT ported -- neither is reached by the Settings screen (Epic-only / Legendary-only respectively)
+- [Phase ?]: process.getSystemVersion polyfilled in electronStub.ts via os.release() rather than modifying the shared backend/utils/systeminfo module
 
 ### Pending Todos
 
@@ -519,8 +523,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T03:34:06.317Z
-Stopped at: Phase 31 context gathered
+Last session: 2026-07-23T04:43:09.834Z
+Stopped at: Completed 31-01-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

@@ -1122,13 +1122,13 @@ Plans:
 **Goal:** Port the settings/config endpoint cluster onto the sidecar, including the `dialog` API surface those flows depend on (Tauri `dialog` plugin — 9 files per spike 009's touch-count). Second of three mechanical re-plumb slices.
 **Depends on:** Phase 30 (slice-1 pattern proven at volume), Phase 29 (store layer).
 **Requirements:** REQ-31-01..07 (7 total — minted 2026-07-23 from 31-CONTEXT.md D-01..D-05)
-**Plans:** 3 plans (2 waves)
+**Plans:** 1/3 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 31-01-PLAN.md — Settings write path (setSetting/writeConfig) + six confirmed generic reads registered on the sidecar [wave 1]
+- [x] 31-01-PLAN.md — Settings write path (setSetting/writeConfig) + six confirmed generic reads registered on the sidecar [wave 1]
 - [ ] 31-02-PLAN.md — Real async dialog members (showMessageBox/showErrorBox/showSaveDialog) via rustInvoke + D-04 shell/clipboard logged no-ops [wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*

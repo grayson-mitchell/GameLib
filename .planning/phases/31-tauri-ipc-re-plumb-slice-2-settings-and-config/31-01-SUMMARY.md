@@ -125,6 +125,17 @@ None — no external service configuration required.
 ## Next Phase Readiness
 The settings write path and generic reads are live and unit-proven under the sidecar. Plan 31-02/31-03 (dialog members, D-04 no-op logging, `31-PORTED-CHANNELS.md`/SEAM.md update) can proceed independently — this plan's `files_modified` scope (`settingsFlowRegistration.ts`, `settingsFlows.test.ts`, `storeLayer.test.ts`) is fully closed. No blockers identified.
 
+## Self-Check: PASSED
+
+All claimed files exist on disk and all claimed commit hashes are present in `git log --oneline --all`:
+- `src/backend/sidecar/settingsFlowRegistration.ts` — FOUND
+- `src/backend/sidecar/electronStub.ts` — FOUND
+- `src/backend/sidecar/__tests__/settingsFlows.test.ts` — FOUND
+- `src/backend/sidecar/__tests__/storeLayer.test.ts` — FOUND
+- `.planning/phases/31-tauri-ipc-re-plumb-slice-2-settings-and-config/31-01-SUMMARY.md` — FOUND
+- `.planning/phases/31-tauri-ipc-re-plumb-slice-2-settings-and-config/deferred-items.md` — FOUND
+- `66cfcee5`, `52935375`, `67297a4c` — FOUND
+
 ---
 *Phase: 31-tauri-ipc-re-plumb-slice-2-settings-and-config*
 *Completed: 2026-07-23*
