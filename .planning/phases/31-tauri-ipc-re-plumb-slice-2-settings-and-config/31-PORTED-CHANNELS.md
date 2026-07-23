@@ -14,15 +14,19 @@ running app." Registration/real-behavior is proven by jest coverage (`settingsFl
 click-through. Do not read any row below as proof that the end-to-end Settings-screen flow works
 under `tauri:dev` — that live UAT is deferred (D-05, logged in SEAM.md).
 
-**D-05 note on the three dialog members specifically:** `showMessageBox`/`showErrorBox`/
-`showSaveDialog` are **DECLARED INFRASTRUCTURE**, not flow-driven ports. 31-RESEARCH.md Q2 traced
-every real call site of the five `dialog.*` members in the backend and found **zero** Phase 31
-settings/config flow (`setSetting`, `writeConfig`, `getMaxCpus`, `showUpdateSetting`,
-`getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative`) reaches any of them. They were
-built anyway per the locked D-03 decision, to close SEAM.md §3's `dialog ×9` deferred-cluster row
-completely (only the Sync pair remains after this phase). Proof is a direct `electronStub.dialog.*`
-unit test (`dialogStub.test.ts`, mirroring the pre-existing `showOpenDialog` coverage pattern),
-never a settings-screen E2E — there isn't one to exercise them through.
+**D-05 note on `showErrorBox`/`showSaveDialog` (revised, Phase 31 Plan 04):** these two are
+**DECLARED INFRASTRUCTURE**, not flow-driven ports. 31-RESEARCH.md Q2 traced every real call site
+of the five `dialog.*` members in the backend and found **zero** Phase 31 settings/config flow
+(`setSetting`, `writeConfig`, `getMaxCpus`, `showUpdateSetting`, `getLogContent`, `getSystemInfo`,
+`hasExecutable`, `isNative`) reaches either of them. They were built anyway per the locked D-03
+decision, to close SEAM.md §3's `dialog ×9` deferred-cluster row as much as safely possible.
+Proof is a direct `electronStub.dialog.*` unit test (`dialogStub.test.ts`, mirroring the
+pre-existing `showOpenDialog` coverage pattern), never a settings-screen E2E — there isn't one to
+exercise them through. **`showMessageBox` is NOT among this "now real" set** — see "Deliberately
+NOT ported this phase" below for the CR-01 de-scope (Phase 31 Plan 04): it DOES have pre-existing,
+already-shipped backend callers (`promptI386Recovery` via the Phase-30 native-install path,
+`askForceUninstall`) that branch on `response`, and forwarding an OK-only Rust dialog to a
+multi-button destructive confirm auto-confirmed the destructive branch.
 
 ---
 
@@ -38,7 +42,6 @@ never a settings-screen E2E — there isn't one to exercise them through.
 | `getSystemInfo` | invoke | `settingsFlowRegistration.ts` → `backend/utils/systeminfo/index.ts` (boundary-mocked subprocess internals in tests; `process.getSystemVersion` polyfilled in `electronStub.ts`) | REQ-31-01 |
 | `hasExecutable` | invoke | `settingsFlowRegistration.ts` → real backend read (boundary-mocked subprocess internals in tests) | REQ-31-01 |
 | `isNative` | invoke | `settingsFlowRegistration.ts` → `libraryManagerMap[runner].getGame(appName).isNative()`, runner-generic, already-resident `libraryManagerMap` | REQ-31-01 |
-| `showMessageBox` | rustInvoke (`RUST_DIALOG_MESSAGE`) | `electronStub.ts` → `dispatch_rust_channel`'s `dialog_message` arm → `tauri-plugin-dialog`'s `MessageDialogBuilder::blocking_show()`. DECLARED INFRASTRUCTURE (D-05) — no in-scope caller | REQ-31-03 |
 | `showErrorBox` | rustInvoke (`RUST_DIALOG_MESSAGE`, `kind:'error'`) | `electronStub.ts` → same `dialog_message` arm, discards the boolean return | REQ-31-03 |
 | `showSaveDialog` | rustInvoke (`RUST_DIALOG_SAVE`) | `electronStub.ts` → `dispatch_rust_channel`'s `dialog_save` arm → `FileDialogBuilder::blocking_save_file()`. DECLARED INFRASTRUCTURE (D-05) — zero real call sites exist anywhere in the repository | REQ-31-03 |
 
@@ -47,7 +50,26 @@ never a settings-screen E2E — there isn't one to exercise them through.
 ## Deliberately NOT ported this phase
 
 Each entry below still rejects non-fatally with `UNPORTED_CHANNEL_MARKER` per Invariant B (or, for
-the two send-kind no-ops, remains a logged-but-inert listener per D-04).
+the two send-kind no-ops, remains a logged-but-inert listener per D-04) — **except
+`showMessageBox` below, which resolves a safe sentinel rather than rejecting (see its own entry).**
+
+**`showMessageBox` — safe-sentinel logged no-op, CR-01 de-scope (Phase 31 Plan 04):**
+- `showMessageBox` (`RUST_DIALOG_MESSAGE`-eligible channel, but never forwarded to it) —
+  UNLIKE the other rows in this section, this is not "no in-scope caller." It has
+  **pre-existing, already-shipped backend callers** reachable via the Phase-30 native install
+  path: `promptI386Recovery` (`storeManagers/steam/library.ts`, via `startInstallPolling` →
+  `pollInstallOnce`) and `askForceUninstall` (`utils.ts`, reached fire-and-forget from
+  `launcher.ts`), both of which `await dialog.showMessageBox(...)` and branch on the returned
+  `response` to decide whether to run a destructive action. Rust's dialog is OK-only
+  (`blocking_show()` returns a single bool) — forwarding a multi-button confirm to it mapped the
+  bool to `response:0/1`, which auto-confirmed the destructive branch every time (CR-01,
+  31-VERIFICATION.md). The remedy is a de-wire, not a real multi-button port: `showMessageBox`
+  now emits one `console.warn` and RESOLVES the safe sentinel `{ response: -1, checkboxChecked:
+  false }` — never forwarding to `RUST_DIALOG_MESSAGE`, never rejecting/throwing (the two live
+  callers `await` it unguarded and fire-and-forget with no `.catch()`, and this sidecar process
+  has no `unhandledRejection` guard, so a reject would crash it). `-1` declines both reachable
+  callers. A real multi-button `showMessageBox` implementation is deferred to Phase 33 (the
+  lifecycle/dialog cluster).
 
 **Dropped from D-01's original candidate list — traced call sites prove neither is reached by the
 Steam Settings screen (31-RESEARCH.md Q1):**
@@ -85,7 +107,8 @@ Steam Settings screen (31-RESEARCH.md Q1):**
 
 ---
 
-**Note on `dialog`:** with `showMessageBox`/`showErrorBox`/`showSaveDialog` now real
-(this phase) and `showOpenDialog` already real (Phase 30's `dialog_open`), the SEAM.md §3
-`dialog ×9` deferred cluster is closed except for the two Sync members above, which stay
-deferred to Phase 33 as logged no-ops.
+**Note on `dialog`:** with `showErrorBox`/`showSaveDialog` real (this phase) and `showOpenDialog`
+already real (Phase 30's `dialog_open`), the SEAM.md §3 `dialog ×9` deferred cluster is mostly
+closed. `showMessageBox` is deliberately NOT wired (Phase 31 Plan 04, CR-01 de-scope — see above)
+— a safe-sentinel logged no-op, real multi-button behavior deferred to Phase 33 alongside the two
+Sync members above.

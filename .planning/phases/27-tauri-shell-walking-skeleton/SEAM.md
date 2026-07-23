@@ -156,13 +156,23 @@ Full enumerated list in
   Legendary-only respectively), correcting the original D-01 candidate list.
 - **`RUST_DIALOG_MESSAGE`/`RUST_DIALOG_SAVE`** — two new allowlisted `rustInvoke` channels, with
   matching `dispatch_rust_channel` match arms in `main.rs` calling `tauri-plugin-dialog`'s
-  `blocking_show()`/`blocking_save_file()`. `electronStub.ts`'s `dialog.showMessageBox`/
-  `showErrorBox`/`showSaveDialog` are now real, forwarding through this transport with a
-  never-throws safe-default catch. **DECLARED INFRASTRUCTURE, not flow-driven** (D-05 below):
-  31-RESEARCH.md Q2 traced every real call site of the five `dialog.*` members and found zero
-  Phase 31 settings/config flow reaches any of them; they were built anyway to close this
-  document's own §3 `dialog ×9` cluster completely. Proven by a direct `electronStub.dialog.*`
-  unit test (`dialogStub.test.ts`), never a settings-screen E2E.
+  `blocking_show()`/`blocking_save_file()`. `electronStub.ts`'s `dialog.showErrorBox`/
+  `showSaveDialog` are real, forwarding through this transport with a never-throws safe-default
+  catch. **`dialog.showMessageBox` is deliberately NOT wired to this transport (Phase 31 Plan
+  04, CR-01)** — Rust's dialog is OK-only (`blocking_show()` returns a single bool), but the
+  real backend callers (`promptI386Recovery`, `askForceUninstall`) present multi-button
+  destructive/non-destructive confirms and branch on the returned `response`; forwarding to the
+  OK-only dialog auto-confirmed the destructive branch every time, an already-shipped-path
+  correctness/security bug (Phase-30 native install reaches both callers). `showMessageBox` now
+  logs a `console.warn` and resolves the safe sentinel `{ response: -1, checkboxChecked: false
+  }` — never forwarding to `RUST_DIALOG_MESSAGE`, never rejecting (its two live callers `await`
+  it unguarded and fire-and-forget, and the sidecar has no `unhandledRejection` guard, so a
+  reject would crash the process). Real multi-button `showMessageBox` behavior is deferred to
+  Phase 33. **DECLARED INFRASTRUCTURE, not flow-driven** (D-05 below), applies to
+  `showErrorBox`/`showSaveDialog`: 31-RESEARCH.md Q2 traced every real call site of the five
+  `dialog.*` members and found zero Phase 31 settings/config flow reaches any of them; they were
+  built anyway to close this document's own §3 `dialog ×9` cluster. Proven by a direct
+  `electronStub.dialog.*` unit test (`dialogStub.test.ts`), never a settings-screen E2E.
 - **D-04 no-ops upgraded from silent to logged** — `dialog.showMessageBoxSync`/
   `showOpenDialogSync` and `shell.showItemInFolder`/`clipboard.writeText` now emit `console.warn`
   naming the no-op, D-04, and the Phase 33 deferral, instead of doing nothing with zero signal.
@@ -252,7 +262,7 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
 | 1 | `app` (lifecycle beyond getPath/getName) | 26 | Real Tauri lifecycle equivalents (`tauri::App`, window events) for `main.ts`/`main_window.ts`/updater/tray/protocol registration |
-| 2 | `dialog` | 9 | **CLOSED for all async members, Phase 31.** `showMessageBox`/`showErrorBox`/`showSaveDialog` are now real (`dialog_message`/`dialog_save` rustInvoke channels), joining `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, Phase 33 |
+| 2 | `dialog` | 9 | **Mostly closed, Phase 31 — `showMessageBox` deliberately NOT wired (CR-01, Phase 31 Plan 04).** `showErrorBox`/`showSaveDialog` are real (`dialog_message`/`dialog_save` rustInvoke channels), joining `dialog_open` (Phase 30). `showMessageBox` is a safe-sentinel logged no-op (resolves `{response:-1}`, never forwards, never rejects) — forwarding to Rust's OK-only dialog would auto-confirm destructive multi-button backend confirms (`promptI386Recovery`, `askForceUninstall`); real multi-button behavior deferred to Phase 33 (lifecycle/dialog cluster). `showMessageBoxSync`/`showOpenDialogSync` also remain deferred — logged no-ops, sync-over-async, Phase 33 |
 | 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts |
 | 4 | `shell` (remaining methods) | 5 | `showItemInFolder`/`trashItem`/`openPath` via Tauri `opener`/`fs` plugins |
 | 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
