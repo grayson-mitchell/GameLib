@@ -32,6 +32,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
@@ -412,6 +413,32 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
             Ok(Value::Bool(builder.blocking_show()))
         }
+        // Real OS notification (Phase 33 Plan 04, D-05) via `tauri-plugin-notification`. Backs
+        // `electronStub.ts`'s `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom
+        // -- read an optional `title`/`body` from args[0], build the notification, show it. No
+        // icon/nativeImage plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
+        // `show()`'s internal work (`notify_rust`) is dispatched onto `tauri::async_runtime::spawn`
+        // by the plugin itself, so this call returns promptly -- safe to run on the same spawned
+        // worker thread as the other rustInvoke arms.
+        "notification_show" => {
+            let mut builder = app.notification().builder();
+            if let Some(title) = args
+                .first()
+                .and_then(|v| v.get("title"))
+                .and_then(|v| v.as_str())
+            {
+                builder = builder.title(title);
+            }
+            if let Some(body) = args
+                .first()
+                .and_then(|v| v.get("body"))
+                .and_then(|v| v.as_str())
+            {
+                builder = builder.body(body);
+            }
+            builder.show().map_err(|e| e.to_string())?;
+            Ok(Value::Null)
+        }
         // Native save-file dialog (Phase 31 Plan 02, D-03/REQ-31-03): same `Option<FilePath>`
         // shape as `dialog_open`'s pick_folder/pick_file arm -- `Some(path)` is the chosen path,
         // `None` is a healthy user cancel (never an error). Runs on the same spawned worker
@@ -669,6 +696,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let mut child = spawn_sidecar()?;
             let stdin = child

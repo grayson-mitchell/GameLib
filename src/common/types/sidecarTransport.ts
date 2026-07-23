@@ -168,6 +168,14 @@ export const RUST_DIALOG_MESSAGE = 'dialog_message' as const
 export const RUST_DIALOG_SAVE = 'dialog_save' as const
 
 /**
+ * Rust-side channel name: show a real OS notification via `tauri-plugin-notification`
+ * (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s `Notification.show()`. Takes a single
+ * `{ title?, body? }` object arg; resolves `Value::Null` on success. No icon/nativeImage
+ * plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
+ */
+export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -179,7 +187,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_KEYRING_AVAILABLE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_MESSAGE,
-  RUST_DIALOG_SAVE
+  RUST_DIALOG_SAVE,
+  RUST_NOTIFICATION_SHOW
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

@@ -36,7 +36,8 @@ import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
-  RUST_DIALOG_SAVE
+  RUST_DIALOG_SAVE,
+  RUST_NOTIFICATION_SHOW
 } from 'common/types/sidecarTransport'
 
 // ---- process.getSystemVersion polyfill (Phase 31 Plan 01, discovered while
@@ -306,16 +307,48 @@ export const dialog = {
 }
 
 // ---- Notification ----------------------------------------------------------------
+//
+// Real OS notification (Phase 33 Plan 04, D-05) via tauri-plugin-notification's
+// notification_show rustInvoke arm. isSupported() flips to true; show() forwards the
+// constructor's {title, body} inside a try/catch that console.warns and no-ops on failure --
+// never throws (total-method convention, mirrors showErrorBox's shape). No icon/nativeImage
+// plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
+//
+// Zero-change consumer: backend/dialog/dialog.ts's notify() already gates on
+// Notification.isSupported() with an established logged-no-op fallback -- no changes needed
+// there beyond isSupported() returning true.
+
+interface NotificationOptions {
+  title?: string
+  body?: string
+}
 
 export class Notification {
   static isSupported(): boolean {
-    return false
+    return true
   }
-  constructor(_options?: unknown) {}
+
+  private readonly options: NotificationOptions
+
+  constructor(options?: NotificationOptions) {
+    this.options = options ?? {}
+  }
+
   on(): this {
     return this
   }
-  show(): void {}
+
+  show(): void {
+    requestRustInvoke(RUST_NOTIFICATION_SHOW, [
+      { title: this.options.title, body: this.options.body }
+    ]).catch((error) => {
+      console.warn(
+        `[electronStub] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  }
+
   close(): void {}
 }
 
