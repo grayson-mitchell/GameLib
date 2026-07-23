@@ -31,7 +31,7 @@ use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
@@ -365,6 +365,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // `false`->response:1. Default kind is Info when unspecified; the showErrorBox caller
         // always sends `kind:"error"`. Runs on the existing spawned worker thread (same
         // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
+        //
+        // Phase 33 Plan 03 (D-06): extended to read an optional 2-element `buttons` array and
+        // wire it to `MessageDialogButtons::OkCancelCustom` — a real multi-button confirm
+        // instead of the OK-only default. `blocking_show()`'s bool keeps the same meaning:
+        // `true` -> buttons[0] clicked -> electronStub response:0, `false` -> buttons[1]
+        // clicked -> electronStub response:1. Single-button (no `buttons` / not length 2)
+        // behavior is unchanged (still OK-only, always true). Data-shape change only, no new
+        // match arm/channel (33-RESEARCH confirmed).
         "dialog_message" => {
             let message = args
                 .first()
@@ -389,6 +397,18 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .and_then(|v| v.as_str())
             {
                 builder = builder.title(title);
+            }
+            let buttons = args
+                .first()
+                .and_then(|v| v.get("buttons"))
+                .and_then(|v| v.as_array());
+            if let Some(btns) = buttons.filter(|b| b.len() == 2) {
+                let label0 = btns[0].as_str().unwrap_or("");
+                let label1 = btns[1].as_str().unwrap_or("");
+                builder = builder.buttons(MessageDialogButtons::OkCancelCustom(
+                    label0.into(),
+                    label1.into(),
+                ));
             }
             Ok(Value::Bool(builder.blocking_show()))
         }
