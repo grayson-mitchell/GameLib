@@ -116,3 +116,12 @@ None - no external service configuration required.
 ---
 *Phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/storeManagers/steam/withTimeout.ts`
+- FOUND: `src/backend/storeManagers/steam/__tests__/withTimeout.test.ts`
+- FOUND: `.planning/phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-07-SUMMARY.md`
+- FOUND commit: `0aeb4205` (Task 1)
+- FOUND commit: `3d3a5887` (Task 2)
+- FOUND commit: `b10b3128` (SUMMARY)

@@ -1094,7 +1094,7 @@ Plans:
 **Goal:** Port the first user-facing domain slice of the ~217 unported IPC endpoints onto the sidecar, following SEAM.md's incremental-port checklist: a curated `<domain>FlowRegistration.ts` importing only the real backend code the flow needs, real behavior in `electronStub.ts` bound to real Tauri commands for any newly-required Electron API, and the slice proven E2E in the Tauri build. Install/uninstall/update-check is the natural next slice — it reuses the skeleton's own read + action pattern and is the highest user-facing value per endpoint.
 **Depends on:** Phase 29 (store layer), Phase 27 (`steamFlowRegistration.ts` pattern).
 **Requirements:** REQ-30-01, REQ-30-02, REQ-30-03, REQ-30-04, REQ-30-05, REQ-30-06, REQ-30-07, REQ-30-08, REQ-30-09
-**Plans:** 6/6 complete + 1 gap-closure plan (30-07, G-30-02 install-spinner hang)
+**Plans:** 7/7 plans complete
 
 Plans:
 
@@ -1113,7 +1113,7 @@ Plans:
 
 **Gap closure** *(post-UAT live-retest defects)*
 
-- [ ] 30-07-PLAN.md — Bound the pre-download steam-user PICS/getContentServers awaits (withTimeout) + runNativeDepotDownload pre-download-phase watchdog so a never-settling getProductInfo on a stale Tauri sidecar CM socket converts to a terminal {status:'error'}; closes G-30-02 (install badge hangs forever) [gap]
+- [x] 30-07-PLAN.md — Bound the pre-download steam-user PICS/getContentServers awaits (withTimeout) + runNativeDepotDownload pre-download-phase watchdog so a never-settling getProductInfo on a stale Tauri sidecar CM socket converts to a terminal {status:'error'}; closes G-30-02 (install badge hangs forever) [gap]
 
 ---
 
