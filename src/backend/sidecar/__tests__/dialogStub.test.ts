@@ -131,7 +131,7 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
   })
 })
 
-describe('electronStub dialog.showMessageBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+describe('electronStub dialog.showMessageBox (Phase 31 Plan 04, CR-01 de-scope)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -151,41 +151,32 @@ describe('electronStub dialog.showMessageBox (Phase 31 Plan 02, D-03/REQ-31-03)'
     warnSpy.mockRestore()
   })
 
-  it('RUST_DIALOG_MESSAGE is a member of RUST_INVOKE_CHANNELS', () => {
-    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_MESSAGE)).toBe(true)
-  })
-
-  it('maps a true blocking_show() result to { response: 0, checkboxChecked: false } and forwards via RUST_DIALOG_MESSAGE', async () => {
-    program = { type: 'resolve', value: true }
-
-    const result = await dialog.showMessageBox(undefined, {
-      type: 'info',
-      title: 'Title',
-      message: 'Message'
-    })
-
-    expect(result).toEqual({ response: 0, checkboxChecked: false })
-    expect(callLog).toHaveLength(1)
-    expect(callLog[0].channel).toBe(RUST_DIALOG_MESSAGE)
-  })
-
-  it('maps a false blocking_show() result to { response: 1, checkboxChecked: false }', async () => {
-    program = { type: 'resolve', value: false }
-
-    const result = await dialog.showMessageBox(undefined, { message: 'Message' })
-
-    expect(result).toEqual({ response: 1, checkboxChecked: false })
-  })
-
-  it('resolves a safe default and warns (never throws) when requestRustInvoke rejects', async () => {
-    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
-
+  it('resolves the safe sentinel { response: -1, checkboxChecked: false } for a multi-button confirm, never { response: 0 }, and never rejects', async () => {
     await expect(
-      dialog.showMessageBox(undefined, { message: 'Message' })
-    ).resolves.toEqual({ response: 1, checkboxChecked: false })
+      dialog.showMessageBox(undefined, {
+        type: 'warning',
+        title: 'Force uninstall?',
+        message: 'This will delete local files',
+        buttons: ['Confirm', 'Cancel']
+      })
+    ).resolves.toEqual({ response: -1, checkboxChecked: false })
+  })
+
+  it('never calls requestRustInvoke / forwards to RUST_DIALOG_MESSAGE (de-wired, no auto-confirm)', async () => {
+    await dialog.showMessageBox(undefined, { message: 'Message' })
+
+    expect(callLog).toHaveLength(0)
+    expect(
+      callLog.some((entry) => entry.channel === RUST_DIALOG_MESSAGE)
+    ).toBe(false)
+  })
+
+  it('emits one console.warn naming showMessageBox', async () => {
+    await dialog.showMessageBox(undefined, { message: 'Message' })
+
     expect(warnSpy).toHaveBeenCalledTimes(1)
     const [warningArg] = warnSpy.mock.calls[0]
-    expect(String(warningArg)).toContain(RUST_DIALOG_MESSAGE)
+    expect(String(warningArg)).toContain('showMessageBox')
   })
 })
 
@@ -207,6 +198,10 @@ describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', 
 
   afterEach(() => {
     warnSpy.mockRestore()
+  })
+
+  it('RUST_DIALOG_MESSAGE is a member of RUST_INVOKE_CHANNELS', () => {
+    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_MESSAGE)).toBe(true)
   })
 
   it('forwards to RUST_DIALOG_MESSAGE with an error kind and resolves undefined', async () => {

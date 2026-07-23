@@ -153,27 +153,38 @@ export const app = {
 
 // ---- dialog --------------------------------------------------------------------
 //
-// showOpenDialog (Phase 30 Plan 03, D-09/REQ-30-07) and showMessageBox/showErrorBox/
-// showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05) forward to the Rust shell's
-// native dialogs via the existing generic `requestRustInvoke()` channel. This is a
-// deliberate, narrow exception to this module's own "no knowledge of the RPC transport" rule
-// above (which exists to avoid a circular import between electronStub.ts and sidecarRpc.ts
-// for the openExternal/pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is
-// imported directly here, matching `keyringTokenStore.ts`'s call shape, because unlike
+// showOpenDialog (Phase 30 Plan 03, D-09/REQ-30-07) and showErrorBox/showSaveDialog
+// (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05) forward to the Rust shell's native dialogs via
+// the existing generic `requestRustInvoke()` channel. This is a deliberate, narrow exception
+// to this module's own "no knowledge of the RPC transport" rule above (which exists to avoid
+// a circular import between electronStub.ts and sidecarRpc.ts for the
+// openExternal/pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is imported
+// directly here, matching `keyringTokenStore.ts`'s call shape, because unlike
 // openExternal/pushFrontendMessage this is a one-directional call (electronStub -> sidecarRpc
 // only) with no callback the other way, so it does not reintroduce the bidirectional cycle
 // bindTransport() was built to avoid.
 //
+// showMessageBox is DELIBERATELY NOT wired to RUST_DIALOG_MESSAGE (Phase 31 Plan 04, CR-01
+// de-scope). Rust's dialog is OK-only (`blocking_show()` returns a single bool), but real
+// callers (`promptI386Recovery`, `askForceUninstall`) present multi-button
+// destructive/non-destructive confirms and branch on `response`. Forwarding to the OK-only
+// dialog auto-confirms the destructive branch every time -- a real correctness/security bug
+// (CR-01). The safe fix is to de-wire showMessageBox entirely: it logs a console.warn and
+// RESOLVES the sentinel `{ response: -1, checkboxChecked: false }` -- never forwarding to
+// RUST_DIALOG_MESSAGE and never rejecting. It must never reject/throw because the two live
+// callers `await` it unguarded and fire-and-forget (no try/catch, no `.catch()`), and this
+// sidecar process has no `process.on('unhandledRejection')` guard -- an always-rejecting stub
+// would crash the sidecar the first time either path is hit. `-1` is neither `0`
+// (promptI386Recovery's affirmative/destructive branch, decline = `response !== 0`) nor `1`
+// (askForceUninstall's destructive branch, decline = `response !== 1`), so it declines BOTH
+// reachable callers. `handleExit`'s inverted sense (`response === 0` = safe "No") is moot: it
+// is wired in `main.ts` via `app.on('before-quit')`, and `main.ts` is not in the sidecar's
+// curated import graph, so `handleExit` never runs under the sidecar. Real multi-button
+// `showMessageBox` behavior is deferred to Phase 33 (lifecycle/dialog cluster).
+//
 // The two Sync members (showMessageBoxSync/showOpenDialogSync) stay logged no-ops (D-03) --
 // synchronous dialogs cannot be forwarded across the async rustInvoke transport, so they log a
 // console.warn and return a safe default rather than silently doing nothing.
-
-/** Maps Electron's `MessageBoxOptions.type` onto the Rust `MessageDialogKind` string dispatch_rust_channel expects. */
-function mapMessageBoxKind(type: unknown): 'error' | 'warning' | 'info' {
-  if (type === 'error') return 'error'
-  if (type === 'warning') return 'warning'
-  return 'info'
-}
 
 export const dialog = {
   showErrorBox: async (title?: string, content?: string): Promise<void> => {
@@ -190,33 +201,23 @@ export const dialog = {
       )
     }
   },
-  showMessageBox: async (
-    windowOrOptions?: unknown,
-    maybeOptions?: unknown
-  ): Promise<{ response: number; checkboxChecked: boolean }> => {
-    const options = (maybeOptions ?? windowOrOptions) as
-      | { message?: string; title?: string; type?: string }
-      | undefined
-    try {
-      const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
-        {
-          message: options?.message,
-          title: options?.title,
-          kind: mapMessageBoxKind(options?.type)
-        }
-      ])
-      // Rust's blocking_show() bool: true -> response:0 (the affirmative/only button), false ->
-      // response:1. There is no v2 checkbox-return equivalent (documented accepted gap; zero
-      // real callers read checkboxChecked).
-      return { response: result ? 0 : 1, checkboxChecked: false }
-    } catch (error) {
-      // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention).
-      console.warn(
-        `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-      return { response: 1, checkboxChecked: false }
-    }
+  showMessageBox: async (): Promise<{
+    response: number
+    checkboxChecked: boolean
+  }> => {
+    // Deliberately un-ported (Phase 31 Plan 04, CR-01 de-scope) -- see the dialog-block
+    // docstring above for the full rationale. Never forwards to RUST_DIALOG_MESSAGE, never
+    // rejects/throws. Resolves the safe sentinel `{ response: -1 }`: -1 is neither 0
+    // (promptI386Recovery's destructive branch) nor 1 (askForceUninstall's destructive
+    // branch), so it declines both reachable callers. Real multi-button behavior deferred to
+    // Phase 33.
+    console.warn(
+      '[electronStub] dialog.showMessageBox(): deliberately un-ported this phase (Phase 31 ' +
+        'Plan 04, CR-01 de-scope) -- resolves a safe sentinel { response: -1 } instead of ' +
+        'auto-confirming a destructive multi-button confirm; real multi-button behavior ' +
+        'deferred to Phase 33'
+    )
+    return { response: -1, checkboxChecked: false }
   },
   showMessageBoxSync: (): number => {
     console.warn(
