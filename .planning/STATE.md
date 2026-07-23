@@ -4,7 +4,7 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Phase 33 context gathered
-last_updated: "2026-07-23T22:11:12.244Z"
+last_updated: "2026-07-23T22:19:11.187Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 33 (tauri-lifecycle-cluster-app-dialog-window-notifications-tray) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -278,6 +278,7 @@ Closed/parked native-install phases:
 | Phase 32 P02 | ~30min | 2 tasks | 3 files |
 | Phase 32 P03 | ~15min | 2 tasks | 3 files |
 | Phase 33 P01 | ~20min | 3 tasks | 2 files |
+| Phase 33 P02 | ~25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -478,6 +479,8 @@ Recent decisions affecting current work:
 - [Phase 32-03]: Doc-closure triad names both G-30-01 and G-30-02 as doubly-gated live-E2E blockers (D-06), never reusing Phase 30/31's single-blocker wording; documents the 32-02 deviation (dropped non-steam-runner guard) as delivered state
 - [Phase 33]: 33-01: Kept the install watchdog runner-agnostic (8min) rather than steam-only gated, per 33-RESEARCH's lower-risk recommendation
 - [Phase 33]: 33-01: Failure dialog fires only on status:'error' (resolved or thrown), never on 'abort' -- a user cancel is not a failure
+- [Phase ?]: D-01a audit found+fixed a new bare client.getProductInfo call in bridge/launchTarget.ts reachable from the macOS bridge install path — wrapped with withTimeout/STEAM_PICS_TIMEOUT_MS, matching installLocation.ts's fetchInstalldir
+- [Phase ?]: ensureConnected D-02 fix uses AppID 753 (Steam's own client) as the canary probe target and mirrors the existing cold-connect grace-window idiom for relog's bounded fallback
 
 ### Pending Todos
 
@@ -547,7 +550,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-23T22:10:31.547Z
+Last session: 2026-07-23T22:19:11.180Z
 Stopped at: Phase 33 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
