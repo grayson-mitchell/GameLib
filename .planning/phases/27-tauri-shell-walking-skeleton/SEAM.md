@@ -185,6 +185,48 @@ works end-to-end under `tauri:dev`."** The settings write/reflect flow and nativ
 rendering have not been live-UAT'd this phase — that verification is deferred, mirroring Phase
 30's D-04 claim-level precedent for the QR login/install slice.
 
+### Download-queue cluster (real, Phase 32) — CLOSED, moved out of §3
+
+**Ported in Phase 32** (`tauri-ipc-re-plumb-slice-3-downloads-and-queue`, plans 32-01..32-02). Full
+enumerated list in
+`.planning/phases/32-tauri-ipc-re-plumb-slice-3-downloads-and-queue/32-PORTED-CHANNELS.md`.
+
+- **`downloadQueueFlowRegistration.ts`** — the five DownloadManager queue-management channels
+  (`getDMQueueInformation` as `ipcMain.handle`; `removeFromDMQueue`/`pauseCurrentDownload`/
+  `resumeCurrentDownload`/`cancelDownload` as `ipcMain.on`, never `.handle`), reaching the real,
+  unmodified `downloadmanager/downloadqueue.ts` functions — **this closes the D-05a boundary Phase
+  30 deferred to this slice**, below. `pauseCurrentDownload`/`resumeCurrentDownload` are real but
+  implemented as abort-then-reconciled-restart (Phase 23 `reconcilePartialState`), never true
+  in-flight suspend — declared, not silently overclaimed.
+- **`install`/`updateGame`** — re-routed in `installFlowRegistration.ts` onto the real
+  `addToQueue()`, retiring the Phase 30 D-05a direct `SteamGame.install()`/`.update()` bypass
+  entirely (deleted, not wrapped). Both now resolve `Promise<void>` once QUEUED, matching the real
+  typed contract. **Deviation beyond the plan's literal framing:** the Phase 30 CR-01 non-steam-
+  runner guard was dropped completely — full Electron `ipc_handler.ts` parity, ALL runners now
+  enqueue through the sidecar, not just Steam (see `32-02-SUMMARY.md`).
+- **`progressUpdate`** push — `depot.ts`'s already-throttled `emitProgress()` (500ms/1%/1000ms
+  cadence, unchanged) rides the existing generic `frontendMessage` → `frontend_message` relay.
+  Zero new sidecar throttle/coalescer, zero Rust changes.
+- **`changedDMQueueInformation`** push — a second, research-surfaced push channel (5 call sites
+  inside `downloadqueue.ts`) that was undeclared by this phase's own CONTEXT.md going in; without
+  it the Download Manager screen / Sidebar queue badge renders once at mount and never updates.
+  Also rides the existing generic relay, zero new code.
+- Boot-time auto-resume (`main.ts:579`'s `initQueue(isStartup=true)`) is deliberately **NOT**
+  replicated under the sidecar (D-05) — install is parked on **G-30-02** and the CrossOver-bottle
+  resume path is a known, out-of-scope bug (D-07, below). Pre-`initQueue()` cancelability
+  (`downloadqueue.ts:49`'s module-scope `currentElement` seed) is preserved regardless; only the
+  5-second auto-resume timer is suppressed, and its suppression is logged, never silent.
+
+**Claim level (D-06, Phase 32): "wired and unit-proven", NOT "hardware-proven" — doubly gated.**
+Every channel above is registered on the sidecar (or, for `install`/`updateGame`, re-routed onto
+the real queue) and proven by jest coverage (`downloadQueueFlows.test.ts`, the unmodified
+`downloadqueue.test.ts` contract, the existing `depot.test.ts` throttle suite). **Unlike Phase
+30/31's single-blocker deferred-UAT framing, this slice's own live-E2E verification is gated by
+TWO pre-existing blockers at once:** **G-30-01** (Tauri QR login unresponsive — blocks reaching a
+signed-in library to enqueue anything) AND **G-30-02** (install-hang, parked to Phase 33 — blocks a
+running install for the queue channels to act on). See `32-HUMAN-UAT.md` for the doubly-gated
+deferred item naming both.
+
 ### The store layer (real, Phase 29) — CLOSED, moved out of §2/§3
 
 **Generalized from a two-store stub to a full read/write layer in Phase 29**
@@ -279,7 +321,12 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 `checkGameUpdates`, `listSteamLibraryTargets`, `gameStatusUpdate` push — enumerated in
 `30-PORTED-CHANNELS.md`); Phase 31 wired 8 more (`setSetting`, `writeConfig`, `getMaxCpus`,
 `showUpdateSetting`, `getLogContent`, `getSystemInfo`, `hasExecutable`, `isNative` — enumerated in
-`31-PORTED-CHANNELS.md`), for 21 wired total. (`showMessageBox`/`showErrorBox`/`showSaveDialog`
+`31-PORTED-CHANNELS.md`), for 21 wired total; Phase 32 wired/re-routed 7 more (`getDMQueueInformation`,
+`removeFromDMQueue`, `pauseCurrentDownload`, `resumeCurrentDownload`, `cancelDownload` newly
+registered; `install`/`updateGame` re-routed off the Phase 30 D-05a bypass onto the real queue —
+enumerated in `32-PORTED-CHANNELS.md`, which also declares the two push channels
+`progressUpdate`/`changedDMQueueInformation` riding the existing relay with zero new registration),
+for 28 wired/re-routed total. (`showMessageBox`/`showErrorBox`/`showSaveDialog`
 are `rustInvoke` channels, not sidecar `invoke`/`send` channels, and are counted alongside
 `dialog_open` outside this tally — same convention Phase 30 established.) Porting the rest is
 mechanical per endpoint (curate a sidecar invoke handler like `steamFlowRegistration.ts` did) but
@@ -353,10 +400,16 @@ above.
   D-01, not a bug. Convergence rejected (would require hand-rolling OSCrypt in the sidecar).
   Mirrored in `src/backend/sidecar/keyringTokenStore.ts`'s docstring. No new proof artifact.
 - **D-05a (Phase 30) — install is a direct `SteamGame` bypass, NOT a `downloadqueue.ts` port.**
-  Reason from 30-02: the queue's only Steam-relevant behavior is a status push plus install
-  sizing (two direct calls); everything else is runner-irrelevant or Phase 32's cluster.
-  **Phase 32 inherits this boundary** and should build its own curated queue port when it
-  needs pause/resume/cancel.
+  ~~Reason from 30-02: the queue's only Steam-relevant behavior is a status push plus install
+  sizing (two direct calls); everything else is runner-irrelevant or Phase 32's cluster. Phase 32
+  inherits this boundary and should build its own curated queue port when it needs
+  pause/resume/cancel.~~ **CLOSED/SUPERSEDED by Phase 32.** The direct bypass is fully deleted
+  (not wrapped) — `install`/`updateGame` now build the same `DMQueueElement` Electron's
+  `ipc_handler.ts` builds and call the same real `addToQueue()`, and the five queue-management
+  channels (`getDMQueueInformation`/`removeFromDMQueue`/`pauseCurrentDownload`/
+  `resumeCurrentDownload`/`cancelDownload`) are registered on the sidecar reaching
+  `downloadqueue.ts` unchanged. See `### Download-queue cluster (real, Phase 32)` in §1 and
+  `32-PORTED-CHANNELS.md` for the full enumerated boundary.
 - **D-05b/D-12 (Phase 30) — `uninstall`/`checkGameUpdates` reuse the runner-generic handlers
   unchanged, all runners.** Reason: `libraryManagerMap`'s import cost is already sunk via
   `steamFlowRegistration.ts`'s load-bearing first import (verified), so a Steam-only reshape buys
