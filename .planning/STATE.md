@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 31-02-PLAN.md
+stopped_at: Completed 31-03-PLAN.md
 last_updated: "2026-07-23T04:52:31.076Z"
 last_activity: 2026-07-23
 progress:
