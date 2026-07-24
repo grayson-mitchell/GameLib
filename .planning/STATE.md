@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: All gap-closure plans (34-08..34-11) executed; only 34-07's deferred live tag-push
-stopped_at: Completed 34-11-PLAN.md (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked-debt recording, 3/3 tasks)
-last_updated: "2026-07-24T07:44:41.380Z"
-last_activity: 2026-07-24 -- Executed 34-11 (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked debt)
+status: Ready to execute -- gap cycle 2 planned (34-12..34-15), closing the 4 gaps from 34-VERIFICATION
+stopped_at: Planned 34-12..34-15 (gap cycle 2; CI renderer build, Windows SEA spawn, updater feed, Windows signing gate)
+last_updated: "2026-07-24T21:30:00.000Z"
+last_activity: 2026-07-24 -- Planned gap cycle 2 (34-12..34-15) after 34-VERIFICATION gaps_found 6/10
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 52
+  total_plans: 56
   completed_plans: 46
   percent: 60
 ---
@@ -33,10 +33,55 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — CODE-COMPLETE
-Plan: 10 of 10 executed (34-01,02,03,05,06,07,08,09,10,11 executed — no 04)
-Status: All gap-closure plans (34-08..34-11) executed; only 34-07's deferred live tag-push
-  gate remains before the phase can be marked fully complete.
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 PLANNED
+Plan: 10 of 14 executed (34-01,02,03,05,06,07,08,09,10,11 executed — no 04; 34-12..34-15 planned, unexecuted)
+Status: **Gap cycle 2 planned 2026-07-24** (`/gsd-plan-phase 34 --gaps`). `34-VERIFICATION.md`
+  came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
+  prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
+  one WARNING** that no prior review had caught, because all 85 phase tests assert *shape and
+  strings* rather than the *executed code path* -- 85 green tests over 3 live blockers. Four
+  additive plans were written to close them (plan-checker: VERIFICATION PASSED, zero blockers,
+  one non-blocking warning about 34-13's verify step exceeding the 30s fast-feedback target):
+  **34-12** (wave 1) -- GAP-1, the BLOCKER that breaks *every* matrix leg: `release-tauri.yml`
+  never runs `electron-vite build`, yet `tauri.conf.json` has `beforeBuildCommand: ""` and
+  `frontendDist: "../build"`, a directory only that command populates. Adds the renderer build
+  plus the macOS `pnpm build-steam-bridge` and `gh release download crossover-index` steps the
+  Electron workflow (`draft-release-mac.yml`/`build-base.yml`) already has, an ordering
+  regression assertion, and corrects the 18-line header comment that asserts unproven pipeline
+  behavior as fact.
+  **34-13** (wave 1) -- GAP-2, the Windows-leg BLOCKER: `meta/buildSidecarSea.ts` spawns
+  extensionless `node_modules/.bin/{postject,esbuild}` with no `shell:true`, which Windows
+  `CreateProcess` cannot execute without PATHEXT lookup, so the leg dies before `tauri-action`
+  and 34-11's `sidecar_triple: x86_64-pc-windows-msvc` wiring is unreachable in practice.
+  Resolves both tools as CLI modules run through `process.execPath`. Also closes WR-10 by
+  rewiring the call sites to consume the same argv the tests assert.
+  **34-14** (wave 2) -- GAP-3, the dead update feed: the endpoint uses GitHub's
+  `/releases/latest/download/` form, which by design excludes prereleases, while `tauri-action`
+  sets `prerelease: true` unconditionally -- a permanent 404, before and after manual publish.
+  **D-09 forecloses the obvious fix**: draft+prerelease is a locked decision encoding the Phase 19
+  `prerelease-not-Latest` lesson, so dropping the flag was not planned. Instead the feed moves to
+  `/releases/download/updater/latest.json`, promoted by a new `release: published` workflow --
+  which also fixes the second-order problem that the manifest's inner installer URLs don't
+  resolve while the source release is still a draft. A test guards D-09 against reintroduction.
+  **34-15** (wave 2) -- GAP-4 (warning): the Windows signing gate tests only
+  `WINDOWS_CERTIFICATE`, not `WINDOWS_CERT_THUMBPRINT`, so a half-configured secret set yields
+  `certificateThumbprint: ""` and hard-fails the leg -- contradicting D-04's graceful-skip
+  invariant and the workflow's own stated "CI must never fail on missing certs". Requires both
+  secrets, warns and skips otherwise.
+  Every plan is test-first with mandatory RED evidence (each new assertion must be shown failing
+  against today's source before the fix lands), and comment-stripping is mandated wherever a
+  `grep`/`toContain` assertion could otherwise be satisfied by the files' own header prose --
+  the direct answer to the 85-green-tests-over-3-blockers finding.
+  Waves are file-overlap safe: 34-12 and 34-13 share no `files_modified`; 34-14 and 34-15 both
+  `depends_on: ['34-12']` and are mutually disjoint (GAP-3's cross-file test was deliberately
+  placed in `tauriConf.test.ts` rather than `releaseWorkflow.test.ts` to keep them parallel).
+  **These four fixes are a PREREQUISITE to resuming 34-07's live gate, not a replacement for it**
+  -- all three blockers sit on exactly the path that gate exercises first, so running it today
+  would burn a real tag on a pipeline known to be broken.
+  Still explicitly out of scope (user decision GAP-D-01): WR-04 (null CSP / `withGlobalTauri` /
+  broad `opener:default`) and IN-01 (loose `system.pem` match) remain tracked debt in
+  `deferred-items.md`.
+  Prior cycle, unchanged: all gap-closure plans 34-08..34-11 executed and verified in isolation.
   **34-11 executed 2026-07-24** (3/3 tasks, `releaseWorkflow` suite 22/22 green, cross-plan
   regression sweep `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource`
   74/74 green): closed the CI half of CR-01 -- every `release-tauri.yml` matrix leg now
@@ -100,7 +145,19 @@ Status: All gap-closure plans (34-08..34-11) executed; only 34-07's deferred liv
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-11 (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked debt)
+Last activity: 2026-07-24 -- Planned gap cycle 2 (34-12..34-15) after 34-VERIFICATION gaps_found 6/10
+
+> **Plan-counter note (2026-07-24, gap cycle 2 planning):** `gsd-sdk query state.planned-phase`
+> was **deliberately not run** this time. Every plan-counter note below documents the same
+> failure mode -- that verb reverts `stopped_at:` to a stale value and replaces the multi-line
+> `Status:` body with a bare "Ready to execute", orphaning the prose beneath it, and
+> `state.update-progress` has additionally spliced its own progress-bar string into the MIDDLE
+> of an unrelated note's sentence. Rather than run it and repair the damage a sixth time, the
+> frontmatter (`status`, `stopped_at`, `last_updated`, `last_activity`, `progress.total_plans`
+> 52 -> 56) and the body `Phase:`/`Plan:`/`Status:`/`Last activity:` fields were written by hand
+> against the phase directory: 34-01..34-03/05/06/07/08/09/10/11 all have SUMMARY.md on disk (10
+> executed, no 34-04); 34-12..34-15 have PLAN.md with no SUMMARY (4 planned, unexecuted).
+> `percent: 60` is phase-based (3 of 5 completed phases), not plan-based -- unchanged.
 
 > **Plan-counter note (2026-07-24, corrected again post-34-11):** `gsd-sdk query
 > state.advance-plan`, run immediately after 34-11's execution, returned
