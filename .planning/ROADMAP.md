@@ -1222,12 +1222,17 @@ Plans:
 
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
-**Requirements:** TBD — mint at `/gsd-plan-phase 34`
-**Plans:** 0 plans
+**Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
+**Plans:** 6 plans (5 waves)
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 34 to break down)
+- [ ] 34-01-PLAN.md — Wave-0 config-shape test scaffolds (tauriConf/cargoFeatures/releaseWorkflow/buildSidecarSea)
+- [ ] 34-02-PLAN.md — Packaging foundation: keyring Win/Linux features + updater/shell crates + Node SEA sidecar build script
+- [ ] 34-03-PLAN.md — Generate the minisign updater keypair (public key committed later; private key → GitHub secrets)
+- [ ] 34-05-PLAN.md — Tauri shell productionization: bundle.active + nsis/appimage/dmg + externalBin sidecar + updater feed (fork, not Heroic)
+- [ ] 34-06-PLAN.md — CI release pipeline: 3-OS tauri-action matrix, graceful-skip signing, draft+prerelease on v* tag
+- [ ] 34-07-PLAN.md — Live phase-close gate: real v* tag push proves all-platform draft+prerelease + Node-free sidecar (Manual-Only)
 
 ---
 
