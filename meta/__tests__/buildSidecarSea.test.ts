@@ -9,13 +9,19 @@
  * argv-builders and assert their output shape without invoking the real
  * node/postject toolchain.
  */
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   buildSeaConfigPath,
   buildPostjectArgv,
   buildCodesignArgv,
+  buildEsbuildArgv,
   sidecarOutputPath,
   hostTriple,
   resolveTriple,
+  resolveEsbuildCli,
+  resolvePostjectCli,
+  isWindowsSpawnable,
   triplePlatform,
   expectedMachoArch,
   nodeDistName,
@@ -67,7 +73,8 @@ describe('buildPostjectArgv (postject invocation shape, Pattern 3)', () => {
 
   test('the postject argv itself never references codesign directly', () => {
     const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
-    expect(darwinArgv.command).toBe('postject')
+    expect(darwinArgv.command).toBe(process.execPath)
+    expect(darwinArgv.args[0]).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
     expect(JSON.stringify(darwinArgv)).not.toMatch(/codesign/)
   })
 })
@@ -186,5 +193,94 @@ describe('expectedMachoArch', () => {
 
   test('throws for a non-darwin triple', () => {
     expect(() => expectedMachoArch('x86_64-unknown-linux-gnu')).toThrow()
+  })
+})
+
+describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression guard)', () => {
+  test('resolvePostjectCli() and resolveEsbuildCli() resolve to real files on disk', () => {
+    expect(existsSync(resolvePostjectCli())).toBe(true)
+    expect(existsSync(resolveEsbuildCli())).toBe(true)
+    expect(resolvePostjectCli()).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
+    expect(resolveEsbuildCli()).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+  })
+
+  test('buildPostjectArgv(...).command is process.execPath, not the bare "postject" string', () => {
+    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    expect(darwinArgv.command).toBe(process.execPath)
+  })
+
+  test('buildPostjectArgv(...).args[0] resolves to an existing postject/dist/cli.js file', () => {
+    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    expect(darwinArgv.args[0]).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
+    expect(existsSync(darwinArgv.args[0])).toBe(true)
+  })
+
+  test('buildPostjectArgv(...).args carries the sentinel fuse + darwin NODE_SEA flag AFTER the CLI path', () => {
+    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const cliIndex = 0
+    expect(darwinArgv.args).toEqual(expect.arrayContaining([SENTINEL_FUSE, 'NODE_SEA']))
+    expect(darwinArgv.args.indexOf(SENTINEL_FUSE)).toBeGreaterThan(cliIndex)
+    expect(darwinArgv.args.indexOf('NODE_SEA')).toBeGreaterThan(cliIndex)
+
+    const winArgv = buildPostjectArgv('gamelib-sidecar.exe', 'sidecar-prep.blob', 'win32')
+    expect(winArgv.args).not.toEqual(expect.arrayContaining(['NODE_SEA']))
+  })
+
+  test('buildEsbuildArgv(...).command is process.execPath and args[0] resolves to an existing esbuild/bin/esbuild file', () => {
+    const esbuildArgv = buildEsbuildArgv()
+    expect(esbuildArgv.command).toBe(process.execPath)
+    expect(esbuildArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+    expect(existsSync(esbuildArgv.args[0])).toBe(true)
+  })
+
+  test('buildEsbuildArgv(...).args carries the required bundling flags', () => {
+    const esbuildArgv = buildEsbuildArgv()
+    expect(esbuildArgv.args).toEqual(
+      expect.arrayContaining([
+        '--bundle',
+        '--platform=node',
+        '--target=node22',
+        '--format=cjs',
+        '--alias:electron=./src/backend/sidecar/electronStub.ts',
+        '--inject:./meta/sidecarSeaFsShim.ts'
+      ])
+    )
+    expect(esbuildArgv.args.some((a) => a.startsWith('--outfile='))).toBe(true)
+  })
+
+  test('isWindowsSpawnable rejects the old extensionless .bin shim paths and accepts a real Windows exe', () => {
+    expect(isWindowsSpawnable('node_modules\\.bin\\postject')).toBe(false)
+    expect(isWindowsSpawnable('node_modules/.bin/esbuild')).toBe(false)
+    expect(isWindowsSpawnable('C:\\Program Files\\nodejs\\node.exe')).toBe(true)
+  })
+
+  test('the resolved postject/esbuild commands are Windows-spawnable on win32, or process.execPath elsewhere', () => {
+    const postjectArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const esbuildArgv = buildEsbuildArgv()
+    if (process.platform === 'win32') {
+      expect(isWindowsSpawnable(postjectArgv.command)).toBe(true)
+      expect(isWindowsSpawnable(esbuildArgv.command)).toBe(true)
+    } else {
+      expect(postjectArgv.command).toBe(process.execPath)
+      expect(esbuildArgv.command).toBe(process.execPath)
+    }
+  })
+})
+
+describe('the tested argv is the executed argv (WR-10 guard)', () => {
+  function loadStrippedBuildScript(): string {
+    const source = readFileSync(join(__dirname, '..', 'buildSidecarSea.ts'), 'utf-8')
+    return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  }
+
+  test('the source contains no node_modules/.bin path construction (comment-stripped)', () => {
+    const stripped = loadStrippedBuildScript()
+    expect(stripped).not.toMatch(/['"]\.bin['"]/)
+    expect(stripped).not.toMatch(/node_modules/)
+  })
+
+  test('injectBlob() consumes postjectArgv.command, not a separate constant', () => {
+    const stripped = loadStrippedBuildScript()
+    expect(stripped).toMatch(/postjectArgv\.command/)
   })
 })
