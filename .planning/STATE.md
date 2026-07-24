@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: gap cycle 2 execution complete (34-12,34-13,34-14,34-15 all done) -- ready for phase re-verification
-stopped_at: Completed 34-15-PLAN.md (GAP-4 Windows both-secrets signing gate + heredoc-safe output, 2/2 tasks)
-last_updated: "2026-07-24T09:04:00.000Z"
-last_activity: 2026-07-24 -- Executed 34-15 (GAP-4 Windows both-secrets signing gate: require WINDOWS_CERT_THUMBPRINT alongside WINDOWS_CERTIFICATE, warn-and-skip elif, narrower cert-import if:, $RANDOM heredoc for args output); all 4 gap-closure plans (34-12..34-15) now executed -- next is phase re-verification
+status: executing
+stopped_at: Completed 34-16-PLAN.md (GAP-A Apple signing env-gate: unset not empty, 2/2 tasks)
+last_updated: "2026-07-24T11:20:00.000Z"
+last_activity: 2026-07-24 -- Executed 34-16 (GAP-A Apple signing/notarization env vars gated so absent secrets are unset, not defined-and-empty; 8 executed-path RED tests then GREEN); gap cycle 3 continues with 34-17, 34-18
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 49
+  completed_plans: 50
   percent: 60
 ---
 
@@ -33,9 +33,33 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTION COMPLETE
-Plan: 14 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15 executed — no 04)
-Status: **Gap cycle 2 execution complete 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTING
+Plan: 16 of 18 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16 — no 04); gap cycle 3 plans 34-17, 34-18 remain
+Status: **34-16 EXECUTED 2026-07-24** (2/2 tasks, `releaseWorkflow` suite 73/73 green, cross-plan sweep
+  `tauriConf|cargoFeatures|releaseWorkflow|electronUntouched` 129/129 green): closed GAP-A -- both
+  macOS legs of live run 30084918812 failed on `security import: failed to import keychain
+  certificate` even though NO Apple cert secret was enrolled, because the job-level `env:` block
+  unconditionally mapped `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}`, which resolves to
+  a DEFINED, EMPTY variable when the secret is absent -- the Tauri bundler's macOS signing path
+  tests the variable's *presence*, not its truthiness. Task 1 added 8 executed-path regression
+  tests (Tests A-H) that extract-and-run the (not-yet-existing) Apple gate step's shell body via
+  `runStepScript` and assert on resolved `$GITHUB_ENV` file content, plus a new shared
+  `readGithubEnv()` helper in `helpers/workflowSteps.ts` (RED: Tests A-G failed on
+  `extractRunBlock` finding no such step, Test H failed on a genuine still-present six-key
+  job-level env assertion -- verbatim list in `34-16-SUMMARY.md`). Task 2 removed all six
+  `APPLE_*` job-level env entries and replaced the decorative `Warn if macOS signing will be
+  skipped` step with `Enable Apple signing only when a complete cert secret set is enrolled`: a
+  step-level env maps the six secrets onto `IN_APPLE_*`-prefixed inputs (so a defined-but-empty
+  input can never leak under the real name), and a `write_env()` shell function appends to
+  `$GITHUB_ENV` via a `$RANDOM`-delimited heredoc (same injection defense as WR-03's
+  `$GITHUB_OUTPUT` heredoc) only when the full signing trio -- and, separately, the full
+  notarization trio -- is non-empty; partial sets warn and ship unsigned; the D-04 warning string
+  is emitted verbatim on the fully-absent path; no branch calls `exit 1`. Diff confined to the
+  job env block, the replaced step, and comments -- every step named in the plan's hard
+  constraints (renderer build, SEA sidecar build, steam-bridge build, prune step, Windows signing
+  surface, updater-key preflight, tauri-action `with:`) is byte-identical apart from that. No
+  deviations. See `34-16-SUMMARY.md`. **34-17/34-18 remain** in gap cycle 3.
+  Prior context — `34-VERIFICATION.md`
   came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
   prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
   one WARNING** that no prior review had caught, because all 85 phase tests assert *shape and
@@ -201,7 +225,19 @@ Status: **Gap cycle 2 execution complete 2026-07-24** (`/gsd-execute-phase 34 --
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-15 (GAP-4 Windows both-secrets signing gate + heredoc-safe args output); all 4 gap-closure plans (34-12..34-15) now executed, next is phase re-verification
+Last activity: 2026-07-24 -- Executed 34-16 (GAP-A Apple signing env-gate closure)
+
+> **Plan-counter note (2026-07-24, post-34-16 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:` prose block, and revert `total_plans`/`completed_plans`),
+> those verbs were **deliberately not run** this time either. Frontmatter (`status`,
+> `stopped_at`, `last_updated`, `last_activity`, `progress.completed_plans` 49 -> 50) and the
+> body `Plan:`/`Status:`/`Last activity:` fields were written by hand against the phase
+> directory and this session's own commits: `9924b57c` (test, Task 1 RED) and `fb98bf9d` (fix,
+> Task 2 GREEN), plus `34-16-SUMMARY.md` now on disk. `total_plans: 56` is unchanged (34-16 was
+> already counted in the gap-cycle-3 plan total); `percent: 60` is phase-based (3 of 5 completed
+> phases), unchanged -- Phase 34 itself is not yet marked complete pending 34-17/34-18 and
+> re-verification.
 
 > **Plan-counter note (2026-07-24, post-34-15 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert

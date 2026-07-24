@@ -69,7 +69,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
 - [x] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume (completed 2026-07-23)
 - [x] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly (completed 2026-07-23)
-- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 10/10 plans executed (all code-review gap closures done as of 34-11, 2026-07-24), but 34-07's live tag-push gate is DEFERRED by user (not yet passed); phase not complete until that gate runs (REQ-34-04, REQ-34-09 remain unchecked)
+- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 15/17 plans executed (gap cycle 3's 34-16 closed GAP-A, the macOS codesign-on-empty-secret blocker from live run 30084918812; 34-17/34-18 remain to close GAP-B, the updater key/password mismatch); 34-07's live tag-push gate is DEFERRED by user (not yet passed); phase not complete until that gate runs (REQ-34-09 remains unchecked)
 - [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
 
 ## Phase Details
@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 17 plans — **14/17 executed on disk**; gap cycle 3 (34-16..34-18) opened 2026-07-24 to close the two BLOCKERs the first real live run (`actions/runs/30084918812`) found: GAP-A macOS legs hard-failing codesign with no cert secrets enrolled, and GAP-B a mismatched updater key/password pair
+**Plans:** 17 plans — **15/17 executed on disk**; gap cycle 3 (34-16..34-18) opened 2026-07-24 to close the two BLOCKERs the first real live run (`actions/runs/30084918812`) found: GAP-A macOS legs hard-failing codesign with no cert secrets enrolled (**CLOSED by 34-16**), and GAP-B a mismatched updater key/password pair (34-17/34-18 remain)
 
 Plans:
 
@@ -1282,7 +1282,7 @@ Plans:
 
 **Wave 10** *(gap cycle 3 — closes `34-HUMAN-UAT.md`'s two BLOCKER gaps from live run 30084918812; strictly sequential, all three touch `release-tauri.yml`)*
 
-- [ ] 34-16-PLAN.md — GAP-A: make the six `APPLE_*` signing/notarization env vars UNSET rather than defined-and-empty when the secrets are absent (job-level `env:` → a gated step writing `$GITHUB_ENV`), restoring D-04 on macOS; replaces the two decorative warning-string assertions with executed-path tests that read the resolved env
+- [x] 34-16-PLAN.md — GAP-A: make the six `APPLE_*` signing/notarization env vars UNSET rather than defined-and-empty when the secrets are absent (job-level `env:` → a gated step writing `$GITHUB_ENV`), restoring D-04 on macOS; replaces the two decorative warning-string assertions with executed-path tests that read the resolved env
 - [ ] 34-17-PLAN.md — GAP-B code half: new `pnpm verify:updater-key` (`meta/updaterSigningKey.ts`) signs a probe file with the real Tauri signer and compares the signature's minisign key id against the committed `plugins.updater.pubkey`, wired as a workflow preflight after `install-deps` — turns a ~13-minute post-bundle failure into a fast named one
 - [ ] 34-18-PLAN.md — GAP-B human half: re-enroll `TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` as a matched pair (proven locally with 34-17's tool before enrolment), syncing the committed pubkey only if the keypair had to be regenerated
 
