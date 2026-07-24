@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 34-09-PLAN.md (CR-02 Windows icon.ico gap closure, 2/2 tasks)
-last_updated: "2026-07-24T07:24:42.634Z"
-last_activity: 2026-07-24 -- Executed 34-09 (CR-02 gap closure)
+stopped_at: Completed 34-10-PLAN.md (WR-01/WR-03 sidecar hardening gap closure, 3/3 tasks)
+last_updated: "2026-07-24T07:34:39.543Z"
+last_activity: 2026-07-24
 progress:
   total_phases: 5
   completed_phases: 3
@@ -34,8 +34,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 8 of 10 executed (34-01,02,03,05,06,07,08,09 executed — no 04; 34-10,11 remain)
+Plan: 10 of 10 executed (34-01,02,03,05,06,07,08,09,10 executed — no 04; 34-11 remains)
 Status: Executing Phase 34 gap-closure cycle
+  **34-10 executed 2026-07-24** (3/3 tasks, `tauriShellSource` suite 8/8 green, full Wave-0
+  verification set 65/65 green): closed WR-01 -- `use_dev_sidecar()` now reduces to
+  `cfg!(debug_assertions)` alone (the `GAMELIB_SIDECAR_ENTRY`-env-var-or-debug-build expression
+  is gone), so a release build can never be steered onto `Command::new("node")` via the process
+  environment; `resolve_sidecar_entry()`'s dev override is unchanged. Also closed WR-03 --
+  `SidecarState._child` renamed to `child` and is now genuinely used: a new `shutdown_child()`
+  (kill + wait, log-and-swallow on error) is called from a new `RunEvent::Exit` handler
+  (`main()`'s builder tail switched from `.run(context)` to `.build(context).run(|app_handle,
+  event| ...)`), so quitting via red X / Cmd+Q / Alt+F4 -- not just the in-app
+  `app_exit`/`app_relaunch` commands -- now actually kills the sidecar instead of risking an
+  orphaned process holding an authenticated Steam session. New `tauriShellSource.test.ts`
+  extends the Wave-0 config-shape convention to `main.rs` itself via a comment-stripped source
+  check (with a self-test proving the stripper works, since main.rs's own doc comments quote
+  the strings under assertion). One deviation: the plan's Task 1 test and Task 3 acceptance
+  criteria were mutually exclusive as literally written (blanket `_child` substring ban vs. a
+  required `fn shutdown_child`) -- resolved by narrowing the test to the actual stale pattern
+  (`_child: Mutex<Child>`) rather than renaming the plan-mandated method. See `34-10-SUMMARY.md`.
+  Remaining: **34-11** (WR-02 `cert.pfx` left on disk + wiring
+  `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml`).
   **34-09 executed 2026-07-24** (2/2 tasks, `tauriConf` suite 12/12 green): closed CR-02 -- committed
   a real Windows `icons/icon.ico` generated via `tauri icon public/icon.png -o <scratch>` (copying
   only `icon.ico` into place; a fresh regen was confirmed byte-different for `icon.icns`, validating
@@ -64,9 +83,22 @@ Status: Executing Phase 34 gap-closure cycle
   matrix legs green + graceful signing-skip, confirm draft+prerelease Release with artifacts +
   latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while draft, then clean
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
-  happens. Next: execute 34-10..34-11, THEN run the live gate -- CR-02 (icon.ico) is now closed and
+  happens. Next: execute 34-11, THEN run the live gate -- CR-02 (icon.ico) is now closed and
   will no longer fail the Windows leg of that run.
-Last activity: 2026-07-24 -- Executed 34-09 (CR-02 gap closure)
+Last activity: 2026-07-24 -- Executed 34-10 (WR-01/WR-03 gap closure)
+
+> **Plan-counter note (2026-07-24, corrected again post-34-10):** the automated
+> `state.advance-plan` verb, run immediately after 34-10's execution, bumped this file from
+> "Plan: 8 of 10" to "Plan: 9 of 10" -- itself off by one, since 34-01..09 (9 plans) were
+> already executed before this session started. It also silently reverted `stopped_at:`
+> (frontmatter) to the stale "Completed 34-05-PLAN.md" value and replaced the multi-line
+> `Status:` body with a bare "Ready to execute". Both repaired by hand against the phase
+> directory (34-01..34-03/05/06/07/08/09/10 all have SUMMARY.md on disk; 34-11 does not).
+> `state.update-progress` also returned `{updated:false, reason:"Progress field not found"}`
+> against this file's YAML-frontmatter `progress:` block (the handler expects a `**Progress:**`
+> or `Progress:` body line, not frontmatter) -- left unrun, no output to trust either way. Same
+> precedent as every plan-counter note below it -- do not trust `state.*` verbs' blind field
+> writes on this file without checking the phase directory directly.
 
 > **Plan-counter note (2026-07-24, corrected again post-34-09):** the automated
 > `state.advance-plan` verb, run immediately after 34-09's execution, bumped this file from
@@ -352,6 +384,7 @@ Closed/parked native-install phases:
 | Phase 34 P06 | ~15min | 1 tasks | 1 files |
 | Phase 34 P08 | 15min | 3 tasks | 2 files |
 | Phase 34 P09 | 8min | 2 tasks | 3 files |
+| Phase 34 P10 | 25min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -569,6 +602,7 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-06: Windows --config signing override computed via a bash step (id: build_args -> GITHUB_OUTPUT) rather than an inline nested-brace GHA expression ternary, avoiding brace-escaping ambiguity while preserving D-04's secrets-less-run-ships-unsigned default.
 - [Phase 34]: CR-01 fixed via GAMELIB_SIDECAR_TARGET_TRIPLE override + checksum-verified official nodejs.org Node binary for cross-arch builds (GAP-D-02); Intel Mac support kept, Rosetta/dropping the leg rejected
 - [Phase 34]: Confirmed via cmp that tauri icon regen is byte-identical for PNGs but byte-different for icon.icns -- validates the scratch-dir-then-copy-only-icon.ico approach as necessary
+- [Phase 34]: 34-10: kept shutdown_child method name per plan's explicit Task 3 instruction; narrowed Task 1's over-broad test assertion instead, resolving a plan-internal contradiction (blanket _child substring check vs. required fn shutdown_child)
 
 ### Pending Todos
 
@@ -638,7 +672,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T07:16:38.655Z
+Last session: 2026-07-24T07:33:41.184Z
 Stopped at: Completed 34-05-PLAN.md (Tasks 1-2 done; Task 3 human-verify deferred by user)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
