@@ -174,3 +174,13 @@ None - no external service configuration required.
 ---
 *Phase: 34-tauri-packaging-windows-and-linux-builds-signing-auto-update*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/__tests__/tauriShellSource.test.ts`
+- FOUND: `src-tauri/src/main.rs`
+- FOUND: `.planning/phases/34-tauri-packaging-windows-and-linux-builds-signing-auto-update/34-10-SUMMARY.md`
+- FOUND commit: `f66973e6` (Task 1)
+- FOUND commit: `16a3ea25` (Task 2)
+- FOUND commit: `cdb3c0b3` (Task 3)
+- FOUND commit: `2c72ad15` (SUMMARY.md)
