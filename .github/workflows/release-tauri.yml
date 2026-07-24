@@ -23,7 +23,16 @@
 # below is conditional on the relevant secret being non-empty; the default
 # (secrets absent) is "skip signing, log a clear warning, ship an unsigned
 # artifact, job stays green". The intended invariant is that CI never fails
-# on missing certs.
+# on missing certs. GAP-A (34-16, live run 30084918812): the macOS half of
+# that claim was FALSE until this gap cycle -- a job-level `env:` map left
+# APPLE_CERTIFICATE defined-and-empty when the secret was absent, which the
+# Tauri bundler's macOS signing path treats as "signing enrolled" and
+# hard-failed `security import` on every secrets-less macOS leg. The macOS
+# gate is now a shell step ("Enable Apple signing only when a complete cert
+# secret set is enrolled") that writes $GITHUB_ENV only when a complete
+# secret set is present, and the invariant is proven by executed tests
+# (releaseWorkflow.test.ts's "Apple signing env gate, executed" block)
+# reading resolved $GITHUB_ENV content, not asserted by comment prose alone.
 name: Release Tauri
 
 on:
@@ -57,12 +66,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
       WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
@@ -170,12 +173,79 @@ jobs:
           GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}
         run: pnpm build:sidecar-sea
 
-      # D-04 explicit skip-warning: macOS's native env-var signing skip is
-      # otherwise silent. This step makes "logs a clear warning" real and
-      # log-observable (releaseWorkflow.test.ts asserts this string).
-      - name: Warn if macOS signing will be skipped
-        if: startsWith(matrix.platform, 'macos') && env.APPLE_CERTIFICATE == ''
-        run: echo "::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact"
+      # GAP-A (34-16, live run 30084918812): both macOS legs failed with `failed to
+      # bundle project: failed codesign application: failed to run command security
+      # import: failed to import keychain certificate` even though NO Apple cert
+      # secret was enrolled. Mechanism: the prior job-level `env:` block mapped
+      # `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}` unconditionally, which
+      # resolves to a DEFINED, EMPTY variable when the secret is absent -- and the
+      # Tauri bundler's macOS signing path tests the variable's *presence*
+      # (`var_os`), not its truthiness, so it entered the keychain-import branch and
+      # ran `security import` on empty data. The old `Warn if macOS signing will be
+      # skipped` step only printed a line; it prevented nothing.
+      #
+      # GitHub's `secrets` context is NOT available in a step `if:` expression, so
+      # the fix cannot be a conditional `env:` map -- it has to be a shell body that
+      # conditionally writes $GITHUB_ENV. The six IN_APPLE_* step-level inputs below
+      # are themselves defined-and-empty when their secrets are absent, which is
+      # harmless here (this step runs no Tauri tooling) but would recreate the exact
+      # bug above if they carried the real APPLE_* names instead. Apple cert/secret
+      # material now reaches the runner's $GITHUB_ENV file ONLY on a fully-enrolled
+      # signing run (T-34-34); notarization credentials are only exported when
+      # signing is also fully enrolled (T-34-36 -- never notarize an unsigned
+      # bundle); a newline-bearing secret cannot inject a sibling env key because
+      # write_env uses a $RANDOM-delimited heredoc per value, same remedy as WR-03's
+      # $GITHUB_OUTPUT heredoc (T-34-35). No branch calls exit 1 -- D-04 says the job
+      # stays green on any secret combination, including a half-enrolled one.
+      - name: Enable Apple signing only when a complete cert secret set is enrolled
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        env:
+          IN_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          IN_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IN_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          IN_APPLE_ID: ${{ secrets.APPLE_ID }}
+          IN_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          IN_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          write_env() {
+            local NAME="$1"
+            local VALUE="$2"
+            local DELIM="APPLE_ENV_${RANDOM}${RANDOM}${RANDOM}"
+            {
+              echo "${NAME}<<${DELIM}"
+              echo "${VALUE}"
+              echo "${DELIM}"
+            } >> "$GITHUB_ENV"
+          }
+
+          SIGNING_ENABLED=0
+
+          if [ -n "$IN_APPLE_CERTIFICATE" ] && [ -n "$IN_APPLE_CERTIFICATE_PASSWORD" ] && [ -n "$IN_APPLE_SIGNING_IDENTITY" ]; then
+            write_env APPLE_CERTIFICATE "$IN_APPLE_CERTIFICATE"
+            write_env APPLE_CERTIFICATE_PASSWORD "$IN_APPLE_CERTIFICATE_PASSWORD"
+            write_env APPLE_SIGNING_IDENTITY "$IN_APPLE_SIGNING_IDENTITY"
+            SIGNING_ENABLED=1
+          elif [ -n "$IN_APPLE_CERTIFICATE" ]; then
+            MISSING=""
+            if [ -z "$IN_APPLE_CERTIFICATE_PASSWORD" ]; then
+              MISSING="${MISSING}APPLE_CERTIFICATE_PASSWORD "
+            fi
+            if [ -z "$IN_APPLE_SIGNING_IDENTITY" ]; then
+              MISSING="${MISSING}APPLE_SIGNING_IDENTITY "
+            fi
+            echo "::warning::APPLE_CERTIFICATE is set but ${MISSING}missing; shipping unsigned"
+          else
+            echo "::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact"
+          fi
+
+          if [ "$SIGNING_ENABLED" = "1" ] && [ -n "$IN_APPLE_ID" ] && [ -n "$IN_APPLE_PASSWORD" ] && [ -n "$IN_APPLE_TEAM_ID" ]; then
+            write_env APPLE_ID "$IN_APPLE_ID"
+            write_env APPLE_PASSWORD "$IN_APPLE_PASSWORD"
+            write_env APPLE_TEAM_ID "$IN_APPLE_TEAM_ID"
+          elif [ -n "$IN_APPLE_ID" ] || [ -n "$IN_APPLE_PASSWORD" ] || [ -n "$IN_APPLE_TEAM_ID" ]; then
+            echo "::warning::Apple notarization credentials are set but signing is not fully configured; skipping notarization"
+          fi
 
       # D-04 explicit skip-warning: Windows has NO native "skip if absent"
       # behavior (Pitfall 4) -- this step is the only signal a secrets-less
