@@ -34,6 +34,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
 
@@ -534,17 +535,25 @@ fn resolve_sidecar_entry() -> String {
     format!("{}/../build/main/sidecar.js", env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a spawn/path
-/// failure is visible in the `tauri dev` terminal (previously the whole leg was invisible: a
-/// piped stdout consumed by the reader thread and no diagnostics meant even a healthy sidecar —
-/// or a silent spawn failure — produced zero terminal output).
-fn spawn_sidecar() -> std::io::Result<Child> {
+/// Whether this run should use the DEV-mode `node <sidecar-entry.js>` spawn path instead of
+/// the packaged `externalBin` binary. True whenever `GAMELIB_SIDECAR_ENTRY` is explicitly set
+/// (dev/test override) OR this is a debug build (`cargo tauri dev`). A release build always
+/// resolves the bundled sidecar via `tauri-plugin-shell` — never a system `node` (D-06).
+fn use_dev_sidecar() -> bool {
+    std::env::var("GAMELIB_SIDECAR_ENTRY").is_ok() || cfg!(debug_assertions)
+}
+
+/// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
+/// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
+/// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
+/// healthy sidecar — or a silent spawn failure — produced zero terminal output).
+fn spawn_sidecar_dev() -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let cwd = std::env::current_dir()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".into());
     let exists = std::path::Path::new(&entry).exists();
-    eprintln!("[shell] spawning sidecar: node \"{entry}\"");
+    eprintln!("[shell] spawning sidecar (dev): node \"{entry}\"");
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
     let child = Command::new("node")
@@ -560,6 +569,48 @@ fn spawn_sidecar() -> std::io::Result<Child> {
         ),
     }
     child
+}
+
+/// PACKAGED MODE: resolve + spawn the bundled `externalBin` sidecar (`binaries/gamelib-sidecar`)
+/// via `tauri-plugin-shell`'s `app.shell().sidecar(name)` (Don't Hand-Roll — the plugin already
+/// encodes the per-OS `resource_dir()` path-resolution differences between dev and packaged
+/// layouts; never a manual `cfg!(debug_assertions)` path branch here). The plugin's `Command`
+/// wrapper converts into a plain `std::process::Command` (`impl From<Command> for StdCommand`),
+/// so the rest of the spawn/pipe/diagnostic plumbing below is identical to the dev path.
+fn spawn_sidecar_packaged(app: &AppHandle) -> std::io::Result<Child> {
+    let shell_command: ShellCommand = app.shell().sidecar("gamelib-sidecar").map_err(|e| {
+        std::io::Error::other(format!("sidecar externalBin resolution failed: {e}"))
+    })?;
+    let mut std_command: Command = shell_command.into();
+    let program = std_command.get_program().to_string_lossy().to_string();
+    let cwd = std::env::current_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "<unknown>".into());
+    let exists = std::path::Path::new(&program).exists();
+    eprintln!("[shell] spawning sidecar (packaged): \"{program}\"");
+    eprintln!("[shell]   cwd={cwd}");
+    eprintln!("[shell]   entry_exists={exists}");
+    let child = std_command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn();
+    match &child {
+        Ok(_) => eprintln!("[shell] sidecar process spawned OK"),
+        Err(e) => eprintln!(
+            "[shell] FAILED to spawn packaged sidecar (does the externalBin exist for this target triple?): {e}"
+        ),
+    }
+    child
+}
+
+/// Dispatches to the dev or packaged spawn path per `use_dev_sidecar()`.
+fn spawn_sidecar(app: &AppHandle) -> std::io::Result<Child> {
+    if use_dev_sidecar() {
+        spawn_sidecar_dev()
+    } else {
+        spawn_sidecar_packaged(app)
+    }
 }
 
 /// Forward the sidecar's own stderr to the shell's stderr, line-prefixed, so a Node crash
@@ -741,8 +792,10 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let mut child = spawn_sidecar()?;
+            let mut child = spawn_sidecar(app.handle())?;
             let stdin = child
                 .stdin
                 .take()
