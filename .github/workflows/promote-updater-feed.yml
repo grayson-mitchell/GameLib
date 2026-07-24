@@ -1,0 +1,108 @@
+# Promote updater feed: copies the just-published release's `latest.json`
+# manifest to a fixed-tag release (`updater`) so tauri-plugin-updater's feed
+# endpoint has somewhere stable and real to resolve.
+#
+# Why not `/releases/latest/download/latest.json`: GitHub's `/releases/latest`
+# resolves ONLY to the newest NON-prerelease, NON-draft release. D-09
+# (34-CONTEXT.md) locks `prerelease: true` on every release release-tauri.yml
+# creates -- that flag encodes the Phase 19 "prerelease-not-Latest" lesson (a
+# 0.x prerelease must never become GitHub "Latest"). Combined, those two facts
+# mean the `/latest/` endpoint form is a PERMANENT 404, before and after
+# manual publish. Dropping `prerelease: true` to fix this is a FORECLOSED
+# remedy. Instead the endpoint moves to a stable, non-`/latest/` asset
+# location (`/releases/download/updater/latest.json`), and this workflow is
+# the mechanism that keeps that location current.
+#
+# Promotion happens only after a human publishes the draft release
+# (`release: types: [published]`) -- this IS the D-09 human-review gate,
+# preserved rather than worked around. Before publish, the updater keeps
+# seeing the previous version's manifest, exactly as intended. Publishing is
+# also the point at which `latest.json`'s own per-platform installer URLs
+# (which point at the versioned release's assets) first become publicly
+# resolvable, since a draft release's assets are not public.
+#
+# UNPROVEN LIVE: this workflow has never run against a real publish event.
+# It is intended to be exercised as part of 34-07's deferred `v*` tag-push
+# live gate -- treat every claim above as an invariant this workflow is
+# designed to uphold, not something observed on a real runner.
+name: Promote updater feed
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: promote-updater-feed
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    # Guards against this workflow re-triggering itself: `gh release create
+    # updater` below itself emits a `release: published` event, but the
+    # feed-holder release's tag is `updater`, not `v*`, so this condition
+    # excludes it. (GitHub's own rule that events created by the default
+    # GITHUB_TOKEN do not trigger further workflow runs is a second,
+    # independent guard against the same loop.)
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # The published release may be an Electron-only release with no
+      # Tauri latest.json asset (Pitfall 7: draft-release-mac.yml and
+      # draft-release-linux.yml co-run on the same v* tag). Absence is not
+      # an error -- this step must never fail the job.
+      - name: Download latest.json from the published release
+        id: download
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p feed
+          if gh release download "$TAG" --pattern 'latest.json' --dir feed --clobber; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No latest.json on the published release; nothing to promote"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Purely observational -- the file is never modified, only inspected.
+      # Gives an auditable record linking the feed's current contents to the
+      # release tag it was copied from.
+      - name: Record the manifest checksum (audit trail)
+        if: steps.download.outputs.found == 'true'
+        shell: bash
+        run: sha256sum feed/latest.json
+
+      # `--prerelease` is mandatory here, not optional: it is what keeps this
+      # release off GitHub "Latest" (the Phase 19 lesson) while still being
+      # PUBLISHED, which is the only way `/releases/download/updater/...`
+      # resolves publicly. Never mark the feed-holder release as a draft --
+      # a non-published release's assets are not publicly downloadable,
+      # which would recreate the exact bug this workflow exists to fix.
+      - name: Ensure the feed-holder release exists
+        if: steps.download.outputs.found == 'true'
+        shell: bash
+        run: |
+          if ! gh release view updater >/dev/null 2>&1; then
+            gh release create updater \
+              --title "Updater feed" \
+              --notes "Holds latest.json copied verbatim from the most recently published v* release. Not a release of GameLib itself -- do not install from here." \
+              --prerelease
+          fi
+
+      # Uploaded byte-identical, never regenerated or edited: latest.json's
+      # embedded per-platform minisign (Ed25519) signatures are verified
+      # client-side by tauri-plugin-updater against the pubkey committed in
+      # tauri.conf.json. This workflow declares no updater-signing secret
+      # anywhere above and must never gain a jq/sed/redirect step that
+      # rewrites the file -- doing so would invalidate every signature it
+      # carries.
+      - name: Publish the manifest to the stable feed location
+        if: steps.download.outputs.found == 'true'
+        shell: bash
+        run: gh release upload updater feed/latest.json --clobber
