@@ -150,3 +150,10 @@ None - no external service configuration required. (Note: `pnpm install` after p
 ---
 *Phase: 34-tauri-packaging-windows-and-linux-builds-signing-auto-update*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+All 6 created/referenced files verified present on disk (`meta/buildSidecarSea.ts`,
+`meta/sidecarSeaFsShim.ts`, `patches/steam-user.patch`, `patches/lzma.patch`,
+`src-tauri/binaries/.gitignore`, this SUMMARY.md). All 3 commit hashes (`0912daca`,
+`bf70bb67`, `fd3c4c78`) verified present in `git log --oneline --all`.
