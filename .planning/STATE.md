@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: gap cycle 3 execution complete (34-16, 34-17, 34-18 all done) -- ready for phase re-verification
-stopped_at: Completed 34-18-PLAN.md (GAP-B human half via Branch B: regenerated + re-enrolled matched updater keypair, committed pubkey synced to new key id 9A02F7E0C9FC04C7, commit caa15b75, 2/2 tasks)
-last_updated: "2026-07-24T18:47:00.000Z"
-last_activity: 2026-07-24 -- Executed 34-18 (GAP-B human half, Branch B: the original updater key/password proved unrecoverable via pnpm verify:updater-key so the keypair was regenerated; both TAURI_SIGNING_* secrets re-enrolled on grayson-mitchell/GameLib 1s apart, and the committed plugins.updater.pubkey synced to the new key id 9A02F7E0C9FC04C7 in src-tauri/tauri.conf.json); all 3 gap cycle 3 plans (34-16,17,18) now done -- next is phase re-verification (34-07 live tag-push gate remains user-deferred, REQ-34-09 still unchecked)
+status: LIVE TAG-PUSH GATE PASSED 2026-07-25 (REQ-34-09) -- phase 34 code+live complete; only secure-phase 34 remains before advancing to Phase 35
+stopped_at: Live gate re-run 30123449346 (commit 006a900a) GREEN on all 4 legs -- both prior blockers (34-16 macOS empty-cert, 34-17/18 updater keypair) confirmed fixed; REQ-34-09 checked; test tag + draft release cleaned up
+last_updated: "2026-07-25T08:35:00.000Z"
+last_activity: 2026-07-25 -- Ran the deferred 34-07 live tag-push gate. Fixed a build-blocking merge slip first (paths.ts missing `resolve` import from merge d40b4145, commit 006a900a, codecheck clean), retagged v0.7.0-rc.test onto it. Release Tauri run 30123449346 GREEN on all 4 legs: macOS builds unsigned+succeed with signing-skip warnings (blocker 1 fixed via 34-16 env-unset), verify:updater-key preflight passed key id c704fcc9e0f7029a = reversal of 34-18 key 9A02F7E0C9FC04C7 (blocker 2 fixed), draft+prerelease release with all artifacts+latest.json, arm64 SEA sidecar ran Node-free (__GAMELIB_SIDECAR_READY__). REQ-34-09 checked, 34-HUMAN-UAT.md marked PASSED, tag+draft release deleted. NEXT: /gsd-secure-phase 34 (no 34-SECURITY.md yet) then Phase 35 electron cutover.
 progress:
   total_phases: 5
   completed_phases: 3
