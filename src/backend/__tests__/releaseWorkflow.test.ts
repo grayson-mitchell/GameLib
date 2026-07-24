@@ -82,7 +82,7 @@ function runStepScript(
   script: string,
   cwd: string,
   env: Record<string, string> = {}
-): { status: number | null; stderr: string } {
+): { status: number | null; stdout: string; stderr: string } {
   const scriptPath = join(cwd, 'step.sh')
   writeFileSync(scriptPath, script)
   const result = spawnSync(
@@ -90,7 +90,29 @@ function runStepScript(
     ['--noprofile', '--norc', '-eo', 'pipefail', scriptPath],
     { cwd, env: { ...process.env, ...env }, encoding: 'utf-8' }
   )
-  return { status: result.status, stderr: result.stderr }
+  return {
+    status: result.status,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? ''
+  }
+}
+
+/**
+ * Substitutes the `${{ matrix.* }}` GitHub expressions a run block embeds so
+ * the remaining text is executable bash. Deliberately fails the test if any
+ * `${{ ... }}` survives -- an unsubstituted expression would otherwise be
+ * silently executed as literal text and make an assertion vacuous.
+ */
+function substituteMatrixExpressions(
+  script: string,
+  values: Record<string, string>
+): string {
+  let result = script
+  for (const [key, value] of Object.entries(values)) {
+    result = result.split(`\${{ matrix.${key} }}`).join(value)
+  }
+  expect(result).not.toContain('${{')
+  return result
 }
 
 /** Creates a file (and any missing parent directories) under `root`. */
@@ -553,13 +575,15 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
       .join('\n')
   }
 
-  test('Test 1: the signing-override branch requires BOTH secrets on the same if line', () => {
+  test('Test 1: the signing-override branch requires ALL THREE secrets on the same if line', () => {
     const source = loadReleaseWorkflow()
     const ifLine = source
       .split('\n')
       .find((line) => line.includes('-n "$WINDOWS_CERTIFICATE"'))
     expect(ifLine).toBeDefined()
     expect(ifLine).toContain('-n "$WINDOWS_CERT_THUMBPRINT"')
+    // WR-02: the password secret was checked nowhere in the workflow.
+    expect(ifLine).toContain('-n "$WINDOWS_CERTIFICATE_PASSWORD"')
   })
 
   test('Test 2: certificateThumbprint is only reachable after the thumbprint check', () => {
@@ -584,7 +608,7 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(elifMatch?.[0]).not.toMatch(/exit 1/)
   })
 
-  test('Test 5: the cert-import step if: line is gated on the thumbprint too', () => {
+  test('Test 5: the cert-import step if: line is gated on the thumbprint AND the password', () => {
     const source = loadReleaseWorkflow()
     const ifLine = source
       .split('\n')
@@ -594,6 +618,9 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
       )
     expect(ifLine).toBeDefined()
     expect(ifLine).toContain("env.WINDOWS_CERT_THUMBPRINT != ''")
+    // WR-02: without this, cert+thumbprint-without-password reached the pwsh
+    // step and ConvertTo-SecureString -String "" hard-failed the whole leg.
+    expect(ifLine).toContain("env.WINDOWS_CERTIFICATE_PASSWORD != ''")
   })
 
   test('Test 6: secret-derived args output uses a heredoc, not single-line echo', () => {
@@ -618,5 +645,150 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(source).toMatch(
       /Import-PfxCertificate[\s\S]*?finally \{[\s\S]*?Remove-Item -Path cert\.pfx -Force/
     )
+  })
+})
+
+// 34-REVIEW.md (gap cycle 2) WR-02: GAP-4's "both secrets required" gate never checked
+// WINDOWS_CERTIFICATE_PASSWORD, so a cert+thumbprint-without-password secret set still
+// reached the pwsh import step and hard-failed the windows-latest leg -- the same class of
+// failure GAP-4 existed to eliminate. The prior tests asserted only on the text of the if
+// line; these EXECUTE the three-branch shell for every secret combination and assert on
+// the args value it actually writes to $GITHUB_OUTPUT.
+const BUILD_ARGS_STEP_NAME =
+  'Compute tauri-action build args (Windows signing override merge)'
+
+describeOnPosix('release-tauri.yml build-args secret gating, executed (WR-02 regression guard)', () => {
+  let workdir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-buildargs-'))
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  /** Reads back the `args<<DELIM` heredoc GitHub's $GITHUB_OUTPUT protocol uses. */
+  function readArgsOutput(outputPath: string): string {
+    const lines = readFileSync(outputPath, 'utf-8').split('\n')
+    const header = lines[0].match(/^args<<(.+)$/)
+    expect(header).not.toBeNull()
+    const delimiter = (header as RegExpMatchArray)[1]
+    const body: string[] = []
+    for (let index = 1; index < lines.length; index += 1) {
+      if (lines[index] === delimiter) {
+        return body.join('\n')
+      }
+      body.push(lines[index])
+    }
+    throw new Error(`unterminated args heredoc (delimiter ${delimiter})`)
+  }
+
+  function runBuildArgs(
+    secrets: Record<string, string>,
+    platform = 'windows-latest',
+    matrixArgs = ''
+  ): { status: number | null; stdout: string; args: string; rawOutput: string } {
+    const script = substituteMatrixExpressions(
+      extractRunBlock(BUILD_ARGS_STEP_NAME),
+      { platform, args: matrixArgs }
+    )
+    const outputPath = join(workdir, `github-output-${Math.random()}`)
+    writeFileSync(outputPath, '')
+    const result = runStepScript(script, workdir, {
+      GITHUB_OUTPUT: outputPath,
+      WINDOWS_CERTIFICATE: '',
+      WINDOWS_CERT_THUMBPRINT: '',
+      WINDOWS_CERTIFICATE_PASSWORD: '',
+      ...secrets
+    })
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      args: readArgsOutput(outputPath),
+      rawOutput: readFileSync(outputPath, 'utf-8')
+    }
+  }
+
+  test('all three Windows secrets present -> the signing override is merged in', () => {
+    const result = runBuildArgs({
+      WINDOWS_CERTIFICATE: 'BASE64CERT',
+      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
+      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+    })
+    expect(result.status).toBe(0)
+    expect(result.args).toContain('"certificateThumbprint":"AABBCCDD"')
+    expect(result.args).toContain('"digestAlgorithm":"sha256"')
+  })
+
+  test('WR-02: cert + thumbprint but NO password -> warn and ship unsigned, job stays green', () => {
+    const result = runBuildArgs({
+      WINDOWS_CERTIFICATE: 'BASE64CERT',
+      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD'
+    })
+    expect(result.status).toBe(0)
+    expect(result.args).not.toContain('certificateThumbprint')
+    expect(result.stdout).toContain('::warning::')
+    expect(result.stdout).toContain('WINDOWS_CERTIFICATE_PASSWORD')
+  })
+
+  test('cert + password but NO thumbprint -> warn and ship unsigned, job stays green', () => {
+    const result = runBuildArgs({
+      WINDOWS_CERTIFICATE: 'BASE64CERT',
+      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+    })
+    expect(result.status).toBe(0)
+    expect(result.args).not.toContain('certificateThumbprint')
+    expect(result.stdout).toContain('WINDOWS_CERT_THUMBPRINT')
+  })
+
+  test('no Windows secrets at all -> matrix.args passes through untouched (D-04 default)', () => {
+    const result = runBuildArgs({}, 'windows-latest', '--verbose')
+    expect(result.status).toBe(0)
+    expect(result.args.trim()).toBe('--verbose')
+    expect(result.stdout).not.toContain('::warning::')
+  })
+
+  test('a non-Windows leg never merges a signing override even with secrets enrolled', () => {
+    const result = runBuildArgs(
+      {
+        WINDOWS_CERTIFICATE: 'BASE64CERT',
+        WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
+        WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+      },
+      'macos-latest',
+      '--target x86_64-apple-darwin'
+    )
+    expect(result.status).toBe(0)
+    expect(result.args.trim()).toBe('--target x86_64-apple-darwin')
+    expect(result.args).not.toContain('certificateThumbprint')
+  })
+
+  // WR-04: the previous `expect(source).toContain('$RANDOM')` assertion was satisfied by
+  // the step's own comment prose and would have stayed green against a fixed delimiter.
+  // Running the block twice proves the delimiter really varies per run.
+  test('the $GITHUB_OUTPUT heredoc delimiter is randomised per run, not a fixed literal', () => {
+    const secrets = { WINDOWS_CERTIFICATE: '', WINDOWS_CERT_THUMBPRINT: '' }
+    const first = runBuildArgs(secrets).rawOutput.split('\n')[0]
+    const second = runBuildArgs(secrets).rawOutput.split('\n')[0]
+    expect(first).toMatch(/^args<<\S+$/)
+    expect(second).toMatch(/^args<<\S+$/)
+    expect(first).not.toBe(second)
+  })
+
+  test('a newline-bearing thumbprint secret cannot inject extra step outputs', () => {
+    const result = runBuildArgs({
+      WINDOWS_CERTIFICATE: 'BASE64CERT',
+      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD\nevil=pwned',
+      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+    })
+    expect(result.status).toBe(0)
+    // The injected line lands INSIDE the heredoc body (part of args), never
+    // as a sibling `evil=pwned` output key.
+    expect(result.args).toContain('evil=pwned')
+    expect(result.rawOutput.split('\n')[0]).toMatch(/^args<</)
+    const delimiter = result.rawOutput.split('\n')[0].replace('args<<', '')
+    const trailing = result.rawOutput.split(`\n${delimiter}\n`)[1] ?? ''
+    expect(trailing.trim()).toBe('')
   })
 })

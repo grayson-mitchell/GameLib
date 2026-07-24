@@ -190,8 +190,16 @@ jobs:
       # by signtool, so writing a .pfx to the runner filesystem would expose
       # cert material for zero benefit. A cert-without-thumbprint secret set
       # is treated as an absent-secret case (D-04) and never reaches here.
+      #
+      # WR-02 (gap cycle 2 review): GAP-4 restored D-04's invariant for the
+      # thumbprint secret only -- WINDOWS_CERTIFICATE_PASSWORD was checked
+      # nowhere, so enrolling cert + thumbprint but not the password (the
+      # exact half-configured secret set GAP-4 named) hard-failed the
+      # windows-latest leg with an opaque PowerShell binding error. All
+      # three Windows secrets are now required by BOTH gates; any subset
+      # routes through the warn-and-skip branch and ships unsigned.
       - name: Import Windows signing certificate (if present)
-        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != ''
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != '' && env.WINDOWS_CERTIFICATE_PASSWORD != ''
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
@@ -216,10 +224,17 @@ jobs:
       # without the thumbprint secret rendered certificateThumbprint:"" into
       # the --config override and hard-failed the Windows leg via signtool
       # -- contradicting D-04's locked "CI must never fail on missing certs"
-      # invariant. The three-branch shell below restores it: (1) both
-      # secrets present -> sign, (2) cert present but thumbprint missing ->
-      # warn and ship unsigned, job stays green, (3) neither present -> the
-      # existing default. No branch ever calls `exit 1`.
+      # invariant. The three-branch shell below restores it: (1) ALL THREE
+      # Windows secrets present -> sign, (2) the cert present but the
+      # thumbprint and/or password missing -> warn and ship unsigned, job
+      # stays green, (3) none present -> the existing default. No branch
+      # ever calls `exit 1`.
+      #
+      # WR-02 (gap cycle 2 review): branch (1) originally tested only the
+      # cert + thumbprint, leaving WINDOWS_CERTIFICATE_PASSWORD unchecked
+      # anywhere in the workflow -- so a cert+thumbprint-without-password
+      # secret set still reached the pwsh import step and hard-failed the
+      # leg. The password is now part of both gates.
       #
       # WR-03 secondary defect: `args` is secret-derived (the thumbprint is
       # interpolated into it via CONFIG_OVERRIDE), so the old single-line
@@ -233,11 +248,11 @@ jobs:
         id: build_args
         shell: bash
         run: |
-          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ] && [ -n "$WINDOWS_CERT_THUMBPRINT" ]; then
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ] && [ -n "$WINDOWS_CERT_THUMBPRINT" ] && [ -n "$WINDOWS_CERTIFICATE_PASSWORD" ]; then
             CONFIG_OVERRIDE=$(printf -- '--config {"bundle":{"windows":{"certificateThumbprint":"%s","digestAlgorithm":"sha256","timestampUrl":"http://timestamp.digicert.com"}}}' "$WINDOWS_CERT_THUMBPRINT")
             VALUE="${{ matrix.args }} ${CONFIG_OVERRIDE}"
           elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
-            echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT is missing; shipping unsigned"
+            echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT and/or WINDOWS_CERTIFICATE_PASSWORD is missing; shipping unsigned"
             VALUE="${{ matrix.args }}"
           else
             VALUE="${{ matrix.args }}"
