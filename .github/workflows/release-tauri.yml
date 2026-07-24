@@ -1,0 +1,134 @@
+# Release Tauri: builds Windows + Linux + macOS (arm64 & x64) installers via
+# tauri-action on a `v*` tag push (or manual workflow_dispatch), then opens a
+# DRAFT GitHub Release marked PRERELEASE for human review before publish (D-09).
+#
+# NOTE (Pitfall 7): `draft-release-mac.yml` and `draft-release-linux.yml` also
+# trigger on `v*` and will co-run alongside this workflow on every tag push.
+# This is intentional, not a bug -- both pipelines are additive per the
+# Phase 27+ Electron/Tauri parity invariant and publish to the SAME GitHub
+# Release. Tauri's default per-platform artifact names (NSIS/AppImage/dmg)
+# do not collide with electron-builder's `-Setup-`/`-Portable-`/`-macOS-`/
+# `-linux-` artifactName segments, so both sets of assets can safely land on
+# one release.
+#
+# D-03/D-04: signing plumbing is wired to GitHub Actions secrets, but 0.x
+# ships UNsigned -- no cert secrets are enrolled yet. Every signing path
+# below is conditional on the relevant secret being non-empty; the default
+# (secrets absent) is "skip signing, log a clear warning, ship an unsigned
+# artifact, job stays green". CI must never fail on missing certs.
+name: Release Tauri
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-24.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+    runs-on: ${{ matrix.platform }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Ubuntu system dependencies
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: ./.github/actions/install-deps
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      # Compiles build/main/sidecar.js (existing esbuild output) into a
+      # self-contained per-OS executable (Node SEA) BEFORE tauri-action
+      # bundles it as an externalBin -- no cross-job artifact hand-off
+      # window (T-34-07: sidecar substitution mitigation).
+      - name: Build self-contained sidecar (Node SEA)
+        run: pnpm build:sidecar-sea
+
+      # D-04 explicit skip-warning: macOS's native env-var signing skip is
+      # otherwise silent. This step makes "logs a clear warning" real and
+      # log-observable (releaseWorkflow.test.ts asserts this string).
+      - name: Warn if macOS signing will be skipped
+        if: startsWith(matrix.platform, 'macos') && env.APPLE_CERTIFICATE == ''
+        run: echo "::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact"
+
+      # D-04 explicit skip-warning: Windows has NO native "skip if absent"
+      # behavior (Pitfall 4) -- this step is the only signal a secrets-less
+      # run is intentionally shipping unsigned, not silently misconfigured.
+      - name: Warn if Windows signing will be skipped
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE == ''
+        run: echo "::warning::Signing skipped — no Windows cert secret set; shipping unsigned artifact"
+
+      # Windows signing config lives as a static tauri.conf.json field, not
+      # an env-var gate (Pattern 2) -- import the cert ONLY when present, and
+      # ONLY in-memory (never written to a cached/persisted artifact, T-34-05).
+      - name: Import Windows signing certificate (if present)
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          Set-Content -Path cert.pfx -Value $bytes -AsByteStream
+          $securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+
+      # tauri.conf.json never declares certificateThumbprint (D-04 anti-
+      # pattern guard -- a committed thumbprint would FAIL a secrets-less
+      # CI run). The Windows signing config is merged in ONLY here, ONLY
+      # when the cert secret is present; every other leg (and a secrets-
+      # less Windows run) passes only matrix.args -- the true default is
+      # "unsigned, warned, job green".
+      - name: Compute tauri-action build args (Windows signing override merge)
+        id: build_args
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
+            CONFIG_OVERRIDE=$(printf -- '--config {"bundle":{"windows":{"certificateThumbprint":"%s","digestAlgorithm":"sha256","timestampUrl":"http://timestamp.digicert.com"}}}' "$WINDOWS_CERT_THUMBPRINT")
+            echo "args=${{ matrix.args }} ${CONFIG_OVERRIDE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "args=${{ matrix.args }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: tauri-apps/tauri-action@v1
+        with:
+          tagName: v__VERSION__
+          releaseName: 'GameLib v__VERSION__'
+          releaseBody: 'See the assets below to download and install.'
+          releaseDraft: true
+          prerelease: true
+          args: ${{ steps.build_args.outputs.args }}
