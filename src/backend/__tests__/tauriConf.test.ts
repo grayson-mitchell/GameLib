@@ -10,7 +10,7 @@
  * below is the mitigation for this threat -- it must never silently pass on
  * a config that (re-)derives the updater feed from Heroic upstream.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const TAURI_CONF_PATH = join(
@@ -21,6 +21,8 @@ const TAURI_CONF_PATH = join(
   'src-tauri',
   'tauri.conf.json'
 )
+
+const SRC_TAURI_DIR = join(__dirname, '..', '..', '..', 'src-tauri')
 
 function loadTauriConf(): Record<string, unknown> {
   return JSON.parse(readFileSync(TAURI_CONF_PATH, 'utf-8')) as Record<
@@ -85,5 +87,39 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
   test('the updater feed never contains Heroic-Games-Launcher (T-34-01 -- fork-pointed feed, never derive from defaults)', () => {
     const conf = loadTauriConf()
     expect(JSON.stringify(conf)).not.toContain('Heroic-Games-Launcher')
+  })
+})
+
+describe('tauri.conf.json icon set (CR-02 -- nsis needs a Windows .ico)', () => {
+  test('bundle.icon contains icons/icon.ico', () => {
+    const conf = loadTauriConf()
+    const bundle = conf.bundle as Record<string, unknown>
+    expect(bundle.icon).toEqual(expect.arrayContaining(['icons/icon.ico']))
+  })
+
+  test('when bundle.targets includes nsis, at least one bundle.icon entry ends with .ico', () => {
+    const conf = loadTauriConf()
+    const bundle = conf.bundle as Record<string, unknown>
+    const targets = bundle.targets as string[]
+    const icons = bundle.icon as string[]
+    if (targets.includes('nsis')) {
+      expect(icons.some((icon) => icon.endsWith('.ico'))).toBe(true)
+    }
+  })
+
+  test('every bundle.icon path exists on disk', () => {
+    const conf = loadTauriConf()
+    const bundle = conf.bundle as Record<string, unknown>
+    const icons = bundle.icon as string[]
+    const missing = icons.filter(
+      (icon) => !existsSync(join(SRC_TAURI_DIR, icon))
+    )
+    expect(missing).toEqual([])
+  })
+
+  test('src-tauri/icons/icon.ico starts with the ICO magic bytes', () => {
+    const icoPath = join(SRC_TAURI_DIR, 'icons', 'icon.ico')
+    const header = readFileSync(icoPath).subarray(0, 4)
+    expect(header).toEqual(Buffer.from([0x00, 0x00, 0x01, 0x00]))
   })
 })
