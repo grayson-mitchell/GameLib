@@ -55,6 +55,27 @@ created: 2026-07-24
 | 34-06 T1 | 34-06 | 4 | REQ-34-04, REQ-34-06 | T-34-04 / T-34-05 / T-34-07 / T-34-11 | Graceful-skip signing + explicit skip warning; draft-prerelease | unit + yaml-parse | `pnpm test -- --testPathPattern=releaseWorkflow` + `python3 -c "import yaml; yaml.safe_load(...)"` | ✅ release-tauri.yml | ⬜ pending |
 | 34-07 T1 | 34-07 | 5 | REQ-34-04, REQ-34-09 | T-34-04 / T-34-12 / T-34-13 | Live: 3-OS build unsigned-but-working; draft+prerelease not-Latest; Node-free sidecar | manual (live gate) | Push `v0.7.0-rc.test`; verify Actions run + draft release + standalone sidecar | ⬜ (live CI/Release) | ⬜ pending |
 
+### Gap-closure cycle (34-08..34-11, added 2026-07-24 from `34-REVIEW.md`)
+
+> Closes CR-01, CR-02, WR-01, WR-02, WR-03. WR-04 and IN-01 are deliberately out of scope
+> (recorded in `deferred-items.md` by 34-11 T3). Test commands use `npx jest --testPathPattern=…`
+> rather than `pnpm test --` (34-06's recorded arg-dropping gotcha) and never gate on a green
+> full-suite exit code (known pre-existing `library.ts:1153` leaked-timer exit-1).
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| 34-08 T1 | 34-08 | 6 | REQ-34-03 | T-34-14 | Sidecar triple derives from the build *target*, not the runner's arch (CR-01) | unit | `npx jest --testPathPattern=buildSidecarSea` | ✅ meta/buildSidecarSea.ts | ⬜ pending |
+| 34-08 T2 | 34-08 | 6 | REQ-34-03 | T-34-14 / T-34-15 | Cross-build uses a checksum-verified official Node binary for the target triple, never a relabeled `process.execPath`; arch asserted, not assumed | unit + build gate | `npx jest --testPathPattern=buildSidecarSea` | ✅ meta/buildSidecarSea.ts | ⬜ pending |
+| 34-08 T3 | 34-08 | 6 | REQ-34-03 | T-34-14 | Cross-arch output proven genuinely x86_64 on the arm64 dev Mac before CI | smoke (local) | `GAMELIB_SIDECAR_TARGET_TRIPLE=x86_64-apple-darwin pnpm build:sidecar-sea` + `lipo -archs` prints `x86_64` | ⬜ (build artifact) | ⬜ pending |
+| 34-09 T1 | 34-09 | 6 | REQ-34-01, REQ-34-02 | — | Missing Windows `.ico` caught by the Wave-0 suite, not by a live Windows CI run (CR-02) | unit (RED scaffold) | `npx jest --testPathPattern=tauriConf` | ✅ tauriConf.test.ts | 🔴 RED-by-design |
+| 34-09 T2 | 34-09 | 6 | REQ-34-01, REQ-34-02 | — | `nsis` target has a real `.ico`; every `bundle.icon` path resolves | unit | `npx jest --testPathPattern=tauriConf` | ⬜ (icon.ico to be generated) | ⬜ pending |
+| 34-10 T1 | 34-10 | 6 | REQ-34-03, REQ-34-08 | T-34-09 / T-34-17 / T-34-16 | Source-shape assertions run against comment-stripped `main.rs` so they cannot pass vacuously | unit (RED scaffold) | `npx jest --testPathPattern=tauriShellSource` | ⬜ (suite to be created) | 🔴 RED-by-design |
+| 34-10 T2 | 34-10 | 6 | REQ-34-03, REQ-34-08 | T-34-09 / T-34-17 | Release builds cannot be diverted to an arbitrary system `node` via `GAMELIB_SIDECAR_ENTRY` (WR-01) | unit + build | `npx jest --testPathPattern=tauriShellSource` + `cd src-tauri && cargo build` | ✅ src-tauri/src/main.rs | ⬜ pending |
+| 34-10 T3 | 34-10 | 6 | REQ-34-08 | T-34-16 | Sidecar is killed+reaped on `RunEvent::Exit` — no orphan holding a Steam session (WR-03) | unit + build | `npx jest --testPathPattern=tauriShellSource` + `cd src-tauri && cargo build` | ✅ src-tauri/src/main.rs | ⬜ pending |
+| 34-11 T1 | 34-11 | 7 | REQ-34-03, REQ-34-06 | T-34-14 | Every matrix leg declares its own `sidecar_triple`; a future leg added without one fails the test (CR-01 CI half) | unit + yaml-parse | `npx jest --testPathPattern=releaseWorkflow` | ✅ release-tauri.yml | ⬜ pending |
+| 34-11 T2 | 34-11 | 7 | REQ-34-04 | T-34-05 | `cert.pfx` deleted in a `finally` (survives a failed import); no artifact/cache step can leak it (WR-02) | unit + yaml-parse | `npx jest --testPathPattern=releaseWorkflow` | ✅ release-tauri.yml | ⬜ pending |
+| 34-11 T3 | 34-11 | 7 | — | — | WR-04 + IN-01 recorded as tracked debt rather than silently dropped | doc assertion | `deferred-items.md` contains WR-04 and IN-01 entries | ✅ deferred-items.md | ⬜ pending |
+
 *Status: ⬜ pending · ✅ green · 🔴 RED-by-design (Wave-0 scaffold) · ❌ red · ⚠️ flaky*
 
 ---

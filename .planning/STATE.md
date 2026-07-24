@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 34-07-PLAN.md (checkpoint:human-verify live tag-push gate deferred by user; recorded pending in 34-07-SUMMARY.md)
-last_updated: "2026-07-24T04:34:01.659Z"
-last_activity: 2026-07-24
+stopped_at: Planned gap-closure plans 34-08..34-11 from 34-REVIEW.md (checker PASSED; 34-07's live tag-push gate still deferred by user)
+last_updated: "2026-07-24T07:00:16.414Z"
+last_activity: 2026-07-24 -- Phase 34 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
@@ -34,8 +34,21 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 6 of 6 (34-01,02,03,05,06,07 all executed — no 04; 34-07's live gate DEFERRED by user, not passed)
-Status: All 6 plans executed. Phase 34 is code-complete + unit-tested but NOT phase-complete —
+Plan: 6 of 10 executed (34-01,02,03,05,06,07 executed — no 04; gap-closure plans 34-08..34-11
+  planned 2026-07-24, NOT yet executed; 34-07's live gate DEFERRED by user, not passed)
+Status: Ready to execute — gap cycle 34-08..34-11 planned and checker-PASSED. All 6 original
+  plans executed; Phase 34 is code-complete + unit-tested but NOT phase-complete on two counts.
+  **(1) Code review gaps.** `34-REVIEW.md` (status `issues_found`, 2 critical / 4 warnings /
+  1 info) found two release blockers on the CI path: CR-01 (the macOS `x86_64-apple-darwin` leg
+  builds an arm64 SEA sidecar because `hostTriple()` reads the runner's arch, not the Tauri
+  `--target`) and CR-02 (no `icon.ico` despite `nsis` being an active bundle target). Gap plans
+  34-08..34-11 close CR-01, CR-02, WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY` override),
+  WR-02 (`cert.pfx` left on disk) and WR-03 (sidecar orphaned on app exit). User scope decisions
+  this cycle: WR-04 (null CSP / `withGlobalTauri` / broad `opener:default`) and IN-01 (loose
+  `system.pem` match) are DEFERRED as tracked debt, recorded in the phase's `deferred-items.md`;
+  CR-01 is fixed by a target-triple override plus a checksum-verified official x64 Node base
+  binary (Intel Mac support kept — dropping the leg and Rosetta were both explicitly rejected).
+  **(2) Live gate.**
   34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live proof, REQ-34-09) was
   deferred by explicit user decision this session. Full repro steps recorded verbatim in
   34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm
@@ -43,8 +56,17 @@ Status: All 6 plans executed. Phase 34 is code-complete + unit-tested but NOT ph
   artifacts + latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while
   draft, then clean up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until
   that run actually happens. Next: either resume 34-07's live gate, or move on and return to it
-  before declaring Phase 34 / the Phase 35 Electron-cutover dependency satisfied.
-Last activity: 2026-07-24
+  before declaring Phase 34 / the Phase 35 Electron-cutover dependency satisfied. Recommended
+  ordering: execute 34-08..34-11 FIRST, then run the live gate — CR-01 and CR-02 would fail the
+  Windows and macOS-x64 legs of that very run.
+Last activity: 2026-07-24 -- Phase 34 gap-closure plans 34-08..34-11 created and verified
+
+> **Plan-counter note (2026-07-24):** `gsd-sdk query state.planned-phase` regressed
+> `stopped_at` to "Completed 34-05-PLAN.md" (a stale pre-34-06/07 value) and replaced the
+> multi-line `Status:` prose with a bare "Ready to execute", orphaning the paragraph beneath
+> it. Both were repaired by hand against the phase directory (34-01..34-07 SUMMARY.md all
+> present; 34-08..34-11 PLAN.md present with no SUMMARY). Same failure mode as the two
+> plan-counter notes below — do not trust the verb's blind field writes on this file.
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
 > file to "Plan: 2 of 4" immediately after 31-04's execution — itself stale drift, since
