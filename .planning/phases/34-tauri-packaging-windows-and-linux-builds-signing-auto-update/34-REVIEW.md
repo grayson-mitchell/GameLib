@@ -1,567 +1,715 @@
 ---
 phase: 34-tauri-packaging-windows-and-linux-builds-signing-auto-update
-reviewed: 2026-07-24T20:15:00Z
+reviewed: 2026-07-24T21:05:00Z
 depth: standard
-files_reviewed: 16
+files_reviewed: 7
 files_reviewed_list:
   - .github/workflows/release-tauri.yml
-  - meta/__tests__/buildSidecarSea.test.ts
+  - .github/workflows/promote-updater-feed.yml
   - meta/buildSidecarSea.ts
-  - meta/sidecarSeaFsShim.ts
-  - patches/lzma.patch
-  - patches/steam-user.patch
-  - src-tauri/Cargo.toml
-  - src-tauri/binaries/.gitignore
-  - src-tauri/capabilities/default.json
-  - src-tauri/icons/icon.ico
-  - src-tauri/src/main.rs
+  - meta/__tests__/buildSidecarSea.test.ts
   - src-tauri/tauri.conf.json
-  - src/backend/__tests__/cargoFeatures.test.ts
   - src/backend/__tests__/releaseWorkflow.test.ts
   - src/backend/__tests__/tauriConf.test.ts
-  - src/backend/__tests__/tauriShellSource.test.ts
 findings:
   critical: 3
-  warning: 10
+  warning: 9
   info: 3
-  total: 16
+  total: 15
 status: issues_found
 ---
 
-# Phase 34: Code Review Report (re-review after gap closure 34-08..34-11)
+# Phase 34 (gap cycle 2): Code Review Report
 
-**Reviewed:** 2026-07-24
+**Reviewed:** 2026-07-24T21:05:00Z
 **Depth:** standard
-**Files Reviewed:** 16
+**Files Reviewed:** 7
 **Status:** issues_found
 
 ## Summary
 
-**Gap-fix verdict (the five findings this cycle was supposed to close):**
+Gap cycle 2 (34-12..34-15) closes the four verification gaps as claimed at the
+level of "the literal thing the gap named now exists in the file". It does not
+close them at the level of "the pipeline would now produce a correct artifact."
 
-| Prior finding | Verdict | Notes |
-|---|---|---|
-| CR-01 (host-vs-target sidecar triple) | **Closed, correctly** | `resolveTriple()`/`triplePlatform()`/`expectedMachoArch()` make the output triple, postject's `--macho-segment-name`, and the `lipo -archs` gate all target-driven; `obtainCrossNodeBinary()` genuinely downloads + SHA-256-verifies the nodejs.org binary rather than relabeling `process.execPath`; the workflow wires `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg. Regression tests are real, not vacuous. |
-| CR-02 (missing Windows `.ico`) | **Closed, correctly** | `src-tauri/icons/icon.ico` is a genuine 6-image MS icon resource (verified: `MS Windows icon resource - 6 icons`, magic `00 00 01 00`), wired into `bundle.icon`, asserted both on-disk and by magic bytes. |
-| WR-01 (release-reachable `node` spawn) | **Closed, correctly** | `use_dev_sidecar()` reduces to `cfg!(debug_assertions)`; `GAMELIB_SIDECAR_ENTRY` survives only as a dev-path entry redirect. |
-| WR-02 (`cert.pfx` left on disk) | **Closed, correctly** | `try/finally` + `Remove-Item -Force`; the inaccurate "ONLY in-memory" claim was corrected rather than papered over. |
-| WR-03 (orphan sidecar on exit) | **Closed, but incomplete** | `RunEvent::Exit` -> `shutdown_child()` covers window-close/Cmd+Q. It does **not** cover the `app_relaunch` path (WR-01 below), and it is an unconditional `kill()` with no graceful shutdown (WR-02 below). |
+Two of the three BLOCKERs below are *created* by GAP-1's fix, not merely
+missed by it. Adding `pnpm exec electron-vite build` + `pnpm build-steam-bridge`
+to the workflow is the change that first makes `build/` reachable by
+tauri-action — and `build/` is where `buildSidecarSea.ts` already parks a
+58 MB Node tarball, a 13 MB unminified full-backend bundle, and the raw SEA
+blob. `frontendDist: "../build"` embeds all of it into the shipped binary
+(CR-02). And `pnpm build-steam-bridge` writes to `public/bin/${process.arch}/`
+using the *runner's* arch, which is the exact host-vs-target defect class that
+gap cycle 1's CR-01 fix taught this codebase to avoid for the sidecar — now
+reintroduced for the bridge helper on the `x86_64-apple-darwin` leg (CR-01).
 
-**New/previously-missed defects.** Three BLOCKERs remain. None is a regression from the gap
-cycle — all are pre-existing and all sit squarely on the code path the deferred 34-07 live gate
-would have exercised first. Because the tag-push pipeline has *never* been run, none was caught
-empirically:
+GAP-2's fix is also partial: it converted two of the three PATH-dependent
+spawns in `buildSidecarSea.ts` to `require.resolve` + `process.execPath` and
+left `generateSeaBlob()` spawning a bare `'node'` (CR-03), which silently
+breaks the file's own documented "the base binary must be the exact same Node
+version as the blob" invariant.
 
-1. **The release workflow never builds the renderer.** `frontendDist: "../build"` +
-   `beforeBuildCommand: ""` + no `electron-vite build` step anywhere in `release-tauri.yml`
-   means every Tauri bundle produced by CI either fails to bundle or ships with no web assets.
-2. **The `windows-latest` leg cannot build the SEA sidecar** — `buildSidecarSea.ts` spawns
-   `node_modules/.bin/esbuild` and `node_modules/.bin/postject` as bare extensionless paths,
-   which do not execute via `spawn()` on Windows.
-3. **Auto-update can never resolve its feed** — every release is created `prerelease: true`
-   while the endpoint is `/releases/latest/download/latest.json`, which by GitHub's documented
-   semantics never resolves to a prerelease.
+On the tests: the scope note's warning about string/shape assertions is
+justified. `releaseWorkflow.test.ts` Test 7 (`expect(source).toContain('$RANDOM')`)
+is satisfied by the workflow's own comment prose at line 203 — it would pass
+against a fixed heredoc delimiter (WR-04). `isWindowsSpawnable()` is dead
+production code whose test asserts a regex against three hardcoded literals
+and proves nothing about the build script (WR-05). No test parses either
+workflow as YAML, executes any step, or inspects what actually lands in
+`build/`.
 
-Ten warnings follow, concentrated in three clusters: exit/lifecycle correctness in the Rust
-shell, tests that assert weaker things than their prose claims, and renderer-facing capability
-grants with zero callers.
+I verified empirically where it mattered: `require.resolve` does resolve
+correctly under the `esbuild ... | node` stdin invocation; esbuild's
+`maybeOptimizePackage()` gate really is `os.platform() !== "win32" && !isYarn()`
+so the platform branch's premise is accurate; `electron-vite`'s renderer
+`outDir` really is `build` so GAP-1's step does populate `frontendDist`; both
+workflow YAMLs parse.
 
-**Previously-accepted deferred debt (NOT re-raised as findings):** prior-review WR-04
-(`security.csp: null` + `withGlobalTauri` + broad `opener:default`) and IN-01
-(`sidecarSeaFsShim.ts`'s loose `system.pem` match) are recorded as tracked debt in
-`deferred-items.md` per user decision GAP-D-01. They are unchanged and remain open; see the
-"Deferred debt" section at the end.
+Prior-round findings WR-09 (no concurrency control across four matrix legs +
+two co-triggering Electron workflows) and IN-02 (`hostTriple()` mislabels
+arm64 Windows/Linux) remain open and are **not** re-raised here per the scope
+note — but note that CR-02 and the `latest.json` read-modify-write race are
+downstream of WR-09 still being open.
 
 ## Critical Issues
 
-### CR-01: `release-tauri.yml` never builds the renderer — every CI bundle ships without web assets
+### CR-01: GAP-1's new steam-bridge step is host-arch-driven — the `x86_64-apple-darwin` bundle ships an unreachable bridge helper
 
-**File:** `.github/workflows/release-tauri.yml:61-158` (entire `steps:` list)
-**Also:** `src-tauri/tauri.conf.json:7-8` (`frontendDist: "../build"`, `beforeBuildCommand: ""`)
-
-**Issue:** Tauri resolves the app's web assets from `frontendDist: "../build"`, i.e.
-`build/index.html` and `build/assets/*`. Those files are produced *only* by
-`electron-vite build` (see `electron.vite.config.ts` — `renderer.build.outDir: 'build'`,
-`input: index.html`). The release workflow's complete step list is:
-
-```
-checkout -> apt deps -> ./.github/actions/install-deps -> rust toolchain -> rust-cache
--> pnpm build:sidecar-sea -> signing-warn steps -> cert import -> build_args -> tauri-action
-```
-
-None of those build the renderer:
-- `./.github/actions/install-deps` runs only `pnpm install` + `pnpm download-helper-binaries`
-  (verified in `.github/actions/install-deps/action.yml`).
-- `pnpm build:sidecar-sea` = `pnpm build:sidecar && esbuild … meta/buildSidecarSea.ts | node`,
-  which emits `build/main/sidecar.js` and `src-tauri/binaries/…` only.
-- `beforeBuildCommand` is the empty string, so the Tauri CLI runs nothing pre-bundle.
-- `tauri-apps/tauri-action` does not build frontends; that is precisely what
-  `beforeBuildCommand` exists for. There is not even a `build` script in `package.json` for it
-  to fall back to.
-
-Result on a real tag push: `build/` exists (created by `build:sidecar`) but contains no
-`index.html`, so `tauri build` either aborts with "Unable to find your web assets" or produces
-installers whose webview loads nothing. All four matrix legs are affected. Compare the Electron
-pipeline, which is correct: `draft-release-mac.yml` runs `pnpm release:mac`
-= `pnpm build-steam-bridge && electron-vite build && electron-builder …`.
-
-Two further omissions in the same family, both silent:
-- `pnpm build-steam-bridge` is never run, so the Phase 24 macOS Steam bridge helper
-  (`build/bin/…`) is absent from macOS Tauri bundles.
-- The `gh release download crossover-index` step that seeds `public/crossover-index.json.gz`
-  (present in `draft-release-mac.yml`) is absent, so Tauri builds ship without the bundled
-  CrossOver index snapshot.
-
-**Fix:** Add explicit renderer/asset build steps before `tauri-action` (preferred over
-`beforeBuildCommand`, since it keeps the `tauri dev` flow unchanged and makes failures
-attributable to their own step):
+**File:** `.github/workflows/release-tauri.yml:97-100`
+**Issue:**
+34-12 added:
 
 ```yaml
       - name: Build steam bridge shims (macOS only)
         if: startsWith(matrix.platform, 'macos')
         run: pnpm build-steam-bridge
-
-      - name: Build renderer (electron-vite) — produces build/index.html for frontendDist
-        run: pnpm exec electron-vite build
 ```
 
-Then add a `releaseWorkflow.test.ts` assertion so this cannot regress:
+`meta/buildSteamBridgeShims.ts` writes its outputs to
+`public/bin/${process.arch}/darwin/` (file header lines 11 and 19), where
+`process.arch` is the **build host's** arch. `macos-latest` runners are
+Apple Silicon, so both macOS matrix legs emit
+`public/bin/arm64/darwin/steam-bridge-helper` and
+`public/bin/arm64/darwin/steam_api.dll`. Vite copies `public/` into `build/`,
+which becomes `frontendDist`.
+
+At runtime the consumer resolves the same path from the **running process's**
+arch:
 
 ```ts
-test('builds the renderer before invoking tauri-action (frontendDist ../build must exist)', () => {
-  const source = loadReleaseWorkflow()
-  expect(source).toMatch(/electron-vite build[\s\S]*?tauri-apps\/tauri-action/)
-})
+// src/backend/constants/paths.ts:97,111
+join(publicDir, 'bin', process.arch, 'darwin', 'steam_api.dll')
+join(publicDir, 'bin', process.arch, 'darwin', 'steam-bridge-helper')
 ```
 
----
+The `--target x86_64-apple-darwin` bundle ships an x86_64 SEA sidecar
+(`GAMELIB_SIDECAR_TARGET_TRIPLE: x86_64-apple-darwin`), so `process.arch` is
+`'x64'` there. It will look for `bin/x64/darwin/...`, find nothing, and the
+macOS Steam bridge — the entire Phase 24 feature — is dead in the x86_64
+build. The binaries are also arm64 Mach-O regardless of path, because `clang`
+is invoked with no `-arch` flag.
 
-### CR-02: The `windows-latest` leg cannot run the SEA sidecar build — `.bin` shims are not executable via `spawn()` on Windows
+This is the same host-vs-target bug family as the CR-01 that gap cycle 1 fixed
+for the sidecar (`resolveTriple()` / `GAMELIB_SIDECAR_TARGET_TRIPLE`), and the
+same one `buildSidecarSea.ts:315-337` documents at length — reintroduced by
+this cycle's own fix, for a different artifact, with no test guarding it.
 
-**File:** `meta/buildSidecarSea.ts:124-125` (`POSTJECT_BIN`, `ESBUILD_BIN`), used at `:371` and `:561`
-
-**Issue:**
-
-```ts
-const POSTJECT_BIN = join('node_modules', '.bin', 'postject')
-const ESBUILD_BIN = join('node_modules', '.bin', 'esbuild')
-…
-const result = await spawnArgv(ESBUILD_BIN, [ … ])                 // :371
-const inject  = await spawnArgv(POSTJECT_BIN, postjectArgv.args)   // :561
-```
-
-`spawnArgv()` calls `child_process.spawn(command, args, { stdio: … })` with **no `shell: true`**
-(correct per T-24-06). On Windows, pnpm materialises `node_modules/.bin/postject` as three files:
-`postject` (a POSIX shell shim, not executable by `CreateProcess`), `postject.CMD`, and
-`postject.ps1`. `spawn()` with an explicit extensionless relative path performs no PATHEXT
-resolution, so the Windows leg fails inside `bundleForSea()` with `ENOENT`/`EACCES` before it
-ever reaches postject — `pnpm build:sidecar-sea` fails, the step fails, and the
-`windows-latest` job dies before `tauri-action` runs. The `sidecar_triple:
-'x86_64-pc-windows-msvc'` matrix wiring added by 34-11 is therefore unreachable in practice.
-Nothing catches this: `buildSidecarSea.test.ts` only exercises the pure argv builders, and the
-pipeline has never been run (34-07 deferred).
-
-**Fix:** Resolve the real executables rather than the shim. The cleanest T-24-06-preserving form
-is argv-form, shell-free, and platform-neutral:
-
-```ts
-const ESBUILD_BIN = require.resolve('esbuild/bin/esbuild')   // run via process.execPath
-const POSTJECT_BIN = require.resolve('postject/dist/cli.js')
-…
-await spawnArgv(process.execPath, [ESBUILD_BIN, ...esbuildArgs])
-await spawnArgv(process.execPath, [POSTJECT_BIN, ...postjectArgv.args])
-```
-
-(The minimal alternative is `const BIN_EXT = process.platform === 'win32' ? '.CMD' : ''`, but a
-`.CMD` still needs a shell on some Node versions, which reintroduces the T-24-06 hazard.) Add a
-unit test asserting the resolved binary path is Windows-executable when
-`process.platform === 'win32'`.
-
----
-
-### CR-03: The updater feed can never resolve — `/releases/latest/download/` is incompatible with `prerelease: true`
-
-**File:** `src-tauri/tauri.conf.json:42-44` (`plugins.updater.endpoints`)
-**Also:** `.github/workflows/release-tauri.yml:156-157` (`releaseDraft: true`, `prerelease: true`)
-
-**Issue:** The workflow unconditionally creates every release as a **draft + prerelease**:
+**Fix:** make the bridge build target-driven the same way the sidecar build
+already is. Minimum viable:
 
 ```yaml
-          releaseDraft: true
-          prerelease: true
+      - name: Build steam bridge shims (macOS only)
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        env:
+          GAMELIB_BRIDGE_TARGET_ARCH: ${{ matrix.sidecar_triple == 'x86_64-apple-darwin' && 'x64' || 'arm64' }}
+        run: pnpm build-steam-bridge
 ```
 
-while the updater feed is hardcoded to:
+and in `meta/buildSteamBridgeShims.ts`, replace `process.arch` in the output
+path with `process.env.GAMELIB_BRIDGE_TARGET_ARCH || process.arch`, and pass
+the matching `-arch x86_64` / `-arch arm64` to the `clang` invocation
+(`buildHelperCompileArgv`, line ~117). Add a regression test mirroring
+`resolveTriple`'s: an `x64` override must yield a `bin/x64/darwin/...` path.
+Alternatively build a universal helper with `-arch x86_64 -arch arm64` and
+resolve `bin/universal/darwin/...` on darwin only.
 
-```json
-"endpoints": [
-  "https://github.com/grayson-mitchell/GameLib/releases/latest/download/latest.json"
-]
+---
+
+### CR-02: `frontendDist: "../build"` now embeds ~70 MB of SEA/Electron build intermediates — including the full unminified backend bundle — into every shipped installer
+
+**File:** `.github/workflows/release-tauri.yml:108-110, 134-137` + `src-tauri/tauri.conf.json:7`
+**Issue:**
+Before GAP-1, tauri-action aborted with "Unable to find your web assets"
+because nothing populated `build/`. GAP-1 fixes that — and in doing so makes
+Tauri consume the *whole* `build/` tree, which is also
+`buildSidecarSea.ts`'s scratch directory (lines 116-121, 178). Step ordering
+in the workflow is: renderer build (line 110) → SEA build (line 137) →
+tauri-action (line 227), so every SEA intermediate is present when Tauri
+reads `frontendDist`.
+
+Observed contents of `build/` on this machine after exactly that sequence:
+
+```
+build/node-dist/node-v26.2.0-darwin-x64.tar.gz   58 MB   (downloaded Node dist)
+build/node-dist/node-v26.2.0-darwin-x64/                 (extracted node binary)
+build/main/sidecar-sea-bundle.js                 13 MB   (full backend, unminified)
+build/main/sidecar.js                           935 KB
+build/main/main.js                              670 KB   (Electron main — unused by Tauri)
+build/main/chunks/                                       (Electron main chunks)
+build/main/decompressWorker.js
+build/sea-config.json
+build/sidecar-prep.blob                                  (the SEA blob)
 ```
 
-GitHub's `/releases/latest` (and the `/releases/latest/download/<asset>` redirect) is documented
-to resolve to "the most recent **non-prerelease, non-draft** release". `latest.json` is uploaded
-as an asset of a release that is, by design and by a test-guarded invariant
-(`releaseWorkflow.test.ts:73-83`), always a prerelease. So the endpoint 404s forever — before
-publish (draft) *and* after publish (still flagged prerelease unless a human manually unchecks
-it, which is not part of the documented D-09 publish procedure). REQ-34-09's wording ("invisible
-to the updater until manual publish") assumes visibility *returns* after publish; it does not.
+Tauri embeds `frontendDist` into the compiled Rust binary via
+`generate_context!`/`EmbeddedAssets` and serves it over `tauri://localhost`.
+Consequences:
 
-Net effect: the entire minisign / `createUpdaterArtifacts` / pubkey apparatus is inert, and
-`tauriConf.test.ts:79-85` asserts the endpoint is "correct" (it only checks the URL contains
-`grayson-mitchell/GameLib`), giving false confidence.
+1. **Size** — the `x86_64-apple-darwin` leg embeds a 58 MB Node tarball plus
+   a second copy of the sidecar (SEA blob) plus a third copy (the JS bundle)
+   into the installer.
+2. **Source disclosure** — `sidecar-sea-bundle.js` is the entire GameLib
+   backend, esbuild-bundled with no `--minify`, including the Steam auth,
+   token-store and depot code. It is fetchable from the webview.
+3. **Aggravated by `"csp": null`** (`tauri.conf.json:22`) plus
+   `"withGlobalTauri": true` (line 11) — there is no CSP restricting what the
+   webview may fetch, and `window.__TAURI__` is exposed globally.
 
-**Fix:** Pick one and make it explicit:
+No test asserts anything about `frontendDist`'s contents; `tauriConf.test.ts`
+only checks `bundle.*` keys.
 
-- **Option A (keep prereleases):** point the feed at a stable, non-`latest` asset location the
-  publish step updates, e.g. a fixed tag:
-  ```json
-  "endpoints": ["https://github.com/grayson-mitchell/GameLib/releases/download/updater/latest.json"]
-  ```
-  and have the publish procedure re-upload `latest.json` to the `updater` release.
-- **Option B (keep the URL):** drop `prerelease: true` for releases intended to be
-  update-visible, keeping `releaseDraft: true` as the human-review gate (a draft is already
-  invisible; the prerelease flag is what breaks `latest`).
+**Fix:** stop overloading `build/` as both the frontend dist and the SEA
+scratch dir. Either (a) point `frontendDist` at a dedicated renderer-only
+directory, or (b) prune before bundling. Option (b) is the smallest change —
+add a step between the SEA build and tauri-action:
 
-Either way, add the missing cross-file test:
+```yaml
+      - name: Prune non-frontend build intermediates before bundling
+        shell: bash
+        run: |
+          rm -rf build/node-dist build/main build/preload
+          rm -f build/sea-config.json build/sidecar-prep.blob
+          test -f build/index.html   # fail loud if the prune ate the frontend
+```
+
+Better long-term: move `NODE_DIST_CACHE_DIR`, `SEA_CONFIG_PATH`,
+`SEA_BLOB_PATH` and `SEA_BUNDLE_PATH` in `meta/buildSidecarSea.ts` out of
+`build/` into a sibling `.sea-work/` (add to `.gitignore`), so the two trees
+can never collide again. Add a test that enumerates the expected
+`frontendDist` roots and fails on any unexpected top-level entry.
+
+---
+
+### CR-03: `generateSeaBlob()` still spawns a bare `'node'` from `PATH` — GAP-2's fix skipped the third spawn, silently allowing a version-skewed SEA binary
+
+**File:** `meta/buildSidecarSea.ts:479-482`
+**Issue:**
+GAP-2 (34-13) converted `esbuild` and `postject` to `require.resolve` +
+`process.execPath`, on the stated rationale that `process.execPath` "is never
+looked up via `PATH`/PATHEXT and is therefore spawnable identically on every
+OS" (lines 136-141). The third spawn in the same file was not converted:
 
 ```ts
-test('the updater endpoint form is compatible with the workflow release flags', () => {
-  const endpoint = ((loadTauriConf().plugins as any).updater.endpoints as string[])[0]
-  const workflow = readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
-  if (endpoint.includes('/releases/latest/download/')) {
-    expect(workflow).not.toContain('prerelease: true')
-  }
-})
+const result = await spawnArgv('node', [
+  '--experimental-sea-config',
+  SEA_CONFIG_PATH
+])
 ```
 
-## Warnings
+This is not just stylistic inconsistency — it breaks a correctness invariant
+the file itself documents twice:
 
-### WR-01: `app_relaunch` bypasses `RunEvent::Exit`, so the WR-03 sidecar-cleanup fix does not cover restart
+> "the base binary MUST match the Node version generating the SEA blob"
+> (lines 396-399)
+> "the SEA blob (`generateSeaBlob()`) is generated by THIS running `node`, so
+> the base binary injected with it must be the exact same Node version."
+> (lines 500-504)
 
-**File:** `src-tauri/src/main.rs:511-513` (`"app_relaunch"` arm), `:883-889` (exit handler)
+`generateSeaBlob()` does **not** run under "THIS running node". It runs under
+whatever `node` `PATH` resolves to. Meanwhile `copyNodeBinary()` uses
+`process.execPath` for native builds and `nodeDistUrls(triple)` — defaulted to
+`process.version` — for cross builds. Any divergence (nvm/fnm shim vs. the
+node that `pnpm` spawned, Corepack, a `.nvmrc` mismatch, a `volta`-pinned
+project) produces a SEA blob from Node X injected into a Node Y base binary.
+The failure mode is a runtime crash or subtly wrong behavior in the shipped
+sidecar, not a build error: `verifyBinaryArch()` gates the Mach-O *arch* but
+nothing gates the *version*, and both the exit-code check and the
+`existsSync()` check pass.
 
-**Issue:** `AppHandle::restart()` is `-> !`: it runs `cleanup_before_exit()` and then
-execs/exits the process directly, without returning control to the event loop. The
-user-supplied `run(|app_handle, event| …)` callback's `RunEvent::Exit` arm is driven only by the
-event loop, so `shutdown_child()` is not guaranteed to run on the relaunch path. The result is
-the exact failure mode WR-03 was filed against — an orphaned sidecar holding an authenticated
-Steam session and open sockets — now *duplicated* against the fresh sidecar the relaunched shell
-spawns. The `shutdown_child()` doc comment (`:133-135`) even names `app_relaunch` as a covered
-path; it is not.
-
-**Fix:** Kill the child explicitly before restarting:
-
-```rust
-"app_relaunch" => {
-    if let Some(state) = app.try_state::<Arc<SidecarState>>() {
-        state.shutdown_child();
-    }
-    app.restart();
-}
-```
-
-`shutdown_child()` is already safe to call twice (kill errors on an exited child are logged and
-swallowed), so a later `RunEvent::Exit` double-call is harmless.
-
-### WR-02: `shutdown_child()` SIGKILLs the sidecar with no graceful-shutdown attempt
-
-**File:** `src-tauri/src/main.rs:141-157`
-
-**Issue:** `child.kill()` is `SIGKILL` on Unix and `TerminateProcess` on Windows — unmaskable and
-immediate. The sidecar owns `electron-store` writes (Steam library/token stores) and in-flight
-depot installs. A quit issued mid-write can truncate a store JSON file, and a quit mid-install
-leaves `.acf`/partial-chunk state with no chance to run the existing cancel/cleanup paths — the
-same data-integrity class as the historical "startup-resume crash on stale StateFlags" issue.
-There is also no bound on `child.wait()`, so a child that somehow survives the kill hangs app
-exit on the main thread.
-
-**Fix:** Try a cooperative shutdown first, then escalate:
-
-```rust
-// best-effort graceful stop: send a shutdown frame (or close stdin for EOF), then wait briefly
-let _ = self.write_raw(&serde_json::json!({ "kind": "shutdown" }));
-let deadline = Instant::now() + Duration::from_secs(3);
-while Instant::now() < deadline {
-    if matches!(child.try_wait(), Ok(Some(_))) { return }
-    thread::sleep(Duration::from_millis(100));
-}
-let _ = child.kill();
-let _ = child.wait();
-```
-
-### WR-03: Windows signing override emits an empty `certificateThumbprint`, hard-failing CI in a half-configured state
-
-**File:** `.github/workflows/release-tauri.yml:140-149`
-
-**Issue:** The gate is `[ -n "$WINDOWS_CERTIFICATE" ]` only — `WINDOWS_CERT_THUMBPRINT` is never
-checked:
-
-```bash
-CONFIG_OVERRIDE=$(printf -- '--config {"bundle":{"windows":{"certificateThumbprint":"%s",…}}}' "$WINDOWS_CERT_THUMBPRINT")
-```
-
-If a maintainer enrols `WINDOWS_CERTIFICATE`/`WINDOWS_CERTIFICATE_PASSWORD` but forgets the
-thumbprint secret (an easy three-secret mistake), the override renders
-`"certificateThumbprint":""`, tauri invokes signtool with an empty thumbprint, and the Windows
-leg fails hard — directly violating the file's own stated invariant "CI must never fail on
-missing certs" (`:14-18`).
-
-Secondary: `echo "args=…" >> "$GITHUB_OUTPUT"` writes a secret-derived value with no delimiter
-escaping. A thumbprint secret containing a newline would allow arbitrary step outputs to be
-injected; GitHub's own guidance is a random heredoc delimiter for any non-literal output value.
+On this machine `process.execPath` is v26.2.0 (evidenced by the downloaded
+`build/node-dist/node-v26.2.0-darwin-x64.tar.gz`), while `package.json`
+`engines.node` is `>=22` — precisely the situation where a stale PATH `node`
+is plausible.
 
 **Fix:**
 
-```bash
-if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ] && [ -n "$WINDOWS_CERT_THUMBPRINT" ]; then
-  …
-elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
-  echo "::warning::WINDOWS_CERTIFICATE set but WINDOWS_CERT_THUMBPRINT missing; shipping unsigned"
-  echo "args=${{ matrix.args }}" >> "$GITHUB_OUTPUT"
-fi
-```
-and emit via a heredoc delimiter (`{ echo "args<<$DELIM"; echo "$VALUE"; echo "$DELIM"; }`).
-
-### WR-04: `tauriShellSource.test.ts`'s comment-stripping self-test is vacuous
-
-**File:** `src/backend/__tests__/tauriShellSource.test.ts:48-54`
-
-**Issue:** The suite's whole premise (`:30-38`) is that `loadMainRsCode()` must strip comments so
-the "does NOT contain X" assertions cannot pass on prose alone, and the self-test is supposed to
-prove the stripping works:
-
 ```ts
-expect(loadMainRsCode()).not.toContain('Kept alive so the child is not reaped')
+const result = await spawnArgv(process.execPath, [
+  '--experimental-sea-config',
+  SEA_CONFIG_PATH
+])
 ```
 
-That exact phrase was **deleted from `main.rs` by the very commit under review** (the `_child`
-field doc comment was rewritten — see `main.rs:120-125`). The string now appears nowhere in the
-file, so the self-test passes identically whether `loadMainRsCode()` strips comments, returns the
-raw file, or returns the empty string. The stated anti-vacuous guarantee is unverified, and every
-downstream `not.toContain` assertion inherits that unverified premise.
+and add a version gate so the invariant is enforced rather than merely
+documented — in `copyNodeBinary()`, for the cross-build path, assert the
+downloaded dist's version equals `process.version`; for the native path this
+is automatic once the above change lands. A cheap regression test: assert the
+comment-stripped source of `buildSidecarSea.ts` contains no
+`spawnArgv('node'` / `spawnArgv("node"` literal (the same technique
+`buildSidecarSea.test.ts:292` already uses for `.bin`).
 
-**Fix:** Self-test against a phrase that is *currently* comment-only in `main.rs`, with a
-positive control:
+## Warnings
 
-```ts
-test('a comment-only phrase from main.rs IS present raw but absent after stripping', () => {
-  const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
-  const phrase = 'held alive so it is not reaped early' // lives only in a doc comment
-  expect(raw).toContain(phrase)                    // positive control: really in the file
-  expect(loadMainRsCode()).not.toContain(phrase)   // and stripping really removed it
-})
-```
+### WR-01: `cert.pfx` escapes the `try/finally` guarantee — the step comment's "removed even when the import throws" claim is false
 
-### WR-05: `releaseWorkflow.test.ts`'s "no cache step" assertion gives false assurance
+**File:** `.github/workflows/release-tauri.yml:171-179`
+**Issue:** The step comment (lines 156-160) asserts:
 
-**File:** `src/backend/__tests__/releaseWorkflow.test.ts:160-164`
+> "cert.pfx exists on disk only for the duration of the import; the finally
+> block below removes it immediately afterward, including when the import
+> itself throws, so no retried/continued job step can find it left behind."
 
-**Issue:**
+But `ConvertTo-SecureString` sits **outside** the `try`:
 
-```ts
-test('has no upload-artifact or cache step that could exfiltrate the workspace (and its cert.pfx)', () => {
-  expect(source).not.toContain('actions/upload-artifact')
-  expect(source).not.toContain('actions/cache')
-})
-```
-
-The workflow *does* contain caching — `swatinem/rust-cache@v2` (`:77-79`), which wraps
-`actions/cache` internally, plus `actions/setup-node` with `cache: 'pnpm'` inside the composite
-`install-deps` action. The literal-substring test sees neither. It is scoped harmlessly today
-(rust-cache is limited to `./src-tauri -> target`; `cert.pfx` lives at the workspace root), but
-the test asserts a property it does not verify — worse than no test, since adding a
-workspace-wide cache later would leave it green.
-
-**Fix:** Assert the real property (allowlist + scope) rather than a substring:
-
-```ts
-const ALLOWED_CACHE_ACTIONS = ['swatinem/rust-cache']
-test('any cache/artifact step is on the allowlist and scoped away from the workspace root', () => {
-  const uses = [...source.matchAll(/uses:\s*([^\s]+)/g)].map((m) => m[1])
-  const caching = uses.filter((u) => /cache|upload-artifact/i.test(u))
-  expect(caching.every((u) => ALLOWED_CACHE_ACTIONS.some((a) => u.startsWith(a)))).toBe(true)
-})
-```
-
-### WR-06: `updater:default` and `shell:allow-execute` are granted to the webview with zero renderer callers
-
-**File:** `src-tauri/capabilities/default.json:6-15`
-
-**Issue:** A repo-wide search of `src/` finds no import of `@tauri-apps/plugin-updater` or
-`@tauri-apps/plugin-shell` anywhere (the only hits are the assertion strings inside
-`cargoFeatures.test.ts`). Both grants are therefore dead:
-
-- `updater:default` exposes `plugin:updater|check` / `|download_and_install` to renderer JS that
-  never calls them. It also means the phase's headline auto-update feature has **no caller at
-  all** — nothing in Rust or JS ever triggers an update check, so even with CR-03 fixed the app
-  would not self-update.
-- `shell:allow-execute` (scoped to `{name: 'binaries/gamelib-sidecar', sidecar: true}`) is
-  unnecessary by the file's own reasoning: `spawn_sidecar_packaged()` calls
-  `app.shell().sidecar(...)` from **Rust**, and the comment correctly states "Rust plugin API
-  calls bypass capabilities". What the grant actually buys is the ability for renderer JS
-  (reachable via `withGlobalTauri: true`) to spawn *additional* sidecar processes — each a full
-  backend that opens its own Steam session and writes the same `electron-store` files
-  concurrently.
-
-**Fix:** Remove `shell:allow-execute` from `capabilities/default.json` entirely (verify the
-packaged sidecar still spawns — it will; the Rust path is unaffected), and either wire a real
-update check (`check()` on startup behind a setting) or drop `updater:default` until a caller
-exists. Add a capability-shape test asserting no plugin permission is granted without a
-corresponding renderer import.
-
-### WR-07: Node base-binary integrity check is same-origin and unsigned, but is documented as the T-34-15 supply-chain mitigation
-
-**File:** `meta/buildSidecarSea.ts:441-482`
-
-**Issue:** `obtainCrossNodeBinary()` downloads `node-<ver>-<dist>.tar.gz` and verifies it against
-`SHASUMS256.txt` fetched from **the same host over the same channel**, and every failure message
-is tagged `T-34-15`. A same-origin, unsigned checksum defends against truncated/corrupt transfers
-only; an attacker able to serve a malicious tarball from `nodejs.org` (or terminate TLS in front
-of the runner) serves a matching `SHASUMS256.txt` in the same breath. Node publishes
-`SHASUMS256.txt.sig`, signed by the release keys, precisely for this; it is not checked. The
-resulting binary is what every macOS x64 user's sidecar is built from, so the claimed mitigation
-does materially less than the comments assert.
-
-**Fix:** Verify `SHASUMS256.txt.sig` against a pinned release key, or (simpler and equally
-strong) pin the expected SHA-256 per supported triple as a committed constant so the trust anchor
-is the reviewed source tree rather than the download origin:
-
-```ts
-const NODE_DIST_SHA256: Record<string, string> = {
-  'node-v22.11.0-darwin-x64.tar.gz': '<hash committed after manual verification>'
+```powershell
+Set-Content -Path cert.pfx -Value $bytes -AsByteStream        # <- file written
+$securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force   # <- can throw HERE
+try {
+  Import-PfxCertificate ...
+} finally {
+  Remove-Item -Path cert.pfx -Force -ErrorAction SilentlyContinue
 }
 ```
-…and downgrade the `T-34-15` labelling in the comments to what the current check actually proves.
 
-### WR-08: Stale comment in `buildSidecarSea.ts` contradicts the code it documents
+If `WINDOWS_CERTIFICATE_PASSWORD` is empty or unset, `ConvertTo-SecureString
+-String ""` is a terminating error under GitHub's `pwsh` shell
+(`$ErrorActionPreference = 'Stop'`), the script aborts before entering the
+`try`, and the PKCS#12 private key remains in the runner workspace. Practical
+exposure is bounded because a failed step aborts the job — but the documented
+invariant is simply not true, and this is exactly the half-configured-secrets
+scenario GAP-4 set out to make safe.
 
-**File:** `meta/buildSidecarSea.ts:113-115`
+`releaseWorkflow.test.ts:150` (`expect(source).toContain('finally {')`) and
+`:145` do not catch this — they only check that a `finally` exists somewhere
+after `Import-PfxCertificate`.
 
+**Fix:** move every statement that can throw after the file write inside the
+`try`, or write the file inside the `try`:
+
+```powershell
+$bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+$securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+try {
+  Set-Content -Path cert.pfx -Value $bytes -AsByteStream
+  Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+} finally {
+  Remove-Item -Path cert.pfx -Force -ErrorAction SilentlyContinue
+}
+```
+
+Tighten the test to assert `Set-Content -Path cert.pfx` appears *after*
+`try {`.
+
+---
+
+### WR-02: GAP-4's "both secrets required" gate still ignores `WINDOWS_CERTIFICATE_PASSWORD` — the D-04 "CI never fails on missing certs" invariant is still breakable
+
+**File:** `.github/workflows/release-tauri.yml:169`
+**Issue:** The fix comment (lines 189-197) claims the three-branch shell
+"restores" D-04's locked invariant. It restores it for exactly one of the
+three Windows secrets. The cert-import step's gate is:
+
+```yaml
+if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != ''
+```
+
+`WINDOWS_CERTIFICATE_PASSWORD` is not checked anywhere. Enrolling cert +
+thumbprint but not the password — the exact "half-configured secret set" the
+gap names — hard-fails the `windows-latest` leg with an opaque PowerShell
+binding error, which is the same class of failure GAP-4 was raised to
+eliminate. `releaseWorkflow.test.ts` Test 5 asserts only the two secrets that
+were fixed, so the gap is invisible to the suite.
+
+**Fix:** require all three secrets in both gates, and route the
+cert-but-no-password case through the existing warn-and-skip branch:
+
+```yaml
+if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != '' && env.WINDOWS_CERTIFICATE_PASSWORD != ''
+```
+
+```bash
+elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
+  echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT and/or WINDOWS_CERTIFICATE_PASSWORD is missing; shipping unsigned"
+  VALUE="${{ matrix.args }}"
+```
+
+Extend Test 5 to assert the third secret.
+
+---
+
+### WR-03: `TAURI_SIGNING_PRIVATE_KEY` is the only secret with no graceful-skip and no warn step, yet `createUpdaterArtifacts: true` is unconditional
+
+**File:** `src-tauri/tauri.conf.json:37` + `.github/workflows/release-tauri.yml:58-59`
+**Issue:** The workflow header (lines 21-26) states the locked invariant:
+"Every signing path below is conditional on the relevant secret being
+non-empty; the default (secrets absent) is 'skip signing, log a clear
+warning, ship an unsigned artifact, job stays green'."
+
+That is implemented for `APPLE_CERTIFICATE` (line 143) and
+`WINDOWS_CERTIFICATE` (line 150). It is **not** implemented for
+`TAURI_SIGNING_PRIVATE_KEY`, and `bundle.createUpdaterArtifacts` is a static
+`true` with a committed `plugins.updater.pubkey`. With a pubkey present and
+`TAURI_SIGNING_PRIVATE_KEY` empty, `tauri build` errors out rather than
+skipping — failing **all four** matrix legs, not just one, and producing no
+`latest.json` for `promote-updater-feed.yml` to promote. This asymmetry is
+undetectable from the repo (secret enrollment is not inspectable) and is not
+covered by any test or warning step, on a pipeline explicitly marked
+`UNPROVEN LIVE`.
+
+**Fix:** add a preflight step matching the two existing warning steps, so a
+missing updater key is a loud, named failure instead of an opaque tauri
+error:
+
+```yaml
+      - name: Fail fast with a clear message if the updater signing key is absent
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        shell: bash
+        run: |
+          echo "::error::TAURI_SIGNING_PRIVATE_KEY is not enrolled, but tauri.conf.json sets createUpdaterArtifacts: true and commits an updater pubkey. tauri build will fail on every matrix leg. Enrol the secret, or set createUpdaterArtifacts: false."
+          exit 1
+```
+
+Add a `releaseWorkflow.test.ts` assertion that a `TAURI_SIGNING_PRIVATE_KEY == ''`
+guard exists whenever `tauri.conf.json` has `createUpdaterArtifacts: true`.
+
+---
+
+### WR-04: `releaseWorkflow.test.ts` Test 7 is satisfied by the workflow's own comment prose — it would pass against a fixed heredoc delimiter
+
+**File:** `src/backend/__tests__/releaseWorkflow.test.ts:295-298`
 **Issue:**
 
 ```ts
-// electron/electron-store stay external: the sidecar's Electron-guarded
-// code paths never reach them at runtime outside an Electron host, and
-// neither package is present for a SEA-packaged Tauri build to resolve.
+test('Test 7: the heredoc delimiter is randomised via $RANDOM', () => {
+  const source = loadReleaseWorkflow()
+  expect(source).toContain('$RANDOM')
+})
 ```
 
-This is the pre-fix design and is now false in two ways, both contradicted by the file's own
-header (fix 2, `:37-48`) and by `bundleForSea()` (`:366-391`): the SEA bundle omits
-`--packages=external` entirely (everything is inlined, including `electron-store`), and
-`electron` is *aliased* to `electronStub.ts`, not left external. A maintainer reading only this
-comment would reasonably re-add `--packages=external` and reintroduce the
-`ERR_UNKNOWN_BUILTIN_MODULE` startup crash the header documents at length.
+`loadReleaseWorkflow()` is the **unstripped** file, and
+`release-tauri.yml:203-204` literally reads:
 
-**Fix:** Replace the block with the actual invariant — "nothing is external; `electron` is
-statically aliased to `electronStub.ts`; re-adding `--packages=external` here will crash the SEA
-sidecar at startup (see fix 1 in the header)."
+> "All three branches now emit via a heredoc whose delimiter is randomised
+> per run from bash's `$RANDOM` ..."
 
-### WR-09: No concurrency control for four matrix legs plus two co-triggering Electron release workflows
+So the assertion is satisfied by the comment alone. Replacing
+`DELIM="ARGS_${RANDOM}${RANDOM}${RANDOM}"` with `DELIM="ARGS_EOF"` — the
+exact regression this test exists to prevent — leaves it green. The file's
+own sibling describe block already established the comment-stripping helper
+(`loadStrippedReleaseWorkflow`, line 239) and its docstring at lines 233-237
+explains precisely why stripping is required here; Test 7 just doesn't use it.
 
-**File:** `.github/workflows/release-tauri.yml:5-12` (the co-run claim), `:27-47` (matrix), `:151-158`
+Test 3 (lines 264-268) has the same defect in a weaker form: both
+`toContain('elif')` and `/::warning::[^\n]*WINDOWS_CERT_THUMBPRINT/` run
+against the unstripped source.
 
-**Issue:** The header asserts as fact that this workflow and `draft-release-{mac,linux}.yml`
-"publish to the SAME GitHub Release". Nothing enforces that. GitHub permits multiple *draft*
-releases sharing one tag name, and there is no `concurrency:` group, no dedicated
-create-the-release job, and four matrix legs (`fail-fast: false`) each invoking `tauri-action`
-with the same `tagName`. Two independent create-release paths (tauri-action and
-electron-builder's `-p always`) racing on the same tag can produce duplicate drafts with assets
-split across them — which would also split `latest.json` from the installers it describes. This
-is exactly the class of failure the deferred 34-07 live gate exists to catch, and the comment
-currently reads as verified fact rather than an untested assumption.
+**Fix:**
 
-**Fix:** Add a `concurrency` group and a single release-creating job the matrix depends on:
+```ts
+test('Test 7: the heredoc delimiter is randomised via $RANDOM', () => {
+  const stripped = loadStrippedReleaseWorkflow()
+  expect(stripped).toMatch(/DELIM=.*\$\{?RANDOM\}?/)
+  expect(stripped).not.toMatch(/args<<[A-Za-z_][A-Za-z0-9_]*\s*$/m)  // no literal delimiter
+})
+```
+
+and switch Test 3 to `loadStrippedReleaseWorkflow()`. Same treatment for
+`tauriConf.test.ts` tests 3-6 and 8, which are all unstripped `toContain`
+assertions against files whose comments discuss the same strings.
+
+---
+
+### WR-05: `isWindowsSpawnable()` is dead production code; its test is a tautology over three hardcoded literals
+
+**File:** `meta/buildSidecarSea.ts:165-174`, `meta/__tests__/buildSidecarSea.test.ts:262-266`
+**Issue:** `isWindowsSpawnable` is exported and never called by any
+production code path — grep across the repo returns only its own definition
+and the test file. `spawnArgv()`, `buildEsbuildArgv()`, `buildPostjectArgv()`
+and `copyNodeBinary()` all ignore it. Its own docstring admits its purpose is
+documentary ("Pure predicate documenting exactly why...").
+
+Its headline test asserts a regex against string constants that appear
+nowhere in the build script:
+
+```ts
+expect(isWindowsSpawnable('node_modules\\.bin\\postject')).toBe(false)
+expect(isWindowsSpawnable('node_modules/.bin/esbuild')).toBe(false)
+expect(isWindowsSpawnable('C:\\Program Files\\nodejs\\node.exe')).toBe(true)
+```
+
+This tests `/\.(exe|cmd|bat|com)$/i` against literals. It cannot regress when
+the build script regresses. The genuine GAP-2 guard is the separate
+`'the source contains no node_modules/.bin path construction'` test (line 292),
+which does inspect real source. `isWindowsSpawnable` adds an exported API
+surface, a maintenance burden, and — worse — the appearance of coverage where
+there is none.
+
+**Fix:** either delete `isWindowsSpawnable` and its two tests (the source-scan
+test already covers the regression), or make it load-bearing by asserting it
+inside `spawnArgv()`:
+
+```ts
+function spawnArgv(command: string, args: string[]) {
+  if (process.platform === 'win32' && !isWindowsSpawnable(command)) {
+    throw new Error(
+      `COMPILE GATE FAILED (D-06/CR-02): "${command}" has no Windows-executable ` +
+        `extension and cannot be spawned via CreateProcess without a shell.`
+    )
+  }
+  ...
+}
+```
+
+That turns the predicate into a real runtime gate (and would, incidentally,
+have caught CR-03's bare `'node'` on Windows).
+
+---
+
+### WR-06: `buildEsbuildArgv()` reads `process.platform` directly, so its Windows-only branch is untestable off Windows — the one branch GAP-2 exists to fix is the one never exercised
+
+**File:** `meta/buildSidecarSea.ts:243-259`, `meta/__tests__/buildSidecarSea.test.ts:229-245`
+**Issue:** `buildPostjectArgv(binaryPath, blobPath, platform = process.platform)`
+and `buildCodesignArgv(binaryPath, platform = process.platform)` both accept an
+injectable platform, and their tests exercise darwin/win32/linux
+unconditionally. `buildEsbuildArgv()` takes no parameters and branches on
+`process.platform` internally (line 255). Its test is therefore forced into:
+
+```ts
+if (process.platform === 'win32') { /* assert execPath branch */ }
+else { /* assert direct-spawn branch */ }
+```
+
+On macOS/Linux dev machines and on three of the four CI legs, the `win32`
+branch is never evaluated. GAP-2 was raised *because* Windows behavior had
+never been validated; the fix reintroduces a Windows-only code path with the
+same "green everywhere but Windows" blind spot.
+
+The branch's premise is correct (I confirmed
+`node_modules/esbuild/install.js:223` gates on
+`os2.platform() !== "win32" && !isYarn()`), but the premise is a runtime
+property of a third-party installer, wrapped in a `try/catch` (lines 226-229)
+that silently leaves the JS wrapper in place on failure and is skipped
+entirely when `ESBUILD_BINARY_PATH` is set (line 250). A `process.platform`
+check is a proxy for "is this file a native binary", not a test of it.
+
+**Fix:** parameterize and detect rather than assume:
+
+```ts
+export function buildEsbuildArgv(
+  platform: NodeJS.Platform | string = process.platform
+): { command: string; args: string[] } {
+  const esbuildCli = resolveEsbuildCli()
+  const flags = [ /* unchanged */ ]
+  return platform === 'win32'
+    ? { command: process.execPath, args: [esbuildCli, ...flags] }
+    : { command: esbuildCli, args: flags }
+}
+```
+
+then assert both branches unconditionally:
+
+```ts
+expect(buildEsbuildArgv('win32').command).toBe(process.execPath)
+expect(buildEsbuildArgv('win32').args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+expect(buildEsbuildArgv('linux').command).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+```
+
+More robust still: sniff the resolved file's first bytes for a `#!` shebang
+and route through `process.execPath` iff it is a script, on every OS. That
+removes the dependency on esbuild's installer behavior entirely.
+
+---
+
+### WR-07: `promote-updater-feed.yml` treats every `gh release download` failure as "nothing to promote" — auth, network and rate-limit failures silently freeze the updater feed
+
+**File:** `.github/workflows/promote-updater-feed.yml:64-71`
+**Issue:**
+
+```bash
+if gh release download "$TAG" --pattern 'latest.json' --dir feed --clobber; then
+  echo "found=true" >> "$GITHUB_OUTPUT"
+else
+  echo "::notice::No latest.json on the published release; nothing to promote"
+  echo "found=false" >> "$GITHUB_OUTPUT"
+fi
+```
+
+The `else` branch is reached for *any* non-zero exit: no matching asset (the
+intended case, per the comment at lines 55-58), but equally an expired token,
+a 5xx from the API, a secondary rate limit, or a transient network fault.
+`found=false` then skips all three downstream steps, the job goes green, and
+the only signal is a `::notice::` claiming a specific cause that may be
+false. Because this is the sole mechanism keeping
+`/releases/download/updater/latest.json` current, a silent failure here means
+every installed client is permanently pinned to the previous version's
+manifest with no alarm anywhere.
+
+**Fix:** distinguish the expected case from the unexpected one:
+
+```bash
+if gh release view "$TAG" --json assets --jq '.assets[].name' > names.txt; then
+  if grep -qx 'latest.json' names.txt; then
+    gh release download "$TAG" --pattern 'latest.json' --dir feed --clobber
+    echo "found=true" >> "$GITHUB_OUTPUT"
+  else
+    echo "::notice::No latest.json asset on $TAG (Electron-only release); nothing to promote"
+    echo "found=false" >> "$GITHUB_OUTPUT"
+  fi
+else
+  echo "::error::Could not read assets for $TAG -- the updater feed was NOT updated"
+  exit 1
+fi
+```
+
+Also consider a `::warning::` when `found=false`, so a leg that should have
+produced `latest.json` but didn't is visible in the run summary rather than
+buried at notice level.
+
+---
+
+### WR-08: the promotion has no version-ordering check — publishing an older draft rewrites the feed with an older manifest
+
+**File:** `.github/workflows/promote-updater-feed.yml:46, 105-108`
+**Issue:** The only guard is `startsWith(github.event.release.tag_name, 'v')`.
+Because `release-tauri.yml` creates **draft** releases held for human review
+(D-09), it is normal for several unpublished drafts to accumulate. Publishing
+them out of order — or publishing a hotfix branch's older tag after a newer
+one — unconditionally clobbers the feed:
+
+```bash
+gh release upload updater feed/latest.json --clobber
+```
+
+`tauri-plugin-updater` will not *install* a downgrade, but the feed
+nonetheless stops advertising the newest build until someone re-publishes,
+with no warning. There is also no assertion that the promoted manifest's
+`version` matches `$TAG`, so a stale `latest.json` left on a release from a
+retried run would be promoted verbatim.
+
+**Fix:** compare versions before clobbering. Note `tauriConf.test.ts` test 7
+forbids `jq ` in this workflow (as a signature-integrity guard against
+rewriting the file) — reading with `jq -r` does not rewrite it, but to stay
+inside the letter of that guard use `gh`'s built-in `--jq` or a node one-liner:
+
+```bash
+NEW=$(node -e "process.stdout.write(require('./feed/latest.json').version)")
+if gh release download updater --pattern latest.json --dir current --clobber 2>/dev/null; then
+  CUR=$(node -e "process.stdout.write(require('./current/latest.json').version)")
+  if [ "$NEW" = "$CUR" ] || [ "$(printf '%s\n%s\n' "$CUR" "$NEW" | sort -V | tail -1)" != "$NEW" ]; then
+    echo "::warning::Refusing to promote $NEW over the current feed version $CUR"
+    exit 0
+  fi
+fi
+gh release upload updater feed/latest.json --clobber
+```
+
+Tighten test 7's guard from `not.toContain('jq ')` to something that targets
+*writes* (e.g. no `jq ... >` redirect into `latest.json`), so integrity
+checking is not accidentally forbidden along with rewriting.
+
+---
+
+### WR-09: the "audit trail" checksum step is decorative — computed, printed, never compared or retained
+
+**File:** `.github/workflows/promote-updater-feed.yml:76-79`
+**Issue:**
 
 ```yaml
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+      - name: Record the manifest checksum (audit trail)
+        if: steps.download.outputs.found == 'true'
+        shell: bash
+        run: sha256sum feed/latest.json
 ```
-plus a `create-release` job emitting `release_id`, consumed by the matrix via
-`releaseId: ${{ needs.create-release.outputs.release_id }}`. Soften the header comment to state
-the co-run behaviour is an untested assumption pending the 34-07 gate.
 
-### WR-10: Tests assert argv/URL shapes the production build never executes
+The comment calls this "an auditable record linking the feed's current
+contents to the release tag it was copied from." It writes one line to a job
+log that expires with the default retention, is not attached to the release,
+not compared against anything before or after upload, and not asserted by any
+test. It provides no tamper detection: the upload happens two steps later
+with no re-hash, so a modified file would not be caught. As written it is a
+no-op that reads as a control.
 
-**File:** `meta/buildSidecarSea.ts:155-171` + `:561`; `:314-335` + `:426-432`
-**Also:** `meta/__tests__/buildSidecarSea.test.ts:68-72`, `:157-161`
+**Fix:** either make it real — hash it and persist the digest durably:
 
-**Issue:** Two exported helpers are partly decorative:
+```yaml
+      - name: Record and verify the manifest checksum
+        if: steps.download.outputs.found == 'true'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          DIGEST=$(sha256sum feed/latest.json | cut -d' ' -f1)
+          echo "Promoting $TAG latest.json sha256=$DIGEST" >> "$GITHUB_STEP_SUMMARY"
+```
 
-1. `buildPostjectArgv()` returns `{ command: 'postject', args }`, and the test asserts
-   `darwinArgv.command).toBe('postject')` — but `injectBlob()` ignores `.command` and spawns
-   `POSTJECT_BIN` (`node_modules/.bin/postject`). The tested command string is never the one
-   executed, which is how CR-02 above went unnoticed.
-2. `nodeDistUrls()` has a fully-implemented Windows branch (`.zip` archive, `node.exe` inner
-   path) with a dedicated test, but `obtainCrossNodeBinary()` rejects every `win32` triple at
-   `:426-432` before ever calling it — and extraction is hardcoded to `tar -xzf`, which cannot
-   read a `.zip`. `nodeDistName()`'s `aarch64-unknown-linux-gnu` mapping is likewise mapped and
-   tested but unreachable (no matrix leg).
-
-**Fix:** Have `injectBlob()` consume `buildPostjectArgv().command` (with the resolution fix from
-CR-02 applied *inside* the builder, so the tested value *is* the executed value), and either
-delete the Windows branch of `nodeDistUrls()` or implement zip extraction so the branch is real.
-Tests asserting unreachable behaviour should be deleted alongside it.
+and re-hash after `gh release upload` to confirm the round trip — or delete
+the step and drop the "audit trail" claim from the comment.
 
 ## Info
 
-### IN-01: No timeouts on `fetch()` or `spawnArgv()` in the SEA build script
+### IN-01: `"csp": null` plus `"withGlobalTauri": true` leaves the webview unrestricted
 
-**File:** `meta/buildSidecarSea.ts:195-212`, `:442`, `:454`
-
-**Issue:** Neither `fetch()` call nor any `spawnArgv()` invocation carries a timeout or
-`AbortSignal`. A stalled nodejs.org connection or a wedged `tar`/`postject` hangs the CI step
-until the job-level timeout, producing a very long billed run with no diagnostic.
-
-**Fix:** `fetch(url, { signal: AbortSignal.timeout(60_000) })`, plus a `setTimeout` +
-`child.kill()` guard inside `spawnArgv`.
-
-### IN-02: `hostTriple()` silently mislabels arm64 Windows and arm64 Linux hosts
-
-**File:** `meta/buildSidecarSea.ts:215-225`
-
-**Issue:** `process.platform === 'win32'` returns `x86_64-pc-windows-msvc` and the fallthrough
-returns `x86_64-unknown-linux-gnu` regardless of `process.arch`. On an arm64 Windows or arm64
-Linux dev machine, `triple === hostTriple()` is true, so `copyNodeBinary()` copies the arm64
-`process.execPath` and labels it x86_64 — the exact relabeling GAP-D-02 rejected, and outside the
-darwin-only `lipo` gate's reach.
-
-**Fix:** Branch on `process.arch` for all three platforms, or `throw` for unsupported
-host arch/platform combinations rather than guessing.
-
-### IN-03: Two small comment/message inaccuracies left by the gap fixes
-
-**File:** `src-tauri/src/main.rs:876`; `src/backend/__tests__/tauriShellSource.test.ts:44`
-
-**Issue:** (a) `.expect("error while running the GameLib Tauri shell")` now attaches to
-`.build()`, not `.run()`, so a *construction* failure reports a *running* error. (b) the
-comment-stripper's `line.replace(/\/\/.*$/, '')` also truncates any Rust string literal
-containing `//` (e.g. a future `"steam://…"` or `"https://…"` literal in code), silently
-weakening whichever assertion depends on that line.
-
-**Fix:** (a) `.expect("failed to build the GameLib Tauri shell")`. (b) Note the limitation in the
-helper's doc comment, or skip the trailing-comment strip on lines containing a quote character.
+**File:** `src-tauri/tauri.conf.json:11, 21-23`
+**Issue:** `app.security.csp` is `null`, which disables Content Security Policy
+injection entirely, while `withGlobalTauri: true` exposes `window.__TAURI__` to
+every script in the webview. Any injected script (a compromised CDN asset, a
+stored-XSS payload rendered by the React app, or a game description fetched
+from the Steam store API) has full access to the Tauri command surface. This
+predates gap cycle 2 and may be a deliberate Electron-parity choice, but it
+materially amplifies CR-02 (the backend bundle is fetchable from that same
+webview) and should be an explicit, recorded decision rather than a default.
+**Fix:** set a restrictive `csp` (at minimum `default-src 'self'` plus the
+specific `img-src`/`connect-src` origins the store/artwork code needs), and
+drop `withGlobalTauri` if the renderer uses the `@tauri-apps/api` package
+rather than the global.
 
 ---
 
-## Deferred debt (recorded, not re-raised)
+### IN-02: three near-identical comment-stripping helpers duplicated across the test suite
 
-Per user decision GAP-D-01 the following remain open and accepted in `deferred-items.md`. Both
-were re-confirmed present during this review and are deliberately **not** counted in the findings
-above:
-
-- **WR-04 (prior review):** `src-tauri/tauri.conf.json:21-23` `security.csp: null` +
-  `app.withGlobalTauri: true` + `opener:default` in `capabilities/default.json`. Note that WR-06
-  above compounds it: `withGlobalTauri` is what makes the dead `shell:allow-execute` /
-  `updater:default` grants renderer-reachable in the first place.
-- **IN-01 (prior review):** `meta/sidecarSeaFsShim.ts:46-48` loose `system.pem` suffix match.
-
-Also unchanged and out of scope: 34-07's live `v*` tag-push gate is deferred by user decision,
-which is why CR-01/CR-02/CR-03 above are still latent rather than observed failures.
+**File:** `src/backend/__tests__/tauriConf.test.ts:59-64`, `src/backend/__tests__/releaseWorkflow.test.ts:239-244`, `meta/__tests__/buildSidecarSea.test.ts:287-290`
+**Issue:** `stripComments`, `loadStrippedReleaseWorkflow` and
+`loadStrippedBuildScript` implement the same idea three different ways with
+three different fidelities: the two YAML ones drop `#`-leading lines only
+(missing trailing inline comments), the TS one strips `/* */` blocks and
+`//`-leading lines (missing trailing `//` comments and mishandling `*/` inside
+string literals). WR-04 exists partly because this helper is available but
+inconsistently applied. **Fix:** extract one shared
+`src/backend/__tests__/helpers/stripComments.ts` exposing
+`stripHashComments(text)` and `stripJsComments(text)`, and use it everywhere a
+`toContain` assertion is made against a heavily-commented file.
 
 ---
 
-_Reviewed: 2026-07-24T20:15:00Z_
+### IN-03: `obtainCrossNodeBinary()` hardcodes `tar -xzf` while `nodeDistUrls()` can return a `.zip`, and `nodeDistName()` supports a triple no caller can reach
+
+**File:** `meta/buildSidecarSea.ts:373-389, 416, 564-570`
+**Issue:** `nodeDistUrls()` correctly returns `node-<v>-win-x64.zip` for the
+Windows triple (tested at `buildSidecarSea.test.ts:164-168`), but
+`obtainCrossNodeBinary()` unconditionally extracts with `tar -xzf`. The only
+thing preventing a tar-on-zip failure is the `triplePlatform(triple) === 'win32'`
+early throw at line 506 — a guard placed for a different reason. Separately,
+`nodeDistName()` maps `aarch64-unknown-linux-gnu` → `linux-arm64` but no
+matrix leg, `expectedMachoArch()` case, or CI path ever produces that triple;
+adding an arm64-Linux leg later would work by accident until it doesn't.
+**Fix:** derive the extraction command from the archive name rather than the
+platform (`archiveName.endsWith('.zip') ? unzip : tar`), and either wire the
+arm64-Linux triple into the matrix or drop it from `nodeDistName()` so the
+supported set is single-sourced.
+
+---
+
+_Reviewed: 2026-07-24T21:05:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
