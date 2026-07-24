@@ -172,6 +172,18 @@ jobs:
       # immediately afterward, including when the import itself throws, so
       # no retried/continued job step can find it left behind.
       #
+      # WR-01 (gap cycle 2 review): that guarantee used to be false. The
+      # `Set-Content` file write and the `ConvertTo-SecureString` call both
+      # sat OUTSIDE the try, and under GitHub's pwsh
+      # (`$ErrorActionPreference = 'Stop'`) `ConvertTo-SecureString -String ""`
+      # is a TERMINATING error -- so a half-configured secret set (cert
+      # enrolled, password missing) aborted the script after the PKCS#12
+      # private key had already been written to the workspace and before the
+      # finally block existed to remove it. Every statement that can throw
+      # after the key material exists on disk now lives inside the try, and
+      # the only fallible statement before it (`ConvertTo-SecureString`)
+      # runs while nothing has been written yet.
+      #
       # GAP-4 (34-VERIFICATION.md truth #7 / 34-REVIEW.md WR-03): the if:
       # condition additionally requires WINDOWS_CERT_THUMBPRINT != '' --
       # without a usable thumbprint the imported cert can never be selected
@@ -183,9 +195,9 @@ jobs:
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
-          Set-Content -Path cert.pfx -Value $bytes -AsByteStream
           $securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
           try {
+            Set-Content -Path cert.pfx -Value $bytes -AsByteStream
             Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
           } finally {
             Remove-Item -Path cert.pfx -Force -ErrorAction SilentlyContinue

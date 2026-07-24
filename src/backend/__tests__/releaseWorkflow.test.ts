@@ -223,6 +223,61 @@ describe('release-tauri.yml Windows cert material cleanup (WR-02 regression guar
     expect(source).toContain('finally {')
   })
 
+  // WR-01 (34-REVIEW.md gap cycle 2): `expect(source).toContain('finally {')` is
+  // satisfied by a finally block that does not actually cover the file write. The
+  // step's own comment claimed cert.pfx is removed "even when the import itself
+  // throws", but Set-Content and ConvertTo-SecureString both sat OUTSIDE the try,
+  // and ConvertTo-SecureString -String "" is a TERMINATING error under GitHub's
+  // pwsh -- leaving the PKCS#12 private key in the runner workspace. These
+  // assertions check containment in the step's real run block, not mere presence.
+  describe('cert.pfx never exists on disk outside the try/finally (WR-01)', () => {
+    const CERT_STEP_NAME = 'Import Windows signing certificate (if present)'
+
+    test('every cert.pfx reference sits inside the try block', () => {
+      const block = extractRunBlock(CERT_STEP_NAME)
+      const tryIndex = block.indexOf('try {')
+      expect(tryIndex).toBeGreaterThanOrEqual(0)
+
+      const certIndexes: number[] = []
+      for (
+        let index = block.indexOf('cert.pfx');
+        index !== -1;
+        index = block.indexOf('cert.pfx', index + 1)
+      ) {
+        certIndexes.push(index)
+      }
+      expect(certIndexes.length).toBeGreaterThan(0)
+      for (const certIndex of certIndexes) {
+        expect(certIndex).toBeGreaterThan(tryIndex)
+      }
+    })
+
+    test('the file write happens after `try {`, not before it', () => {
+      const block = extractRunBlock(CERT_STEP_NAME)
+      expect(block.indexOf('Set-Content -Path cert.pfx')).toBeGreaterThan(
+        block.indexOf('try {')
+      )
+    })
+
+    test('the only fallible pre-try statement runs while nothing is on disk yet', () => {
+      const block = extractRunBlock(CERT_STEP_NAME)
+      // ConvertTo-SecureString throws on an empty/unset password secret; it
+      // must therefore run BEFORE any key material is written.
+      expect(block.indexOf('ConvertTo-SecureString')).toBeLessThan(
+        block.indexOf('Set-Content -Path cert.pfx')
+      )
+    })
+
+    test('the finally block still removes the file', () => {
+      const block = extractRunBlock(CERT_STEP_NAME)
+      const finallyIndex = block.indexOf('finally {')
+      expect(finallyIndex).toBeGreaterThan(block.indexOf('Import-PfxCertificate'))
+      expect(block.indexOf('Remove-Item -Path cert.pfx -Force')).toBeGreaterThan(
+        finallyIndex
+      )
+    })
+  })
+
   test('no longer contains the inaccurate "ONLY in-memory" claim', () => {
     const source = loadReleaseWorkflow()
     expect(source).not.toContain('ONLY in-memory')
