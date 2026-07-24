@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.7
-milestone_name: — Steam Native Install
-status: PHASE 34 COMPLETE 2026-07-25 -- live tag-push gate PASSED (REQ-34-09) + secure-phase DONE (42/42 threats, threats_open: 0); ready for Phase 35 (Electron cutover)
-stopped_at: Phase 34 fully closed -- live gate run 30123449346 GREEN on all 4 legs, 34-SECURITY.md written (State B, 42/42 verified, threats_open: 0), ROADMAP + REQUIREMENTS marked complete
-last_updated: "2026-07-25T08:35:00.000Z"
-last_activity: 2026-07-25 -- Ran the deferred 34-07 live tag-push gate. Fixed a build-blocking merge slip first (paths.ts missing `resolve` import from merge d40b4145, commit 006a900a, codecheck clean), retagged v0.7.0-rc.test onto it. Release Tauri run 30123449346 GREEN on all 4 legs: macOS builds unsigned+succeed with signing-skip warnings (blocker 1 fixed via 34-16 env-unset), verify:updater-key preflight passed key id c704fcc9e0f7029a = reversal of 34-18 key 9A02F7E0C9FC04C7 (blocker 2 fixed), draft+prerelease release with all artifacts+latest.json, arm64 SEA sidecar ran Node-free (__GAMELIB_SIDECAR_READY__). REQ-34-09 checked, 34-HUMAN-UAT.md marked PASSED, tag+draft release deleted. NEXT: /gsd-secure-phase 34 (no 34-SECURITY.md yet) then Phase 35 electron cutover.
+milestone: v0.8
+milestone_name: — Tauri Shell
+status: Phase 34 COMPLETE 2026-07-25 (live gate + secure-phase both passed); Phase 34.1 context gathered, ready for /gsd-plan-phase 34.1
+stopped_at: Phase 34.1 context gathered
+last_updated: "2026-07-25T09:20:00.000Z"
+last_activity: 2026-07-25 -- Ran /gsd-discuss-phase 34.1 (Tauri IPC re-plumb slice 4, app shell + window chrome). 15 decisions captured in 34.1-CONTEXT.md (commit f4fdc68d). Headlines - D-01 window chrome executes RENDERER-SIDE via Tauri JS window API (no sidecar hop, no new Rust arms) and D-02 counts as PORTED for the Phase 35 gate as a third kind; D-05 framelessWindow is an off-by-default USER SETTING, not a platform property, so "match Electron" = honor the setting at runtime via setDecorations, default stays decorated; D-07/D-08 EXTRACT the 28 main.ts handler bodies into shared Electron-free modules (first slice to modify the Electron entry point -- additive/reversible invariant is now BEHAVIORAL, not textual); D-10 gamepadAction re-implemented renderer-side; D-11 build a REAL Tauri tray (feature, not a port -- largest scope risk); D-12 createNewWindow/showAboutWindow as real WebviewWindows, login-webview story owned by 34.4; D-14 callTool reassigned to 34.5 so the slice is 33 channels not 34 (IPC-PORT-INVENTORY.md needs correcting in BOTH lists); D-15 unit-proven, ALL live UAT deferred -- phase closes without anyone having looked at the visual deliverable, recorded explicitly. NEXT: /gsd-plan-phase 34.1.
 progress:
   total_phases: 5
   completed_phases: 3
@@ -963,8 +963,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T08:59:10.786Z
-Stopped at: Completed 34-14-PLAN.md
+Last session: 2026-07-24T22:12:12.111Z
+Stopped at: Phase 34.1 context gathered
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
