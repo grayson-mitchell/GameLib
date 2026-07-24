@@ -96,10 +96,27 @@ jobs:
       # Purely observational -- the file is never modified, only inspected.
       # Gives an auditable record linking the feed's current contents to the
       # release tag it was copied from.
+      #
+      # WR-09 (gap cycle 2 review): this step used to be a bare
+      # `sha256sum feed/latest.json`. It wrote one line to a job log that
+      # expires with the default retention, was never attached to the
+      # release, never compared against anything before or after upload, and
+      # never asserted by any test -- a no-op that READ as a control while
+      # providing no tamper detection whatsoever (the upload happened two
+      # steps later with no re-hash, so a modified file would sail through).
+      # The digest is now persisted to the run summary AND exported as a step
+      # output, so the "Verify the promoted feed" step below can re-hash what
+      # GitHub actually serves and prove the round trip.
       - name: Record the manifest checksum (audit trail)
+        id: digest
         if: steps.download.outputs.found == 'true'
         shell: bash
-        run: sha256sum feed/latest.json
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          DIGEST=$(sha256sum feed/latest.json | cut -d' ' -f1)
+          echo "sha256=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Promoting $TAG manifest sha256=$DIGEST" >> "$GITHUB_STEP_SUMMARY"
 
       # `--prerelease` is mandatory here, not optional: it is what keeps this
       # release off GitHub "Latest" (the Phase 19 lesson) while still being
@@ -171,3 +188,26 @@ jobs:
           fi
           gh release upload updater feed/latest.json --clobber
           echo "promoted=true" >> "$GITHUB_OUTPUT"
+
+      # WR-09: closes the loop the "audit trail" step only pretended to. The
+      # digest recorded before the upload is compared against a re-download
+      # of what the feed endpoint now actually serves, so a truncated upload,
+      # a clobber race with a concurrent run, or any rewrite of the manifest
+      # (which would invalidate its embedded minisign signatures and break
+      # every client's update check) fails the job here instead of shipping
+      # silently.
+      - name: Verify the promoted feed round-trips byte-identically
+        if: steps.publish.outputs.promoted == 'true'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          EXPECTED_SHA256: ${{ steps.digest.outputs.sha256 }}
+        run: |
+          mkdir -p verify
+          gh release download updater --pattern 'latest.json' --dir verify --clobber
+          ACTUAL=$(sha256sum verify/latest.json | cut -d' ' -f1)
+          if [ "$ACTUAL" != "$EXPECTED_SHA256" ]; then
+            echo "::error::the promoted manifest does not match what was recorded (expected $EXPECTED_SHA256, got $ACTUAL) -- the updater feed may be serving a corrupted or rewritten file"
+            exit 1
+          fi
+          echo "Updater feed verified for $TAG: sha256=$ACTUAL" >> "$GITHUB_STEP_SUMMARY"

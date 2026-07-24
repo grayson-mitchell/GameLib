@@ -10,6 +10,7 @@
  * below is the mitigation for this threat -- it must never silently pass on
  * a config that (re-)derives the updater feed from Heroic upstream.
  */
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -586,5 +587,137 @@ describeOnPosix('promote-updater-feed.yml publish step, executed (WR-08 regressi
     expect(result.status).not.toBe(0)
     expect(result.stdout).toContain('::error::')
     expect(result.uploaded).toBe(false)
+  })
+})
+
+/**
+ * 34-REVIEW.md (gap cycle 2) WR-09: the "audit trail" step was a bare
+ * `sha256sum feed/latest.json` -- one line into an expiring job log, compared against
+ * nothing, asserted by no test, with the upload happening two steps later with no re-hash.
+ * It read as a control while detecting nothing. The digest is now exported and re-checked
+ * against what the feed actually serves after the upload.
+ *
+ * `sha256sum` is a GNU coreutils tool present on the ubuntu-24.04 runner this job uses;
+ * macOS dev machines ship `shasum` instead, so a byte-compatible shim is installed on
+ * PATH when the real binary is absent. The workflow instructions themselves are executed
+ * verbatim either way.
+ */
+const DIGEST_STEP_NAME = 'Record the manifest checksum (audit trail)'
+const VERIFY_STEP_NAME = 'Verify the promoted feed round-trips byte-identically'
+
+const SHA256SUM_SHIM = `#!/usr/bin/env bash
+shasum -a 256 "$@"
+`
+
+describeOnPosix('promote-updater-feed.yml checksum audit trail, executed (WR-09 regression guard)', () => {
+  let workdir: string
+  let binDir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-digest-'))
+    binDir = join(workdir, 'stub-bin')
+    mkdirSync(binDir, { recursive: true })
+    writeStubExecutable(binDir, 'gh', GH_STUB)
+    if (runStepScript('command -v sha256sum', workdir).status !== 0) {
+      writeStubExecutable(binDir, 'sha256sum', SHA256SUM_SHIM)
+    }
+    mkdirSync(join(workdir, 'feed'), { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  function stepEnv(extra: Record<string, string> = {}): Record<string, string> {
+    return {
+      TAG: 'v0.7.0',
+      PATH: `${binDir}:${process.env.PATH ?? ''}`,
+      ...extra
+    }
+  }
+
+  function runStep(
+    stepName: string,
+    env: Record<string, string>
+  ): { status: number | null; stdout: string; outputs: string; summary: string } {
+    const script = substituteExpressions(
+      extractRunBlock(readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'), stepName),
+      {
+        'github.event.release.tag_name': 'v0.7.0',
+        'steps.digest.outputs.sha256': env.EXPECTED_SHA256 ?? ''
+      }
+    )
+    const outputPath = join(workdir, `github-output-${Math.random()}`)
+    const summaryPath = join(workdir, `github-summary-${Math.random()}`)
+    writeFileSync(outputPath, '')
+    writeFileSync(summaryPath, '')
+    const result = runStepScript(script, workdir, {
+      ...env,
+      GITHUB_OUTPUT: outputPath,
+      GITHUB_STEP_SUMMARY: summaryPath
+    })
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      outputs: readFileSync(outputPath, 'utf-8'),
+      summary: readFileSync(summaryPath, 'utf-8')
+    }
+  }
+
+  /** sha256 of the manifest bytes the tests write, computed independently. */
+  function digestOf(contents: string): string {
+    return createHash('sha256').update(contents).digest('hex')
+  }
+
+  test('WR-09: the digest is exported as a step output, not just printed to a log', () => {
+    const manifest = JSON.stringify({ version: '0.7.0' })
+    writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
+    const result = runStep(DIGEST_STEP_NAME, stepEnv())
+    expect(result.status).toBe(0)
+    expect(result.outputs).toContain(`sha256=${digestOf(manifest)}`)
+  })
+
+  test('WR-09: the digest is persisted to the run summary, not an expiring job log', () => {
+    const manifest = JSON.stringify({ version: '0.7.0' })
+    writeFileSync(join(workdir, 'feed', 'latest.json'), manifest)
+    const result = runStep(DIGEST_STEP_NAME, stepEnv())
+    expect(result.summary).toContain(digestOf(manifest))
+    expect(result.summary).toContain('v0.7.0')
+  })
+
+  test('WR-09: the promoted feed is re-hashed and accepted when it matches', () => {
+    const manifest = JSON.stringify({ version: '0.7.0' })
+    const result = runStep(
+      VERIFY_STEP_NAME,
+      stepEnv({
+        EXPECTED_SHA256: digestOf(manifest),
+        GH_STUB_CURRENT_MANIFEST: manifest
+      })
+    )
+    expect(result.status).toBe(0)
+    expect(result.summary).toContain(digestOf(manifest))
+  })
+
+  test('WR-09: a feed serving DIFFERENT bytes than were recorded fails the job', () => {
+    const recorded = JSON.stringify({ version: '0.7.0' })
+    const served = JSON.stringify({ version: '0.7.0', tampered: true })
+    const result = runStep(
+      VERIFY_STEP_NAME,
+      stepEnv({
+        EXPECTED_SHA256: digestOf(recorded),
+        GH_STUB_CURRENT_MANIFEST: served
+      })
+    )
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+  })
+
+  test('WR-09: the verify step is gated on an actual promotion having happened', () => {
+    const promote = stripComments(readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'))
+    expect(promote).toContain("steps.publish.outputs.promoted == 'true'")
+    // ...and it must run AFTER the upload, or it would verify stale bytes.
+    expect(promote.indexOf('gh release upload updater')).toBeLessThan(
+      promote.indexOf(VERIFY_STEP_NAME)
+    )
   })
 })
