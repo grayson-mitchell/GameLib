@@ -1293,10 +1293,67 @@ Plans:
 
 ---
 
+### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
+
+**Goal:** Port the **app shell and window chrome** IPC cluster (**33 channels** — `callTool` reassigned to Phase 34.5 by D-14) onto the Tauri build: window state and controls (minimize/maximize/unmaximize/close/fullscreen/frameless), zoom factor, title-bar overlay, tray colour, About window, language switching, custom themes/CSS, app version + changelog + releases, connectivity signal, gamepad input, and quit/lock/unlock. Establishes a **third port kind** — `renderer-side (Tauri JS)` — for window chrome (D-01/D-02), and is the **first slice to modify `src/backend/main.ts`** (D-07 body extraction), so the additive/reversible invariant becomes BEHAVIORAL rather than textual: `npm start` and `pnpm tauri:dev` must both still work.
+**Requirements:** REQ-34.1-01, REQ-34.1-02, REQ-34.1-03, REQ-34.1-04, REQ-34.1-05, REQ-34.1-06, REQ-34.1-07, REQ-34.1-08, REQ-34.1-09, REQ-34.1-10, REQ-34.1-11, REQ-34.1-12
+**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Plans:** 8 plans in 4 waves
+
+Plans:
+- [ ] 34.1-01-PLAN.md — D-04 capability grants (12 explicit window/webview commands, `core:window:default` composition verified) + D-14 IPC-PORT-INVENTORY correction (34.1: 34→33, 34.5: 55→56)
+- [ ] 34.1-02-PLAN.md — D-07/D-08 handler-body extraction into Electron-free `src/backend/appshell/*`, `main.ts` reduced to one-line delegations
+- [ ] 34.1-03-PLAN.md — D-01/D-02 ten window-chrome channels renderer-side via Tauri JS + D-05/D-06 frameless runtime (pre-paint `setDecorations`, on-toggle re-apply, working drag region)
+- [ ] 34.1-04-PLAN.md — D-03/D-09 curated sidecar `appShellFlowRegistration.ts` for the 18 sidecar-routed channels + D-13 logged no-ops + a genuinely new import-graph gate
+- [ ] 34.1-05-PLAN.md — D-10 `gamepadAction` re-implemented renderer-side (geometric directional focus replacing Chromium spatial navigation)
+- [ ] 34.1-06-PLAN.md — D-11 real bounded Tauri tray (`tray-icon` feature, `TrayIcon` at setup, one new `tray_set_icon` Rust arm driving `changeTrayColor`)
+- [ ] 34.1-07-PLAN.md — D-12 `createNewWindow`/`showAboutWindow` as real `WebviewWindow`s with a fail-closed child-window capability boundary + static `about.html`
+- [ ] 34.1-08-PLAN.md — D-02/D-15 `34.1-PORTED-CHANNELS.md` declared list (third port kind + honest unobserved sign-off), `34.1-HUMAN-UAT.md`, SEAM.md §3→§1 move
+
+### Phase 34.2: Tauri IPC re-plumb slice 5 — game details, settings and overrides (INSERTED)
+
+**Goal:** Port the **game details, settings and overrides** IPC cluster (26 channels): per-game info/settings/overrides, SDL selection, launch options, install-path changes, version pinning, repair/kill, and the enrichment surfaces (wiki game info, anticheat status, known fixes, CrossOver index, store search, recent games). Additive and reversible — the Electron build keeps working unchanged.
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.2`
+**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.2 to break down)
+
+### Phase 34.3: Tauri IPC re-plumb slice 6 — shell, files, logs and diagnostics (INSERTED)
+
+**Goal:** Port the **shell, files, logs and diagnostics** IPC cluster (30 channels): external-link and folder/file reveal handlers, path/disk-space/clipboard utilities, the `logger/ipc_handler.ts` cluster, log upload and management, system-info copy, and the cache-clear/reset diagnostics. Additive and reversible — the Electron build keeps working unchanged.
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.3`
+**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.3 to break down)
+
+### Phase 34.4: Tauri IPC re-plumb slice 7 — Steam completion and Humble (INSERTED)
+
+**Goal:** Port the **remaining Steam surface plus the whole Humble integration** (38 channels): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with all 21 `humble/ipc_handler.ts` channels from phases 10-15. Additive and reversible — the Electron build keeps working unchanged.
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.4`
+**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.4 to break down)
+
+### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
+
+**Goal:** Port the **inherited non-Steam runner surface** (55 channels — the largest slice): Epic/GOG/Amazon/Zoom auth, sign-out, saves sync and CLI versions; the EOS overlay cluster; Wine version/runtime management and tooling (DXVK, VKD3D, winetricks); desktop shortcuts, add-to-Steam and SteamGridDB artwork. Carried across rather than dropped per the Phase 35 discussion — the keep/drop call is deliberately deferred to this phase own discuss-phase. Additive and reversible — the Electron build keeps working unchanged.
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.5`
+**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.5 to break down)
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
-**Depends on:** Phase 34 (all three platforms shipping on Tauri first).
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.5** (the IPC re-plumb must be complete — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
 **Plans:** 0 plans
 
