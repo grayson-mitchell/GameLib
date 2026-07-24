@@ -226,11 +226,22 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     expect(winArgv.args).not.toEqual(expect.arrayContaining(['NODE_SEA']))
   })
 
-  test('buildEsbuildArgv(...).command is process.execPath and args[0] resolves to an existing esbuild/bin/esbuild file', () => {
+  test('buildEsbuildArgv() resolves esbuild through a Windows-spawnable path, run via process.execPath on win32 and directly elsewhere (esbuild self-optimizes bin/esbuild to a native binary on non-win32, discovered empirically during implementation)', () => {
     const esbuildArgv = buildEsbuildArgv()
-    expect(esbuildArgv.command).toBe(process.execPath)
-    expect(esbuildArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-    expect(existsSync(esbuildArgv.args[0])).toBe(true)
+    if (process.platform === 'win32') {
+      // esbuild's install.js maybeOptimizePackage() never hardlink-swaps
+      // bin/esbuild on win32 -- it stays esbuild's plain JS wrapper, run
+      // through process.execPath exactly like postject's CLI.
+      expect(esbuildArgv.command).toBe(process.execPath)
+      expect(esbuildArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+      expect(existsSync(esbuildArgv.args[0])).toBe(true)
+    } else {
+      // On macOS/Linux, esbuild's own installer replaces bin/esbuild with
+      // the raw native binary -- it is directly spawnable and is NOT
+      // valid JS, so it must BE the command, not an argv[0] under node.
+      expect(existsSync(esbuildArgv.command)).toBe(true)
+      expect(esbuildArgv.command).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+    }
   })
 
   test('buildEsbuildArgv(...).args carries the required bundling flags', () => {
@@ -254,15 +265,20 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     expect(isWindowsSpawnable('C:\\Program Files\\nodejs\\node.exe')).toBe(true)
   })
 
-  test('the resolved postject/esbuild commands are Windows-spawnable on win32, or process.execPath elsewhere', () => {
+  test('the resolved postject/esbuild commands are Windows-spawnable on win32, or directly spawnable elsewhere', () => {
     const postjectArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
     const esbuildArgv = buildEsbuildArgv()
     if (process.platform === 'win32') {
       expect(isWindowsSpawnable(postjectArgv.command)).toBe(true)
       expect(isWindowsSpawnable(esbuildArgv.command)).toBe(true)
     } else {
+      // postject's CLI is always plain JS -> always process.execPath.
+      // esbuild's own installer self-optimizes bin/esbuild into a
+      // directly-spawnable native binary on non-win32 (see the
+      // buildEsbuildArgv() test above) -- so its command is the resolved
+      // path itself here, not process.execPath.
       expect(postjectArgv.command).toBe(process.execPath)
-      expect(esbuildArgv.command).toBe(process.execPath)
+      expect(existsSync(esbuildArgv.command)).toBe(true)
     }
   })
 })

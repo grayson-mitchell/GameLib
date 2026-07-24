@@ -121,8 +121,57 @@ const SEA_CONFIG_PATH = join('build', 'sea-config.json')
 const SEA_BLOB_PATH = join('build', 'sidecar-prep.blob')
 
 const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
-const POSTJECT_BIN = join('node_modules', '.bin', 'postject')
-const ESBUILD_BIN = join('node_modules', '.bin', 'esbuild')
+
+/**
+ * CR-02/GAP-2 fix: previously this file hardcoded
+ * `join('node_modules', '.bin', 'postject'|'esbuild')` and spawned those
+ * paths directly. On Windows, pnpm materialises `.bin` entries as a POSIX
+ * shell shim plus `.CMD`/`.ps1` siblings -- there is no extensionless
+ * native executable there at all. `spawn()` given an explicit,
+ * extensionless relative path performs no PATHEXT resolution (that lookup
+ * is a `cmd.exe`/shell behavior), so Windows `CreateProcess` fails before
+ * either tool ever runs, killing the whole `windows-latest` matrix leg
+ * before it reaches `tauri-action`.
+ *
+ * Passing a `shell` option to `spawn()` is NOT an acceptable fix here
+ * (T-24-06 argv-form-only rule -- see `spawnArgv` below). Instead both CLI
+ * tools are resolved as ordinary Node modules via `require.resolve`, and
+ * run through `process.execPath` -- the already-running Node interpreter,
+ * which is never looked up via `PATH`/PATHEXT and is therefore spawnable
+ * identically on every OS. This is also shell-free and platform-neutral.
+ */
+export function resolveEsbuildCli(): string {
+  try {
+    return require.resolve('esbuild/bin/esbuild')
+  } catch (error) {
+    throw new Error(
+      `COMPILE GATE FAILED (D-06/CR-02): cannot resolve esbuild/bin/esbuild -- ` +
+        `is the dependency installed? (${(error as Error).message})`
+    )
+  }
+}
+
+export function resolvePostjectCli(): string {
+  try {
+    return require.resolve('postject/dist/cli.js')
+  } catch (error) {
+    throw new Error(
+      `COMPILE GATE FAILED (D-06/CR-02): cannot resolve postject/dist/cli.js -- ` +
+        `is the dependency installed? (${(error as Error).message})`
+    )
+  }
+}
+
+/**
+ * Pure predicate documenting exactly why the old `.bin` shim paths were
+ * unspawnable on Windows and why `process.execPath` is not: `CreateProcess`
+ * can run a path directly only when it carries a recognized executable
+ * extension (`.exe`/`.cmd`/`.bat`/`.com`). Asserted by
+ * `meta/__tests__/buildSidecarSea.test.ts`.
+ */
+export function isWindowsSpawnable(command: string): boolean {
+  return /\.(exe|cmd|bat|com)$/i.test(command)
+}
 
 // Cross-arch Node base-binary download cache, under the already-gitignored
 // `/build` directory (CR-01 fix, Task 2) -- no new .gitignore entries.
@@ -158,6 +207,7 @@ export function buildPostjectArgv(
   platform: NodeJS.Platform | string = process.platform
 ): { command: string; args: string[] } {
   const args = [
+    resolvePostjectCli(),
     binaryPath,
     'NODE_SEA_BLOB',
     blobPath,
@@ -167,7 +217,45 @@ export function buildPostjectArgv(
   if (platform === 'darwin') {
     args.push('--macho-segment-name', 'NODE_SEA')
   }
-  return { command: 'postject', args }
+  return { command: process.execPath, args }
+}
+
+/**
+ * Argv-form (never a shell string, T-24-06) esbuild SEA-bundle invocation
+ * shape, mirroring `buildPostjectArgv`'s CR-02 fix -- with one necessary
+ * divergence discovered empirically while implementing this task: unlike
+ * postject's `dist/cli.js` (always plain JS), esbuild's OWN installer
+ * (`node_modules/esbuild/install.js`, `maybeOptimizePackage()`) hardlinks
+ * `bin/esbuild` to the raw native platform binary on every OS EXCEPT
+ * win32 (and never under yarn) -- a documented esbuild optimization to
+ * skip the JS-wrapper hop. On macOS/Linux the resolved path is therefore
+ * already a directly-spawnable native executable, not a script
+ * `process.execPath` can parse as JS (confirmed empirically: running it
+ * through `process.execPath` throws `SyntaxError: Invalid or unexpected
+ * token` on the Mach-O header). Only on win32 does `bin/esbuild` remain
+ * esbuild's `#!/usr/bin/env node` JS wrapper, which must run through
+ * `process.execPath` like postject's CLI. Flags are exactly the eight
+ * arguments `bundleForSea()` passed directly to `spawnArgv` before this
+ * refactor -- in particular `--packages=external` is deliberately ABSENT
+ * (Rule-1 fix 1, file header); re-adding it crashes the SEA sidecar at
+ * startup with `ERR_UNKNOWN_BUILTIN_MODULE`.
+ */
+export function buildEsbuildArgv(): { command: string; args: string[] } {
+  const esbuildCli = resolveEsbuildCli()
+  const flags = [
+    '--bundle',
+    '--platform=node',
+    '--target=node22',
+    '--format=cjs',
+    '--alias:electron=./src/backend/sidecar/electronStub.ts',
+    '--inject:./meta/sidecarSeaFsShim.ts',
+    `--outfile=${SEA_BUNDLE_PATH}`,
+    SIDECAR_ENTRY_PATH
+  ]
+  if (process.platform === 'win32') {
+    return { command: process.execPath, args: [esbuildCli, ...flags] }
+  }
+  return { command: esbuildCli, args: flags }
 }
 
 /**
@@ -368,16 +456,8 @@ async function bundleForSea(): Promise<void> {
     throw new Error(`Missing sidecar entry point at ${SIDECAR_ENTRY_PATH}`)
   }
   await mkdir(join('build', 'main'), { recursive: true })
-  const result = await spawnArgv(ESBUILD_BIN, [
-    '--bundle',
-    '--platform=node',
-    '--target=node22',
-    '--format=cjs',
-    '--alias:electron=./src/backend/sidecar/electronStub.ts',
-    '--inject:./meta/sidecarSeaFsShim.ts',
-    `--outfile=${SEA_BUNDLE_PATH}`,
-    SIDECAR_ENTRY_PATH
-  ])
+  const esbuildArgv = buildEsbuildArgv()
+  const result = await spawnArgv(esbuildArgv.command, esbuildArgv.args)
   if (result.code !== 0) {
     throw new Error(
       `COMPILE GATE FAILED (D-06): esbuild SEA bundle exited ${result.code}:\n${result.stderr}`
@@ -558,7 +638,7 @@ async function injectBlob(binaryPath: string, triple: string): Promise<void> {
     SEA_BLOB_PATH,
     targetPlatform
   )
-  const inject = await spawnArgv(POSTJECT_BIN, postjectArgv.args)
+  const inject = await spawnArgv(postjectArgv.command, postjectArgv.args)
   if (inject.code !== 0) {
     throw new Error(
       `COMPILE GATE FAILED (D-06): postject exited ${inject.code}:\n${inject.stderr}`
