@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path'
 
 import {
   extractRunBlock as extractRunBlockFrom,
+  readGithubEnv,
   runStepScript,
   stripHashComments,
   substituteExpressions
@@ -137,11 +138,12 @@ describe('release-tauri.yml Windows signing graceful-skip conditional (D-04, Pit
 })
 
 describe('release-tauri.yml per-OS "Signing skipped" clear-warning steps (D-04 regression guard)', () => {
-  test('emits ::warning::Signing skipped when APPLE_CERTIFICATE is empty', () => {
-    const source = loadReleaseWorkflow()
-    expect(source).toMatch(/env\.APPLE_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
-  })
-
+  // GAP-A (34-16): the APPLE_CERTIFICATE sibling of this test was deleted --
+  // it asserted on the WARNING STRING's shape and stayed green through live
+  // run 30084918812, which failed on `security import` because the "warning"
+  // step never prevented the signing attempt. Its replacement is the
+  // executed-path "Apple signing env gate" describe block below, which reads
+  // resolved $GITHUB_ENV content instead of source text.
   test('emits ::warning::Signing skipped when WINDOWS_CERTIFICATE is empty', () => {
     const source = loadReleaseWorkflow()
     expect(source).toMatch(/env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
@@ -597,9 +599,14 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(stripped).not.toMatch(/args<<[A-Za-z_][A-Za-z0-9_]*\s*$/m)
   })
 
-  test('Test 8 (D-04 invariant guard): existing per-OS Signing-skipped warnings still present', () => {
+  // GAP-A (34-16): this test used to also assert
+  // `env.APPLE_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped` -- that
+  // half was deleted along with the step it described (job-level
+  // APPLE_CERTIFICATE no longer exists at all, see the executed-path "Apple
+  // signing env gate" describe block below). The Windows half below is
+  // unaffected and out of scope for this gap.
+  test('Test 8 (D-04 invariant guard): existing Windows Signing-skipped warning still present', () => {
     const source = loadReleaseWorkflow()
-    expect(source).toMatch(/env\.APPLE_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
     expect(source).toMatch(/env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
   })
 
@@ -820,5 +827,169 @@ describeOnPosix('release-tauri.yml build-args secret gating, executed (WR-02 reg
     const delimiter = result.rawOutput.split('\n')[0].replace('args<<', '')
     const trailing = result.rawOutput.split(`\n${delimiter}\n`)[1] ?? ''
     expect(trailing.trim()).toBe('')
+  })
+})
+
+// GAP-A (live run 30084918812): both macOS legs failed with `failed to run command
+// security import: failed to import keychain certificate` even though NO Apple cert
+// secret is enrolled -- a direct D-04 violation. Root cause: the job-level `env:` block
+// unconditionally mapped `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}`, which
+// resolves to a DEFINED, EMPTY variable when the secret is absent. The Tauri bundler's
+// macOS signing path tests the variable's *presence*, not its truthiness, so it entered
+// the keychain-import branch on empty data. The prior `Warn if macOS signing will be
+// skipped` step only printed a line -- it prevented nothing. These tests assert on
+// RESOLVED $GITHUB_ENV CONTENT produced by executing the gate step's real shell body,
+// never on a warning string alone.
+const APPLE_GATE_STEP_NAME =
+  'Enable Apple signing only when a complete cert secret set is enrolled'
+
+describeOnPosix('release-tauri.yml Apple signing env gate, executed (GAP-A regression guard)', () => {
+  let workdir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-applegate-'))
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  type AppleGateInput = Partial<
+    Record<
+      | 'IN_APPLE_CERTIFICATE'
+      | 'IN_APPLE_CERTIFICATE_PASSWORD'
+      | 'IN_APPLE_SIGNING_IDENTITY'
+      | 'IN_APPLE_ID'
+      | 'IN_APPLE_PASSWORD'
+      | 'IN_APPLE_TEAM_ID',
+      string
+    >
+  >
+
+  function runAppleGate(inputs: AppleGateInput): {
+    status: number | null
+    stdout: string
+    rawEnv: string
+    env: Record<string, string>
+  } {
+    const envFilePath = join(workdir, `github-env-${Math.random()}`)
+    writeFileSync(envFilePath, '')
+    const result = runStepScript(extractRunBlock(APPLE_GATE_STEP_NAME), workdir, {
+      GITHUB_ENV: envFilePath,
+      IN_APPLE_CERTIFICATE: '',
+      IN_APPLE_CERTIFICATE_PASSWORD: '',
+      IN_APPLE_SIGNING_IDENTITY: '',
+      IN_APPLE_ID: '',
+      IN_APPLE_PASSWORD: '',
+      IN_APPLE_TEAM_ID: '',
+      ...inputs
+    })
+    const rawEnv = readFileSync(envFilePath, 'utf-8')
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      rawEnv,
+      env: readGithubEnv(envFilePath)
+    }
+  }
+
+  test('Test A (the live failure): all Apple secrets empty -> nothing exported, warned', () => {
+    const result = runAppleGate({})
+    expect(result.status).toBe(0)
+    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+    expect(result.stdout).toContain(
+      '::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact'
+    )
+  })
+
+  test('Test B: full signing trio exports exactly those three, nothing else', () => {
+    const result = runAppleGate({
+      IN_APPLE_CERTIFICATE: 'CERTDATA',
+      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
+    })
+    expect(result.status).toBe(0)
+    expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
+    expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
+    expect(result.env.APPLE_SIGNING_IDENTITY).toBe('Developer ID Application: Foo')
+    expect(result.env.APPLE_ID).toBeUndefined()
+    expect(result.env.APPLE_PASSWORD).toBeUndefined()
+    expect(result.env.APPLE_TEAM_ID).toBeUndefined()
+  })
+
+  test('Test C (partial set, D-04): cert set but password empty -> warn, ship unsigned', () => {
+    const result = runAppleGate({ IN_APPLE_CERTIFICATE: 'CERTDATA' })
+    expect(result.status).toBe(0)
+    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+    expect(result.stdout).toContain('::warning::')
+    expect(result.stdout).toContain('APPLE_CERTIFICATE_PASSWORD')
+  })
+
+  test('Test D (partial set): cert + password set, identity empty -> warn, ship unsigned', () => {
+    const result = runAppleGate({
+      IN_APPLE_CERTIFICATE: 'CERTDATA',
+      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass'
+    })
+    expect(result.status).toBe(0)
+    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+    expect(result.stdout).toContain('APPLE_SIGNING_IDENTITY')
+  })
+
+  test('Test E (notarization): full signing trio + full notarization trio -> all six exported', () => {
+    const result = runAppleGate({
+      IN_APPLE_CERTIFICATE: 'CERTDATA',
+      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo',
+      IN_APPLE_ID: 'dev@example.com',
+      IN_APPLE_PASSWORD: 'app-specific-pw',
+      IN_APPLE_TEAM_ID: 'TEAM1234'
+    })
+    expect(result.status).toBe(0)
+    expect(result.env.APPLE_CERTIFICATE).toBe('CERTDATA')
+    expect(result.env.APPLE_CERTIFICATE_PASSWORD).toBe('certpass')
+    expect(result.env.APPLE_SIGNING_IDENTITY).toBe('Developer ID Application: Foo')
+    expect(result.env.APPLE_ID).toBe('dev@example.com')
+    expect(result.env.APPLE_PASSWORD).toBe('app-specific-pw')
+    expect(result.env.APPLE_TEAM_ID).toBe('TEAM1234')
+  })
+
+  test('Test F (never notarize an unsigned bundle): notarization trio set but no cert -> nothing exported', () => {
+    const result = runAppleGate({
+      IN_APPLE_ID: 'dev@example.com',
+      IN_APPLE_PASSWORD: 'app-specific-pw',
+      IN_APPLE_TEAM_ID: 'TEAM1234'
+    })
+    expect(result.status).toBe(0)
+    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+  })
+
+  test('Test G (injection, mirrors WR-03): a newline-bearing identity cannot inject an extra GITHUB_ENV key', () => {
+    // PRECONDITION: cert + password must also be set, or the signing branch
+    // (and its write_env call) is never reached -- see the plan's note on
+    // why an identity-only variant of this test would pass vacuously.
+    const result = runAppleGate({
+      IN_APPLE_CERTIFICATE: 'CERTDATA',
+      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo\nEVIL=pwned'
+    })
+    expect(result.status).toBe(0)
+    expect(result.env.APPLE_SIGNING_IDENTITY).toContain('EVIL=pwned')
+    expect(result.env.EVIL).toBeUndefined()
+  })
+})
+
+// The other half of the GAP-A invariant: even a flawless gate step is defeated if the
+// job-level `env:` block still maps an APPLE_* secret directly (reintroducing the
+// defined-but-empty variable the live run failed on). Runs outside describeOnPosix --
+// it is a static text check, not a shell execution, so it applies on every platform.
+describe('release-tauri.yml job-level env has no APPLE_ keys (GAP-A regression guard)', () => {
+  test('Test H: the job-level env: block defines no APPLE_ key', () => {
+    const stripped = loadStrippedWorkflow()
+    const envStart = stripped.indexOf('\n    env:')
+    const stepsStart = stripped.indexOf('\n    steps:')
+    expect(envStart).toBeGreaterThanOrEqual(0)
+    expect(stepsStart).toBeGreaterThan(envStart)
+    const jobEnvSlice = stripped.slice(envStart, stepsStart)
+    expect(jobEnvSlice).not.toMatch(/APPLE_/)
   })
 })

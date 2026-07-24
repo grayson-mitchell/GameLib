@@ -15,7 +15,7 @@
  * this module was created to fix.
  */
 import { spawnSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /**
@@ -147,4 +147,57 @@ export function writeStubExecutable(
 ): void {
   const stubPath = join(binDir, name)
   writeFileSync(stubPath, script, { mode: 0o755 })
+}
+
+/**
+ * Parses GitHub's `$GITHUB_ENV` file protocol -- both the `NAME<<DELIM` ...
+ * `DELIM` heredoc form and the plain `NAME=VALUE` form -- into a
+ * `Record<string, string>`, modelled on the `readArgsOutput` helper that
+ * already parses the sibling `$GITHUB_OUTPUT` heredoc variant in
+ * releaseWorkflow.test.ts. Like every helper in this module, it FAILS LOUDLY:
+ * an unterminated heredoc throws rather than returning a partial map, so a
+ * caller's presence/absence assertions can never be satisfied by truncated
+ * output.
+ */
+export function readGithubEnv(filePath: string): Record<string, string> {
+  const lines = readFileSync(filePath, 'utf-8').split('\n')
+  const result: Record<string, string> = {}
+  let index = 0
+  while (index < lines.length) {
+    const line = lines[index]
+    if (line === '') {
+      index += 1
+      continue
+    }
+    const heredocMatch = line.match(/^([A-Za-z_][A-Za-z0-9_]*)<<(.+)$/)
+    if (heredocMatch) {
+      const [, name, delimiter] = heredocMatch
+      const body: string[] = []
+      index += 1
+      let terminated = false
+      while (index < lines.length) {
+        if (lines[index] === delimiter) {
+          terminated = true
+          index += 1
+          break
+        }
+        body.push(lines[index])
+        index += 1
+      }
+      if (!terminated) {
+        throw new Error(
+          `unterminated $GITHUB_ENV heredoc for "${name}" (delimiter ${delimiter})`
+        )
+      }
+      result[name] = body.join('\n')
+      continue
+    }
+    const plainMatch = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
+    if (plainMatch) {
+      const [, name, value] = plainMatch
+      result[name] = value
+    }
+    index += 1
+  }
+  return result
 }
