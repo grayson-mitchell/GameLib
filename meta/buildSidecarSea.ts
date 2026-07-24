@@ -162,16 +162,18 @@ export function resolvePostjectCli(): string {
   }
 }
 
-/**
- * Pure predicate documenting exactly why the old `.bin` shim paths were
- * unspawnable on Windows and why `process.execPath` is not: `CreateProcess`
- * can run a path directly only when it carries a recognized executable
- * extension (`.exe`/`.cmd`/`.bat`/`.com`). Asserted by
- * `meta/__tests__/buildSidecarSea.test.ts`.
- */
-export function isWindowsSpawnable(command: string): boolean {
-  return /\.(exe|cmd|bat|com)$/i.test(command)
-}
+// WR-05 (gap cycle 2 review): an exported `isWindowsSpawnable(command)`
+// predicate used to live here. It was never called by any production code
+// path -- `spawnArgv()`, `buildEsbuildArgv()`, `buildPostjectArgv()` and
+// `copyNodeBinary()` all ignored it -- and its own docstring conceded it was
+// documentary. Its headline test asserted a regex against three hardcoded
+// string literals that appear nowhere in this file, so it could not regress
+// when this script regressed: exported API surface plus the APPEARANCE of
+// coverage where there was none. Deleted. The real GAP-2 guards are the
+// source-scan tests in `meta/__tests__/buildSidecarSea.test.ts` ("no
+// node_modules/.bin path construction", "no bare 'node' spawn") plus the
+// assertions that every resolved command exists on disk, all of which
+// inspect the argv this file actually executes.
 
 // Cross-arch Node base-binary download cache, under the already-gitignored
 // `/build` directory (CR-01 fix, Task 2) -- no new .gitignore entries.

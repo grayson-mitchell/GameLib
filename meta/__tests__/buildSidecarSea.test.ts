@@ -22,7 +22,6 @@ import {
   resolveTriple,
   resolveEsbuildCli,
   resolvePostjectCli,
-  isWindowsSpawnable,
   triplePlatform,
   expectedMachoArch,
   nodeDistName,
@@ -260,27 +259,28 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     expect(esbuildArgv.args.some((a) => a.startsWith('--outfile='))).toBe(true)
   })
 
-  test('isWindowsSpawnable rejects the old extensionless .bin shim paths and accepts a real Windows exe', () => {
-    expect(isWindowsSpawnable('node_modules\\.bin\\postject')).toBe(false)
-    expect(isWindowsSpawnable('node_modules/.bin/esbuild')).toBe(false)
-    expect(isWindowsSpawnable('C:\\Program Files\\nodejs\\node.exe')).toBe(true)
-  })
-
-  test('the resolved postject/esbuild commands are Windows-spawnable on win32, or directly spawnable elsewhere', () => {
+  // WR-05: the two tests that used to live here asserted
+  // `isWindowsSpawnable(...)` -- a regex over three hardcoded literals that
+  // appear nowhere in the build script, and a predicate no production code
+  // path ever called. Both the predicate and those assertions are gone. What
+  // replaces them checks the property that actually matters for every spawn
+  // this file performs: the command is a real file on disk, on every OS.
+  test('every command this script spawns resolves to a file that exists on disk', () => {
     const postjectArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
     const esbuildArgv = buildEsbuildArgv()
-    if (process.platform === 'win32') {
-      expect(isWindowsSpawnable(postjectArgv.command)).toBe(true)
-      expect(isWindowsSpawnable(esbuildArgv.command)).toBe(true)
-    } else {
-      // postject's CLI is always plain JS -> always process.execPath.
-      // esbuild's own installer self-optimizes bin/esbuild into a
-      // directly-spawnable native binary on non-win32 (see the
-      // buildEsbuildArgv() test above) -- so its command is the resolved
-      // path itself here, not process.execPath.
-      expect(postjectArgv.command).toBe(process.execPath)
-      expect(existsSync(esbuildArgv.command)).toBe(true)
-    }
+    const seaBlobArgv = buildSeaBlobArgv()
+
+    // postject's CLI is always plain JS -> always process.execPath, with the
+    // CLI as argv[0]. esbuild's own installer self-optimizes bin/esbuild into
+    // a directly-spawnable native binary on non-win32 (see the
+    // buildEsbuildArgv() test above), so there its command is the resolved
+    // path itself.
+    expect(postjectArgv.command).toBe(process.execPath)
+    expect(existsSync(postjectArgv.command)).toBe(true)
+    expect(existsSync(postjectArgv.args[0])).toBe(true)
+
+    expect(existsSync(esbuildArgv.command)).toBe(true)
+    expect(existsSync(seaBlobArgv.command)).toBe(true)
   })
 })
 
