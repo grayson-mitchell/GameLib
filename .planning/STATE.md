@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 34-17-PLAN.md (GAP-B code half: pnpm verify:updater-key decode-and-match preflight, 2/2 tasks)
-last_updated: "2026-07-24T11:35:00.000Z"
-last_activity: 2026-07-24 -- Executed 34-17 (GAP-B code half: added pnpm verify:updater-key, which signs a throwaway probe file with the real Tauri signer and compares the resulting signature's minisign key id against the committed plugins.updater.pubkey, then wired it into release-tauri.yml as a preflight step after install-deps and before all expensive build work); gap cycle 3 continues with 34-18 (the human half -- re-enrolling a matched key/password pair, using this plan's tool as the verification gate)
+status: gap cycle 3 execution complete (34-16, 34-17, 34-18 all done) -- ready for phase re-verification
+stopped_at: Completed 34-18-PLAN.md (GAP-B human half via Branch B: regenerated + re-enrolled matched updater keypair, committed pubkey synced to new key id 9A02F7E0C9FC04C7, commit caa15b75, 2/2 tasks)
+last_updated: "2026-07-24T18:47:00.000Z"
+last_activity: 2026-07-24 -- Executed 34-18 (GAP-B human half, Branch B: the original updater key/password proved unrecoverable via pnpm verify:updater-key so the keypair was regenerated; both TAURI_SIGNING_* secrets re-enrolled on grayson-mitchell/GameLib 1s apart, and the committed plugins.updater.pubkey synced to the new key id 9A02F7E0C9FC04C7 in src-tauri/tauri.conf.json); all 3 gap cycle 3 plans (34-16,17,18) now done -- next is phase re-verification (34-07 live tag-push gate remains user-deferred, REQ-34-09 still unchecked)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 51
+  completed_plans: 52
   percent: 60
 ---
 
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTING
-Plan: 17 of 18 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16,17 — no 04); gap cycle 3 plan 34-18 remains
-Status: **34-17 EXECUTED 2026-07-24** (2/2 tasks, `updaterSigningKey` suite 8/8 green, `releaseWorkflow`
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTION COMPLETE
+Plan: 17 of 17 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16,17,18 — no 04); gap cycle 3 (34-16,17,18) all done
+Status: **34-18 EXECUTED 2026-07-24 — GAP CYCLE 3 COMPLETE** (Branch B: regenerated + re-enrolled matched updater keypair, committed pubkey → new key id 9A02F7E0C9FC04C7, commit caa15b75; tauriConf 39/39 green). Prior context — **34-17 EXECUTED 2026-07-24** (2/2 tasks, `updaterSigningKey` suite 8/8 green, `releaseWorkflow`
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
