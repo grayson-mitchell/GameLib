@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: Phase 34 COMPLETE 2026-07-25 (live gate + secure-phase both passed); Phase 34.1 context gathered, ready for /gsd-plan-phase 34.1
-stopped_at: Phase 34.1 context gathered
-last_updated: "2026-07-25T09:20:00.000Z"
-last_activity: 2026-07-25 -- Ran /gsd-discuss-phase 34.1 (Tauri IPC re-plumb slice 4, app shell + window chrome). 15 decisions captured in 34.1-CONTEXT.md (commit f4fdc68d). Headlines - D-01 window chrome executes RENDERER-SIDE via Tauri JS window API (no sidecar hop, no new Rust arms) and D-02 counts as PORTED for the Phase 35 gate as a third kind; D-05 framelessWindow is an off-by-default USER SETTING, not a platform property, so "match Electron" = honor the setting at runtime via setDecorations, default stays decorated; D-07/D-08 EXTRACT the 28 main.ts handler bodies into shared Electron-free modules (first slice to modify the Electron entry point -- additive/reversible invariant is now BEHAVIORAL, not textual); D-10 gamepadAction re-implemented renderer-side; D-11 build a REAL Tauri tray (feature, not a port -- largest scope risk); D-12 createNewWindow/showAboutWindow as real WebviewWindows, login-webview story owned by 34.4; D-14 callTool reassigned to 34.5 so the slice is 33 channels not 34 (IPC-PORT-INVENTORY.md needs correcting in BOTH lists); D-15 unit-proven, ALL live UAT deferred -- phase closes without anyone having looked at the visual deliverable, recorded explicitly. NEXT: /gsd-plan-phase 34.1.
+status: Phase 34.1 PLANNED -- 8 plans in 4 waves, plan-checker PASSED with 0 blockers; ready for /gsd-execute-phase 34.1
+stopped_at: Phase 34.1 planned -- 8 plans, 24 tasks, 4 waves; REQ-34.1-01..12 minted
+last_updated: "2026-07-25T11:05:00.000Z"
+last_activity: 2026-07-25 -- Planned Phase 34.1 (Tauri IPC slice 4, app shell + window chrome). Reused the committed 34.1-RESEARCH.md (d74dbf82), which CLOSED the mandatory D-04 check - core:window:default in Tauri 2.11.5 is confirmed a read-only getter set, so the explicit mutation grants are necessary AND every identifier D-04 named is real. Wrote 34.1-VALIDATION.md (90ad32ae), ran pattern-mapper, planner minted REQ-34.1-01..12 into REQUIREMENTS.md and wrote 8 plans (b741f43b); plan-checker VERIFICATION PASSED, 0 blockers, 2 doc-hygiene warnings. Planner findings that changed plan shape - only 6 handler bodies actually need extraction (not 28, not even the 18 research estimated); createNewWindow/showAboutWindow resolved RENDERER-side (WebviewWindow ctor is webview-context-only, sidecar is headless); exactly ONE new Rust arm in the slice (tray_set_icon); setZoomFactor needed a real units conversion (Electron setZoomLevel = Chromium level, Tauri setZoom = scale factor) or the UI would silently mis-scale; electronStub.app.getVersion() read npm_package_version which is UNSET in the packaged SEA sidecar, so getHeroicVersion would have reported 0.0.0 in every shipped build; set-connectivity-online is ALREADY live via bootstrap.ts. NEW GAP found that CONTEXT did not anticipate - `-webkit-app-region: drag` is Chromium-only, so a frameless Tauri window would be UNDRAGGABLE; plan 34.1-03 installs document-level mousedown/dblclick handlers. 35 threats registered (ASVS L1). NEXT: /gsd-execute-phase 34.1.
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 56
-  completed_plans: 52
-  percent: 60
+  total_phases: 15
+  completed_phases: 8
+  total_plans: 71
+  completed_plans: 55
+  percent: 53
 ---
 
 # Project State
@@ -35,7 +35,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTION COMPLETE
 Plan: 17 of 17 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16,17,18 — no 04); gap cycle 3 (34-16,17,18) all done
-Status: **34-18 EXECUTED 2026-07-24 — GAP CYCLE 3 COMPLETE** (Branch B: regenerated + re-enrolled matched updater keypair, committed pubkey → new key id 9A02F7E0C9FC04C7, commit caa15b75; tauriConf 39/39 green). Prior context — **34-17 EXECUTED 2026-07-24** (2/2 tasks, `updaterSigningKey` suite 8/8 green, `releaseWorkflow`
+Status: Ready to execute
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
@@ -255,7 +255,7 @@ Status: **34-18 EXECUTED 2026-07-24 — GAP CYCLE 3 COMPLETE** (Branch B: regene
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-17 (GAP-B code half: pnpm verify:updater-key decode-and-match preflight)
+Last activity: 2026-07-24 -- Phase 34.1 planning complete
 
 > **Plan-counter note (2026-07-24, post-34-17 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
