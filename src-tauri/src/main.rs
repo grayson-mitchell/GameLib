@@ -536,11 +536,13 @@ fn resolve_sidecar_entry() -> String {
 }
 
 /// Whether this run should use the DEV-mode `node <sidecar-entry.js>` spawn path instead of
-/// the packaged `externalBin` binary. True whenever `GAMELIB_SIDECAR_ENTRY` is explicitly set
-/// (dev/test override) OR this is a debug build (`cargo tauri dev`). A release build always
-/// resolves the bundled sidecar via `tauri-plugin-shell` — never a system `node` (D-06).
+/// the packaged `externalBin` binary. Gated on build profile ALONE (`cfg!(debug_assertions)`):
+/// a release build can never take this path, regardless of the process environment (D-06,
+/// WR-01). `GAMELIB_SIDECAR_ENTRY` still redirects WHICH entry file the dev path loads (via
+/// `resolve_sidecar_entry()` above), but it can no longer switch a release build onto the
+/// `node` path the way the old `.is_ok() || cfg!(debug_assertions)` expression allowed.
 fn use_dev_sidecar() -> bool {
-    std::env::var("GAMELIB_SIDECAR_ENTRY").is_ok() || cfg!(debug_assertions)
+    cfg!(debug_assertions)
 }
 
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
