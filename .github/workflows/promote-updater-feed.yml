@@ -54,8 +54,25 @@ jobs:
 
       # The published release may be an Electron-only release with no
       # Tauri latest.json asset (Pitfall 7: draft-release-mac.yml and
-      # draft-release-linux.yml co-run on the same v* tag). Absence is not
-      # an error -- this step must never fail the job.
+      # draft-release-linux.yml co-run on the same v* tag). That absence is
+      # not an error and must never fail the job.
+      #
+      # WR-07 (gap cycle 2 review): this step used to treat ANY non-zero
+      # `gh release download` exit as "nothing to promote" -- an expired
+      # token, a 5xx from the API, a secondary rate limit or a transient
+      # network fault all landed in the same branch, set found=false, skipped
+      # every downstream step, left the job green, and printed a ::notice::
+      # asserting a cause that may be false. Since this workflow is the SOLE
+      # mechanism keeping /releases/download/updater/latest.json current, a
+      # silent failure here pins every installed client to the previous
+      # version's manifest with no alarm anywhere. The asset list is now read
+      # FIRST: an unreadable release is a hard error, and only a genuinely
+      # absent asset takes the skip path.
+      #
+      # The asset check is a `node` one-liner, not `jq`: this workflow must
+      # never gain a jq/sed step (see the signature-integrity note below and
+      # tauriConf.test.ts test 7), and node is preinstalled on ubuntu runners.
+      # It only READS assets.json -- latest.json itself is never parsed here.
       - name: Download latest.json from the published release
         id: download
         shell: bash
@@ -63,10 +80,16 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           mkdir -p feed
-          if gh release download "$TAG" --pattern 'latest.json' --dir feed --clobber; then
+          if ! gh release view "$TAG" --json assets > assets.json; then
+            echo "::error::Could not read the asset list for $TAG -- refusing to assume 'nothing to promote'. The updater feed was NOT updated."
+            exit 1
+          fi
+          ASSET_PRESENT=$(node -e "const assets = require('./assets.json').assets || []; const names = assets.map(function (a) { return a.name }); process.stdout.write(names.includes('latest.json') ? 'yes' : 'no')")
+          if [ "$ASSET_PRESENT" = "yes" ]; then
+            gh release download "$TAG" --pattern 'latest.json' --dir feed --clobber
             echo "found=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::No latest.json on the published release; nothing to promote"
+            echo "::notice::No latest.json asset on $TAG (Electron-only release); nothing to promote"
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
 

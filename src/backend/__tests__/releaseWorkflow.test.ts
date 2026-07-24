@@ -12,7 +12,6 @@
  * and prerelease assertions below are the mitigation -- a regression here
  * would silently remove the D-09 human-review gate before publish.
  */
-import { spawnSync } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
@@ -23,6 +22,13 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+
+import {
+  extractRunBlock as extractRunBlockFrom,
+  runStepScript,
+  stripHashComments,
+  substituteExpressions
+} from './helpers/workflowSteps'
 
 const RELEASE_WORKFLOW_PATH = join(
   __dirname,
@@ -44,87 +50,23 @@ function loadReleaseWorkflow(): string {
  * assertion made against its actual instructions (WR-04).
  */
 function loadStrippedWorkflow(): string {
-  return loadReleaseWorkflow()
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('#'))
-    .join('\n')
+  return stripHashComments(loadReleaseWorkflow())
 }
 
-/**
- * Extracts a step's literal `run: |` block body, dedented, so a test can
- * EXECUTE the workflow's real shell instructions instead of pattern-matching
- * their text. Fails loudly if the named step (or its run block) is missing,
- * rather than silently returning an empty script that would vacuously pass.
- */
+/** Loads a step's literal `run: |` body from this workflow (shared helper). */
 function extractRunBlock(stepName: string): string {
-  const lines = loadReleaseWorkflow().split('\n')
-  const stepIndex = lines.findIndex((line) => line.trim() === `- name: ${stepName}`)
-  expect(stepIndex).toBeGreaterThanOrEqual(0)
-
-  const runIndex = lines.findIndex(
-    (line, index) => index > stepIndex && line.trim() === 'run: |'
-  )
-  expect(runIndex).toBeGreaterThan(stepIndex)
-
-  const runIndent = lines[runIndex].length - lines[runIndex].trimStart().length
-  const body: string[] = []
-  for (let index = runIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index]
-    if (line.trim() === '') {
-      body.push('')
-      continue
-    }
-    const indent = line.length - line.trimStart().length
-    if (indent <= runIndent) {
-      break
-    }
-    body.push(line.slice(runIndent + 2))
-  }
-  expect(body.join('').trim().length).toBeGreaterThan(0)
-  return body.join('\n')
+  return extractRunBlockFrom(loadReleaseWorkflow(), stepName)
 }
 
-/**
- * Runs an extracted run block exactly the way GitHub's `shell: bash` does
- * (`bash --noprofile --norc -eo pipefail {0}`), in a throwaway working
- * directory, so a failing guard inside the script surfaces as a non-zero
- * status here too.
- */
-function runStepScript(
-  script: string,
-  cwd: string,
-  env: Record<string, string> = {}
-): { status: number | null; stdout: string; stderr: string } {
-  const scriptPath = join(cwd, 'step.sh')
-  writeFileSync(scriptPath, script)
-  const result = spawnSync(
-    'bash',
-    ['--noprofile', '--norc', '-eo', 'pipefail', scriptPath],
-    { cwd, env: { ...process.env, ...env }, encoding: 'utf-8' }
-  )
-  return {
-    status: result.status,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? ''
-  }
-}
-
-/**
- * Substitutes the `${{ matrix.* }}` GitHub expressions a run block embeds so
- * the remaining text is executable bash. Deliberately fails the test if any
- * `${{ ... }}` survives -- an unsubstituted expression would otherwise be
- * silently executed as literal text and make an assertion vacuous.
- */
+/** Substitutes this workflow's `${{ matrix.* }}` expressions (shared helper). */
 function substituteMatrixExpressions(
   script: string,
   values: Record<string, string>
 ): string {
-  let result = script
-  for (const [key, value] of Object.entries(values)) {
-    result = result.split(`\${{ matrix.${key} }}`).join(value)
-  }
-  expect(result).not.toContain('${{')
-  return result
+  return substituteExpressions(script, {
+    'matrix.platform': values.platform,
+    'matrix.args': values.args
+  })
 }
 
 /** Creates a file (and any missing parent directories) under `root`. */

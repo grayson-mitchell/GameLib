@@ -10,8 +10,17 @@
  * below is the mitigation for this threat -- it must never silently pass on
  * a config that (re-)derives the updater feed from Heroic upstream.
  */
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+import {
+  extractRunBlock,
+  runStepScript,
+  stripHashComments,
+  substituteExpressions,
+  writeStubExecutable
+} from './helpers/workflowSteps'
 
 const TAURI_CONF_PATH = join(
   __dirname,
@@ -57,10 +66,7 @@ function loadTauriConf(): Record<string, unknown> {
  * assertion made against its actual instructions.
  */
 function stripComments(text: string): string {
-  return text
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('#'))
-    .join('\n')
+  return stripHashComments(text)
 }
 
 describe('tauri.conf.json bundle shape (D-01 / D-02 -- real installable build, all 3 platforms)', () => {
@@ -279,5 +285,142 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
     expect(typeof updater.pubkey).toBe('string')
     expect((updater.pubkey as string).length).toBeGreaterThan(0)
     expect(JSON.stringify(conf)).not.toContain('Heroic-Games-Launcher')
+  })
+})
+
+/**
+ * 34-REVIEW.md (gap cycle 2) WR-07: the promotion workflow's download step treated EVERY
+ * non-zero `gh release download` exit as "no asset, nothing to promote" -- an expired
+ * token, a 5xx, a rate limit or a network fault all set found=false, skipped every
+ * downstream step and left the job green, while printing a ::notice:: asserting a cause
+ * that may be false. Because this workflow is the sole mechanism keeping
+ * /releases/download/updater/latest.json current, that silently pins every installed
+ * client to the previous manifest forever.
+ *
+ * These tests EXECUTE the step's real shell body against a stubbed `gh` on PATH, so they
+ * distinguish the three outcomes by behaviour rather than by text shape.
+ */
+const GH_STUB = `#!/usr/bin/env bash
+set -u
+echo "$*" >> gh-calls.log
+if [ "\${1:-}" = "release" ] && [ "\${2:-}" = "view" ]; then
+  if [ "\${GH_STUB_VIEW_STATUS:-0}" != "0" ]; then
+    echo "gh: could not reach the API" >&2
+    exit "\${GH_STUB_VIEW_STATUS}"
+  fi
+  printf '%s' "\${GH_STUB_ASSETS:-}"
+  exit 0
+fi
+if [ "\${1:-}" = "release" ] && [ "\${2:-}" = "download" ]; then
+  if [ "\${GH_STUB_DOWNLOAD_STATUS:-0}" != "0" ]; then
+    exit "\${GH_STUB_DOWNLOAD_STATUS}"
+  fi
+  mkdir -p feed
+  printf '%s' "\${GH_STUB_MANIFEST:-{}}" > feed/latest.json
+  exit 0
+fi
+echo "unexpected gh invocation: $*" >&2
+exit 99
+`
+
+const DOWNLOAD_STEP_NAME = 'Download latest.json from the published release'
+const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
+
+describeOnPosix('promote-updater-feed.yml download step, executed (WR-07 regression guard)', () => {
+  let workdir: string
+  let binDir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-promote-'))
+    binDir = join(workdir, 'stub-bin')
+    mkdirSync(binDir, { recursive: true })
+    writeStubExecutable(binDir, 'gh', GH_STUB)
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  function runDownloadStep(env: Record<string, string>): {
+    status: number | null
+    stdout: string
+    outputs: string
+    ghCalls: string
+  } {
+    const script = substituteExpressions(
+      extractRunBlock(
+        readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
+        DOWNLOAD_STEP_NAME
+      ),
+      { 'github.event.release.tag_name': 'v0.7.0' }
+    )
+    const outputPath = join(workdir, 'github-output')
+    writeFileSync(outputPath, '')
+    const result = runStepScript(script, workdir, {
+      GITHUB_OUTPUT: outputPath,
+      TAG: 'v0.7.0',
+      PATH: `${binDir}:${process.env.PATH ?? ''}`,
+      ...env
+    })
+    const ghCallsPath = join(workdir, 'gh-calls.log')
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      outputs: readFileSync(outputPath, 'utf-8'),
+      ghCalls: existsSync(ghCallsPath)
+        ? readFileSync(ghCallsPath, 'utf-8')
+        : ''
+    }
+  }
+
+  test('a release that really carries latest.json is downloaded and marked found=true', () => {
+    const result = runDownloadStep({
+      GH_STUB_ASSETS: JSON.stringify({
+        assets: [{ name: 'latest.json' }, { name: 'GameLib_0.7.0_amd64.AppImage' }]
+      }),
+      GH_STUB_MANIFEST: JSON.stringify({ version: '0.7.0' })
+    })
+    expect(result.status).toBe(0)
+    expect(result.outputs).toContain('found=true')
+    expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(true)
+  })
+
+  test('an Electron-only release (no latest.json asset) skips quietly and stays green', () => {
+    const result = runDownloadStep({
+      GH_STUB_ASSETS: JSON.stringify({
+        assets: [{ name: 'GameLib-0.7.0-macOS-arm64.dmg' }]
+      })
+    })
+    expect(result.status).toBe(0)
+    expect(result.outputs).toContain('found=false')
+    expect(result.stdout).toContain('::notice::')
+    // It must not even attempt the download when the asset is known absent.
+    expect(result.ghCalls).not.toContain('release download')
+  })
+
+  test('WR-07: an unreadable release (auth/network/rate-limit) FAILS the job instead of reporting "nothing to promote"', () => {
+    const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '1' })
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+    // The misleading "nothing to promote" NOTICE must not be emitted for an
+    // API failure -- only the error is.
+    expect(result.stdout).not.toContain('::notice::')
+    expect(result.outputs).not.toContain('found=')
+  })
+
+  test('WR-07: an API failure never silently marks the feed as up to date', () => {
+    const result = runDownloadStep({ GH_STUB_VIEW_STATUS: '8' })
+    expect(result.status).not.toBe(0)
+    expect(result.outputs).not.toContain('found=true')
+    expect(existsSync(join(workdir, 'feed', 'latest.json'))).toBe(false)
+  })
+
+  test('a download that fails AFTER the asset was confirmed present still fails the job', () => {
+    const result = runDownloadStep({
+      GH_STUB_ASSETS: JSON.stringify({ assets: [{ name: 'latest.json' }] }),
+      GH_STUB_DOWNLOAD_STATUS: '1'
+    })
+    expect(result.status).not.toBe(0)
+    expect(result.outputs).not.toContain('found=true')
   })
 })
