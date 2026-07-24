@@ -580,12 +580,11 @@ describeOnPosix('release-tauri.yml prunes frontendDist before bundling (CR-02 re
 // "never fail", so an unstripped assertion would be self-invalidating (prose alone could
 // satisfy or defeat it).
 describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / GAP-4 regression guard)', () => {
-  function loadStrippedReleaseWorkflow(): string {
-    return loadReleaseWorkflow()
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('#'))
-      .join('\n')
-  }
+  // WR-04: this used to be a third private copy of the comment-stripper; it
+  // now delegates to the single module-level helper so every assertion in
+  // this file can reach it (the whole reason Test 3 and Test 7 were checking
+  // the UNSTRIPPED source and passing on comment prose alone).
+  const loadStrippedReleaseWorkflow = loadStrippedWorkflow
 
   test('Test 1: the signing-override branch requires ALL THREE secrets on the same if line', () => {
     const source = loadReleaseWorkflow()
@@ -607,10 +606,12 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(idxThumbCheck).toBeLessThan(idxCertThumbprint)
   })
 
+  // WR-04: both assertions used to run against the UNSTRIPPED source, where the
+  // step's own comment prose already names `elif` and WINDOWS_CERT_THUMBPRINT.
   test('Test 3: a warn-and-skip middle branch exists naming WINDOWS_CERT_THUMBPRINT', () => {
-    const source = loadReleaseWorkflow()
-    expect(source).toContain('elif')
-    expect(source).toMatch(/::warning::[^\n]*WINDOWS_CERT_THUMBPRINT/)
+    const stripped = loadStrippedReleaseWorkflow()
+    expect(stripped).toContain('elif')
+    expect(stripped).toMatch(/::warning::[^\n]*WINDOWS_CERT_THUMBPRINT/)
   })
 
   test('Test 4: the warn-and-skip branch does not fail the job (no exit 1)', () => {
@@ -641,9 +642,17 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(stripped).not.toMatch(/echo "args=[^\n]*CONFIG_OVERRIDE/)
   })
 
+  // WR-04: `expect(source).toContain('$RANDOM')` against the UNSTRIPPED file was
+  // satisfied by the step comment that merely DESCRIBES the randomisation -- so
+  // replacing DELIM="ARGS_${RANDOM}..." with a fixed DELIM="ARGS_EOF" (the exact
+  // regression this test exists to prevent) left it green. It now asserts against the
+  // instructions only, and additionally forbids a fixed literal delimiter. The
+  // executed-behaviour counterpart lives in the "build-args secret gating, executed"
+  // block below, which runs the step twice and proves the delimiter really varies.
   test('Test 7: the heredoc delimiter is randomised via $RANDOM', () => {
-    const source = loadReleaseWorkflow()
-    expect(source).toContain('$RANDOM')
+    const stripped = loadStrippedReleaseWorkflow()
+    expect(stripped).toMatch(/DELIM=.*\$\{?RANDOM\}?/)
+    expect(stripped).not.toMatch(/args<<[A-Za-z_][A-Za-z0-9_]*\s*$/m)
   })
 
   test('Test 8 (D-04 invariant guard): existing per-OS Signing-skipped warnings still present', () => {

@@ -181,7 +181,7 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
     const plugins = conf.plugins as Record<string, unknown>
     const updater = plugins.updater as Record<string, unknown>
     const endpoints = updater.endpoints as string[]
-    const workflow = readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
+    const workflow = stripComments(readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8'))
 
     if (workflow.includes('prerelease: true')) {
       expect(endpoints[0]).not.toContain('/releases/latest/download/')
@@ -212,7 +212,9 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
     const tag = (match as RegExpMatchArray)[1]
 
     expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
-    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    const promoteWorkflow = stripComments(
+      readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    )
 
     expect(promoteWorkflow).toContain(`gh release upload ${tag} `)
     expect(promoteWorkflow).toContain('--clobber')
@@ -220,7 +222,9 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
 
   test('test 4: the promotion workflow triggers only on published releases', () => {
     expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
-    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    const promoteWorkflow = stripComments(
+      readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    )
 
     expect(promoteWorkflow).toContain('types: [published]')
     expect(promoteWorkflow).not.toContain('types: [created]')
@@ -229,7 +233,9 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
 
   test('test 5: the promotion workflow is guarded against re-triggering off the feed-holder release', () => {
     expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
-    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    const promoteWorkflow = stripComments(
+      readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    )
 
     expect(promoteWorkflow).toContain(
       "startsWith(github.event.release.tag_name, 'v')"
@@ -238,7 +244,9 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
 
   test('test 6: the feed-holder release stays a non-draft prerelease', () => {
     expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
-    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    const promoteWorkflow = stripComments(
+      readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    )
 
     expect(promoteWorkflow).toContain('--prerelease')
     expect(promoteWorkflow).not.toContain('--draft')
@@ -257,7 +265,7 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
   })
 
   test('test 8 (D-09 guard): release-tauri.yml still sets BOTH releaseDraft: true and prerelease: true', () => {
-    const workflow = readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
+    const workflow = stripComments(readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8'))
 
     expect(workflow).toContain('releaseDraft: true')
     expect(workflow).toContain('prerelease: true')
