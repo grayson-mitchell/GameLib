@@ -69,7 +69,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
 - [x] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume (completed 2026-07-23)
 - [x] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly (completed 2026-07-23)
-- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork
+- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 6/6 plans executed, but 34-07's live tag-push gate is DEFERRED by user (not yet passed); phase not complete
 - [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
 
 ## Phase Details
@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed — 34-07's live gate DEFERRED by user decision (not yet passed); Phase 34 NOT phase-complete until it runs
 
 Plans:
 
@@ -1246,7 +1246,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 34-07-PLAN.md — Live phase-close gate: real v* tag push proves all-platform draft+prerelease + Node-free sidecar (Manual-Only)
+- [x] 34-07-PLAN.md — Live phase-close gate: real v* tag push proves all-platform draft+prerelease + Node-free sidecar (Manual-Only) — **DEFERRED by user 2026-07-24**; see 34-07-SUMMARY.md for full repro steps to resume
 
 ---
 

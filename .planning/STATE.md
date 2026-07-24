@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 34-05-PLAN.md (Tasks 1-2 done; Task 3 human-verify deferred by user)
+stopped_at: Completed 34-07-PLAN.md (checkpoint:human-verify live tag-push gate deferred by user; recorded pending in 34-07-SUMMARY.md)
 last_updated: "2026-07-24T04:34:01.659Z"
 last_activity: 2026-07-24
 progress:
@@ -34,8 +34,16 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 5 of 6 (34-06 complete; 34-07 remains — sequence is 01,02,03,05,06,07, no 04)
-Status: Ready to execute 34-07 (Manual-Only live tag-push gate)
+Plan: 6 of 6 (34-01,02,03,05,06,07 all executed — no 04; 34-07's live gate DEFERRED by user, not passed)
+Status: All 6 plans executed. Phase 34 is code-complete + unit-tested but NOT phase-complete —
+  34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live proof, REQ-34-09) was
+  deferred by explicit user decision this session. Full repro steps recorded verbatim in
+  34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm
+  all 4 matrix legs green + graceful signing-skip, confirm draft+prerelease Release with
+  artifacts + latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while
+  draft, then clean up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until
+  that run actually happens. Next: either resume 34-07's live gate, or move on and return to it
+  before declaring Phase 34 / the Phase 35 Electron-cutover dependency satisfied.
 Last activity: 2026-07-24
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
