@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 6/6 plans executed — 34-07's live gate DEFERRED by user decision (not yet passed); Phase 34 NOT phase-complete until it runs
+**Plans:** 10 plans (6 executed + 4 gap-closure plans added 2026-07-24 from `34-REVIEW.md`) — 34-07's live gate DEFERRED by user decision (not yet passed); Phase 34 NOT phase-complete until the gap plans land and that gate runs
 
 Plans:
 
@@ -1247,6 +1247,21 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 34-07-PLAN.md — Live phase-close gate: real v* tag push proves all-platform draft+prerelease + Node-free sidecar (Manual-Only) — **DEFERRED by user 2026-07-24**; see 34-07-SUMMARY.md for full repro steps to resume
+
+**Wave 6** *(gap closure — closes `34-REVIEW.md` CR-01, CR-02, WR-01, WR-03; all three run in parallel, no file overlap)*
+
+- [ ] 34-08-PLAN.md — CR-01 build script: target-triple override (`GAMELIB_SIDECAR_TARGET_TRIPLE`) + checksum-verified official Node base binary for cross-arch + `lipo -archs` arch gate
+- [ ] 34-09-PLAN.md — CR-02: generate/commit `src-tauri/icons/icon.ico`, wire into `bundle.icon`, guard every icon path in `tauriConf.test.ts`
+- [ ] 34-10-PLAN.md — WR-01 + WR-03: gate the dev-sidecar path to debug builds only; kill + reap the sidecar on `RunEvent::Exit`; new comment-stripped `main.rs` source-shape suite
+
+**Wave 7** *(blocked on 34-08)*
+
+- [ ] 34-11-PLAN.md — CR-01 CI half (per-leg `sidecar_triple` → SEA build) + WR-02 (`cert.pfx` removed in a `finally`, false "in-memory only" comment corrected) + record WR-04/IN-01 as deferred debt
+
+> **Out of scope for this gap cycle (user decision GAP-D-01):** review findings **WR-04**
+> (`security.csp: null` + `withGlobalTauri` + broad `opener:default`) and **IN-01**
+> (`sidecarSeaFsShim.ts` loose `system.pem` match) are deferred as tracked debt — recorded in
+> the phase's `deferred-items.md` by 34-11, not implemented.
 
 ---
 
