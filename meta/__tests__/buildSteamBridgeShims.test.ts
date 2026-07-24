@@ -5,6 +5,8 @@ import {
   buildHelperCompileArgv,
   buildShimCompileArgv,
   helperOutputPath,
+  machoArchFlag,
+  resolveBridgeArch,
   shimOutputPath,
   steamAppIdOutputPath
 } from '../buildSteamBridgeShims'
@@ -114,6 +116,88 @@ describe('buildSteamBridgeShims', () => {
       // shell-interpolated command string.
       expect(sourceText).not.toMatch(/spawn\(`/)
       expect(sourceText).not.toMatch(/exec\(/)
+    })
+  })
+
+  // CR-01 (34-REVIEW.md gap cycle 2): the bundled bridge outputs were pathed
+  // by the BUILD HOST's process.arch and compiled with no `-arch`, so the
+  // `--target x86_64-apple-darwin` release leg (built on an Apple-Silicon
+  // macos-latest runner) shipped arm64 bytes at bin/arm64/... while its own
+  // x64 sidecar looks for bin/x64/... at runtime. These assertions exercise
+  // the real resolution path used by compileHelper()/compileShim() (which
+  // call the *OutputPath helpers with no argument, i.e. through the default
+  // parameter), not just the explicitly-parameterized form.
+  describe('resolveBridgeArch (CR-01: target-driven, not host-driven)', () => {
+    it('returns the GAMELIB_BRIDGE_TARGET_ARCH override when set', () => {
+      expect(resolveBridgeArch({ GAMELIB_BRIDGE_TARGET_ARCH: 'x64' })).toBe(
+        'x64'
+      )
+    })
+
+    it('falls back to process.arch when the var is absent', () => {
+      expect(resolveBridgeArch({})).toBe(process.arch)
+    })
+
+    it('falls back to process.arch when the var is the empty string (unset matrix field)', () => {
+      expect(resolveBridgeArch({ GAMELIB_BRIDGE_TARGET_ARCH: '' })).toBe(
+        process.arch
+      )
+    })
+
+    it('CR-01 REGRESSION: an x64 override drives the DEFAULT-ARGUMENT output paths, not just explicit ones', () => {
+      const previous = process.env.GAMELIB_BRIDGE_TARGET_ARCH
+      process.env.GAMELIB_BRIDGE_TARGET_ARCH = 'x64'
+      try {
+        // No argument: this is exactly how compileHelper()/compileShim()/
+        // stageSteamAppId() call these helpers.
+        expect(helperOutputPath()).toBe(
+          join('public', 'bin', 'x64', 'darwin', 'steam-bridge-helper')
+        )
+        expect(shimOutputPath()).toBe(
+          join('public', 'bin', 'x64', 'darwin', 'steam_api.dll')
+        )
+        expect(steamAppIdOutputPath()).toBe(
+          join('public', 'bin', 'x64', 'darwin', 'steam_appid.txt')
+        )
+        expect(helperOutputPath()).not.toContain(
+          join('bin', 'arm64', 'darwin')
+        )
+      } finally {
+        if (previous === undefined) {
+          delete process.env.GAMELIB_BRIDGE_TARGET_ARCH
+        } else {
+          process.env.GAMELIB_BRIDGE_TARGET_ARCH = previous
+        }
+      }
+    })
+
+    it('CR-01 REGRESSION: the compile argv carries a -arch matching the target, so the Mach-O is not host-native', () => {
+      const x64 = buildHelperCompileArgv('x64')
+      const archIndex = x64.args.indexOf('-arch')
+      expect(archIndex).toBeGreaterThan(-1)
+      expect(x64.args[archIndex + 1]).toBe('x86_64')
+      expect(x64.args).toContain(helperOutputPath('x64'))
+
+      const arm64 = buildHelperCompileArgv('arm64')
+      expect(arm64.args[arm64.args.indexOf('-arch') + 1]).toBe('arm64')
+      expect(arm64.args).toContain(helperOutputPath('arm64'))
+    })
+
+    it('machoArchFlag refuses an arch it cannot name, rather than silently emitting host-native bytes', () => {
+      expect(machoArchFlag('arm64')).toBe('arm64')
+      expect(machoArchFlag('x64')).toBe('x86_64')
+      expect(() => machoArchFlag('ia32')).toThrow()
+      expect(() => buildHelperCompileArgv('ia32')).toThrow()
+    })
+
+    it('the source never re-derives a bundled path from process.arch directly (host-vs-target guard)', () => {
+      const stripped = sourceText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      // process.arch may appear ONLY as resolveBridgeArch()'s fallback.
+      const occurrences = stripped.match(/process\.arch/g) ?? []
+      expect(occurrences).toHaveLength(1)
+      expect(stripped).toMatch(/return process\.arch/)
     })
   })
 

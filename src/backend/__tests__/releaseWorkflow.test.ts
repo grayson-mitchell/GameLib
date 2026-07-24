@@ -221,6 +221,77 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
   })
 })
 
+// 34-REVIEW.md (gap cycle 2) CR-01: GAP-1's new `pnpm build-steam-bridge` step was
+// host-arch-driven -- meta/buildSteamBridgeShims.ts emitted to
+// public/bin/${process.arch}/darwin/, and both macos-latest legs are Apple Silicon, so
+// the `--target x86_64-apple-darwin` bundle shipped bin/arm64/... while its own x64
+// sidecar resolves bin/x64/... at runtime. Rather than asserting the raw expression
+// string, these tests EVALUATE the workflow's GitHub-expression ternary for each macOS
+// matrix leg and assert the arch it actually yields.
+describe('release-tauri.yml steam-bridge target arch (CR-01 regression guard)', () => {
+  /** The `${{ ... }}` expression the bridge step assigns to GAMELIB_BRIDGE_TARGET_ARCH. */
+  function bridgeArchExpression(): string {
+    const source = loadReleaseWorkflow()
+    const line = source
+      .split('\n')
+      .find((l) => l.includes('GAMELIB_BRIDGE_TARGET_ARCH:'))
+    expect(line).toBeDefined()
+    return (line as string).split('GAMELIB_BRIDGE_TARGET_ARCH:')[1].trim()
+  }
+
+  /**
+   * Evaluates the GitHub Actions `<lhs> == '<literal>' && '<a>' || '<b>'`
+   * ternary idiom for a concrete matrix.sidecar_triple value. Deliberately
+   * strict: an expression shape this cannot parse fails the test rather than
+   * silently returning a default.
+   */
+  function evaluateBridgeArch(expression: string, sidecarTriple: string): string {
+    const match = expression.match(
+      /^\$\{\{\s*matrix\.sidecar_triple\s*==\s*'([^']+)'\s*&&\s*'([^']+)'\s*\|\|\s*'([^']+)'\s*\}\}$/
+    )
+    expect(match).not.toBeNull()
+    const [, comparedTriple, whenTrue, whenFalse] = match as RegExpMatchArray
+    return sidecarTriple === comparedTriple ? whenTrue : whenFalse
+  }
+
+  test('the x86_64-apple-darwin leg builds an x64-pathed bridge, not arm64', () => {
+    const expression = bridgeArchExpression()
+    expect(evaluateBridgeArch(expression, 'x86_64-apple-darwin')).toBe('x64')
+  })
+
+  test('the aarch64-apple-darwin leg still builds an arm64-pathed bridge', () => {
+    const expression = bridgeArchExpression()
+    expect(evaluateBridgeArch(expression, 'aarch64-apple-darwin')).toBe('arm64')
+  })
+
+  test('the two macOS legs never resolve to the same arch', () => {
+    const expression = bridgeArchExpression()
+    expect(evaluateBridgeArch(expression, 'x86_64-apple-darwin')).not.toBe(
+      evaluateBridgeArch(expression, 'aarch64-apple-darwin')
+    )
+  })
+
+  test('the env var the workflow sets is the one the build script actually reads', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('GAMELIB_BRIDGE_TARGET_ARCH:')
+
+    const buildScript = readFileSync(
+      join(__dirname, '..', '..', '..', 'meta', 'buildSteamBridgeShims.ts'),
+      'utf-8'
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect(buildScript).toContain('env.GAMELIB_BRIDGE_TARGET_ARCH')
+  })
+
+  test('the arch env wiring belongs to the steam-bridge step (not some later step)', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(
+      /Build steam bridge shims \(macOS only\)[\s\S]*?GAMELIB_BRIDGE_TARGET_ARCH:[\s\S]*?run: pnpm build-steam-bridge/
+    )
+  })
+})
+
 // 34-VERIFICATION.md truth #7 PARTIAL / 34-REVIEW.md WR-03: the Windows signing override
 // gate tests only `-n "$WINDOWS_CERTIFICATE"` and never `WINDOWS_CERT_THUMBPRINT`. Enrolling
 // the certificate secret without the thumbprint secret renders `"certificateThumbprint":""`

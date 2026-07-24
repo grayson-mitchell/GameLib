@@ -8,21 +8,33 @@
  * binaries are never committed, only generated/hand-written source is):
  *
  *   1. Compiles native/steam-bridge/helper/bridge_helper.c (Plan 24-02) with
- *      system `clang` -> `public/bin/${process.arch}/darwin/steam-bridge-helper`,
+ *      system `clang` -> `public/bin/${targetArch}/darwin/steam-bridge-helper`,
  *      `chmod 755` -- the exact non-win32 `downloadAsset` convention from
  *      meta/downloadHelperBinaries.ts.
  *
  *   2. Cross-compiles native/steam-bridge/generated/steam_api_shim.c + .def
  *      (Plan 24-01's committed generator output) with the pinned zig
  *      toolchain (meta/downloadZig.ts) via `zig cc -target x86-windows-gnu`
- *      -> `public/bin/${process.arch}/darwin/steam_api.dll` -- the SINGLE
+ *      -> `public/bin/${targetArch}/darwin/steam_api.dll` -- the SINGLE
  *      SHARED BUNDLED LOCATION (BLOCKER 2), matching
  *      src/backend/constants/paths.ts's `builtBridgeShimPath` byte-for-byte.
  *      This script intentionally does NOT import paths.ts -- that module
  *      imports Electron's `app` at load time and would crash under plain
  *      `node`; the path is independently reconstructed here using the exact
- *      same `join('public', 'bin', process.arch, 'darwin', ...)` segments
+ *      same `join('public', 'bin', <arch>, 'darwin', ...)` segments
  *      publicDir itself resolves to at dev-run time.
+ *
+ * CR-01 (34-REVIEW.md gap cycle 2): `targetArch` above is the BUILD TARGET's
+ * arch (`resolveBridgeArch()`), NOT the build host's `process.arch`. Both
+ * `macos-latest` release matrix legs run on Apple-Silicon runners, so a
+ * host-driven path emitted `bin/arm64/darwin/...` even on the
+ * `--target x86_64-apple-darwin` leg -- while the x86_64 bundle's sidecar
+ * resolves `bin/x64/darwin/...` at runtime (`process.arch === 'x64'`) and
+ * found nothing, silently killing the whole Phase 24 bridge feature in that
+ * bundle. The helper was arm64 Mach-O regardless, because `clang` was
+ * invoked with no `-arch` flag. This is the same host-vs-target bug family
+ * as `meta/buildSidecarSea.ts`'s `resolveTriple()`/
+ * `GAMELIB_SIDECAR_TARGET_TRIPLE`, and is fixed the same way.
  *
  * The shim cross-compile is a REAL COMPILE GATE (review finding #5a): a
  * non-zero `zig cc` exit OR a missing `.dll` output FAILS the build. This is
@@ -76,17 +88,60 @@ const STEAM_APPID_SOURCE_PATH = join(
 )
 
 /**
+ * CR-01 fix (mirrors `meta/buildSidecarSea.ts`'s `resolveTriple()`): the
+ * bundled-output arch must be driven by the build TARGET, not by
+ * `process.arch` of the machine running this script.
+ * `GAMELIB_BRIDGE_TARGET_ARCH` is set per matrix leg by
+ * `.github/workflows/release-tauri.yml`; when unset (local `pnpm
+ * build-steam-bridge` / `dist:mac`) it falls back to `process.arch`, so the
+ * native/dev path is byte-for-byte unaffected. GitHub Actions renders an
+ * unset matrix field as the empty string, so `''` is also treated as unset.
+ *
+ * The value is a Node `process.arch` token (`x64`/`arm64`) because that is
+ * what the RUNTIME consumer (`publicDir`/`bin/${process.arch}/darwin` in
+ * src/backend/constants/paths.ts) uses to resolve these files.
+ */
+export function resolveBridgeArch(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const override = env.GAMELIB_BRIDGE_TARGET_ARCH
+  if (typeof override === 'string' && override.length > 0) {
+    return override
+  }
+  return process.arch
+}
+
+/**
+ * Maps a Node `process.arch` token to the `clang -arch` Mach-O architecture
+ * name. Without an explicit `-arch`, clang emits host-native bytes -- so an
+ * Apple-Silicon runner produced an arm64 helper even when building the
+ * x86_64 bundle (CR-01). Throws for anything outside the two darwin arches
+ * this bridge supports rather than silently falling back to host-native.
+ */
+export function machoArchFlag(arch: string): string {
+  if (arch === 'arm64') {
+    return 'arm64'
+  }
+  if (arch === 'x64') {
+    return 'x86_64'
+  }
+  throw new Error(
+    `unsupported steam-bridge target arch: ${arch} (expected 'arm64' or 'x64')`
+  )
+}
+
+/**
  * Build-time equivalent of `publicDir` (src/backend/constants/paths.ts) --
  * this script runs from the repo root via `esbuild --bundle ... | node`
  * (the meta/ convention), so `join('public', 'bin', ...)` resolves to the
  * exact same location `publicDir` resolves to at dev-run time.
  */
-function bundledBinDir(arch: string = process.arch): string {
+function bundledBinDir(arch: string = resolveBridgeArch()): string {
   return join('public', 'bin', arch, 'darwin')
 }
 
 /** Matches steamBridgeHelperPath (src/backend/constants/paths.ts, Plan 24-06). */
-export function helperOutputPath(arch: string = process.arch): string {
+export function helperOutputPath(arch: string = resolveBridgeArch()): string {
   return join(bundledBinDir(arch), 'steam-bridge-helper')
 }
 
@@ -95,27 +150,40 @@ export function helperOutputPath(arch: string = process.arch): string {
  * src/backend/constants/paths.ts's `builtBridgeShimPath` exactly; Plan
  * 24-05's `shimGenerate.ts` reads FROM this exact path at runtime.
  */
-export function shimOutputPath(arch: string = process.arch): string {
+export function shimOutputPath(arch: string = resolveBridgeArch()): string {
   return join(bundledBinDir(arch), 'steam_api.dll')
 }
 
 /** Staged next to the built helper (finding #4 -- helper cwd resolution). */
-export function steamAppIdOutputPath(arch: string = process.arch): string {
+export function steamAppIdOutputPath(
+  arch: string = resolveBridgeArch()
+): string {
   return join(bundledBinDir(arch), 'steam_appid.txt')
 }
 
 /**
  * Argv-form (never a shell string, T-24-06) command for compiling the
- * native arm64 helper. Exported so tests can assert the exact command
+ * native host helper. Exported so tests can assert the exact command
  * construction without invoking real clang.
+ *
+ * CR-01: carries an explicit `-arch` matching the TARGET arch, so the
+ * emitted Mach-O really is the architecture its bundled path claims --
+ * `-o public/bin/x64/darwin/...` must not contain arm64 bytes.
  */
-export function buildHelperCompileArgv(arch: string = process.arch): {
+export function buildHelperCompileArgv(arch: string = resolveBridgeArch()): {
   command: string
   args: string[]
 } {
   return {
     command: 'clang',
-    args: ['-O2', '-o', helperOutputPath(arch), HELPER_SOURCE_PATH]
+    args: [
+      '-O2',
+      '-arch',
+      machoArchFlag(arch),
+      '-o',
+      helperOutputPath(arch),
+      HELPER_SOURCE_PATH
+    ]
   }
 }
 
@@ -127,7 +195,7 @@ export function buildHelperCompileArgv(arch: string = process.arch): {
  */
 export function buildShimCompileArgv(
   zigBinPath: string,
-  arch: string = process.arch
+  arch: string = resolveBridgeArch()
 ): { command: string; args: string[] } {
   return {
     command: zigBinPath,
@@ -170,7 +238,9 @@ function spawnArgv(
 async function compileHelper(): Promise<void> {
   mkdirSync(bundledBinDir(), { recursive: true })
   const { command, args } = buildHelperCompileArgv()
-  console.log(`Compiling native arm64 helper: ${command} ${args.join(' ')}`)
+  console.log(
+    `Compiling native ${resolveBridgeArch()} helper: ${command} ${args.join(' ')}`
+  )
   const result = await spawnArgv(command, args)
   if (result.code !== 0) {
     throw new Error(

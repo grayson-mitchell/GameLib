@@ -94,9 +94,22 @@ jobs:
       # `build-steam-bridge && electron-vite build`. Without this step every
       # macOS Tauri bundle ships without build/bin/... and the bridge is
       # unusable. Precedes the renderer build to match release:mac's chain.
+      #
+      # CR-01 (gap cycle 2 review): meta/buildSteamBridgeShims.ts used to emit
+      # to `public/bin/${process.arch}/darwin/` -- the BUILD HOST's arch.
+      # macos-latest runners are Apple Silicon, so the
+      # `--target x86_64-apple-darwin` leg emitted bin/arm64/... while its own
+      # x86_64 sidecar resolves bin/x64/... at runtime, shipping a bundle
+      # whose Steam bridge could never be found. GAMELIB_BRIDGE_TARGET_ARCH
+      # makes the bridge build target-driven exactly like
+      # GAMELIB_SIDECAR_TARGET_TRIPLE does for the SEA sidecar below, and the
+      # script now passes a matching `clang -arch` so the emitted Mach-O
+      # really is the architecture its path claims.
       - name: Build steam bridge shims (macOS only)
         if: startsWith(matrix.platform, 'macos')
         shell: bash
+        env:
+          GAMELIB_BRIDGE_TARGET_ARCH: ${{ matrix.sidecar_triple == 'x86_64-apple-darwin' && 'x64' || 'arm64' }}
         run: pnpm build-steam-bridge
 
       # GAP-1 (34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01):
