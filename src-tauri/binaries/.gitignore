@@ -1,0 +1,5 @@
+# Phase 34 Plan 02 (D-06): per-OS Node SEA-compiled sidecar binaries
+# (gamelib-sidecar-<host-triple>[.exe]) are CI-built artifacts, never
+# committed source -- mirrors native/steam-bridge's built-binary convention
+# (24-07). This .gitignore file itself keeps the directory tracked.
+gamelib-sidecar-*

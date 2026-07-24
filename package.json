@@ -32,6 +32,7 @@
     "start": "electron-vite dev --watch",
     "tauri:dev": "electron-vite build && pnpm build:sidecar && tauri dev",
     "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --external:electron --external:electron-store --outfile=build/main/sidecar.js src/sidecar/index.ts",
+    "build:sidecar-sea": "pnpm build:sidecar && esbuild --bundle --platform=node --target=node22 meta/buildSidecarSea.ts | node",
     "debug:react": "pnpm start & react-devtools",
     "codecheck": "tsc --noEmit",
     "find-deadcode": "ts-prune --error",

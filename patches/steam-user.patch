@@ -1,0 +1,26 @@
+diff --git a/components/cdn_compression.js b/components/cdn_compression.js
+index 2ff72df14773b80014a1b677d861e9e2b6de32cd..d12a17ff4a906701a62901247208f97454311720 100644
+--- a/components/cdn_compression.js
++++ b/components/cdn_compression.js
+@@ -1,8 +1,18 @@
+-const {requireWithFallback} = require('./helpers.js');
+-
+ const AdmZip = require('adm-zip');
+ const ByteBuffer = require('bytebuffer');
+-const LZMA = requireWithFallback('lzma-native', 'lzma');
++// GameLib patch (Phase 34 Plan 02, D-06): the original
++// `requireWithFallback('lzma-native', 'lzma')` call is a runtime-computed
++// `require(variableName)` -- esbuild cannot statically resolve/bundle it,
++// and Node's Single Executable Application runtime restricts require() to
++// built-in modules only (no node_modules resolution at all, per
++// https://nodejs.org/api/single-executable-applications.html), so this
++// call always threw at sidecar startup once compiled into a self-contained
++// SEA binary. This project never installs the optional `lzma-native`
++// native-addon package (confirmed absent from package.json/node_modules),
++// so the fallback path was ALWAYS the one taken in every real environment
++// (dev, Electron, and Tauri sidecar alike) -- switching to a plain static
++// `require('lzma')` is behavior-identical, just resolvable at build time.
++const LZMA = require('lzma');
+ const StdLib = require('@doctormckay/stdlib');
+ const {ZSTDDecoder} = require('zstddec');
+ 

@@ -1,0 +1,29 @@
+diff --git a/.npmignore b/.npmignore
+deleted file mode 100644
+index c2e58e460fed3577c048b7d61f81cb7808b41e47..0000000000000000000000000000000000000000
+diff --git a/index.js b/index.js
+index 3ddd619efe1dc757dd4141fc086783ffec44a484..51887a0fffc69bb35ac794c5b3774687eb475630 100644
+--- a/index.js
++++ b/index.js
+@@ -4,7 +4,20 @@ var lzma;
+ 
+ function load_lzma()
+ {
+-    return require(require("path").join(__dirname, "src" ,"lzma_worker.js")).LZMA_WORKER;
++    // GameLib patch (Phase 34 Plan 02, D-06): the original
++    // `require(path.join(__dirname, "src", "lzma_worker.js"))` computes its
++    // module specifier at runtime -- esbuild cannot statically resolve or
++    // bundle a computed require(), and Node's Single Executable Application
++    // runtime restricts require() to built-in modules only (no node_modules
++    // / relative-file resolution at all, see
++    // https://nodejs.org/api/single-executable-applications.html). Since
++    // this call runs unconditionally at module load (line 10 below), it
++    // crashed EVERY sidecar startup once bundled into a self-contained SEA
++    // binary. `__dirname` here is always this file's own directory
++    // (node_modules/lzma/), so a static `require("./src/lzma_worker.js")`
++    // resolves to the exact same file -- behavior-identical, just
++    // resolvable (and bundleable) at build time instead of at runtime.
++    return require("./src/lzma_worker.js").LZMA_WORKER;
+ }
+ 
+ lzma = load_lzma();
