@@ -34,12 +34,16 @@ jobs:
         include:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
+            sidecar_triple: 'aarch64-apple-darwin'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
+            sidecar_triple: 'x86_64-apple-darwin'
           - platform: 'ubuntu-24.04'
             args: ''
+            sidecar_triple: 'x86_64-unknown-linux-gnu'
           - platform: 'windows-latest'
             args: ''
+            sidecar_triple: 'x86_64-pc-windows-msvc'
     runs-on: ${{ matrix.platform }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +82,18 @@ jobs:
       # self-contained per-OS executable (Node SEA) BEFORE tauri-action
       # bundles it as an externalBin -- no cross-job artifact hand-off
       # window (T-34-07: sidecar substitution mitigation).
+      #
+      # CR-01: macos-latest runners are Apple-Silicon native, so without an
+      # explicit per-leg triple below the SEA build script (meta/
+      # buildSidecarSea.ts resolveTriple()) would resolve the HOST triple on
+      # both macOS legs -- the `--target x86_64-apple-darwin` leg would then
+      # emit an aarch64-named, aarch64-arch sidecar that tauri-action's
+      # externalBin resolution cannot find/use for the x86_64 bundle. Each
+      # matrix leg's `sidecar_triple` field makes the SEA build
+      # target-driven instead of host-driven via the env var set below.
       - name: Build self-contained sidecar (Node SEA)
+        env:
+          GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}
         run: pnpm build:sidecar-sea
 
       # D-04 explicit skip-warning: macOS's native env-var signing skip is

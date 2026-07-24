@@ -107,3 +107,28 @@ describe('release-tauri.yml never regresses to Heroic', () => {
     expect(source).not.toContain('Heroic')
   })
 })
+
+describe('release-tauri.yml per-leg sidecar target triple (CR-01 regression guard)', () => {
+  test('wires GAMELIB_SIDECAR_TARGET_TRIPLE from matrix.sidecar_triple', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}')
+  })
+
+  test('declares all four target triples across the matrix legs', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain("sidecar_triple: 'aarch64-apple-darwin'")
+    expect(source).toContain("sidecar_triple: 'x86_64-apple-darwin'")
+    expect(source).toContain("sidecar_triple: 'x86_64-unknown-linux-gnu'")
+    expect(source).toContain("sidecar_triple: 'x86_64-pc-windows-msvc'")
+  })
+
+  test('declares exactly four sidecar_triple matrix entries', () => {
+    const source = loadReleaseWorkflow()
+    const matches = source.match(/sidecar_triple: '/g) ?? []
+    expect(matches).toHaveLength(4)
+  })
+
+  test('the SEA build step carries the GAMELIB_SIDECAR_TARGET_TRIPLE env wiring', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(
+      /Build self-contained sidecar \(Node SEA\)[\s\S]*?GAMELIB_SIDECAR_TARGET_TRIPLE/
