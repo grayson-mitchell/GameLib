@@ -101,6 +101,26 @@ jobs:
 
       - uses: ./.github/actions/install-deps
 
+      # GAP-B (34-17, live run 30084918812): both Linux and Windows bundled their
+      # installers successfully and THEN died at updater signing with `failed to
+      # decode secret key: incorrect updater private key password: Wrong password
+      # for that key` -- the Windows leg burned ~13 minutes of Rust build first.
+      # The "Fail fast..." step above only checks TAURI_SIGNING_PRIVATE_KEY is
+      # non-empty; a non-empty key with a mismatched password sails straight
+      # through it. This step actually signs a throwaway probe file with the real
+      # Tauri signer and compares the resulting signature's key id against the
+      # committed src-tauri/tauri.conf.json plugins.updater.pubkey key id -- the
+      # same check a developer can run locally via `pnpm verify:updater-key`
+      # before enrolling secrets. It also catches the quieter failure where the
+      # key decodes but does NOT match the committed pubkey (updates every
+      # installed client would reject). It cannot sit next to the "Fail fast"
+      # step above because it needs node_modules (the Tauri CLI), so it runs here
+      # instead -- still well before the renderer build, the SEA sidecar build,
+      # and tauri-action.
+      - name: Verify the updater signing key and password actually decode
+        shell: bash
+        run: pnpm verify:updater-key
+
       # Mirrors draft-release-mac.yml's step verbatim: seeds public/ with the
       # bundled CrossOver compatibility-index snapshot BEFORE the renderer
       # build below, so the snapshot is bundled into the shipped webview.

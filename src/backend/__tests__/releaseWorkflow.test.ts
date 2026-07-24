@@ -683,6 +683,42 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
     expect(guardBlock).not.toBeNull()
     expect(guardBlock?.[0]).toContain('createUpdaterArtifacts')
   })
+
+  // GAP-B (34-17, live run 30084918812): the presence-only guard above does not
+  // catch a non-empty key with a WRONG password (the actual live failure) or a
+  // key that decodes but does not match the committed pubkey. These tests prove
+  // the decode-and-match preflight (`pnpm verify:updater-key`) is wired in, and
+  // that it runs after dependency install (it needs the Tauri CLI) but before
+  // every expensive build step it exists to protect.
+  test('GAP-B: the workflow runs pnpm verify:updater-key', () => {
+    const stripped = loadStrippedWorkflow()
+    expect(stripped).toContain('run: pnpm verify:updater-key')
+  })
+
+  test('GAP-B: the decode preflight runs after install-deps but before every expensive build step', () => {
+    const stripped = loadStrippedWorkflow()
+    const installDepsIndex = stripped.indexOf('uses: ./.github/actions/install-deps')
+    const preflightIndex = stripped.indexOf('run: pnpm verify:updater-key')
+    expect(installDepsIndex).toBeGreaterThanOrEqual(0)
+    expect(preflightIndex).toBeGreaterThan(installDepsIndex)
+    for (const laterStep of [
+      'run: pnpm exec electron-vite build',
+      'run: pnpm build:sidecar-sea',
+      'uses: tauri-apps/tauri-action'
+    ]) {
+      expect(preflightIndex).toBeLessThan(stripped.indexOf(laterStep))
+    }
+  })
+
+  test('GAP-B: package.json really defines a verify:updater-key script', () => {
+    const packageJson = JSON.parse(
+      readFileSync(join(__dirname, '..', '..', '..', 'package.json'), 'utf-8')
+    ) as { scripts?: Record<string, string> }
+    expect(packageJson.scripts?.['verify:updater-key']).toBeDefined()
+    expect(packageJson.scripts?.['verify:updater-key']).toContain(
+      'meta/verifyUpdaterSigningKey.ts'
+    )
+  })
 })
 
 // 34-REVIEW.md (gap cycle 2) WR-02: GAP-4's "both secrets required" gate never checked
