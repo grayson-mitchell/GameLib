@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 34-16-PLAN.md (GAP-A Apple signing env-gate: unset not empty, 2/2 tasks)
-last_updated: "2026-07-24T11:20:00.000Z"
-last_activity: 2026-07-24 -- Executed 34-16 (GAP-A Apple signing/notarization env vars gated so absent secrets are unset, not defined-and-empty; 8 executed-path RED tests then GREEN); gap cycle 3 continues with 34-17, 34-18
+stopped_at: Completed 34-17-PLAN.md (GAP-B code half: pnpm verify:updater-key decode-and-match preflight, 2/2 tasks)
+last_updated: "2026-07-24T11:35:00.000Z"
+last_activity: 2026-07-24 -- Executed 34-17 (GAP-B code half: added pnpm verify:updater-key, which signs a throwaway probe file with the real Tauri signer and compares the resulting signature's minisign key id against the committed plugins.updater.pubkey, then wired it into release-tauri.yml as a preflight step after install-deps and before all expensive build work); gap cycle 3 continues with 34-18 (the human half -- re-enrolling a matched key/password pair, using this plan's tool as the verification gate)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 50
+  completed_plans: 51
   percent: 60
 ---
 
@@ -34,8 +34,38 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTING
-Plan: 16 of 18 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16 — no 04); gap cycle 3 plans 34-17, 34-18 remain
-Status: **34-16 EXECUTED 2026-07-24** (2/2 tasks, `releaseWorkflow` suite 73/73 green, cross-plan sweep
+Plan: 17 of 18 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16,17 — no 04); gap cycle 3 plan 34-18 remains
+Status: **34-17 EXECUTED 2026-07-24** (2/2 tasks, `updaterSigningKey` suite 8/8 green, `releaseWorkflow`
+  suite 76/76 green, cross-plan sweep
+  `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
+  192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
+  their installers in full and THEN failed at updater signing with `failed to decode secret key:
+  incorrect updater private key password: Wrong password for that key`, ~13 minutes into the Windows
+  leg, because WR-03's existing preflight only asserts `TAURI_SIGNING_PRIVATE_KEY != ''` -- a non-empty
+  key with a mismatched password sails straight through it. Task 1 added `meta/updaterSigningKey.ts`
+  (`verifyUpdaterSigningKeypair()` signs a throwaway probe file with the real Tauri signer, spawned via
+  `require.resolve('@tauri-apps/cli/tauri.js')` + `process.execPath` in argv form -- the proven GAP-2
+  pattern, never a bare `tauri`/pnpm `.bin` path -- and compares the resulting signature's minisign key
+  id against the committed `src-tauri/tauri.conf.json` `plugins.updater.pubkey` key id; discriminated
+  result `ok | missing-key | password-mismatch | sign-failed | pubkey-mismatch | bad-pubkey`, never
+  throws for an expected failure), `meta/verifyUpdaterSigningKey.ts` (thin CLI entry, one `::error::`
+  line per failure kind naming the concrete remedy, only the public key id ever printed on success),
+  and `meta/__tests__/updaterSigningKey.test.ts` (real keypairs generated via `tauri signer generate
+  --ci` in `beforeAll`, no hand-rolled crypto, no checked-in key material) plus the `verify:updater-key`
+  package.json script following the existing meta-script esbuild-pipe-to-node convention exactly. Task 2
+  inserted `Verify the updater signing key and password actually decode` into `release-tauri.yml`
+  immediately after `install-deps` and before the CrossOver-index fetch (needs `node_modules` for the
+  Tauri CLI, so cannot sit next to WR-03's presence-only guard), running on all four matrix legs so a
+  single bad leg cannot let the other three burn their full builds before dying; extended
+  `releaseWorkflow.test.ts`'s WR-03 describe block with 3 tests proving the step exists and is ordered
+  after `install-deps` and before `electron-vite build`/`build:sidecar-sea`/`tauri-action`. Exact
+  `pnpm verify:updater-key` invocation/output for both the matched and wrong-password cases recorded
+  verbatim in `34-17-SUMMARY.md` (34-18 hands this command to a human as a blocking gate). No
+  deviations -- the plan's `<interfaces>` MECHANISM facts (minisign layout, key-id byte offsets,
+  the exact `Wrong password for that key` stderr string) were independently re-verified empirically
+  before writing code and matched exactly. See `34-17-SUMMARY.md`. **34-18 remains** -- the human half
+  of GAP-B (re-enrolling a matched key/password pair), which depends on the tool this plan built.
+  Prior context — **34-16 EXECUTED 2026-07-24** (2/2 tasks, `releaseWorkflow` suite 73/73 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|electronUntouched` 129/129 green): closed GAP-A -- both
   macOS legs of live run 30084918812 failed on `security import: failed to import keychain
   certificate` even though NO Apple cert secret was enrolled, because the job-level `env:` block
@@ -225,7 +255,22 @@ Status: **34-16 EXECUTED 2026-07-24** (2/2 tasks, `releaseWorkflow` suite 73/73 
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-16 (GAP-A Apple signing env-gate closure)
+Last activity: 2026-07-24 -- Executed 34-17 (GAP-B code half: pnpm verify:updater-key decode-and-match preflight)
+
+> **Plan-counter note (2026-07-24, post-34-17 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:` prose block, and revert `total_plans`/`completed_plans`),
+> those verbs were **deliberately not run** this time either. Frontmatter (`status`,
+> `stopped_at`, `last_updated`, `last_activity`, `progress.completed_plans` 50 -> 51) and the
+> body `Plan:`/`Status:`/`Last activity:` fields were written by hand against the phase
+> directory and this session's own commits: `e2653759` (feat, Task 1) and `c5722ed8` (feat,
+> Task 2), plus `34-17-SUMMARY.md` now on disk. `total_plans: 56` is unchanged (34-17 was
+> already counted in the gap-cycle-3 plan total); `percent: 60` is phase-based (3 of 5 completed
+> phases), unchanged -- Phase 34 itself is not yet marked complete pending 34-18 and
+> re-verification. `REQUIREMENTS.md` was checked directly: REQ-34-05/REQ-34-06 were already
+> `[x]` from earlier plans, and REQ-34-09 correctly remains `[ ]` (it is the Manual-Only live
+> tag-push gate; this plan only provides its code-side mitigation, not the live proof itself) --
+> `requirements mark-complete` was therefore not run, as there is nothing new to mark.
 
 > **Plan-counter note (2026-07-24, post-34-16 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
