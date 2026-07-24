@@ -187,7 +187,7 @@ function spawnArgv(
 }
 
 /** Matches the plan's verify-command host-triple resolution exactly. */
-function hostTriple(): string {
+export function hostTriple(): string {
   if (process.platform === 'win32') {
     return 'x86_64-pc-windows-msvc'
   }
@@ -197,6 +197,116 @@ function hostTriple(): string {
       : 'x86_64-apple-darwin'
   }
   return 'x86_64-unknown-linux-gnu'
+}
+
+/**
+ * CR-01 fix: the sidecar's output triple must be driven by the build
+ * TARGET, not by `process.arch`/`process.platform` of the machine running
+ * this script. Before this fix, both `macos-latest` matrix legs (which are
+ * Apple-Silicon-native runners) called `hostTriple()` directly and always
+ * produced `aarch64-apple-darwin`, so the `--target x86_64-apple-darwin`
+ * leg either failed to resolve its Tauri `externalBin` or shipped arm64
+ * bytes mislabeled as x86_64.
+ *
+ * `GAMELIB_SIDECAR_TARGET_TRIPLE` is set per matrix leg by
+ * `.github/workflows/release-tauri.yml` (34-11); when it is unset (local
+ * `tauri dev` / a bare `pnpm build:sidecar-sea`) this falls back to
+ * `hostTriple()`, so the native/dev path is unaffected. GitHub Actions
+ * renders an unset matrix field as the empty string, so `''` is also
+ * treated as unset.
+ */
+export function resolveTriple(env: NodeJS.ProcessEnv = process.env): string {
+  const override = env.GAMELIB_SIDECAR_TARGET_TRIPLE
+  if (typeof override === 'string' && override.length > 0) {
+    return override
+  }
+  return hostTriple()
+}
+
+/**
+ * Maps a target triple to the platform value `buildPostjectArgv`/
+ * `buildCodesignArgv` expect. Exists because `injectBlob()` previously
+ * derived this from the HOST platform (`process.platform`) rather than the
+ * TARGET triple -- the same host-vs-target bug family as CR-01.
+ */
+export function triplePlatform(triple: string): NodeJS.Platform {
+  if (triple.endsWith('-apple-darwin')) {
+    return 'darwin'
+  }
+  if (triple.includes('-windows-')) {
+    return 'win32'
+  }
+  if (triple.includes('-linux-')) {
+    return 'linux'
+  }
+  throw new Error(`unsupported sidecar target triple: ${triple}`)
+}
+
+/**
+ * Expected `lipo -archs` output for a darwin target triple -- the arch
+ * gate (`verifyBinaryArch()`) is darwin-only by design, so this throws for
+ * any non-darwin triple.
+ */
+export function expectedMachoArch(triple: string): string {
+  if (triple === 'aarch64-apple-darwin') {
+    return 'arm64'
+  }
+  if (triple === 'x86_64-apple-darwin') {
+    return 'x86_64'
+  }
+  throw new Error(`unsupported sidecar target triple: ${triple}`)
+}
+
+/** Maps a Rust target triple to Node's dist platform-arch segment. */
+export function nodeDistName(triple: string): string {
+  switch (triple) {
+    case 'aarch64-apple-darwin':
+      return 'darwin-arm64'
+    case 'x86_64-apple-darwin':
+      return 'darwin-x64'
+    case 'x86_64-unknown-linux-gnu':
+      return 'linux-x64'
+    case 'aarch64-unknown-linux-gnu':
+      return 'linux-arm64'
+    case 'x86_64-pc-windows-msvc':
+      return 'win-x64'
+    default:
+      throw new Error(`unsupported sidecar target triple: ${triple}`)
+  }
+}
+
+/**
+ * Resolves the official nodejs.org dist archive/checksum/inner-binary
+ * locations for a target triple. `version` defaults to `process.version`
+ * (already `v`-prefixed) -- the base binary MUST match the Node version
+ * generating the SEA blob, so callers should not override this in
+ * production code (only tests pin an explicit version).
+ *
+ * `innerBinaryPath` is an archive-internal member path handed to `tar`,
+ * not a host filesystem path -- built with forward slashes verbatim, never
+ * `path.join`.
+ */
+export function nodeDistUrls(
+  triple: string,
+  version: string = process.version
+): {
+  archiveName: string
+  archiveUrl: string
+  shasumsUrl: string
+  innerBinaryPath: string
+} {
+  if (!version.startsWith('v')) {
+    throw new Error(`nodeDistUrls: version must be v-prefixed, got "${version}"`)
+  }
+  const dist = nodeDistName(triple)
+  const isWindows = dist.startsWith('win-')
+  const archiveName = `node-${version}-${dist}.${isWindows ? 'zip' : 'tar.gz'}`
+  const archiveUrl = `https://nodejs.org/dist/${version}/${archiveName}`
+  const shasumsUrl = `https://nodejs.org/dist/${version}/SHASUMS256.txt`
+  const innerBinaryPath = isWindows
+    ? `node-${version}-${dist}/node.exe`
+    : `node-${version}-${dist}/bin/node`
+  return { archiveName, archiveUrl, shasumsUrl, innerBinaryPath }
 }
 
 async function writeSeaConfig(): Promise<void> {
