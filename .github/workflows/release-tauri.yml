@@ -111,8 +111,13 @@ jobs:
         run: echo "::warning::Signing skipped — no Windows cert secret set; shipping unsigned artifact"
 
       # Windows signing config lives as a static tauri.conf.json field, not
-      # an env-var gate (Pattern 2) -- import the cert ONLY when present, and
-      # ONLY in-memory (never written to a cached/persisted artifact, T-34-05).
+      # an env-var gate (Pattern 2). T-34-05: the cert is decoded from a
+      # GitHub secret and written to cert.pfx in the runner workspace --
+      # Import-PfxCertificate requires a file path, so there is no
+      # in-memory-only import. cert.pfx exists on disk only for the
+      # duration of the import; the finally block below removes it
+      # immediately afterward, including when the import itself throws, so
+      # no retried/continued job step can find it left behind.
       - name: Import Windows signing certificate (if present)
         if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
@@ -120,7 +125,11 @@ jobs:
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
           Set-Content -Path cert.pfx -Value $bytes -AsByteStream
           $securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
-          Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+          try {
+            Import-PfxCertificate -FilePath cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+          } finally {
+            Remove-Item -Path cert.pfx -Force -ErrorAction SilentlyContinue
+          }
 
       # tauri.conf.json never declares certificateThumbprint (D-04 anti-
       # pattern guard -- a committed thumbprint would FAIL a secrets-less

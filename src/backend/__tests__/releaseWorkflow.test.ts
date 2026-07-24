@@ -132,3 +132,34 @@ describe('release-tauri.yml per-leg sidecar target triple (CR-01 regression guar
     const source = loadReleaseWorkflow()
     expect(source).toMatch(
       /Build self-contained sidecar \(Node SEA\)[\s\S]*?GAMELIB_SIDECAR_TARGET_TRIPLE/
+    )
+  })
+})
+
+describe('release-tauri.yml Windows cert material cleanup (WR-02 regression guard)', () => {
+  test('removes cert.pfx with -Force after import', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('Remove-Item -Path cert.pfx -Force')
+  })
+
+  test('the removal always follows the Import-PfxCertificate call', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(/Import-PfxCertificate[\s\S]*?Remove-Item -Path cert\.pfx -Force/)
+  })
+
+  test('the removal sits in a finally block', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('finally {')
+  })
+
+  test('no longer contains the inaccurate "ONLY in-memory" claim', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).not.toContain('ONLY in-memory')
+  })
+
+  test('has no upload-artifact or cache step that could exfiltrate the workspace (and its cert.pfx)', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).not.toContain('actions/upload-artifact')
+    expect(source).not.toContain('actions/cache')
+  })
+})
