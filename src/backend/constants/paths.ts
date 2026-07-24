@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { existsSync, mkdirSync, renameSync } from 'graceful-fs'
 import { homedir } from 'os'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import { env } from 'process'
 import { dirSync } from 'tmp'
 import { isSnap } from './environment'
