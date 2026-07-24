@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Completed 34-08-PLAN.md (CR-01 cross-arch sidecar triple fix, 3/3 tasks)
-last_updated: "2026-07-24T07:10:56.336Z"
-last_activity: 2026-07-24 -- Executed 34-08 (CR-01 gap closure)
+stopped_at: Completed 34-09-PLAN.md (CR-02 Windows icon.ico gap closure, 2/2 tasks)
+last_updated: "2026-07-24T07:24:42.634Z"
+last_activity: 2026-07-24 -- Executed 34-09 (CR-02 gap closure)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -34,8 +34,16 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 7 of 10 executed (34-01,02,03,05,06,07,08 executed — no 04; 34-09,10,11 remain)
+Plan: 8 of 10 executed (34-01,02,03,05,06,07,08,09 executed — no 04; 34-10,11 remain)
 Status: Executing Phase 34 gap-closure cycle
+  **34-09 executed 2026-07-24** (2/2 tasks, `tauriConf` suite 12/12 green): closed CR-02 -- committed
+  a real Windows `icons/icon.ico` generated via `tauri icon public/icon.png -o <scratch>` (copying
+  only `icon.ico` into place; a fresh regen was confirmed byte-different for `icon.icns`, validating
+  the scratch-dir-then-copy-only approach), wired it into `bundle.icon` in `tauri.conf.json` after
+  `icons/icon.icns`, and added a 4-test regression block to `tauriConf.test.ts` (array-contains,
+  nsis-implies-.ico invariant, existsSync guard over every `bundle.icon` path, ICO magic-byte check
+  that rejects a renamed-PNG substitute). RED-then-GREEN sequence followed the 34-01 Wave-0
+  convention. See `34-09-SUMMARY.md`.
   **34-08 executed 2026-07-24** (3/3 tasks, unit-tested 26/26 passing, empirically hardware-proven
   on this arm64 Mac): closed CR-01 -- `meta/buildSidecarSea.ts` now resolves its output triple via
   `resolveTriple()`/`GAMELIB_SIDECAR_TARGET_TRIPLE` (falls back to `hostTriple()`), sources a
@@ -44,22 +52,30 @@ Status: Executing Phase 34 gap-closure cycle
   (`verifyBinaryArch()`, T-34-14) before it can ship. `x86_64-apple-darwin` override run produced a
   genuinely `x86_64` binary; the no-override native run still produced `arm64` -- unregressed. See
   `34-08-SUMMARY.md` for verbatim `lipo -archs` evidence.
-  Remaining gap plans **34-09..34-11** close CR-02 (no `icon.ico` despite `nsis` being an active
-  bundle target), WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY` override), WR-02 (`cert.pfx` left
-  on disk), and WR-03 (sidecar orphaned on app exit) -- and 34-11 must wire
-  `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml` for 34-08's
-  fix to take effect in CI. User scope decisions this cycle: WR-04 (null CSP / `withGlobalTauri` /
-  broad `opener:default`) and IN-01 (loose `system.pem` match) are DEFERRED as tracked debt,
-  recorded in the phase's `deferred-items.md`.
+  Remaining gap plans **34-10..34-11** close WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY`
+  override), WR-02 (`cert.pfx` left on disk), and WR-03 (sidecar orphaned on app exit) -- and 34-11
+  must wire `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml`
+  for 34-08's fix to take effect in CI. User scope decisions this cycle: WR-04 (null CSP /
+  `withGlobalTauri` / broad `opener:default`) and IN-01 (loose `system.pem` match) are DEFERRED as
+  tracked debt, recorded in the phase's `deferred-items.md`.
   **Live gate (unchanged).** 34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live
   proof, REQ-34-09) was deferred by explicit user decision. Full repro steps recorded verbatim in
   34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm all 4
   matrix legs green + graceful signing-skip, confirm draft+prerelease Release with artifacts +
   latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while draft, then clean
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
-  happens. Next: execute 34-09..34-11, THEN run the live gate -- CR-02 (icon.ico) would still fail
-  the Windows leg of that run until 34-09/10/11 land.
-Last activity: 2026-07-24 -- Executed 34-08 (CR-01 gap closure)
+  happens. Next: execute 34-10..34-11, THEN run the live gate -- CR-02 (icon.ico) is now closed and
+  will no longer fail the Windows leg of that run.
+Last activity: 2026-07-24 -- Executed 34-09 (CR-02 gap closure)
+
+> **Plan-counter note (2026-07-24, corrected again post-34-09):** the automated
+> `state.advance-plan` verb, run immediately after 34-09's execution, bumped this file from
+> "Plan: 7 of 10" to "Plan: 8 of 10" -- coincidentally correct as a bare number this time, but
+> it also silently reverted `stopped_at:` (frontmatter) to the stale "Completed 34-05-PLAN.md"
+> value and replaced the multi-line `Status:` body with a bare "Ready to execute", same failure
+> mode documented in the note below. Both repaired by hand against the phase directory
+> (34-01..34-03/05/06/07/08/09 all have SUMMARY.md on disk; 34-10/11 do not). Same precedent as
+> every plan-counter note below it -- do not trust this verb's blind field writes on this file.
 
 > **Plan-counter note (2026-07-24, corrected again post-34-08):** the automated
 > `state.advance-plan` verb, run immediately after 34-08's execution, bumped this file from
@@ -335,6 +351,7 @@ Closed/parked native-install phases:
 | Phase 34 P05 | 10min | 2 tasks | 3 files |
 | Phase 34 P06 | ~15min | 1 tasks | 1 files |
 | Phase 34 P08 | 15min | 3 tasks | 2 files |
+| Phase 34 P09 | 8min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -551,6 +568,7 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-05: Task 3 (npm run tauri:dev / npm start both-launch human-verify) deferred by user decision — REQ-34-08 additive/reversible invariant not yet runtime-proven; carry forward as pending human-UAT
 - [Phase 34]: 34-06: Windows --config signing override computed via a bash step (id: build_args -> GITHUB_OUTPUT) rather than an inline nested-brace GHA expression ternary, avoiding brace-escaping ambiguity while preserving D-04's secrets-less-run-ships-unsigned default.
 - [Phase 34]: CR-01 fixed via GAMELIB_SIDECAR_TARGET_TRIPLE override + checksum-verified official nodejs.org Node binary for cross-arch builds (GAP-D-02); Intel Mac support kept, Rosetta/dropping the leg rejected
+- [Phase 34]: Confirmed via cmp that tauri icon regen is byte-identical for PNGs but byte-different for icon.icns -- validates the scratch-dir-then-copy-only-icon.ico approach as necessary
 
 ### Pending Todos
 
@@ -620,7 +638,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T07:09:59.394Z
+Last session: 2026-07-24T07:16:38.655Z
 Stopped at: Completed 34-05-PLAN.md (Tasks 1-2 done; Task 3 human-verify deferred by user)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
