@@ -252,7 +252,7 @@ export function buildPostjectArgv(
  * branches are now asserted unconditionally by the test suite.
  */
 export function buildEsbuildArgv(
-  platform: NodeJS.Platform | string = process.platform
+  platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
   const esbuildCli = resolveEsbuildCli()
   const flags = [

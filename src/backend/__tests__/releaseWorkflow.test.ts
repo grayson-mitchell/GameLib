@@ -670,12 +670,11 @@ describe('release-tauri.yml updater signing key preflight (WR-03 regression guar
       return
     }
     const stripped = loadStrippedWorkflow()
-    const guardBlock = (
-      stripped.match(/if: env\.TAURI_SIGNING_PRIVATE_KEY == ''[\s\S]*?exit 1/) as
-        | RegExpMatchArray
-        | null
-    )?.[0] as string
-    expect(guardBlock).toContain('createUpdaterArtifacts')
+    const guardBlock = stripped.match(
+      /if: env\.TAURI_SIGNING_PRIVATE_KEY == ''[\s\S]*?exit 1/
+    )
+    expect(guardBlock).not.toBeNull()
+    expect(guardBlock?.[0]).toContain('createUpdaterArtifacts')
   })
 })
 
