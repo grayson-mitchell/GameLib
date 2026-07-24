@@ -303,7 +303,17 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
 const GH_STUB = `#!/usr/bin/env bash
 set -u
 echo "$*" >> gh-calls.log
-if [ "\${1:-}" = "release" ] && [ "\${2:-}" = "view" ]; then
+CMD="\${1:-}"
+SUB="\${2:-}"
+ARG="\${3:-}"
+DIR="."
+while [ $# -gt 0 ]; do
+  if [ "$1" = "--dir" ]; then
+    DIR="\${2:-.}"
+  fi
+  shift
+done
+if [ "$CMD" = "release" ] && [ "$SUB" = "view" ]; then
   if [ "\${GH_STUB_VIEW_STATUS:-0}" != "0" ]; then
     echo "gh: could not reach the API" >&2
     exit "\${GH_STUB_VIEW_STATUS}"
@@ -311,15 +321,27 @@ if [ "\${1:-}" = "release" ] && [ "\${2:-}" = "view" ]; then
   printf '%s' "\${GH_STUB_ASSETS:-}"
   exit 0
 fi
-if [ "\${1:-}" = "release" ] && [ "\${2:-}" = "download" ]; then
+if [ "$CMD" = "release" ] && [ "$SUB" = "download" ]; then
+  if [ "$ARG" = "updater" ]; then
+    if [ -z "\${GH_STUB_CURRENT_MANIFEST:-}" ]; then
+      echo "release not found" >&2
+      exit 1
+    fi
+    mkdir -p "$DIR"
+    printf '%s' "$GH_STUB_CURRENT_MANIFEST" > "$DIR/latest.json"
+    exit 0
+  fi
   if [ "\${GH_STUB_DOWNLOAD_STATUS:-0}" != "0" ]; then
     exit "\${GH_STUB_DOWNLOAD_STATUS}"
   fi
-  mkdir -p feed
-  printf '%s' "\${GH_STUB_MANIFEST:-{}}" > feed/latest.json
+  mkdir -p "$DIR"
+  printf '%s' "\${GH_STUB_MANIFEST:-{}}" > "$DIR/latest.json"
   exit 0
 fi
-echo "unexpected gh invocation: $*" >&2
+if [ "$CMD" = "release" ] && [ "$SUB" = "upload" ]; then
+  exit 0
+fi
+echo "unexpected gh invocation" >&2
 exit 99
 `
 
@@ -422,5 +444,147 @@ describeOnPosix('promote-updater-feed.yml download step, executed (WR-07 regress
     })
     expect(result.status).not.toBe(0)
     expect(result.outputs).not.toContain('found=true')
+  })
+})
+
+/**
+ * 34-REVIEW.md (gap cycle 2) WR-08: the promotion's only guard was the `v*` tag prefix.
+ * Since release-tauri.yml creates DRAFT releases held for human review (D-09), drafts
+ * accumulate and can be published out of order -- each publish unconditionally clobbered
+ * the feed, so an older manifest could silently replace a newer one (tauri-plugin-updater
+ * refuses to INSTALL a downgrade, so nothing alarms; the feed just stops advertising the
+ * newest build). Nothing checked that the promoted manifest's own version matched the tag
+ * it came from either.
+ */
+const PUBLISH_STEP_NAME = 'Publish the manifest to the stable feed location'
+
+describeOnPosix('promote-updater-feed.yml publish step, executed (WR-08 regression guard)', () => {
+  let workdir: string
+  let binDir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-publish-'))
+    binDir = join(workdir, 'stub-bin')
+    mkdirSync(binDir, { recursive: true })
+    writeStubExecutable(binDir, 'gh', GH_STUB)
+    mkdirSync(join(workdir, 'feed'), { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  function runPublishStep(options: {
+    newVersion: string | null
+    currentVersion?: string
+    tag?: string
+  }): {
+    status: number | null
+    stdout: string
+    outputs: string
+    uploaded: boolean
+  } {
+    const tag = options.tag ?? `v${options.newVersion ?? '0.0.0'}`
+    writeFileSync(
+      join(workdir, 'feed', 'latest.json'),
+      JSON.stringify(
+        options.newVersion === null ? { notes: 'no version here' } : { version: options.newVersion }
+      )
+    )
+    const script = substituteExpressions(
+      extractRunBlock(
+        readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8'),
+        PUBLISH_STEP_NAME
+      ),
+      { 'github.event.release.tag_name': tag }
+    )
+    const outputPath = join(workdir, 'github-output')
+    writeFileSync(outputPath, '')
+    const env: Record<string, string> = {
+      GITHUB_OUTPUT: outputPath,
+      TAG: tag,
+      PATH: `${binDir}:${process.env.PATH ?? ''}`
+    }
+    if (options.currentVersion !== undefined) {
+      env.GH_STUB_CURRENT_MANIFEST = JSON.stringify({
+        version: options.currentVersion
+      })
+    }
+    const result = runStepScript(script, workdir, env)
+    const ghCallsPath = join(workdir, 'gh-calls.log')
+    const ghCalls = existsSync(ghCallsPath)
+      ? readFileSync(ghCallsPath, 'utf-8')
+      : ''
+    return {
+      status: result.status,
+      stdout: result.stdout,
+      outputs: readFileSync(outputPath, 'utf-8'),
+      uploaded: ghCalls.includes('release upload updater')
+    }
+  }
+
+  test('a newer manifest is promoted over the current feed version', () => {
+    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.6.0' })
+    expect(result.status).toBe(0)
+    expect(result.uploaded).toBe(true)
+    expect(result.outputs).toContain('promoted=true')
+  })
+
+  test('WR-08: an OLDER manifest is refused, leaving the newer feed in place', () => {
+    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.8.0' })
+    expect(result.status).toBe(0)
+    expect(result.uploaded).toBe(false)
+    expect(result.outputs).toContain('promoted=false')
+    expect(result.stdout).toContain('::warning::')
+  })
+
+  test('WR-08: version ordering is semantic, not lexicographic (0.10.0 beats 0.9.0)', () => {
+    const older = runPublishStep({ newVersion: '0.9.0', currentVersion: '0.10.0' })
+    expect(older.uploaded).toBe(false)
+
+    const newer = runPublishStep({ newVersion: '0.10.0', currentVersion: '0.9.0' })
+    expect(newer.uploaded).toBe(true)
+  })
+
+  test('the first ever promotion (no feed-holder release yet) uploads unconditionally', () => {
+    const result = runPublishStep({ newVersion: '0.7.0' })
+    expect(result.status).toBe(0)
+    expect(result.uploaded).toBe(true)
+    expect(result.outputs).toContain('promoted=true')
+  })
+
+  test('re-promoting the SAME version is allowed (byte-identical, idempotent clobber)', () => {
+    const result = runPublishStep({ newVersion: '0.7.0', currentVersion: '0.7.0' })
+    expect(result.status).toBe(0)
+    expect(result.uploaded).toBe(true)
+  })
+
+  test('WR-08: a manifest whose version does not match the published tag is flagged', () => {
+    const result = runPublishStep({
+      newVersion: '0.6.0',
+      currentVersion: '0.5.0',
+      tag: 'v0.7.0'
+    })
+    expect(result.stdout).toContain('::warning::')
+    expect(result.stdout).toContain('0.6.0')
+    // Still promoted -- a prerelease tag legitimately differs from the version.
+    expect(result.uploaded).toBe(true)
+  })
+
+  test('a matching tag/version pair promotes without any warning', () => {
+    const result = runPublishStep({
+      newVersion: '0.7.0',
+      currentVersion: '0.6.0',
+      tag: 'v0.7.0'
+    })
+    expect(result.stdout).not.toContain('::warning::')
+    expect(result.uploaded).toBe(true)
+  })
+
+  test('a manifest with no version field is refused rather than promoted blind', () => {
+    const result = runPublishStep({ newVersion: null, currentVersion: '0.6.0' })
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+    expect(result.uploaded).toBe(false)
   })
 })

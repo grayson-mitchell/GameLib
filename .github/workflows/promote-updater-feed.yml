@@ -124,8 +124,50 @@ jobs:
       # tauri.conf.json. This workflow declares no updater-signing secret
       # anywhere above and must never gain a jq/sed/redirect step that
       # rewrites the file -- doing so would invalidate every signature it
-      # carries.
+      # carries. The `node -e` reads below only PARSE the manifest's version
+      # field; nothing here ever writes to feed/latest.json.
+      #
+      # WR-08 (gap cycle 2 review): the only guard used to be the tag_name
+      # `v*` prefix check. Because release-tauri.yml creates DRAFT releases
+      # held for human review (D-09), several unpublished drafts routinely
+      # accumulate -- and publishing them out of order, or publishing a
+      # hotfix branch's older tag after a newer one, unconditionally
+      # clobbered the feed with an older manifest. tauri-plugin-updater will
+      # not INSTALL a downgrade, so the visible symptom is silent: the feed
+      # simply stops advertising the newest build until somebody notices and
+      # re-publishes. There was also no check that the promoted manifest's
+      # own version matches the tag it came from, so a stale latest.json left
+      # on a release by a retried run was promoted verbatim.
+      #
+      # A same-version re-promotion is deliberately ALLOWED (the upload is a
+      # byte-identical --clobber, so re-running after a partial upload is
+      # safe); only a strict downgrade is refused. The tag/version mismatch
+      # is a WARNING rather than a hard failure because a prerelease tag
+      # (v0.7.0-rc1) legitimately differs from tauri.conf.json's version.
       - name: Publish the manifest to the stable feed location
+        id: publish
         if: steps.download.outputs.found == 'true'
         shell: bash
-        run: gh release upload updater feed/latest.json --clobber
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          NEW=$(node -e "process.stdout.write(String(require('./feed/latest.json').version || ''))")
+          if [ -z "$NEW" ]; then
+            echo "::error::feed/latest.json declares no version -- refusing to promote an unrecognisable manifest"
+            exit 1
+          fi
+          if [ "$NEW" != "${TAG#v}" ]; then
+            echo "::warning::the manifest promoted from $TAG declares version $NEW; check this is not a stale asset from a retried run"
+          fi
+          mkdir -p current
+          if gh release download updater --pattern 'latest.json' --dir current --clobber 2>/dev/null; then
+            CUR=$(node -e "process.stdout.write(String(require('./current/latest.json').version || ''))")
+            NEWEST=$(printf '%s\n%s\n' "$CUR" "$NEW" | sort -V | tail -1)
+            if [ -n "$CUR" ] && [ "$CUR" != "$NEW" ] && [ "$NEWEST" != "$NEW" ]; then
+              echo "::warning::Refusing to promote $NEW over the newer feed version $CUR"
+              echo "promoted=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          gh release upload updater feed/latest.json --clobber
+          echo "promoted=true" >> "$GITHUB_OUTPUT"
