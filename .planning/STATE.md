@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing
-stopped_at: Completed 34-10-PLAN.md (WR-01/WR-03 sidecar hardening gap closure, 3/3 tasks)
-last_updated: "2026-07-24T07:34:39.543Z"
-last_activity: 2026-07-24
+status: All gap-closure plans (34-08..34-11) executed; only 34-07's deferred live tag-push
+stopped_at: Completed 34-11-PLAN.md (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked-debt recording, 3/3 tasks)
+last_updated: "2026-07-24T07:44:41.380Z"
+last_activity: 2026-07-24 -- Executed 34-11 (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked debt)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -33,9 +33,26 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 10 of 10 executed (34-01,02,03,05,06,07,08,09,10 executed — no 04; 34-11 remains)
-Status: Executing Phase 34 gap-closure cycle
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — CODE-COMPLETE
+Plan: 10 of 10 executed (34-01,02,03,05,06,07,08,09,10,11 executed — no 04)
+Status: All gap-closure plans (34-08..34-11) executed; only 34-07's deferred live tag-push
+  gate remains before the phase can be marked fully complete.
+  **34-11 executed 2026-07-24** (3/3 tasks, `releaseWorkflow` suite 22/22 green, cross-plan
+  regression sweep `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource`
+  74/74 green): closed the CI half of CR-01 -- every `release-tauri.yml` matrix leg now
+  declares an explicit `sidecar_triple` literal, passed to the `Build self-contained sidecar
+  (Node SEA)` step as `GAMELIB_SIDECAR_TARGET_TRIPLE`, so 34-08's `resolveTriple()`/
+  `lipo -archs` gate now actually receives a per-leg target instead of always resolving the
+  host triple -- the `x86_64-apple-darwin` leg on an Apple-Silicon `macos-latest` runner will
+  build a genuine x86_64 sidecar. Also closed all of WR-02 -- the Windows signing cert import
+  step now wraps `Import-PfxCertificate` in `try/finally` with `Remove-Item -Path cert.pfx
+  -Force -ErrorAction SilentlyContinue`, so `cert.pfx` is deleted from the runner workspace
+  even on a failed import, and the step's comment no longer claims the false "ONLY in-memory"
+  handling. `deferred-items.md` gained WR-04 (null CSP / `withGlobalTauri` / broad
+  `opener:default`) and IN-01 (`sidecarSeaFsShim.ts` loose `system.pem` match) as tracked debt
+  per user decision GAP-D-01 -- both explicitly out of scope for this gap cycle -- plus a
+  close-out note naming 34-07's deferred live gate as the sole remaining phase item. See
+  `34-11-SUMMARY.md`.
   **34-10 executed 2026-07-24** (3/3 tasks, `tauriShellSource` suite 8/8 green, full Wave-0
   verification set 65/65 green): closed WR-01 -- `use_dev_sidecar()` now reduces to
   `cfg!(debug_assertions)` alone (the `GAMELIB_SIDECAR_ENTRY`-env-var-or-debug-build expression
@@ -53,8 +70,7 @@ Status: Executing Phase 34 gap-closure cycle
   criteria were mutually exclusive as literally written (blanket `_child` substring ban vs. a
   required `fn shutdown_child`) -- resolved by narrowing the test to the actual stale pattern
   (`_child: Mutex<Child>`) rather than renaming the plan-mandated method. See `34-10-SUMMARY.md`.
-  Remaining: **34-11** (WR-02 `cert.pfx` left on disk + wiring
-  `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml`).
+  (WR-01/WR-03 closure superseded by 34-11's closure of CR-01's CI half and WR-02, above.)
   **34-09 executed 2026-07-24** (2/2 tasks, `tauriConf` suite 12/12 green): closed CR-02 -- committed
   a real Windows `icons/icon.ico` generated via `tauri icon public/icon.png -o <scratch>` (copying
   only `icon.ico` into place; a fresh regen was confirmed byte-different for `icon.icns`, validating
@@ -71,21 +87,39 @@ Status: Executing Phase 34 gap-closure cycle
   (`verifyBinaryArch()`, T-34-14) before it can ship. `x86_64-apple-darwin` override run produced a
   genuinely `x86_64` binary; the no-override native run still produced `arm64` -- unregressed. See
   `34-08-SUMMARY.md` for verbatim `lipo -archs` evidence.
-  Remaining gap plans **34-10..34-11** close WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY`
-  override), WR-02 (`cert.pfx` left on disk), and WR-03 (sidecar orphaned on app exit) -- and 34-11
-  must wire `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml`
-  for 34-08's fix to take effect in CI. User scope decisions this cycle: WR-04 (null CSP /
-  `withGlobalTauri` / broad `opener:default`) and IN-01 (loose `system.pem` match) are DEFERRED as
-  tracked debt, recorded in the phase's `deferred-items.md`.
+  Gap plans **34-10** (WR-01, WR-03) and **34-11** (CR-01 CI half, WR-02) are now both executed --
+  all four gap-closure findings from the code review are closed in code. User scope decisions this
+  cycle: WR-04 (null CSP / `withGlobalTauri` / broad `opener:default`) and IN-01 (loose
+  `system.pem` match) are DEFERRED as tracked debt, recorded in the phase's `deferred-items.md`
+  (WR-04/IN-01 entries added by 34-11).
   **Live gate (unchanged).** 34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live
   proof, REQ-34-09) was deferred by explicit user decision. Full repro steps recorded verbatim in
   34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm all 4
   matrix legs green + graceful signing-skip, confirm draft+prerelease Release with artifacts +
   latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while draft, then clean
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
-  happens. Next: execute 34-11, THEN run the live gate -- CR-02 (icon.ico) is now closed and
-  will no longer fail the Windows leg of that run.
-Last activity: 2026-07-24 -- Executed 34-10 (WR-01/WR-03 gap closure)
+  happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
+  (cert cleanup) are all now closed and will no longer fail that run.
+Last activity: 2026-07-24 -- Executed 34-11 (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked debt)
+
+> **Plan-counter note (2026-07-24, corrected again post-34-11):** `gsd-sdk query
+> state.advance-plan`, run immediately after 34-11's execution, returned
+> `{advanced:false, reason:"last_plan", current_plan:10, total_plans:10,
+> status:"ready_for_verification"}` without writing anything -- harmless this time (34-11 is
+> genuinely this phase's last plan). `gsd-sdk query state.update-progress` was NOT harmless: it
+> reverted `status:` (frontmatter) from `executing` to `verifying`, reverted `stopped_at:`
+> (frontmatter) back to the stale "Completed 34-05-PLAN.md" value, replaced the multi-line
+> `Status:` body with "Phase complete — ready for verification", dropped the
+> "-- Executed 34-10 (WR-01/WR-03 gap closure)" suffix from `Last activity:`, and -- most
+> damaging -- spliced its own `[█████████░] 88%` progress-bar string into the MIDDLE of the
+> prior plan-counter note's prose (between "the handler expects a `**Progress:**`" and "or
+> `Progress:` body line"), corrupting that note's sentence. The entire automated write was
+> discarded via `git checkout -- .planning/STATE.md` (a targeted single-file revert, not a
+> blanket reset) and every field above was corrected by hand against the phase directory
+> (34-01..34-03/05/06/07/08/09/10/11 all have SUMMARY.md on disk; no 34-04). Same precedent as
+> every plan-counter note below it -- do not trust `state.*` verbs' blind field writes on this
+> file, and specifically do not trust `state.update-progress` not to mangle unrelated prose
+> elsewhere in the file.
 
 > **Plan-counter note (2026-07-24, corrected again post-34-10):** the automated
 > `state.advance-plan` verb, run immediately after 34-10's execution, bumped this file from
@@ -603,6 +637,7 @@ Recent decisions affecting current work:
 - [Phase 34]: CR-01 fixed via GAMELIB_SIDECAR_TARGET_TRIPLE override + checksum-verified official nodejs.org Node binary for cross-arch builds (GAP-D-02); Intel Mac support kept, Rosetta/dropping the leg rejected
 - [Phase 34]: Confirmed via cmp that tauri icon regen is byte-identical for PNGs but byte-different for icon.icns -- validates the scratch-dir-then-copy-only-icon.ico approach as necessary
 - [Phase 34]: 34-10: kept shutdown_child method name per plan's explicit Task 3 instruction; narrowed Task 1's over-broad test assertion instead, resolving a plan-internal contradiction (blanket _child substring check vs. required fn shutdown_child)
+- [Phase 34]: 34-11: Used explicit per-leg sidecar_triple matrix literals over inline GHA ternary; try/finally cert.pfx cleanup; WR-04/IN-01 deferred per GAP-D-01 — Literal matrix fields match 34-06's build_args precedent and are directly test-assertable; try/finally covers the failed-import case a trailing statement would miss
 
 ### Pending Todos
 
@@ -672,8 +707,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T07:33:41.184Z
-Stopped at: Completed 34-05-PLAN.md (Tasks 1-2 done; Task 3 human-verify deferred by user)
+Last session: 2026-07-24T07:44:41.373Z
+Stopped at: Completed 34-11-PLAN.md (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked-debt recording, 3/3 tasks)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

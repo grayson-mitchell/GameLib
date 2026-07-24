@@ -69,7 +69,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 31: IPC re-plumb slice 2 (settings/config)** - Settings/config cluster plus the Tauri `dialog` plugin surface those flows need (3 plans executed 2026-07-23; verification gaps_found — gap plan 31-04 added to close CR-01 dialog auto-confirm blocker + WR-01 path-traversal, de-wiring showMessageBox to a safe resolved sentinel ({response:-1}, never rejects) with real multi-button behavior deferred to Phase 33) (completed 2026-07-23)
 - [x] **Phase 32: IPC re-plumb slice 3 (downloads/queue)** - Download-manager/queue cluster; exercises the push-notification path at real volume (completed 2026-07-23)
 - [x] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly (completed 2026-07-23)
-- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 6/6 plans executed, but 34-07's live tag-push gate is DEFERRED by user (not yet passed); phase not complete
+- [ ] **Phase 34: Tauri packaging (Windows/Linux)** - Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 10/10 plans executed (all code-review gap closures done as of 34-11, 2026-07-24), but 34-07's live tag-push gate is DEFERRED by user (not yet passed); phase not complete until that gate runs (REQ-34-04, REQ-34-09 remain unchecked)
 - [ ] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last
 
 ## Phase Details
@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 9/10 plans executed
+**Plans:** 10/10 plans executed (34-07's live tag-push gate deferred)
 
 Plans:
 
@@ -1256,7 +1256,7 @@ Plans:
 
 **Wave 7** *(blocked on 34-08)*
 
-- [ ] 34-11-PLAN.md — CR-01 CI half (per-leg `sidecar_triple` → SEA build) + WR-02 (`cert.pfx` removed in a `finally`, false "in-memory only" comment corrected) + record WR-04/IN-01 as deferred debt
+- [x] 34-11-PLAN.md — CR-01 CI half (per-leg `sidecar_triple` → SEA build) + WR-02 (`cert.pfx` removed in a `finally`, false "in-memory only" comment corrected) + record WR-04/IN-01 as deferred debt
 
 > **Out of scope for this gap cycle (user decision GAP-D-01):** review findings **WR-04**
 > (`security.csp: null` + `withGlobalTauri` + broad `opener:default`) and **IN-01**
