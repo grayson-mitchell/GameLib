@@ -158,8 +158,15 @@ jobs:
       # duration of the import; the finally block below removes it
       # immediately afterward, including when the import itself throws, so
       # no retried/continued job step can find it left behind.
+      #
+      # GAP-4 (34-VERIFICATION.md truth #7 / 34-REVIEW.md WR-03): the if:
+      # condition additionally requires WINDOWS_CERT_THUMBPRINT != '' --
+      # without a usable thumbprint the imported cert can never be selected
+      # by signtool, so writing a .pfx to the runner filesystem would expose
+      # cert material for zero benefit. A cert-without-thumbprint secret set
+      # is treated as an absent-secret case (D-04) and never reaches here.
       - name: Import Windows signing certificate (if present)
-        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != ''
+        if: matrix.platform == 'windows-latest' && env.WINDOWS_CERTIFICATE != '' && env.WINDOWS_CERT_THUMBPRINT != ''
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
@@ -174,19 +181,48 @@ jobs:
       # tauri.conf.json never declares certificateThumbprint (D-04 anti-
       # pattern guard -- a committed thumbprint would FAIL a secrets-less
       # CI run). The Windows signing config is merged in ONLY here, ONLY
-      # when the cert secret is present; every other leg (and a secrets-
-      # less Windows run) passes only matrix.args -- the true default is
-      # "unsigned, warned, job green".
+      # when BOTH the cert secret and the thumbprint secret are present --
+      # every other leg (and a secrets-less or half-configured Windows run)
+      # passes only matrix.args -- the true default is "unsigned, warned,
+      # job green".
+      #
+      # GAP-4 (34-VERIFICATION.md truth #7 / 34-REVIEW.md WR-03): the prior
+      # gate tested only WINDOWS_CERTIFICATE, so enrolling the cert secret
+      # without the thumbprint secret rendered certificateThumbprint:"" into
+      # the --config override and hard-failed the Windows leg via signtool
+      # -- contradicting D-04's locked "CI must never fail on missing certs"
+      # invariant. The three-branch shell below restores it: (1) both
+      # secrets present -> sign, (2) cert present but thumbprint missing ->
+      # warn and ship unsigned, job stays green, (3) neither present -> the
+      # existing default. No branch ever calls `exit 1`.
+      #
+      # WR-03 secondary defect: `args` is secret-derived (the thumbprint is
+      # interpolated into it via CONFIG_OVERRIDE), so the old single-line
+      # `echo "args=..." >> "$GITHUB_OUTPUT"` form let a secret containing a
+      # newline inject arbitrary step outputs. All three branches now emit
+      # via a heredoc whose delimiter is randomised per run from bash's
+      # $RANDOM (GitHub's documented remedy for non-literal output values;
+      # openssl/uuidgen are not reliably available under Git Bash on
+      # windows-latest, where this step runs).
       - name: Compute tauri-action build args (Windows signing override merge)
         id: build_args
         shell: bash
         run: |
-          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ] && [ -n "$WINDOWS_CERT_THUMBPRINT" ]; then
             CONFIG_OVERRIDE=$(printf -- '--config {"bundle":{"windows":{"certificateThumbprint":"%s","digestAlgorithm":"sha256","timestampUrl":"http://timestamp.digicert.com"}}}' "$WINDOWS_CERT_THUMBPRINT")
-            echo "args=${{ matrix.args }} ${CONFIG_OVERRIDE}" >> "$GITHUB_OUTPUT"
+            VALUE="${{ matrix.args }} ${CONFIG_OVERRIDE}"
+          elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
+            echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT is missing; shipping unsigned"
+            VALUE="${{ matrix.args }}"
           else
-            echo "args=${{ matrix.args }}" >> "$GITHUB_OUTPUT"
+            VALUE="${{ matrix.args }}"
           fi
+          DELIM="ARGS_${RANDOM}${RANDOM}${RANDOM}"
+          {
+            echo "args<<$DELIM"
+            echo "$VALUE"
+            echo "$DELIM"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: tauri-apps/tauri-action@v1
         with:
