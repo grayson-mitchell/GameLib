@@ -220,3 +220,93 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
     expect(source).toMatch(/run: pnpm build:sidecar-sea[\s\S]*?uses: tauri-apps\/tauri-action/)
   })
 })
+
+// 34-VERIFICATION.md truth #7 PARTIAL / 34-REVIEW.md WR-03: the Windows signing override
+// gate tests only `-n "$WINDOWS_CERTIFICATE"` and never `WINDOWS_CERT_THUMBPRINT`. Enrolling
+// the certificate secret without the thumbprint secret renders `"certificateThumbprint":""`
+// into the --config override, tauri invokes signtool with an empty thumbprint, and the
+// Windows leg hard-fails -- contradicting D-04's locked "CI must never fail on missing certs"
+// invariant. WR-03's secondary defect: the secret-derived `args` output is written to
+// $GITHUB_OUTPUT with the single-line key=value form, which a newline in the thumbprint
+// secret could use to inject arbitrary step outputs. These assertions MUST fail against the
+// pre-fix workflow (RED); GAP-4's fix (34-15 Task 2) makes them pass.
+//
+// Tests 2, 4 and 6 assert against a comment-stripped copy of the workflow -- the file's own
+// header/step comments already mention certificateThumbprint, WINDOWS_CERT_THUMBPRINT, and
+// "never fail", so an unstripped assertion would be self-invalidating (prose alone could
+// satisfy or defeat it).
+describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / GAP-4 regression guard)', () => {
+  function loadStrippedReleaseWorkflow(): string {
+    return loadReleaseWorkflow()
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .join('\n')
+  }
+
+  test('Test 1: the signing-override branch requires BOTH secrets on the same if line', () => {
+    const source = loadReleaseWorkflow()
+    const ifLine = source
+      .split('\n')
+      .find((line) => line.includes('-n "$WINDOWS_CERTIFICATE"'))
+    expect(ifLine).toBeDefined()
+    expect(ifLine).toContain('-n "$WINDOWS_CERT_THUMBPRINT"')
+  })
+
+  test('Test 2: certificateThumbprint is only reachable after the thumbprint check', () => {
+    const stripped = loadStrippedReleaseWorkflow()
+    const idxThumbCheck = stripped.indexOf('-n "$WINDOWS_CERT_THUMBPRINT" ]')
+    const idxCertThumbprint = stripped.indexOf('certificateThumbprint')
+    expect(idxThumbCheck).toBeGreaterThanOrEqual(0)
+    expect(idxCertThumbprint).toBeGreaterThanOrEqual(0)
+    expect(idxThumbCheck).toBeLessThan(idxCertThumbprint)
+  })
+
+  test('Test 3: a warn-and-skip middle branch exists naming WINDOWS_CERT_THUMBPRINT', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('elif')
+    expect(source).toMatch(/::warning::[^\n]*WINDOWS_CERT_THUMBPRINT/)
+  })
+
+  test('Test 4: the warn-and-skip branch does not fail the job (no exit 1)', () => {
+    const stripped = loadStrippedReleaseWorkflow()
+    const elifMatch = stripped.match(/elif[\s\S]*?WINDOWS_CERT_THUMBPRINT[\s\S]*?fi\b/)
+    expect(elifMatch).not.toBeNull()
+    expect(elifMatch?.[0]).not.toMatch(/exit 1/)
+  })
+
+  test('Test 5: the cert-import step if: line is gated on the thumbprint too', () => {
+    const source = loadReleaseWorkflow()
+    const ifLine = source
+      .split('\n')
+      .find(
+        (line) =>
+          line.trim().startsWith('if:') && line.includes("env.WINDOWS_CERTIFICATE != ''")
+      )
+    expect(ifLine).toBeDefined()
+    expect(ifLine).toContain("env.WINDOWS_CERT_THUMBPRINT != ''")
+  })
+
+  test('Test 6: secret-derived args output uses a heredoc, not single-line echo', () => {
+    const stripped = loadStrippedReleaseWorkflow()
+    expect(stripped).toContain('args<<')
+    expect(stripped).not.toMatch(/echo "args=[^\n]*CONFIG_OVERRIDE/)
+  })
+
+  test('Test 7: the heredoc delimiter is randomised via $RANDOM', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toContain('$RANDOM')
+  })
+
+  test('Test 8 (D-04 invariant guard): existing per-OS Signing-skipped warnings still present', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(/env\.APPLE_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
+    expect(source).toMatch(/env\.WINDOWS_CERTIFICATE == ''[\s\S]*?::warning::Signing skipped/)
+  })
+
+  test('Test 9 (34-11 regression guard): cert.pfx cleanup still sits in a finally block', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(
+      /Import-PfxCertificate[\s\S]*?finally \{[\s\S]*?Remove-Item -Path cert\.pfx -Force/
+    )
+  })
+})
