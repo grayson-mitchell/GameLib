@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Phase 34 context gathered
-last_updated: "2026-07-24T02:16:43.945Z"
+stopped_at: Completed 34-02-PLAN.md
+last_updated: "2026-07-24T03:53:49.465Z"
 last_activity: 2026-07-24
 progress:
   total_phases: 5
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-24
 
@@ -283,6 +283,7 @@ Closed/parked native-install phases:
 | Phase 33 P04 | ~40min | 3 tasks | 8 files |
 | Phase 33 P06 | ~15min | 2 tasks | 2 files |
 | Phase 34 P01 | 17min | 2 tasks | 4 files |
+| Phase 34 P02 | ~50min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -492,6 +493,9 @@ Recent decisions affecting current work:
 - [Phase 33]: Declared the 3 gate gap-fixes (notification capability grant, sidecar online-monitor wiring, windowControlsOverlay guard) found during the 33-05 live gate as first-class rows in 33-PORTED-CHANNELS.md alongside the planned 33-01..33-04 work
 - [Phase 33]: Distinguished proof levels explicitly: dialog/Notification/shell/app forwards are wired-and-unit-proven; the G-30-02 fix and 3 gate gap-fixes are hardware-proven live via the 33-05 D-13 gate
 - [Phase 34]: 34-01: buildSidecarSea.test.ts's target API adds a dedicated buildCodesignArgv(binaryPath, platform) export so codesign-only-on-macOS has a real positive assertion
+- [Phase ?]: 34-02: SEA build bundles its own fully self-contained sidecar copy (no --packages=external), since SEA require() bypasses Module._load and cannot resolve node_modules
+- [Phase 34]: 34-02: electron resolved via esbuild --alias to electronStub.ts at build time for the SEA bundle (the repo's usual runtime Module._load hook cannot reach a compiled SEA binary)
+- [Phase 34]: 34-02: steam-user and lzma runtime-computed require() calls patched via pnpm patch to their always-resolved literal target (behavior-neutral, unblocks SEA bundling)
 
 ### Pending Todos
 
@@ -561,8 +565,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T02:15:38.278Z
-Stopped at: Phase 34 context gathered
+Last session: 2026-07-24T03:53:49.459Z
+Stopped at: Completed 34-02-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
