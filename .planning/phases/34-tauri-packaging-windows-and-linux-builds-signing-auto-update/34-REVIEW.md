@@ -17,7 +17,10 @@ findings:
   warning: 2
   info: 4
   total: 6
+  warning_resolved: 1
 status: issues_found
+resolved:
+  - "WR-01 fixed inline post-review (package.json verify:updater-key now uses --outfile + && instead of a pipe; exit code propagates without pipefail). Verified 8/8 updaterSigningKey tests + simulated esbuild-failure now exits non-zero."
 ---
 
 # Phase 34 (gap cycle 3): Code Review Report
@@ -57,6 +60,8 @@ and four INFO-tier items, detailed below.
 ## Warnings
 
 ### WR-01: `pnpm verify:updater-key` can silently exit 0 when esbuild fails to bundle it, outside of CI
+
+**✅ RESOLVED** (fixed inline post-review): `verify:updater-key` now bundles with `--outfile=node_modules/.cache/verify-updater-key.cjs` and runs `node` via `&&`, so the exit code propagates without depending on the caller's shell enabling `pipefail`. No pipe, no bash dependency, output in the gitignored cache dir. Verified: normal run exits 1 (missing-key), a simulated esbuild-bundle failure now exits non-zero (was a false 0), and the `updaterSigningKey` suite is 8/8 green including the two end-to-end `pnpm verify:updater-key` spawns.
 
 **File:** `package.json:66`
 **Issue:** The script is `esbuild --bundle --platform=node --target=node22 meta/verifyUpdaterSigningKey.ts | node`. Its exit-code correctness depends entirely on the invoking shell enabling `pipefail`; POSIX defines a pipeline's exit status as the *last* command's status unless `pipefail` is set. I verified this directly:
