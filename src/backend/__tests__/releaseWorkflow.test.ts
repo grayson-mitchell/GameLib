@@ -822,6 +822,17 @@ describeOnPosix('release-tauri.yml build-args secret gating, executed (WR-02 reg
     expect(result.stdout).not.toContain('::warning::')
   })
 
+  test('WR-02: thumbprint/password present but NO cert -> warn naming the cert, ship unsigned, job stays green', () => {
+    const result = runBuildArgs({
+      WINDOWS_CERT_THUMBPRINT: 'AABBCCDD',
+      WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
+    })
+    expect(result.status).toBe(0)
+    expect(result.args).not.toContain('certificateThumbprint')
+    expect(result.stdout).toContain('::warning::')
+    expect(result.stdout).toContain('WINDOWS_CERTIFICATE is missing')
+  })
+
   test('a non-Windows leg never merges a signing override even with secrets enrolled', () => {
     const result = runBuildArgs(
       {
@@ -1011,6 +1022,20 @@ describeOnPosix('release-tauri.yml Apple signing env gate, executed (GAP-A regre
     expect(result.status).toBe(0)
     expect(result.env.APPLE_SIGNING_IDENTITY).toContain('EVIL=pwned')
     expect(result.env.EVIL).toBeUndefined()
+  })
+
+  test('Test I (WR-02): cert absent but a secondary Apple secret present -> nothing exported, cert named as the missing one', () => {
+    const result = runAppleGate({
+      IN_APPLE_CERTIFICATE_PASSWORD: 'certpass',
+      IN_APPLE_SIGNING_IDENTITY: 'Developer ID Application: Foo'
+    })
+    expect(result.status).toBe(0)
+    expect(result.rawEnv).not.toMatch(/^APPLE_/m)
+    expect(result.stdout).toContain('::warning::')
+    expect(result.stdout).toContain('APPLE_CERTIFICATE is missing')
+    // The misdiagnosis WR-02 flags: a partial set must NOT read as the all-empty
+    // "no Apple cert secret set" case (that string belongs to Test A only).
+    expect(result.stdout).not.toContain('no Apple cert secret set')
   })
 })
 

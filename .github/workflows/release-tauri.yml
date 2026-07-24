@@ -217,6 +217,14 @@ jobs:
       # write_env uses a $RANDOM-delimited heredoc per value, same remedy as WR-03's
       # $GITHUB_OUTPUT heredoc (T-34-35). No branch calls exit 1 -- D-04 says the job
       # stays green on any secret combination, including a half-enrolled one.
+      #
+      # WR-02 (gap cycle 3 review): the inverse partial set -- cert ABSENT but a
+      # secondary Apple secret (password and/or signing identity) present -- used to
+      # fall straight through to the generic "no Apple cert secret set" default,
+      # misdiagnosing a genuine partial-enrolment mistake as "nothing enrolled". A
+      # dedicated elif now names that the APPLE_CERTIFICATE secret itself is the one
+      # missing. The truly-nothing-enrolled case still hits the final else, so Test A
+      # and 34-07's repro grep for the verbatim D-04 string are unaffected.
       - name: Enable Apple signing only when a complete cert secret set is enrolled
         if: startsWith(matrix.platform, 'macos')
         shell: bash
@@ -255,6 +263,8 @@ jobs:
               MISSING="${MISSING}APPLE_SIGNING_IDENTITY "
             fi
             echo "::warning::APPLE_CERTIFICATE is set but ${MISSING}missing; shipping unsigned"
+          elif [ -n "$IN_APPLE_CERTIFICATE_PASSWORD" ] || [ -n "$IN_APPLE_SIGNING_IDENTITY" ]; then
+            echo "::warning::APPLE_CERTIFICATE is missing but APPLE_CERTIFICATE_PASSWORD/APPLE_SIGNING_IDENTITY is set; shipping unsigned (the Apple cert secret itself is not enrolled)"
           else
             echo "::warning::Signing skipped — no Apple cert secret set; shipping unsigned artifact"
           fi
@@ -347,6 +357,15 @@ jobs:
       # secret set still reached the pwsh import step and hard-failed the
       # leg. The password is now part of both gates.
       #
+      # WR-02 (gap cycle 3 review): the inverse partial set -- cert ABSENT
+      # but the thumbprint and/or password present -- previously fell to the
+      # unconditioned default with no diagnostic here (only the generic
+      # "Warn if Windows signing will be skipped" step above fired, which
+      # reads as "nothing enrolled"). A dedicated elif now names that the
+      # WINDOWS_CERTIFICATE secret itself is the missing one. Additive only:
+      # it never merges a signing override and never calls exit 1, so the
+      # all-present and all-absent paths the live run proved are unchanged.
+      #
       # WR-03 secondary defect: `args` is secret-derived (the thumbprint is
       # interpolated into it via CONFIG_OVERRIDE), so the old single-line
       # `echo "args=..." >> "$GITHUB_OUTPUT"` form let a secret containing a
@@ -364,6 +383,9 @@ jobs:
             VALUE="${{ matrix.args }} ${CONFIG_OVERRIDE}"
           elif [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$WINDOWS_CERTIFICATE" ]; then
             echo "::warning::WINDOWS_CERTIFICATE is set but WINDOWS_CERT_THUMBPRINT and/or WINDOWS_CERTIFICATE_PASSWORD is missing; shipping unsigned"
+            VALUE="${{ matrix.args }}"
+          elif [ "${{ matrix.platform }}" = "windows-latest" ] && { [ -n "$WINDOWS_CERT_THUMBPRINT" ] || [ -n "$WINDOWS_CERTIFICATE_PASSWORD" ]; }; then
+            echo "::warning::WINDOWS_CERT_THUMBPRINT/WINDOWS_CERTIFICATE_PASSWORD is set but WINDOWS_CERTIFICATE is missing; shipping unsigned (the Windows cert secret itself is not enrolled)"
             VALUE="${{ matrix.args }}"
           else
             VALUE="${{ matrix.args }}"
