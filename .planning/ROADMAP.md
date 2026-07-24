@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 14 plans (10/10 executed; 34-12..34-15 planned — gap cycle 2, closing `34-VERIFICATION.md`'s 4 failed truths; 34-07's live tag-push gate still deferred)
+**Plans:** 14 plans (11/14 executed; 34-13..34-15 remain — gap cycle 2, closing `34-VERIFICATION.md`'s 4 failed truths; 34-07's live tag-push gate still deferred)
 
 Plans:
 
@@ -1265,7 +1265,7 @@ Plans:
 
 **Wave 8** *(gap cycle 2 — closes `34-VERIFICATION.md` failed truths #4, #5, #6, #9 and PARTIAL truth #7; 34-12 and 34-13 have zero `files_modified` overlap and run in parallel)*
 
-- [ ] 34-12-PLAN.md — GAP-1: add the missing renderer build (`pnpm exec electron-vite build`), macOS `build-steam-bridge`, and `gh release download crossover-index` steps ahead of `tauri-action`; correct the header comment that asserted unproven pipeline behavior as fact
+- [x] 34-12-PLAN.md — GAP-1: add the missing renderer build (`pnpm exec electron-vite build`), macOS `build-steam-bridge`, and `gh release download crossover-index` steps ahead of `tauri-action`; correct the header comment that asserted unproven pipeline behavior as fact
 - [ ] 34-13-PLAN.md — GAP-2: resolve `esbuild`/`postject` as CLI modules run through `process.execPath` instead of extensionless `node_modules/.bin` shims, so the `windows-latest` leg can build the SEA sidecar (also closes WR-10 for postject: the tested command is now the executed command)
 
 **Wave 9** *(blocked on 34-12 — 34-15 shares `release-tauri.yml` + `releaseWorkflow.test.ts` with it, 34-14 cross-reads the same workflow; 34-14 and 34-15 have no mutual overlap and run in parallel)*
