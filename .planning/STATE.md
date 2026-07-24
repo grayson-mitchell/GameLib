@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
-stopped_at: Planned gap-closure plans 34-08..34-11 from 34-REVIEW.md (checker PASSED; 34-07's live tag-push gate still deferred by user)
-last_updated: "2026-07-24T07:00:16.414Z"
-last_activity: 2026-07-24 -- Phase 34 planning complete
+stopped_at: Completed 34-08-PLAN.md (CR-01 cross-arch sidecar triple fix, 3/3 tasks)
+last_updated: "2026-07-24T07:10:56.336Z"
+last_activity: 2026-07-24 -- Executed 34-08 (CR-01 gap closure)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -34,32 +34,50 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — EXECUTING
-Plan: 6 of 10 executed (34-01,02,03,05,06,07 executed — no 04; gap-closure plans 34-08..34-11
-  planned 2026-07-24, NOT yet executed; 34-07's live gate DEFERRED by user, not passed)
-Status: Ready to execute — gap cycle 34-08..34-11 planned and checker-PASSED. All 6 original
-  plans executed; Phase 34 is code-complete + unit-tested but NOT phase-complete on two counts.
-  **(1) Code review gaps.** `34-REVIEW.md` (status `issues_found`, 2 critical / 4 warnings /
-  1 info) found two release blockers on the CI path: CR-01 (the macOS `x86_64-apple-darwin` leg
-  builds an arm64 SEA sidecar because `hostTriple()` reads the runner's arch, not the Tauri
-  `--target`) and CR-02 (no `icon.ico` despite `nsis` being an active bundle target). Gap plans
-  34-08..34-11 close CR-01, CR-02, WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY` override),
-  WR-02 (`cert.pfx` left on disk) and WR-03 (sidecar orphaned on app exit). User scope decisions
-  this cycle: WR-04 (null CSP / `withGlobalTauri` / broad `opener:default`) and IN-01 (loose
-  `system.pem` match) are DEFERRED as tracked debt, recorded in the phase's `deferred-items.md`;
-  CR-01 is fixed by a target-triple override plus a checksum-verified official x64 Node base
-  binary (Intel Mac support kept — dropping the leg and Rosetta were both explicitly rejected).
-  **(2) Live gate.**
-  34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live proof, REQ-34-09) was
-  deferred by explicit user decision this session. Full repro steps recorded verbatim in
-  34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm
-  all 4 matrix legs green + graceful signing-skip, confirm draft+prerelease Release with
-  artifacts + latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while
-  draft, then clean up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until
-  that run actually happens. Next: either resume 34-07's live gate, or move on and return to it
-  before declaring Phase 34 / the Phase 35 Electron-cutover dependency satisfied. Recommended
-  ordering: execute 34-08..34-11 FIRST, then run the live gate — CR-01 and CR-02 would fail the
-  Windows and macOS-x64 legs of that very run.
-Last activity: 2026-07-24 -- Phase 34 gap-closure plans 34-08..34-11 created and verified
+Plan: 7 of 10 executed (34-01,02,03,05,06,07,08 executed — no 04; 34-09,10,11 remain)
+Status: Executing Phase 34 gap-closure cycle
+  **34-08 executed 2026-07-24** (3/3 tasks, unit-tested 26/26 passing, empirically hardware-proven
+  on this arm64 Mac): closed CR-01 -- `meta/buildSidecarSea.ts` now resolves its output triple via
+  `resolveTriple()`/`GAMELIB_SIDECAR_TARGET_TRIPLE` (falls back to `hostTriple()`), sources a
+  checksum-verified official nodejs.org Node binary for cross-arch builds instead of relabeling
+  `process.execPath`, and gates the produced binary's real Mach-O arch via `lipo -archs`
+  (`verifyBinaryArch()`, T-34-14) before it can ship. `x86_64-apple-darwin` override run produced a
+  genuinely `x86_64` binary; the no-override native run still produced `arm64` -- unregressed. See
+  `34-08-SUMMARY.md` for verbatim `lipo -archs` evidence.
+  Remaining gap plans **34-09..34-11** close CR-02 (no `icon.ico` despite `nsis` being an active
+  bundle target), WR-01 (release-reachable `GAMELIB_SIDECAR_ENTRY` override), WR-02 (`cert.pfx` left
+  on disk), and WR-03 (sidecar orphaned on app exit) -- and 34-11 must wire
+  `GAMELIB_SIDECAR_TARGET_TRIPLE` per matrix leg in `.github/workflows/release-tauri.yml` for 34-08's
+  fix to take effect in CI. User scope decisions this cycle: WR-04 (null CSP / `withGlobalTauri` /
+  broad `opener:default`) and IN-01 (loose `system.pem` match) are DEFERRED as tracked debt,
+  recorded in the phase's `deferred-items.md`.
+  **Live gate (unchanged).** 34-07's checkpoint:human-verify live tag-push gate (REQ-34-04 live
+  proof, REQ-34-09) was deferred by explicit user decision. Full repro steps recorded verbatim in
+  34-07-SUMMARY.md for resumption: push `v0.7.0-rc.test` to the `gamelib` fork remote, confirm all 4
+  matrix legs green + graceful signing-skip, confirm draft+prerelease Release with artifacts +
+  latest.json, confirm Node-free sidecar smoke, confirm updater invisibility while draft, then clean
+  up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
+  happens. Next: execute 34-09..34-11, THEN run the live gate -- CR-02 (icon.ico) would still fail
+  the Windows leg of that run until 34-09/10/11 land.
+Last activity: 2026-07-24 -- Executed 34-08 (CR-01 gap closure)
+
+> **Plan-counter note (2026-07-24, corrected again post-34-08):** the automated
+> `state.advance-plan` verb, run immediately after 34-08's execution, bumped this file from
+> "Plan: 1 of 10" to "Plan: 2 of 10" -- itself still wrong, since it was working off the
+> already-stale "Plan: 1 of 10" / "stopped_at: Completed 34-05-PLAN.md" values noted below,
+> which predate this session and never accounted for 34-06/34-07/34-08 already being executed
+> (34-01..34-03/05/06/07/08 all have SUMMARY.md on disk). Corrected above to 7 of 10 by
+> checking the phase directory directly rather than trusting the blind counter increment --
+> same precedent as the three plan-counter notes below it.
+>
+> **Frontmatter revert observed (2026-07-24):** after this manual correction, running
+> `gsd-sdk query state.record-session` / `state.record-metric` / `state.add-decision` /
+> `roadmap.update-plan-progress` in sequence silently reverted the YAML frontmatter
+> `stopped_at:` field (line 6) back to the stale "Completed 34-05-PLAN.md" value, while
+> leaving `last_activity` and the body `Plan:`/`Status:` fields (edited in the same manual
+> pass) untouched. Root cause not diagnosed (deferred); re-corrected by hand a second time
+> below. Treat `stopped_at:` frontmatter as another field this SDK write-path can silently
+> clobber -- verify it after any `state.*` mutation call, not just the `Plan:` counter.
 
 > **Plan-counter note (2026-07-24):** `gsd-sdk query state.planned-phase` regressed
 > `stopped_at` to "Completed 34-05-PLAN.md" (a stale pre-34-06/07 value) and replaced the
@@ -316,6 +334,7 @@ Closed/parked native-install phases:
 | Phase 34 P02 | ~50min | 2 tasks | 9 files |
 | Phase 34 P05 | 10min | 2 tasks | 3 files |
 | Phase 34 P06 | ~15min | 1 tasks | 1 files |
+| Phase 34 P08 | 15min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -531,6 +550,7 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-05: shell:allow-execute scoped to exactly {name:'binaries/gamelib-sidecar', sidecar:true} — no broad shell grant to the webview — T-34-09 elevation-of-privilege mitigation
 - [Phase 34]: 34-05: Task 3 (npm run tauri:dev / npm start both-launch human-verify) deferred by user decision — REQ-34-08 additive/reversible invariant not yet runtime-proven; carry forward as pending human-UAT
 - [Phase 34]: 34-06: Windows --config signing override computed via a bash step (id: build_args -> GITHUB_OUTPUT) rather than an inline nested-brace GHA expression ternary, avoiding brace-escaping ambiguity while preserving D-04's secrets-less-run-ships-unsigned default.
+- [Phase 34]: CR-01 fixed via GAMELIB_SIDECAR_TARGET_TRIPLE override + checksum-verified official nodejs.org Node binary for cross-arch builds (GAP-D-02); Intel Mac support kept, Rosetta/dropping the leg rejected
 
 ### Pending Todos
 
@@ -600,7 +620,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T04:33:15.164Z
+Last session: 2026-07-24T07:09:59.394Z
 Stopped at: Completed 34-05-PLAN.md (Tasks 1-2 done; Task 3 human-verify deferred by user)
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
