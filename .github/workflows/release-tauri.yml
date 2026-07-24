@@ -2,20 +2,28 @@
 # tauri-action on a `v*` tag push (or manual workflow_dispatch), then opens a
 # DRAFT GitHub Release marked PRERELEASE for human review before publish (D-09).
 #
+# UNPROVEN LIVE: this pipeline has never completed a real tag-push run --
+# 34-07's live `v*` gate (REQ-34-09) is deliberately deferred pending this gap
+# cycle's fixes. Every behavioral claim in this header is an INTENDED
+# invariant the workflow is designed to uphold, not something observed on a
+# real runner. Treat it as unproven until that live gate actually executes.
+#
 # NOTE (Pitfall 7): `draft-release-mac.yml` and `draft-release-linux.yml` also
 # trigger on `v*` and will co-run alongside this workflow on every tag push.
 # This is intentional, not a bug -- both pipelines are additive per the
-# Phase 27+ Electron/Tauri parity invariant and publish to the SAME GitHub
-# Release. Tauri's default per-platform artifact names (NSIS/AppImage/dmg)
-# do not collide with electron-builder's `-Setup-`/`-Portable-`/`-macOS-`/
-# `-linux-` artifactName segments, so both sets of assets can safely land on
-# one release.
+# Phase 27+ Electron/Tauri parity invariant and are ASSUMED to publish to the
+# SAME GitHub Release without collision, pending the 34-07 live gate: Tauri's
+# default per-platform artifact names (NSIS/AppImage/dmg) are not expected to
+# collide with electron-builder's `-Setup-`/`-Portable-`/`-macOS-`/`-linux-`
+# artifactName segments, so both sets of assets are assumed able to land on
+# one release. This has not yet been confirmed on a real tag push.
 #
 # D-03/D-04: signing plumbing is wired to GitHub Actions secrets, but 0.x
 # ships UNsigned -- no cert secrets are enrolled yet. Every signing path
 # below is conditional on the relevant secret being non-empty; the default
 # (secrets absent) is "skip signing, log a clear warning, ship an unsigned
-# artifact, job stays green". CI must never fail on missing certs.
+# artifact, job stays green". The intended invariant is that CI never fails
+# on missing certs.
 name: Release Tauri
 
 on:
@@ -68,6 +76,38 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
 
       - uses: ./.github/actions/install-deps
+
+      # Mirrors draft-release-mac.yml's step verbatim: seeds public/ with the
+      # bundled CrossOver compatibility-index snapshot BEFORE the renderer
+      # build below, so the snapshot is bundled into the shipped webview.
+      # T-34-16: scoped to this repo via github.token, restricted to a single
+      # asset by --pattern, and non-fatal via `|| echo` -- a repo with no
+      # published crossover-index release ships without a snapshot instead of
+      # failing the job.
+      - name: Fetch bundled CrossOver index snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download crossover-index --pattern crossover-index.json.gz --dir public --clobber || echo "No published index yet; shipping without a bundled snapshot"
+
+      # Phase 24 macOS Steam bridge helper: release:mac builds this via
+      # `build-steam-bridge && electron-vite build`. Without this step every
+      # macOS Tauri bundle ships without build/bin/... and the bridge is
+      # unusable. Precedes the renderer build to match release:mac's chain.
+      - name: Build steam bridge shims (macOS only)
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        run: pnpm build-steam-bridge
+
+      # GAP-1 (34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01):
+      # tauri.conf.json declares `frontendDist: "../build"` and
+      # `beforeBuildCommand: ""` -- this step is the ONLY thing that produces
+      # build/index.html. Without it, tauri-action either aborts with "Unable
+      # to find your web assets" or ships an installer whose webview loads
+      # nothing, on every matrix leg.
+      - name: Build renderer web assets (electron-vite)
+        shell: bash
+        run: pnpm exec electron-vite build
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
