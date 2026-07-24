@@ -39,6 +39,18 @@ function loadReleaseWorkflow(): string {
 }
 
 /**
+ * Drops lines whose first non-whitespace character is `#`, so the workflow's
+ * own explanatory prose can neither satisfy nor invalidate a `toContain`/regex
+ * assertion made against its actual instructions (WR-04).
+ */
+function loadStrippedWorkflow(): string {
+  return loadReleaseWorkflow()
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n')
+}
+
+/**
  * Extracts a step's literal `run: |` block body, dedented, so a test can
  * EXECUTE the workflow's real shell instructions instead of pattern-matching
  * their text. Fails loudly if the named step (or its run block) is missing,
@@ -645,6 +657,74 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
     expect(source).toMatch(
       /Import-PfxCertificate[\s\S]*?finally \{[\s\S]*?Remove-Item -Path cert\.pfx -Force/
     )
+  })
+})
+
+// 34-REVIEW.md (gap cycle 2) WR-03: the workflow header states every signing path is
+// conditional on its secret and that the secrets-absent default is "skip, warn, ship
+// unsigned, job green". That holds for APPLE_CERTIFICATE and WINDOWS_CERTIFICATE but NOT
+// for TAURI_SIGNING_PRIVATE_KEY: with `createUpdaterArtifacts: true` and a committed
+// pubkey, `tauri build` errors out instead of skipping, killing all four legs. The
+// coupling below is the invariant -- it is expressed as a conditional so that flipping
+// createUpdaterArtifacts to false legitimately retires the guard.
+describe('release-tauri.yml updater signing key preflight (WR-03 regression guard)', () => {
+  function updaterArtifactsEnabled(): boolean {
+    const conf = JSON.parse(
+      readFileSync(
+        join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.conf.json'),
+        'utf-8'
+      )
+    ) as { bundle?: { createUpdaterArtifacts?: boolean } }
+    return conf.bundle?.createUpdaterArtifacts === true
+  }
+
+  test('createUpdaterArtifacts: true implies a TAURI_SIGNING_PRIVATE_KEY == \'\' guard exists', () => {
+    if (!updaterArtifactsEnabled()) {
+      return
+    }
+    const stripped = loadStrippedWorkflow()
+    expect(stripped).toContain("env.TAURI_SIGNING_PRIVATE_KEY == ''")
+  })
+
+  test('the guard fails the job loudly rather than warning and continuing', () => {
+    if (!updaterArtifactsEnabled()) {
+      return
+    }
+    const stripped = loadStrippedWorkflow()
+    const guardBlock = stripped.match(
+      /if: env\.TAURI_SIGNING_PRIVATE_KEY == ''[\s\S]*?exit 1/
+    )
+    expect(guardBlock).not.toBeNull()
+    expect(guardBlock?.[0]).toContain('::error::')
+  })
+
+  test('the guard runs before any build step, so the failure is fast and cheap', () => {
+    if (!updaterArtifactsEnabled()) {
+      return
+    }
+    const stripped = loadStrippedWorkflow()
+    const guardIndex = stripped.indexOf("env.TAURI_SIGNING_PRIVATE_KEY == ''")
+    expect(guardIndex).toBeGreaterThanOrEqual(0)
+    for (const laterStep of [
+      'run: pnpm exec electron-vite build',
+      'run: pnpm build:sidecar-sea',
+      'uses: tauri-apps/tauri-action'
+    ]) {
+      expect(guardIndex).toBeLessThan(stripped.indexOf(laterStep))
+    }
+  })
+
+  test('the guard names the concrete remedy, not just the missing secret', () => {
+    if (!updaterArtifactsEnabled()) {
+      return
+    }
+    const stripped = loadStrippedWorkflow()
+    const guardBlock = (
+      stripped.match(/if: env\.TAURI_SIGNING_PRIVATE_KEY == ''[\s\S]*?exit 1/) as
+        | RegExpMatchArray
+        | null
+    )?.[0] as string
+    expect(guardBlock).toContain('createUpdaterArtifacts')
   })
 })
 

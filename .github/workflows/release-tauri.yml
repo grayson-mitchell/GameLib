@@ -69,6 +69,27 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # WR-03 (gap cycle 2 review): TAURI_SIGNING_PRIVATE_KEY is the ONE
+      # secret with no graceful-skip path. D-03/D-04's "skip signing, warn,
+      # ship unsigned, job stays green" default covers the OS code-signing
+      # certs only -- it cannot cover the updater key, because
+      # tauri.conf.json sets `createUpdaterArtifacts: true` with a committed
+      # `plugins.updater.pubkey`, and `tauri build` then ERRORS OUT rather
+      # than skipping when the private key is absent. That failure hits all
+      # four matrix legs, produces no latest.json for
+      # promote-updater-feed.yml to promote, and surfaces as an opaque tauri
+      # error late in the run. Secret enrolment is not inspectable from the
+      # repo, so this preflight is the only way the asymmetry is visible:
+      # it turns that opaque late failure into a named one, before any
+      # expensive build work. Remedy is either enrolling the secret or
+      # setting createUpdaterArtifacts: false -- both are explicit choices.
+      - name: Fail fast with a clear message if the updater signing key is absent
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        shell: bash
+        run: |
+          echo "::error::TAURI_SIGNING_PRIVATE_KEY is not enrolled, but src-tauri/tauri.conf.json sets createUpdaterArtifacts: true and commits an updater pubkey. tauri build will fail on every matrix leg. Enrol the secret (with TAURI_SIGNING_PRIVATE_KEY_PASSWORD), or set createUpdaterArtifacts: false."
+          exit 1
+
       - name: Install Ubuntu system dependencies
         if: matrix.platform == 'ubuntu-24.04'
         run: |
