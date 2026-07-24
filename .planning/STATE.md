@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: Ready to execute -- gap cycle 2 planned (34-12..34-15), closing the 4 gaps from 34-VERIFICATION
-stopped_at: Planned 34-12..34-15 (gap cycle 2; CI renderer build, Windows SEA spawn, updater feed, Windows signing gate)
-last_updated: "2026-07-24T21:30:00.000Z"
-last_activity: 2026-07-24 -- Planned gap cycle 2 (34-12..34-15) after 34-VERIFICATION gaps_found 6/10
+status: executing -- gap cycle 2 (34-12..34-15), closing the 4 gaps from 34-VERIFICATION
+stopped_at: Executing 34-12..34-15 (gap cycle 2; CI renderer build, Windows SEA spawn, updater feed, Windows signing gate)
+last_updated: "2026-07-24T21:45:00.000Z"
+last_activity: 2026-07-24 -- Started gap cycle 2 execution (/gsd-execute-phase 34 --gaps-only)
 progress:
   total_phases: 5
   completed_phases: 3
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 PLANNED
-Plan: 10 of 14 executed (34-01,02,03,05,06,07,08,09,10,11 executed — no 04; 34-12..34-15 planned, unexecuted)
-Status: **Gap cycle 2 planned 2026-07-24** (`/gsd-plan-phase 34 --gaps`). `34-VERIFICATION.md`
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTING
+Plan: 10 of 14 executed (34-01,02,03,05,06,07,08,09,10,11 executed — no 04; 34-12..34-15 executing now)
+Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
   came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
   prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
   one WARNING** that no prior review had caught, because all 85 phase tests assert *shape and
@@ -145,7 +145,7 @@ Status: **Gap cycle 2 planned 2026-07-24** (`/gsd-plan-phase 34 --gaps`). `34-VE
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Planned gap cycle 2 (34-12..34-15) after 34-VERIFICATION gaps_found 6/10
+Last activity: 2026-07-24 -- Started gap cycle 2 execution (34-12..34-15) via /gsd-execute-phase 34 --gaps-only
 
 > **Plan-counter note (2026-07-24, gap cycle 2 planning):** `gsd-sdk query state.planned-phase`
 > was **deliberately not run** this time. Every plan-counter note below documents the same
