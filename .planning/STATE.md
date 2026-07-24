@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing -- gap cycle 2 (34-12,34-13,34-14 done; 34-15 remains), closing the 4 gaps from 34-VERIFICATION
-stopped_at: Completed 34-14-PLAN.md (GAP-3 dead updater feed fix -- fixed-tag endpoint + post-publish promotion workflow, 2/2 tasks)
-last_updated: "2026-07-24T08:59:10.792Z"
-last_activity: 2026-07-24 -- Executed 34-14 (GAP-3 dead updater feed fix via fixed-tag endpoint + post-publish promotion workflow); 34-15 remains
+status: gap cycle 2 execution complete (34-12,34-13,34-14,34-15 all done) -- ready for phase re-verification
+stopped_at: Completed 34-15-PLAN.md (GAP-4 Windows both-secrets signing gate + heredoc-safe output, 2/2 tasks)
+last_updated: "2026-07-24T09:04:00.000Z"
+last_activity: 2026-07-24 -- Executed 34-15 (GAP-4 Windows both-secrets signing gate: require WINDOWS_CERT_THUMBPRINT alongside WINDOWS_CERTIFICATE, warn-and-skip elif, narrower cert-import if:, $RANDOM heredoc for args output); all 4 gap-closure plans (34-12..34-15) now executed -- next is phase re-verification
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 48
+  completed_plans: 49
   percent: 60
 ---
 
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTING
-Plan: 13 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14 executed — no 04; 34-15 remains)
-Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
+Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTION COMPLETE
+Plan: 14 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15 executed — no 04)
+Status: **Gap cycle 2 execution complete 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
   came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
   prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
   one WARNING** that no prior review had caught, because all 85 phase tests assert *shape and
@@ -103,12 +103,27 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   tripped the literal-string acceptance-criteria greps for those exact tokens; reworded both
   comments to state the same invariant without the literal string, no test or code weakened. A
   test guards D-09's `prerelease: true`/`releaseDraft: true` against reintroduction. See
-  `34-14-SUMMARY.md`. **34-15 remains** (wave 2, GAP-4).
-  **34-15** (wave 2) -- GAP-4 (warning): the Windows signing gate tests only
-  `WINDOWS_CERTIFICATE`, not `WINDOWS_CERT_THUMBPRINT`, so a half-configured secret set yields
-  `certificateThumbprint: ""` and hard-fails the leg -- contradicting D-04's graceful-skip
-  invariant and the workflow's own stated "CI must never fail on missing certs". Requires both
-  secrets, warns and skips otherwise.
+  `34-14-SUMMARY.md`.
+  **34-15 EXECUTED 2026-07-24** (wave 2, 2/2 tasks, `releaseWorkflow` suite 40/40 green,
+  cross-plan sweep `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched`
+  122/122 green): closed GAP-4 -- the Windows signing gate tested only `WINDOWS_CERTIFICATE`,
+  not `WINDOWS_CERT_THUMBPRINT`, so a half-configured secret set yielded
+  `certificateThumbprint: ""` and hard-failed the leg -- contradicting D-04's graceful-skip
+  invariant and the workflow's own stated "CI must never fail on missing certs". Task 1 added
+  a 9-test regression block to `releaseWorkflow.test.ts` (RED: 7/9 failed against the pre-fix
+  workflow, verbatim failing-test list in `34-15-SUMMARY.md`). Task 2 narrowed the cert-import
+  step's `if:` to also require `WINDOWS_CERT_THUMBPRINT != ''` (no `.pfx` written for an
+  unusable cert), restructured `build_args` into an if/elif/else (both secrets -> sign;
+  cert-only -> `::warning::` + ship unsigned, job stays green, no `exit 1`; neither -> existing
+  default), and replaced the single-line `echo "args=..."` output with a `$RANDOM`-randomised
+  heredoc, closing the WR-03 secondary `$GITHUB_OUTPUT` injection point. One deviation: Task
+  1's Test 4 was rewritten from the plan's literal "no exit 1 anywhere in the whole file"
+  wording (already true pre-fix, so not RED as specified) to an elif-scoped assertion that
+  genuinely fails pre-fix and passes post-fix, preserving the same D-04 invariant; Task 2's
+  literal whole-file "no exit 1" acceptance grep still holds. See `34-15-SUMMARY.md`.
+  **All four gap-closure plans (34-12, 34-13, 34-14, 34-15) are now executed.** Next step is
+  phase re-verification (`/gsd-verify-work 34` or equivalent) to confirm `34-VERIFICATION.md`'s
+  remaining truths now pass, followed by resumption of 34-07's deferred live tag-push gate.
   Every plan is test-first with mandatory RED evidence (each new assertion must be shown failing
   against today's source before the fix lands), and comment-stripping is mandated wherever a
   `grep`/`toContain` assertion could otherwise be satisfied by the files' own header prose --
@@ -186,7 +201,18 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-14 (GAP-3 dead updater feed fix via fixed-tag endpoint + post-publish promotion workflow); 34-15 remains
+Last activity: 2026-07-24 -- Executed 34-15 (GAP-4 Windows both-secrets signing gate + heredoc-safe args output); all 4 gap-closure plans (34-12..34-15) now executed, next is phase re-verification
+
+> **Plan-counter note (2026-07-24, post-34-15 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:` prose block, and revert `total_plans`), those verbs were
+> **deliberately not run** this time. Frontmatter (`status`, `stopped_at`, `last_updated`,
+> `last_activity`, `progress.completed_plans` 48 -> 49) and the body `Plan:`/`Status:`/`Last
+> activity:` fields were written by hand against the phase directory and this session's own
+> commits: 34-01..34-03/05/06/07/08/09/10/11/12/13/14/15 all have SUMMARY.md on disk (14
+> executed, no 34-04); 34-15 is this session's plan. `total_plans: 56` / `completed_plans: 49`
+> reflects 34-15 landing. `percent: 60` is phase-based (3 of 5 completed phases), unchanged --
+> Phase 34 itself is not yet marked complete pending re-verification.
 
 > **Plan-counter note (2026-07-24, post-34-14 execution):** `gsd-sdk query state.advance-plan`,
 > run immediately after 34-14's execution, returned `{advanced:true, previous_plan:12,
