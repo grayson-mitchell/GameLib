@@ -23,9 +23,25 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": "all",
-    "icon": []
+    "active": true,
+    "targets": ["nsis", "appimage", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "externalBin": ["binaries/gamelib-sidecar"],
+    "createUpdaterArtifacts": true
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVDQzY5Qzc4NDlBQTFBQTcKUldTbkdxcEplSnpHN0UwcUNzRDcwR2xLaGxFRnBMQXNrR20wVzRqY3ovcWtzRTg1cTMyYVQ3eU4K",
+      "endpoints": [
+        "https://github.com/grayson-mitchell/GameLib/releases/latest/download/latest.json"
+      ],
+      "windows": { "installMode": "passive" }
+    }
+  }
 }
