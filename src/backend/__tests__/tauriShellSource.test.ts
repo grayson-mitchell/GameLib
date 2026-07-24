@@ -81,7 +81,11 @@ describe('main.rs sidecar lifecycle (WR-03 -- sidecar terminated on app exit)', 
   })
 
   test('the SidecarState field is no longer the unused-marked _child', () => {
-    expect(loadMainRsCode()).not.toContain('_child')
+    // Deliberately narrower than a blanket `_child` substring check: the WR-03 fix adds a
+    // legitimately-named `shutdown_child()` method, which itself contains the substring
+    // `_child`. What must actually be gone is the stale FIELD declaration
+    // (`_child: Mutex<Child>`), not every symbol that happens to end in "_child".
+    expect(loadMainRsCode()).not.toMatch(/_child\s*:\s*Mutex<Child>/)
   })
 
   test('the exit handler reaches the managed SidecarState via try_state', () => {

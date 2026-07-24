@@ -120,13 +120,40 @@ struct SidecarState {
     /// id -> one-shot sender the reader thread fulfils when the matching response arrives.
     pending: Mutex<HashMap<String, Sender<Result<Value, String>>>>,
     counter: AtomicU64,
-    /// Kept alive so the child is not reaped; the shell owns the sidecar's lifetime.
-    _child: Mutex<Child>,
+    /// The shell owns the sidecar's lifetime: held alive so it is not reaped early, and
+    /// explicitly killed by `shutdown_child()` on app exit (WR-03).
+    child: Mutex<Child>,
 }
 
 impl SidecarState {
     fn next_id(&self) -> String {
         self.counter.fetch_add(1, Ordering::Relaxed).to_string()
+    }
+
+    /// WR-03: kill and reap the sidecar process. Called from the `RunEvent::Exit`
+    /// handler in `main()`. Normal window close (red X / Cmd+Q / Alt+F4) does not route
+    /// through `app_exit`/`app_relaunch` (the only two in-app call sites that used to be
+    /// the sole way this process died), so without this an orphaned sidecar can survive
+    /// after the user believes the app has quit, retaining an authenticated Steam session,
+    /// open network sockets, and file handles. This runs on the exit path, so a poisoned
+    /// mutex, an already-exited process, or a kill error must all be logged and swallowed
+    /// rather than panicking -- an unwind here is worse than a leak.
+    fn shutdown_child(&self) {
+        let mut child = match self.child.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => {
+                eprintln!("[shell] sidecar mutex poisoned during exit shutdown; recovering");
+                poisoned.into_inner()
+            }
+        };
+        if let Err(e) = child.kill() {
+            eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
+        }
+        if let Err(e) = child.wait() {
+            eprintln!("[shell] sidecar wait() failed during exit shutdown: {e}");
+        } else {
+            eprintln!("[shell] sidecar terminated on exit");
+        }
     }
 
     /// Serialize an arbitrary `serde_json::Value` and write it (newline-terminated) to the
@@ -815,7 +842,7 @@ fn main() {
                 stdin: Mutex::new(stdin),
                 pending: Mutex::new(HashMap::new()),
                 counter: AtomicU64::new(1),
-                _child: Mutex::new(child),
+                child: Mutex::new(child),
             });
 
             start_reader(app.handle().clone(), state.clone(), stdout);
@@ -845,6 +872,19 @@ fn main() {
             open_external,
             sidecar_store_snapshot
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running the GameLib Tauri shell");
+        .build(tauri::generate_context!())
+        .expect("error while running the GameLib Tauri shell")
+        // WR-03: normal window close (red X / Cmd+Q / Alt+F4) does not route through the
+        // in-app app_exit/app_relaunch commands, so without an explicit RunEvent::Exit
+        // handler the sidecar child can be left running as an orphan after the user
+        // believes the app has quit -- retaining an authenticated Steam session, open
+        // network sockets, and file handles. Kill it here on the way out; this is not a
+        // WindowEvent::CloseRequested handler and does not cancel or defer exit.
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+                    state.shutdown_child();
+                }
+            }
+        });
 }
