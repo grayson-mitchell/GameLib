@@ -99,3 +99,11 @@ CR-02 is closed. `34-10` (WR-01, release-reachable `GAMELIB_SIDECAR_ENTRY` overr
 ---
 *Phase: 34-tauri-packaging-windows-and-linux-builds-signing-auto-update*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+- FOUND: src-tauri/icons/icon.ico
+- FOUND: .planning/phases/34-tauri-packaging-windows-and-linux-builds-signing-auto-update/34-09-SUMMARY.md
+- FOUND commit: 246cd65f (test task 1)
+- FOUND commit: bc9bd41c (feat task 2)
+- FOUND commit: 2e63ebb9 (docs summary)
