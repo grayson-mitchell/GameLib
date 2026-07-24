@@ -535,22 +535,27 @@ pnpm tauri signer generate -- -w ~/.tauri/gamelib-updater.key
 
 **If this table is empty:** N/A — see above.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three were resolved during Phase 34 planning; each resolution points at the deciding plan/task.
 
 1. **Should the Tauri release workflow share the `v*` tag trigger with the existing Electron `draft-release-mac.yml`/`draft-release-linux.yml`, or use a distinct tag pattern?**
    - What we know: Both existing Electron workflows already claim `v*`; a new Tauri workflow using the same pattern will co-trigger on every version tag push during the Electron/Tauri coexistence window (until Phase 35).
    - What's unclear: Whether GameLib wants one unified release per tag (both shells' artifacts on the same GitHub Release) or a decoupled Tauri release cadence.
    - Recommendation: Default to sharing `v*` (simplest, matches D-09's "pushing a version tag... creates a draft release" framing) and verify no artifact-filename collisions; flag as a quick discuss-phase confirmation if the user has a preference.
+   - **RESOLVED (34-06 Task 1):** Shares the `v*` trigger (co-triggering with the Electron `draft-release-*` workflows is ACCEPTED — Pitfall 7); the plan requires confirming Tauri vs electron-builder artifact names do not collide.
 
 2. **Does GameLib need to support Linux desktop environments without a Secret Service implementation (bare window managers, minimal server-like Linux)?**
    - What we know: `sync-secret-service` (the `keyring` crate's Linux feature) depends on a running Secret Service provider (GNOME Keyring, KWallet) being present.
    - What's unclear: No existing repo document specifies a minimum supported Linux desktop-environment matrix.
    - Recommendation: Assume mainstream GNOME/KDE desktops are the target (matches the existing Electron Linux build's implicit assumptions — CrossOver/Wine bottle work in this codebase already assumes a fairly complete desktop Linux environment) unless the user says otherwise; document the runtime fallback behavior (Pitfall 5) regardless.
+   - **RESOLVED (34-02 Task 1):** Targets mainstream GNOME/KDE; the plan documents the Secret Service assumption and the `keyring:unavailable` structured-error fallback (Pitfall 5 / A3).
 
 3. **What is the exact per-OS `build:sidecar-sea` invocation shape, and should it live as a new `meta/*.ts` script (mirroring `buildSteamBridgeShims.ts`/`gen_vtables.ts`'s existing convention) or inline in the CI workflow?**
    - What we know: The existing `build:sidecar` esbuild step is a single cross-platform command; the SEA packaging step (Pattern 3) has OS-conditional branches (codesign only on macOS, `.exe` extension only on Windows).
    - What's unclear: Whether to write this as a portable `meta/buildSidecarSea.ts` (Node script, matches repo convention, testable) or as inline shell steps per matrix leg in the workflow YAML (simpler, less code, harder to test locally).
    - Recommendation: Follow the established `meta/*.ts` convention (portable, `esbuild`-runnable, and locally reproducible outside CI) — this is a low-risk, low-cost decision for the planner to make explicitly rather than defaulting to inline YAML.
+   - **RESOLVED (34-02 Task 2):** Built as portable `meta/buildSidecarSea.ts` (exported pure argv-builders, unit-tested by `buildSidecarSea.test.ts`), NOT inline CI YAML.
 
 ## Environment Availability
 
@@ -679,7 +684,7 @@ pnpm tauri signer generate -- -w ~/.tauri/gamelib-updater.key
 | Sidecar compilation | MEDIUM | Mechanism is HIGH confidence (official Node docs) but real-world outcome (macOS x64 tier, worker fallback) inferred from code-reading, not an actual build-and-run |
 | Pitfalls | MEDIUM-HIGH | Most are directly verified by reading repo code or official docs; one (Pitfall 5's exact keyring failure mode) is explicitly logged as an assumption |
 
-### Open Questions
+### Open Questions (RESOLVED — see the detailed `## Open Questions (RESOLVED)` section above)
 1. Should the new Tauri release workflow share the `v*` tag trigger with the existing Electron draft-release workflows, or use a distinct pattern? (co-triggering risk during the Electron/Tauri coexistence window)
 2. What Linux desktop-environment matrix does GameLib actually need to support for the `sync-secret-service` keyring backend? (no existing repo doc specifies this)
 3. Should the SEA packaging step live as a portable `meta/buildSidecarSea.ts` script (repo convention) or inline CI YAML?

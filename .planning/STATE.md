@@ -4,8 +4,8 @@ milestone: v0.7
 milestone_name: — Steam Native Install
 status: executing
 stopped_at: Phase 34 context gathered
-last_updated: "2026-07-24T00:03:05.311Z"
-last_activity: 2026-07-23
+last_updated: "2026-07-24T00:57:50.891Z"
+last_activity: 2026-07-24 -- Phase 34 planning complete
 progress:
   total_phases: 5
   completed_phases: 3
@@ -36,7 +36,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 33 (tauri-lifecycle-cluster-app-dialog-window-notifications-tray) — EXECUTING
 Plan: 6 of 6
 Status: Ready to execute
-Last activity: 2026-07-23
+Last activity: 2026-07-24 -- Phase 34 planning complete
 
 > **Plan-counter note (2026-07-23):** the automated `state.advance-plan` verb bumped this
 > file to "Plan: 2 of 4" immediately after 31-04's execution — itself stale drift, since

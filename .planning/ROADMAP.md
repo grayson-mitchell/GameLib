@@ -1227,11 +1227,25 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 34-01-PLAN.md — Wave-0 config-shape test scaffolds (tauriConf/cargoFeatures/releaseWorkflow/buildSidecarSea)
-- [ ] 34-02-PLAN.md — Packaging foundation: keyring Win/Linux features + updater/shell crates + Node SEA sidecar build script
 - [ ] 34-03-PLAN.md — Generate the minisign updater keypair (public key committed later; private key → GitHub secrets)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 34-02-PLAN.md — Packaging foundation: keyring Win/Linux features + updater/shell crates + Node SEA sidecar build script
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 34-05-PLAN.md — Tauri shell productionization: bundle.active + nsis/appimage/dmg + externalBin sidecar + updater feed (fork, not Heroic)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 34-06-PLAN.md — CI release pipeline: 3-OS tauri-action matrix, graceful-skip signing, draft+prerelease on v* tag
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 34-07-PLAN.md — Live phase-close gate: real v* tag push proves all-platform draft+prerelease + Node-free sidecar (Manual-Only)
 
 ---
