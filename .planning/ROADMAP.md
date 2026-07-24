@@ -1223,7 +1223,7 @@ Plans:
 **Goal:** Extend the macOS-only dev build to real Windows and Linux Tauri packaging with code signing, notarization, and an auto-update feed — explicitly deferred by 27-CONTEXT. Note the auto-update feed must point at the GameLib fork, not Heroic upstream (the failure mode quick task 260720-q5n fixed for the Electron build).
 **Depends on:** Phase 33 (an app that runs before an app that ships).
 **Requirements:** REQ-34-01, REQ-34-02, REQ-34-03, REQ-34-04, REQ-34-05, REQ-34-06, REQ-34-07, REQ-34-08, REQ-34-09
-**Plans:** 14 plans (12/14 executed; 34-14..34-15 remain — gap cycle 2, closing `34-VERIFICATION.md`'s 4 failed truths; 34-07's live tag-push gate still deferred)
+**Plans:** 14 plans (13/14 executed; 34-15 remains — gap cycle 2, closing `34-VERIFICATION.md`'s 4 failed truths; 34-07's live tag-push gate still deferred)
 
 Plans:
 
@@ -1270,7 +1270,7 @@ Plans:
 
 **Wave 9** *(blocked on 34-12 — 34-15 shares `release-tauri.yml` + `releaseWorkflow.test.ts` with it, 34-14 cross-reads the same workflow; 34-14 and 34-15 have no mutual overlap and run in parallel)*
 
-- [ ] 34-14-PLAN.md — GAP-3: repoint `plugins.updater.endpoints` at the fixed-tag asset URL `/releases/download/updater/latest.json` and add a `release: published`-triggered `promote-updater-feed.yml` that copies `latest.json` there byte-for-byte — keeps D-09's `prerelease: true` + draft human gate intact
+- [x] 34-14-PLAN.md — GAP-3: repoint `plugins.updater.endpoints` at the fixed-tag asset URL `/releases/download/updater/latest.json` and add a `release: published`-triggered `promote-updater-feed.yml` that copies `latest.json` there byte-for-byte — keeps D-09's `prerelease: true` + draft human gate intact
 - [ ] 34-15-PLAN.md — GAP-4: require BOTH `WINDOWS_CERTIFICATE` and `WINDOWS_CERT_THUMBPRINT` before enabling Windows signing (warn-and-skip otherwise, restoring D-04); narrow the cert-import gate so no unusable `.pfx` hits disk; emit secret-derived `$GITHUB_OUTPUT` via a randomised heredoc delimiter
 
 > **Locked constraint honored by 34-14:** D-09 forecloses the "just drop `prerelease: true`"

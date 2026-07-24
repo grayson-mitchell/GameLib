@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing -- gap cycle 2 (34-12,34-13 done; 34-14..34-15 remain), closing the 4 gaps from 34-VERIFICATION
-stopped_at: Completed 34-13-PLAN.md (GAP-2 Windows-spawnable esbuild/postject resolution via process.execPath + WR-10 closure, 2/2 tasks)
-last_updated: "2026-07-24T08:48:39.000Z"
-last_activity: 2026-07-24 -- Executed 34-13 (GAP-2 Windows-spawnable SEA tool resolution)
+status: executing -- gap cycle 2 (34-12,34-13,34-14 done; 34-15 remains), closing the 4 gaps from 34-VERIFICATION
+stopped_at: Completed 34-14-PLAN.md (GAP-3 dead updater feed fix -- fixed-tag endpoint + post-publish promotion workflow, 2/2 tasks)
+last_updated: "2026-07-24T08:59:10.792Z"
+last_activity: 2026-07-24 -- Executed 34-14 (GAP-3 dead updater feed fix via fixed-tag endpoint + post-publish promotion workflow); 34-15 remains
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 47
+  completed_plans: 48
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTING
-Plan: 12 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13 executed — no 04; 34-14..34-15 remain)
+Plan: 13 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14 executed — no 04; 34-15 remains)
 Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
   came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
   prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
@@ -80,14 +80,30 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   `buildEsbuildArgv()` now branches on `process.platform` (win32: wrap in `process.execPath`
   like postject; else: spawn the native binary directly), with two Task-1 tests corrected to
   match. Windows-leg behavior is unchanged from the plan's literal spec. See `34-13-SUMMARY.md`.
-  **34-14** (wave 2) -- GAP-3, the dead update feed: the endpoint uses GitHub's
+  **34-14 EXECUTED 2026-07-24** (wave 2, 2/2 tasks, `tauriConf` suite 21/21 green, cross-plan
+  sweep `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched`
+  113/113 green): closed GAP-3, the dead update feed -- the endpoint used GitHub's
   `/releases/latest/download/` form, which by design excludes prereleases, while `tauri-action`
   sets `prerelease: true` unconditionally -- a permanent 404, before and after manual publish.
   **D-09 forecloses the obvious fix**: draft+prerelease is a locked decision encoding the Phase 19
-  `prerelease-not-Latest` lesson, so dropping the flag was not planned. Instead the feed moves to
-  `/releases/download/updater/latest.json`, promoted by a new `release: published` workflow --
-  which also fixes the second-order problem that the manifest's inner installer URLs don't
-  resolve while the source release is still a draft. A test guards D-09 against reintroduction.
+  `prerelease-not-Latest` lesson, so dropping the flag was not an option. Task 1 added a 9-test
+  `describe` block to `tauriConf.test.ts` (RED: 7/9 failed against the pre-fix config/workflow --
+  verbatim failing-test list in `34-14-SUMMARY.md`, including a one-liner proof that
+  `workflow.includes('prerelease: true') && endpoint.includes('/releases/latest/download/')`
+  printed `true` against today's files). Task 2 repointed
+  `plugins.updater.endpoints[0]` to `/releases/download/updater/latest.json` (exactly one changed
+  line in `tauri.conf.json`, confirmed via `git diff --numstat` = `1  1`) and added
+  `.github/workflows/promote-updater-feed.yml`, triggered only on `release: types: [published]`,
+  which downloads the published tag's `latest.json` (non-fatal if absent), logs its SHA-256,
+  ensures the `updater` release exists as a published (never draft) prerelease, and uploads the
+  manifest byte-for-byte -- declaring no Apple/Windows/Tauri-signing secret anywhere in the file,
+  so the minisign trust chain is provably unweakened. One self-corrected snag during Task 2: the
+  workflow's own explanatory prose initially contained the literal strings `--draft` and
+  `TAURI_SIGNING_PRIVATE_KEY` (inside sentences describing what NOT to do / NOT to hold), which
+  tripped the literal-string acceptance-criteria greps for those exact tokens; reworded both
+  comments to state the same invariant without the literal string, no test or code weakened. A
+  test guards D-09's `prerelease: true`/`releaseDraft: true` against reintroduction. See
+  `34-14-SUMMARY.md`. **34-15 remains** (wave 2, GAP-4).
   **34-15** (wave 2) -- GAP-4 (warning): the Windows signing gate tests only
   `WINDOWS_CERTIFICATE`, not `WINDOWS_CERT_THUMBPRINT`, so a half-configured secret set yields
   `certificateThumbprint: ""` and hard-fails the leg -- contradicting D-04's graceful-skip
@@ -170,7 +186,26 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-13 (GAP-2 Windows-spawnable SEA tool resolution via process.execPath); 34-14..34-15 remain
+Last activity: 2026-07-24 -- Executed 34-14 (GAP-3 dead updater feed fix via fixed-tag endpoint + post-publish promotion workflow); 34-15 remains
+
+> **Plan-counter note (2026-07-24, post-34-14 execution):** `gsd-sdk query state.advance-plan`,
+> run immediately after 34-14's execution, returned `{advanced:true, previous_plan:12,
+> current_plan:13, total_plans:14}` and repeated the exact same corruption documented in every
+> note below: silently reverted `stopped_at:` (frontmatter) to the stale "Completed
+> 34-13-PLAN.md" value, reverted `progress.total_plans` (frontmatter) from 56 back to 52,
+> reverted `progress.completed_plans` from 48 back to 46, replaced the multi-line `Status:` body
+> with a bare "Ready to execute" (orphaning the gap-cycle-2 prose beneath it), and truncated
+> `last_activity`/`Last activity:` to a bare date. `gsd-sdk query state.update-progress` was run
+> next and additionally spliced its own `[█████████░] 88%` progress-bar string into the MIDDLE of
+> the immediately-preceding plan-counter note's prose (same failure mode the 2026-07-24
+> corrected-again-post-34-11 note below documents). The bare "current_plan:13" number was
+> coincidentally correct as a bare integer (12 plans executed before this session's 34-14 run =
+> 13 after), but every other field either verb touched was wrong. Neither automated write was
+> kept: `.planning/STATE.md` was restored from a pre-verb backup copy and every field was
+> corrected by hand against the phase directory (34-01..34-03/05/06/07/08/09/10/11/12/13/14 all
+> have SUMMARY.md on disk; no 34-04; 34-15 has PLAN.md with no SUMMARY). Same precedent as every
+> plan-counter note below -- do not trust `state.advance-plan`/`state.update-progress`'s writes
+> on this file without diffing against a backup and checking the phase directory directly first.
 
 > **Plan-counter note (2026-07-24, post-34-13 execution):** `gsd-sdk query state.advance-plan`,
 > run immediately after 34-13's execution, returned `{advanced:true, previous_plan:11,
@@ -531,6 +566,7 @@ Closed/parked native-install phases:
 | Phase 34 P08 | 15min | 3 tasks | 2 files |
 | Phase 34 P09 | 8min | 2 tasks | 3 files |
 | Phase 34 P10 | 25min | 3 tasks | 2 files |
+| Phase 34 P14 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -750,6 +786,7 @@ Recent decisions affecting current work:
 - [Phase 34]: Confirmed via cmp that tauri icon regen is byte-identical for PNGs but byte-different for icon.icns -- validates the scratch-dir-then-copy-only-icon.ico approach as necessary
 - [Phase 34]: 34-10: kept shutdown_child method name per plan's explicit Task 3 instruction; narrowed Task 1's over-broad test assertion instead, resolving a plan-internal contradiction (blanket _child substring check vs. required fn shutdown_child)
 - [Phase 34]: 34-11: Used explicit per-leg sidecar_triple matrix literals over inline GHA ternary; try/finally cert.pfx cleanup; WR-04/IN-01 deferred per GAP-D-01 — Literal matrix fields match 34-06's build_args precedent and are directly test-assertable; try/finally covers the failed-import case a trailing statement would miss
+- [Phase 34]: 34-14: repointed the updater feed endpoint to a fixed-tag asset URL (/releases/download/updater/latest.json) and added a release:published-triggered promote-updater-feed.yml, closing GAP-3 while preserving D-09's draft+prerelease human-review gate
 
 ### Pending Todos
 
@@ -819,8 +856,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T07:44:41.373Z
-Stopped at: Completed 34-11-PLAN.md (CR-01 CI wiring + WR-02 cert cleanup + WR-04/IN-01 tracked-debt recording, 3/3 tasks)
+Last session: 2026-07-24T08:59:10.786Z
+Stopped at: Completed 34-14-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
