@@ -17,10 +17,11 @@ findings:
   warning: 2
   info: 4
   total: 6
-  warning_resolved: 1
+  warning_resolved: 2
 status: issues_found
 resolved:
   - "WR-01 fixed inline post-review (package.json verify:updater-key now uses --outfile + && instead of a pipe; exit code propagates without pipefail). Verified 8/8 updaterSigningKey tests + simulated esbuild-failure now exits non-zero."
+  - "WR-02 fixed inline post-review (release-tauri.yml: added a cert-absent-but-secondary-present diagnostic elif to BOTH the Apple gate and the Windows build_args step, naming the cert secret as the missing one; purely additive, proven paths unchanged, D-04 green-on-any-combo holds). Executed-path tests added (Apple Test I + Windows mirror); releaseWorkflow 78/78, sweep 194/194."
 ---
 
 # Phase 34 (gap cycle 3): Code Review Report
@@ -84,6 +85,8 @@ $ sh -c 'false | node; echo $?'
 or wrap the existing pipe in an explicit `bash -eo pipefail -c '...'` inside the script string so correctness doesn't depend on the caller's ambient shell.
 
 ### WR-02: Partial-secret-set diagnostics miss the "primary secret missing, secondary secrets present" case on both signing gates
+
+**✅ RESOLVED** (fixed inline post-review): both gates now have a dedicated `elif` for the cert-absent-but-secondary-present case, naming `APPLE_CERTIFICATE` / `WINDOWS_CERTIFICATE` as the missing secret instead of falling through to the misleading "nothing enrolled" default. Purely additive — no signing override is merged and no branch calls `exit 1`, so the all-present and all-absent paths the live run proved stay behaviorally identical and D-04 (job green on any secret combination) still holds. Test A's verbatim all-empty string is preserved. Executed-path tests added (Apple Test I + a Windows mirror); `releaseWorkflow` 78/78, cross-plan sweep 194/194, `tsc` clean.
 
 **File:** `.github/workflows/release-tauri.yml:249-260` (Apple), `:358-370` (Windows)
 **Issue:** Both gates only special-case "primary secret present, others missing." The inverse — secondary secrets present but the primary cert secret absent — is not diagnosed distinctly:
