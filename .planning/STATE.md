@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: — Steam Native Install
-status: executing -- gap cycle 2 (34-12 done; 34-13..34-15 remain), closing the 4 gaps from 34-VERIFICATION
-stopped_at: Completed 34-12-PLAN.md (GAP-1 renderer/steam-bridge/crossover-index build steps + header UNPROVEN LIVE correction, 2/2 tasks)
-last_updated: "2026-07-24T08:37:00.000Z"
-last_activity: 2026-07-24 -- Executed 34-12 (GAP-1 CI renderer build closure)
+status: executing -- gap cycle 2 (34-12,34-13 done; 34-14..34-15 remain), closing the 4 gaps from 34-VERIFICATION
+stopped_at: Completed 34-13-PLAN.md (GAP-2 Windows-spawnable esbuild/postject resolution via process.execPath + WR-10 closure, 2/2 tasks)
+last_updated: "2026-07-24T08:48:39.000Z"
+last_activity: 2026-07-24 -- Executed 34-13 (GAP-2 Windows-spawnable SEA tool resolution)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 56
-  completed_plans: 46
+  completed_plans: 47
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 2 EXECUTING
-Plan: 11 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12 executed — no 04; 34-13..34-15 remain)
+Plan: 12 of 14 executed (34-01,02,03,05,06,07,08,09,10,11,12,13 executed — no 04; 34-14..34-15 remain)
 Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --gaps-only`). `34-VERIFICATION.md`
   came back `gaps_found` at 6/10 must-haves: gap cycle 1 (34-08..34-11) genuinely closed every
   prior code-review finding, but goal-backward verification then found **three NEW BLOCKERs plus
@@ -56,14 +56,30 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   assumptions pending 34-07's deferred live gate rather than asserted fact (34-REVIEW.md WR-09).
   releaseWorkflow suite 31/31 green; cross-plan sweep
   (`tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched`)
-  94/94 green. No deviations. See `34-12-SUMMARY.md`. **34-13/34-14/34-15 remain** -- 34-14 and
-  34-15 both `depends_on: ['34-12']` and can now proceed.
-  **34-13** (wave 1) -- GAP-2, the Windows-leg BLOCKER: `meta/buildSidecarSea.ts` spawns
+  94/94 green. No deviations. See `34-12-SUMMARY.md`. **34-14/34-15 remain** -- both
+  `depends_on: ['34-12']` and can now proceed.
+  **34-13 EXECUTED 2026-07-24** (wave 1, 2/2 tasks, `buildSidecarSea` suite 36/36 green,
+  cross-plan sweep `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched`
+  104/104 green): closed GAP-2, the Windows-leg BLOCKER -- `meta/buildSidecarSea.ts` spawned
   extensionless `node_modules/.bin/{postject,esbuild}` with no `shell:true`, which Windows
-  `CreateProcess` cannot execute without PATHEXT lookup, so the leg dies before `tauri-action`
-  and 34-11's `sidecar_triple: x86_64-pc-windows-msvc` wiring is unreachable in practice.
-  Resolves both tools as CLI modules run through `process.execPath`. Also closes WR-10 by
-  rewiring the call sites to consume the same argv the tests assert.
+  `CreateProcess` cannot execute without PATHEXT lookup, killing the leg before `tauri-action`
+  and leaving 34-11's `sidecar_triple: x86_64-pc-windows-msvc` wiring unreachable in practice.
+  Task 1 added 10 RED regression tests (verbatim RED output in `34-13-SUMMARY.md`: 10/36 failed
+  against the pre-fix source, including a manual node probe confirming `.bin` string still
+  present today). Task 2 deleted `POSTJECT_BIN`/`ESBUILD_BIN`, added `resolveEsbuildCli()`/
+  `resolvePostjectCli()` (`require.resolve`-based, fail-loud `COMPILE GATE FAILED (D-06/CR-02)`
+  on resolution failure) and `isWindowsSpawnable()`, rewired `buildPostjectArgv()`/new
+  `buildEsbuildArgv()` to return `{command: process.execPath, args: [cliPath, ...]}`, and
+  rewired both `bundleForSea()`/`injectBlob()` call sites to consume the resolved argv --
+  closing WR-10 (the tested command is now the executed command). `pnpm build:sidecar-sea`
+  ran end-to-end on this arm64 Mac and printed `SEA sidecar arch verified: arm64` plus the
+  compiled binary path -- the plan's mandated BEHAVIORAL proof. One Rule-1 deviation found
+  during that verification run: esbuild's own installer (`install.js maybeOptimizePackage()`)
+  hardlinks `bin/esbuild` to the raw native binary on every OS except win32, so
+  `process.execPath <path>` crashed with a Mach-O `SyntaxError` on this host;
+  `buildEsbuildArgv()` now branches on `process.platform` (win32: wrap in `process.execPath`
+  like postject; else: spawn the native binary directly), with two Task-1 tests corrected to
+  match. Windows-leg behavior is unchanged from the plan's literal spec. See `34-13-SUMMARY.md`.
   **34-14** (wave 2) -- GAP-3, the dead update feed: the endpoint uses GitHub's
   `/releases/latest/download/` form, which by design excludes prereleases, while `tauri-action`
   sets `prerelease: true` unconditionally -- a permanent 404, before and after manual publish.
@@ -154,7 +170,22 @@ Status: **Gap cycle 2 execution started 2026-07-24** (`/gsd-execute-phase 34 --g
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Executed 34-12 (GAP-1 CI renderer/steam-bridge/crossover-index build closure); 34-13..34-15 remain
+Last activity: 2026-07-24 -- Executed 34-13 (GAP-2 Windows-spawnable SEA tool resolution via process.execPath); 34-14..34-15 remain
+
+> **Plan-counter note (2026-07-24, post-34-13 execution):** `gsd-sdk query state.advance-plan`,
+> run immediately after 34-13's execution, returned `{advanced:true, previous_plan:11,
+> current_plan:12, total_plans:14}` and repeated the exact same corruption documented in the
+> note below: silently reverted `stopped_at:` (frontmatter) to the stale "Completed
+> 34-11-PLAN.md" value, reverted `progress.total_plans` (frontmatter) from 56 back to 52,
+> replaced the multi-line `Status:` body with a bare "Ready to execute" (orphaning the
+> gap-cycle-2 prose beneath it), and truncated `last_activity`/`Last activity:` to a bare date.
+> The bare "current_plan:12" number was coincidentally correct (11 plans executed before this
+> session's 34-13 run = 12 after), but every other field it touched was wrong, identical to the
+> post-34-12 failure mode. The entire automated write was discarded via `git checkout --
+> .planning/STATE.md` and every field was corrected by hand against the phase directory
+> (34-01..34-03/05/06/07/08/09/10/11/12/13 all have SUMMARY.md on disk; no 34-04; 34-14/34-15
+> have PLAN.md with no SUMMARY). Same precedent as every plan-counter note below -- do not trust
+> `state.advance-plan`'s writes on this file without checking the phase directory directly first.
 
 > **Plan-counter note (2026-07-24, post-34-12 execution):** `gsd-sdk query state.advance-plan`,
 > run immediately after 34-12's execution, returned `{advanced:true, previous_plan:10,
