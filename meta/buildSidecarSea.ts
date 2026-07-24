@@ -241,8 +241,19 @@ export function buildPostjectArgv(
  * refactor -- in particular `--packages=external` is deliberately ABSENT
  * (Rule-1 fix 1, file header); re-adding it crashes the SEA sidecar at
  * startup with `ERR_UNKNOWN_BUILTIN_MODULE`.
+ *
+ * WR-06 fix (gap cycle 2 review): `platform` is an injectable parameter,
+ * matching `buildPostjectArgv`/`buildCodesignArgv`. It previously read
+ * `process.platform` internally, which forced its test into an
+ * `if (process.platform === 'win32')` shape -- so the win32 branch was never
+ * evaluated on macOS/Linux dev machines nor on three of the four CI legs.
+ * GAP-2 exists precisely BECAUSE Windows behavior had never been validated;
+ * an unreachable-off-Windows branch reproduces that blind spot. Both
+ * branches are now asserted unconditionally by the test suite.
  */
-export function buildEsbuildArgv(): { command: string; args: string[] } {
+export function buildEsbuildArgv(
+  platform: NodeJS.Platform | string = process.platform
+): { command: string; args: string[] } {
   const esbuildCli = resolveEsbuildCli()
   const flags = [
     '--bundle',
@@ -254,7 +265,7 @@ export function buildEsbuildArgv(): { command: string; args: string[] } {
     `--outfile=${SEA_BUNDLE_PATH}`,
     SIDECAR_ENTRY_PATH
   ]
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     return { command: process.execPath, args: [esbuildCli, ...flags] }
   }
   return { command: esbuildCli, args: flags }

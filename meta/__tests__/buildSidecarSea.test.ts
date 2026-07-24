@@ -244,6 +244,38 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     }
   })
 
+  // WR-06 (34-REVIEW.md gap cycle 2): buildEsbuildArgv() read process.platform
+  // internally, so the win32 branch -- the ONE branch GAP-2 exists to fix --
+  // was never evaluated on macOS/Linux dev machines or on three of the four CI
+  // legs. With platform injected (as buildPostjectArgv/buildCodesignArgv
+  // already did), both branches are exercised on every host.
+  test('WR-06: the win32 branch runs the esbuild CLI through process.execPath (asserted on every host)', () => {
+    const winArgv = buildEsbuildArgv('win32')
+    expect(winArgv.command).toBe(process.execPath)
+    expect(winArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+    expect(existsSync(winArgv.args[0])).toBe(true)
+  })
+
+  test('WR-06: the non-win32 branches spawn the esbuild binary directly (asserted on every host)', () => {
+    for (const platform of ['darwin', 'linux'] as const) {
+      const argv = buildEsbuildArgv(platform)
+      expect(argv.command).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
+      expect(argv.command).not.toBe(process.execPath)
+      expect(existsSync(argv.command)).toBe(true)
+      expect(argv.args[0]).toBe('--bundle')
+    }
+  })
+
+  test('WR-06: the two branches differ only in who is spawned, never in the flags', () => {
+    const winArgv = buildEsbuildArgv('win32')
+    const linuxArgv = buildEsbuildArgv('linux')
+    expect(winArgv.args.slice(1)).toEqual(linuxArgv.args)
+  })
+
+  test('WR-06: the default parameter still follows the host platform', () => {
+    expect(buildEsbuildArgv()).toEqual(buildEsbuildArgv(process.platform))
+  })
+
   test('buildEsbuildArgv(...).args carries the required bundling flags', () => {
     const esbuildArgv = buildEsbuildArgv()
     expect(esbuildArgv.args).toEqual(
