@@ -237,6 +237,35 @@ jobs:
             echo "$DELIM"
           } >> "$GITHUB_OUTPUT"
 
+      # CR-02 (gap cycle 2 review): `build/` is BOTH tauri.conf.json's
+      # `frontendDist` AND meta/buildSidecarSea.ts's scratch directory. Once
+      # GAP-1 made `build/` reachable by tauri-action, Tauri began embedding
+      # every SEA/Electron intermediate into the shipped binary via
+      # `generate_context!`/EmbeddedAssets and serving it over
+      # tauri://localhost: a ~58 MB downloaded Node dist tarball
+      # (build/node-dist), the 13 MB UNMINIFIED full-backend bundle
+      # (build/main/sidecar-sea-bundle.js -- Steam auth, token store and
+      # depot code, fetchable from the webview), the raw SEA blob, and the
+      # Electron main/preload output Tauri never loads. This step removes
+      # them AFTER the sidecar binary has already been produced into
+      # src-tauri/binaries/ and BEFORE tauri-action reads frontendDist.
+      #
+      # The two `test` lines are deliberate fail-loud guards, not decoration:
+      # if a future prune line over-reaches and eats the renderer output (or
+      # the macOS bridge assets vite copies from public/), this step fails
+      # here rather than silently shipping an empty webview.
+      - name: Prune non-frontend build intermediates before bundling
+        shell: bash
+        env:
+          IS_MACOS: ${{ startsWith(matrix.platform, 'macos') }}
+        run: |
+          rm -rf build/main build/preload build/node-dist
+          rm -f build/sea-config.json build/sidecar-prep.blob
+          test -f build/index.html
+          if [ "$IS_MACOS" = "true" ]; then
+            test -d build/bin
+          fi
+
       - uses: tauri-apps/tauri-action@v1
         with:
           tagName: v__VERSION__

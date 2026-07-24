@@ -12,8 +12,17 @@
  * and prerelease assertions below are the mitigation -- a regression here
  * would silently remove the D-09 human-review gate before publish.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 
 const RELEASE_WORKFLOW_PATH = join(
   __dirname,
@@ -27,6 +36,68 @@ const RELEASE_WORKFLOW_PATH = join(
 
 function loadReleaseWorkflow(): string {
   return readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
+}
+
+/**
+ * Extracts a step's literal `run: |` block body, dedented, so a test can
+ * EXECUTE the workflow's real shell instructions instead of pattern-matching
+ * their text. Fails loudly if the named step (or its run block) is missing,
+ * rather than silently returning an empty script that would vacuously pass.
+ */
+function extractRunBlock(stepName: string): string {
+  const lines = loadReleaseWorkflow().split('\n')
+  const stepIndex = lines.findIndex((line) => line.trim() === `- name: ${stepName}`)
+  expect(stepIndex).toBeGreaterThanOrEqual(0)
+
+  const runIndex = lines.findIndex(
+    (line, index) => index > stepIndex && line.trim() === 'run: |'
+  )
+  expect(runIndex).toBeGreaterThan(stepIndex)
+
+  const runIndent = lines[runIndex].length - lines[runIndex].trimStart().length
+  const body: string[] = []
+  for (let index = runIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (line.trim() === '') {
+      body.push('')
+      continue
+    }
+    const indent = line.length - line.trimStart().length
+    if (indent <= runIndent) {
+      break
+    }
+    body.push(line.slice(runIndent + 2))
+  }
+  expect(body.join('').trim().length).toBeGreaterThan(0)
+  return body.join('\n')
+}
+
+/**
+ * Runs an extracted run block exactly the way GitHub's `shell: bash` does
+ * (`bash --noprofile --norc -eo pipefail {0}`), in a throwaway working
+ * directory, so a failing guard inside the script surfaces as a non-zero
+ * status here too.
+ */
+function runStepScript(
+  script: string,
+  cwd: string,
+  env: Record<string, string> = {}
+): { status: number | null; stderr: string } {
+  const scriptPath = join(cwd, 'step.sh')
+  writeFileSync(scriptPath, script)
+  const result = spawnSync(
+    'bash',
+    ['--noprofile', '--norc', '-eo', 'pipefail', scriptPath],
+    { cwd, env: { ...process.env, ...env }, encoding: 'utf-8' }
+  )
+  return { status: result.status, stderr: result.stderr }
+}
+
+/** Creates a file (and any missing parent directories) under `root`. */
+function touch(root: string, relativePath: string, contents = 'x'): void {
+  const target = join(root, relativePath)
+  mkdirSync(dirname(target), { recursive: true })
+  writeFileSync(target, contents)
 }
 
 describe('release-tauri.yml trigger shape (D-05, D-09)', () => {
@@ -289,6 +360,119 @@ describe('release-tauri.yml steam-bridge target arch (CR-01 regression guard)', 
     expect(source).toMatch(
       /Build steam bridge shims \(macOS only\)[\s\S]*?GAMELIB_BRIDGE_TARGET_ARCH:[\s\S]*?run: pnpm build-steam-bridge/
     )
+  })
+})
+
+// 34-REVIEW.md (gap cycle 2) CR-02: tauri.conf.json's `frontendDist: "../build"` is the
+// SAME directory meta/buildSidecarSea.ts uses as scratch space, so once GAP-1 populated
+// build/ the shipped installer embedded a ~58 MB Node dist tarball, the unminified
+// full-backend SEA bundle, the raw SEA blob and the Electron main/preload output --
+// webview-fetchable, with `csp: null`. These tests EXECUTE the prune step's real shell
+// body against a synthetic build/ tree rather than asserting on its text, so a prune line
+// that stops removing an intermediate (or starts eating the renderer output) fails here.
+const PRUNE_STEP_NAME = 'Prune non-frontend build intermediates before bundling'
+const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
+
+describeOnPosix('release-tauri.yml prunes frontendDist before bundling (CR-02 regression guard)', () => {
+  let workdir: string
+
+  /** Mirrors the build/ contents observed after renderer build + SEA build. */
+  function seedBuildTree(root: string, { withBridge }: { withBridge: boolean }): void {
+    touch(root, join('build', 'index.html'), '<!doctype html>')
+    touch(root, join('build', 'assets', 'index-abc123.js'))
+    touch(root, join('build', 'assets', 'index-abc123.css'))
+    touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64.tar.gz'))
+    touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64', 'bin', 'node'))
+    touch(root, join('build', 'main', 'sidecar-sea-bundle.js'))
+    touch(root, join('build', 'main', 'sidecar.js'))
+    touch(root, join('build', 'main', 'main.js'))
+    touch(root, join('build', 'main', 'chunks', 'chunk-1.js'))
+    touch(root, join('build', 'main', 'decompressWorker.js'))
+    touch(root, join('build', 'preload', 'index.js'))
+    touch(root, join('build', 'sea-config.json'), '{}')
+    touch(root, join('build', 'sidecar-prep.blob'))
+    if (withBridge) {
+      touch(root, join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'))
+      touch(root, join('build', 'bin', 'x64', 'darwin', 'steam_api.dll'))
+    }
+  }
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-prune-'))
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  test('the prune step runs after the SEA build and before tauri-action', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).toMatch(
+      new RegExp(
+        `run: pnpm build:sidecar-sea[\\s\\S]*?${PRUNE_STEP_NAME}[\\s\\S]*?uses: tauri-apps/tauri-action`
+      )
+    )
+  })
+
+  test('executing it removes every SEA/Electron intermediate from frontendDist', () => {
+    seedBuildTree(workdir, { withBridge: true })
+    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+      IS_MACOS: 'true'
+    })
+    expect(result.status).toBe(0)
+
+    for (const leftover of [
+      join('build', 'node-dist'),
+      join('build', 'main'),
+      join('build', 'preload'),
+      join('build', 'sea-config.json'),
+      join('build', 'sidecar-prep.blob')
+    ]) {
+      expect(existsSync(join(workdir, leftover))).toBe(false)
+    }
+  })
+
+  test('executing it leaves the renderer output and the bundled bridge assets intact', () => {
+    seedBuildTree(workdir, { withBridge: true })
+    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+      IS_MACOS: 'true'
+    })
+    expect(result.status).toBe(0)
+
+    for (const kept of [
+      join('build', 'index.html'),
+      join('build', 'assets', 'index-abc123.js'),
+      join('build', 'assets', 'index-abc123.css'),
+      join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'),
+      join('build', 'bin', 'x64', 'darwin', 'steam_api.dll')
+    ]) {
+      expect(existsSync(join(workdir, kept))).toBe(true)
+    }
+  })
+
+  test('it fails loudly if the prune ate the renderer entrypoint', () => {
+    seedBuildTree(workdir, { withBridge: true })
+    rmSync(join(workdir, 'build', 'index.html'))
+    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+      IS_MACOS: 'true'
+    })
+    expect(result.status).not.toBe(0)
+  })
+
+  test('it fails loudly on a macOS leg whose bridge assets never reached build/ (CR-01 interlock)', () => {
+    seedBuildTree(workdir, { withBridge: false })
+    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+      IS_MACOS: 'true'
+    })
+    expect(result.status).not.toBe(0)
+  })
+
+  test('the bridge-asset guard does not fire on the non-macOS legs', () => {
+    seedBuildTree(workdir, { withBridge: false })
+    const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+      IS_MACOS: 'false'
+    })
+    expect(result.status).toBe(0)
   })
 })
 
