@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: Phase 34.1 PLANNED -- 8 plans in 4 waves, plan-checker PASSED with 0 blockers; ready for /gsd-execute-phase 34.1
-stopped_at: Phase 34.1 planned -- 8 plans, 24 tasks, 4 waves; REQ-34.1-01..12 minted
-last_updated: "2026-07-25T11:05:00.000Z"
-last_activity: 2026-07-25 -- Planned Phase 34.1 (Tauri IPC slice 4, app shell + window chrome). Reused the committed 34.1-RESEARCH.md (d74dbf82), which CLOSED the mandatory D-04 check - core:window:default in Tauri 2.11.5 is confirmed a read-only getter set, so the explicit mutation grants are necessary AND every identifier D-04 named is real. Wrote 34.1-VALIDATION.md (90ad32ae), ran pattern-mapper, planner minted REQ-34.1-01..12 into REQUIREMENTS.md and wrote 8 plans (b741f43b); plan-checker VERIFICATION PASSED, 0 blockers, 2 doc-hygiene warnings. Planner findings that changed plan shape - only 6 handler bodies actually need extraction (not 28, not even the 18 research estimated); createNewWindow/showAboutWindow resolved RENDERER-side (WebviewWindow ctor is webview-context-only, sidecar is headless); exactly ONE new Rust arm in the slice (tray_set_icon); setZoomFactor needed a real units conversion (Electron setZoomLevel = Chromium level, Tauri setZoom = scale factor) or the UI would silently mis-scale; electronStub.app.getVersion() read npm_package_version which is UNSET in the packaged SEA sidecar, so getHeroicVersion would have reported 0.0.0 in every shipped build; set-connectivity-online is ALREADY live via bootstrap.ts. NEW GAP found that CONTEXT did not anticipate - `-webkit-app-region: drag` is Chromium-only, so a frameless Tauri window would be UNDRAGGABLE; plan 34.1-03 installs document-level mousedown/dblclick handlers. 35 threats registered (ASVS L1). NEXT: /gsd-execute-phase 34.1.
+status: executing
+stopped_at: Phase 34.1 EXECUTING -- plan 34.1-01 done (1 of 8); REQ-34.1-01..12
+last_updated: "2026-07-25T12:15:00.000Z"
+last_activity: 2026-07-25 -- Executed 34.1-01 (D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation). Task 1 (5169d476) extended src-tauri/capabilities/default.json with the twelve core:window:*/core:webview:* identifiers D-01's renderer-side window chrome needs, recording the verified core:window:default read-only-getter-set composition in the file's own description. Task 2 (077a3fdb) added src/backend/__tests__/capabilitiesDefault.test.ts (5/5 green, REQ-34.1-02-tagged), spot-checked to fail on both narrowing (dropping allow-set-webview-zoom) and widening (adding core:window:default). Task 3 (dbe07735) corrected .planning/IPC-PORT-INVENTORY.md for D-14 (slice 4: 34->33 channels, callTool removed + reassignment note added; slice 8: 55->56 channels, callTool inserted alphabetically); Totals table (210/27/183) left unchanged. One Rule-1 deviation: Task 3's own verify script conflicted with its own action mandate (a note naming callTool vs. a blunt no-callTool-substring grep over the whole section) -- resolved via plain (non-backtick) text for callTool in the note, satisfying the more precise acceptance_criteria; documented in 34.1-01-SUMMARY.md. requirements mark-complete ran clean for REQ-34.1-02/REQ-34.1-10 (diff-verified against a pre-run backup, only those two checkboxes flipped). Per the standing gsd-sdk state-write corruption precedent (see notes below), state.advance-plan/state.update-progress/roadmap.update-plan-progress were NOT run; this frontmatter and the Current Position block below were hand-corrected instead. NEXT: plans 34.1-02..08 (waves 1-4, per phase plan dependency graph).
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 71
-  completed_plans: 55
+  completed_plans: 56
   percent: 53
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34 — tauri-packaging-windows-and-linux-builds-signing-auto-update
+**Current focus:** Phase 34.1 — tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34 (tauri-packaging-windows-and-linux-builds-signing-auto-update) — GAP CYCLE 3 EXECUTION COMPLETE
-Plan: 17 of 17 executed (34-01,02,03,05,06,07,08,09,10,11,12,13,14,15,16,17,18 — no 04); gap cycle 3 (34-16,17,18) all done
-Status: Ready to execute
+Phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — EXECUTING
+Plan: 1 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete; see 34.1-01-SUMMARY.md)
+Status: Executing Phase 34.1 -- plans 34.1-02..08 remain
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
@@ -255,7 +255,7 @@ Status: Ready to execute
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Phase 34.1 planning complete
+Last activity: 2026-07-24 -- Phase 34.1 execution started
 
 > **Plan-counter note (2026-07-24, post-34-17 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
