@@ -24,11 +24,43 @@ const TAURI_CONF_PATH = join(
 
 const SRC_TAURI_DIR = join(__dirname, '..', '..', '..', 'src-tauri')
 
+const RELEASE_WORKFLOW_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '.github',
+  'workflows',
+  'release-tauri.yml'
+)
+
+const PROMOTE_WORKFLOW_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '.github',
+  'workflows',
+  'promote-updater-feed.yml'
+)
+
 function loadTauriConf(): Record<string, unknown> {
   return JSON.parse(readFileSync(TAURI_CONF_PATH, 'utf-8')) as Record<
     string,
     unknown
   >
+}
+
+/**
+ * Drops lines whose first non-whitespace character is `#`, so a workflow's
+ * own explanatory comments cannot satisfy (or invalidate) a `toContain`/regex
+ * assertion made against its actual instructions.
+ */
+function stripComments(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n')
 }
 
 describe('tauri.conf.json bundle shape (D-01 / D-02 -- real installable build, all 3 platforms)', () => {
@@ -121,5 +153,123 @@ describe('tauri.conf.json icon set (CR-02 -- nsis needs a Windows .ico)', () => 
     const icoPath = join(SRC_TAURI_DIR, 'icons', 'icon.ico')
     const header = readFileSync(icoPath).subarray(0, 4)
     expect(header).toEqual(Buffer.from([0x00, 0x00, 0x01, 0x00]))
+  })
+})
+
+/**
+ * 34-VERIFICATION.md failed truth #9 / 34-REVIEW.md CR-03 (GAP-3): the
+ * updater endpoint used GitHub's `/releases/latest/download/` form, which by
+ * design resolves only to the newest NON-prerelease, NON-draft release --
+ * while release-tauri.yml's tauri-action step unconditionally sets
+ * `prerelease: true`. That combination is a PERMANENT 404, both before and
+ * after a human manually publishes the draft, because publishing never
+ * clears the prerelease flag.
+ *
+ * D-09 (34-CONTEXT.md) LOCKS draft + prerelease as the intentional mitigation
+ * for the Phase 19 "prerelease-not-Latest" lesson (a 0.x prerelease must
+ * never become GitHub "Latest"). Dropping `prerelease: true` is therefore a
+ * FORECLOSED remedy -- test 8 below is a deliberate regression guard against
+ * a future "simplification" that would reintroduce that failure. The actual
+ * fix moves the endpoint to a stable, non-`/latest/` asset location
+ * (`/releases/download/<tag>/latest.json`) and adds a `release: published`
+ * -triggered promotion workflow that copies `latest.json` there without ever
+ * touching the minisign signing key.
+ */
+describe('updater feed reachability given the release flags (CR-03 / GAP-3 regression guard)', () => {
+  test('test 1: if release-tauri.yml sets prerelease: true, the endpoint must not use /releases/latest/download/', () => {
+    const conf = loadTauriConf()
+    const plugins = conf.plugins as Record<string, unknown>
+    const updater = plugins.updater as Record<string, unknown>
+    const endpoints = updater.endpoints as string[]
+    const workflow = readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
+
+    if (workflow.includes('prerelease: true')) {
+      expect(endpoints[0]).not.toContain('/releases/latest/download/')
+    }
+  })
+
+  test('test 2: endpoints[0] is a fixed-tag asset URL a prerelease-only pipeline can serve', () => {
+    const conf = loadTauriConf()
+    const plugins = conf.plugins as Record<string, unknown>
+    const updater = plugins.updater as Record<string, unknown>
+    const endpoints = updater.endpoints as string[]
+
+    expect(endpoints[0]).toMatch(
+      /^https:\/\/github\.com\/grayson-mitchell\/GameLib\/releases\/download\/([^/]+)\/latest\.json$/
+    )
+  })
+
+  test('test 3: a promotion workflow uploads latest.json to exactly the tag captured from the endpoint', () => {
+    const conf = loadTauriConf()
+    const plugins = conf.plugins as Record<string, unknown>
+    const updater = plugins.updater as Record<string, unknown>
+    const endpoints = updater.endpoints as string[]
+
+    const match = endpoints[0].match(
+      /^https:\/\/github\.com\/grayson-mitchell\/GameLib\/releases\/download\/([^/]+)\/latest\.json$/
+    )
+    expect(match).not.toBeNull()
+    const tag = (match as RegExpMatchArray)[1]
+
+    expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
+    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+
+    expect(promoteWorkflow).toContain(`gh release upload ${tag} `)
+    expect(promoteWorkflow).toContain('--clobber')
+  })
+
+  test('test 4: the promotion workflow triggers only on published releases', () => {
+    expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
+    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+
+    expect(promoteWorkflow).toContain('types: [published]')
+    expect(promoteWorkflow).not.toContain('types: [created]')
+    expect(promoteWorkflow).not.toContain('types: [prereleased]')
+  })
+
+  test('test 5: the promotion workflow is guarded against re-triggering off the feed-holder release', () => {
+    expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
+    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+
+    expect(promoteWorkflow).toContain(
+      "startsWith(github.event.release.tag_name, 'v')"
+    )
+  })
+
+  test('test 6: the feed-holder release stays a non-draft prerelease', () => {
+    expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
+    const promoteWorkflow = readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+
+    expect(promoteWorkflow).toContain('--prerelease')
+    expect(promoteWorkflow).not.toContain('--draft')
+  })
+
+  test('test 7 (signature-integrity guard): the promotion workflow never holds the signing key or rewrites the manifest', () => {
+    expect(existsSync(PROMOTE_WORKFLOW_PATH)).toBe(true)
+    const promoteWorkflow = stripComments(
+      readFileSync(PROMOTE_WORKFLOW_PATH, 'utf-8')
+    )
+
+    expect(promoteWorkflow).not.toContain('TAURI_SIGNING')
+    expect(promoteWorkflow).not.toContain('jq ')
+    expect(promoteWorkflow).not.toContain('sed ')
+    expect(promoteWorkflow).not.toMatch(/>\s*[^\n]*latest\.json/)
+  })
+
+  test('test 8 (D-09 guard): release-tauri.yml still sets BOTH releaseDraft: true and prerelease: true', () => {
+    const workflow = readFileSync(RELEASE_WORKFLOW_PATH, 'utf-8')
+
+    expect(workflow).toContain('releaseDraft: true')
+    expect(workflow).toContain('prerelease: true')
+  })
+
+  test('test 9: pre-existing updater invariants are unchanged (pubkey present, no Heroic reference)', () => {
+    const conf = loadTauriConf()
+    const plugins = conf.plugins as Record<string, unknown>
+    const updater = plugins.updater as Record<string, unknown>
+
+    expect(typeof updater.pubkey).toBe('string')
+    expect((updater.pubkey as string).length).toBeGreaterThan(0)
+    expect(JSON.stringify(conf)).not.toContain('Heroic-Games-Launcher')
   })
 })
