@@ -697,17 +697,28 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // ── Total-body guard: a rejected send-handler body must never crash the
   // sidecar process (the sidecar-dialog-reject-crashes precedent) ───────────
 
-  it('REQ-34.1-05 changeLanguage (send): a rejected i18next.changeLanguage is caught and logged, the RPC loop keeps serving afterward', async () => {
-    mockAppSettings({})
+  // CHANGED TEST CONTRACT (CR-01, Phase 34.1 code review). This test previously
+  // asserted that a failing `i18next.changeLanguage` produced a
+  // `[appShellFlowRegistration] changeLanguage failed:` console.warn -- i.e. it PINNED
+  // the bug: the rejection escaped `appshell/language.ts` and aborted `gameInfoStore
+  // .clear()` / `setSetting('language', ...)` / `emit('languageChanged')`, so under the
+  // sidecar (where i18next is NEVER init()'d -- see language.ts's own CR-01 comment) the
+  // user's language choice silently never persisted. The contract is now the opposite:
+  // an i18next failure is CONTAINED inside `changeLanguage` and the persist path still
+  // runs. The surviving requirement -- "a send-handler body must never crash the
+  // sidecar" -- is still asserted below via the post-failure health check.
+  it('REQ-34.1-05/CR-01 changeLanguage (send): a REJECTED i18next.changeLanguage still persists the setting, clears the cache and emits languageChanged', async () => {
+    const { setSetting } = mockAppSettings({})
     mockedI18nextChangeLanguage.mockRejectedValueOnce(new Error('boom'))
+    const emitSpy = jest.spyOn(backendEvents, 'emit')
 
     const { input, frames } = startSidecar()
     writeSend(input, 'change-lang-fail-1', 'changeLanguage', ['de'])
     await flush()
 
-    expect(
-      warnSpy.mock.calls.some(([msg]) => String(msg).includes('changeLanguage'))
-    ).toBe(true)
+    expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
+    expect(setSetting).toHaveBeenCalledWith('language', 'de')
+    expect(emitSpy).toHaveBeenCalledWith('languageChanged')
 
     writeInvoke(input, 'health-after-change-lang-fail', 'health', [])
     await flush()
@@ -719,6 +730,40 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       ok: true,
       result: 'ok'
     })
+
+    emitSpy.mockRestore()
+  })
+
+  // CR-01 regression guard, and the shape the suite's `i18next` mock otherwise hides:
+  // the REAL uninitialized i18next 22.5.1 does not reject, it throws SYNCHRONOUSLY
+  // (`TypeError: Cannot read properties of undefined (reading 'toResolveHierarchy')`,
+  // verified against the installed package). A `try { await ... }` catches both, but
+  // only this variant proves the sync path -- a fix that merely appended `.catch()` to
+  // the call expression would pass the rejection test above and still fail here.
+  it('REQ-34.1-05/CR-01 changeLanguage (send): a SYNCHRONOUSLY THROWING i18next.changeLanguage (the real uninitialized-instance shape) still persists the setting', async () => {
+    const { setSetting } = mockAppSettings({})
+    mockedI18nextChangeLanguage.mockImplementationOnce(() => {
+      throw new TypeError(
+        "Cannot read properties of undefined (reading 'toResolveHierarchy')"
+      )
+    })
+    const emitSpy = jest.spyOn(backendEvents, 'emit')
+
+    const { input, frames } = startSidecar()
+    writeSend(input, 'change-lang-throw-1', 'changeLanguage', ['pt'])
+    await flush()
+
+    expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
+    expect(setSetting).toHaveBeenCalledWith('language', 'pt')
+    expect(emitSpy).toHaveBeenCalledWith('languageChanged')
+
+    writeInvoke(input, 'health-after-change-lang-throw', 'health', [])
+    await flush()
+    expect(frames.find((f) => f.id === 'health-after-change-lang-throw')).toMatchObject(
+      { ok: true, result: 'ok' }
+    )
+
+    emitSpy.mockRestore()
   })
 
   // ── fs-seeding cleanup guard (not a functional assertion — keeps the
