@@ -24,9 +24,10 @@
  *       `buildCrossoverRatingMap()` (Plan 34.2-03 extraction; registered at
  *       `crossover_index/ipc_handler.ts:47` today)
  *     - `searchStores` / `getStoreSearchDeals` / `getStoreSearchStoreMap` ->
- *       `storeSearch/cheapshark.ts`'s `searchGames(query)` /
- *       `getGameDeals(gameId)` / `getStoreMap()`
- *       (`storeSearch/index.ts:14/23/35`)
+ *       `storeSearch/handlers.ts`'s `handleSearchStores(query)` /
+ *       `handleGetStoreSearchDeals(gameId)` / `handleGetStoreSearchStoreMap()`
+ *       (Plan 34.2-13 extraction; imported the same way by
+ *       `storeSearch/index.ts` on the Electron side)
  *     - `removeRecent` -> `recent_games/recent_games.ts`'s
  *       `removeRecentGame(appName)` (`recent_games/ipc_handler.ts:4`)
  *
@@ -59,13 +60,16 @@
  * `downloadAntiCheatData` per `releasesInfoReady` event.
  *
  * `searchStores` / `getStoreSearchDeals` / `getStoreSearchStoreMap` error
- * contract: `storeSearch/index.ts`'s try / `logError('<channel> handler
- * failed: ...')` / `throw err` shape is reproduced VERBATIM for all three.
- * A bare `async () => searchGames(query)` is explicitly wrong here — it
- * would silently change the error-propagation contract the frontend depends
- * on: the frontend container is exclusively responsible for turning a
- * rejected promise into the "provider failed" state (Phase 20 D-14), and a
- * swallowed error would be indistinguishable from "no results".
+ * contract: this registration now IMPORTS the three shared handler bodies
+ * from `storeSearch/handlers.ts` instead of hand-copying the try / `logError`
+ * / `throw err` shape (Phase 34.2 Plan 13, closes code-review finding
+ * WR-09 — before this, the shape existed in two hand-copied places with
+ * nothing pinning them equal, so an Electron-side edit could silently
+ * diverge on Tauri). A bare `async () => searchGames(query)` remains
+ * explicitly wrong here — the rethrow is deliberate and load-bearing (Phase
+ * 20 D-14): the frontend container is exclusively responsible for turning a
+ * rejected promise into the "provider failed" state, and a swallowed error
+ * would be indistinguishable from "no results".
  *
  * `getCrossoverIndex` D-10 note: this channel is exempted from the 60s
  * invoke bound in `src-tauri/src/main.rs`'s `LONG_RUNNING_CHANNELS` (Task 2
@@ -87,18 +91,23 @@
  * `electron`, `backend/ipc`, `../ipc`, `../launcher`, or `main_window`
  * DIRECTLY (enforced by `gameDetailsImportGate.test.ts`'s comment-stripped
  * gates). Transitive reach to `electron` DOES exist here and is EXPECTED --
- * this file's own `import { ... } from '../storeSearch/cheapshark'` below
- * reaches `cheapshark.ts`'s `import { app } from 'electron'` -- and is safe
- * at runtime because `electronStub`'s `Module._load` interception rewrites
- * every `require('electron')` inside the sidecar process. See
+ * this file's own `import { ... } from '../storeSearch/handlers'` below
+ * reaches `handlers.ts`'s own import of `cheapshark.ts`, which itself
+ * `import { app } from 'electron'` -- and is safe at runtime because
+ * `electronStub`'s `Module._load` interception rewrites every
+ * `require('electron')` inside the sidecar process. See
  * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
  * set of electron-importing modules actually reachable from this slice's
  * four gated entry points. Every import below reaches an
  * UNDERLYING module (`anticheat/utils`, `../knownFixes`,
- * `../crossover_index/crossoverRatingMap`, `../storeSearch/cheapshark`,
+ * `../crossover_index/crossoverRatingMap`, `../storeSearch/handlers`,
  * `../recent_games/recent_games`, `../wiki_game_info/wiki_game_info`,
  * `../utils`) — NEVER a feature module's `ipc_handler.ts` and NEVER
  * `storeSearch/index.ts` (which itself calls `addHandler`).
+ * `storeSearch/handlers.ts` is the correct import target precisely because
+ * it contains no `addHandler` call of its own — the same
+ * underlying-module-not-`ipc_handler` rule D-04 already states, applied to
+ * the last duplicated surface (Phase 34.2 Plan 13, WR-09).
  *
  * `wiki_game_info/electronStore` is already registered by
  * `storeRegistration.ts:104` (Phase 29) — this module needs no new store
@@ -117,12 +126,11 @@ import { gameAnticheatInfo } from '../anticheat/utils'
 import { readKnownFixes } from '../knownFixes'
 import { buildCrossoverRatingMap } from '../crossover_index/crossoverRatingMap'
 import {
-  searchGames,
-  getGameDeals,
-  getStoreMap
-} from '../storeSearch/cheapshark'
+  handleSearchStores,
+  handleGetStoreSearchDeals,
+  handleGetStoreSearchStoreMap
+} from '../storeSearch/handlers'
 import { removeRecentGame } from '../recent_games/recent_games'
-import { logError, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 
 /**
@@ -168,52 +176,25 @@ export function registerEnrichmentFlows(): void {
   // manager AND calls loadIndex/buildMaps per game. See module docstring.
   ipcMain.handle('getCrossoverIndex', async () => buildCrossoverRatingMap())
 
-  // storeSearch trio — reproduces storeSearch/index.ts's try/log/RETHROW
-  // shape verbatim (Phase 20 D-14). A bare pass-through would silently
-  // change the error-propagation contract the frontend depends on.
+  // storeSearch trio — delegates to the shared bodies in
+  // storeSearch/handlers.ts (Phase 34.2 Plan 13, closes WR-09), which carry
+  // the Phase 20 D-14 try/log/RETHROW contract. A bare pass-through would
+  // silently change the error-propagation contract the frontend depends on.
   ipcMain.handle(
     'searchStores',
-    async (_event: unknown, ...args: unknown[]) => {
-      const query = args[0] as string
-      try {
-        return await searchGames(query)
-      } catch (err) {
-        logError(
-          `searchStores handler failed: ${String(err)}`,
-          LogPrefix.Backend
-        )
-        throw err
-      }
-    }
+    async (_event: unknown, ...args: unknown[]) =>
+      handleSearchStores(args[0] as string)
   )
 
   ipcMain.handle(
     'getStoreSearchDeals',
-    async (_event: unknown, ...args: unknown[]) => {
-      const gameId = args[0] as string
-      try {
-        return await getGameDeals(gameId)
-      } catch (err) {
-        logError(
-          `getStoreSearchDeals handler failed: ${String(err)}`,
-          LogPrefix.Backend
-        )
-        throw err
-      }
-    }
+    async (_event: unknown, ...args: unknown[]) =>
+      handleGetStoreSearchDeals(args[0] as string)
   )
 
-  ipcMain.handle('getStoreSearchStoreMap', async () => {
-    try {
-      return await getStoreMap()
-    } catch (err) {
-      logError(
-        `getStoreSearchStoreMap handler failed: ${String(err)}`,
-        LogPrefix.Backend
-      )
-      throw err
-    }
-  })
+  ipcMain.handle('getStoreSearchStoreMap', async () =>
+    handleGetStoreSearchStoreMap()
+  )
 
   // Imports ONLY removeRecentGame from recent_games.ts — not
   // getRecentGames/addRecentGame/maxRecentGames (curated-import
