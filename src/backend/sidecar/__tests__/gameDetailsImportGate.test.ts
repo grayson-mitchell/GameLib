@@ -22,7 +22,7 @@
  * "electron" or a channel name cannot self-invalidate its own gate.
  */
 
-import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 
@@ -43,7 +43,6 @@ function listTsFiles(dir: string): string[] {
     .map((entry) => entry.name)
 }
 
-const REPO_ROOT = join(__dirname, '../../../..')
 const MAIN_TS_PATH = join(__dirname, '../../main.ts')
 
 describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/REQ-34.2-10/REQ-34.2-14)', () => {
@@ -274,64 +273,102 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     }
   )
 
-  // ── Gate 7 (D-09 do-not-touch): settingsFlowRegistration.ts is
-  // byte-identical to its committed HEAD version ─────────────────────────────
-  it('REQ-34.2-10 Gate 7: settingsFlowRegistration.ts is byte-identical to the committed HEAD version', () => {
+  // ── Gate 7 (D-09 do-not-touch, WR-01 replacement): settingsFlowRegistration.ts
+  // is pinned to a committed sha256 digest of its own byte content. This
+  // replaces the prior HEAD-comparison gate, which compared the working tree
+  // to `git show HEAD:<same path>` -- unconditionally true on any clean
+  // checkout (the working tree IS HEAD by definition) and therefore
+  // protecting nothing since the moment it was committed. No `git` subprocess
+  // remains in this file; digest comparison needs none. ─────────────────────
+  const SETTINGS_FLOW_REGISTRATION_SHA256 =
+    'd1b690da8b190743716e9584cd4531a8937c979eb685aa6bfbc463008f188296'
+
+  it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
-    const working = readFileSync(filePath, 'utf-8')
+    const digest = createHash('sha256')
+      .update(readFileSync(filePath))
+      .digest('hex')
 
-    let headContent: string | null = null
-    try {
-      headContent = execFileSync(
-        'git',
-        ['show', 'HEAD:src/backend/sidecar/settingsFlowRegistration.ts'],
-        { cwd: REPO_ROOT, encoding: 'utf-8' }
-      )
-    } catch {
-      // Git comparison impractical in this environment (e.g. no .git, shallow
-      // checkout without the blob) — fall back to the file's own known
-      // bottle-fix marker strings, per this plan's own instruction.
-      headContent = null
-    }
-
-    if (headContent !== null) {
-      expect(working).toBe(headContent)
-    } else {
-      expect(working).toMatch(/steamLibrary/)
-      expect(working).toMatch(/requestGameSettings/)
-    }
+    // If this fails because the file was DELIBERATELY edited: this file
+    // carries a shipped, hardware-proven bottle-launch fix
+    // (`steamLibrary.has(appName)`, REQ-34.2-10 / D-09) that must never be
+    // silently altered. Recompute deliberately
+    // (`shasum -a 256 src/backend/sidecar/settingsFlowRegistration.ts`),
+    // update SETTINGS_FLOW_REGISTRATION_SHA256 above, and state the reason in
+    // the commit message -- never silently.
+    expect(digest).toBe(SETTINGS_FLOW_REGISTRATION_SHA256)
   })
 
-  // ── Gate 8 (REQ-34.2-14 do-not-touch): electronUntouched.test.ts is
-  // byte-identical to its committed HEAD version ─────────────────────────────
-  it('REQ-34.2-14 Gate 8: electronUntouched.test.ts is byte-identical to the committed HEAD version', () => {
+  // Semantic pin (Layer 2): the exact ten-channel set, parsed out of the
+  // comment-stripped source -- survives a legitimate reformat (which changes
+  // the digest but not the channel set) while still catching a rewrite.
+  // Mirrors `longRunningChannels.test.ts`'s own exact-set idiom so both
+  // silent widening and silent narrowing fail.
+  const EXPECTED_SETTINGS_FLOW_CHANNELS = [
+    'requestAppSettings',
+    'setSetting',
+    'writeConfig',
+    'getMaxCpus',
+    'showUpdateSetting',
+    'getLogContent',
+    'getSystemInfo',
+    'hasExecutable',
+    'isNative',
+    'requestGameSettings'
+  ]
+
+  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these ten channels', () => {
+    const filePath = join(__dirname, '../settingsFlowRegistration.ts')
+    const stripped = stripComments(readFileSync(filePath, 'utf-8'))
+    const channelPattern = /ipcMain\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
+    const found = new Set<string>()
+    let match: RegExpExecArray | null
+    while ((match = channelPattern.exec(stripped)) !== null) {
+      found.add(match[1])
+    }
+
+    // Failure here means the registered channel set changed -- if
+    // intentional (a REQ-34.2-10 / D-09 do-not-touch file), state the reason
+    // in the commit, then update this list AND the sha256 digest above
+    // together, never one without the other.
+    expect(found.size).toBe(10)
+    expect([...found].sort()).toEqual(
+      [...EXPECTED_SETTINGS_FLOW_CHANNELS].sort()
+    )
+  })
+
+  it('REQ-34.2-10/D-09 Gate 7 semantic pin: the requestGameSettings registration still contains the steamLibrary.has( bottle-launch fix', () => {
+    const filePath = join(__dirname, '../settingsFlowRegistration.ts')
+    const stripped = stripComments(readFileSync(filePath, 'utf-8'))
+
+    // Comment-stripped first so a docstring merely mentioning `steamLibrary`
+    // cannot satisfy this gate on its own -- this is the specific
+    // Steam-detection workaround D-09 exists to protect (from the
+    // `debug/steam-bottle-game-no-launch` investigation).
+    expect(stripped).toMatch(/steamLibrary\.has\(/)
+  })
+
+  // ── Gate 8 (REQ-34.2-14 do-not-touch, WR-01 replacement): electronUntouched
+  // .test.ts is pinned to a committed sha256 digest of its own byte content --
+  // same replacement reasoning as Gate 7 above. ──────────────────────────────
+  const ELECTRON_UNTOUCHED_SHA256 =
+    'ceae5a7caa238f4f89804c41c2994fbf8e7720fadc908d6cbb7601a67ab8763d'
+
+  it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')
-    const working = readFileSync(filePath, 'utf-8')
+    const digest = createHash('sha256')
+      .update(readFileSync(filePath))
+      .digest('hex')
 
-    let headContent: string | null = null
-    try {
-      headContent = execFileSync(
-        'git',
-        [
-          'show',
-          'HEAD:src/backend/sidecar/__tests__/electronUntouched.test.ts'
-        ],
-        { cwd: REPO_ROOT, encoding: 'utf-8' }
-      )
-    } catch {
-      headContent = null
-    }
-
-    if (headContent !== null) {
-      expect(working).toBe(headContent)
-    } else {
-      expect(working).toMatch(/STRICTLY READ-ONLY/)
-      expect(working).toMatch(
-        /keyringTokenStore\.ts and bootstrap\.ts never reference configStore/
-      )
-      expect(working).toMatch(
-        /safeStorage\.isEncryptionAvailable never regresses to the "always true" lie/
-      )
-    }
+    // If this fails because the file was DELIBERATELY edited: this is Phase
+    // 28's keyring/`configStore` byte-identity proof (REQ-34.2-14
+    // do-not-touch) -- the file that detects a regression to the
+    // `safeStorage.isEncryptionAvailable` "always true" lie. Weakening or
+    // repurposing it must happen openly, never silently. Recompute
+    // deliberately
+    // (`shasum -a 256 src/backend/sidecar/__tests__/electronUntouched.test.ts`),
+    // update ELECTRON_UNTOUCHED_SHA256 above, and state the reason in the
+    // commit message.
+    expect(digest).toBe(ELECTRON_UNTOUCHED_SHA256)
   })
 })
