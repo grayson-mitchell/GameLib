@@ -13,6 +13,15 @@
  * so they must be mocked here too, or importing `../tauriAttach` for real (as every test
  * below does) throws `Class extends value undefined is not a constructor` before any
  * assertion runs.
+ *
+ * Phase 34.1 Plan 07 (D-12): `tauriAttach.ts` -> `./api` -> `./api/helpers.ts` now
+ * statically imports `./api/tauriChildWindows.ts`, which statically imports
+ * `@tauri-apps/api/webviewWindow`. That module's own top-level code calls
+ * `applyMixins(WebviewWindow, [Window, Webview])`, reading `Window.prototype`/
+ * `Webview.prototype` off the REAL `@tauri-apps/api/window`/`@tauri-apps/api/webview`
+ * exports -- the plain-object mocks below have no `prototype`, so without this mock the
+ * import chain throws `Cannot read properties of undefined (reading 'prototype')` before
+ * any assertion runs.
  */
 
 jest.mock('@tauri-apps/api/window', () => ({
@@ -32,6 +41,10 @@ jest.mock('@tauri-apps/api/window', () => ({
 
 jest.mock('@tauri-apps/api/webview', () => ({
   getCurrentWebview: () => ({ setZoom: jest.fn() })
+}))
+
+jest.mock('@tauri-apps/api/webviewWindow', () => ({
+  WebviewWindow: jest.fn()
 }))
 
 // tauriAttach.ts's top-level code reads/assigns `window`/`navigator` immediately on
