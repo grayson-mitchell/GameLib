@@ -136,6 +136,10 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "checkGameUpdates",
     "refreshLibrary",
     "getCrossoverIndex",
+    // A full re-verify/re-download of an installed game (legendary/gogdl repair) routinely exceeds 60s (CR-01).
+    "repair",
+    // readConfig('library') calls legendary.refresh(), the same work refreshLibrary is exempted for; readConfig('user') is fast, so this trades a 60s rejection for a never-settling promise if it ever wedges.
+    "readConfig",
 ];
 
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).

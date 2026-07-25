@@ -40,7 +40,9 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   'uninstall',
   'checkGameUpdates',
   'refreshLibrary',
-  'getCrossoverIndex'
+  'getCrossoverIndex',
+  'repair',
+  'readConfig'
 ]
 
 /**
@@ -88,17 +90,26 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
     expect(extractLongRunningChannels()).toContain('getCrossoverIndex')
   })
 
-  test('REQ-34.2-12 all five pre-existing members survive', () => {
+  test('REQ-34.2-12 all six pre-existing members survive', () => {
     const channels = extractLongRunningChannels()
     for (const preExisting of [
       'install',
       'updateGame',
       'uninstall',
       'checkGameUpdates',
-      'refreshLibrary'
+      'refreshLibrary',
+      'getCrossoverIndex'
     ]) {
       expect(channels).toContain(preExisting)
     }
+  })
+
+  test('REQ-34.2-12 repair is a member — a real GOG/Epic repair routinely exceeds the 60s bound (CR-01)', () => {
+    expect(extractLongRunningChannels()).toContain('repair')
+  })
+
+  test("REQ-34.2-12 readConfig is a member — readConfig('library') calls legendary.refresh(), the same work refreshLibrary is exempted for", () => {
+    expect(extractLongRunningChannels()).toContain('readConfig')
   })
 
   test('REQ-34.2-12 the exemption list is EXACTLY the expected set (guards both silent widening and silent narrowing)', () => {
