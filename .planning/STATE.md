@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.2 planned (7 plans, 4 waves)
-last_updated: "2026-07-25T08:14:48.037Z"
-last_activity: 2026-07-25 -- Phase 34.2 planning complete
+stopped_at: Completed 34.2-01-PLAN.md
+last_updated: "2026-07-25T08:39:05.000Z"
+last_activity: 2026-07-25 -- 34.2-01 executed (i18next init + releasesInfoReady/anticheat wirings)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 78
-  completed_plans: 63
+  completed_plans: 64
   percent: 60
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.2 — tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrides PLANNED (7 plans in 4 waves, REQ-34.2-01..14 minted, plan-checker passed) — run `/gsd-execute-phase 34.2`
+**Current focus:** Phase 34.2 — tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,11 +33,23 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrides) — PLANNED
-Plan: 0 of 7 executed — 7 plans in 4 waves; REQ-34.2-01..14 minted into REQUIREMENTS.md; plan-checker returned VERIFICATION PASSED (one non-blocking RESEARCH.md doc-hygiene warning). Next: `/gsd-execute-phase 34.2`.
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING
+Plan: 2 of 7
+
+34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
+field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
+boot); Task 2 wired fetchLastestReleases() + re-homed the releasesInfoReady->downloadAntiCheatData
+listener (D-07/D-04, both after initOnlineMonitor(), listener before fetch); Task 3 added a 7-test
+non-mocked proof suite (bootstrapWirings.test.ts) exercising the real i18next/backendEvents/
+utils-releases/anticheat-utils singletons -- discovered and defeated (via jest.unmock('i18next'))
+a project-wide Jest automock at src/backend/__mocks__/i18next.ts that silently substitutes for the
+real npm package in every backend test file with no explicit jest.mock() call, a level further back
+than the exact 34.1 CR-01 blind spot this plan's objective names. REQ-34.2-02/04/07/14 complete, see
+34.2-01-SUMMARY.md. RED spot-checked: reverting Task 1's block failed test 1; reverting Task 2's
+listener block failed test 4 while test 3 still passed. Next: 34.2-02.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute — Phase 34.2, 7 plans in 4 waves
+Status: Executing Phase 34.2
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -261,7 +273,19 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- Phase 34.2 planning complete
+Last activity: 2026-07-25 -- 34.2-01 executed (i18next init + releasesInfoReady/anticheat wirings, see 34.2-01-SUMMARY.md)
+
+> **Plan-counter note (2026-07-25, post-34.2-01 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:`/`Plan:` prose block, and revert `total_plans`/
+> `completed_plans`), those verbs were **deliberately not run** for this execution either.
+> Frontmatter (`status`, `stopped_at`, `last_updated`, `last_activity`,
+> `progress.completed_plans` 63 -> 64) and the body `Plan:`/`Status:`/`Last activity:` fields
+> were written by hand against the phase directory and this session's own commits: `a8e7c809`
+> (feat, Task 1), `910e8b40` (feat, Task 2), `8ad8f5e5` (test, Task 3), plus `34.2-01-SUMMARY.md`
+> now on disk. `total_plans: 78` is unchanged (34.2-01..07 were already counted when the phase was
+> planned); `percent: 60` is phase-based (9 of 15 completed phases), unchanged -- Phase 34.2 itself
+> is not yet marked complete pending plans 34.2-02..07.
 
 > **Plan-counter note (2026-07-25, post-34.1-05 execution):** `gsd-sdk query
 > state.update-progress`, run after 34.1-05's task commits, repeated the EXACT same
@@ -699,6 +723,7 @@ Closed/parked native-install phases:
 | Phase 34.1 P06 | 45min | 3 tasks | 7 files |
 | Phase 34.1 P07 | 45min | 3 tasks | 7 files |
 | Phase 34.1 P08 | 50min | 3 tasks | 4 files |
+| Phase 34.2 P01 | ~75min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -929,6 +954,9 @@ Recent decisions affecting current work:
 - [Phase 34.1]: 34.1-08: zero drift found between the plan's declared 33-channel/kind assignment and what shipped, confirmed by set-equality against IPC-PORT-INVENTORY.md's corrected Slice 4 list
 - [Phase 34.1]: 34.1-08: changeTrayColor recorded as sidecar send + rustInvoke (new arm), a more specific kind than the plan's flat sidecar-send bucket, not a contradiction
 - [Phase 34.1]: 34.1-08: SEAM.md's headline-cost tally advanced from 28 to 61 wired/re-routed total; callTool's D-14 move to Phase 34.5 noted
+- [Phase 34.2]: 34.2-01: Re-homed anticheat/ipc_handler.ts's releasesInfoReady listener body directly into bootstrap.ts (Block A) rather than importing that file, because its module scope calls addHandler from backend/ipc, which imports the real electron
+- [Phase 34.2]: 34.2-01: Discovered src/backend/__mocks__/i18next.ts is a project-wide Jest automock (adjacent to the Backend project's roots) applied to every backend test file automatically with no explicit jest.mock() call anywhere -- one level further back than the exact CR-01 blind spot this plan's objective names; jest.unmock('i18next') defeats it
+- [Phase 34.2]: 34.2-01: Dropped the plan's literal "rmSync the tmp home dir in afterAll" test instruction after it reproducibly crashed the whole Node process (LogWriter's real fire-and-forget writes raced the delete); adopted steamAuthFlows.test.ts's own no-explicit-cleanup precedent instead
 
 ### Pending Todos
 
