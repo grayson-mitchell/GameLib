@@ -12,7 +12,9 @@
  * `installFlowRegistration.ts` — Phase 30 Plan 02,
  * D-05a/D-05b/D-07/D-08/D-12), the curated settings-read channels
  * (`registerSettingsFlows()`, `settingsFlowRegistration.ts` — Phase 30 Plan
- * 06, gap closure for Gap 2 / UAT Test 8), and the
+ * 06, gap closure for Gap 2 / UAT Test 8), the curated app-shell channels
+ * (`registerAppShellFlows()`, `appShellFlowRegistration.ts` — Phase 34.1 Plan
+ * 04, D-03/D-08/D-09/D-13), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -40,6 +42,7 @@ import { registerInstallFlows } from './installFlowRegistration'
 import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
 import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
+import { registerAppShellFlows } from './appShellFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -75,6 +78,13 @@ registerDialogFlows()
 // dependency at registration time); placed alongside them, before
 // `ensureStoresRegistered()` (32-PATTERNS.md).
 registerDownloadQueueFlows()
+// Phase 34.1 Plan 04: the 18 app-shell channels (themes, version/changelog,
+// isIntelMac, changeLanguage, notify/quit/open*, abort, lock/unlock,
+// setTitleBarOverlay, getWebviewPreloadPath) — no ordering constraint
+// relative to the other calls above (own channel names, no cross-module
+// runtime dependency at registration time), placed alongside them, before
+// `ensureStoresRegistered()`.
+registerAppShellFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

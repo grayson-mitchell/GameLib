@@ -31,6 +31,11 @@
 
 import { release as osRelease } from 'os'
 
+// Phase 34.1 Plan 04 (T-34.1-17): static import, same pattern
+// `utils/systeminfo/heroicVersion.ts` already uses -- `process.env.npm_package_version`
+// (the previous source of app.getVersion() below) is UNSET in the packaged SEA sidecar
+// binary, so without this every shipped build's `getHeroicVersion` reported '0.0.0'.
+import pkgJson from '../../../package.json'
 import { getPath } from './pathShim'
 import { requestRustInvoke } from './sidecarRpc'
 import {
@@ -152,7 +157,7 @@ export const app = {
   setName: (): void => {},
   isPackaged: false,
   getAppPath: (): string => process.cwd(),
-  getVersion: (): string => process.env.npm_package_version ?? '0.0.0',
+  getVersion: (): string => pkgJson.version ?? '0.0.0',
   whenReady: (): Promise<void> => Promise.resolve(),
   on: () => app,
   once: () => app,
@@ -458,7 +463,15 @@ const fakeWebContents = {
 
 const fakeWindow = {
   isDestroyed: (): boolean => false,
-  webContents: fakeWebContents
+  webContents: fakeWebContents,
+  // Phase 34.1 Plan 04 (Rule 1 bug fix): `handleExit()` (backend/utils.ts) is now
+  // sidecar-reachable via the `quit` channel and unconditionally calls
+  // `mainWindow?.hide()` after its pending-operations dialog branch -- since
+  // `getMainWindow()` resolves this (truthy) fakeWindow rather than `undefined`,
+  // the missing method threw `TypeError: mainWindow.hide is not a function` and
+  // prevented `app.exit()` from ever being reached. A safe no-op is sufficient:
+  // real window visibility is not a sidecar concern (there is no real window here).
+  hide: (): void => {}
 }
 
 export const BrowserWindow = {
