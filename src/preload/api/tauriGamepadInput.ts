@@ -1,0 +1,283 @@
+/**
+ * Tauri renderer-side gamepad input (Phase 34.1 Plan 05, D-10).
+ *
+ * Electron injects synthetic input via `webContents.sendInputEvent` (`main.ts:1377`),
+ * which Chromium turns into real keyboard/mouse events AND, for the four directional
+ * actions, drives Chromium's own BUILT-IN spatial navigation. Tauri has no equivalent --
+ * WKWebView and WebView2 do not implement Chromium's spatial navigation, so dispatching
+ * an arrow `KeyboardEvent` alone would move nothing. This module is therefore a
+ * re-derivation against DOM semantics, not a mechanical port (D-10's accepted cost): the
+ * renderer computes every focus move and synthetic event itself instead of round-tripping
+ * a native input event through a window that, under Tauri, cannot interpret it.
+ *
+ * `src/preload/api/misc.ts`'s `isTauri()` branch (Task 3) is the ONLY caller path into
+ * this module; nothing on the Electron path reaches it, and the sidecar registers
+ * nothing for the `gamepadAction` channel -- the `UNPORTED_CHANNEL_MARKER` path is
+ * simply never reached because this short-circuit is the only caller path.
+ *
+ * This module imports nothing from `electron` and nothing from `@tauri-apps/api` -- it
+ * is pure DOM. Every branch is TOTAL: the whole dispatch is wrapped in try/catch so a
+ * failure `console.warn`s and the returned promise still resolves rather than rejects --
+ * an unhandled rejection from `window.api.gamepadAction` firing every frame from the
+ * Gamepad polling loop (`frontend/helpers/gamepad.ts`) would be worse than the no-op it
+ * replaces (T-34.1-19).
+ */
+import type { GamepadActionArgs } from 'common/types'
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"]'
+
+const KEY_CODES: Record<string, number> = {
+  Tab: 9,
+  Escape: 27,
+  ArrowUp: 38,
+  ArrowDown: 40,
+  ArrowLeft: 37,
+  ArrowRight: 39
+}
+
+function warn(label: string, error?: unknown): void {
+  if (error !== undefined) {
+    console.warn(`[tauriGamepadInput] ${label}:`, error)
+  } else {
+    console.warn(`[tauriGamepadInput] ${label}`)
+  }
+}
+
+function hasZeroArea(rect: DOMRect): boolean {
+  return rect.width <= 0 || rect.height <= 0
+}
+
+/** Focusable elements, in document order, filtered to ones a user could actually reach. */
+function getFocusableElements(): HTMLElement[] {
+  const nodeList = document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  const result: HTMLElement[] = []
+  nodeList.forEach((el) => {
+    if ((el as HTMLInputElement | HTMLButtonElement).disabled) return
+    if (el.getAttribute('aria-hidden') === 'true') return
+    if (hasZeroArea(el.getBoundingClientRect())) return
+    result.push(el)
+  })
+  return result
+}
+
+/** `document.activeElement`, narrowed -- `document.body` counts as "nothing focused". */
+function activeElement(): HTMLElement | null {
+  const el = document.activeElement
+  if (!el || el === document.body) return null
+  return el as HTMLElement
+}
+
+/**
+ * `keyCode`/`which` are not part of the modern `KeyboardEventInit` constructor
+ * dictionary (they're legacy readonly accessors on `KeyboardEvent.prototype`), so they
+ * must be attached with `defineProperty` after construction -- assigning them directly
+ * silently no-ops on a getter-only property.
+ */
+function makeKeyboardEvent(
+  type: 'keydown' | 'keyup',
+  key: string,
+  keyCode: number,
+  shiftKey: boolean
+): KeyboardEvent {
+  const event = new KeyboardEvent(type, {
+    key,
+    code: key,
+    shiftKey,
+    bubbles: true,
+    cancelable: true
+  })
+  Object.defineProperty(event, 'keyCode', { value: keyCode, configurable: true })
+  Object.defineProperty(event, 'which', { value: keyCode, configurable: true })
+  return event
+}
+
+/**
+ * Dispatches a `keydown` then a `keyup` `KeyboardEvent` on `target`, bubbling and
+ * cancelable, with matching `key`/`code`/`keyCode`/`which` fields. Returns whether the
+ * `keydown` was prevented -- `EventTarget.dispatchEvent()` returns `false` when a
+ * cancelable event was prevented, so `defaultPrevented` is the negation of that.
+ */
+function dispatchKey(
+  target: EventTarget,
+  key: string,
+  opts?: { shiftKey?: boolean }
+): boolean {
+  const keyCode = KEY_CODES[key] ?? 0
+  const shiftKey = opts?.shiftKey === true
+  const keydownNotPrevented = target.dispatchEvent(
+    makeKeyboardEvent('keydown', key, keyCode, shiftKey)
+  )
+  target.dispatchEvent(makeKeyboardEvent('keyup', key, keyCode, shiftKey))
+  return !keydownNotPrevented
+}
+
+function focusableIndex(list: HTMLElement[], el: HTMLElement | null): number {
+  if (!el) return -1
+  return list.indexOf(el)
+}
+
+function doTab(shift: boolean): void {
+  const list = getFocusableElements()
+  const current = activeElement()
+  if (current) {
+    dispatchKey(current, 'Tab', { shiftKey: shift })
+  }
+  if (list.length === 0) return
+
+  const currentIndex = focusableIndex(list, current)
+  let nextIndex: number
+  if (currentIndex === -1) {
+    nextIndex = shift ? list.length - 1 : 0
+  } else {
+    const delta = shift ? -1 : 1
+    nextIndex = ((currentIndex + delta) % list.length + list.length) % list.length
+  }
+  list[nextIndex]?.focus()
+}
+
+function doEsc(): void {
+  const target: EventTarget = activeElement() ?? document
+  dispatchKey(target, 'Escape')
+}
+
+function doBack(): void {
+  // Electron used `mainWindow.webContents.goBack()`. For a hash/BrowserRouter SPA the
+  // browser's own session-history stack is the same one Electron's webContents was
+  // walking, so `window.history.back()` is the faithful Tauri equivalent.
+  window.history.back()
+}
+
+function dispatchPointerSequence(
+  target: Element,
+  clientX: number,
+  clientY: number,
+  button: 0 | 2
+): void {
+  const base: MouseEventInit = { bubbles: true, cancelable: true, clientX, clientY, button }
+  // jsdom -- and, more importantly, some real webview test surfaces -- has no
+  // `PointerEvent` global by default, so every step here is a `MouseEvent`, including
+  // the ones named for pointer semantics (`pointerdown`/`pointerup`).
+  if (button === 0) {
+    target.dispatchEvent(new MouseEvent('pointerdown', base))
+    target.dispatchEvent(new MouseEvent('mousedown', base))
+    target.dispatchEvent(new MouseEvent('mouseup', base))
+    target.dispatchEvent(new MouseEvent('pointerup', base))
+    target.dispatchEvent(new MouseEvent('click', base))
+  } else {
+    target.dispatchEvent(new MouseEvent('mousedown', base))
+    target.dispatchEvent(new MouseEvent('mouseup', base))
+    target.dispatchEvent(new MouseEvent('contextmenu', base))
+  }
+}
+
+function doClick(
+  metadata: { x: number; y: number } | undefined,
+  button: 0 | 2,
+  actionName: string
+): void {
+  if (!metadata) {
+    warn(`${actionName} requires metadata but none was provided`)
+    return
+  }
+  const target = document.elementFromPoint(metadata.x, metadata.y)
+  if (!target) return
+  dispatchPointerSequence(target, metadata.x, metadata.y, button)
+}
+
+function isScrollable(el: Element): boolean {
+  if (el.scrollHeight <= el.clientHeight) return false
+  const overflowY = getComputedStyle(el).overflowY
+  if (overflowY === 'visible' || overflowY === 'hidden') return false
+  return true
+}
+
+function findScrollableAncestor(start: Element | null): Element {
+  let el: Element | null = start
+  while (el) {
+    if (isScrollable(el)) return el
+    el = el.parentElement
+  }
+  return document.scrollingElement ?? document.documentElement
+}
+
+/**
+ * Electron's `mouseWheel` `deltaY` convention is inverted from `scrollTop`: a POSITIVE
+ * `deltaY` scrolls content UP (wheel rolled away from the user), so `rightStickUp`
+ * DECREASES `scrollTop` and `rightStickDown` INCREASES it. Getting this backwards is
+ * the single most likely regression in this function -- pinned by test.
+ */
+function doScroll(delta: number): void {
+  const center = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
+  const target = findScrollableAncestor(center)
+  if (typeof target.scrollBy === 'function') {
+    target.scrollBy({ top: delta })
+  } else {
+    target.scrollTop += delta
+  }
+}
+
+/**
+ * Directional focus movement -- implemented in Task 2 (the Chromium-spatnav
+ * replacement). Stubbed here so the module compiles and Task 1's non-directional tests
+ * are meaningful in isolation.
+ */
+function moveFocusDirectionally(direction: 'Up' | 'Down' | 'Left' | 'Right'): void {
+  warn(`directional focus movement (${direction}) not yet implemented`)
+}
+
+export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
+  try {
+    switch (args.action) {
+      case 'tab':
+        doTab(false)
+        break
+      case 'shiftTab':
+        doTab(true)
+        break
+      case 'esc':
+        doEsc()
+        break
+      case 'back':
+        doBack()
+        break
+      case 'leftClick':
+        doClick(args.metadata, 0, 'leftClick')
+        break
+      case 'rightClick':
+        doClick(args.metadata, 2, 'rightClick')
+        break
+      case 'rightStickUp':
+        doScroll(-50)
+        break
+      case 'rightStickDown':
+        doScroll(50)
+        break
+      case 'padUp':
+      case 'padDown':
+      case 'padLeft':
+      case 'padRight':
+      case 'leftStickUp':
+      case 'leftStickDown':
+      case 'leftStickLeft':
+      case 'leftStickRight': {
+        const direction = args.action.replace(/pad|leftStick/, '') as
+          | 'Up'
+          | 'Down'
+          | 'Left'
+          | 'Right'
+        moveFocusDirectionally(direction)
+        break
+      }
+      default:
+        // `rightStickLeft`/`rightStickRight`/`mainAction`/`altAction`/`keyboardClick`/
+        // `guide` -- Electron's own switch (`main.ts:1395-1497`) has no case for these
+        // either (silent no-op); `mainAction`/`keyboardClick` are handled entirely in
+        // `gamepad.ts` and never reach this function at all (see module docstring).
+        warn(`unhandled gamepad action "${args.action}"`)
+    }
+  } catch (error) {
+    warn('tauriGamepadAction failed', error)
+  }
+  return Promise.resolve()
+}
