@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: verifying
-stopped_at: Completed 34.2-14-PLAN.md -- Phase 34.2 gap cycle 1 COMPLETE (7/7 plans, 34.2-08..14), all verification gaps + review findings closed except accepted debt (WR-03/05/06/07/10, IN-01..04); ready for re-verification
-last_updated: "2026-07-25T20:50:25.446Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 COMPLETE (34.2-14 done, 7/7 plans)
+status: gaps_found
+stopped_at: Phase 34.2 gap cycle 1 EXECUTED (7/7, 34.2-08..14) but RE-VERIFICATION returned gaps_found -- the 3 original gaps (REQ-34.2-03/-07/-12) ARE genuinely closed, but the closure plans introduced 3 NEW blockers (unregistered logError send channel, String(reason) outside the guard's own try, sidecarRejectionGuard.test.ts missing the pathShim mock); PHASE NOT COMPLETE, needs gap cycle 2
+last_updated: "2026-07-26T00:00:00.000Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executed + re-verified (gaps_found, 3 new blockers)
 progress:
   total_phases: 15
   completed_phases: 10
