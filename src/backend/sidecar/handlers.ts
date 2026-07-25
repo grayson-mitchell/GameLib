@@ -16,7 +16,9 @@
  * (`registerAppShellFlows()`, `appShellFlowRegistration.ts` — Phase 34.1 Plan
  * 04, D-03/D-08/D-09/D-13), the curated game-details/settings/override
  * channels (`registerGameDetailsFlows()`, `gameDetailsFlowRegistration.ts` —
- * Phase 34.2 Plan 04, D-01/D-03/D-04), and the
+ * Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
+ * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
+ * Plan 06, D-04/D-07/D-10), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -46,6 +48,7 @@ import { registerDialogFlows } from './dialogFlowRegistration'
 import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { registerAppShellFlows } from './appShellFlowRegistration'
 import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
+import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -93,6 +96,15 @@ registerAppShellFlows()
 // channel names, no cross-module runtime dependency at registration time),
 // placed alongside them, before `ensureStoresRegistered()`.
 registerGameDetailsFlows()
+// Phase 34.2 Plan 06: the 8 enrichment channels (getWikiGameInfo,
+// getAnticheatInfo, getKnownFixes, getCrossoverIndex, searchStores,
+// getStoreSearchDeals, getStoreSearchStoreMap, removeRecent) — no ordering
+// constraint relative to the other calls above (own channel names, no
+// cross-module runtime dependency at registration time), placed alongside
+// them, before `ensureStoresRegistered()`. `wiki_game_info/electronStore`
+// is already registered by `storeRegistration.ts:104` (Phase 29), so this
+// module needs no new store plumbing.
+registerEnrichmentFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
