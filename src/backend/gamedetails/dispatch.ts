@@ -7,8 +7,17 @@
  * build runs (single source of truth). `main.ts` keeps each registration
  * line as a one-line delegation to one of these exports.
  *
- * MUST NOT import `electron` (or anything that transitively reaches it) --
- * including `backend/ipc` -- the Node sidecar imports this module directly.
+ * MUST NOT import `electron`, `backend/ipc`, `../ipc`, `../launcher`, or
+ * `main_window` DIRECTLY -- the Node sidecar imports this module directly,
+ * and `gameDetailsImportGate.test.ts`'s comment-stripped gates enforce this.
+ * Transitive reach to `electron` DOES exist here and is EXPECTED -- this
+ * file's own `import { notify } from '../dialog/dialog'` below reaches
+ * `dialog.ts`'s `import { dialog, Notification } from 'electron'` -- and is
+ * safe at runtime because `electronStub`'s `Module._load` interception
+ * (`sidecar/electronStub.ts`) rewrites every `require('electron')` inside
+ * the sidecar process. See `sidecar/__tests__/electronReachLedger.test.ts`
+ * for the measured, enforced set of electron-importing modules actually
+ * reachable from this slice's four gated entry points.
  *
  * 19-channel reconciliation for this slice: 15 bodies live here, 1
  * (`setGameMetadataOverride`) lives in `./overrides`, 2

@@ -83,8 +83,17 @@
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
- * `electron` module, and no file under `src/backend/sidecar/` may import it
- * either directly or transitively. Every import below reaches an
+ * `electron` module, and no file under `src/backend/sidecar/` may import
+ * `electron`, `backend/ipc`, `../ipc`, `../launcher`, or `main_window`
+ * DIRECTLY (enforced by `gameDetailsImportGate.test.ts`'s comment-stripped
+ * gates). Transitive reach to `electron` DOES exist here and is EXPECTED --
+ * this file's own `import { ... } from '../storeSearch/cheapshark'` below
+ * reaches `cheapshark.ts`'s `import { app } from 'electron'` -- and is safe
+ * at runtime because `electronStub`'s `Module._load` interception rewrites
+ * every `require('electron')` inside the sidecar process. See
+ * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
+ * set of electron-importing modules actually reachable from this slice's
+ * four gated entry points. Every import below reaches an
  * UNDERLYING module (`anticheat/utils`, `../knownFixes`,
  * `../crossover_index/crossoverRatingMap`, `../storeSearch/cheapshark`,
  * `../recent_games/recent_games`, `../wiki_game_info/wiki_game_info`,
