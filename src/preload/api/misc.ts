@@ -12,6 +12,8 @@ import {
   tauriIsFrameless,
   tauriSetZoomFactor
 } from './tauriWindowChrome'
+import { tauriGamepadAction } from './tauriGamepadInput'
+import type { GamepadActionArgs } from 'common/types'
 
 export const clearCache = makeListenerCaller('clearCache')
 export const clearAchievementCache = makeListenerCaller('clearAchievementCache')
@@ -72,7 +74,15 @@ export const authAmazon = makeHandlerInvoker('authAmazon')
 export const logoutAmazon = makeHandlerInvoker('logoutAmazon')
 export const checkGameUpdates = makeHandlerInvoker('checkGameUpdates')
 export const refreshLibrary = makeHandlerInvoker('refreshLibrary')
-export const gamepadAction = makeHandlerInvoker('gamepadAction')
+// D-10 (Phase 34.1 Plan 05): Electron injects synthetic input via
+// `webContents.sendInputEvent` (`main.ts:1377`); Tauri has no equivalent, so under
+// Tauri the renderer dispatches its own DOM events/focus moves instead
+// (`tauriGamepadInput.ts`). The sidecar registers nothing for this channel -- the
+// UNPORTED_CHANNEL_MARKER path is never reached because this isTauri() short-circuit
+// is the only caller path, matching the ten D-01 window-chrome exports above.
+const gamepadActionIpc = makeHandlerInvoker('gamepadAction')
+export const gamepadAction = (args: GamepadActionArgs) =>
+  isTauri() ? tauriGamepadAction(args) : gamepadActionIpc(args)
 export const logError = makeListenerCaller('logError')
 export const logInfo = makeListenerCaller('logInfo')
 export const showConfigFileInFolder = makeListenerCaller('showConfigFileInFolder')
