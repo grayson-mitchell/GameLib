@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: gaps_found
-stopped_at: "Phase 34.2 GAP CYCLE 2 EXECUTED (18/18 plans, 34.2-15..18 all complete) but RE-VERIFICATION returned gaps_found again. The 3 blockers cycle 1 introduced (CR-01 logError silent send, CR-02 String(reason) outside its try, CR-03 missing pathShim mock) ARE genuinely closed and independently confirmed. But cycle 2 introduced 1 NEW BLOCKER of its own: testContainment.test.ts declares 11 sidecar suites as accepted debt instead of containing them, and bootstrap.test.ts among them was reproduced LIVE (3x) clobbering the developer's real ~/Library/Logs/GameLib/gamelib.log via archiveOldLogFile()'s renameSync. Plus 3 warnings (WR-01 vacuous NO-FILESYSTEM-WRITES gate, WR-02 floating promise in the logError listener, WR-03 ${error} on unknown in repairFailure.ts:45). All 14 REQ-34.2-* pass on literal text; no orphaned IDs. PHASE NOT COMPLETE -- next is /gsd-plan-phase 34.2 --gaps (gap cycle 3)"
-last_updated: "2026-07-26T11:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2 executed + re-verified (gaps_found, 1 new blocker)
+status: planned
+stopped_at: "Phase 34.2 GAP CYCLE 3 PLANNED (plans 34.2-19..24, plan-checker VERIFICATION PASSED). Closes the blocker + 3 warnings that gap cycle 2 introduced: 34.2-19 makes test containment STRUCTURAL via a backend-project jest setupFiles entry (kills the live ~/Library/Logs/GameLib/gamelib.log clobber, reproduced 3x); 34.2-20 catches the logError listener's floating promise at the call site (WR-02); 34.2-21 defensively stringifies repairFailure.ts's unknown so the ERROR dialog is unconditional (WR-03); 34.2-22 adds a Rust #[cfg(test)] module proving timeout_for() consults LONG_RUNNING_CHANNELS (carried-forward warning); 34.2-23 de-vacuums the NO-FILESYSTEM-WRITES gate and replaces the rotted 11-suite declared list with a readdirSync set-equality tripwire over all 25 suites (WR-01); 34.2-24 brings 34.2-PORTED-CHANNELS.md current and commits a currency-gate.py. Waves 1(19-22)/2(23)/3(24). Ready to execute: /gsd-execute-phase 34.2"
+last_updated: "2026-07-26T11:30:00.000Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 3 planned (6 plans, 34.2-19..24)
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 89
+  total_plans: 95
   completed_plans: 81
-  percent: 91
+  percent: 85
 ---
 
 # Project State
@@ -33,22 +33,54 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 EXECUTED, RE-VERIFIED gaps_found
-Plan: 18 of 18 executed -- cycle 2's 3 target blockers closed, but 1 NEW blocker introduced; GAP CYCLE 3 needed
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 PLANNED, ready to execute
+Plan: 18 of 18 executed; 6 new gap-closure plans written (34.2-19..24), plan-checker VERIFICATION PASSED
+
+Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
+
+- 34.2-19 (wave 1, BLOCKER): structural containment via a `src/backend/jest.setupContainment.ts`
+  `setupFiles` entry on the backend jest project — redirects HOME/USERPROFILE/APPDATA/LOCALAPPDATA/
+  XDG_* so no suite can opt out of containment by omission. Verified mechanism: `os.homedir()`
+  honours `process.env.HOME` verbatim on POSIX, and `setupFiles` runs before any test file's imports,
+  so the one eager resolver (`constants/paths.ts`, module-scope `app.getPath`) is import-time-safe.
+  Blast radius is the whole backend project (111 suites); acceptance criterion pins the failing-suite
+  set to exactly {rustInvokeChannel.test.ts}, the documented 34.1-era baseline.
+- 34.2-20 (wave 1, WR-02): catch the logError listener's floating promise at the call site with a
+  stderr diagnostic — load-bearing assertion is NEGATIVE (must not contain processGuards.ts's
+  absorption text), because a positive-only assertion passes pre-fix.
+- 34.2-21 (wave 1, WR-03): defensively stringify repairFailure.ts's `unknown` so the ERROR dialog
+  renders unconditionally; adds Object.create(null) + throwing-toString cases that fail against HEAD.
+- 34.2-22 (wave 1, carried-forward): Rust `#[cfg(test)]` module proving `timeout_for()` consults
+  LONG_RUNNING_CHANNELS, bidirectionally falsifiable; pinned from jest since CI runs no cargo step.
+- 34.2-23 (wave 2, WR-01): raw-source anti-claim gate + `readdirSync` set-equality tripwire over all
+  25 suites; DELETES KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES rather than reframing it.
+- 34.2-24 (wave 3, REQ-34.2-13): PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py.
+
+Anti-recurrence discipline (three straight cycles shipped a new defect while closing the named one):
+every new test carries an explicit "fails against pre-fix code" acceptance criterion with the RED
+proof recorded verbatim in the SUMMARY (9 hand-proven REDs), and every new gate carries a self-test
+proving that gate can fail. Structural fixes were preferred wherever the enumeration was the thing
+rotting.
+
+Prior re-verification context (still the contract these plans must satisfy):
 
 Re-verification 2026-07-26 (third verification of this phase) returned **gaps_found**:
+
 - CLOSED (independently confirmed): CR-01 logError now registered from the real production path
   with positive side-effect proof; CR-02 String(reason) inside its own try; CR-03 pathShim mock restored.
+
 - NEW BLOCKER: testContainment.test.ts (34.2-18's own artifact) declares 11 sidecar suites as accepted
   debt rather than containing them. bootstrap.test.ts drives the real init() 3x and was reproduced
   LIVE 3 times clobbering the developer's real ~/Library/Logs/GameLib/gamelib.log via
   archiveOldLogFile()'s renameSync. Same incident class as tests-clobbering-real-steam-store.
   Fix direction: structural containment (jest setupFiles for the backend project) so a suite cannot
   opt out by omission, plus a derived tripwire classifying every *.test.ts in the directory.
+
 - WARNINGS: WR-01 the NO-FILESYSTEM-WRITES gate is vacuous (matches comment-stripped source);
   WR-02 the logError listener leaks a floating promise dispatchSend's sync catch cannot see;
   WR-03 repairFailure.ts:45 interpolates ${error} typed unknown -- the CR-02 class relocated to
   the renderer, and a throw there suppresses the ERROR dialog REQ-34.2-12 exists to guarantee.
+
 - All 14 REQ-34.2-01..14 pass on literal text; no orphaned requirement IDs.
 - 2 human-UAT items recorded (UAT-34.2-01 live translated notification, UAT-34.2-02 real anticheat fetch).
 
@@ -744,7 +776,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 3 planned (6 plans, 34.2-19..24)
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
