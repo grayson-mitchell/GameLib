@@ -14,7 +14,9 @@
  * (`registerSettingsFlows()`, `settingsFlowRegistration.ts` — Phase 30 Plan
  * 06, gap closure for Gap 2 / UAT Test 8), the curated app-shell channels
  * (`registerAppShellFlows()`, `appShellFlowRegistration.ts` — Phase 34.1 Plan
- * 04, D-03/D-08/D-09/D-13), and the
+ * 04, D-03/D-08/D-09/D-13), the curated game-details/settings/override
+ * channels (`registerGameDetailsFlows()`, `gameDetailsFlowRegistration.ts` —
+ * Phase 34.2 Plan 04, D-01/D-03/D-04), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -43,6 +45,7 @@ import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
 import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { registerAppShellFlows } from './appShellFlowRegistration'
+import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -85,6 +88,11 @@ registerDownloadQueueFlows()
 // runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerAppShellFlows()
+// Phase 34.2 Plan 04: the 15 invoke-kind game-details/settings/override
+// channels — no ordering constraint relative to the other calls above (own
+// channel names, no cross-module runtime dependency at registration time),
+// placed alongside them, before `ensureStoresRegistered()`.
+registerGameDetailsFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
