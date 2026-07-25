@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-01-PLAN.md
-last_updated: "2026-07-25T08:39:05.000Z"
-last_activity: 2026-07-25 -- 34.2-01 executed (i18next init + releasesInfoReady/anticheat wirings)
+stopped_at: Completed 34.2-02-PLAN.md
+last_updated: "2026-07-25T08:56:07.000Z"
+last_activity: 2026-07-25 -- 34.2-02 executed (gamedetails/dispatch.ts + overrides.ts extraction, main.ts delegations)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 78
-  completed_plans: 64
+  completed_plans: 65
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -46,7 +46,25 @@ a project-wide Jest automock at src/backend/__mocks__/i18next.ts that silently s
 real npm package in every backend test file with no explicit jest.mock() call, a level further back
 than the exact 34.1 CR-01 blind spot this plan's objective names. REQ-34.2-02/04/07/14 complete, see
 34.2-01-SUMMARY.md. RED spot-checked: reverting Task 1's block failed test 1; reverting Task 2's
-listener block failed test 4 while test 3 still passed. Next: 34.2-02.
+listener block failed test 4 while test 3 still passed.
+
+34.2-02 done -- Task 1 extracted 15 game-details/settings handler bodies verbatim from main.ts into
+Electron-free src/backend/gamedetails/dispatch.ts (isGameAvailable, getGameInfo, getExtraInfo,
+getGameSettings, kill, repair, changeInstallPath, getLaunchOptions, changeGameVersionPinnedStatus,
+getGameOverride, getGameSdl, readConfig, addNewApp, getAvailableCyberpunkMods,
+setCyberpunkModConfig); Task 2 added gamedetails/overrides.ts (setGameMetadataOverride + a
+setMetadataChangedNotifier DI seam, since the module cannot import backend/ipc's
+sendFrontendMessage) and rewrote main.ts's 17 registrations as one-line delegations
+(getGameMetadataOverride/getAllGameOverrides already-clean pass-throughs and requestGameSettings
+D-09 left untouched); Task 3 added a 28-test direct-call suite (gameDetailsModules.test.ts) incl.
+a jest.unmock('i18next') proof (repair/getLaunchOptions assertions run against the real,
+uninitialized i18next.t() output rather than a fake, per the 34.2-01 CR-01-blind-spot lesson) and
+a no-electron/backend-ipc/launcher/main_window source gate. RED spot-checked: injecting an
+electron import into dispatch.ts failed the source gate; dropping the attachOverrides call in
+getGameInfo failed a test; swapping kill's two statements failed the call-order test. One Rule 3
+deviation: removed a pre-existing unused `backendEvents` import from main.ts (a leftover from
+Phase 34.1's changeLanguage extraction) that blocked this plan's own eslint-clean acceptance
+criterion. REQ-34.2-01/03/08/09 complete, see 34.2-02-SUMMARY.md. Next: 34.2-03.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Executing Phase 34.2
