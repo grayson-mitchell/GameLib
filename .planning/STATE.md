@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: Completed 34.2-13-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-14 remains
-last_updated: "2026-07-25T20:42:11.413Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-13 complete)
+status: verifying
+stopped_at: Completed 34.2-14-PLAN.md -- Phase 34.2 gap cycle 1 COMPLETE (7/7 plans, 34.2-08..14), all verification gaps + review findings closed except accepted debt (WR-03/05/06/07/10, IN-01..04); ready for re-verification
+last_updated: "2026-07-25T20:50:25.446Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 COMPLETE (34.2-14 done, 7/7 plans)
 progress:
   total_phases: 15
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 85
-  completed_plans: 76
-  percent: 60
+  completed_plans: 77
+  percent: 91
 ---
 
 # Project State
@@ -33,7 +33,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 1 COMPLETE (7/7 plans), ready for re-verification
 Plan: 14 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
@@ -301,6 +301,52 @@ complete, see 34.2-12-SUMMARY.md. Full backend sweep: 107/108 suites, 2227/2228 
 single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase 34.1, unchanged, plus
 this plan's own net +2 tests (Gate 7's two new semantic-pin tests; Task 2 rewrote an existing test
 in place). Next: 34.2-13.
+
+34.2-13 done -- closed code-review WR-09 (REQ-34.2-11): extracted the three `storeSearch` D-14
+rethrow-contract handler bodies (`handleSearchStores`, `handleGetStoreSearchDeals`,
+`handleGetStoreSearchStoreMap`) into `storeSearch/handlers.ts`, the single implementation now
+imported by both `storeSearch/index.ts` (Electron `addHandler`) and
+`sidecar/enrichmentFlowRegistration.ts` (Tauri `ipcMain.handle`) as one-line delegations, closing
+the hand-copied duplication WR-09 found. A comment-stripped anti-remerge gate
+(`storeSearch/__tests__/handlers.test.ts`, 10 tests) proves the log strings now exist in exactly
+one file; live negative control re-inlined one handler body into `enrichmentFlowRegistration.ts`
+and confirmed the gate fails naming it, then reverted. Full backend sweep: 108/109 suites,
+2237/2238 tests -- the single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase
+34.1, unchanged, plus this plan's net +1 suite/+10 tests; `electronReachLedger.test.ts`'s baseline
+did not grow (handlers.ts's electron reach is via the already-baselined `cheapshark.ts` hop). No
+deviations. See 34.2-13-SUMMARY.md. (Backfilled into this position log by 34.2-14's executor --
+34.2-13's own session completed its work and decision log entry but did not append this narrative
+line; verified against 34.2-13-SUMMARY.md and its recorded commits `465a2829`/`79f2ad75` before
+writing.) Next: 34.2-14.
+
+34.2-14 done -- **FINAL PLAN OF GAP CYCLE 1.** Closed the currency gap `34.2-VERIFICATION.md`
+truth row 13 named against `34.2-PORTED-CHANNELS.md`: Task 1 brought §1 (LONG_RUNNING_CHANNELS now
+8 members -- `getCrossoverIndex` from 34.2-06 plus `repair`/`readConfig` from 34.2-08, still a
+timeout-policy edit not a port kind, dispatch_rust_channel arm count still 11, verified against
+`src-tauri/src/main.rs` source directly), the `repair`/`readConfig` §2 rows (CR-01 timeout
+exemption, the missed 34.2-06 audit, the renderer catch fix), the D-07 bootstrap-wiring §2 entry
+(CR-02 crash-unsafety and its `.catch()`+`processGuards.ts` fix), and §5 (named WR-03/05/06/07/10 +
+IN-01..04 as still-open accepted debt) current. Task 2 corrected §6's sign-off to state the true
+direct-import (not transitive) electron-freedom invariant, named `Module._load` as the runtime
+rescue mechanism and `electronReachLedger.test.ts` (29 of 192 files) as the measured Phase 35
+work-list, recorded that WR-01/WR-04 were assert-nothing proofs now replaced, added a paragraph
+recording (not resolving) how the gap cycle touches both deferred `34.2-HUMAN-UAT.md` items without
+changing their pending/deferred status, and appended a labelled §7 gap-cycle reconciliation
+subsection naming the gap/finding each of 34.2-08..14 closed. REQ-34.2-12/REQ-34.2-03 complete, see
+34.2-14-SUMMARY.md. Exactly one file modified across both commits (`34.2-PORTED-CHANNELS.md`);
+`34.2-HUMAN-UAT.md` and `.planning/IPC-PORT-INVENTORY.md` confirmed untouched via
+`git status --porcelain`. Full backend baseline unchanged at 108/109 suites, 2237/2238 tests
+(the single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase 34.1, still out of
+scope); targeted 17-suite/236-test sweep green; `tsc --noEmit` and `cargo check --quiet` both
+clean. No deviations.
+**PHASE 34.2 GAP CYCLE 1 COMPLETE — 7/7 plans executed (34.2-08..14). Every verification gap
+(#1/#2/#3) and every code-review finding classified blocker/actionable in this cycle (CR-01, CR-02,
+CR-03, WR-01, WR-02, WR-04, WR-08, WR-09) is closed. Findings deliberately left open (WR-03, WR-05,
+WR-06, WR-07, WR-10, IN-01, IN-02, IN-03, IN-04) are named by ID in the refreshed
+`34.2-PORTED-CHANNELS.md` §5 and in `deferred-items.md`, not silently dropped. Both deferred
+`34.2-HUMAN-UAT.md` live items (UAT-34.2-01, UAT-34.2-02) remain deferred, unmodified. The
+pre-existing `rustInvokeChannel.test.ts` failure (Phase 34.1 tray regression) remains red,
+unchanged, out of scope. Ready for re-verification against the refreshed artifact set.**
 NOTE: this plan's own `gsd-sdk` state writes hit the same known-corruption family documented in
 every note in this cluster: `state.record-metric` reverted the frontmatter `stopped_at` (already
 hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` value a second time,
@@ -310,9 +356,19 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[...]` splice two notes below (now reading `88%`)
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
+`state.advance-plan` reverted `last_activity` from a descriptive suffix to a bare date and left
+the frontmatter `percent` field stale at `67` even though `state.update-progress`'s own JSON
+output (run immediately after) reported `91`; `state.record-metric`/`state.add-decision` behaved
+cleanly this round (append-only, no reverts). `state.update-progress` again spliced the literal
+progress-bar string `[█████████░] 91%` into THIS sentence in place of the `[...]` placeholder
+(the same splice site every prior note in this cluster records, now at line ~310) rather than
+into anything resembling a progress-bar field — hand-corrected back to `[...]`, along with the
+stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-session snapshot of
+`STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -536,7 +592,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-13 complete)
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 COMPLETE (34.2-14 done, 7/7 plans)
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1087,6 +1143,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P11 | 35min | 2 tasks | 4 files |
 | Phase 34.2 P12 | 25min | 2 tasks | 2 files |
 | Phase 34.2 P13 | 20min | 2 tasks | 4 files |
+| Phase 34.2 P14 | 40min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -1334,6 +1391,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Digest pins are primary do-not-touch enforcement (byte-identity); ten-channel-set and steamLibrary.has( pins are a secondary Layer 2 that survives reformat while catching a rewrite
 - [Phase 34.2]: getLaunchOptions test reads public/locales/en/gamepage.json directly rather than hardcoding the translated string, so the assertion breaks if launch.default is renamed or deleted
 - [Phase 34.2-13]: storeSearch/handlers.ts documents transitive (not direct) electron reach through cheapshark.ts, mirroring plan 34.2-11's corrected wording rather than the pre-34.2-11 overclaim
+- [Phase ?]: Read all six gap-cycle plans' actual shipped state from source (main.rs, bootstrap.ts, electronReachLedger.test.ts), not from plan intent, when refreshing 34.2-PORTED-CHANNELS.md
+- [Phase ?]: Did not edit 34.2-HUMAN-UAT.md when refreshing 34.2-PORTED-CHANNELS.md -- recorded gap-cycle interaction with both deferred UAT items without changing their pending/deferred status
 
 ### Pending Todos
 
@@ -1403,8 +1462,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T20:42:11.405Z
-Stopped at: Completed 34.2-13-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-14 remains
+Last session: 2026-07-25T20:50:25.440Z
+Stopped at: Completed 34.2-14-PLAN.md -- Phase 34.2 gap cycle 1 COMPLETE (7/7 plans, 34.2-08..14), all verification gaps + review findings closed except accepted debt (WR-03/05/06/07/10, IN-01..04); ready for re-verification
 Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
