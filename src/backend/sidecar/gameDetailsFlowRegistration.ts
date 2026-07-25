@@ -1,15 +1,16 @@
 /**
- * Curated game-details/settings channel registration (Phase 34.2 Plan 04,
- * D-01/D-03/D-04, REQ-34.2-01/REQ-34.2-03/REQ-34.2-08/REQ-34.2-09/
- * REQ-34.2-10/REQ-34.2-14).
+ * Curated game-details/settings channel registration (Phase 34.2 Plans 04
+ * and 05, D-01/D-03/D-04/D-08, REQ-34.2-01/REQ-34.2-03/REQ-34.2-08/
+ * REQ-34.2-09/REQ-34.2-10/REQ-34.2-14).
  *
- * Registers the 15 invoke-kind per-game channels the game-details page and
- * its settings/override affordances depend on, onto electronStub's
- * `ipcMain` recorder, importing the REAL `backend/gamedetails/dispatch.ts`
- * bodies plan 34.2-02 extracted unchanged (mirrors `appShellFlowRegistration.ts`'s
- * / `downloadQueueFlowRegistration.ts`'s own objective — prove the real logic
- * runs behind the new transport, not a reimplementation, so the Electron and
- * Tauri builds cannot drift apart):
+ * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * send) the game-details page and its settings/override affordances depend
+ * on, onto electronStub's `ipcMain` recorder, importing the REAL
+ * `backend/gamedetails/dispatch.ts`/`backend/gamedetails/overrides.ts`
+ * bodies plans 34.2-02/34.2-05 extracted unchanged (mirrors
+ * `appShellFlowRegistration.ts`'s / `downloadQueueFlowRegistration.ts`'s own
+ * objective — prove the real logic runs behind the new transport, not a
+ * reimplementation, so the Electron and Tauri builds cannot drift apart):
  *
  *   invoke (15, `ipcMain.handle`):
  *     - `getGameInfo` -> `gamedetails/dispatch` (`main.ts:821-823`)
@@ -34,17 +35,42 @@
  *     - `getAllGameOverrides` -> `game_overrides`'s `getAllGameOverrides`,
  *       an already-clean pass-through, never extracted (`main.ts:1453-1455`)
  *
+ *   send (3, `ipcMain.on`, Plan 05):
+ *     - `setGameMetadataOverride` -> `gamedetails/overrides` (`main.ts:1445-1447`)
+ *     - `changeGameVersionPinnedStatus` -> `gamedetails/dispatch`
+ *       (`main.ts:1524-1526`) — takes THREE POSITIONAL arguments (`appName`,
+ *       `runner`, `status`), unlike the other two send channels here
+ *     - `addNewApp` -> `gamedetails/dispatch` (`main.ts:1443`)
+ *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails
  * 100% SILENTLY at runtime (Phase 31 Pitfall 2) — every registration below
  * was cross-checked against `main.ts`'s own `addHandler`/`addListener` call
  * for that exact channel before being written. `repair` and
  * `setCyberpunkModConfig` are both `addHandler` in `main.ts` (INVOKE)
  * despite feeling fire-and-forget — do not "correct" them to `ipcMain.on`.
+ * The 3 send channels above were each opened at their cited `main.ts` line
+ * and confirmed to be `addListener`, never `addHandler`, before being
+ * written: getting the kind wrong here produces NO runtime signal at all —
+ * no reject, no timeout, no `UNPORTED_CHANNEL_MARKER`, no log line (this
+ * project's own G-30-01 `logoutSteam` failure class).
+ *
+ * Every `send`-kind body below is wrapped in `try`/`catch` ->
+ * `logSendFailure` (copied from `appShellFlowRegistration.ts`'s own
+ * `logSendFailure` helper) — an unhandled throw/rejection from a
+ * fire-and-forget listener crashes the sidecar process (no
+ * `process.on('unhandledRejection')` guard exists here; the
+ * `sidecar-dialog-reject-crashes` precedent). `setMetadataChangedNotifier`
+ * is installed, wrapped the same way, once at the TOP of
+ * `registerGameDetailsFlows()` — before any of the 3 `ipcMain.on`
+ * registrations — so no send can ever fire against the default no-op
+ * installed by `gamedetails/overrides.ts`. The installed notifier pushes
+ * over the EXISTING generic frontend-message relay
+ * (`./sidecarRpc`'s `pushFrontendMessage`, the same function
+ * `storeWriteHandlers.ts`'s D-06 `STORE_CHANGED_CHANNEL` push and Phase
+ * 34.1's `languageChanged` push both ride) — zero new Rust arms, exactly the
+ * Phase 29 `storeChanged` precedent this plan's own interfaces required.
  *
  * Deliberately does NOT register:
- *   - The 3 send-kind channels (`setGameMetadataOverride`,
- *     `changeGameVersionPinnedStatus`, `addNewApp`) — plan 34.2-05 owns
- *     these, added to this same file as a follow-on registration function.
  *   - The 8 enrichment channels (`getKnownFixes`, `getCrossoverIndex`,
  *     `getWikiGameInfo`, `getAnticheatInfo`, `searchStores`,
  *     `getStoreSearchDeals`, `getStoreSearchStoreMap`, `removeRecent`) —
@@ -74,6 +100,7 @@
  */
 
 import { ipcMain } from './electronStub'
+import { pushFrontendMessage } from './sidecarRpc'
 import {
   getGameInfo,
   getExtraInfo,
@@ -87,21 +114,48 @@ import {
   getGameOverride,
   getGameSdl,
   getAvailableCyberpunkMods,
-  setCyberpunkModConfig
+  setCyberpunkModConfig,
+  changeGameVersionPinnedStatus,
+  addNewApp
 } from '../gamedetails/dispatch'
+import {
+  setGameMetadataOverride,
+  setMetadataChangedNotifier
+} from '../gamedetails/overrides'
 import {
   getGameOverrides,
   getAllGameOverrides
 } from '../game_overrides'
-import type { MoveGameArgs, Runner } from 'common/types'
+import type { MoveGameArgs, GameInfo, Runner } from 'common/types'
+
+function logSendFailure(channel: string, error: unknown): void {
+  console.warn(
+    `[gameDetailsFlowRegistration] ${channel} failed:`,
+    error instanceof Error ? error.message : String(error)
+  )
+}
 
 /**
- * Registers the 15 invoke-kind game-details/settings/override channels.
- * Called once from `handlers.ts` — this module owns no side effects at
- * import time beyond the imports above; the caller decides when
+ * Registers the 18 game-details/settings/override channels (15 invoke + 3
+ * send). Called once from `handlers.ts` — this module owns no side effects
+ * at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
 export function registerGameDetailsFlows(): void {
+  // Installed FIRST, before any of the 3 send registrations below, so no
+  // send can ever fire against gamedetails/overrides.ts's default no-op
+  // notifier. Rides the existing generic frontend-message relay
+  // (sidecarRpc's pushFrontendMessage) — zero new Rust arms.
+  setMetadataChangedNotifier((overrides) => {
+    try {
+      pushFrontendMessage('metadataChanged', overrides)
+    } catch (error) {
+      logSendFailure('metadataChanged', error)
+    }
+  })
+
+  // ── invoke (15) ───────────────────────────────────────────────────────
+
   ipcMain.handle(
     'getGameInfo',
     async (_event: unknown, ...args: unknown[]) =>
@@ -191,4 +245,49 @@ export function registerGameDetailsFlows(): void {
   // Already-clean pass-through to game_overrides/index.ts, never extracted
   // into gamedetails/dispatch.ts (main.ts:1453-1455).
   ipcMain.handle('getAllGameOverrides', async () => getAllGameOverrides())
+
+  // ── send (3) ──────────────────────────────────────────────────────────
+
+  ipcMain.on(
+    'setGameMetadataOverride',
+    (_event: unknown, ...args: unknown[]) => {
+      try {
+        setGameMetadataOverride(
+          args[0] as {
+            appName: string
+            title?: string
+            art_cover?: string
+            art_square?: string
+          }
+        )
+      } catch (error) {
+        logSendFailure('setGameMetadataOverride', error)
+      }
+    }
+  )
+
+  // THREE positional arguments (appName, runner, status) — not an object,
+  // unlike the other two send channels above.
+  ipcMain.on(
+    'changeGameVersionPinnedStatus',
+    (_event: unknown, ...args: unknown[]) => {
+      try {
+        changeGameVersionPinnedStatus(
+          args[0] as string,
+          args[1] as Runner,
+          args[2] as boolean
+        )
+      } catch (error) {
+        logSendFailure('changeGameVersionPinnedStatus', error)
+      }
+    }
+  )
+
+  ipcMain.on('addNewApp', (_event: unknown, ...args: unknown[]) => {
+    try {
+      addNewApp(args[0] as GameInfo)
+    } catch (error) {
+      logSendFailure('addNewApp', error)
+    }
+  })
 }
