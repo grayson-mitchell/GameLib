@@ -180,6 +180,7 @@ import { listenerRegistry } from '../electronStub'
 import {
   RUST_APP_EXIT,
   RUST_NOTIFICATION_SHOW,
+  RUST_TRAY_SET_ICON,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
 import pkgJson from '../../../../package.json'
@@ -549,6 +550,148 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         true
       )
     }
+
+    // Plan 06/D-11: tray_set_icon is the ONE legitimate new arm this slice adds --
+    // this is the one place the permitted set legitimately grew. changeTrayColor's
+    // own 500ms settle delay means it can't cheaply join the live exercise above
+    // without a real wait, so it's asserted statically here and exercised live (via
+    // fake timers) by the 'REQ-34.1-07 changeTrayColor -> tray_set_icon' block below.
+    expect(
+      (RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_TRAY_SET_ICON)
+    ).toBe(true)
+  })
+
+  // ── changeTrayColor -> tray_set_icon (Plan 06, D-11) ────────────────────────
+  //
+  // Fires the registered `changeTrayColor` listener DIRECTLY via `listenerRegistry`
+  // rather than through the RPC/stream pipe `writeSend`/`flush` use elsewhere in this
+  // file -- `registerAppShellFlows()` runs exactly ONCE at this file's module-scope
+  // import (same precedent as the lock/unlock coverage above), so the listener is
+  // already registered before any test body runs; going through the stream layer
+  // would add real-I/O-vs-fake-timer interleaving this suite doesn't need for a
+  // channel with no stream-side effects of its own.
+  describe('REQ-34.1-07 changeTrayColor -> tray_set_icon (Phase 34.1 Plan 06, D-11)', () => {
+    function fireChangeTrayColor(): void {
+      const listeners = listenerRegistry.get('changeTrayColor') ?? []
+      expect(listeners.length).toBeGreaterThan(0)
+      listeners[listeners.length - 1](undefined)
+    }
+
+    beforeEach(() => {
+      // `logInfo()` (called synchronously by the changeTrayColor listener) needs
+      // `heroicLogWriter` assigned, which only happens via bootstrap.ts's real
+      // `initHeadless()` -- i.e. via `startSidecar()`'s `init()` call, same as every
+      // other test in this file. Calling it here (discarding the result) makes this
+      // describe block self-sufficient regardless of test execution order or a
+      // `--testNamePattern` filter that skips the file's earlier `startSidecar()`
+      // calls this block would otherwise silently rely on.
+      startSidecar()
+      jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('REQ-34.1-07 invokes nothing before 500ms have elapsed, then RUST_TRAY_SET_ICON with [{ dark: true }] after exactly 500ms when darkTrayIcon is true', () => {
+      mockAppSettings({ darkTrayIcon: true })
+
+      fireChangeTrayColor()
+      expect(mockRequestRustInvoke).not.toHaveBeenCalled()
+
+      jest.advanceTimersByTime(499)
+      expect(mockRequestRustInvoke).not.toHaveBeenCalled()
+
+      jest.advanceTimersByTime(1)
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+        { dark: true }
+      ])
+    })
+
+    it('REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ dark: false }] after 500ms when darkTrayIcon is false', () => {
+      mockAppSettings({ darkTrayIcon: false })
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+        { dark: false }
+      ])
+    })
+
+    it('REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ dark: false }] when darkTrayIcon is absent from settings', () => {
+      mockAppSettings({})
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+        { dark: false }
+      ])
+    })
+
+    it('REQ-34.1-07 a rejected requestRustInvoke is caught and logged via console.warn, never an unhandled rejection', async () => {
+      mockAppSettings({ darkTrayIcon: true })
+      mockRequestRustInvoke.mockRejectedValueOnce(new Error('rust unreachable'))
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+      // Let the rejected promise's .catch() handler actually run (a plain microtask,
+      // independent of the fake timers controlling the 500ms setTimeout above).
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(
+        warnSpy.mock.calls.some(([msg]) =>
+          String(msg).includes('changeTrayColor')
+        )
+      ).toBe(true)
+    })
+
+    it('REQ-34.1-07 repeated changeTrayColor sends within the 500ms window collapse to a single invoke (T-34.1-23)', () => {
+      mockAppSettings({ darkTrayIcon: true })
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(200)
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(200)
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+
+      expect(mockRequestRustInvoke).toHaveBeenCalledTimes(1)
+    })
+
+    it('REQ-34.1-07 registerAppShellFlows() performs exactly one initial sync invoke', () => {
+      // Isolated: re-calling the SHARED module's registerAppShellFlows() here would
+      // double-register every OTHER channel's listener too (breaking the lock/unlock/
+      // abort tests elsewhere in this file, whose bodies assume exactly one listener
+      // each). jest.isolateModules gives a fresh module registry -- a fresh
+      // electronStub (own listenerRegistry), a fresh sidecarRpc mock instance, and a
+      // fresh backend/config mock instance -- so this test's own registration can
+      // never leak into the shared suite state.
+      jest.isolateModules(() => {
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ darkTrayIcon: false }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+
+        const { registerAppShellFlows } = require('../appShellFlowRegistration')
+        registerAppShellFlows()
+        jest.runAllTimers()
+
+        expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)
+        expect(isolatedRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+          { dark: false }
+        ])
+      })
+    })
   })
 
   // ── Total-body guard: a rejected send-handler body must never crash the

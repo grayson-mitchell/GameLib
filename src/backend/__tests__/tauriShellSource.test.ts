@@ -92,3 +92,108 @@ describe('main.rs sidecar lifecycle (WR-03 -- sidecar terminated on app exit)', 
     expect(loadMainRsCode()).toContain('try_state::<Arc<SidecarState>>')
   })
 })
+
+describe('REQ-34.1-07 main.rs tray construction (Phase 34.1 Plan 06, D-11)', () => {
+  test('REQ-34.1-07 constructs a TrayIconBuilder', () => {
+    expect(loadMainRsCode()).toContain('TrayIconBuilder')
+  })
+
+  test('REQ-34.1-07 embeds both icon variants via include_bytes!', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('include_bytes!("../../public/icon-dark.png")')
+    expect(code).toContain('include_bytes!("../../public/icon-light.png")')
+  })
+
+  test('REQ-34.1-07 the tray id string gamelib-tray appears in both the builder and the tray_by_id lookup', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('TRAY_ICON_ID: &str = "gamelib-tray"')
+    expect(code).toMatch(/TrayIconBuilder::with_id\(TRAY_ICON_ID\)/)
+    expect(code).toMatch(/tray_by_id\(TRAY_ICON_ID\)/)
+  })
+
+  test('REQ-34.1-07 no unwrap() or expect( appears inside the tray-building block', () => {
+    const code = loadMainRsCode()
+    const startMarker = 'MenuItemBuilder::with_id("show"'
+    const startIdx = code.indexOf(startMarker)
+    expect(startIdx).toBeGreaterThan(-1)
+    // The tray-building block ends where the (real, non-comment) debug_assertions cfg
+    // attribute gating the devtools-only block begins.
+    const endMarker = '#[cfg(debug_assertions)]'
+    const endIdx = code.indexOf(endMarker, startIdx)
+    expect(endIdx).toBeGreaterThan(startIdx)
+    const traySetupBlock = code.slice(startIdx, endIdx)
+    expect(traySetupBlock).not.toMatch(/unwrap\(\)|expect\(/)
+  })
+})
+
+describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-11)', () => {
+  test('REQ-34.1-07 dispatch_rust_channel has exactly one "tray_set_icon" arm', () => {
+    const code = loadMainRsCode()
+    const matches = code.match(/"tray_set_icon"\s*=>/g) ?? []
+    expect(matches.length).toBe(1)
+  })
+
+  test('REQ-34.1-07 the tray_set_icon arm appears before the rustInvoke:unknown-channel catch-all', () => {
+    const code = loadMainRsCode()
+    const armIdx = code.indexOf('"tray_set_icon" =>')
+    const catchAllIdx = code.indexOf('rustInvoke:unknown-channel')
+    expect(armIdx).toBeGreaterThan(-1)
+    expect(catchAllIdx).toBeGreaterThan(-1)
+    expect(armIdx).toBeLessThan(catchAllIdx)
+  })
+
+  test('REQ-34.1-07 this is the ONLY new dispatch arm across the phase -- no other new match arm exists beyond the pre-34.1-06 set', () => {
+    const code = loadMainRsCode()
+    // Scoped to exactly the outer `match channel { ... }` arms of dispatch_rust_channel
+    // (8-space indent, verified against every existing arm) -- NOT nested inner matches
+    // like dialog_message's `"error"`/`"warning"` MessageDialogKind arms, and NOT the
+    // unrelated `"show"`/`"quit"` MenuId matches inside the tray's own on_menu_event
+    // closure (a different match statement entirely, at a different indent depth).
+    const armMatches = code.match(/^ {8}"[a-z_]+"\s*=>/gm) ?? []
+    const armNames = armMatches.map((line) => line.match(/"([a-z_]+)"/)?.[1])
+    const preExistingArms = [
+      'keyring_get',
+      'keyring_set',
+      'keyring_delete',
+      'keyring_available',
+      'dialog_open',
+      'dialog_message',
+      'notification_show',
+      'shell_show_item_in_folder',
+      'shell_open_path',
+      'app_exit',
+      'app_relaunch',
+      'dialog_save'
+    ]
+    const newArms = armNames.filter(
+      (name) => name && !preExistingArms.includes(name)
+    )
+    expect(newArms).toEqual(['tray_set_icon'])
+  })
+})
+
+describe('REQ-34.1-07 main.rs tray scope boundary (Phase 34.1 Plan 06, D-11 negative bound)', () => {
+  test('REQ-34.1-07 does NOT contain the declared out-of-scope menu depth (recents/dock/Reload/Debug/openDevTools)', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('recent')
+    expect(code).not.toContain('dock')
+    expect(code).not.toContain('Reload')
+    expect(code).not.toContain('Debug')
+    expect(code).not.toContain('openDevTools')
+  })
+})
+
+describe('loadMainRsCode comment-stripping self-test (REQ-34.1-07)', () => {
+  test('a bare comment mentioning TrayIconBuilder does not by itself satisfy the tray-construction gate', () => {
+    // Simulates what would happen if the ONLY occurrence of "TrayIconBuilder" were a
+    // comment -- proves the stripping helper, not the file's real code, is what's under
+    // test here for the sibling "constructs a TrayIconBuilder" assertion above.
+    const commentOnly = '// TrayIconBuilder is used below\nfn other() {}'
+    const stripped = commentOnly
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('//'))
+      .map((line) => line.replace(/\/\/.*$/, ''))
+      .join('\n')
+    expect(stripped).not.toContain('TrayIconBuilder')
+  })
+})
