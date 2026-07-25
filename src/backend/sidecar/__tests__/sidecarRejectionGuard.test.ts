@@ -28,16 +28,26 @@
  * singleton bootstrap.ts uses is exercised, same reasoning as that file's own header), and the
  * `mock`-prefixed, per-test-namespaced `os.homedir()` redirect to a disposable tmp directory.
  *
- * NO FILESYSTEM WRITES: `downloadAntiCheatData` is mocked in every test in this file, and this
- * suite never calls any directory-creation, file-write, or file-removal Node fs API itself.
- * This is deliberate (finding CR-03, T-34.2-42): `pathShim.resolveAppDataDir()` prefers
- * `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` on Windows/Linux, so an `os.homedir()`
- * mock alone does not guarantee redirection there. The `beforeAll` below adds a
- * `resolve`+`relative` containment tripwire on `appFolder` (mirroring `fileStore.ts`'s own
- * containment-check idiom -- `relative(resolve(base), target)` then
- * `startsWith('..') || isAbsolute(...)`, NOT `path.join`, which this project's recorded
- * convention holds is not a containment check) so a future edit that starts writing fails
- * loudly here instead of silently reaching a real user config directory.
+ * CONTAINMENT (closes 34.2 gap cycle 2 / CR-03 / WR-01): every test in this file drives the
+ * REAL, unmocked `bootstrap.init()` -> `initLogger()`, which creates and rotates a REAL log
+ * file on disk (`LogWriter#archiveOldLogFile()` `renameSync`s an existing `gamelib.log` to
+ * `gamelib.log.old` on first write) -- this suite's earlier claim of touching zero files on
+ * disk was false. Those writes are redirected into a disposable per-suite tmp root by TWO
+ * separate mocks below: a `pathShim` module mock (the choke point `constants/paths.ts`'s
+ * `appFolder`/`userDataPath`/`fixesPath` resolve through, since `pathShim.resolveAppDataDir()`
+ * prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` on Windows/Linux -- the
+ * `os.homedir()` mock above is insufficient by itself, per finding CR-03/T-34.2-42, first
+ * fixed for `gameDetailsFlows.test.ts`/`enrichmentFlows.test.ts` in plan 34.2-10) and a
+ * `backend/logger/paths` module mock (the log path is computed INDEPENDENTLY of `pathShim` --
+ * `getBaseLogPath()` reads `process.env.LOCALAPPDATA`/`XDG_STATE_HOME` plus `homedir()`
+ * directly, so it bypasses BOTH the `os` mock and the `pathShim` mock -- finding WR-01,
+ * uncovered by every tripwire in this cluster until now). The `beforeAll` below adds a
+ * `resolve`+`relative` containment tripwire (mirroring `fileStore.ts`'s own containment-check
+ * idiom -- `relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`, NOT
+ * `path.join`, which this project's recorded convention holds is not a containment check) over
+ * `appFolder`, `userDataPath`, `fixesPath` AND `getLogFilePath({})` so a future edit that
+ * starts writing, or a regression in either mock, fails loudly here instead of silently
+ * reaching a real user config or log directory.
  */
 
 import { PassThrough } from 'node:stream'
@@ -45,6 +55,7 @@ import EventEmitter from 'node:events'
 import { readFileSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
 import { tmpdir } from 'os'
+import { getLogFilePath } from 'backend/logger/paths'
 
 // ── i18next — defeat Jest's project-wide automatic manual mock (same load-bearing reasoning
 // as bootstrapWirings.test.ts's own header: without this, `require('i18next')` inside the
@@ -72,6 +83,88 @@ jest.mock('os', () => {
         `gamelib-sidecarrejectionguard-test-home-${process.pid}`,
         String(mockTestHomeSuffix)
       )
+  }
+})
+
+// ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s module-scope
+// `app.getPath('appData'|'userData')` calls resolve through `electronStub.ts` ->
+// `pathShim.getPath()`, whose real `resolveAppDataDir()` prefers `env.APPDATA` (win32) /
+// `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` -- bypassing the `jest.mock('os', ...)`
+// redirect above on those platforms. Copied verbatim from `gameDetailsFlows.test.ts:136-161`
+// except for the tmp-root name -- no platform branch, no environment variable participating.
+//
+// NOTE (deliberately NOT reconciled): this tmp root is the PARENT of the per-test
+// `os.homedir()` redirect above (which appends a `mockTestHomeSuffix` segment).
+// `constants/paths.ts`'s `appFolder`/`userDataPath`/`fixesPath` are resolved ONCE, at
+// require-time, via this pathShim mock's `appData`/`userData` branches -- before any
+// per-test suffix exists -- so this root must stay stable across the whole suite's
+// lifetime. Do NOT append `mockTestHomeSuffix` here to "match" the os mock; that would break
+// module-scope singleton resolution the isolated harnesses below rely on. ──────────────────
+jest.mock('../pathShim', () => {
+  const actualOs = jest.requireActual('os')
+  const actualPath = jest.requireActual('path')
+  const tmpRoot = actualPath.join(
+    actualOs.tmpdir(),
+    `gamelib-sidecarrejectionguard-test-home-${process.pid}`
+  )
+  return {
+    getPath: (name: string) => {
+      switch (name) {
+        case 'appData':
+          return tmpRoot
+        case 'userData':
+          return actualPath.join(tmpRoot, 'GameLib')
+        case 'temp':
+          return actualOs.tmpdir()
+        case 'home':
+          return tmpRoot
+        default:
+          throw new Error(
+            `[pathShim mock] getPath('${name}') is not shimmed for this test`
+          )
+      }
+    }
+  }
+})
+
+// ── backend/logger/paths — WR-01: `getLogFilePath`'s real `getBaseLogPath()` computes the log
+// directory INDEPENDENTLY of `pathShim`, straight from `process.env.LOCALAPPDATA`/
+// `XDG_STATE_HOME` plus `homedir()` -- so it bypasses BOTH the `os` mock and the `pathShim`
+// mock above. This factory reimplements `getLogFilePath`'s relative-path derivation (heroic
+// log vs runner log vs game log), rooted at the SAME tmp root as the `pathShim` mock, so
+// distinct arguments still yield distinct paths. Copied verbatim from
+// `loggerFlows.test.ts:134-158` except for the tmp-root name. Deliberately does NOT call
+// `jest.requireActual('backend/logger')` -- `backend/logger/index.ts` and `log_writer.ts`
+// import each other circularly, and re-entering that cycle from inside a mock factory throws
+// inside `LogWriter`'s constructor (see this file's own note above the `jest.mock('electron',
+// ...)` block on why `jest.spyOn`, not `jest.mock`, is used for `backend/logger` itself). ────
+jest.mock('backend/logger/paths', () => {
+  const actualPath = jest.requireActual('path')
+  const actualOs = jest.requireActual('os')
+  const tmpRoot = actualPath.join(
+    actualOs.tmpdir(),
+    `gamelib-sidecarrejectionguard-test-home-${process.pid}`
+  )
+  const logBaseDir = actualPath.join(tmpRoot, 'logs')
+  return {
+    getLogFilePath: (
+      args: { appName?: string; runner?: string; type?: string } = {}
+    ): string => {
+      let relativeFilePath: string
+      if (!(args?.appName || args?.runner)) {
+        relativeFilePath = 'gamelib'
+      } else if (args.runner && !args.appName) {
+        relativeFilePath = actualPath.join('runners', args.runner)
+      } else {
+        const { appName, runner, type = 'launch' } = args
+        relativeFilePath = actualPath.join(
+          'games',
+          `${appName}_${runner}`,
+          type
+        )
+      }
+      return actualPath.join(logBaseDir, relativeFilePath + '.log')
+    }
   }
 })
 
@@ -201,7 +294,6 @@ function setupIsolatedBootstrapHarness(): {
   backendEvents: any
   downloadAntiCheatDataMock: jest.Mock
   logWarningMock: jest.SpyInstance
-  appFolder: string
 } {
   let harness!: ReturnType<typeof setupIsolatedBootstrapHarness>
   jest.isolateModules(() => {
@@ -218,7 +310,6 @@ function setupIsolatedBootstrapHarness(): {
     const { init } = require('../bootstrap')
     const { downloadAntiCheatData } = require('../../anticheat/utils')
     const loggerModule = require('backend/logger')
-    const { appFolder } = require('../../constants/paths')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     // spyOn (not jest.mock) — wraps the real, already-loaded module object in place so
@@ -231,11 +322,37 @@ function setupIsolatedBootstrapHarness(): {
       init,
       backendEvents,
       downloadAntiCheatDataMock: downloadAntiCheatData,
-      logWarningMock: logWarningSpy,
-      appFolder
+      logWarningMock: logWarningSpy
     }
   })
   return harness
+}
+
+/**
+ * Requires `constants/paths.ts` fresh inside its own `jest.isolateModules()` sandbox and
+ * returns just the three path constants the containment tripwire below needs.
+ *
+ * Refinement (gap cycle 2, plan 34.2-18, IN-03): the tripwire previously called the full
+ * `setupIsolatedBootstrapHarness()` above -- building the entire bootstrap graph (backend
+ * events, `downloadAntiCheatData`, the `logWarning` spy, GlobalConfig) and leaving an
+ * unrestored `jest.spyOn` -- just to read one module's constants. This narrower helper reads
+ * only `constants/paths.ts`, still inside `jest.isolateModules()` so the require-time
+ * legacy-folder migration in that module runs against the SAME mocked `pathShim` as every
+ * other test in this file, without the unrelated side effects.
+ */
+function loadConstantsPaths(): {
+  appFolder: string
+  userDataPath: string
+  fixesPath: string
+} {
+  let result!: ReturnType<typeof loadConstantsPaths>
+  jest.isolateModules(() => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { appFolder, userDataPath, fixesPath } = require('../../constants/paths')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    result = { appFolder, userDataPath, fixesPath }
+  })
+  return result
 }
 
 /**
@@ -277,15 +394,28 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       delete process.env.CI
     }
 
-    // T-34.2-42 / CR-03 containment tripwire: prove the resolved `appFolder` this whole
-    // suite's redirected `os.homedir()` produces is actually contained inside `os.tmpdir()`,
-    // using the SAME `resolve`+`relative` idiom `fileStore.ts`'s own containment check uses
+    // T-34.2-42 / CR-03 / WR-01 containment tripwire: prove `appFolder`, `userDataPath`,
+    // `fixesPath` (via the `pathShim` mock) AND `getLogFilePath({})` (via the
+    // `backend/logger/paths` mock) all resolve inside `os.tmpdir()`, using the SAME
+    // `resolve`+`relative` idiom `fileStore.ts`'s own containment check uses
     // (`relative(resolve(base), target)` then `startsWith('..') || isAbsolute(...)`) --
-    // never `path.join`, which is not a containment check.
-    const { appFolder } = setupIsolatedBootstrapHarness()
-    const relativeToTmpdir = relative(resolve(tmpdir()), resolve(appFolder))
-    expect(relativeToTmpdir.startsWith('..')).toBe(false)
-    expect(isAbsolute(relativeToTmpdir)).toBe(false)
+    // never `path.join`, which is not a containment check. Throws loudly ("REFUSING TO RUN")
+    // rather than relying on an `afterAll` restore as a safety net -- this repo's own
+    // `tests-clobbering-real-steam-store` incident (commit 92c29a5e) recorded that an
+    // `afterAll` restore is not a safety net under jest worker force-exit.
+    const { appFolder, userDataPath, fixesPath } = loadConstantsPaths()
+    const tmpRoot = resolve(tmpdir())
+    const candidates = [appFolder, userDataPath, fixesPath, getLogFilePath({})]
+    for (const candidate of candidates) {
+      const rel = relative(tmpRoot, resolve(candidate))
+      if (rel.startsWith('..') || isAbsolute(rel)) {
+        throw new Error(
+          `[sidecarRejectionGuard.test.ts] REFUSING TO RUN: "${candidate}" resolves ` +
+            `outside os.tmpdir() (${tmpRoot}) -- a containment mock is not in effect, ` +
+            'and this suite would write into a real user log/config directory.'
+        )
+      }
+    }
   })
 
   afterAll(() => {
