@@ -1315,7 +1315,7 @@ Plans:
 **Goal:** Port the **game details, settings and overrides** IPC cluster (26 channels): per-game info/settings/overrides, SDL selection, launch options, install-path changes, version pinning, repair/kill, and the enrichment surfaces (wiki game info, anticheat status, known fixes, CrossOver index, store search, recent games). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.2-01, REQ-34.2-02, REQ-34.2-03, REQ-34.2-04, REQ-34.2-05, REQ-34.2-06, REQ-34.2-07, REQ-34.2-08, REQ-34.2-09, REQ-34.2-10, REQ-34.2-11, REQ-34.2-12, REQ-34.2-13, REQ-34.2-14
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 - [x] 34.2-01-PLAN.md — D-02/D-07 the two sidecar bootstrap wirings (i18next init, `fetchLastestReleases()` + the re-homed `releasesInfoReady` anticheat listener) with NON-MOCKED proof
@@ -1324,7 +1324,7 @@ Plans:
 - [x] 34.2-04-PLAN.md — curated `gameDetailsFlowRegistration.ts` for the 15 invoke-kind per-game channels + the import-graph/delegation-shape gate
 - [x] 34.2-05-PLAN.md — the 3 send-kind channels (`setGameMetadataOverride`/`changeGameVersionPinnedStatus`/`addNewApp`) with POSITIVE-side-effect proof, never absence-of-marker
 - [x] 34.2-06-PLAN.md — curated `enrichmentFlowRegistration.ts` for the 8 enrichment channels + D-10 `LONG_RUNNING_CHANNELS` (`getCrossoverIndex` in; `getWikiGameInfo` measured first)
-- [ ] 34.2-07-PLAN.md — D-11 closure: `34.2-PORTED-CHANNELS.md` (26 channels + 3 declaration riders + the honest sign-off naming D-02/D-07), `34.2-HUMAN-UAT.md`, SEAM.md §3→§1
+- [x] 34.2-07-PLAN.md — D-11 closure: `34.2-PORTED-CHANNELS.md` (26 channels + 3 declaration riders + the honest sign-off naming D-02/D-07), `34.2-HUMAN-UAT.md`, SEAM.md §3→§1 (headline tally 61→87 wired/re-routed total)
 
 ### Phase 34.3: Tauri IPC re-plumb slice 6 — shell, files, logs and diagnostics (INSERTED)
 
