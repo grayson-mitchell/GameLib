@@ -10,6 +10,18 @@ module.exports = {
   testPathIgnorePatterns: ['./node_modules/'],
   resetMocks: true,
 
+  // LOAD-BEARING FOR CONTAINMENT (Phase 34.2, gap cycle 3, plan 34.2-19).
+  // Redirects HOME/USERPROFILE/APPDATA/LOCALAPPDATA/XDG_* for every
+  // src/backend test file BEFORE that file's own imports run, so no suite
+  // can opt out of containment by omission (a hand-maintained per-suite
+  // list already rotted once — see jest.setupContainment.ts's docstring).
+  // Scope is the backend project ONLY: the destruction path
+  // (backend/logger/paths.ts's getBaseLogPath(), sidecar/pathShim.ts's
+  // resolveAppDataDir()) is reachable only from src/backend, so the
+  // frontend/common/preload/meta jest projects are deliberately untouched.
+  // Do not remove this entry.
+  setupFiles: ['<rootDir>/src/backend/jest.setupContainment.ts'],
+
   rootDir: '../..',
 
   // The root of your source code, typically /src
