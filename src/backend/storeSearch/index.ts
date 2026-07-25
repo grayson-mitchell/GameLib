@@ -1,45 +1,26 @@
 import { addHandler } from 'backend/ipc'
-import { logError, LogPrefix } from 'backend/logger'
-import { searchGames, getGameDeals, getStoreMap } from './cheapshark'
+import {
+  handleSearchStores,
+  handleGetStoreSearchDeals,
+  handleGetStoreSearchStoreMap
+} from './handlers'
 
 /**
  * IPC handler registration for the aggregated store-search feature
- * (Phase 20 / STORESEARCH-01). Mirrors `backend/discounts/index.ts`'s
- * throw-on-failure `addHandler` contract verbatim — handlers never swallow
- * errors into an empty result; the frontend container is exclusively
- * responsible for converting a rejected promise into the D-14 "provider
- * failed" state.
+ * (Phase 20 / STORESEARCH-01). The three handler bodies (including the
+ * Phase 20 D-14 throw-on-failure contract) now live in `./handlers.ts`
+ * (Phase 34.2 Plan 13, closes WR-09) — both this Electron registration and
+ * `sidecar/enrichmentFlowRegistration.ts`'s Tauri registration import the
+ * same bodies, so an edit to the error contract cannot silently diverge
+ * between the two builds.
  */
 
-addHandler('searchStores', async (_event, query) => {
-  try {
-    return await searchGames(query)
-  } catch (err) {
-    logError(`searchStores handler failed: ${String(err)}`, LogPrefix.Backend)
-    throw err
-  }
-})
+addHandler('searchStores', async (_event, query) => handleSearchStores(query))
 
-addHandler('getStoreSearchDeals', async (_event, gameId) => {
-  try {
-    return await getGameDeals(gameId)
-  } catch (err) {
-    logError(
-      `getStoreSearchDeals handler failed: ${String(err)}`,
-      LogPrefix.Backend
-    )
-    throw err
-  }
-})
+addHandler('getStoreSearchDeals', async (_event, gameId) =>
+  handleGetStoreSearchDeals(gameId)
+)
 
-addHandler('getStoreSearchStoreMap', async () => {
-  try {
-    return await getStoreMap()
-  } catch (err) {
-    logError(
-      `getStoreSearchStoreMap handler failed: ${String(err)}`,
-      LogPrefix.Backend
-    )
-    throw err
-  }
-})
+addHandler('getStoreSearchStoreMap', async () =>
+  handleGetStoreSearchStoreMap()
+)
