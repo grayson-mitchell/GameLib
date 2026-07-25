@@ -87,8 +87,10 @@
  *
  * Every `send`-kind body below is wrapped so a rejected/thrown failure logs
  * rather than propagates — an unhandled rejection from a `send` handler
- * crashes the sidecar process (no `process.on('unhandledRejection')` guard
- * exists here; see the `sidecar-dialog-reject-crashes` precedent).
+ * crashes the sidecar process. `sidecar/processGuards.ts` (Phase 34.2 Plan
+ * 09) now installs a process-level `unhandledRejection` guard, but that is
+ * defence-in-depth only — it does not replace this try/catch-at-the-body
+ * discipline (see the `sidecar-dialog-reject-crashes` precedent).
  */
 
 import { ipcMain, app, powerSaveBlocker } from './electronStub'

@@ -57,8 +57,10 @@
  * Every `send`-kind body below is wrapped in `try`/`catch` ->
  * `logSendFailure` (copied from `appShellFlowRegistration.ts`'s own
  * `logSendFailure` helper) — an unhandled throw/rejection from a
- * fire-and-forget listener crashes the sidecar process (no
- * `process.on('unhandledRejection')` guard exists here; the
+ * fire-and-forget listener crashes the sidecar process. `sidecar/
+ * processGuards.ts` (Phase 34.2 Plan 09) now installs a process-level
+ * `unhandledRejection` guard, but that is defence-in-depth only — it does
+ * not replace this try/catch-at-the-body discipline (the
  * `sidecar-dialog-reject-crashes` precedent). `setMetadataChangedNotifier`
  * is installed, wrapped the same way, once at the TOP of
  * `registerGameDetailsFlows()` — before any of the 3 `ipcMain.on`

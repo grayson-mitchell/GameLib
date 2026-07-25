@@ -210,9 +210,11 @@ export const app = {
 // (CR-01). The safe fix is to de-wire showMessageBox entirely: it logs a console.warn and
 // RESOLVES the sentinel `{ response: -1, checkboxChecked: false }` -- never forwarding to
 // RUST_DIALOG_MESSAGE and never rejecting. It must never reject/throw because the two live
-// callers `await` it unguarded and fire-and-forget (no try/catch, no `.catch()`), and this
-// sidecar process has no `process.on('unhandledRejection')` guard -- an always-rejecting stub
-// would crash the sidecar the first time either path is hit. `-1` is neither `0`
+// callers `await` it unguarded and fire-and-forget (no try/catch, no `.catch()`), and even
+// though `sidecar/processGuards.ts` now installs a process-level `unhandledRejection` guard
+// (Phase 34.2 Plan 09), that guard is defence-in-depth only -- an always-rejecting stub here
+// would still surface as a logged crash-adjacent warning the first time either path is hit,
+// not a clean no-op. `-1` is neither `0`
 // (promptI386Recovery's affirmative/destructive branch, decline = `response !== 0`) nor `1`
 // (askForceUninstall's destructive branch, decline = `response !== 1`), so it declines BOTH
 // reachable callers.

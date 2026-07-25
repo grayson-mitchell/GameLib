@@ -16,8 +16,14 @@
  * the bootstrap module without it auto-starting against the real
  * process.stdin/stdout (bootstrap.test.ts calls `init()` itself with
  * injected streams).
+ *
+ * Ordering (Phase 34.2 Plan 09, T-34.2-39): `installUnhandledRejectionGuard()` must run
+ * BEFORE `init()` — the guard must be live before `bootstrap.ts`'s module scope and `init()`
+ * can produce any rejection.
  */
 
 import { init } from 'backend/sidecar/bootstrap'
+import { installUnhandledRejectionGuard } from 'backend/sidecar/processGuards'
 
+installUnhandledRejectionGuard()
 init()
