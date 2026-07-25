@@ -18,12 +18,25 @@
  * because sidecar callers routinely `await`/fire-and-forget with no `try`/`catch` and (until
  * this module) no process-level guard existed at all. This guard must NEVER re-throw, NEVER
  * terminate the process, and NEVER change the exit code — it only logs and returns.
- * Its own logging is wrapped in a `try`/`catch` with a `process.stderr` fallback, because
- * `heroicLogWriter` (backend/logger) is unset until `initLogger()` runs inside
- * `bootstrap.init()` — a rejection during early boot (before `init()` runs) would otherwise
- * make `logWarning()` itself throw, turning this guard into a brand-new crash path. `stdout`
- * is never used for diagnostics: it carries the sidecar's newline-delimited JSON RPC frame
- * stream, and any non-frame byte written there corrupts the transport.
+ *
+ * BOTH halves of the listener body are individually wrapped in their own `try`/`catch`, not
+ * just the logging call (Phase 34.2 gap cycle 2, CR-02 regression — gap cycle 1's own claim
+ * that "its own logging is wrapped in a try/catch" was FALSE: the message-construction step
+ * that ran `String(reason)` sat OUTSIDE that try, so a rejection reason with a null prototype
+ * or a throwing/absent `toString`/`Symbol.toPrimitive` made the listener itself throw, which
+ * Node escalates into an uncaught exception and kills the process — the exact crash class this
+ * module exists to prevent, reintroduced by the guard):
+ *   1. Message construction — reassigns a `let message` (initialized to a hardcoded,
+ *      non-interpolated fallback literal) inside its own `try`. If the reason cannot be
+ *      converted to a string, the fallback literal is logged instead of throwing — the guard
+ *      still produces a signal, it does not merely survive silently.
+ *   2. The logging call itself — wrapped in a second `try`/`catch` with a `process.stderr`
+ *      fallback, because `heroicLogWriter` (backend/logger) is unset until `initLogger()` runs
+ *      inside `bootstrap.init()` — a rejection during early boot (before `init()` runs) would
+ *      otherwise make `logWarning()` itself throw, turning this guard into a brand-new crash
+ *      path. `stdout` is never used for diagnostics: it carries the sidecar's
+ *      newline-delimited JSON RPC frame stream, and any non-frame byte written there corrupts
+ *      the transport.
  */
 
 import { logWarning, LogPrefix } from 'backend/logger'
@@ -46,7 +59,14 @@ function installUnhandledRejectionGuard(
   unhandledRejectionGuardInstalled = true
 
   target.on('unhandledRejection', (reason: unknown) => {
-    const message = `[sidecar] unhandled promise rejection: ${String(reason)}`
+    let message = '[sidecar] unhandled promise rejection: <unstringifiable reason>'
+    try {
+      message = `[sidecar] unhandled promise rejection: ${
+        reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)
+      }`
+    } catch {
+      // keep the fallback message
+    }
     try {
       logWarning(message, LogPrefix.Backend)
     } catch {
