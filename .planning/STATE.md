@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready_to_execute
-stopped_at: Phase 34.2 GAP CYCLE 2 PLANNED (4 plans, 34.2-15..18, 2 waves) -- closes the 3 blockers gap cycle 1 introduced (CR-01 unregistered logError send channel, CR-02 String(reason) outside the guard's own try, CR-03 sidecarRejectionGuard.test.ts missing the pathShim mock). The 3 ORIGINAL gaps (REQ-34.2-03/-07/-12) remain genuinely closed. Plan-checker PASSED first iteration. PHASE NOT COMPLETE -- next is /gsd-execute-phase 34.2
-last_updated: "2026-07-26T00:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2 planned (4 plans, checker passed)
+status: executing
+stopped_at: Completed 34.2-15-PLAN.md (gap cycle 2, CR-02 hardened + hostile-reason tests) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-16..18 remain)
+last_updated: "2026-07-25T21:45:28.801Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-15 executed (CR-02 hardened, 3 hostile-reason tests added)
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 89
-  completed_plans: 77
-  percent: 87
+  completed_plans: 78
+  percent: 88
 ---
 
 # Project State
@@ -33,20 +33,24 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 PLANNED (4 plans, 34.2-15..18), ready to execute
-Plan: 14 of 18 executed
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 EXECUTING (4 plans, 34.2-15..18)
+Plan: 15 of 18 executed
 
 Gap cycle 2 plans (created 2026-07-26, plan-checker PASSED on iteration 1):
+
 - 34.2-15 (wave 1) -- CR-02: move String(reason) inside installUnhandledRejectionGuard's own try
   with a hardcoded fallback; 3 hostile-reason tests (null prototype, throwing toString, throwing
   Symbol.toPrimitive). REQ-34.2-07, -14.
+
 - 34.2-16 (wave 1) -- CR-01 sidecar half: curated loggerFlowRegistration.ts registering ONLY the
   logError send channel, proven by a positive log-file side effect over the real transport (NOT
   absence-of-throw). Ports logError ahead of its Phase 34.3 slot -- both IPC-PORT-INVENTORY.md and
   34.2-PORTED-CHANNELS.md must be reconciled; double-registration prohibited (dispatchSend iterates
   ALL listeners, so a second one duplicates every frontend log line). REQ-34.2-12, -08, -09, -13, -14.
+
 - 34.2-17 (wave 1) -- CR-01 renderer half: extract reportRepairFailure (console.error + logError +
   ERROR dialog), reduce onRepairYesClick's catch to a delegation. REQ-34.2-12, -14.
+
 - 34.2-18 (wave 2, depends_on 15+16) -- CR-03 + WR-01: apply the pathShim + logger/paths containment
   kit to sidecarRejectionGuard.test.ts, extend every tripwire to the log path, prove with an
   env-simulating test (APPDATA/XDG_CONFIG_HOME/XDG_STATE_HOME/LOCALAPPDATA set to sentinels OUTSIDE
@@ -56,6 +60,24 @@ Newly surfaced debt (deferred, NOT planned): 11 other sidecar suites drive boots
 the containment kit (appShellFlows, bootstrapWirings, bootstrap, downloadQueueFlows, electronUntouched,
 onlineMonitorWiring, installFlows, skeletonFlows, settingsFlows, rustInvokeChannel, steamAuthFlows) --
 same tests-clobbering-real-steam-store risk class, pre-existing. Recorded in deferred-items.md.
+
+34.2-15 done -- GAP CYCLE 2, first plan executed. Closed CR-02: `processGuards.ts`'s
+`installUnhandledRejectionGuard` built its log message with `String(reason)` OUTSIDE its own try
+(only the `logWarning` call was wrapped), so a null-prototype reason or a reason whose
+`toString`/`Symbol.toPrimitive` throws would make the listener itself throw -- escalated by Node
+into an `uncaughtException` with no handler installed, killing the sidecar. Task 1 moved the
+interpolation into its own try, reassigning a `let message` initialized to a hardcoded,
+non-interpolated fallback literal (`<unstringifiable reason>`) on failure; corrected the module
+docstring, which had falsely claimed only the logging call was wrapped. Task 2 added 3 hostile-
+reason cases to Group 2 (null-prototype, throwing `toString`, throwing `Symbol.toPrimitive`),
+each asserting the EXACT fallback string via `toHaveBeenCalledWith` (not `stringContaining`, which
+would also pass for the interpolated form). RED spot-checked by hand: reverting Task 1's fix made
+all 3 new cases fail with `TypeError: Cannot convert object to primitive value`; restored, `git
+diff` against the Task-1 commit showed zero difference. REQ-34.2-07/-14 complete, see
+34.2-15-SUMMARY.md. No deviations. Full backend sweep: 108/109 suites, 2240/2241 tests (+3 over
+the 2237/2238 baseline) -- the
+single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase 34.1, unchanged; `tsc
+--noEmit` and `cargo check --quiet` both clean. Next: 34.2-16 (CR-01 sidecar half, same wave).
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -374,7 +396,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[...]` splice two notes below (now reading `88%`)
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -389,7 +411,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Phase complete — ready for verification
+Status: Ready to execute
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -613,7 +635,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 COMPLETE (34.2-14 done, 7/7 plans)
+Last activity: 2026-07-25
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1165,6 +1187,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P12 | 25min | 2 tasks | 2 files |
 | Phase 34.2 P13 | 20min | 2 tasks | 4 files |
 | Phase 34.2 P14 | 40min | 2 tasks | 1 files |
+| Phase 34.2 P15 | 25m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1414,6 +1437,7 @@ Recent decisions affecting current work:
 - [Phase 34.2-13]: storeSearch/handlers.ts documents transitive (not direct) electron reach through cheapshark.ts, mirroring plan 34.2-11's corrected wording rather than the pre-34.2-11 overclaim
 - [Phase ?]: Read all six gap-cycle plans' actual shipped state from source (main.rs, bootstrap.ts, electronReachLedger.test.ts), not from plan intent, when refreshing 34.2-PORTED-CHANNELS.md
 - [Phase ?]: Did not edit 34.2-HUMAN-UAT.md when refreshing 34.2-PORTED-CHANNELS.md -- recorded gap-cycle interaction with both deferred UAT items without changing their pending/deferred status
+- [Phase 34.2]: 34.2-15: kept CR-02's unhandledRejection fallback message fully hardcoded/non-interpolated and did not add an uncaughtException handler, per the plan's explicit scope boundary
 
 ### Pending Todos
 
@@ -1483,8 +1507,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T20:50:25.440Z
-Stopped at: Completed 34.2-14-PLAN.md -- Phase 34.2 gap cycle 1 COMPLETE (7/7 plans, 34.2-08..14), all verification gaps + review findings closed except accepted debt (WR-03/05/06/07/10, IN-01..04); ready for re-verification
+Last session: 2026-07-25T21:45:28.794Z
+Stopped at: Completed 34.2-15-PLAN.md (gap cycle 2, CR-02 hardened + hostile-reason tests) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-16..18 remain)
 Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
