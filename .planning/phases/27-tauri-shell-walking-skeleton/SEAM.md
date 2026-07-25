@@ -378,6 +378,57 @@ This slice wires/re-routes 33 more channels — see the headline-cost tally belo
 
 ---
 
+### Game details, settings and overrides cluster (real, Phase 34.2) — CLOSED, moved out of §3
+
+**Ported in Phase 34.2** (`tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid`, plans
+34.2-01..34.2-07). Full enumerated list, one row per channel with its kind/backed-by/proof-level,
+in `.planning/phases/34.2-tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid/34.2-PORTED-CHANNELS.md`.
+This slice wires 26 more channels — see the headline-cost tally below.
+
+- **No new port kind.** This slice uses exactly the two kinds Phases 30–33 established:
+  `sidecar invoke` (23 channels) and `sidecar send` (3 channels). Zero `rustInvoke` rows, zero
+  `renderer-side (Tauri JS)` rows. **Zero new `dispatch_rust_channel` arms — the count stays at
+  11** (last changed by Phase 34.1's `tray_set_icon`). The only Rust-adjacent change is one string
+  (`"getCrossoverIndex"`) added to the existing `LONG_RUNNING_CHANNELS` array
+  (`src-tauri/src/main.rs`) — a timeout-policy edit extending Phase 30's CR-03 mechanism, not a
+  new arm.
+- **The slice's actual content: two startup wirings, not 26 delegations.** i18next was never
+  initialized in the sidecar, so `i18next.t()` returned `undefined` (not a throw, not the inline
+  default) at every backend call site reachable from the sidecar since Phase 30; and
+  `fetchLastestReleases()` — the sole emitter of `releasesInfoReady` — was never called, so
+  `getAnticheatInfo` structurally could not return data. Both are now wired in `bootstrap.ts`
+  (D-02, D-07), alongside the re-homed `releasesInfoReady` → `downloadAntiCheatData` listener that
+  `anticheat/ipc_handler.ts` cannot supply to the sidecar (that file's module scope calls
+  `addHandler` from `backend/ipc`, forbidden under `src/backend/sidecar/`). **Generalize the
+  lesson for later slices: Electron `app.whenReady()` inits are not auto-run in the sidecar, and
+  the ones that fail QUIETLY are the dangerous ones** — 34.1's CR-01 caught the loud half of the
+  same bug (`changeLanguage()` throwing); this slice found the silent half (`i18next.t()`
+  returning `undefined`).
+- **Three more Electron-side extractions**, continuing the behavioral-not-textual invariant 34.1
+  established: `main.ts`'s 19 game-details/settings/override handler bodies → two new
+  `src/backend/gamedetails/{dispatch,overrides}.ts` modules; `readKnownFixes` out of
+  `launcher.ts` → `knownFixes.ts` (kept `launcher.ts`'s 2170-line Wine pipeline out of the sidecar
+  graph for a 20-line JSON reader); `buildCrossoverRatingMap` out of
+  `crossover_index/ipc_handler.ts` → `crossoverRatingMap.ts` (that file co-located the function
+  with its own `addHandler` side effect). `electronUntouched.test.ts` was again inspected and left
+  byte-unchanged — it remains Phase 28's narrow keyring/`configStore` byte-identity proof, asserts
+  nothing about `main.ts`, and was not repurposed. A genuinely new
+  `gameDetailsImportGate.test.ts` carries this slice's curated-import, delegation-shape,
+  transport-kind and do-not-touch gates, mirroring `appShellImportGate.test.ts`'s shape rather
+  than extending it.
+- **Claim level (Phase 34.2): unit-proven, and genuinely STRONGER than 34.1's.** Unlike 34.1's
+  visual/interactive deliverable (which jest structurally could not see), this slice is almost
+  entirely data-in/data-out — 26 channels with assertable return shapes, exercised over the real
+  sidecar RPC loop, so "wired and unit-proven" is genuinely close to "works" here. It has exactly
+  **two named live-UAT exceptions, D-02 and D-07** — the two bootstrap wirings above, whose
+  effects (a rendered notification string; a downloaded anticheat data file) only appear in a live
+  sidecar boot and are deliberately deferred, recorded with reproduction steps in
+  `.planning/phases/34.2-tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid/34.2-HUMAN-UAT.md`.
+  Do not read "wired and unit-proven" as "seen working" for this cluster either — that is exactly
+  how G-30-02 was declared fixed twice while the live build hung.
+
+---
+
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
 
 - **`fileStore.ts`** — graduated to §1 in Phase 29; see `### The store layer (real, Phase 29)`
@@ -437,8 +488,11 @@ enumerated in `32-PORTED-CHANNELS.md`, which also declares the two push channels
 `progressUpdate`/`changedDMQueueInformation` riding the existing relay with zero new registration),
 for 28 wired/re-routed total; Phase 34.1 wired/re-routed 33 more (13 renderer-side (Tauri JS), 8
 sidecar invoke, 11 sidecar send including `changeTrayColor`'s new `tray_set_icon` rustInvoke arm,
-and 1 confirmed-already-live-via-bootstrap — enumerated in `34.1-PORTED-CHANNELS.md`), for **61
-wired/re-routed total**. The `callTool` channel (`src/backend/tools/ipc_handler.ts:25`,
+and 1 confirmed-already-live-via-bootstrap — enumerated in `34.1-PORTED-CHANNELS.md`), for 61
+wired/re-routed total; Phase 34.2 wired 26 more (23 sidecar invoke, 3 sidecar send, zero new port
+kinds, zero new `dispatch_rust_channel` arms — enumerated in `34.2-PORTED-CHANNELS.md`, which also
+records the two bootstrap wirings, D-02 and D-07, as this slice's actual load-bearing content),
+for **87 wired/re-routed total**. The `callTool` channel (`src/backend/tools/ipc_handler.ts:25`,
 Winetricks/winecfg/runExe) was reassigned out of the Slice 4 grouping to the Phase 34.5 slice by
 Phase 34.1's own CONTEXT decision D-14 before this tally — it was never counted in Phase 34.1's 33.
 (`showMessageBox`/`showErrorBox`/`showSaveDialog`
@@ -468,9 +522,19 @@ no real Tauri-side behavior.
 - `session`/`powerSaveBlocker` — **upgraded to LOGGED no-ops in Phase 33** (D-08/D-09, Accepted
   Constraints below); still no real Tauri v2 parity behind either. Multi-account flows and the
   macOS Steam bridge (Idea B, Phase 24) remain unrelated, untouched arcs.
-- `launcher.ts`'s full Wine/GameConfig/DownloadManager pipeline and the other 5 store managers
-  (GOG/Legendary/Nile/Zoom/Sideload) — `steamFlowRegistration.ts` deliberately imports only
-  `SteamLibraryManager`/`SteamGame`, not `storeManagers/index.ts`'s `libraryManagerMap`.
+- **`launcher.ts`'s full Wine/GameConfig/DownloadManager pipeline (STILL deferred).** Corrected
+  2026-07-25, Phase 34.2: this bullet previously claimed `steamFlowRegistration.ts` deliberately
+  imports only `SteamLibraryManager`/`SteamGame`, never `storeManagers/index.ts`'s
+  `libraryManagerMap` — **that claim is now partially stale.** As of Phase 34.2,
+  `gameDetailsFlowRegistration.ts` dispatches runner-generically through `libraryManagerMap` for
+  all six managers (D-01), resting on the Phase 32 D-02 finding that `storeManagers/index.ts`
+  force-constructs all six managers in the sidecar regardless — so narrowing would buy nothing and
+  would mean shipping a runner guard Electron does not have. What genuinely remains deferred:
+  `launcher.ts`'s own 2170-line Wine/GameConfig/DownloadManager pipeline itself — only
+  `readKnownFixes` (a 20-line, fully self-contained JSON reader) was extracted out of it
+  (`knownFixes.ts`, Phase 34.2 D-05), precisely to avoid importing the rest of that module into the
+  sidecar graph. `prepareWineLaunch`/`runWineCommand`/`callRunner` and the full pipeline remain
+  unported — target Phase 34.5/35.
 
 ---
 
