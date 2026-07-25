@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: completed
+status: executing
 stopped_at: Phase 34.2 context gathered
 last_updated: "2026-07-25T07:20:13.635Z"
 last_activity: 2026-07-25
