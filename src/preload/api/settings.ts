@@ -1,8 +1,26 @@
 import { makeListenerCaller, makeHandlerInvoker } from '../ipc'
+import { isTauri } from '../tauriTransport'
+import { applyFramelessDecorations } from './tauriWindowChrome'
 
 export const requestAppSettings = makeHandlerInvoker('requestAppSettings')
 export const requestGameSettings = makeHandlerInvoker('requestGameSettings')
-export const setSetting = makeListenerCaller('setSetting')
+
+const setSettingIpc = makeListenerCaller('setSetting')
+
+// D-05 (Phase 34.1 Plan 03): under Tauri, writing `settings.framelessWindow` (the
+// `default` app scope -- game-scoped settings never affect the app window)
+// re-applies window decorations immediately via `applyFramelessDecorations()`. This
+// is a deliberate SUPERSET of Electron parity: Electron's own Settings label for this
+// toggle says "requires restart" (it is only read once, at `createMainWindow()` time,
+// `main_window.ts:44`), whereas D-05's own text calls for "re-applying when the user
+// toggles it". Never runs on the Electron path.
+export const setSetting = (...args: Parameters<typeof setSettingIpc>) => {
+  setSettingIpc(...args)
+  const [{ appName, key, value }] = args
+  if (isTauri() && appName === 'default' && key === 'framelessWindow') {
+    applyFramelessDecorations(Boolean(value))
+  }
+}
 export const getLegendaryVersion = makeHandlerInvoker('getLegendaryVersion')
 export const getGogdlVersion = makeHandlerInvoker('getGogdlVersion')
 export const getCometVersion = makeHandlerInvoker('getCometVersion')

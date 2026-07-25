@@ -29,6 +29,10 @@
  */
 import api from './api'
 import { isTauri } from './tauriTransport'
+import {
+  applyFramelessDecorations,
+  installDragRegionHandlers
+} from './api/tauriWindowChrome'
 
 // Proof-of-execution marker (Phase 27 Plan 05): the literal first console line so we can
 // confirm this attach module evaluates BEFORE the renderer renders / lazy-loads App (whose
@@ -84,6 +88,24 @@ if (shouldAttach) {
   ) as NodeJS.Platform
   window.isE2ETesting = false
   window.flatpakRuntimeVersion = undefined
+
+  // D-05/D-06 (Phase 34.1 Plan 03): apply the settings.framelessWindow decoration
+  // state before React renders, so the window never visibly flips on startup.
+  // applyFramelessDecorations()/installDragRegionHandlers() are already total (never
+  // throw -- see tauriWindowChrome.ts's own header comment); this try/catch is a
+  // second, deliberately redundant layer, because a throw anywhere in this attach
+  // path blanks the window (SEAM Invariant A) and no window-chrome failure is worth
+  // that risk.
+  try {
+    applyFramelessDecorations()
+  } catch (error) {
+    console.warn('[GameLib] applyFramelessDecorations failed:', error)
+  }
+  try {
+    installDragRegionHandlers()
+  } catch (error) {
+    console.warn('[GameLib] installDragRegionHandlers failed:', error)
+  }
 }
 
 export {}
