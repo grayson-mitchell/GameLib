@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.1 EXECUTING -- plan 34.1-02 done (2 of 8); REQ-34.1-04/REQ-34.1-12
-last_updated: "2026-07-25T00:06:49.000Z"
-last_activity: 2026-07-25 -- Executed 34.1-02 (D-07/D-08 app-shell handler extraction). Task 1 (4ad8fdcd) created src/backend/appshell/themes.ts, releases.ts, language.ts -- Electron-free bodies for getCustomThemes/getThemeCSS/getCustomCSS, getLatestReleasesForStartup/getCurrentChangelogEntry, and changeLanguage, extracted verbatim from main.ts (lines 1513-1539, 757-768, 514-520). Task 2 (45b6e191) converted main.ts's six corresponding registrations to one-line delegations, removed now-unused imports (readdirSync/readFileSync, gameInfoStore, getLatestReleases/getCurrentChangelog from ./utils); verified byte-identical D-01 window-chrome registrations via git diff against the pre-plan commit, and full jest suite green (127/127 suites). Task 3 (5495962f) added src/backend/appshell/__tests__/appshellModules.test.ts -- 12 direct-call behavior tests (all REQ-34.1-04-tagged) including a call-order assertion (backendEvents.emit('languageChanged') fires last, spot-checked RED by reordering) and a comment-stripped by-construction source gate proving no file under src/backend/appshell/ imports electron (spot-checked green with a temporary electron-mentioning comment). One Rule-1 deviation: getCustomCSS's extracted return type corrected from the plan prose's Promise<string | undefined> to Promise<string> (matching AppSettings.customCSS: string), which failed addHandler's AsyncIPCFunctions type check under tsc; runtime behavior unaffected, documented in 34.1-02-SUMMARY.md. requirements mark-complete not yet run this session (REQ-34.1-04/REQ-34.1-12 need marking). Per the standing gsd-sdk state-write corruption precedent (see notes below), state.advance-plan/state.update-progress/roadmap.update-plan-progress were NOT run; this frontmatter and the Current Position block below were hand-corrected instead. NEXT: plans 34.1-03..08 (waves 1-4 remainder, per phase plan dependency graph).
+stopped_at: Phase 34.1 EXECUTING -- plan 34.1-03 done (3 of 8); REQ-34.1-01/REQ-34.1-03
+last_updated: "2026-07-25T00:26:46Z"
+last_activity: 2026-07-25 -- Executed 34.1-03 (D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime). Task 1 (aa2ac32d) added src/preload/api/tauriWindowChrome.ts -- ten faithful Tauri-JS implementations of minimizeWindow/maximizeWindow/unmaximizeWindow/closeWindow/isMaximized/isMinimized/isFullscreen/setFullscreen/isFrameless/setZoomFactor against getCurrentWindow()/getCurrentWebview(), deliberately NOT the naive implementations for isFullscreen (declared-false env/CLI stand-in, never calls the Window API) and setZoomFactor (Math.pow(1.2, level) converts Electron's zoom LEVEL to Tauri's zoom SCALE FACTOR); plus applyFramelessDecorations/installDragRegionHandlers for Task 3. windowChrome.test.ts: 18 tests (REQ-34.1-01), Math.pow spot-check confirmed red-then-green. Task 2 (9b2c00e2) short-circuited misc.ts's ten exports on isTauri(), names/signatures byte-identical, Electron path untouched; found + fixed a Rule-1 regression this plan's own Task 1 caused -- misc.ts's new static import of tauriWindowChrome.ts pulls the REAL @tauri-apps/api/window//webview into tauriAttach.ts's import graph, whose classes extend Resource from @tauri-apps/api/core at module-eval time, crashing tauriAttach.test.ts's existing minimal core mock with "Class extends value undefined is not a constructor"; fixed by adding matching window//webview mocks to tauriAttach.test.ts. Task 3 (59f6da68) wired applyFramelessDecorations()/installDragRegionHandlers() into tauriAttach.ts's pre-paint shouldAttach block (try/catch, SEAM Invariant A), and settings.ts's setSetting now re-applies decorations live for default-scope framelessWindow writes under Tauri (deliberate superset of Electron's "requires restart" parity); framelessRuntime.test.ts: 17 tests (REQ-34.1-03) covering decorated-default, toggling, rejection safety, one-time listener install, drag-region resolution + fallback heuristic, and setSetting's exact trigger condition. Adaptation (not a plan deviation): jest-environment-jsdom is not installed in this repo (confirmed, matches src/frontend/jest.config.js's own documented constraint) despite the plan's "(jsdom)" label on framelessRuntime.test.ts, so that file uses manual document/Element-shaped stubs mirroring tauriAttach.test.ts's own installWindowStub() pattern instead -- avoids a package-manager install (excluded from executor auto-fix). Full suite green: pnpm jest windowChrome/framelessRuntime/tauriAttach/tauriTransport 4/4 suites 60/60 tests, full pnpm jest 130 suites/2378 tests green, tsc clean, git diff frontend/backend empty (preload-only plan). requirements mark-complete run: REQ-34.1-01/REQ-34.1-03 marked [x]. roadmap.update-plan-progress run (34.1: 2/8 -> 3/8, safe this time -- diff confined to the plan-count line and the 34.1-03 checkbox, no corruption observed). state.advance-plan/state.update-progress were NOT run per the standing gsd-sdk state-write corruption precedent (see notes below); this frontmatter and the Current Position block were hand-corrected instead. NEXT: plans 34.1-04..08 (waves 2-4 remainder, per phase plan dependency graph; 34.1-04 depends_on 34.1-02, already satisfied).
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 71
-  completed_plans: 57
+  completed_plans: 58
   percent: 53
 ---
 
@@ -34,8 +34,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — EXECUTING
-Plan: 2 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md)
-Status: Executing Phase 34.1 -- plans 34.1-03..08 remain
+Plan: 3 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md)
+Status: Executing Phase 34.1 -- plans 34.1-04..08 remain
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
@@ -255,7 +255,7 @@ Status: Executing Phase 34.1 -- plans 34.1-03..08 remain
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-24 -- Phase 34.1 execution started
+Last activity: 2026-07-25 -- Executed 34.1-03 (D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime); see frontmatter last_activity for detail
 
 > **Plan-counter note (2026-07-24, post-34-17 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
