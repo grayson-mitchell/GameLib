@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-12-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-13..14 remain
-last_updated: "2026-07-25T20:29:33.238Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-12 complete)
+stopped_at: Completed 34.2-13-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-14 remains
+last_updated: "2026-07-25T20:42:11.413Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-13 complete)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 85
-  completed_plans: 75
+  completed_plans: 76
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
-Plan: 13 of 14
+Plan: 14 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -536,7 +536,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-12 complete)
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-13 complete)
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1086,6 +1086,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P10 | 25min | 2 tasks | 2 files |
 | Phase 34.2 P11 | 35min | 2 tasks | 4 files |
 | Phase 34.2 P12 | 25min | 2 tasks | 2 files |
+| Phase 34.2 P13 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1332,6 +1333,7 @@ Recent decisions affecting current work:
 - [Phase 34.2-11]: electronReachLedger.test.ts is a growth-only (subset) tripwire over the measured electron-reach set, not a strict-equality pin — Phase 35 is expected to shrink the set over time as modules are decoupled from electron; a strict pin would go red on every legitimate improvement
 - [Phase 34.2]: Digest pins are primary do-not-touch enforcement (byte-identity); ten-channel-set and steamLibrary.has( pins are a secondary Layer 2 that survives reformat while catching a rewrite
 - [Phase 34.2]: getLaunchOptions test reads public/locales/en/gamepage.json directly rather than hardcoding the translated string, so the assertion breaks if launch.default is renamed or deleted
+- [Phase 34.2-13]: storeSearch/handlers.ts documents transitive (not direct) electron reach through cheapshark.ts, mirroring plan 34.2-11's corrected wording rather than the pre-34.2-11 overclaim
 
 ### Pending Todos
 
@@ -1401,8 +1403,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T20:29:33.231Z
-Stopped at: Completed 34.2-12-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-13..14 remain
+Last session: 2026-07-25T20:42:11.405Z
+Stopped at: Completed 34.2-13-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-14 remains
 Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
