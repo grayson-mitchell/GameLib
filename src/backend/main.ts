@@ -24,7 +24,7 @@ import 'backend/discounts'
 import 'backend/storeSearch'
 import { autoUpdater } from 'electron-updater'
 import { cpus } from 'os'
-import { existsSync, watch, readdirSync, readFileSync } from 'graceful-fs'
+import { existsSync, watch } from 'graceful-fs'
 import 'source-map-support/register'
 
 import Backend from 'i18next-fs-backend'
@@ -71,9 +71,7 @@ import {
   showItemInFolder,
   getFileSize,
   detectVCRedist,
-  getLatestReleases,
   getShellPath,
-  getCurrentChangelog,
   removeFolder,
   downloadDefaultWine,
   sendGameStatusUpdate,
@@ -105,7 +103,6 @@ import {
   LogPrefix,
   logWarning
 } from './logger'
-import { gameInfoStore } from 'backend/storeManagers/legendary/electronStores'
 import {
   launchEventCallback,
   readKnownFixes,
@@ -172,6 +169,21 @@ import {
 } from './constants/paths'
 import { supportedLanguages } from 'common/languages'
 import MigrationSystem from './migration'
+
+// D-07/D-08 (Phase 34.1 Plan 02): extracted, Electron-free app-shell handler
+// bodies -- the sidecar imports these same modules directly. These
+// registrations below stay one-line delegations so the registration site
+// remains auditable in one place.
+import {
+  getCustomThemes,
+  getThemeCSS,
+  getCustomCSS
+} from './appshell/themes'
+import {
+  getLatestReleasesForStartup,
+  getCurrentChangelogEntry
+} from './appshell/releases'
+import { changeLanguage } from './appshell/language'
 
 if (isLinux) app.commandLine?.appendSwitch('--gtk-version', '3')
 
@@ -511,13 +523,9 @@ if (!gotTheLock) {
       mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
     }, 200)
 
-    addListener('changeLanguage', async (event, language) => {
-      logInfo(['Changing Language to:', language], LogPrefix.Backend)
-      await i18next.changeLanguage(language)
-      gameInfoStore.clear()
-      GlobalConfig.get().setSetting('language', language)
-      backendEvents.emit('languageChanged')
-    })
+    addListener('changeLanguage', async (event, language) =>
+      changeLanguage(language)
+    )
 
     fetchLastestReleases()
 
@@ -754,18 +762,9 @@ addHandler('getGameSdl', async (event, appName) =>
 
 addHandler('showUpdateSetting', () => !isFlatpak)
 
-addHandler('getLatestReleases', async () => {
-  const { checkForUpdatesOnStartup } = GlobalConfig.get().getSettings()
-  if (checkForUpdatesOnStartup) {
-    return getLatestReleases()
-  } else {
-    return []
-  }
-})
+addHandler('getLatestReleases', async () => getLatestReleasesForStartup())
 
-addHandler('getCurrentChangelog', async () => {
-  return getCurrentChangelog()
-})
+addHandler('getCurrentChangelog', async () => getCurrentChangelogEntry())
 
 addListener('clearCache', (event, showDialog, fromVersionChange = false) => {
   clearCache(undefined, fromVersionChange)
@@ -1510,33 +1509,11 @@ addHandler('clipboardReadText', () => clipboard.readText())
 
 addListener('clipboardWriteText', (e, text) => clipboard.writeText(text))
 
-addHandler('getCustomThemes', async () => {
-  const { customThemesPath } = GlobalConfig.get().getSettings()
+addHandler('getCustomThemes', async () => getCustomThemes())
 
-  if (!existsSync(customThemesPath)) {
-    return []
-  }
+addHandler('getThemeCSS', async (event, theme) => getThemeCSS(theme))
 
-  return readdirSync(customThemesPath).filter((fileName) =>
-    fileName.endsWith('.css')
-  )
-})
-
-addHandler('getThemeCSS', async (event, theme) => {
-  const { customThemesPath = '' } = GlobalConfig.get().getSettings()
-
-  const cssPath = path.join(customThemesPath, theme)
-
-  if (!existsSync(cssPath)) {
-    return ''
-  }
-
-  return readFileSync(cssPath, 'utf-8')
-})
-
-addHandler('getCustomCSS', async () => {
-  return GlobalConfig.get().getSettings().customCSS
-})
+addHandler('getCustomCSS', async () => getCustomCSS())
 
 addListener('setTitleBarOverlay', (e, args) => {
   const mainWindow = getMainWindow()
