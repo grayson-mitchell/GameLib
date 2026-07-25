@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.1-06-PLAN.md
-last_updated: "2026-07-25T01:41:29.856Z"
+stopped_at: Completed 34.1-07-PLAN.md
+last_updated: "2026-07-25T02:56:48.423Z"
 last_activity: 2026-07-25
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 71
-  completed_plans: 61
+  completed_plans: 62
   percent: 53
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — EXECUTING
-Plan: 6 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md)
+Plan: 7 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md. **34.1-08 remains.**)
 Status: Ready to execute
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
@@ -262,7 +262,7 @@ Last activity: 2026-07-25
 > corruption the 2026-07-24 note two entries below documents: it spliced its own
 > `[█████████░] 85%` progress-bar string into the middle of that OTHER note's prose --
 > the very sentence describing where the PRIOR `88%` splice landed -- turning `"the
-> handler expects a `**Progress:**[█████████░] 86%
+> handler expects a `**Progress:**[█████████░] 87%
 > `**Progress:**[█████████░] 85%` mid-word. `state.advance-plan` and the two
 > `state.add-decision` calls were clean. Fixed with a targeted `Edit` restoring the
 > exact original text (verified byte-identical against `git show HEAD:.planning/
@@ -691,6 +691,7 @@ Closed/parked native-install phases:
 | Phase 34 P14 | 20min | 2 tasks | 3 files |
 | Phase 34.1 P05 | 45min | 3 tasks | 4 files |
 | Phase 34.1 P06 | 45min | 3 tasks | 7 files |
+| Phase 34.1 P07 | 45min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -916,6 +917,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Added the image-png Cargo feature alongside tray-icon (Rule 3 fix) -- Image::from_bytes is gated behind image-ico/image-png and is not implied by tray-icon
 - [Phase ?]: changeTrayColor's initial sync is deferred via setImmediate (registerAppShellFlows runs before initLogger; GlobalConfig.get()'s first call can itself synchronously log)
 - [Phase ?]: Left linux-libxdo off the tray-icon feature set -- unverified requirement, recorded as an open Linux question rather than guessed
+- [Phase 34.1]: D-12 resolved: createNewWindow/showAboutWindow are renderer-side (Tauri JS) via WebviewWindow, not sidecar-routed — WebviewWindow's constructor is webview-context-only, the headless sidecar cannot call it -- zero new Rust arms needed
+- [Phase 34.1]: Child-window labels are a monotonic counter (external-<n>) or fixed 'about', never derived from the URL and never 'main' — preserves capabilities/default.json's windows:['main'] fail-closed boundary -- remote content opened via createNewWindow inherits zero Tauri command access
 
 ### Pending Todos
 
@@ -985,8 +988,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T01:41:29.850Z
-Stopped at: Completed 34.1-06-PLAN.md
+Last session: 2026-07-25T02:56:48.417Z
+Stopped at: Completed 34.1-07-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
