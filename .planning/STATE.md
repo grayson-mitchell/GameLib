@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: verifying
-stopped_at: Completed 34.2-07-PLAN.md -- Phase 34.2 fully complete (7/7 plans)
-last_updated: "2026-07-25T10:42:22.224Z"
-last_activity: 2026-07-25
+status: executing
+stopped_at: Phase 34.2 gap cycle PLANNED -- verification returned gaps_found (11/14); 7 gap plans 34.2-08..14 written, none executed
+last_updated: "2026-07-25T11:47:25.548Z"
+last_activity: 2026-07-25 -- Phase 34.2 gap-closure planning complete
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 78
+  total_plans: 85
   completed_plans: 70
   percent: 67
 ---
@@ -184,7 +184,7 @@ now 87 wired/re-routed total across Phases 30-34.2. Next: Phase 34.3
 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics).**
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Phase complete — ready for verification
+Status: Ready to execute
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -408,7 +408,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25
+Last activity: 2026-07-25 -- Phase 34.2 planning complete
 
 > **Plan-counter note (2026-07-25, post-34.2-06 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.update-progress`/`state.record-metric`/
