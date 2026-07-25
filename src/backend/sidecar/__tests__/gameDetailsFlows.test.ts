@@ -168,7 +168,9 @@ jest.mock('../../online_monitor', () => ({
 
 // ── backend/storeManagers mock — the boundary all 13 gamedetails/dispatch.ts
 // bodies call into. Six scriptable managers (one per Runner), mirroring
-// downloadQueueFlows.test.ts's own boundary role ─────────────────────────────
+// downloadQueueFlows.test.ts's own boundary role. `addNewApp` (Plan 05,
+// REQ-34.2-09) is the sideload-only entry the new send-kind channel below
+// dispatches to ─────────────────────────────────────────────────────────────
 jest.mock('backend/storeManagers', () => {
   const makeManager = () => ({
     getGame: jest.fn(),
@@ -181,7 +183,8 @@ jest.mock('backend/storeManagers', () => {
     refresh: jest.fn(),
     getListOfGames: jest.fn(),
     getCyberpunkMods: jest.fn(),
-    setCyberpunkModConfig: jest.fn()
+    setCyberpunkModConfig: jest.fn(),
+    addNewApp: jest.fn()
   })
   return {
     libraryManagerMap: {
@@ -236,7 +239,14 @@ import { notify } from '../../dialog/dialog'
 import { sendGameStatusUpdate } from '../../utils'
 import { LegendaryUser } from '../../storeManagers/legendary/user'
 import { callAbortController } from '../../utils/aborthandler/aborthandler'
-import { handlerRegistry } from '../electronStub'
+import { handlerRegistry, listenerRegistry } from '../electronStub'
+// Namespace import (not a named import) so `jest.spyOn(sidecarRpc,
+// 'pushFrontendMessage')` (Test 7, crash containment) can override the
+// SAME shared module.exports property `gameDetailsFlowRegistration.ts`'s own
+// compiled `sidecarRpc_1.pushFrontendMessage(...)` call site reads at call
+// time — real, unmocked `sidecarRpc.ts`, per this suite's own module
+// docstring (every module in the transport/registration path runs for real).
+import * as sidecarRpc from '../sidecarRpc'
 import { gameOverridesStore } from '../../game_overrides/electronStores'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 
@@ -253,6 +263,10 @@ const legendaryManager = libraryManagerMap.legendary as unknown as Record<
 >
 const gogManager = libraryManagerMap.gog as unknown as Record<string, jest.Mock>
 const steamManager = libraryManagerMap.steam as unknown as Record<
+  string,
+  jest.Mock
+>
+const sideloadManager = libraryManagerMap.sideload as unknown as Record<
   string,
   jest.Mock
 >
@@ -333,6 +347,21 @@ function writeInvoke(
   input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
 }
 
+/**
+ * Writes a well-formed `send` (fire-and-forget) request frame to the
+ * sidecar's stdin (mirrors `appShellFlows.test.ts`'s own `writeSend` helper).
+ * Unlike `writeInvoke`, no response frame is ever produced for this `id` —
+ * see the send-kind describe block below for why that matters.
+ */
+function writeSend(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
+}
+
 function findResponse(
   frames: Frame[],
   id: string
@@ -375,7 +404,12 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     mockedGetUserInfo.mockReset()
     mockedCallAbortController.mockReset()
 
-    for (const manager of [legendaryManager, gogManager, steamManager]) {
+    for (const manager of [
+      legendaryManager,
+      gogManager,
+      steamManager,
+      sideloadManager
+    ]) {
       for (const key of Object.keys(manager)) {
         manager[key].mockReset()
       }
@@ -761,5 +795,221 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     expect(getGameSettingsHandler).toBeDefined()
     expect(requestGameSettingsHandler).toBeDefined()
     expect(requestGameSettingsHandler).not.toBe(getGameSettingsHandler)
+  })
+})
+
+// ── send-kind channels (Phase 34.2 Plan 05 — REQ-34.2-08/REQ-34.2-01/
+// REQ-34.2-09) ────────────────────────────────────────────────────────────
+//
+// An unported OR broken `send` channel produces NO signal at runtime — no
+// reject, no timeout, no unported-channel error marker, no log line. "The
+// call didn't throw" and "no marker appeared" are explicitly NOT acceptable
+// evidence in this block; this is the project's own G-30-01 (`logoutSteam`)
+// failure class. Every assertion below is a POSITIVE side-effect assertion:
+// a value read back from the real store, a real mocked-manager call, or a
+// real frame collected off the transport.
+describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
+  beforeEach(() => {
+    mockAppSettings({ language: 'en' })
+    mockedIsOnline.mockReset().mockReturnValue(true)
+    for (const manager of [
+      legendaryManager,
+      gogManager,
+      steamManager,
+      sideloadManager
+    ]) {
+      for (const key of Object.keys(manager)) {
+        manager[key].mockReset()
+      }
+    }
+    gameOverridesStore.set('overrides', {})
+  })
+
+  // ── REQ-34.2-08: setGameMetadataOverride round-trip, push, delete ────────
+
+  it('REQ-34.2-08 setGameMetadataOverride (send) round-trip: a subsequent getAllGameOverrides invoke reads back the exact write', async () => {
+    const { input, frames } = startSidecar()
+    writeSend(input, 'sgmo-rt-1', 'setGameMetadataOverride', [
+      { appName: 'X', title: 'T', art_cover: 'C', art_square: 'S' }
+    ])
+    await flush()
+
+    writeInvoke(input, 'ago-rt-1', 'getAllGameOverrides', [])
+    await flush()
+
+    const response = findResponse(frames, 'ago-rt-1')
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toMatchObject({
+      X: { title: 'T', art_cover: 'C', art_square: 'S' }
+    })
+  })
+
+  it('REQ-34.2-08 setGameMetadataOverride (send) pushes a metadataChanged frontendMessage frame whose payload equals the full overrides map', async () => {
+    const { input, frames } = startSidecar()
+    writeSend(input, 'sgmo-push-1', 'setGameMetadataOverride', [
+      { appName: 'Y', title: 'Pushed Title' }
+    ])
+    await flush()
+
+    writeInvoke(input, 'ago-push-1', 'getAllGameOverrides', [])
+    await flush()
+    const storeResponse = findResponse(frames, 'ago-push-1')
+
+    const pushFrame = frames.find(
+      (f) => f.kind === 'frontendMessage' && f.channel === 'metadataChanged'
+    ) as { args?: unknown[] } | undefined
+
+    // The proof is the FRAME reaching the transport, not a spy on the
+    // notifier function — asserted against the collected output stream.
+    expect(pushFrame).toBeDefined()
+    expect(pushFrame?.args?.[0]).toEqual(storeResponse?.result)
+    expect(pushFrame?.args?.[0]).toMatchObject({ Y: { title: 'Pushed Title' } })
+  })
+
+  it('REQ-34.2-08 setGameMetadataOverride (send) with every field empty deletes the entry — a subsequent getGameMetadataOverride invoke returns null', async () => {
+    gameOverridesStore.set('overrides', { Z: { title: 'Stale' } })
+
+    const { input, frames } = startSidecar()
+    writeSend(input, 'sgmo-del-1', 'setGameMetadataOverride', [
+      { appName: 'Z' }
+    ])
+    await flush()
+
+    writeInvoke(input, 'gmo-del-1', 'getGameMetadataOverride', ['Z'])
+    await flush()
+
+    const response = findResponse(frames, 'gmo-del-1')
+    expect(response?.ok).toBe(true)
+    expect(response?.result).toBeNull()
+  })
+
+  // ── REQ-34.2-09: addNewApp ────────────────────────────────────────────────
+
+  it('REQ-34.2-09 addNewApp (send) reaches the sideload manager only, with the GameInfo fixture intact', async () => {
+    const gameInfoFixture = {
+      app_name: 'sideload-app-1',
+      title: 'Sideload Game',
+      runner: 'sideload'
+    }
+
+    const { input } = startSidecar()
+    writeSend(input, 'ana-1', 'addNewApp', [gameInfoFixture])
+    await flush()
+
+    expect(sideloadManager.addNewApp).toHaveBeenCalledWith(gameInfoFixture)
+    expect(legendaryManager.getGame).not.toHaveBeenCalled()
+    expect(gogManager.getGame).not.toHaveBeenCalled()
+    expect(steamManager.getGame).not.toHaveBeenCalled()
+  })
+
+  // ── REQ-34.2-01: changeGameVersionPinnedStatus's 3 positional args ───────
+
+  it('REQ-34.2-01 changeGameVersionPinnedStatus (send) unwraps its 3 positional args in order — status=true', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'cgvps-true-1', 'changeGameVersionPinnedStatus', [
+      'X',
+      'gog',
+      true
+    ])
+    await flush()
+
+    expect(gogManager.changeVersionPinnedStatus).toHaveBeenCalledWith(
+      'X',
+      true
+    )
+  })
+
+  it('REQ-34.2-01 changeGameVersionPinnedStatus (send) unwraps its 3 positional args in order — status=false', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'cgvps-false-1', 'changeGameVersionPinnedStatus', [
+      'X',
+      'gog',
+      false
+    ])
+    await flush()
+
+    expect(gogManager.changeVersionPinnedStatus).toHaveBeenCalledWith(
+      'X',
+      false
+    )
+  })
+
+  // ── Kind gate ──────────────────────────────────────────────────────────
+
+  it('REQ-34.2-01/REQ-34.2-08/REQ-34.2-09 kind gate: all 3 send channels are registered exactly once as listeners, never as handlers', async () => {
+    startSidecar()
+    await flush()
+
+    for (const channel of [
+      'setGameMetadataOverride',
+      'changeGameVersionPinnedStatus',
+      'addNewApp'
+    ]) {
+      expect(listenerRegistry.get(channel)?.length).toBe(1)
+      expect(handlerRegistry.get(channel)).toBeUndefined()
+    }
+  })
+
+  // ── Crash containment ──────────────────────────────────────────────────
+
+  it('REQ-34.2-08/REQ-34.2-09 crash containment: a throwing addNewApp AND a throwing notifier both leave the sidecar alive — health still resolves, zero unhandledRejection events', async () => {
+    const unhandledRejections: unknown[] = []
+    const onUnhandledRejection = (reason: unknown): void => {
+      unhandledRejections.push(reason)
+    }
+    process.on('unhandledRejection', onUnhandledRejection)
+
+    const pushSpy = jest
+      .spyOn(sidecarRpc, 'pushFrontendMessage')
+      .mockImplementationOnce(() => {
+        throw new Error('boom-notifier')
+      })
+
+    try {
+      sideloadManager.addNewApp.mockImplementation(() => {
+        throw new Error('boom-addNewApp')
+      })
+
+      const { input, frames } = startSidecar()
+
+      writeSend(input, 'ana-throw-1', 'addNewApp', [
+        { app_name: 'boom-app' }
+      ])
+      await flush()
+
+      writeSend(input, 'sgmo-throw-1', 'setGameMetadataOverride', [
+        { appName: 'Boom', title: 'Boom Title' }
+      ])
+      await flush()
+
+      writeInvoke(input, 'health-after-throws-1', 'health', [])
+      await flush()
+
+      const healthResponse = findResponse(frames, 'health-after-throws-1')
+      expect(healthResponse).toMatchObject({ ok: true, result: 'ok' })
+      expect(unhandledRejections).toHaveLength(0)
+    } finally {
+      pushSpy.mockRestore()
+      process.off('unhandledRejection', onUnhandledRejection)
+    }
+  })
+
+  // ── Idempotency ────────────────────────────────────────────────────────
+
+  it('REQ-34.2-01/REQ-34.2-08/REQ-34.2-09 idempotency: two startSidecar() calls do not double-register any of the 3 send channels', async () => {
+    startSidecar()
+    await flush()
+    startSidecar()
+    await flush()
+
+    for (const channel of [
+      'setGameMetadataOverride',
+      'changeGameVersionPinnedStatus',
+      'addNewApp'
+    ]) {
+      // registerGameDetailsFlows() runs once at handlers.ts module scope —
+      // this pins that assumption directly against the runtime registry.
+      expect(listenerRegistry.get(channel)?.length).toBe(1)
+    }
   })
 })
