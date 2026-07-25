@@ -144,7 +144,7 @@ import {
   setGameMetadataOverride,
   setMetadataChangedNotifier
 } from './gamedetails/overrides'
-import { buildCrossoverRatingMap } from './crossover_index/ipc_handler'
+import { buildCrossoverRatingMap } from './crossover_index/crossoverRatingMap'
 import { configStore } from './constants/key_value_stores'
 import {
   customThemesWikiLink,

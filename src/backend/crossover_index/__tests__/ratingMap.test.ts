@@ -1,16 +1,12 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { GameInfo } from 'common/types'
 
-// ── backend/ipc mock — this test imports ipc_handler.ts directly (the file
-// under test), whose module-level `addHandler('getCrossoverIndex', ...)`
-// call would otherwise reach the real `backend/ipc` → `ipcMain.handle`,
-// which the shared electron test mock does not implement (it only mocks
-// the EventEmitter-style `on`/`once` surface). Mocking `backend/ipc` here
-// keeps the registration side effect harmless without touching shared test
-// infra used by the rest of the suite.
-jest.mock('backend/ipc', () => ({
-  addHandler: jest.fn(),
-  sendFrontendMessage: jest.fn()
-}))
+// ── backend/ipc mock no longer needed here (Phase 34.2 Plan 03, D-06) —
+// this suite now imports `crossoverRatingMap.ts` directly, which has no
+// `addHandler` call of its own; the module-level registration side effect
+// that used to require mocking `backend/ipc` now lives only in
+// `ipc_handler.ts`, which this suite never imports.
 
 // ── backend/constants/environment mock — mutable double, mirrors the
 // envMock pattern used by wiki_game_info.test.ts / games.test.ts so tests
@@ -54,7 +50,7 @@ jest.mock('../index', () => ({
     getCodeweaversFromIndexMock(...args)
 }))
 
-import { buildCrossoverRatingMap } from '../ipc_handler'
+import { buildCrossoverRatingMap } from '../crossoverRatingMap'
 
 function makeGame(overrides: Partial<GameInfo> = {}): GameInfo {
   return {
@@ -177,5 +173,21 @@ describe('buildCrossoverRatingMap', () => {
     expect(Object.keys(map).sort()).toEqual(
       ['gog-eligible', 'steam-eligible'].sort()
     )
+  })
+
+  // ── D-06 anti-remerge guard — fails loudly if a future edit re-merges the
+  // addHandler registration back into this file, silently reopening the
+  // side-effect-import trap this plan closed.
+  it('never re-merges the addHandler("getCrossoverIndex", ...) registration into this module', () => {
+    const source = readFileSync(
+      join(__dirname, '..', 'crossoverRatingMap.ts'),
+      'utf-8'
+    )
+    const stripped = source
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+
+    expect(stripped).not.toMatch(/addHandler/)
   })
 })
