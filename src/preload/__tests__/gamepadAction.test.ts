@@ -302,3 +302,114 @@ describe('tauriGamepadAction (REQ-34.1-06)', () => {
     await expect(tauriGamepadAction({ action: 'tab' })).resolves.toBeUndefined()
   })
 })
+
+describe('tauriGamepadAction directional focus movement (REQ-34.1-06)', () => {
+  it('REQ-34.1-06: from the top-left cell, padRight focuses top-right and padDown focuses bottom-left', async () => {
+    const topLeft = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const topRight = new FakeElement('button', { top: 0, left: 100, right: 200, bottom: 50 })
+    const bottomLeft = new FakeElement('button', {
+      top: 50,
+      left: 0,
+      right: 100,
+      bottom: 100
+    })
+    const bottomRight = new FakeElement('button', {
+      top: 50,
+      left: 100,
+      right: 200,
+      bottom: 100
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([
+      topLeft,
+      topRight,
+      bottomLeft,
+      bottomRight
+    ])
+
+    fakeDocument.activeElement = topLeft
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(fakeDocument.activeElement).toBe(topRight)
+
+    fakeDocument.activeElement = topLeft
+    await tauriGamepadAction({ action: 'padDown' })
+    expect(fakeDocument.activeElement).toBe(bottomLeft)
+  })
+
+  it('REQ-34.1-06: padLeft from the leftmost cell leaves focus unchanged (no wrap)', async () => {
+    const topLeft = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const topRight = new FakeElement('button', { top: 0, left: 100, right: 200, bottom: 50 })
+    fakeDocument.querySelectorAll.mockReturnValue([topLeft, topRight])
+    fakeDocument.activeElement = topLeft
+
+    await tauriGamepadAction({ action: 'padLeft' })
+    expect(fakeDocument.activeElement).toBe(topLeft)
+  })
+
+  it('REQ-34.1-06: leftStickUp and padUp produce identical results (eight actions collapse to four directions)', async () => {
+    const bottom = new FakeElement('button', { top: 100, left: 0, right: 100, bottom: 150 })
+    const top = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    fakeDocument.querySelectorAll.mockReturnValue([bottom, top])
+
+    fakeDocument.activeElement = bottom
+    await tauriGamepadAction({ action: 'padUp' })
+    expect(fakeDocument.activeElement).toBe(top)
+
+    fakeDocument.activeElement = bottom
+    await tauriGamepadAction({ action: 'leftStickUp' })
+    expect(fakeDocument.activeElement).toBe(top)
+  })
+
+  it('REQ-34.1-06: perpendicular weighting is honoured -- the aligned-but-farther candidate wins over the nearer-but-offset one', async () => {
+    // origin bottom edge at y=50, centre x=50.
+    // "offset": primary (vertical gap) = 10, secondary (centre-x offset) = 40 ->
+    //   score = 10 + 2*40 = 90.
+    // "aligned": primary = 60, secondary = 0 -> score = 60 + 2*0 = 60. Aligned wins.
+    // With the perpendicular weight dropped to 1x this reverses (offset score 50 <
+    // aligned score 60) -- this is the case that actually distinguishes the weighting,
+    // spot-checked manually against the `2 *` in `directionScore`.
+    const origin = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const offset = new FakeElement('button', {
+      top: 60,
+      left: 40,
+      right: 140,
+      bottom: 110
+    })
+    const aligned = new FakeElement('button', {
+      top: 110,
+      left: 0,
+      right: 100,
+      bottom: 160
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([origin, offset, aligned])
+    fakeDocument.activeElement = origin
+
+    await tauriGamepadAction({ action: 'padDown' })
+    expect(fakeDocument.activeElement).toBe(aligned)
+  })
+
+  it('REQ-34.1-06: with nothing focused, a directional press focuses the top-left-most candidate', async () => {
+    const topLeft = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const bottomRight = new FakeElement('button', {
+      top: 50,
+      left: 100,
+      right: 200,
+      bottom: 100
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([topLeft, bottomRight])
+    fakeDocument.activeElement = fakeDocument.body
+
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(fakeDocument.activeElement).toBe(topLeft)
+  })
+
+  it('REQ-34.1-06: focus does not move when the dispatched arrow keydown is preventDefault()ed', async () => {
+    const origin = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const right = new FakeElement('button', { top: 0, left: 100, right: 200, bottom: 50 })
+    fakeDocument.querySelectorAll.mockReturnValue([origin, right])
+    fakeDocument.activeElement = origin
+    origin.addEventListener('keydown', (event) => event.preventDefault())
+
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(fakeDocument.activeElement).toBe(origin)
+  })
+})

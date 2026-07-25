@@ -217,13 +217,108 @@ function doScroll(delta: number): void {
   }
 }
 
+type Direction = 'Up' | 'Down' | 'Left' | 'Right'
+
+interface RectLike {
+  top: number
+  left: number
+  right: number
+  bottom: number
+}
+
+function zeroRectAtOrigin(): RectLike {
+  return { top: 0, left: 0, right: 0, bottom: 0 }
+}
+
+function isInDirection(direction: Direction, origin: RectLike, rect: RectLike): boolean {
+  switch (direction) {
+    case 'Up':
+      return rect.bottom <= origin.top
+    case 'Down':
+      return rect.top >= origin.bottom
+    case 'Left':
+      return rect.right <= origin.left
+    case 'Right':
+      return rect.left >= origin.right
+  }
+}
+
 /**
- * Directional focus movement -- implemented in Task 2 (the Chromium-spatnav
- * replacement). Stubbed here so the module compiles and Task 1's non-directional tests
- * are meaningful in isolation.
+ * `primary` is the gap between the facing edges along the movement axis; `secondary` is
+ * the centre-to-centre offset on the perpendicular axis, weighted `2x`. Weighting the
+ * perpendicular offset higher is what keeps the move in the intended column/row instead
+ * of skipping diagonally to a nearer-but-off-axis candidate.
  */
-function moveFocusDirectionally(direction: 'Up' | 'Down' | 'Left' | 'Right'): void {
-  warn(`directional focus movement (${direction}) not yet implemented`)
+function directionScore(direction: Direction, origin: RectLike, rect: RectLike): number {
+  const originCenterX = (origin.left + origin.right) / 2
+  const originCenterY = (origin.top + origin.bottom) / 2
+  const rectCenterX = (rect.left + rect.right) / 2
+  const rectCenterY = (rect.top + rect.bottom) / 2
+
+  let primary: number
+  let secondary: number
+  switch (direction) {
+    case 'Up':
+      primary = origin.top - rect.bottom
+      secondary = Math.abs(rectCenterX - originCenterX)
+      break
+    case 'Down':
+      primary = rect.top - origin.bottom
+      secondary = Math.abs(rectCenterX - originCenterX)
+      break
+    case 'Left':
+      primary = origin.left - rect.right
+      secondary = Math.abs(rectCenterY - originCenterY)
+      break
+    case 'Right':
+      primary = rect.left - origin.right
+      secondary = Math.abs(rectCenterY - originCenterY)
+      break
+  }
+  return primary + 2 * secondary
+}
+
+const ARROW_KEYS: Record<Direction, 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight'> = {
+  Up: 'ArrowUp',
+  Down: 'ArrowDown',
+  Left: 'ArrowLeft',
+  Right: 'ArrowRight'
+}
+
+/**
+ * Chromium's built-in spatial navigation -- which is what made Electron's synthetic
+ * `keyDown` with keyCode `Up`/`Down`/`Left`/`Right` actually move focus -- does not
+ * exist in WKWebView or WebView2 (D-10's accepted re-derivation cost). This computes
+ * the nearest-in-direction focusable element from `getBoundingClientRect()` geometry
+ * instead: candidates strictly on the requested side of the currently focused element
+ * are scored by facing-edge distance plus double the perpendicular centre offset, and
+ * the lowest-scoring candidate is focused. Electron's spatial navigation does not wrap
+ * at the edges, so neither does this -- if there are no candidates, focus is left
+ * unchanged.
+ */
+function moveFocusDirectionally(direction: Direction): void {
+  const current = activeElement()
+  if (current) {
+    const prevented = dispatchKey(current, ARROW_KEYS[direction])
+    if (prevented) return
+  }
+
+  const origin = current ? current.getBoundingClientRect() : zeroRectAtOrigin()
+  const candidates = getFocusableElements().filter((el) => el !== current)
+
+  let best: HTMLElement | null = null
+  let bestScore = Infinity
+  for (const candidate of candidates) {
+    const rect = candidate.getBoundingClientRect()
+    if (!isInDirection(direction, origin, rect)) continue
+    const score = directionScore(direction, origin, rect)
+    if (score < bestScore) {
+      bestScore = score
+      best = candidate
+    }
+  }
+
+  best?.focus()
 }
 
 export function tauriGamepadAction(args: GamepadActionArgs): Promise<void> {
