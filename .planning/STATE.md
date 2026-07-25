@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.2 gap cycle PLANNED -- verification returned gaps_found (11/14); 7 gap plans 34.2-08..14 written, none executed
-last_updated: "2026-07-25T11:47:25.548Z"
-last_activity: 2026-07-25 -- Phase 34.2 gap-closure planning complete
+stopped_at: Phase 34.2 gap cycle 1 EXECUTING -- 34.2-08 done; 34.2-09..14 remain
+last_updated: "2026-07-26T00:00:00.000Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-08 complete)
 progress:
   total_phases: 15
-  completed_phases: 10
+  completed_phases: 9
   total_plans: 85
-  completed_plans: 70
-  percent: 67
+  completed_plans: 71
+  percent: 60
 ---
 
 # Project State
@@ -33,8 +33,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — COMPLETE
-Plan: 7 of 7
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
+Plan: 9 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -182,6 +182,27 @@ verified instead via the targeted 7-suite/152-test sweep + tsc --noEmit + cargo 
 exactly two named live-UAT exceptions (D-02, D-07) deferred per D-11. Headline IPC re-plumb tally
 now 87 wired/re-routed total across Phases 30-34.2. Next: Phase 34.3
 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics).**
+
+**GAP CYCLE 1 (verification returned `gaps_found`, 11/14 — plans 34.2-08..14):**
+
+34.2-08 done -- Task 1 exempted `repair` and `readConfig` from the sidecar's 60s bounded invoke
+timeout (both now resolve to `None` in Rust `timeout_for()`, each with a one-line rationale comment;
+`INVOKE_TIMEOUT`, `timeout_for()` and every `dispatch_rust_channel` arm left byte-unchanged) and
+extended `longRunningChannels.test.ts`'s exact-set pin to the new eight-member array in the SAME
+commit, widening the pre-existing-survivor loop to six and adding two named per-channel tests. Task 2
+wrapped `onRepairYesClick`'s floating `await repair(appName, runner)` in try/catch + `window.api
+.logError` (no rethrow, matching the `GamePage/index.tsx:288` convention), so a spurious timeout can
+no longer become an unhandled rejection. Closes verification gap #1 / code-review CR-01;
+REQ-34.2-12 complete, see 34.2-08-SUMMARY.md. Two recorded decisions: the `readConfig` exemption
+applies to the whole channel rather than just `readConfig('library')` (accepted tradeoff, recorded
+in-code per threat T-34.2-35), and the renderer catch logs-and-swallows rather than rethrowing to
+avoid recreating the floating-promise problem one frame up at `onClick`. No deviations. One benign
+eslint warning added (`GameSubMenu/index.tsx:147`, `unknown`-typed template literal — same accepted
+class already present at the convention site; eslint still exits 0 with 0 errors, 18 warnings vs 17).
+NOTE: this plan's own STATE/ROADMAP writes were interrupted by an API cutoff and were completed by
+the orchestrator on re-entry; `state.begin-phase`/`state.update-progress` again reverted `stopped_at`
+to a false "Phase 34.2 fully complete (7/7)" and re-spliced a progress-bar string into the
+plan-counter note at line ~483 -- both hand-corrected, same precedent as every note in this cluster.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Ready to execute
@@ -408,7 +429,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- Phase 34.2 planning complete
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-08 complete)
 
 > **Plan-counter note (2026-07-25, post-34.2-06 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.update-progress`/`state.record-metric`/
@@ -916,6 +937,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P05 | 25min | 2 tasks | 2 files |
 | Phase 34.2 P06 | 35min | 3 tasks | 5 files |
 | Phase 34.2 P07 | ~9min | 3 tasks | 5 files |
+| Phase 34.2 P08 | 12min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
