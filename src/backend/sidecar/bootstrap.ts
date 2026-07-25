@@ -74,9 +74,18 @@ import { initOnlineMonitor } from '../online_monitor'
 // `initHeadless()` assigns the SAME `heroicLogWriter` singleton via the
 // SAME real `LogWriter` class, skipping only those two Electron-app-only
 // side effects — not a reimplementation of logging itself.
-import { initHeadless as initLogger, logWarning, LogPrefix } from '../logger'
+import {
+  initHeadless as initLogger,
+  logDebug,
+  logWarning,
+  LogPrefix
+} from '../logger'
 import { GlobalConfig } from '../config'
 import { publicDir } from '../constants/paths'
+import { backendEvents } from '../backend_events'
+import { fetchLastestReleases } from '../utils/releases'
+import { downloadAntiCheatData } from '../anticheat/utils'
+import { isMac } from '../constants/environment'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -103,6 +112,14 @@ let onlineMonitorInitialized = false
 // init() many times per file with fresh streams, and re-initializing i18next per call is
 // wasteful and can race its async resource load.
 let i18nInitialized = false
+// Guards the re-homed `releasesInfoReady` anticheat listener below (D-04). Same reason as
+// onlineMonitorInitialized: `backendEvents.on` accumulates a listener per call, so without
+// this guard repeated init() calls in tests would fire N downloads per event.
+let anticheatListenerRegistered = false
+// Guards the fetchLastestReleases() call below (D-07). Same reason as the other guards:
+// bootstrap.test.ts / *Flows.test.ts call init() many times per file, and a second fetch per
+// call is wasteful and would violate the "one fetch, one listener" idempotency contract.
+let releasesFetchInitialized = false
 
 export function init(
   input: Readable = process.stdin,
@@ -194,6 +211,56 @@ export function init(
   if (!onlineMonitorInitialized) {
     initOnlineMonitor()
     onlineMonitorInitialized = true
+  }
+  // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). Reproduces
+  // `anticheat/ipc_handler.ts:12-19`'s body exactly, including its `logDebug` line.
+  // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
+  // `src/backend/sidecar/`: its module scope calls `addHandler` from `backend/ipc`, which
+  // imports the real `electron` (D-04's curated-import discipline, carried from Phase 30
+  // D-08 / 34.1 D-09) — so this listener has no other home under the sidecar, and without it
+  // D-07's emit below would fire into a void and `getAnticheatInfo` would still structurally
+  // be unable to return data. Electron keeps using `anticheat/ipc_handler.ts`'s own copy via
+  // `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the sidecar
+  // only, never a second registration in the same process.
+  //
+  // Must be registered before Block B's fetch, below, so the listener exists before the
+  // event it responds to can possibly fire.
+  if (!anticheatListenerRegistered) {
+    anticheatListenerRegistered = true
+    try {
+      backendEvents.on('releasesInfoReady', (releasesInfo) => {
+        logDebug(
+          'Releases info ready, checking anticheat data',
+          LogPrefix.Backend
+        )
+        void downloadAntiCheatData(
+          isMac
+            ? releasesInfo.anticheatFiles.shaMac
+            : releasesInfo.anticheatFiles.shaLinux
+        )
+      })
+    } catch (error) {
+      logWarning(
+        `[bootstrap] Failed to register releasesInfoReady anticheat listener: ${error}`,
+        LogPrefix.Backend
+      )
+    }
+  }
+  // Block B — fetchLastestReleases() (D-07). Must run AFTER initOnlineMonitor() above,
+  // because fetchLastestReleases wraps its work in runOnceWhenOnline, and AFTER Block A so
+  // the releasesInfoReady listener exists before the event it responds to can fire. Its own
+  // `process.env.CI === 'e2e'` and `isWindows` early-returns are preserved unchanged by
+  // calling it as-is — not replicated or bypassed here.
+  if (!releasesFetchInitialized) {
+    releasesFetchInitialized = true
+    try {
+      fetchLastestReleases()
+    } catch (error) {
+      logWarning(
+        `[bootstrap] fetchLastestReleases() failed: ${error}`,
+        LogPrefix.Backend
+      )
+    }
   }
   output.write(`${READY_SENTINEL}\n`)
 }
