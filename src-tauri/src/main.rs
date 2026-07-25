@@ -118,12 +118,24 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 /// bound, and a genuinely wedged long-running invoke now surfaces as a never-settling promise
 /// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
 /// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
+///
+/// Phase 34.2 Plan 06, D-10: `getCrossoverIndex` joins this list for the same library-wide
+/// reason as `checkGameUpdates`/`refreshLibrary` above — it fans out over every game in every
+/// library manager (`crossover_index/crossoverRatingMap.ts`'s `buildCrossoverRatingMap()`), AND
+/// calls `loadIndex`/`buildMaps` (`crossover_index/index.ts:99`) once PER GAME rather than once
+/// overall, a known inefficiency deliberately not fixed by this slice (recorded as a deferred
+/// optimization in `34.2-03-SUMMARY.md`). `getWikiGameInfo` was measured instead of exempted:
+/// three representative cold-cache calls (Hades, Stardew Valley, Portal 2 — cache-miss forced
+/// via this repo's own jest electron-store automock, real network, 2026-07-25) completed in
+/// 1190ms / 957ms / 702ms respectively, comfortably under the 60s bound, so it stays on the
+/// default 60s timeout (see `34.2-06-SUMMARY.md` for the full measurement record).
 const LONG_RUNNING_CHANNELS: &[&str] = &[
     "install",
     "updateGame",
     "uninstall",
     "checkGameUpdates",
     "refreshLibrary",
+    "getCrossoverIndex",
 ];
 
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
