@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-04-PLAN.md
-last_updated: "2026-07-25T09:33:39.680Z"
-last_activity: 2026-07-25
+stopped_at: Completed 34.2-05-PLAN.md
+last_updated: "2026-07-25T09:49:11.853Z"
+last_activity: 2026-07-25 -- 34.2-05 executed (gameDetailsFlowRegistration.ts send channels + gameDetailsFlows.test.ts proof suite, see 34.2-05-SUMMARY.md)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 78
-  completed_plans: 67
+  completed_plans: 68
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -111,6 +111,22 @@ before the FIRST test, so isOnline: jest.fn(() => true) needed re-arming in befo
 isOnline() gate silently returned undefined. Also narrowed settingsFlows.test.ts's Invariant B
 guard to getUserInfo only (readConfig is no longer unported -- now owned by this plan).
 REQ-34.2-01/03/08/09/10/14 complete, see 34.2-04-SUMMARY.md. Next: 34.2-05.
+
+34.2-05 done -- Task 1 registered the 3 send-kind channels (setGameMetadataOverride,
+changeGameVersionPinnedStatus, addNewApp) onto gameDetailsFlowRegistration.ts, each
+cross-checked against main.ts's addListener kind before writing, wrapped in try/catch ->
+logSendFailure; installed setMetadataChangedNotifier() first (before any send
+registration) riding the existing sidecarRpc.pushFrontendMessage relay -- zero new Rust
+arms, confirmed via an empty `git diff src-tauri/` and a clean `cargo check`. Task 2 added
+a 9-test positive-side-effect proof block to gameDetailsFlows.test.ts (store read-back,
+metadataChanged push-frame assertion, delete-path reachability, sideload-only addNewApp
+dispatch, both branches of the 3-positional-arg changeGameVersionPinnedStatus unwrap, a
+runtime registry kind gate, forced-throw crash containment on two independent paths with
+an unhandledRejection spy, and a two-startSidecar() idempotency pin). REQ-34.2-01/08/09
+complete, see 34.2-05-SUMMARY.md. RED spot-checked: commenting out setGameOverrides
+failed the round-trip test; removing the notifier install failed the push-frame test while
+the round-trip test still passed; swapping args[1]/args[2] in changeGameVersionPinnedStatus
+failed both status-variant tests. No deviations. Next: 34.2-06.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Executing Phase 34.2
@@ -337,7 +353,20 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- 34.2-04 executed (gameDetailsFlowRegistration.ts, 15 invoke channels, see 34.2-04-SUMMARY.md)
+Last activity: 2026-07-25 -- 34.2-05 executed (gameDetailsFlowRegistration.ts send channels + gameDetailsFlows.test.ts proof suite, see 34.2-05-SUMMARY.md)
+
+> **Plan-counter note (2026-07-25, post-34.2-05 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:`/`Plan:` prose block, and revert `total_plans`/
+> `completed_plans`), `state.advance-plan`/`state.update-progress`/`state.record-metric` WERE run
+> for this execution -- `advance-plan` and `update-progress` landed correctly this time
+> (`completed_plans` 67 -> 68, `Plan: 6 of 7`, frontmatter `percent`/body progress-bar updated to
+> 87%), but `state.advance-plan` again reverted the body `Status:` line to the generic "Ready to
+> execute" placeholder and stripped `Last activity:`'s descriptive suffix down to the bare date --
+> hand-corrected here (`Status: Executing Phase 34.2`, `Last activity:` restored) alongside the
+> body `34.2-05 done --` paragraph, against this session's own commits: `51fb141d` (feat, Task 1),
+> `07c026bf` (test, Task 2), plus `34.2-05-SUMMARY.md` now on disk. `total_plans: 78` unchanged;
+> Phase 34.2 itself is not yet marked complete pending plans 34.2-06/07.
 
 > **Plan-counter note (2026-07-25, post-34.2-04 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
@@ -816,6 +845,7 @@ Closed/parked native-install phases:
 | Phase 34.1 P08 | 50min | 3 tasks | 4 files |
 | Phase 34.2 P01 | ~75min | 3 tasks | 2 files |
 | Phase 34.2 P04 | 50min | 3 tasks | 5 files |
+| Phase 34.2 P05 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1051,6 +1081,7 @@ Recent decisions affecting current work:
 - [Phase 34.2]: 34.2-01: Dropped the plan's literal "rmSync the tmp home dir in afterAll" test instruction after it reproducibly crashed the whole Node process (LogWriter's real fire-and-forget writes raced the delete); adopted steamAuthFlows.test.ts's own no-explicit-cleanup precedent instead
 - [Phase 34.2]: requestGameSettings stays solely owned by settingsFlowRegistration.ts (D-09); deduping getGameSettings/requestGameSettings deferred to Phase 35 Electron cutover
 - [Phase 34.2]: getGameMetadataOverride/getAllGameOverrides registered directly against game_overrides/index.ts, never routed through gamedetails/dispatch.ts (already Electron-free pass-throughs)
+- [Phase 34.2-05]: Route metadataChanged frontend push through sidecarRpc.pushFrontendMessage directly, not electron/backend-ipc.ts — Same relay storeWriteHandlers.ts's D-06 STORE_CHANGED_CHANNEL push already rides; zero new Rust arms; importing backend/ipc.ts is forbidden under src/backend/sidecar/
 
 ### Pending Todos
 
@@ -1120,8 +1151,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T09:33:39.675Z
-Stopped at: Completed 34.2-04-PLAN.md
+Last session: 2026-07-25T09:49:11.846Z
+Stopped at: Completed 34.2-05-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
