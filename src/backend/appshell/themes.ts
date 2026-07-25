@@ -40,6 +40,6 @@ export async function getThemeCSS(theme: string): Promise<string> {
   return readFileSync(cssPath, 'utf-8')
 }
 
-export async function getCustomCSS(): Promise<string | undefined> {
+export async function getCustomCSS(): Promise<string> {
   return GlobalConfig.get().getSettings().customCSS
 }
