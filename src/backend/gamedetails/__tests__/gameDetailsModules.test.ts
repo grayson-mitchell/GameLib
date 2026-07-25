@@ -1,0 +1,577 @@
+/**
+ * Direct-call behavior tests for the D-01/D-03/D-08 extracted game-details
+ * modules (Phase 34.2 Plan 02, REQ-34.2-01/REQ-34.2-03/REQ-34.2-08/
+ * REQ-34.2-09/REQ-34.2-14). Every exported function is invoked DIRECTLY --
+ * never through `backend/main`, never through IPC/RPC -- proving the same
+ * observable behavior the Electron `main.ts` handlers had before extraction.
+ * A by-construction source gate also proves the modules stay Electron-free
+ * (D-09), mirroring `appshellModules.test.ts`'s own gate.
+ */
+
+// ── i18next -- DEFEAT Jest's project-wide automatic manual mock. This is the
+// load-bearing line of this whole suite: `src/backend/__mocks__/i18next.ts`
+// sits adjacent to this jest project's `roots` (`src/backend`), so Jest
+// substitutes it for the REAL npm `i18next` package in EVERY backend test
+// file automatically -- with no `jest.mock('i18next', ...)` call required
+// anywhere. This is the exact quiet-mock trap Phase 34.1's CR-01 finding
+// warned about (34.2-01's `bootstrapWirings.test.ts` header). `repair`'s
+// notify calls and `getLaunchOptions`'s synthesized-default option both go
+// through `i18next.t(...)`; asserting against a FAKE `t()` (which just
+// echoes the key) would prove nothing about what the uninitialized real
+// singleton actually returns, so this file asserts against whatever the
+// real, unmocked, uninitialized `i18next.t()` yields instead of hardcoding
+// a translated string -- translator-independent, and not a second CR-01
+// blind spot. `jest.unmock` -- not `jest.mock` -- restores default (real)
+// module resolution; it does not substitute a replacement. ────────────────
+jest.unmock('i18next')
+
+import { readFileSync as readSourceFile, readdirSync } from 'fs'
+import { join } from 'path'
+import i18next from 'i18next'
+
+// ── backend/storeManagers mock -- six fully-mocked managers so no real
+// store manager (and none of their electron-store/network dependencies) is
+// loaded, mirroring crossover_index/__tests__/ratingMap.test.ts's own
+// approach. ──────────────────────────────────────────────────────────────
+function makeGameDouble(overrides: Partial<Record<string, jest.Mock>> = {}) {
+  return {
+    isGameAvailable: jest.fn(),
+    getGameInfo: jest.fn(),
+    getExtraInfo: jest.fn(),
+    getSettings: jest.fn(),
+    stop: jest.fn(),
+    repair: jest.fn(),
+    ...overrides
+  }
+}
+
+function makeManagerDouble() {
+  return {
+    getGame: jest.fn(),
+    hasGame: jest.fn(),
+    refresh: jest.fn(),
+    getListOfGames: jest.fn(),
+    changeGameInstallPath: jest.fn(),
+    getLaunchOptions: jest.fn(),
+    changeVersionPinnedStatus: jest.fn(),
+    addNewApp: jest.fn(),
+    getCyberpunkMods: jest.fn(),
+    setCyberpunkModConfig: jest.fn(),
+    getGameOverride: jest.fn(),
+    getGameSdl: jest.fn()
+  }
+}
+
+const managerMocks = {
+  steam: makeManagerDouble(),
+  legendary: makeManagerDouble(),
+  gog: makeManagerDouble(),
+  nile: makeManagerDouble(),
+  zoom: makeManagerDouble(),
+  sideload: makeManagerDouble()
+}
+
+jest.mock('backend/storeManagers', () => ({
+  libraryManagerMap: managerMocks
+}))
+
+// ── backend/game_overrides mock -- observes attachOverrides/setGameOverrides/
+// getAllGameOverrides calls without touching the real electron-store-backed
+// implementation. ────────────────────────────────────────────────────────
+const attachOverridesMock = jest.fn()
+const setGameOverridesMock = jest.fn()
+const getAllGameOverridesMock = jest.fn()
+jest.mock('backend/game_overrides', () => ({
+  attachOverrides: (...args: [unknown]) => attachOverridesMock(...args),
+  setGameOverrides: (...args: [unknown, unknown]) =>
+    setGameOverridesMock(...args),
+  getAllGameOverrides: (...args: []) => getAllGameOverridesMock(...args)
+}))
+
+// ── backend/dialog/dialog mock ──────────────────────────────────────────
+const notifyMock = jest.fn()
+jest.mock('backend/dialog/dialog', () => ({
+  notify: (...args: [unknown]) => notifyMock(...args)
+}))
+
+// ── backend/utils mock (sendGameStatusUpdate only -- this module has many
+// other exports main.ts still needs, but dispatch.ts only imports this
+// one). ──────────────────────────────────────────────────────────────────
+const sendGameStatusUpdateMock = jest.fn()
+jest.mock('backend/utils', () => ({
+  sendGameStatusUpdate: (...args: [unknown]) => sendGameStatusUpdateMock(...args)
+}))
+
+// ── backend/online_monitor mock ─────────────────────────────────────────
+const isOnlineMock = jest.fn()
+jest.mock('backend/online_monitor', () => ({
+  isOnline: (...args: []) => isOnlineMock(...args)
+}))
+
+// ── backend/storeManagers/legendary/user mock ───────────────────────────
+const getUserInfoMock = jest.fn()
+jest.mock('backend/storeManagers/legendary/user', () => ({
+  LegendaryUser: {
+    getUserInfo: (...args: []) => getUserInfoMock(...args)
+  }
+}))
+
+// ── backend/utils/aborthandler/aborthandler mock ────────────────────────
+const callAbortControllerMock = jest.fn()
+jest.mock('backend/utils/aborthandler/aborthandler', () => ({
+  callAbortController: (...args: [string]) => callAbortControllerMock(...args)
+}))
+
+// ── backend/logger mock -- heroicLogWriter is unset until bootstrap.ts's
+// init() runs (this repo's own documented gotcha); mocked so logInfo/
+// logWarning/logError are no-ops rather than throwing on the unset writer.
+// Deliberately NOT mocking i18next here (see the top-of-file comment). ────
+const logInfoMock = jest.fn()
+const logErrorMock = jest.fn()
+const logWarningMock = jest.fn()
+jest.mock('backend/logger', () => ({
+  logInfo: (...args: unknown[]) => logInfoMock(...args),
+  logError: (...args: unknown[]) => logErrorMock(...args),
+  logWarning: (...args: unknown[]) => logWarningMock(...args),
+  LogPrefix: { Backend: 'Backend' }
+}))
+
+import {
+  isGameAvailable,
+  getGameInfo,
+  getExtraInfo,
+  getGameSettings,
+  kill,
+  repair,
+  changeInstallPath,
+  getLaunchOptions,
+  changeGameVersionPinnedStatus,
+  getGameOverride,
+  getGameSdl,
+  readConfig,
+  addNewApp,
+  getAvailableCyberpunkMods,
+  setCyberpunkModConfig
+} from '../dispatch'
+import {
+  setGameMetadataOverride,
+  setMetadataChangedNotifier
+} from '../overrides'
+
+const OTHER_RUNNERS_FOR_LEGENDARY = ['steam', 'gog', 'nile', 'zoom', 'sideload'] as const
+const OTHER_RUNNERS_FOR_GOG = ['steam', 'legendary', 'nile', 'zoom', 'sideload'] as const
+const OTHER_RUNNERS_FOR_SIDELOAD = ['steam', 'legendary', 'gog', 'nile', 'zoom'] as const
+
+describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  // ── isGameAvailable ─────────────────────────────────────────────────
+  it('REQ-34.2-01 isGameAvailable forwards to the runner-pinned getGame().isGameAvailable()', async () => {
+    const gameDouble = makeGameDouble({
+      isGameAvailable: jest.fn().mockResolvedValue(true)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await isGameAvailable({ appName: '440', runner: 'steam' })
+
+    expect(result).toBe(true)
+    expect(managerMocks.steam.getGame).toHaveBeenCalledWith('440')
+  })
+
+  // ── getGameInfo ─────────────────────────────────────────────────────
+  it('REQ-34.2-01 getGameInfo returns null for a legendary appName when hasGame is false, WITHOUT calling getGame', async () => {
+    managerMocks.legendary.hasGame.mockReturnValue(false)
+
+    const result = await getGameInfo('some-app', 'legendary')
+
+    expect(result).toBeNull()
+    expect(managerMocks.legendary.getGame).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.2-01 getGameInfo returns null when getGameInfo() yields {} (the empty-object case)', async () => {
+    const gameDouble = makeGameDouble({
+      getGameInfo: jest.fn().mockReturnValue({})
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await getGameInfo('440', 'steam')
+
+    expect(result).toBeNull()
+    expect(attachOverridesMock).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.2-01 getGameInfo returns the result of attachOverrides(...), not the raw info object', async () => {
+    const rawInfo = { app_name: '440', title: 'Portal 2' }
+    const overriddenInfo = { ...rawInfo, overrides: { title: 'Custom' } }
+    const gameDouble = makeGameDouble({
+      getGameInfo: jest.fn().mockReturnValue(rawInfo)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+    attachOverridesMock.mockReturnValue(overriddenInfo)
+
+    const result = await getGameInfo('440', 'steam')
+
+    expect(attachOverridesMock).toHaveBeenCalledWith(rawInfo)
+    expect(result).toBe(overriddenInfo)
+  })
+
+  // ── getExtraInfo ────────────────────────────────────────────────────
+  it('REQ-34.2-01 getExtraInfo applies the same legendary fastpath', async () => {
+    managerMocks.legendary.hasGame.mockReturnValue(false)
+
+    const result = await getExtraInfo('some-app', 'legendary')
+
+    expect(result).toBeNull()
+    expect(managerMocks.legendary.getGame).not.toHaveBeenCalled()
+  })
+
+  // ── getGameSettings ─────────────────────────────────────────────────
+  it('REQ-34.2-01 getGameSettings returns null and logs when the underlying getSettings() rejects', async () => {
+    const error = new Error('boom')
+    const gameDouble = makeGameDouble({
+      getSettings: jest.fn().mockRejectedValue(error)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await getGameSettings('440', 'steam')
+
+    expect(result).toBeNull()
+    expect(logErrorMock).toHaveBeenCalledWith(error, 'Backend')
+  })
+
+  // ── kill ────────────────────────────────────────────────────────────
+  it('REQ-34.2-01 kill calls callAbortController(appName) BEFORE getGame(appName).stop() and returns stop()\'s result', async () => {
+    const order: string[] = []
+    callAbortControllerMock.mockImplementation(() => {
+      order.push('abort')
+    })
+    const stopResult = Symbol('stopped')
+    const gameDouble = makeGameDouble({
+      stop: jest.fn().mockImplementation(() => {
+        order.push('stop')
+        return Promise.resolve(stopResult)
+      })
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await kill('440', 'steam')
+
+    expect(order).toEqual(['abort', 'stop'])
+    expect(result).toBe(stopResult)
+  })
+
+  // ── repair ──────────────────────────────────────────────────────────
+  it('REQ-34.2-01 repair returns early with a logWarning and fires NO sendGameStatusUpdate when isOnline() is false', async () => {
+    isOnlineMock.mockReturnValue(false)
+
+    await repair('440', 'steam')
+
+    expect(logWarningMock).toHaveBeenCalled()
+    expect(sendGameStatusUpdateMock).not.toHaveBeenCalled()
+    expect(managerMocks.steam.getGame).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.2-01 repair on the happy path fires sendGameStatusUpdate with status:"repairing" then "done", and calls notify exactly once', async () => {
+    isOnlineMock.mockReturnValue(true)
+    const gameDouble = makeGameDouble({
+      getGameInfo: jest.fn().mockReturnValue({ title: 'Portal 2' }),
+      repair: jest.fn().mockResolvedValue(undefined)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    await repair('440', 'steam')
+
+    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(1, {
+      appName: '440',
+      runner: 'steam',
+      status: 'repairing'
+    })
+    expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(2, {
+      appName: '440',
+      runner: 'steam',
+      status: 'done'
+    })
+    expect(notifyMock).toHaveBeenCalledTimes(1)
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Portal 2' })
+    )
+  })
+
+  it('REQ-34.2-01 repair on a rejecting repair() calls notify TWICE (error then finished) and still ends with status:"done"', async () => {
+    isOnlineMock.mockReturnValue(true)
+    const gameDouble = makeGameDouble({
+      getGameInfo: jest.fn().mockReturnValue({ title: 'Portal 2' }),
+      repair: jest.fn().mockRejectedValue(new Error('repair failed'))
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    await repair('440', 'steam')
+
+    expect(notifyMock).toHaveBeenCalledTimes(2)
+    expect(notifyMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ title: 'Portal 2' })
+    )
+    expect(notifyMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ title: 'Portal 2' })
+    )
+    expect(sendGameStatusUpdateMock).toHaveBeenLastCalledWith({
+      appName: '440',
+      runner: 'steam',
+      status: 'done'
+    })
+  })
+
+  // ── changeInstallPath ───────────────────────────────────────────────
+  it('REQ-34.2-01 changeInstallPath forwards {appName, path} to changeGameInstallPath and logs', async () => {
+    managerMocks.steam.changeGameInstallPath.mockResolvedValue(undefined)
+
+    await changeInstallPath({ appName: '440', path: '/new/path', runner: 'steam' })
+
+    expect(managerMocks.steam.changeGameInstallPath).toHaveBeenCalledWith(
+      '440',
+      '/new/path'
+    )
+    expect(logInfoMock).toHaveBeenCalled()
+  })
+
+  // ── getLaunchOptions ────────────────────────────────────────────────
+  it('REQ-34.2-01 getLaunchOptions prepends a synthesized Default option when options exist but none matches the default predicate', async () => {
+    managerMocks.steam.getLaunchOptions.mockResolvedValue([
+      { name: 'Custom', parameters: '-x', type: 'basic' }
+    ])
+    const expectedDefaultName = i18next.t('launch.default', 'Default', {
+      ns: 'gamepage'
+    })
+
+    const result = await getLaunchOptions('440', 'steam')
+
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({
+      name: expectedDefaultName,
+      parameters: '',
+      type: 'basic'
+    })
+  })
+
+  it('REQ-34.2-01 getLaunchOptions does NOT prepend when a default option already exists', async () => {
+    const existingDefault = { name: 'Default', parameters: '', type: 'basic' }
+    managerMocks.steam.getLaunchOptions.mockResolvedValue([existingDefault])
+
+    const result = await getLaunchOptions('440', 'steam')
+
+    expect(result).toEqual([existingDefault])
+  })
+
+  it('REQ-34.2-01 getLaunchOptions returns [] untouched when the manager returns []', async () => {
+    managerMocks.steam.getLaunchOptions.mockResolvedValue([])
+
+    const result = await getLaunchOptions('440', 'steam')
+
+    expect(result).toEqual([])
+  })
+
+  // ── changeGameVersionPinnedStatus ───────────────────────────────────
+  it('REQ-34.2-01 changeGameVersionPinnedStatus forwards to the runner-pinned changeVersionPinnedStatus', () => {
+    changeGameVersionPinnedStatus('440', 'steam', true)
+
+    expect(managerMocks.steam.changeVersionPinnedStatus).toHaveBeenCalledWith(
+      '440',
+      true
+    )
+  })
+
+  // ── readConfig ──────────────────────────────────────────────────────
+  it("REQ-34.2-09 readConfig('library') awaits legendary.refresh() then returns getListOfGames()", async () => {
+    const games = [{ app_name: 'a' }, { app_name: 'b' }]
+    managerMocks.legendary.refresh.mockResolvedValue(undefined)
+    managerMocks.legendary.getListOfGames.mockReturnValue(games)
+
+    const result = await readConfig('library')
+
+    expect(managerMocks.legendary.refresh).toHaveBeenCalledTimes(1)
+    expect(result).toBe(games)
+  })
+
+  it("REQ-34.2-09 readConfig('user') returns LegendaryUser.getUserInfo()'s displayName", async () => {
+    getUserInfoMock.mockReturnValue({ displayName: 'Alice' })
+
+    const result = await readConfig('user')
+
+    expect(result).toBe('Alice')
+  })
+
+  it("REQ-34.2-09 readConfig('user') returns '' when getUserInfo() is undefined", async () => {
+    getUserInfoMock.mockReturnValue(undefined)
+
+    const result = await readConfig('user')
+
+    expect(result).toBe('')
+  })
+
+  // ── pinned-manager dispatch: getGameOverride/getGameSdl -> legendary,
+  // getAvailableCyberpunkMods/setCyberpunkModConfig -> gog, addNewApp ->
+  // sideload -- and to no other runner. ───────────────────────────────
+  it('REQ-34.2-09 getGameOverride dispatches to legendary and to no other runner', async () => {
+    managerMocks.legendary.getGameOverride.mockResolvedValue({})
+
+    await getGameOverride()
+
+    expect(managerMocks.legendary.getGameOverride).toHaveBeenCalledTimes(1)
+    for (const runner of OTHER_RUNNERS_FOR_LEGENDARY) {
+      expect(managerMocks[runner].getGameOverride).not.toHaveBeenCalled()
+    }
+  })
+
+  it('REQ-34.2-09 getGameSdl dispatches to legendary and to no other runner', async () => {
+    managerMocks.legendary.getGameSdl.mockResolvedValue([])
+
+    await getGameSdl('440')
+
+    expect(managerMocks.legendary.getGameSdl).toHaveBeenCalledWith('440')
+    for (const runner of OTHER_RUNNERS_FOR_LEGENDARY) {
+      expect(managerMocks[runner].getGameSdl).not.toHaveBeenCalled()
+    }
+  })
+
+  it('REQ-34.2-09 getAvailableCyberpunkMods dispatches to gog and to no other runner', async () => {
+    managerMocks.gog.getCyberpunkMods.mockResolvedValue([])
+
+    await getAvailableCyberpunkMods()
+
+    expect(managerMocks.gog.getCyberpunkMods).toHaveBeenCalledTimes(1)
+    for (const runner of OTHER_RUNNERS_FOR_GOG) {
+      expect(managerMocks[runner].getCyberpunkMods).not.toHaveBeenCalled()
+    }
+  })
+
+  it('REQ-34.2-09 setCyberpunkModConfig dispatches to gog and to no other runner', async () => {
+    managerMocks.gog.setCyberpunkModConfig.mockResolvedValue(undefined)
+    const props = { enabled: true, modsToLoad: ['mod-a'] }
+
+    await setCyberpunkModConfig(props)
+
+    expect(managerMocks.gog.setCyberpunkModConfig).toHaveBeenCalledWith(props)
+    for (const runner of OTHER_RUNNERS_FOR_GOG) {
+      expect(managerMocks[runner].setCyberpunkModConfig).not.toHaveBeenCalled()
+    }
+  })
+
+  it('REQ-34.2-09 addNewApp dispatches to sideload and to no other runner', () => {
+    const args = { app_name: 'my-sideload-app' }
+
+    addNewApp(args as never)
+
+    expect(managerMocks.sideload.addNewApp).toHaveBeenCalledWith(args)
+    for (const runner of OTHER_RUNNERS_FOR_SIDELOAD) {
+      expect(managerMocks[runner].addNewApp).not.toHaveBeenCalled()
+    }
+  })
+})
+
+describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  // This test MUST run before any test below installs a notifier via
+  // setMetadataChangedNotifier -- the notifier is a module-scope singleton
+  // (not a jest mock reset by resetMocks), so this is the only point in the
+  // suite where overrides.ts's real, untouched, fail-safe default (a no-op
+  // that logWarning()s once) is genuinely exercised rather than a
+  // test-installed replacement.
+  it('REQ-34.2-08 setGameMetadataOverride still performs the store write and does not throw when NO notifier has ever been installed', () => {
+    getAllGameOverridesMock.mockReturnValue({})
+
+    expect(() =>
+      setGameMetadataOverride({ appName: '440', title: 'Custom Title' })
+    ).not.toThrow()
+    expect(setGameOverridesMock).toHaveBeenCalledWith('440', {
+      title: 'Custom Title',
+      art_cover: undefined,
+      art_square: undefined
+    })
+  })
+
+  it('REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the installed notifier with getAllGameOverrides()\'s value', () => {
+    const overridesSnapshot = { '440': { title: 'Custom Title' } }
+    getAllGameOverridesMock.mockReturnValue(overridesSnapshot)
+    const notifierMock = jest.fn()
+    setMetadataChangedNotifier(notifierMock)
+
+    setGameMetadataOverride({
+      appName: '440',
+      title: 'Custom Title',
+      art_cover: 'cover.png',
+      art_square: 'square.png'
+    })
+
+    expect(setGameOverridesMock).toHaveBeenCalledWith('440', {
+      title: 'Custom Title',
+      art_cover: 'cover.png',
+      art_square: 'square.png'
+    })
+    expect(notifierMock).toHaveBeenCalledWith(overridesSnapshot)
+  })
+})
+
+describe('backend/gamedetails source gate (REQ-34.2-03/REQ-34.2-14)', () => {
+  /** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
+   * before matching, so an explanatory comment naming a forbidden pattern
+   * does not fail its own gate (mirrors electronUntouched.test.ts's and
+   * appshellModules.test.ts's own `stripComments`). */
+  function stripComments(source: string): string {
+    return source
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+  }
+
+  function listTsFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .map((entry) => entry.name)
+  }
+
+  it('REQ-34.2-03/REQ-34.2-14 no .ts file under src/backend/gamedetails/ imports the real electron module', () => {
+    const gamedetailsDir = join(__dirname, '..')
+    const files = listTsFiles(gamedetailsDir)
+
+    expect(files.length).toBeGreaterThan(0)
+
+    for (const file of files) {
+      const stripped = stripComments(
+        readSourceFile(join(gamedetailsDir, file), 'utf-8')
+      )
+      expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
+      expect(stripped).not.toMatch(/require\(\s*['"]electron['"]\s*\)/)
+    }
+  })
+
+  it('REQ-34.2-03/REQ-34.2-14 no .ts file under src/backend/gamedetails/ references backend/ipc, ../ipc, ../launcher, or main_window', () => {
+    const gamedetailsDir = join(__dirname, '..')
+    const files = listTsFiles(gamedetailsDir)
+
+    for (const file of files) {
+      const stripped = stripComments(
+        readSourceFile(join(gamedetailsDir, file), 'utf-8')
+      )
+      expect(stripped).not.toMatch(/backend\/ipc/)
+      expect(stripped).not.toMatch(/from\s+['"]\.\.\/ipc['"]/)
+      expect(stripped).not.toMatch(/\.\.\/launcher/)
+      expect(stripped).not.toMatch(/main_window/)
+    }
+  })
+
+  it('REQ-34.2-03/REQ-34.2-14 self-test: stripComments removes a comment-only "from \'electron\'" line before matching, so the gate is not vacuous', () => {
+    const source = [
+      '// this comment intentionally says: from \'electron\'',
+      "import { libraryManagerMap } from '../storeManagers'"
+    ].join('\n')
+    const stripped = stripComments(source)
+    expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
+  })
+})
