@@ -141,7 +141,11 @@ export default function GamesSubmenu({
   }
 
   async function onRepairYesClick(appName: string) {
-    await repair(appName, runner)
+    try {
+      await repair(appName, runner)
+    } catch (error) {
+      window.api.logError(`repair failed for ${appName}: ${error}`)
+    }
   }
 
   function handleRepair(appName: string) {
