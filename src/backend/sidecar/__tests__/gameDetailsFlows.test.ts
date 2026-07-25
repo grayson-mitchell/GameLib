@@ -22,6 +22,22 @@
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
+ * **CR-03 (34.2-10):** the `jest.mock('os', ...)` `homedir()` override alone
+ * is insufficient — `pathShim.ts`'s real `resolveAppDataDir()` prefers
+ * `env.APPDATA` (win32) / `env.XDG_CONFIG_HOME` (default/Linux) over
+ * `homedir()`, so on those platforms `constants/paths.ts`'s module-scope
+ * `appFolder`/`userDataPath`/`fixesPath` resolve to the REAL user config
+ * directory instead — where this suite's two `beforeEach` blocks then
+ * `gameOverridesStore.set('overrides', {})`, wiping a real user's title/art
+ * customizations. `jest.mock('os', ...)` is KEPT below as defence-in-depth;
+ * the actual redirect mocks `pathShim` itself — the single choke point
+ * `electronStub.ts`'s `app.getPath()` calls through — with no platform
+ * branch and no environment variable participating, and a `beforeAll`
+ * containment guard (`resolve`+`relative`, never `startsWith`/`join` — see
+ * Phase 18's recorded "join is not containment" lesson) asserts
+ * `appFolder`/`userDataPath`/`fixesPath` all resolve inside `os.tmpdir()`
+ * before the first destructive write can run.
+ *
  * `jest.mock('electron', ...)` / `jest.mock('electron-store', ...)` below
  * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
@@ -106,6 +122,41 @@ jest.mock('os', () => {
         actual.tmpdir(),
         `gamelib-gamedetailsflows-test-home-${process.pid}`
       )
+  }
+})
+
+// ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s
+// module-scope `app.getPath('appData'|'userData')` calls resolve through
+// `electronStub.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
+// prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` — bypassing
+// the `jest.mock('os', ...)` redirect above on win32/default. This factory
+// reimplements all four names the real shim supports, rooted at a single
+// per-suite tmp directory, with NO platform branch and NO env var reference —
+// see the module docstring above ───────────────────────────────────────────
+jest.mock('../pathShim', () => {
+  const actualOs = jest.requireActual('os')
+  const actualPath = jest.requireActual('path')
+  const tmpRoot = actualPath.join(
+    actualOs.tmpdir(),
+    `gamelib-gamedetailsflows-test-home-${process.pid}`
+  )
+  return {
+    getPath: (name: string) => {
+      switch (name) {
+        case 'appData':
+          return tmpRoot
+        case 'userData':
+          return actualPath.join(tmpRoot, 'GameLib')
+        case 'temp':
+          return actualOs.tmpdir()
+        case 'home':
+          return tmpRoot
+        default:
+          throw new Error(
+            `[pathShim mock] getPath('${name}') is not shimmed for this test`
+          )
+      }
+    }
   }
 })
 
@@ -249,6 +300,35 @@ import { handlerRegistry, listenerRegistry } from '../electronStub'
 import * as sidecarRpc from '../sidecarRpc'
 import { gameOverridesStore } from '../../game_overrides/electronStores'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
+import { relative, resolve, isAbsolute } from 'path'
+import { tmpdir } from 'os'
+import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
+
+// ── CR-03 containment guard — MUST run before either describe block's first
+// beforeEach (both end in a destructive gameOverridesStore.set('overrides',
+// {})). Jest runs a top-level beforeAll before any nested describe's
+// beforeEach. Uses resolve+relative, never startsWith/join (Phase 18: "join
+// is not containment"; a bare prefix check would also pass for a sibling
+// directory sharing the tmp prefix). Throws loudly rather than relying on an
+// afterAll as a safety net — see this repo's tests-clobbering-real-steam-store
+// lesson (commit 92c29a5e): an afterAll restore is not a safety net under
+// jest worker force-exit. Asserts fixesPath too (this suite doesn't touch it
+// today) so the two suites' guards stay textually identical and any future
+// test in this file that starts using fixesPath inherits the tripwire ──────
+beforeAll(() => {
+  const tmpRoot = resolve(tmpdir())
+  for (const candidate of [appFolder, userDataPath, fixesPath]) {
+    const rel = relative(tmpRoot, resolve(candidate))
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      throw new Error(
+        `[gameDetailsFlows.test.ts] REFUSING TO RUN: "${candidate}" resolves ` +
+          `outside os.tmpdir() (${tmpRoot}) — the pathShim mock redirect is ` +
+          'not in effect, and this suite would overwrite a real user config ' +
+          'directory.'
+      )
+    }
+  }
+})
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedIsOnline = isOnline as jest.Mock
