@@ -41,3 +41,19 @@ of fixing it inline).
   `cd src-tauri && cargo check --quiet` is clean. `pnpm test:ci`'s full-suite green requirement
   in this plan's own `<verification>` section could not be satisfied end-to-end due to this
   pre-existing, unrelated defect — recorded here rather than silently claimed passing.
+
+## From the phase-level post-merge test gate (orchestrator, /gsd-execute-phase 34.2)
+
+- **Pre-existing FAILING test: `src/backend/sidecar/__tests__/rustInvokeChannel.test.ts` →
+  "writes a single well-formed rustInvoke frame for an allowlisted channel".** The assertion
+  `expect(rustInvokeLines).toHaveLength(1)` receives 2 frames: the expected
+  `keyring_get` plus an unexpected `tray_set_icon` frame (`{"dark":false}`). Confirmed
+  **pre-existing and NOT introduced by phase 34.2**: bisected by checking out `src/backend`
+  at `4e6e9de4` (the last commit before any 34.2 execution work) and re-running the suite in
+  isolation — it fails there byte-identically (1 failed, 7 passed), then the tree was restored
+  to HEAD clean. Fails deterministically in isolation, so it is not test-ordering pollution.
+  Provenance points at phase 34.1's tray work (`34.1-06`, "real Tauri tray — tray_set_icon
+  rustInvoke arm + changeTrayColor registration"): **phase 34.1 was marked COMPLETE with this
+  test red.** Full backend suite otherwise green at end of 34.2: 105/106 suites, 2211/2212
+  tests passing. Out of scope for 34.2 to fix — belongs to a 34.1 gap-closure cycle or a
+  standalone fix. Flagged to the user in the phase-completion report.
