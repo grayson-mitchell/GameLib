@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-15-PLAN.md (gap cycle 2, CR-02 hardened + hostile-reason tests) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-16..18 remain)
-last_updated: "2026-07-25T21:45:28.801Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-15 executed (CR-02 hardened, 3 hostile-reason tests added)
+stopped_at: "Completed 34.2-16-PLAN.md (gap cycle 2, CR-01 sidecar half: logError registered + proven) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-17..18 remain)"
+last_updated: "2026-07-25T22:04:13.478Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-16 executed (CR-01 sidecar half, logError registered + proven)
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 89
-  completed_plans: 78
-  percent: 88
+  completed_plans: 79
+  percent: 89
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 EXECUTING (4 plans, 34.2-15..18)
-Plan: 15 of 18 executed
+Plan: 16 of 18 executed -- 34.2-17..18 remain
 
 Gap cycle 2 plans (created 2026-07-26, plan-checker PASSED on iteration 1):
 
@@ -78,6 +78,38 @@ diff` against the Task-1 commit showed zero difference. REQ-34.2-07/-14 complete
 the 2237/2238 baseline) -- the
 single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase 34.1, unchanged; `tsc
 --noEmit` and `cargo check --quiet` both clean. Next: 34.2-16 (CR-01 sidecar half, same wave).
+
+34.2-16 done -- GAP CYCLE 2, second plan executed. Closed verification gap #1 / code-review CR-01's
+sidecar half (REQ-34.2-12): Task 1 created `loggerFlowRegistration.ts`, a curated module
+registering ONLY `ipcMain.on('logError', ...)` (behaviorally identical to `logger/ipc_handler.ts:15`),
+wired into `handlers.ts` before `ensureStoresRegistered()`; the docstring names the Phase 34.3
+early-port and explicitly prohibits a second registration (`dispatchSend` iterates every entry in
+`listenerRegistry`'s array, so a duplicate would duplicate every frontend log line). Task 2 added
+`loggerFlows.test.ts` (5 tests) with the full four-part containment kit from day one (`os` +
+`pathShim` + `backend/logger/paths` mocks + a `resolve`/`relative` tripwire covering
+`getLogFilePath({})` alongside `appFolder`/`userDataPath`/`fixesPath`) -- the load-bearing test
+writes a `logError` send frame with a unique marker over the real, unmocked sidecar RPC transport
+and polls the real log file for it, proving a positive side effect rather than absence-of-throw
+(REQ-34.2-08/09's own evidence standard). `backend/logger` is `jest.spyOn`'d, never `jest.mock`'d
+(the logger/log_writer.ts circular-require crash `sidecarRejectionGuard.test.ts` already
+documented). RED spot-checked by hand: commenting out `handlers.ts`'s `registerLoggerFlows()` call
+made the positive test fail by TIMEOUT (marker never appears), never an exception -- reproducing
+this project's own `sidecar-send-channels-fail-silently`/G-30-01 failure class directly; restored,
+`git diff` against the Task 1 commit confirmed empty. Task 3 reconciled both ledgers:
+`IPC-PORT-INVENTORY.md` moved `logError` from the Phase 34.3/slice-6 list (30->29) to "Already
+ported" (27->28), annotated with the early-port note, totals reconciled (28 ported / 182 unported /
+210 total, verified 33+26+29+38+56=182 by hand); `34.2-PORTED-CHANNELS.md` gained a new
+"Gap cycle 2 reconciliation" subsection under §7. Slice 5's headline 26-channel count is unaffected
+-- `logError` was never one of the 26. REQ-34.2-12/-08/-09/-13/-14 complete, see 34.2-16-SUMMARY.md.
+One Rule 3 deviation (wording-only, no behavior change): the first draft of the new module's
+docstring used the literal substring `logger/ipc_handler` and uppercase "MUST NOT register", which
+tripped this plan's own literal grep-based acceptance criteria (expecting 0 occurrences of the
+former, and the lowercase "must NOT register" phrasing) -- rephrased without changing scope or
+behavior, re-verified green. Full backend sweep: 109/110 suites, 2245/2246 tests (+5 over the
+2240/2241 baseline) -- the single known `rustInvokeChannel.test.ts` failure, pre-existing from
+Phase 34.1, unchanged; `tsc --noEmit` and `cargo check --quiet` both clean; `git diff` against
+`logger/ipc_handler.ts`/`main.ts` across all 3 commits confirmed empty (Electron behavior
+unchanged, REQ-34.2-14). Next: 34.2-17 (CR-01 renderer half, same wave).
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -396,7 +428,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1188,6 +1220,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P13 | 20min | 2 tasks | 4 files |
 | Phase 34.2 P14 | 40min | 2 tasks | 1 files |
 | Phase 34.2 P15 | 25m | 2 tasks | 2 files |
+| Phase 34.2 P16 | 45min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -1438,6 +1471,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Read all six gap-cycle plans' actual shipped state from source (main.rs, bootstrap.ts, electronReachLedger.test.ts), not from plan intent, when refreshing 34.2-PORTED-CHANNELS.md
 - [Phase ?]: Did not edit 34.2-HUMAN-UAT.md when refreshing 34.2-PORTED-CHANNELS.md -- recorded gap-cycle interaction with both deferred UAT items without changing their pending/deferred status
 - [Phase 34.2]: 34.2-15: kept CR-02's unhandledRejection fallback message fully hardcoded/non-interpolated and did not add an uncaughtException handler, per the plan's explicit scope boundary
+- [Phase 34.2]: Ported logError early from Phase 34.3/slice-6 into 34.2 gap cycle 2 (plan 34.2-16) — Gap cycle 1's onRepairYesClick renderer fix already routes a real repair failure through window.api.logError, and an unregistered send channel is a total silent no-op under Tauri
+- [Phase 34.2]: Registered ONLY logError, not the other five logger/ipc_handler.ts channels — logInfo/getLogContent/showLogFileInFolder/uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles remain Phase 34.3 work, declared unported in 3 places (module docstring, handlers.ts comment, both ledgers)
+- [Phase 34.2]: backend/logger is jest.spyOn'd in loggerFlows.test.ts, never jest.mock'd — logger/index.ts and log_writer.ts import each other circularly; a jest.mock factory calling requireActual re-enters that cycle and throws inside LogWriter's constructor (sidecarRejectionGuard.test.ts precedent)
 
 ### Pending Todos
 
@@ -1507,8 +1543,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T21:45:28.794Z
-Stopped at: Completed 34.2-15-PLAN.md (gap cycle 2, CR-02 hardened + hostile-reason tests) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-16..18 remain)
+Last session: 2026-07-25T22:04:13.471Z
+Stopped at: Completed 34.2-16-PLAN.md (gap cycle 2, CR-01 sidecar half: logError registered + proven) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-17..18 remain)
 Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
