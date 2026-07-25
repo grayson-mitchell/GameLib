@@ -247,6 +247,20 @@ describe('installDragRegionHandlers (REQ-34.1-03)', () => {
     expect(mockWindow.startDragging).not.toHaveBeenCalled()
   })
 
+  // WR-01 regression guard. The class name here is copied from the REAL render --
+  // `WindowControls/index.tsx` renders `<div className="windowControls">` and
+  // `WindowControls/index.scss` styles `.windowControls`. The exclusion selector
+  // previously read `.WindowControls` (capital W), which is case-sensitively different
+  // and matched nothing, so this test would have failed against the shipped code.
+  it('REQ-34.1-03/WR-01: with the property unsupported, a mousedown inside the REAL .windowControls container does not call startDragging', () => {
+    const sidebar = new FakeElement('div', { className: 'Sidebar' })
+    const controls = new FakeElement('div', { className: 'windowControls' })
+    const gap = new FakeElement('span')
+    chain(sidebar, controls, gap)
+    mousedownHandler?.({ button: 0, target: gap })
+    expect(mockWindow.startDragging).not.toHaveBeenCalled()
+  })
+
   it('REQ-34.1-03: a dblclick in a drag region calls toggleMaximize', () => {
     const el = new FakeElement('div', { appRegion: 'drag' })
     dblclickHandler?.({ target: el })

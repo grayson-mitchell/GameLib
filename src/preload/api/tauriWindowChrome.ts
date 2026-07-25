@@ -316,9 +316,16 @@ function resolveDragRegion(target: EventTarget | null): boolean {
 
   if (propertySeen) return false
 
+  // WR-01 (Phase 34.1 code review): the class is `.windowControls`, LOWER-case w.
+  // `WindowControls/index.tsx` renders `<div className="windowControls">` and
+  // `WindowControls/index.scss`'s selector is `.windowControls`; CSS class selectors are
+  // case-sensitive in standards mode, so the previous `.WindowControls` matched nothing
+  // and this exclusion was dead code. On a webview that does NOT implement
+  // `-webkit-app-region` -- the fallback's entire reason to exist -- a mousedown on the
+  // padding/gaps inside the window-controls container therefore started a window drag.
   if (
     start.closest(
-      'a, button, [role="button"], input, select, textarea, .WindowControls'
+      'a, button, [role="button"], input, select, textarea, .windowControls'
     )
   ) {
     return false
