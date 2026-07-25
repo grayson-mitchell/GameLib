@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.1 EXECUTING -- plan 34.1-01 done (1 of 8); REQ-34.1-01..12
-last_updated: "2026-07-25T12:15:00.000Z"
-last_activity: 2026-07-25 -- Executed 34.1-01 (D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation). Task 1 (5169d476) extended src-tauri/capabilities/default.json with the twelve core:window:*/core:webview:* identifiers D-01's renderer-side window chrome needs, recording the verified core:window:default read-only-getter-set composition in the file's own description. Task 2 (077a3fdb) added src/backend/__tests__/capabilitiesDefault.test.ts (5/5 green, REQ-34.1-02-tagged), spot-checked to fail on both narrowing (dropping allow-set-webview-zoom) and widening (adding core:window:default). Task 3 (dbe07735) corrected .planning/IPC-PORT-INVENTORY.md for D-14 (slice 4: 34->33 channels, callTool removed + reassignment note added; slice 8: 55->56 channels, callTool inserted alphabetically); Totals table (210/27/183) left unchanged. One Rule-1 deviation: Task 3's own verify script conflicted with its own action mandate (a note naming callTool vs. a blunt no-callTool-substring grep over the whole section) -- resolved via plain (non-backtick) text for callTool in the note, satisfying the more precise acceptance_criteria; documented in 34.1-01-SUMMARY.md. requirements mark-complete ran clean for REQ-34.1-02/REQ-34.1-10 (diff-verified against a pre-run backup, only those two checkboxes flipped). Per the standing gsd-sdk state-write corruption precedent (see notes below), state.advance-plan/state.update-progress/roadmap.update-plan-progress were NOT run; this frontmatter and the Current Position block below were hand-corrected instead. NEXT: plans 34.1-02..08 (waves 1-4, per phase plan dependency graph).
+stopped_at: Phase 34.1 EXECUTING -- plan 34.1-02 done (2 of 8); REQ-34.1-04/REQ-34.1-12
+last_updated: "2026-07-25T00:06:49.000Z"
+last_activity: 2026-07-25 -- Executed 34.1-02 (D-07/D-08 app-shell handler extraction). Task 1 (4ad8fdcd) created src/backend/appshell/themes.ts, releases.ts, language.ts -- Electron-free bodies for getCustomThemes/getThemeCSS/getCustomCSS, getLatestReleasesForStartup/getCurrentChangelogEntry, and changeLanguage, extracted verbatim from main.ts (lines 1513-1539, 757-768, 514-520). Task 2 (45b6e191) converted main.ts's six corresponding registrations to one-line delegations, removed now-unused imports (readdirSync/readFileSync, gameInfoStore, getLatestReleases/getCurrentChangelog from ./utils); verified byte-identical D-01 window-chrome registrations via git diff against the pre-plan commit, and full jest suite green (127/127 suites). Task 3 (5495962f) added src/backend/appshell/__tests__/appshellModules.test.ts -- 12 direct-call behavior tests (all REQ-34.1-04-tagged) including a call-order assertion (backendEvents.emit('languageChanged') fires last, spot-checked RED by reordering) and a comment-stripped by-construction source gate proving no file under src/backend/appshell/ imports electron (spot-checked green with a temporary electron-mentioning comment). One Rule-1 deviation: getCustomCSS's extracted return type corrected from the plan prose's Promise<string | undefined> to Promise<string> (matching AppSettings.customCSS: string), which failed addHandler's AsyncIPCFunctions type check under tsc; runtime behavior unaffected, documented in 34.1-02-SUMMARY.md. requirements mark-complete not yet run this session (REQ-34.1-04/REQ-34.1-12 need marking). Per the standing gsd-sdk state-write corruption precedent (see notes below), state.advance-plan/state.update-progress/roadmap.update-plan-progress were NOT run; this frontmatter and the Current Position block below were hand-corrected instead. NEXT: plans 34.1-03..08 (waves 1-4 remainder, per phase plan dependency graph).
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 71
-  completed_plans: 56
+  completed_plans: 57
   percent: 53
 ---
 
@@ -34,8 +34,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — EXECUTING
-Plan: 1 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete; see 34.1-01-SUMMARY.md)
-Status: Executing Phase 34.1 -- plans 34.1-02..08 remain
+Plan: 2 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md)
+Status: Executing Phase 34.1 -- plans 34.1-03..08 remain
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
