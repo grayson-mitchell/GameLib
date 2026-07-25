@@ -36,23 +36,55 @@ function warn(label: string, error: unknown): void {
 let externalWindowCounter = 0
 
 /**
- * Opens `url` in a new, unprivileged child window. Labels are a monotonic counter,
- * never derived from the url -- a url-derived label could otherwise be crafted to
- * collide with `main` or `about` and inherit their capability grants (T-34.1-27).
+ * WR-04 (Phase 34.1 code review): child-window labels must survive a renderer reload.
+ *
+ * `externalWindowCounter` is module state in the RENDERER bundle, but child
+ * `WebviewWindow`s are separate OS windows that OUTLIVE a main-window reload (F5,
+ * devtools reload, `location.reload()`). After a reload the counter restarted at 0, so
+ * the next `createNewWindow` requested the already-taken label `external-1`, Tauri
+ * rejected it, and the only symptom was a `tauri://error` `console.warn` -- from the
+ * user's side, clicking a ProtonDB / AppleWiki / AreWeAntiCheatYet link simply did
+ * nothing.
+ *
+ * The timestamp+random suffix makes collisions independent of renderer lifetime while
+ * keeping the two properties T-34.1-27 depends on: the label is NEVER derived from the
+ * caller-supplied url, and it can never equal `main` or `about` (the `external-` prefix
+ * is fixed and neither reserved label starts with it), so these windows continue to
+ * match NO capability and receive ZERO Tauri command access.
+ */
+function nextExternalWindowLabel(): string {
+  externalWindowCounter += 1
+  const entropy = Math.random().toString(36).slice(2, 8)
+  return `external-${Date.now()}-${externalWindowCounter}-${entropy}`
+}
+
+/**
+ * Opens `url` in a new, unprivileged child window. Labels are generated, never derived
+ * from the url -- a url-derived label could otherwise be crafted to collide with `main`
+ * or `about` and inherit their capability grants (T-34.1-27).
  */
 export const tauriCreateNewWindow = (url: string): void => {
   try {
-    externalWindowCounter += 1
-    const label = `external-${externalWindowCounter}`
-    const win = new WebviewWindow(label, {
+    const win = new WebviewWindow(nextExternalWindowLabel(), {
       url,
       width: 1200,
       height: 700,
       resizable: true,
-      center: true,
-      title: 'GameLib'
+      center: true
+      // WR-07 (Phase 34.1 code review): NO hard-coded `title` here, deliberately.
+      //
+      // This window loads renderer-SUPPLIED REMOTE content. Titling it 'GameLib'
+      // presented an attacker-controlled page under the app's own name -- a phishing
+      // affordance that Electron's equivalent (`new BrowserWindow(...).loadURL(url)`,
+      // main.ts:797-799) did not have, because there the remote page's own `<title>`
+      // showed. Omitting `title` restores that Electron behaviour: Tauri falls back to
+      // the loaded document's own title. Do not "fix" this by adding a title back.
     })
-    win.once('tauri://error', (event) => warn('createNewWindow', event))
+    // WR-06: `once()` returns a promise; float it explicitly rather than leaving a
+    // floating rejection for `bootErrorSurface` to downgrade.
+    void win
+      .once('tauri://error', (event) => warn('createNewWindow', event))
+      .catch((error) => warn('createNewWindow:once', error))
   } catch (error) {
     warn('createNewWindow', error)
   }
@@ -67,6 +99,32 @@ export const tauriShowAboutWindow = (): void => {
   void showAboutWindowAsync().catch((error) => warn('showAboutWindow', error))
 }
 
+/**
+ * WR-06 (Phase 34.1 code review): how long the About window may wait on the sidecar.
+ *
+ * `getHeroicVersion()` is a `sidecar_invoke` round-trip bounded by `INVOKE_TIMEOUT`
+ * (60s, `src-tauri/src/main.rs`). Awaiting it UNBOUNDED before constructing the window
+ * meant that with a slow or wedged sidecar the About menu item appeared to do nothing
+ * for up to a minute and then opened. The version string is cosmetic; the window is
+ * not. One second is far longer than a healthy round-trip and far shorter than a
+ * user-visible hang.
+ */
+const ABOUT_VERSION_TIMEOUT_MS = 1000
+
+async function resolveAboutVersion(): Promise<string> {
+  try {
+    return await Promise.race([
+      window.api.getHeroicVersion(),
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve('unknown'), ABOUT_VERSION_TIMEOUT_MS)
+      )
+    ])
+  } catch (error) {
+    warn('showAboutWindow:getHeroicVersion', error)
+    return 'unknown'
+  }
+}
+
 async function showAboutWindowAsync(): Promise<void> {
   const existing = await WebviewWindow.getByLabel('about')
   if (existing) {
@@ -74,12 +132,7 @@ async function showAboutWindowAsync(): Promise<void> {
     return
   }
 
-  let version = 'unknown'
-  try {
-    version = await window.api.getHeroicVersion()
-  } catch (error) {
-    warn('showAboutWindow:getHeroicVersion', error)
-  }
+  const version = await resolveAboutVersion()
 
   const win = new WebviewWindow('about', {
     url: 'about.html?v=' + encodeURIComponent(version),
@@ -87,7 +140,13 @@ async function showAboutWindowAsync(): Promise<void> {
     height: 380,
     resizable: false,
     center: true,
+    // Unlike `tauriCreateNewWindow` above, a hard-coded title is CORRECT here: this
+    // window loads the static, first-party, capability-free `public/about.html`, not
+    // renderer-supplied remote content, so WR-07's phishing concern does not apply.
     title: 'About GameLib'
   })
-  win.once('tauri://error', (event) => warn('showAboutWindow', event))
+  // WR-06: float the `once()` promise explicitly (see tauriCreateNewWindow).
+  void win
+    .once('tauri://error', (event) => warn('showAboutWindow', event))
+    .catch((error) => warn('showAboutWindow:once', error))
 }

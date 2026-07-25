@@ -146,6 +146,86 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     warnSpy.mockRestore()
   })
 
+  // ── WR-04 (Phase 34.1 code review): labels must survive a renderer reload ──
+
+  it('REQ-34.1-08/WR-04: external labels keep the "external-" prefix and are never "main"/"about"', () => {
+    tauriCreateNewWindow('https://www.protondb.com/app/1')
+    const [label] = webviewWindowCtor.mock.calls[0] as [string, unknown]
+
+    expect(label.startsWith('external-')).toBe(true)
+    expect(label).not.toBe('main')
+    expect(label).not.toBe('about')
+    // The url must not leak into the label (T-34.1-27).
+    expect(label).not.toContain('protondb')
+  })
+
+  it('REQ-34.1-08/WR-04: labels are NOT a bare reset-on-reload counter -- a fresh module registry (simulating F5) does not re-issue "external-1"', () => {
+    tauriCreateNewWindow('https://www.protondb.com/app/1')
+    const [labelBefore] = webviewWindowCtor.mock.calls[0] as [string, unknown]
+
+    // Re-importing the module in a fresh registry is exactly what a renderer reload
+    // does to `externalWindowCounter` -- while the child OS windows created before the
+    // reload are still alive and still own their labels. A bare counter therefore
+    // re-requested `external-1`, Tauri rejected the duplicate, and the click silently
+    // did nothing.
+    jest.resetModules()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const reloaded = require('../api/tauriChildWindows')
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    reloaded.tauriCreateNewWindow('https://www.protondb.com/app/2')
+    const [labelAfter] = webviewWindowCtor.mock.calls[1] as [string, unknown]
+
+    expect(labelAfter).not.toBe(labelBefore)
+    expect(labelBefore).not.toBe('external-1')
+    expect(labelAfter).not.toBe('external-1')
+  })
+
+  // ── WR-07: no first-party title on renderer-supplied REMOTE content ──
+
+  it('REQ-34.1-08/WR-07: a createNewWindow child carries NO hard-coded title, so the remote page titles itself (Electron parity)', () => {
+    tauriCreateNewWindow('https://evil.example/looks-official')
+    const [, options] = webviewWindowCtor.mock.calls[0] as [
+      string,
+      Record<string, unknown>
+    ]
+
+    expect(options.title).toBeUndefined()
+  })
+
+  it('REQ-34.1-08/WR-07: the About window DOES keep its title -- it loads first-party static about.html, not remote content', async () => {
+    tauriShowAboutWindow()
+    await flush()
+
+    const [, options] = webviewWindowCtor.mock.calls[0] as [
+      string,
+      Record<string, unknown>
+    ]
+    expect(options.title).toBe('About GameLib')
+  })
+
+  // ── WR-06: the About window must not block on a wedged sidecar ──
+
+  it('REQ-34.1-08/WR-06: a getHeroicVersion() that never settles still opens the About window, with v=unknown', async () => {
+    // `advanceTimersByTimeAsync` (not the sync variant) is required: it yields to the
+    // microtask queue between timer runs, which is what lets the `getByLabel('about')`
+    // await and the `Promise.race` continuation settle inside the fake-timer clock.
+    jest.useFakeTimers()
+    // A wedged sidecar: the invoke hangs until the Rust shell's own 60s INVOKE_TIMEOUT.
+    mockedGetHeroicVersion.mockReturnValue(new Promise(() => {}))
+
+    tauriShowAboutWindow()
+    await jest.advanceTimersByTimeAsync(1000)
+
+    expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
+    const [, options] = webviewWindowCtor.mock.calls[0] as [
+      string,
+      { url: string }
+    ]
+    expect(options.url).toBe('about.html?v=unknown')
+
+    jest.useRealTimers()
+  })
+
   it('REQ-34.1-08: with isTauri() false, helpers.ts exports call the IPC path and never touch WebviewWindow', () => {
     mockedIsTauri.mockReturnValue(false)
 
