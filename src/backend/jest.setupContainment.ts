@@ -27,35 +27,84 @@
  * contained by construction, because containment no longer depends on any
  * suite author opting in.
  *
- * Mechanism: `setupFiles` entries run once per test file, before the test
- * framework and before that file's own imports are evaluated — so every
- * module-scope `homedir()` / `process.env` read anywhere in the backend
- * import graph already observes the redirected values below. `os.homedir()`
- * honours `process.env.HOME` verbatim on POSIX and `process.env.USERPROFILE`
- * on win32 (probed on this host, 2026-07-26: `node -e "process.env.HOME=
- * '/tmp/fake-home-probe'; console.log(require('os').homedir())"` prints
- * `/tmp/fake-home-probe`). That single mechanism redirects
- * `backend/logger/paths.ts`'s `getBaseLogPath()` macOS branch — the branch
- * empirically proven to destroy real data on this host — with no
- * `jest.mock` and no module-registry surgery. The four APPDATA/
- * LOCALAPPDATA/XDG_CONFIG_HOME/XDG_STATE_HOME variables are set alongside it
- * so the Windows and Linux branches of both `getBaseLogPath()` and
- * `sidecar/pathShim.ts`'s `resolveAppDataDir()` are covered too, even when a
- * suite pins `backend/constants/environment` to a non-macOS platform or
- * forces `process.platform` directly. `XDG_DATA_HOME`/`XDG_CACHE_HOME` are
- * covered defensively for the same reason, though neither resolver above
- * reads them today.
+ * Mechanism, REVISED 2026-07-26 (originally attempted, then disproven, a
+ * pure `process.env`-redirection approach with NO `jest.mock` at all — see
+ * "Corrected premise" below for why): `setupFiles` entries run once per test
+ * file, before the test framework and before that file's own imports are
+ * evaluated. This module does TWO things, in this order:
  *
- * `os.tmpdir()` is captured FIRST, before any of the redirection below, via
- * `require('os').tmpdir()` — `tmpdir()` reads `TMPDIR`, never `HOME`, so it
- * is unaffected by the environment mutation this module performs.
+ * 1. `jest.mock('os', factory)` — spreads `jest.requireActual('os')` (every
+ *    real export stays real: `tmpdir()`, `platform()`, `type()`, etc.) and
+ *    overrides ONLY `homedir()` to return the disposable per-process root
+ *    below. This is the SAME factory shape gap-cycle-2's per-suite kits
+ *    already use (`testContainment.test.ts`'s Block A, `loggerFlows.test.ts`,
+ *    etc.) — the only difference is registration point: once, here, for the
+ *    whole backend project, instead of copy-pasted into every suite that
+ *    needs it. Because `setupFiles` runs before the test file's own imports,
+ *    this mock is already registered by the time ANY backend module first
+ *    `require`s `'os'` — so a twelfth suite added tomorrow with zero
+ *    containment code of its own still gets a redirected `homedir()`,
+ *    exactly like every suite that already remembered to add the kit by
+ *    hand. This is what redirects `backend/logger/paths.ts`'s
+ *    `getBaseLogPath()` macOS branch — the branch empirically proven to
+ *    destroy real data on this host (see "Corrected premise" below) — and
+ *    `sidecar/pathShim.ts`'s `resolveAppDataDir()` darwin branch.
+ * 2. `process.env.HOME`/`USERPROFILE`/`APPDATA`/`LOCALAPPDATA`/
+ *    `XDG_CONFIG_HOME`/`XDG_STATE_HOME`/`XDG_DATA_HOME`/`XDG_CACHE_HOME` are
+ *    still set, as defense-in-depth for the Windows/Linux branches of both
+ *    resolvers, which prefer these env vars over `homedir()` and DO
+ *    correctly observe Jest's per-test-file `process.env` (see "Corrected
+ *    premise" below for why this half of the original approach was never
+ *    the problem).
  *
- * Deliberately NO jest.mock: mocking `os` project-wide would change module
- * resolution for all ~111 backend suites and could silently break any suite
- * that legitimately uses another `os` export. Env-var redirection changes no
- * module graph at all — every consumer still gets the real `os`/`path`
- * modules, just with different environment inputs, exactly as it would in a
- * real containerized/CI environment with a different `$HOME`.
+ * Corrected premise (why `os.homedir()` needed `jest.mock`, not just env
+ * vars): the original version of this module set ONLY the env vars above,
+ * reasoning that `os.homedir()` "honours `process.env.HOME` verbatim on
+ * POSIX" — true in *plain* Node (verified via `node -e "process.env.HOME=
+ * '/tmp/fake-home-probe'; console.log(require('os').homedir())"`, which
+ * prints `/tmp/fake-home-probe`), but FALSE inside a Jest test. Jest's
+ * `jest-environment-node` + `jest-util`'s `installCommonGlobals` (see
+ * `node_modules/jest-util/build/createProcessObject.js`) replace
+ * `global.process` PER TEST FILE with a deep-cloned synthetic process
+ * object whose `.env` is a pure-JS `Proxy` — a one-time snapshot of the real
+ * environment at construction. Writes to `process.env.HOME` inside a Jest
+ * test only mutate this JS-only clone; they never call the real `setenv()`.
+ * `os.homedir()` is a NATIVE binding (libuv `uv_os_homedir()`) that reads
+ * the actual OS environ directly, completely bypassing Jest's fake
+ * `process.env` — so the env-only version of this module left `homedir()`
+ * (and therefore `getBaseLogPath()`'s isMac branch, which has NO env-var
+ * fallback at all) resolving to the developer's REAL home, unchanged, the
+ * entire time. Proven with a live `stat` before/after on the real
+ * `~/Library/Logs/GameLib/gamelib.log`/`.log.old`: both mtimes changed
+ * across a full `sidecar/__tests__` run even with the env-only fix
+ * installed. Two non-`jest.mock` alternatives were also tried and ruled
+ * out: direct `Object.defineProperty(os, 'homedir', ...)` throws
+ * `TypeError: Cannot redefine property: homedir` (Node's core-module
+ * exports are non-configurable getters under CJS `require()` in this Node
+ * version — same reason `jest.spyOn` would fail identically); and a
+ * `Module._load` hook (the technique `installElectronHook.ts` uses
+ * successfully for `require('electron')`) does NOT intercept `require('os')`
+ * under Jest, because Jest's Runtime resolves Node builtins through its own
+ * captured `require()`, bypassing `Module._load` entirely — verified
+ * empirically, a test-local `Module._load` override left a downstream
+ * `require('backend/logger/paths')` call still resolving the real,
+ * unpatched `os.homedir()`. `jest.mock('os', factory)` — a module-registry
+ * substitution, not a property mutation — was the only mechanism found that
+ * actually works.
+ *
+ * `os.tmpdir()` is captured FIRST, before `jest.mock` and before the env
+ * redirection below, via `jest.requireActual('os').tmpdir()` — `tmpdir()`
+ * reads `TMPDIR` (unaffected either way) and using the REAL module here
+ * avoids taking a dependency on the mock this same module is about to
+ * install.
+ *
+ * Scope of the `jest.mock('os', ...)` call is intentionally narrow: only
+ * `homedir` is overridden; every other `os` export (`tmpdir`, `platform`,
+ * `type`, `release`, `cpus`, `EOL`, ...) is the real implementation via
+ * `...jest.requireActual('os')`, so no suite that legitimately uses another
+ * `os` export observes any behavior change. This is the one property this
+ * module's original "no jest.mock" design intent was actually protecting —
+ * it still holds, even though the *mechanism* changed.
  *
  * Deliberately NO teardown hook of any kind restores the mutated environment
  * variables. Registering one would resurrect the exact "a post-test restore
@@ -73,15 +122,23 @@
  */
 
 import { existsSync, mkdirSync } from 'fs'
-import { tmpdir } from 'os'
 import { join } from 'path'
+
+// Real, unmocked 'os' -- used only to compute the containment root itself,
+// BEFORE the jest.mock('os', ...) call below installs the homedir()
+// override. jest.requireActual is deliberate here: this module is about to
+// mock 'os' for every OTHER consumer in this test file's module graph, and
+// must not accidentally consume its own not-yet-installed mock.
+/* eslint-disable @typescript-eslint/no-var-requires */
+const realOs: typeof import('os') = jest.requireActual('os')
+/* eslint-enable @typescript-eslint/no-var-requires */
 
 // Capture the REAL OS temp root before any redirection below. `tmpdir()`
 // reads `TMPDIR` (or platform equivalents), never `HOME`/`USERPROFILE`, so
-// this call is unaffected by the `process.env` mutation performed in this
-// same module, and gives every containment proof suite a stable "outside"
+// this call is unaffected by the `process.env` mutation performed later in
+// this module, and gives every containment proof suite a stable "outside"
 // reference to assert against.
-const realTmpRoot = tmpdir()
+const realTmpRoot = realOs.tmpdir()
 
 // One root per process (`process.pid`), so parallel jest workers never
 // collide over the same directory and a force-exited worker leaves no
@@ -100,6 +157,25 @@ const containmentRoot = join(
 if (!existsSync(containmentRoot)) {
   mkdirSync(containmentRoot, { recursive: true })
 }
+
+// ── THE load-bearing fix (2026-07-26): jest.mock('os', ...) ────────────────
+// Registered here, in setupFiles, BEFORE this test file's own imports run --
+// so every module in the backend graph that does `require('os')` /
+// `import { homedir } from 'os'` for the rest of this test file's lifetime
+// gets THIS factory's object instead of the real module. Only `homedir` is
+// overridden; every other export is `jest.requireActual('os')`'s real
+// implementation, so no suite that legitimately uses another `os` export
+// (tmpdir, platform, type, release, cpus, EOL, ...) observes any behavior
+// change. This is a module-registry substitution (a NEW object), not a
+// property mutation on the real 'os' module -- Node's core-module exports
+// are non-configurable getters under CJS require() in this Node version, so
+// a direct `Object.defineProperty(os, 'homedir', ...)` or `jest.spyOn`
+// throws `TypeError: Cannot redefine property: homedir`; only jest.mock's
+// registry-level substitution works.
+jest.mock('os', () => ({
+  ...jest.requireActual('os'),
+  homedir: () => containmentRoot
+}))
 
 // ── POSIX / Windows home directory redirection ─────────────────────────────
 // `os.homedir()` reads these verbatim; this is what redirects
