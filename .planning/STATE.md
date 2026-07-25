@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.1 wave 2 complete -- plans 01-04 done, 05-08 remain
-last_updated: "2026-07-25T12:40:00.000Z"
-last_activity: 2026-07-25 -- Executed 34.1-03 (D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime). Task 1 (aa2ac32d) added src/preload/api/tauriWindowChrome.ts -- ten faithful Tauri-JS implementations of minimizeWindow/maximizeWindow/unmaximizeWindow/closeWindow/isMaximized/isMinimized/isFullscreen/setFullscreen/isFrameless/setZoomFactor against getCurrentWindow()/getCurrentWebview(), deliberately NOT the naive implementations for isFullscreen (declared-false env/CLI stand-in, never calls the Window API) and setZoomFactor (Math.pow(1.2, level) converts Electron's zoom LEVEL to Tauri's zoom SCALE FACTOR); plus applyFramelessDecorations/installDragRegionHandlers for Task 3. windowChrome.test.ts: 18 tests (REQ-34.1-01), Math.pow spot-check confirmed red-then-green. Task 2 (9b2c00e2) short-circuited misc.ts's ten exports on isTauri(), names/signatures byte-identical, Electron path untouched; found + fixed a Rule-1 regression this plan's own Task 1 caused -- misc.ts's new static import of tauriWindowChrome.ts pulls the REAL @tauri-apps/api/window//webview into tauriAttach.ts's import graph, whose classes extend Resource from @tauri-apps/api/core at module-eval time, crashing tauriAttach.test.ts's existing minimal core mock with "Class extends value undefined is not a constructor"; fixed by adding matching window//webview mocks to tauriAttach.test.ts. Task 3 (59f6da68) wired applyFramelessDecorations()/installDragRegionHandlers() into tauriAttach.ts's pre-paint shouldAttach block (try/catch, SEAM Invariant A), and settings.ts's setSetting now re-applies decorations live for default-scope framelessWindow writes under Tauri (deliberate superset of Electron's "requires restart" parity); framelessRuntime.test.ts: 17 tests (REQ-34.1-03) covering decorated-default, toggling, rejection safety, one-time listener install, drag-region resolution + fallback heuristic, and setSetting's exact trigger condition. Adaptation (not a plan deviation): jest-environment-jsdom is not installed in this repo (confirmed, matches src/frontend/jest.config.js's own documented constraint) despite the plan's "(jsdom)" label on framelessRuntime.test.ts, so that file uses manual document/Element-shaped stubs mirroring tauriAttach.test.ts's own installWindowStub() pattern instead -- avoids a package-manager install (excluded from executor auto-fix). Full suite green: pnpm jest windowChrome/framelessRuntime/tauriAttach/tauriTransport 4/4 suites 60/60 tests, full pnpm jest 130 suites/2378 tests green, tsc clean, git diff frontend/backend empty (preload-only plan). requirements mark-complete run: REQ-34.1-01/REQ-34.1-03 marked [x]. roadmap.update-plan-progress run (34.1: 2/8 -> 3/8, safe this time -- diff confined to the plan-count line and the 34.1-03 checkbox, no corruption observed). state.advance-plan/state.update-progress were NOT run per the standing gsd-sdk state-write corruption precedent (see notes below); this frontmatter and the Current Position block were hand-corrected instead. NEXT: plans 34.1-04..08 (waves 2-4 remainder, per phase plan dependency graph; 34.1-04 depends_on 34.1-02, already satisfied).
+stopped_at: Completed 34.1-05-PLAN.md
+last_updated: "2026-07-25T01:15:01.709Z"
+last_activity: 2026-07-25 -- Executed 34.1-05 (D-10 renderer-side gamepadAction). tauriGamepadInput.ts re-implements all twelve gamepad action cases as pure DOM dispatch, replacing webContents.sendInputEvent, including a from-scratch geometric nearest-in-direction focus algorithm for the four directional actions (no Chromium spatial nav under WKWebView/WebView2). misc.ts's gamepadAction now short-circuits on isTauri(). jest-environment-jsdom not installed (matches src/frontend/jest.config.js precedent) -- hand-rolled DOM harness on Node's built-in EventTarget/Event instead. 20 new tests (18 in gamepadAction.test.ts + 2 in a new gamepadActionRouting.test.ts, added because jest.mock() is file-wide/hoisted and could not both mock and use the real implementation in one file), full suite 134 suites/2426 tests green, tsc clean. REQ-34.1-06 complete, see 34.1-05-SUMMARY.md.
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 71
-  completed_plans: 58
+  completed_plans: 60
   percent: 53
 ---
 
@@ -34,8 +34,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — EXECUTING
-Plan: 4 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md)
-Status: Executing Phase 34.1 -- plans 34.1-04..08 remain
+Plan: 5 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md)
+Status: Executing Phase 34.1 -- plans 34.1-06..08 remain
   suite 76/76 green, cross-plan sweep
   `tauriConf|cargoFeatures|releaseWorkflow|buildSidecarSea|tauriShellSource|electronUntouched|updaterSigningKey`
   192/192 green): closed the CODE half of GAP-B, live run 30084918812 -- Linux and Windows both bundled
@@ -255,7 +255,22 @@ Status: Executing Phase 34.1 -- plans 34.1-04..08 remain
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- Executed 34.1-03 (D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime); see frontmatter last_activity for detail
+Last activity: 2026-07-25 -- Executed 34.1-05 (D-10 renderer-side gamepadAction); see frontmatter last_activity for detail
+
+> **Plan-counter note (2026-07-25, post-34.1-05 execution):** `gsd-sdk query
+> state.update-progress`, run after 34.1-05's task commits, repeated the EXACT same
+> corruption the 2026-07-24 note two entries below documents: it spliced its own
+> `[█████████░] 85%` progress-bar string into the middle of that OTHER note's prose --
+> the very sentence describing where the PRIOR `88%` splice landed -- turning `"the
+> handler expects a `**Progress:**`" and "or` into `"the handler expects a
+> `**Progress:**[█████████░] 85%` mid-word. `state.advance-plan` and the two
+> `state.add-decision` calls were clean. Fixed with a targeted `Edit` restoring the
+> exact original text (verified byte-identical against `git show HEAD:.planning/
+> STATE.md` for that line range), not a blanket revert -- the surrounding
+> frontmatter/Current-Position/decisions/metrics writes from this same session were
+> legitimate and were kept. Same precedent as every note in this cluster: never trust
+> `state.update-progress` not to mangle unrelated prose anywhere in this file; always
+> diff its output before committing.
 
 > **Plan-counter note (2026-07-24, post-34-17 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
@@ -674,6 +689,7 @@ Closed/parked native-install phases:
 | Phase 34 P09 | 8min | 2 tasks | 3 files |
 | Phase 34 P10 | 25min | 3 tasks | 2 files |
 | Phase 34 P14 | 20min | 2 tasks | 3 files |
+| Phase 34.1 P05 | 45min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -894,6 +910,8 @@ Recent decisions affecting current work:
 - [Phase 34]: 34-10: kept shutdown_child method name per plan's explicit Task 3 instruction; narrowed Task 1's over-broad test assertion instead, resolving a plan-internal contradiction (blanket _child substring check vs. required fn shutdown_child)
 - [Phase 34]: 34-11: Used explicit per-leg sidecar_triple matrix literals over inline GHA ternary; try/finally cert.pfx cleanup; WR-04/IN-01 deferred per GAP-D-01 — Literal matrix fields match 34-06's build_args precedent and are directly test-assertable; try/finally covers the failed-import case a trailing statement would miss
 - [Phase 34]: 34-14: repointed the updater feed endpoint to a fixed-tag asset URL (/releases/download/updater/latest.json) and added a release:published-triggered promote-updater-feed.yml, closing GAP-3 while preserving D-09's draft+prerelease human-review gate
+- [Phase 34.1-05]: No jest-environment-jsdom added; hand-rolled DOM/event test harness on Node's built-in EventTarget/Event instead — Matches the project's documented precedent (src/frontend/jest.config.js) for avoiding this dependency; Node's EventTarget/Event already implement the dispatch/cancel semantics needed
+- [Phase 34.1-05]: Split D-10 gamepad test coverage across two files — gamepadAction.test.ts uses the real tauriGamepadAction for DOM logic; gamepadActionRouting.test.ts mocks it to prove only misc.ts's isTauri() routing -- jest.mock() is file-wide/hoisted so one file could not do both
 
 ### Pending Todos
 
@@ -963,8 +981,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-24T22:12:12.111Z
-Stopped at: Phase 34.1 context gathered
+Last session: 2026-07-25T01:15:01.702Z
+Stopped at: Completed 34.1-05-PLAN.md
 Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
