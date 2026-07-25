@@ -7,7 +7,7 @@
  * (e.g. adding core:window:default) nor a silent narrowing (e.g. dropping
  * one of the twelve explicit identifiers) can land green.
  */
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const CAPABILITIES_DEFAULT_PATH = join(
@@ -19,6 +19,8 @@ const CAPABILITIES_DEFAULT_PATH = join(
   'capabilities',
   'default.json'
 )
+
+const CAPABILITIES_DIR = join(__dirname, '..', '..', '..', 'src-tauri', 'capabilities')
 
 interface ShellAllowExecutePermission {
   identifier: string
@@ -77,8 +79,7 @@ describe('capabilities/default.json D-04 window/webview grants (REQ-34.1-02)', (
       'core:webview:default',
       'core:tray:default',
       'notification:default',
-      'dialog:allow-open',
-      'core:webview:allow-create-webview-window'
+      'dialog:allow-open'
     ]
     for (const grant of forbidden) {
       expect(perms).not.toContain(grant)
@@ -114,5 +115,34 @@ describe('capabilities/default.json D-04 window/webview grants (REQ-34.1-02)', (
     const conf = loadCapabilitiesDefault()
     expect(conf.description).toContain('core:window:default')
     expect(conf.description).toContain('read-only getter set')
+  })
+})
+
+describe('capabilities/default.json D-12 child-window grant (REQ-34.1-08)', () => {
+  test('REQ-34.1-08: core:webview:allow-create-webview-window is granted', () => {
+    const conf = loadCapabilitiesDefault()
+    const perms = stringPermissions(conf)
+    expect(perms).toContain('core:webview:allow-create-webview-window')
+  })
+
+  test('REQ-34.1-08: windows still deep-equals ["main"] -- the fail-closed child-window boundary', () => {
+    const conf = loadCapabilitiesDefault()
+    expect(conf.windows).toEqual(['main'])
+  })
+
+  test('REQ-34.1-08: src-tauri/capabilities/ contains exactly one .json file', () => {
+    const jsonFiles = readdirSync(CAPABILITIES_DIR).filter((f) => f.endsWith('.json'))
+    expect(jsonFiles).toEqual(['default.json'])
+  })
+
+  test('REQ-34.1-08: no entry matches the bare core:webview:allow-create-webview identifier (without the -window suffix)', () => {
+    const conf = loadCapabilitiesDefault()
+    const perms = stringPermissions(conf)
+    expect(perms).not.toContain('core:webview:allow-create-webview')
+  })
+
+  test('REQ-34.1-08: description records the ZERO Tauri command access fail-closed rationale', () => {
+    const conf = loadCapabilitiesDefault()
+    expect(conf.description).toContain('ZERO Tauri command access')
   })
 })
