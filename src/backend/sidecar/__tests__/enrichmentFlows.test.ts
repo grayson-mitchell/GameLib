@@ -179,15 +179,21 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { PassThrough } from 'node:stream'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { join } from 'path'
 
 import { init } from '../bootstrap'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { handlerRegistry } from '../electronStub'
-import { fixesPath } from '../../constants/paths'
-import { appFolder } from '../../constants/paths'
+import { fixesPath, appFolder } from '../../constants/paths'
 import { wikiGameInfoStore } from '../../wiki_game_info/electronStore'
 import { configStore } from '../../constants/key_value_stores'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
@@ -894,7 +900,7 @@ describe('REQ-34.2-04 enrichmentFlowRegistration.ts import gates', () => {
   })
 
   it('REQ-34.2-04 enrichmentFlowRegistration.ts references no ipc_handler path, backend/ipc, ../ipc, or storeSearch/index', () => {
-    const source = require('fs').readFileSync(
+    const source = readFileSync(
       join(__dirname, '../enrichmentFlowRegistration.ts'),
       'utf-8'
     )
@@ -906,20 +912,15 @@ describe('REQ-34.2-04 enrichmentFlowRegistration.ts import gates', () => {
   })
 
   it('REQ-34.2-04 no .ts file directly under src/backend/sidecar/ imports the real electron module (re-run of the directory gate, now covering the new file)', () => {
-    const fs = require('fs')
     const sidecarDir = join(__dirname, '..')
-    const files: string[] = fs
-      .readdirSync(sidecarDir, { withFileTypes: true })
-      .filter(
-        (entry: { isFile(): boolean; name: string }) =>
-          entry.isFile() && entry.name.endsWith('.ts')
-      )
-      .map((entry: { name: string }) => entry.name)
+    const files: string[] = readdirSync(sidecarDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .map((entry) => entry.name)
     expect(files).toContain('enrichmentFlowRegistration.ts')
 
     for (const file of files) {
       const stripped = stripComments(
-        fs.readFileSync(join(sidecarDir, file), 'utf-8')
+        readFileSync(join(sidecarDir, file), 'utf-8')
       )
       expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
       expect(stripped).not.toMatch(/require\(\s*['"]electron['"]\s*\)/)
