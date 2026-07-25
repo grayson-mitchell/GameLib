@@ -612,14 +612,21 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     expect(mockedSteamGetGame).toHaveBeenCalledWith('999001')
   })
 
-  // Invariant B (REQ-31-07): getUserInfo (Epic-only) and readConfig
-  // (Legendary-only) are deliberately NOT ported this phase (31-RESEARCH.md
-  // Q1 — neither is reached by the Settings screen) — they must keep
-  // rejecting non-fatally, and the RPC loop must keep serving afterward.
-  it('Invariant B guard: getUserInfo and readConfig (deliberately unported) still reject non-fatally, and the RPC loop keeps serving', async () => {
+  // Invariant B (REQ-31-07): getUserInfo (Epic-only) is deliberately NOT
+  // ported this phase (31-RESEARCH.md Q1 — not reached by the Settings
+  // screen) — it must keep rejecting non-fatally, and the RPC loop must keep
+  // serving afterward.
+  //
+  // NOTE (Phase 34.2 Plan 04): `readConfig` — originally paired with
+  // `getUserInfo` in this same "deliberately unported" guard — is now a REAL
+  // registration owned by `gameDetailsFlowRegistration.ts`
+  // (`main.ts:977`/REQ-34.2-09). It is intentionally REMOVED from this
+  // assertion rather than left asserting a marker that no longer applies;
+  // `readConfig`'s own real-dispatch coverage lives in
+  // `gameDetailsFlows.test.ts`.
+  it('Invariant B guard: getUserInfo (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'user-info-1', 'getUserInfo', [])
-    writeInvoke(input, 'read-config-1', 'readConfig', ['library'])
     await flush()
 
     const userInfoResponse = frames.find(
@@ -627,12 +634,6 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     ) as { ok: boolean; error?: string } | undefined
     expect(userInfoResponse?.ok).toBe(false)
     expect(userInfoResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
-
-    const readConfigResponse = frames.find(
-      (frame) => frame.id === 'read-config-1'
-    ) as { ok: boolean; error?: string } | undefined
-    expect(readConfigResponse?.ok).toBe(false)
-    expect(readConfigResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
 
     writeInvoke(input, 'health-after-generic-reads', 'health', [])
     await flush()
