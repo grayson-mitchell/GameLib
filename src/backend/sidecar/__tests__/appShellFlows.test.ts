@@ -68,7 +68,7 @@
  */
 
 import { PassThrough } from 'node:stream'
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -165,7 +165,13 @@ jest.mock('../../storeManagers/legendary/electronStores', () => ({
 // be asserted directly, mirroring downloadQueueFlows.test.ts's own boundary
 // choice for backend/storeManagers ───────────────────────────────────────────
 jest.mock('../../utils/aborthandler/aborthandler', () => ({
-  callAbortController: jest.fn()
+  callAbortController: jest.fn(),
+  // CR-04: `handleExit`'s DESTRUCTIVE branch calls `callAllAbortControllers()` (it
+  // aborts every in-flight download). It was missing from this mock, so that branch
+  // threw a TypeError partway through instead of running -- which silently made any
+  // "did the destructive branch run?" assertion vacuous. Present and asserted-against
+  // by the CR-04 fail-safe test below.
+  callAllAbortControllers: jest.fn()
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
@@ -174,21 +180,27 @@ import { GlobalConfig } from 'backend/config'
 import i18next from 'i18next'
 import { gameInfoStore } from '../../storeManagers/legendary/electronStores'
 import { backendEvents } from '../../backend_events'
-import { callAbortController } from '../../utils/aborthandler/aborthandler'
+import {
+  callAbortController,
+  callAllAbortControllers
+} from '../../utils/aborthandler/aborthandler'
 import { requestRustInvoke } from '../sidecarRpc'
 import { listenerRegistry } from '../electronStub'
 import {
   RUST_APP_EXIT,
+  RUST_DIALOG_MESSAGE,
   RUST_NOTIFICATION_SHOW,
   RUST_TRAY_SET_ICON,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
+import { gamesConfigPath } from '../../constants/paths'
 import pkgJson from '../../../../package.json'
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
 const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
 const mockedCallAbortController = callAbortController as jest.Mock
+const mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
@@ -277,6 +289,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedI18nextChangeLanguage.mockClear().mockResolvedValue(undefined)
     mockedGameInfoStoreClear.mockClear()
     mockedCallAbortController.mockClear()
+    mockedCallAllAbortControllers.mockClear()
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
@@ -435,6 +448,84 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     await flush()
 
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
+  })
+
+  // ── CR-04 (Phase 34.1 code review): the pending-operations quit confirm ───
+  //
+  // Registering `quit` made `handleExit()` sidecar-reachable for the first time, which
+  // invalidated the invariant `electronStub.showMessageBox`'s own comment block reasoned
+  // from. `handleExit` is the ONE caller in this codebase whose dialog sense is inverted
+  // (index 0 = safe "No", index 1 = destructive "Yes" -> kill legendary/gogdl/nile +
+  // callAllAbortControllers + app.exit). These two tests pin the consequences.
+  describe('CR-04 quit with pending operations', () => {
+    const lockFile = join(gamesConfigPath, 'lock')
+
+    beforeEach(() => {
+      mkdirSync(gamesConfigPath, { recursive: true })
+      writeFileSync(lockFile, '')
+    })
+
+    afterEach(() => {
+      if (existsSync(lockFile)) rmSync(lockFile)
+    })
+
+    // NOTE on what is (and is not) observable here: `electronStub.showMessageBox`
+    // deliberately does NOT forward `cancelId` into the Rust payload -- it consumes it
+    // locally as the `safeIndex` fail-safe default. So `cancelId: 0` cannot be asserted
+    // on the wire; the second test below asserts its BEHAVIOUR instead, which is the
+    // property that actually matters.
+    it('REQ-34.1-05/CR-04: the confirm dialog reaches Rust with NON-BLANK labels even though this suite\'s i18next has no t()', async () => {
+      const { input } = startSidecar()
+      writeSend(input, 'quit-pending-1', 'quit', [])
+      await flush()
+
+      const dialogCall = mockRequestRustInvoke.mock.calls.find(
+        ([channel]) => channel === RUST_DIALOG_MESSAGE
+      )
+      expect(dialogCall).toBeDefined()
+      const options = (dialogCall?.[1] as Record<string, unknown>[])[0]
+
+      // This suite's `i18next` mock exposes ONLY `changeLanguage` -- calling `t()` on it
+      // throws, which is a faithful stand-in for the real uninitialized instance (whose
+      // `t(key, fallback)` returns `undefined`, the fallback argument NOT saving it).
+      // Either way the labels previously crossed the wire as JSON `null` and `main.rs`'s
+      // `.unwrap_or("")` rendered a blank message with two blank buttons -- on a dialog
+      // whose non-cancel branch kills in-flight downloads.
+      const buttons = options.buttons as string[]
+      expect(buttons).toHaveLength(2)
+      for (const label of [...buttons, options.message, options.title]) {
+        expect(typeof label).toBe('string')
+        expect(String(label).length).toBeGreaterThan(0)
+      }
+    })
+
+    it('REQ-34.1-05/CR-04: a FAILING confirm dialog must NOT exit the app or kill in-flight downloads (fail-safe-to-decline)', async () => {
+      mockRequestRustInvoke.mockImplementation((channel: string) =>
+        channel === RUST_DIALOG_MESSAGE
+          ? Promise.reject(new Error('transport timeout'))
+          : Promise.resolve(undefined)
+      )
+
+      const { input } = startSidecar()
+      writeSend(input, 'quit-pending-2', 'quit', [])
+      await flush()
+
+      // Proves the dialog branch was actually taken (pending operations present).
+      expect(
+        mockRequestRustInvoke.mock.calls.some(
+          ([channel]) => channel === RUST_DIALOG_MESSAGE
+        )
+      ).toBe(true)
+
+      // THE assertion, and the observable proof that `handleExit` declares
+      // `cancelId: 0`: with no cancelId the stub's positional fallback
+      // (`buttons.length - 1`) returns index 1 = "Yes" = the DESTRUCTIVE branch, so a
+      // wedged/timed-out dialog silently killed the user's in-flight install and quit
+      // the app. `response === 0` is handleExit's early-return, so NEITHER the abort
+      // fan-out NOR app_exit may be reached.
+      expect(mockedCallAllAbortControllers).not.toHaveBeenCalled()
+      expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(RUST_APP_EXIT, [])
+    })
   })
 
   it('REQ-34.1-05 openReleases (send) reaches shell.openExternal with heroicGithubURL over the openExternal parity path', async () => {

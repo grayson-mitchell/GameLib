@@ -248,18 +248,60 @@ const showAboutWindow = () => {
   return app.showAboutPanel()
 }
 
+/**
+ * CR-04 (Phase 34.1 code review): a translation lookup that survives an UNINITIALIZED
+ * i18next instance.
+ *
+ * `handleExit` became sidecar-reachable this slice (`appShellFlowRegistration.ts`
+ * registers `ipcMain.on('quit', ...)`), and the headless sidecar never runs the
+ * `i18next.use(Backend).init({...})` call that lives inside `main.ts`'s
+ * `app.whenReady()` block. On an uninitialized instance `i18next.t(key, fallback)`
+ * returns `undefined` -- the fallback argument does NOT save it (verified against the
+ * installed i18next 22.5.1). Those `undefined`s crossed the wire as JSON `null` and
+ * `main.rs`'s `dialog_message` arm renders them via `.unwrap_or("")`, so the user was
+ * shown a BLANK message with TWO BLANK BUTTONS on the quit-confirm -- with no way to
+ * tell which one cancels, on a dialog whose other branch kills in-flight downloads.
+ *
+ * Under Electron i18next IS initialized, so this returns the real translation and
+ * behaviour is unchanged.
+ */
+function tOrFallback(key: string, fallback: string): string {
+  try {
+    const translated: unknown = i18next.t(key, fallback)
+    return typeof translated === 'string' && translated.length > 0
+      ? translated
+      : fallback
+  } catch {
+    return fallback
+  }
+}
+
 async function handleExit() {
   const isLocked = existsSync(join(gamesConfigPath, 'lock'))
   const mainWindow = getMainWindow()
 
   if ((isLocked || isRunning()) && mainWindow) {
     const { response } = await dialog.showMessageBox(mainWindow, {
-      buttons: [i18next.t('box.no'), i18next.t('box.yes')],
-      message: i18next.t(
+      buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
+      // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
+      // INVERTED relative to every other `showMessageBox` caller in the codebase:
+      // index 0 is the SAFE "No" and index 1 is the DESTRUCTIVE "Yes"
+      // (killPattern('legendary'|'gogdl'|'nile') + callAllAbortControllers() +
+      // app.exit(), i.e. killing an in-flight install/download). The sidecar's
+      // `electronStub.showMessageBox` fail-safe default is
+      // `options?.cancelId ?? (buttons.length ?? 1) - 1`, which without an explicit
+      // cancelId evaluates to 1 here -- so ANY transport error or timeout on the
+      // newly-sidecar-reachable `quit` path returned the DESTRUCTIVE answer. Declaring
+      // cancelId: 0 restores the stub's documented fail-safe-to-decline property for
+      // this caller. Electron's own dialog also honours cancelId (it is the response
+      // returned when the dialog is dismissed without a button press), so this is
+      // correct on both paths.
+      cancelId: 0,
+      message: tOrFallback(
         'box.quit.message',
         'There are pending operations, are you sure?'
       ),
-      title: i18next.t('box.quit.title', 'Exit')
+      title: tOrFallback('box.quit.title', 'Exit')
     })
 
     if (response === 0) {

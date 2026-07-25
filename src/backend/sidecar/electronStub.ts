@@ -215,10 +215,24 @@ export const app = {
 // would crash the sidecar the first time either path is hit. `-1` is neither `0`
 // (promptI386Recovery's affirmative/destructive branch, decline = `response !== 0`) nor `1`
 // (askForceUninstall's destructive branch, decline = `response !== 1`), so it declines BOTH
-// reachable callers. `handleExit`'s inverted sense (`response === 0` = safe "No") is moot: it
-// is wired in `main.ts` via `app.on('before-quit')`, and `main.ts` is not in the sidecar's
-// curated import graph, so `handleExit` never runs under the sidecar. Real multi-button
-// `showMessageBox` behavior is deferred to Phase 33 (lifecycle/dialog cluster).
+// reachable callers.
+//
+// CORRECTED (CR-04, Phase 34.1 code review). This block previously asserted:
+//   "`handleExit`'s inverted sense (`response === 0` = safe "No") is moot: it is wired in
+//    `main.ts` via `app.on('before-quit')`, and `main.ts` is not in the sidecar's curated
+//    import graph, so `handleExit` never runs under the sidecar."
+// That is NO LONGER TRUE. Phase 34.1 Plan 04 registers `ipcMain.on('quit', () =>
+// handleExit())` in `appShellFlowRegistration.ts`, which imports `handleExit` directly from
+// `backend/utils` -- so `handleExit` IS sidecar-reachable, and with it the one caller in this
+// codebase whose SAFE index is 0 rather than the last index. The `safeIndex` fallback below
+// (`cancelId ?? buttons.length - 1`) would have resolved to 1 = "Yes" for its two-button
+// array, i.e. the DESTRUCTIVE branch (killPattern legendary/gogdl/nile +
+// callAllAbortControllers + app.exit) on any transport error or timeout -- fail-OPEN, the
+// exact opposite of this stub's documented property. `handleExit` now declares an explicit
+// `cancelId: 0` (see `backend/utils.ts`) so the first operand of that `??` is used and the
+// fail-safe-to-decline property holds for it too. Any FUTURE caller whose safe button is not
+// the last index must likewise declare `cancelId` -- the positional fallback cannot infer it.
+// Real multi-button `showMessageBox` behavior is deferred to Phase 33 (lifecycle/dialog cluster).
 //
 // The two Sync members (showMessageBoxSync/showOpenDialogSync) stay logged no-ops (D-03) --
 // synchronous dialogs cannot be forwarded across the async rustInvoke transport, so they log a
