@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.2-16-PLAN.md (gap cycle 2, CR-01 sidecar half: logError registered + proven) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-17..18 remain)"
-last_updated: "2026-07-25T22:04:13.478Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-16 executed (CR-01 sidecar half, logError registered + proven)
+stopped_at: "Completed 34.2-17-PLAN.md (gap cycle 2, CR-01 renderer half: reportRepairFailure extracted, 4/4 tests, CR-01 fully closed) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-18 remains)"
+last_updated: "2026-07-26T00:00:00.000Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-17 executed (CR-01 renderer half, reportRepairFailure extracted, CR-01 fully closed)
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 89
-  completed_plans: 79
-  percent: 89
+  completed_plans: 80
+  percent: 90
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 EXECUTING (4 plans, 34.2-15..18)
-Plan: 16 of 18 executed -- 34.2-17..18 remain
+Plan: 17 of 18 executed -- 34.2-18 remains
 
 Gap cycle 2 plans (created 2026-07-26, plan-checker PASSED on iteration 1):
 
@@ -110,6 +110,36 @@ behavior, re-verified green. Full backend sweep: 109/110 suites, 2245/2246 tests
 Phase 34.1, unchanged; `tsc --noEmit` and `cargo check --quiet` both clean; `git diff` against
 `logger/ipc_handler.ts`/`main.ts` across all 3 commits confirmed empty (Electron behavior
 unchanged, REQ-34.2-14). Next: 34.2-17 (CR-01 renderer half, same wave).
+
+34.2-17 done -- GAP CYCLE 2, third plan executed, CR-01 FULLY CLOSED (both halves). Closed the
+renderer half of verification gap #1 / code-review CR-01's third `missing:` item (REQ-34.2-12):
+Task 1 extracted `GameSubMenu/index.tsx:143-149`'s `onRepairYesClick` catch body into a new
+`repairFailure.ts` module exporting `reportRepairFailure()`, which performs exactly three
+independent side effects in order -- `console.error` (transport-independent, always visible in
+webview devtools), `window.api.logError` (the pre-existing signal, made live on the sidecar by
+34.2-16), and `showDialogModal` with `type: 'ERROR'` (the signal the user actually sees) -- and
+reduced the call site to a one-line delegation, leaving `handleRepair` and every other function
+untouched. Added `box.error.title`/`box.repair.error` English source strings, preserving the
+locale file's alphabetical key ordering. T-34.2-52 (information disclosure): the dialog message
+is the FIXED translated string only, never the raw error text. Task 2 added a 4-test direct-call
+suite (`repairFailure.test.ts`, no rendering/no jsdom needed) covering all three signals plus the
+information-disclosure guard (a distinctive sentinel token embedded in the error must reach
+console/log but never the dialog message). One design refinement during Task 2: the plan's own
+RED-spot-check acceptance criterion required that deleting the `showDialogModal` call fail EXACTLY
+one test, but a first draft with 4 separate one-behavior-per-test blocks failed 2 tests on that
+revert (the dialog-shape test and the info-disclosure test both read the same mocked call) --
+merged those two into one test, added an independent 4th test (non-Error thrown value, touching
+only console.error/logError) to keep the suite at 4+ tests; RED spot-checked by hand: reverting
+made exactly 1 of 4 tests fail, restored, diff confirmed clean. REQ-34.2-12/-14 complete, see
+34.2-17-SUMMARY.md. No deviations (one Rule 3 wording-only fixup before the Task 1 commit: the
+first docstring draft repeated literal code strings `window.api.logError`/`type: 'ERROR'` in prose,
+which would have doubled this plan's own literal-grep acceptance counts -- rephrased, no behavior
+change). Full frontend sweep: 26/26 suites, 185/185 tests (+1 suite/+4 tests over the 25/25,
+181/181 baseline); `tsc --noEmit` clean; eslint 0 errors, 18 warnings (unchanged total -- the one
+pre-existing `unknown`-typed template-literal warning moved from `index.tsx:147` into
+`repairFailure.ts:45` when the catch body was extracted); `lint-translations` output byte-identical
+before/after (7929 lines, exit 0). Next: 34.2-18 (wave 2, depends on 15+16 -- CR-03 + WR-01
+pathShim/logger containment kit for `sidecarRejectionGuard.test.ts`), the final plan of gap cycle 2.
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -428,7 +458,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1221,6 +1251,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P14 | 40min | 2 tasks | 1 files |
 | Phase 34.2 P15 | 25m | 2 tasks | 2 files |
 | Phase 34.2 P16 | 45min | 3 tasks | 6 files |
+| Phase 34.2 P17 | ~35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1474,6 +1505,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Ported logError early from Phase 34.3/slice-6 into 34.2 gap cycle 2 (plan 34.2-16) — Gap cycle 1's onRepairYesClick renderer fix already routes a real repair failure through window.api.logError, and an unregistered send channel is a total silent no-op under Tauri
 - [Phase 34.2]: Registered ONLY logError, not the other five logger/ipc_handler.ts channels — logInfo/getLogContent/showLogFileInFolder/uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles remain Phase 34.3 work, declared unported in 3 places (module docstring, handlers.ts comment, both ledgers)
 - [Phase 34.2]: backend/logger is jest.spyOn'd in loggerFlows.test.ts, never jest.mock'd — logger/index.ts and log_writer.ts import each other circularly; a jest.mock factory calling requireActual re-enters that cycle and throws inside LogWriter's constructor (sidecarRejectionGuard.test.ts precedent)
+- [Phase 34.2]: Merged the showDialogModal-behavior test and the T-34.2-52 information-disclosure guard into one test so deleting the showDialogModal call fails exactly one test (34.2-17)
+- [Phase 34.2]: Dialog message is the FIXED translated string only -- raw error text goes to console.error and window.api.logError, never the rendered dialog (T-34.2-52, 34.2-17)
 
 ### Pending Todos
 
@@ -1543,8 +1576,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T22:04:13.471Z
-Stopped at: Completed 34.2-16-PLAN.md (gap cycle 2, CR-01 sidecar half: logError registered + proven) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-17..18 remain)
+Last session: 2026-07-25T22:14:59.972Z
+Stopped at: Completed 34.2-17-PLAN.md (gap cycle 2, CR-01 renderer half: reportRepairFailure extracted, 4/4 tests, CR-01 fully closed) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-18 remains)
 Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
