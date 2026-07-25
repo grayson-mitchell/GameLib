@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-10-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-11..14 remain
-last_updated: "2026-07-25T20:05:52.097Z"
-last_activity: 2026-07-25 -- Phase 34.2 gap cycle 1 executing (34.2-10 complete)
+stopped_at: Completed 34.2-11-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-12..14 remain
+last_updated: "2026-07-25T20:18:01.108Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-11 complete)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 85
-  completed_plans: 73
+  completed_plans: 74
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
-Plan: 11 of 14
+Plan: 12 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -247,6 +247,33 @@ error, then passed again after revert (28/28 and 31/31). Full backend sweep: 106
 2221/2222 tests -- the single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase
 34.1, unchanged. No production source file touched; requirements-completed: [] (deliberate, see
 PLAN.md frontmatter). See 34.2-10-SUMMARY.md. Next: 34.2-11.
+
+34.2-11 done -- closed verification gap #3 (REQ-34.2-03) / code-review finding WR-02: the
+requirement text and two module docstrings (`dispatch.ts`, `enrichmentFlowRegistration.ts`)
+overclaimed a TRANSITIVE electron-freedom property the code does not have -- `dispatch.ts` ->
+`../dialog/dialog` -> `electron` and `enrichmentFlowRegistration.ts` -> `../storeSearch/cheapshark`
+-> `electron` are both real two-hop edges the existing depth-1 `gameDetailsImportGate.test.ts`
+gates cannot see. Task 1 rewrote all three sites (comment-only diff in the two source files,
+confirmed via a `^[+-]` grep excluding comment-prefixed lines) to state the true, enforced
+invariant -- no DIRECT electron/`backend/ipc`/`../ipc`/`../launcher`/`main_window` import -- and to
+name `electronStub.ts`'s `Module._load` interception as the mechanism that makes transitive reach
+safe at runtime; `REQUIREMENTS.md`'s REQ-34.2-03 got an explicit, dated correction note naming this
+gap/WR-02, REQ-34.2-14 left byte-unchanged (one hunk only, verified via `git diff`). Task 2 built
+`electronReachLedger.test.ts` from scratch using the TypeScript compiler API
+(`ts.resolveModuleName` against the repo's own `tsconfig.json`, never `ts-morph`/`madge`) to walk
+the real transitive import graph from the four gated entry points, committing a growth-only
+(subset, not strict-equality) baseline of the 29 electron-importing modules actually reachable --
+regenerated fresh at execution time, matching the plan's planning-time 29-entry list byte-for-byte
+even though the total graph size (192 files) differs slightly from the plan's 194-file note (not
+investigated further, per the plan's own "do not force either value" guidance -- the >100
+reachability-sanity assertion holds either way). Both required negative controls were run live and
+reverted: removing a baseline entry made the growth tripwire fail naming it; restricting the walk
+to depth 1 failed 3 of 4 tests (anti-degradation, reachability sanity, gap-#3 edge pin), proving
+none of the four tests pass vacuously. `gameDetailsImportGate.test.ts` untouched (owned by
+34.2-12/WR-01). REQ-34.2-03 content-complete (checkbox left for the verifier, per plan
+instruction). See 34.2-11-SUMMARY.md. Full backend sweep: 107/108 suites, 2225/2226 tests -- the
+single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase 34.1, unchanged, plus
+this plan's new 1 suite / 4 tests. No deviations. Next: 34.2-12.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Ready to execute
@@ -473,7 +500,28 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- Phase 34.2 gap cycle 1 executing (34.2-10 complete)
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-11 complete)
+
+> **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
+> documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
+> `state.record-session` were all run. `advance-plan` landed correctly (`completed_plans` 73 -> 74,
+> `Plan: 12 of 14`); `record-metric` (Phase 34.2 P11 | 35min | 2 tasks | 4 files) and both
+> `add-decision` calls were clean; `record-session` updated `Last session` cleanly. As with
+> 34.2-10's note, `update-progress` reported `percent: 87` (a PLAN-based figure computed
+> internally) but did NOT write it into frontmatter `percent` (still 60, correctly phase-based) --
+> instead it again spliced its own `87%` progress-bar figure into the MIDDLE of the 2026-07-25
+> post-34.1-05 note two entries below (the same sentence quoting the `90%`-vs-`85%` splice
+> incident), overwriting that historical quote's `90%` with `87%` mid-sentence. Restored via a
+> targeted `Edit` back to the exact original `90%` text. It also stripped both `last_activity` /
+> `Last activity:` lines down to a bare date, dropping the `-- Phase 34.2 gap cycle 1 executing
+> (34.2-N complete)` suffix each time one of these calls ran -- hand-restored (with the plan number
+> bumped to 11) after every call, not just once, since a LATER call in the same session (`
+> record-session`) reverted the string again after an earlier hand-fix. `stopped_at:` was also
+> hand-corrected from "Completed 34.2-10-PLAN.md" to "Completed 34.2-11-PLAN.md -- ... 34.2-12..14
+> remain" (none of the four verbs above touch `stopped_at:` themselves). Against this session's own
+> commits: `9aa361b3` (docs, Task 1), `a81c98ec` (test, Task 2), plus `34.2-11-SUMMARY.md` now on
+> disk. `total_plans: 85` unchanged; Phase 34.2 itself is not yet marked complete pending plans
+> 34.2-12..14.
 
 > **Plan-counter note (2026-07-25, post-34.2-10 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1000,6 +1048,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P08 | 12min | 2 tasks | 3 files |
 | Phase 34.2 P09 | 25min | 3 tasks | 7 files |
 | Phase 34.2 P10 | 25min | 2 tasks | 2 files |
+| Phase 34.2 P11 | 35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1242,6 +1291,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Corrected (not deleted) SEAM.md's stale steamFlowRegistration.ts/libraryManagerMap claim: gameDetailsFlowRegistration.ts now dispatches runner-generically through libraryManagerMap for all six managers (D-01/Phase-32-D-02); what remains deferred is launcher.ts's own Wine/GameConfig/DownloadManager pipeline
 - [Phase ?]: Sidecar unhandledRejection guard must resolve/log, never introduce a new throw/reject/exit path (sidecar-dialog-reject-crashes precedent)
 - [Phase 34.2]: 34.2-10: mocked pathShim.getPath() directly (not os.homedir()) to redirect sidecar test config paths, since pathShim.resolveAppDataDir() prefers env.APPDATA/env.XDG_CONFIG_HOME over homedir() on win32/default — os.homedir() mock alone is silently bypassed by pathShim's real precedence, risking real user config wipe
+- [Phase 34.2-11]: Corrected the false transitive electron-freedom claim in dispatch.ts/enrichmentFlowRegistration.ts/REQUIREMENTS.md rather than building a real transitive purity gate — a genuine transitive gate would need a 29-module allowlist spanning nearly the whole backend, constraining nothing; untangling that coupling is Phase 35's job
+- [Phase 34.2-11]: electronReachLedger.test.ts is a growth-only (subset) tripwire over the measured electron-reach set, not a strict-equality pin — Phase 35 is expected to shrink the set over time as modules are decoupled from electron; a strict pin would go red on every legitimate improvement
 
 ### Pending Todos
 
@@ -1311,7 +1362,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T20:05:52.090Z
+Last session: 2026-07-25T20:18:01.102Z
 Stopped at: Completed 34.2-10-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-11..14 remain
 Next: Execute 34.2-11-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
