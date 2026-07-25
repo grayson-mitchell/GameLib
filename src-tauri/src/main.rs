@@ -12,6 +12,12 @@
 //        - sidecar_store_snapshot(minimal store snapshot for the synchronous store bridge)
 //   4. Read SidecarNotification lines from the sidecar's stdout and re-emit them to the
 //      webview as the `frontend_message` Tauri event (ipcRenderer.on backend→frontend parity).
+//   5. Build a bounded Tauri tray at setup (Phase 34.1 Plan 06, D-11) -- tooltip, left-click
+//      show/focus, and a two-item Show/Quit menu -- and back `changeTrayColor` via the
+//      `tray_set_icon` rustInvoke arm, the ONLY new `dispatch_rust_channel` arm added by the
+//      whole 34.1 slice. Deliberately out of scope: recent-games submenu, About/Reload/Debug,
+//      the macOS dock menu, language-driven rebuilds, and honouring `noTrayIcon`/`exitToTray`
+//      (all re-deferred to Phase 35 -- see 34.1-06-PLAN.md and 34.1-PORTED-CHANNELS.md).
 //
 // NOTE: attaching `window.api` + the six preload globals to the webview is 27-03's job; this
 // shell only relays transport. It does NOT modify anything under src/preload or src/backend.
@@ -30,6 +36,9 @@ use std::time::Duration;
 use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
+use tauri::image::Image;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
@@ -48,6 +57,46 @@ const FRONTEND_MESSAGE_EVENT: &str = "frontend_message";
 
 /// Reserved channel the store-snapshot command invokes on.
 const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
+
+// ---- Tray icon (Phase 34.1 Plan 06, D-11) ----
+//
+// Icon bytes are embedded at COMPILE TIME via `include_bytes!`, not resolved at runtime from
+// `publicDir`/`app.getAppPath()`. This deliberately sidesteps this repo's recurring
+// publicDir/getAppPath path-resolution failure family
+// ([[publicdir-getapppath-chunking]], the bundled-JSON-asset gotcha) -- no runtime path is
+// resolved and no file can be substituted post-build (T-34.1-21).
+
+/// Dark tray icon variant, shown when `settings.darkTrayIcon` is true.
+const TRAY_ICON_DARK: &[u8] = include_bytes!("../../public/icon-dark.png");
+/// Light tray icon variant (also the startup default, corrected by the sidecar's initial
+/// `changeTrayColor` sync once `GlobalConfig` is readable -- see `dispatch_rust_channel`'s
+/// `tray_set_icon` arm and `appShellFlowRegistration.ts`).
+const TRAY_ICON_LIGHT: &[u8] = include_bytes!("../../public/icon-light.png");
+/// Unique id for the app's single tray icon; looked up later via `app.tray_by_id(...)`.
+const TRAY_ICON_ID: &str = "gamelib-tray";
+/// 1x1 fully-transparent pixel, used only if BOTH bundled tray PNGs fail to decode. Should
+/// never happen in practice (they are checked-in assets) -- exists purely so `tray_image`
+/// has an infallible last resort and can never panic (T-34.1-22).
+const TRAY_ICON_FALLBACK_PIXEL: [u8; 4] = [0, 0, 0, 0];
+
+/// Decode the requested tray icon variant. Every failure path degrades instead of panicking:
+/// a bad/corrupt embedded asset falls back to the light variant, and if that also fails to
+/// decode, falls back to a blank 1x1 pixel image built via `Image::new` (infallible, no
+/// decode step) -- `tray_image` can never be the reason `.setup()` panics (T-34.1-22).
+fn tray_image(dark: bool) -> Image<'static> {
+    let bytes = if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT };
+    if let Ok(img) = Image::from_bytes(bytes) {
+        return img;
+    }
+    eprintln!(
+        "[shell] WARN: requested tray icon variant (dark={dark}) failed to decode, trying light variant"
+    );
+    if let Ok(img) = Image::from_bytes(TRAY_ICON_LIGHT) {
+        return img;
+    }
+    eprintln!("[shell] WARN: both tray icon variants failed to decode, using a blank fallback");
+    Image::new(&TRAY_ICON_FALLBACK_PIXEL, 1, 1)
+}
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
@@ -848,6 +897,75 @@ fn main() {
             start_reader(app.handle().clone(), state.clone(), stdout);
             start_stderr_forwarder(stderr);
             app.manage(state);
+
+            // Real Tauri tray (Phase 34.1 Plan 06, D-11) -- bounded scope: tooltip, left-click
+            // show/focus, and a two-item Show GameLib / Quit menu. Deliberately excludes the
+            // recent-games submenu, About/Reload/Debug, the macOS dock menu, and
+            // language-driven rebuilds (34.1-06-PLAN.md's declared out-of-scope list).
+            //
+            // Every step below is non-fatal: a menu-item, menu, or tray build failure is
+            // logged and the app continues without a tray, never `unwrap()`/`panic!` out of
+            // `.setup()` (T-34.1-22) -- a tray that fails to build is strictly better than a
+            // shell that fails to start.
+            match (
+                MenuItemBuilder::with_id("show", "Show GameLib").build(app),
+                MenuItemBuilder::with_id("quit", "Quit").build(app),
+            ) {
+                (Ok(show_item), Ok(quit_item)) => {
+                    match MenuBuilder::new(app)
+                        .items(&[&show_item, &quit_item])
+                        .build()
+                    {
+                        Ok(menu) => {
+                            let tray = TrayIconBuilder::with_id(TRAY_ICON_ID)
+                                .icon(tray_image(false))
+                                .tooltip("GameLib")
+                                .menu(&menu)
+                                .show_menu_on_left_click(false)
+                                .on_menu_event(|app_handle, event| match event.id().as_ref() {
+                                    "show" => {
+                                        if let Some(window) =
+                                            app_handle.get_webview_window("main")
+                                        {
+                                            let _ = window.show();
+                                            let _ = window.set_focus();
+                                        }
+                                    }
+                                    "quit" => app_handle.exit(0),
+                                    _ => {}
+                                })
+                                .on_tray_icon_event(|tray, event| {
+                                    if let TrayIconEvent::Click {
+                                        button: MouseButton::Left,
+                                        button_state: MouseButtonState::Up,
+                                        ..
+                                    } = event
+                                    {
+                                        let app_handle = tray.app_handle();
+                                        if let Some(window) =
+                                            app_handle.get_webview_window("main")
+                                        {
+                                            let _ = window.show();
+                                            let _ = window.set_focus();
+                                        }
+                                    }
+                                })
+                                .build(app);
+                            if let Err(e) = tray {
+                                eprintln!(
+                                    "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
+                                );
+                            }
+                        }
+                        Err(e) => eprintln!(
+                            "[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray"
+                        ),
+                    }
+                }
+                _ => eprintln!(
+                    "[shell] WARN: tray menu items failed to build -- continuing without a tray"
+                ),
+            }
 
             // Dev-only: force the webview devtools open (the dev webview exposes no
             // right-click inspect on macOS) so renderer errors are inspectable, and
