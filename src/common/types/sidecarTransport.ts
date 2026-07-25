@@ -207,6 +207,17 @@ export const RUST_APP_EXIT = 'app_exit' as const
 export const RUST_APP_RELAUNCH = 'app_relaunch' as const
 
 /**
+ * Rust-side channel name: swap the real Tauri tray's icon between the dark/light variants
+ * (Phase 34.1 Plan 06, D-11). Backs the sidecar's `changeTrayColor` registration
+ * (`appShellFlowRegistration.ts`), which reads `darkTrayIcon` from `GlobalConfig` and forwards
+ * it here. Takes a single `{ dark: boolean }` object arg; resolves `Value::Null` whether or not
+ * a tray currently exists (a missing tray is not an error condition — it may have legitimately
+ * failed to build at startup). This is the ONLY new `dispatch_rust_channel` arm added across the
+ * entire Phase 34.1 slice (D-01 keeps window chrome renderer-side, with zero new Rust arms).
+ */
+export const RUST_TRAY_SET_ICON = 'tray_set_icon' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -223,7 +234,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SHELL_SHOW_ITEM_IN_FOLDER,
   RUST_SHELL_OPEN_PATH,
   RUST_APP_EXIT,
-  RUST_APP_RELAUNCH
+  RUST_APP_RELAUNCH,
+  RUST_TRAY_SET_ICON
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

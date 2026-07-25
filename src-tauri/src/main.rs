@@ -560,6 +560,30 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         "app_relaunch" => {
             app.restart();
         }
+        // Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's
+        // `changeTrayColor` registration (`appShellFlowRegistration.ts`), which reads
+        // `darkTrayIcon` from `GlobalConfig` and forwards it here as `{ dark }`. This is the
+        // ONLY new `dispatch_rust_channel` arm added by the entire 34.1 slice -- D-01 keeps
+        // window chrome renderer-side with zero new Rust arms.
+        "tray_set_icon" => {
+            let dark = args
+                .first()
+                .and_then(|v| v.get("dark"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            match app.tray_by_id(TRAY_ICON_ID) {
+                Some(tray) => {
+                    tray.set_icon(Some(tray_image(dark)))
+                        .map_err(|e| e.to_string())?;
+                }
+                // A missing tray is not an error condition -- it may have legitimately
+                // failed to build at startup (T-34.1-22); log and resolve successfully.
+                None => eprintln!(
+                    "[shell] tray_set_icon: no tray found with id {TRAY_ICON_ID:?}, skipping"
+                ),
+            }
+            Ok(Value::Null)
+        }
         // Native save-file dialog (Phase 31 Plan 02, D-03/REQ-31-03): same `Option<FilePath>`
         // shape as `dialog_open`'s pick_folder/pick_file arm -- `Some(path)` is the chosen path,
         // `None` is a healthy user cancel (never an error). Runs on the same spawned worker

@@ -49,15 +49,22 @@
  * was cross-checked against `main.ts`'s own `addHandler`/`addListener` call
  * for that exact channel before being written.
  *
+ *   - `changeTrayColor` (Plan 06, D-11) -> reads `darkTrayIcon` from
+ *     `GlobalConfig` and forwards `{ dark }` to the real Tauri tray via the
+ *     `tray_set_icon` rustInvoke arm -- THE SLICE'S ONLY NEW RUST ARM. Mirrors
+ *     `tray_icon.ts:51`'s 500ms settle delay and its own module-level timer
+ *     (never stacks unbounded timers, T-34.1-23). `registerAppShellFlows()`
+ *     also performs one initial, fully-guarded sync so the tray's startup
+ *     light-variant default gets corrected without waiting on a user toggle.
+ *
  * Deliberately does NOT register:
  *   - The ten D-01 window-chrome channels (`minimizeWindow`/`maximizeWindow`/
  *     `unmaximizeWindow`/`closeWindow`/`isMaximized`/`isMinimized`/
  *     `isFullscreen`/`setFullscreen`/`isFrameless`/`setZoomFactor`) — D-02:
  *     the sidecar registers nothing for them, the preload short-circuit means
  *     any sidecar registration would be unreachable dead code.
- *   - `changeTrayColor`, `createNewWindow`, `showAboutWindow`, and
- *     `gamepadAction` — plans 34.1-05/06/07 own these as from-scratch Tauri
- *     work, not extraction.
+ *   - `createNewWindow`, `showAboutWindow`, and `gamepadAction` — plans
+ *     34.1-05/07 own these as from-scratch Tauri work, not extraction.
  *   - `set-connectivity-online` — already live via `bootstrap.ts`'s
  *     `initOnlineMonitor()` call (Phase 33); `electronStub`'s
  *     `listenerRegistry` holds an ARRAY per channel, so a second
@@ -96,6 +103,10 @@ import { changeLanguage } from '../appshell/language'
 import { notify } from '../dialog/dialog'
 import { handleExit, openUrlOrFile } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
+import { GlobalConfig } from '../config'
+import { logInfo, LogPrefix } from '../logger'
+import { requestRustInvoke } from './sidecarRpc'
+import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -113,6 +124,28 @@ let webviewPreloadPathWarned = false
 // process, so there is nothing to share these with.
 let powerId: number | undefined
 let displaySleepId: number | undefined
+
+// changeTrayColor's 500ms settle-delay timer (mirrors tray_icon.ts:51's own setTimeout).
+// Module-level so repeated sends within the window clear-and-reschedule instead of
+// stacking unbounded timers (T-34.1-23).
+let trayColorTimer: NodeJS.Timeout | undefined
+
+/**
+ * Read `darkTrayIcon` from `GlobalConfig` and forward it to the real Tauri tray via the
+ * `tray_set_icon` rustInvoke arm (Plan 06, D-11). Fully guarded: a `GlobalConfig` read
+ * failure or a rejected `requestRustInvoke` both log and return — a tray sync must never
+ * crash the sidecar (the `sidecar-dialog-reject-crashes` precedent).
+ */
+function syncTrayIcon(): void {
+  try {
+    const { darkTrayIcon } = GlobalConfig.get().getSettings()
+    requestRustInvoke(RUST_TRAY_SET_ICON, [{ dark: Boolean(darkTrayIcon) }]).catch(
+      (error) => logSendFailure('changeTrayColor', error)
+    )
+  } catch (error) {
+    logSendFailure('changeTrayColor', error)
+  }
+}
 
 /**
  * Registers the 18 app-shell channels. Called once from `handlers.ts` — this
@@ -253,4 +286,31 @@ export function registerAppShellFlows(): void {
       '[appShellFlowRegistration] setTitleBarOverlay(): logged no-op (D-13) -- no native titlebar overlay survives under Tauri once D-06 puts GameLib\'s own buttons on every platform when frameless'
     )
   })
+
+  // D-11: swap the real Tauri tray's icon via the `tray_set_icon` rustInvoke arm.
+  // Mirrors tray_icon.ts:51 exactly -- log immediately (safe: only reachable at
+  // runtime, well after the sidecar has booted and initLogger() has run), then a
+  // 500ms settle delay before the actual sync so a rapid theme-setting change
+  // doesn't race a still-updating `darkTrayIcon` value.
+  ipcMain.on('changeTrayColor', () => {
+    logInfo('Changing Tray icon Color...', LogPrefix.Backend)
+    if (trayColorTimer) {
+      clearTimeout(trayColorTimer)
+    }
+    trayColorTimer = setTimeout(syncTrayIcon, 500)
+  })
+
+  // Initial sync: correct the tray's startup light-variant default (main.rs's
+  // `.setup()` always starts with `tray_image(false)`) to the user's actual
+  // `darkTrayIcon` setting. Deferred via `setImmediate` (Rule 3 fix, same shape as
+  // `downloadQueueFlowRegistration.ts`'s D-05 precedent): `registerAppShellFlows()`
+  // runs synchronously at `handlers.ts`'s top-level `import './handlers'`
+  // (`bootstrap.ts` Step 2), BEFORE `initLogger()` (Step 3) has run -- and
+  // `GlobalConfig.get()`'s first-ever call in this process can itself synchronously
+  // call `logInfo`/`logError` on the config-version-upgrade path (`config.ts:145/
+  // 152`), which would throw before the sidecar ever reaches READY if not deferred.
+  // `syncTrayIcon()`'s own try/catch additionally covers the same third path this
+  // codebase's precedent already documented (a test file that imports `./handlers`
+  // directly, without ever calling `init()`/`initLogger()`).
+  setImmediate(syncTrayIcon)
 }
