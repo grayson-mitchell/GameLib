@@ -225,6 +225,14 @@ export function init(
   //
   // Must be registered before Block B's fetch, below, so the listener exists before the
   // event it responds to can possibly fire.
+  //
+  // CR-02 (34.2-09): the outer `try`/`catch` below covers ONLY the synchronous
+  // `backendEvents.on(...)` registration call, which cannot itself throw — it gives ZERO
+  // coverage to the listener body, which runs later from the emitter, outside this stack
+  // frame. The `.catch()` attached directly to the `downloadAntiCheatData(...)` call is what
+  // covers that body: `createMD5`'s `await` inside `downloadAntiCheatData` sits outside its
+  // own internal try/catch, so an `EACCES`/`ENOENT`/TOCTOU/is-a-directory fault on the local
+  // anticheat cache file would otherwise reject an unguarded promise.
   if (!anticheatListenerRegistered) {
     anticheatListenerRegistered = true
     try {
@@ -233,11 +241,16 @@ export function init(
           'Releases info ready, checking anticheat data',
           LogPrefix.Backend
         )
-        void downloadAntiCheatData(
+        downloadAntiCheatData(
           isMac
             ? releasesInfo.anticheatFiles.shaMac
             : releasesInfo.anticheatFiles.shaLinux
-        )
+        ).catch((error) => {
+          logWarning(
+            `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
+            LogPrefix.Backend
+          )
+        })
       })
     } catch (error) {
       logWarning(
