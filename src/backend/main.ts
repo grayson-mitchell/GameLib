@@ -105,10 +105,10 @@ import {
 } from './logger'
 import {
   launchEventCallback,
-  readKnownFixes,
   runWineCommand,
   validWine
 } from './launcher'
+import { readKnownFixes } from './knownFixes'
 import { initQueue } from './downloadmanager/downloadqueue'
 import {
   initOnlineMonitor,
