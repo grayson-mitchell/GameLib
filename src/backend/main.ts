@@ -116,21 +116,35 @@ import {
   runOnceWhenOnline
 } from './online_monitor'
 import { notify, showDialogBoxModalAuto } from './dialog/dialog'
-import { callAbortController } from './utils/aborthandler/aborthandler'
 import { getDefaultSavePath } from './save_sync'
 import { initTrayIcon } from './tray_icon/tray_icon'
 import { createMainWindow, getMainWindow, isFrameless } from './main_window'
 
 import { playtimeSyncQueue } from './storeManagers/gog/electronStores'
 import { initStoreManagers, libraryManagerMap } from './storeManagers'
+import { getGameOverrides, getAllGameOverrides } from './game_overrides'
 import {
-  setGameOverrides,
-  getGameOverrides,
-  getAllGameOverrides,
-  attachOverrides
-} from './game_overrides'
+  isGameAvailable,
+  getGameInfo,
+  getExtraInfo,
+  getGameSettings,
+  kill,
+  repair,
+  changeInstallPath,
+  getLaunchOptions,
+  changeGameVersionPinnedStatus,
+  getGameOverride,
+  getGameSdl,
+  readConfig,
+  addNewApp,
+  getAvailableCyberpunkMods,
+  setCyberpunkModConfig
+} from './gamedetails/dispatch'
+import {
+  setGameMetadataOverride,
+  setMetadataChangedNotifier
+} from './gamedetails/overrides'
 import { buildCrossoverRatingMap } from './crossover_index/ipc_handler'
-import { backendEvents } from './backend_events'
 import { configStore } from './constants/key_value_stores'
 import {
   customThemesWikiLink,
@@ -184,6 +198,14 @@ import {
   getCurrentChangelogEntry
 } from './appshell/releases'
 import { changeLanguage } from './appshell/language'
+
+// D-01/D-03 (Phase 34.2 Plan 02): installs the Electron-side metadataChanged
+// push for gamedetails/overrides.ts's setGameMetadataOverride, making it
+// byte-equivalent to the pre-extraction `sendFrontendMessage('metadataChanged',
+// getAllGameOverrides())` call it replaces.
+setMetadataChangedNotifier((overrides) =>
+  sendFrontendMessage('metadataChanged', overrides)
+)
 
 if (isLinux) app.commandLine?.appendSwitch('--gtk-version', '3')
 
@@ -753,12 +775,8 @@ addHandler('getMaxCpus', () => cpus().length)
 
 addHandler('getHeroicVersion', () => app.getVersion())
 addHandler('isFullscreen', () => isSteamDeckGameMode || isCLIFullscreen)
-addHandler('getGameOverride', async () =>
-  libraryManagerMap['legendary'].getGameOverride()
-)
-addHandler('getGameSdl', async (event, appName) =>
-  libraryManagerMap['legendary'].getGameSdl(appName)
-)
+addHandler('getGameOverride', async () => getGameOverride())
+addHandler('getGameSdl', async (event, appName) => getGameSdl(appName))
 
 addHandler('showUpdateSetting', () => !isFlatpak)
 
@@ -798,28 +816,11 @@ addListener('createNewWindow', (e, url) => {
   new BrowserWindow({ height: 700, width: 1200 }).loadURL(url)
 })
 
-addHandler('isGameAvailable', async (e, args) => {
-  const { appName, runner } = args
-  return libraryManagerMap[runner].getGame(appName).isGameAvailable()
-})
+addHandler('isGameAvailable', async (e, args) => isGameAvailable(args))
 
-addHandler('getGameInfo', async (event, appName, runner) => {
-  // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
-  if (
-    runner === 'legendary' &&
-    !libraryManagerMap['legendary'].hasGame(appName)
-  ) {
-    return null
-  }
-  const tempGameInfo = libraryManagerMap[runner].getGame(appName).getGameInfo()
-  // The game managers return an empty object if they couldn't fetch the game
-  // info, since most of the backend assumes getting it can never fail (and
-  // an empty object is a little easier to work with than `null`)
-  // The frontend can however handle being passed an explicit `null` value, so
-  // we return that here instead if the game info is empty
-  if (!Object.keys(tempGameInfo).length) return null
-  return attachOverrides(tempGameInfo)
-})
+addHandler('getGameInfo', async (event, appName, runner) =>
+  getGameInfo(appName, runner)
+)
 
 addHandler(
   'getAchievements',
@@ -828,25 +829,13 @@ addHandler(
   }
 )
 
-addHandler('getExtraInfo', async (event, appName, runner) => {
-  // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
-  if (
-    runner === 'legendary' &&
-    !libraryManagerMap['legendary'].hasGame(appName)
-  ) {
-    return null
-  }
-  return libraryManagerMap[runner].getGame(appName).getExtraInfo()
-})
+addHandler('getExtraInfo', async (event, appName, runner) =>
+  getExtraInfo(appName, runner)
+)
 
-addHandler('getGameSettings', async (event, appName, runner) => {
-  try {
-    return await libraryManagerMap[runner].getGame(appName).getSettings()
-  } catch (error) {
-    logError(error, LogPrefix.Backend)
-    return null
-  }
-})
+addHandler('getGameSettings', async (event, appName, runner) =>
+  getGameSettings(appName, runner)
+)
 
 addHandler('getGOGLinuxInstallersLangs', async (event, appName) =>
   libraryManagerMap['gog'].getLinuxInstallersLanguages(appName)
@@ -985,14 +974,7 @@ addHandler('getAlternativeWine', async () =>
   GlobalConfig.get().getAlternativeWine()
 )
 
-addHandler('readConfig', async (event, configClass) => {
-  if (configClass === 'library') {
-    await libraryManagerMap['legendary'].refresh()
-    return libraryManagerMap['legendary'].getListOfGames()
-  }
-  const userInfo = LegendaryUser.getUserInfo()
-  return userInfo?.displayName ?? ''
-})
+addHandler('readConfig', async (event, configClass) => readConfig(configClass))
 
 addHandler('requestAppSettings', () => GlobalConfig.get().getSettings())
 addHandler('requestGameSettings', async (_e, appName) => {
@@ -1125,41 +1107,7 @@ addListener('showItemInFolder', async (e, item) => showItemInFolder(item))
 
 addHandler('uninstall', uninstallGameCallback)
 
-addHandler('repair', async (event, appName, runner) => {
-  if (!isOnline()) {
-    logWarning(
-      `App offline, skipping repair for game '${appName}'.`,
-      LogPrefix.Backend
-    )
-    return
-  }
-
-  sendGameStatusUpdate({
-    appName,
-    runner,
-    status: 'repairing'
-  })
-
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
-
-  try {
-    await libraryManagerMap[runner].getGame(appName).repair()
-  } catch (error) {
-    notify({
-      title,
-      body: i18next.t('notify.error.reparing', 'Error Repairing')
-    })
-    logError(error, LogPrefix.Backend)
-  }
-  notify({ title, body: i18next.t('notify.finished.reparing') })
-  logInfo('Finished repairing', LogPrefix.Backend)
-
-  sendGameStatusUpdate({
-    appName,
-    runner,
-    status: 'done'
-  })
-})
+addHandler('repair', async (event, appName, runner) => repair(appName, runner))
 
 addHandler(
   'moveInstall',
@@ -1296,18 +1244,9 @@ addHandler(
   }
 )
 
-addHandler('kill', async (event, appName, runner) => {
-  callAbortController(appName)
-  return libraryManagerMap[runner].getGame(appName).stop()
-})
+addHandler('kill', async (event, appName, runner) => kill(appName, runner))
 
-addHandler('changeInstallPath', async (event, { appName, path, runner }) => {
-  await libraryManagerMap[runner].changeGameInstallPath(appName, path)
-  logInfo(
-    `Finished changing install path of ${appName} to ${path}.`,
-    LogPrefix.Backend
-  )
-})
+addHandler('changeInstallPath', async (event, args) => changeInstallPath(args))
 
 addHandler('egsSync', async (event, args) => {
   return libraryManagerMap['legendary'].toggleGamesSync(args)
@@ -1317,31 +1256,9 @@ addHandler('syncGOGSaves', async (event, gogSaves, appName, arg) =>
   libraryManagerMap['gog'].getGame(appName).syncSaves(arg, '', gogSaves)
 )
 
-addHandler('getLaunchOptions', async (event, appName, runner) => {
-  const availableLaunchOptions =
-    await libraryManagerMap[runner].getLaunchOptions(appName)
-
-  // add a default option if there are other options but no default
-  if (
-    availableLaunchOptions.length > 0 &&
-    !availableLaunchOptions.some(
-      (option) =>
-        (option.type === undefined || option.type === 'basic') &&
-        option.name === 'Default' &&
-        option.parameters === ''
-    )
-  ) {
-    availableLaunchOptions.unshift({
-      name: i18next.t('launch.default', 'Default', {
-        ns: 'gamepage'
-      }),
-      parameters: '',
-      type: 'basic'
-    })
-  }
-
-  return availableLaunchOptions
-})
+addHandler('getLaunchOptions', async (event, appName, runner) =>
+  getLaunchOptions(appName, runner)
+)
 
 addHandler('syncSaves', async (event, { arg = '', path, appName, runner }) => {
   if (runner === 'legendary') {
@@ -1523,15 +1440,11 @@ addListener('setTitleBarOverlay', (e, args) => {
   }
 })
 
-addListener('addNewApp', (e, args) =>
-  libraryManagerMap['sideload'].addNewApp(args)
-)
+addListener('addNewApp', (e, args) => addNewApp(args))
 
-addListener('setGameMetadataOverride', (e, args) => {
-  const { appName, title, art_cover, art_square } = args
-  setGameOverrides(appName, { title, art_cover, art_square })
-  sendFrontendMessage('metadataChanged', getAllGameOverrides())
-})
+addListener('setGameMetadataOverride', (e, args) =>
+  setGameMetadataOverride(args)
+)
 
 addHandler('getGameMetadataOverride', async (_e, appName) => {
   return getGameOverrides(appName)
@@ -1602,15 +1515,15 @@ addHandler('setPrivateBranchPassword', (e, appName, password) =>
 )
 
 addHandler('getAvailableCyberpunkMods', async () =>
-  libraryManagerMap['gog'].getCyberpunkMods()
+  getAvailableCyberpunkMods()
 )
 addHandler('setCyberpunkModConfig', async (e, props) =>
-  libraryManagerMap['gog'].setCyberpunkModConfig(props)
+  setCyberpunkModConfig(props)
 )
 
-addListener('changeGameVersionPinnedStatus', (e, appName, runner, status) => {
-  libraryManagerMap[runner].changeVersionPinnedStatus(appName, status)
-})
+addListener('changeGameVersionPinnedStatus', (e, appName, runner, status) =>
+  changeGameVersionPinnedStatus(appName, runner, status)
+)
 
 addHandler('getKnownFixes', (e, appName, runner) =>
   readKnownFixes(appName, runner)
