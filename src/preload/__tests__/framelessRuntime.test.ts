@@ -129,9 +129,34 @@ beforeEach(() => {
 })
 
 describe('applyFramelessDecorations (REQ-34.1-03)', () => {
-  it('REQ-34.1-03: applyFramelessDecorations() with no settings snapshot calls setDecorations(true)', () => {
+  // CLARIFIED TEST CONTRACT (CR-02, Phase 34.1 code review). This assertion is correct
+  // about the FUNCTION in isolation -- with no data, the default is DECORATED, matching
+  // Electron's shipped default -- but on its own it read as if the empty-snapshot case
+  // were the steady state. It is not: it is only ever the PRE-HYDRATION paint that
+  // `preload/tauriAttach`'s module body performs before `hydrateStoreSnapshot()` has
+  // run. The correcting second pass is pinned by the sequence test below; without that
+  // one, this test alone leaves the shipped `framelessWindow: true` bug green.
+  it('REQ-34.1-03: applyFramelessDecorations() with no settings snapshot yet (the pre-hydration paint) calls setDecorations(true)', () => {
     applyFramelessDecorations()
     expect(mockWindow.setDecorations).toHaveBeenCalledWith(true)
+  })
+
+  // CR-02 regression guard: reproduces `src/frontend/index.tsx`'s real two-phase startup
+  // sequence -- tauriAttach's pre-paint call against an EMPTY snapshot, then the
+  // post-`hydrateStoreSnapshot()` re-apply against the real settings. A build that drops
+  // the second call (the shipped bug) leaves a `framelessWindow: true` user with the
+  // native titlebar restored AND GameLib's own overlay controls drawn on top of it.
+  it('REQ-34.1-03/CR-02: a frameless user gets setDecorations(false) once the snapshot hydrates, not the pre-hydration default', () => {
+    // Phase 1 -- tauriAttach module body, snapshot still empty.
+    mockedSnapshotGet.mockReturnValue(undefined)
+    applyFramelessDecorations()
+    expect(mockWindow.setDecorations).toHaveBeenNthCalledWith(1, true)
+
+    // Phase 2 -- index.tsx, immediately after `await hydrateStoreSnapshot()`.
+    mockedSnapshotGet.mockReturnValue({ framelessWindow: true })
+    applyFramelessDecorations()
+    expect(mockWindow.setDecorations).toHaveBeenNthCalledWith(2, false)
+    expect(mockWindow.setDecorations).toHaveBeenLastCalledWith(false)
   })
 
   it('REQ-34.1-03: applyFramelessDecorations() with framelessWindow:false calls setDecorations(true)', () => {

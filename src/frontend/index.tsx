@@ -34,6 +34,7 @@ import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { defaultThemes } from './components/UI/ThemeSelector'
 import Loading from './screens/Loading'
 import { isTauri, hydrateStoreSnapshot } from '../preload/tauriTransport'
+import { applyFramelessDecorations } from '../preload/api/tauriWindowChrome'
 
 initOnlineMonitor()
 
@@ -78,6 +79,30 @@ if (isTauri()) {
       error
     )
   }
+
+  // CR-02 (Phase 34.1 code review): RE-apply the frameless decoration state now that
+  // `configStore.settings` is actually in the snapshot.
+  //
+  // `preload/tauriAttach` (this file's first import) calls `applyFramelessDecorations()`
+  // from its MODULE BODY, deliberately, so the window never visibly flips on startup.
+  // But ES modules evaluate every static import before any of this file's own top-level
+  // statements run -- and `hydrateStoreSnapshot()` above is a top-level STATEMENT. So at
+  // attach time the snapshot map is still empty, `snapshotGet('configStore','settings')`
+  // returns `undefined`, and the pre-paint call always resolves the DEFAULT
+  // (`framelessWindow: false` -> `setDecorations(true)`), never the user's setting.
+  //
+  // For a `framelessWindow: true` user that shipped a visibly broken window on every
+  // launch: the native titlebar was restored here, while `App.tsx` reads `isFrameless`
+  // LATER (GlobalState.tsx, post-hydration) and correctly got `true` -- so GameLib
+  // rendered its OWN overlay window controls on top and the user got BOTH chromes at
+  // once. Nothing re-applied afterwards; the only other call site is the `setSetting`
+  // toggle.
+  //
+  // The pre-paint call is still the right default-state paint; this is the correcting
+  // second pass. `applyFramelessDecorations` is idempotent and TOTAL (never throws --
+  // see tauriWindowChrome.ts's header), so a redundant re-apply for the common
+  // decorated case costs one `setDecorations(true)` and nothing else.
+  applyFramelessDecorations()
 }
 
 const DEFAULT_THEME = 'midnightMirage'
