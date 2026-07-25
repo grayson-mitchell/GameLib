@@ -18,7 +18,10 @@
  * channels (`registerGameDetailsFlows()`, `gameDetailsFlowRegistration.ts` —
  * Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
  * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
- * Plan 06, D-04/D-07/D-10), and the
+ * Plan 06, D-04/D-07/D-10), the curated logger channel (registered by
+ * `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2 plan 34.2-16,
+ * REQ-34.2-12 — `logError` only, an early port of a Phase 34.3/slice-6
+ * channel; Phase 34.3 must NOT register it again), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -49,6 +52,7 @@ import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { registerAppShellFlows } from './appShellFlowRegistration'
 import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
+import { registerLoggerFlows } from './loggerFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -105,6 +109,18 @@ registerGameDetailsFlows()
 // is already registered by `storeRegistration.ts:104` (Phase 29), so this
 // module needs no new store plumbing.
 registerEnrichmentFlows()
+// Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12): the single `logError`
+// send channel, ported early from its Phase 34.3/slice-6 slot because gap
+// cycle 1's renderer repair-failure handler now routes through it — an
+// unregistered `send` channel is a total silent no-op under Tauri. Declared
+// in both `.planning/IPC-PORT-INVENTORY.md` and this slice's own
+// `34.2-PORTED-CHANNELS.md` (§7 gap-cycle-2 subsection, plan 34.2-16 Task 3)
+// so Phase 34.3 does not register `logError` a second time — a duplicate
+// listener would duplicate every frontend log line (`dispatchSend` iterates
+// ALL listeners for a channel). No ordering constraint relative to the other
+// calls above (own channel name, no cross-module runtime dependency at
+// registration time), placed alongside them, before `ensureStoresRegistered()`.
+registerLoggerFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
