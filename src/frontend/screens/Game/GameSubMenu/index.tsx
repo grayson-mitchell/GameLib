@@ -15,6 +15,7 @@ import GameContext from '../GameContext'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
+import { reportRepairFailure } from './repairFailure'
 
 import {
   ArrowUpward as ArrowUpwardIcon,
@@ -144,7 +145,7 @@ export default function GamesSubmenu({
     try {
       await repair(appName, runner)
     } catch (error) {
-      window.api.logError(`repair failed for ${appName}: ${error}`)
+      reportRepairFailure({ appName, error, showDialogModal, t })
     }
   }
 

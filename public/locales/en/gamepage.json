@@ -58,6 +58,9 @@
         },
         "choose": "Choose",
         "close": "Close",
+        "error": {
+            "title": "Error"
+        },
         "importpath": "Choose Game Folder to import",
         "move": {
             "message": "This can take a long time, are you sure?",
@@ -72,6 +75,7 @@
         },
         "ok": "OK",
         "repair": {
+            "error": "Repair failed. See the log for details.",
             "message": "Do you want to try to repair this game? This can take a long time.",
             "title": "Verify and Repair"
         },
