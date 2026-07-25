@@ -319,6 +319,65 @@ live gate.
 
 ---
 
+### App shell + window chrome cluster (real, Phase 34.1) — CLOSED, moved out of §3
+
+**Ported in Phase 34.1** (`tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome`, plans
+34.1-01..34.1-08). Full enumerated list, one row per channel with its kind/backed-by/proof-level,
+in `.planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-PORTED-CHANNELS.md`.
+This slice wires/re-routes 33 more channels — see the headline-cost tally below.
+
+- **A third port kind joins the vocabulary: `renderer-side (Tauri JS)`.** Alongside the existing
+  `sidecar invoke`/`send` (Phases 30–33) and `rustInvoke` (Phase 28+) kinds, 13 of this slice's 33
+  channels — the ten D-01 window-chrome verbs (`minimizeWindow`/`maximizeWindow`/
+  `unmaximizeWindow`/`closeWindow`/`isMaximized`/`isMinimized`/`isFullscreen`/`setFullscreen`/
+  `isFrameless`/`setZoomFactor`), `gamepadAction`, and `createNewWindow`/`showAboutWindow` — call a
+  Tauri JS API (or, for `gamepadAction`, plain DOM APIs) directly from the preload with no sidecar
+  hop at all. The sidecar registers nothing for these channels; `UNPORTED_CHANNEL_MARKER` is never
+  reached because the preload short-circuits first under `isTauri()`. Later slices meeting a
+  webview-context-only Tauri JS API (no headless-sidecar equivalent) should expect this same shape,
+  not force it through a sidecar registration.
+- **Rust side: the `tray-icon` Cargo feature, a bounded `TrayIcon`, and one new
+  `dispatch_rust_channel` arm.** `TrayIconBuilder` constructs a real tray non-fatally at `.setup()`
+  (tooltip, left-click show/focus, a two-item Show GameLib / Quit menu); both icon variants are
+  embedded via `include_bytes!` rather than resolved at runtime (sidestepping this repo's recurring
+  publicDir/getAppPath path-resolution failure family). `tray_set_icon` is the slice's **only** new
+  arm, bringing the `dispatch_rust_channel` count from 10 to 11; it backs the `changeTrayColor`
+  sidecar-send channel via a 500ms collapsing settle timer. Bounded scope only — recent-games
+  submenu, About/Reload/Debug items, macOS dock menu, `languageChanged` rebuilds, and
+  `noTrayIcon`/`exitToTray` honouring are re-deferred to Phase 35 (see `34.1-PORTED-CHANNELS.md`
+  §5), pinned mechanically by a negative source gate proving `main.rs` names none of that scope.
+- **New capability grants and a fail-closed child-window boundary.** `src-tauri/capabilities/default.json`
+  gained the twelve explicit `core:window:*`/`core:webview:*` commands D-01's window chrome calls,
+  plus `core:webview:allow-create-webview-window` for D-12's `WebviewWindow` primitive — both
+  scoped to `windows: ["main"]`, with `core:window:default`/`core:webview:default`/`core:tray:default`
+  deliberately never granted. Child windows created by `createNewWindow`/`showAboutWindow` are
+  labelled from a monotonic counter (`external-<n>`) or the fixed `about` label — **never** derived
+  from caller-supplied input and **never** `main` — so a child window's label matches nothing in the
+  capability scope and it inherits zero Tauri command access by construction, not by convention.
+- **First slice to modify `src/backend/main.ts`.** Every prior Tauri phase left `main.ts`
+  byte-identical; this slice converts six handler registrations (`getCustomThemes`/`getThemeCSS`/
+  `getCustomCSS`/`getLatestReleases`/`getCurrentChangelog`/`changeLanguage`) to one-line delegations
+  into new `src/backend/appshell/*.ts` modules (D-07/D-08), so the additive/reversible invariant
+  this seam has relied on since Phase 27 is now **behavioral** (the Electron path calls the same
+  extracted function the sidecar does, proven by direct-call tests) rather than **textual**
+  (`main.ts` unchanged byte-for-byte). `electronUntouched.test.ts` was inspected during this slice
+  and found to be Phase 28's narrow keyring/`configStore` byte-identity proof — it asserts nothing
+  about `main.ts` — and was left byte-unchanged; a genuinely new `appShellImportGate.test.ts` gates
+  D-09's curated-import discipline (no `electron` import under `src/backend/sidecar/`, no
+  side-effect import of `utils/ipc_handler.ts`, and `main.ts`'s six app-shell handlers stay
+  delegations) instead of repurposing the Phase 28 file.
+- **Claim level (Phase 34.1): unit-proven only, ALL live UAT deferred (D-15).** Unlike Phase 33,
+  this slice adds no hardware-proven row. Every one of the 33 channels above is "wired and
+  unit-proven," the same claim level as Phase 30–32, and D-15 deliberately declines a Phase
+  33-D-13-style live gate for this slice's own headline deliverable — the frameless toggle, the
+  titlebar buttons, the tray appearing and its colour changing, gamepad navigation, and macOS
+  traffic lights vs custom buttons are all **unobserved**. The ten deferred items with their
+  reproduction steps are recorded in
+  `.planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-HUMAN-UAT.md`.
+  Do not read "wired and unit-proven" as "seen working" for this cluster.
+
+---
+
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
 
 - **`fileStore.ts`** — graduated to §1 in Phase 29; see `### The store layer (real, Phase 29)`
@@ -353,15 +412,15 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 
 | Priority | API / cluster | Files touched | What's needed to port |
 |---|---|---|---|
-| 1 | `app` (lifecycle beyond getPath/getName) | 26 | **Partially closed, Phase 33** — `quit`/`exit`/`relaunch` are now real (`AppHandle::exit()`/`restart()` via new `rustInvoke` channels), fixing the "zombie sidecar" gap. Still deferred: updater hooks and tray/protocol registration (`main.ts`/`main_window.ts`'s remaining lifecycle surface) — target **Phase 34/35** |
+| 1 | `app` (lifecycle beyond getPath/getName) | 26 | **Partially closed, Phase 33 + Phase 34.1** — `quit`/`exit`/`relaunch` are real since Phase 33 (`AppHandle::exit()`/`restart()`), fixing the "zombie sidecar" gap. **Tray registration is now CLOSED (Phase 34.1, bounded)** — see the new §1 subsection and `34.1-PORTED-CHANNELS.md`'s re-deferral list for exactly what's still out of scope (recent-games submenu, dock menu, etc., target Phase 35). Updater hooks and custom-protocol registration remain deferred — target **Phase 34/35** |
 | 2 | `dialog` | 9 | **Fully closed, Phase 33.** `showMessageBox` now real multi-button (`MessageDialogButtons::OkCancelCustom`, per-caller `cancelId` fail-safe, D-07) — retires the Phase 31 CR-01 safe-sentinel stopgap. Joins `showErrorBox`/`showSaveDialog` (Phase 31) and `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, no in-scope caller re-examined this phase, target **Phase 35** |
-| 3 | `BrowserWindow` (full window management) | 7 | Real multi-window support if GameLib ever needs more than the single webview this skeleton hosts — target **Phase 34/35** |
+| 3 | `BrowserWindow` (full window management) | 7 | **Partially closed, Phase 34.1** — real multi-window now exists via `WebviewWindow` for `createNewWindow`/`showAboutWindow` (D-12, renderer-side Tauri JS, zero new Rust arms). What remains deferred is the `<webview>` login story (navigation interception, OAuth redirect capture, session/cookie access) — target **Phase 34.4** |
 | 4 | `shell` (remaining methods) | 5 | **Mostly closed, Phase 33** — `showItemInFolder`/`openPath` now real via `tauri-plugin-opener`. `trashItem` stays a LOGGED no-op (Accepted Constraint below, no vetted Tauri v2 plugin has trash capability) — target **Phase 35 revisit** |
 | 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
-| 6 | `nativeImage` | 4 | Tauri `image`/icon APIs, only needed once tray/notifications need custom icons (the Phase 33 notification port uses no custom image) — target **Phase 34/35** |
+| 6 | `nativeImage` | 4 | **Partially addressed, Phase 34.1** — the new tray (see §1) uses compile-time `include_bytes!` images rather than a `nativeImage` API call; per-platform icon resizing stays deferred — target **Phase 34/35** |
 | 7 | `Notification` | 3 | **Fully closed, Phase 33** — real via the new `tauri-plugin-notification` plugin (`isSupported()` → `true`, `.show()` forwards title/body) |
 | 8 | `session`/`screen`/`net`/`Menu` | 2 each | **Partially closed, Phase 33** — `net`'s online-monitor half moved toward real (`initOnlineMonitor()` wired into sidecar `bootstrap.ts`, `net.isOnline()` added to the stub); `session` stays a LOGGED no-op (Accepted Constraint below, D-09). `screen`/`Menu` untouched — target **Phase 34/35** |
-| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | **`powerSaveBlocker` upgraded to a LOGGED no-op this phase** (Accepted Constraint below, D-08); `clipboard`/`protocol`/`Tray`/`ipcMain` (remaining) untouched — case-by-case Tauri equivalents, low volume, low urgency, target **Phase 34/35** |
+| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | **`Tray` is now CLOSED (Phase 34.1, bounded)** — a real `TrayIconBuilder` tray exists (see the new §1 subsection); scope beyond the bounded minimum is re-deferred to Phase 35. `powerSaveBlocker` remains the existing LOGGED no-op (Accepted Constraint below, D-08, carried forward unchanged this phase). `clipboard`/`protocol`/`ipcMain` (remaining) untouched — target **Phase 34/35** |
 
 **The IPC re-plumb (the headline cost):** ~208 of the 220 total IPC endpoints (158 `addHandler` +
 62 `addListener`, `AsyncIPCFunctions` ≈335 typed entries per spike 009) remain on the Electron
@@ -376,7 +435,13 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 registered; `install`/`updateGame` re-routed off the Phase 30 D-05a bypass onto the real queue —
 enumerated in `32-PORTED-CHANNELS.md`, which also declares the two push channels
 `progressUpdate`/`changedDMQueueInformation` riding the existing relay with zero new registration),
-for 28 wired/re-routed total. (`showMessageBox`/`showErrorBox`/`showSaveDialog`
+for 28 wired/re-routed total; Phase 34.1 wired/re-routed 33 more (13 renderer-side (Tauri JS), 8
+sidecar invoke, 11 sidecar send including `changeTrayColor`'s new `tray_set_icon` rustInvoke arm,
+and 1 confirmed-already-live-via-bootstrap — enumerated in `34.1-PORTED-CHANNELS.md`), for **61
+wired/re-routed total**. The `callTool` channel (`src/backend/tools/ipc_handler.ts:25`,
+Winetricks/winecfg/runExe) was reassigned out of the Slice 4 grouping to the Phase 34.5 slice by
+Phase 34.1's own CONTEXT decision D-14 before this tally — it was never counted in Phase 34.1's 33.
+(`showMessageBox`/`showErrorBox`/`showSaveDialog`
 are `rustInvoke` channels, not sidecar `invoke`/`send` channels, and are counted alongside
 `dialog_open` outside this tally — same convention Phase 30 established.) Porting the rest is
 mechanical per endpoint (curate a sidecar invoke handler like `steamFlowRegistration.ts` did) but
