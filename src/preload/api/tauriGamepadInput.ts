@@ -117,12 +117,26 @@ function focusableIndex(list: HTMLElement[], el: HTMLElement | null): number {
   return list.indexOf(el)
 }
 
+/**
+ * WR-02 (Phase 34.1 code review): two ordering bugs, both fixed here.
+ *
+ * 1. `dispatchKey`'s return value (whether the synthetic keydown was
+ *    `preventDefault()`ed) was DISCARDED. `moveFocusDirectionally` already honours it
+ *    (`if (prevented) return`); this did not, so whenever the app handled Tab itself --
+ *    a modal focus trap, a custom focus manager -- focus moved TWICE: once by the app,
+ *    once by this function.
+ * 2. The focusable list was captured BEFORE the dispatch, so any DOM change the app's
+ *    own Tab handler made (closing a dialog, opening a menu) left `list[nextIndex]`
+ *    pointing at a detached/stale element. It is now recomputed AFTER.
+ */
 function doTab(shift: boolean): void {
-  const list = getFocusableElements()
   const current = activeElement()
-  if (current) {
-    dispatchKey(current, 'Tab', { shiftKey: shift })
+  if (current && dispatchKey(current, 'Tab', { shiftKey: shift })) {
+    // The app handled Tab itself -- do not move focus a second time.
+    return
   }
+
+  const list = getFocusableElements()
   if (list.length === 0) return
 
   const currentIndex = focusableIndex(list, current)
@@ -226,8 +240,43 @@ interface RectLike {
   bottom: number
 }
 
-function zeroRectAtOrigin(): RectLike {
-  return { top: 0, left: 0, right: 0, bottom: 0 }
+/**
+ * WR-03 (Phase 34.1 code review): the "nothing is focused yet" origin.
+ *
+ * This used to be a zero rect at (0,0) for every direction. `isInDirection` then
+ * required `rect.bottom <= 0` for `Up` and `rect.right <= 0` for `Left` -- which NO
+ * on-screen element can satisfy, because viewport coordinates are >= 0. So `padUp` /
+ * `padLeft` / `leftStickUp` / `leftStickLeft` were permanent no-ops until something was
+ * focused, while `Down` / `Right` worked. For a gamepad-only user -- the sole consumer
+ * of this module -- that is a dead input on half the d-pad at every screen entry.
+ *
+ * The fix seeds a degenerate rect on the viewport edge OPPOSITE the movement direction,
+ * so "move Up with nothing focused" behaves as if the cursor were just below the
+ * viewport: every element is legitimately "above" it, and `directionScore`'s
+ * facing-edge term then naturally picks the BOTTOM-most one (with the perpendicular
+ * centre-offset term still breaking ties toward the middle of the screen). Each
+ * direction is the mirror image of its opposite, so entry from any edge is symmetric.
+ */
+function viewportOriginFor(direction: Direction): RectLike {
+  // The preload jest project runs on `testEnvironment: 'node'` with a hand-built
+  // `window` stub, so these can legitimately be absent -- fall back to 0, which
+  // degrades to the previous behaviour rather than producing NaN scores.
+  const width = typeof window !== 'undefined' ? (window.innerWidth ?? 0) : 0
+  const height = typeof window !== 'undefined' ? (window.innerHeight ?? 0) : 0
+  switch (direction) {
+    case 'Up':
+      // Just BELOW the viewport: everything on screen is above it.
+      return { top: height, bottom: height, left: 0, right: width }
+    case 'Down':
+      // Just ABOVE the viewport.
+      return { top: 0, bottom: 0, left: 0, right: width }
+    case 'Left':
+      // Just RIGHT of the viewport.
+      return { top: 0, bottom: height, left: width, right: width }
+    case 'Right':
+      // Just LEFT of the viewport.
+      return { top: 0, bottom: height, left: 0, right: 0 }
+  }
 }
 
 function isInDirection(direction: Direction, origin: RectLike, rect: RectLike): boolean {
@@ -303,7 +352,11 @@ function moveFocusDirectionally(direction: Direction): void {
     if (prevented) return
   }
 
-  const origin = current ? current.getBoundingClientRect() : zeroRectAtOrigin()
+  // WR-03: with nothing focused, seed from the viewport edge opposite `direction`
+  // rather than a zero rect at (0,0) -- see `viewportOriginFor`.
+  const origin = current
+    ? current.getBoundingClientRect()
+    : viewportOriginFor(direction)
   const candidates = getFocusableElements().filter((el) => el !== current)
 
   let best: HTMLElement | null = null

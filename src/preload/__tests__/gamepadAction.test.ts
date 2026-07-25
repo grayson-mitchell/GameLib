@@ -412,4 +412,120 @@ describe('tauriGamepadAction directional focus movement (REQ-34.1-06)', () => {
     await tauriGamepadAction({ action: 'padRight' })
     expect(fakeDocument.activeElement).toBe(origin)
   })
+
+  // ── WR-02 (Phase 34.1 code review): doTab's preventDefault + stale-list bugs ──
+
+  it('REQ-34.1-06/WR-02: tab does NOT move focus when the app preventDefault()s the Tab keydown', async () => {
+    const el0 = new FakeElement('button')
+    const el1 = new FakeElement('button')
+    fakeDocument.querySelectorAll.mockReturnValue([el0, el1])
+    fakeDocument.activeElement = el0
+    // A modal focus trap / custom focus manager handling Tab itself. Before this fix
+    // `doTab` discarded `dispatchKey`'s return value, so focus moved TWICE -- once by
+    // the app, once by this function.
+    el0.addEventListener('keydown', (event) => event.preventDefault())
+
+    await tauriGamepadAction({ action: 'tab' })
+    expect(fakeDocument.activeElement).toBe(el0)
+  })
+
+  it('REQ-34.1-06/WR-02: shiftTab also honours preventDefault()', async () => {
+    const el0 = new FakeElement('button')
+    const el1 = new FakeElement('button')
+    fakeDocument.querySelectorAll.mockReturnValue([el0, el1])
+    fakeDocument.activeElement = el1
+    el1.addEventListener('keydown', (event) => event.preventDefault())
+
+    await tauriGamepadAction({ action: 'shiftTab' })
+    expect(fakeDocument.activeElement).toBe(el1)
+  })
+
+  it('REQ-34.1-06/WR-02: the focusable list is recomputed AFTER the Tab dispatch, so a DOM change made by the app handler is honoured', async () => {
+    const el0 = new FakeElement('button')
+    const stale = new FakeElement('button')
+    const fresh = new FakeElement('button')
+
+    // Before the dispatch the document contains [el0, stale]; the app's own (non-
+    // preventing) Tab handler swaps `stale` out for `fresh` -- e.g. closing a dialog.
+    // A pre-dispatch snapshot would focus the detached `stale` element.
+    fakeDocument.querySelectorAll.mockReturnValue([el0, stale])
+    fakeDocument.activeElement = el0
+    el0.addEventListener('keydown', () => {
+      fakeDocument.querySelectorAll.mockReturnValue([el0, fresh])
+    })
+
+    await tauriGamepadAction({ action: 'tab' })
+    expect(fakeDocument.activeElement).toBe(fresh)
+    expect(stale.focus).not.toHaveBeenCalled()
+  })
+
+  // ── WR-03 (Phase 34.1 code review): Up/Left were dead with nothing focused ──
+
+  it('REQ-34.1-06/WR-03: padUp with nothing focused focuses the BOTTOM-most element (was a permanent no-op)', async () => {
+    const top = new FakeElement('button', { top: 0, left: 350, right: 450, bottom: 50 })
+    const bottom = new FakeElement('button', {
+      top: 500,
+      left: 350,
+      right: 450,
+      bottom: 550
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([top, bottom])
+    fakeDocument.activeElement = fakeDocument.body
+
+    await tauriGamepadAction({ action: 'padUp' })
+    expect(fakeDocument.activeElement).toBe(bottom)
+  })
+
+  it('REQ-34.1-06/WR-03: padLeft with nothing focused focuses the RIGHT-most element (was a permanent no-op)', async () => {
+    const left = new FakeElement('button', { top: 250, left: 0, right: 100, bottom: 300 })
+    const right = new FakeElement('button', {
+      top: 250,
+      left: 600,
+      right: 700,
+      bottom: 300
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([left, right])
+    fakeDocument.activeElement = fakeDocument.body
+
+    await tauriGamepadAction({ action: 'padLeft' })
+    expect(fakeDocument.activeElement).toBe(right)
+  })
+
+  it('REQ-34.1-06/WR-03: leftStickUp/leftStickLeft with nothing focused are live too, matching their pad equivalents', async () => {
+    const top = new FakeElement('button', { top: 0, left: 350, right: 450, bottom: 50 })
+    const bottom = new FakeElement('button', {
+      top: 500,
+      left: 350,
+      right: 450,
+      bottom: 550
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([top, bottom])
+
+    fakeDocument.activeElement = fakeDocument.body
+    await tauriGamepadAction({ action: 'leftStickUp' })
+    expect(fakeDocument.activeElement).toBe(bottom)
+
+    fakeDocument.activeElement = fakeDocument.body
+    await tauriGamepadAction({ action: 'leftStickLeft' })
+    expect(fakeDocument.activeElement).toBe(bottom)
+  })
+
+  it('REQ-34.1-06/WR-03: Down/Right with nothing focused still pick the top/left-most element (unchanged behaviour)', async () => {
+    const topLeft = new FakeElement('button', { top: 0, left: 0, right: 100, bottom: 50 })
+    const bottomRight = new FakeElement('button', {
+      top: 500,
+      left: 600,
+      right: 700,
+      bottom: 550
+    })
+    fakeDocument.querySelectorAll.mockReturnValue([topLeft, bottomRight])
+
+    fakeDocument.activeElement = fakeDocument.body
+    await tauriGamepadAction({ action: 'padDown' })
+    expect(fakeDocument.activeElement).toBe(topLeft)
+
+    fakeDocument.activeElement = fakeDocument.body
+    await tauriGamepadAction({ action: 'padRight' })
+    expect(fakeDocument.activeElement).toBe(topLeft)
+  })
 })
