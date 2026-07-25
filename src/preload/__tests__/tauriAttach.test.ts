@@ -4,7 +4,35 @@
  * side effect actually assigns `window.api` + the 6 preload globals when `isTauri()` is
  * true (the BLOCKER-1 fix from 27-01), and does nothing when it's false (Electron path
  * unaffected -- the real preload script attaches window.api on its own, independently).
+ *
+ * Phase 34.1 Plan 03 (D-01): `tauriAttach.ts` -> `./api` -> `./api/misc.ts` now
+ * statically imports `./api/tauriWindowChrome.ts`, which in turn statically imports the
+ * REAL `@tauri-apps/api/window`/`@tauri-apps/api/webview` packages. Those packages'
+ * classes extend `Resource` from `@tauri-apps/api/core` at module-evaluation time, which
+ * this file's existing minimal `@tauri-apps/api/core` mock (below) does not provide --
+ * so they must be mocked here too, or importing `../tauriAttach` for real (as every test
+ * below does) throws `Class extends value undefined is not a constructor` before any
+ * assertion runs.
  */
+
+jest.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: () => ({
+    minimize: jest.fn(),
+    maximize: jest.fn(),
+    unmaximize: jest.fn(),
+    close: jest.fn(),
+    isMaximized: jest.fn(),
+    isMinimized: jest.fn(),
+    setFullscreen: jest.fn(),
+    setDecorations: jest.fn(),
+    startDragging: jest.fn(),
+    toggleMaximize: jest.fn()
+  })
+}))
+
+jest.mock('@tauri-apps/api/webview', () => ({
+  getCurrentWebview: () => ({ setZoom: jest.fn() })
+}))
 
 // tauriAttach.ts's top-level code reads/assigns `window`/`navigator` immediately on
 // import -- provide minimal stubs since this project's preload Jest environment is

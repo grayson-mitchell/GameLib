@@ -1,4 +1,17 @@
 import { makeListenerCaller, makeHandlerInvoker, frontendListenerSlot } from '../ipc'
+import { isTauri } from '../tauriTransport'
+import {
+  tauriMinimizeWindow,
+  tauriMaximizeWindow,
+  tauriUnmaximizeWindow,
+  tauriCloseWindow,
+  tauriIsMaximized,
+  tauriIsMinimized,
+  tauriIsFullscreen,
+  tauriSetFullscreen,
+  tauriIsFrameless,
+  tauriSetZoomFactor
+} from './tauriWindowChrome'
 
 export const clearCache = makeListenerCaller('clearCache')
 export const clearAchievementCache = makeListenerCaller('clearAchievementCache')
@@ -12,20 +25,41 @@ export const getCurrentChangelog = makeHandlerInvoker('getCurrentChangelog')
 export const openPatreonPage = makeListenerCaller('openPatreonPage')
 export const openKofiPage = makeListenerCaller('openKofiPage')
 export const openGithubSponsorsPage = makeListenerCaller('openGithubSponsorsPage')
-export const isFullscreen = makeHandlerInvoker('isFullscreen')
-export const isFrameless = makeHandlerInvoker('isFrameless')
-export const isMinimized = makeHandlerInvoker('isMinimized')
-export const isMaximized = makeHandlerInvoker('isMaximized')
-export const minimizeWindow = makeListenerCaller('minimizeWindow')
-export const maximizeWindow = makeListenerCaller('maximizeWindow')
-export const unmaximizeWindow = makeListenerCaller('unmaximizeWindow')
-export const closeWindow = makeListenerCaller('closeWindow')
-export const setFullscreen = makeListenerCaller('setFullscreen')
+// D-01/D-02 (Phase 34.1 Plan 03): window chrome executes RENDERER-SIDE under Tauri --
+// the sidecar registers nothing for these ten channels, and the
+// UNPORTED_CHANNEL_MARKER path is never reached because this isTauri() short-circuit
+// is the only caller path. Under Electron each still goes through the same generic
+// ipc.ts factory as before -- byte-identical to the pre-plan behavior.
+const isFullscreenIpc = makeHandlerInvoker('isFullscreen')
+const isFramelessIpc = makeHandlerInvoker('isFrameless')
+const isMinimizedIpc = makeHandlerInvoker('isMinimized')
+const isMaximizedIpc = makeHandlerInvoker('isMaximized')
+const minimizeWindowIpc = makeListenerCaller('minimizeWindow')
+const maximizeWindowIpc = makeListenerCaller('maximizeWindow')
+const unmaximizeWindowIpc = makeListenerCaller('unmaximizeWindow')
+const closeWindowIpc = makeListenerCaller('closeWindow')
+const setFullscreenIpc = makeListenerCaller('setFullscreen')
+const setZoomFactorIpc = makeListenerCaller('setZoomFactor')
+
+export const isFullscreen = () => (isTauri() ? tauriIsFullscreen() : isFullscreenIpc())
+export const isFrameless = () => (isTauri() ? tauriIsFrameless() : isFramelessIpc())
+export const isMinimized = () => (isTauri() ? tauriIsMinimized() : isMinimizedIpc())
+export const isMaximized = () => (isTauri() ? tauriIsMaximized() : isMaximizedIpc())
+export const minimizeWindow = () =>
+  isTauri() ? tauriMinimizeWindow() : minimizeWindowIpc()
+export const maximizeWindow = () =>
+  isTauri() ? tauriMaximizeWindow() : maximizeWindowIpc()
+export const unmaximizeWindow = () =>
+  isTauri() ? tauriUnmaximizeWindow() : unmaximizeWindowIpc()
+export const closeWindow = () => (isTauri() ? tauriCloseWindow() : closeWindowIpc())
+export const setFullscreen = (enabled: boolean) =>
+  isTauri() ? tauriSetFullscreen(enabled) : setFullscreenIpc(enabled)
 export const handleMaximized = frontendListenerSlot('maximized')
 export const handleUnmaximized = frontendListenerSlot('unmaximized')
 export const handleFullscreen = frontendListenerSlot('fullscreen')
 export const openWebviewPage = makeListenerCaller('openWebviewPage')
-export const setZoomFactor = makeListenerCaller('setZoomFactor')
+export const setZoomFactor = (zoomFactor: string) =>
+  isTauri() ? tauriSetZoomFactor(zoomFactor) : setZoomFactorIpc(zoomFactor)
 export const frontendReady = makeListenerCaller('frontendReady')
 export const lock = makeListenerCaller('lock')
 export const unlock = makeListenerCaller('unlock')
@@ -63,7 +97,6 @@ export const handleShowDialog = frontendListenerSlot('showDialog')
 // below for why this module must not statically import the real value).
 import type Store from 'electron-store'
 import {
-  isTauri,
   registerStore,
   snapshotGet,
   snapshotHas,
