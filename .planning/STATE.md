@@ -4,14 +4,14 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: "Completed 34.2-17-PLAN.md (gap cycle 2, CR-01 renderer half: reportRepairFailure extracted, 4/4 tests, CR-01 fully closed) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-18 remains)"
-last_updated: "2026-07-26T00:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2: plan 34.2-17 executed (CR-01 renderer half, reportRepairFailure extracted, CR-01 fully closed)
+last_updated: "2026-07-25T22:34:46.252Z"
+last_activity: 2026-07-25
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 89
-  completed_plans: 80
-  percent: 90
+  completed_plans: 81
+  percent: 67
 ---
 
 # Project State
@@ -33,8 +33,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 EXECUTING (4 plans, 34.2-15..18)
-Plan: 17 of 18 executed -- 34.2-18 remains
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 COMPLETE (4 plans, 34.2-15..18, all executed)
+Plan: 18 of 18 executed -- gap cycle 2 fully closed, re-verification next
 
 Gap cycle 2 plans (created 2026-07-26, plan-checker PASSED on iteration 1):
 
@@ -140,6 +140,37 @@ pre-existing `unknown`-typed template-literal warning moved from `index.tsx:147`
 `repairFailure.ts:45` when the catch body was extracted); `lint-translations` output byte-identical
 before/after (7929 lines, exit 0). Next: 34.2-18 (wave 2, depends on 15+16 -- CR-03 + WR-01
 pathShim/logger containment kit for `sidecarRejectionGuard.test.ts`), the final plan of gap cycle 2.
+
+34.2-18 done -- GAP CYCLE 2, fourth and final plan executed, CR-03/WR-01 CLOSED. Task 1 added
+the `pathShim` + `backend/logger/paths` containment kit to `sidecarRejectionGuard.test.ts`
+(the suite gap cycle 1 created to prove CR-02, which never received the CR-03 remedy its
+siblings got in plan 34.2-10 -- an `os.homedir()` mock alone does not contain `pathShim`'s
+real `resolveAppDataDir()` on Windows/Linux, since it prefers `env.APPDATA`/
+`env.XDG_CONFIG_HOME`); extended the tripwire to 4 candidates (`appFolder`/`userDataPath`/
+`fixesPath`/`getLogFilePath({})`); replaced the suite's false "NO FILESYSTEM WRITES" docstring
+claim; replaced the tripwire's heavy `setupIsolatedBootstrapHarness()` data source with a
+narrower `loadConstantsPaths()` helper (IN-03). Task 2 extended the same log-path containment
+to `gameDetailsFlows.test.ts`/`enrichmentFlows.test.ts` (closing WR-01 for all four in-scope
+suites) with zero assertions altered; before/after `~/Library/Logs/GameLib` timestamps
+confirmed unchanged. Task 3 added `testContainment.test.ts`: Block A proves containment holds
+even with `APPDATA`/`XDG_CONFIG_HOME`/`XDG_STATE_HOME`/`LOCALAPPDATA` set to sentinels outside
+`os.tmpdir()` AND `process.platform` forced to `'linux'` (mirroring this repo's own
+`overrideProcessPlatform` precedent, `constants.test.ts`) -- the platform-forcing was a
+necessary addition beyond the plan's literal env-var-only text, since `pathShim.ts`'s real
+darwin branch never consults any of those four env vars, so a macOS run using env vars alone
+would have been vacuous; Block B is a declared-list (4 entries) source gate over
+comment-stripped source, plus anti-vacuity checks. 11 other sidecar suites sharing the same
+risk class recorded as declared debt in `deferred-items.md`. One Rule 1 deviation: Task 1's
+literal deliberate-break acceptance criterion (remove pathShim mock + export
+`XDG_CONFIG_HOME`) does not reproduce on this macOS host for the reason above -- substituted
+the platform-correct 34.2-10 negative-control method (point the mock's own `'appData'` branch
+outside tmpdir) instead, verified live (all 11 tests failed "REFUSING TO RUN", reverted clean).
+REQ-34.2-07/-14 complete, see 34.2-18-SUMMARY.md. Full backend sweep: 111 suites (110 passed /
+1 pre-existing known `rustInvokeChannel.test.ts` failure, unchanged from 34.1), 2273 tests
+(2272 passed) -- +1 suite/+27 tests over the 110/111 baseline, zero regressions; `tsc --noEmit`
+and `cargo check --quiet` both clean; no production/Rust code touched.
+**PHASE 34.2 GAP CYCLE 2 COMPLETE -- all 4 plans (34.2-15..18) executed, CR-01/CR-02/CR-03/
+WR-01 all closed. Next: re-verification of Phase 34.2 as a whole.**
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -458,7 +489,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1252,6 +1283,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P15 | 25m | 2 tasks | 2 files |
 | Phase 34.2 P16 | 45min | 3 tasks | 6 files |
 | Phase 34.2 P17 | ~35min | 2 tasks | 4 files |
+| Phase 34.2 P18 | 30min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
