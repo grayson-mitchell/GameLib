@@ -436,6 +436,66 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         stderrWriteSpy.mockRestore()
       }
     })
+
+    // RED-PROOF (gap cycle 2, CR-02): reverting processGuards.ts's `let message = <fallback
+    // literal>; try { message = ... }` back to a single `const message = \`...${String(reason)}\``
+    // built OUTSIDE its own try -- i.e. moving the reassignment above/out of the try block --
+    // makes THIS test fail: `target.emit('unhandledRejection', ...)` throws
+    // `TypeError: Cannot convert object to primitive value` instead of returning normally.
+    // Verified by hand during this task's execution (recorded in the plan SUMMARY's RED
+    // spot-check note) and restored immediately afterwards.
+    it('CR-02 regression (gap cycle 2): never throws out of emit() for a null-prototype reason', () => {
+      const { installUnhandledRejectionGuard, logWarningMock } =
+        loadFreshProcessGuards()
+      const target = new EventEmitter()
+      installUnhandledRejectionGuard(target)
+
+      const reason = Object.create(null)
+
+      expect(() => target.emit('unhandledRejection', reason)).not.toThrow()
+      expect(logWarningMock).toHaveBeenCalledWith(
+        '[sidecar] unhandled promise rejection: <unstringifiable reason>',
+        expect.anything()
+      )
+    })
+
+    it('CR-02 regression (gap cycle 2): never throws out of emit() when reason.toString throws', () => {
+      const { installUnhandledRejectionGuard, logWarningMock } =
+        loadFreshProcessGuards()
+      const target = new EventEmitter()
+      installUnhandledRejectionGuard(target)
+
+      const reason = {
+        toString() {
+          throw new Error('toString exploded')
+        }
+      }
+
+      expect(() => target.emit('unhandledRejection', reason)).not.toThrow()
+      expect(logWarningMock).toHaveBeenCalledWith(
+        '[sidecar] unhandled promise rejection: <unstringifiable reason>',
+        expect.anything()
+      )
+    })
+
+    it('CR-02 regression (gap cycle 2): never throws out of emit() when reason[Symbol.toPrimitive] throws', () => {
+      const { installUnhandledRejectionGuard, logWarningMock } =
+        loadFreshProcessGuards()
+      const target = new EventEmitter()
+      installUnhandledRejectionGuard(target)
+
+      const reason = {
+        [Symbol.toPrimitive]() {
+          throw new Error('toPrimitive exploded')
+        }
+      }
+
+      expect(() => target.emit('unhandledRejection', reason)).not.toThrow()
+      expect(logWarningMock).toHaveBeenCalledWith(
+        '[sidecar] unhandled promise rejection: <unstringifiable reason>',
+        expect.anything()
+      )
+    })
   })
 
   describe('Group 3: entry-ordering gate (by-construction, source text -- src/sidecar/ is not a jest project root)', () => {
