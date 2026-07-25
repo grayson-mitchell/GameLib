@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-02-PLAN.md
-last_updated: "2026-07-25T08:56:07.000Z"
-last_activity: 2026-07-25 -- 34.2-02 executed (gamedetails/dispatch.ts + overrides.ts extraction, main.ts delegations)
+stopped_at: Completed 34.2-03-PLAN.md
+last_updated: "2026-07-25T09:07:17.000Z"
+last_activity: 2026-07-25 -- 34.2-03 executed (knownFixes.ts + crossoverRatingMap.ts extraction, launcher.ts/main.ts/ipc_handler.ts delegations)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 78
-  completed_plans: 65
+  completed_plans: 66
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -64,7 +64,27 @@ electron import into dispatch.ts failed the source gate; dropping the attachOver
 getGameInfo failed a test; swapping kill's two statements failed the call-order test. One Rule 3
 deviation: removed a pre-existing unused `backendEvents` import from main.ts (a leftover from
 Phase 34.1's changeLanguage extraction) that blocked this plan's own eslint-clean acceptance
-criterion. REQ-34.2-01/03/08/09 complete, see 34.2-02-SUMMARY.md. Next: 34.2-03.
+criterion. REQ-34.2-01/03/08/09 complete, see 34.2-02-SUMMARY.md.
+
+34.2-03 done -- Task 1 extracted readKnownFixes verbatim out of launcher.ts into Electron-free
+src/backend/knownFixes.ts (D-05, launcher.ts deliberately excluded from the sidecar's import graph
+per steamFlowRegistration.ts:22); launcher.ts's installFixes imports it back unchanged, dead
+fixesPath/storeMap/KnowFixesInfo imports removed. Task 2 extracted buildCrossoverRatingMap +
+its D-11/D-16 three-state docstring out of crossover_index/ipc_handler.ts into
+crossoverRatingMap.ts (D-06, closing the side-effect-import trap where the function shared a file
+with its own addHandler call); ipc_handler.ts reduced to two imports + the single addHandler line,
+no re-export; ratingMap.test.ts retargeted, its jest.mock('backend/ipc') block dropped (6->7
+tests, new anti-remerge source-gate test). Task 3 added a 5-test direct-call proof suite
+(knownFixes.test.ts, all REQ-34.2-05-tagged) with a jest.mock('os') homedir redirect
+(appShellFlows.test.ts precedent) as defense-in-depth alongside the project-wide electron
+automock, which already anchors fixesPath under os.tmpdir() via app.getPath('appData'). One Rule 3
+deviation: main.ts's refreshCrossoverRatingMap() had a second, plan-undocumented import of
+buildCrossoverRatingMap from ipc_handler.ts that broke the build after Task 2's extraction --
+redirected to crossoverRatingMap.ts. Logged one unrelated pre-existing eslint error
+(index.test.ts:29) to the phase's deferred-items.md rather than fixing it. REQ-34.2-05/06/14
+complete, see 34.2-03-SUMMARY.md. RED spot-checked: removing storeMap[runner] from the path
+construction failed 3/5 knownFixes tests; replacing the try/catch with a bare JSON.parse failed
+the malformed-JSON test. Next: 34.2-04.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Executing Phase 34.2
@@ -291,7 +311,19 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-25 -- 34.2-01 executed (i18next init + releasesInfoReady/anticheat wirings, see 34.2-01-SUMMARY.md)
+Last activity: 2026-07-25 -- 34.2-03 executed (knownFixes.ts + crossoverRatingMap.ts extraction, see 34.2-03-SUMMARY.md)
+
+> **Plan-counter note (2026-07-25, post-34.2-03 execution):** per the known-corruption precedent
+> documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
+> `stopped_at:`, mangle the `Status:`/`Plan:` prose block, and revert `total_plans`/
+> `completed_plans`), those verbs were **deliberately not run** for this execution either.
+> Frontmatter (`status`, `stopped_at`, `last_updated`, `last_activity`,
+> `progress.completed_plans` 65 -> 66) and the body `Plan:`/`Status:`/`Last activity:` fields
+> were written by hand against the phase directory and this session's own commits: `f03f95d3`
+> (feat, Task 1), `137a522d` (feat, Task 2), `99cd1450` (test, Task 3), plus `34.2-03-SUMMARY.md`
+> now on disk. `total_plans: 78` is unchanged (34.2-01..07 were already counted when the phase was
+> planned); `percent: 60` is phase-based (9 of 15 completed phases), unchanged -- Phase 34.2 itself
+> is not yet marked complete pending plans 34.2-04..07.
 
 > **Plan-counter note (2026-07-25, post-34.2-01 execution):** per the known-corruption precedent
 > documented in every note below (`state.advance-plan`/`state.update-progress` silently revert
