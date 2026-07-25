@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: gaps_found
-stopped_at: Phase 34.2 gap cycle 1 EXECUTED (7/7, 34.2-08..14) but RE-VERIFICATION returned gaps_found -- the 3 original gaps (REQ-34.2-03/-07/-12) ARE genuinely closed, but the closure plans introduced 3 NEW blockers (unregistered logError send channel, String(reason) outside the guard's own try, sidecarRejectionGuard.test.ts missing the pathShim mock); PHASE NOT COMPLETE, needs gap cycle 2
+status: ready_to_execute
+stopped_at: Phase 34.2 GAP CYCLE 2 PLANNED (4 plans, 34.2-15..18, 2 waves) -- closes the 3 blockers gap cycle 1 introduced (CR-01 unregistered logError send channel, CR-02 String(reason) outside the guard's own try, CR-03 sidecarRejectionGuard.test.ts missing the pathShim mock). The 3 ORIGINAL gaps (REQ-34.2-03/-07/-12) remain genuinely closed. Plan-checker PASSED first iteration. PHASE NOT COMPLETE -- next is /gsd-execute-phase 34.2
 last_updated: "2026-07-26T00:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executed + re-verified (gaps_found, 3 new blockers)
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 2 planned (4 plans, checker passed)
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 85
+  total_plans: 89
   completed_plans: 77
-  percent: 91
+  percent: 87
 ---
 
 # Project State
@@ -33,8 +33,29 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 1 COMPLETE (7/7 plans), ready for re-verification
-Plan: 14 of 14
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 2 PLANNED (4 plans, 34.2-15..18), ready to execute
+Plan: 14 of 18 executed
+
+Gap cycle 2 plans (created 2026-07-26, plan-checker PASSED on iteration 1):
+- 34.2-15 (wave 1) -- CR-02: move String(reason) inside installUnhandledRejectionGuard's own try
+  with a hardcoded fallback; 3 hostile-reason tests (null prototype, throwing toString, throwing
+  Symbol.toPrimitive). REQ-34.2-07, -14.
+- 34.2-16 (wave 1) -- CR-01 sidecar half: curated loggerFlowRegistration.ts registering ONLY the
+  logError send channel, proven by a positive log-file side effect over the real transport (NOT
+  absence-of-throw). Ports logError ahead of its Phase 34.3 slot -- both IPC-PORT-INVENTORY.md and
+  34.2-PORTED-CHANNELS.md must be reconciled; double-registration prohibited (dispatchSend iterates
+  ALL listeners, so a second one duplicates every frontend log line). REQ-34.2-12, -08, -09, -13, -14.
+- 34.2-17 (wave 1) -- CR-01 renderer half: extract reportRepairFailure (console.error + logError +
+  ERROR dialog), reduce onRepairYesClick's catch to a delegation. REQ-34.2-12, -14.
+- 34.2-18 (wave 2, depends_on 15+16) -- CR-03 + WR-01: apply the pathShim + logger/paths containment
+  kit to sidecarRejectionGuard.test.ts, extend every tripwire to the log path, prove with an
+  env-simulating test (APPDATA/XDG_CONFIG_HOME/XDG_STATE_HOME/LOCALAPPDATA set to sentinels OUTSIDE
+  os.tmpdir()) -- a green macOS run is explicitly NOT accepted as evidence. REQ-34.2-07, -14.
+
+Newly surfaced debt (deferred, NOT planned): 11 other sidecar suites drive bootstrap.init() without
+the containment kit (appShellFlows, bootstrapWirings, bootstrap, downloadQueueFlows, electronUntouched,
+onlineMonitorWiring, installFlows, skeletonFlows, settingsFlows, rustInvokeChannel, steamAuthFlows) --
+same tests-clobbering-real-steam-store risk class, pre-existing. Recorded in deferred-items.md.
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
