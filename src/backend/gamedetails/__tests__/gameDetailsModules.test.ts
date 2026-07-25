@@ -163,6 +163,34 @@ const OTHER_RUNNERS_FOR_GOG = ['steam', 'legendary', 'nile', 'zoom', 'sideload']
 const OTHER_RUNNERS_FOR_SIDELOAD = ['steam', 'legendary', 'gog', 'nile', 'zoom'] as const
 
 describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
+  // WR-04 (Phase 34.2 Plan 12): initialize the REAL i18next singleton once
+  // for this suite, reading resources straight off disk rather than a
+  // hand-written fixture. Reading the real locale file is deliberate: the
+  // getLaunchOptions assertion below breaks if `launch.default` is ever
+  // renamed or deleted, which a hardcoded fixture would silently hide.
+  // Guarded by `isInitialized` so this stays safe if another suite in the
+  // same jest worker already initialized the singleton (mirrors
+  // `bootstrapWirings.test.ts`'s own real-i18next precedent).
+  beforeAll(async () => {
+    if (!i18next.isInitialized) {
+      const gamepageResources = JSON.parse(
+        readSourceFile(
+          join(__dirname, '../../../../public/locales/en/gamepage.json'),
+          'utf-8'
+        )
+      )
+      await i18next.init({
+        lng: 'en',
+        fallbackLng: 'en',
+        ns: ['gamepage'],
+        defaultNS: 'gamepage',
+        resources: { en: { gamepage: gamepageResources } },
+        returnEmptyString: false,
+        returnNull: false
+      })
+    }
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -339,22 +367,49 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   })
 
   // ── getLaunchOptions ────────────────────────────────────────────────
+  // WR-04 (Phase 34.2 Plan 12): nothing in this assertion is derived from the
+  // same i18next.t() call the code under test makes. Previously,
+  // `expectedDefaultName` was computed by calling the SAME uninitialized
+  // `i18next.t('launch.default', 'Default', { ns: 'gamepage' })` the code
+  // under test calls -- on i18next 22.5.1 the uninitialized singleton
+  // returns `undefined` (it does not throw, and the inline English default
+  // does not rescue it), and `toEqual` treats `undefined` object properties
+  // as absent, so the assertion passed even if `result[0]` had no `name` at
+  // all. This rewrite compares against the on-disk locale file's own value
+  // (read via the real, now-initialized i18next singleton from the
+  // `beforeAll` above) and explicitly rejects both prior failure modes: the
+  // uninitialized-real-singleton `undefined`, and the project-wide
+  // `__mocks__/i18next.ts` automock's `t: (key) => key` echo.
   it('REQ-34.2-01 getLaunchOptions prepends a synthesized Default option when options exist but none matches the default predicate', async () => {
     managerMocks.steam.getLaunchOptions.mockResolvedValue([
       { name: 'Custom', parameters: '-x', type: 'basic' }
     ])
-    const expectedDefaultName = i18next.t('launch.default', 'Default', {
-      ns: 'gamepage'
-    })
+    const gamepageResources = JSON.parse(
+      readSourceFile(
+        join(__dirname, '../../../../public/locales/en/gamepage.json'),
+        'utf-8'
+      )
+    )
+    const realTranslatedDefault = gamepageResources.launch.default
 
     const result = await getLaunchOptions('440', 'steam')
 
     expect(result).toHaveLength(2)
-    expect(result[0]).toEqual({
-      name: expectedDefaultName,
-      parameters: '',
-      type: 'basic'
-    })
+    expect(result[0]).toMatchObject({ parameters: '', type: 'basic' })
+    // `LaunchOption` is a union (basic | altExe | dlc) and only the 'basic'
+    // variant carries `name` -- the toMatchObject assertion above already
+    // proves `type: 'basic'` at runtime, so this cast merely satisfies the
+    // type checker for the narrower assertions below.
+    const defaultOption = result[0] as { name: string }
+    // Assertion 3: a real translated string, compared against the file that
+    // defines it.
+    expect(defaultOption.name).toBe(realTranslatedDefault)
+    // Assertion 4 (the regression assertion): fails against the
+    // uninitialized real singleton (which yields `undefined`) AND against
+    // the automock (whose `t: (key) => key` yields the literal key) -- so
+    // neither prior blind spot can silently return.
+    expect(defaultOption.name).not.toBe('launch.default')
+    expect(defaultOption.name).not.toBeUndefined()
   })
 
   it('REQ-34.2-01 getLaunchOptions does NOT prepend when a default option already exists', async () => {
