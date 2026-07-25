@@ -303,4 +303,38 @@ describe('setSetting wrapper (REQ-34.1-03)', () => {
       value: true
     })
   })
+
+  // WR-05 regression guard: `setSetting` was a pure, never-throwing passthrough before
+  // this slice. It is reachable from untyped renderer code, so a malformed call must
+  // still be forwarded harmlessly rather than throwing a TypeError back into the caller
+  // AFTER the IPC send has already gone out. The unguarded `const [{ appName, key,
+  // value }] = args` ran on BOTH paths and broke that.
+  const malformed = [undefined, null] as unknown as [
+    Parameters<typeof setSetting>[0]
+  ]
+
+  it('REQ-34.1-03/WR-05: a malformed argument does not throw on the ELECTRON path, and is still forwarded over IPC', () => {
+    mockedIsTauri.mockReturnValue(false)
+    for (const bad of malformed) {
+      expect(() => setSetting(bad)).not.toThrow()
+      expect(electronIpcSendMock).toHaveBeenCalledWith('setSetting', bad)
+    }
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-03/WR-05: a malformed argument does not throw on the TAURI path either', () => {
+    mockedIsTauri.mockReturnValue(true)
+    for (const bad of malformed) {
+      expect(() => setSetting(bad)).not.toThrow()
+    }
+    expect(mockWindow.setDecorations).not.toHaveBeenCalled()
+  })
+
+  it('REQ-34.1-03/WR-05: a zero-argument call does not throw on either path', () => {
+    const noArgs = setSetting as unknown as () => void
+    mockedIsTauri.mockReturnValue(false)
+    expect(() => noArgs()).not.toThrow()
+    mockedIsTauri.mockReturnValue(true)
+    expect(() => noArgs()).not.toThrow()
+  })
 })
