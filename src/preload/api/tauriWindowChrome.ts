@@ -139,6 +139,132 @@ export const tauriSetZoomFactor = (zoomFactor: string): void => {
 }
 
 /**
+ * CR-03 (Phase 34.1 code review): the PRODUCER for the `maximized`/`unmaximized`
+ * frontend pushes.
+ *
+ * Under Electron these come from real window events (`main.ts:240-241`:
+ * `mainWindow.on('maximize', () => sendFrontendMessage('maximized'))`). This slice
+ * ported `maximizeWindow`/`unmaximizeWindow`/`isMaximized` renderer-side and added a
+ * double-click `toggleMaximize()` handler, but nothing emitted the two pushes under
+ * Tauri -- not the sidecar, not `main.rs`, not this module. `WindowControls`
+ * (`frontend/components/UI/WindowControls/index.tsx`) reads `isMaximized()` exactly ONCE
+ * at mount and relies on those pushes for every state transition afterwards, so
+ * `maximized` stayed `false` forever: the button kept calling `maximizeWindow()` and
+ * THE WINDOW COULD NEVER BE RESTORED FROM THE TITLEBAR BUTTON -- the exact control this
+ * slice exists to port. The dblclick `toggleMaximize()` desynced it further.
+ *
+ * The producer is renderer-side (Tauri's own window events), matching how every other
+ * D-01 channel in this module is served -- there is no sidecar or `main.rs` hop, and no
+ * new capability grant: `onResized` rides `core:event:allow-listen`, already covered by
+ * `core:default`.
+ *
+ * ONE shared `onResized` subscription with a de-duped `lastMaximized` cache backs all
+ * subscribers: `onResized` fires continuously during an interactive resize drag, and an
+ * un-deduped design would issue an `isMaximized()` IPC round-trip -- and a React
+ * setState -- per frame.
+ *
+ * Deliberately NOT wired here: `fullscreen`. Its Electron producer is
+ * `enter-full-screen`/`leave-full-screen` (`main.ts:242-246`), but `isFullscreen` under
+ * Tauri is NOT a window-state query -- `tauriIsFullscreen` above returns the static
+ * `isSteamDeckGameMode` gamescope signal, which is what `App.tsx`'s `fullscreen` CSS
+ * class actually tracks, and which cannot change at runtime. Pushing REAL OS
+ * fullscreen transitions into that slot would silently redefine what the class means
+ * and put it permanently at odds with the `isFullscreen()` value GlobalState seeds it
+ * from. `tauriHandleFullscreen` below is therefore a DECLARED no-op, not an oversight.
+ */
+type MaximizeChangeListener = (maximized: boolean) => void
+
+const maximizeListeners = new Set<MaximizeChangeListener>()
+let maximizeWatcherStarted = false
+let lastMaximized: boolean | undefined
+
+function emitMaximizeChange(maximized: boolean): void {
+  if (maximized === lastMaximized) return
+  lastMaximized = maximized
+  for (const listener of [...maximizeListeners]) {
+    try {
+      listener(maximized)
+    } catch (error) {
+      warn('maximizeChangeListener', error)
+    }
+  }
+}
+
+/**
+ * Starts the single shared `onResized` watcher. Idempotent, and never unsubscribed --
+ * it is the lifetime-of-the-window equivalent of Electron's own
+ * `mainWindow.on('maximize', ...)` registration, which is likewise never removed.
+ */
+function ensureMaximizeWatcher(): void {
+  if (maximizeWatcherStarted) return
+  if (!isTauri()) return
+  maximizeWatcherStarted = true
+  try {
+    const appWindow = getCurrentWindow()
+    // Seed the de-dupe cache so the first real transition is not swallowed and a
+    // resize that does NOT change maximized-state does not spuriously fire.
+    void appWindow
+      .isMaximized()
+      .then((maximized) => {
+        if (lastMaximized === undefined) lastMaximized = maximized
+      })
+      .catch((error) => warn('maximizeWatcher:seed', error))
+
+    void appWindow
+      .onResized(() => {
+        void appWindow
+          .isMaximized()
+          .then(emitMaximizeChange)
+          .catch((error) => warn('maximizeWatcher:isMaximized', error))
+      })
+      .catch((error) => warn('maximizeWatcher:onResized', error))
+  } catch (error) {
+    warn('ensureMaximizeWatcher', error)
+  }
+}
+
+function subscribeMaximizeChange(
+  wanted: boolean,
+  listener: () => void
+): () => void {
+  const wrapped: MaximizeChangeListener = (maximized) => {
+    if (maximized === wanted) listener()
+  }
+  maximizeListeners.add(wrapped)
+  ensureMaximizeWatcher()
+  return () => {
+    maximizeListeners.delete(wrapped)
+  }
+}
+
+/** `handleMaximized` parity: fires when the window BECOMES maximized. */
+export const tauriHandleMaximized = (listener: () => void): (() => void) =>
+  subscribeMaximizeChange(true, listener)
+
+/** `handleUnmaximized` parity: fires when the window STOPS being maximized. */
+export const tauriHandleUnmaximized = (listener: () => void): (() => void) =>
+  subscribeMaximizeChange(false, listener)
+
+/**
+ * `handleFullscreen` -- a DECLARED no-op under Tauri. See the block comment above
+ * `MaximizeChangeListener` for why wiring this to real OS fullscreen state would be a
+ * silent semantic change, not a fix. Returns a no-op unsubscribe so the caller's
+ * `useEffect` cleanup contract still holds.
+ */
+export const tauriHandleFullscreen = (
+  _listener: (isFullscreen: boolean) => void
+): (() => void) => {
+  return () => {}
+}
+
+/** Test seam only -- resets the module-level watcher/de-dupe state. */
+export const __resetMaximizeWatcherForTests = (): void => {
+  maximizeListeners.clear()
+  maximizeWatcherStarted = false
+  lastMaximized = undefined
+}
+
+/**
  * D-05: applies `settings.framelessWindow` to the real window via `setDecorations()`.
  * Called with no argument to resolve from the settings snapshot (default `false` ->
  * DECORATED, matching Electron's shipped default); called with an explicit boolean

@@ -10,8 +10,12 @@ import {
   tauriIsFullscreen,
   tauriSetFullscreen,
   tauriIsFrameless,
-  tauriSetZoomFactor
+  tauriSetZoomFactor,
+  tauriHandleMaximized,
+  tauriHandleUnmaximized,
+  tauriHandleFullscreen
 } from './tauriWindowChrome'
+import type { IpcRendererEvent } from 'electron'
 import { tauriGamepadAction } from './tauriGamepadInput'
 import type { GamepadActionArgs } from 'common/types'
 
@@ -56,9 +60,46 @@ export const unmaximizeWindow = () =>
 export const closeWindow = () => (isTauri() ? tauriCloseWindow() : closeWindowIpc())
 export const setFullscreen = (enabled: boolean) =>
   isTauri() ? tauriSetFullscreen(enabled) : setFullscreenIpc(enabled)
-export const handleMaximized = frontendListenerSlot('maximized')
-export const handleUnmaximized = frontendListenerSlot('unmaximized')
-export const handleFullscreen = frontendListenerSlot('fullscreen')
+// CR-03 (Phase 34.1 code review): under Tauri these three pushes had NO PRODUCER --
+// Electron emits them from real window events (`main.ts:240-246`), but nothing on the
+// Tauri path did, so `frontendListenerSlot` registered a listener that could never
+// fire. For `maximized`/`unmaximized` that made `WindowControls`' restore button
+// permanently unreachable (it reads `isMaximized()` once at mount and depends on these
+// pushes for every transition after). The producer is renderer-side, in
+// `tauriWindowChrome.ts`, reached through the SAME `isTauri()` short-circuit as the ten
+// D-01 channels above; the Electron path is untouched.
+//
+// `fullscreen` is a DECLARED no-op under Tauri rather than a real fullscreen watch --
+// see `tauriHandleFullscreen`'s own comment: `isFullscreen` under Tauri is the static
+// `isSteamDeckGameMode` gamescope signal, not a window-state query, so there is no
+// runtime transition to push and emitting real OS fullscreen changes here would
+// silently redefine what `App.tsx`'s `fullscreen` class means.
+const handleMaximizedIpc = frontendListenerSlot('maximized')
+const handleUnmaximizedIpc = frontendListenerSlot('unmaximized')
+const handleFullscreenIpc = frontendListenerSlot('fullscreen')
+
+export const handleMaximized = (
+  listener: (e: IpcRendererEvent) => void
+): (() => void) =>
+  isTauri()
+    ? tauriHandleMaximized(() => listener(undefined as unknown as IpcRendererEvent))
+    : handleMaximizedIpc(listener)
+
+export const handleUnmaximized = (
+  listener: (e: IpcRendererEvent) => void
+): (() => void) =>
+  isTauri()
+    ? tauriHandleUnmaximized(() => listener(undefined as unknown as IpcRendererEvent))
+    : handleUnmaximizedIpc(listener)
+
+export const handleFullscreen = (
+  listener: (e: IpcRendererEvent, isFullscreen: boolean) => void
+): (() => void) =>
+  isTauri()
+    ? tauriHandleFullscreen((isFullscreen) =>
+        listener(undefined as unknown as IpcRendererEvent, isFullscreen)
+      )
+    : handleFullscreenIpc(listener)
 export const openWebviewPage = makeListenerCaller('openWebviewPage')
 export const setZoomFactor = (zoomFactor: string) =>
   isTauri() ? tauriSetZoomFactor(zoomFactor) : setZoomFactorIpc(zoomFactor)
