@@ -27,8 +27,13 @@
 import './installElectronHook'
 
 import type { Readable, Writable } from 'node:stream'
+import { existsSync } from 'graceful-fs'
+import { join } from 'node:path'
+import Backend from 'i18next-fs-backend'
+import i18next from 'i18next'
 import * as electronStub from './electronStub'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import { supportedLanguages } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 
@@ -69,7 +74,9 @@ import { initOnlineMonitor } from '../online_monitor'
 // `initHeadless()` assigns the SAME `heroicLogWriter` singleton via the
 // SAME real `LogWriter` class, skipping only those two Electron-app-only
 // side effects — not a reimplementation of logging itself.
-import { initHeadless as initLogger } from '../logger'
+import { initHeadless as initLogger, logWarning, LogPrefix } from '../logger'
+import { GlobalConfig } from '../config'
+import { publicDir } from '../constants/paths'
 
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
@@ -91,6 +98,11 @@ let loggerInitialized = false
 // `set-connectivity-online` listener, firing `setStatus()` (and a fresh `pingSites()` ping) once
 // per accumulated registration on every subsequent event.
 let onlineMonitorInitialized = false
+// Guards the i18next initialization block below (D-02). Same reason
+// loggerInitialized/onlineMonitorInitialized exist: bootstrap.test.ts / *Flows.test.ts call
+// init() many times per file with fresh streams, and re-initializing i18next per call is
+// wasteful and can race its async resource load.
+let i18nInitialized = false
 
 export function init(
   input: Readable = process.stdin,
@@ -103,6 +115,65 @@ export function init(
   if (!loggerInitialized) {
     initLogger()
     loggerInitialized = true
+  }
+  // i18next initialization (D-02): mirrors main.ts:460-472's
+  // `i18next.use(Backend).init({...})` call -- the ONLY i18next.init() call site in the
+  // whole backend, which only ever runs inside Electron's `app.whenReady()` and therefore
+  // never executes under the headless sidecar. Without it, `i18next.t()` returns
+  // `undefined` for every one of the 103 backend `t()` call sites reachable from the
+  // sidecar (verified against installed i18next 22.5.1 -- it does not throw and there is
+  // no rescuing inline English default).
+  //
+  // Placement is load-bearing: must run AFTER `initLogger()` above -- `GlobalConfig.get()`
+  // below is this process's first-ever `GlobalConfig` read, and the config-version-upgrade
+  // path (config.ts:145/152) can itself call `logInfo`/`logError` synchronously, which
+  // throws while `heroicLogWriter` is unset (same ordering reason as
+  // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
+  if (!i18nInitialized) {
+    i18nInitialized = true
+    try {
+      const settings = GlobalConfig.get().getSettings()
+      const localesDir = join(publicDir, 'locales')
+      // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
+      // under the sidecar, electronStub's `app.getAppPath()` resolves to `process.cwd()`,
+      // not a packaged asar root -- so the packaged-build half of this path cannot be
+      // proven by jest and is a named deferred-UAT item. If the resolved directory is
+      // absent, warn loudly naming the resolved path rather than silently falling back --
+      // i18next's own `fallbackLng`/key-return behavior below is still strictly better than
+      // the current permanent `undefined`.
+      if (!existsSync(localesDir)) {
+        logWarning(
+          `[bootstrap] i18next locales directory not found at "${localesDir}" -- backend-side translated strings will fall back to their keys`,
+          LogPrefix.Backend
+        )
+      }
+      i18next
+        .use(Backend)
+        .init({
+          backend: {
+            addPath: join(publicDir, 'locales', '{{lng}}', '{{ns}}'),
+            allowMultiLoading: false,
+            loadPath: join(publicDir, 'locales', '{{lng}}', '{{ns}}.json')
+          },
+          debug: false,
+          returnEmptyString: false,
+          returnNull: false,
+          fallbackLng: 'en',
+          lng: settings.language,
+          supportedLngs: supportedLanguages
+        })
+        .catch((error) => {
+          logWarning(
+            `[bootstrap] i18next initialization failed: ${error}`,
+            LogPrefix.Backend
+          )
+        })
+    } catch (error) {
+      logWarning(
+        `[bootstrap] Failed to read settings for i18next initialization: ${error}`,
+        LogPrefix.Backend
+      )
+    }
   }
   startRpcServer(input, output)
   electronStub.bindTransport({
