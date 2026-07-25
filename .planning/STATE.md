@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.2 gap cycle 1 EXECUTING -- 34.2-08 done; 34.2-09..14 remain
-last_updated: "2026-07-26T00:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-08 complete)
+stopped_at: Phase 34.2 gap cycle 1 EXECUTING -- 34.2-09 done; 34.2-10..14 remain
+last_updated: "2026-07-25T19:54:52.424Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-09 complete)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 85
-  completed_plans: 71
+  completed_plans: 72
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
-Plan: 9 of 14
+Plan: 10 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -203,6 +203,29 @@ NOTE: this plan's own STATE/ROADMAP writes were interrupted by an API cutoff and
 the orchestrator on re-entry; `state.begin-phase`/`state.update-progress` again reverted `stopped_at`
 to a false "Phase 34.2 fully complete (7/7)" and re-spliced a progress-bar string into the
 plan-counter note at line ~483 -- both hand-corrected, same precedent as every note in this cluster.
+
+34.2-09 done -- closed verification gap #2 (REQ-34.2-07) / code-review finding CR-02: Task 1
+attached a `.catch()` directly to the `downloadAntiCheatData(...)` call inside `bootstrap.ts`'s
+`releasesInfoReady` listener body (the pre-existing `try`/`catch` around `backendEvents.on()`
+covered only the synchronous registration, not the listener body which runs later from the
+emitter). Task 2 added `processGuards.ts`'s `installUnhandledRejectionGuard()` -- idempotent,
+log-only, `process.stderr` fallback for the early-boot `heroicLogWriter`-unset window, never
+re-throws/exits/touches stdout -- installed in `src/sidecar/index.ts` before `init()`, and
+updated the three stale "no guard exists" comments (`electronStub.ts`/`appShellFlowRegistration
+.ts`/`gameDetailsFlowRegistration.ts`) to point at it. Task 3 added `sidecarRejectionGuard.test.ts`
+(8 tests): a survival proof driving the real `bootstrap.init()` with a rejecting
+`downloadAntiCheatData` (zero `unhandledRejection` events, warning logged, listener still ran),
+guard-contract unit tests (idempotency, non-throw incl. when `logWarning` itself throws), and a
+by-construction source-text gate proving guard-before-init() ordering in `src/sidecar/index.ts`
+(not a jest project root, never imported). RED spot-check performed by hand: reverting Task 1's
+`.catch()` made the survival-proof test fail as expected; file restored and `git diff` confirmed
+empty afterwards. REQ-34.2-07 complete, see 34.2-09-SUMMARY.md. This was a CONTINUATION run:
+Tasks 1-2 were committed in a prior session interrupted before Task 3; on resume, Task 3's test
+file was found already fully written on disk (uncommitted) from that interrupted session --
+verified against the plan's acceptance criteria rather than rewritten, with two Rule-1 fixes
+applied (a TS2740 type mismatch in `loadFreshProcessGuards()`'s return type, and two doc-comments
+that named literal banned fs-API identifiers in prose, tripping the plan's own acceptance-grep
+even though no actual fs call existed).
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Ready to execute
@@ -429,7 +452,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-08 complete)
+Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-09 complete)
 
 > **Plan-counter note (2026-07-25, post-34.2-06 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.update-progress`/`state.record-metric`/
@@ -938,6 +961,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P06 | 35min | 3 tasks | 5 files |
 | Phase 34.2 P07 | ~9min | 3 tasks | 5 files |
 | Phase 34.2 P08 | 12min | 2 tasks | 3 files |
+| Phase 34.2 P09 | 25min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1178,6 +1202,7 @@ Recent decisions affecting current work:
 - [Phase ?]: getCrossoverIndex exempted from the 60s invoke bound (LONG_RUNNING_CHANNELS, zero new Rust dispatch arms)
 - [Phase 34.2]: Slice closure (34.2-07): wrote 34.2-PORTED-CHANNELS.md sec.6 sign-off fresh rather than reusing 34.1's wording -- this slice's 26 channels are data-in/data-out with assertable return shapes over the real RPC loop, a genuinely stronger claim than 34.1's unobservable visual deliverable; named D-02/D-07 as the two honest exceptions
 - [Phase 34.2]: Corrected (not deleted) SEAM.md's stale steamFlowRegistration.ts/libraryManagerMap claim: gameDetailsFlowRegistration.ts now dispatches runner-generically through libraryManagerMap for all six managers (D-01/Phase-32-D-02); what remains deferred is launcher.ts's own Wine/GameConfig/DownloadManager pipeline
+- [Phase ?]: Sidecar unhandledRejection guard must resolve/log, never introduce a new throw/reject/exit path (sidecar-dialog-reject-crashes precedent)
 
 ### Pending Todos
 
@@ -1247,9 +1272,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T10:42:22.217Z
-Stopped at: Completed 34.2-07-PLAN.md -- Phase 34.2 fully complete (7/7 plans)
-Next: Human runs the 3 D-07 gates in 23-UAT.md on real macOS (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and records PASS/FAIL. Any FAIL routes to /gsd-plan-phase 23 --gaps. Phase 23 cannot be marked complete until all 3 gates pass. Also still outstanding (unrelated to Phase 23): Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — required before milestone v0.7 completion.
+Last session: 2026-07-25T19:53:45.026Z
+Stopped at: Completed 34.2-09-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-10..14 remain
+Next: Execute 34.2-10-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |

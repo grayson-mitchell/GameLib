@@ -1315,7 +1315,7 @@ Plans:
 **Goal:** Port the **game details, settings and overrides** IPC cluster (26 channels): per-game info/settings/overrides, SDL selection, launch options, install-path changes, version pinning, repair/kill, and the enrichment surfaces (wiki game info, anticheat status, known fixes, CrossOver index, store search, recent games). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.2-01, REQ-34.2-02, REQ-34.2-03, REQ-34.2-04, REQ-34.2-05, REQ-34.2-06, REQ-34.2-07, REQ-34.2-08, REQ-34.2-09, REQ-34.2-10, REQ-34.2-11, REQ-34.2-12, REQ-34.2-13, REQ-34.2-14
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 8/14 plans executed
+**Plans:** 9/14 plans executed
 
 Plans:
 - [x] 34.2-01-PLAN.md — D-02/D-07 the two sidecar bootstrap wirings (i18next init, `fetchLastestReleases()` + the re-homed `releasesInfoReady` anticheat listener) with NON-MOCKED proof
@@ -1330,7 +1330,7 @@ Plans:
 
 Wave 1 *(no `files_modified` overlap — all five may run in parallel)*
 - [x] 34.2-08-PLAN.md — gap #1 / CR-01: add `repair` + `readConfig` to `LONG_RUNNING_CHANNELS`, update the exact-set pin, catch the repair rejection at `onRepairYesClick`
-- [ ] 34.2-09-PLAN.md — gap #2 / CR-02: `.catch()` the anticheat download inside the listener body + a log-only `unhandledRejection` guard, proven by a rejecting-download survival test
+- [x] 34.2-09-PLAN.md — gap #2 / CR-02: `.catch()` the anticheat download inside the listener body + a log-only `unhandledRejection` guard, proven by a rejecting-download survival test
 - [ ] 34.2-10-PLAN.md — CR-03 (blocker) + WR-08: redirect both destructive suites through a `pathShim` mock with a `resolve`+`relative` containment tripwire; re-arm the `online_monitor` mock
 - [ ] 34.2-11-PLAN.md — gap #3 / WR-02: replace the false transitive-electron-freedom claim with the true invariant + a committed, growth-only electron-reach ledger
 - [ ] 34.2-12-PLAN.md — WR-01 + WR-04: replace the tautological HEAD-comparison gates with sha256 + semantic pins, and the vacuous i18next assertion with a real translation
