@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.2 gap cycle 1 EXECUTING -- 34.2-09 done; 34.2-10..14 remain
-last_updated: "2026-07-25T19:54:52.424Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-09 complete)
+stopped_at: Completed 34.2-10-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-11..14 remain
+last_updated: "2026-07-25T20:05:52.097Z"
+last_activity: 2026-07-25 -- Phase 34.2 gap cycle 1 executing (34.2-10 complete)
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 85
-  completed_plans: 72
+  completed_plans: 73
   percent: 60
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 1)
-Plan: 10 of 14
+Plan: 11 of 14
 
 34.2-01 done -- Task 1 initialized i18next in the sidecar bootstrap (D-02, mirrors main.ts:460-472
 field-for-field, idempotent guard, after initLogger()/before READY_SENTINEL, never able to crash
@@ -226,6 +226,27 @@ verified against the plan's acceptance criteria rather than rewritten, with two 
 applied (a TS2740 type mismatch in `loadFreshProcessGuards()`'s return type, and two doc-comments
 that named literal banned fs-API identifiers in prose, tripping the plan's own acceptance-grep
 even though no actual fs call existed).
+
+34.2-10 done -- closed code-review finding CR-03 (blocker-severity anti-pattern in
+34.2-VERIFICATION.md's Anti-Patterns table, no REQ ID -- REQ-34.2-03's actual work stays with
+34.2-11) and WR-08: Task 1 mocked `pathShim.getPath()` directly in `enrichmentFlows.test.ts`
+(all 4 names, no platform branch, no env var) since the suite's only prior redirect was a
+`jest.mock('os')` homedir() override that `pathShim.ts`'s real `resolveAppDataDir()` bypasses on
+win32 (`env.APPDATA`) and default/Linux (`env.XDG_CONFIG_HOME`) -- a real data-loss risk for the
+suite's `rmSync(fixesPath, ...)`/`configStore.set('games.recent', [])` calls on non-macOS; added a
+`beforeAll` containment guard (`resolve`+`relative`, never `startsWith`/`join`, per Phase 18's
+"join is not containment" lesson) over `appFolder`/`userDataPath`/`fixesPath`; re-armed the
+`online_monitor` `isOnline`/`runOnceWhenOnline` mocks in `beforeEach` (WR-08 -- `resetMocks: true`
+strips a factory's own default implementation, so `runOnceWhenOnline` never invoked its callback
+in this file). Task 2 applied the identical mock+guard shape to `gameDetailsFlows.test.ts` (its
+own two `gameOverridesStore.set('overrides', {})` `beforeEach` blocks had the same bypass), leaving
+its `jest.mock('os')` and load-bearing `jest.unmock('i18next')` untouched. Both suites' negative
+controls (temporarily pointing the mock's `'appData'` branch outside tmpdir) were run live and
+recorded verbatim in 34.2-10-SUMMARY.md: every test in both files failed loudly with the guard's
+error, then passed again after revert (28/28 and 31/31). Full backend sweep: 106/107 suites,
+2221/2222 tests -- the single known `rustInvokeChannel.test.ts` failure, pre-existing from Phase
+34.1, unchanged. No production source file touched; requirements-completed: [] (deliberate, see
+PLAN.md frontmatter). See 34.2-10-SUMMARY.md. Next: 34.2-11.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Ready to execute
@@ -452,7 +473,23 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 1 executing (34.2-09 complete)
+Last activity: 2026-07-25 -- Phase 34.2 gap cycle 1 executing (34.2-10 complete)
+
+> **Plan-counter note (2026-07-25, post-34.2-10 execution):** per the known-corruption precedent
+> documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
+> `state.update-progress` were all run. `advance-plan` landed correctly (`completed_plans` 72 -> 73,
+> `Plan: 11 of 14`); `record-metric` and `add-decision` were clean. `update-progress` reported
+> `percent: 86` (a PLAN-based figure it computed internally) but did not write that value into
+> frontmatter `percent` (still 60, correctly phase-based per every prior note in this cluster) --
+> instead it silently reverted frontmatter `stopped_at:` back to a stale "Completed
+> 34.2-09-PLAN.md" value (hand-corrected to 34.2-10 a second time) and, more damaging, spliced its
+> own `86%` progress-bar figure into the MIDDLE of the 2026-07-25 post-34.1-05 note two entries
+> below -- the very sentence quoting the PRIOR splice incident's `90%` -- overwriting that
+> historical quote with `86%` mid-sentence. Restored via a targeted `Edit` back to the exact
+> original `90%` text (verified against the note's own surrounding prose, which still describes a
+> `90%`-vs-`85%` mismatch), not a blanket revert. Against this session's own commits: `ef0d8ed3`
+> (fix, Task 1), `5828d3e4` (fix, Task 2), plus `34.2-10-SUMMARY.md` now on disk. `total_plans: 85`
+> unchanged; Phase 34.2 itself is not yet marked complete pending plans 34.2-11..14.
 
 > **Plan-counter note (2026-07-25, post-34.2-06 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.update-progress`/`state.record-metric`/
@@ -962,6 +999,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P07 | ~9min | 3 tasks | 5 files |
 | Phase 34.2 P08 | 12min | 2 tasks | 3 files |
 | Phase 34.2 P09 | 25min | 3 tasks | 7 files |
+| Phase 34.2 P10 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1203,6 +1241,7 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Slice closure (34.2-07): wrote 34.2-PORTED-CHANNELS.md sec.6 sign-off fresh rather than reusing 34.1's wording -- this slice's 26 channels are data-in/data-out with assertable return shapes over the real RPC loop, a genuinely stronger claim than 34.1's unobservable visual deliverable; named D-02/D-07 as the two honest exceptions
 - [Phase 34.2]: Corrected (not deleted) SEAM.md's stale steamFlowRegistration.ts/libraryManagerMap claim: gameDetailsFlowRegistration.ts now dispatches runner-generically through libraryManagerMap for all six managers (D-01/Phase-32-D-02); what remains deferred is launcher.ts's own Wine/GameConfig/DownloadManager pipeline
 - [Phase ?]: Sidecar unhandledRejection guard must resolve/log, never introduce a new throw/reject/exit path (sidecar-dialog-reject-crashes precedent)
+- [Phase 34.2]: 34.2-10: mocked pathShim.getPath() directly (not os.homedir()) to redirect sidecar test config paths, since pathShim.resolveAppDataDir() prefers env.APPDATA/env.XDG_CONFIG_HOME over homedir() on win32/default — os.homedir() mock alone is silently bypassed by pathShim's real precedence, risking real user config wipe
 
 ### Pending Todos
 
@@ -1272,9 +1311,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T19:53:45.026Z
-Stopped at: Completed 34.2-09-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-10..14 remain
-Next: Execute 34.2-10-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-25T20:05:52.090Z
+Stopped at: Completed 34.2-10-PLAN.md -- Phase 34.2 gap cycle 1 EXECUTING, 34.2-11..14 remain
+Next: Execute 34.2-11-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
