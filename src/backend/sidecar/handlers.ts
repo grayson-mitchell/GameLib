@@ -28,8 +28,15 @@
  * Rust arms), the curated logger
  * channel (registered by `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2
  * plan 34.2-16, REQ-34.2-12 — `logError` only, an early port of a Phase
- * 34.3/slice-6 channel; Phase 34.3 must NOT register it again), and the
- * two store-layer read handlers (D-03): the eager
+ * 34.3/slice-6 channel; Phase 34.3 must NOT register it again), the curated
+ * Humble library/sync + key-state channels (`registerHumbleFlows()`,
+ * `humbleFlowRegistration.ts` — Phase 34.4 Plan 04, REQ-34.4-07 —
+ * humbleGetUserInfo/humbleCheckHealth/humbleSync/humbleGetKeys/
+ * humbleGetSyncState/humbleGetGiftedAt/humbleMarkRedeemed/
+ * humbleUndoRedeemed/humbleGetRevealedKeyValue/humbleGetClaimAnnotations;
+ * curated-imports `humble/user.ts`/`humble/library.ts` directly, never
+ * `humble/ipc_handler.ts`, which also registers six channels Phase 34.4.1
+ * owns), and the two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
  * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
@@ -62,6 +69,7 @@ import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
 import { registerShellFilesFlows } from './shellFilesFlowRegistration'
 import { registerClipboardFlows } from './clipboardFlowRegistration'
 import { registerLoggerFlows } from './loggerFlowRegistration'
+import { registerHumbleFlows } from './humbleFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -146,6 +154,16 @@ registerClipboardFlows()
 // calls above (own channel name, no cross-module runtime dependency at
 // registration time), placed alongside them, before `ensureStoresRegistered()`.
 registerLoggerFlows()
+// Phase 34.4 Plan 04 (REQ-34.4-07): the 10 library/sync + key-state Humble
+// channels (humbleGetUserInfo, humbleCheckHealth, humbleSync, humbleGetKeys,
+// humbleGetSyncState, humbleGetGiftedAt, humbleMarkRedeemed,
+// humbleUndoRedeemed, humbleGetRevealedKeyValue, humbleGetClaimAnnotations)
+// — no ordering constraint relative to the other calls above (own channel
+// names, no cross-module runtime dependency at registration time), placed
+// alongside them, before `ensureStoresRegistered()`. Every store this module
+// needs (all 9 Humble stores) is already registered by storeRegistration.ts
+// — zero new store plumbing.
+registerHumbleFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
