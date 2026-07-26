@@ -105,6 +105,16 @@ conscious classification cannot be silently invisible the way this hole was.
 
 ## From plan 34.2-20 (gap cycle 3, WR-02 closure)
 
+**RESOLUTION NOTE, 2026-07-26 (gap cycle 4, plan 34.2-30):** this entry is superseded, not
+duplicated, by **D4-DEF-01** below. Plan 34.2-26 (gap cycle 4) added `logErrorSettled`, a
+promise-returning sibling of the block-body `logError` wrapper this entry describes, and rewired
+`loggerFlowRegistration.ts`'s call site to use it — closing the specific consequence this entry
+warned about (a real log-write rejection dropped before it could reach a `.catch()`). The
+underlying observation this entry originally made — that all four wrapper exports still discard
+their promise — remains true and is restated with a measured blast radius (309 call sites) in
+D4-DEF-01. The original text below is preserved unedited, per this project's convention (the same
+one gap cycle 3 used when it closed the 34.2-18 entry).
+
 - **`backend/logger/index.ts`'s four exported wrappers (`logDebug`/`logInfo`/`logWarning`/
   `logError`) all discard the promise `heroicLogWriter.<method>(...)` returns.** Each is a
   block-body arrow function with no `return` statement (e.g. `const logError = (...params) =>
@@ -238,3 +248,64 @@ the two builds, which REQ-34.2-14 explicitly forbids. Cross-referenced in plan 3
 model as T-34.2-69. **Natural home, if tightened later:** a single change in
 `LogWriter#writeString` (escape `\n` → `\\n` for non-forced messages), applied once for both
 builds rather than per-channel.
+
+## From gap cycle 4 (plans 34.2-25..34.2-29)
+
+Deliberate deferrals from `34.2-REVIEW-GAP-CYCLE-3.md`'s 14 findings that gap cycle 4 did not
+fix, recorded with a reason and a natural home so a future gap cycle does not have to re-derive
+scope from scratch. Pinned by `currency-gate.py`'s `CYCLE4_DEFERRED_FINDING_TOKENS` so a future
+edit cannot quietly drop the record that these were considered and not silently forgotten.
+
+- **D4-DEF-01** — `src/backend/logger/index.ts:16-27`. The four exported wrappers
+  (`logDebug`/`logInfo`/`logWarning`/`logError`) still discard the `Promise<void>` their
+  `LogWriter` method returns (each is a block-body arrow function with no `return` statement).
+  Plan 34.2-26 added `logErrorSettled`, a promise-returning sibling, for the one call site that
+  must settle (`loggerFlowRegistration.ts`'s `logError` send-channel listener), rather than
+  changing the four shared wrappers themselves. **Reason for deferring:** the measured blast
+  radius — 309 statement-position `logError(...)` call sites under `src/backend` (excluding
+  `logger/`/`__tests__`), none awaited, against this project's
+  `@typescript-eslint/no-floating-promises: 'warn'` eslint rule — would add roughly 309 new lint
+  warnings for zero runtime change (the promise is dropped either way; only the drop site moves
+  from inside the wrapper to each unawaited call site). This is the "audit with
+  `@typescript-eslint/no-floating-promises`" the code review's CR-01 finding itself asked for;
+  the count, not just the conclusion, is recorded here. **Natural home:** a standalone plan
+  changing all four `backend/logger` wrapper exports to `return` their writer call together, with
+  a call-site audit of the resulting new lint warnings across the 309 sites — a wide blast radius,
+  hence a separate plan, not a rider on this one. **This entry supersedes and updates the
+  pre-existing "From plan 34.2-20" entry above (see its dated resolution note) rather than
+  duplicating it** — that entry described the same underlying fact before `logErrorSettled`
+  existed; this entry restates it with the measured 309-site figure gap cycle 4 added.
+- **D4-DEF-02** — the carried-forward gap-cycle-3 residuals that gap cycle 4 did not touch, each
+  re-stated with its current status:
+  - The per-suite containment tmp-root string triplication (gap cycle 3's WR-05: five suites each
+    hardcode their tmp-root string three times, once per mock factory, with nothing asserting the
+    three copies agree) and the hoisted-factory TDZ naming issue (gap cycle 3's WR-06: two
+    hoisted `jest.mock` factories reference a `const` declared below the hoist point) — both
+    **still open**, and now further demoted from "worth fixing for legibility" to purely cosmetic
+    by gap cycle 4's own `setupFiles`-time precondition (plan 34.2-25): a desync between any
+    per-suite mock and the project-wide mechanism now throws loudly (`REFUSING TO RUN`) rather
+    than silently producing a contained-but-inconsistent state, so the failure mode WR-05/WR-06
+    originally warned about is structurally closed even though the duplication itself is not.
+    **Natural home:** unchanged — hoist each suite's tmp-root string to a single `mock`-prefixed
+    module-scope constant referenced by all three factories, a small mechanical five-file cleanup.
+  - The two unrestored `jest.spyOn` calls in `sidecarRejectionGuard.test.ts:319,376` (gap cycle
+    3's IN-03) — **still open**, out of scope for gap cycle 4's five plans (none touch that
+    file's harness helpers). **Natural home:** unchanged — `afterEach(() =>
+    jest.restoreAllMocks())` at the describe level, a one-line fix for a future small plan.
+  - The project-wide `prettier --check` baseline (gap cycle 3's IN-01) — **still red for
+    pre-existing files** project-wide; gap cycle 4 makes its OWN touched files clean (confirmed
+    by plan 34.2-30's own final consistency sweep: `npx prettier --check` exits 0 on all 11 files
+    touched across plans 34.2-25..34.2-29), which is the part CI attributes to this cycle's work.
+    **Natural home:** unchanged — a project-wide `npx prettier --write` pass, ideally as its own
+    dedicated plan since fixing only gap-cycle-4's files in isolation does not change the gate's
+    overall red/green outcome for everyone else.
+  - The pre-existing, non-deterministic `storeManagers/steam/library.ts` poll-timer leaked-`Timeout`
+    flake — explicitly out of scope for this cycle, unchanged. Re-observed during this plan's own
+    final consistency sweep: one of two full-backend-project runs additionally failed
+    `withTimeout.test.ts` with the same root cause already documented under "From plan 34.2-07"
+    and "From plan 34.2-19" above (`TypeError: Cannot read properties of undefined (reading
+    'map')` inside `readAcfState`/`pollInstallOnce`); the second run reproduced the clean,
+    documented baseline exactly (`{rustInvokeChannel.test.ts}` only). Confirms, a third time, that
+    WHICH suite the leaked timer lands on is non-deterministic and unrelated to whatever this
+    project's plans touch. **Natural home:** unchanged — a standalone fix for `library.ts`'s
+    poll-timer teardown.
