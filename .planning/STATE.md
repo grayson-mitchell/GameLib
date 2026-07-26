@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-05 done
-last_updated: "2026-07-27T23:10:00.000Z"
-last_activity: 2026-07-27 -- 34.4-05 executed (ownership-override trio + corrected humbleRecordGiftLinkOpened + humbleDisconnect send + humbleRunValidation node:sea gating, REQ-34.4-07/08/09)
+stopped_at: 34.4-08 done
+last_updated: "2026-07-27T23:45:00.000Z"
+last_activity: 2026-07-27 -- 34.4-08 executed (electronReachLedger ENTRY_POINTS extended to 10, baseline regenerated 30->34 modules via measurement, phase-wide structural additive/reversible sweep green, REQ-34.4-10/15)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 109
-  percent: 74
+  completed_plans: 110
+  percent: 75
 ---
 
 # Project State
@@ -34,7 +34,34 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 7 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07 done; 34.4-08, 34.4-09, 34.4-10 still pending)
+Plan: 8 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07, 34.4-08 done; 34.4-09, 34.4-10 still pending)
+
+34.4-08 done -- Extended electronReachLedger.test.ts's ENTRY_POINTS from 7 to 10 (added
+humbleFlowRegistration.ts, steamAuthFlowRegistration.ts, settingsFlowRegistration.ts) and
+regenerated BASELINE_ELECTRON_REACHING_MODULES by actually running computeElectronReach() via a
+temporary, removed measurement statement (before: 30 modules / visitedFiles.size 202; after: 34
+modules / visitedFiles.size 217). The measurement DISAGREED with the plan's own prediction: 4 new
+modules appeared, not the 3 named in the plan's <interfaces> section and 34.4-RESEARCH.md --
+src/backend/humble/userAgent.ts (imports `app` from 'electron', reached two-hop via
+humbleFlowRegistration.ts -> humble/user.ts:16 -> ./userAgent, and independently three-hop via
+humbleFlowRegistration.ts -> humble/library.ts:12 -> ./adapter -> ./userAgent) was not named by
+either source. Per the plan's explicit rule the measurement won; all 4 were added to the baseline
+with reach-path comments, flagged as a genuine planning-time gap rather than silently absorbed.
+Extended requiredModules anti-degradation list with all 4 edges; raised the reachability floor
+150->200 (measured 217, never lowered). Hand RED-proofed (removed the userAgent.ts entry, growth-
+tripwire failed naming exactly that module, restored, re-verified green). Task 2's phase-wide
+structural sweep (7 checks) all green: tsc --noEmit clean; cargo check clean + src-tauri/ diff-stat
+empty (zero new Rust, standing rider held); full backend jest run twice, 2468/2470 both times,
+identical failing-suite set (only the 2 documented pre-existing baselines -- confirms 3658b204's
+leaked-timer fix is genuinely stable, no flaky third failure landed on either run); frontend jest
+213/213 clean; electronUntouched.test.ts 11/11 passing with diff-stat empty on that file for the
+whole phase; main.ts and humble/ipc_handler.ts both byte-unchanged since the phase's first commit
+(caebe13f1). Found and fixed one out-of-scope-but-CI-blocking Rule 1 defect during the prettier
+sweep: storeManagers/steam/library.ts (touched by the out-of-band timer-leak fix 3658b204, never
+run through prettier) failed prettier --check -- fixed via prettier --write (whitespace/line-wrap
+only, verified library.test.ts unchanged 166/166). REQ-34.4-10/15 complete, see 34.4-08-SUMMARY.md.
+Next: 34.4-09 (wave 4, the declaration/documentation plan) then 34.4-10 (the phase's blocking,
+non-autonomous live gate).
 
 34.4-05 done -- Humble ownership-override trio (humbleSetOwnershipOverride/humbleClearOwnershipOverride/
 humbleGetOwnershipOverrides) + corrected humbleRecordGiftLinkOpened (ipcMain.handle, not the send
