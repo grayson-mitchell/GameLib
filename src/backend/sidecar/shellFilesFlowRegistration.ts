@@ -1,12 +1,12 @@
 /**
- * Curated shell/files/diagnostics channel registration (Phase 34.3 Plan 01,
- * D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-13).
+ * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
+ * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 18 of this slice's 29 channels onto electronStub's `ipcMain`
+ * Registers 21 of this slice's 29 channels onto electronStub's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (ipcMain.on, 15):
+ *   send (ipcMain.on, 18):
  *     - `openExternalUrl` -> `utils.ts`'s `openUrlOrFile(args[0])` (`main.ts:735`)
  *     - `openFolder` -> `openUrlOrFile(args[0])` (`main.ts:736`)
  *     - `openSupportPage` -> `openUrlOrFile(supportURL)` (`main.ts:737`)
@@ -27,6 +27,18 @@
  *       (`main.ts:762-764`)
  *     - `showItemInFolder` -> `utils.ts`'s `showItemInFolder(item)`, a
  *       SYNCHRONOUS function, not a promise (`main.ts:1106`)
+ *     - `clearCache` -> `utils.ts`'s `clearCache(undefined, fromVersionChange)`
+ *       + `pushFrontendMessage('refreshLibrary')` + (only when `args[0]` is
+ *       truthy) `showDialogBoxModalAuto` called with NO `event` property
+ *       (sidecar `send` listeners never have one — this takes the
+ *       `sendFrontendMessage('showDialog', ...)` branch, `dialog.ts:23-31`,
+ *       which never throws), reproducing `main.ts:787-803`'s exact body
+ *     - `clearAchievementCache` -> `utils.ts`'s `clearAchievementCache(appName)`
+ *       + `logInfo(...)` from `../logger` (`main.ts:805-811`)
+ *     - `resetHeroic` -> `utils.ts`'s `resetHeroic()`, UNMODIFIED — no
+ *       build-conditional branch added here or in `utils.ts`; the
+ *       `app.relaunch()` -> `app.quit()` ordering race is fixed entirely
+ *       inside `electronStub` by plan 34.3-05 (`main.ts:813`)
  *
  *   invoke (ipcMain.handle, 3):
  *     - `checkDiskSpace` -> `utils/filesystem`'s `getDiskInfo`/`isWritable`/
@@ -60,7 +72,16 @@
  * and drag `backend/ipc` (which imports the real `electron`) into this
  * module's import graph. This module therefore imports only from `../utils`,
  * `../utils/filesystem`, `../schemas`, `../constants/urls`,
- * `../constants/paths`, `node:path`, `graceful-fs`, and `common/types`.
+ * `../constants/paths`, `../dialog/dialog`, `../logger`, `./sidecarRpc`,
+ * `i18next`, `node:path`, `graceful-fs`, and `common/types`.
+ *
+ * Scope honesty (Phase 34.3 Plan 02): `resetHeroic` is narrower than its UI
+ * copy claims — it deletes ONLY `configPath` (`config.json`) and
+ * `gamesConfigPath` (`GamesConfig/`). The Steam token/library store, all 10
+ * Humble stores, the download manager, and the Wine/wiki/crossover caches
+ * all survive as siblings in `appFolder`. The dialog's "removes all Settings
+ * and Caching" copy already overclaims in Electron; that is inherited,
+ * out-of-scope UI copy, not a defect this plan introduces or fixes.
  *
  * Deliberately does NOT register:
  *   - `openReleases`, `openWebviewPage`, `openCustomThemesWiki`,
@@ -77,7 +98,10 @@ import {
   showItemInFolder as showItemInFolderImpl,
   getShellPath,
   removeFolder,
-  getFileSize
+  getFileSize,
+  clearCache,
+  clearAchievementCache,
+  resetHeroic
 } from '../utils'
 import {
   getDiskInfo,
@@ -100,6 +124,10 @@ import {
   wikiLink,
   sidInfoUrl
 } from '../constants/urls'
+import { showDialogBoxModalAuto } from '../dialog/dialog'
+import { pushFrontendMessage } from './sidecarRpc'
+import { logInfo, LogPrefix } from '../logger'
+import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -110,10 +138,11 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this plan's 18 shell/files/diagnostics channels. Called once from
- * `handlers.ts` — this module owns no side effects at import time beyond the
- * imports above; the caller decides when registration onto the handler
- * registry happens.
+ * Registers this module's 21 shell/files/diagnostics channels (18 from Plan
+ * 01, plus Plan 02's `clearCache`/`clearAchievementCache`/`resetHeroic`).
+ * Called once from `handlers.ts` — this module owns no side effects at
+ * import time beyond the imports above; the caller decides when
+ * registration onto the handler registry happens.
  */
 export function registerShellFilesFlows(): void {
   // ── send (12): the 12 URL openers sharing the openUrlOrFile code path ────
@@ -227,6 +256,69 @@ export function registerShellFilesFlows(): void {
       removeFolder(folderPath, folderName)
     } catch (error) {
       logSendFailure('removeFolder', error)
+    }
+  })
+
+  // ── send (1): clearCache — reproduces main.ts:787-803's exact body. The
+  // dialog is called with NO `event` property: sidecar `send` listeners
+  // never have one, so `showDialogBoxModalAuto` always takes its
+  // `sendFrontendMessage('showDialog', ...)` branch (`dialog.ts:23-31`),
+  // which never throws. `refreshLibrary` rides the generic frontend_message
+  // relay via `pushFrontendMessage` — zero new Rust arms ─────────────────────
+
+  ipcMain.on('clearCache', (_event: unknown, ...args: unknown[]) => {
+    try {
+      const showDialog = args[0]
+      const fromVersionChange = args[1] === true
+      clearCache(undefined, fromVersionChange)
+      pushFrontendMessage('refreshLibrary')
+
+      if (showDialog) {
+        showDialogBoxModalAuto({
+          title: i18next.t('box.cache-cleared.title', 'Cache Cleared'),
+          message: i18next.t(
+            'box.cache-cleared.message',
+            'GameLib Cache Was Cleared!'
+          ),
+          type: 'MESSAGE',
+          buttons: [{ text: i18next.t('box.ok', 'Ok') }]
+        })
+      }
+    } catch (error) {
+      logSendFailure('clearCache', error)
+    }
+  })
+
+  // ── send (1): clearAchievementCache — main.ts:805-811 ─────────────────────
+
+  ipcMain.on(
+    'clearAchievementCache',
+    (_event: unknown, ...args: unknown[]) => {
+      try {
+        const appName = args[0] as string
+        clearAchievementCache(appName)
+        logInfo(
+          'Achievement cache was cleared for game: ' + appName,
+          LogPrefix.Backend
+        )
+      } catch (error) {
+        logSendFailure('clearAchievementCache', error)
+      }
+    }
+  )
+
+  // ── send (1): resetHeroic — main.ts:813. Calls the UNMODIFIED utils.ts
+  // body; no build-conditional branch here or in utils.ts. The relaunch/quit
+  // ordering race is fixed entirely inside electronStub by plan 34.3-05.
+  // Real blast radius: deletes ONLY configPath + gamesConfigPath — every
+  // other electron-store file in appFolder (Steam token/library, all 10
+  // Humble stores, download manager, Wine/wiki/crossover caches) survives ──
+
+  ipcMain.on('resetHeroic', () => {
+    try {
+      resetHeroic()
+    } catch (error) {
+      logSendFailure('resetHeroic', error)
     }
   })
 
