@@ -16,6 +16,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -28,17 +29,35 @@ const MAIN_RS_PATH = join(
 )
 
 /**
- * Reads main.rs and strips comments so assertions run against code only:
- *   - drops every line whose trimmed form starts with `//` (covers `//`, `///`, `//!`)
- *   - drops a trailing `// ...` fragment from any mixed code/comment line
+ * Reads main.rs (or `source` if provided — the self-tests below drive this SAME code path
+ * with synthetic input rather than reimplementing the stripping algorithm) and strips
+ * comments so assertions run against code only. Two-stage order:
+ *   1. `stripSourceComments` (shared util, `../testUtils/stripSourceComments`) FIRST — this
+ *      removes `/* ... *\/` block comments, whose interior lines do NOT themselves start with
+ *      a comment marker and therefore survive a line-prefix-only filter entirely. This stage
+ *      is now LOAD-BEARING: Phase 34.3 Plan 07 adds positive-existence assertions (e.g.
+ *      `fn clipboard_text_arg`) whose exact tokens also appear in main.rs's own prose (this
+ *      file's pre-existing WR-03 gate has the identical property for `RunEvent::Exit` /
+ *      `.kill()` / `try_state::<Arc<SidecarState>>`), so a block comment merely NAMING one of
+ *      these tokens must not satisfy the gate.
+ *   2. THEN a LOCAL trailing-`//` pass on that output — `stripSourceComments`'s own docstring
+ *      permits a caller to layer this on top when it can show its own matchers never touch a
+ *      `//`-bearing string literal (WR-08 tradeoff, see below). This drops:
+ *        - every line whose trimmed form starts with `//` (covers `//`, `///`, `//!`)
+ *        - a trailing `// ...` fragment from any mixed code/comment line
  * This stripping exists because main.rs's doc comments quote the very strings under
  * assertion below — without it, every "does NOT contain X" test could pass vacuously
  * against a comment that merely mentions X was removed, and every "DOES contain X" test
  * could pass vacuously against a comment that merely describes X.
+ *
+ * Accepted WR-08 tradeoff: the local trailing-`//` pass in stage 2 can truncate a code line
+ * containing a quoted `//`-bearing string literal (e.g. `"steam://..."`) — this is acceptable
+ * here because none of this file's assertions match against such a literal. If a future
+ * assertion needs to, this local pass must be reconsidered, not the assertion weakened.
  */
-function loadMainRsCode(): string {
-  const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
-  return raw
+function loadMainRsCode(source?: string): string {
+  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
     .map((line) => line.replace(/\/\/.*$/, ''))
@@ -49,7 +68,31 @@ describe('loadMainRsCode comment-stripping helper (self-test)', () => {
   test('a comment-only phrase from main.rs is NOT present in the stripped output', () => {
     // Without correct stripping this phrase (from the pre-fix _child field doc comment)
     // would leak through and make the WR-03 "_child is gone" assertion vacuously pass.
-    expect(loadMainRsCode()).not.toContain('Kept alive so the child is not reaped')
+    expect(loadMainRsCode()).not.toContain(
+      'Kept alive so the child is not reaped'
+    )
+  })
+
+  test('a /* */ block comment whose interior line names fn clipboard_text_arg does NOT survive stripping', () => {
+    // RED direction: against the PRE-Task-2 loadMainRsCode (line-prefix filter only), this
+    // synthetic source's interior line `fn clipboard_text_arg` does not itself start with a
+    // comment marker, so it would survive stripping and make Task 3's positive-existence
+    // assertion for `fn clipboard_text_arg` pass on prose alone.
+    const source = [
+      '/*',
+      ' * see fn clipboard_text_arg for the argument-parsing helper',
+      ' */',
+      'fn other() {}'
+    ].join('\n')
+    expect(loadMainRsCode(source)).not.toContain('clipboard_text_arg')
+  })
+
+  test('a // line naming clipboard_write_text does NOT survive stripping (regression guard)', () => {
+    const source = [
+      '// clipboard_write_text is handled below',
+      'fn other() {}'
+    ].join('\n')
+    expect(loadMainRsCode(source)).not.toContain('clipboard_write_text')
   })
 })
 
