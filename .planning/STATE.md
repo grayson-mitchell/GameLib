@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-04-PLAN.md
-last_updated: "2026-07-26T09:49:21.604Z"
+stopped_at: Completed 34.3-02-PLAN.md
+last_updated: "2026-07-26T10:21:23.194Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 96
-  percent: 87
+  completed_plans: 97
+  percent: 88
 ---
 
 # Project State
@@ -34,8 +34,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9 (wave 1 -- plans 01/02/03/04 -- now fully complete)
 discuss/plan.
+
+34.3-02 done -- Cache/reset channel registration (the last remaining wave-1 plan). Registered
+`clearCache`/`clearAchievementCache`/`resetHeroic` as 3 more send-kind channels in
+`shellFilesFlowRegistration.ts` (18 -> 21 channels), each reproducing `main.ts`'s exact body against
+UNMODIFIED `utils.ts` functions. `clearCache`'s dialog passes no `event` property (sidecar `send`
+listeners never have one), taking `showDialogBoxModalAuto`'s `sendFrontendMessage('showDialog')`
+branch, proven non-fatal even when forced to throw; `refreshLibrary` rides `pushFrontendMessage`
+directly. `resetHeroic` calls `utils.ts`'s body completely unmodified -- no build-conditional
+branch; the relaunch/quit ordering race is left to plan 34.3-05. Extended
+`shellFilesFlows.test.ts` 25 -> 30 tests. **Deviation of note:** diagnosed that this project's
+`resetMocks: true` (`src/backend/jest.config.js`) wipes any implementation baked into a
+`jest.mock(...)` factory before every test -- a real implementation must be (re-)installed in
+`beforeEach` instead; also extended the legendary `electronStores` mock (`installStore`/
+`libraryStore`) and added a `backend/storeManagers` mock so `clearCache`'s real fire-and-forget
+legendary-cleanup dynamic import doesn't reach real runner-spawn machinery. Full backend sweep:
+2370/2373 passing, 3 failing suites all confirmed pre-existing/unrelated (`rustInvokeChannel.test.ts`
+documented baseline, wine `rest.test.ts` documented path-depth bug, `reconcile.test.ts` reproduced
+as the already-documented `library.ts` leaked-timer flake via isolated re-run). REQ-34.3-05/-06/-13
+complete, see 34.3-02-SUMMARY.md. Next: 34.3-05 (wave 2).
 
 34.3-04 done -- Logger channel registration. Added `logInfoSettled` (expression-body sibling of
 `logInfo` in `backend/logger/index.ts`, byte-shape-identical to `logErrorSettled`) and registered
@@ -889,7 +908,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1697,6 +1716,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P01 | 55min | 3 tasks | 8 files |
 | Phase 34.3 P03 | 45min | 3 tasks | 5 files |
 | Phase 34.3 P04 | 40min | 3 tasks | 5 files |
+| Phase 34.3 P02 | 90min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1970,6 +1990,9 @@ Recent decisions affecting current work:
 - [Phase 34.3]: logInfo's call-site guard is byte-shape-identical to logError's (34.3-04, REQ-34.3-09)
 - [Phase 34.3]: deleteUploadedLogFile ported at parity, declared structurally unable to delete in either build (34.3-04, D-08)
 - [Phase 34.3]: Log redaction (D-09) declared out of scope for uploadLogFile, no audit performed (34.3-04)
+- [Phase 34.3-02]: jest resetMocks:true wipes any implementation baked into a jest.mock(...) factory before EVERY test -- install the real default implementation in beforeEach instead
+- [Phase 34.3-02]: clearCache's refreshLibrary push rides pushFrontendMessage from ./sidecarRpc directly, per the plan's interfaces section
+- [Phase 34.3-02]: resetHeroic calls utils.ts's resetHeroic() completely unmodified -- no build-conditional branch; the relaunch/quit ordering race is left to plan 34.3-05
 
 ### Pending Todos
 
@@ -2040,7 +2063,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T09:49:21.596Z
+Last session: 2026-07-26T10:19:21.424Z
 Stopped at: Completed 34.3-04-PLAN.md
 Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
 (Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
