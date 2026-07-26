@@ -1,7 +1,8 @@
 /**
- * Curated Steam QR-login + credential-login + session/identity channel
- * registration (Phase 30 Plan 01 D-01/D-02/D-08; extended Phase 34.4 Plan 01,
- * REQ-34.4-01/REQ-34.4-02).
+ * Curated Steam QR-login + credential-login + session/identity + bottle +
+ * client-setup + redeem/install-size channel registration (Phase 30 Plan 01
+ * D-01/D-02/D-08; extended Phase 34.4 Plan 01, REQ-34.4-01/REQ-34.4-02;
+ * extended Phase 34.4 Plan 02, REQ-34.4-03/REQ-34.4-04/REQ-34.4-05).
  *
  * Registers the invoke handlers the Tauri build's Steam login gate needs to
  * reach a populated, signed-in library, importing the REAL backend code
@@ -38,14 +39,54 @@
  *     never lets the fire-and-forget `SteamUser.logout()` rejection escape
  *     unguarded.
  *
+ * macOS CrossOver bottle trio (Phase 34.4 Plan 02, REQ-34.4-03,
+ * `ipcMain.handle`, `main.ts:946-953`):
+ *   - `steamBottleProvision` -> `provisionBottle(args)` (`main.ts:946`).
+ *   - `isSteamBottleProvisioned` -> `isBottleProvisioned()` (`main.ts:947`).
+ *   - `steamBottleStatus` -> the ONE genuinely inline body among the 15
+ *     Steam-labeled channels (`main.ts:948-953`): reads
+ *     `steamBottleConfigStore.get_nodefault('provisioned') ?? false` and
+ *     `steamBottleConfigStore.get_nodefault('bottleName') ??
+ *     DEFAULT_STEAM_BOTTLE_NAME`, reproduced here rather than re-derived from
+ *     `isBottleProvisioned()` — diverging from the store read would be a
+ *     behavior change, not a port. Deliberately has NO `loggedIn` field
+ *     (removed by 17-17/WR-02; D-04: bottled-Steam auth stays opaque).
+ *
+ * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
+ * `ipcMain.handle`, `main.ts:958-961`):
+ *   - `steamClientSetupStart` -> `startGuidedClientInstall()` (`main.ts:958`).
+ *   - `steamClientSetupRecheck` -> `ensureSteamClientReady(appId)`
+ *     (`main.ts:959-961`).
+ *
+ * Misc pair (Phase 34.4 Plan 02, REQ-34.4-05, `ipcMain.handle`,
+ * `main.ts:906-917,923-925`):
+ *   - `redeemSteamKey` -> the WR-03 main-process trust boundary, ported
+ *     VERBATIM from `main.ts:906-917`: a payload whose `store !== 'steam'`,
+ *     or whose `key` is not a string, or whose `key` is empty, returns
+ *     `{ store: 'steam', outcome: 'error', message: 'invalid-request' }`
+ *     WITHOUT reaching `SteamUser.redeemKey` — the renderer payload is
+ *     untrusted at runtime despite its type contract. Only a valid payload
+ *     calls `SteamUser.redeemKey(store, key)`. Never logs the key value on
+ *     either path.
+ *   - `getSteamInstallSize` -> `getSteamInstallSize(appId)` (`main.ts:923-925`,
+ *     imported from `steam/games.ts`, not `steam/library.ts`).
+ *
+ * Never live-run (D-08): `steamBottleProvision` downloads a real CrossOver
+ * bottle, and `redeemSteamKey` burns a key irreversibly — both stay
+ * unit-proven and declared in `34.4-PORTED-CHANNELS.md` (plan 34.4-09).
+ * Phase 26's 5 deferred live-key UAT items stay deferred and are NOT folded
+ * in. The bottle/client-setup group is Node `child_process` work — zero new
+ * Rust arms (34.2's standing rider).
+ *
  * Deliberately does NOT register `isLoggedIn` (`LegendaryUser.isLoggedIn()`,
  * `main.ts:875` — Epic auth, reassigned to Phase 34.5 by 34.4 D-03, not a
- * Steam channel despite the inventory grouping it here), nor the bottle
- * trio / client-setup pair / `redeemSteamKey` / `getSteamInstallSize` /
- * private-branch pair — those belong to plan 34.4-02 (same file, next wave).
- * Those channels stay unregistered on the sidecar and keep rejecting
- * non-fatally with `UNPORTED_CHANNEL_MARKER` per SEAM.md Load-Bearing
- * Invariant B.
+ * Steam channel despite the inventory grouping it here), nor
+ * `getPrivateBranchPassword`/`setPrivateBranchPassword` (`main.ts:1510-1515`
+ * — a GOG channel despite the inventory filing it under Steam; registered by
+ * `settingsFlowRegistration.ts` instead). Those channels stay unregistered
+ * here — `isLoggedIn` keeps rejecting non-fatally with
+ * `UNPORTED_CHANNEL_MARKER` per SEAM.md Load-Bearing Invariant B until Phase
+ * 34.5 lands.
  */
 
 import { ipcMain } from './electronStub'
@@ -65,7 +106,20 @@ import { ipcMain } from './electronStub'
 // module graph.
 import '../storeManagers'
 import { SteamUser } from '../storeManagers/steam/user'
-import { steamSyncStore } from '../storeManagers/steam/electronStores'
+import {
+  steamSyncStore,
+  steamBottleConfigStore
+} from '../storeManagers/steam/electronStores'
+import {
+  provisionBottle,
+  isBottleProvisioned
+} from '../storeManagers/steam/bottle'
+import {
+  startGuidedClientInstall,
+  ensureSteamClientReady
+} from '../storeManagers/steam/clientSetup'
+import { getSteamInstallSize } from '../storeManagers/steam/games'
+import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -131,4 +185,70 @@ export function registerSteamAuthFlows(): void {
       console.warn('[steamAuthFlowRegistration] logoutSteam failed:', error)
     )
   })
+
+  // Source: main.ts:906-917 — WR-03's trust-boundary validation for a
+  // security-sensitive secret, ported VERBATIM (REQ-34.4-05). The renderer
+  // payload is untrusted at runtime despite its type contract: reject a
+  // malformed shape (non-'steam' store, non-string / empty key) BEFORE
+  // delegating to steam-user, rather than forwarding garbage across. Never
+  // logs the key value on either path.
+  ipcMain.handle(
+    'redeemSteamKey',
+    async (_event: unknown, ...args: unknown[]) => {
+      const payload = args[0] as { store?: unknown; key?: unknown }
+      const store = payload?.store
+      const key = payload?.key
+      if (store !== 'steam' || typeof key !== 'string' || key.length === 0) {
+        return { store: 'steam', outcome: 'error', message: 'invalid-request' }
+      }
+      return SteamUser.redeemKey(store, key)
+    }
+  )
+
+  // Source: main.ts:923-925 (REQ-34.4-05). Imported from steam/games.ts, NOT
+  // steam/library.ts.
+  ipcMain.handle(
+    'getSteamInstallSize',
+    async (_event: unknown, ...args: unknown[]) => {
+      return getSteamInstallSize(args[0] as string)
+    }
+  )
+
+  // ── macOS CrossOver bottle trio (REQ-34.4-03, main.ts:946-953) ────────────
+  ipcMain.handle(
+    'steamBottleProvision',
+    async (_event: unknown, ...args: unknown[]) => {
+      return provisionBottle(args[0] as Parameters<typeof provisionBottle>[0])
+    }
+  )
+
+  ipcMain.handle('isSteamBottleProvisioned', async () => {
+    return isBottleProvisioned()
+  })
+
+  // Source: main.ts:948-953 — the ONE genuinely inline body among the 15
+  // Steam-labeled channels. Reproduces the store read exactly; does NOT call
+  // isBottleProvisioned() as a "better" source, and does NOT re-add a
+  // `loggedIn` field (removed by 17-17/WR-02 — bottled-Steam auth stays
+  // opaque, D-04).
+  ipcMain.handle('steamBottleStatus', async () => {
+    return {
+      provisioned: steamBottleConfigStore.get_nodefault('provisioned') ?? false,
+      bottleName:
+        steamBottleConfigStore.get_nodefault('bottleName') ??
+        DEFAULT_STEAM_BOTTLE_NAME
+    }
+  })
+
+  // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
+  ipcMain.handle('steamClientSetupStart', async () => {
+    return startGuidedClientInstall()
+  })
+
+  ipcMain.handle(
+    'steamClientSetupRecheck',
+    async (_event: unknown, ...args: unknown[]) => {
+      return ensureSteamClientReady(args[0] as string)
+    }
+  )
 }
