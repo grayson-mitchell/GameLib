@@ -280,3 +280,15 @@ None — no external service configuration required.
 ---
 *Quick task: 260726-q8f-extract-shared-stripsourcecomments-util-*
 *Completed: 2026-07-26*
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/testUtils/stripSourceComments.ts`
+- FOUND: `src/backend/__tests__/stripSourceComments.test.ts`
+- FOUND: `src/backend/sidecar/__tests__/structuralContainment.test.ts`
+- FOUND: `src/backend/appshell/__tests__/appshellModules.test.ts`
+- FOUND: `src/backend/crossover_index/__tests__/ratingMap.test.ts`
+- FOUND commit `e31c8391` (Task 1: shared util + self-test)
+- FOUND commit `10ca2940` (Task 2: 14-file migration)
+- FOUND commit `aecaf80c` (Task 3: structuralContainment.test.ts migration + hazard-check diff)
+- FOUND commit `ba612431` (docs: SUMMARY + PLAN commit)
