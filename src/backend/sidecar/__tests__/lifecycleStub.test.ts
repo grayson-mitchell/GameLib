@@ -232,16 +232,14 @@ describe('electronStub app.exit / app.quit / app.relaunch (Phase 33 Plan 04, D-0
     expect(callLog).toEqual([{ channel: RUST_APP_EXIT, args: [] }])
   })
 
-  it('relaunch() forwards via RUST_APP_RELAUNCH', async () => {
-    program = { type: 'resolve', value: null }
-
-    app.relaunch()
-    await flushMicrotasks()
-
-    expect(callLog).toEqual([{ channel: RUST_APP_RELAUNCH, args: [] }])
-    expect(warnSpy).not.toHaveBeenCalled()
-  })
-
+  // Ordering note (Phase 34.3 Plan 05, D-06): this describe block shares ONE electronStub module
+  // instance across all its `it`s (no `jest.resetModules()` in this file), so the module-scope
+  // `relaunchInFlight` flag set by relaunch() is NOT reset between tests. Both tests below call
+  // relaunch() at least once, which permanently flips the flag for every test that runs after
+  // them in this file -- so this test (whose OWN exit() assertion below requires the flag still
+  // be false) is declared BEFORE the "relaunch() forwards..." test rather than after it. See
+  // `electronStub app.relaunch/quit race guard` (below) for the dedicated, isolated coverage of
+  // the guard itself.
   it('exit()/relaunch() never throw and log a warning when requestRustInvoke rejects', async () => {
     program = { type: 'reject', error: new Error('rustInvoke: timeout') }
 
@@ -255,6 +253,16 @@ describe('electronStub app.exit / app.quit / app.relaunch (Phase 33 Plan 04, D-0
     await flushMicrotasks()
     expect(warnSpy).toHaveBeenCalledTimes(1)
     expect(String(warnSpy.mock.calls[0][0])).toContain(RUST_APP_RELAUNCH)
+  })
+
+  it('relaunch() forwards via RUST_APP_RELAUNCH', async () => {
+    program = { type: 'resolve', value: null }
+
+    app.relaunch()
+    await flushMicrotasks()
+
+    expect(callLog).toEqual([{ channel: RUST_APP_RELAUNCH, args: [] }])
+    expect(warnSpy).not.toHaveBeenCalled()
   })
 })
 

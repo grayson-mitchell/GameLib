@@ -152,6 +152,23 @@ export const ipcMain = {
 // exit path) await these or check a return value, so a best-effort forward (never throws, logs
 // on failure) is sufficient. Without this the sidecar's own no-op left a zombie process: the
 // real Tauri window/process never actually exited or relaunched.
+//
+// Phase 34.3 Plan 05 (D-06, REQ-34.3-07): relaunch-vs-quit race guard. In real Electron,
+// app.relaunch() only *registers* a restart and app.quit() *performs* it -- both are needed,
+// ordered, inside one process. Under Tauri, app.restart() alone does everything, and this stub
+// forwards relaunch()/quit() as two INDEPENDENT fire-and-forget frames, each dispatched to
+// dispatch_rust_channel on its own spawned worker thread (main.rs) -- so app_exit's frame can be
+// processed BEFORE app_relaunch's, and the app quits instead of restarting, nondeterministically.
+// resetHeroic (utils.ts) is the real caller that hits this ordering (relaunch() then quit(), one
+// setTimeout tick apart) -- its body is intentionally NOT modified; this guard lives entirely
+// here so utils.ts stays byte-identical for both builds and Phase 35 has one less build-detection
+// conditional to unwind. Never reset: a relaunch is terminal for this process --
+// app.restart() never returns and the process is about to be replaced, so resetting the flag
+// would only reintroduce the race for code that (cannot) run after. Rejected alternative:
+// serializing dispatch_rust_channel itself would fix this for every caller, but it would touch
+// the hot path for every single rustInvoke, not just these two rare lifecycle calls.
+let relaunchInFlight = false
+
 export const app = {
   getPath,
   getName: (): string => 'GameLib',
@@ -163,6 +180,14 @@ export const app = {
   on: () => app,
   once: () => app,
   quit: (): void => {
+    // D-06: a relaunch already in flight owns this process's teardown -- suppress quit() so its
+    // independently-dispatched app_exit frame cannot win the race and quit instead of restart.
+    if (relaunchInFlight) {
+      console.warn(
+        '[electronStub] app.quit(): suppressed -- a relaunch is already in flight'
+      )
+      return
+    }
     requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
       console.warn(
         `[electronStub] app.quit(): ${RUST_APP_EXIT} failed:`,
@@ -171,6 +196,13 @@ export const app = {
     })
   },
   exit: (): void => {
+    // D-06: see quit()'s comment above -- same suppression, same reason.
+    if (relaunchInFlight) {
+      console.warn(
+        '[electronStub] app.exit(): suppressed -- a relaunch is already in flight'
+      )
+      return
+    }
     requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
       console.warn(
         `[electronStub] app.exit(): ${RUST_APP_EXIT} failed:`,
@@ -179,6 +211,10 @@ export const app = {
     })
   },
   relaunch: (): void => {
+    // D-06: mark a relaunch in flight BEFORE dispatching -- terminal for this process, never
+    // reset (see the module-scope comment above `app` for why resetting would reintroduce the
+    // race).
+    relaunchInFlight = true
     requestRustInvoke(RUST_APP_RELAUNCH, []).catch((error) => {
       console.warn(
         `[electronStub] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
