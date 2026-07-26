@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-21-PLAN.md (WR-03 repairFailure.ts hostile-value hardening closed; gap cycle 3, plan 3 of 6 -- 34.2-22..24 remain)
-last_updated: "2026-07-26T00:27:29.073Z"
+stopped_at: Completed 34.2-22-PLAN.md (Rust timeout_for() behavioral test + jest existence gate closed; gap cycle 3, plan 4 of 6 -- 34.2-23..24 remain)
+last_updated: "2026-07-26T00:35:51.274Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 95
-  completed_plans: 84
-  percent: 88
+  completed_plans: 85
+  percent: 89
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
-Plan: 21 of 24 done (34.2-21 complete); 3 gap-closure plans remain (34.2-22..24)
+Plan: 22 of 24 done (34.2-22 complete); 2 gap-closure plans remain (34.2-23..24)
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -122,6 +122,31 @@ suites, 195/195 tests, zero regressions. REQ-34.2-12/-14 complete (already marke
 plans; re-confirmed), see 34.2-21-SUMMARY.md. Next: 34.2-22 (Rust `timeout_for()` proof, same
 wave).
 
+34.2-22 done -- GAP CYCLE 3, fourth plan executed, carried-forward Rust-coverage warning CLOSED.
+Task 1 appended a `#[cfg(test)] mod tests` to `src-tauri/src/main.rs` (6 tests: exempt channel
+waits indefinitely, non-exempt channel bounded at `INVOKE_TIMEOUT`, `repair`/`readConfig` exempt,
+`getCrossoverIndex` exempt, a loop over the full `LONG_RUNNING_CHANNELS` array paired with a real
+non-exempt channel -- `getGameSettings` -- for non-vacuity in both directions, and `INVOKE_TIMEOUT`
+pinned at 60s) -- the first Rust test coverage anywhere in `src-tauri/src` (`cargo test` ran 0
+tests before this plan). RED-proofed by hand, both directions: `timeout_for` stubbed to
+unconditional `Some(INVOKE_TIMEOUT)` failed 4 of 6 tests, stubbed to unconditional `None` failed a
+DIFFERENT 2 of 6 tests; restored, `git diff --stat` showed the change was purely additive (69
+insertions, 0 deletions) against the pre-plan baseline. Task 2 extended
+`longRunningChannels.test.ts` (8->14 tests) with a new describe block reading `main.rs` RAW (not
+comment-stripped, since `#[cfg(test)]` sits adjacent to doc comments) asserting the attribute's
+presence, >=2 `timeout_for` references inside that region, and that the region iterates
+`LONG_RUNNING_CHANNELS` rather than hardcoding a duplicate list -- because this project's CI runs
+no cargo step at all, so without this gate the Rust module could be deleted with nothing
+automated noticing. Carries 2 self-tests (mirroring `gameDetailsImportGate.test.ts`'s own Gate-2
+convention): a synthetic source lacking `#[cfg(test)]` fails to match, and one with the attribute
+but only weak `timeout_for` references / no iteration also fails. RED-proofed by hand: reverted
+`main.rs` to its pre-Task-1 (`HEAD~1`) content, 4 of the 6 new tests failed, restored (`git diff
+--stat` empty, byte-identical to the Task 1 commit). Zero new dependencies (`git diff --exit-code
+src-tauri/Cargo.toml` clean), zero new `dispatch_rust_channel` arms, `cargo check --quiet` and
+`tsc --noEmit` both clean. No deviations. REQ-34.2-12/-14 complete (already marked from prior
+plans; re-confirmed), see 34.2-22-SUMMARY.md. Next: 34.2-23 (wave 2, WR-01 raw-source anti-claim
+gate + `readdirSync` set-equality tripwire).
+
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
 - 34.2-19 (wave 1, BLOCKER) DONE: structural containment via a `src/backend/jest.setupContainment.ts`
@@ -139,8 +164,9 @@ Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 i
 - 34.2-21 (wave 1, WR-03): defensively stringify repairFailure.ts's `unknown` so the ERROR dialog
   renders unconditionally; adds Object.create(null) + throwing-toString cases that fail against HEAD.
 
-- 34.2-22 (wave 1, carried-forward): Rust `#[cfg(test)]` module proving `timeout_for()` consults
+- 34.2-22 (wave 1, carried-forward) DONE: Rust `#[cfg(test)]` module proving `timeout_for()` consults
   LONG_RUNNING_CHANNELS, bidirectionally falsifiable; pinned from jest since CI runs no cargo step.
+  See 34.2-22-SUMMARY.md.
 
 - 34.2-23 (wave 2, WR-01): raw-source anti-claim gate + `readdirSync` set-equality tripwire over all
   25 suites; DELETES KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES rather than reframing it.
@@ -628,7 +654,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1426,6 +1452,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P19 | 100min | 3 tasks | 6 files |
 | Phase 34.2 P20 | 8min | 2 tasks | 2 files |
 | Phase 34.2 P21 | 15min | 2 tasks | 2 files |
+| Phase 34.2 P22 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1684,6 +1711,7 @@ Recent decisions affecting current work:
 - [Phase 34.2-19]: env-var-only os.homedir() redirection does not work under Jest 29's synthetic per-test-file process.env; fixed via a narrow jest.mock('os', ...) call in the setupFiles module (coordinator-approved Rule 4 correction, verified live)
 - [Phase 34.2-20]: Guard logError's call to logError(...) with Promise.resolve(...).catch(...) at loggerFlowRegistration.ts's own call site (WR-02), restoring processGuards.ts's not-a-substitute-for-call-site-handling invariant — processGuards.ts's docstring explicitly forbids relying on its generic unhandledRejection guard as the primary handler; test mocks use mockImplementation not mockReturnValue since logger.logError's declared return type is void
 - [Phase 34.2-21]: reportRepairFailure wraps each of the three failure signals in its own try/catch, not just the errorText precomputation, so the docstring's independence claim is actually true against any future throw source — the stringification fix removes the only KNOWN throw source but showDialogModal/logError are caller-supplied and cannot be proven never to throw
+- [Phase 34.2]: Test 5 non-vacuity check uses getGameSettings (a real ported channel) rather than a made-up string; jest gate matches RAW main.rs source (not the comment-stripped helper) since #[cfg(test)] sits adjacent to doc comments
 
 ### Pending Todos
 
@@ -1753,8 +1781,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T00:27:29.064Z
-Stopped at: Completed 34.2-21-PLAN.md (WR-03 repairFailure.ts hostile-value hardening closed; gap cycle 3, plan 3 of 6 -- 34.2-22..24 remain)
+Last session: 2026-07-26T00:35:51.266Z
+Stopped at: Completed 34.2-22-PLAN.md (Rust timeout_for() behavioral test + jest existence gate closed; gap cycle 3, plan 4 of 6 -- 34.2-23..24 remain)
 Next: Execute 34.2-20-PLAN.md (gap cycle 3 continues, WR-02). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
