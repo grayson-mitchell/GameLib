@@ -438,12 +438,20 @@ const IN_SCOPE_SUITES = [
  * other, and excluding it would leave the Block C tripwire below with a
  * permanent one-file blind spot.
  *
- * The directory holds 25 `*.test.ts` files as of this plan (24 before this
- * gap cycle, plus `structuralContainment.test.ts` added by plan 34.2-19);
- * 4 are `IN_SCOPE_SUITES` and the 21 below account for the rest -- 9 of the
- * original 24 were classified by NEITHER of the two lists this replaces,
- * which is exactly why a length-only pin (Block B's old `toHaveLength(11)`)
- * was never sufficient and Block C's derived tripwire exists.
+ * The directory holds 26 `*.test.ts` files as of this plan (25 before gap
+ * cycle 4 plan 34.2-26 added `loggerCallSiteGuard.test.ts`, itself
+ * classified here rather than left as the deliberately-open Block C failure
+ * that plan left as live evidence the tripwire fires); 4 are
+ * `IN_SCOPE_SUITES` and the 22 below account for the rest (counts
+ * recomputed from `readdirSync` by this plan, not carried forward by
+ * hand -- see Block C's own anti-vacuity test, which asserts every name
+ * declared here still exists on disk).
+ *
+ * `loggerCallSiteGuard.test.ts` (plan 34.2-26) is classified as
+ * structurally contained: it carries no `os`/`pathShim` mock of its own and
+ * relies entirely on the `setupFiles` mechanism, mocking only
+ * `backend/logger/paths` (a module below the code it tests) plus
+ * `electron`/`backend/config`.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -459,6 +467,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'installFlows.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
+  'loggerCallSiteGuard.test.ts',
   'onlineMonitorWiring.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',
@@ -637,40 +646,50 @@ describe('Block C: derived readdirSync tripwire over the whole directory (plan 3
     })
   })
 
-  // Tripwire self-test: proves diffSuiteClassification (the SAME function
-  // the gate above calls) actually detects growth, not just that it can be
-  // satisfied by the current tree.
+  // WR-05: both self-tests below use fully synthetic, LITERAL input arrays
+  // -- neither calls listActualTestSuites(). Before this plan, both self-
+  // tests derived their "actual files" input from the live directory
+  // listing (listActualTestSuites() plus/minus one synthetic name), which
+  // coupled them to the exact state the real gate above is itself
+  // comparing. The moment the real gate's own set-equality check failed
+  // (e.g. an unclassified suite added and not yet registered), BOTH
+  // self-tests failed too, because listActualTestSuites() returned a
+  // right-hand set the self-tests' own hardcoded expectations no longer
+  // matched. Reproduced live during this plan's own arrival state (see
+  // 34.2-29-SUMMARY.md): dropping loggerCallSiteGuard.test.ts unclassified
+  // produced 3 failures, not 1 -- the two self-tests below failed WITH
+  // misleading `expected ['zzSyntheticUnclassifiedSuite.test.ts']` /
+  // `expected []` messages that named the WRONG file and actively misdirect
+  // whoever is diagnosing the real failure, rather than surfacing the one
+  // genuinely unclassified suite. Both self-tests still call
+  // diffSuiteClassification -- the SAME function the real gate above calls
+  // -- so they prove the gate's own comparison logic, not a
+  // reimplementation of it; they just no longer borrow their INPUT from the
+  // state under test.
   it('tripwire self-test: an unclassified synthetic file name is reported by diffSuiteClassification', () => {
-    const declared = [...IN_SCOPE_SUITES, ...STRUCTURALLY_CONTAINED_SUITES]
-    const actualFilesPlusOne = [
-      ...listActualTestSuites(),
-      'zzSyntheticUnclassifiedSuite.test.ts'
-    ].sort()
+    const actualFiles = ['a.test.ts', 'b.test.ts', 'zzSynthetic.test.ts']
+    const declared = ['a.test.ts', 'b.test.ts']
 
     const { unclassified, phantom } = diffSuiteClassification(
-      actualFilesPlusOne,
+      actualFiles,
       declared
     )
-    expect(unclassified).toEqual(['zzSyntheticUnclassifiedSuite.test.ts'])
+    expect(unclassified).toEqual(['zzSynthetic.test.ts'])
     expect(phantom).toEqual([])
   })
 
   // Tripwire self-test (phantom direction): proves the same function also
   // catches a declared name naming a file that no longer exists.
   it('tripwire self-test: a phantom declared name naming a nonexistent file is reported by diffSuiteClassification', () => {
-    const actualFiles = listActualTestSuites()
-    const declaredPlusPhantom = [
-      ...IN_SCOPE_SUITES,
-      ...STRUCTURALLY_CONTAINED_SUITES,
-      'zzPhantomDeletedSuite.test.ts'
-    ]
+    const actualFiles = ['a.test.ts', 'b.test.ts']
+    const declared = ['a.test.ts', 'b.test.ts', 'zzPhantom.test.ts']
 
     const { unclassified, phantom } = diffSuiteClassification(
       actualFiles,
-      declaredPlusPhantom
+      declared
     )
     expect(unclassified).toEqual([])
-    expect(phantom).toEqual(['zzPhantomDeletedSuite.test.ts'])
+    expect(phantom).toEqual(['zzPhantom.test.ts'])
   })
 })
 
