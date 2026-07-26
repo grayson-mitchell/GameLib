@@ -107,12 +107,32 @@ jest.mock('backend/constants/environment', () => ({
 // LIB-01 convention for this exact module ────────────────────────────────────
 jest.mock('../../storeManagers/steam/user')
 
+// ── Plan 34.4-02 additions — bottle/clientSetup/games mocked at the module
+// boundary (their own logic is already covered by
+// storeManagers/steam/__tests__/). This suite proves registration and
+// transport, not bottle or client-setup logic ────────────────────────────────
+jest.mock('../../storeManagers/steam/bottle')
+jest.mock('../../storeManagers/steam/clientSetup')
+jest.mock('../../storeManagers/steam/games')
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { init } from '../bootstrap'
 import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import {
+  configStore as steamConfigStore,
+  steamBottleConfigStore
+} from '../../storeManagers/steam/electronStores'
 import { getTokenStore } from '../../storeManagers/steam/tokenStore'
+import {
+  provisionBottle,
+  isBottleProvisioned
+} from '../../storeManagers/steam/bottle'
+import {
+  startGuidedClientInstall,
+  ensureSteamClientReady
+} from '../../storeManagers/steam/clientSetup'
+import { getSteamInstallSize } from '../../storeManagers/steam/games'
 import {
   UNPORTED_CHANNEL_MARKER,
   RUST_KEYRING_SET
@@ -192,6 +212,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     // the top of this file) — clear() here only ever touches that disposable
     // directory, never real user data.
     steamConfigStore.clear()
+    steamBottleConfigStore.clear()
   })
 
   // Test 1: checkSteamInstalled resolves a real boolean, not the unported marker.
@@ -554,6 +575,299 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           warnSpy.mockRestore()
         }
       })
+    })
+  })
+
+  // ── macOS CrossOver bottle trio (Phase 34.4 Plan 02, REQ-34.4-03) ────────────
+  describe('bottle trio', () => {
+    it('REQ-34.4-03 steamBottleProvision invoke delegates to provisionBottle exactly once with the transport arg passed through unchanged', async () => {
+      jest.mocked(provisionBottle).mockResolvedValue({ status: 'done' })
+
+      const { input, frames } = startSidecar()
+      const transportArg = { bottleName: 'GameLibSteam' }
+      writeInvoke(input, 'bottle-provision-1', 'steamBottleProvision', [
+        transportArg
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'bottle-provision-1')
+      expect(response).toMatchObject({
+        id: 'bottle-provision-1',
+        ok: true,
+        result: { status: 'done' }
+      })
+      expect(provisionBottle).toHaveBeenCalledTimes(1)
+      expect(provisionBottle).toHaveBeenCalledWith(transportArg)
+    })
+
+    it("REQ-34.4-03 isSteamBottleProvisioned invoke round-trips isBottleProvisioned()'s boolean", async () => {
+      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'is-provisioned-1', 'isSteamBottleProvisioned', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'is-provisioned-1')
+      expect(response).toMatchObject({
+        id: 'is-provisioned-1',
+        ok: true,
+        result: true
+      })
+      expect(isBottleProvisioned).toHaveBeenCalledTimes(1)
+    })
+
+    it('REQ-34.4-03 steamBottleStatus resolves the exact defaulted object when both store reads return undefined', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'bottle-status-default-1', 'steamBottleStatus', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'bottle-status-default-1'
+      )
+      expect(response).toMatchObject({
+        id: 'bottle-status-default-1',
+        ok: true,
+        result: { provisioned: false, bottleName: 'GameLibSteam' }
+      })
+    })
+
+    it('REQ-34.4-03 steamBottleStatus resolves real stored values when present', async () => {
+      steamBottleConfigStore.set('provisioned', true)
+      steamBottleConfigStore.set('bottleName', 'CustomBottle')
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'bottle-status-real-1', 'steamBottleStatus', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'bottle-status-real-1'
+      )
+      expect(response).toMatchObject({
+        id: 'bottle-status-real-1',
+        ok: true,
+        result: { provisioned: true, bottleName: 'CustomBottle' }
+      })
+    })
+
+    it('REQ-34.4-03 steamBottleStatus resolved object has no loggedIn property (17-17/WR-02 — the always-false auth signal was deliberately removed)', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'bottle-status-no-loggedin-1', 'steamBottleStatus', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'bottle-status-no-loggedin-1'
+      ) as { result?: Record<string, unknown> } | undefined
+      expect(response?.result).not.toHaveProperty('loggedIn')
+    })
+  })
+
+  // ── Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04) ───────
+  describe('client-setup pair', () => {
+    it('REQ-34.4-04 steamClientSetupStart invoke round-trips and delegates to startGuidedClientInstall exactly once', async () => {
+      jest
+        .mocked(startGuidedClientInstall)
+        .mockResolvedValue({ status: 'started' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'client-setup-start-1', 'steamClientSetupStart', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'client-setup-start-1'
+      )
+      expect(response).toMatchObject({
+        id: 'client-setup-start-1',
+        ok: true,
+        result: { status: 'started' }
+      })
+      expect(startGuidedClientInstall).toHaveBeenCalledTimes(1)
+    })
+
+    it('REQ-34.4-04 steamClientSetupRecheck invoke round-trips and delegates to ensureSteamClientReady exactly once with the appId argument', async () => {
+      jest
+        .mocked(ensureSteamClientReady)
+        .mockResolvedValue({ status: 'ready', ready: true })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'client-setup-recheck-1', 'steamClientSetupRecheck', [
+        '999001'
+      ])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'client-setup-recheck-1'
+      )
+      expect(response).toMatchObject({
+        id: 'client-setup-recheck-1',
+        ok: true,
+        result: { status: 'ready', ready: true }
+      })
+      expect(ensureSteamClientReady).toHaveBeenCalledTimes(1)
+      expect(ensureSteamClientReady).toHaveBeenCalledWith('999001')
+    })
+  })
+
+  // ── redeemSteamKey / getSteamInstallSize (Phase 34.4 Plan 02, REQ-34.4-05) ───
+  describe('redeem / install size', () => {
+    it('REQ-34.4-05 redeemSteamKey invoke, valid payload: reaches SteamUser.redeemKey with exactly the two positional args and the result round-trips', async () => {
+      jest
+        .mocked(SteamUser.redeemKey)
+        .mockResolvedValue({ store: 'steam', outcome: 'success' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'redeem-valid-1', 'redeemSteamKey', [
+        { store: 'steam', key: 'AAAAA-BBBBB-CCCCC' }
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'redeem-valid-1')
+      expect(response).toMatchObject({
+        id: 'redeem-valid-1',
+        ok: true,
+        result: { store: 'steam', outcome: 'success' }
+      })
+      expect(SteamUser.redeemKey).toHaveBeenCalledTimes(1)
+      expect(SteamUser.redeemKey).toHaveBeenCalledWith(
+        'steam',
+        'AAAAA-BBBBB-CCCCC'
+      )
+    })
+
+    // ── WR-03 trust-boundary rejection cases — the point of this describe.
+    // Each asserts SteamUser.redeemKey was NEVER called (not merely that the
+    // returned message matches), which is what makes this a real
+    // trust-boundary test rather than one that would still pass if the guard
+    // were moved after the delegation.
+    it('REQ-34.4-05 redeemSteamKey invoke rejects a non-"steam" store before reaching SteamUser.redeemKey', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'redeem-bad-store-1', 'redeemSteamKey', [
+        { store: 'gog', key: 'AAAAA-BBBBB-CCCCC' }
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'redeem-bad-store-1')
+      expect(response).toMatchObject({
+        id: 'redeem-bad-store-1',
+        ok: true,
+        result: {
+          store: 'steam',
+          outcome: 'error',
+          message: 'invalid-request'
+        }
+      })
+      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.4-05 redeemSteamKey invoke rejects a non-string key before reaching SteamUser.redeemKey', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'redeem-bad-key-type-1', 'redeemSteamKey', [
+        { store: 'steam', key: 12345 }
+      ])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'redeem-bad-key-type-1'
+      )
+      expect(response).toMatchObject({
+        id: 'redeem-bad-key-type-1',
+        ok: true,
+        result: {
+          store: 'steam',
+          outcome: 'error',
+          message: 'invalid-request'
+        }
+      })
+      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.4-05 redeemSteamKey invoke rejects an empty-string key before reaching SteamUser.redeemKey', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'redeem-empty-key-1', 'redeemSteamKey', [
+        { store: 'steam', key: '' }
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'redeem-empty-key-1')
+      expect(response).toMatchObject({
+        id: 'redeem-empty-key-1',
+        ok: true,
+        result: {
+          store: 'steam',
+          outcome: 'error',
+          message: 'invalid-request'
+        }
+      })
+      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.4-05 redeemSteamKey invoke rejects a missing/null payload before reaching SteamUser.redeemKey', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'redeem-null-payload-1', 'redeemSteamKey', [null])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'redeem-null-payload-1'
+      )
+      expect(response).toMatchObject({
+        id: 'redeem-null-payload-1',
+        ok: true,
+        result: {
+          store: 'steam',
+          outcome: 'error',
+          message: 'invalid-request'
+        }
+      })
+      expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.4-05 no emitted log line or response frame in the rejection cases contains the submitted key value', async () => {
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      const SECRET_KEY = 'SUPER-SECRET-KEY-VALUE-DO-NOT-LEAK'
+
+      try {
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'redeem-no-leak-1', 'redeemSteamKey', [
+          { store: 'not-steam', key: SECRET_KEY }
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'redeem-no-leak-1')
+        expect(JSON.stringify(response)).not.toContain(SECRET_KEY)
+
+        const allLoggedText = [
+          ...logSpy.mock.calls,
+          ...warnSpy.mock.calls,
+          ...errorSpy.mock.calls
+        ]
+          .flat()
+          .map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
+          .join('\n')
+        expect(allLoggedText).not.toContain(SECRET_KEY)
+        expect(SteamUser.redeemKey).not.toHaveBeenCalled()
+      } finally {
+        logSpy.mockRestore()
+        warnSpy.mockRestore()
+        errorSpy.mockRestore()
+      }
+    })
+
+    it('REQ-34.4-05 getSteamInstallSize invoke round-trips and delegates to getSteamInstallSize exactly once with the appId', async () => {
+      jest.mocked(getSteamInstallSize).mockResolvedValue('1.5 GB')
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'install-size-1', 'getSteamInstallSize', ['999001'])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'install-size-1')
+      expect(response).toMatchObject({
+        id: 'install-size-1',
+        ok: true,
+        result: '1.5 GB'
+      })
+      expect(getSteamInstallSize).toHaveBeenCalledTimes(1)
+      expect(getSteamInstallSize).toHaveBeenCalledWith('999001')
     })
   })
 })
