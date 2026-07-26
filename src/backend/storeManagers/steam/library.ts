@@ -257,7 +257,10 @@ async function buildResumeFinalizeOpts(
     })
 
     const installRoot = resolve(target.targetSteamappsDir, 'common', installdir)
-    const { jobs, allFilesVerified } = await reconcilePartialState(plan, installRoot)
+    const { jobs, allFilesVerified } = await reconcilePartialState(
+      plan,
+      installRoot
+    )
 
     // CR-01 gap closure (23-code-review): allFilesVerified is a CONTENT-only
     // (sha1) verdict from reconcilePartialState — it proves nothing about
@@ -271,11 +274,8 @@ async function buildResumeFinalizeOpts(
     // path runs (healReconciledFileModes, shared in depot.ts) so this path
     // can never silently diverge from that discipline.
     const jobFiles = new Set(jobs.map((job) => job.file))
-    const { allModesHealed, failures: healFailures } = await healReconciledFileModes(
-      plan,
-      installRoot,
-      jobFiles
-    )
+    const { allModesHealed, failures: healFailures } =
+      await healReconciledFileModes(plan, installRoot, jobFiles)
 
     return {
       targetSteamappsDir: target.targetSteamappsDir,
@@ -664,9 +664,7 @@ export default class SteamLibraryManager implements LibraryManager {
       // three roots (mirrors refreshInstallState()'s reconciliation;
       // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
       // byte-for-byte unchanged when they match).
-      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
-        appIdStr
-      )
+      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
       const installedData = bridgeAuthoritative
         ? bridgeInstalledData
         : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
@@ -865,9 +863,7 @@ export default class SteamLibraryManager implements LibraryManager {
       // reconciliation. Precedence for non-eligible titles is unchanged:
       // native wins, then Phase 17 bottle, then bridge — never
       // double-count/conflate the three roots.
-      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
-        appIdStr
-      )
+      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
       const installedData = bridgeAuthoritative
         ? bridgeInstalledData
         : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
@@ -1825,7 +1821,11 @@ export function startInstallPolling(
     isNativeHandoff: boolean
   } =
     typeof intervalMsOrOptions === 'number'
-      ? { intervalMs: intervalMsOrOptions, source: 'native', isNativeHandoff: false }
+      ? {
+          intervalMs: intervalMsOrOptions,
+          source: 'native',
+          isNativeHandoff: false
+        }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
           source: intervalMsOrOptions.source ?? 'native',
