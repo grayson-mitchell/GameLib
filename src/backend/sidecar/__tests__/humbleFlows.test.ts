@@ -1,6 +1,7 @@
 /**
- * End-to-end wiring test for the sidecar's curated Humble library/sync +
- * key-state channels (Phase 34.4 Plan 04 — Task 2, REQ-34.4-07).
+ * End-to-end wiring test for the sidecar's curated Humble channels (Phase
+ * 34.4 Plan 04 — Task 2, REQ-34.4-07; extended by Plan 05, Task 3,
+ * REQ-34.4-07/08/09).
  *
  * Mirrors `steamAuthFlows.test.ts`'s real-shim, over-the-wire pattern: the
  * REAL sidecar RPC server (`bootstrap.ts`'s `init()`) is driven in-process
@@ -9,6 +10,14 @@
  * and `../../humble/library` are automocked (their own logic is already
  * covered by `src/backend/humble/__tests__/`); this suite proves
  * *registration and transport*, not Humble logic.
+ *
+ * Two describe blocks near the end of this file deliberately BYPASS those
+ * file-wide automocks via `jest.resetModules()` + a dynamic `require()`,
+ * each documented in full at its own describe block: the D-05 ordering proof
+ * (drives the REAL `HumbleUser.disconnect()`) and the `humbleRunValidation`
+ * packaged-signal tests (drive a fresh, independent module instance per
+ * `node:sea` scenario). Both are self-contained and do not affect any other
+ * test in this file.
  *
  * Does NOT carry its own `jest.mock('os', ...)` block —
  * `src/backend/jest.setupContainment.ts` runs via `setupFiles` for every
@@ -139,6 +148,38 @@ function writeInvoke(
   args: unknown[]
 ): void {
   input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
+}
+
+/** Writes a well-formed `send` request frame to the sidecar's stdin
+ * (copied from steamAuthFlows.test.ts — this file has no prior `writeSend`,
+ * needed now that `humbleDisconnect` (Plan 05) is a real send channel). */
+function writeSend(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
+}
+
+/** Local test-only shape for `HumbleLibrary.getKeys()`'s fake return values
+ * (Plan 05's ownership-override / gift-link guard tests): every real
+ * `HumbleKey` field, plus two non-`HumbleKey` fields (`__fakeKeyValue`,
+ * `__fakeGiftUrl`) the real `ipc_handler.ts` guard bodies never read — seeded
+ * only so the C4 no-leak assertions have a distinctive value to fail
+ * against if a rejection warning is ever widened beyond the machineName. */
+type HumbleKeyForTest = {
+  gamekey: string
+  machineName: string
+  state: 'UNPICKED' | 'UNREVEALED' | 'REVEALED' | 'REDEEMED' | 'UNREDEEMABLE'
+  title: string
+  platform: string
+  expiration: string | null
+  origin: string
+  ownedElsewhere: boolean
+  matchConfidence: 'exact' | 'fuzzy' | 'none'
+  __fakeKeyValue: string
+  __fakeGiftUrl: string
 }
 
 describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ-34.4-07)', () => {
@@ -460,26 +501,24 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     ]
 
     it('REQ-34.4-07 registerHumbleFlows() does not register any of the 6 channels Phase 34.4.1 owns, as either a handler or a listener', () => {
-      const before: Record<string, { handler: boolean; listeners: number }> = {}
+      // Deliberately does NOT call registerHumbleFlows() a second time here.
+      // Plan 34.4-04's version of this test did (every one of its 10
+      // registrations was `ipcMain.handle`, which simply overwrites the same
+      // map entry — safe to repeat). Plan 34.4-05 changes that: this module
+      // now also registers `humbleDisconnect` via `ipcMain.on`, and
+      // `electronStub.ts`'s `on()` PUSHES onto an array
+      // (`listenerRegistry.get(channel) ?? []; listeners.push(...)`) rather
+      // than overwriting — a second call would stack a duplicate listener
+      // and cause `HumbleUser.disconnect()` to fire twice per `send`,
+      // corrupting every later "called exactly once" assertion in this file
+      // for the rest of the process (the hazard `clipboardFlowRegistration`'s
+      // own test docstring already names, and `clipboardFlows.test.ts` avoids
+      // by registering exactly once for the whole file). Registration already
+      // happened once at module scope via `handlers.ts` (reached through this
+      // file's own `import { init } from '../bootstrap'` above) — reading the
+      // registries directly, with NO second registration call, is sufficient
+      // to prove the negative-scope guard.
       for (const channel of DEFERRED_CHANNELS) {
-        before[channel] = {
-          handler: isolationHandlerRegistry.has(channel),
-          listeners: (isolationListenerRegistry.get(channel) ?? []).length
-        }
-      }
-
-      // Calling registerHumbleFlows() a second time here (it is already
-      // called once at module scope by handlers.ts, reached via this file's
-      // own `import { init } from '../bootstrap'` above) is safe: every one
-      // of this module's 10 registrations is `ipcMain.handle`, which simply
-      // overwrites the same map entry — none is a listener, so there is no
-      // risk of stacking a duplicate `ipcMain.on` callback onto a shared
-      // channel array (the hazard clipboardFlows.test.ts's own module
-      // docstring names for a module that DOES register listeners).
-      registerHumbleFlows()
-
-      for (const channel of DEFERRED_CHANNELS) {
-        expect(before[channel]).toEqual({ handler: false, listeners: 0 })
         expect(isolationHandlerRegistry.has(channel)).toBe(false)
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(0)
       }
@@ -488,6 +527,37 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       // inspecting the real registry the module under test writes to, not a
       // reimplementation.
       expect(typeof isolationIpcMain.handle).toBe('function')
+    })
+
+    it('REQ-34.4-07/08/09 registerHumbleFlows() has registered all 16 Humble channels this slice owns: 15 as ipcMain.handle (incl. humbleRunValidation, dev signal), 1 (humbleDisconnect) as ipcMain.on exactly once', () => {
+      const HANDLE_CHANNELS = [
+        'humbleGetUserInfo',
+        'humbleCheckHealth',
+        'humbleSync',
+        'humbleGetKeys',
+        'humbleGetSyncState',
+        'humbleGetGiftedAt',
+        'humbleMarkRedeemed',
+        'humbleUndoRedeemed',
+        'humbleGetRevealedKeyValue',
+        'humbleGetClaimAnnotations',
+        'humbleSetOwnershipOverride',
+        'humbleClearOwnershipOverride',
+        'humbleGetOwnershipOverrides',
+        'humbleRecordGiftLinkOpened',
+        // Under jest (plain node, never a packaged SEA build),
+        // isPackagedSidecar() resolves false, so humbleRunValidation IS
+        // registered — this is the dev-signal branch, pinned separately
+        // below (REQ-34.4-08).
+        'humbleRunValidation'
+      ]
+      expect(HANDLE_CHANNELS).toHaveLength(15)
+      for (const channel of HANDLE_CHANNELS) {
+        expect(isolationHandlerRegistry.has(channel)).toBe(true)
+      }
+      expect(
+        (isolationListenerRegistry.get('humbleDisconnect') ?? []).length
+      ).toBe(1)
     })
 
     it('REQ-34.4-07 SEAM.md Invariant B: humbleRevealKey (deferred to Phase 34.4.1) still rejects non-fatally over the wire, and the RPC loop keeps serving', async () => {
@@ -583,6 +653,521 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         'export function registerHumbleFlows(): void {}'
       ].join('\n')
       expect(importsIpcHandler(synthetic)).toBe(false)
+    })
+  })
+
+  // ── Ownership-override trio + humbleRecordGiftLinkOpened (Plan 05,
+  // REQ-34.4-07) ─────────────────────────────────────────────────────────────
+  describe('ownership-override trio + humbleRecordGiftLinkOpened — trust-boundary guards (T-34.4-20/21/25)', () => {
+    // Distinctive fake key value / URL, seeded on every fake key below, so
+    // the C4 no-leak assertions are meaningful (a negative assertion against
+    // an empty/undefined value proves nothing).
+    const FAKE_KEY_VALUE = 'HUMBLE-SECRET-KEY-NEVER-LOGGED'
+    const FAKE_GIFT_URL = 'https://www.humblebundle.com/gift/NEVER-LOGGED-TOKEN'
+
+    function fakeKey(overrides: Partial<HumbleKeyForTest>): HumbleKeyForTest {
+      return {
+        gamekey: 'gk-1',
+        machineName: 'mn-1',
+        state: 'UNREVEALED',
+        title: 'Test Game',
+        platform: 'steam',
+        expiration: null,
+        origin: 'Test Bundle',
+        ownedElsewhere: false,
+        matchConfidence: 'none',
+        // Non-HumbleKey fields the real ipc_handler.ts body never reads, but
+        // seeded so a leaked-value assertion has something distinctive to
+        // fail against if the guard is ever weakened to log more than a
+        // machineName.
+        __fakeKeyValue: FAKE_KEY_VALUE,
+        __fakeGiftUrl: FAKE_GIFT_URL,
+        ...overrides
+      }
+    }
+
+    describe('humbleSetOwnershipOverride (D-42/T-12-03)', () => {
+      it('REQ-34.4-07 round-trips and calls HumbleLibrary.setOwnershipOverride exactly once for a fuzzy match', async () => {
+        jest
+          .mocked(HumbleLibrary.getKeys)
+          .mockReturnValue([
+            fakeKey({ machineName: 'fuzzy-mn', matchConfidence: 'fuzzy' })
+          ] as ReturnType<typeof HumbleLibrary.getKeys>)
+        jest
+          .mocked(HumbleLibrary.setOwnershipOverride)
+          .mockReturnValue(undefined)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'set-override-1', 'humbleSetOwnershipOverride', [
+          'fuzzy-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'set-override-1')
+        expect(response).toMatchObject({ id: 'set-override-1', ok: true })
+        expect(HumbleLibrary.setOwnershipOverride).toHaveBeenCalledTimes(1)
+        expect(HumbleLibrary.setOwnershipOverride).toHaveBeenCalledWith(
+          'fuzzy-mn'
+        )
+      })
+
+      it('REQ-34.4-07 guard: rejects a non-fuzzy (exact) match — setOwnershipOverride is NEVER called, and the warning names only the machineName', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        jest
+          .mocked(HumbleLibrary.getKeys)
+          .mockReturnValue([
+            fakeKey({ machineName: 'exact-mn', matchConfidence: 'exact' })
+          ] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'set-override-2', 'humbleSetOwnershipOverride', [
+          'exact-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'set-override-2')
+        expect(response).toMatchObject({ id: 'set-override-2', ok: true })
+        expect(HumbleLibrary.setOwnershipOverride).not.toHaveBeenCalled()
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        const [message, loggedMachineName] = warnSpy.mock.calls[0]
+        expect(String(message)).toContain('humbleSetOwnershipOverride')
+        expect(loggedMachineName).toBe('exact-mn')
+        const wholeCall = warnSpy.mock.calls[0].join(' ')
+        expect(wholeCall).not.toContain(FAKE_KEY_VALUE)
+        expect(wholeCall).not.toContain(FAKE_GIFT_URL)
+        warnSpy.mockRestore()
+      })
+
+      it('REQ-34.4-07 guard: rejects an unknown machineName — setOwnershipOverride is NEVER called', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        jest
+          .mocked(HumbleLibrary.getKeys)
+          .mockReturnValue([] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'set-override-3', 'humbleSetOwnershipOverride', [
+          'unknown-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'set-override-3')
+        expect(response).toMatchObject({ id: 'set-override-3', ok: true })
+        expect(HumbleLibrary.setOwnershipOverride).not.toHaveBeenCalled()
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        warnSpy.mockRestore()
+      })
+    })
+
+    describe('humbleClearOwnershipOverride / humbleGetOwnershipOverrides — plain delegates', () => {
+      it('REQ-34.4-07 humbleClearOwnershipOverride delegates the machineName verbatim', async () => {
+        jest
+          .mocked(HumbleLibrary.clearOwnershipOverride)
+          .mockReturnValue(undefined)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'clear-override-1', 'humbleClearOwnershipOverride', [
+          'mn-to-clear'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'clear-override-1')
+        expect(response).toMatchObject({ id: 'clear-override-1', ok: true })
+        expect(HumbleLibrary.clearOwnershipOverride).toHaveBeenCalledWith(
+          'mn-to-clear'
+        )
+      })
+
+      it('REQ-34.4-07 humbleGetOwnershipOverrides round-trips a real map, not the unported marker', async () => {
+        const fakeOverrides = { 'mn-1': 12345 }
+        jest
+          .mocked(HumbleLibrary.getAllOwnershipOverrides)
+          .mockReturnValue(fakeOverrides)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'get-overrides-1', 'humbleGetOwnershipOverrides', [])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'get-overrides-1')
+        expect(response).toMatchObject({
+          id: 'get-overrides-1',
+          ok: true,
+          result: fakeOverrides
+        })
+        expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      })
+    })
+
+    describe('humbleRecordGiftLinkOpened (D-59/D-57) — CORRECTED kind (invoke, not send)', () => {
+      it('REQ-34.4-07 resolves as an INVOKE (a response frame comes back for its own id) — the corrected classification', async () => {
+        jest.mocked(HumbleLibrary.getKeys).mockReturnValue([
+          fakeKey({
+            machineName: 'eligible-mn',
+            ownedElsewhere: true,
+            state: 'UNREVEALED'
+          })
+        ] as ReturnType<typeof HumbleLibrary.getKeys>)
+        jest
+          .mocked(HumbleLibrary.recordGiftLinkOpened)
+          .mockReturnValue(undefined)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'gift-link-invoke-1', 'humbleRecordGiftLinkOpened', [
+          'eligible-mn'
+        ])
+        await flush()
+
+        const response = frames.find(
+          (frame) => frame.id === 'gift-link-invoke-1'
+        )
+        expect(response).toMatchObject({ id: 'gift-link-invoke-1', ok: true })
+        expect(HumbleLibrary.recordGiftLinkOpened).toHaveBeenCalledTimes(1)
+        expect(HumbleLibrary.recordGiftLinkOpened).toHaveBeenCalledWith(
+          'eligible-mn'
+        )
+      })
+
+      it('REQ-34.4-07 is NOT reachable as a listener — driving it as a SEND never calls recordGiftLinkOpened', async () => {
+        jest.mocked(HumbleLibrary.getKeys).mockReturnValue([
+          fakeKey({
+            machineName: 'eligible-mn-2',
+            ownedElsewhere: true,
+            state: 'UNREVEALED'
+          })
+        ] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input } = startSidecar()
+        writeSend(input, 'gift-link-send-1', 'humbleRecordGiftLinkOpened', [
+          'eligible-mn-2'
+        ])
+        await flush()
+
+        expect(HumbleLibrary.recordGiftLinkOpened).not.toHaveBeenCalled()
+      })
+
+      it('REQ-34.4-07 guard: rejects an unknown machineName — recordGiftLinkOpened is NEVER called, warning names only the machineName', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        jest
+          .mocked(HumbleLibrary.getKeys)
+          .mockReturnValue([] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'gift-link-2', 'humbleRecordGiftLinkOpened', [
+          'unknown-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'gift-link-2')
+        expect(response).toMatchObject({ id: 'gift-link-2', ok: true })
+        expect(HumbleLibrary.recordGiftLinkOpened).not.toHaveBeenCalled()
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        const [message, loggedMachineName] = warnSpy.mock.calls[0]
+        expect(String(message)).toContain('humbleRecordGiftLinkOpened')
+        expect(loggedMachineName).toBe('unknown-mn')
+        warnSpy.mockRestore()
+      })
+
+      it('REQ-34.4-07 guard: rejects a key that is not ownedElsewhere — recordGiftLinkOpened is NEVER called', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        jest.mocked(HumbleLibrary.getKeys).mockReturnValue([
+          fakeKey({
+            machineName: 'not-owned-mn',
+            ownedElsewhere: false,
+            state: 'UNREVEALED'
+          })
+        ] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'gift-link-3', 'humbleRecordGiftLinkOpened', [
+          'not-owned-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'gift-link-3')
+        expect(response).toMatchObject({ id: 'gift-link-3', ok: true })
+        expect(HumbleLibrary.recordGiftLinkOpened).not.toHaveBeenCalled()
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        warnSpy.mockRestore()
+      })
+
+      it('REQ-34.4-07 guard: rejects a key whose state is not UNREVEALED — recordGiftLinkOpened is NEVER called', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        jest.mocked(HumbleLibrary.getKeys).mockReturnValue([
+          fakeKey({
+            machineName: 'already-revealed-mn',
+            ownedElsewhere: true,
+            state: 'REVEALED'
+          })
+        ] as ReturnType<typeof HumbleLibrary.getKeys>)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'gift-link-4', 'humbleRecordGiftLinkOpened', [
+          'already-revealed-mn'
+        ])
+        await flush()
+
+        const response = frames.find((frame) => frame.id === 'gift-link-4')
+        expect(response).toMatchObject({ id: 'gift-link-4', ok: true })
+        expect(HumbleLibrary.recordGiftLinkOpened).not.toHaveBeenCalled()
+        expect(warnSpy).toHaveBeenCalledTimes(1)
+        warnSpy.mockRestore()
+      })
+    })
+  })
+
+  // ── humbleDisconnect — kind proofs + rejection guard (Plan 05, REQ-34.4-09,
+  // T-34.4-23) ─────────────────────────────────────────────────────────────
+  describe('humbleDisconnect — kind proofs + rejection guard', () => {
+    it('REQ-34.4-09 kind proof, positive direction: a humbleDisconnect SEND frame causes HumbleUser.disconnect to be called exactly once, and produces no response frame', async () => {
+      jest.mocked(HumbleUser.disconnect).mockResolvedValue(undefined)
+
+      const { input, frames } = startSidecar()
+      writeSend(input, 'disconnect-send-1', 'humbleDisconnect', [])
+      await flush()
+
+      expect(
+        frames.find((frame) => frame.id === 'disconnect-send-1')
+      ).toBeUndefined()
+      expect(HumbleUser.disconnect).toHaveBeenCalledTimes(1)
+    })
+
+    it('REQ-34.4-09 kind proof, negative direction: humbleDisconnect must NOT be reachable as an invoke handler', async () => {
+      jest.mocked(HumbleUser.disconnect).mockResolvedValue(undefined)
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'disconnect-invoke-1', 'humbleDisconnect', [])
+      await flush()
+
+      const response = frames.find(
+        (frame) => frame.id === 'disconnect-invoke-1'
+      ) as { ok?: boolean } | undefined
+      expect(response?.ok).not.toBe(true)
+      expect(HumbleUser.disconnect).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.4-09 rejection guard (WR-02): a rejecting HumbleUser.disconnect does not crash the sidecar, is never an unhandled rejection, and the RPC loop keeps serving', async () => {
+      const unhandledRejections: unknown[] = []
+      const onUnhandledRejection = (reason: unknown): void => {
+        unhandledRejections.push(reason)
+      }
+      process.on('unhandledRejection', onUnhandledRejection)
+
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+      try {
+        jest
+          .mocked(HumbleUser.disconnect)
+          .mockRejectedValue(new Error('humble disconnect transport failure'))
+
+        const { input, frames } = startSidecar()
+        writeSend(input, 'disconnect-reject-1', 'humbleDisconnect', [])
+        await flush()
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          '[humbleFlowRegistration] humbleDisconnect failed:',
+          expect.any(Error)
+        )
+
+        writeInvoke(input, 'health-after-disconnect-reject', 'health', [])
+        await flush()
+        const healthResponse = frames.find(
+          (frame) => frame.id === 'health-after-disconnect-reject'
+        )
+        expect(healthResponse).toMatchObject({
+          id: 'health-after-disconnect-reject',
+          ok: true,
+          result: 'ok'
+        })
+
+        expect(unhandledRejections).toEqual([])
+      } finally {
+        process.off('unhandledRejection', onUnhandledRejection)
+        warnSpy.mockRestore()
+      }
+    })
+  })
+
+  // ── humbleRunValidation — packaged-signal resolution (Plan 05, REQ-34.4-08,
+  // T-34.4-26) ─────────────────────────────────────────────────────────────
+  // These tests bypass this FILE's own top-level `jest.mock('../../humble/user')`
+  // /`jest.mock('../../humble/library')` automocks by dynamically re-requiring
+  // `../humbleFlowRegistration` and `../electronStub` after `jest.resetModules()`
+  // -- Jest keeps applying the SAME automock factories on re-require (resetModules
+  // only clears the instantiated-module cache, not the configured mock list), so
+  // this stays safe/automocked; only `node:sea` is freshly (re-)mocked per test via
+  // `jest.doMock`, which is NOT hoisted and therefore must be the LAST mock call
+  // before each dynamic require below. Each test gets its own fresh module
+  // instance (and therefore its own fresh, empty `handlerRegistry`), so these do
+  // not interact with -- or get polluted by -- the shared sidecar this file's
+  // other tests drive via `startSidecar()`.
+  describe('humbleRunValidation — packaged-signal resolution', () => {
+    afterEach(() => {
+      jest.dontMock('node:sea')
+    })
+
+    it('REQ-34.4-08 registered when node:sea reports this is NOT a packaged SEA build (the dev signal)', () => {
+      jest.resetModules()
+      jest.doMock('node:sea', () => ({ isSea: () => false }))
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const fresh = require('../humbleFlowRegistration') as {
+        registerHumbleFlows: () => void
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const freshStub = require('../electronStub') as {
+        handlerRegistry: Map<string, unknown>
+      }
+
+      fresh.registerHumbleFlows()
+      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(true)
+    })
+
+    it('REQ-34.4-08 NOT registered when node:sea reports this IS a packaged SEA build', () => {
+      jest.resetModules()
+      jest.doMock('node:sea', () => ({ isSea: () => true }))
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const fresh = require('../humbleFlowRegistration') as {
+        registerHumbleFlows: () => void
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const freshStub = require('../electronStub') as {
+        handlerRegistry: Map<string, unknown>
+      }
+
+      fresh.registerHumbleFlows()
+      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
+    })
+
+    it('REQ-34.4-08 safe default: NOT registered when node:sea is undeterminable (throws), and the fallback is logged once', () => {
+      jest.resetModules()
+      jest.doMock('node:sea', () => {
+        throw new Error('node:sea unavailable on this runtime (simulated)')
+      })
+      const consoleWarnSpy = jest
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {})
+
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const fresh = require('../humbleFlowRegistration') as {
+        registerHumbleFlows: () => void
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const freshStub = require('../electronStub') as {
+        handlerRegistry: Map<string, unknown>
+      }
+
+      fresh.registerHumbleFlows()
+      expect(freshStub.handlerRegistry.has('humbleRunValidation')).toBe(false)
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('node:sea unavailable'),
+        expect.any(Error)
+      )
+      consoleWarnSpy.mockRestore()
+    })
+  })
+
+  // ── humbleDisconnect — D-05 ordering proof (Plan 05, REQ-34.4-09, T-34.4-24)
+  // ───────────────────────────────────────────────────────────────────────────
+  // This suite automocks `../../humble/user` file-wide so every OTHER test in
+  // this file proves registration/transport, not Humble logic. D-05's claim --
+  // that the three store clears happen even when the session.fromPartition wipe
+  // loop no-ops or rejects -- is a claim about the REAL disconnect() body
+  // (user.ts:566-608), which an automocked HumbleUser.disconnect cannot prove.
+  // This describe block bypasses the file-wide automock for ONE test via
+  // `jest.resetModules()` + a dynamic, unmocked `require`, mirroring
+  // `user.test.ts`'s own sanctioned mock boundary (electron -> session, but here
+  // routed at the REAL electronStub per this file's own top-level
+  // `jest.mock('electron', () => jest.requireActual('../electronStub'))` --
+  // deliberately NOT overridden, so `session.fromPartition()` below is the REAL,
+  // accepted Phase 29 D-09 no-op, never a fabricated one; backend/logger ->
+  // log* per user.test.ts's own boundary; ../electronStores is left REAL and
+  // spied on directly, since `jest.setupContainment.ts` already redirects
+  // HOME/XDG structurally for this whole file (Phase 34.2 gap cycle 4), so the
+  // real store files this touches are disposable, never real developer data.
+  // Placed as the LAST describe block in this file: `jest.resetModules()` only
+  // affects FUTURE dynamic `require()` calls, never the already-bound
+  // top-of-file `import` bindings every other test in this file uses -- but
+  // keeping it last avoids any risk of ordering interaction regardless.
+  describe('humbleDisconnect — D-05 ordering proof (real disconnect(), not automocked)', () => {
+    it('REQ-34.4-09 the three Humble store clears happen, and independently of every session.fromPartition wipe step failing against the real electronStub D-09 no-op', async () => {
+      jest.resetModules()
+
+      const warnSpy = jest.fn()
+      jest.doMock('backend/logger', () => ({
+        logInfo: jest.fn(),
+        logError: jest.fn(),
+        logWarning: (...args: unknown[]) => warnSpy(...args),
+        LogPrefix: { Backend: 'Backend' }
+      }))
+
+      // `jest.requireActual` (NOT plain `require`) is load-bearing here: this
+      // file's own file-wide `jest.mock('../../humble/user')` (hoisted, top
+      // of file) stays registered across `jest.resetModules()` -- resetModules
+      // only clears the INSTANTIATED-module cache, not the configured mock
+      // list -- so a plain `require('../../humble/user')` would still resolve
+      // to a fresh instance of the SAME automock (confirmed by hand: the
+      // first version of this test used plain `require` and failed with
+      // "received value must be a promise", because the automocked
+      // `disconnect()` returns `undefined`, not a Promise). `requireActual`
+      // is the one call that genuinely bypasses the registered mock.
+      const { HumbleUser: RealHumbleUser } = jest.requireActual(
+        '../../humble/user'
+      ) as {
+        HumbleUser: { disconnect: () => Promise<void> }
+      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const realStores = require('../../humble/electronStores') as {
+        configStore: {
+          set: (key: string, value: unknown) => void
+          get_nodefault: (key: string) => unknown
+          clear: () => void
+        }
+        humbleLibraryStore: {
+          set: (key: string, value: unknown) => void
+          clear: () => void
+        }
+        humbleSyncStore: {
+          set: (key: string, value: unknown) => void
+          clear: () => void
+        }
+      }
+
+      realStores.configStore.set('sessionCookie', 'FAKE-D05-COOKIE-VALUE')
+      realStores.humbleLibraryStore.set('fake-order', { keys: [] })
+      realStores.humbleSyncStore.set('state', { syncedAt: 111 })
+
+      const clearConfigSpy = jest.spyOn(realStores.configStore, 'clear')
+      const clearLibrarySpy = jest.spyOn(realStores.humbleLibraryStore, 'clear')
+      const clearSyncSpy = jest.spyOn(realStores.humbleSyncStore, 'clear')
+
+      // The real electronStub `session.fromPartition()` (D-09, accepted no-op)
+      // returns `{}` -- calling ANY of the 5 best-effort wipe methods on it
+      // throws "is not a function", which `disconnect()`'s own per-step
+      // try/catch (user.ts:588) converts into a logged warning, never a thrown
+      // exception -- so this exercises the real "every partition step fails"
+      // case with zero fabrication.
+      await expect(RealHumbleUser.disconnect()).resolves.toBeUndefined()
+
+      // (a) all three store clears happened.
+      expect(clearConfigSpy).toHaveBeenCalledTimes(1)
+      expect(clearLibrarySpy).toHaveBeenCalledTimes(1)
+      expect(clearSyncSpy).toHaveBeenCalledTimes(1)
+      expect(
+        realStores.configStore.get_nodefault('sessionCookie')
+      ).toBeUndefined()
+
+      // (b) they happened even though every one of the 5 partition wipe steps
+      // failed against the real D-09 stub -- proving the credential wipe is
+      // NOT contingent on the partition steps succeeding (user.ts:588).
+      expect(warnSpy).toHaveBeenCalledTimes(5)
+      for (const call of warnSpy.mock.calls) {
+        const message = Array.isArray(call[0]) ? call[0].join(' ') : call[0]
+        expect(String(message)).toMatch(/wipe step/i)
+      }
+
+      clearConfigSpy.mockRestore()
+      clearLibrarySpy.mockRestore()
+      clearSyncSpy.mockRestore()
     })
   })
 })
