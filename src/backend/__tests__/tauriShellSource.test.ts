@@ -28,6 +28,16 @@ const MAIN_RS_PATH = join(
   'main.rs'
 )
 
+const CAPABILITIES_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'capabilities',
+  'default.json'
+)
+
 /**
  * Reads main.rs (or `source` if provided — the self-tests below drive this SAME code path
  * with synthetic input rather than reimplementing the stripping algorithm) and strips
@@ -244,5 +254,99 @@ describe('loadMainRsCode comment-stripping self-test (REQ-34.1-07)', () => {
       .map((line) => line.replace(/\/\/.*$/, ''))
       .join('\n')
     expect(stripped).not.toContain('TrayIconBuilder')
+  })
+})
+
+/**
+ * REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07).
+ *
+ * This gate proves CONTINUED EXISTENCE of the Rust source shapes below -- the two
+ * dispatch_rust_channel arms, their two pure helpers, the plugin registration, and every
+ * #[cfg(test)] fn plan 34.3-03 added -- it does NOT and CANNOT prove the Cargo tests still
+ * pass. This project's CI runs no cargo step at all (`.github/workflows/*.yml` contains
+ * neither `cargo test` nor `cargo check`), so `cd src-tauri && cargo test` is hand-run, and
+ * its hand-verified RED proof is recorded in `34.3-03-SUMMARY.md`. Adding a cargo step to CI
+ * is a deliberately deferred idea (D-07's own rejected-alternatives list), not an oversight.
+ *
+ * All positive-existence assertions below run against `loadMainRsCode()`'s comment-stripped
+ * output -- see this file's own Task 2 hardening (the block-comment stripper) for why that
+ * matters here specifically: `fn clipboard_text_arg` et al. also appear in main.rs's own
+ * prose (the doc comments above the arms name every one of these symbols), so an unstripped
+ * gate could pass on comment text alone even if the real code were deleted.
+ */
+describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07)', () => {
+  test('REQ-34.3-08 the clipboard_write_text dispatch arm exists', () => {
+    expect(loadMainRsCode()).toContain('"clipboard_write_text" =>')
+  })
+
+  test('REQ-34.3-08 the clipboard_read_text dispatch arm exists', () => {
+    expect(loadMainRsCode()).toContain('"clipboard_read_text" =>')
+  })
+
+  test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
+    expect(loadMainRsCode()).toContain('fn clipboard_text_arg')
+  })
+
+  test('REQ-34.3-08 the clipboard_read_value pure helper exists', () => {
+    expect(loadMainRsCode()).toContain('fn clipboard_read_value')
+  })
+
+  test('REQ-34.3-08 the clipboard plugin is registered', () => {
+    expect(loadMainRsCode()).toContain('tauri_plugin_clipboard_manager::init()')
+  })
+
+  test('REQ-34.3-08 the ClipboardExt trait is imported', () => {
+    expect(loadMainRsCode()).toContain(
+      'use tauri_plugin_clipboard_manager::ClipboardExt'
+    )
+  })
+
+  // The real #[test] fn names plan 34.3-03 added to main.rs's #[cfg(test)] mod (verified by
+  // direct read, not guessed) -- pinning the Cargo test module's continued existence against
+  // a later refactor silently deleting it.
+  const EXPECTED_CLIPBOARD_TEST_FN_NAMES = [
+    'clipboard_text_arg_rejects_absent_args',
+    'clipboard_text_arg_rejects_null',
+    'clipboard_text_arg_rejects_number',
+    'clipboard_text_arg_rejects_bool',
+    'clipboard_text_arg_accepts_empty_string',
+    'clipboard_text_arg_accepts_nonempty_string',
+    'clipboard_text_arg_ignores_trailing_args',
+    'clipboard_read_value_empty_string_is_not_null',
+    'clipboard_read_value_nonempty_string_round_trips',
+    'clipboard_read_value_propagates_error'
+  ]
+
+  test('REQ-34.3-08 every clipboard #[cfg(test)] fn plan 34.3-03 added still exists', () => {
+    const code = loadMainRsCode()
+    for (const fnName of EXPECTED_CLIPBOARD_TEST_FN_NAMES) {
+      expect(code).toContain(`fn ${fnName}`)
+    }
+  })
+
+  test('REQ-34.3-08 / D-05 no-fix: shutdown_child() is NOT called inside the app_relaunch arm body', () => {
+    // Narrow, scoped to the app_relaunch arm's own body -- shutdown_child legitimately exists
+    // as a method AND is legitimately called from the RunEvent::Exit handler (WR-03), so a
+    // blanket substring check would be wrong. REQ-34.3-06 resolved to NO FIX: main.rs's own
+    // comment above this arm (see Task 1's docstring citation) records that RunEvent::Exit
+    // already fires and already kills the sidecar before the process re-execs.
+    const code = loadMainRsCode()
+    const armStart = code.indexOf('"app_relaunch" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armBodyEnd = code.indexOf('\n        }', armStart)
+    expect(armBodyEnd).toBeGreaterThan(armStart)
+    const armBody = code.slice(armStart, armBodyEnd)
+    expect(armBody).not.toContain('shutdown_child()')
+  })
+
+  test('REQ-34.3-08 / D-05 no-fix: shutdown_child() has exactly one call site in the whole file (the RunEvent::Exit handler)', () => {
+    const code = loadMainRsCode()
+    const callSites = code.match(/shutdown_child\(\)/g) ?? []
+    expect(callSites.length).toBe(1)
+  })
+
+  test('REQ-34.3-08 / D-02 zero-capability-grant: capabilities/default.json contains no "clipboard" string', () => {
+    const capabilitiesRaw = readFileSync(CAPABILITIES_PATH, 'utf-8')
+    expect(capabilitiesRaw).not.toContain('clipboard')
   })
 })
