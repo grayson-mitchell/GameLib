@@ -46,18 +46,21 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
 ]
 
 /**
- * Reads main.rs and strips comments so assertions run against code only
- * (mirrors `tauriShellSource.test.ts`'s own `loadMainRsCode` helper):
+ * Reads main.rs (or `source` if provided — the WR-08 self-tests below drive this SAME code path
+ * with synthetic input rather than reimplementing the stripping algorithm) and strips comments so
+ * assertions run against code only (mirrors `tauriShellSource.test.ts`'s own `loadMainRsCode`
+ * helper):
  *   - drops every line whose trimmed form starts with `//` (covers `//`, `///`, `//!`)
  *   - drops a trailing `// ...` fragment from any mixed code/comment line
+ *
+ * Consumers of this helper's soundness: `extractLongRunningChannels()` (parses
+ * `LONG_RUNNING_CHANNELS`'s string literals from the output) and the `INVOKE_TIMEOUT` literal
+ * assertion below. Other Wave-0 config gates (`tauriConf.test.ts`, `tauriShellSource.test.ts`)
+ * copy this exact stripper pattern, so a defect found here is worth guarding against once, here.
  */
-function loadMainRsCode(): string {
-  const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
-  return raw
-    .split('\n')
-    .filter((line) => !line.trim().startsWith('//'))
-    .map((line) => line.replace(/\/\/.*$/, ''))
-    .join('\n')
+function loadMainRsCode(source?: string): string {
+  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  return stripRustLineComments(raw)
 }
 
 /**
@@ -66,7 +69,9 @@ function loadMainRsCode(): string {
  */
 function extractLongRunningChannels(): string[] {
   const code = loadMainRsCode()
-  const match = code.match(/const LONG_RUNNING_CHANNELS[^=]*=\s*&\[([\s\S]*?)\];/)
+  const match = code.match(
+    /const LONG_RUNNING_CHANNELS[^=]*=\s*&\[([\s\S]*?)\];/
+  )
   if (!match) {
     throw new Error('LONG_RUNNING_CHANNELS array not found in main.rs')
   }
@@ -153,10 +158,13 @@ function hasBehavioralRustTestModule(source: string): boolean {
   // `assert_eq!(\n    timeout_for(channel),\n    None,\n    ...\n);` form.
   const hasRealAssertion = /assert_eq!\(\s*timeout_for\(/.test(strippedRegion)
   const timeoutForRefs = strippedRegion.match(/timeout_for/g) ?? []
-  const iteratesLongRunningChannels = /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/.test(
-    strippedRegion
+  const iteratesLongRunningChannels =
+    /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/.test(strippedRegion)
+  return (
+    hasRealAssertion &&
+    timeoutForRefs.length >= 2 &&
+    iteratesLongRunningChannels
   )
-  return hasRealAssertion && timeoutForRefs.length >= 2 && iteratesLongRunningChannels
 }
 
 /**
@@ -282,5 +290,68 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
 
   test('REQ-34.2-12 getWikiGameInfo is NOT exempted — the 2026-07-25 cold-cache measurement (1190ms/957ms/702ms) stayed comfortably under the 60s bound', () => {
     expect(extractLongRunningChannels()).not.toContain('getWikiGameInfo')
+  })
+})
+
+/**
+ * WR-08: `loadMainRsCode()`'s `.replace(/\/\/.*$/, '')` has no string-literal awareness. `main.rs`
+ * is safe today only because every `steam://` / `https://` occurrence sits on a line that starts
+ * with `//` and is dropped wholesale — the moment a code line gains a literal such as
+ * `"steam://rungameid/"`, the stripper truncates it and `extractLongRunningChannels()` /
+ * the `INVOKE_TIMEOUT` literal assertion above would fail or, worse, silently match a truncated
+ * body. This helper is also the exact pattern other Wave-0 config gates
+ * (`tauriConf.test.ts`, `tauriShellSource.test.ts`) copy, so the guard is worth carrying here
+ * rather than attempting a correct Rust lexer in a config gate.
+ */
+describe('stripper integrity (WR-08)', () => {
+  test('the real file: stripping does not cut a string literal in half (quote count stays EVEN)', () => {
+    const stripped = loadMainRsCode()
+    const quoteCount = (stripped.match(/"/g) ?? []).length
+    // Plain `toBe(0)` would only report "Expected: 0, Received: 1" on failure — the raw count
+    // itself (needed to locate which literal got cut) would be lost. Assert via a labeled
+    // boolean instead so a failure names the count directly.
+    const isEven = quoteCount % 2 === 0
+    expect({ isEven, quoteCount }).toEqual({ isEven: true, quoteCount })
+  })
+
+  test('the real file: every line of the stripped output has a balanced (even) "-count', () => {
+    const strippedLines = loadMainRsCode().split('\n')
+    const unbalancedLines = strippedLines
+      .map((line, index) => ({
+        index,
+        line,
+        quoteCount: (line.match(/"/g) ?? []).length
+      }))
+      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
+    // Reporting the full list of unbalanced lines (not just a boolean) makes a future failure
+    // diagnosable at a glance rather than requiring a re-run with extra logging.
+    expect(unbalancedLines).toEqual([])
+  })
+
+  // Self-test proving the guard above can actually FAIL (mirrors this file's other self-tests):
+  // a synthetic Rust line carrying a quoted `steam://` literal followed by a trailing `//`
+  // comment is exactly the future regression WR-08 predicts. Feeding it through the SAME
+  // `loadMainRsCode()` code path (via the optional `source` parameter) demonstrates the stripper
+  // truncates the literal, producing an ODD "-count on that line — i.e. that the (a)/(b) guards
+  // above would reject it.
+  //
+  // Honesty note (34.2-28 Task 2 resolution): the truncation is driven entirely by the FIRST `//`
+  // the naive stripper finds — here, the one embedded inside the `steam://` literal itself — not
+  // by the appended ` // trailing note`. That trailing comment is kept below (matching this
+  // plan's literal fixture request, so the title's claim is true), but removing ONLY it would
+  // leave the line's outcome unchanged: the embedded `//` alone already truncates the literal
+  // before the appended comment is ever reached. The genuine falsifiability lever is therefore
+  // the literal's OWN `//`, not the trailing comment — demonstrated by hand in 34.2-28-SUMMARY.md
+  // by temporarily removing the `//` from the literal itself (not the trailing comment) and
+  // observing this self-test fail (EVEN count), then restoring.
+  test('self-test: a synthetic code line with a quoted steam:// literal plus a trailing comment produces an ODD "-count on that line (proves the guard can fail)', () => {
+    const syntheticSource = [
+      'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
+      'const RUNGAME_PREFIX: &str = "steam://rungameid/"; // trailing note'
+    ].join('\n')
+    const strippedLines = loadMainRsCode(syntheticSource).split('\n')
+    const truncatedLine = strippedLines[1]
+    const quoteCount = (truncatedLine.match(/"/g) ?? []).length
+    expect(quoteCount % 2).toBe(1)
   })
 })
