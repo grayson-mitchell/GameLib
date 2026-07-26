@@ -99,10 +99,13 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
   })
 
   // Independent 4th test (not tied to the showDialogModal call): proves the
-  // console.error/logError signals also fire for a non-Error thrown value
-  // (e.g. a plain string), the kind of "hostile reason" this gap cycle's
-  // sibling plans (34.2-15) have specifically hardened against elsewhere.
-  it('still reports console.error and window.api.logError for a non-Error thrown value', () => {
+  // console.error/logError signals also fire for a plain-string thrown
+  // value. This is a real, unremarkable scenario (e.g. `throw 'timed out'`)
+  // -- NOT a hostile one. It never exercises the `${error}` primitive-
+  // conversion throw path (a plain string is already a primitive), so it
+  // must not be read as covering the WR-03 hostile-reason class; that
+  // claim belongs solely to the three tests below.
+  it('still reports console.error and window.api.logError for a plain-string thrown value (non-hostile baseline)', () => {
     reportRepairFailure({
       appName: 'MyGame',
       error: 'a plain string rejection',
@@ -114,5 +117,114 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
     expect(logErrorMock).toHaveBeenCalledTimes(1)
     const [logMessage] = logErrorMock.mock.calls[0] as [string]
     expect(logMessage).toContain('a plain string rejection')
+  })
+
+  // WR-03 hostile-reason regression cases (gap cycle 3).
+  //
+  // repairFailure.ts:45 interpolates `${error}` where `error: unknown`, with
+  // no try/catch -- the identical defect class plan 34.2-15 removed from
+  // processGuards.ts, reintroduced here. For a null-prototype reason, or one
+  // whose `toString`/`Symbol.toPrimitive` throws, that interpolation throws
+  // `TypeError: Cannot convert object to primitive value` BEFORE reaching
+  // the showDialogModal call two lines below -- so the ERROR dialog
+  // REQ-34.2-12 exists to guarantee never renders, and the throw escapes
+  // onRepairYesClick's catch into the un-awaited dialog-button handler at
+  // index.tsx:158 as an unhandled renderer rejection.
+  //
+  // These three constructions are the same shapes plan 34.2-15 used in
+  // src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts (Group 2,
+  // lines 577-628), so both suites exercise an identical adversary.
+  //
+  // RED-PROOF (confirmed by hand 2026-07-26 against the pre-fix
+  // implementation, before Task 2's hardening): all three tests below FAILED
+  // with `TypeError: Cannot convert object to primitive value` thrown out of
+  // `reportRepairFailure` itself, and `showDialogModalMock` was never
+  // called. See 34.2-21-SUMMARY.md for the verbatim jest output. Do not
+  // weaken these constructions to something jest's own conversions can
+  // tolerate -- that is exactly how the previous 4th test came to pass
+  // vacuously (see the baseline test above).
+  const hostileReasons: Array<[string, unknown]> = [
+    ['a null-prototype object', Object.create(null) as unknown],
+    [
+      'an object whose toString throws',
+      {
+        toString() {
+          throw new Error('toString exploded')
+        }
+      }
+    ],
+    [
+      'an object whose Symbol.toPrimitive throws',
+      {
+        [Symbol.toPrimitive]() {
+          throw new Error('toPrimitive exploded')
+        }
+      }
+    ]
+  ]
+
+  it.each(hostileReasons)(
+    'does not throw and still calls showDialogModal with type ERROR for %s',
+    (_label, error) => {
+      expect(() =>
+        reportRepairFailure({
+          appName: 'MyGame',
+          error,
+          showDialogModal: showDialogModalMock,
+          t
+        })
+      ).not.toThrow()
+
+      expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+      const [options] = showDialogModalMock.mock.calls[0] as [
+        { type: string }
+      ]
+      expect(options.type).toBe('ERROR')
+    }
+  )
+
+  it.each(hostileReasons)(
+    'still calls window.api.logError exactly once for %s (signal 2 degrades to a fallback string, never disappears)',
+    (_label, error) => {
+      reportRepairFailure({
+        appName: 'MyGame',
+        error,
+        showDialogModal: showDialogModalMock,
+        t
+      })
+
+      expect(logErrorMock).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it.each(hostileReasons)(
+    'still calls console.error exactly once for %s (signal 1 is unaffected)',
+    (_label, error) => {
+      reportRepairFailure({
+        appName: 'MyGame',
+        error,
+        showDialogModal: showDialogModalMock,
+        t
+      })
+
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('showDialogModal message is still the fixed translated string only, for a hostile reason (T-34.2-52 survives the hardening)', () => {
+    const [, hostileError] = hostileReasons[1]
+
+    reportRepairFailure({
+      appName: 'MyGame',
+      error: hostileError,
+      showDialogModal: showDialogModalMock,
+      t
+    })
+
+    expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+    const [options] = showDialogModalMock.mock.calls[0] as [
+      { message: string }
+    ]
+    expect(options.message).toBe('Repair failed. See the log for details.')
   })
 })
