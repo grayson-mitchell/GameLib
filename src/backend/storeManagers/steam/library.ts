@@ -1859,7 +1859,25 @@ export function startInstallPolling(
       return
     }
 
-    await pollInstallOnce(appId, source)
+    // Teardown-safety (mirrors bottle.ts GAP C): a real poller can outlive the
+    // Jest suite that started it (unref() above only stops it from keeping the
+    // process alive — it does NOT stop it from firing while the process is
+    // otherwise kept busy by a later suite). If it fires after that suite's
+    // module mocks are torn down, readAcfState()'s dependencies
+    // (getSteamLibraries/getSteamBottleSettings) return undefined and throw.
+    // Left unguarded, that throw escapes this async setInterval callback as an
+    // unhandled rejection and kills the whole Jest worker. Production never
+    // expects this branch — it's a defensive, log-only catch; the next tick
+    // retries normally.
+    try {
+      await pollInstallOnce(appId, source)
+    } catch (error) {
+      logError(
+        [`Steam: install polling tick for appId ${appId} threw`, error],
+        LogPrefix.Steam
+      )
+      return
+    }
 
     // pollInstallOnce may have stopped the poll (state became 'installed')
     if (!activePolls.has(appId)) return
@@ -2058,7 +2076,23 @@ export function startUninstallPolling(
       return
     }
 
-    await pollUninstallOnce(appId, source)
+    // Teardown-safety (mirrors startInstallPolling's callback above / bottle.ts
+    // GAP C): a real poller can outlive the Jest suite that started it —
+    // unref() only stops it from keeping the process alive, not from firing
+    // while a later suite keeps the process busy. If it fires after that
+    // suite's module mocks are torn down, readAcfState()'s dependencies throw,
+    // and an unguarded throw here would escape as an unhandled rejection and
+    // kill the whole Jest worker. Production never expects this branch — it's
+    // a defensive, log-only catch; the next tick retries normally.
+    try {
+      await pollUninstallOnce(appId, source)
+    } catch (error) {
+      logError(
+        [`Steam: uninstall polling tick for appId ${appId} threw`, error],
+        LogPrefix.Steam
+      )
+      return
+    }
 
     // pollUninstallOnce may have stopped the poll (manifest absent = complete)
     if (!activeUninstallPolls.has(appId)) return
@@ -2319,6 +2353,12 @@ export function pollRunningOnce(): void {
 export function startRunningPoll(intervalMs = 5000): void {
   if (runningPollTimer) return // idempotent
   runningPollTimer = setInterval(pollRunningOnce, intervalMs)
+  // Teardown-safety (mirrors the install/uninstall pollers above): unref so a
+  // leaked real poller never keeps a Jest worker alive on its own.
+  // Production-neutral in the Electron main process. pollRunningOnce is
+  // synchronous and its own readRunningAppId() never throws (see docstring),
+  // so no try/catch guard is needed here.
+  runningPollTimer.unref?.()
   logInfo('Steam: started running-game poller', LogPrefix.Steam)
 }
 
