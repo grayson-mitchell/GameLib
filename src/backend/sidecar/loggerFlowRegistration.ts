@@ -40,6 +40,62 @@
  * itself is already reachable from the sidecar's import graph
  * (`processGuards.ts` imports `logWarning` from it), so importing
  * `logError`/`LogPrefix` from it here adds no new reach.
+ *
+ * WR-02 (Phase 34.2 gap cycle 3, plan 34.2-20 — closes REQ-34.2-12/-14): the
+ * `logError(...)` call below used to be neither `await`ed nor `.catch()`'d.
+ * `LogWriter#logBase` (`backend/logger/log_writer.ts:131`) is `private
+ * async` and performs `fsPromises.appendFile`/`mkdir`, so a real log-write
+ * failure (EACCES, ENOSPC, a deleted log directory) became a process-level
+ * `unhandledRejection`. `dispatchSend`'s `try`/`catch` (`sidecarRpc.ts:137-
+ * 146`) is synchronous and cannot see an async rejection surfacing after the
+ * listener body returns.
+ *
+ * It survived only because `processGuards.ts` absorbed it — which directly
+ * violates that module's own documented invariant (its docstring, lines
+ * 10-14): it "is explicitly NOT a substitute for call-site
+ * `.catch()`/`try`/`catch` handling — every `send`-kind body and every
+ * fire-and-forget call the sidecar owns must still guard itself." The fix
+ * below restores that invariant: the rejection is now settled AT THIS CALL
+ * SITE, with its own module-attributed stderr diagnostic (distinct from
+ * `processGuards.ts`'s generic `[sidecar] unhandled promise rejection:`
+ * prefix, precisely so a real failure here is no longer generic). The
+ * process guard remains installed as pure defence-in-depth — it is simply no
+ * longer the primary (and, before this fix, only) handler for this channel.
+ *
+ * `logError(...)`'s return value is normalised via `Promise.resolve(...)`
+ * before `.catch` is attached: the declared TypeScript return type is `void`
+ * (see `logError` in `backend/logger/index.ts`), but the runtime value is a
+ * promise today via `LogWriter#logError` -> `#logBase`. `Promise.resolve`
+ * makes the guard correct either way without depending on that runtime
+ * shape. The whole expression is prefixed with `void` so the listener body
+ * itself stays synchronous and returns `undefined`, preserving `ipcMain.on`
+ * / `dispatchSend`'s listener contract.
+ *
+ * The `.catch` handler mirrors `processGuards.ts`'s own documented
+ * discipline exactly (governed by this project's recorded
+ * `sidecar-dialog-reject-crashes` incident: a "fix" that introduces a NEW
+ * throw/reject/exit path is worse than the bug it fixes):
+ *   - Message construction: a `let` is initialised to a hardcoded,
+ *     non-interpolated fallback literal BEFORE its own `try`, then
+ *     reassigned inside that `try` via `error instanceof Error ? ... :
+ *     String(error)` (the plan 34.2-15 / CR-02 shape — a bare `${error}`
+ *     interpolation of an `unknown` value is exactly the defect WR-03 flags
+ *     elsewhere in this same gap cycle).
+ *   - The diagnostic is written to `process.stderr` only, NEVER the sidecar's
+ *     stdout stream — that stream carries the newline-delimited JSON RPC
+ *     frame protocol, and any non-frame byte written there corrupts the
+ *     transport. The write itself is wrapped in its own `try`/`catch` that
+ *     swallows, so this handler can never become a new throw path.
+ *   - Never rethrows, never calls `process.exit`, never changes the exit
+ *     code.
+ *
+ * The type assertion that used to narrow the frontend's message argument to
+ * a string has been dropped (review finding IN-05). The declared
+ * transport contract (`src/common/types/ipc.ts:106`) is
+ * `logError: (message: unknown) => void`, and `LogWriter#logError` already
+ * accepts `unknown` — the assertion claimed a guarantee the transport never
+ * made, and a malformed frame with an empty `args` array previously yielded
+ * a silently-asserted `undefined`-as-string.
  */
 
 import { ipcMain } from './electronStub'
@@ -52,8 +108,28 @@ import { logError, LogPrefix } from '../logger'
  */
 export function registerLoggerFlows(): void {
   // Behavior identical to the Electron-only logger IPC handler's own
-  // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`.
+  // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`,
+  // except the call is now guarded at this call site (WR-02) rather than
+  // left as a floating promise for processGuards.ts to absorb.
   ipcMain.on('logError', (_event: unknown, ...args: unknown[]) => {
-    logError(args[0] as string, LogPrefix.Frontend)
+    void Promise.resolve(logError(args[0], LogPrefix.Frontend)).catch(
+      (error: unknown) => {
+        let diagnostic =
+          '[loggerFlowRegistration] logError call-site rejection: <unstringifiable reason>'
+        try {
+          diagnostic = `[loggerFlowRegistration] logError call-site rejection: ${
+            error instanceof Error ? (error.stack ?? error.message) : String(error)
+          }`
+        } catch {
+          // keep the hardcoded fallback
+        }
+        try {
+          process.stderr.write(`${diagnostic}\n`)
+        } catch {
+          // Nothing further we can safely do -- swallow. Never re-throw,
+          // never exit, never write to stdout (RPC frame transport).
+        }
+      }
+    )
   })
 }
