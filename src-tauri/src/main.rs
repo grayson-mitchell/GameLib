@@ -339,6 +339,37 @@ async fn sidecar_store_snapshot(
     .map_err(|e| e.to_string())?
 }
 
+// ---- Clipboard arg/value helpers (Phase 34.3 Plan 03, D-01/D-02/REQ-34.3-08) ----
+//
+// The `clipboard_write_text`/`clipboard_read_text` dispatch arms below call
+// `app.clipboard()`, which needs a live `AppHandle` and therefore cannot be driven from a
+// plain `#[test]` (a `#[cfg(test)]` unit test structurally cannot construct a Tauri
+// runtime). These two functions extract each arm's non-plugin logic into a pure,
+// `AppHandle`-free surface so it can be proven by `#[cfg(test)] mod tests` below. The arms'
+// actual plugin calls are proven empirically instead, by REQ-34.3-11's live-gate item 3 —
+// not by these tests.
+
+/// This channel's entire ASVS V5 input validation: `args[0]` must be present and a JSON
+/// string. An empty string is a VALID clipboard write and must not be conflated with a
+/// missing/wrong-typed argument — `unwrap_or("")` would silently accept both.
+fn clipboard_text_arg(args: &[Value]) -> Result<&str, String> {
+    args.first()
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "clipboard_write_text:bad-args".to_string())
+}
+
+/// Shapes the plugin's `Result<String, String>` into the arm's `Result<Value, String>`.
+/// An empty clipboard read is `Ok(Value::String(String::new()))`, deliberately NOT
+/// `Ok(Value::Null)` — the sidecar's `clipboardReadText` handler coerces a non-string result
+/// to `''`, which would mask a `Value::Null` regression here as an indistinguishable empty
+/// read instead of a visibly wrong shape.
+fn clipboard_read_value(read: Result<String, String>) -> Result<Value, String> {
+    match read {
+        Ok(text) => Ok(Value::String(text)),
+        Err(e) => Err(e),
+    }
+}
+
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -568,10 +599,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
         // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
         "clipboard_write_text" => {
-            let text = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or("clipboard_write_text:bad-args")?;
+            let text = clipboard_text_arg(args)?;
             app.clipboard().write_text(text).map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
@@ -585,11 +613,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // -- the plugin's own `desktop.rs` docstring warns `read_text()` must not be called on
         // the main thread (Linux deadlock risk). A future refactor that moves dispatch onto
         // the reader thread must not silently reintroduce that deadlock.
-        "clipboard_read_text" => app
-            .clipboard()
-            .read_text()
-            .map(Value::String)
-            .map_err(|e| e.to_string()),
+        "clipboard_read_text" => {
+            clipboard_read_value(app.clipboard().read_text().map_err(|e| e.to_string()))
+        }
         // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
         // `AppHandle::exit()`. Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. Only two
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
@@ -1090,9 +1116,18 @@ fn main() {
 /// neither `cargo test` nor `cargo check`), so these tests are run manually
 /// (`cd src-tauri && cargo test`) and their continued existence is pinned by a jest gate in the
 /// JS file above rather than by any automated Rust step.
+///
+/// Phase 34.3 Plan 03 / REQ-34.3-08 extends this module with `clipboard_text_arg` and
+/// `clipboard_read_value` — the pure, `AppHandle`-free surface extracted from the
+/// `clipboard_write_text`/`clipboard_read_text` dispatch arms, since those arms' own
+/// `app.clipboard()` calls need a live Tauri runtime a `#[test]` cannot construct. As with
+/// `timeout_for()` above, this project's CI runs no cargo step, so these are hand-run too —
+/// the arms' plugin calls themselves are proven by REQ-34.3-11's live-gate item 3, not by
+/// these tests.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn exempt_channel_waits_indefinitely() {
@@ -1144,5 +1179,84 @@ mod tests {
         // instead of exempting a specific channel (mirrors the JS gate's own reasoning,
         // asserted here behaviorally).
         assert_eq!(INVOKE_TIMEOUT, Duration::from_secs(60));
+    }
+
+    // ---- clipboard_text_arg (Phase 34.3 Plan 03, REQ-34.3-08) ----
+    //
+    // RED direction: an implementation using `unwrap_or("")` instead of `ok_or_else` would
+    // flip the four rejection cases below to `Ok`.
+
+    #[test]
+    fn clipboard_text_arg_rejects_absent_args() {
+        assert!(clipboard_text_arg(&[]).is_err());
+        assert_eq!(
+            clipboard_text_arg(&[]).unwrap_err(),
+            "clipboard_write_text:bad-args"
+        );
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_null() {
+        assert!(clipboard_text_arg(&[Value::Null]).is_err());
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_number() {
+        assert!(clipboard_text_arg(&[json!(1)]).is_err());
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_bool() {
+        assert!(clipboard_text_arg(&[Value::Bool(true)]).is_err());
+    }
+
+    #[test]
+    fn clipboard_text_arg_accepts_empty_string() {
+        // An empty string is a VALID clipboard write, not a missing argument.
+        assert_eq!(clipboard_text_arg(&[json!("")]), Ok(""));
+    }
+
+    #[test]
+    fn clipboard_text_arg_accepts_nonempty_string() {
+        assert_eq!(clipboard_text_arg(&[json!("hi")]), Ok("hi"));
+    }
+
+    #[test]
+    fn clipboard_text_arg_ignores_trailing_args() {
+        assert_eq!(
+            clipboard_text_arg(&[json!("hi"), json!("ignored")]),
+            Ok("hi")
+        );
+    }
+
+    // ---- clipboard_read_value (Phase 34.3 Plan 03, REQ-34.3-08) ----
+    //
+    // RED direction: an implementation returning `Value::Null` for an empty clipboard would
+    // fail the first case below — the sidecar's `clipboardReadText` handler coerces a
+    // non-string result to `''`, which would mask that regression as an indistinguishable
+    // empty read.
+
+    #[test]
+    fn clipboard_read_value_empty_string_is_not_null() {
+        assert_eq!(
+            clipboard_read_value(Ok(String::new())),
+            Ok(Value::String(String::new()))
+        );
+    }
+
+    #[test]
+    fn clipboard_read_value_nonempty_string_round_trips() {
+        assert_eq!(
+            clipboard_read_value(Ok("hi".to_string())),
+            Ok(Value::String("hi".to_string()))
+        );
+    }
+
+    #[test]
+    fn clipboard_read_value_propagates_error() {
+        assert_eq!(
+            clipboard_read_value(Err("boom".to_string())),
+            Err("boom".to_string())
+        );
     }
 }
