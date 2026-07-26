@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-08 done
-last_updated: "2026-07-27T23:45:00.000Z"
-last_activity: 2026-07-27 -- 34.4-08 executed (electronReachLedger ENTRY_POINTS extended to 10, baseline regenerated 30->34 modules via measurement, phase-wide structural additive/reversible sweep green, REQ-34.4-10/15)
+stopped_at: 34.4-09 done
+last_updated: "2026-07-27T23:59:00.000Z"
+last_activity: 2026-07-27 -- 34.4-09 executed (34.4-PORTED-CHANNELS.md declares all 31 channels with honest proof levels, ported-channels-gate.py self-tested doc-shape gate (9/9 check_*-to-self-test), SEAM.md Incremental-Port Checklist steps 5/6 closed, REQ-34.4-14/16)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 110
+  completed_plans: 111
   percent: 75
 ---
 
@@ -34,7 +34,34 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 8 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07, 34.4-08 done; 34.4-09, 34.4-10 still pending)
+Plan: 9 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07, 34.4-08, 34.4-09 done; 34.4-10 still pending)
+
+34.4-09 done -- Wrote 34.4-PORTED-CHANNELS.md declaring all 31 ported channels (13 genuinely-Steam
++ 2 corrected-to-GOG + 16 Humble) in one five-column table with honest per-row proof levels (unit /
+unit + LIVE (item N) / unit only, declared) drawn from what the 8 prior SUMMARYs actually record --
+never inflated to "seen working". Named all four framing corrections this phase owed its own
+upstream planning docs: humbleRecordGiftLinkOpened's corrected handle kind, the GOG reclassification
+of getPrivateBranchPassword/setPrivateBranchPassword, the electron-reach ledger's MEASURED
+four-module growth (not the predicted two/three -- humble/userAgent.ts was an unpredicted fourth),
+and the two registration modules that were never already electronReachLedger.test.ts entry points.
+Every accepted rider named per-row: humbleDisconnect's D-05 declared partial + Phase 34.4.1 revisit
+obligation, redeemSteamKey/steamBottleProvision's D-08 unit-only never-live-run declarations,
+humbleRunValidation's resolved (not declared) node:sea packaged-guard. Any unit + LIVE cell marked
+as a forward reference to plan 34.4-10's not-yet-run live gate. Wrote ported-channels-gate.py: 9
+check_* functions covering REQ-34.4-14 (declared-list shape) and REQ-34.4-16 (verifying, never
+editing, IPC-PORT-INVENTORY.md's already-correct 31/6/57 scope-surgery split), each with exactly
+one self-test case (9:9, counted and asserted equal at runtime); both `python3
+ported-channels-gate.py` and `--self-test` exit 0; git diff --stat on IPC-PORT-INVENTORY.md and
+ROADMAP.md confirmed empty. Two Rule-1 gate-logic bugs found and fixed before commit during the
+plan's own mandatory verify-against-the-real-document step: a case-sensitive rider-token mismatch,
+and a whole-section (vs whole-line) backtick extraction that produced a false positive against the
+real inventory's own explanatory prose (the D-01/D-02/D-03 scope-surgery paragraph names
+isLoggedIn and the 6 deferred channels in prose while explaining they moved out). Closed SEAM.md's
+Incremental-Port Checklist steps 5/6: new §1 subsection "Steam completion and Humble cluster (real,
+Phase 34.4)" after the Phase 34.3 subsection; §3 deferred item 5 (D-02, the login-channel row)
+retired as fully closed; §3 BrowserWindow row re-targeted from "Phase 34.4" to "Phase 34.4.1" per
+D-01. Diff confined to exactly 2 hunks; Load-Bearing Invariant B byte-unchanged. REQ-34.4-14/16
+complete, see 34.4-09-SUMMARY.md. Next: 34.4-10 (the phase's blocking, non-autonomous live gate).
 
 34.4-08 done -- Extended electronReachLedger.test.ts's ENTRY_POINTS from 7 to 10 (added
 humbleFlowRegistration.ts, steamAuthFlowRegistration.ts, settingsFlowRegistration.ts) and
@@ -2426,12 +2453,13 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T19:18:04.906Z
-Stopped at: Phase 34.4 context gathered
-Next: Plan 34.3-09 (the phase's blocking, non-autonomous live gate -- 5 named items, items 1/2/3/5
-under `pnpm tauri:dev`, item 4 on a PACKAGED build; results recorded in `34.3-LIVE-GATE.md`) is
-the only remaining plan in Phase 34.3; continue via `/gsd-execute-phase 34.3`. Also still
-outstanding (unrelated to Phase 34.3): Phase 34.2's owed
+Last session: 2026-07-27T23:59:00.000Z
+Stopped at: Phase 34.4, plan 34.4-09 done (9/10 plans)
+Next: Plan 34.4-10 (the phase's blocking, non-autonomous live gate -- 5 named items, all under
+`pnpm tauri:dev`, deliberately no packaged-build item per D-10; results recorded in
+`34.4-LIVE-GATE.md`) is the only remaining plan in Phase 34.4; continue via
+`/gsd-execute-phase 34.4`. Also still outstanding (unrelated to Phase 34.4): Phase 34.3's
+34.3-09 live gate result reconciliation if not already closed; Phase 34.2's owed
 secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates
 (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md
 real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled
