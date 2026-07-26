@@ -182,7 +182,8 @@ export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
  * not await it), but a real request/response `rustInvoke` frame under the hood so failures are
  * observable (logged), never silent.
  */
-export const RUST_SHELL_SHOW_ITEM_IN_FOLDER = 'shell_show_item_in_folder' as const
+export const RUST_SHELL_SHOW_ITEM_IN_FOLDER =
+  'shell_show_item_in_folder' as const
 
 /**
  * Rust-side channel name: open a path with the default (or specified) program via

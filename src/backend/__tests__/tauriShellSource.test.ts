@@ -163,7 +163,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'shell_open_path',
       'app_exit',
       'app_relaunch',
-      'dialog_save'
+      'dialog_save',
+      // Phase 34.3 Plan 03 (D-01/D-02, REQ-34.3-03) legitimately added exactly these two new
+      // arms after 34.1-06 landed -- the clipboard seam's Cargo tests (main.rs's own
+      // #[cfg(test)] mod) are the behavioral proof for these two; this gate only pins that no
+      // OTHER, undeclared arm has crept in since.
+      'clipboard_write_text',
+      'clipboard_read_text'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

@@ -629,6 +629,27 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // returns (`-> !`) -- it either restarts the process directly (main thread) or blocks
         // this spawned worker thread until the process exits (background thread), which is safe
         // since the whole process is about to go away regardless.
+        //
+        // Phase 34.3 Plan 03 D-05 / REQ-34.3-06 (RESOLVED, no code change needed): dispatch_rust_channel
+        // always runs on a thread::spawn'd worker thread (see start_reader above), never the main
+        // thread, so this app.restart() call is always restart()'s BACKGROUND-THREAD branch -- it sets
+        // restart_on_exit=true and requests exit through the real event loop, rather than the
+        // main-thread branch that skips RunEvent::Exit entirely. That exit request fires
+        // tauri::RunEvent::Exit, and this file's own .run(...) closure (below main()) calls
+        // state.shutdown_child() on exactly that event -- BEFORE the process re-execs. Therefore there
+        // is no orphan-sidecar window for this codebase's calling pattern, and no extra
+        // state.shutdown_child() call belongs here -- adding one would be dead code inviting the next
+        // reader to wonder why it is duplicated. Verified against tauri 2.11.5's vendored source (the
+        // exact version this crate's Cargo.lock pins) by direct read of app.rs's restart()/run()/
+        // make_run_event_loop_callback() -- see 34.3-RESEARCH.md Q1 for the full evidence chain.
+        // restart()'s "skip the events" branch applies ONLY when restart() is called on the main
+        // thread, which this call site never is.
+        // Empirical confirmation is REQ-34.3-11's live-gate item 4 (a PACKAGED build: resetHeroic
+        // leaves exactly ONE sidecar process), not a Rust unit test -- a #[cfg(test)] test structurally
+        // cannot drive a live winit/tao event loop. One residual not traced here: the exact delivery
+        // guarantee of runtime_handle.request_exit(...) inside tauri-runtime-wry -- the same mechanism
+        // every existing app.exit() call in this codebase already depends on; the live-gate item above
+        // is where that residual closes empirically.
         "app_relaunch" => {
             app.restart();
         }
