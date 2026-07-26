@@ -207,6 +207,23 @@ export const RUST_APP_EXIT = 'app_exit' as const
 export const RUST_APP_RELAUNCH = 'app_relaunch' as const
 
 /**
+ * Rust-side channel name: write text to the OS clipboard via `tauri-plugin-clipboard-manager`
+ * (Phase 34.3 Plan 03, D-01/D-02). Backs `electronStub.ts`'s `clipboard.writeText()`.
+ * Fire-and-forget from the caller's perspective (D-03, mirrors real Electron's void-returning
+ * API), but a real request/response `rustInvoke` frame under the hood so failures are
+ * observable (logged), never silent.
+ */
+export const RUST_CLIPBOARD_WRITE_TEXT = 'clipboard_write_text' as const
+
+/**
+ * Rust-side channel name: read text from the OS clipboard via
+ * `tauri-plugin-clipboard-manager` (Phase 34.3 Plan 03, D-01/D-02). Backs the sidecar's
+ * `clipboardReadText` handler, which awaits this directly rather than going through
+ * `electronStub.ts`'s deliberately-dead synchronous `clipboard.readText()` stub (D-04).
+ */
+export const RUST_CLIPBOARD_READ_TEXT = 'clipboard_read_text' as const
+
+/**
  * Rust-side channel name: swap the real Tauri tray's icon between the dark/light variants
  * (Phase 34.1 Plan 06, D-11). Backs the sidecar's `changeTrayColor` registration
  * (`appShellFlowRegistration.ts`), which reads `darkTrayIcon` from `GlobalConfig` and forwards
@@ -235,6 +252,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SHELL_OPEN_PATH,
   RUST_APP_EXIT,
   RUST_APP_RELAUNCH,
+  RUST_CLIPBOARD_WRITE_TEXT,
+  RUST_CLIPBOARD_READ_TEXT,
   RUST_TRAY_SET_ICON
 ] as const
 

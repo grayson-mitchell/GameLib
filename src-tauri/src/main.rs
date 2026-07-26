@@ -40,6 +40,7 @@ use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
@@ -560,6 +561,35 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
+        // Write text to the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
+        // `tauri-plugin-clipboard-manager`'s `app.clipboard().write_text()`. Backs
+        // `electronStub.ts`'s `clipboard.writeText()`. This arm and `clipboard_read_text`
+        // below are the ONLY two new `dispatch_rust_channel` arms the entire 34.3 slice adds
+        // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
+        // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
+        "clipboard_write_text" => {
+            let text = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or("clipboard_write_text:bad-args")?;
+            app.clipboard().write_text(text).map_err(|e| e.to_string())?;
+            Ok(Value::Null)
+        }
+        // Read text from the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
+        // `tauri-plugin-clipboard-manager`'s `app.clipboard().read_text()`. Backs the
+        // sidecar's `clipboardReadText` handler (D-04 -- the read path bypasses
+        // `electronStub`'s sync stub and awaits this rustInvoke directly, since a sync
+        // function structurally cannot await a Rust round-trip). Safe to call `read_text()`
+        // here specifically because `dispatch_rust_channel` always runs on a
+        // `thread::spawn`'d worker thread (see `start_reader`), never the main/reader thread
+        // -- the plugin's own `desktop.rs` docstring warns `read_text()` must not be called on
+        // the main thread (Linux deadlock risk). A future refactor that moves dispatch onto
+        // the reader thread must not silently reintroduce that deadlock.
+        "clipboard_read_text" => app
+            .clipboard()
+            .read_text()
+            .map(Value::String)
+            .map_err(|e| e.to_string()),
         // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
         // `AppHandle::exit()`. Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. Only two
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
@@ -912,6 +942,7 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let mut child = spawn_sidecar(app.handle())?;
             let stdin = child
