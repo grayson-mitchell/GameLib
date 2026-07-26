@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-03-PLAN.md
-last_updated: "2026-07-26T09:31:24.769Z"
+stopped_at: Completed 34.3-04-PLAN.md
+last_updated: "2026-07-26T09:49:21.604Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 95
-  percent: 67
+  completed_plans: 96
+  percent: 87
 ---
 
 # Project State
@@ -34,8 +34,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 discuss/plan.
+
+34.3-04 done -- Logger channel registration. Added `logInfoSettled` (expression-body sibling of
+`logInfo` in `backend/logger/index.ts`, byte-shape-identical to `logErrorSettled`) and registered
+this slice's remaining 5 `logger/ipc_handler.ts` channels in `loggerFlowRegistration.ts`: `logInfo`
+(send, mirrors `logError`'s call-site rejection guard shape exactly), `showLogFileInFolder` (send),
+and `uploadLogFile`/`deleteUploadedLogFile`/`getUploadedLogFiles` (invoke, curated-imports
+`logger/uploader.ts` directly -- never `logger/ipc_handler.ts`, which also registers the
+already-ported `getLogContent`/`logError`). Declared in the module docstring: `deleteUploadedLogFile`
+is ported at parity but structurally cannot delete anything in EITHER build (`uploader.ts:74-77`'s
+hardcoded `token = '1'`, D-08); log redaction is out of scope, no audit performed (D-09). Extended
+`loggerFlows.test.ts` (5 -> 12 tests) and `loggerCallSiteGuard.test.ts` (5 -> 7 tests) with
+round-trip coverage mocked only at the HTTP (`global.fetch`)/store (`uploadedLogFileStore`)
+boundaries -- never the uploader functions themselves; 5 new assertions hand RED-proofed by
+temporarily disabling registrations / breaking the expiry-pruning logic, then restored clean. One
+Rule 1 fix: `bootstrap.test.ts`'s "still genuinely unported" example channel was `getUploadedLogFiles`,
+which this plan legitimately ports -- substituted `getLegendaryVersion`, following 34.3-01's own
+precedent. Full backend sweep: 112/115 suites, 2365/2368 tests green -- the 3 failing suites
+(`rustInvokeChannel.test.ts`, wine `rest.test.ts`, `cargoFeatures.test.ts`) are pre-existing and
+unrelated (logged to `deferred-items.md`, not fixed; `cargoFeatures.test.ts`'s crate-pin gap was
+introduced by 34.3-03's clipboard-manager dependency, not this plan). `tsc --noEmit`/
+`prettier --check`/`cargo check --quiet` (no Rust touched) all green. REQ-34.3-01/-09/-13 complete,
+see 34.3-04-SUMMARY.md. Next: 34.3-02 (the other wave-1 plan, no SUMMARY on disk yet).
 
 34.3-03 done -- Rust clipboard seam + D-05 verification. Added `tauri-plugin-clipboard-manager`
 (resolved 2.3.2, confirmed no `js_init_script` at execution time) with zero renderer capability
@@ -867,7 +889,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 86%
+trusted blindly. The recurring `**Progress:**[█████████░] 87%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1674,6 +1696,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P27 | 15min | 2 tasks | 2 files |
 | Phase 34.3 P01 | 55min | 3 tasks | 8 files |
 | Phase 34.3 P03 | 45min | 3 tasks | 5 files |
+| Phase 34.3 P04 | 40min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1944,6 +1967,9 @@ Recent decisions affecting current work:
 - [Phase 34.3]: getLegendaryVersion substituted for checkDiskSpace as the still-unported Invariant B guard example channel in 4 pre-existing test files
 - [Phase ?]: D-05's proposed shutdown_child() fix in app_relaunch is dropped, not implemented -- RunEvent::Exit already fires reliably for dispatch_rust_channel's worker-thread calling pattern (34.3-RESEARCH.md Q1), verified finding recorded as a code comment
 - [Phase 34.3]: tauri-plugin-clipboard-manager 2.3.2 added with zero renderer capability grant -- confirmed no js_init_script, D-02 stance holds
+- [Phase 34.3]: logInfo's call-site guard is byte-shape-identical to logError's (34.3-04, REQ-34.3-09)
+- [Phase 34.3]: deleteUploadedLogFile ported at parity, declared structurally unable to delete in either build (34.3-04, D-08)
+- [Phase 34.3]: Log redaction (D-09) declared out of scope for uploadLogFile, no audit performed (34.3-04)
 
 ### Pending Todos
 
@@ -2014,8 +2040,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T09:31:24.763Z
-Stopped at: Completed 34.3-03-PLAN.md
+Last session: 2026-07-26T09:49:21.596Z
+Stopped at: Completed 34.3-04-PLAN.md
 Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
 (Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
 Plan 34.3-02 (still no SUMMARY on disk) remains the other wave-1 plan; continue with it via
