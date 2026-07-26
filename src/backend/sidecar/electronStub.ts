@@ -41,6 +41,7 @@ import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_APP_EXIT,
   RUST_APP_RELAUNCH,
+  RUST_CLIPBOARD_WRITE_TEXT,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -577,13 +578,28 @@ export const powerSaveBlocker = {
 }
 
 export const clipboard = {
-  // D-04 (REQ-31-04): upgraded from a silent no-op to a logged one -- see shell.showItemInFolder
-  // above for the rationale. Real clipboard-write support is deferred to Phase 33.
-  writeText: (_text: string): void => {
-    console.warn(
-      '[electronStub] clipboard.writeText(): logged no-op (D-04, deferred to Phase 33) -- clipboard writes are not yet forwarded to Rust'
-    )
+  // Phase 34.3 Plan 05 (D-01/D-02/D-03, REQ-34.3-03/04): graduated from the D-04 logged no-op
+  // (Phase 31 -- "deferred to Phase 33", never collected) to a real forward, backed by
+  // tauri-plugin-clipboard-manager's write_text (RUST_CLIPBOARD_WRITE_TEXT). Byte-shape-identical
+  // to shell.showItemInFolder above: fire-and-forget (mirrors real Electron's void-returning
+  // clipboard.writeText) -- never throws; a transport failure is logged, never silent. Log-only
+  // failure is deliberate Electron parity, not a shortcut: real clipboard.writeText is void and
+  // cannot surface failure either, so matching it keeps both builds behaviorally identical.
+  writeText: (text: string): void => {
+    requestRustInvoke(RUST_CLIPBOARD_WRITE_TEXT, [text]).catch((error) => {
+      console.warn(
+        `[electronStub] clipboard.writeText(): ${RUST_CLIPBOARD_WRITE_TEXT} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
   },
+  // D-04: DELIBERATELY DEAD -- this member is NOT a shortcut left over, it is a documented,
+  // permanent no-op. Real Electron's clipboard.readText() is synchronous, so this stub stays
+  // synchronous to keep faithfully impersonating that shape -- but a sync function structurally
+  // cannot await a Rust round-trip. The ONLY sidecar-reachable caller is `clipboardReadText`
+  // (registered with addHandler, async), which awaits requestRustInvoke(RUST_CLIPBOARD_READ_TEXT,
+  // []) directly inside its own handler (clipboardFlowRegistration.ts, Plan 06) and never calls
+  // this member. No other backend module may call this and expect a real value.
   readText: (): string => ''
 }
 
