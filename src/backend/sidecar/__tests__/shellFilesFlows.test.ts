@@ -672,19 +672,25 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       ) as { args?: unknown[] } | undefined
       expect(dialogFrame).toBeDefined()
       const [title] = dialogFrame?.args as unknown[]
-      // Real i18next.t()'s resolved value — its own inline fallback default
-      // ('Cache Cleared'), since under jest `app.getAppPath()` resolves to
-      // `process.cwd()` (this jest project's root, `src/backend`), not the
-      // repo root `public/locales/en/` directory actually lives under
-      // (publicdir-getapppath-chunking gotcha family — the packaged-build
-      // half of this path is a named deferred-UAT item, not provable here).
+      // The requirement is that the title is a RESOLVED human string, never
+      // the raw i18next key. Which resolved string it is depends on whether
+      // i18next found `public/locales/en/translation.json` in this run:
+      //   - locales loaded    -> 'Cache cleared' (the real translation)
+      //   - locales not found -> 'Cache Cleared' (t()'s inline fallback arg)
+      // Under jest `app.getAppPath()` resolves to `process.cwd()` (this jest
+      // project's root, `src/backend`) rather than the repo root that
+      // `public/locales/en/` actually lives under, so which branch wins is
+      // environment-dependent (publicdir-getapppath-chunking gotcha family —
+      // the packaged-build half of this path is a named deferred-UAT item,
+      // not provable here). Asserting either exact casing makes this test
+      // flake, so assert the invariant instead.
+      //
       // This still doubles as a live check that bootstrap.ts's real
       // i18next.init() ran (not the project-wide automock's literal
       // `t(key) => key` echo): with i18next mocked, `title` would resolve to
-      // the raw key `box.cache-cleared.title` instead, and the assertion
-      // below would fail.
-      expect(title).toBe('Cache Cleared')
+      // the raw key `box.cache-cleared.title` and both assertions below fail.
       expect(title).not.toBe('box.cache-cleared.title')
+      expect(['Cache cleared', 'Cache Cleared']).toContain(title)
     })
 
     it('REQ-34.3-06 clearCache never crashes the sidecar when the dialog path throws — logs and completes the send dispatch', async () => {
