@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.2-24-PLAN.md (gap cycle 3 fully closed: PORTED-CHANNELS.md currency + deferred-items.md reasoned deferrals + VALIDATION.md extension + committed currency-gate.py). Phase 34.2 gap cycle 3 complete (34.2-19..24). Next: re-verification of Phase 34.2."
+stopped_at: "Gap cycle 3 (34.2-19..24) EXECUTED — all 24 plans of Phase 34.2 now have SUMMARYs; tsc clean, jest 2753/2754 (sole red = pre-existing rustInvokeChannel.test.ts). BUT the cycle-3 code review (34.2-REVIEW-GAP-CYCLE-3.md, 2 critical / 11 warning) empirically DISPROVED two of the cycle's three fixes, so Phase 34.2 is NOT verified and NOT complete. Verifier was deliberately SKIPPED by user decision — 34.2-VERIFICATION.md on disk is STALE (it is cycle 2's round). GAP SOURCE FOR CYCLE 4 = 34.2-REVIEW-GAP-CYCLE-3.md, not the stale VERIFICATION.md. Blockers: CR-01 the WR-02 .catch guard in loggerFlowRegistration.ts is inert because logger/index.ts:25-27 wrappers have block bodies with no return (logError() is undefined, not a promise) and its 4 new tests only pass because they spyOn a promise shape that never occurs at runtime; CR-02 jest.mock('os') in jest.setupContainment.ts does not cover the 'node:os' specifier (already used at depot/decompressPool.ts:18 + 8 test files) so containment leaks the real HOME. Also WR-01 Block D's HOME gate matches raw source and self-satisfies from a docblock at jest.setupContainment.ts:64; WR-03 both production files are prettier --check dirty at HEAD and CI runs pnpm prettier. Next: /gsd-plan-phase 34.2 --gaps (cycle 4)."
 last_updated: "2026-07-26T01:06:15.327Z"
 last_activity: 2026-07-26
 progress:
