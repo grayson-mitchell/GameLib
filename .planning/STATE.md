@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-01-PLAN.md
-last_updated: "2026-07-26T09:16:13.441Z"
+stopped_at: Completed 34.3-03-PLAN.md
+last_updated: "2026-07-26T09:31:24.769Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 94
+  completed_plans: 95
   percent: 67
 ---
 
@@ -34,8 +34,25 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 discuss/plan.
+
+34.3-03 done -- Rust clipboard seam + D-05 verification. Added `tauri-plugin-clipboard-manager`
+(resolved 2.3.2, confirmed no `js_init_script` at execution time) with zero renderer capability
+grant, plus the two `clipboard_write_text`/`clipboard_read_text` `dispatch_rust_channel` arms --
+the ONLY new Rust arms this whole 34.3 slice adds. Extracted `clipboard_text_arg`/
+`clipboard_read_value` as pure helpers and proved them with 10 new `#[cfg(test)]` cases (6 -> 16),
+both RED-proved by hand (the `unwrap_or("")` regression flips exactly the 4 rejection tests; the
+`Value::Null`-for-empty-read regression flips exactly one test). Recorded 34.3-RESEARCH.md Q1's
+finding as a code comment above `app_relaunch`: `AppHandle::restart()` DOES fire `RunEvent::Exit`
+for this codebase's worker-thread calling pattern, so D-05's proposed `shutdown_child()` fix is
+dropped, not added -- arm body unchanged (`app.restart();`). One Rule 1 fix (extended
+`tauriShellSource.test.ts`'s 34.1-scoped "only new arm" gate to acknowledge the two clipboard
+arms as this slice's own legitimate addition) and one Rule 3 fix (prettier reformatted one
+pre-existing over-80-char line in `sidecarTransport.ts`, unrelated to this plan's content but
+required for this plan's own `prettier --check` gate). `cargo check`/`cargo test` (16/16)/
+`tsc --noEmit`/`prettier --check`/targeted jest sweep (93/93) all green. See 34.3-03-SUMMARY.md.
+Next: 34.3-02 (the other wave-1 plan, no SUMMARY on disk yet).
 
 Prior phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — **COMPLETE
 2026-07-26, 30/30 plans, closed via a human OVERRIDE of the round-4 blocker (see below).**
@@ -850,7 +867,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 85%
+trusted blindly. The recurring `**Progress:**[█████████░] 86%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1656,6 +1673,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P26 | 45min | 3 tasks | 4 files |
 | Phase 34.2 P27 | 15min | 2 tasks | 2 files |
 | Phase 34.3 P01 | 55min | 3 tasks | 8 files |
+| Phase 34.3 P03 | 45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1924,6 +1942,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: 34.2-27: showDialogModal wrapped in its own try/catch per WR-06's explicit fix, superseding 34.2-21's prior unwrapped-payoff design note; title/message precomputed into let bindings with hardcoded English fallbacks so a throwing t() cannot prevent the dialog from rendering
 - [Phase 34.3]: checkDiskSpace's zod Path.parse() validation preserved unchanged as the ASVS V5 control; never swapped for node's path.parse
 - [Phase 34.3]: getLegendaryVersion substituted for checkDiskSpace as the still-unported Invariant B guard example channel in 4 pre-existing test files
+- [Phase ?]: D-05's proposed shutdown_child() fix in app_relaunch is dropped, not implemented -- RunEvent::Exit already fires reliably for dispatch_rust_channel's worker-thread calling pattern (34.3-RESEARCH.md Q1), verified finding recorded as a code comment
+- [Phase 34.3]: tauri-plugin-clipboard-manager 2.3.2 added with zero renderer capability grant -- confirmed no js_init_script, D-02 stance holds
 
 ### Pending Todos
 
@@ -1994,9 +2014,16 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T09:16:13.433Z
-Stopped at: Completed 34.3-01-PLAN.md
-Next: Plan 34.3-01 complete (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md); continue with 34.3-02 via `/gsd-execute-phase 34.3`. Also still outstanding (unrelated to Phase 34.3): Phase 34.2's owed secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-26T09:31:24.763Z
+Stopped at: Completed 34.3-03-PLAN.md
+Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
+(Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
+Plan 34.3-02 (still no SUMMARY on disk) remains the other wave-1 plan; continue with it via
+`/gsd-execute-phase 34.3`. Also still outstanding (unrelated to Phase 34.3): Phase 34.2's owed
+secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates
+(multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md
+real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled
+Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
