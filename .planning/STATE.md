@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: Completed 34.2-30-PLAN.md — GAP CYCLE 4 fully executed (30/30 plans). Round-4 code review + verification both ran; verification status gaps_found (1 blocker in gap-cycle-4's own gate infrastructure). Phase NOT marked complete.
-last_updated: "2026-07-26T18:45:00Z"
+status: ready_to_plan
+stopped_at: Phase 34.2 complete (30/30) — ready to discuss Phase 34.3
+last_updated: "2026-07-26T18:55:00Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 101
-  completed_plans: 90
-  percent: 89
+  completed_plans: 93
+  percent: 92
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.2 — tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid
+**Current focus:** Phase 34.3 — tauri ipc re plumb slice 6 shell files logs and diagnostics
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,9 +33,12 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 4 EXECUTED,
-verification round 4 = gaps_found. Phase NOT complete.
-Plan: 30 of 30 done. Gap cycle 4 (34.2-25..30, 3 waves) is fully executed as of 2026-07-26:
+Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — NOT STARTED, ready to
+discuss/plan.
+
+Prior phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — **COMPLETE
+2026-07-26, 30/30 plans, closed via a human OVERRIDE of the round-4 blocker (see below).**
+Gap cycle 4 (34.2-25..30, 3 waves) fully executed:
 34.2-25/26/27 ran earlier that day; **34.2-28 (WR-04 vacuous Rust test-module gate + WR-08
 comment-stripper truncation), 34.2-29 (WR-01/WR-02/WR-05, CR-02 secondary, WR-10), and 34.2-30
 (REQ-34.2-13 declaration currency, currency-gate.py extended for cycle 4 without weakening
@@ -75,11 +78,23 @@ touched in Phase 33, untouched by this phase); `python3 currency-gate.py` exits 
 cycle-3 and cycle-4 sections. Known intermittent `withTimeout.test.ts` flake (library.ts leaked
 timer) appeared in one executor sweep, not in the orchestrator's.
 
-Next: either `/gsd-plan-phase 34.2 --gaps` for a gap cycle 5 (blocker + the 11 warnings), or a
-human override accepting the blocker as tracked meta-test-tooling debt — the verifier explicitly
-notes an override is defensible because the defect is in gate infrastructure, not in the 26 ported
-channels. **Security: `workflow.security_enforcement=true` and no `34.2-SECURITY.md` exists yet —
-`/gsd-secure-phase 34.2` is still owed regardless of which route is taken.**
+**RESOLUTION — human override, 2026-07-26 (no gap cycle 5).** A repo-wide scan taken at decision
+time found **16 comment-stripping helpers of this family and 15 of them carry the identical
+line-prefix defect**, copy-pasted across phases 34, 34.1 and 34.2 — only
+`structuralContainment.test.ts` (written during this very cycle) is correct. A phase-scoped gap
+cycle 5 would have fixed 2 of 15 and left 13, guaranteeing the same finding resurfaces in the
+34.3/34.4/34.5 reviews. Four consecutive cycles had been narrowing on a symptom whose cause is
+repo-wide copy-paste. The blocker is therefore accepted as tracked debt on 34.2 and **re-scoped to
+one cross-cutting sweep**: extract a single shared comment-stripping util that removes block
+comments BEFORE the existing line-prefix filter (keeping the line filter is required — a naive
+`/\/\/.*$/gm` swap would reintroduce the string-literal truncation plan 34.2-28 just fixed as
+WR-08), self-test it with the non-`*`-prefixed spelling, and replace all 15 copies.
+Rationale and residual risk recorded in `34.2-VERIFICATION.md`'s `override:` block.
+
+Still owed on 34.2: **`/gsd-secure-phase 34.2`** (`workflow.security_enforcement=true`, no
+`34.2-SECURITY.md` exists), the 11 warnings + 8 info of `34.2-REVIEW-GAP-CYCLE-4.md` (recorded
+under `deferred:`, genuinely open — NOT resolved), and 2 human-UAT items in `34.2-HUMAN-UAT.md`
+(D-02 live translated notification, D-07 live anticheat fetch).
 
 34.2-26 done -- GAP CYCLE 4, wave 1, second plan executed, CR-01 CLOSED (the WR-02 call-site
 rejection guard added by gap cycle 3 was inert in production — `logError()` returned `undefined`
@@ -833,7 +848,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Ready to plan
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -1471,6 +1486,7 @@ Closed/parked native-install phases:
 | 29 | 7 | - | - |
 | 31 | 4 | - | - |
 | 32 | 3 | - | - |
+| 34.2 | 30 | - | - |
 
 **v0.1 Detail Log:**
 
