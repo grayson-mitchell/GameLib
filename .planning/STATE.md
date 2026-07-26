@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-06 done
-last_updated: "2026-07-27T22:20:00.000Z"
-last_activity: 2026-07-27 -- 34.4-06 executed (hardened electronStub.net.request, D-06, REQ-34.4-11)
+stopped_at: 34.4-07 done
+last_updated: "2026-07-27T22:35:00.000Z"
+last_activity: 2026-07-27 -- 34.4-07 executed (WebView D-04 honesty panel + Electron-unreachability gate, REQ-34.4-12)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 106
-  percent: 72
+  completed_plans: 107
+  percent: 73
 ---
 
 # Project State
@@ -34,7 +34,35 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 4 of 10 (34.4-01, 34.4-03, 34.4-04, 34.4-06 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+Plan: 5 of 10 (34.4-01, 34.4-03, 34.4-04, 34.4-06, 34.4-07 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+
+34.4-07 done -- WebView D-04 honesty panel + Electron-unreachability gate (wave 1, depends_on: []).
+Replaced the silently-blank Tauri login screen (`WebView/index.tsx`'s `!webviewPreloadPath` branch,
+previously a bare `<></>` for every build) with an isTauri()-branched pair: the Tauri arm logs via
+`window.api.logInfo` (naming the screen, runner, and reason) and returns the new, hook-free
+(besides `useTranslation`) `WebviewUnavailablePanel.tsx`, extracted following the
+`CrossoverBadge.tsx`/`MacArchBadge.tsx` DOM-less pattern -- heading + body naming the build
+limitation and (when known) the attempted store, plus a next-step pointing to the Electron build;
+no copy affordance, no `navigator.clipboard` reference. The Electron arm stays a distinct,
+byte-unchanged `return <></>` with a comment naming Phase 34.4.1 as the real fix's owner. Added
+`WebviewUnavailablePanel.test.tsx` (13 tests): content proof (4, via a DOM-less `collectText()`
+walk of the React element graph), a self-tested `navigator.clipboard`-absence source gate (3), and
+-- since `WebView` is hook-heavy and throws "Invalid hook call" if invoked as a plain function
+outside a render tree, and this project has no DOM harness -- a STRUCTURAL FALLBACK source gate
+(6) proving the Electron arm is distinct from and unreachable relative to the Tauri arm, with 4
+self-tests (rejects merged single-return, rejects a dropped Electron fallback, rejects an
+Electron arm silently changed to also render the panel, and a positive control accepting the
+plan's own specified shape). Hand RED-proofed by merging the two arms back into the pre-plan
+single `return <></>`: exactly the 2 tests asserting against the real source failed for the
+expected reason (`Expected: true / Received: false` and `marker not found: if (isTauri())`),
+all 4 self-tests + 7 other tests stayed green throughout; restored via `git checkout --`,
+confirmed `git diff --stat` empty against the Task 1 commit. `electronUntouched.test.ts` run
+green (11/11), byte-unchanged. Full frontend sweep: 27 suites / 213 tests, all passing (up from
+26/200 pre-plan) -- no suite that was green went red. Full backend sweep: 116/118 suites,
+2436/2438 tests -- only the 2 pre-existing documented baselines (`rustInvokeChannel.test.ts`,
+wine `rest.test.ts`); no backend or Rust file touched (`git diff --stat src-tauri/` empty). No
+deviations -- plan executed exactly as written. REQ-34.4-12 complete, see 34.4-07-SUMMARY.md.
+Next: 34.4-02 (bottle/client-setup/redeem/private-branch group, wave 1).
 
 34.4-06 done -- Hardened electronStub.net.request to fail fast and legibly (wave 1, depends_on: []).
 `net.request()`'s previously-total-no-op `on()` now records handlers by event name and
