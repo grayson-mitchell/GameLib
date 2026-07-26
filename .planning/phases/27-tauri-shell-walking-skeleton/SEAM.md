@@ -427,6 +427,70 @@ This slice wires 26 more channels — see the headline-cost tally below.
   Do not read "wired and unit-proven" as "seen working" for this cluster either — that is exactly
   how G-30-02 was declared fixed twice while the live build hung.
 
+### Shell, files, logs and diagnostics cluster (real, Phase 34.3) — CLOSED, moved out of §3
+
+**Ported in Phase 34.3** (`tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics`, plans
+34.3-01..34.3-07). Full enumerated list, one row per channel with its kind/backed-by/proof-level,
+in `.planning/phases/34.3-tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics/34.3-PORTED-CHANNELS.md`.
+This slice wires 29 more channels, but — state this plainly, the same correction that document's
+own opening section makes — the 29-channel count is not this slice's real cost. 15 of the 29
+reduce to `openUrlOrFile()`/`showItemInFolder()` in `utils.ts`, already in the sidecar's import
+graph and already reaching Rust arms (`open_external`/`shell_open_path`/`reveal_item_in_dir`) that
+existed before this slice started. The slice's actual content is three pieces: **a new clipboard
+platform seam** (the one genuinely missing Electron-API capability this project had), **a
+JS-side `app.relaunch()`/`app.quit()` ordering fix** contained entirely inside `electronStub.ts`,
+and **this re-plumb series' first blocking live gate** (5 named items, not a 29-channel UAT).
+
+- **Channel-kind breakdown.** No new port kind — this slice uses exactly the two kinds Phases
+  30–34.2 established: `sidecar send` (20 channels) and `sidecar invoke` (9 channels). **Two new
+  `dispatch_rust_channel` arms** — `clipboard_write_text` and `clipboard_read_text` — the only Rust
+  arms this slice adds, taking the running arm count to 13 (last changed by Phase 34.1's
+  `tray_set_icon`). Both arms call `app.clipboard()` from `tauri-plugin-clipboard-manager`,
+  registered with **zero** `clipboard-manager:*` renderer capability grant — the capability file's
+  own stated principle (capabilities gate webview→Rust IPC only, not Rust-side plugin calls, the
+  same reasoning Phase 33's WR-03 used to refuse `dialog:allow-open`) still holds.
+- **Accepted-gap riders**, all declared in `34.3-PORTED-CHANNELS.md`, not left to a reviewer's
+  memory: `deleteUploadedLogFile`'s both-builds structural deadness (`uploader.ts:74-77`'s
+  hardcoded `token = '1'` — an inherited upstream Heroic defect, not port-introduced, distinct from
+  34.2's D-07 which *was* port-introduced); the Humble key-copy silent-failure risk on
+  `clipboardWriteText` (log-only failure at Electron parity, D-03, a known accepted risk against
+  `HumbleClaimWizard/index.tsx:120,366`); `electronStub.clipboard.readText()`'s documented,
+  deliberately-dead synchronous no-op stub (D-04 — the real Rust-backed `clipboardReadText`
+  handler bypasses it entirely); and the filed-not-audited log-redaction security todo (D-09 — no
+  audit was performed, by explicit user instruction, and the question is open, not answered).
+- **Invariants A and B still hold.** No channel outside this slice's 29 gained a registration this
+  phase, so every channel Phase 35 has not yet reached still rejects non-fatally exactly as
+  Invariant B requires. Invariant A (`window.api` attachment order) is unaffected — this slice adds
+  no new module that reads `window.api` at module scope.
+- **Incremental-Port Checklist step 3** (give a stubbed Electron API real behavior bound to a real
+  Tauri command, rather than leaving it a silent no-op) was executed for `clipboard`: 34.3-03 added
+  the `tauri-plugin-clipboard-manager` plugin + the two dispatch arms above, and 34.3-05 replaced
+  `electronStub.clipboard.writeText`'s Phase 31 D-04 logged no-op with a real fire-and-forget
+  forward, mirroring `shell.showItemInFolder`'s existing template.
+- **Checklist step 4** (declare a new persisted-config store in `storePolicy.ts`'s tier lists and
+  `storeRegistration.ts`'s side-effect import list) was a **no-op this slice** — `uploadedLogFileStore`
+  and `gogAchievementStore` were already registered by Phase 29's D-15 extraction, so this slice
+  needed zero new store plumbing.
+- **D-05 resolved to NO FIX, not a fix that shipped.** Research verified, at HIGH confidence via a
+  direct read of `tauri = 2.11.5` (as pinned by `Cargo.lock`), that `AppHandle::restart()` already
+  fires `RunEvent::Exit` for this codebase's worker-thread `dispatch_rust_channel` calling pattern
+  — so the existing Phase 33 `shutdown_child()` handler already runs before the process re-execs.
+  The orphan-sidecar scenario was an inference from Tauri's API semantics, not a measured defect;
+  34.3-03 recorded the verified finding as a code comment above the `app_relaunch` arm rather than
+  adding a `state.shutdown_child()` call, which would have been dead code.
+- **Claim level (Phase 34.3): this slice DELIBERATELY BREAKS the unit-proven-only precedent.**
+  Phase 30's D-04 → 34.1's D-15 → 34.2's D-11 all deferred a live gate because jest's assertion-only
+  evidence was close enough to "works" for those slices' data-in/data-out channels. This slice
+  cannot make that claim for its own headline content: most of these channels' *entire purpose* is
+  an observable OS side effect (a browser window opening, Finder revealing a file, a real clipboard
+  round-trip, a process actually exiting) that jest structurally cannot see, plus two Rust arms CI
+  never compiles and one destructive channel (`resetHeroic`) whose failure mode is only visible in
+  the process table. A **blocking** 5-item live gate (34.3-09, `34.3-LIVE-GATE.md`) is the phase's
+  closing condition for exactly this reason — this is the gate 34.2 itself named as its
+  "highest-value optional gate" and deferred. Do not read "wired and unit-proven" as "seen working"
+  for this cluster either — that is exactly how G-30-02 was declared fixed twice while the live
+  build hung.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
@@ -471,7 +535,7 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 | 6 | `nativeImage` | 4 | **Partially addressed, Phase 34.1** — the new tray (see §1) uses compile-time `include_bytes!` images rather than a `nativeImage` API call; per-platform icon resizing stays deferred — target **Phase 34/35** |
 | 7 | `Notification` | 3 | **Fully closed, Phase 33** — real via the new `tauri-plugin-notification` plugin (`isSupported()` → `true`, `.show()` forwards title/body) |
 | 8 | `session`/`screen`/`net`/`Menu` | 2 each | **Partially closed, Phase 33** — `net`'s online-monitor half moved toward real (`initOnlineMonitor()` wired into sidecar `bootstrap.ts`, `net.isOnline()` added to the stub); `session` stays a LOGGED no-op (Accepted Constraint below, D-09). `screen`/`Menu` untouched — target **Phase 34/35** |
-| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | **`Tray` is now CLOSED (Phase 34.1, bounded)** — a real `TrayIconBuilder` tray exists (see the new §1 subsection); scope beyond the bounded minimum is re-deferred to Phase 35. `powerSaveBlocker` remains the existing LOGGED no-op (Accepted Constraint below, D-08, carried forward unchanged this phase). `clipboard`/`protocol`/`ipcMain` (remaining) untouched — target **Phase 34/35** |
+| 9 | `protocol`/`powerSaveBlocker`/`clipboard`/`Tray`/`ipcMain` (remaining) | 1 each | **`Tray` is now CLOSED (Phase 34.1, bounded)** — a real `TrayIconBuilder` tray exists (see the new §1 subsection); scope beyond the bounded minimum is re-deferred to Phase 35. `powerSaveBlocker` remains the existing LOGGED no-op (Accepted Constraint below, D-08, carried forward unchanged this phase). **`clipboard` is now CLOSED (Phase 34.3, real seam)** — see the new §1 subsection; `protocol`/`ipcMain` (remaining) untouched — target **Phase 34/35** |
 
 **The IPC re-plumb (the headline cost):** ~208 of the 220 total IPC endpoints (158 `addHandler` +
 62 `addListener`, `AsyncIPCFunctions` ≈335 typed entries per spike 009) remain on the Electron
