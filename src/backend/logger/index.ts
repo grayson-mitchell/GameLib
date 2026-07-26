@@ -34,15 +34,15 @@ const logError = (...params: Parameters<LogWriter['logError']>) => {
  * semantically — the only difference is that this one is an EXPRESSION
  * body, so it actually `return`s the `Promise<void>` `heroicLogWriter
  * .logError(...)` produces, instead of silently dropping it the way the
- * block-body `logError` above does (and the way `logDebug`/`logInfo`/
- * `logWarning` still do). `loggerFlowRegistration.ts`'s `logError` IPC
- * listener imports THIS export so its call-site `.catch` guard has a real
- * promise to attach to.
+ * block-body `logError` above does (and the way `logDebug`/`logWarning`
+ * still do). `loggerFlowRegistration.ts`'s `logError` IPC listener imports
+ * THIS export so its call-site `.catch` guard has a real promise to attach
+ * to.
  *
- * Deliberately NOT applied to `logDebug`/`logInfo`/`logWarning`/`logError`
- * above: this project measured 309 statement-position `logError(...)` call
- * sites under `src/backend` (excluding `src/backend/logger/` and
- * `__tests__`), none of them awaited, and `eslint.config.mjs:39` sets
+ * Deliberately NOT applied to `logDebug`/`logWarning`/`logError` above:
+ * this project measured 309 statement-position `logError(...)` call sites
+ * under `src/backend` (excluding `src/backend/logger/` and `__tests__`),
+ * none of them awaited, and `eslint.config.mjs:39` sets
  * `@typescript-eslint/no-floating-promises` to `warn` — so changing the
  * shared wrapper's inferred return type from `void` to `Promise<void>`
  * would add roughly 309 new warnings against a current backend baseline in
@@ -54,10 +54,30 @@ const logError = (...params: Parameters<LogWriter['logError']>) => {
  * audit's result. Widening all four wrappers remains a separately-scoped
  * follow-up, already recorded in this phase's `deferred-items.md` under
  * "From plan 34.2-20", and restated by plan 34.2-30.
+ *
+ * Phase 34.3 plan 04 (REQ-34.3-09) added `logInfoSettled` below for the
+ * identical call-site-guard reason — `logInfo` is a `send` channel and, per
+ * the `sidecar-send-channels-fail-silently` gotcha, a call-site rejection
+ * that escapes its listener would kill the sidecar. The shared-wrapper
+ * widening described above remains the same separately-scoped deferred
+ * follow-up for both `logInfo` and `logError`.
  */
 const logErrorSettled = (
   ...params: Parameters<LogWriter['logError']>
 ): Promise<void> => heroicLogWriter.logError(...params)
+
+/**
+ * `logInfoSettled` (Phase 34.3 plan 04 — REQ-34.3-09): byte-shape-identical
+ * sibling of `logErrorSettled` above, over `logInfo`'s own parameter type.
+ * `logInfo` above is a block-body wrapper that drops the `Promise<void>`
+ * `heroicLogWriter.logInfo(...)` returns; this expression-body sibling
+ * forwards it instead, so `loggerFlowRegistration.ts`'s `logInfo` send
+ * listener has a real promise to attach its call-site `.catch` guard to —
+ * the exact same reason `logErrorSettled` exists.
+ */
+const logInfoSettled = (
+  ...params: Parameters<LogWriter['logInfo']>
+): Promise<void> => heroicLogWriter.logInfo(...params)
 
 function getRunnerLogWriter(runner: RunnerOrComet) {
   const writer = runnerLogWriters.get(runner)
@@ -163,6 +183,7 @@ export {
   initHeadless,
   logDebug,
   logInfo,
+  logInfoSettled,
   logWarning,
   logError,
   logErrorSettled,
