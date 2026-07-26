@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.2-25-PLAN.md (CR-02 node:os containment gap closed, gap cycle 4 plan 1 of 6)"
-last_updated: "2026-07-26T02:30:16.232Z"
-last_activity: 2026-07-26 -- Phase 34.2 execution started
+stopped_at: Completed 34.2-26-PLAN.md (CR-01 logError call-site guard closed, gap cycle 4 plan 2 of 6)
+last_updated: "2026-07-26T03:36:33.323Z"
+last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 101
-  completed_plans: 88
-  percent: 67
+  completed_plans: 89
+  percent: 88
 ---
 
 # Project State
@@ -34,17 +34,55 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 4)
-Plan: 25 of 30 done. Plans 34.2-01..25 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
-plan 34.2-25 just completed). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
+Plan: 26 of 30 done. Plans 34.2-01..26 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
+plans 34.2-25/26 done). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
 `34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after one revision round (blocker:
 34.2-25's Test 9 node:os source gate flagged its own sibling test — closed by a declared 3-entry
-exclusion allowlist with a self-match break check). Next: continue wave 1 (34.2-26/27/28), then
+exclusion allowlist with a self-match break check). Next: continue wave 1 (34.2-27/28), then
 wave 2 (34.2-29), then wave 3 (34.2-30), then a FOURTH verification round for the phase as a
 whole.
 
-NOTE for the executor: 34.2-26's new suite deliberately trips `testContainment.test.ts`'s Block C
-classification tripwire — that red is EVIDENCE the tripwire is live, not a regression. 34.2-29
-(wave 2) closes it. 34.2-26 is forbidden from editing that file.
+NOTE for the executor: 34.2-26's new suite (`loggerCallSiteGuard.test.ts`) still deliberately
+trips `testContainment.test.ts`'s Block C classification tripwire (confirmed live on the
+post-34.2-26 full backend sweep) — that red is EVIDENCE the tripwire is live, not a regression.
+34.2-29 (wave 2) closes it by registering the file in `STRUCTURALLY_CONTAINED_SUITES`. 34.2-26 was
+(and future plans before 34.2-29 remain) forbidden from editing `testContainment.test.ts` directly
+— confirmed via `git diff --exit-code` on that file across all three of 34.2-26's task commits.
+
+34.2-26 done -- GAP CYCLE 4, wave 1, second plan executed, CR-01 CLOSED (the WR-02 call-site
+rejection guard added by gap cycle 3 was inert in production — `logError()` returned `undefined`
+because `backend/logger/index.ts`'s wrapper is a block-body arrow with no `return`, so
+`Promise.resolve(undefined).catch(...)` resolved immediately and the four WR-02 tests that
+"proved" the fix only passed because they `jest.spyOn`'d a rejecting promise shape that never
+occurs at runtime). Task 1 wrote `loggerCallSiteGuard.test.ts` (stub-free, never spies on/mocks
+the logger module under test) with 4 real-module contracts (A: real ENOTDIR async rejection via a
+regular file written where a directory is expected; B: synchronous throw from an unassigned
+writer, reproducing the recorded "heroicLogWriter unset until bootstrap init" gotcha live; C:
+runtime contract that a promise-returning export exists; D: source gate proving the wrapper is an
+EXPRESSION body, with a self-test), RED-confirmed against HEAD (Test A's real ENOTDIR rejection
+fired as a genuine, unhandled promise, caught only because the test itself installed an
+`unhandledRejection` listener first). Task 2 added `logErrorSettled` BESIDE the existing
+`logError` (not converting it — converting the shared wrapper would add ~309 new
+no-floating-promises warnings project-wide for 309 unawaited call sites, a deferred, separately-
+scoped change per `deferred-items.md`/plan 34.2-30) and wrapped `loggerFlowRegistration.ts`'s call
+site in `try`/`catch` so a synchronous throw is converted to `Promise.reject(error)` and settled by
+the same `.catch` as the async path. One Rule 1 eslint fix along the way (`prefer-promise-reject-
+errors` on the caught `unknown` value, disabled inline rather than wrapped — wrapping via
+`String(error)` could itself throw for a hostile reason). Deliberate-break check (by hand):
+reverting `logErrorSettled` to a block body crashed the whole node process on an uncaught ENOTDIR
+rejection rather than a clean test failure — a stronger, not weaker, failure signal; restored
+clean. Task 3 deleted the four spy-fabricated WR-02 tests from `loggerFlows.test.ts`, fixed the
+one remaining test that also silently stopped observing anything after Task 2's call-site change
+(now spies on `logErrorSettled`), and corrected the WR-10 tripwire comment (it is a POST-HOC
+DETECTOR, not a preventer — `jest.setupContainment.ts`'s `setupFiles`-time precondition, added by
+34.2-25, is the actual preventer). Full backend sweep on a clean run: failing-suite set exactly
+`{testContainment.test.ts (Block C tripwire, EXPECTED, closer=34.2-29), rustInvokeChannel.test.ts
+(pre-existing 34.1-era baseline)}`; one earlier run in-session additionally hit the already-
+documented, non-deterministic `library.ts` leaked-timer flake on `enrichmentFlows.test.ts`
+(clean on retest). `tsc --noEmit` clean; `prettier --check` clean on all 4 files; backend eslint
+total unchanged at 2539 problems (16 errors/2523 warnings) — zero net regression. REQ-34.2-12/-14
+complete (already marked from prior plans; re-confirmed), see 34.2-26-SUMMARY.md. Next: 34.2-27
+(wave 1, same wave).
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -724,7 +762,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1526,6 +1564,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P23 | 50min | 2 tasks | 1 files |
 | Phase 34.2 P24 | 55min | 3 tasks | 4 files |
 | Phase 34.2 P25 | 90m | 3 tasks | 2 files |
+| Phase 34.2 P26 | 45min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1789,6 +1828,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Closed deferred-items.md entries are marked with a heading suffix plus a dated resolution block rather than deleted, preserving the historical record while making current status unambiguous.
 - [Phase ?]: 34.2-25: userInfo() failures (uv_os_get_passwd) fall back to a synthetic username/homedir object rather than propagating, since no real backend consumer reads homedir from userInfo()
 - [Phase ?]: 34.2-25: mkdtempSync + chmodSync(0o700) replaces the predictable pid-based containment root path; no teardown hook added, deliberately unchanged from gap cycle 3
+- [Phase 34.2-26]: Added logErrorSettled as a new sibling export instead of converting the shared logError wrapper — avoids ~309 new no-floating-promises warnings project-wide for zero runtime change; deferred to plan 34.2-30
+- [Phase 34.2-26]: Test A/B use a bounded flushUntil() poll instead of a fixed-tick flush() — a real fsPromises.mkdir() rejection is not reliably bounded by a fixed setImmediate count; under-waiting risked a crashed jest worker
 
 ### Pending Todos
 
@@ -1858,9 +1899,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T02:30:16.225Z
-Stopped at: Completed 34.2-25-PLAN.md (CR-02 node:os containment gap closed, gap cycle 4 plan 1 of 6)
-Next: Execute 34.2-24-PLAN.md (gap cycle 3's final plan, wave 3, REQ-34.2-13 -- PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-26T03:36:33.314Z
+Stopped at: Completed 34.2-26-PLAN.md (CR-01 logError call-site guard closed, gap cycle 4 plan 2 of 6)
+Next: Execute 34.2-27-PLAN.md (gap cycle 4, wave 1, same wave as 34.2-26/28). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
