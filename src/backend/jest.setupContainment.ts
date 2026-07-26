@@ -119,16 +119,82 @@
  * Note on wording: writes still happen under this redirection — LogWriter
  * still creates/renames files, electron-store still persists JSON — they are
  * merely redirected into a disposable per-process root, never suppressed.
+ *
+ * GAP CYCLE 4 REVISION (2026-07-26, plan 34.2-25 — CR-02, WR-07, WR-09,
+ * WR-10, WR-11, WR-12): the mechanism above closed containment for the
+ * bare `'os'` specifier only. Measured in the gap-cycle-3 review:
+ * `os.homedir()` returned the containment root while `require('node:os')
+ * .homedir()` returned the developer's REAL home in the same test file --
+ * Jest keys the `node:`-prefixed builtin separately in its module registry,
+ * so `jest.mock('os', ...)` never touched it. `os.userInfo().homedir` was
+ * not redirected by either specifier. Five changes close this:
+ *
+ * 1. (CR-02) The factory is now a hoisted FUNCTION DECLARATION,
+ *    `mockOsFactory`, registered once against the bare specifier and once
+ *    against the `node:`-prefixed one (see the two `jest.mock` calls
+ *    below). It also overrides `userInfo()` (spreading the real result,
+ *    replacing only `homedir`), with a synthetic fallback if the real call
+ *    throws `uv_os_get_passwd` (routine under containerised CI with no
+ *    `/etc/passwd` entry for the running uid).
+ * 2. (WR-07) `containmentRoot` is now `mkdtempSync(join(realTmpRoot,
+ *    'gamelib-jest-home-'))` + `chmodSync(root, 0o700)` instead of a
+ *    predictable path derived from the OS temp root plus this worker's
+ *    process id, built with a check-then-act `existsSync`-then-`mkdirSync`
+ *    pair. `mkdtemp` is
+ *    atomic (no TOCTOU), mode 0700, and its suffix is unpredictable --
+ *    closing the world-writable-`/tmp` symlink-capture vector on Linux
+ *    CI, where this root receives real `electron-store` JSON
+ *    (`fileStore.ts`) and the full contents of `gamelib.log`. The
+ *    deliberate no-teardown-hook decision from the original mechanism is
+ *    UNCHANGED and for the same reason: a force-exited jest worker skips
+ *    teardown hooks (`tests-clobbering-real-steam-store`, commit
+ *    `92c29a5e`); mode 0700 is the control here, not deletion.
+ * 3. Both `containmentRoot` and the pre-mock real home
+ *    (`realHomeAtSetup`, WR-09) are memoized on `globalThis` under
+ *    `__GAMELIB_JEST_CONTAINMENT_ROOT__` / `__GAMELIB_JEST_REAL_HOME__` so
+ *    a second evaluation of this module (e.g. `structuralContainment
+ *    .test.ts` importing `containmentRoot` directly) reuses the same
+ *    values instead of minting a second, disagreeing root.
+ * 4. (WR-09/WR-10) `realHomeAtSetup` is now exported alongside
+ *    `containmentRoot`, and a precondition block runs after both
+ *    `jest.mock` registrations and the env assignments: it re-resolves
+ *    `require('os').homedir()` and `require('node:os').homedir()` and
+ *    checks `containmentRoot` resolves inside `realTmpRoot`, throwing a
+ *    loud `[jest.setupContainment] REFUSING TO RUN` `Error` if any of the
+ *    three do not hold. Because `setupFiles` entries run once per test
+ *    file strictly BEFORE that file's own imports, this precondition
+ *    precedes `constants/paths.ts`'s module-scope `mkdirSync` and every
+ *    other import-time filesystem touch -- which is exactly what the
+ *    per-suite tripwires in `bootstrap.test.ts` and `loggerFlows.test.ts`
+ *    cannot do (they run as the first *test*, after all module-scope
+ *    imports already executed). `getLogFilePath({})` is deliberately NOT
+ *    required here -- requiring `backend/logger/paths` from `setupFiles`
+ *    would pull a module into the graph of all 111 backend suites before
+ *    their own `jest.mock` calls register; that assertion lives in
+ *    `structuralContainment.test.ts` Test 2/Test 6 instead.
+ * 5. (WR-12) The comment above the `XDG_DATA_HOME`/`XDG_CACHE_HOME`
+ *    assignments below is corrected: `src/backend/constants/paths.ts:21`
+ *    is FIRST-PARTY code that reads `XDG_DATA_HOME` for `flatpakHome`, not
+ *    merely "a transitively-imported library" as the prior wording
+ *    claimed.
  */
 
-import { existsSync, mkdirSync } from 'fs'
-import { join } from 'path'
+import { chmodSync, mkdtempSync } from 'fs'
+import { isAbsolute, join, relative, resolve } from 'path'
+
+declare global {
+  // eslint-disable-next-line no-var -- globalThis memoization requires `var`
+  var __GAMELIB_JEST_CONTAINMENT_ROOT__: string | undefined
+  // eslint-disable-next-line no-var -- globalThis memoization requires `var`
+  var __GAMELIB_JEST_REAL_HOME__: string | undefined
+}
 
 // Real, unmocked 'os' -- used only to compute the containment root itself,
-// BEFORE the jest.mock('os', ...) call below installs the homedir()
-// override. jest.requireActual is deliberate here: this module is about to
-// mock 'os' for every OTHER consumer in this test file's module graph, and
-// must not accidentally consume its own not-yet-installed mock.
+// BEFORE the jest.mock('os'/'node:os', ...) calls below install the
+// homedir()/userInfo() overrides. jest.requireActual is deliberate here:
+// this module is about to mock both specifiers for every OTHER consumer in
+// this test file's module graph, and must not accidentally consume its own
+// not-yet-installed mock.
 /* eslint-disable @typescript-eslint/no-var-requires */
 const realOs: typeof import('os') = jest.requireActual('os')
 /* eslint-enable @typescript-eslint/no-var-requires */
@@ -140,42 +206,90 @@ const realOs: typeof import('os') = jest.requireActual('os')
 // reference to assert against.
 const realTmpRoot = realOs.tmpdir()
 
-// One root per process (`process.pid`), so parallel jest workers never
-// collide over the same directory and a force-exited worker leaves no
-// shared, in-use state behind for a sibling worker to trip over. Prefixed
-// `gamelib-jest-home-` so a stray directory left behind by a killed worker
-// is attributable to this mechanism at a glance.
-const containmentRoot = join(
-  realTmpRoot,
-  `gamelib-jest-home-${process.pid}`
-)
+// WR-09: capture the pre-mock real home BEFORE the mocks are installed, via
+// the `jest.requireActual` handle above (which bypasses the mock). Memoized
+// on `globalThis` (re-execution safety, see docstring point 3) so a second
+// evaluation of this module reuses the same value rather than recomputing
+// it -- harmless here since `homedir()` is deterministic, but keeps this
+// value and `containmentRoot` symmetric.
+const realHomeAtSetup: string =
+  globalThis.__GAMELIB_JEST_REAL_HOME__ ?? realOs.homedir()
+globalThis.__GAMELIB_JEST_REAL_HOME__ = realHomeAtSetup
 
-// `mkdirSync` with `{ recursive: true }` so any consumer that assumes an
-// already-existing home directory (rather than creating it lazily on first
-// write) does not fail on a missing parent. Idempotent and safe to call
-// again if a prior test file in the same worker already created it.
-if (!existsSync(containmentRoot)) {
-  mkdirSync(containmentRoot, { recursive: true })
+// WR-07: mkdtempSync is atomic (no TOCTOU), creates with mode 0700, and its
+// suffix is unpredictable -- replacing the old join(realTmpRoot,
+// `gamelib-jest-home-` + this worker's process id) + `existsSync`-then-
+// `mkdirSync` check-then-act pair, which was a predictable path with a
+// symlink-capture window on world-writable Linux `/tmp`. Memoized on
+// `globalThis` under `__GAMELIB_JEST_CONTAINMENT_ROOT__`
+// (re-execution safety, docstring point 3): a second evaluation of this
+// module reuses the existing root instead of minting a second one that
+// would disagree with the first, which is what makes it safe for
+// `structuralContainment.test.ts` to import `containmentRoot` directly.
+function ensureContainmentRoot(): string {
+  if (globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__ !== undefined) {
+    return globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__
+  }
+  const root = mkdtempSync(join(realTmpRoot, 'gamelib-jest-home-'))
+  chmodSync(root, 0o700)
+  globalThis.__GAMELIB_JEST_CONTAINMENT_ROOT__ = root
+  return root
 }
 
-// ── THE load-bearing fix (2026-07-26): jest.mock('os', ...) ────────────────
+const containmentRoot = ensureContainmentRoot()
+
+// ── CR-02 dual-specifier factory ────────────────────────────────────────
+// A hoisted FUNCTION DECLARATION, not a `const` -- a `const` would be in
+// the temporal dead zone when ts-jest hoists the `jest.mock` calls below
+// above it; the `mock` name prefix additionally keeps this factory
+// reference legal under `babel-plugin-jest-hoist`'s out-of-scope-variable
+// rule, matching the `mockTmpRootName` convention already recorded in
+// deferred-items.md. Only `homedir` and `userInfo` are overridden; every
+// other export (`tmpdir`, `platform`, `type`, `release`, `cpus`, `EOL`,
+// ...) is `jest.requireActual('os')`'s real implementation, so no suite
+// that legitimately uses another `os` export observes any behavior change.
+function mockOsFactory() {
+  const actual = jest.requireActual<typeof import('os')>('os')
+  return {
+    ...actual,
+    homedir: () => containmentRoot,
+    userInfo: (...args: Parameters<typeof actual.userInfo>) => {
+      try {
+        return { ...actual.userInfo(...args), homedir: containmentRoot }
+      } catch {
+        // uv_os_get_passwd: userInfo() reads the OS passwd database
+        // directly and throws when the running uid has no /etc/passwd
+        // entry -- routine under containerised CI (`docker --user
+        // $(id -u)`, WR-11 problem 3). The two real backend consumers
+        // (utils/filesystem/windows.ts:82, storeManagers/legendary/
+        // user.ts:6) only read `username`, never `homedir`, so this
+        // synthetic fallback has no behavioral blast radius beyond
+        // containment.
+        return {
+          username: 'gamelib-jest',
+          uid: -1,
+          gid: -1,
+          shell: null,
+          homedir: containmentRoot
+        }
+      }
+    }
+  }
+}
+
 // Registered here, in setupFiles, BEFORE this test file's own imports run --
-// so every module in the backend graph that does `require('os')` /
-// `import { homedir } from 'os'` for the rest of this test file's lifetime
-// gets THIS factory's object instead of the real module. Only `homedir` is
-// overridden; every other export is `jest.requireActual('os')`'s real
-// implementation, so no suite that legitimately uses another `os` export
-// (tmpdir, platform, type, release, cpus, EOL, ...) observes any behavior
-// change. This is a module-registry substitution (a NEW object), not a
-// property mutation on the real 'os' module -- Node's core-module exports
-// are non-configurable getters under CJS require() in this Node version, so
-// a direct `Object.defineProperty(os, 'homedir', ...)` or `jest.spyOn`
-// throws `TypeError: Cannot redefine property: homedir`; only jest.mock's
+// TWICE, once per specifier, because Jest keys the `node:`-prefixed builtin
+// separately in its module registry from the bare one (the entire CR-02
+// defect: `jest.mock('os', ...)` alone left `require('node:os')` resolving
+// to the developer's real `$HOME`). This is a module-registry substitution
+// (a NEW object per specifier), not a property mutation on the real 'os'
+// module -- Node's core-module exports are non-configurable getters under
+// CJS require() in this Node version, so a direct
+// `Object.defineProperty(os, 'homedir', ...)` or `jest.spyOn` throws
+// `TypeError: Cannot redefine property: homedir`; only jest.mock's
 // registry-level substitution works.
-jest.mock('os', () => ({
-  ...jest.requireActual('os'),
-  homedir: () => containmentRoot
-}))
+jest.mock('os', mockOsFactory)
+jest.mock('node:os', mockOsFactory)
 
 // ── POSIX / Windows home directory redirection ─────────────────────────────
 // `os.homedir()` reads these verbatim; this is what redirects
@@ -205,11 +319,71 @@ process.env.LOCALAPPDATA = join(containmentRoot, 'AppData', 'Local')
 process.env.XDG_CONFIG_HOME = join(containmentRoot, '.config')
 process.env.XDG_STATE_HOME = join(containmentRoot, '.local', 'state')
 
-// Not read by either of the two resolvers this module exists to contain,
-// but the remaining XDG base-directory variables a transitively-imported
-// library could consult — covering them costs one line each and closes the
-// same defect class pre-emptively.
+// WR-12 correction: `src/backend/constants/paths.ts:21` is FIRST-PARTY code
+// that reads `XDG_DATA_HOME` --
+// `export const flatpakHome = env.XDG_DATA_HOME?.replace('/data', '') ||
+// homedir()` -- so setting it changes `flatpakHome` for every backend test
+// from the `|| homedir()` branch to the `?.replace('/data', '')` branch.
+// (The prior wording here claimed these two variables were "not read by
+// either of the two resolvers this module exists to contain, but the
+// remaining XDG base-directory variables a transitively-imported library
+// could consult" -- true of `XDG_CACHE_HOME`, but factually wrong for
+// `XDG_DATA_HOME`.) The value stays contained either way, but a future
+// change to the `?.replace('/data', '')` logic would silently alter
+// `flatpakHome` under test with no signal without a pinning assertion --
+// see `structuralContainment.test.ts` Test 4, which asserts `flatpakHome`
+// also resolves inside `os.tmpdir()`.
 process.env.XDG_DATA_HOME = join(containmentRoot, '.local', 'share')
 process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
 
-export { containmentRoot }
+// ── WR-10: a PRECONDITION, not a post-hoc detector ─────────────────────────
+// `setupFiles` entries run once per test file, strictly BEFORE that file's
+// own imports -- so this check runs before `constants/paths.ts`'s
+// module-scope `mkdirSync` and every other import-time filesystem touch,
+// which is exactly what the per-suite tripwires in `bootstrap.test.ts` and
+// `loggerFlows.test.ts` cannot do (they run as the first *test*, after all
+// module-scope imports in that file have already executed). `getLogFilePath
+// ({})` is deliberately NOT required here: requiring `backend/logger/paths`
+// from `setupFiles` would pull a module into the graph of all 111 backend
+// suites before their own `jest.mock` calls register; that assertion lives
+// in `structuralContainment.test.ts` Test 2/Test 6 instead.
+{
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const bareHomeAtPrecondition = (
+    require('os') as typeof import('os')
+  ).homedir()
+  const prefixedHomeAtPrecondition = (
+    require('node:os') as typeof import('os')
+  ).homedir()
+  /* eslint-enable @typescript-eslint/no-require-imports */
+
+  // "resolves inside realTmpRoot" via relative()+resolve() -- never a raw
+  // `.startsWith(realTmpRoot)` string-prefix check, which is unsound for
+  // sibling directories sharing a prefix (e.g. `/tmp/foo` vs `/tmp/foobar`).
+  const rootRelativeToTmp = relative(
+    resolve(realTmpRoot),
+    resolve(containmentRoot)
+  )
+  const rootIsInsideRealTmp =
+    !rootRelativeToTmp.startsWith('..') && !isAbsolute(rootRelativeToTmp)
+
+  if (
+    bareHomeAtPrecondition !== containmentRoot ||
+    prefixedHomeAtPrecondition !== containmentRoot ||
+    !rootIsInsideRealTmp
+  ) {
+    throw new Error(
+      '[jest.setupContainment] REFUSING TO RUN: containment precondition ' +
+        'failed -- ' +
+        `require('os').homedir()=${bareHomeAtPrecondition}, ` +
+        `require('node:os').homedir()=${prefixedHomeAtPrecondition}, ` +
+        `expected both to equal containmentRoot=${containmentRoot}, and ` +
+        `containmentRoot must resolve inside realTmpRoot=${realTmpRoot}. ` +
+        'Refusing to let any backend test file import run against a ' +
+        'broken containment boundary (see jest.setupContainment.ts ' +
+        'docstring, gap cycle 4 / CR-02 / WR-10).'
+    )
+  }
+}
+
+export { containmentRoot, realHomeAtSetup }
