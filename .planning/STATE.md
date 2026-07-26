@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-26-PLAN.md (CR-01 logError call-site guard closed, gap cycle 4 plan 2 of 6)
-last_updated: "2026-07-26T03:36:33.323Z"
+stopped_at: Completed 34.2-27-PLAN.md (WR-06 signal-2/3 diagnosis + WR-03 prettier regression closed, gap cycle 4 plan 3 of 6)
+last_updated: "2026-07-26T03:45:34.619Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 101
-  completed_plans: 89
-  percent: 88
+  completed_plans: 90
+  percent: 89
 ---
 
 # Project State
@@ -34,11 +34,11 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 4)
-Plan: 26 of 30 done. Plans 34.2-01..26 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
-plans 34.2-25/26 done). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
+Plan: 27 of 30 done. Plans 34.2-01..27 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
+plans 34.2-25/26/27 done). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
 `34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after one revision round (blocker:
 34.2-25's Test 9 node:os source gate flagged its own sibling test — closed by a declared 3-entry
-exclusion allowlist with a self-match break check). Next: continue wave 1 (34.2-27/28), then
+exclusion allowlist with a self-match break check). Next: finish wave 1 (34.2-28), then
 wave 2 (34.2-29), then wave 3 (34.2-30), then a FOURTH verification round for the phase as a
 whole.
 
@@ -83,6 +83,30 @@ documented, non-deterministic `library.ts` leaked-timer flake on `enrichmentFlow
 total unchanged at 2539 problems (16 errors/2523 warnings) — zero net regression. REQ-34.2-12/-14
 complete (already marked from prior plans; re-confirmed), see 34.2-26-SUMMARY.md. Next: 34.2-27
 (wave 1, same wave).
+
+34.2-27 done -- GAP CYCLE 4, wave 1, third plan executed, WR-06 CLOSED (and WR-03's prettier
+regression on `repairFailure.ts`). Task 1 wrote 5 hostile-dependency tests to
+`repairFailure.test.ts` -- window.api.logError throwing, window.api entirely absent (the Tauri
+preload-factory-did-not-attach failure mode), t() throwing on the title key, showDialogModal
+throwing, and a T-34.2-52-under-hostility regression guard -- RED-confirmed by hand against
+unmodified `repairFailure.ts` (exactly 4 of 5 failed, the 5th stayed green as a pure regression
+guard; Tests 3/4 failed via the throw escaping `reportRepairFailure` itself, not an assertion
+diff, reproducing the `index.tsx:158` un-awaited-handler escape route WR-06 names). Task 2
+replaced signal 2's empty catch with a named `console.error('repair-failure log signal
+unavailable:', logErr)` diagnostic; precomputed `title`/`message` into `let` bindings
+pre-initialised to the hardcoded English literals, reassigned from `t(...)` inside their own
+try so a throwing `t` degrades to the fallback and the dialog still renders; wrapped
+`showDialogModal` itself in a try/catch emitting `'repair-failure dialog signal unavailable:'`
+on failure -- superseding 34.2-21's prior design note that left it as an intentionally-unwrapped
+"payoff" statement, per this plan's explicit Task 2 action. `npx prettier --write` applied to
+both files (closes WR-03's CI regression). Deliberate-break check (by hand): reverting signal
+2's diagnostic back to an empty catch failed exactly Tests 1 and 2, all other 17 tests
+(including 3/4/5) stayed green; restored clean. Full frontend sweep: 26/26 suites, 200/200 tests
+(+5 over the 195/195 baseline from plan 34.2-21); `tsc --noEmit` clean; eslint 0
+errors/warnings on `repairFailure.ts`; `index.tsx` byte-unchanged (`git diff --exit-code` 0);
+`package.json`/`pnpm-lock.yaml` unchanged (no installs). REQ-34.2-12/-14 complete (already
+marked from prior plans; re-confirmed), see 34.2-27-SUMMARY.md. Next: 34.2-28 (wave 1, same
+wave).
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -762,7 +786,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1565,6 +1589,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P24 | 55min | 3 tasks | 4 files |
 | Phase 34.2 P25 | 90m | 3 tasks | 2 files |
 | Phase 34.2 P26 | 45min | 3 tasks | 4 files |
+| Phase 34.2 P27 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1830,6 +1855,7 @@ Recent decisions affecting current work:
 - [Phase ?]: 34.2-25: mkdtempSync + chmodSync(0o700) replaces the predictable pid-based containment root path; no teardown hook added, deliberately unchanged from gap cycle 3
 - [Phase 34.2-26]: Added logErrorSettled as a new sibling export instead of converting the shared logError wrapper — avoids ~309 new no-floating-promises warnings project-wide for zero runtime change; deferred to plan 34.2-30
 - [Phase 34.2-26]: Test A/B use a bounded flushUntil() poll instead of a fixed-tick flush() — a real fsPromises.mkdir() rejection is not reliably bounded by a fixed setImmediate count; under-waiting risked a crashed jest worker
+- [Phase 34.2]: 34.2-27: showDialogModal wrapped in its own try/catch per WR-06's explicit fix, superseding 34.2-21's prior unwrapped-payoff design note; title/message precomputed into let bindings with hardcoded English fallbacks so a throwing t() cannot prevent the dialog from rendering
 
 ### Pending Todos
 
@@ -1899,8 +1925,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T03:36:33.314Z
-Stopped at: Completed 34.2-26-PLAN.md (CR-01 logError call-site guard closed, gap cycle 4 plan 2 of 6)
+Last session: 2026-07-26T03:45:34.612Z
+Stopped at: Completed 34.2-27-PLAN.md (WR-06 signal-2/3 diagnosis + WR-03 prettier regression closed, gap cycle 4 plan 3 of 6)
 Next: Execute 34.2-27-PLAN.md (gap cycle 4, wave 1, same wave as 34.2-26/28). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
