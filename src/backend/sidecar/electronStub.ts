@@ -471,12 +471,14 @@ export const shell = {
   // (mirrors real Electron's void-returning API) -- never throws; a transport failure is logged,
   // never silent.
   showItemInFolder: (fullPath: string): void => {
-    requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, [fullPath]).catch((error) => {
-      console.warn(
-        `[electronStub] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
-        error instanceof Error ? error.message : String(error)
-      )
-    })
+    requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, [fullPath]).catch(
+      (error) => {
+        console.warn(
+          `[electronStub] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
+          error instanceof Error ? error.message : String(error)
+        )
+      }
+    )
   },
   // D-05: stays a LOGGED no-op (never silent) -- tauri-plugin-fs 2.5.1 (the only first-party
   // candidate audited in 33-RESEARCH) has no trash/recycle-bin capability at all in this
