@@ -1391,10 +1391,10 @@ Cross-cutting constraints:
 **Goal:** Port the **shell, files, logs and diagnostics** IPC cluster (**29 channels** — corrected from "30" at plan time; `IPC-PORT-INVENTORY.md` §"Phase 34.3 — Slice 6" and 34.3-CONTEXT.md both say 29): external-link and folder/file reveal handlers, path/disk-space/clipboard utilities, the `logger/ipc_handler.ts` cluster, log upload and management, system-info copy, and the cache-clear/reset diagnostics. Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.3-01, REQ-34.3-02, REQ-34.3-03, REQ-34.3-04, REQ-34.3-05, REQ-34.3-06, REQ-34.3-07, REQ-34.3-08, REQ-34.3-09, REQ-34.3-10, REQ-34.3-11, REQ-34.3-12, REQ-34.3-13
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 9 plans in 6 waves
+**Plans:** 1/9 plans executed
 
 Plans:
-- [ ] 34.3-01-PLAN.md — REQ-34.3-01/02: new `shellFilesFlowRegistration.ts` registering the 14 `main.ts` link/reveal openers + the 4 filesystem/diagnostics channels, wired into `handlers.ts`, with `shellFilesFlows.test.ts` (wave 1)
+- [x] 34.3-01-PLAN.md — REQ-34.3-01/02: new `shellFilesFlowRegistration.ts` registering the 14 `main.ts` link/reveal openers + the 4 filesystem/diagnostics channels, wired into `handlers.ts`, with `shellFilesFlows.test.ts` (wave 1)
 - [ ] 34.3-02-PLAN.md — REQ-34.3-05/06: `clearCache` (dialog + `refreshLibrary` push), `clearAchievementCache`, and `resetHeroic` added to the same module at parity, `utils.ts` untouched (wave 2)
 - [ ] 34.3-03-PLAN.md — REQ-34.3-03/06/08: `tauri-plugin-clipboard-manager` + 2 new `dispatch_rust_channel` arms called Rust-side with ZERO capability grant, 2 pure helpers with hand-RED-proved `#[cfg(test)]` tests, the 2 transport constants, and D-05's verified-no-fix comment (wave 1)
 - [ ] 34.3-04-PLAN.md — REQ-34.3-09: `logInfoSettled` + the 5 logger/upload channels in `loggerFlowRegistration.ts` via curated imports, `deleteUploadedLogFile`'s both-builds deadness declared (wave 1)

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.3 planned (9 plans / 6 waves, plan-checker PASSED) — ready to execute
-last_updated: "2026-07-26T08:49:43.491Z"
-last_activity: 2026-07-26 -- Phase 34.3 planning complete
+stopped_at: Completed 34.3-01-PLAN.md
+last_updated: "2026-07-26T09:16:13.441Z"
+last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 93
+  completed_plans: 94
   percent: 67
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.3 — tauri ipc re plumb slice 6 shell files logs and diagnostics
+**Current focus:** Phase 34.3 — tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,7 +33,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — NOT STARTED, ready to
+Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
+Plan: 2 of 9
 discuss/plan.
 
 Prior phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — **COMPLETE
@@ -849,7 +850,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 85%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1088,7 +1089,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.3 planning complete
+Last activity: 2026-07-26
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1654,6 +1655,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P25 | 90m | 3 tasks | 2 files |
 | Phase 34.2 P26 | 45min | 3 tasks | 4 files |
 | Phase 34.2 P27 | 15min | 2 tasks | 2 files |
+| Phase 34.3 P01 | 55min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -1920,6 +1922,8 @@ Recent decisions affecting current work:
 - [Phase 34.2-26]: Added logErrorSettled as a new sibling export instead of converting the shared logError wrapper — avoids ~309 new no-floating-promises warnings project-wide for zero runtime change; deferred to plan 34.2-30
 - [Phase 34.2-26]: Test A/B use a bounded flushUntil() poll instead of a fixed-tick flush() — a real fsPromises.mkdir() rejection is not reliably bounded by a fixed setImmediate count; under-waiting risked a crashed jest worker
 - [Phase 34.2]: 34.2-27: showDialogModal wrapped in its own try/catch per WR-06's explicit fix, superseding 34.2-21's prior unwrapped-payoff design note; title/message precomputed into let bindings with hardcoded English fallbacks so a throwing t() cannot prevent the dialog from rendering
+- [Phase 34.3]: checkDiskSpace's zod Path.parse() validation preserved unchanged as the ASVS V5 control; never swapped for node's path.parse
+- [Phase 34.3]: getLegendaryVersion substituted for checkDiskSpace as the still-unported Invariant B guard example channel in 4 pre-existing test files
 
 ### Pending Todos
 
@@ -1990,9 +1994,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T07:41:28.835Z
-Stopped at: Phase 34.3 context gathered
-Next: `/gsd-plan-phase 34.3` — 34.3-CONTEXT.md is committed (244891cb) with 14 decisions across 4 discussed areas. Also still outstanding (unrelated to Phase 34.3): Phase 34.2's owed secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-26T09:16:13.433Z
+Stopped at: Completed 34.3-01-PLAN.md
+Next: Plan 34.3-01 complete (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md); continue with 34.3-02 via `/gsd-execute-phase 34.3`. Also still outstanding (unrelated to Phase 34.3): Phase 34.2's owed secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
