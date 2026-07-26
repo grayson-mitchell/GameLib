@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: "Gap cycle 3 (34.2-19..24) EXECUTED — all 24 plans of Phase 34.2 now have SUMMARYs; tsc clean, jest 2753/2754 (sole red = pre-existing rustInvokeChannel.test.ts). BUT the cycle-3 code review (34.2-REVIEW-GAP-CYCLE-3.md, 2 critical / 11 warning) empirically DISPROVED two of the cycle's three fixes, so Phase 34.2 is NOT verified and NOT complete. Verifier was deliberately SKIPPED by user decision — 34.2-VERIFICATION.md on disk is STALE (it is cycle 2's round). GAP SOURCE FOR CYCLE 4 = 34.2-REVIEW-GAP-CYCLE-3.md, not the stale VERIFICATION.md. Blockers: CR-01 the WR-02 .catch guard in loggerFlowRegistration.ts is inert because logger/index.ts:25-27 wrappers have block bodies with no return (logError() is undefined, not a promise) and its 4 new tests only pass because they spyOn a promise shape that never occurs at runtime; CR-02 jest.mock('os') in jest.setupContainment.ts does not cover the 'node:os' specifier (already used at depot/decompressPool.ts:18 + 8 test files) so containment leaks the real HOME. Also WR-01 Block D's HOME gate matches raw source and self-satisfies from a docblock at jest.setupContainment.ts:64; WR-03 both production files are prettier --check dirty at HEAD and CI runs pnpm prettier. Next: /gsd-plan-phase 34.2 --gaps (cycle 4)."
+status: ready_to_execute
+stopped_at: "Gap cycle 4 PLANNED (34.2-25..30, 3 waves) — plan-checker VERIFICATION PASSED after one revision round. Gap source was 34.2-REVIEW-GAP-CYCLE-3.md (2 critical + 12 warnings; its frontmatter miscounts warnings as 11, the body's WR-01..WR-12 is authoritative), NOT the stale 34.2-VERIFICATION.md. All 14 findings covered: Wave 1 = 34.2-25 (CR-02 dual-specifier os/node:os containment + userInfo + mkdtemp 0700 root + setupFiles-time abort), 34.2-26 (CR-01 logErrorSettled sibling + sync-throw guard + stub-free ENOTDIR proof), 34.2-27 (WR-06 repairFailure silent catch), 34.2-28 (WR-04/WR-08 Rust gate comment-counting + literal-truncating stripper); Wave 2 = 34.2-29 (WR-01/02/05 + jest.config.js cross-project gate); Wave 3 = 34.2-30 (REQ-34.2-13 currency + currency-gate.py extension + D4-DEF-01/02). THREE deliberate divergences from the review's literal prescription, all checker-validated: (1) CR-01 does NOT expression-body the four logger/index.ts wrappers — measured 309 statement-position logError() call sites, none awaited, against @typescript-eslint/no-floating-promises:'warn' (eslint.config.mjs:39), i.e. ~309 new warnings for ZERO runtime change; deferred as D4-DEF-01. (2) WR-11's Test 6 drops userInfo() as its independent reference (34.2-25 now redirects it) and anchors on a pre-mock realHomeAtSetup capture + the per-run mkdtemp root, so it is non-vacuous on all 3 platforms. (3) The node:os source gate uses a declared 3-entry NODE_OS_GATE_EXEMPT_FILES allowlist rather than a blanket __tests__ exemption — a blanket one would reinstate containment-by-omission, the accepted-debt pattern 34.2-19 killed and that rotted within one cycle. NOTE a deliberate cross-wave red: 34.2-26's new suite trips testContainment.test.ts's Block C classification tripwire (evidence the tripwire is live); 34.2-29 closes it, and testContainment.test.ts is a FORWARD DECLARATION in 34.2-25's allowlist because wave-2 plans cannot edit wave-1's files_modified. Next: /gsd-execute-phase 34.2 (clear context first). [Previous entry] Gap cycle 3 (34.2-19..24) EXECUTED — all 24 plans of Phase 34.2 now have SUMMARYs; tsc clean, jest 2753/2754 (sole red = pre-existing rustInvokeChannel.test.ts). BUT the cycle-3 code review (34.2-REVIEW-GAP-CYCLE-3.md, 2 critical / 11 warning) empirically DISPROVED two of the cycle's three fixes, so Phase 34.2 is NOT verified and NOT complete. Verifier was deliberately SKIPPED by user decision — 34.2-VERIFICATION.md on disk is STALE (it is cycle 2's round). GAP SOURCE FOR CYCLE 4 = 34.2-REVIEW-GAP-CYCLE-3.md, not the stale VERIFICATION.md. Blockers: CR-01 the WR-02 .catch guard in loggerFlowRegistration.ts is inert because logger/index.ts:25-27 wrappers have block bodies with no return (logError() is undefined, not a promise) and its 4 new tests only pass because they spyOn a promise shape that never occurs at runtime; CR-02 jest.mock('os') in jest.setupContainment.ts does not cover the 'node:os' specifier (already used at depot/decompressPool.ts:18 + 8 test files) so containment leaks the real HOME. Also WR-01 Block D's HOME gate matches raw source and self-satisfies from a docblock at jest.setupContainment.ts:64; WR-03 both production files are prettier --check dirty at HEAD and CI runs pnpm prettier. Next: /gsd-plan-phase 34.2 --gaps (cycle 4)."
 last_updated: "2026-07-26T01:06:15.327Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 95
+  total_plans: 101
   completed_plans: 87
   percent: 67
 ---
@@ -33,9 +33,16 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 COMPLETE
-Plan: 24 of 24 done (34.2-24 complete). All five gap-cycle-3 plans (34.2-19..24) executed;
-next step is re-verification of Phase 34.2 as a whole (fourth verification round).
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 4 PLANNED, READY TO EXECUTE
+Plan: 24 of 30 done. Plans 34.2-01..24 executed (gap cycles 1–3); gap cycle 4 (34.2-25..30,
+3 waves) planned 2026-07-26 from `34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after
+one revision round (blocker: 34.2-25's Test 9 node:os source gate flagged its own sibling test —
+closed by a declared 3-entry exclusion allowlist with a self-match break check). Next step is
+`/gsd-execute-phase 34.2`, then a FOURTH verification round for the phase as a whole.
+
+NOTE for the executor: 34.2-26's new suite deliberately trips `testContainment.test.ts`'s Block C
+classification tripwire — that red is EVIDENCE the tripwire is live, not a regression. 34.2-29
+(wave 2) closes it. 34.2-26 is forbidden from editing that file.
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
