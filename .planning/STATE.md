@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: planning
-stopped_at: Phase 34.4 context gathered
+status: executing
+stopped_at: Phase 34.4 planned
 last_updated: "2026-07-27T00:00:00.000Z"
-last_activity: 2026-07-27
+last_activity: 2026-07-27 -- Phase 34.4 planned (10 plans, 5 waves)
 progress:
   total_phases: 17
   completed_phases: 11
-  total_plans: 110
+  total_plans: 120
   completed_plans: 102
   percent: 69
 ---
@@ -1251,7 +1251,9 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-27 -- Completed quick task 260727-c42: graphify graph consolidation
+Last activity: 2026-07-27 -- Phase 34.4 planned: 10 plans in 5 waves, plan-checker PASSED
+(0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
+(graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
