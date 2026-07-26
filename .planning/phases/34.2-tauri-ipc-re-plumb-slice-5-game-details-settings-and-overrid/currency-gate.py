@@ -1,19 +1,32 @@
 #!/usr/bin/env python3
 """Currency gate for 34.2-PORTED-CHANNELS.md.
 
-Purpose (read this before deleting a failing assertion): every one of this phase's three
+Purpose (read this before deleting a failing assertion): every one of this phase's
 verification rounds cited the SAME currency-gap class — `34.2-PORTED-CHANNELS.md` reflecting the
 previous gap cycle's closures while predating the review that triggered the current one. This
 script turns that "stale" observation into a non-zero exit instead of leaving it as something only
 a verifier notices.
 
-When a FOURTH gap cycle runs against this phase, the correct maintenance action is to EXTEND the
-two token lists below (CLOSED_FINDING_TOKENS / DEFERRED_FINDING_TOKENS) and add its own
-`### Gap cycle N reconciliation` subsection — not to delete or weaken any assertion here. Deleting
-an assertion to make the gate pass defeats the reason this file exists (T-34.2-92: denial of
-service via un-maintainability). If a finding genuinely no longer needs tracking, remove its token
-from the list in the SAME commit that also removes/closes the reconciliation prose discussing it,
-so the two never drift apart.
+Per-cycle constant pattern (established by cycle 3, extended by cycle 4 — repeat this
+mechanically for a fifth cycle, do not re-derive it):
+
+  1. Add `CYCLE<N>_RECONCILIATION_HEADING = "### Gap cycle <N> reconciliation"`.
+  2. Add `CYCLE<N>_CLOSED_FINDING_TOKENS` and `CYCLE<N>_DEFERRED_FINDING_TOKENS` for that cycle's
+     own findings.
+  3. Duplicate assertions 1-3 (heading exists exactly once, body non-empty, every closed/deferred
+     token present) for the new cycle's section, leaving every prior cycle's assertions untouched.
+  4. Update the ordering check (assertion 4) so the NEWEST cycle's heading must be last, and keep
+     (or add another) companion assertion that every older cycle's heading is still present AND
+     appears BEFORE the newest one (compare `str.find` indices) — "newest last, history preserved
+     in reading order". Do not remove an older cycle's presence/ordering pin when adding a new one.
+  5. Update the final success `print(...)` to report every cycle's token counts.
+
+When a FIFTH gap cycle runs against this phase, the correct maintenance action is to EXTEND the
+token lists and heading constants above — never to delete or weaken an existing assertion.
+Deleting an assertion to make the gate pass defeats the reason this file exists (T-34.2-92: denial
+of service via un-maintainability). If a finding genuinely no longer needs tracking, remove its
+token from the list in the SAME commit that also removes/closes the reconciliation prose
+discussing it, so the two never drift apart.
 """
 
 import re
@@ -24,16 +37,18 @@ PORTED_CHANNELS_PATH = (
     Path(__file__).parent / "34.2-PORTED-CHANNELS.md"
 )
 
-# The literal heading gap cycle 3 added. A future cycle adds its own, numbered heading; this
-# constant stays pinned to cycle 3's own heading text so this gate keeps verifying cycle 3's
-# section specifically, even after a cycle 4 section is appended after it.
-RECONCILIATION_HEADING = "### Gap cycle 3 reconciliation"
+# ---------------------------------------------------------------------------
+# Gap cycle 3 (established first; renamed with a CYCLE3_ prefix for symmetry
+# with cycle 4 below — the heading text and both token lists are UNCHANGED in
+# content from the original single-cycle version of this gate).
+# ---------------------------------------------------------------------------
 
-# Findings this cycle CLOSED. Every token below must appear within the gap-cycle-3
-# reconciliation section. Extend this list, do not replace it, when a future cycle closes
-# additional findings inside its OWN reconciliation section (add a new constant for that
-# cycle's heading + token list instead of overloading this one).
-CLOSED_FINDING_TOKENS = [
+CYCLE3_RECONCILIATION_HEADING = "### Gap cycle 3 reconciliation"
+
+# Findings gap cycle 3 CLOSED. Every token below must appear within the gap-cycle-3
+# reconciliation section. Extend a NEW cycle's own list when that cycle closes additional
+# findings inside its OWN reconciliation section — do not add to this one.
+CYCLE3_CLOSED_FINDING_TOKENS = [
     "CR-01",
     "WR-01",
     "WR-02",
@@ -46,16 +61,49 @@ CLOSED_FINDING_TOKENS = [
     "timeout_for",
 ]
 
-# Findings this cycle deliberately did NOT fix (deferred or accepted, with a reason recorded
+# Findings gap cycle 3 deliberately did NOT fix (deferred or accepted, with a reason recorded
 # elsewhere in the section and in deferred-items.md). Every token below must also appear within
 # the gap-cycle-3 reconciliation section, so a future edit cannot quietly drop the record that
 # these were considered and not silently forgotten.
-DEFERRED_FINDING_TOKENS = [
+CYCLE3_DEFERRED_FINDING_TOKENS = [
     "WR-05",
     "WR-06",
     "IN-01",
     "IN-03",
     "IN-06",
+]
+
+# ---------------------------------------------------------------------------
+# Gap cycle 4 (added by plan 34.2-30). Extends the pattern above; does not touch it.
+# ---------------------------------------------------------------------------
+
+CYCLE4_RECONCILIATION_HEADING = "### Gap cycle 4 reconciliation"
+
+# All 14 findings from 34.2-REVIEW-GAP-CYCLE-3.md (2 critical + 12 warnings — the review's own
+# frontmatter undercounts them as `warning: 11`; the body labels WR-01 through WR-12 and the body
+# is authoritative). Every token below must appear within the gap-cycle-4 reconciliation section.
+CYCLE4_CLOSED_FINDING_TOKENS = [
+    "CR-01",
+    "CR-02",
+    "WR-01",
+    "WR-02",
+    "WR-03",
+    "WR-04",
+    "WR-05",
+    "WR-06",
+    "WR-07",
+    "WR-08",
+    "WR-09",
+    "WR-10",
+    "WR-11",
+    "WR-12",
+]
+
+# Findings gap cycle 4 deliberately did NOT fix (deferred, with a reason recorded elsewhere in the
+# section and in deferred-items.md's "From gap cycle 4" section).
+CYCLE4_DEFERRED_FINDING_TOKENS = [
+    "D4-DEF-01",
+    "D4-DEF-02",
 ]
 
 PLACEHOLDER_PATTERN = re.compile(r"\bTBD\b|\bTODO\b|\bFIXME\b|\bXXX\b")
@@ -79,49 +127,80 @@ def find_reconciliation_section(text: str, heading: str) -> str:
     return rest
 
 
+def check_cycle_section(
+    text: str,
+    heading: str,
+    closed_tokens: list[str],
+    deferred_tokens: list[str],
+    cycle_label: str,
+) -> str:
+    """Assertions 1-3 for a single cycle's reconciliation section. Returns the section body."""
+    heading_count = text.count(heading)
+    if heading_count == 0:
+        fail(
+            f'missing required heading "{heading}" — the {cycle_label} reconciliation section '
+            "is absent"
+        )
+    if heading_count > 1:
+        fail(
+            f'heading "{heading}" appears {heading_count} times, expected exactly 1 — '
+            f"duplicate or malformed {cycle_label} reconciliation section"
+        )
+
+    section = find_reconciliation_section(text, heading)
+    if not section.strip():
+        fail(f'heading "{heading}" found but its body is empty')
+
+    missing_closed = [tok for tok in closed_tokens if tok not in section]
+    if missing_closed:
+        fail(
+            f"the {cycle_label} reconciliation section is missing required CLOSED-finding "
+            f"token(s): {', '.join(missing_closed)} — a closure this cycle claims elsewhere "
+            "is not documented in its own reconciliation section"
+        )
+
+    missing_deferred = [tok for tok in deferred_tokens if tok not in section]
+    if missing_deferred:
+        fail(
+            f"the {cycle_label} reconciliation section is missing required DEFERRED-finding "
+            f"token(s): {', '.join(missing_deferred)} — a finding this cycle left open has "
+            "been silently dropped from the record instead of being named with a reason"
+        )
+
+    return section
+
+
 def main() -> None:
     if not PORTED_CHANNELS_PATH.exists():
         fail(f"{PORTED_CHANNELS_PATH} does not exist")
 
     text = PORTED_CHANNELS_PATH.read_text(encoding="utf-8")
 
-    # 1. The gap-cycle-3 reconciliation heading must exist, exactly once.
-    heading_count = text.count(RECONCILIATION_HEADING)
-    if heading_count == 0:
-        fail(
-            f'missing required heading "{RECONCILIATION_HEADING}" — the newest cycle\'s '
-            "reconciliation section is absent"
-        )
-    if heading_count > 1:
-        fail(
-            f'heading "{RECONCILIATION_HEADING}" appears {heading_count} times, expected '
-            "exactly 1 — duplicate or malformed reconciliation section"
-        )
+    # 1-3. Cycle 3's own section: heading present exactly once, body non-empty, every
+    #      closed/deferred token present. UNCHANGED from the original single-cycle gate.
+    check_cycle_section(
+        text,
+        CYCLE3_RECONCILIATION_HEADING,
+        CYCLE3_CLOSED_FINDING_TOKENS,
+        CYCLE3_DEFERRED_FINDING_TOKENS,
+        "gap-cycle-3",
+    )
 
-    section = find_reconciliation_section(text, RECONCILIATION_HEADING)
-    if not section.strip():
-        fail(f'heading "{RECONCILIATION_HEADING}" found but its body is empty')
+    # 1-3 (extended). Cycle 4's own section: same three checks, cycle 4's own tokens.
+    check_cycle_section(
+        text,
+        CYCLE4_RECONCILIATION_HEADING,
+        CYCLE4_CLOSED_FINDING_TOKENS,
+        CYCLE4_DEFERRED_FINDING_TOKENS,
+        "gap-cycle-4",
+    )
 
-    # 2. Every closed-finding token must appear within that section.
-    missing_closed = [tok for tok in CLOSED_FINDING_TOKENS if tok not in section]
-    if missing_closed:
-        fail(
-            "the gap-cycle-3 reconciliation section is missing required CLOSED-finding "
-            f"token(s): {', '.join(missing_closed)} — a closure this cycle claims elsewhere "
-            "is not documented in its own reconciliation section"
-        )
-
-    # 3. Every deferred-finding token must appear within that section.
-    missing_deferred = [tok for tok in DEFERRED_FINDING_TOKENS if tok not in section]
-    if missing_deferred:
-        fail(
-            "the gap-cycle-3 reconciliation section is missing required DEFERRED-finding "
-            f"token(s): {', '.join(missing_deferred)} — a finding this cycle left open has "
-            "been silently dropped from the record instead of being named with a reason"
-        )
-
-    # 4. The gap-cycle-3 section must be the LAST `###` subsection under `## 7. Reconciliation`,
-    #    so a fourth cycle appending its own section after it keeps the ordering meaningful.
+    # 4. Ordering: "newest last, history preserved in reading order". The gap-cycle-4 heading
+    #    must be the LAST `###` subsection under `## 7. Reconciliation`, AND the gap-cycle-3
+    #    heading must still be present and appear BEFORE the gap-cycle-4 heading. This is an
+    #    EXTENSION of the original single-heading ordering check, not a weakening: cycle 3's
+    #    section is now pinned in two ways (presence, checked above, and relative position,
+    #    checked here) instead of one.
     section7_match = re.search(r"\n## 7\. Reconciliation\n", text)
     if not section7_match:
         fail('missing "## 7. Reconciliation" heading — cannot verify subsection ordering')
@@ -133,12 +212,26 @@ def main() -> None:
     if not subsection_headings:
         fail('"## 7. Reconciliation" has no "###" subsections at all')
     last_subsection = subsection_headings[-1]
-    if not last_subsection.startswith(RECONCILIATION_HEADING):
+    if not last_subsection.startswith(CYCLE4_RECONCILIATION_HEADING):
         fail(
-            f'the gap-cycle-3 reconciliation section is not the LAST "###" subsection under '
+            f'the gap-cycle-4 reconciliation section is not the LAST "###" subsection under '
             f'"## 7. Reconciliation" — found "{last_subsection}" after it. A later '
             "reconciliation subsection must be appended AFTER this one, not before it "
             "(subsection order is the reading order of the phase's gap-cycle history)."
+        )
+
+    cycle3_idx = text.find(CYCLE3_RECONCILIATION_HEADING)
+    cycle4_idx = text.find(CYCLE4_RECONCILIATION_HEADING)
+    if cycle3_idx == -1:
+        fail(
+            f'"{CYCLE3_RECONCILIATION_HEADING}" is missing entirely — the gap-cycle-4 section '
+            "must be appended AFTER cycle 3's, not replace it"
+        )
+    if cycle3_idx >= cycle4_idx:
+        fail(
+            f'"{CYCLE3_RECONCILIATION_HEADING}" appears AFTER (or at the same position as) '
+            f'"{CYCLE4_RECONCILIATION_HEADING}" — history must read oldest-to-newest; the '
+            "gap-cycle-3 section must come first"
         )
 
     # 5. No placeholder token anywhere in the document.
@@ -151,9 +244,12 @@ def main() -> None:
         )
 
     print(
-        "OK: gap-cycle-3 reconciliation present, exactly once, last under §7, "
-        f"{len(CLOSED_FINDING_TOKENS)} closed-finding token(s) and "
-        f"{len(DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present, "
+        "OK: gap-cycle-3 reconciliation present, exactly once, before gap-cycle-4, "
+        f"{len(CYCLE3_CLOSED_FINDING_TOKENS)} closed-finding token(s) and "
+        f"{len(CYCLE3_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present; "
+        "gap-cycle-4 reconciliation present, exactly once, last under §7, "
+        f"{len(CYCLE4_CLOSED_FINDING_TOKENS)} closed-finding token(s) and "
+        f"{len(CYCLE4_DEFERRED_FINDING_TOKENS)} deferred-finding token(s) all present, "
         "no placeholders."
     )
     sys.exit(0)
