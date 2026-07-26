@@ -40,7 +40,14 @@ export default function LogUploadDialog() {
       return
     }
     const [url] = result
-    await navigator.clipboard.writeText(url)
+    // Use the app's own clipboard channel, NOT navigator.clipboard: under
+    // Tauri the renderer is WKWebView, whose Web Clipboard API resolves
+    // without actually writing, so this dialog's "URL copied to your
+    // clipboard" message was a lie in the Tauri build (found by the phase
+    // 34.3 live gate, item 5). clipboardWriteText is registered in BOTH
+    // builds -- main.ts:1427 under Electron, clipboardFlowRegistration.ts
+    // under the sidecar (-> the Rust clipboard arm) -- so this is parity-safe.
+    window.api.clipboardWriteText(url)
     setUploadUrl(url)
   }, [uploadLogFileProps])
 

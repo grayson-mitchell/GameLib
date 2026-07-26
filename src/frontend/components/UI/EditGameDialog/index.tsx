@@ -72,7 +72,11 @@ export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
   const hasOverride = Boolean(gameInfo.overrides)
 
   async function handlePasteFromClipboard(target: 'cover' | 'square') {
-    const text = (await navigator.clipboard.readText()).trim()
+    // See LogFileUploadDialog: navigator.clipboard is unreliable in Tauri's
+    // WKWebView renderer. clipboardReadText is registered in both builds
+    // (main.ts:1425 under Electron, clipboardFlowRegistration.ts under the
+    // sidecar), so routing through it is parity-safe.
+    const text = (await window.api.clipboardReadText()).trim()
     if (!text) return
     if (target === 'cover') setArtCover(text)
     else setArtSquare(text)
