@@ -589,13 +589,55 @@ export const screen = {
 // `downloadmanager/utils.ts` read `undefined === 'online'` (false) forever because this member
 // did not exist, so every Steam install request under Tauri failed instantly with "App offline,
 // skipping install" even though the machine (and Steam) were fully online.
+// net.request (D-06, Phase 34.4 Plan 06): was previously a total silent dead end --
+// `on()` recorded nothing, so a caller's `request.on('error', ...)` handler could never fire.
+// This was added in Phase 33 purely so `net.isOnline` (below) could exist alongside it.
+//
+// `humblePostRequest` (`backend/humble/adapter.ts:264-336`) is the ONLY caller in the whole
+// backend, and it already has `request.on('error', ...)` wired at ~L328 -- it just never fired.
+// Its prior sole failure path was therefore its own `REQUEST_TIMEOUT_MS` timer (adapter.ts:277-
+// 287), which rejects after 15s with the misleading `"Humble reveal request timed out"` -- a
+// message that reads as a Humble outage rather than a missing transport seam, and would send a
+// future reader straight back into the Cloudflare investigation that six rounds of the
+// `humble-reveal-key-fails` debug session already falsified (rounds 1-6 established cookie/
+// header fidelity is NOT the problem -- a live 403 with fullCookieJarPresent=true pointed at
+// axios's TLS/HTTP transport fingerprint instead). The real seam belongs to Phase 34.4.1
+// (`humbleRevealKey` is deferred there per D-02) -- its owner must NOT re-run rounds 1-5.
+//
+// Fix: emit an asynchronous `'error'` event (via `setImmediate`) naming the missing seam, so
+// `humblePostRequest`'s existing handler clears its timeout and rejects immediately with an
+// accurate cause. Two constraints are load-bearing, not stylistic (`sidecar-dialog-reject-
+// crashes`):
+//   1. Never throw or reject synchronously inside `request()` -- the caller registers
+//      `request.on('error', ...)` on the object THIS function returns, so a synchronous
+//      emission would fire before any handler could be attached and vanish silently.
+//   2. Never reject a promise the caller cannot handle -- this emits an event, it does not
+//      return a rejecting promise. An unguarded fire-and-forget `await` of a rejecting stub is
+//      exactly how `sidecar-dialog-reject-crashes` happened. Optional invocation (`handlers['error']?.(...)`)
+//      means a caller that registers no `'error'` handler is unaffected.
+//
+// Mirrors `session.fromPartition`'s own D-09 rationale immediately above ("fails loudly with a
+// clear log line instead of an opaque TypeError") applied to its neighbour.
 export const net = {
-  request: () => ({
-    on: (): void => {},
-    end: (): void => {},
-    write: (): void => {},
-    setHeader: (): void => {}
-  }),
+  request: () => {
+    const handlers: Record<string, (arg?: unknown) => void> = {}
+    setImmediate(() => {
+      handlers['error']?.(
+        new Error(
+          '[electronStub] net.request(): not implemented in the sidecar -- this seam is ' +
+            "Phase 34.4.1's (Humble reveal POST). See D-06."
+        )
+      )
+    })
+    return {
+      on: (event: string, cb: (arg?: unknown) => void): void => {
+        handlers[event] = cb
+      },
+      end: (): void => {},
+      write: (): void => {},
+      setHeader: (): void => {}
+    }
+  },
   isOnline: (): boolean => true
 }
 

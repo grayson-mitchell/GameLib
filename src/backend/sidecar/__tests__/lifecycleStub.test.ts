@@ -326,9 +326,14 @@ describe('electronStub net.isOnline (fix/steam-native-install-stability, 33-05 l
     expect(net.isOnline()).toBe(true)
   })
 
-  it('request() member is unchanged (still a safe no-op transport stub)', () => {
+  // `request()` GRADUATED from a total silent no-op to a fail-fast, seam-naming async
+  // `'error'` emission in Phase 34.4 Plan 06 (D-06) -- see `netStub.test.ts` for its full
+  // contract (async-only emission, optional invocation, the `humblePostRequest` integration
+  // proof). This describe block only asserts the surface shape survives: `end`/`write`/
+  // `setHeader` remain synchronous no-ops, and `on` still accepts a handler without throwing.
+  it("request()'s end/write/setHeader stay synchronous no-ops (D-06 changed on()/error emission only)", () => {
     const req = net.request()
-    expect(() => req.on()).not.toThrow()
+    expect(() => req.on('error', () => {})).not.toThrow()
     expect(() => req.end()).not.toThrow()
     expect(() => req.write()).not.toThrow()
     expect(() => req.setHeader()).not.toThrow()
