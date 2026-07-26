@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-02-PLAN.md
-last_updated: "2026-07-26T10:21:23.194Z"
+stopped_at: Completed 34.3-05-PLAN.md
+last_updated: "2026-07-26T10:52:00.000Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 97
-  percent: 88
+  completed_plans: 98
+  percent: 89
 ---
 
 # Project State
@@ -34,8 +34,33 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 5 of 9 (wave 1 -- plans 01/02/03/04 -- now fully complete)
+Plan: 7 of 9 (wave 2 -- plan 05 now complete)
 discuss/plan.
+
+34.3-05 done -- Clipboard forwarding + relaunch/quit race guard (D-01/D-02/D-03/D-04/D-06).
+`electronStub.clipboard.writeText` graduated from the Phase 31 logged no-op ("deferred to
+Phase 33", never collected) to a real fire-and-forget forward to `RUST_CLIPBOARD_WRITE_TEXT`,
+byte-shape-identical to `shell.showItemInFolder`'s template; `clipboard.readText()` documented
+DELIBERATELY DEAD (unchanged sync signature/`''` return -- plan 34.3-06's async handler bypasses
+it entirely). Added a module-scope `relaunchInFlight` flag: `app.relaunch()` sets it (never
+reset -- a relaunch is terminal), `app.quit()`/`app.exit()` become logged no-ops once set,
+closing the nondeterministic quit-instead-of-restart race on `resetHeroic` -- `utils.ts` stays
+byte-identical (`git diff --stat` empty across all 4 commits), no `isTauri()` branch anywhere.
+Migrated `dialogStub.test.ts`'s obsolete clipboard D-04 describe block (kept the surviving
+`readText() === ''` assertion, pointer comment to new coverage, following the in-repo
+`shell.showItemInFolder` D-04->D-05 precedent); extended `lifecycleStub.test.ts`'s allowlist
+test + added isolated (`jest.isolateModules()`, mirrors `bootstrapWirings.test.ts`) race-guard
+coverage proving both directions, hand-verified load-bearing by temporarily de-isolating one
+case and confirming it fails for the exact leaked-flag reason the isolation prevents. Two
+deviations: Rule 1 reordered two pre-existing lifecycle tests broken by the flag's cross-test
+leakage (this file has no file-wide `jest.resetModules()`); Rule 3 fixed a pre-existing (already
+84-char pre-plan) prettier violation on an untouched `shell.showItemInFolder` line, same class as
+34.3-03's own documented Rule 3 fix. Full backend sweep (`npx jest`, run twice): only
+pre-existing documented failures appear (`rustInvokeChannel.test.ts`, wine `rest.test.ts`, and
+once `storeManagers/steam/__tests__/library.test.ts` -- confirmed via isolated re-run 166/166
+clean, the same non-deterministic `library.ts` leaked-timer flake landing on a different suite
+this time). `tsc --noEmit`/`prettier --check` on all 3 touched files both clean. REQ-34.3-03/-04/
+-07/-13 complete, see 34.3-05-SUMMARY.md. Next: 34.3-06 (clipboardFlowRegistration.ts, wave 2).
 
 34.3-02 done -- Cache/reset channel registration (the last remaining wave-1 plan). Registered
 `clearCache`/`clearAchievementCache`/`resetHeroic` as 3 more send-kind channels in
@@ -908,7 +933,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1717,6 +1742,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P03 | 45min | 3 tasks | 5 files |
 | Phase 34.3 P04 | 40min | 3 tasks | 5 files |
 | Phase 34.3 P02 | 90min | 2 tasks | 2 files |
+| Phase 34.3 P05 | ~50min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1993,6 +2019,7 @@ Recent decisions affecting current work:
 - [Phase 34.3-02]: jest resetMocks:true wipes any implementation baked into a jest.mock(...) factory before EVERY test -- install the real default implementation in beforeEach instead
 - [Phase 34.3-02]: clearCache's refreshLibrary push rides pushFrontendMessage from ./sidecarRpc directly, per the plan's interfaces section
 - [Phase 34.3-02]: resetHeroic calls utils.ts's resetHeroic() completely unmodified -- no build-conditional branch; the relaunch/quit ordering race is left to plan 34.3-05
+- [Phase 34.3]: 34.3-05 D-06: relaunchInFlight guard lives entirely in electronStub.ts (never reset, relaunch is terminal); resetHeroic in utils.ts stays byte-identical, no isTauri() branch
 
 ### Pending Todos
 
@@ -2063,7 +2090,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T10:19:21.424Z
+Last session: 2026-07-26T10:34:34.278Z
 Stopped at: Completed 34.3-04-PLAN.md
 Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
 (Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
