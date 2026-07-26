@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-01 done
-last_updated: "2026-07-27T21:40:39.000Z"
-last_activity: 2026-07-27 -- 34.4-01 executed (Steam credential login + session/identity channels)
+stopped_at: 34.4-03 done
+last_updated: "2026-07-27T21:48:00.000Z"
+last_activity: 2026-07-27 -- 34.4-03 executed (GOG private-branch password channels, REQ-34.4-06)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 103
-  percent: 69
+  completed_plans: 104
+  percent: 70
 ---
 
 # Project State
@@ -34,7 +34,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 1 of 10
+Plan: 2 of 10 (34.4-01, 34.4-03 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+
+34.4-03 done -- GOG private-branch password channels (wave 1, depends_on: []). Registered
+`getPrivateBranchPassword`/`setPrivateBranchPassword` in `settingsFlowRegistration.ts` as GOG
+channels (`main.ts:1510-1515`), correcting IPC-PORT-INVENTORY.md's file-grouped
+misclassification under "Steam" (REQ-34.4-06) -- both route through
+`libraryManagerMap['gog'].getGame(appName).getBranchPassword()`/`setBranchPassword(password)`,
+zero new import (libraryManagerMap already imported for `requestGameSettings`/`isNative`), zero
+new store plumbing. Extended `settingsFlows.test.ts` 17 -> 21 tests: GOG-routed round-trip,
+non-transposed two-arg proof (password reaches `setBranchPassword`, appName reaches `getGame`),
+a not-called assertion on `libraryManagerMap.steam.getGame` (the misattribution guard), and a
+no-password-leak check across response frames + stderr. Hand RED-proofed the misattribution
+guard by flipping `'gog'` to `'steam'` in one registration -- both the read-response and the
+not-called assertion failed for the expected reason -- then restored byte-identical. One Rule 3
+deviation: `gameDetailsImportGate.test.ts`'s Gate 7 do-not-touch sha256/semantic pin on this
+same file needed updating (10 -> 12 channels) since this plan deliberately extends the file that
+gate protects; the `steamLibrary.has()` D-09 bottle-launch fix that gate exists to guard is
+confirmed unchanged by its own adjacent semantic-pin test. Full backend sweep: 2413/2415 tests,
+114/116 suites -- only the 2 pre-existing documented baselines (`rustInvokeChannel.test.ts`,
+wine `rest.test.ts`). No Rust files touched; `main.ts`/`steamAuthFlowRegistration.ts` byte-
+unchanged. Did NOT assert a reach-ledger growth figure per the plan's explicit instruction --
+`settingsFlowRegistration.ts` is confirmed NOT currently an `electronReachLedger.test.ts` entry
+point; that measurement is deferred to plan 34.4-08. REQ-34.4-06 complete, see
+34.4-03-SUMMARY.md. Next: 34.4-02 (bottle/client-setup/redeem group, same file, wave 1).
 
 34.4-01 done -- Steam credential/SteamGuard/TOTP login trio + session/identity trio
 registration (wave 1). Extended `steamAuthFlowRegistration.ts` with 6 new registrations:
