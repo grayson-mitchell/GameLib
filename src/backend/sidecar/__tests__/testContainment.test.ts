@@ -432,26 +432,35 @@ const IN_SCOPE_SUITES = [
  * other, and excluding it would leave the Block C tripwire below with a
  * permanent one-file blind spot.
  *
- * The directory holds 27 `*.test.ts` files as of Phase 34.3 Plan 01 (26
- * before this plan added `shellFilesFlows.test.ts`; 25 before gap cycle 4
- * plan 34.2-26 added `loggerCallSiteGuard.test.ts`, itself classified here
- * rather than left as the deliberately-open Block C failure that plan left
- * as live evidence the tripwire fires); 4 are `IN_SCOPE_SUITES` and the 23
- * below account for the rest (counts recomputed from `readdirSync` by this
- * plan, not carried forward by hand -- see Block C's own anti-vacuity test,
- * which asserts every name declared here still exists on disk).
+ * The directory holds 28 `*.test.ts` files as of Phase 34.3 Plan 06 (27
+ * before this plan added `clipboardFlows.test.ts`; 26 before plan 34.3-01
+ * added `shellFilesFlows.test.ts`; 25 before gap cycle 4 plan 34.2-26 added
+ * `loggerCallSiteGuard.test.ts`, itself classified here rather than left as
+ * the deliberately-open Block C failure that plan left as live evidence the
+ * tripwire fires); 4 are `IN_SCOPE_SUITES` and the 24 below account for the
+ * rest (counts recomputed from `readdirSync` by this plan, not carried
+ * forward by hand -- see Block C's own anti-vacuity test, which asserts
+ * every name declared here still exists on disk).
  *
  * `loggerCallSiteGuard.test.ts` (plan 34.2-26) is classified as
  * structurally contained: it carries no `os`/`pathShim` mock of its own and
  * relies entirely on the `setupFiles` mechanism, mocking only
  * `backend/logger/paths` (a module below the code it tests) plus
  * `electron`/`backend/config`.
+ *
+ * `clipboardFlows.test.ts` (Phase 34.3 Plan 06) is classified as
+ * structurally contained: it uses the identical `os`/`electron`/
+ * `electron-store` mock kit already classified here for
+ * `appShellFlows.test.ts`/`shellFilesFlows.test.ts`, calling
+ * `registerClipboardFlows()` directly rather than booting the full sidecar
+ * via `../bootstrap`'s `init()`.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
   'bootstrap.test.ts',
   'bootstrapWirings.test.ts',
+  'clipboardFlows.test.ts',
   'dialogStub.test.ts',
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
