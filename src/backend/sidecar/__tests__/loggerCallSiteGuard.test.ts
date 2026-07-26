@@ -218,7 +218,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     }
   })
 
-  it('Test B (synchronous throw): an unassigned writer does not escape the listener, and still writes a diagnostic', () => {
+  it('Test B (synchronous throw): an unassigned writer does not escape the listener, and still writes a diagnostic', async () => {
     const stderrSpy = jest
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
@@ -244,6 +244,16 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
 
       expect(() => freshListener!(undefined, 'boom')).not.toThrow()
     })
+
+    // The synchronous throw above is converted to Promise.reject(error) at
+    // the call site, and that rejection's own .catch handler only runs on a
+    // later microtask/macrotask turn — a plain synchronous test body would
+    // read stderrSpy before the diagnostic is ever written.
+    await flushUntil(() =>
+      stderrSpy.mock.calls.some((call) =>
+        String(call[0]).includes('[loggerFlowRegistration]')
+      )
+    )
 
     const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
     const diagnostic = stderrLines.find((line) =>

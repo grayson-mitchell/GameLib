@@ -26,6 +26,39 @@ const logError = (...params: Parameters<LogWriter['logError']>) => {
   heroicLogWriter.logError(...params)
 }
 
+/**
+ * `logErrorSettled` (Phase 34.2 gap cycle 4, plan 34.2-26 — closes CR-01):
+ * added BESIDE `logError` above, not in place of it. `logError` and
+ * `logErrorSettled` are one-line siblings over the identical
+ * `Parameters<LogWriter['logError']>` type, so they cannot drift
+ * semantically — the only difference is that this one is an EXPRESSION
+ * body, so it actually `return`s the `Promise<void>` `heroicLogWriter
+ * .logError(...)` produces, instead of silently dropping it the way the
+ * block-body `logError` above does (and the way `logDebug`/`logInfo`/
+ * `logWarning` still do). `loggerFlowRegistration.ts`'s `logError` IPC
+ * listener imports THIS export so its call-site `.catch` guard has a real
+ * promise to attach to.
+ *
+ * Deliberately NOT applied to `logDebug`/`logInfo`/`logWarning`/`logError`
+ * above: this project measured 309 statement-position `logError(...)` call
+ * sites under `src/backend` (excluding `src/backend/logger/` and
+ * `__tests__`), none of them awaited, and `eslint.config.mjs:39` sets
+ * `@typescript-eslint/no-floating-promises` to `warn` — so changing the
+ * shared wrapper's inferred return type from `void` to `Promise<void>`
+ * would add roughly 309 new warnings against a current backend baseline in
+ * the low thousands (a project-wide, undeclared blast radius), with ZERO
+ * runtime behavior change, since the promise is dropped either way — only
+ * the drop site moves from inside this file to every one of those 309
+ * call sites. The code review that raised CR-01 named this blast radius
+ * and asked for it to be audited before acting; this comment IS that
+ * audit's result. Widening all four wrappers remains a separately-scoped
+ * follow-up, already recorded in this phase's `deferred-items.md` under
+ * "From plan 34.2-20", and restated by plan 34.2-30.
+ */
+const logErrorSettled = (
+  ...params: Parameters<LogWriter['logError']>
+): Promise<void> => heroicLogWriter.logError(...params)
+
 function getRunnerLogWriter(runner: RunnerOrComet) {
   const writer = runnerLogWriters.get(runner)
   if (writer) return writer
@@ -132,6 +165,7 @@ export {
   logInfo,
   logWarning,
   logError,
+  logErrorSettled,
   getRunnerLogWriter,
   createGameLogWriter,
   LogPrefix,

@@ -62,12 +62,30 @@
  * process guard remains installed as pure defence-in-depth — it is simply no
  * longer the primary (and, before this fix, only) handler for this channel.
  *
- * `logError(...)`'s return value is normalised via `Promise.resolve(...)`
- * before `.catch` is attached: the declared TypeScript return type is `void`
- * (see `logError` in `backend/logger/index.ts`), but the runtime value is a
- * promise today via `LogWriter#logError` -> `#logBase`. `Promise.resolve`
- * makes the guard correct either way without depending on that runtime
- * shape. The whole expression is prefixed with `void` so the listener body
+ * CORRECTED (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01). This paragraph
+ * previously asserted that `logError(...)`'s declared `void` return type was
+ * merely a stale annotation and that "the runtime value is a promise today
+ * via `LogWriter#logError` -> `#logBase`". That claim was false, and is the
+ * root of CR-01: `backend/logger/index.ts`'s `logError` wrapper is a
+ * block-body arrow with no `return` statement, so it evaluates to `undefined`
+ * at runtime — the declared `void` type was the type checker correctly
+ * reporting the real runtime shape, not a stale artifact. `Promise.resolve
+ * (undefined).catch(...)` resolves immediately, so the `.catch` below was
+ * unreachable for a real log-write failure the entire time gap cycle 3
+ * shipped it.
+ *
+ * The call site below now imports `logErrorSettled` instead of `logError` —
+ * a sibling export (`backend/logger/index.ts`) declared with an EXPRESSION
+ * body that actually forwards `heroicLogWriter.logError(...)`'s
+ * `Promise<void>`, added specifically so this call site has a real promise
+ * to attach `.catch` to. A `try`/`catch` around the call additionally
+ * settles the SYNCHRONOUS throw path: a synchronous throw (`heroicLogWriter`
+ * still unassigned before `initHeadless()`/`init()` runs — the recorded
+ * "heroicLogWriter unset until bootstrap init" gotcha) happens during
+ * argument evaluation, before any `Promise.resolve` call is ever reached,
+ * and would otherwise land in `dispatchSend`'s synchronous `catch`
+ * (`sidecarRpc.ts:137-146`) rather than this handler's own diagnostic. The
+ * whole expression is still prefixed with `void` so the listener body
  * itself stays synchronous and returns `undefined`, preserving `ipcMain.on`
  * / `dispatchSend`'s listener contract.
  *
@@ -99,7 +117,7 @@
  */
 
 import { ipcMain } from './electronStub'
-import { logError, LogPrefix } from '../logger'
+import { logErrorSettled, LogPrefix } from '../logger'
 
 /**
  * Registers the single `logError` channel. Called once from `handlers.ts` —
@@ -109,27 +127,46 @@ import { logError, LogPrefix } from '../logger'
 export function registerLoggerFlows(): void {
   // Behavior identical to the Electron-only logger IPC handler's own
   // `addListener('logError', (e, message) => logError(message, LogPrefix.Frontend))`,
-  // except the call is now guarded at this call site (WR-02) rather than
-  // left as a floating promise for processGuards.ts to absorb.
+  // except the call is now guarded at this call site (WR-02/CR-01) rather
+  // than left as a floating promise for processGuards.ts to absorb.
   ipcMain.on('logError', (_event: unknown, ...args: unknown[]) => {
-    void Promise.resolve(logError(args[0], LogPrefix.Frontend)).catch(
-      (error: unknown) => {
-        let diagnostic =
-          '[loggerFlowRegistration] logError call-site rejection: <unstringifiable reason>'
-        try {
-          diagnostic = `[loggerFlowRegistration] logError call-site rejection: ${
-            error instanceof Error ? (error.stack ?? error.message) : String(error)
-          }`
-        } catch {
-          // keep the hardcoded fallback
-        }
-        try {
-          process.stderr.write(`${diagnostic}\n`)
-        } catch {
-          // Nothing further we can safely do -- swallow. Never re-throw,
-          // never exit, never write to stdout (RPC frame transport).
-        }
+    // CR-01: the synchronous throw path (heroicLogWriter still unassigned
+    // before initHeadless()/init() runs) happens during argument evaluation
+    // of the call below, before Promise.resolve is ever reached -- so it is
+    // caught here and converted into a rejection, settled by the same
+    // .catch below as the async path.
+    let settled: Promise<unknown>
+    try {
+      settled = Promise.resolve(logErrorSettled(args[0], LogPrefix.Frontend))
+    } catch (error: unknown) {
+      // The caught value is whatever was thrown during argument evaluation
+      // (typically a TypeError, but not guaranteed to be an Error -- the
+      // .catch handler below already treats it as `unknown` and safely
+      // falls back to String(error) for anything else). Rejecting with the
+      // raw value, rather than wrapping it, preserves that exact contract
+      // instead of risking a second throw here (String() itself can throw
+      // for a null-prototype/hostile reason).
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      settled = Promise.reject(error)
+    }
+    void settled.catch((error: unknown) => {
+      let diagnostic =
+        '[loggerFlowRegistration] logError call-site rejection: <unstringifiable reason>'
+      try {
+        diagnostic = `[loggerFlowRegistration] logError call-site rejection: ${
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error)
+        }`
+      } catch {
+        // keep the hardcoded fallback
       }
-    )
+      try {
+        process.stderr.write(`${diagnostic}\n`)
+      } catch {
+        // Nothing further we can safely do -- swallow. Never re-throw,
+        // never exit, never write to stdout (RPC frame transport).
+      }
+    })
   })
 }
