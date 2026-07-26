@@ -2191,3 +2191,4 @@ Steam adoption, client-setup flows) — both required before milestone v0.7 comp
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
+| 2026-07-27 | fast | Tracked `.claude/settings.json` (was untracked) so the graphify hook-guard PreToolUse hooks persist + are shared; split the personal `Notification`/`Stop` ntfy.sh hooks out into globally-gitignored `settings.local.json` rather than publishing an unauthenticated ntfy topic name to the public fork remote. Stop hook still points at the never-changed `CHANGE-ME` placeholder. | ✅ |
