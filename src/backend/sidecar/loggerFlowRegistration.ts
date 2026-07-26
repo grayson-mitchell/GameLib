@@ -114,10 +114,75 @@
  * accepts `unknown` — the assertion claimed a guarantee the transport never
  * made, and a malformed frame with an empty `args` array previously yielded
  * a silently-asserted `undefined`-as-string.
+ *
+ * ---
+ *
+ * Phase 34.3 plan 04 (REQ-34.3-01/-09/-13) extends this module with this
+ * slice's 5 logger channels, each cross-checked against the Electron-only
+ * `logger/ipc_handler.ts`'s own `addListener`/`addHandler` call for that
+ * exact channel before being written here:
+ *
+ *   send (`ipcMain.on`):
+ *     - `logInfo` -> `logger/ipc_handler.ts:14` (`addListener('logInfo', ...)`)
+ *     - `showLogFileInFolder` -> `logger/ipc_handler.ts:22`
+ *       (`addListener('showLogFileInFolder', ...)`)
+ *
+ *   invoke (`ipcMain.handle`):
+ *     - `uploadLogFile` -> `logger/ipc_handler.ts:26`
+ *       (`addHandler('uploadLogFile', ...)`)
+ *     - `deleteUploadedLogFile` -> `logger/ipc_handler.ts:27`
+ *       (`addHandler('deleteUploadedLogFile', ...)`)
+ *     - `getUploadedLogFiles` -> `logger/ipc_handler.ts:30`
+ *       (`addHandler('getUploadedLogFiles', ...)`)
+ *
+ * `logError` above is registered EXACTLY ONCE in this file (by 34.2-16) —
+ * `logInfo` below is its `send`-shape twin, mirroring the same call-site
+ * rejection guard shape byte-for-byte (substituting `logInfoSettled` for
+ * `logErrorSettled` and `LogPrefix.Frontend` unchanged), for the identical
+ * reason: an unregistered `send` channel is a total, silent no-op under
+ * Tauri, and a call-site rejection that escapes the listener would
+ * otherwise crash the sidecar (T-34.3-14).
+ *
+ * D-14 (curated-import discipline, inherited unchanged): `uploadLogFile`,
+ * `deleteUploadedLogFile`, and `getUploadedLogFiles` are imported directly
+ * from `../logger/uploader`, and `getLogFilePath` from `../logger/paths` —
+ * NEVER from `logger/ipc_handler.ts`, which also registers the
+ * already-ported `getLogContent` (L18) and `logError` (L15). A side-effect
+ * import of that file would double-register both (T-34.3-15) and drag
+ * `backend/ipc` -> the real `electron` module into this slice's curated
+ * sidecar graph.
+ *
+ * D-08 — `deleteUploadedLogFile` is ported at parity but CANNOT ACTUALLY
+ * DELETE ANYTHING IN EITHER BUILD. `logger/uploader.ts:74-77` hardcodes
+ * `const token = '1'` with a comment stating dpaste.com does not support
+ * deletion and that the option was meant to be hidden — it never was
+ * (`UploadedLogFilesList/index.tsx:60` still wires a live button to this
+ * channel). This differs from 34.2 D-07's dead-under-Tauri-only channel:
+ * this one is equally dead in both builds, an inherited upstream Heroic
+ * defect this port neither introduces nor worsens. Ported faithfully here;
+ * the live-button UI bug is filed as a separate todo, not fixed in this
+ * plan (T-34.3-16, accepted + declared, see `34.3-PORTED-CHANNELS.md`).
+ *
+ * D-09 — log redaction is OUT OF SCOPE for this module. `uploadLogFile`
+ * sends up to 10 MiB of unredacted log content to a public dpaste with a
+ * 2-day expiry, and `src/backend/logger/` performs no redaction anywhere.
+ * GameLib adds Steam refresh tokens and revealed Humble key values upstream
+ * Heroic never had. The threat is identical in both builds and predates
+ * this slice; it is recorded as a standing security todo
+ * (T-34.3-13, `34.3-PORTED-CHANNELS.md`). By explicit user instruction, NO
+ * AUDIT of whether a token or key value can reach a log line is performed
+ * by this plan or this module.
  */
 
 import { ipcMain } from './electronStub'
-import { logErrorSettled, LogPrefix } from '../logger'
+import { logErrorSettled, logInfoSettled, LogPrefix } from '../logger'
+import { getLogFilePath } from '../logger/paths'
+import { showItemInFolder } from '../utils'
+import {
+  uploadLogFile,
+  deleteUploadedLogFile,
+  getUploadedLogFiles
+} from '../logger/uploader'
 
 /**
  * Registers the single `logError` channel. Called once from `handlers.ts` —
@@ -169,4 +234,107 @@ export function registerLoggerFlows(): void {
       }
     })
   })
+
+  // Electron parity source: src/backend/logger/ipc_handler.ts:14
+  // addListener('logInfo', (e, message) => logInfo(message, LogPrefix.Frontend))
+  //
+  // logInfo is logError's send-shape twin (see this module's header
+  // docstring) -- the SAME call-site-guard shape, substituting
+  // logInfoSettled for logErrorSettled.
+  ipcMain.on('logInfo', (_event: unknown, ...args: unknown[]) => {
+    // The synchronous throw path (heroicLogWriter still unassigned before
+    // initHeadless()/init() runs) happens during argument evaluation of the
+    // call below, before Promise.resolve is ever reached -- caught here and
+    // converted into a rejection, settled by the same .catch below as the
+    // async path.
+    let settled: Promise<unknown>
+    try {
+      settled = Promise.resolve(logInfoSettled(args[0], LogPrefix.Frontend))
+    } catch (error: unknown) {
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      settled = Promise.reject(error)
+    }
+    void settled.catch((error: unknown) => {
+      let diagnostic =
+        '[loggerFlowRegistration] logInfo call-site rejection: <unstringifiable reason>'
+      try {
+        diagnostic = `[loggerFlowRegistration] logInfo call-site rejection: ${
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error)
+        }`
+      } catch {
+        // keep the hardcoded fallback
+      }
+      try {
+        process.stderr.write(`${diagnostic}\n`)
+      } catch {
+        // Nothing further we can safely do -- swallow. Never re-throw,
+        // never exit, never write to stdout (RPC frame transport).
+      }
+    })
+  })
+
+  // Electron parity source: src/backend/logger/ipc_handler.ts:22-24
+  // addListener('showLogFileInFolder', (e, args) => showItemInFolder(getLogFilePath(args)))
+  //
+  // args[0] is passed WHOLE to getLogFilePath -- it is a GetLogFileArgs
+  // object (or undefined for the base Heroic log), not a path string.
+  ipcMain.on('showLogFileInFolder', (_event: unknown, ...args: unknown[]) => {
+    try {
+      showItemInFolder(
+        getLogFilePath(args[0] as Parameters<typeof getLogFilePath>[0])
+      )
+    } catch (error: unknown) {
+      let diagnostic =
+        '[loggerFlowRegistration] showLogFileInFolder call-site rejection: <unstringifiable reason>'
+      try {
+        diagnostic = `[loggerFlowRegistration] showLogFileInFolder call-site rejection: ${
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error)
+        }`
+      } catch {
+        // keep the hardcoded fallback
+      }
+      try {
+        process.stderr.write(`${diagnostic}\n`)
+      } catch {
+        // Nothing further we can safely do -- swallow. Never re-throw,
+        // never exit, never write to stdout (RPC frame transport).
+      }
+    }
+  })
+
+  // Electron parity source: src/backend/logger/ipc_handler.ts:26
+  // addHandler('uploadLogFile', async (e, name, args) => uploadLogFile(name, args))
+  //
+  // No try/catch here that would swallow the rejection: the frontend owns
+  // the "upload failed" state, and LogFileUploadDialog expects the invoke
+  // to reject on failure (the Phase 20 D-14 convention).
+  ipcMain.handle('uploadLogFile', async (_event: unknown, ...args: unknown[]) =>
+    uploadLogFile(
+      args[0] as string,
+      args[1] as Parameters<typeof getLogFilePath>[0]
+    )
+  )
+
+  // Electron parity source: src/backend/logger/ipc_handler.ts:27
+  //
+  // D-08 (see this module's header docstring): ported faithfully. This
+  // channel cannot actually delete anything in either build --
+  // logger/uploader.ts:74-77 hardcodes token = '1'. Do NOT fix, guard, or
+  // work around that here.
+  ipcMain.handle(
+    'deleteUploadedLogFile',
+    async (_event: unknown, ...args: unknown[]) =>
+      deleteUploadedLogFile(args[0] as string)
+  )
+
+  // Electron parity source: src/backend/logger/ipc_handler.ts:30
+  //
+  // getUploadedLogFiles's expiry-pruning side effect (a read channel that
+  // mutates the store) is preserved -- Electron parity, and it is what
+  // frontend/state/UploadedLogFiles.ts reads at module scope.
+  ipcMain.handle('getUploadedLogFiles', async () => getUploadedLogFiles())
 }
