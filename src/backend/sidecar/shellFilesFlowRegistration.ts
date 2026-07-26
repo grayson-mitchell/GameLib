@@ -24,11 +24,11 @@
  *       '${appName}.json'))` (`main.ts:755-760`)
  *     - `removeFolder` -> `utils.ts`'s `removeFolder(path, folderName)` — `args[0]`
  *       is a TWO-ELEMENT ARRAY `[path, folderName]`, not two positional args
- *       (`main.ts:762-764`) — added by Task 2
+ *       (`main.ts:762-764`)
  *     - `showItemInFolder` -> `utils.ts`'s `showItemInFolder(item)`, a
  *       SYNCHRONOUS function, not a promise (`main.ts:1106`)
  *
- *   invoke (ipcMain.handle, 3) — added by Task 2:
+ *   invoke (ipcMain.handle, 3):
  *     - `checkDiskSpace` -> `utils/filesystem`'s `getDiskInfo`/`isWritable`/
  *       `isAccessibleWithinFlatpakSandbox`, gated by the zod `Path` schema's
  *       `.parse()` — this throw-on-invalid-input IS the ASVS V5 control for
@@ -74,8 +74,18 @@
 import { ipcMain } from './electronStub'
 import {
   openUrlOrFile,
-  showItemInFolder as showItemInFolderImpl
+  showItemInFolder as showItemInFolderImpl,
+  getShellPath,
+  removeFolder,
+  getFileSize
 } from '../utils'
+import {
+  getDiskInfo,
+  isWritable,
+  isAccessibleWithinFlatpakSandbox
+} from '../utils/filesystem'
+import { Path } from '../schemas'
+import { existsSync } from 'graceful-fs'
 import { configPath, gamesConfigPath } from '../constants/paths'
 import { join } from 'node:path'
 import {
@@ -90,6 +100,7 @@ import {
   wikiLink,
   sidInfoUrl
 } from '../constants/urls'
+import type { DiskSpaceData } from 'common/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -206,4 +217,50 @@ export function registerShellFilesFlows(): void {
       logSendFailure('showItemInFolder', error)
     }
   })
+
+  // ── send (1): removeFolder — args[0] is a TWO-ELEMENT ARRAY, not two
+  // positional args (main.ts:762-764) ───────────────────────────────────────
+
+  ipcMain.on('removeFolder', (_event: unknown, ...args: unknown[]) => {
+    try {
+      const [folderPath, folderName] = args[0] as [string, string]
+      removeFolder(folderPath, folderName)
+    } catch (error) {
+      logSendFailure('removeFolder', error)
+    }
+  })
+
+  // ── invoke (3): filesystem/diagnostics ────────────────────────────────────
+
+  ipcMain.handle(
+    'checkDiskSpace',
+    async (_event: unknown, ...args: unknown[]): Promise<DiskSpaceData> => {
+      // T-34.3-01 (mitigate): Path.parse is the zod schema's OWN validation —
+      // it throws on an invalid path. This is the ASVS V5 control for this
+      // channel; it must never be swapped for node's `path.parse` and must
+      // never be wrapped in a try/catch that swallows the rejection.
+      const parsedPath = Path.parse(args[0] as string)
+
+      const { freeSpace, totalSpace } = await getDiskInfo(parsedPath)
+      const pathIsWritable = await isWritable(parsedPath)
+      const pathIsFlatpakAccessible =
+        isAccessibleWithinFlatpakSandbox(parsedPath)
+
+      return {
+        free: freeSpace,
+        diskSize: totalSpace,
+        validPath: pathIsWritable,
+        validFlatpakPath: pathIsFlatpakAccessible,
+        message: `${getFileSize(freeSpace)} / ${getFileSize(totalSpace)}`
+      }
+    }
+  )
+
+  ipcMain.handle('getShellPath', async (_event: unknown, ...args: unknown[]) =>
+    getShellPath(args[0] as string)
+  )
+
+  ipcMain.handle('pathExists', async (_event: unknown, ...args: unknown[]) =>
+    existsSync(args[0] as string)
+  )
 }

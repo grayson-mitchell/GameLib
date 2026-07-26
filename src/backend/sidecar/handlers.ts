@@ -18,10 +18,13 @@
  * channels (`registerGameDetailsFlows()`, `gameDetailsFlowRegistration.ts` —
  * Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
  * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
- * Plan 06, D-04/D-07/D-10), the curated logger channel (registered by
- * `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2 plan 34.2-16,
- * REQ-34.2-12 — `logError` only, an early port of a Phase 34.3/slice-6
- * channel; Phase 34.3 must NOT register it again), and the
+ * Plan 06, D-04/D-07/D-10), the curated shell/files/diagnostics channels
+ * (`registerShellFilesFlows()`, `shellFilesFlowRegistration.ts` — Phase 34.3
+ * Plan 01, REQ-34.3-01/-02/-13 — the 14 link/reveal openers plus
+ * checkDiskSpace/getShellPath/pathExists/removeFolder), the curated logger
+ * channel (registered by `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2
+ * plan 34.2-16, REQ-34.2-12 — `logError` only, an early port of a Phase
+ * 34.3/slice-6 channel; Phase 34.3 must NOT register it again), and the
  * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
@@ -52,6 +55,7 @@ import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { registerAppShellFlows } from './appShellFlowRegistration'
 import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
+import { registerShellFilesFlows } from './shellFilesFlowRegistration'
 import { registerLoggerFlows } from './loggerFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
@@ -109,6 +113,14 @@ registerGameDetailsFlows()
 // is already registered by `storeRegistration.ts:104` (Phase 29), so this
 // module needs no new store plumbing.
 registerEnrichmentFlows()
+// Phase 34.3 Plan 01 (REQ-34.3-01/-02/-13): the 15 send-kind shell/link-opener
+// channels (12 URL openers, showConfigFileInFolder, showItemInFolder,
+// removeFolder) plus the 3 invoke-kind filesystem/diagnostics channels
+// (checkDiskSpace, getShellPath, pathExists) — no ordering constraint
+// relative to the other calls above (own channel names, no cross-module
+// runtime dependency at registration time), placed alongside them, before
+// `ensureStoresRegistered()`.
+registerShellFilesFlows()
 // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12): the single `logError`
 // send channel, ported early from its Phase 34.3/slice-6 slot because gap
 // cycle 1's renderer repair-failure handler now routes through it — an
