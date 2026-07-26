@@ -12,7 +12,7 @@
  * needed its own mocks to stay contained would prove only that suite is
  * safe; this one proves the mechanism itself is safe by construction.
  *
- * RED PROOF (performed by hand 2026-07-26, recorded verbatim in
+ * RED PROOF, ORIGINAL (performed by hand 2026-07-26, recorded verbatim in
  * 34.2-19-SUMMARY.md): with the `setupFiles` entry in
  * `src/backend/jest.config.js` temporarily commented out, 5 of 6 tests FAIL
  * (Tests 1, 2, 3, 5, 6 — everything that depends on `jest.setupContainment
@@ -24,12 +24,46 @@
  * even without this mechanism — it transits `electron`'s pre-existing
  * DEFAULT jest automock (`src/backend/__mocks__/electron.ts`), whose
  * `app.getPath` is independently `tmpdir()`-based already, unrelated to this
- * plan's fix. Restored immediately afterwards; `git diff --exit-code
- * src/backend/jest.config.js` confirmed clean (no residue).
+ * plan's fix.
+ *
+ * RE-DERIVED 2026-07-26 (34.2-25, Task 3, WR-09): this file now carries a
+ * top-level `import { containmentRoot, realHomeAtSetup } from
+ * 'backend/jest.setupContainment'` (added directly above, to consume WR-09's
+ * export). That import alone triggers `jest.setupContainment.ts`'s module
+ * body — including its `jest.mock('os'/'node:os', ...)` registrations —
+ * regardless of whether `setupFiles` also loads it, so with the `setupFiles`
+ * entry commented out this file now largely re-establishes its own
+ * containment by accident. Re-run by hand with `setupFiles` commented out:
+ * only **1 of 12** tests FAILS — Test 1 (`expect(homedir()).toBe
+ * (containmentRoot)`, received the developer's real home). Every other test
+ * (2, 3, 4, 5, 6, 7, 8, 9 + both self-tests + the allowlist check) stays
+ * GREEN, because each of them re-`require()`s `'os'`/`'node:os'`/
+ * `backend/logger/paths`/`../pathShim`/`../../constants/paths` (via
+ * `jest.isolateModules` or a fresh test-body-time `require()`) AFTER the
+ * `jest.setupContainment` import has already run and registered both mocks
+ * — only Test 1's top-of-file `homedir` binding (from `import { homedir,
+ * tmpdir, userInfo } from 'os'` at the TOP of this file, evaluated BEFORE
+ * the `jest.setupContainment` import below it) was captured from the real,
+ * still-unmocked `os` module. This does NOT mean `setupFiles` is
+ * unnecessary: it means THIS FILE, uniquely among the ~111 backend suites,
+ * now carries a redundant containment path of its own (the WR-09 import) in
+ * addition to `setupFiles` — every OTHER suite in the project has no such
+ * import and depends on `setupFiles` entirely, which is what the module's
+ * own docstring and WR-10's precondition continue to guarantee. Restored
+ * immediately afterwards; `git diff --exit-code src/backend/jest.config.js`
+ * confirmed clean (no residue).
  */
 
 import { homedir, tmpdir, userInfo } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
+
+// Named import, not `jest.isolateModules` + `require` -- Task 2's
+// globalThis memoization (`__GAMELIB_JEST_CONTAINMENT_ROOT__` /
+// `__GAMELIB_JEST_REAL_HOME__`) is what makes this safe: even if Jest
+// re-evaluates `jest.setupContainment` for this file's own module
+// registry, it reuses the SAME root/real-home rather than minting a
+// second, disagreeing pair.
+import { containmentRoot, realHomeAtSetup } from 'backend/jest.setupContainment'
 
 /** Tripwire idiom shared with `testContainment.test.ts`: a path is
  * "contained" inside `root` when its path relative to `root` neither starts
@@ -40,14 +74,12 @@ function assertContained(root: string, candidate: string): void {
   expect(isAbsolute(rel)).toBe(false)
 }
 
-/** Inverse of `assertContained` — asserts `candidate` is NOT inside `root`. */
-function assertNotContained(root: string, candidate: string): void {
-  const rel = relative(resolve(root), resolve(candidate))
-  expect(rel.startsWith('..') || isAbsolute(rel)).toBe(true)
-}
-
 describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 3, plan 34.2-19, REQ-34.2-07/-14)', () => {
   it('Test 1: os.homedir() resolves inside os.tmpdir() with zero jest.mock calls in this file', () => {
+    // Strengthened from "inside tmpdir()" to exact identity (34.2-25,
+    // Task 3): homedir() must be THE containment root, not merely some
+    // path under tmpdir().
+    expect(homedir()).toBe(containmentRoot)
     assertContained(tmpdir(), homedir())
   })
 
@@ -78,18 +110,22 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     assertContained(tmpdir(), appDataPath)
   })
 
-  it('Test 4: the REAL, unmocked appFolder / userDataPath / fixesPath from backend/constants/paths resolve inside os.tmpdir()', () => {
+  it('Test 4: the REAL, unmocked appFolder / userDataPath / fixesPath / flatpakHome from backend/constants/paths resolve inside os.tmpdir()', () => {
     let appFolder!: string
     let userDataPath!: string
     let fixesPath!: string
+    let flatpakHome!: string
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const paths = require('../../constants/paths')
       /* eslint-enable @typescript-eslint/no-require-imports */
-      ;({ appFolder, userDataPath, fixesPath } = paths)
+      ;({ appFolder, userDataPath, fixesPath, flatpakHome } = paths)
     })
 
-    for (const candidate of [appFolder, userDataPath, fixesPath]) {
+    // flatpakHome (WR-12): nothing previously pinned its value, so a future
+    // change to the `env.XDG_DATA_HOME?.replace('/data','') || homedir()`
+    // logic could silently alter behaviour under test with no signal.
+    for (const candidate of [appFolder, userDataPath, fixesPath, flatpakHome]) {
       assertContained(tmpdir(), candidate)
     }
   })
@@ -124,14 +160,22 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
     }
   })
 
-  it('Test 6 (anti-vacuity): os.tmpdir() is NOT inside the developer real home, and the resolved log path is NOT the real gamelib.log', () => {
-    // `os.userInfo().homedir` reads the OS passwd database directly, not
-    // `process.env.HOME` -- genuinely independent of the redirection this
-    // suite exists to prove, so this assertion cannot be trivially satisfied
-    // by the same mechanism under test.
-    const realHome = userInfo().homedir
-
-    assertNotContained(realHome, tmpdir())
+  it('Test 6 (anti-vacuity, portable): the redirection target is genuinely different from the real home, and the resolved log path lands inside the per-run containment root', () => {
+    // Rewritten 34.2-25 Task 3 (WR-11). The prior version used
+    // `os.userInfo().homedir` as its "independent" real-home reference --
+    // that stopped being independent the moment Task 2 redirected
+    // `userInfo()` too (it now returns `containmentRoot`, same as
+    // `homedir()`), so the old assertion would trivially pass for the WRONG
+    // reason. `realHomeAtSetup` (captured in jest.setupContainment.ts
+    // BEFORE any mock is installed) is the correct independent reference
+    // now. The prior version also hardcoded the macOS
+    // `Library/Logs/GameLib/gamelib.log` layout, making the check itself
+    // vacuous on Linux/Windows (`assertNotContained(realHome, tmpdir())`
+    // also fails spuriously wherever `TMPDIR` sits under `$HOME`), and
+    // called `userInfo()` unguarded, which throws
+    // (`uv_os_get_passwd`) in containerised CI with no `/etc/passwd` entry
+    // for the running uid.
+    expect(containmentRoot).not.toBe(realHomeAtSetup)
 
     let logPath!: string
     jest.isolateModules(() => {
@@ -141,14 +185,12 @@ describe('structural containment proof — zero per-suite mocks (34.2 gap cycle 
       logPath = getLogFilePath({})
     })
 
-    const realGamelibLog = join(
-      realHome,
-      'Library',
-      'Logs',
-      'GameLib',
-      'gamelib.log'
-    )
-    expect(logPath).not.toBe(realGamelibLog)
+    // Strictly stronger than the old `assertContained(tmpdir(), ...)`: the
+    // resolved log path must land inside THIS per-run mkdtemp root, which
+    // cannot coincide with the real home on any platform, on any of
+    // `getBaseLogPath()`'s three platform branches, regardless of where
+    // `TMPDIR` happens to sit.
+    assertContained(containmentRoot, logPath)
   })
 })
 
