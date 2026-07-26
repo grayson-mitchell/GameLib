@@ -459,6 +459,16 @@ const IN_SCOPE_SUITES = [
  * contained: it uses the identical `electron`/`electron-store` mock kit
  * already classified here for `steamAuthFlows.test.ts`, driving the real
  * sidecar via `../bootstrap`'s `init()`.
+ *
+ * `netStub.test.ts` (Phase 34.4 Plan 06, D-06) is classified as structurally
+ * contained: it uses the identical `os`/`electron`/`electron-store` mock kit
+ * already classified here for `dialogStub.test.ts`/`lifecycleStub.test.ts`,
+ * additionally mocking `backend/logger` (avoids a real log write from one
+ * code path it deliberately exercises) -- no new containment surface. A
+ * `readdirSync` recount at this plan's execution time (not carried forward
+ * by hand, correcting the stale "28" figure above by one -- `humbleFlows.test.ts`
+ * had already raised it to 29 without this comment being updated) puts the
+ * directory at 30 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 26 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -477,6 +487,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
+  'netStub.test.ts',
   'onlineMonitorWiring.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',
