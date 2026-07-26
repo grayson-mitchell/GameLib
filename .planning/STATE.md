@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.2-19-PLAN.md (gap cycle 3, plan 1 of 6: structural jest containment via jest.mock('os', ...) + env-var redirection in a setupFiles module -- closes the live gamelib.log destruction blocker; mid-execution architectural correction, coordinator-approved, see 34.2-19-SUMMARY.md) -- Phase 34.2 GAP CYCLE 3 EXECUTING (34.2-20..24 remain)"
-last_updated: "2026-07-26T12:00:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 3 executing (34.2-19 done, 5 plans remain)
+stopped_at: Completed 34.2-20-PLAN.md (WR-02 logError call-site guard closed; gap cycle 3, plan 2 of 6 -- 34.2-21..24 remain)
+last_updated: "2026-07-26T00:20:18.794Z"
+last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 95
-  completed_plans: 82
-  percent: 61
+  completed_plans: 83
+  percent: 87
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
-Plan: 19 of 24 done (34.2-19 complete); 5 gap-closure plans remain (34.2-20..24)
+Plan: 20 of 24 done (34.2-20 complete); 4 gap-closure plans remain (34.2-21..24)
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -62,6 +62,39 @@ before/after a full `sidecar/__tests__` run -- the verification's own three-time
 finding is directly refuted. `34.2-19-PLAN.md` amended in place with a full deviation log.
 REQ-34.2-07/-14 complete, see 34.2-19-SUMMARY.md. Next: 34.2-20 (WR-02, same wave).
 
+34.2-20 done -- GAP CYCLE 3, second plan executed, WR-02 CLOSED. Task 1 changed
+`loggerFlowRegistration.ts`'s `logError` send-channel listener from a bare, unguarded call
+(`logError(args[0] as string, LogPrefix.Frontend)`, neither `await`ed nor `.catch()`'d) to
+`void Promise.resolve(logError(args[0], LogPrefix.Frontend)).catch(...)`, restoring
+`processGuards.ts`'s own documented invariant ("not a substitute for call-site handling") that
+had been quietly re-violated. The `.catch` handler mirrors plan 34.2-15's CR-02 shape exactly
+(hardcoded fallback literal initialized before its own try, reassigned via
+`error instanceof Error ? ... : String(error)`), writes a module-attributed diagnostic
+(`[loggerFlowRegistration] logError call-site rejection: ...`) to `process.stderr` only, and
+drops the `args[0] as string` assertion (review finding IN-05) in favor of the declared
+`unknown` transport contract. Task 2 added 4 tests (`loggerFlows.test.ts`, 5->9) driving a
+`jest.spyOn`'d rejecting `backend/logger` `logError` through the real registered listener; the
+load-bearing assertion is NEGATIVE (diagnostic must carry the call-site prefix AND must NOT
+contain processGuards.ts's generic `unhandled promise rejection` text -- a positive-only
+assertion would pass identically pre-fix, since the process guard already produces some
+diagnostic). RED-PROOF by hand: restored the pre-fix file via `git show HEAD~1:... > file`, all
+4 new tests failed (2 by assertion, 2 by the rejection itself escaping as an uncaught value
+inside the test), restored via `git checkout HEAD -- file` (`git diff --stat` empty, byte
+Match to the Task 1 commit), suite green again. One out-of-scope discovery logged (not fixed):
+`backend/logger/index.ts`'s four wrapper exports (`logDebug`/`logInfo`/`logWarning`/`logError`)
+all discard their `LogWriter` method's returned promise (no `return` statement in any of the
+four block-body arrow functions) -- so today `logError(...)`'s runtime return value is always
+`undefined`, meaning Task 1's guard is correct/necessary but only becomes fully load-bearing
+once a future fix makes the wrapper actually forward the promise; logged to
+`deferred-items.md` under "From plan 34.2-20" (out of scope: touching all four wrappers is a
+project-wide, separately-scoped change). Full backend sweep: 111/112 suites passed on the
+cleaner of two consecutive runs (sole failure the pre-existing, already-documented
+`rustInvokeChannel.test.ts`), 2283/2284 tests; the other run additionally hit the
+already-documented non-deterministic `library.ts` leaked-timer flake on an unrelated suite --
+neither failure touches any file this plan modified. `tsc --noEmit` and eslint on
+`loggerFlowRegistration.ts` both clean. REQ-34.2-12/-14 complete (already marked from prior
+plans; re-confirmed), see 34.2-20-SUMMARY.md. Next: 34.2-21 (WR-03, same wave).
+
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
 - 34.2-19 (wave 1, BLOCKER) DONE: structural containment via a `src/backend/jest.setupContainment.ts`
@@ -72,9 +105,9 @@ Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 i
   Blast radius is the whole backend project (111 suites); acceptance criterion pins the failing-suite
   set to exactly {rustInvokeChannel.test.ts}, the documented 34.1-era baseline.
 
-- 34.2-20 (wave 1, WR-02): catch the logError listener's floating promise at the call site with a
+- 34.2-20 (wave 1, WR-02) DONE: catch the logError listener's floating promise at the call site with a
   stderr diagnostic — load-bearing assertion is NEGATIVE (must not contain processGuards.ts's
-  absorption text), because a positive-only assertion passes pre-fix.
+  absorption text), because a positive-only assertion passes pre-fix. See 34.2-20-SUMMARY.md.
 
 - 34.2-21 (wave 1, WR-03): defensively stringify repairFailure.ts's `unknown` so the ERROR dialog
   renders unconditionally; adds Object.create(null) + throwing-toString cases that fail against HEAD.
@@ -568,7 +601,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 87%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -807,7 +840,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-26 -- Phase 34.2 gap cycle 3 planned (6 plans, 34.2-19..24)
+Last activity: 2026-07-26
 
 > **Plan-counter note (2026-07-26, post-34.2-11 execution):** per the known-corruption precedent
 > documented in every note below, `state.advance-plan`/`state.record-metric`/`state.add-decision`/
@@ -1364,6 +1397,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P17 | ~35min | 2 tasks | 4 files |
 | Phase 34.2 P18 | 30min | 3 tasks | 6 files |
 | Phase 34.2 P19 | 100min | 3 tasks | 6 files |
+| Phase 34.2 P20 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1620,6 +1654,7 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Merged the showDialogModal-behavior test and the T-34.2-52 information-disclosure guard into one test so deleting the showDialogModal call fails exactly one test (34.2-17)
 - [Phase 34.2]: Dialog message is the FIXED translated string only -- raw error text goes to console.error and window.api.logError, never the rendered dialog (T-34.2-52, 34.2-17)
 - [Phase 34.2-19]: env-var-only os.homedir() redirection does not work under Jest 29's synthetic per-test-file process.env; fixed via a narrow jest.mock('os', ...) call in the setupFiles module (coordinator-approved Rule 4 correction, verified live)
+- [Phase 34.2-20]: Guard logError's call to logError(...) with Promise.resolve(...).catch(...) at loggerFlowRegistration.ts's own call site (WR-02), restoring processGuards.ts's not-a-substitute-for-call-site-handling invariant — processGuards.ts's docstring explicitly forbids relying on its generic unhandledRejection guard as the primary handler; test mocks use mockImplementation not mockReturnValue since logger.logError's declared return type is void
 
 ### Pending Todos
 
@@ -1689,8 +1724,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T12:00:00.000Z
-Stopped at: Completed 34.2-19-PLAN.md (gap cycle 3, plan 1 of 6: structural jest containment via jest.mock('os', ...) + env-var redirection in a setupFiles module -- closes the live gamelib.log destruction blocker; mid-execution architectural correction, coordinator-approved, see 34.2-19-SUMMARY.md) -- Phase 34.2 GAP CYCLE 3 EXECUTING (34.2-20..24 remain)
+Last session: 2026-07-26T00:20:18.785Z
+Stopped at: Completed 34.2-20-PLAN.md (WR-02 logError call-site guard closed; gap cycle 3, plan 2 of 6 -- 34.2-21..24 remain)
 Next: Execute 34.2-20-PLAN.md (gap cycle 3 continues, WR-02). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |

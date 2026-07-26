@@ -86,6 +86,31 @@ of fixing it inline).
   each of the 11 files, or folded into Phase 35's broader Electron-cutover work. Not fixed
   here — out of scope for this plan's four named suites.
 
+## From plan 34.2-20 (gap cycle 3, WR-02 closure)
+
+- **`backend/logger/index.ts`'s four exported wrappers (`logDebug`/`logInfo`/`logWarning`/
+  `logError`) all discard the promise `heroicLogWriter.<method>(...)` returns.** Each is a
+  block-body arrow function with no `return` statement (e.g. `const logError = (...params) =>
+  { heroicLogWriter.logError(...params) }`, `index.ts:25-27`), so at runtime `logError(...)`
+  always synchronously returns `undefined` — never the `Promise<void>` that
+  `LogWriter#logError` (`log_writer.ts:171-173`) actually produces via `#logBase`'s
+  `fsPromises.appendFile`/`mkdir`. This means a real log-write failure's rejection is dropped
+  *inside `logger/index.ts` itself*, before it ever reaches a caller like
+  `loggerFlowRegistration.ts` — so this plan's Task 1 `.catch()` (which normalises whatever
+  `logError(...)` returns via `Promise.resolve(...)`) can only observe a rejection if a future
+  fix makes the wrapper actually `return` the writer's promise. The plan's own `<interfaces>`
+  section states `logError(...)` "returns `heroicLogWriter.logError(...)`" — that claim is
+  currently FALSE against the real source; Task 2's test suite works around this by
+  `jest.spyOn`-overriding the exported `logError` function directly (bypassing the wrapper's
+  real body entirely), so the WR-02 proof itself is unaffected. Not fixed here: touching
+  `logger/index.ts` would change behavior for all four wrappers project-wide, a scope well
+  beyond this plan's declared `files_modified` (`loggerFlowRegistration.ts` +
+  `loggerFlows.test.ts`), and is exactly the kind of "significant structural modification
+  affecting a shared module" Rule 4 reserves for an explicit decision. Natural home: a
+  standalone plan making all four `backend/logger` wrapper exports `return` their writer call,
+  with call-site audits of every fire-and-forget `logInfo`/`logDebug`/`logWarning` call this
+  project has (a wide blast radius, hence a separate plan).
+
 ## From plan 34.2-19 (gap cycle 3, structural containment)
 
 - **Re-observed: the pre-existing `library.ts` leaked-timer flake (see "From plan 34.2-07"
