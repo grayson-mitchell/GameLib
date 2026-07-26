@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-02 done
-last_updated: "2026-07-27T22:41:25.000Z"
-last_activity: 2026-07-27 -- 34.4-02 executed (bottle trio + client-setup pair + redeemSteamKey/getSteamInstallSize, REQ-34.4-03/04/05)
+stopped_at: 34.4-05 done
+last_updated: "2026-07-27T23:10:00.000Z"
+last_activity: 2026-07-27 -- 34.4-05 executed (ownership-override trio + corrected humbleRecordGiftLinkOpened + humbleDisconnect send + humbleRunValidation node:sea gating, REQ-34.4-07/08/09)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 108
-  percent: 73
+  completed_plans: 109
+  percent: 74
 ---
 
 # Project State
@@ -34,7 +34,48 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 6 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-06, 34.4-07 done; 34.4-05, 34.4-08, 34.4-09, 34.4-10 still pending)
+Plan: 7 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07 done; 34.4-08, 34.4-09, 34.4-10 still pending)
+
+34.4-05 done -- Humble ownership-override trio (humbleSetOwnershipOverride/humbleClearOwnershipOverride/
+humbleGetOwnershipOverrides) + corrected humbleRecordGiftLinkOpened (ipcMain.handle, not the send
+34.4-CONTEXT.md's Discretion section incorrectly named -- confirmed by three independent sources:
+ipc_handler.ts:72 addHandler, common/types/ipc.ts:350 Promise<void>, preload/api/humble.ts:31
+makeHandlerInvoker) + humbleDisconnect (the one genuine ipcMain.on send in the Humble half, D-05
+declared partial: the synchronous credential wipe is the real, fully-functional security boundary;
+only the session.fromPartition wipe loop no-ops against the accepted Phase 29 D-09 stub; Phase
+34.4.1 must revisit once a real browser context exists) + humbleRunValidation, registered on the
+Tauri sidecar (wave 2, depends_on: ["34.4-04"]). humbleFlowRegistration.ts now registers all 16
+Humble channels this slice owns (15 ipcMain.handle + 1 ipcMain.on); the 6 Phase 34.4.1 channels
+stay unregistered (negative-scope guard re-confirmed green). Both server-side re-validation guards
+(D-42/T-12-03 non-fuzzy rejection, D-59/D-57 gift-link eligibility) ported verbatim, each proven by
+a not-called assertion plus C4 no-leak assertions against a seeded fake key value/URL.
+humbleRunValidation's dev-vs-packaged divergence RESOLVED (not declared) via a new
+isPackagedSidecar() helper using require('node:sea').isSea(), empirically verified at execution
+time (Node v26.2.0: typeof require('node:sea').isSea === 'function', returns false under the plain
+dev sidecar entry) -- electronStub.app's hardcoded isPackaged:false made reusing Electron's guard
+verbatim unsafe. Added 18 new tests (35 total, up from 17): ownership-trio + gift-link round-trips
+and rejection proofs, humbleDisconnect positive/negative kind proofs + WR-02 rejection guard, the
+D-05 store-clear-independence ordering proof driving the REAL (jest.requireActual-bypassed,
+non-automocked) HumbleUser.disconnect() against the real electronStub D-09 session no-op (proving
+the three store clears happen even though every partition wipe step fails -- not merely that
+disconnect was called), and humbleRunValidation's three packaged-signal branches via fresh
+dynamically re-required module instances per jest.doMock('node:sea', ...) scenario. Found and fixed
+a real latent test bug during the mandatory hand RED proof: 34.4-04's negative-scope guard test
+called registerHumbleFlows() a second time, safe only while every registration was ipcMain.handle
+(map-overwrite) -- unsafe the moment humbleDisconnect's ipcMain.on (push-semantics) landed, since a
+repeat call would have stacked a duplicate listener and doubled every future disconnect() call for
+the rest of the process; removed the redundant call. Both hand RED proofs recorded verbatim in
+34.4-05-SUMMARY.md (flip humbleDisconnect to handle -> 4 tests fail correctly; delete the
+non-fuzzy-rejection early return -> 2 tests fail correctly on their not-called assertion). Process
+lesson recorded: Task 1+2 was implemented in one editing pass and not committed before running the
+first hand RED proof's `git checkout --`, which reverted all the way to the last commit (34.4-04's
+state) and wiped the uncommitted Task 1+2 work -- recovered by hand-reconstructing the file from
+retained edit context, re-verifying, then committing before the second RED proof. Full backend
+sweep: 116/118 suites, 2468/2470 tests -- only the 2 pre-existing documented baselines
+(rustInvokeChannel.test.ts, wine rest.test.ts); no backend-file-unrelated regressions; main.ts and
+src-tauri/ both byte-unchanged. electronReachLedger.test.ts stayed green (4/4) -- same measured-not-
+assumed finding as 34.4-04: humbleFlowRegistration.ts is not yet in ENTRY_POINTS, which plan 34.4-08
+owns. REQ-34.4-07/08/09 complete, see 34.4-05-SUMMARY.md. Next: 34.4-08 (wave 3).
 
 34.4-02 done -- macOS CrossOver bottle trio (steamBottleProvision/isSteamBottleProvisioned/
 steamBottleStatus) + guided Steam-client install pair (steamClientSetupStart/
