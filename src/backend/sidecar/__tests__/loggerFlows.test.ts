@@ -433,3 +433,185 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
  * channel. Restoring the call and re-running turns the suite green again,
  * confirmed via `git diff` showing zero difference against the Task 1 commit.
  */
+
+/**
+ * WR-02 call-site guarantee (Phase 34.2 gap cycle 3, plan 34.2-20 — closes
+ * REQ-34.2-12/-14). Drives a REJECTING `backend/logger` `logError` export
+ * through the registered `logError` listener and proves the rejection is
+ * settled by `loggerFlowRegistration.ts`'s own `.catch` handler — never by
+ * `processGuards.ts`'s generic, defence-in-depth `unhandledRejection`
+ * absorption.
+ *
+ * `jest.spyOn(logger, 'logError')` is used, never `jest.mock('backend/
+ * logger', ...)` — this suite's own header (and `sidecarRejectionGuard.
+ * test.ts`'s note) already documents the `logger`/`log_writer.ts`
+ * circular-require hazard a mock factory calling `jest.requireActual`
+ * would re-enter. `jest.restoreAllMocks()` in `afterEach` undoes every spy
+ * from this block so the earlier positive side-effect test (which relies on
+ * the REAL `logger.logError`) is unaffected by test ordering.
+ */
+describe('sidecar logger flow: logError call-site guard (WR-02, Phase 34.2 gap cycle 3, plan 34.2-20)', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('WR-02 Test A: a rejecting logError write is caught at the call site, not by processGuards.ts, and produces no unhandledRejection', async () => {
+    const rejectionMessage = `wr-02-marker-${process.pid}-${Math.random()
+      .toString(36)
+      .slice(2)}`
+    jest
+      .spyOn(logger, 'logError')
+      .mockImplementation(() => Promise.reject(new Error(rejectionMessage)))
+
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+    const unhandledRejectionListener = jest.fn()
+    process.on('unhandledRejection', unhandledRejectionListener)
+
+    try {
+      const { input } = startSidecar()
+      writeSend(input, 'le-wr02-a', 'logError', ['trigger'])
+      await flush()
+
+      const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
+
+      // Load-bearing NEGATIVE assertion: a test that only checked "some
+      // diagnostic appeared on stderr" would pass identically against
+      // pre-fix code, because processGuards.ts's own unhandledRejection
+      // guard ALREADY writes a stderr-reachable diagnostic (its
+      // logWarning-throws fallback path) — that absorption is exactly what
+      // made WR-02 invisible before this plan. Asserting the call-site
+      // prefix is present AND that processGuards.ts's generic text is
+      // ABSENT is what proves this specific call site caught the
+      // rejection, not the process-level guard.
+      const callSiteDiagnostic = stderrLines.find((line) =>
+        line.includes('[loggerFlowRegistration]')
+      )
+      expect(callSiteDiagnostic).toBeDefined()
+      expect(callSiteDiagnostic).toContain(rejectionMessage)
+      for (const line of stderrLines) {
+        expect(line).not.toContain('unhandled promise rejection')
+      }
+
+      // The rejection was settled by loggerFlowRegistration.ts's own
+      // .catch, so no unhandledRejection event should ever have reached
+      // the real process listener list.
+      expect(unhandledRejectionListener).not.toHaveBeenCalled()
+
+      // stdout carries the RPC frame protocol — the diagnostic must never
+      // land there.
+      expect(stdoutSpy).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandledRejectionListener)
+    }
+  })
+
+  it('WR-02 Test B: a logError rejection with a null-prototype reason still writes a fallback diagnostic and never throws', async () => {
+    jest
+      .spyOn(logger, 'logError')
+      .mockImplementation(() => Promise.reject(Object.create(null) as Error))
+
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+    const unhandledRejectionListener = jest.fn()
+    process.on('unhandledRejection', unhandledRejectionListener)
+
+    try {
+      const { input } = startSidecar()
+      // Must not throw synchronously while writing the frame, and must not
+      // reject the surrounding test.
+      expect(() =>
+        writeSend(input, 'le-wr02-b', 'logError', ['trigger'])
+      ).not.toThrow()
+      await flush()
+
+      const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
+      const callSiteDiagnostic = stderrLines.find((line) =>
+        line.includes('[loggerFlowRegistration]')
+      )
+      // Object.create(null) cannot be stringified (no toString/valueOf),
+      // so the hardcoded fallback literal is the expected, acceptable
+      // content -- the load-bearing point is that a diagnostic is still
+      // written and the process never crashes.
+      expect(callSiteDiagnostic).toBeDefined()
+      expect(unhandledRejectionListener).not.toHaveBeenCalled()
+      expect(stdoutSpy).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandledRejectionListener)
+    }
+  })
+
+  it('WR-02 Test C: a logError rejection whose reason has a throwing toString still writes a fallback diagnostic and never throws', async () => {
+    const hostileReason = {
+      toString() {
+        throw new Error('hostile toString')
+      }
+    }
+    jest
+      .spyOn(logger, 'logError')
+      .mockImplementation(() => Promise.reject(hostileReason as unknown as Error))
+
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+    const unhandledRejectionListener = jest.fn()
+    process.on('unhandledRejection', unhandledRejectionListener)
+
+    try {
+      const { input } = startSidecar()
+      expect(() =>
+        writeSend(input, 'le-wr02-c', 'logError', ['trigger'])
+      ).not.toThrow()
+      await flush()
+
+      const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
+      const callSiteDiagnostic = stderrLines.find((line) =>
+        line.includes('[loggerFlowRegistration]')
+      )
+      expect(callSiteDiagnostic).toBeDefined()
+      expect(unhandledRejectionListener).not.toHaveBeenCalled()
+      expect(stdoutSpy).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandledRejectionListener)
+    }
+  })
+
+  it('WR-02 Test D: nothing is ever written to process.stdout across any rejection shape (Error, null-prototype, throwing toString)', async () => {
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+    jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+    const rejectionReasons: unknown[] = [
+      new Error(`wr-02-marker-d-${process.pid}`),
+      Object.create(null),
+      {
+        toString() {
+          throw new Error('hostile toString')
+        }
+      }
+    ]
+
+    for (const [index, reason] of rejectionReasons.entries()) {
+      jest
+        .spyOn(logger, 'logError')
+        .mockImplementation(() => Promise.reject(reason as Error))
+      const { input } = startSidecar()
+      writeSend(input, `le-wr02-d-${index}`, 'logError', ['trigger'])
+      await flush()
+    }
+
+    expect(stdoutSpy).not.toHaveBeenCalled()
+  })
+})
