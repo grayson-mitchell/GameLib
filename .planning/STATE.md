@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-20-PLAN.md (WR-02 logError call-site guard closed; gap cycle 3, plan 2 of 6 -- 34.2-21..24 remain)
-last_updated: "2026-07-26T00:20:18.794Z"
+stopped_at: Completed 34.2-21-PLAN.md (WR-03 repairFailure.ts hostile-value hardening closed; gap cycle 3, plan 3 of 6 -- 34.2-22..24 remain)
+last_updated: "2026-07-26T00:27:29.073Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 95
-  completed_plans: 83
-  percent: 87
+  completed_plans: 84
+  percent: 88
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
-Plan: 20 of 24 done (34.2-20 complete); 4 gap-closure plans remain (34.2-21..24)
+Plan: 21 of 24 done (34.2-21 complete); 3 gap-closure plans remain (34.2-22..24)
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -94,6 +94,33 @@ already-documented non-deterministic `library.ts` leaked-timer flake on an unrel
 neither failure touches any file this plan modified. `tsc --noEmit` and eslint on
 `loggerFlowRegistration.ts` both clean. REQ-34.2-12/-14 complete (already marked from prior
 plans; re-confirmed), see 34.2-20-SUMMARY.md. Next: 34.2-21 (WR-03, same wave).
+
+34.2-21 done -- GAP CYCLE 3, third plan executed, WR-03 CLOSED. Task 1 added 3
+`it.each`-driven hostile-value regression blocks to `repairFailure.test.ts` (null-prototype
+object via `Object.create(null)`, throwing-`toString`, throwing-`Symbol.toPrimitive` -- the same
+shapes plan 34.2-15 used in `sidecarRejectionGuard.test.ts` Group 2), plus a T-34.2-52
+hostile-value dialog-message test; renamed the pre-existing vacuous plain-string 4th test's
+framing from "hostile reason" to "non-hostile baseline" (a plain string never exercises the
+primitive-conversion throw path). RED-confirmed by hand against unmodified `repairFailure.ts`:
+10 of 14 tests failed with `TypeError: Cannot convert object to primitive value` (or the custom
+thrower's own message) escaping `reportRepairFailure` before `showDialogModal` was ever called
+-- see 34.2-21-SUMMARY.md for the verbatim output. Task 2 rewrote `reportRepairFailure`'s body to
+precompute `errorText` once via a `let`-fallback-before-try (mirroring `processGuards.ts:61-69`
+verbatim), never interpolating the raw `error: unknown` binding into a template literal, and
+additionally wrapped `console.error`/`window.api.logError` each in their own try/catch so the
+module's own "three independent signals" docstring claim is actually true against any future
+throw source, not just the one removed (decision recorded in the SUMMARY: `showDialogModal`
+itself deliberately left unwrapped as the last/payoff statement). Also dropped the unused
+`export` from `ReportRepairFailureOptions` (review finding IN-02, zero external consumers
+confirmed via grep). One Rule 3 deviation (wording-only, no behavior change): the first docstring
+draft used the literal backtick-quoted substring `${error}` in prose describing the historical
+defect, which self-tripped this plan's own `grep -c '\${error}'` acceptance criterion (same class
+of issue plan 34.2-16 hit) -- reworded, re-verified clean. All 14 tests pass; `tsc --noEmit` and
+eslint (0 errors/warnings, the `restrict-template-expressions` warning on line 45 is gone) both
+clean; `index.tsx` byte-unchanged (`git diff --exit-code` clean); full frontend sweep 26/26
+suites, 195/195 tests, zero regressions. REQ-34.2-12/-14 complete (already marked from prior
+plans; re-confirmed), see 34.2-21-SUMMARY.md. Next: 34.2-22 (Rust `timeout_for()` proof, same
+wave).
 
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
@@ -601,7 +628,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1398,6 +1425,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P18 | 30min | 3 tasks | 6 files |
 | Phase 34.2 P19 | 100min | 3 tasks | 6 files |
 | Phase 34.2 P20 | 8min | 2 tasks | 2 files |
+| Phase 34.2 P21 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1655,6 +1683,7 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Dialog message is the FIXED translated string only -- raw error text goes to console.error and window.api.logError, never the rendered dialog (T-34.2-52, 34.2-17)
 - [Phase 34.2-19]: env-var-only os.homedir() redirection does not work under Jest 29's synthetic per-test-file process.env; fixed via a narrow jest.mock('os', ...) call in the setupFiles module (coordinator-approved Rule 4 correction, verified live)
 - [Phase 34.2-20]: Guard logError's call to logError(...) with Promise.resolve(...).catch(...) at loggerFlowRegistration.ts's own call site (WR-02), restoring processGuards.ts's not-a-substitute-for-call-site-handling invariant — processGuards.ts's docstring explicitly forbids relying on its generic unhandledRejection guard as the primary handler; test mocks use mockImplementation not mockReturnValue since logger.logError's declared return type is void
+- [Phase 34.2-21]: reportRepairFailure wraps each of the three failure signals in its own try/catch, not just the errorText precomputation, so the docstring's independence claim is actually true against any future throw source — the stringification fix removes the only KNOWN throw source but showDialogModal/logError are caller-supplied and cannot be proven never to throw
 
 ### Pending Todos
 
@@ -1724,8 +1753,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T00:20:18.785Z
-Stopped at: Completed 34.2-20-PLAN.md (WR-02 logError call-site guard closed; gap cycle 3, plan 2 of 6 -- 34.2-21..24 remain)
+Last session: 2026-07-26T00:27:29.064Z
+Stopped at: Completed 34.2-21-PLAN.md (WR-03 repairFailure.ts hostile-value hardening closed; gap cycle 3, plan 3 of 6 -- 34.2-22..24 remain)
 Next: Execute 34.2-20-PLAN.md (gap cycle 3 continues, WR-02). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
