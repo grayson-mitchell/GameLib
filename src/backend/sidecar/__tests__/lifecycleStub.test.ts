@@ -435,6 +435,56 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
     expect(calls).toEqual([{ channel: RUST_APP_EXIT, args: [] }])
   })
 
+  it('CR-01: quit() after a FAILED relaunch() is NOT suppressed — the app must stay quittable', async () => {
+    // Every other case in this describe resolves the mock, so the failed-relaunch path was
+    // uncovered. On the success path the relaunch promise never settles (Rust sends no response
+    // and the process is replaced first), so a REJECTION means the relaunch did not happen and
+    // this process survives. If the guard stayed set, app.quit()/exit() would be permanent no-ops
+    // and the app could only be closed by force-quit. resetHeroic() runs this on every reset.
+    let result!: {
+      app: typeof import('../electronStub').app
+      mockInvoke: jest.Mock
+    }
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const sidecarRpc = require('../sidecarRpc') as {
+        requestRustInvoke: jest.Mock
+      }
+      const freshElectronStub =
+        require('../electronStub') as typeof import('../electronStub')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      // Only the relaunch dispatch fails; a subsequent exit dispatch must still go through.
+      sidecarRpc.requestRustInvoke.mockImplementation((channel: string) =>
+        channel === RUST_APP_RELAUNCH
+          ? Promise.reject(new Error('synthetic relaunch transport failure'))
+          : Promise.resolve(null)
+      )
+      result = {
+        app: freshElectronStub.app,
+        mockInvoke: sidecarRpc.requestRustInvoke
+      }
+    })
+    const { app: freshApp, mockInvoke } = result
+
+    freshApp.relaunch()
+    await flushMicrotasks()
+    freshApp.quit()
+    await flushMicrotasks()
+
+    const calls = mockInvoke.mock.calls.map(([channel, args]) => ({
+      channel,
+      args
+    }))
+    // The exit frame MUST be dispatched — this is the whole point of the fix.
+    expect(calls).toEqual([
+      { channel: RUST_APP_RELAUNCH, args: [] },
+      { channel: RUST_APP_EXIT, args: [] }
+    ])
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('a relaunch is already in flight')
+    )
+  })
+
   it('exit() after relaunch() is also suppressed', async () => {
     const { app: freshApp, mockInvoke } = loadFreshApp()
 

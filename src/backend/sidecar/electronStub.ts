@@ -162,9 +162,11 @@ export const ipcMain = {
 // resetHeroic (utils.ts) is the real caller that hits this ordering (relaunch() then quit(), one
 // setTimeout tick apart) -- its body is intentionally NOT modified; this guard lives entirely
 // here so utils.ts stays byte-identical for both builds and Phase 35 has one less build-detection
-// conditional to unwind. Never reset: a relaunch is terminal for this process --
+// conditional to unwind. Not reset on the SUCCESS path: a relaunch is terminal for this process --
 // app.restart() never returns and the process is about to be replaced, so resetting the flag
-// would only reintroduce the race for code that (cannot) run after. Rejected alternative:
+// would only reintroduce the race for code that (cannot) run after. It IS reset when the relaunch
+// dispatch REJECTS (CR-01) -- see relaunch()'s catch below: a failed relaunch means the process
+// survives, so holding the flag would make the app permanently unquittable. Rejected alternative:
 // serializing dispatch_rust_channel itself would fix this for every caller, but it would touch
 // the hot path for every single rustInvoke, not just these two rare lifecycle calls.
 let relaunchInFlight = false
@@ -216,6 +218,15 @@ export const app = {
     // race).
     relaunchInFlight = true
     requestRustInvoke(RUST_APP_RELAUNCH, []).catch((error) => {
+      // CR-01: RELEASE the guard here. On the SUCCESS path this promise never settles -- Rust's
+      // app_relaunch arm sends no response frame and the process is replaced before it could --
+      // so reaching this catch means the relaunch genuinely did NOT happen (transport failure, or
+      // the 60s rustInvoke timeout). This process is therefore NOT being replaced, so the teardown
+      // ownership the flag asserts is void, and there is no pending relaunch frame left for an
+      // exit frame to race against. Leaving it set would permanently no-op app.quit()/app.exit()
+      // for the rest of this process's life -- including the ordinary Quit menu path -- leaving
+      // the app closable only by force-quit. resetHeroic() runs this on every reset.
+      relaunchInFlight = false
       console.warn(
         `[electronStub] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
         error instanceof Error ? error.message : String(error)
