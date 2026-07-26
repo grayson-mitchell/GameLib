@@ -714,7 +714,48 @@ const REQUIRED_CONTAINMENT_ENV_VARS = [
   'XDG_CACHE_HOME'
 ]
 
-describe('Block D: structural containment gate (plan 34.2-23, T-34.2-84)', () => {
+/**
+ * WR-01: true iff `source` assigns `process.env.<key> =` as an actual code
+ * statement. Matches on comment-stripped source -- deliberately the OPPOSITE
+ * of Block B's "NO FILESYSTEM WRITES" anti-claim gate above, which correctly
+ * stays on RAW source. The two are not inconsistent: Block B's gate hunts a
+ * *comment* (a claim that can only ever be written in prose, which
+ * `stripComments` would hide), while this gate hunts a *code statement* (an
+ * assignment that a docblock line can merely mention without making true).
+ * Before this plan, this gate matched RAW source, so a docblock line merely
+ * mentioning `process.env.HOME =` (e.g. in explanatory prose) satisfied it
+ * identically to the real assignment actually being present -- deleting the
+ * real assignment left the gate green. Do not "harmonise" this with Block
+ * B's raw-source gate; a future reader must not move this back onto raw
+ * source. Self-test below.
+ */
+function assignsContainmentEnvVar(source: string, key: string): boolean {
+  return new RegExp(`process\\.env\\.${key}\\s*=`).test(stripComments(source))
+}
+
+/**
+ * WR-02: true iff `source` (comment-stripped) registers the load-bearing
+ * containment mechanism `jest.setupContainment.ts`'s own docstring calls
+ * "THE load-bearing fix" -- the `jest.mock` module-registry substitution for
+ * BOTH the bare `'os'` specifier and the `'node:os'` specifier, with a
+ * `homedir` override (an arrow function) AND a `userInfo` override. Before
+ * this plan, Block D gated only the eight `process.env` assignments the
+ * containment module itself labels "defense-in-depth" -- deleting the
+ * `jest.mock('node:os', ...)` registration (the exact CR-02 regression) left
+ * Block D fully green. Self-tests below.
+ */
+function hasContainmentOsMock(source: string): boolean {
+  const stripped = stripComments(source)
+  const hasBareOsMock = /jest\.mock\(\s*['"]os['"]/.test(stripped)
+  const hasNodeOsMock = /jest\.mock\(\s*['"]node:os['"]/.test(stripped)
+  const hasHomedirOverride = /homedir\s*:\s*\([^)]*\)\s*=>/.test(stripped)
+  const hasUserInfoOverride = /userInfo\s*:\s*\(/.test(stripped)
+  return (
+    hasBareOsMock && hasNodeOsMock && hasHomedirOverride && hasUserInfoOverride
+  )
+}
+
+describe('Block D: structural containment gate -- gates BOTH the load-bearing os/node:os module-registry substitution (WR-02) AND the defence-in-depth process.env assignments (WR-01), on comment-stripped source (plan 34.2-23 T-34.2-84, hardened by plan 34.2-29)', () => {
   it('src/backend/jest.config.js still wires a setupFiles entry naming jest.setupContainment', () => {
     const source = readFileSync(JEST_CONFIG_PATH, 'utf-8')
     expect(hasSetupContainmentEntry(source)).toBe(true)
@@ -734,12 +775,73 @@ describe('Block D: structural containment gate (plan 34.2-23, T-34.2-84)', () =>
   })
 
   it.each(REQUIRED_CONTAINMENT_ENV_VARS)(
-    'src/backend/jest.setupContainment.ts still assigns process.env.%s',
+    'src/backend/jest.setupContainment.ts still assigns process.env.%s, matched on comment-stripped source (WR-01)',
     (key) => {
       const source = readFileSync(JEST_SETUP_CONTAINMENT_PATH, 'utf-8')
-      expect(source).toMatch(new RegExp(`process\\.env\\.${key}\\s*=`))
+      expect(assignsContainmentEnvVar(source, key)).toBe(true)
     }
   )
+
+  // WR-01 self-test: proves assignsContainmentEnvVar (the SAME function the
+  // gate above calls) rejects a docblock-only occurrence of the assignment
+  // it is supposed to require as a real code statement.
+  it('WR-01 self-test: a synthetic source whose only process.env.HOME = occurrence sits on a docblock line is rejected', () => {
+    const synthetic = [
+      '/**',
+      ' * process.env.HOME = containmentRoot',
+      ' */',
+      'const unrelated = 1'
+    ].join('\n')
+    expect(assignsContainmentEnvVar(synthetic, 'HOME')).toBe(false)
+  })
+
+  it('src/backend/jest.setupContainment.ts still registers the load-bearing os/node:os homedir+userInfo mock (WR-02)', () => {
+    const source = readFileSync(JEST_SETUP_CONTAINMENT_PATH, 'utf-8')
+    expect(hasContainmentOsMock(source)).toBe(true)
+  })
+
+  it("WR-02 self-test: a synthetic factory registered only for the bare 'os' specifier is rejected (documents the pre-34.2-25 CR-02 state)", () => {
+    const synthetic = [
+      'function mockOsFactory() {',
+      "  return { homedir: () => '/tmp/fake', userInfo: () => ({ homedir: '/tmp/fake' }) }",
+      '}',
+      "jest.mock('os', mockOsFactory)"
+    ].join('\n')
+    expect(hasContainmentOsMock(synthetic)).toBe(false)
+  })
+
+  it('WR-02 self-test: a synthetic factory registered for both specifiers but with no homedir override is rejected', () => {
+    const synthetic = [
+      'function mockOsFactory() {',
+      "  return { userInfo: () => ({ homedir: '/tmp/fake' }) }",
+      '}',
+      "jest.mock('os', mockOsFactory)",
+      "jest.mock('node:os', mockOsFactory)"
+    ].join('\n')
+    expect(hasContainmentOsMock(synthetic)).toBe(false)
+  })
+
+  it('WR-02 self-test: a synthetic factory overriding homedir but not userInfo is rejected', () => {
+    const synthetic = [
+      'function mockOsFactory() {',
+      "  return { homedir: () => '/tmp/fake' }",
+      '}',
+      "jest.mock('os', mockOsFactory)",
+      "jest.mock('node:os', mockOsFactory)"
+    ].join('\n')
+    expect(hasContainmentOsMock(synthetic)).toBe(false)
+  })
+
+  it('WR-02 self-test: a synthetic factory registered for both specifiers with homedir and userInfo overrides is accepted', () => {
+    const synthetic = [
+      'function mockOsFactory() {',
+      "  return { homedir: () => '/tmp/fake', userInfo: () => ({ homedir: '/tmp/fake' }) }",
+      '}',
+      "jest.mock('os', mockOsFactory)",
+      "jest.mock('node:os', mockOsFactory)"
+    ].join('\n')
+    expect(hasContainmentOsMock(synthetic)).toBe(true)
+  })
 })
 
 // STRUCTURAL GATE RED PROOF (recorded verbatim in 34.2-23-SUMMARY.md): the
