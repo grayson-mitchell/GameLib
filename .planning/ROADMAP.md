@@ -1414,14 +1414,25 @@ Cross-cutting constraints:
 ### Phase 34.4: Tauri IPC re-plumb slice 7 — Steam completion and Humble (INSERTED)
 
 **Goal:** Port the **remaining Steam surface plus the portable half of the Humble integration** (**31 channels** — was 38; see the re-scoping below): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with 16 of the 22 Humble channels from phases 10-15. Also: an honest "not available on this build" login surface (**D-04**), a fail-fast `electronStub.net.request` (**D-06**), and a **blocking 5-item live gate** (**D-08**). Additive and reversible — the Electron build keeps working unchanged.
-**Requirements:** TBD — mint at `/gsd-plan-phase 34.4`
+**Requirements:** REQ-34.4-01..16
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 0 plans
+**Plans:** 10 plans (5 waves)
 
 Re-scoped by `34.4-CONTEXT.md` on 2026-07-27: **38 → 31.** `isLoggedIn` → Phase 34.5 (**D-03**; it is `LegendaryUser.isLoggedIn()` — Epic, filed here only because the inventory grouped by file, same as 34.1 D-14's `callTool` move). The 6 Humble browser-auth channels → **Phase 34.4.1** (**D-01/D-02**; the `<webview>` + `session.fromPartition` seam is cross-cutting and 34.5 needs it too). `IPC-PORT-INVENTORY.md` updated to match.
 
+Planning also corrected two RESEARCH.md claims against source: `settingsFlowRegistration.ts` and `steamAuthFlowRegistration.ts` are **not** already `electronReachLedger.test.ts` entry points (plan 09 adds them), and RESEARCH Open Question 1 is resolved — neither `main.rs` sidecar spawn path passes an env var, but `node:sea`'s `isSea()` is a genuine Node-only packaged signal (the packaged sidecar is a SEA binary), so `humbleRunValidation`'s `isPackaged` divergence can be resolved rather than only declared.
+
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.4 to break down)
+- [ ] 34.4-01-PLAN.md — Steam credential/SteamGuard trio + session/identity trio incl. `logoutSteam` as a send (wave 1)
+- [ ] 34.4-02-PLAN.md — Bottle trio, client-setup pair, `redeemSteamKey`/`getSteamInstallSize` (wave 2)
+- [ ] 34.4-03-PLAN.md — The two **GOG** private-branch password channels via `libraryManagerMap` (wave 1)
+- [ ] 34.4-04-PLAN.md — New `humbleFlowRegistration.ts` + `handlers.ts` wiring + 10 clean Humble channels (wave 1)
+- [ ] 34.4-05-PLAN.md — Ownership overrides, corrected `humbleRecordGiftLinkOpened` handle, `humbleDisconnect` send (D-05), `humbleRunValidation` guard (wave 2)
+- [ ] 34.4-06-PLAN.md — Fail-fast `electronStub.net.request` (D-06) (wave 1)
+- [ ] 34.4-07-PLAN.md — Honest "not available on this build" login panel (D-04) (wave 1)
+- [ ] 34.4-08-PLAN.md — Reach-ledger extension (regenerated, 3 new edges) + structural additive/reversible sweep (wave 3)
+- [ ] 34.4-09-PLAN.md — `34.4-PORTED-CHANNELS.md` + self-tested gate script + SEAM.md §3→§1 (wave 4)
+- [ ] 34.4-10-PLAN.md — Blocking 5-item live gate under `tauri:dev` (D-08/D-09/D-10) (wave 5)
 
 ### Phase 34.4.1: Tauri embedded-browser login seam (INSERTED)
 
