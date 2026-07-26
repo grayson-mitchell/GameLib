@@ -65,7 +65,10 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () =>
-      path.join(actual.tmpdir(), `gamelib-installflows-test-home-${process.pid}`)
+      path.join(
+        actual.tmpdir(),
+        `gamelib-installflows-test-home-${process.pid}`
+      )
   }
 })
 
@@ -239,7 +242,9 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     steamGameMocks.update
       .mockReset()
       .mockResolvedValue({ status: 'error', error: 'not implemented' })
-    steamGameMocks.uninstall.mockReset().mockResolvedValue({ stdout: '', stderr: '' })
+    steamGameMocks.uninstall
+      .mockReset()
+      .mockResolvedValue({ stdout: '', stderr: '' })
     steamGameMocks.getGameInfo
       .mockReset()
       .mockReturnValue({ title: 'Install Flows Test Game' })
@@ -268,7 +273,11 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     await flush()
 
     const response = frames.find((frame) => frame.id === 'targets-off-1')
-    expect(response).toMatchObject({ id: 'targets-off-1', ok: true, result: [] })
+    expect(response).toMatchObject({
+      id: 'targets-off-1',
+      ok: true,
+      result: []
+    })
   })
 
   it('Test 1b: listSteamLibraryTargets resolves the real registered-library array with the opt-in ON', async () => {
@@ -418,9 +427,15 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // genuinely unported (mirrors `settingsFlows.test.ts`'s own canonical
   // Invariant B example), so this test keeps proving the invariant rather
   // than asserting something Phase 32 deliberately made false.
-  it('Test 6 (Invariant B guard): checkDiskSpace (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  //
+  // UPDATED AGAIN (Phase 34.3 Plan 01): `checkDiskSpace` is ALSO no longer
+  // unported — it is now registered for real by `shellFilesFlowRegistration.ts`
+  // (REQ-34.3-02, `shellFilesFlows.test.ts` covers its ported behavior).
+  // `getLegendaryVersion` substitutes here as a channel this plan does not
+  // touch and that stays genuinely unported until Phase 34.5.
+  it('Test 6 (Invariant B guard): getLegendaryVersion (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'disk-space-1', 'checkDiskSpace', [])
+    writeInvoke(input, 'disk-space-1', 'getLegendaryVersion', [])
     await flush()
 
     const diskSpaceResponse = frames.find(

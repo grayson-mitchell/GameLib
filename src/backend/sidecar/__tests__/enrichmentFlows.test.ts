@@ -1018,9 +1018,15 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       }
     )
 
-    it('REQ-34.2-14 an UNPORTED channel (checkDiskSpace, owned by a later slice) still returns UNPORTED_CHANNEL_MARKER', async () => {
+    // UPDATED (Phase 34.3 Plan 01): `checkDiskSpace` — this test's original
+    // example channel — is no longer unported. It is now registered for real
+    // by `shellFilesFlowRegistration.ts` (REQ-34.3-02, `shellFilesFlows.test.ts`
+    // covers its ported behavior). `getLegendaryVersion` substitutes here as a
+    // channel this plan does not touch and that stays genuinely unported
+    // until Phase 34.5.
+    it('REQ-34.2-14 an UNPORTED channel (getLegendaryVersion, owned by a later slice) still returns UNPORTED_CHANNEL_MARKER', async () => {
       const { input, frames } = startSidecar()
-      writeInvoke(input, 'unported-1', 'checkDiskSpace', ['/tmp'])
+      writeInvoke(input, 'unported-1', 'getLegendaryVersion', [])
       await flush()
 
       const response = findResponse(frames, 'unported-1')

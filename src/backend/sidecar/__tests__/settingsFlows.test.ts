@@ -332,9 +332,19 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   // Invariant B guard: a still-unported DownloadDialog channel (e.g.
   // checkDiskSpace) STILL rejects carrying UNPORTED_CHANNEL_MARKER, and the
   // RPC loop keeps serving afterward (health resolves).
-  it('Invariant B guard: checkDiskSpace (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  //
+  // UPDATED (Phase 34.3 Plan 01): `checkDiskSpace` — this test's original
+  // example channel — is no longer unported. It is now registered for real
+  // by `shellFilesFlowRegistration.ts` (REQ-34.3-02, `shellFilesFlows.test.ts`
+  // covers its ported behavior). `getLegendaryVersion` substitutes here as a
+  // channel this plan does not touch and that stays genuinely unported until
+  // Phase 34.5, so this test keeps proving the invariant rather than
+  // asserting something Phase 34.3 deliberately made false (mirrors
+  // `installFlows.test.ts`'s own prior Phase 32 substitution of this exact
+  // example channel).
+  it('Invariant B guard: getLegendaryVersion (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'disk-space-1', 'checkDiskSpace', [])
+    writeInvoke(input, 'disk-space-1', 'getLegendaryVersion', [])
     await flush()
 
     const diskSpaceResponse = frames.find(
@@ -412,10 +422,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
     const gameConfigInstance = mockedGameConfigGet('Game123') as {
       setSetting: jest.Mock
     }
-    expect(gameConfigInstance.setSetting).toHaveBeenCalledWith(
-      'language',
-      'fr'
-    )
+    expect(gameConfigInstance.setSetting).toHaveBeenCalledWith('language', 'fr')
   })
 
   // Must-have: writeConfig persists a global ThemeSelector config change
@@ -588,9 +595,9 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     writeInvoke(input, 'has-executable-1', 'hasExecutable', ['node'])
     await flush()
 
-    const response = frames.find(
-      (frame) => frame.id === 'has-executable-1'
-    ) as { ok: boolean; result?: unknown; error?: string } | undefined
+    const response = frames.find((frame) => frame.id === 'has-executable-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
     expect(response?.ok).toBe(true)
     expect(response?.error).toBeUndefined()
     expect(typeof response?.result).toBe('boolean')

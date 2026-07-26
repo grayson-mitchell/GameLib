@@ -508,7 +508,10 @@ const ALL_15_CHANNELS: [string, unknown[]][] = [
   ['getLaunchOptions', ['app-1', 'legendary']],
   ['kill', ['app-1', 'legendary']],
   ['repair', ['app-1', 'legendary']],
-  ['changeInstallPath', [{ appName: 'app-1', path: '/x', runner: 'legendary' }]],
+  [
+    'changeInstallPath',
+    [{ appName: 'app-1', path: '/x', runner: 'legendary' }]
+  ],
   ['readConfig', ['user']],
   ['getGameOverride', []],
   ['getGameSdl', ['app-1']],
@@ -880,9 +883,15 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
 
   // ── REQ-34.2-14 / SEAM Invariant B ──────────────────────────────────────────
 
-  it('REQ-34.2-14/SEAM Invariant B: an UNPORTED channel (checkDiskSpace, owned by a later slice) still returns UNPORTED_CHANNEL_MARKER', async () => {
+  // UPDATED (Phase 34.3 Plan 01): `checkDiskSpace` — this test's original
+  // example channel — is no longer unported. It is now registered for real
+  // by `shellFilesFlowRegistration.ts` (REQ-34.3-02, `shellFilesFlows.test.ts`
+  // covers its ported behavior). `getLegendaryVersion` substitutes here as a
+  // channel this plan does not touch and that stays genuinely unported until
+  // Phase 34.5.
+  it('REQ-34.2-14/SEAM Invariant B: an UNPORTED channel (getLegendaryVersion, owned by a later slice) still returns UNPORTED_CHANNEL_MARKER', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'unported-1', 'checkDiskSpace', ['/tmp'])
+    writeInvoke(input, 'unported-1', 'getLegendaryVersion', [])
     await flush()
 
     const response = findResponse(frames, 'unported-1')
@@ -1042,10 +1051,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
     ])
     await flush()
 
-    expect(gogManager.changeVersionPinnedStatus).toHaveBeenCalledWith(
-      'X',
-      true
-    )
+    expect(gogManager.changeVersionPinnedStatus).toHaveBeenCalledWith('X', true)
   })
 
   it('REQ-34.2-01 changeGameVersionPinnedStatus (send) unwraps its 3 positional args in order — status=false', async () => {
@@ -1101,9 +1107,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
 
       const { input, frames } = startSidecar()
 
-      writeSend(input, 'ana-throw-1', 'addNewApp', [
-        { app_name: 'boom-app' }
-      ])
+      writeSend(input, 'ana-throw-1', 'addNewApp', [{ app_name: 'boom-app' }])
       await flush()
 
       writeSend(input, 'sgmo-throw-1', 'setGameMetadataOverride', [
