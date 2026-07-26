@@ -85,6 +85,102 @@ describe('loadMainRsCode comment-stripping helper (self-test)', () => {
   })
 })
 
+/**
+ * Reads main.rs RAW (no comment-stripping) — `#[cfg(test)]` is an attribute, not a comment,
+ * and it sits directly adjacent to doc comments in main.rs's appended test module, so running
+ * `loadMainRsCode()`'s stripper over it would be pointless at best and could interact with the
+ * attribute-adjacent doc-comment lines at worst. This helper is scoped to this describe block
+ * only — it does not replace `loadMainRsCode()` for the exemption-list assertions above.
+ */
+function loadMainRsRaw(): string {
+  return readFileSync(MAIN_RS_PATH, 'utf-8')
+}
+
+/**
+ * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for`
+ * (referenced at least twice) and iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a
+ * second duplicate list). Shared by both the real-file assertions below and this block's own
+ * self-test, so the self-test proves the SAME logic that gates the real file can fail.
+ */
+function hasBehavioralRustTestModule(source: string): boolean {
+  const cfgTestIndex = source.indexOf('#[cfg(test)]')
+  if (cfgTestIndex === -1) {
+    return false
+  }
+  const region = source.slice(cfgTestIndex)
+  const timeoutForRefs = region.match(/timeout_for/g) ?? []
+  const iteratesLongRunningChannels = /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/.test(
+    region
+  )
+  return timeoutForRefs.length >= 2 && iteratesLongRunningChannels
+}
+
+/**
+ * Pins the existence of `src-tauri/src/main.rs`'s `#[cfg(test)]` behavioral test module (Phase
+ * 34.2 gap cycle 3, plan 22) from the JS side. This project's CI runs no cargo step at all
+ * (`.github/workflows/*.yml` contains neither `cargo test` nor `cargo check`), so without this
+ * gate the Rust module could be deleted and NOTHING automated would notice — the same class of
+ * silent-deletion risk WR-01 closed for the sidecar containment tripwires elsewhere in this gap
+ * cycle. A human must still actually RUN the Rust tests: `cd src-tauri && cargo test`.
+ */
+describe('REQ-34.2-14 main.rs #[cfg(test)] behavioral test module is present (pinned from JS since CI runs no cargo step)', () => {
+  test('main.rs contains a #[cfg(test)] attribute', () => {
+    expect(loadMainRsRaw()).toContain('#[cfg(test)]')
+  })
+
+  test('the #[cfg(test)] region references timeout_for at least twice — it genuinely exercises the function, not merely exists', () => {
+    const source = loadMainRsRaw()
+    const cfgTestIndex = source.indexOf('#[cfg(test)]')
+    expect(cfgTestIndex).toBeGreaterThan(-1)
+    const region = source.slice(cfgTestIndex)
+    const timeoutForRefs = region.match(/timeout_for/g) ?? []
+    expect(timeoutForRefs.length).toBeGreaterThanOrEqual(2)
+  })
+
+  test('the #[cfg(test)] region iterates LONG_RUNNING_CHANNELS rather than hardcoding a second duplicate list', () => {
+    const source = loadMainRsRaw()
+    const cfgTestIndex = source.indexOf('#[cfg(test)]')
+    expect(cfgTestIndex).toBeGreaterThan(-1)
+    const region = source.slice(cfgTestIndex)
+    expect(region).toMatch(/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/)
+  })
+
+  test('the full gate (all three conditions together) matches the real main.rs', () => {
+    expect(hasBehavioralRustTestModule(loadMainRsRaw())).toBe(true)
+  })
+
+  // Self-test (mirrors gameDetailsImportGate.test.ts's own Gate-2 self-test convention): proves
+  // this gate can actually FAIL, against a synthetic source lacking #[cfg(test)] entirely —
+  // without this, the gate above is another assertion nobody has proven can fail, which is
+  // precisely the WR-01 failure mode this gap cycle is closing elsewhere.
+  test('self-test: a synthetic source lacking #[cfg(test)] does NOT match the gate', () => {
+    const syntheticSource = [
+      'fn timeout_for(channel: &str) -> Option<Duration> {',
+      '    if LONG_RUNNING_CHANNELS.contains(&channel) { None } else { Some(INVOKE_TIMEOUT) }',
+      '}',
+      '// no test module below — timeout_for is mentioned above but never in a #[cfg(test)] region'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(syntheticSource)).toBe(false)
+  })
+
+  // Second self-test: a #[cfg(test)] module present but referencing timeout_for only once, and
+  // never iterating LONG_RUNNING_CHANNELS, must also fail — proves the gate is not satisfied by
+  // the attribute's mere presence.
+  test('self-test: a #[cfg(test)] module that exists but does not exercise timeout_for or iterate LONG_RUNNING_CHANNELS does NOT match the gate', () => {
+    const syntheticSource = [
+      '#[cfg(test)]',
+      'mod tests {',
+      '    use super::*;',
+      '    #[test]',
+      '    fn placeholder() {',
+      '        assert_eq!(timeout_for("install"), None);',
+      '    }',
+      '}'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(syntheticSource)).toBe(false)
+  })
+})
+
 describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () => {
   test('REQ-34.2-12 getCrossoverIndex is a member', () => {
     expect(extractLongRunningChannels()).toContain('getCrossoverIndex')
