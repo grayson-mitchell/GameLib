@@ -48,12 +48,15 @@ interface ReportRepairFailureOptions {
  *
  * Signal independence: each of the three calls below is individually
  * wrapped so a failure in one cannot suppress a later one -- this makes the
- * "three independent signals" claim above actually true (it previously was
- * not: all three were bare sequential statements sharing one throw source).
- * The stringification fix above removes the only KNOWN throw source in this
- * function, but `showDialogModal`/`window.api.logError` are caller-supplied
- * and this module cannot prove they never throw, so the guards stay as
- * defence-in-depth rather than being removed as "provably unreachable".
+ * "three independent signals" claim above actually true. Previously it was
+ * only true for signals 1 and 2 (WR-06, gap cycle 4): signal 3's
+ * `showDialogModal`/`t` calls were unguarded, so a throwing caller-supplied
+ * dependency there still escaped this function into the un-awaited
+ * dialog-button handler at `index.tsx:158`. Every signal now catches its own
+ * failure and emits a named diagnostic to `console.error` rather than
+ * disappearing -- under Tauri the likely cause of signal 2 failing is that
+ * the preload factory did not attach `window.api.logError`, not that the log
+ * write itself failed, and that distinction is itself useful information.
  *
  * T-34.2-52 (information disclosure): the dialog message is a FIXED
  * translated string only. Backend error text routinely carries absolute
@@ -61,11 +64,14 @@ interface ReportRepairFailureOptions {
  * text goes to the console and the log (both local, both already carrying
  * that class of data), never into a rendered dialog a user might screenshot
  * or share. Unchanged by the WR-03 hardening -- the precomputed error text
- * is used only for `window.api.logError`, never for the dialog message.
+ * is used only for `window.api.logError`, never for the dialog message. The
+ * two WR-06 diagnostics below extend this guarantee: both go to
+ * `console.error` only, carrying the caller-supplied failure object as an
+ * argument, and never enter the dialog message.
  *
- * T-34.2-53 (denial of service): this function performs three plain,
- * non-async calls with no await and no rethrow -- it runs on an
- * already-failed path. Do not add an await or a rethrow here.
+ * T-34.2-53 (denial of service): this function performs three
+ * individually-guarded, non-async calls with no await and no rethrow -- it
+ * runs on an already-failed path. Do not add an await or a rethrow here.
  */
 export function reportRepairFailure({
   appName,
@@ -75,7 +81,8 @@ export function reportRepairFailure({
 }: ReportRepairFailureOptions): void {
   let errorText = '<unstringifiable error>'
   try {
-    errorText = error instanceof Error ? (error.stack ?? error.message) : String(error)
+    errorText =
+      error instanceof Error ? (error.stack ?? error.message) : String(error)
   } catch {
     // keep the fallback errorText
   }
@@ -91,14 +98,41 @@ export function reportRepairFailure({
 
   try {
     window.api.logError(`repair failed for ${appName}: ${errorText}`)
-  } catch {
-    // signal 2 must never suppress signal 3
+  } catch (logErr) {
+    // Never silent: signal 2 failing is itself diagnostic information --
+    // under Tauri the likely cause is that the preload factory did not
+    // attach `window.api.logError`, not that the log write failed.
+    // `logErr` is passed as a second ARGUMENT, never interpolated.
+    try {
+      console.error('repair-failure log signal unavailable:', logErr)
+    } catch {
+      // this diagnostic must never itself become a new throw path
+    }
   }
 
-  showDialogModal({
-    showDialog: true,
-    type: 'ERROR',
-    title: t('box.error.title', 'Error'),
-    message: t('box.repair.error', 'Repair failed. See the log for details.')
-  })
+  let title = 'Error'
+  let message = 'Repair failed. See the log for details.'
+  try {
+    title = t('box.error.title', title)
+    message = t('box.repair.error', message)
+  } catch {
+    // keep the hardcoded English fallback -- a throwing `t` must still
+    // yield a rendered dialog
+  }
+
+  try {
+    showDialogModal({
+      showDialog: true,
+      type: 'ERROR',
+      title,
+      message
+    })
+  } catch (dlgErr) {
+    // `dlgErr` is passed as a second ARGUMENT, never interpolated.
+    try {
+      console.error('repair-failure dialog signal unavailable:', dlgErr)
+    } catch {
+      // this diagnostic must never itself become a new throw path
+    }
+  }
 }

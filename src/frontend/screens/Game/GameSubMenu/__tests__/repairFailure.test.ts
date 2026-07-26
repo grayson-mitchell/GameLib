@@ -26,8 +26,9 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
     if (!globalWithWindow.window) {
       globalWithWindow.window = {}
     }
-    ;(globalThis as unknown as { window: { api: { logError: jest.Mock } } }).window.api =
-      { logError: logErrorMock }
+    ;(
+      globalThis as unknown as { window: { api: { logError: jest.Mock } } }
+    ).window.api = { logError: logErrorMock }
 
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -176,9 +177,7 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
       ).not.toThrow()
 
       expect(showDialogModalMock).toHaveBeenCalledTimes(1)
-      const [options] = showDialogModalMock.mock.calls[0] as [
-        { type: string }
-      ]
+      const [options] = showDialogModalMock.mock.calls[0] as [{ type: string }]
       expect(options.type).toBe('ERROR')
     }
   )
@@ -222,9 +221,7 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
     })
 
     expect(showDialogModalMock).toHaveBeenCalledTimes(1)
-    const [options] = showDialogModalMock.mock.calls[0] as [
-      { message: string }
-    ]
+    const [options] = showDialogModalMock.mock.calls[0] as [{ message: string }]
     expect(options.message).toBe('Repair failed. See the log for details.')
   })
 
@@ -259,9 +256,10 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
 
       expect(showDialogModalMock).toHaveBeenCalledTimes(1)
       expect(consoleErrorSpy).toHaveBeenCalledTimes(2)
-      const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
-        typeof first === 'string' &&
-        first.includes('repair-failure log signal unavailable')
+      const diagnosticCall = consoleErrorSpy.mock.calls.find(
+        ([first]) =>
+          typeof first === 'string' &&
+          first.includes('repair-failure log signal unavailable')
       )
       expect(diagnosticCall).toBeDefined()
     })
@@ -287,9 +285,10 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
         ).not.toThrow()
 
         expect(showDialogModalMock).toHaveBeenCalledTimes(1)
-        const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
-          typeof first === 'string' &&
-          first.includes('repair-failure log signal unavailable')
+        const diagnosticCall = consoleErrorSpy.mock.calls.find(
+          ([first]) =>
+            typeof first === 'string' &&
+            first.includes('repair-failure log signal unavailable')
         )
         expect(diagnosticCall).toBeDefined()
       } finally {
@@ -344,9 +343,10 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
         })
       ).not.toThrow()
 
-      const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
-        typeof first === 'string' &&
-        first.includes('repair-failure dialog signal unavailable')
+      const diagnosticCall = consoleErrorSpy.mock.calls.find(
+        ([first]) =>
+          typeof first === 'string' &&
+          first.includes('repair-failure dialog signal unavailable')
       )
       expect(diagnosticCall).toBeDefined()
     })
