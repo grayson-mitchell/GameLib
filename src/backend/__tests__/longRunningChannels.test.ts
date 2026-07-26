@@ -97,22 +97,66 @@ function loadMainRsRaw(): string {
 }
 
 /**
- * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for`
- * (referenced at least twice) and iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a
- * second duplicate list). Shared by both the real-file assertions below and this block's own
- * self-test, so the self-test proves the SAME logic that gates the real file can fail.
+ * Locates the `#[cfg(test)]` region in RAW source, returning `null` if the attribute is absent.
+ * The attribute itself must be located in RAW text — `#[cfg(test)]` sits directly adjacent to doc
+ * comments in main.rs's appended test module, so stripping before locating would be pointless at
+ * best (see `loadMainRsRaw()`'s own comment above). Shared by `hasBehavioralRustTestModule` and
+ * the individual test blocks below so neither reimplements the raw-region lookup.
  */
-function hasBehavioralRustTestModule(source: string): boolean {
+function locateCfgTestRegionRaw(source: string): string | null {
   const cfgTestIndex = source.indexOf('#[cfg(test)]')
   if (cfgTestIndex === -1) {
+    return null
+  }
+  return source.slice(cfgTestIndex)
+}
+
+/**
+ * Applies the same per-line comment-stripping algorithm `loadMainRsCode()` uses (drop lines whose
+ * trimmed form starts with `//`; strip a trailing `//...` fragment from a mixed code/comment
+ * line) to an arbitrary source string. Extracted so `loadMainRsCode()` and
+ * `hasBehavioralRustTestModule`'s region-counting can share one implementation instead of two
+ * copies drifting apart (WR-04).
+ */
+function stripRustLineComments(source: string): string {
+  return source
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .map((line) => line.replace(/\/\/.*$/, ''))
+    .join('\n')
+}
+
+/**
+ * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for` via a
+ * real `assert_eq!` call (not merely the identifier appearing somewhere in the region) and
+ * iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a second duplicate list).
+ *
+ * Two-step reasoning (WR-04): the `#[cfg(test)]` region is LOCATED in raw source
+ * (`locateCfgTestRegionRaw`, attribute-adjacent doc comments make stripping-before-locating
+ * unsafe), then everything COUNTED inside that region is comment-stripped
+ * (`stripRustLineComments`) before any assertion runs. Without the second step, a region
+ * consisting only of `// timeout_for ... timeout_for ...` comment lines plus a zero-assertion
+ * loop satisfies a raw-text count — exactly the WR-04 counter-example this file's self-test
+ * carries verbatim from the code review.
+ *
+ * Shared by both the real-file assertions below and this block's own self-tests, so the
+ * self-tests prove the SAME logic that gates the real file can fail.
+ */
+function hasBehavioralRustTestModule(source: string): boolean {
+  const region = locateCfgTestRegionRaw(source)
+  if (region === null) {
     return false
   }
-  const region = source.slice(cfgTestIndex)
-  const timeoutForRefs = region.match(/timeout_for/g) ?? []
+  const strippedRegion = stripRustLineComments(region)
+  // The `\s*` spans newlines (no `s` flag needed — `\s` already matches `\n`), which is required
+  // because the real module's loop body uses the multi-line
+  // `assert_eq!(\n    timeout_for(channel),\n    None,\n    ...\n);` form.
+  const hasRealAssertion = /assert_eq!\(\s*timeout_for\(/.test(strippedRegion)
+  const timeoutForRefs = strippedRegion.match(/timeout_for/g) ?? []
   const iteratesLongRunningChannels = /for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/.test(
-    region
+    strippedRegion
   )
-  return timeoutForRefs.length >= 2 && iteratesLongRunningChannels
+  return hasRealAssertion && timeoutForRefs.length >= 2 && iteratesLongRunningChannels
 }
 
 /**
@@ -125,24 +169,23 @@ function hasBehavioralRustTestModule(source: string): boolean {
  */
 describe('REQ-34.2-14 main.rs #[cfg(test)] behavioral test module is present (pinned from JS since CI runs no cargo step)', () => {
   test('main.rs contains a #[cfg(test)] attribute', () => {
-    expect(loadMainRsRaw()).toContain('#[cfg(test)]')
+    expect(locateCfgTestRegionRaw(loadMainRsRaw())).not.toBeNull()
   })
 
-  test('the #[cfg(test)] region references timeout_for at least twice — it genuinely exercises the function, not merely exists', () => {
-    const source = loadMainRsRaw()
-    const cfgTestIndex = source.indexOf('#[cfg(test)]')
-    expect(cfgTestIndex).toBeGreaterThan(-1)
-    const region = source.slice(cfgTestIndex)
-    const timeoutForRefs = region.match(/timeout_for/g) ?? []
+  test('the #[cfg(test)] region contains a real assert_eq! against timeout_for, not merely the identifier', () => {
+    const region = locateCfgTestRegionRaw(loadMainRsRaw())
+    expect(region).not.toBeNull()
+    const strippedRegion = stripRustLineComments(region as string)
+    expect(strippedRegion).toMatch(/assert_eq!\(\s*timeout_for\(/)
+    const timeoutForRefs = strippedRegion.match(/timeout_for/g) ?? []
     expect(timeoutForRefs.length).toBeGreaterThanOrEqual(2)
   })
 
   test('the #[cfg(test)] region iterates LONG_RUNNING_CHANNELS rather than hardcoding a second duplicate list', () => {
-    const source = loadMainRsRaw()
-    const cfgTestIndex = source.indexOf('#[cfg(test)]')
-    expect(cfgTestIndex).toBeGreaterThan(-1)
-    const region = source.slice(cfgTestIndex)
-    expect(region).toMatch(/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/)
+    const region = locateCfgTestRegionRaw(loadMainRsRaw())
+    expect(region).not.toBeNull()
+    const strippedRegion = stripRustLineComments(region as string)
+    expect(strippedRegion).toMatch(/for\s+\w+\s+in\s+LONG_RUNNING_CHANNELS/)
   })
 
   test('the full gate (all three conditions together) matches the real main.rs', () => {
@@ -178,6 +221,23 @@ describe('REQ-34.2-14 main.rs #[cfg(test)] behavioral test module is present (pi
       '}'
     ].join('\n')
     expect(hasBehavioralRustTestModule(syntheticSource)).toBe(false)
+  })
+
+  // Third self-test (WR-04 counter-example, carried VERBATIM from
+  // 34.2-REVIEW-GAP-CYCLE-3.md's WR-04 finding): a module consisting only of two COMMENT
+  // mentions of `timeout_for` and a zero-assertion iteration loop satisfies the CURRENT
+  // (unmodified) raw-count predicate, because comments inside the region are never stripped
+  // before counting. This is the RED proof for this task: it MUST fail against today's
+  // predicate, then pass once the predicate is corrected to require a real `assert_eq!`.
+  test('self-test: WR-04 counter-example — comment-only timeout_for mentions plus a zero-assertion loop does NOT match the gate', () => {
+    const vacuousModule = [
+      '#[cfg(test)]',
+      'mod tests {',
+      '    // timeout_for ... timeout_for ...',
+      '    #[test] fn noop() { for _c in LONG_RUNNING_CHANNELS {} }',
+      '}'
+    ].join('\n')
+    expect(hasBehavioralRustTestModule(vacuousModule)).toBe(false)
   })
 })
 
