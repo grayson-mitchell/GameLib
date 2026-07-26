@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-06-PLAN.md
-last_updated: "2026-07-26T10:49:53.122Z"
+stopped_at: Completed 34.3-07-PLAN.md
+last_updated: "2026-07-26T11:01:42.319Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 99
+  completed_plans: 100
   percent: 67
 ---
 
@@ -34,8 +34,39 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 8 of 9 (wave 2 -- plan 06 now complete)
+Plan: 9 of 9 (wave 4 -- plan 07 now complete)
 discuss/plan.
+
+34.3-07 done -- Automated-proof structural gates (the phase's structural-proof plan, wave 4,
+depends on 01/02/03/04/06). Extended `electronReachLedger.test.ts`'s `ENTRY_POINTS` with this
+slice's three registration modules (`shellFilesFlowRegistration.ts`/
+`clipboardFlowRegistration.ts`/`loggerFlowRegistration.ts`) and REGENERATED
+`BASELINE_ELECTRON_REACHING_MODULES` by actually running `computeElectronReach()` (temporary
+measurement print statement, captured then removed) rather than transcribing a guess -- the
+measured set grew 29 -> 30, gaining EXACTLY `src/backend/logger/uploader.ts` (the D-10-named
+edge: `uploader.ts:1` imports `app` from `electron`, reached via `loggerFlowRegistration.ts`),
+zero other additions/removals. Extended the anti-degradation `requiredModules` list with the
+new edge; raised the reachability-sanity floor 100 -> 150 (measured `visitedFiles.size` is
+202, recorded in a comment); growth-only/subset semantics and all 4 pre-existing tests
+preserved. Hardened `tauriShellSource.test.ts`'s `loadMainRsCode` to accept an optional
+`source?` param and call the shared `stripSourceComments` util FIRST (block-comment
+stripping) THEN the existing local trailing-`//` pass -- closing a vacuous-gate risk where a
+`/* */` block comment's interior line could survive the old line-prefix-only filter and
+satisfy a positive-existence assertion on prose; proved with 2 new self-tests. Added a
+`REQ-34.3-08 main.rs clipboard seam` describe block (10 cases) pinning both dispatch arms,
+both pure helpers, the plugin registration + `ClipboardExt` import, all 10 real `#[test] fn`
+names from plan 34.3-03's Cargo test module, that `shutdown_child()` is absent from the
+`app_relaunch` arm's own body and has exactly one call site file-wide (REQ-34.3-06/D-05
+no-fix), and that `capabilities/default.json` contains no `clipboard` string (D-02
+zero-capability-grant). Hand-verified RED proof: temporarily deleted
+`clipboard_read_value_propagates_error`'s `#[test] fn` from `main.rs`, confirmed the "every
+clipboard #[cfg(test)] fn still exists" case failed naming the missing fn, reverted via
+`git checkout` (byte-identical). No deviations -- plan executed exactly as written. Full
+backend `npx jest --selectProjects Backend`: 2399/2401 tests, 114/116 suites -- only the 2
+pre-existing, already-documented baselines (`rustInvokeChannel.test.ts`, wine `rest.test.ts`).
+`tsc --noEmit`/`prettier --check` on both touched files clean; no Rust files touched (RED
+proof reverted, `git diff --stat src-tauri/` empty). REQ-34.3-08/-10/-13 complete, see
+34.3-07-SUMMARY.md. Next: 34.3-08 (wave 5, the final plan of this phase).
 
 34.3-06 done -- Clipboard channel registration. Created `clipboardFlowRegistration.ts`
 exporting `registerClipboardFlows()`, registering the 3 clipboard channels
@@ -960,7 +991,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1771,6 +1802,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P02 | 90min | 2 tasks | 2 files |
 | Phase 34.3 P05 | ~50min | 3 tasks | 3 files |
 | Phase 34.3 P06 | 35min | 2 tasks | 4 files |
+| Phase 34.3 P07 | ~50min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2049,6 +2081,8 @@ Recent decisions affecting current work:
 - [Phase 34.3-02]: resetHeroic calls utils.ts's resetHeroic() completely unmodified -- no build-conditional branch; the relaunch/quit ordering race is left to plan 34.3-05
 - [Phase 34.3]: 34.3-05 D-06: relaunchInFlight guard lives entirely in electronStub.ts (never reset, relaunch is terminal); resetHeroic in utils.ts stays byte-identical, no isTauri() branch
 - [Phase 34.3]: clipboardFlows.test.ts calls registerClipboardFlows() directly rather than booting the full sidecar via bootstrap's init(), since the module touches no store/config/environment surface — Mirrors lifecycleStub.test.ts's lighter mock-only-the-Rust-boundary shape instead of the heavier appShellFlows/shellFilesFlows full-bootstrap harness
+- [Phase 34.3-07]: Regenerated the electron-reach ledger baseline by running computeElectronReach(), not transcribing prose -- measured set gained exactly one module (logger/uploader.ts), matching D-10's named edge
+- [Phase 34.3-07]: Hardened tauriShellSource.test.ts's loadMainRsCode with the shared stripSourceComments util (block comments) layered under the existing local trailing-// pass, closing a vacuous-gate risk for Task 3's positive-existence assertions
 
 ### Pending Todos
 
@@ -2119,8 +2153,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T10:49:53.006Z
-Stopped at: Completed 34.3-04-PLAN.md
+Last session: 2026-07-26T11:01:30.510Z
+Stopped at: Completed 34.3-07-PLAN.md
 Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
 (Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
 Plan 34.3-02 (still no SUMMARY on disk) remains the other wave-1 plan; continue with it via
