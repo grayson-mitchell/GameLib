@@ -64,6 +64,7 @@ import { isAbsolute, join, relative, resolve } from 'path'
 // registry, it reuses the SAME root/real-home rather than minting a
 // second, disagreeing pair.
 import { containmentRoot, realHomeAtSetup } from 'backend/jest.setupContainment'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 /** Tripwire idiom shared with `testContainment.test.ts`: a path is
  * "contained" inside `root` when its path relative to `root` neither starts
@@ -259,12 +260,13 @@ const NODE_OS_GATE_EXEMPT_FILES = [
 // conscious, justified edit -- the same declared-list discipline this phase
 // already uses for STRUCTURALLY_CONTAINED_SUITES and IN_SCOPE_SUITES.
 
-/** Strips `//` line comments and block comments from `source`, local to this
- * gate (deliberately NOT importing testContainment.test.ts's comment-
- * stripping helper, which belongs to a different plan's file). */
-function stripCommentsForNodeOsGate(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments
+// first, then the line-prefix filter), imported above. Migrated from this
+// file's own former `stripCommentsForNodeOsGate` (quick task 260726-q8f) --
+// see this gate's own verified-green run below for confirmation that the
+// shared util's strictly-less-aggressive trailing-comment behaviour does
+// not introduce a false positive here.
 
 /** A file that touches the 'node:os' specifier at all may not mention either
  * forbidden identifier anywhere in its (comment-stripped) source. This is
@@ -274,7 +276,7 @@ function stripCommentsForNodeOsGate(source: string): string {
  * itself), so the rule has to be "the file may not mention the identifiers
  * at all" once it references the specifier anywhere. */
 function usesForbiddenNodeOsBinding(source: string): boolean {
-  const stripped = stripCommentsForNodeOsGate(source)
+  const stripped = stripSourceComments(source)
   if (!stripped.includes('node:os')) return false
   return /\bhomedir\b/.test(stripped) || /\buserInfo\b/.test(stripped)
 }
