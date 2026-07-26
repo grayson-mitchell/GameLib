@@ -8,6 +8,8 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import LoginWarning from '../Login/components/LoginWarning'
 import { NileLoginData } from 'common/types/nile'
+import { isTauri } from 'preload/tauriTransport'
+import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import {
   Dialog,
   DialogContent,
@@ -444,6 +446,25 @@ export default function WebView() {
   }, [webviewRef.current])
 
   if (!webviewPreloadPath) {
+    if (isTauri()) {
+      // D-04 (REQ-34.4-12): 34.1 D-12 made getWebviewPreloadPath return a
+      // declared-empty '' under Tauri, so without this branch a user
+      // clicking "Log in to Humble" (or Epic/GOG/Amazon) saw a blank
+      // screen with no error, no log line, no explanation. Log the gap so
+      // it is legible to a developer too ("logged, never silent").
+      window.api.logInfo(
+        `[WebView] embedded login unavailable under Tauri (runner=${
+          runner ?? 'unknown'
+        }, webviewPreloadPath is empty) -- see Phase 34.4.1 D-01`
+      )
+      return <WebviewUnavailablePanel runner={runner} />
+    }
+    // Structurally unreachable on Electron: it always resolves a real
+    // preload path via getWebviewPreloadPath. Kept as a distinct branch
+    // (not merged with the Tauri case above) so a test can assert
+    // Electron's shape never changes (D-04's rider). The real fix — a
+    // shared <webview>/session.fromPartition seam — is Phase 34.4.1's
+    // (D-01).
     return <></>
   }
 
