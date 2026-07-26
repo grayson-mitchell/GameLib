@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-23-PLAN.md (testContainment.test.ts hardened: raw-source anti-claim gate, readdirSync set-equality tripwire, structural containment gate; gap cycle 3, plan 5 of 6 -- 34.2-24 remains)
-last_updated: "2026-07-26T00:53:09.536Z"
+stopped_at: "Completed 34.2-24-PLAN.md (gap cycle 3 fully closed: PORTED-CHANNELS.md currency + deferred-items.md reasoned deferrals + VALIDATION.md extension + committed currency-gate.py). Phase 34.2 gap cycle 3 complete (34.2-19..24). Next: re-verification of Phase 34.2."
+last_updated: "2026-07-26T01:06:15.327Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 95
-  completed_plans: 86
-  percent: 91
+  completed_plans: 87
+  percent: 67
 ---
 
 # Project State
@@ -33,8 +33,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
-Plan: 23 of 24 done (34.2-23 complete); 1 gap-closure plan remains (34.2-24)
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 COMPLETE
+Plan: 24 of 24 done (34.2-24 complete). All five gap-cycle-3 plans (34.2-19..24) executed;
+next step is re-verification of Phase 34.2 as a whole (fourth verification round).
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -181,6 +182,29 @@ clean throughout; no production code touched (only `testContainment.test.ts`). R
 complete (already marked from prior plans; re-confirmed), see 34.2-23-SUMMARY.md. Next: 34.2-24
 (wave 3, REQ-34.2-13, final plan of gap cycle 3 -- PORTED-CHANNELS.md currency + currency-gate.py).
 
+34.2-24 done -- GAP CYCLE 3, sixth and final plan executed, REQ-34.2-13 currency gap CLOSED
+(the recurring gap all three verification rounds cited). Task 1 added a
+`### Gap cycle 3 reconciliation` subsection under `34.2-PORTED-CHANNELS.md` §7 naming every
+closed finding (CR-01, WR-01/02/03/04/07/08, IN-02, IN-05, the carried-forward `timeout_for`
+gap) with its plan/file/verbatim RED proof pulled from the five SUMMARYs, the verbatim live
+`stat` evidence that the phase's own test commands no longer destroy the developer's real
+`gamelib.log`, and every deliberately-deferred finding (WR-05/WR-06/IN-01/IN-03/IN-06) with a
+reason; §6 gained a matching honesty addendum. Task 2 marked `deferred-items.md`'s 34.2-18
+containment-debt entry `-- CLOSED by gap cycle 3` with a dated resolution block (11-suite
+record preserved, not deleted) and added a "From gap cycle 3" section for the five residual
+findings plus IN-04 (accepted, parity with Electron). Task 3 extended `34.2-VALIDATION.md`
+(2 new Test Infrastructure rows, Per-Task Verification Map 20 -> 31 rows, a Gap Cycle 3
+Sign-Off Addendum beneath the untouched original approval block) and committed
+`currency-gate.py`, a re-runnable python3 doc-shape script (mirroring plan 34.2-07's own
+precedent) asserting the reconciliation section exists once, is the last `###` subsection
+under §7, names every closed/deferred token, and carries no placeholders -- hand RED-proofed
+by redacting `WR-05`, confirming a named non-zero exit, then restoring clean. §2's channel
+table, the two deferred-UAT rows, the original Validation Sign-Off block, the Manual-Only
+Verifications section, and the `rustInvokeChannel.test.ts` baseline entry are all confirmed
+byte-unchanged (`git diff`). REQ-34.2-07/-12/-13/-14 complete, see 34.2-24-SUMMARY.md.
+**GAP CYCLE 3 COMPLETE (34.2-19..24, 6 plans). PHASE 34.2's 24 plans are all executed.
+Next: re-verification of Phase 34.2 as a whole (fourth verification round).**
+
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
 - 34.2-19 (wave 1, BLOCKER) DONE: structural containment via a `src/backend/jest.setupContainment.ts`
@@ -207,7 +231,8 @@ Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 i
   than reframing it; also fixed the mislabelled load-bearing environment mock and moved the
   worker-wide `process.platform` leak into per-test restoration. See 34.2-23-SUMMARY.md.
 
-- 34.2-24 (wave 3, REQ-34.2-13): PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py.
+- 34.2-24 (wave 3, REQ-34.2-13) DONE: PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py.
+  See 34.2-24-SUMMARY.md.
 
 Anti-recurrence discipline (three straight cycles shipped a new defect while closing the named one):
 every new test carries an explicit "fails against pre-fix code" acceptance criterion with the RED
@@ -690,7 +715,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1490,6 +1515,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P21 | 15min | 2 tasks | 2 files |
 | Phase 34.2 P22 | 10min | 2 tasks | 2 files |
 | Phase 34.2 P23 | 50min | 2 tasks | 1 files |
+| Phase 34.2 P24 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1749,6 +1775,8 @@ Recent decisions affecting current work:
 - [Phase 34.2-20]: Guard logError's call to logError(...) with Promise.resolve(...).catch(...) at loggerFlowRegistration.ts's own call site (WR-02), restoring processGuards.ts's not-a-substitute-for-call-site-handling invariant — processGuards.ts's docstring explicitly forbids relying on its generic unhandledRejection guard as the primary handler; test mocks use mockImplementation not mockReturnValue since logger.logError's declared return type is void
 - [Phase 34.2-21]: reportRepairFailure wraps each of the three failure signals in its own try/catch, not just the errorText precomputation, so the docstring's independence claim is actually true against any future throw source — the stringification fix removes the only KNOWN throw source but showDialogModal/logError are caller-supplied and cannot be proven never to throw
 - [Phase 34.2]: Test 5 non-vacuity check uses getGameSettings (a real ported channel) rather than a made-up string; jest gate matches RAW main.rs source (not the comment-stripped helper) since #[cfg(test)] sits adjacent to doc comments
+- [Phase 34.2]: Currency gate matches a specific pinned heading (Gap cycle 3 reconciliation) rather than a generic latest-section pattern, so a future gap cycle 4 extends its own token lists instead of overloading cycle 3's record.
+- [Phase 34.2]: Closed deferred-items.md entries are marked with a heading suffix plus a dated resolution block rather than deleted, preserving the historical record while making current status unambiguous.
 
 ### Pending Todos
 
@@ -1818,8 +1846,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T00:53:09.536Z
-Stopped at: Completed 34.2-23-PLAN.md (testContainment.test.ts hardened: raw-source anti-claim gate, readdirSync set-equality tripwire, structural containment gate; gap cycle 3, plan 5 of 6 -- 34.2-24 remains)
+Last session: 2026-07-26T01:06:15.293Z
+Stopped at: Completed 34.2-24-PLAN.md (gap cycle 3 fully closed: PORTED-CHANNELS.md currency + deferred-items.md reasoned deferrals + VALIDATION.md extension + committed currency-gate.py). Phase 34.2 gap cycle 3 complete (34.2-19..24). Next: re-verification of Phase 34.2.
 Next: Execute 34.2-24-PLAN.md (gap cycle 3's final plan, wave 3, REQ-34.2-13 -- PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
