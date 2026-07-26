@@ -70,10 +70,9 @@ const mockScratchDir = jest
 // as a directory component (`<scratch>/blocked/logs/`). This is the ENOTDIR
 // source: `fsPromises.mkdir('<scratch>/blocked/logs', { recursive: true })`
 // cannot create a directory through a path component that is a plain file.
-jest.requireActual<typeof import('fs')>('fs').writeFileSync(
-  join(mockScratchDir, 'blocked'),
-  ''
-)
+jest
+  .requireActual<typeof import('fs')>('fs')
+  .writeFileSync(join(mockScratchDir, 'blocked'), '')
 
 // ── backend/logger/paths — the ONLY choke point this suite needs to
 // redirect. getLogFilePath({}) resolves inside the blocked file written
