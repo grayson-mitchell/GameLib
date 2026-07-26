@@ -45,19 +45,41 @@ const ENTRY_POINTS = [
   join(REPO_ROOT, 'src/backend/gamedetails/dispatch.ts'),
   join(REPO_ROOT, 'src/backend/gamedetails/overrides.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/gameDetailsFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/enrichmentFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/enrichmentFlowRegistration.ts'),
+  // Phase 34.3 Plan 07 (REQ-34.3-10, D-10): this slice's three entry points.
+  // logger/uploader.ts (reached via loggerFlowRegistration.ts) imports `app`
+  // from 'electron' at its own line 1 -- the new edge this extension exists
+  // to capture.
+  join(REPO_ROOT, 'src/backend/sidecar/shellFilesFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/clipboardFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/loggerFlowRegistration.ts')
 ]
 
-// Regenerated at plan-execution time (2026-07-26), not pasted from planning-time
-// prose. Sorted, repo-relative. See SUMMARY for the (accepted, explained) 192-
-// vs-194 total-file-count discrepancy against the planning-time note -- the
-// electron-importing set itself is IDENTICAL, which is the property this file
-// enforces.
+// Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
+// pasted from planning-time prose. Sorted, repo-relative. See SUMMARY for the
+// (accepted, explained) 192-vs-194 total-file-count discrepancy against the
+// planning-time note -- the electron-importing set itself is IDENTICAL, which
+// is the property this file enforces.
+//
+// Phase 34.3 Plan 07 (REQ-34.3-10, D-10) extended ENTRY_POINTS with this
+// slice's three registration modules and re-ran computeElectronReach() (via a
+// temporary one-off measurement print statement, removed after capture -- see
+// 34.3-07-SUMMARY.md for the exact before/after measurement). The ONLY new
+// module the measured set gained is src/backend/logger/uploader.ts below --
+// exactly the edge D-10's own purpose section names (logger/uploader.ts:1
+// imports `app` from 'electron', reached transitively via
+// loggerFlowRegistration.ts). No other path appeared or disappeared; the
+// prior 34.2 baseline's 29 entries are unchanged.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
   'src/backend/ipc.ts',
   'src/backend/launcher.ts',
+  // Phase 34.3 Plan 07 (D-10): new edge, pulled in via
+  // loggerFlowRegistration.ts -> logger/uploader.ts -> `import { app } from
+  // 'electron'` (uploader.ts:1). Entry point:
+  // src/backend/sidecar/loggerFlowRegistration.ts.
+  'src/backend/logger/uploader.ts',
   'src/backend/main_window.ts',
   'src/backend/online_monitor.ts',
   'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts',
@@ -247,73 +269,67 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     reachResult = computeElectronReach(ENTRY_POINTS, options)
   }, 30000)
 
-  it(
-    'growth tripwire: every electron-importing module measured today is present in the committed baseline',
-    () => {
-      const measured = [...reachResult.electronImportingFiles].sort()
-      const newModules = measured.filter(
-        (mod) => !BASELINE_ELECTRON_REACHING_MODULES.includes(mod)
+  it('growth tripwire: every electron-importing module measured today is present in the committed baseline', () => {
+    const measured = [...reachResult.electronImportingFiles].sort()
+    const newModules = measured.filter(
+      (mod) => !BASELINE_ELECTRON_REACHING_MODULES.includes(mod)
+    )
+    if (newModules.length > 0) {
+      throw new Error(
+        `A NEW electron-importing module has entered the sidecar's reach graph and is ` +
+          `NOT in the committed baseline: ${newModules.join(', ')}. This is not ` +
+          `automatically a bug -- electronStub.ts's Module._load hook safely rescues ` +
+          `transitive electron reach at runtime -- but the baseline must be updated ` +
+          `deliberately, after review, never silently. If this addition was reviewed and ` +
+          `accepted, add the new path(s) to BASELINE_ELECTRON_REACHING_MODULES above with ` +
+          `a comment explaining why.`
       )
-      if (newModules.length > 0) {
-        throw new Error(
-          `A NEW electron-importing module has entered the sidecar's reach graph and is ` +
-            `NOT in the committed baseline: ${newModules.join(', ')}. This is not ` +
-            `automatically a bug -- electronStub.ts's Module._load hook safely rescues ` +
-            `transitive electron reach at runtime -- but the baseline must be updated ` +
-            `deliberately, after review, never silently. If this addition was reviewed and ` +
-            `accepted, add the new path(s) to BASELINE_ELECTRON_REACHING_MODULES above with ` +
-            `a comment explaining why.`
-        )
-      }
-      expect(newModules).toEqual([])
-    },
-    30000
-  )
+    }
+    expect(newModules).toEqual([])
+  }, 30000)
 
-  it(
-    'anti-degradation: the measured set is non-empty and contains every known load-bearing electron-reaching edge',
-    () => {
-      const measured = reachResult.electronImportingFiles
-      expect(measured.size).toBeGreaterThan(0)
+  it('anti-degradation: the measured set is non-empty and contains every known load-bearing electron-reaching edge', () => {
+    const measured = reachResult.electronImportingFiles
+    expect(measured.size).toBeGreaterThan(0)
 
-      const requiredModules = [
-        'src/backend/dialog/dialog.ts',
-        'src/backend/ipc.ts',
-        'src/backend/launcher.ts',
-        'src/backend/storeSearch/cheapshark.ts',
-        'src/backend/constants/paths.ts',
-        'src/backend/utils.ts',
-        'src/common/types.ts'
-      ]
-      for (const requiredModule of requiredModules) {
-        expect(measured.has(requiredModule)).toBe(true)
-      }
-    },
-    30000
-  )
+    const requiredModules = [
+      'src/backend/dialog/dialog.ts',
+      'src/backend/ipc.ts',
+      'src/backend/launcher.ts',
+      'src/backend/storeSearch/cheapshark.ts',
+      'src/backend/constants/paths.ts',
+      'src/backend/utils.ts',
+      'src/common/types.ts',
+      // Phase 34.3 Plan 07 (D-10): the new edge itself is anti-vacuity-protected --
+      // logger/uploader.ts, reached via loggerFlowRegistration.ts.
+      'src/backend/logger/uploader.ts'
+    ]
+    for (const requiredModule of requiredModules) {
+      expect(measured.has(requiredModule)).toBe(true)
+    }
+  }, 30000)
 
-  it(
-    'reachability sanity: the walk actually traverses the graph rather than stopping at depth 1',
-    () => {
-      expect(reachResult.visitedFiles.size).toBeGreaterThan(100)
-    },
-    30000
-  )
+  it('reachability sanity: the walk actually traverses the graph rather than stopping at depth 1', () => {
+    // Phase 34.3 Plan 07 (D-10): three new entry points grew visitedFiles.size
+    // to a measured 202. Raised the floor from 100 to 150 -- comfortably below
+    // the measured size, so the guard stays meaningful (never lowered, per the
+    // plan's explicit instruction).
+    expect(reachResult.visitedFiles.size).toBeGreaterThan(150)
+  }, 30000)
 
-  it(
-    'the gap-#3 edge is pinned as a known, documented fact: dispatch.ts reaches dialog.ts, which imports electron directly',
-    () => {
-      const dispatchPath = resolve(REPO_ROOT, 'src/backend/gamedetails/dispatch.ts')
-      const dialogPath = resolve(REPO_ROOT, 'src/backend/dialog/dialog.ts')
+  it('the gap-#3 edge is pinned as a known, documented fact: dispatch.ts reaches dialog.ts, which imports electron directly', () => {
+    const dispatchPath = resolve(
+      REPO_ROOT,
+      'src/backend/gamedetails/dispatch.ts'
+    )
+    const dialogPath = resolve(REPO_ROOT, 'src/backend/dialog/dialog.ts')
 
-      // dispatch.ts is one of the four entry points, so it is always visited;
-      // the real assertion is that the walk reached dialog.ts FROM it.
-      expect(reachResult.visitedFiles.has(dispatchPath)).toBe(true)
-      expect(reachResult.visitedFiles.has(dialogPath)).toBe(true)
-      expect(
-        reachResult.electronImportingFiles.has('src/backend/dialog/dialog.ts')
-      ).toBe(true)
-    },
-    30000
-  )
+    // dispatch.ts is one of the four entry points, so it is always visited;
+    // the real assertion is that the walk reached dialog.ts FROM it.
+    expect(reachResult.visitedFiles.has(dispatchPath)).toBe(true)
+    expect(reachResult.visitedFiles.has(dialogPath)).toBe(true)
+    expect(
+      reachResult.electronImportingFiles.has('src/backend/dialog/dialog.ts')
+    ).toBe(true)
+  }, 30000)
 })
