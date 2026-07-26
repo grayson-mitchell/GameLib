@@ -28,6 +28,7 @@ jest.unmock('i18next')
 import { readFileSync as readSourceFile, readdirSync } from 'fs'
 import { join } from 'path'
 import i18next from 'i18next'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── backend/storeManagers mock -- six fully-mocked managers so no real
 // store manager (and none of their electron-store/network dependencies) is
@@ -99,7 +100,8 @@ jest.mock('backend/dialog/dialog', () => ({
 // one). ──────────────────────────────────────────────────────────────────
 const sendGameStatusUpdateMock = jest.fn()
 jest.mock('backend/utils', () => ({
-  sendGameStatusUpdate: (...args: [unknown]) => sendGameStatusUpdateMock(...args)
+  sendGameStatusUpdate: (...args: [unknown]) =>
+    sendGameStatusUpdateMock(...args)
 }))
 
 // ── backend/online_monitor mock ─────────────────────────────────────────
@@ -158,9 +160,27 @@ import {
   setMetadataChangedNotifier
 } from '../overrides'
 
-const OTHER_RUNNERS_FOR_LEGENDARY = ['steam', 'gog', 'nile', 'zoom', 'sideload'] as const
-const OTHER_RUNNERS_FOR_GOG = ['steam', 'legendary', 'nile', 'zoom', 'sideload'] as const
-const OTHER_RUNNERS_FOR_SIDELOAD = ['steam', 'legendary', 'gog', 'nile', 'zoom'] as const
+const OTHER_RUNNERS_FOR_LEGENDARY = [
+  'steam',
+  'gog',
+  'nile',
+  'zoom',
+  'sideload'
+] as const
+const OTHER_RUNNERS_FOR_GOG = [
+  'steam',
+  'legendary',
+  'nile',
+  'zoom',
+  'sideload'
+] as const
+const OTHER_RUNNERS_FOR_SIDELOAD = [
+  'steam',
+  'legendary',
+  'gog',
+  'nile',
+  'zoom'
+] as const
 
 describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   // WR-04 (Phase 34.2 Plan 12): initialize the REAL i18next singleton once
@@ -270,7 +290,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   })
 
   // ── kill ────────────────────────────────────────────────────────────
-  it('REQ-34.2-01 kill calls callAbortController(appName) BEFORE getGame(appName).stop() and returns stop()\'s result', async () => {
+  it("REQ-34.2-01 kill calls callAbortController(appName) BEFORE getGame(appName).stop() and returns stop()'s result", async () => {
     const order: string[] = []
     callAbortControllerMock.mockImplementation(() => {
       order.push('abort')
@@ -357,7 +377,11 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 changeInstallPath forwards {appName, path} to changeGameInstallPath and logs', async () => {
     managerMocks.steam.changeGameInstallPath.mockResolvedValue(undefined)
 
-    await changeInstallPath({ appName: '440', path: '/new/path', runner: 'steam' })
+    await changeInstallPath({
+      appName: '440',
+      path: '/new/path',
+      runner: 'steam'
+    })
 
     expect(managerMocks.steam.changeGameInstallPath).toHaveBeenCalledWith(
       '440',
@@ -551,7 +575,7 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
     })
   })
 
-  it('REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the installed notifier with getAllGameOverrides()\'s value', () => {
+  it("REQ-34.2-08 setGameMetadataOverride calls setGameOverrides(appName, {title, art_cover, art_square}) and invokes the installed notifier with getAllGameOverrides()'s value", () => {
     const overridesSnapshot = { '440': { title: 'Custom Title' } }
     getAllGameOverridesMock.mockReturnValue(overridesSnapshot)
     const notifierMock = jest.fn()
@@ -574,16 +598,9 @@ describe('backend/gamedetails/overrides.ts (REQ-34.2-08)', () => {
 })
 
 describe('backend/gamedetails source gate (REQ-34.2-03/REQ-34.2-14)', () => {
-  /** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
-   * before matching, so an explanatory comment naming a forbidden pattern
-   * does not fail its own gate (mirrors electronUntouched.test.ts's and
-   * appshellModules.test.ts's own `stripComments`). */
-  function stripComments(source: string): string {
-    return source
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-      .join('\n')
-  }
+  // Comment-stripping now delegates to the shared
+  // `backend/testUtils/stripSourceComments` util (strips block comments
+  // first, then the line-prefix filter), imported above as `stripComments`.
 
   function listTsFiles(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true })
@@ -623,7 +640,7 @@ describe('backend/gamedetails source gate (REQ-34.2-03/REQ-34.2-14)', () => {
 
   it('REQ-34.2-03/REQ-34.2-14 self-test: stripComments removes a comment-only "from \'electron\'" line before matching, so the gate is not vacuous', () => {
     const source = [
-      '// this comment intentionally says: from \'electron\'',
+      "// this comment intentionally says: from 'electron'",
       "import { libraryManagerMap } from '../storeManagers'"
     ].join('\n')
     const stripped = stripComments(source)

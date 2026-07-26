@@ -82,6 +82,7 @@
 import { PassThrough } from 'node:stream'
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
 // tmp directory so this suite can never touch a developer's real config
@@ -247,15 +248,9 @@ function writeSend(
   input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
 }
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines before matching, so
- * an explanatory comment naming a forbidden pattern does not fail its own gate (mirrors
- * electronUntouched.test.ts's own `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 function makeQueueElement(appName: string): DMQueueElement {
   return {
@@ -311,7 +306,11 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     const response = frames.find((f) => f.id === 'queue-info-1') as
       | {
           ok: boolean
-          result?: { elements?: unknown[]; finished?: unknown[]; state?: string }
+          result?: {
+            elements?: unknown[]
+            finished?: unknown[]
+            state?: string
+          }
           error?: string
         }
       | undefined
@@ -335,7 +334,8 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     expect(downloadManager.get('queue', [])).toHaveLength(0)
     const pushed = frames.find(
       (f) =>
-        f.kind === 'frontendMessage' && f.channel === 'changedDMQueueInformation'
+        f.kind === 'frontendMessage' &&
+        f.channel === 'changedDMQueueInformation'
     )
     expect(pushed).toBeDefined()
     expect(frames.find((f) => f.id === 'remove-1')).toBeUndefined()
@@ -351,7 +351,8 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
 
     const pushed = frames.find(
       (f) =>
-        f.kind === 'frontendMessage' && f.channel === 'changedDMQueueInformation'
+        f.kind === 'frontendMessage' &&
+        f.channel === 'changedDMQueueInformation'
     ) as { args?: unknown[] } | undefined
     expect(pushed).toBeDefined()
     expect((pushed?.args as unknown[])?.[1]).toBe('paused')
@@ -459,7 +460,8 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
 
     const pushed = frames.filter(
       (f) =>
-        f.kind === 'frontendMessage' && f.channel === 'changedDMQueueInformation'
+        f.kind === 'frontendMessage' &&
+        f.channel === 'changedDMQueueInformation'
     )
     expect(pushed.length).toBeGreaterThan(0)
   })
@@ -510,8 +512,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
       (f) =>
         f.kind === 'frontendMessage' &&
         f.channel === 'gameStatusUpdate' &&
-        ((f.args as unknown[])?.[0] as { status?: string })?.status ===
-          'queued'
+        ((f.args as unknown[])?.[0] as { status?: string })?.status === 'queued'
     )
     expect(queuedPushes).toHaveLength(1)
   })

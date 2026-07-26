@@ -56,6 +56,7 @@ import { readFileSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { getLogFilePath } from 'backend/logger/paths'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── i18next — defeat Jest's project-wide automatic manual mock (same load-bearing reasoning
 // as bootstrapWirings.test.ts's own header: without this, `require('i18next')` inside the
@@ -240,9 +241,7 @@ jest.mock('backend/config', () => ({
 jest.mock('../../anticheat/utils', () => ({
   downloadAntiCheatData: jest.fn(() =>
     Promise.reject(
-      new Error(
-        "EACCES: permission denied, open 'areweanticheatyet.json'"
-      )
+      new Error("EACCES: permission denied, open 'areweanticheatyet.json'")
     )
   ),
   gameAnticheatInfo: jest.fn()
@@ -266,16 +265,9 @@ async function flush(times = 6): Promise<void> {
   }
 }
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines before matching, so
- * this file's own explanatory comments (which necessarily name the patterns under test) cannot
- * self-satisfy a gate (mirrors gameDetailsImportGate.test.ts's/bootstrapWirings.test.ts's own
- * `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 /**
  * Requires the sidecar bootstrap graph fresh inside its own `jest.isolateModules()` sandbox
@@ -348,7 +340,11 @@ function loadConstantsPaths(): {
   let result!: ReturnType<typeof loadConstantsPaths>
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { appFolder, userDataPath, fixesPath } = require('../../constants/paths')
+    const {
+      appFolder,
+      userDataPath,
+      fixesPath
+    } = require('../../constants/paths')
     /* eslint-enable @typescript-eslint/no-require-imports */
     result = { appFolder, userDataPath, fixesPath }
   })

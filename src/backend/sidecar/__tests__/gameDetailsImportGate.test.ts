@@ -25,17 +25,11 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
- * before matching, so an explanatory comment naming a forbidden pattern does
- * not fail its own gate (mirrors `appShellImportGate.test.ts`'s own
- * `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 function listTsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
@@ -48,7 +42,7 @@ const MAIN_TS_PATH = join(__dirname, '../../main.ts')
 describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/REQ-34.2-10/REQ-34.2-14)', () => {
   // ── Gate 1: no file directly under src/backend/sidecar/ imports the real
   // 'electron' module ─────────────────────────────────────────────────────
-  it("REQ-34.2-14 Gate 1: no .ts file directly under src/backend/sidecar/ imports the real electron module", () => {
+  it('REQ-34.2-14 Gate 1: no .ts file directly under src/backend/sidecar/ imports the real electron module', () => {
     const sidecarDir = join(__dirname, '..')
     const files = listTsFiles(sidecarDir)
     expect(files.length).toBeGreaterThan(0)
@@ -352,7 +346,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // .test.ts is pinned to a committed sha256 digest of its own byte content --
   // same replacement reasoning as Gate 7 above. ──────────────────────────────
   const ELECTRON_UNTOUCHED_SHA256 =
-    'ceae5a7caa238f4f89804c41c2994fbf8e7720fadc908d6cbb7601a67ab8763d'
+    '66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

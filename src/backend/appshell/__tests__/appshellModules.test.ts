@@ -9,6 +9,7 @@
 
 import { readFileSync as readSourceFile, readdirSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── graceful-fs mock (themes.ts) — deterministic fs behavior, no real disk ──
 jest.mock('graceful-fs', () => ({
@@ -179,7 +180,7 @@ describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
     expect(mockedGetLatestReleases).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.1-04 getLatestReleasesForStartup forwards getLatestReleases()\'s result when checkForUpdatesOnStartup is true', async () => {
+  it("REQ-34.1-04 getLatestReleasesForStartup forwards getLatestReleases()'s result when checkForUpdatesOnStartup is true", async () => {
     mockAppSettings({ checkForUpdatesOnStartup: true })
     const releases = [{ id: 1, tag_name: 'v1.0.0' }]
     ;(mockedGetLatestReleases as jest.Mock).mockResolvedValue(releases)
@@ -190,7 +191,7 @@ describe('backend/appshell/releases.ts (REQ-34.1-04)', () => {
     expect(mockedGetLatestReleases).toHaveBeenCalledTimes(1)
   })
 
-  it('REQ-34.1-04 getCurrentChangelogEntry forwards to backend/utils\'s getCurrentChangelog', async () => {
+  it("REQ-34.1-04 getCurrentChangelogEntry forwards to backend/utils's getCurrentChangelog", async () => {
     const changelog = { id: 2, tag_name: 'v1.1.0' }
     ;(mockedGetCurrentChangelog as jest.Mock).mockResolvedValue(changelog)
 
@@ -236,16 +237,9 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
 })
 
 describe('backend/appshell source gate (REQ-34.1-04)', () => {
-  /** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
-   * before matching, so an explanatory comment naming a forbidden pattern
-   * does not fail its own gate (mirrors electronUntouched.test.ts's and
-   * downloadQueueFlows.test.ts's own `stripComments`). */
-  function stripComments(source: string): string {
-    return source
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-      .join('\n')
-  }
+  // Comment-stripping now delegates to the shared
+  // `backend/testUtils/stripSourceComments` util (strips block comments
+  // first, then the line-prefix filter), imported above as `stripComments`.
 
   it('REQ-34.1-04 source gate: no file under src/backend/appshell/ imports the real electron module', () => {
     const appshellDir = join(__dirname, '..')

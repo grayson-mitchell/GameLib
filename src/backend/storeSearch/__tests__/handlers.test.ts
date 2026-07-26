@@ -18,6 +18,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 const mockSearchGames = jest.fn()
 const mockGetGameDeals = jest.fn()
@@ -40,15 +41,9 @@ import {
   handleGetStoreSearchStoreMap
 } from '../handlers'
 
-/** Mirrors enrichmentFlows.test.ts's own stripComments -- comment-stripping
- * is load-bearing here since this file and both module docstrings discuss
- * the literal phrase `handler failed:`. */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 describe('storeSearch/handlers.ts', () => {
   beforeEach(() => {
@@ -134,9 +129,7 @@ describe('storeSearch/handlers.ts', () => {
     it('handleGetStoreSearchStoreMap REJECTS (never resolves to an empty object) when the provider rejects, and logs the exact channel prefix', async () => {
       mockGetStoreMap.mockRejectedValue(new Error('cheapshark unreachable'))
 
-      const outcome = await Promise.allSettled([
-        handleGetStoreSearchStoreMap()
-      ])
+      const outcome = await Promise.allSettled([handleGetStoreSearchStoreMap()])
 
       expect(outcome[0].status).toBe('rejected')
       if (outcome[0].status === 'rejected') {
@@ -162,10 +155,7 @@ describe('storeSearch/handlers.ts', () => {
     })
 
     it("storeSearch/index.ts references the shared module and contains no 'handler failed:' log string", () => {
-      const source = readFileSync(
-        join(__dirname, '..', 'index.ts'),
-        'utf-8'
-      )
+      const source = readFileSync(join(__dirname, '..', 'index.ts'), 'utf-8')
       const stripped = stripComments(source)
       expect(stripped).toMatch(/from\s+['"]\.\/handlers['"]/)
       expect(stripped).not.toMatch(/handler failed:/)
@@ -182,10 +172,7 @@ describe('storeSearch/handlers.ts', () => {
     })
 
     it('the shared handlers.ts module itself holds all three log strings (the single source of truth)', () => {
-      const source = readFileSync(
-        join(__dirname, '..', 'handlers.ts'),
-        'utf-8'
-      )
+      const source = readFileSync(join(__dirname, '..', 'handlers.ts'), 'utf-8')
       const stripped = stripComments(source)
       expect(stripped).toMatch(/searchStores handler failed:/)
       expect(stripped).toMatch(/getStoreSearchDeals handler failed:/)

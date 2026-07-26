@@ -34,6 +34,7 @@ import { existsSync, mkdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock. This is the load-bearing
 // line of this whole suite: `src/backend/__mocks__/i18next.ts` sits adjacent to this jest
@@ -196,7 +197,7 @@ async function waitFor(
     if (Date.now() - start > timeoutMs) {
       throw new Error('waitFor: condition not met within timeout')
     }
-     
+
     await new Promise((resolve) => setTimeout(resolve, intervalMs))
   }
 }
@@ -212,10 +213,10 @@ async function waitFor(
  */
 function setupIsolatedBootstrap(): {
   init: (input: PassThrough, output: PassThrough) => void
-   
+
   backendEvents: any
   axiosGet: jest.Mock
-   
+
   i18nextInstance: any
   appFolder: string
 } {
@@ -419,12 +420,6 @@ describe('sidecar bootstrap wirings (Phase 34.2 Plan 01 -- REQ-34.2-02/04/07/14)
   })
 })
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines before matching, so
- * this file's own explanatory comments naming the forbidden pattern do not fail their own
- * gate (mirrors downloadQueueFlows.test.ts's own `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.

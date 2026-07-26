@@ -47,6 +47,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── Scratch directory (real, unmocked fs/os/path) ───────────────────────────
 // Declared at module scope, textually BEFORE the jest.mock() factory that
@@ -139,18 +140,9 @@ async function flushUntil(
   }
 }
 
-/**
- * Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
- * before matching (mirrors `gameDetailsImportGate.test.ts`'s own
- * `stripComments`), so this file's own explanatory prose above cannot
- * self-satisfy Test D's gate.
- */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 /**
  * Test D's source gate: true only when the promise-returning error-logging

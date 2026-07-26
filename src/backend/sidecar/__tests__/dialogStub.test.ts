@@ -24,6 +24,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── os — per-pid tmp home, same convention as skeletonFlows.test.ts / electronUntouched.test.ts
 jest.mock('os', () => {
@@ -79,15 +80,19 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
     // resetMocks: true (jest.config.js) wipes even a factory-supplied implementation before
     // every test (same gotcha keyringTokenStore.test.ts documents) — re-wire here.
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      if (!program) {
-        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        if (!program) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return program.type === 'resolve'
+          ? Promise.resolve(program.value)
+          : Promise.reject(program.error)
       }
-      return program.type === 'resolve'
-        ? Promise.resolve(program.value)
-        : Promise.reject(program.error)
-    })
+    )
   })
 
   afterEach(() => {
@@ -95,13 +100,17 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
   })
 
   it('RUST_DIALOG_OPEN is a member of RUST_INVOKE_CHANNELS (so requestRustInvoke will emit, not pre-reject)', () => {
-    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_OPEN)).toBe(true)
+    expect(
+      (RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_OPEN)
+    ).toBe(true)
   })
 
   it('resolves { canceled: false, filePaths: [path] } when requestRustInvoke resolves a picked path', async () => {
     program = { type: 'resolve', value: '/Users/dev/Games' }
 
-    const result = await dialog.showOpenDialog(undefined, { properties: ['openDirectory'] })
+    const result = await dialog.showOpenDialog(undefined, {
+      properties: ['openDirectory']
+    })
 
     expect(result).toEqual({ canceled: false, filePaths: ['/Users/dev/Games'] })
     expect(callLog).toEqual([
@@ -141,15 +150,19 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
     program = null
     callLog = []
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      if (!program) {
-        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        if (!program) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return program.type === 'resolve'
+          ? Promise.resolve(program.value)
+          : Promise.reject(program.error)
       }
-      return program.type === 'resolve'
-        ? Promise.resolve(program.value)
-        : Promise.reject(program.error)
-    })
+    )
   })
 
   afterEach(() => {
@@ -168,9 +181,9 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
         cancelId: 1
       })
     ).resolves.toEqual({ response: 0, checkboxChecked: false })
-    expect(
-      callLog.some((entry) => entry.channel === RUST_DIALOG_MESSAGE)
-    ).toBe(true)
+    expect(callLog.some((entry) => entry.channel === RUST_DIALOG_MESSAGE)).toBe(
+      true
+    )
   })
 
   it('resolves { response: 1, checkboxChecked: false } when requestRustInvoke resolves false (buttons[1] clicked)', async () => {
@@ -209,7 +222,10 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
 
     await expect(
       dialog.showMessageBox(undefined, {
-        buttons: [i18nLike('box.steam.mac32Detected.confirm'), i18nLike('box.cancel')],
+        buttons: [
+          i18nLike('box.steam.mac32Detected.confirm'),
+          i18nLike('box.cancel')
+        ],
         cancelId: 1
       })
     ).resolves.toEqual({ response: 1, checkboxChecked: false })
@@ -250,15 +266,19 @@ describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', 
     program = null
     callLog = []
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      if (!program) {
-        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        if (!program) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return program.type === 'resolve'
+          ? Promise.resolve(program.value)
+          : Promise.reject(program.error)
       }
-      return program.type === 'resolve'
-        ? Promise.resolve(program.value)
-        : Promise.reject(program.error)
-    })
+    )
   })
 
   afterEach(() => {
@@ -266,7 +286,9 @@ describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', 
   })
 
   it('RUST_DIALOG_MESSAGE is a member of RUST_INVOKE_CHANNELS', () => {
-    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_MESSAGE)).toBe(true)
+    expect(
+      (RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_MESSAGE)
+    ).toBe(true)
   })
 
   it('forwards to RUST_DIALOG_MESSAGE with an error kind and resolves undefined', async () => {
@@ -283,7 +305,9 @@ describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', 
   it('never throws and warns when requestRustInvoke rejects', async () => {
     program = { type: 'reject', error: new Error('rustInvoke: timeout') }
 
-    await expect(dialog.showErrorBox('Title', 'Content')).resolves.toBeUndefined()
+    await expect(
+      dialog.showErrorBox('Title', 'Content')
+    ).resolves.toBeUndefined()
     expect(warnSpy).toHaveBeenCalledTimes(1)
     const [warningArg] = warnSpy.mock.calls[0]
     expect(String(warningArg)).toContain(RUST_DIALOG_MESSAGE)
@@ -295,15 +319,19 @@ describe('electronStub dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)'
     program = null
     callLog = []
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-      callLog.push({ channel, args })
-      if (!program) {
-        return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        if (!program) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return program.type === 'resolve'
+          ? Promise.resolve(program.value)
+          : Promise.reject(program.error)
       }
-      return program.type === 'resolve'
-        ? Promise.resolve(program.value)
-        : Promise.reject(program.error)
-    })
+    )
   })
 
   afterEach(() => {
@@ -311,15 +339,22 @@ describe('electronStub dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)'
   })
 
   it('RUST_DIALOG_SAVE is a member of RUST_INVOKE_CHANNELS', () => {
-    expect((RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_SAVE)).toBe(true)
+    expect(
+      (RUST_INVOKE_CHANNELS as readonly string[]).includes(RUST_DIALOG_SAVE)
+    ).toBe(true)
   })
 
   it('maps a picked path to { canceled: false, filePath } and forwards via RUST_DIALOG_SAVE', async () => {
     program = { type: 'resolve', value: '/Users/dev/save.json' }
 
-    const result = await dialog.showSaveDialog(undefined, { defaultPath: 'save.json' })
+    const result = await dialog.showSaveDialog(undefined, {
+      defaultPath: 'save.json'
+    })
 
-    expect(result).toEqual({ canceled: false, filePath: '/Users/dev/save.json' })
+    expect(result).toEqual({
+      canceled: false,
+      filePath: '/Users/dev/save.json'
+    })
     expect(callLog).toEqual([
       { channel: RUST_DIALOG_SAVE, args: [{ defaultPath: 'save.json' }] }
     ])
@@ -393,10 +428,7 @@ describe('electronStub clipboard D-04 logged no-op (REQ-31-04)', () => {
 // getMainWindow()/sendFrontendMessage() import chain into this lightweight sidecar suite.
 describe('backend/dialog/dialog.ts notify() logged no-op (REQ-30-07/D-09)', () => {
   it('the else branch alongside isSteamDeckGameMode calls logInfo (comments stripped)', () => {
-    const src = readFileSync(
-      join(__dirname, '../../dialog/dialog.ts'),
-      'utf-8'
-    )
+    const src = readFileSync(join(__dirname, '../../dialog/dialog.ts'), 'utf-8')
     const stripped = stripComments(src)
     const notifyMatch = stripped.match(
       /function notify\([^)]*\)\s*{[\s\S]*?\n}/
@@ -408,10 +440,6 @@ describe('backend/dialog/dialog.ts notify() logged no-op (REQ-30-07/D-09)', () =
   })
 })
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines before matching. */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.

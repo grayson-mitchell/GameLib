@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { GameInfo } from 'common/types'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── backend/ipc mock no longer needed here (Phase 34.2 Plan 03, D-06) —
 // this suite now imports `crossoverRatingMap.ts` directly, which has no
@@ -163,7 +164,11 @@ describe('buildCrossoverRatingMap', () => {
       makeGame({ app_name: 'gog-eligible', runner: 'gog', title: 'GOG Hit' })
     ])
     getListOfGamesMocks.steam.mockReturnValue([
-      makeGame({ app_name: 'steam-eligible', runner: 'steam', title: 'Steam Hit' })
+      makeGame({
+        app_name: 'steam-eligible',
+        runner: 'steam',
+        title: 'Steam Hit'
+      })
     ])
     isCrossoverIndexEligibleMock.mockReturnValue(true)
     getCodeweaversFromIndexMock.mockResolvedValue(null)
@@ -183,10 +188,10 @@ describe('buildCrossoverRatingMap', () => {
       join(__dirname, '..', 'crossoverRatingMap.ts'),
       'utf-8'
     )
-    const stripped = source
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-      .join('\n')
+    // Comment-stripping delegates to the shared
+    // `backend/testUtils/stripSourceComments` util, imported above as
+    // `stripComments`.
+    const stripped = stripComments(source)
 
     expect(stripped).not.toMatch(/addHandler/)
   })

@@ -23,17 +23,11 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
- * before matching, so an explanatory comment naming a forbidden pattern does
- * not fail its own gate (mirrors `electronUntouched.test.ts`'s and
- * `downloadQueueFlows.test.ts`'s own `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 function listTsFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
@@ -64,7 +58,7 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
   // stripper).
   it('REQ-34.1-12/D-09 Gate 1 self-test: stripComments removes a comment-only "from \'electron\'" line before matching', () => {
     const source = [
-      '// this comment intentionally says: from \'electron\'',
+      "// this comment intentionally says: from 'electron'",
       "import { ipcMain } from './electronStub'"
     ].join('\n')
     const stripped = stripComments(source)
@@ -105,11 +99,8 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
 
   // ── Gate 4: D-08 shape gate — main.ts keeps one-line delegations to the
   // extracted appshell/* bodies, never inline reimplementations ─────────────
-  it("REQ-34.1-05/D-08 Gate 4: main.ts imports the extracted appshell/* modules and delegates to them (not inline bodies)", () => {
-    const mainSource = readFileSync(
-      join(__dirname, '../../main.ts'),
-      'utf-8'
-    )
+  it('REQ-34.1-05/D-08 Gate 4: main.ts imports the extracted appshell/* modules and delegates to them (not inline bodies)', () => {
+    const mainSource = readFileSync(join(__dirname, '../../main.ts'), 'utf-8')
     const stripped = stripComments(mainSource)
 
     // main.ts imports the extracted, Electron-free modules (D-07/D-08).

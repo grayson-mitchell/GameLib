@@ -37,6 +37,7 @@
 
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL
 // sidecar shims (mirrors skeletonFlows.test.ts): without this, Jest's automatic
@@ -112,7 +113,10 @@ function programAllReject(message: string): void {
 }
 
 function programAllResolve(): void {
-  programChannel('keyring_get', { type: 'resolve', value: 'sidecar-only-token' })
+  programChannel('keyring_get', {
+    type: 'resolve',
+    value: 'sidecar-only-token'
+  })
   programChannel('keyring_set', { type: 'resolve', value: true })
   programChannel('keyring_delete', { type: 'resolve', value: true })
   programChannel('keyring_available', { type: 'resolve', value: true })
@@ -153,15 +157,19 @@ beforeEach(() => {
   program = {}
   // resetMocks: true wipes even a factory-supplied implementation before every test (the
   // same gotcha keyringTokenStore.test.ts documents) — re-wire the fake responder here.
-  mockRequestRustInvoke.mockImplementation((channel: string, _args: unknown[]) => {
-    const outcome = program[channel]
-    if (!outcome) {
-      return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+  mockRequestRustInvoke.mockImplementation(
+    (channel: string, _args: unknown[]) => {
+      const outcome = program[channel]
+      if (!outcome) {
+        return Promise.reject(
+          new Error(`no outcome programmed for channel: ${channel}`)
+        )
+      }
+      return outcome.type === 'resolve'
+        ? Promise.resolve(outcome.value)
+        : Promise.reject(outcome.error)
     }
-    return outcome.type === 'resolve'
-      ? Promise.resolve(outcome.value)
-      : Promise.reject(outcome.error)
-  })
+  )
 })
 
 describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)', () => {
@@ -306,11 +314,6 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   })
 })
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines before matching, so
- * an explanatory comment naming a forbidden identifier does not fail its own gate. */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.

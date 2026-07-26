@@ -75,6 +75,7 @@
 import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 const TMP_ROOT_NAME = `gamelib-testcontainment-test-home-${process.pid}`
 
@@ -191,16 +192,9 @@ jest.mock('electron-store', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-/** Strips `//`, `/* ... *\/`-continuation, and `*`-prefixed docblock lines
- * before matching, so an explanatory comment naming a forbidden/required
- * pattern cannot self-satisfy its own gate (mirrors
- * `gameDetailsImportGate.test.ts`'s own `stripComments`). */
-function stripComments(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-    .join('\n')
-}
+// Comment-stripping now delegates to the shared
+// `backend/testUtils/stripSourceComments` util (strips block comments first,
+// then the line-prefix filter), imported above as `stripComments`.
 
 describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2-18, REQ-34.2-07/-14)', () => {
   const ENV_KEYS = [

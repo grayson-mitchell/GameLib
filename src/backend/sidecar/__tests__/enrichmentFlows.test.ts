@@ -289,6 +289,7 @@ import {
 } from 'fs'
 import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
+import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 import { init } from '../bootstrap'
 import { GlobalConfig } from 'backend/config'
@@ -345,8 +346,14 @@ const steamManager = libraryManagerMap.steam as unknown as Record<
   string,
   jest.Mock
 >
-const nileManager = libraryManagerMap.nile as unknown as Record<string, jest.Mock>
-const zoomManager = libraryManagerMap.zoom as unknown as Record<string, jest.Mock>
+const nileManager = libraryManagerMap.nile as unknown as Record<
+  string,
+  jest.Mock
+>
+const zoomManager = libraryManagerMap.zoom as unknown as Record<
+  string,
+  jest.Mock
+>
 const sideloadManager = libraryManagerMap.sideload as unknown as Record<
   string,
   jest.Mock
@@ -701,10 +708,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       )
 
       const { input, frames } = startSidecar()
-      writeInvoke(input, 'gkf-1', 'getKnownFixes', [
-        'known-fixes-app',
-        'gog'
-      ])
+      writeInvoke(input, 'gkf-1', 'getKnownFixes', ['known-fixes-app', 'gog'])
       await flush()
 
       const response = findResponse(frames, 'gkf-1')
@@ -739,18 +743,16 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       mockIsCrossoverIndexEligible.mockImplementation(
         (gameInfo: GameInfo) => gameInfo.app_name !== 'ineligible-1'
       )
-      mockGetCodeweaversFromIndex.mockImplementation(
-        (gameInfo: GameInfo) => {
-          if (gameInfo.app_name === 'matched-1') {
-            return Promise.resolve({
-              macRating: 5,
-              linuxRating: null,
-              slug: 'matched-1'
-            })
-          }
-          return Promise.resolve(null)
+      mockGetCodeweaversFromIndex.mockImplementation((gameInfo: GameInfo) => {
+        if (gameInfo.app_name === 'matched-1') {
+          return Promise.resolve({
+            macRating: 5,
+            linuxRating: null,
+            slug: 'matched-1'
+          })
         }
-      )
+        return Promise.resolve(null)
+      })
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gci-1', 'getCrossoverIndex', [])
@@ -769,9 +771,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         true
       )
       expect(map['unmatched-1']).toBeNull()
-      expect(Object.prototype.hasOwnProperty.call(map, 'matched-1')).toBe(
-        true
-      )
+      expect(Object.prototype.hasOwnProperty.call(map, 'matched-1')).toBe(true)
       expect(map['matched-1']).toBe(5)
     })
 
@@ -828,7 +828,11 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       const cachedPayload = {
         pcgamingwiki: null,
         applegamingwiki: null,
-        codeweavers: { macRating: null, linuxRating: null, slug: 'the-real-game-title' },
+        codeweavers: {
+          macRating: null,
+          linuxRating: null,
+          slug: 'the-real-game-title'
+        },
         howlongtobeat: null,
         gamesdb: null,
         steamInfo: null,
@@ -1028,15 +1032,9 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
 // ── REQ-34.2-04 import gates (comment-stripped, self-tested) ───────────────
 describe('REQ-34.2-04 enrichmentFlowRegistration.ts import gates', () => {
-  /** Strips comments before matching (mirrors gameDetailsImportGate.test.ts's
-   * own stripComments) so an explanatory header paragraph naming a forbidden
-   * pattern cannot fail its own gate. */
-  function stripComments(source: string): string {
-    return source
-      .split('\n')
-      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-      .join('\n')
-  }
+  // Comment-stripping now delegates to the shared
+  // `backend/testUtils/stripSourceComments` util (strips block comments
+  // first, then the line-prefix filter), imported above as `stripComments`.
 
   it('REQ-34.2-04 self-test: stripComments removes a comment-only forbidden-pattern line before matching', () => {
     const source = [
