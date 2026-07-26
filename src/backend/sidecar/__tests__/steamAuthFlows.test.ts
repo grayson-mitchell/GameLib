@@ -169,6 +169,17 @@ function writeInvoke(
   input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
 }
 
+/** Writes a well-formed `send` request frame to the sidecar's stdin (copied
+ * from settingsFlows.test.ts:249-256 — this file has no prior `writeSend`). */
+function writeSend(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
+}
+
 describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   beforeEach(() => {
     // resetMocks:true (shared root config) wipes automock implementations
@@ -296,7 +307,9 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     )
     writeInvoke(input, 'snapshot-1', 'sidecar:store-snapshot', [])
     await flush()
-    const snapshotResponse = frames.find((frame) => frame.id === 'snapshot-1') as
+    const snapshotResponse = frames.find(
+      (frame) => frame.id === 'snapshot-1'
+    ) as
       | {
           ok: boolean
           result: { steamConfigStore?: Record<string, unknown> }
@@ -313,30 +326,234 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     )
   })
 
-  // Test 5 (Invariant B guard): a deliberately unported channel (D-02 —
-  // credential/SteamGuard/logout are out of scope for this plan) still
-  // rejects carrying UNPORTED_CHANNEL_MARKER, and the RPC loop keeps serving
-  // afterward.
-  it('Test 5 (Invariant B guard): logoutSteam (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  // Test 5 (Invariant B guard) — REWRITTEN by Phase 34.4 Plan 01. The
+  // ORIGINAL channel this test drove was `logoutSteam`, asserting it stayed
+  // "deliberately unported" per Phase 30 D-02. That contract is legitimately
+  // CHANGED by this plan: REQ-34.4-02 ports `logoutSteam` as a real `send`
+  // channel (see the describe block below for its own send-kind proof, plus
+  // the plan 34.4-10 live-gate item 2 for the residual jest structurally
+  // cannot reach). Re-pointed at `humbleRevealKey` instead — one of the 6
+  // Humble channels deliberately deferred to Phase 34.4.1 (D-02) and not
+  // registered by any 34.4 plan — to keep proving Invariant B (an unported
+  // channel stays a non-fatal rejection, and the RPC loop keeps serving)
+  // without silently dropping the assertion this test exists to make.
+  it('Test 5 (Invariant B guard): humbleRevealKey (deferred to Phase 34.4.1, D-02) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'logout-1', 'logoutSteam', [])
+    writeInvoke(input, 'reveal-1', 'humbleRevealKey', [])
     await flush()
 
-    const logoutResponse = frames.find((frame) => frame.id === 'logout-1') as
+    const revealResponse = frames.find((frame) => frame.id === 'reveal-1') as
       | { ok: boolean; error?: string }
       | undefined
-    expect(logoutResponse?.ok).toBe(false)
-    expect(logoutResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    expect(revealResponse?.ok).toBe(false)
+    expect(revealResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
 
-    writeInvoke(input, 'health-after-logout', 'health', [])
+    writeInvoke(input, 'health-after-reveal', 'health', [])
     await flush()
     const healthResponse = frames.find(
-      (frame) => frame.id === 'health-after-logout'
+      (frame) => frame.id === 'health-after-reveal'
     )
     expect(healthResponse).toMatchObject({
-      id: 'health-after-logout',
+      id: 'health-after-reveal',
       ok: true,
       result: 'ok'
+    })
+  })
+
+  // ── Credential/SteamGuard/TOTP login trio (Phase 34.4 Plan 01, REQ-34.4-01) ──
+  describe('credential/SteamGuard/TOTP login trio', () => {
+    it('REQ-34.4-01 steamStartCredentials invoke resolves a real value (not the unported marker) and delegates the destructured username/password, not the raw payload object', async () => {
+      jest
+        .mocked(SteamUser.startCredentialLogin)
+        .mockResolvedValue({ status: 'done' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'start-cred-1', 'steamStartCredentials', [
+        { username: 'gsd-tester', password: 'super-secret' }
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'start-cred-1')
+      expect(response).toMatchObject({
+        id: 'start-cred-1',
+        ok: true,
+        result: { status: 'done' }
+      })
+      expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      expect(SteamUser.startCredentialLogin).toHaveBeenCalledTimes(1)
+      expect(SteamUser.startCredentialLogin).toHaveBeenCalledWith(
+        'gsd-tester',
+        'super-secret'
+      )
+    })
+
+    it('REQ-34.4-01 steamStartCredentials round-trips a guard_required-shaped value unchanged (the frontend contract, steam/user.ts:49-51)', async () => {
+      jest
+        .mocked(SteamUser.startCredentialLogin)
+        .mockResolvedValue({ status: 'guard_required' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'start-cred-guard-1', 'steamStartCredentials', [
+        { username: 'gsd-tester', password: 'super-secret' }
+      ])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'start-cred-guard-1')
+      expect(response).toMatchObject({
+        id: 'start-cred-guard-1',
+        ok: true,
+        result: { status: 'guard_required' }
+      })
+    })
+
+    it('REQ-34.4-01 steamSubmitGuard invoke resolves a real value and delegates the bare code string to submitSteamGuardCode', async () => {
+      jest
+        .mocked(SteamUser.submitSteamGuardCode)
+        .mockResolvedValue({ status: 'done' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'submit-guard-1', 'steamSubmitGuard', ['ABCDE'])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'submit-guard-1')
+      expect(response).toMatchObject({
+        id: 'submit-guard-1',
+        ok: true,
+        result: { status: 'done' }
+      })
+      expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      expect(SteamUser.submitSteamGuardCode).toHaveBeenCalledTimes(1)
+      expect(SteamUser.submitSteamGuardCode).toHaveBeenCalledWith('ABCDE')
+    })
+
+    it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with no arguments', async () => {
+      jest
+        .mocked(SteamUser.pollCredentialLogin)
+        .mockResolvedValue({ status: 'waiting' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'poll-cred-1', 'steamPollCredential', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'poll-cred-1')
+      expect(response).toMatchObject({
+        id: 'poll-cred-1',
+        ok: true,
+        result: { status: 'waiting' }
+      })
+      expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      expect(SteamUser.pollCredentialLogin).toHaveBeenCalledTimes(1)
+      expect(SteamUser.pollCredentialLogin).toHaveBeenCalledWith()
+    })
+  })
+
+  // ── Session/identity trio (Phase 34.4 Plan 01, REQ-34.4-02) ──────────────────
+  describe('session/identity trio', () => {
+    it('REQ-34.4-02 getSteamUserInfo invoke round-trips a real value, not the unported marker', async () => {
+      jest.mocked(SteamUser.getUserDetails).mockResolvedValue({
+        username: 'gsd-tester',
+        steamId: 'STEAMID_TEST'
+      })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'user-info-1', 'getSteamUserInfo', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'user-info-1')
+      expect(response).toMatchObject({
+        id: 'user-info-1',
+        ok: true,
+        result: { username: 'gsd-tester', steamId: 'STEAMID_TEST' }
+      })
+      expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
+      expect(SteamUser.getUserDetails).toHaveBeenCalledTimes(1)
+    })
+
+    it('REQ-34.4-02 getSteamSyncedAt invoke resolves null when the store has no syncedAt (matching `?? null`)', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'synced-at-1', 'getSteamSyncedAt', [])
+      await flush()
+
+      const response = frames.find((frame) => frame.id === 'synced-at-1')
+      expect(response).toMatchObject({
+        id: 'synced-at-1',
+        ok: true,
+        result: null
+      })
+    })
+
+    describe('logoutSteam (the G-30-01 send channel)', () => {
+      it('REQ-34.4-02 kind proof, positive direction: a logoutSteam SEND frame causes SteamUser.logout to be called exactly once', async () => {
+        jest.mocked(SteamUser.logout).mockResolvedValue(undefined)
+
+        const { input, frames } = startSidecar()
+        writeSend(input, 'logout-send-1', 'logoutSteam', [])
+        await flush()
+
+        // A send never produces a response frame with this id.
+        expect(
+          frames.find((frame) => frame.id === 'logout-send-1')
+        ).toBeUndefined()
+        expect(SteamUser.logout).toHaveBeenCalledTimes(1)
+      })
+
+      it('REQ-34.4-02 kind proof, negative direction: logoutSteam must NOT be reachable as an invoke handler', async () => {
+        jest.mocked(SteamUser.logout).mockResolvedValue(undefined)
+
+        const { input, frames } = startSidecar()
+        writeInvoke(input, 'logout-invoke-1', 'logoutSteam', [])
+        await flush()
+
+        const response = frames.find(
+          (frame) => frame.id === 'logout-invoke-1'
+        ) as { ok?: boolean; error?: string } | undefined
+        // A send channel driven as an invoke must not resolve a successful
+        // response frame carrying a SteamUser.logout() result — this is the
+        // dispatchSend/dispatchInvoke mismatch G-30-01's inverse would produce.
+        expect(response?.ok).not.toBe(true)
+        expect(SteamUser.logout).not.toHaveBeenCalled()
+      })
+
+      it('REQ-34.4-02 rejection guard: a rejecting SteamUser.logout does not crash the sidecar and the RPC loop keeps serving', async () => {
+        const unhandledRejections: unknown[] = []
+        const onUnhandledRejection = (reason: unknown): void => {
+          unhandledRejections.push(reason)
+        }
+        process.on('unhandledRejection', onUnhandledRejection)
+
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+        try {
+          jest
+            .mocked(SteamUser.logout)
+            .mockRejectedValue(new Error('logout transport failure'))
+
+          const { input, frames } = startSidecar()
+          writeSend(input, 'logout-reject-1', 'logoutSteam', [])
+          await flush()
+
+          expect(warnSpy).toHaveBeenCalledWith(
+            '[steamAuthFlowRegistration] logoutSteam failed:',
+            expect.any(Error)
+          )
+
+          writeInvoke(input, 'health-after-logout-reject', 'health', [])
+          await flush()
+          const healthResponse = frames.find(
+            (frame) => frame.id === 'health-after-logout-reject'
+          )
+          expect(healthResponse).toMatchObject({
+            id: 'health-after-logout-reject',
+            ok: true,
+            result: 'ok'
+          })
+
+          expect(unhandledRejections).toEqual([])
+        } finally {
+          process.off('unhandledRejection', onUnhandledRejection)
+          warnSpy.mockRestore()
+        }
+      })
     })
   })
 })
