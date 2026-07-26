@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.4 planned
-last_updated: "2026-07-27T00:00:00.000Z"
-last_activity: 2026-07-27 -- Phase 34.4 planned (10 plans, 5 waves)
+stopped_at: 34.4-01 done
+last_updated: "2026-07-27T21:40:39.000Z"
+last_activity: 2026-07-27 -- 34.4-01 executed (Steam credential login + session/identity channels)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 102
+  completed_plans: 103
   percent: 69
 ---
 
@@ -33,9 +33,34 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.4
-Plan: Not started
-discuss/plan.
+Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
+Plan: 1 of 10
+
+34.4-01 done -- Steam credential/SteamGuard/TOTP login trio + session/identity trio
+registration (wave 1). Extended `steamAuthFlowRegistration.ts` with 6 new registrations:
+`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential` (REQ-34.4-01, all
+`ipcMain.handle`) and `getSteamUserInfo`/`getSteamSyncedAt`/`logoutSteam` (REQ-34.4-02).
+`logoutSteam` registered as `ipcMain.on` (send), cross-checked against `main.ts:939`'s
+`addListener` call -- the G-30-01 channel, guarded with a `.catch()` writing a
+`[steamAuthFlowRegistration]`-prefixed warning, never rethrows. Rewrote the module docstring,
+which previously asserted these channels were "deliberately NOT registered" (now false).
+Extended `steamAuthFlows.test.ts` 5 -> 14 tests: round-trips for the credential trio incl. the
+guard_required contract, session/identity round-trips, and a bidirectional send-kind proof for
+`logoutSteam` (send calls SteamUser.logout exactly once; invoke does NOT reach it) plus a
+rejection guard proving a failing logout neither crashes the sidecar nor leaves an
+unhandledRejection. Hand RED-proofed by flipping `logoutSteam` to `ipcMain.handle` --
+confirmed the send-kind test fails for the right reason, reverted via `git checkout`
+(`git diff --stat` empty against the Task 1 commit). Rewrote Test 5 (previously asserting
+`logoutSteam` stays unported) to target `humbleRevealKey` instead, with a comment recording
+the original channel, the reason for the change, and where the replacement proof lives. Full
+backend sweep: 2409/2411 tests, 114/116 suites -- only the 2 pre-existing, already-documented
+baselines (`rustInvokeChannel.test.ts`, wine `rest.test.ts`). No Rust files touched;
+`main.ts` byte-unchanged. Caught the `gsd-sdk state writes corrupt STATE.md` gotcha firing
+again on the initial `state.load` call (reverted `total_phases`/`stopped_at`/Current Position
+to a stale snapshot) -- reverted via `git checkout` before any commit, applied this STATE.md
+update by hand instead of trusting `state.*` verbs. REQ-34.4-01/REQ-34.4-02 complete, see
+34.4-01-SUMMARY.md. Next: 34.4-02 (bottle/client-setup/redeem/private-branch group, same file,
+next wave).
 
 34.3-08 done -- Declared ported-channel list + SEAM closure (wave 5, depends on 01-07).
 Wrote `34.3-PORTED-CHANNELS.md` (29 rows, no `logError` row, both framing corrections, the
