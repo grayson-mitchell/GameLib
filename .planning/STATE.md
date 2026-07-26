@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-08-PLAN.md
+stopped_at: Completed 34.3-09-PLAN.md
 last_updated: "2026-07-26T11:15:46.727Z"
 last_activity: 2026-07-26
 progress:
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 9 of 9 (wave 5 -- plan 08 now complete; plan 09, wave 6, the blocking live gate, remains)
+Plan: 9 of 9 (ALL COMPLETE -- plan 09, the blocking live gate, ran 2026-07-27: all 5 items PASS)
 discuss/plan.
 
 34.3-08 done -- Declared ported-channel list + SEAM closure (wave 5, depends on 01-07).
@@ -46,8 +46,10 @@ each self-test-proven to reject a synthetic violation). Closed SEAM.md's Increme
 Checklist steps 5/6 (new §1 CLOSED subsection, §3 row 9's `clipboard` moved from "untouched"
 to CLOSED). Filed `uploaded-log-delete-button-lies.md` and `log-upload-has-no-redaction.md`
 todos. REQ-34.3-12/REQ-34.3-13 complete, see 34.3-08-SUMMARY.md. Live-gate proof-level cells
-(`unit + LIVE (item N)`) are explicitly declared PENDING, not yet observed -- plan 34.3-09
-(the blocking live gate, non-autonomous) is next and has not run.
+(`unit + LIVE (item N)`) were declared PENDING at the time plan 08 was written; plan 34.3-09
+(the blocking live gate) has since RUN (2026-07-27) with all 5 items PASS -- see 34.3-LIVE-GATE.md,
+which records that items 1/2/3/5 and item 4's process count are tester attestations without
+retained transcripts, while item 4's post-conditions are machine-verified.
 
 34.3-07 done -- Automated-proof structural gates (the phase's structural-proof plan, wave 4,
 depends on 01/02/03/04/06). Extended `electronReachLedger.test.ts`'s `ENTRY_POINTS` with this
