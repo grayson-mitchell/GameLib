@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: planned
-stopped_at: "Phase 34.2 GAP CYCLE 3 PLANNED (plans 34.2-19..24, plan-checker VERIFICATION PASSED). Closes the blocker + 3 warnings that gap cycle 2 introduced: 34.2-19 makes test containment STRUCTURAL via a backend-project jest setupFiles entry (kills the live ~/Library/Logs/GameLib/gamelib.log clobber, reproduced 3x); 34.2-20 catches the logError listener's floating promise at the call site (WR-02); 34.2-21 defensively stringifies repairFailure.ts's unknown so the ERROR dialog is unconditional (WR-03); 34.2-22 adds a Rust #[cfg(test)] module proving timeout_for() consults LONG_RUNNING_CHANNELS (carried-forward warning); 34.2-23 de-vacuums the NO-FILESYSTEM-WRITES gate and replaces the rotted 11-suite declared list with a readdirSync set-equality tripwire over all 25 suites (WR-01); 34.2-24 brings 34.2-PORTED-CHANNELS.md current and commits a currency-gate.py. Waves 1(19-22)/2(23)/3(24). Ready to execute: /gsd-execute-phase 34.2"
-last_updated: "2026-07-26T11:30:00.000Z"
-last_activity: 2026-07-26 -- Phase 34.2 gap cycle 3 planned (6 plans, 34.2-19..24)
+status: executing
+stopped_at: "Completed 34.2-19-PLAN.md (gap cycle 3, plan 1 of 6: structural jest containment via jest.mock('os', ...) + env-var redirection in a setupFiles module -- closes the live gamelib.log destruction blocker; mid-execution architectural correction, coordinator-approved, see 34.2-19-SUMMARY.md) -- Phase 34.2 GAP CYCLE 3 EXECUTING (34.2-20..24 remain)"
+last_updated: "2026-07-26T12:00:00.000Z"
+last_activity: 2026-07-26 -- Phase 34.2 gap cycle 3 executing (34.2-19 done, 5 plans remain)
 progress:
   total_phases: 15
-  completed_phases: 10
+  completed_phases: 9
   total_plans: 95
-  completed_plans: 81
-  percent: 85
+  completed_plans: 82
+  percent: 61
 ---
 
 # Project State
@@ -33,27 +33,58 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 PLANNED, ready to execute
-Plan: 18 of 18 executed; 6 new gap-closure plans written (34.2-19..24), plan-checker VERIFICATION PASSED
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
+Plan: 19 of 24 done (34.2-19 complete); 5 gap-closure plans remain (34.2-20..24)
+
+34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
+`src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
+project's `setupFiles` (`src/backend/jest.config.js`), redirecting HOME/USERPROFILE/APPDATA/
+LOCALAPPDATA/XDG_CONFIG_HOME/XDG_STATE_HOME/XDG_DATA_HOME/XDG_CACHE_HOME so no suite can opt out
+of containment by omission. MID-EXECUTION CORRECTION (coordinator-approved, Rule 4 architectural
+deviation): the plan's originally-specified env-var-only mechanism does NOT redirect
+`os.homedir()` inside a Jest test on this project's Jest 29/Node 26 setup -- Jest replaces
+`process.env` with a decoupled, per-test-file synthetic Proxy that `os.homedir()`'s native
+binding never observes (live `stat` proof: real `~/Library/Logs/GameLib/gamelib.log` mtime
+still changed with the env-only fix installed). Two `jest.mock`-free alternatives were ruled out
+(non-configurable core-module property mutation; a `Module._load` hook, bypassed for builtins
+under Jest's own Runtime). Fix: a single, narrow `jest.mock('os', () => ({...jest.requireActual
+('os'), homedir: () => containmentRoot}))` call added to the setup module (commit `752f6096`),
+env-var redirection kept as defense-in-depth for the Windows/Linux branches. Task 2 added
+`structuralContainment.test.ts` (6 tests, zero per-suite `jest.mock` calls), hand RED-proofed
+(5/6 tests fail with `setupFiles` disabled; Test 4 stays green independently via the pre-existing
+default `electron` automock). Task 3 added a containment tripwire as the first test in
+`bootstrap.test.ts` -- the suite independently reproduced destroying real developer data three
+times during verification -- and reconciled the full backend baseline (111/112 suites, 2279/2280
+tests, sole failure `rustInvokeChannel.test.ts`, observed on 5 of 7 runs; 2 runs hit a
+pre-existing, unrelated `library.ts` leaked-timer flake, logged to `deferred-items.md`). LIVE
+DESTRUCTION CHECK: `~/Library/Logs/GameLib/gamelib.log`/`.log.old` mtimes byte-identical
+before/after a full `sidecar/__tests__` run -- the verification's own three-times-reproduced
+finding is directly refuted. `34.2-19-PLAN.md` amended in place with a full deviation log.
+REQ-34.2-07/-14 complete, see 34.2-19-SUMMARY.md. Next: 34.2-20 (WR-02, same wave).
 
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
-- 34.2-19 (wave 1, BLOCKER): structural containment via a `src/backend/jest.setupContainment.ts`
+- 34.2-19 (wave 1, BLOCKER) DONE: structural containment via a `src/backend/jest.setupContainment.ts`
   `setupFiles` entry on the backend jest project — redirects HOME/USERPROFILE/APPDATA/LOCALAPPDATA/
-  XDG_* so no suite can opt out of containment by omission. Verified mechanism: `os.homedir()`
-  honours `process.env.HOME` verbatim on POSIX, and `setupFiles` runs before any test file's imports,
-  so the one eager resolver (`constants/paths.ts`, module-scope `app.getPath`) is import-time-safe.
+  XDG_* so no suite can opt out of containment by omission, PLUS a narrow `jest.mock('os', ...)`
+  (coordinator-approved mid-execution correction — env vars alone do not redirect `os.homedir()`
+  under Jest's synthetic per-test-file `process.env`; see 34.2-19-SUMMARY.md for the full finding).
   Blast radius is the whole backend project (111 suites); acceptance criterion pins the failing-suite
   set to exactly {rustInvokeChannel.test.ts}, the documented 34.1-era baseline.
+
 - 34.2-20 (wave 1, WR-02): catch the logError listener's floating promise at the call site with a
   stderr diagnostic — load-bearing assertion is NEGATIVE (must not contain processGuards.ts's
   absorption text), because a positive-only assertion passes pre-fix.
+
 - 34.2-21 (wave 1, WR-03): defensively stringify repairFailure.ts's `unknown` so the ERROR dialog
   renders unconditionally; adds Object.create(null) + throwing-toString cases that fail against HEAD.
+
 - 34.2-22 (wave 1, carried-forward): Rust `#[cfg(test)]` module proving `timeout_for()` consults
   LONG_RUNNING_CHANNELS, bidirectionally falsifiable; pinned from jest since CI runs no cargo step.
+
 - 34.2-23 (wave 2, WR-01): raw-source anti-claim gate + `readdirSync` set-equality tripwire over all
   25 suites; DELETES KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES rather than reframing it.
+
 - 34.2-24 (wave 3, REQ-34.2-13): PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py.
 
 Anti-recurrence discipline (three straight cycles shipped a new defect while closing the named one):
@@ -1332,6 +1363,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P16 | 45min | 3 tasks | 6 files |
 | Phase 34.2 P17 | ~35min | 2 tasks | 4 files |
 | Phase 34.2 P18 | 30min | 3 tasks | 6 files |
+| Phase 34.2 P19 | 100min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -1587,6 +1619,7 @@ Recent decisions affecting current work:
 - [Phase 34.2]: backend/logger is jest.spyOn'd in loggerFlows.test.ts, never jest.mock'd — logger/index.ts and log_writer.ts import each other circularly; a jest.mock factory calling requireActual re-enters that cycle and throws inside LogWriter's constructor (sidecarRejectionGuard.test.ts precedent)
 - [Phase 34.2]: Merged the showDialogModal-behavior test and the T-34.2-52 information-disclosure guard into one test so deleting the showDialogModal call fails exactly one test (34.2-17)
 - [Phase 34.2]: Dialog message is the FIXED translated string only -- raw error text goes to console.error and window.api.logError, never the rendered dialog (T-34.2-52, 34.2-17)
+- [Phase 34.2-19]: env-var-only os.homedir() redirection does not work under Jest 29's synthetic per-test-file process.env; fixed via a narrow jest.mock('os', ...) call in the setupFiles module (coordinator-approved Rule 4 correction, verified live)
 
 ### Pending Todos
 
@@ -1656,9 +1689,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-25T22:14:59.972Z
-Stopped at: Completed 34.2-17-PLAN.md (gap cycle 2, CR-01 renderer half: reportRepairFailure extracted, 4/4 tests, CR-01 fully closed) -- Phase 34.2 GAP CYCLE 2 EXECUTING (34.2-18 remains)
-Next: Execute 34.2-13-PLAN.md (gap cycle 1 continues). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-26T12:00:00.000Z
+Stopped at: Completed 34.2-19-PLAN.md (gap cycle 3, plan 1 of 6: structural jest containment via jest.mock('os', ...) + env-var redirection in a setupFiles module -- closes the live gamelib.log destruction blocker; mid-execution architectural correction, coordinator-approved, see 34.2-19-SUMMARY.md) -- Phase 34.2 GAP CYCLE 3 EXECUTING (34.2-20..24 remain)
+Next: Execute 34.2-20-PLAN.md (gap cycle 3 continues, WR-02). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
