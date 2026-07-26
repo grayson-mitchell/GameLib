@@ -491,6 +491,59 @@ and **this re-plumb series' first blocking live gate** (5 named items, not a 29-
   for this cluster either — that is exactly how G-30-02 was declared fixed twice while the live
   build hung.
 
+### Steam completion and Humble cluster (real, Phase 34.4) — CLOSED, moved out of §3
+
+**Ported in Phase 34.4** (`tauri-ipc-re-plumb-slice-7-steam-completion-and-humble`, plans
+34.4-01..34.4-08). Full enumerated list, one row per channel with its kind/backed-by/proof-level,
+in `.planning/phases/34.4-tauri-ipc-re-plumb-slice-7-steam-completion-and-humble/34.4-PORTED-CHANNELS.md`.
+This slice wires 31 channels — the remaining Steam surface (credential/SteamGuard login,
+session/identity, macOS CrossOver bottle, guided client install, private branches, redeem/install
+size) plus the portable half of Humble (everything that does not touch Chromium).
+
+- **Channel-kind breakdown: 13 genuinely-Steam channels, 2 corrected-to-GOG, 16 Humble.** No new
+  port kind — this slice uses exactly the two kinds Phases 30–34.3 established: `sidecar invoke`
+  (29 channels) and `sidecar send` (2 channels). **Kind is the recurring hazard in this sequence,
+  so name both `send` channels explicitly: `logoutSteam`** (the G-30-01 channel — its failure
+  mode produces no reject, no timeout and no console line) **and `humbleDisconnect`**. A third
+  channel, `humbleRecordGiftLinkOpened`, was corrected FROM a claimed `send` TO its real `handle`
+  kind during this slice — `34.4-CONTEXT.md`'s Discretion section had it wrong. **Zero new
+  `dispatch_rust_channel` arms** — the running arm count stays at 13 (last changed by Phase
+  34.3's clipboard pair); the Steam login path is `steam-session` running headless (already
+  proven by the ported QR flow) and the bottle/client-setup channels are Node `child_process`
+  work, so nothing here needed a Rust seam.
+- **The scope surgery, stated plainly.** This slice was deliberately re-scoped from the
+  inventory's original 38 to 31: `isLoggedIn` moved to Phase 34.5 (D-03, it is
+  `LegendaryUser.isLoggedIn()` — Epic auth, filed here only because the inventory groups by file),
+  and 6 Humble browser-auth channels moved to the newly-inserted **Phase 34.4.1** (D-01/D-02),
+  because the `<webview>`/`session.fromPartition` seam they need is shared with Phase 34.5's
+  Epic/GOG/Amazon logins and does not belong inside a store-completion slice. Phase 34.4.1 runs
+  BEFORE Phase 34.5 for exactly that reason.
+- **Accepted-gap riders**, all declared in `34.4-PORTED-CHANNELS.md`, not left to a reviewer's
+  memory: `humbleDisconnect`'s **declared partial (D-05)** — the stored encrypted cookie delete
+  IS the real, functional sign-out and runs independent of the best-effort Chromium
+  partition-wipe no-op, but Phase 34.4.1 **must revisit it** once a real browser context exists,
+  or 34.4.1 silently inherits a half-finished sign-out; `redeemSteamKey`/`steamBottleProvision`
+  as **unit-proven-only, never live-run, per D-08** (a redemption is irreversible, a bottle
+  provision downloads real CrossOver bits — neither belongs in a repeatable port-slice gate); and
+  `humbleRunValidation`'s packaged-guard decision, **resolved** (not declared) via a new
+  `isPackagedSidecar()` helper built on `require('node:sea').isSea()`.
+- **Claim level (Phase 34.4): this slice ran a BLOCKING 5-item live gate (D-08), carrying 34.3's
+  D-11/D-13 precedent rather than reverting to the earlier unit-only precedent.** The deciding
+  evidence is `logoutSteam` itself — the G-30-01 channel, structurally invisible to jest
+  assertions on failure. The five items: (1) credential + SteamGuard login reaches a signed-in,
+  populated library; (2) `logoutSteam` actually signs out; (3) `getSteamUserInfo`/
+  `getSteamSyncedAt` return real data after that login; (4) `humbleSync`+`humbleGetKeys` run
+  against a real session and return the real key list; (5) `steamBottleStatus`/
+  `isSteamBottleProvisioned` report truthfully on macOS. All five ran under `pnpm tauri:dev` with
+  **deliberately NO packaged-build item (D-10)** — unlike 34.3's D-12, nothing in this slice's
+  content (login, sign-out, data reads, a status check) depends on the dev-vs-packaged sidecar
+  spawn path, and the one path that does differ when signed (Phase 28's keyring seam) is already
+  exercised by the previously-ported QR login. This is a decision, recorded here so the omission
+  reads as one, not an oversight. Plan 34.4-10 runs this gate AFTER this document was written;
+  the gate's result is recorded in `34.4-LIVE-GATE.md`. Do not read "wired and unit-proven" as
+  "seen working" for this cluster either — that is exactly how G-30-02 was declared fixed twice
+  while the live build hung.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
@@ -529,9 +582,9 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 |---|---|---|---|
 | 1 | `app` (lifecycle beyond getPath/getName) | 26 | **Partially closed, Phase 33 + Phase 34.1** — `quit`/`exit`/`relaunch` are real since Phase 33 (`AppHandle::exit()`/`restart()`), fixing the "zombie sidecar" gap. **Tray registration is now CLOSED (Phase 34.1, bounded)** — see the new §1 subsection and `34.1-PORTED-CHANNELS.md`'s re-deferral list for exactly what's still out of scope (recent-games submenu, dock menu, etc., target Phase 35). Updater hooks and custom-protocol registration remain deferred — target **Phase 34/35** |
 | 2 | `dialog` | 9 | **Fully closed, Phase 33.** `showMessageBox` now real multi-button (`MessageDialogButtons::OkCancelCustom`, per-caller `cancelId` fail-safe, D-07) — retires the Phase 31 CR-01 safe-sentinel stopgap. Joins `showErrorBox`/`showSaveDialog` (Phase 31) and `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, no in-scope caller re-examined this phase, target **Phase 35** |
-| 3 | `BrowserWindow` (full window management) | 7 | **Partially closed, Phase 34.1** — real multi-window now exists via `WebviewWindow` for `createNewWindow`/`showAboutWindow` (D-12, renderer-side Tauri JS, zero new Rust arms). What remains deferred is the `<webview>` login story (navigation interception, OAuth redirect capture, session/cookie access) — target **Phase 34.4** |
+| 3 | `BrowserWindow` (full window management) | 7 | **Partially closed, Phase 34.1** — real multi-window now exists via `WebviewWindow` for `createNewWindow`/`showAboutWindow` (D-12, renderer-side Tauri JS, zero new Rust arms). What remains deferred is the `<webview>` login story (navigation interception, OAuth redirect capture, session/cookie access) — **re-targeted from Phase 34.4 to Phase 34.4.1** (Phase 34.4 D-01: the seam is cross-cutting, shared with Phase 34.5's Epic/GOG/Amazon logins, and does not belong inside a store-completion slice; Phase 34.4.1 runs BEFORE Phase 34.5 for that reason) |
 | 4 | `shell` (remaining methods) | 5 | **Mostly closed, Phase 33** — `showItemInFolder`/`openPath` now real via `tauri-plugin-opener`. `trashItem` stays a LOGGED no-op (Accepted Constraint below, no vetted Tauri v2 plugin has trash capability) — target **Phase 35 revisit** |
-| 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **CLOSED for the QR branch, Phase 30** (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04). The credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) remain deferred (D-02) — natural home is whichever future phase needs sign-in without a phone |
+| 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **Fully closed, Phase 34.4.** The QR branch closed in Phase 30 (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04); the credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) — deferred here since Phase 30 D-02 — are now also ported, unit-proven, and covered by a blocking live gate. See the new `### Steam completion and Humble cluster (real, Phase 34.4)` subsection in §1 above and `34.4-PORTED-CHANNELS.md` for the full per-channel detail |
 | 6 | `nativeImage` | 4 | **Partially addressed, Phase 34.1** — the new tray (see §1) uses compile-time `include_bytes!` images rather than a `nativeImage` API call; per-platform icon resizing stays deferred — target **Phase 34/35** |
 | 7 | `Notification` | 3 | **Fully closed, Phase 33** — real via the new `tauri-plugin-notification` plugin (`isSupported()` → `true`, `.show()` forwards title/body) |
 | 8 | `session`/`screen`/`net`/`Menu` | 2 each | **Partially closed, Phase 33** — `net`'s online-monitor half moved toward real (`initOnlineMonitor()` wired into sidecar `bootstrap.ts`, `net.isOnline()` added to the stub); `session` stays a LOGGED no-op (Accepted Constraint below, D-09). `screen`/`Menu` untouched — target **Phase 34/35** |
