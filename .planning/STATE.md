@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-27-PLAN.md (WR-06 signal-2/3 diagnosis + WR-03 prettier regression closed, gap cycle 4 plan 3 of 6)
-last_updated: "2026-07-26T03:45:34.619Z"
+stopped_at: Completed 34.2-30-PLAN.md — GAP CYCLE 4 fully executed (30/30 plans). Round-4 code review + verification both ran; verification status gaps_found (1 blocker in gap-cycle-4's own gate infrastructure). Phase NOT marked complete.
+last_updated: "2026-07-26T18:45:00Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
@@ -33,21 +33,53 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 4)
-Plan: 27 of 30 done. Plans 34.2-01..27 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
-plans 34.2-25/26/27 done). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
-`34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after one revision round (blocker:
-34.2-25's Test 9 node:os source gate flagged its own sibling test — closed by a declared 3-entry
-exclusion allowlist with a self-match break check). Next: finish wave 1 (34.2-28), then
-wave 2 (34.2-29), then wave 3 (34.2-30), then a FOURTH verification round for the phase as a
-whole.
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 4 EXECUTED,
+verification round 4 = gaps_found. Phase NOT complete.
+Plan: 30 of 30 done. Gap cycle 4 (34.2-25..30, 3 waves) is fully executed as of 2026-07-26:
+34.2-25/26/27 ran earlier that day; **34.2-28 (WR-04 vacuous Rust test-module gate + WR-08
+comment-stripper truncation), 34.2-29 (WR-01/WR-02/WR-05, CR-02 secondary, WR-10), and 34.2-30
+(REQ-34.2-13 declaration currency, currency-gate.py extended for cycle 4 without weakening
+cycle 3) executed this session.** All 14 findings of `34.2-REVIEW-GAP-CYCLE-3.md` are reconciled
+in `34.2-PORTED-CHANNELS.md`.
 
-NOTE for the executor: 34.2-26's new suite (`loggerCallSiteGuard.test.ts`) still deliberately
-trips `testContainment.test.ts`'s Block C classification tripwire (confirmed live on the
-post-34.2-26 full backend sweep) — that red is EVIDENCE the tripwire is live, not a regression.
-34.2-29 (wave 2) closes it by registering the file in `STRUCTURALLY_CONTAINED_SUITES`. 34.2-26 was
-(and future plans before 34.2-29 remain) forbidden from editing `testContainment.test.ts` directly
-— confirmed via `git diff --exit-code` on that file across all three of 34.2-26's task commits.
+Round-4 gates then ran on the whole phase:
+- `34.2-REVIEW-GAP-CYCLE-4.md` (code review, 12 files, standard depth): **1 blocker, 11 warnings,
+  8 info.** Written to a per-cycle filename deliberately — the workflow's default `34.2-REVIEW.md`
+  would have overwritten the original cycle-1 review.
+- `34.2-VERIFICATION.md` (round 4): **status `gaps_found`.** All 14 requirement-level truths pass
+  at the production-behaviour level and the round-3 live-data-destruction blocker is confirmed
+  CLOSED (bootstrap.test.ts no longer touches the real `~/Library/Logs/GameLib/gamelib.log`;
+  mtimes byte-identical before/after). CR-01 and CR-02 from cycle 3 are genuinely fixed in
+  production, each with a functional (non-regex) backstop.
+
+**The round-4 blocker (the reason the phase is not complete):** the shared `stripComments` helper
+— duplicated in `testContainment.test.ts:198-203` and `loggerCallSiteGuard.test.ts:148-153` — is a
+LINE-PREFIX filter. It drops a line only when that line itself begins with a comment marker, so the
+interior of a block comment whose lines lack a `*` prefix survives stripping. Independently
+reproduced by executing the helper: a pure block comment merely NAMING the pattern satisfies
+`hasContainmentOsMock`, `assignsContainmentEnvVar('HOME')`, and `hasExpressionBodyErrorWrapper`.
+Those are precisely the gates gap cycle 4 built to close cycle-3's WR-01/WR-02 — so this phase's
+recurring "gate passes vacuously" defect reappeared one level deeper, in the fix for it. The
+CORRECT implementation (`stripCommentsForNodeOsGate`, strips `/\*[\s\S]*?\*\//g` first) already
+exists in the same gap cycle in `structuralContainment.test.ts:265-267` and was never propagated.
+Secondary: the 8 `process.env` assignments in `jest.setupContainment.ts` are covered ONLY by the
+now-vacuous text gate — deleting one goes fully undetected.
+
+Also measured, not inferred: `ensureContainmentRoot()` memoizes on `globalThis`, which Jest resets
+per test FILE, so `mkdtempSync` runs once per file and nothing deletes it — temp dirs went
+1968 → 2081 across one backend run (+113 = exactly the suite count).
+
+Tree state at hand-off: `npx tsc --noEmit` exits 0; full backend jest 112/113 suites,
+2325/2326 tests, sole failure `rustInvokeChannel.test.ts` (documented Phase 34.1 baseline, last
+touched in Phase 33, untouched by this phase); `python3 currency-gate.py` exits 0 enforcing both
+cycle-3 and cycle-4 sections. Known intermittent `withTimeout.test.ts` flake (library.ts leaked
+timer) appeared in one executor sweep, not in the orchestrator's.
+
+Next: either `/gsd-plan-phase 34.2 --gaps` for a gap cycle 5 (blocker + the 11 warnings), or a
+human override accepting the blocker as tracked meta-test-tooling debt — the verifier explicitly
+notes an override is defensible because the defect is in gate infrastructure, not in the 26 ported
+channels. **Security: `workflow.security_enforcement=true` and no `34.2-SECURITY.md` exists yet —
+`/gsd-secure-phase 34.2` is still owed regardless of which route is taken.**
 
 34.2-26 done -- GAP CYCLE 4, wave 1, second plan executed, CR-01 CLOSED (the WR-02 call-site
 rejection guard added by gap cycle 3 was inert in production — `logError()` returned `undefined`
