@@ -1046,3 +1046,72 @@ fn main() {
             }
         });
 }
+
+/// Behavioral tests over `timeout_for()` (Phase 34.2 gap cycle 3, plan 22) — closes the warning
+/// carried forward across all three of this phase's verification rounds: no Rust-side test
+/// proved `timeout_for()` actually consults `LONG_RUNNING_CHANNELS`. The JS-side
+/// `src/backend/__tests__/longRunningChannels.test.ts` gate covers the array's CONTENTS (a
+/// comment-stripped source assertion, set-equality); this module covers the FUNCTION's
+/// BEHAVIOR — if `timeout_for` ever reverted to an unconditional `Some(INVOKE_TIMEOUT)` or an
+/// unconditional `None`, every test in that JS file would still pass unchanged, but the tests
+/// below would not (see `34.2-22-SUMMARY.md` for the hand-verified RED proof in both
+/// directions). This project's CI runs no cargo step at all (`.github/workflows/*.yml` contains
+/// neither `cargo test` nor `cargo check`), so these tests are run manually
+/// (`cd src-tauri && cargo test`) and their continued existence is pinned by a jest gate in the
+/// JS file above rather than by any automated Rust step.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exempt_channel_waits_indefinitely() {
+        assert_eq!(timeout_for("install"), None);
+    }
+
+    #[test]
+    fn non_exempt_channel_is_bounded_at_invoke_timeout() {
+        // Fails if timeout_for ever reverts to an unconditional None.
+        assert_eq!(timeout_for("getGameInfo"), Some(INVOKE_TIMEOUT));
+    }
+
+    #[test]
+    fn repair_and_read_config_are_exempt() {
+        // The two channels gap cycle 1 added; REQ-34.2-12 depends on both staying exempt.
+        assert_eq!(timeout_for("repair"), None);
+        assert_eq!(timeout_for("readConfig"), None);
+    }
+
+    #[test]
+    fn get_crossover_index_is_exempt() {
+        // Added by REQ-34.2-12 / D-10.
+        assert_eq!(timeout_for("getCrossoverIndex"), None);
+    }
+
+    #[test]
+    fn every_long_running_channel_is_exempt_and_a_non_member_is_bounded() {
+        // Iterated over LONG_RUNNING_CHANNELS rather than a hardcoded literal list, so a ninth
+        // exempt channel does not require editing this test — the hardcoded-list responsibility
+        // already lives in the JS gate above, and duplicating it here would create a second list
+        // to keep in sync.
+        for channel in LONG_RUNNING_CHANNELS {
+            assert_eq!(
+                timeout_for(channel),
+                None,
+                "expected {channel} (a LONG_RUNNING_CHANNELS member) to wait indefinitely"
+            );
+        }
+        // Non-vacuous in both directions: an unconditional None would fail only this half, an
+        // unconditional Some would fail only the loop above. getGameSettings is a real,
+        // non-exempt channel this phase ported (src/backend/gamedetails/dispatch.ts), not a
+        // made-up string.
+        assert_eq!(timeout_for("getGameSettings"), Some(INVOKE_TIMEOUT));
+    }
+
+    #[test]
+    fn invoke_timeout_is_60_seconds() {
+        // Pins the bound so the D-10 boundary cannot be "solved" by raising the global timeout
+        // instead of exempting a specific channel (mirrors the JS gate's own reasoning,
+        // asserted here behaviorally).
+        assert_eq!(INVOKE_TIMEOUT, Duration::from_secs(60));
+    }
+}
