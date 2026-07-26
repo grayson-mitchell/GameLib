@@ -454,6 +454,11 @@ const IN_SCOPE_SUITES = [
  * `appShellFlows.test.ts`/`shellFilesFlows.test.ts`, calling
  * `registerClipboardFlows()` directly rather than booting the full sidecar
  * via `../bootstrap`'s `init()`.
+ *
+ * `humbleFlows.test.ts` (Phase 34.4 Plan 04) is classified as structurally
+ * contained: it uses the identical `electron`/`electron-store` mock kit
+ * already classified here for `steamAuthFlows.test.ts`, driving the real
+ * sidecar via `../bootstrap`'s `init()`.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -467,6 +472,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'electronUntouched.test.ts',
   'fileStore.test.ts',
   'gameDetailsImportGate.test.ts',
+  'humbleFlows.test.ts',
   'installFlows.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
