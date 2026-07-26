@@ -1315,7 +1315,7 @@ Plans:
 **Goal:** Port the **game details, settings and overrides** IPC cluster (26 channels): per-game info/settings/overrides, SDL selection, launch options, install-path changes, version pinning, repair/kill, and the enrichment surfaces (wiki game info, anticheat status, known fixes, CrossOver index, store search, recent games). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.2-01, REQ-34.2-02, REQ-34.2-03, REQ-34.2-04, REQ-34.2-05, REQ-34.2-06, REQ-34.2-07, REQ-34.2-08, REQ-34.2-09, REQ-34.2-10, REQ-34.2-11, REQ-34.2-12, REQ-34.2-13, REQ-34.2-14
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 24/24 plans complete
+**Plans:** 30 plans (24/30 complete — gap cycle 4 planned 2026-07-26)
 
 Plans:
 - [x] 34.2-01-PLAN.md — D-02/D-07 the two sidecar bootstrap wirings (i18next init, `fetchLastestReleases()` + the re-homed `releasesInfoReady` anticheat listener) with NON-MOCKED proof
@@ -1365,10 +1365,26 @@ Wave 2 *(blocked on Wave 1 — reads `loggerFlows.test.ts` and gates the new `se
 Wave 3 *(blocked on Waves 1–2 — documents their outcome)*
 - [x] 34.2-24-PLAN.md — REQ-34.2-13 currency: gap cycle 3 reconciliation in `34.2-PORTED-CHANNELS.md`, reasoned deferrals for WR-05/WR-06/IN-01/IN-03/IN-06 in `deferred-items.md`, VALIDATION rows, plus a committed `currency-gate.py` that turns staleness into a non-zero exit
 
+**Gap cycle 4** *(planned 2026-07-26 — the cycle-3 CODE REVIEW (`34.2-REVIEW-GAP-CYCLE-3.md`, 2 critical / 12 warnings) empirically DISPROVED two of gap cycle 3's three claims. `34.2-VERIFICATION.md` on disk is STALE (cycle 2's round); the review is the authoritative gap source. Meta-finding this cycle answers: each of the last three cycles fixed its named gap and introduced a new one, and in each case the cycle's own new tests were structurally incapable of detecting the shortfall — so every plan here writes its proof FIRST and records the RED observed against the then-current code.)*
+
+Wave 1 *(no `files_modified` overlap — all four may run in parallel)*
+- [ ] 34.2-25-PLAN.md — CR-02 (BLOCKER) + WR-07/WR-09/WR-10/WR-11/WR-12: containment is specifier-dependent (`jest.mock('os')` leaves `node:os.homedir()` returning the real `$HOME`, measured live; `userInfo().homedir` unredirected). Dual-specifier factory, `mkdtempSync`+`chmodSync 0o700` root, a `setupFiles`-time precondition that ABORTS rather than detects, and a portable anti-vacuity check anchored on the per-run root
+- [ ] 34.2-26-PLAN.md — CR-01 (BLOCKER) + WR-03/WR-10: the WR-02 `.catch` guard is INERT (`logger/index.ts:25-27` block-body arrows return `undefined`, so `Promise.resolve(undefined).catch` can never fire) and its four tests only pass because they `jest.spyOn` a promise shape that never occurs at runtime. Adds a promise-returning `logErrorSettled`, guards the sync-throw path, and replaces the fabricated proof with a stub-free `ENOTDIR` one
+- [ ] 34.2-27-PLAN.md — WR-06 + WR-03: `repairFailure.ts` swallows a missing `window.api.logError` in an empty catch — the exact silent-void class this phase exists to close — and signal 3's `t`/`showDialogModal` are unguarded contrary to the docstring's T-34.2-53 claim
+- [ ] 34.2-28-PLAN.md — WR-04 + WR-08: the Rust-test presence gate counts `timeout_for` in COMMENTS (a zero-assertion module satisfies it), and `loadMainRsCode()`'s `//` stripper will truncate a future `"steam://…"` literal
+
+Wave 2 *(blocked on Wave 1 — asserts on 34.2-25's containment shape and classifies 34.2-26's new suite)*
+- [ ] 34.2-29-PLAN.md — WR-01 + WR-02 + WR-05 + CR-02 secondary + WR-10: Block D's HOME gate self-satisfies from a docblock and never gates the mock the module itself calls load-bearing; Block C's self-tests emit two misleading noise failures the moment the real gate fires; `jest.config.js`'s backend-only scope claim becomes an enforced cross-project gate
+
+Wave 3 *(blocked on Waves 1–2 — documents their outcome)*
+- [ ] 34.2-30-PLAN.md — REQ-34.2-13 currency: gap cycle 4 reconciliation in `34.2-PORTED-CHANNELS.md` naming all 14 findings with evidence (incl. the three places the remedy diverged from the review's literal prescription), `currency-gate.py` extended with cycle-4 constants and a newest-section-last ordering rule, VALIDATION rows, and `D4-DEF-01`/`D4-DEF-02` reasoned deferrals
+
 Cross-cutting constraints:
 - `npx tsc --noEmit` and `cd src-tauri && cargo check --quiet` stay clean
 - Backend suite baseline is 108/109 suites, 2237/2238 tests (measured 2026-07-26 during re-verification; was 105/106 · 2211/2212 before gap cycle 1) — the sole failure (`rustInvokeChannel.test.ts`) is pre-existing since Phase 34.1 and explicitly out of scope
 - Additive and reversible: the Electron build keeps working unchanged (REQ-34.2-14)
+- `npx prettier --check` on every file this cycle touches must exit 0 — newly load-bearing since gap cycle 3 regressed two production files from clean to dirty and `.github/workflows/lint.yml:19` runs `pnpm prettier`
+- Proof standard (gap cycle 4): every new test states how it goes RED against the then-current code, no proof may stub the function under test, and every corrected gate carries a self-test proving it rejects the input it previously accepted
 
 ### Phase 34.3: Tauri IPC re-plumb slice 6 — shell, files, logs and diagnostics (INSERTED)
 
