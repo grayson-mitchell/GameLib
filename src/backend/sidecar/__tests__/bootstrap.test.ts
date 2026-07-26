@@ -98,16 +98,27 @@ async function flush(): Promise<void> {
 
 describe('sidecar bootstrap (headless boot)', () => {
   // Containment tripwire (Phase 34.2 gap cycle 3, plan 34.2-19 --
-  // REQ-34.2-07/-14). FIRST test in this describe block, deliberately, so it
-  // runs before any of the real init() calls below. Asserts the real,
-  // unmocked getLogFilePath({}) from backend/logger/paths -- the exact call
-  // initHeadless() makes, and the exact value that was rotating the real
-  // ~/Library/Logs/GameLib/gamelib.log -- resolves inside os.tmpdir(). This
-  // suite carries no jest.mock for os/pathShim/backend/logger/paths of its
-  // own; containment comes entirely from src/backend/jest.setupContainment
-  // .ts's project-wide setupFiles registration. If a future edit removes
-  // that setupFiles entry, THIS test fails locally, at the exact site of
-  // the historical defect, not only in a distant gate file.
+  // REQ-34.2-07/-14). FIRST test in this describe block, but this is a
+  // DETECTOR, not a preventer (corrected 34.2-29, WR-10 remaining half):
+  // being the first `it` in this describe only means it runs before the
+  // real `init()` calls further down in THIS test body -- it does NOT run
+  // before this file's own module-scope imports (`../bootstrap`,
+  // `../../logger/paths`, line 66-75 above), and `constants/paths.ts`
+  // performs real filesystem work (an `app.getPath('appData')` read plus a
+  // conditional `mkdirSync`) at module scope, i.e. before ANY test body in
+  // this file runs, tripwire included. The actual preventer is
+  // `src/backend/jest.setupContainment.ts`'s `setupFiles`-time precondition
+  // (added by plan 34.2-25): `setupFiles` entries run once per test file,
+  // strictly BEFORE that file's own imports are evaluated, so containment
+  // is already in place by the time this file's module-scope imports above
+  // execute -- something a first-test tripwire structurally cannot do. This
+  // test carries no jest.mock for os/pathShim/backend/logger/paths of its
+  // own; containment comes entirely from that setupFiles registration. Its
+  // real value is as LOCALISED DOCUMENTATION at the exact site of the
+  // historical defect: if a future edit removes the setupFiles entry, this
+  // test still fails HERE too, not only in a distant gate file -- it just
+  // does so as a second, redundant detector, not as the mechanism that kept
+  // the destruction from happening in the first place.
   it('containment tripwire: getLogFilePath({}) resolves inside os.tmpdir(), not the developer real home', () => {
     const logPath = getLogFilePath({})
     const tmpRoot = resolve(tmpdir())
@@ -149,7 +160,9 @@ describe('sidecar bootstrap (headless boot)', () => {
 
     await flush()
 
-    const responseLine = lines.find((line) => line.includes('"id":"test-ping-1"'))
+    const responseLine = lines.find((line) =>
+      line.includes('"id":"test-ping-1"')
+    )
     expect(responseLine).toBeDefined()
     expect(JSON.parse(responseLine as string)).toEqual({
       id: 'test-ping-1',

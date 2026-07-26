@@ -513,9 +513,7 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
       const stripped = stripComments(
         readFileSync(join(__dirname, name), 'utf-8')
       )
-      expect(stripped).toMatch(
-        /jest\.mock\(\s*['"]backend\/logger\/paths['"]/
-      )
+      expect(stripped).toMatch(/jest\.mock\(\s*['"]backend\/logger\/paths['"]/)
     }
   )
 
@@ -573,7 +571,7 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
   // self-test): stripComments must remove a comment-only line naming a
   // forbidden pattern before matching, proving the stripper itself works
   // rather than merely asserting a raw grep would pass.
-  it('gate self-test: stripComments removes a comment-only jest.mock(\'../pathShim\' line before matching', () => {
+  it("gate self-test: stripComments removes a comment-only jest.mock('../pathShim' line before matching", () => {
     const source = [
       "// this comment intentionally says: jest.mock('../pathShim', () => {})",
       "import { readFileSync } from 'fs'"
@@ -617,9 +615,7 @@ function diffSuiteClassification(
   const unclassified = actualFiles
     .filter((name) => !declaredSet.has(name))
     .sort()
-  const phantom = declaredNames
-    .filter((name) => !actualSet.has(name))
-    .sort()
+  const phantom = declaredNames.filter((name) => !actualSet.has(name)).sort()
   return { unclassified, phantom }
 }
 
@@ -868,3 +864,135 @@ describe('Block D: structural containment gate -- gates BOTH the load-bearing os
 // commented out; running this suite made the "still wires a setupFiles
 // entry" test above fail; the entry was restored and
 // `git diff --exit-code src/backend/jest.config.js` returned 0.
+
+// ── Block E: cross-project containment scope gate (plan 34.2-29,
+// CR-02 secondary) ───────────────────────────────────────────────────────
+//
+// `src/backend/jest.config.js`'s `setupFiles` comment justifies registering
+// `jest.setupContainment.ts` on the Backend project ONLY by asserting the
+// destruction path is "reachable only from `src/backend`, so the
+// frontend/common/preload/meta jest projects are deliberately untouched" --
+// true today, hand-maintained, and previously UNENFORCED: nothing failed if
+// a `meta` or `preload` suite started importing `backend/logger` tomorrow.
+// This block converts that assumption into an enforced invariant: if a
+// frontend/common/preload/meta test file ever imports one of the four
+// containment-relevant module specifiers below, it would run WITHOUT the
+// containment `setupFiles` entry (that entry is registered on the Backend
+// jest project only), reopening the destruction path in a project nobody is
+// watching for it. `meta/__tests__/buildSidecarSea.test.ts` reads backend
+// source as TEXT only (an esbuild `--alias:electron=./src/backend/...`
+// CLI-arg string) -- this gate matches only quoted import/require
+// specifiers, never an arbitrary string mention, so that file continues to
+// be allowed.
+
+/** Module specifiers whose real implementation reaches the destruction path
+ * `jest.setupContainment.ts` exists to contain (`os.homedir()` /
+ * `getBaseLogPath()` / `resolveAppDataDir()`). */
+const CONTAINMENT_MODULE_SPECIFIERS = [
+  'backend/logger',
+  'backend/logger/paths',
+  'backend/constants/paths',
+  'backend/sidecar/pathShim'
+]
+
+/**
+ * True if comment-stripped `source` contains an `import ... from` or
+ * `require(...)` specifier naming `moduleSpecifier`, either as the bare
+ * form (`'backend/logger'`, resolved via this project's `baseUrl`) or a
+ * relative form ending in the same path (`'../../../backend/logger'`, any
+ * number of `../` segments). Matches only within a quoted import/require
+ * specifier -- never an arbitrary string mention elsewhere in the file.
+ */
+function importsContainmentModule(
+  source: string,
+  moduleSpecifier: string
+): boolean {
+  const stripped = stripComments(source)
+  const escaped = moduleSpecifier.replace(/\//g, '\\/')
+  const pattern = new RegExp(
+    `(?:from\\s+|require\\(\\s*)['"](?:\\.\\./)*${escaped}['"]`
+  )
+  return pattern.test(stripped)
+}
+
+/** Recursively collects every `*.test.ts`/`*.test.tsx` file under `rootDir`,
+ * skipping `node_modules`. Returns `[]` for a directory that does not
+ * exist, so a project that has not yet grown any tests does not crash the
+ * gate. */
+function collectTestFilesRecursive(rootDir: string): string[] {
+  if (!existsSync(rootDir)) return []
+  const results: string[] = []
+  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules') continue
+    const fullPath = join(rootDir, entry.name)
+    if (entry.isDirectory()) {
+      results.push(...collectTestFilesRecursive(fullPath))
+    } else if (entry.isFile() && /\.test\.tsx?$/.test(entry.name)) {
+      results.push(fullPath)
+    }
+  }
+  return results
+}
+
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
+const EXTERNAL_PROJECT_DIRS = [
+  join(REPO_ROOT, 'src', 'frontend'),
+  join(REPO_ROOT, 'src', 'common'),
+  join(REPO_ROOT, 'src', 'preload'),
+  join(REPO_ROOT, 'meta')
+]
+
+interface ContainmentImportViolation {
+  file: string
+  specifier: string
+}
+
+/** Every (file, specifier) pair where a frontend/common/preload/meta
+ * `*.test.ts(x)` file imports a containment-relevant backend module. */
+function findCrossProjectContainmentViolations(): ContainmentImportViolation[] {
+  const violations: ContainmentImportViolation[] = []
+  for (const projectDir of EXTERNAL_PROJECT_DIRS) {
+    for (const filePath of collectTestFilesRecursive(projectDir)) {
+      const source = readFileSync(filePath, 'utf-8')
+      for (const specifier of CONTAINMENT_MODULE_SPECIFIERS) {
+        if (importsContainmentModule(source, specifier)) {
+          violations.push({ file: relative(REPO_ROOT, filePath), specifier })
+        }
+      }
+    }
+  }
+  return violations
+}
+
+describe('Block E: cross-project containment scope gate (plan 34.2-29, CR-02 secondary)', () => {
+  it('no frontend/common/preload/meta *.test.ts(x) file imports a containment-relevant backend module', () => {
+    expect(findCrossProjectContainmentViolations()).toEqual([])
+  })
+
+  it('self-test: a synthetic source importing backend/logger is detected', () => {
+    const synthetic = "import { logInfo } from 'backend/logger'\n"
+    expect(importsContainmentModule(synthetic, 'backend/logger')).toBe(true)
+  })
+
+  it('self-test: a synthetic source importing an unrelated backend module is accepted (not flagged by any containment specifier)', () => {
+    const synthetic = "import type { ValidStoreName } from 'common/types'\n"
+    for (const specifier of CONTAINMENT_MODULE_SPECIFIERS) {
+      expect(importsContainmentModule(synthetic, specifier)).toBe(false)
+    }
+  })
+
+  it('self-test: a relative-form import (../../../backend/logger/paths) is detected the same as the bare form', () => {
+    const synthetic =
+      "import { getLogFilePath } from '../../../backend/logger/paths'\n"
+    expect(importsContainmentModule(synthetic, 'backend/logger/paths')).toBe(
+      true
+    )
+  })
+})
+
+// BLOCK E DELIBERATE-BREAK PROOF (recorded verbatim in 34.2-29-SUMMARY.md):
+// a real `import { getLogFilePath } from 'backend/logger/paths'` line was
+// temporarily added to `src/common/types/__tests__/storePolicy.test.ts`;
+// running this suite made the real-file gate above fail, naming that exact
+// file and specifier; the line was reverted and
+// `git status --porcelain` confirmed clean.
