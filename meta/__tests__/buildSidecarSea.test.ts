@@ -56,23 +56,43 @@ describe('buildSeaConfigPath', () => {
 
 describe('buildPostjectArgv (postject invocation shape, Pattern 3)', () => {
   test('contains the exact sentinel fuse string verbatim', () => {
-    const argv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const argv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     expect(argv.args).toEqual(expect.arrayContaining([SENTINEL_FUSE]))
   })
 
   test('the NODE_SEA macho-segment flag appears only for darwin triples', () => {
-    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const darwinArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     expect(darwinArgv.args).toEqual(expect.arrayContaining(['NODE_SEA']))
 
-    const winArgv = buildPostjectArgv('gamelib-sidecar.exe', 'sidecar-prep.blob', 'win32')
+    const winArgv = buildPostjectArgv(
+      'gamelib-sidecar.exe',
+      'sidecar-prep.blob',
+      'win32'
+    )
     expect(winArgv.args).not.toEqual(expect.arrayContaining(['NODE_SEA']))
 
-    const linuxArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'linux')
+    const linuxArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'linux'
+    )
     expect(linuxArgv.args).not.toEqual(expect.arrayContaining(['NODE_SEA']))
   })
 
   test('the postject argv itself never references codesign directly', () => {
-    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const darwinArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     expect(darwinArgv.command).toBe(process.execPath)
     expect(darwinArgv.args[0]).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
     expect(JSON.stringify(darwinArgv)).not.toMatch(/codesign/)
@@ -100,7 +120,9 @@ describe('buildCodesignArgv (codesign only on macOS, Pattern 3 strip+re-sign)', 
 describe('resolveTriple (CR-01: target-driven, not host-driven)', () => {
   test('returns the override when GAMELIB_SIDECAR_TARGET_TRIPLE is set', () => {
     expect(
-      resolveTriple({ GAMELIB_SIDECAR_TARGET_TRIPLE: 'x86_64-unknown-linux-gnu' })
+      resolveTriple({
+        GAMELIB_SIDECAR_TARGET_TRIPLE: 'x86_64-unknown-linux-gnu'
+      })
     ).toBe('x86_64-unknown-linux-gnu')
   })
 
@@ -109,7 +131,9 @@ describe('resolveTriple (CR-01: target-driven, not host-driven)', () => {
   })
 
   test('falls back to hostTriple() when the var is the empty string (unset matrix field)', () => {
-    expect(resolveTriple({ GAMELIB_SIDECAR_TARGET_TRIPLE: '' })).toBe(hostTriple())
+    expect(resolveTriple({ GAMELIB_SIDECAR_TARGET_TRIPLE: '' })).toBe(
+      hostTriple()
+    )
   })
 
   test('CR-01 REGRESSION: an x86_64-apple-darwin override yields the x86_64 output filename, not aarch64', () => {
@@ -205,24 +229,42 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
   })
 
   test('buildPostjectArgv(...).command is process.execPath, not the bare "postject" string', () => {
-    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const darwinArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     expect(darwinArgv.command).toBe(process.execPath)
   })
 
   test('buildPostjectArgv(...).args[0] resolves to an existing postject/dist/cli.js file', () => {
-    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const darwinArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     expect(darwinArgv.args[0]).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
     expect(existsSync(darwinArgv.args[0])).toBe(true)
   })
 
   test('buildPostjectArgv(...).args carries the sentinel fuse + darwin NODE_SEA flag AFTER the CLI path', () => {
-    const darwinArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const darwinArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     const cliIndex = 0
-    expect(darwinArgv.args).toEqual(expect.arrayContaining([SENTINEL_FUSE, 'NODE_SEA']))
+    expect(darwinArgv.args).toEqual(
+      expect.arrayContaining([SENTINEL_FUSE, 'NODE_SEA'])
+    )
     expect(darwinArgv.args.indexOf(SENTINEL_FUSE)).toBeGreaterThan(cliIndex)
     expect(darwinArgv.args.indexOf('NODE_SEA')).toBeGreaterThan(cliIndex)
 
-    const winArgv = buildPostjectArgv('gamelib-sidecar.exe', 'sidecar-prep.blob', 'win32')
+    const winArgv = buildPostjectArgv(
+      'gamelib-sidecar.exe',
+      'sidecar-prep.blob',
+      'win32'
+    )
     expect(winArgv.args).not.toEqual(expect.arrayContaining(['NODE_SEA']))
   })
 
@@ -285,6 +327,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
         '--target=node22',
         '--format=cjs',
         '--alias:electron=./src/backend/sidecar/electronStub.ts',
+        '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
         '--inject:./meta/sidecarSeaFsShim.ts'
       ])
     )
@@ -298,7 +341,11 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
   // replaces them checks the property that actually matters for every spawn
   // this file performs: the command is a real file on disk, on every OS.
   test('every command this script spawns resolves to a file that exists on disk', () => {
-    const postjectArgv = buildPostjectArgv('gamelib-sidecar', 'sidecar-prep.blob', 'darwin')
+    const postjectArgv = buildPostjectArgv(
+      'gamelib-sidecar',
+      'sidecar-prep.blob',
+      'darwin'
+    )
     const esbuildArgv = buildEsbuildArgv()
     const seaBlobArgv = buildSeaBlobArgv()
 
@@ -318,7 +365,10 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
 
 describe('the tested argv is the executed argv (WR-10 guard)', () => {
   function loadStrippedBuildScript(): string {
-    const source = readFileSync(join(__dirname, '..', 'buildSidecarSea.ts'), 'utf-8')
+    const source = readFileSync(
+      join(__dirname, '..', 'buildSidecarSea.ts'),
+      'utf-8'
+    )
     return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   }
 

@@ -261,6 +261,19 @@ export function buildEsbuildArgv(
     '--target=node22',
     '--format=cjs',
     '--alias:electron=./src/backend/sidecar/electronStub.ts',
+    // 34.3-09 D-13 live-gate fix: esbuild resolves an `import` specifier's
+    // package.json `exports` map via the `import` condition regardless of
+    // the bundle's own `--format=cjs` output -- a dual-package hazard, not
+    // an esbuild bug. `i18next-fs-backend`'s `.` export's `import`/`default`
+    // condition points at `./esm/index.js`, whose `writeFile.js`/
+    // `readFile.js` use a top-level `await import(...)` Deno-detection
+    // guard -- unsupported in a cjs bundle, so `bootstrap.ts`'s
+    // `import Backend from 'i18next-fs-backend'` (added by 34.2-01's sidecar
+    // i18next init, D-02) broke this SEA bundle the moment it was reached.
+    // The package's OWN `./cjs` subpath export is plain CJS
+    // (`require('node:fs')`, no top-level await) -- alias forces esbuild to
+    // resolve there instead, matching the electron alias above.
+    '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
     '--inject:./meta/sidecarSeaFsShim.ts',
     `--outfile=${SEA_BUNDLE_PATH}`,
     SIDECAR_ENTRY_PATH
@@ -422,7 +435,9 @@ export function nodeDistUrls(
   innerBinaryPath: string
 } {
   if (!version.startsWith('v')) {
-    throw new Error(`nodeDistUrls: version must be v-prefixed, got "${version}"`)
+    throw new Error(
+      `nodeDistUrls: version must be v-prefixed, got "${version}"`
+    )
   }
   const dist = nodeDistName(triple)
   const isWindows = dist.startsWith('win-')
@@ -636,7 +651,9 @@ async function copyNodeBinary(triple: string): Promise<string> {
   const outputPath = sidecarOutputPath(triple)
   await mkdir(SIDECAR_BIN_DIR, { recursive: true })
   const source =
-    triple === hostTriple() ? process.execPath : await obtainCrossNodeBinary(triple)
+    triple === hostTriple()
+      ? process.execPath
+      : await obtainCrossNodeBinary(triple)
   await copyFile(source, outputPath)
   await chmod(outputPath, 0o755)
   return outputPath
@@ -659,7 +676,8 @@ async function copyNodeBinary(triple: string): Promise<string> {
 async function injectBlob(binaryPath: string, triple: string): Promise<void> {
   const targetPlatform = triplePlatform(triple)
   const codesignSteps = buildCodesignArgv(binaryPath, targetPlatform)
-  const canCodesign = process.platform === 'darwin' && targetPlatform === 'darwin'
+  const canCodesign =
+    process.platform === 'darwin' && targetPlatform === 'darwin'
 
   if (canCodesign && codesignSteps[0]) {
     const strip = await spawnArgv(
