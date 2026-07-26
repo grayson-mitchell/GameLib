@@ -1,8 +1,11 @@
 /**
  * Unit tests for the sidecar's real `dialog.*` forwarding paths (Phase 30 Plan 03's
  * `showOpenDialog` folder-picker, Phase 31 Plan 02's `showMessageBox`/`showErrorBox`/
- * `showSaveDialog`), plus the D-04 logged-no-op upgrades (shell.showItemInFolder,
- * clipboard.writeText) and a by-construction proof that `notify()`'s no-op is logged.
+ * `showSaveDialog`), the D-03 logged-no-op Sync members, and a by-construction proof that
+ * `notify()`'s no-op is logged. `shell.showItemInFolder` and `clipboard.writeText` both
+ * graduated from a D-04 logged no-op to real Rust forwarding (see the pointer comments below);
+ * `clipboard.readText()`'s documented-dead no-op assertion is the one surviving piece of D-04
+ * coverage still living in this file.
  *
  * There is no real Rust process here — `requestRustInvoke` (from `../sidecarRpc`) is mocked
  * with a small in-memory per-channel program, mirroring `keyringTokenStore.test.ts`'s
@@ -403,23 +406,13 @@ describe('electronStub dialog Sync members stay logged no-ops (D-03)', () => {
 
 // `shell.showItemInFolder`'s D-04 coverage was here until Phase 33 Plan 04 graduated it to real
 // forwarding (D-05) -- see `lifecycleStub.test.ts` for its current coverage. `clipboard.writeText`
-// is untouched by Phase 33 and stays a logged no-op.
-describe('electronStub clipboard D-04 logged no-op (REQ-31-04)', () => {
-  beforeEach(() => {
-    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    warnSpy.mockRestore()
-  })
-
-  it('clipboard.writeText logs a warning instead of silently no-oping', () => {
-    clipboard.writeText('some text')
-
-    expect(warnSpy).toHaveBeenCalledTimes(1)
-    const [warningArg] = warnSpy.mock.calls[0]
-    expect(String(warningArg)).toContain('clipboard.writeText')
-    expect(String(warningArg)).toContain('D-04')
+// followed the same path in Phase 34.3 Plan 05 (D-01/D-03) -- see `lifecycleStub.test.ts`'s
+// `electronStub clipboard.writeText real forwarding` describe block for its current coverage.
+// `clipboard.readText` did NOT graduate (D-04): it stays a documented, deliberately-dead
+// synchronous no-op, so its assertion remains here rather than being deleted.
+describe('electronStub clipboard — D-04 no-op GRADUATED to real forwarding (Phase 34.3 Plan 05, REQ-34.3-03/04)', () => {
+  it("clipboard.readText() still returns '' synchronously and is documented-dead (REQ-34.3-04)", () => {
+    expect(clipboard.readText()).toBe('')
   })
 })
 

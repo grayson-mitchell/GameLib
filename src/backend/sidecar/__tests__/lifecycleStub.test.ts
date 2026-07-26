@@ -28,7 +28,10 @@ jest.mock('os', () => {
   return {
     ...actual,
     homedir: () =>
-      path.join(actual.tmpdir(), `gamelib-lifecyclestub-test-home-${process.pid}`)
+      path.join(
+        actual.tmpdir(),
+        `gamelib-lifecyclestub-test-home-${process.pid}`
+      )
   }
 })
 
@@ -48,6 +51,7 @@ jest.mock('../sidecarRpc', () => ({
 import {
   Notification,
   app,
+  clipboard,
   net,
   powerSaveBlocker,
   session,
@@ -57,6 +61,8 @@ import { requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_APP_EXIT,
   RUST_APP_RELAUNCH,
+  RUST_CLIPBOARD_READ_TEXT,
+  RUST_CLIPBOARD_WRITE_TEXT,
   RUST_INVOKE_CHANNELS,
   RUST_NOTIFICATION_SHOW,
   RUST_SHELL_OPEN_PATH,
@@ -84,15 +90,19 @@ beforeEach(() => {
   warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   // resetMocks: true (jest.config.js) wipes even a factory-supplied implementation before every
   // test (same gotcha dialogStub.test.ts documents) — re-wire here.
-  mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
-    callLog.push({ channel, args })
-    if (!program) {
-      return Promise.reject(new Error(`no outcome programmed for channel: ${channel}`))
+  mockRequestRustInvoke.mockImplementation(
+    (channel: string, args: unknown[]) => {
+      callLog.push({ channel, args })
+      if (!program) {
+        return Promise.reject(
+          new Error(`no outcome programmed for channel: ${channel}`)
+        )
+      }
+      return program.type === 'resolve'
+        ? Promise.resolve(program.value)
+        : Promise.reject(program.error)
     }
-    return program.type === 'resolve'
-      ? Promise.resolve(program.value)
-      : Promise.reject(program.error)
-  })
+  )
 })
 
 afterEach(() => {
@@ -100,7 +110,7 @@ afterEach(() => {
 })
 
 describe('new lifecycle channels are allowlisted (else requestRustInvoke pre-rejects)', () => {
-  it('RUST_NOTIFICATION_SHOW / RUST_SHELL_SHOW_ITEM_IN_FOLDER / RUST_SHELL_OPEN_PATH / RUST_APP_EXIT / RUST_APP_RELAUNCH are all members of RUST_INVOKE_CHANNELS', () => {
+  it('RUST_NOTIFICATION_SHOW / RUST_SHELL_SHOW_ITEM_IN_FOLDER / RUST_SHELL_OPEN_PATH / RUST_APP_EXIT / RUST_APP_RELAUNCH / RUST_CLIPBOARD_WRITE_TEXT / RUST_CLIPBOARD_READ_TEXT are all members of RUST_INVOKE_CHANNELS', () => {
     const channels = RUST_INVOKE_CHANNELS as readonly string[]
     expect(channels).toEqual(
       expect.arrayContaining([
@@ -108,7 +118,9 @@ describe('new lifecycle channels are allowlisted (else requestRustInvoke pre-rej
         RUST_SHELL_SHOW_ITEM_IN_FOLDER,
         RUST_SHELL_OPEN_PATH,
         RUST_APP_EXIT,
-        RUST_APP_RELAUNCH
+        RUST_APP_RELAUNCH,
+        RUST_CLIPBOARD_WRITE_TEXT,
+        RUST_CLIPBOARD_READ_TEXT
       ])
     )
   })
@@ -122,7 +134,10 @@ describe('electronStub Notification (Phase 33 Plan 04, D-05)', () => {
   it('show() forwards {title, body} via RUST_NOTIFICATION_SHOW', async () => {
     program = { type: 'resolve', value: null }
 
-    const notification = new Notification({ title: 'GameLib', body: 'Install complete' })
+    const notification = new Notification({
+      title: 'GameLib',
+      body: 'Install complete'
+    })
     notification.show()
     await flushMicrotasks()
 
@@ -162,7 +177,10 @@ describe('electronStub shell.showItemInFolder / shell.openPath (Phase 33 Plan 04
     await flushMicrotasks()
 
     expect(callLog).toEqual([
-      { channel: RUST_SHELL_SHOW_ITEM_IN_FOLDER, args: ['/Users/dev/Games/game.exe'] }
+      {
+        channel: RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+        args: ['/Users/dev/Games/game.exe']
+      }
     ])
     expect(warnSpy).not.toHaveBeenCalled()
   })
@@ -170,7 +188,9 @@ describe('electronStub shell.showItemInFolder / shell.openPath (Phase 33 Plan 04
   it('showItemInFolder never throws and logs a warning when requestRustInvoke rejects', async () => {
     program = { type: 'reject', error: new Error('rustInvoke: timeout') }
 
-    expect(() => shell.showItemInFolder('/Users/dev/Games/game.exe')).not.toThrow()
+    expect(() =>
+      shell.showItemInFolder('/Users/dev/Games/game.exe')
+    ).not.toThrow()
     await flushMicrotasks()
 
     expect(warnSpy).toHaveBeenCalledTimes(1)
@@ -190,7 +210,10 @@ describe('electronStub shell.showItemInFolder / shell.openPath (Phase 33 Plan 04
   })
 
   it('openPath never rejects -- resolves the error message string and logs a warning on transport failure', async () => {
-    program = { type: 'reject', error: new Error('rustInvoke: channel not allowed') }
+    program = {
+      type: 'reject',
+      error: new Error('rustInvoke: channel not allowed')
+    }
 
     await expect(shell.openPath('/Users/dev/Games/game.exe')).resolves.toBe(
       'rustInvoke: channel not allowed'
@@ -209,6 +232,32 @@ describe('electronStub shell.trashItem stays a LOGGED no-op (D-05, no vetted Tau
     const [warningArg] = warnSpy.mock.calls[0]
     expect(String(warningArg)).toContain('trashItem')
     expect(String(warningArg)).toContain('D-05')
+  })
+})
+
+describe('electronStub clipboard.writeText real forwarding (Phase 34.3 Plan 05, REQ-34.3-03/04)', () => {
+  it("writeText('x') produces exactly one recorded call { channel: RUST_CLIPBOARD_WRITE_TEXT, args: ['x'] }", async () => {
+    program = { type: 'resolve', value: null }
+
+    clipboard.writeText('x')
+    await flushMicrotasks()
+
+    expect(callLog).toEqual([
+      { channel: RUST_CLIPBOARD_WRITE_TEXT, args: ['x'] }
+    ])
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not throw when the RPC rejects, and warns with the channel name', async () => {
+    program = { type: 'reject', error: new Error('rustInvoke: timeout') }
+
+    expect(() => clipboard.writeText('x')).not.toThrow()
+    await flushMicrotasks()
+
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(String(warnSpy.mock.calls[0][0])).toContain(
+      RUST_CLIPBOARD_WRITE_TEXT
+    )
   })
 })
 
@@ -310,5 +359,97 @@ describe('electronStub session / powerSaveBlocker stay accepted no-ops but now L
   it('powerSaveBlocker.stop/isStarted stay silent, side-effect-free no-ops (unchanged)', () => {
     expect(() => powerSaveBlocker.stop()).not.toThrow()
     expect(powerSaveBlocker.isStarted()).toBe(false)
+  })
+})
+
+describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, REQ-34.3-07)', () => {
+  /**
+   * Isolation note (mirrors `bootstrapWirings.test.ts`'s single precedent use of this exact
+   * pattern, itself following `appShellFlows.test.ts`): every OTHER describe block in this file
+   * shares ONE electronStub module instance (no `jest.resetModules()` anywhere), and several of
+   * them call `app.relaunch()` -- which permanently flips the module-scope `relaunchInFlight`
+   * flag (by design, D-06: never reset in production). A test asserting "quit() with NO prior
+   * relaunch() still forwards" would silently pass or fail for the WRONG reason if it reused
+   * that already-poisoned shared instance (the flag would already be `true` from an earlier
+   * describe block, indistinguishable from a real regression). `jest.isolateModules()` gives
+   * each case below its own FRESH copy of `electronStub` (and, transitively, a fresh
+   * `../sidecarRpc` mock instance) with `relaunchInFlight` back at its `false` initial value --
+   * exactly like a fresh process. `require()` (not `import()`) is required here because
+   * `jest.isolateModules()`'s callback must run synchronously.
+   */
+  function loadFreshApp(): {
+    app: typeof import('../electronStub').app
+    mockInvoke: jest.Mock
+  } {
+    let result!: {
+      app: typeof import('../electronStub').app
+      mockInvoke: jest.Mock
+    }
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const sidecarRpc = require('../sidecarRpc') as {
+        requestRustInvoke: jest.Mock
+      }
+      const freshElectronStub =
+        require('../electronStub') as typeof import('../electronStub')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      sidecarRpc.requestRustInvoke.mockImplementation(() =>
+        Promise.resolve(null)
+      )
+      result = {
+        app: freshElectronStub.app,
+        mockInvoke: sidecarRpc.requestRustInvoke
+      }
+    })
+    return result
+  }
+
+  it('relaunch() then quit() records ONLY the RUST_APP_RELAUNCH call, and quit() emits a suppression warning', async () => {
+    const { app: freshApp, mockInvoke } = loadFreshApp()
+
+    freshApp.relaunch()
+    await flushMicrotasks()
+    freshApp.quit()
+    await flushMicrotasks()
+
+    const calls = mockInvoke.mock.calls.map(([channel, args]) => ({
+      channel,
+      args
+    }))
+    expect(calls).toEqual([{ channel: RUST_APP_RELAUNCH, args: [] }])
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('a relaunch is already in flight')
+    )
+  })
+
+  it('quit() alone with no prior relaunch() still records RUST_APP_EXIT (over-suppression regression guard)', async () => {
+    const { app: freshApp, mockInvoke } = loadFreshApp()
+
+    freshApp.quit()
+    await flushMicrotasks()
+
+    const calls = mockInvoke.mock.calls.map(([channel, args]) => ({
+      channel,
+      args
+    }))
+    expect(calls).toEqual([{ channel: RUST_APP_EXIT, args: [] }])
+  })
+
+  it('exit() after relaunch() is also suppressed', async () => {
+    const { app: freshApp, mockInvoke } = loadFreshApp()
+
+    freshApp.relaunch()
+    await flushMicrotasks()
+    freshApp.exit()
+    await flushMicrotasks()
+
+    const calls = mockInvoke.mock.calls.map(([channel, args]) => ({
+      channel,
+      args
+    }))
+    expect(calls).toEqual([{ channel: RUST_APP_RELAUNCH, args: [] }])
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('a relaunch is already in flight')
+    )
   })
 })
