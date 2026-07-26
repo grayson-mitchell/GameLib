@@ -8,7 +8,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import LoginWarning from '../Login/components/LoginWarning'
 import { NileLoginData } from 'common/types/nile'
-import { isTauri } from 'preload/tauriTransport'
+import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import {
   Dialog,
