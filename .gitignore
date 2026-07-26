@@ -48,3 +48,10 @@ native/steam-bridge/generated/*.dll
 # Phase 24 Plan 07 (R5): the pinned zig toolchain meta/downloadZig.ts
 # extracts is a build-time-only tool, never bundled/committed.
 /.build-tools/
+
+# Knowledge graphs. graphify-out/ is the live standalone-`graphify`-CLI graph
+# (large, regenerable via `graphify update .`, never committed).
+# .planning/graphs/ is the retired GSD-skill duplicate -- ignored so it cannot
+# come back.
+graphify-out/
+.planning/graphs/
