@@ -291,21 +291,18 @@ export function registerShellFilesFlows(): void {
 
   // ── send (1): clearAchievementCache — main.ts:805-811 ─────────────────────
 
-  ipcMain.on(
-    'clearAchievementCache',
-    (_event: unknown, ...args: unknown[]) => {
-      try {
-        const appName = args[0] as string
-        clearAchievementCache(appName)
-        logInfo(
-          'Achievement cache was cleared for game: ' + appName,
-          LogPrefix.Backend
-        )
-      } catch (error) {
-        logSendFailure('clearAchievementCache', error)
-      }
+  ipcMain.on('clearAchievementCache', (_event: unknown, ...args: unknown[]) => {
+    try {
+      const appName = args[0] as string
+      clearAchievementCache(appName)
+      logInfo(
+        'Achievement cache was cleared for game: ' + appName,
+        LogPrefix.Backend
+      )
+    } catch (error) {
+      logSendFailure('clearAchievementCache', error)
     }
-  )
+  })
 
   // ── send (1): resetHeroic — main.ts:813. Calls the UNMODIFIED utils.ts
   // body; no build-conditional branch here or in utils.ts. The relaunch/quit

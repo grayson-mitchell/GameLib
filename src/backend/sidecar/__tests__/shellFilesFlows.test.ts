@@ -17,11 +17,34 @@
  * `jest.mock('electron', ...)`/`jest.mock('electron-store', ...)` shim
  * routing, and `jest.mock('../sidecarRpc', ...)` partial mock this suite's
  * analog uses are required here too, for the identical reason.
+ *
+ * Plan 02 extends this suite with `clearCache`/`clearAchievementCache`/
+ * `resetHeroic` coverage. `clearCache`'s dialog reaches REAL i18next
+ * translations — `jest.unmock('i18next')` below is load-bearing (see
+ * `gameDetailsFlows.test.ts`'s own header for the documented incident this
+ * pattern exists to avoid: a `jest.mock('i18next', ...)` block here would
+ * make the resolved-title assertion pass whether or not `bootstrap.ts`'s
+ * i18next init ever ran). `resetHeroic` ACTUALLY DELETES `configPath`/
+ * `gamesConfigPath` — the `jest.mock('../pathShim', ...)` block below is the
+ * CR-03 containment fix (34.2-10/gameDetailsFlows.test.ts precedent): on
+ * darwin the `os` mock alone is sufficient (`pathShim`'s `resolveAppDataDir()`
+ * calls `homedir()` directly for that branch), but on win32/linux it prefers
+ * `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` and would bypass the
+ * `os` mock entirely — a real, destructive gap for a suite that deletes
+ * files. Both mocks root at the SAME disposable tmp directory.
  */
+
+// ── i18next -- DEFEAT Jest's project-wide automatic manual mock. Without
+// this line `clearCache`'s dialog title would resolve to the automock's
+// `t(key) => key` echo (the literal string 'box.cache-cleared.title'), which
+// would make the "resolved English string" assertion below pass whether or
+// not bootstrap.ts's real i18next init ever ran. `jest.unmock` restores
+// default (real) module resolution — it does not substitute a replacement. ─
+jest.unmock('i18next')
 
 import { PassThrough } from 'node:stream'
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { tmpdir } from 'os'
 
 // ── os — GAP FIX precedent: redirect homedir() to a disposable per-process
@@ -37,6 +60,41 @@ jest.mock('os', () => {
         actual.tmpdir(),
         `gamelib-shellfilesflows-test-home-${process.pid}`
       )
+  }
+})
+
+// ── pathShim — CR-03 (34.2-10 precedent): the REAL choke point.
+// `constants/paths.ts`'s module-scope `app.getPath('appData'|'userData')`
+// calls resolve through `electronStub.ts` -> `pathShim.getPath()`, whose real
+// `resolveAppDataDir()` prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over
+// `homedir()` on win32/default — bypassing the `os` mock above on those
+// platforms. `resetHeroic` deletes `configPath`/`gamesConfigPath` for real,
+// so this suite must not rely on the darwin-only sufficiency of the `os`
+// mock alone. Rooted at the SAME per-suite tmp directory. ──────────────────
+jest.mock('../pathShim', () => {
+  const actualOs = jest.requireActual('os')
+  const actualPath = jest.requireActual('path')
+  const tmpRoot = actualPath.join(
+    actualOs.tmpdir(),
+    `gamelib-shellfilesflows-test-home-${process.pid}`
+  )
+  return {
+    getPath: (name: string) => {
+      switch (name) {
+        case 'appData':
+          return tmpRoot
+        case 'userData':
+          return actualPath.join(tmpRoot, 'GameLib')
+        case 'temp':
+          return actualOs.tmpdir()
+        case 'home':
+          return tmpRoot
+        default:
+          throw new Error(
+            `[pathShim mock] getPath('${name}') is not shimmed for this test`
+          )
+      }
+    }
   }
 })
 
@@ -95,20 +153,21 @@ jest.mock('backend/config', () => ({
   }
 }))
 
-// ── i18next mock — mirrors appShellFlows.test.ts; not exercised by this
-// plan's own channels, but required so the shared handlers.ts module graph
-// (which also loads appShellFlowRegistration.ts) still loads cleanly ────────
-jest.mock('i18next', () => ({
-  __esModule: true,
-  default: {
-    changeLanguage: jest.fn().mockResolvedValue(undefined)
-  }
-}))
-
 // ── legendary electronStores mock — avoids a real disk-backed CacheStore
-// construction (this repo's own "tests clobbering real store" precedent) ────
+// construction (this repo's own "tests clobbering real store" precedent).
+// `installStore`/`libraryStore` added alongside `gameInfoStore` for Plan
+// 02's `clearCache` coverage — utils.ts's real `clearCache()` body calls
+// `.clear()` on all three; without a mock, the missing two throw
+// synchronously (caught by clearCache's own try/catch, but BEFORE
+// `pushFrontendMessage('refreshLibrary')` ever runs) ────────────────────────
 jest.mock('../../storeManagers/legendary/electronStores', () => ({
   gameInfoStore: {
+    clear: jest.fn()
+  },
+  installStore: {
+    clear: jest.fn()
+  },
+  libraryStore: {
     clear: jest.fn()
   }
 }))
@@ -120,14 +179,50 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
   callAllAbortControllers: jest.fn()
 }))
 
+// ── backend/storeManagers mock — utils.ts's real `clearCache()` body ends
+// with a fire-and-forget `import('./storeManagers').then(({ libraryManagerMap }) =>
+// libraryManagerMap['legendary'].runRunnerCommand({ subcommand: 'cleanup' }, ...))`
+// (Electron parity, unmodified). Without this mock that reaches the REAL
+// legendary runner machinery (`launcher.ts`'s `callRunner`, an actual
+// `child_process.spawn()`) — this narrow stub keeps clearCache's coverage
+// focused on ITS OWN behavior (store clears + refreshLibrary + dialog),
+// mirroring gameDetailsFlows.test.ts's/downloadQueueFlows.test.ts's own
+// `backend/storeManagers` mock precedent ────────────────────────────────────
+jest.mock('backend/storeManagers', () => ({
+  libraryManagerMap: {
+    legendary: { runRunnerCommand: jest.fn() }
+  }
+}))
+
+// ── backend/dialog/dialog mock — narrow override, real module spread
+// (mirrors gameDetailsFlows.test.ts's own `notify` boundary choice).
+// `showDialogBoxModalAuto` is a bare `jest.fn()` here — this project's jest
+// config sets `resetMocks: true` (`src/backend/jest.config.js`), which wipes
+// ANY implementation set inside a `jest.mock(...)` factory before EVERY
+// test. Baking the real implementation in here would silently no-op after
+// the very first test runs. The REAL default implementation is
+// (re-)installed in the cache/reset describe block's own `beforeEach` below,
+// AFTER jest's automatic reset — the only place it survives. A single test
+// can still override it for one call via `mockImplementationOnce` to inject
+// a synthetic dialog failure, without touching `backend/ipc.ts`'s own
+// `sendFrontendMessage`, which structurally cannot throw (see `dialog.ts`'s
+// own two-branch body) ──────────────────────────────────────────────────────
+jest.mock('../../dialog/dialog', () => ({
+  ...jest.requireActual('../../dialog/dialog'),
+  showDialogBoxModalAuto: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { init } from '../bootstrap'
 import { GlobalConfig } from 'backend/config'
 import { requestRustInvoke } from '../sidecarRpc'
 import { listenerRegistry, handlerRegistry } from '../electronStub'
+import { showDialogBoxModalAuto } from '../../dialog/dialog'
+import { achievementStore } from '../../storeManagers/gog/electronStores'
 import {
   RUST_SHELL_OPEN_PATH,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+  RUST_APP_RELAUNCH,
   RUST_INVOKE_CHANNELS
 } from 'common/types/sidecarTransport'
 import { configPath, gamesConfigPath } from '../../constants/paths'
@@ -529,6 +624,157 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     })
   })
 
+  // ── REQ-34.3-05 / REQ-34.3-06 cache and reset channels (Phase 34.3 Plan 02) ─
+
+  describe('REQ-34.3-05 / REQ-34.3-06 cache and reset channels', () => {
+    // (Re-)install the REAL implementation after jest's own `resetMocks: true`
+    // (`src/backend/jest.config.js`) wipes whatever the mock factory set at
+    // module-load time, before EVERY test — see the mock's own docstring
+    // above. Without this, `showDialogBoxModalAuto` silently no-ops
+    // (returns `undefined`, never pushes a `showDialog` frame) in every test
+    // in this block except the one that sets its own `mockImplementationOnce`.
+    beforeEach(() => {
+      jest
+        .mocked(showDialogBoxModalAuto)
+        .mockImplementation(
+          jest.requireActual('../../dialog/dialog').showDialogBoxModalAuto
+        )
+    })
+
+    it('REQ-34.3-05 clearCache(showDialog=false) pushes refreshLibrary but NOT showDialog', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'clear-cache-false-1', 'clearCache', [false])
+      await flush()
+
+      const refreshFrame = frames.find(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'refreshLibrary'
+      )
+      expect(refreshFrame).toBeDefined()
+
+      const dialogFrame = frames.find(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'showDialog'
+      )
+      expect(dialogFrame).toBeUndefined()
+    })
+
+    it('REQ-34.3-06 clearCache(showDialog=true) pushes BOTH refreshLibrary and showDialog, with a RESOLVED title (not the raw i18next key)', async () => {
+      const { input, frames } = startSidecar()
+      writeSend(input, 'clear-cache-true-1', 'clearCache', [true])
+      await flush()
+
+      const refreshFrame = frames.find(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'refreshLibrary'
+      )
+      expect(refreshFrame).toBeDefined()
+
+      const dialogFrame = frames.find(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'showDialog'
+      ) as { args?: unknown[] } | undefined
+      expect(dialogFrame).toBeDefined()
+      const [title] = dialogFrame?.args as unknown[]
+      // Real i18next.t()'s resolved value — its own inline fallback default
+      // ('Cache Cleared'), since under jest `app.getAppPath()` resolves to
+      // `process.cwd()` (this jest project's root, `src/backend`), not the
+      // repo root `public/locales/en/` directory actually lives under
+      // (publicdir-getapppath-chunking gotcha family — the packaged-build
+      // half of this path is a named deferred-UAT item, not provable here).
+      // This still doubles as a live check that bootstrap.ts's real
+      // i18next.init() ran (not the project-wide automock's literal
+      // `t(key) => key` echo): with i18next mocked, `title` would resolve to
+      // the raw key `box.cache-cleared.title` instead, and the assertion
+      // below would fail.
+      expect(title).toBe('Cache Cleared')
+      expect(title).not.toBe('box.cache-cleared.title')
+    })
+
+    it('REQ-34.3-06 clearCache never crashes the sidecar when the dialog path throws — logs and completes the send dispatch', async () => {
+      jest.mocked(showDialogBoxModalAuto).mockImplementationOnce(() => {
+        throw new Error('synthetic dialog failure')
+      })
+
+      const { input, frames } = startSidecar()
+      writeSend(input, 'clear-cache-throw-1', 'clearCache', [true])
+      await flush()
+
+      // The send dispatch completed (no uncaught exception escaped and
+      // killed the process — if it had, this test itself would never reach
+      // this assertion).
+      const refreshFrame = frames.find(
+        (f) => f.kind === 'frontendMessage' && f.channel === 'refreshLibrary'
+      )
+      expect(refreshFrame).toBeDefined()
+
+      expect(warnSpy).toHaveBeenCalled()
+      const warned = warnSpy.mock.calls.some(([first]) =>
+        String(first).includes('clearCache')
+      )
+      expect(warned).toBe(true)
+    })
+
+    it('REQ-34.3-06 clearAchievementCache (send) removes the appName entry from gogAchievementStore', async () => {
+      const appName = `gamelib-shellfilesflows-achv-test-${process.pid}`
+      achievementStore.set(appName, [])
+      expect(achievementStore.has(appName)).toBe(true)
+
+      const { input } = startSidecar()
+      writeSend(input, 'clear-achv-1', 'clearAchievementCache', [appName])
+      await flush()
+
+      expect(achievementStore.has(appName)).toBe(false)
+    })
+
+    describe('resetHeroic (send) — real deletion behind a 1s setTimeout', () => {
+      beforeEach(() => {
+        jest.useFakeTimers({
+          doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask']
+        })
+      })
+
+      afterEach(() => {
+        jest.useRealTimers()
+      })
+
+      it('REQ-34.3-05 resetHeroic deletes configPath and gamesConfigPath, then requests a relaunch after 1s', async () => {
+        // Containment safety: confirm these test-mocked paths resolve inside
+        // the disposable per-process tmp home (the `os`/`pathShim` mocks
+        // above) BEFORE creating or deleting anything — resetHeroic actually
+        // deletes these paths for real.
+        const realTmpDir = tmpdir()
+        expect(configPath.startsWith(realTmpDir)).toBe(true)
+        expect(gamesConfigPath.startsWith(realTmpDir)).toBe(true)
+
+        mkdirSync(dirname(configPath), { recursive: true })
+        writeFileSync(configPath, '{}')
+        mkdirSync(gamesConfigPath, { recursive: true })
+        expect(existsSync(configPath)).toBe(true)
+        expect(existsSync(gamesConfigPath)).toBe(true)
+
+        const { input } = startSidecar()
+        writeSend(input, 'reset-heroic-1', 'resetHeroic', [])
+        await flush()
+
+        // Deletion happens synchronously, before the 1s relaunch/quit timer.
+        expect(existsSync(configPath)).toBe(false)
+        expect(existsSync(gamesConfigPath)).toBe(false)
+        expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+          RUST_APP_RELAUNCH,
+          []
+        )
+
+        jest.advanceTimersByTime(1000)
+        await flush()
+
+        // Note: this deliberately does NOT assert the absence of an
+        // app_exit frame — that ordering guard is plan 34.3-05's
+        // lifecycleStub.test.ts coverage.
+        expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+          RUST_APP_RELAUNCH,
+          []
+        )
+      })
+    })
+  })
+
   // ── Send-vs-handle registration-kind contract (Phase 31 Pitfall 2 /
   // T-34.3-04): the only automated defence against the silent-failure class
   // — derived from a literal table, not from the module under test ──────────
@@ -549,15 +795,18 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     showConfigFileInFolder: 'send',
     removeFolder: 'send',
     showItemInFolder: 'send',
+    clearCache: 'send',
+    clearAchievementCache: 'send',
+    resetHeroic: 'send',
     checkDiskSpace: 'invoke',
     getShellPath: 'invoke',
     pathExists: 'invoke'
   }
 
-  it("REQ-34.3-01/REQ-34.3-02 send-vs-handle contract: every one of this plan's 18 channels is registered with the kind that matches main.ts", () => {
+  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 21 channels is registered with the kind that matches main.ts", () => {
     startSidecar()
 
-    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(18)
+    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(21)
 
     for (const [channel, kind] of Object.entries(CHANNEL_KINDS)) {
       if (kind === 'send') {
