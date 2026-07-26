@@ -58,7 +58,7 @@ of fixing it inline).
   tests passing. Out of scope for 34.2 to fix — belongs to a 34.1 gap-closure cycle or a
   standalone fix. Flagged to the user in the phase-completion report.
 
-## From plan 34.2-18 (gap cycle 2, CR-03/WR-01 closure)
+## From plan 34.2-18 (gap cycle 2, CR-03/WR-01 closure) — CLOSED by gap cycle 3
 
 - **11 other sidecar suites lack the `pathShim`/`backend/logger/paths` containment kit.**
   `testContainment.test.ts`'s Block B gate holds exactly four suites
@@ -85,6 +85,23 @@ of fixing it inline).
   proof. Natural home for closing this debt: a small follow-up plan applying the same kit to
   each of the 11 files, or folded into Phase 35's broader Electron-cutover work. Not fixed
   here — out of scope for this plan's four named suites.
+
+**RESOLVED 2026-07-26 by gap cycle 3, plan 34.2-19.** This debt is closed, not by applying the
+four-part kit to each of the 11 files individually, but structurally: `src/backend/jest.setupContainment.ts`,
+registered via the backend jest project's `setupFiles` entry in `src/backend/jest.config.js`,
+redirects `os.homedir()` (a narrow `jest.mock('os', ...)` overriding only `homedir`) plus eight
+HOME/XDG/APPDATA/LOCALAPPDATA environment variables for every suite under `src/backend` — including
+`bootstrap.test.ts` and the other 10 named above — before any suite's own imports run. A suite is
+now contained by existing under `src/backend`, not by carrying its own mock kit. Live evidence
+(`34.2-19-SUMMARY.md`, "Live Destruction Check"): the real `~/Library/Logs/GameLib/gamelib.log`/
+`.log.old` mtimes were byte-identical before and after a full `src/backend/sidecar/__tests__` run
+with the fix in place (`Jul 26 11:42:53 2026` unchanged on both files across the run), directly
+refuting the three independent live reproductions (`34.2-VERIFICATION.md`, 10:49 -> 10:56 -> 10:57
+rotation) this entry originally recorded. Plan 34.2-23 subsequently deleted
+`KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES` from `testContainment.test.ts` entirely (0 occurrences
+remaining, including in prose) and replaced it with a `readdirSync`-derived set-equality tripwire
+proving every `*.test.ts` file in the directory is classified — so a 12th suite added without
+conscious classification cannot be silently invisible the way this hole was.
 
 ## From plan 34.2-20 (gap cycle 3, WR-02 closure)
 
@@ -133,3 +150,91 @@ of fixing it inline).
   the 5th run's extra failure is this pre-existing, already-tracked defect surfacing on a
   different file, not a new regression). Not fixed here — same natural home as the 34.2-07
   entry (a standalone fix for `library.ts`'s poll-timer teardown).
+
+## From gap cycle 3 (plans 34.2-19..34.2-23)
+
+Residual findings from `34.2-REVIEW-GAP-CYCLE-2.md` that this cycle deliberately did not fix,
+recorded here with a reason and a natural home so a future gap cycle does not have to re-derive
+scope from scratch.
+
+- **WR-05** — `src/backend/sidecar/__tests__/loggerFlows.test.ts:84,105,139`,
+  `testContainment.test.ts:44,66,97`, `sidecarRejectionGuard.test.ts:83,108,145`,
+  `gameDetailsFlows.test.ts:123,141,180`, `enrichmentFlows.test.ts:82,100,139`. Each of these five
+  suites hardcodes its containment tmp-root string three times — once per mock factory (`os`,
+  `pathShim`, `backend/logger/paths`) — with nothing asserting the three copies agree; a future
+  edit to one factory but not the other two would silently desynchronize them while every existing
+  tripwire still passes, because all three roots remain under `os.tmpdir()` regardless. **Reason
+  for deferring:** plan 34.2-19's structural containment (`src/backend/jest.setupContainment.ts`,
+  `setupFiles`) demoted these five suites' per-suite mocks from the primary containment mechanism
+  to defence in depth — the project-wide `setupFiles` entry already redirects `os.homedir()` and
+  the relevant env vars regardless of what any individual suite's own mocks say, so a desync
+  between the three per-suite mocks can no longer produce a write outside `os.tmpdir()`. Still
+  worth fixing for legibility. **Natural home:** hoist each suite's tmp-root string to a single
+  `mock`-prefixed module-scope constant (the `mock` prefix is what makes it legal inside a hoisted
+  `jest.mock` factory) referenced by all three factories — a small, mechanical, five-file cleanup.
+- **WR-06** — `loggerFlows.test.ts:88-95` and `testContainment.test.ts:48-55`. Both hoisted
+  `jest.mock` factories reference a `TMP_ROOT_NAME`/`TMP_ROOT_NAME`-shaped `const` declared BELOW
+  the hoisted `jest.mock` call site — `ts-jest` hoists `jest.mock(...)` above the `const`
+  declaration and above all `import`-generated `require`s. This survives today only because the
+  reference sits inside a lazily-evaluated `homedir: () => ...` arrow and nothing calls
+  `os.homedir()` during module evaluation (both `pathShim` and `backend/logger/paths` are mocked
+  away in both files); under `babel-jest` (which `babel-plugin-jest-hoist` enforces), the file
+  would be rejected outright with "The module factory of `jest.mock()` is not allowed to reference
+  any out-of-scope variables." **Reason for deferring:** same as WR-05 — the fix is naturally
+  bundled with it, since both are the same hoisted-factory tmp-root constant. **Natural home:**
+  rename to a `mock`-prefixed identifier (`mockTmpRootName`), the convention this repo already
+  uses for `mockTestHomeSuffix` in `sidecarRejectionGuard.test.ts:73` — hoist-legal and
+  TDZ-documented — as part of the same WR-05 cleanup pass.
+- **IN-01** — `prettier --check` flags five gap-cycle-2 files: `src/backend/sidecar/processGuards.ts`,
+  `__tests__/sidecarRejectionGuard.test.ts`, `__tests__/loggerFlows.test.ts`,
+  `__tests__/testContainment.test.ts`, `src/frontend/screens/Game/GameSubMenu/__tests__/repairFailure.test.ts`.
+  **Reason for deferring:** `prettier --check` is red at baseline across dozens of pre-existing
+  files in this repository (confirmed by `34.2-REVIEW-GAP-CYCLE-2.md`'s IN-01), so the gate cannot
+  distinguish this cycle's own contribution from pre-existing debt, and reformatting only these
+  five files would not change the gate's overall red/green outcome. Separately: gap cycle 3's OWN
+  new/modified files (`src/backend/jest.setupContainment.ts`,
+  `src/backend/sidecar/__tests__/structuralContainment.test.ts`,
+  `src/backend/sidecar/loggerFlowRegistration.ts`,
+  `src/backend/sidecar/__tests__/loggerFlows.test.ts`,
+  `src/frontend/screens/Game/GameSubMenu/repairFailure.ts`,
+  `src/frontend/screens/Game/GameSubMenu/__tests__/repairFailure.test.ts`, `src-tauri/src/main.rs`,
+  `src/backend/__tests__/longRunningChannels.test.ts`,
+  `src/backend/sidecar/__tests__/testContainment.test.ts`) are this cycle's own responsibility —
+  none of the five plans' own eslint/typecheck acceptance criteria flagged a newly-introduced
+  prettier violation in any of them. **Natural home:** `npx prettier --write` on the five named
+  files, ideally alongside a project-wide prettier pass that also clears the pre-existing baseline
+  violations, since fixing only these five in isolation leaves the gate red for everyone else.
+- **IN-03** — `src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts:319,376`. Both
+  `setupIsolatedBootstrapHarness()` and `loadFreshProcessGuards()` create
+  `jest.spyOn(loggerModule, 'logWarning')` with no matching `mockRestore()`. Benign today because
+  each runs inside a fresh `jest.isolateModules()` registry, so the un-restored spy cannot leak
+  into a sibling test's module instance — but plan 34.2-18's own IN-03 note (the reason
+  `loadConstantsPaths()` was narrowed in the first place) states the rationale was specifically to
+  avoid "leaving an unrestored `jest.spyOn`", and that rationale is only half-applied while these
+  two call sites remain unrestored. **Reason for deferring:** out of scope for the five plans this
+  cycle ran (none of 34.2-19..34.2-23 touch `sidecarRejectionGuard.test.ts`'s harness helpers).
+  **Natural home:** add `afterEach(() => jest.restoreAllMocks())` at the describe level in
+  `sidecarRejectionGuard.test.ts`, a one-line, low-risk fix for a future small plan or the next gap
+  cycle.
+- **IN-06** — `src/backend/sidecar/__tests__/loggerFlows.test.ts` (four `startSidecar()` calls) and
+  `sidecarRejectionGuard.test.ts`. Observed during test runs: `MaxListenersExceededWarning:
+  Possible EventEmitter memory leak detected. 11 exit listeners added to [process].` Each
+  `init()` call attaches process-level listeners that are never removed; cosmetic in a test run
+  today, but it is the same accumulate-without-cleanup shape that would matter if `init()` were
+  ever called twice in production. **Reason for deferring:** the real fix belongs with
+  `bootstrap.init()`'s own idempotency guard (mirroring the module-scope idempotency flag pattern
+  `processGuards.ts` already uses for its own installation), not with a test file — fixing it only
+  in the test harness (e.g. `process.setMaxListeners(0)`) would silence the warning without
+  addressing the production shape it is warning about. **Natural home:** a standalone plan adding
+  an idempotency guard to `bootstrap.init()`'s process-listener registration.
+
+**IN-04 — ACCEPTED, not deferred.** `src/backend/sidecar/loggerFlowRegistration.ts:56-58`: the
+renderer can send arbitrary text through the newly-ported `logError` channel, including embedded
+newlines, which `LogWriter` appends verbatim — allowing forged log lines (e.g. a fake `[ERROR]:`
+entry) in `gamelib.log`. This is accepted rather than deferred because it is exact parity with the
+Electron handler (`src/backend/logger/ipc_handler.ts:15`), which has the identical property today;
+changing it here, in the sidecar port only, would be an undeclared behavioural divergence between
+the two builds, which REQ-34.2-14 explicitly forbids. Cross-referenced in plan 34.2-20's threat
+model as T-34.2-69. **Natural home, if tightened later:** a single change in
+`LogWriter#writeString` (escape `\n` → `\\n` for non-forced messages), applied once for both
+builds rather than per-channel.
