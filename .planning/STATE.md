@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.2-22-PLAN.md (Rust timeout_for() behavioral test + jest existence gate closed; gap cycle 3, plan 4 of 6 -- 34.2-23..24 remain)
-last_updated: "2026-07-26T00:35:51.274Z"
+stopped_at: Completed 34.2-23-PLAN.md (testContainment.test.ts hardened: raw-source anti-claim gate, readdirSync set-equality tripwire, structural containment gate; gap cycle 3, plan 5 of 6 -- 34.2-24 remains)
+last_updated: "2026-07-26T00:53:09.536Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 9
   total_plans: 95
-  completed_plans: 85
-  percent: 89
+  completed_plans: 86
+  percent: 91
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 3 EXECUTING
-Plan: 22 of 24 done (34.2-22 complete); 2 gap-closure plans remain (34.2-23..24)
+Plan: 23 of 24 done (34.2-23 complete); 1 gap-closure plan remains (34.2-24)
 
 34.2-19 done -- GAP CYCLE 3, first plan executed, BLOCKER CLOSED. Task 1 created
 `src/backend/jest.setupContainment.ts`, a `setupFiles` module wired into the backend jest
@@ -147,6 +147,40 @@ src-tauri/Cargo.toml` clean), zero new `dispatch_rust_channel` arms, `cargo chec
 plans; re-confirmed), see 34.2-22-SUMMARY.md. Next: 34.2-23 (wave 2, WR-01 raw-source anti-claim
 gate + `readdirSync` set-equality tripwire).
 
+34.2-23 done -- GAP CYCLE 3, fifth plan executed, WR-01/WR-04/WR-07/WR-08 hardening of
+`testContainment.test.ts` CLOSED. Task 1: the "no longer claims NO FILESYSTEM WRITES" gate now
+matches RAW source instead of `stripComments()` output (the claim can only ever live on a
+`*`-prefixed docblock line, which the stripper always removed -- the prior gate was permanently
+vacuous), with a self-test proving the asymmetry; the `backend/constants/environment` mock's
+comment corrected from the factually-wrong "included for parity" to LOAD-BEARING, naming
+`getBaseLogPath()` as the consumer whose `isMac:false` pin is what makes RED-PROOF-2 non-vacuous
+on this darwin host; Block A's `process.platform`/env-var adversarial mutation moved out of
+`beforeAll`/`afterAll` into a per-test `withAdversarialPlatformAndEnv()` helper restoring in its
+own `finally`. One deviation found+fixed inline: `jest.replaceProperty` (the plan's stated
+preferred mechanism, available since Jest 29.4, this project pins 29.7.0) was tried first for
+`process.platform` and broke the whole test FILE (`TypeError: Cannot assign to read only
+property 'platform'`) because this Node version's `process.platform` descriptor is
+`writable:false` and `jest.replaceProperty`'s own `.restore()` does a plain assignment --
+switched to `Object.defineProperty` per the plan's documented fallback. Task 2: deleted
+`KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES` (the stale 11-suite accepted-debt declaration plan
+34.2-19 had already closed structurally) and its `toHaveLength(11)` pin; added
+`STRUCTURALLY_CONTAINED_SUITES` (21 entries, `testContainment.test.ts` deliberately classifies
+itself rather than being excluded) plus a `readdirSync`-derived set-equality tripwire
+(`diffSuiteClassification`, shared by the gate and both its self-tests) proving every `*.test.ts`
+in the directory is classified by exactly one of the two declared lists; added a structural
+containment gate reading `jest.config.js`/`jest.setupContainment.ts` directly, asserting the
+`setupFiles` entry and all eight env-var assignments are still wired. Four hand RED-proofs
+recorded verbatim in 34.2-23-SUMMARY.md: the anti-claim gate (injected the claim into
+`enrichmentFlows.test.ts`'s docblock, gate failed naming it, reverted clean), the tripwire
+(created a real `zzTripwireProbe.test.ts`, tripwire failed naming it, deleted clean), the
+structural gate (commented out the `setupFiles` entry, exactly that one test failed, restored
+clean, `git diff --exit-code` 0), and the `jest.replaceProperty` rejection itself. Test count
+29 -> 42. Full backend sweep: 111/112 suites, 2304/2305 tests -- sole failure the pre-existing,
+already-documented `rustInvokeChannel.test.ts` (unchanged 34.1-era baseline); `tsc --noEmit`
+clean throughout; no production code touched (only `testContainment.test.ts`). REQ-34.2-07/-14
+complete (already marked from prior plans; re-confirmed), see 34.2-23-SUMMARY.md. Next: 34.2-24
+(wave 3, REQ-34.2-13, final plan of gap cycle 3 -- PORTED-CHANNELS.md currency + currency-gate.py).
+
 Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 introduced:
 
 - 34.2-19 (wave 1, BLOCKER) DONE: structural containment via a `src/backend/jest.setupContainment.ts`
@@ -168,8 +202,10 @@ Gap cycle 3 plans (2026-07-26) — closes the blocker + 3 warnings gap cycle 2 i
   LONG_RUNNING_CHANNELS, bidirectionally falsifiable; pinned from jest since CI runs no cargo step.
   See 34.2-22-SUMMARY.md.
 
-- 34.2-23 (wave 2, WR-01): raw-source anti-claim gate + `readdirSync` set-equality tripwire over all
-  25 suites; DELETES KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES rather than reframing it.
+- 34.2-23 (wave 2, WR-01/WR-04/WR-07/WR-08) DONE: raw-source anti-claim gate + `readdirSync`
+  set-equality tripwire over all 25 suites; deletes the stale 11-suite accepted-debt list rather
+  than reframing it; also fixed the mislabelled load-bearing environment mock and moved the
+  worker-wide `process.platform` leak into per-test restoration. See 34.2-23-SUMMARY.md.
 
 - 34.2-24 (wave 3, REQ-34.2-13): PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py.
 
@@ -654,7 +690,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1453,6 +1489,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P20 | 8min | 2 tasks | 2 files |
 | Phase 34.2 P21 | 15min | 2 tasks | 2 files |
 | Phase 34.2 P22 | 10min | 2 tasks | 2 files |
+| Phase 34.2 P23 | 50min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -1781,9 +1818,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T00:35:51.266Z
-Stopped at: Completed 34.2-22-PLAN.md (Rust timeout_for() behavioral test + jest existence gate closed; gap cycle 3, plan 4 of 6 -- 34.2-23..24 remain)
-Next: Execute 34.2-20-PLAN.md (gap cycle 3 continues, WR-02). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-26T00:53:09.536Z
+Stopped at: Completed 34.2-23-PLAN.md (testContainment.test.ts hardened: raw-source anti-claim gate, readdirSync set-equality tripwire, structural containment gate; gap cycle 3, plan 5 of 6 -- 34.2-24 remains)
+Next: Execute 34.2-24-PLAN.md (gap cycle 3's final plan, wave 3, REQ-34.2-13 -- PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
