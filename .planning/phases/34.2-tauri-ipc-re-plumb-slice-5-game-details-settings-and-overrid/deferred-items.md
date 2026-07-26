@@ -85,3 +85,26 @@ of fixing it inline).
   proof. Natural home for closing this debt: a small follow-up plan applying the same kit to
   each of the 11 files, or folded into Phase 35's broader Electron-cutover work. Not fixed
   here — out of scope for this plan's four named suites.
+
+## From plan 34.2-19 (gap cycle 3, structural containment)
+
+- **Re-observed: the pre-existing `library.ts` leaked-timer flake (see "From plan 34.2-07"
+  above) intermittently lands on OTHER, unrelated suites, not only
+  `rustInvokeChannel.test.ts`.** During this plan's Task 3 full-backend-project baseline
+  reconciliation, `npx jest --testPathPattern=src/backend` was run 5 times: 4 runs showed the
+  documented baseline exactly (111/112 suites, 2279/2280 tests, sole failure
+  `rustInvokeChannel.test.ts`); 1 run additionally failed `enrichmentFlows.test.ts`
+  (`TypeError: Cannot read properties of undefined (reading 'map')` inside
+  `readAcfState`/`pollInstallOnce`, `storeManagers/steam/library.ts:1153`/`1306`); a
+  subsequent single-run repro instead hit `bootstrapWirings.test.ts` (an unrelated JSON-content
+  assertion) with the same leaked-`Timeout` root cause. This confirms the 34.2-07 entry's own
+  prediction that the leak is "systemic to `library.ts`'s poll timer teardown, not one specific
+  test file" — WHICH suite the leaked timer lands on depends on non-deterministic
+  worker-to-file assignment (this plan does not use `--runInBand`), not on this plan's
+  containment changes. `src/backend/storeManagers/steam/library.ts` was not touched by this
+  plan (`git diff --stat` across all of plan 34.2-19's commits confirms zero changes to it or
+  any of its tests). Reported to the user per this plan's own acceptance criterion ("the set of
+  FAILING suites does not grow beyond `rustInvokeChannel.test.ts`" — satisfied on 4 of 5 runs;
+  the 5th run's extra failure is this pre-existing, already-tracked defect surfacing on a
+  different file, not a new regression). Not fixed here — same natural home as the 34.2-07
+  entry (a standalone fix for `library.ts`'s poll-timer teardown).

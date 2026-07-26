@@ -12,6 +12,30 @@
  * pathShim.ts) read/write the real OS config directory instead, exactly as
  * they would in production.
  *
+ * CONTAINMENT (Phase 34.2, gap cycle 3, plan 34.2-19 — REQ-34.2-07/-14):
+ * this suite was independently reproduced DESTROYING the developer's real
+ * `~/Library/Logs/GameLib/gamelib.log` three times during the 2026-07-26
+ * verification (log mtimes 10:49 → 10:56 → 10:57) — each of the three
+ * `init()` calls below runs `initHeadless()` → `new
+ * LogWriter(getLogFilePath({}))` → `archiveOldLogFile()`'s `renameSync`,
+ * unmocked, against whatever `getBaseLogPath()` resolves to. Containment is
+ * now enforced structurally by `src/backend/jest.setupContainment.ts`, wired
+ * into the backend project's `setupFiles` (`src/backend/jest.config.js`) —
+ * NOT by any mock added to this file. That module redirects
+ * `os.homedir()` via a project-wide `os` module mock (env-var
+ * redirection alone does not reach `os.homedir()`'s native binding inside a
+ * Jest test — see `jest.setupContainment.ts`'s own docstring for the full
+ * finding) plus `HOME`/`APPDATA`/`XDG_CONFIG_HOME`/`XDG_STATE_HOME`
+ * env-var redirection for the Windows/Linux branches. The tripwire test
+ * immediately below is this suite's OWN local, failing-loudly proof of that
+ * containment, placed first so it runs before any `init()` call — a future
+ * removal of the `setupFiles` entry fails HERE too, not only in a distant
+ * gate file. Do not add `os` / `pathShim` / `backend/logger/paths`
+ * `jest.mock` blocks to this file — doing so would re-establish the
+ * per-suite pattern this plan exists to replace, and would make the
+ * tripwire vacuous (this suite would then be "contained" by its own local
+ * mock, not by the structural mechanism the tripwire is supposed to prove).
+ *
  * `backend/online_monitor` is mocked (fix/steam-native-install-stability, 33-05 live-gate gap):
  * `init()` now calls the REAL `initOnlineMonitor()`, which reads `net.isOnline()` from
  * `electron` -- under THIS file's default Jest automock (`src/backend/__mocks__/electron.ts`,
@@ -39,9 +63,12 @@ jest.mock('../../online_monitor', () => ({
   onConnectivityChange: jest.fn()
 }))
 
+import { tmpdir } from 'os'
+import { isAbsolute, relative, resolve } from 'path'
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { handlerRegistry } from '../electronStub'
+import { getLogFilePath } from '../../logger/paths'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -70,6 +97,25 @@ async function flush(): Promise<void> {
 }
 
 describe('sidecar bootstrap (headless boot)', () => {
+  // Containment tripwire (Phase 34.2 gap cycle 3, plan 34.2-19 --
+  // REQ-34.2-07/-14). FIRST test in this describe block, deliberately, so it
+  // runs before any of the real init() calls below. Asserts the real,
+  // unmocked getLogFilePath({}) from backend/logger/paths -- the exact call
+  // initHeadless() makes, and the exact value that was rotating the real
+  // ~/Library/Logs/GameLib/gamelib.log -- resolves inside os.tmpdir(). This
+  // suite carries no jest.mock for os/pathShim/backend/logger/paths of its
+  // own; containment comes entirely from src/backend/jest.setupContainment
+  // .ts's project-wide setupFiles registration. If a future edit removes
+  // that setupFiles entry, THIS test fails locally, at the exact site of
+  // the historical defect, not only in a distant gate file.
+  it('containment tripwire: getLogFilePath({}) resolves inside os.tmpdir(), not the developer real home', () => {
+    const logPath = getLogFilePath({})
+    const tmpRoot = resolve(tmpdir())
+    const rel = relative(tmpRoot, resolve(logPath))
+    expect(rel.startsWith('..')).toBe(false)
+    expect(isAbsolute(rel)).toBe(false)
+  })
+
   // Behavior 1: building + running the sidecar entry under bare `node`
   // (electron absent) reaches READY without an uncaught exception --
   // proves paths.ts's app.getPath() and electron_store.ts's `new Store()`
