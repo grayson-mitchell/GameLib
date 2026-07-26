@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-07 done
-last_updated: "2026-07-27T22:35:00.000Z"
-last_activity: 2026-07-27 -- 34.4-07 executed (WebView D-04 honesty panel + Electron-unreachability gate, REQ-34.4-12)
+stopped_at: 34.4-02 done
+last_updated: "2026-07-27T22:41:25.000Z"
+last_activity: 2026-07-27 -- 34.4-02 executed (bottle trio + client-setup pair + redeemSteamKey/getSteamInstallSize, REQ-34.4-03/04/05)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 107
+  completed_plans: 108
   percent: 73
 ---
 
@@ -34,7 +34,41 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 5 of 10 (34.4-01, 34.4-03, 34.4-04, 34.4-06, 34.4-07 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+Plan: 6 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-06, 34.4-07 done; 34.4-05, 34.4-08, 34.4-09, 34.4-10 still pending)
+
+34.4-02 done -- macOS CrossOver bottle trio (steamBottleProvision/isSteamBottleProvisioned/
+steamBottleStatus) + guided Steam-client install pair (steamClientSetupStart/
+steamClientSetupRecheck) + redeemSteamKey/getSteamInstallSize registered on the Tauri sidecar
+(wave 2, depends_on: ["34.4-01"]). Completes all 13 genuinely-Steam channels in
+`steamAuthFlowRegistration.ts` (3 QR + 6 credential/session from plan 01 + 7 here = 16 total
+registrations). `steamBottleStatus` reproduces the one genuinely inline body among the 15
+Steam-labeled channels (`main.ts:948-953`) exactly -- both `get_nodefault(...) ?? fallback` reads,
+no re-derivation from `isBottleProvisioned()`, no `loggedIn` field (17-17/WR-02, D-04).
+`redeemSteamKey`'s WR-03 main-process trust boundary ported verbatim from `main.ts:906-917`:
+malformed payload (`store !== 'steam'`, non-string key, empty key) rejected with the literal
+`{ store: 'steam', outcome: 'error', message: 'invalid-request' }` shape before `SteamUser.redeemKey`
+is ever called; never logs the key value. Module docstring extended with `main.ts:LINE` citations
+for all 7 new channels, and explicitly states `getPrivateBranchPassword`/`setPrivateBranchPassword`
+are NOT registered here (GOG channel, corrected classification -- routed to
+`settingsFlowRegistration.ts` per 34.4-PATTERNS.md). Added 14 new tests (28 total, up from 14):
+bottle trio (incl. both `??` fallback branches + a no-`loggedIn`-property negative assertion),
+client-setup pair, and 4 redeemSteamKey rejection cases (bad store, non-string key, empty key, null
+payload) each asserting `SteamUser.redeemKey` was NEVER called -- the not-called assertion, not
+just the returned message, is what proves the trust boundary -- plus a dedicated no-key-leak test
+spying on console.log/warn/error. Hand RED-proofed by relocating the validation guard to after the
+delegation: exactly the 5 expected redeem-related tests failed for the expected reason (4
+rejection cases + the no-leak test), the 2 unrelated redeem tests (valid payload,
+`getSteamInstallSize`) stayed green; reverted via `git checkout --`, confirmed `git diff --stat`
+empty against the Task 1 commit. Full backend sweep: 115/118 suites, 2449/2452 tests -- the 3
+failing suites are all pre-existing and unrelated, confirmed by isolation re-run (`rustInvokeChannel.test.ts`
+and wine `rest.test.ts` fail identically alone; `lifecycleStub.test.ts` passes 25/25 alone -- the
+full-suite failure is cross-test timer pollution from `steam/library.ts`, a previously-documented
+issue). `electronReachLedger.test.ts` 4/4 green, no new growth (`steam/games.ts` already baselined
+from an earlier slice). No backend-file-unrelated regressions; `main.ts` and `src-tauri/` both
+byte-unchanged. One minor documented deviation: `grep -c "loggedIn"` returns 2 (prose in the
+docstring explaining the field's deliberate absence), not 0 -- satisfied in spirit, confirmed by
+the code-level no-`loggedIn`-property test instead. REQ-34.4-03/04/05 complete, see
+34.4-02-SUMMARY.md. Next: 34.4-05 (wave 2, depends_on: ["34.4-04"]).
 
 34.4-07 done -- WebView D-04 honesty panel + Electron-unreachability gate (wave 1, depends_on: []).
 Replaced the silently-blank Tauri login screen (`WebView/index.tsx`'s `!webviewPreloadPath` branch,
