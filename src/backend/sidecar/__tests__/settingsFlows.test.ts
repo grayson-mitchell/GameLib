@@ -115,10 +115,17 @@ jest.mock('backend/game_config', () => ({
 
 // ── backend/storeManagers mock — the steam-routed branch must never
 // construct a real SteamLibraryManager/SteamGame; a plain jest.fn() proves
-// the routing decision without any depot/PICS/filesystem involvement ────────
+// the routing decision without any depot/PICS/filesystem involvement.
+// `gog` (Phase 34.4 Plan 03) is a sibling stub, same shape, so the GOG
+// private-branch handlers never construct a real GOGLibraryManager/GOGGame
+// either — and so a not-called assertion on `steam.getGame` can prove the
+// GOG-not-Steam classification (REQ-34.4-06) ─────────────────────────────────
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
     steam: {
+      getGame: jest.fn()
+    },
+    gog: {
       getGame: jest.fn()
     }
   }
@@ -171,6 +178,7 @@ import type { AppSettings, GameSettings } from 'common/types'
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedGameConfigGet = GameConfig.get as jest.Mock
 const mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
+const mockedGogGetGame = libraryManagerMap.gog.getGame as jest.Mock
 
 /**
  * Points the mocked GlobalConfig.get() at a fresh settings object, carrying
@@ -652,5 +660,117 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
       ok: true,
       result: 'ok'
     })
+  })
+})
+
+describe('sidecar GOG private-branch password flows (Phase 34.4 Plan 03, REQ-34.4-06)', () => {
+  beforeEach(() => {
+    steamLibrary.clear()
+    mockAppSettings({ language: 'en', enableSteamNativeInstall: false })
+    mockedGogGetGame.mockReset().mockReturnValue({
+      getBranchPassword: jest.fn().mockReturnValue('stored-branch-password'),
+      setBranchPassword: jest.fn()
+    })
+    mockedSteamGetGame.mockReset()
+  })
+
+  // Must-have: getPrivateBranchPassword resolves the real (mocked) GOG
+  // branch password, not the unported marker.
+  it('getPrivateBranchPassword resolves ok:true with the GOG-routed branch password, not the unported marker', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gpbp-1', 'getPrivateBranchPassword', ['gog-app-1'])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'gpbp-1') as
+      | { ok: boolean; result?: unknown; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(response?.result).toBe('stored-branch-password')
+    expect(mockedGogGetGame).toHaveBeenCalledWith('gog-app-1')
+  })
+
+  // Must-have: setPrivateBranchPassword's two transport args are not
+  // transposed — getGame receives appName (arg 0), setBranchPassword
+  // receives password (arg 1). Only checking "it was called" would pass
+  // identically with the arguments swapped.
+  it('setPrivateBranchPassword (invoke, 2 args) reaches getGame(appName) and setBranchPassword(password) with the correct, non-transposed values', async () => {
+    const gogGameStub = {
+      getBranchPassword: jest.fn().mockReturnValue(''),
+      setBranchPassword: jest.fn()
+    }
+    mockedGogGetGame.mockReset().mockReturnValue(gogGameStub)
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'spbp-1', 'setPrivateBranchPassword', [
+      'gog-app-2',
+      'hunter2-branch-secret'
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'spbp-1') as
+      | { ok: boolean; error?: string }
+      | undefined
+    expect(response?.ok).toBe(true)
+    expect(response?.error).toBeUndefined()
+    expect(mockedGogGetGame).toHaveBeenCalledWith('gog-app-2')
+    expect(gogGameStub.setBranchPassword).toHaveBeenCalledWith(
+      'hunter2-branch-secret'
+    )
+  })
+
+  // The point of this plan: both channels reach libraryManagerMap['gog'],
+  // NEVER libraryManagerMap['steam'] — the classification 34.4-RESEARCH.md
+  // corrected from CONTEXT.md's file-grouped domain table. This assertion is
+  // what would catch the Steam misattribution being reintroduced.
+  it('REQ-34.4-06: both channels reach libraryManagerMap.gog.getGame and NEVER libraryManagerMap.steam.getGame', async () => {
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'gpbp-gog-not-steam', 'getPrivateBranchPassword', [
+      'gog-app-3'
+    ])
+    writeInvoke(input, 'spbp-gog-not-steam', 'setPrivateBranchPassword', [
+      'gog-app-3',
+      'another-secret'
+    ])
+    await flush()
+
+    const readResponse = frames.find(
+      (frame) => frame.id === 'gpbp-gog-not-steam'
+    ) as { ok: boolean } | undefined
+    const writeResponse = frames.find(
+      (frame) => frame.id === 'spbp-gog-not-steam'
+    ) as { ok: boolean } | undefined
+    expect(readResponse?.ok).toBe(true)
+    expect(writeResponse?.ok).toBe(true)
+
+    expect(mockedGogGetGame).toHaveBeenCalledWith('gog-app-3')
+    expect(mockedSteamGetGame).not.toHaveBeenCalled()
+  })
+
+  // T-34.4-12 (information disclosure): the submitted password value must
+  // never appear in an emitted response frame or a stderr diagnostic line.
+  it('T-34.4-12: no emitted response frame or stderr diagnostic contains the submitted branch password', async () => {
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const secret = 'super-secret-branch-password-xyz'
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'spbp-secrecy-1', 'setPrivateBranchPassword', [
+      'gog-app-4',
+      secret
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'spbp-secrecy-1')
+    expect(response).toBeDefined()
+    for (const frame of frames) {
+      expect(JSON.stringify(frame)).not.toContain(secret)
+    }
+    for (const call of stderrSpy.mock.calls) {
+      expect(String(call[0])).not.toContain(secret)
+    }
+
+    stderrSpy.mockRestore()
   })
 })

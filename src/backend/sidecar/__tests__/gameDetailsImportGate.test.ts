@@ -274,8 +274,15 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // checkout (the working tree IS HEAD by definition) and therefore
   // protecting nothing since the moment it was committed. No `git` subprocess
   // remains in this file; digest comparison needs none. ─────────────────────
+  // Recomputed 2026-07-27 (Phase 34.4 Plan 03, REQ-34.4-06): this file
+  // deliberately grew by two registrations, `getPrivateBranchPassword`/
+  // `setPrivateBranchPassword` — the corrected GOG classification (not
+  // Steam) of a pair the inventory's file-grouping had mis-filed under
+  // "Steam". The D-09 bottle-launch fix these gates protect
+  // (`steamLibrary.has(appName)` in `requestGameSettings`) is untouched;
+  // see the semantic-pin test below for that direct proof.
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'd1b690da8b190743716e9584cd4531a8937c979eb685aa6bfbc463008f188296'
+    '5cc3245e06290db1f7754a7579db862dee5956a893315c21dbf934381ce99ee1'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -308,10 +315,14 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     'getSystemInfo',
     'hasExecutable',
     'isNative',
-    'requestGameSettings'
+    'requestGameSettings',
+    // Phase 34.4 Plan 03, REQ-34.4-06 — the GOG private-branch pair,
+    // corrected out of the inventory's mis-filed "Steam" classification.
+    'getPrivateBranchPassword',
+    'setPrivateBranchPassword'
   ]
 
-  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these ten channels', () => {
+  it('REQ-34.2-10/D-09 Gate 7 semantic pin: settingsFlowRegistration.ts registers exactly these twelve channels', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
     const stripped = stripComments(readFileSync(filePath, 'utf-8'))
     const channelPattern = /ipcMain\.(?:handle|on)\(\s*['"]([^'"]+)['"]/g
@@ -325,7 +336,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     // intentional (a REQ-34.2-10 / D-09 do-not-touch file), state the reason
     // in the commit, then update this list AND the sha256 digest above
     // together, never one without the other.
-    expect(found.size).toBe(10)
+    expect(found.size).toBe(12)
     expect([...found].sort()).toEqual(
       [...EXPECTED_SETTINGS_FLOW_CHANNELS].sort()
     )

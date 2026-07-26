@@ -41,6 +41,19 @@
  * runner-specific/EOS-overlay/`egsSync` channels — those stay non-fatally
  * rejecting with `UNPORTED_CHANNEL_MARKER` per SEAM.md Load-Bearing
  * Invariant B (31-RESEARCH.md Q1).
+ *
+ * GOG PRIVATE BRANCH (Phase 34.4 Plan 03, REQ-34.4-06). Registers
+ * `getPrivateBranchPassword`/`setPrivateBranchPassword` (`main.ts:1510-1515`)
+ * — a **GOG** pair, despite `.planning/IPC-PORT-INVENTORY.md`'s slice-7 list
+ * filing them under "Steam ... Private branches" (that inventory groups by
+ * file, not by actual runner; 34.4-RESEARCH.md's correction). They are landed
+ * here, never in `steamAuthFlowRegistration.ts`, because this file already
+ * imports `libraryManagerMap` (see `requestGameSettings`/`isNative` above) —
+ * no new import, no new module, no new store plumbing. Both go through
+ * `GOGGame.getBranchPassword()`/`setBranchPassword()`
+ * (`storeManagers/gog/games.ts:1398,1402`), the SAME GOG branch-password key
+ * store `main.ts` reads/writes through — this module never addresses that
+ * store directly (see `storeManagers/gog/electronStores.ts`).
  */
 
 import { existsSync, readFileSync } from 'graceful-fs'
@@ -211,12 +224,15 @@ export function registerSettingsFlows(): void {
   ipcMain.handle('showUpdateSetting', async () => !isFlatpak)
 
   // logger/ipc_handler.ts:17-20
-  ipcMain.handle('getLogContent', async (_event: unknown, appNameOrRunner: unknown) => {
-    const logPath = getLogFilePath(
-      appNameOrRunner as Parameters<typeof getLogFilePath>[0]
-    )
-    return existsSync(logPath) ? readFileSync(logPath, 'utf-8') : ''
-  })
+  ipcMain.handle(
+    'getLogContent',
+    async (_event: unknown, appNameOrRunner: unknown) => {
+      const logPath = getLogFilePath(
+        appNameOrRunner as Parameters<typeof getLogFilePath>[0]
+      )
+      return existsSync(logPath) ? readFileSync(logPath, 'utf-8') : ''
+    }
+  )
 
   // utils/ipc_handler.ts:22
   ipcMain.handle('getSystemInfo', async (_event: unknown, cache?: unknown) =>
@@ -224,8 +240,10 @@ export function registerSettingsFlows(): void {
   )
 
   // utils/ipc_handler.ts:28-30
-  ipcMain.handle('hasExecutable', async (_event: unknown, executable: unknown) =>
-    hasExecutable(executable as string)
+  ipcMain.handle(
+    'hasExecutable',
+    async (_event: unknown, executable: unknown) =>
+      hasExecutable(executable as string)
   )
 
   // main.ts:1567-1569 — NEW FINDING (31-RESEARCH.md Q1), runner-generic,
@@ -239,4 +257,23 @@ export function registerSettingsFlows(): void {
       .getGame(appName as string)
       .isNative()
   })
+
+  // ── GOG PRIVATE BRANCH (Phase 34.4 Plan 03, REQ-34.4-06) ──────────────────
+  // Source: main.ts:1510-1515. GOG channels, NOT Steam — filed as "Steam" in
+  // the inventory only because that document groups by file. Both route
+  // through GOGGame's own accessors (storeManagers/gog/games.ts:1398,1402),
+  // never through the underlying branch-password key store directly — that
+  // key scheme lives in exactly one place.
+  ipcMain.handle(
+    'getPrivateBranchPassword',
+    async (_event: unknown, ...args: unknown[]) =>
+      libraryManagerMap['gog'].getGame(args[0] as string).getBranchPassword()
+  )
+  ipcMain.handle(
+    'setPrivateBranchPassword',
+    async (_event: unknown, ...args: unknown[]) =>
+      libraryManagerMap['gog']
+        .getGame(args[0] as string)
+        .setBranchPassword(args[1] as string)
+  )
 }
