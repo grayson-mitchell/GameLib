@@ -44,12 +44,35 @@
  * never left outstanding in a `beforeAll`/`afterAll` pair that could leak
  * into a later test file sharing the same Jest worker.
  *
- * This gate does NOT cover the whole `src/backend/sidecar/__tests__/`
- * directory -- see the docstring above `IN_SCOPE_SUITES` below for the
- * explicit list of what remains uncovered and why.
+ * **Block C** (plan 34.2-23, WR-08) and **Block D** (plan 34.2-23, T-34.2-84)
+ * close the gap the paragraph above used to describe. Containment for this
+ * whole directory is now STRUCTURAL: `src/backend/jest.setupContainment.ts`,
+ * registered once via `src/backend/jest.config.js`'s `setupFiles` entry
+ * (plan 34.2-19), redirects `os.homedir()` and the HOME/USERPROFILE/APPDATA/
+ * LOCALAPPDATA/XDG_* environment variables for every backend test file
+ * before that file's own imports run -- so a suite added tomorrow with zero
+ * containment code of its own is contained by construction, with no
+ * per-suite opt-in required. `IN_SCOPE_SUITES`' hand-maintained kit (Block
+ * A/B) is retained as DEFENCE IN DEPTH on top of that structural floor, not
+ * as the sole containment mechanism. Block C is a `readdirSync`-derived
+ * set-equality tripwire proving every `*.test.ts` file actually present in
+ * this directory is classified by exactly one of the two declared lists
+ * below (`IN_SCOPE_SUITES` or `STRUCTURALLY_CONTAINED_SUITES`) -- replacing
+ * the prior 11-suite accepted-debt list this file used to declare, which
+ * plan 34.2-19 closed structurally and which had therefore become a false
+ * statement about the tree. Block D reads
+ * `jest.config.js` and `jest.setupContainment.ts` directly and asserts the
+ * structural mechanism itself is still wired up, so its removal is caught
+ * here as a third independent failure site (alongside
+ * `structuralContainment.test.ts` and `bootstrap.test.ts`'s own tripwire).
+ *
+ * Every gate in this file carries a self-test proving that gate can fail --
+ * `stripComments`' own self-test (pre-existing), the WR-01 anti-claim
+ * self-test, the Block C tripwire self-test, and the Block D structural-gate
+ * self-test.
  */
 
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join, relative, resolve, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 
@@ -374,10 +397,18 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
 // ── Block B: declared-list source gate ──────────────────────────────────────
 
 /**
- * The four suites this gate holds to the full containment kit. DECLARED, not
- * derived (this repo's own D-13 precedent, `gameDetailsImportGate.test.ts`) --
- * a `readdirSync`-derived list would silently shrink to fit whatever exists,
+ * The four suites this gate holds to the full containment kit
+ * (`pathShim`/`backend/logger/paths`/`backend/constants/environment` mocks
+ * plus the `getLogFilePath({})` tripwire). DECLARED, not derived (this
+ * repo's own D-13 precedent, `gameDetailsImportGate.test.ts`) -- a
+ * `readdirSync`-derived list would silently shrink to fit whatever exists,
  * defeating the anti-vacuity purpose of pinning an exact count below.
+ *
+ * As of plan 34.2-23, this per-suite kit is DEFENCE IN DEPTH layered on top
+ * of the structural containment `src/backend/jest.setupContainment.ts`
+ * provides to the whole backend project (plan 34.2-19) -- it is no longer
+ * the sole containment mechanism for these four files, only the most
+ * heavily-proven one.
  */
 const IN_SCOPE_SUITES = [
   'gameDetailsFlows.test.ts',
@@ -387,40 +418,61 @@ const IN_SCOPE_SUITES = [
 ]
 
 /**
- * What this gate does NOT cover (verified against the tree at plan
- * execution time, 2026-07-26): every OTHER sidecar suite that also drives
- * `bootstrap.init()` carries the SAME pre-existing env-bypass risk class
- * (`tests-clobbering-real-steam-store`) and is NOT gated here. Recorded as
- * declared debt in this phase's `deferred-items.md`. No reader may take
- * `IN_SCOPE_SUITES` above, or this gate passing, as proof that the whole
- * `src/backend/sidecar/__tests__/` directory is contained.
+ * Every OTHER `*.test.ts` suite in this directory (plan 34.2-23, gap cycle 3
+ * -- replaces the prior accepted-debt list this file used to declare, which
+ * named an 11-suite containment HOLE that plan 34.2-19 closed structurally;
+ * keeping that declaration would have been the same
+ * over-claim-by-stale-declaration failure this phase was cited for three
+ * verification rounds running).
+ *
+ * Membership here carries NO obligation beyond being consciously classified
+ * -- these suites rely on the `setupFiles` entry in
+ * `src/backend/jest.config.js` (`jest.setupContainment.ts`) alone, with no
+ * per-suite mock kit of their own, and that is SAFE precisely because
+ * containment is now structural: registered once, before any suite's own
+ * imports run, for the whole backend project, rather than something each
+ * suite author must remember to opt into.
+ *
+ * `testContainment.test.ts` (this file) classifies ITSELF here: it is just
+ * another backend suite that benefits from structural containment like any
+ * other, and excluding it would leave the Block C tripwire below with a
+ * permanent one-file blind spot.
+ *
+ * The directory holds 25 `*.test.ts` files as of this plan (24 before this
+ * gap cycle, plus `structuralContainment.test.ts` added by plan 34.2-19);
+ * 4 are `IN_SCOPE_SUITES` and the 21 below account for the rest -- 9 of the
+ * original 24 were classified by NEITHER of the two lists this replaces,
+ * which is exactly why a length-only pin (Block B's old `toHaveLength(11)`)
+ * was never sufficient and Block C's derived tripwire exists.
  */
-const KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES = [
+const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
-  'bootstrapWirings.test.ts',
+  'appShellImportGate.test.ts',
   'bootstrap.test.ts',
+  'bootstrapWirings.test.ts',
+  'dialogStub.test.ts',
   'downloadQueueFlows.test.ts',
+  'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
-  'onlineMonitorWiring.test.ts',
+  'fileStore.test.ts',
+  'gameDetailsImportGate.test.ts',
   'installFlows.test.ts',
-  'skeletonFlows.test.ts',
-  'settingsFlows.test.ts',
+  'keyringTokenStore.test.ts',
+  'lifecycleStub.test.ts',
+  'onlineMonitorWiring.test.ts',
   'rustInvokeChannel.test.ts',
-  'steamAuthFlows.test.ts'
+  'settingsFlows.test.ts',
+  'skeletonFlows.test.ts',
+  'steamAuthFlows.test.ts',
+  'storeLayer.test.ts',
+  'structuralContainment.test.ts',
+  'testContainment.test.ts'
 ]
 
 describe('Block B: declared-list source gate over the four in-scope suites (34.2 gap cycle 2, plan 34.2-18)', () => {
-  it('anti-vacuity: the declared list has exactly 4 entries and every file exists', () => {
+  it('anti-vacuity: the declared in-scope list has exactly 4 entries and every file exists', () => {
     expect(IN_SCOPE_SUITES).toHaveLength(4)
     for (const name of IN_SCOPE_SUITES) {
-      const filePath = join(__dirname, name)
-      expect(existsSync(filePath)).toBe(true)
-    }
-  })
-
-  it('anti-vacuity: the declared uncovered list has exactly 11 entries and every file exists', () => {
-    expect(KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES).toHaveLength(11)
-    for (const name of KNOWN_UNCOVERED_BOOTSTRAP_DRIVING_SUITES) {
       const filePath = join(__dirname, name)
       expect(existsSync(filePath)).toBe(true)
     }
@@ -527,3 +579,171 @@ describe('Block B: declared-list source gate over the four in-scope suites (34.2
 // up first, restored immediately afterwards, `git diff` confirmed clean)
 // made exactly one Block B test fail -- the pathShim-mock-presence check
 // for `loggerFlows.test.ts` -- proving Block B is not vacuous.
+
+// ── Block C: derived readdirSync tripwire over the whole directory
+// (plan 34.2-23, WR-08, T-34.2-83) ──────────────────────────────────────────
+
+/** Every `*.test.ts` file actually present in this directory, sorted. */
+function listActualTestSuites(): string[] {
+  return readdirSync(__dirname)
+    .filter((name) => name.endsWith('.test.ts'))
+    .sort()
+}
+
+/**
+ * Set-EQUALITY (not merely "no unclassified file") between `actualFiles`
+ * and the union of the two declared lists above -- so this catches BOTH an
+ * unclassified new suite (T-34.2-83) AND a phantom entry left behind after a
+ * suite is renamed or deleted. Factored into its own function so the gate
+ * below and its self-test exercise the SAME comparison code path -- a
+ * self-test that reimplements the comparison would prove nothing about the
+ * gate it claims to test.
+ */
+function diffSuiteClassification(
+  actualFiles: string[],
+  declaredNames: string[]
+): { unclassified: string[]; phantom: string[] } {
+  const actualSet = new Set(actualFiles)
+  const declaredSet = new Set(declaredNames)
+  const unclassified = actualFiles
+    .filter((name) => !declaredSet.has(name))
+    .sort()
+  const phantom = declaredNames
+    .filter((name) => !actualSet.has(name))
+    .sort()
+  return { unclassified, phantom }
+}
+
+describe('Block C: derived readdirSync tripwire over the whole directory (plan 34.2-23, WR-08)', () => {
+  it('anti-vacuity: the derived directory listing has more than 20 entries and every classified name exists on disk', () => {
+    const actualFiles = listActualTestSuites()
+    expect(actualFiles.length).toBeGreaterThan(20)
+
+    for (const name of [...IN_SCOPE_SUITES, ...STRUCTURALLY_CONTAINED_SUITES]) {
+      expect(existsSync(join(__dirname, name))).toBe(true)
+    }
+  })
+
+  it('T-34.2-83: every *.test.ts file in this directory is classified by exactly one of the two declared lists (set equality)', () => {
+    const actualFiles = listActualTestSuites()
+    const declared = [...IN_SCOPE_SUITES, ...STRUCTURALLY_CONTAINED_SUITES]
+    const { unclassified, phantom } = diffSuiteClassification(
+      actualFiles,
+      declared
+    )
+    expect({ unclassified, phantom }).toEqual({
+      unclassified: [],
+      phantom: []
+    })
+  })
+
+  // Tripwire self-test: proves diffSuiteClassification (the SAME function
+  // the gate above calls) actually detects growth, not just that it can be
+  // satisfied by the current tree.
+  it('tripwire self-test: an unclassified synthetic file name is reported by diffSuiteClassification', () => {
+    const declared = [...IN_SCOPE_SUITES, ...STRUCTURALLY_CONTAINED_SUITES]
+    const actualFilesPlusOne = [
+      ...listActualTestSuites(),
+      'zzSyntheticUnclassifiedSuite.test.ts'
+    ].sort()
+
+    const { unclassified, phantom } = diffSuiteClassification(
+      actualFilesPlusOne,
+      declared
+    )
+    expect(unclassified).toEqual(['zzSyntheticUnclassifiedSuite.test.ts'])
+    expect(phantom).toEqual([])
+  })
+
+  // Tripwire self-test (phantom direction): proves the same function also
+  // catches a declared name naming a file that no longer exists.
+  it('tripwire self-test: a phantom declared name naming a nonexistent file is reported by diffSuiteClassification', () => {
+    const actualFiles = listActualTestSuites()
+    const declaredPlusPhantom = [
+      ...IN_SCOPE_SUITES,
+      ...STRUCTURALLY_CONTAINED_SUITES,
+      'zzPhantomDeletedSuite.test.ts'
+    ]
+
+    const { unclassified, phantom } = diffSuiteClassification(
+      actualFiles,
+      declaredPlusPhantom
+    )
+    expect(unclassified).toEqual([])
+    expect(phantom).toEqual(['zzPhantomDeletedSuite.test.ts'])
+  })
+})
+
+// TRIPWIRE RED PROOF (recorded verbatim in 34.2-23-SUMMARY.md): a real
+// placeholder file, `zzTripwireProbe.test.ts`, was created in this
+// directory containing one trivially-passing test; running this suite with
+// the probe present made the "every *.test.ts file ... classified" test
+// above fail, naming `zzTripwireProbe.test.ts` as unclassified; the probe
+// was then deleted and `git status` confirmed clean.
+
+// ── Block D: structural containment gate (plan 34.2-23, T-34.2-84) ─────────
+
+const JEST_CONFIG_PATH = join(__dirname, '..', '..', 'jest.config.js')
+const JEST_SETUP_CONTAINMENT_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  'jest.setupContainment.ts'
+)
+
+/**
+ * True if `source` (comment-stripped) wires a `setupFiles` entry naming
+ * `jest.setupContainment` -- the single registration point plan 34.2-19
+ * added to `src/backend/jest.config.js`. Shared by the real-file assertion
+ * below and its own self-test, so the self-test proves the SAME logic that
+ * gates the real file can fail.
+ */
+function hasSetupContainmentEntry(source: string): boolean {
+  const stripped = stripComments(source)
+  return /setupFiles\s*:\s*\[[^\]]*jest\.setupContainment/.test(stripped)
+}
+
+const REQUIRED_CONTAINMENT_ENV_VARS = [
+  'HOME',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'XDG_CONFIG_HOME',
+  'XDG_STATE_HOME',
+  'XDG_DATA_HOME',
+  'XDG_CACHE_HOME'
+]
+
+describe('Block D: structural containment gate (plan 34.2-23, T-34.2-84)', () => {
+  it('src/backend/jest.config.js still wires a setupFiles entry naming jest.setupContainment', () => {
+    const source = readFileSync(JEST_CONFIG_PATH, 'utf-8')
+    expect(hasSetupContainmentEntry(source)).toBe(true)
+  })
+
+  // Structural-gate self-test: proves hasSetupContainmentEntry (the SAME
+  // function the gate above calls) can actually fail against a config that
+  // lacks the entry, not just pass against the real file.
+  it('structural gate self-test: a synthetic jest.config.js lacking the setupFiles entry is detected as missing', () => {
+    const synthetic = [
+      'module.exports = {',
+      "  displayName: 'Backend',",
+      "  roots: ['<rootDir>/src/backend']",
+      '}'
+    ].join('\n')
+    expect(hasSetupContainmentEntry(synthetic)).toBe(false)
+  })
+
+  it.each(REQUIRED_CONTAINMENT_ENV_VARS)(
+    'src/backend/jest.setupContainment.ts still assigns process.env.%s',
+    (key) => {
+      const source = readFileSync(JEST_SETUP_CONTAINMENT_PATH, 'utf-8')
+      expect(source).toMatch(new RegExp(`process\\.env\\.${key}\\s*=`))
+    }
+  )
+})
+
+// STRUCTURAL GATE RED PROOF (recorded verbatim in 34.2-23-SUMMARY.md): the
+// `setupFiles` entry in `src/backend/jest.config.js` was temporarily
+// commented out; running this suite made the "still wires a setupFiles
+// entry" test above fail; the entry was restored and
+// `git diff --exit-code src/backend/jest.config.js` returned 0.
