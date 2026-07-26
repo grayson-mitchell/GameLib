@@ -1426,7 +1426,7 @@ Plans:
 - [x] 34.4-01-PLAN.md — Steam credential/SteamGuard trio + session/identity trio incl. `logoutSteam` as a send (wave 1)
 - [ ] 34.4-02-PLAN.md — Bottle trio, client-setup pair, `redeemSteamKey`/`getSteamInstallSize` (wave 2)
 - [x] 34.4-03-PLAN.md — The two **GOG** private-branch password channels via `libraryManagerMap` (wave 1)
-- [ ] 34.4-04-PLAN.md — New `humbleFlowRegistration.ts` + `handlers.ts` wiring + 10 clean Humble channels (wave 1)
+- [x] 34.4-04-PLAN.md — New `humbleFlowRegistration.ts` + `handlers.ts` wiring + 10 clean Humble channels (wave 1)
 - [ ] 34.4-05-PLAN.md — Ownership overrides, corrected `humbleRecordGiftLinkOpened` handle, `humbleDisconnect` send (D-05), `humbleRunValidation` guard (wave 2)
 - [ ] 34.4-06-PLAN.md — Fail-fast `electronStub.net.request` (D-06) (wave 1)
 - [ ] 34.4-07-PLAN.md — Honest "not available on this build" login panel (D-04) (wave 1)

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-03 done
-last_updated: "2026-07-27T21:48:00.000Z"
-last_activity: 2026-07-27 -- 34.4-03 executed (GOG private-branch password channels, REQ-34.4-06)
+stopped_at: 34.4-04 done
+last_updated: "2026-07-27T22:04:00.000Z"
+last_activity: 2026-07-27 -- 34.4-04 executed (Humble library/sync + key-state channels, REQ-34.4-07)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 104
-  percent: 70
+  completed_plans: 105
+  percent: 71
 ---
 
 # Project State
@@ -34,7 +34,46 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 2 of 10 (34.4-01, 34.4-03 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+Plan: 3 of 10 (34.4-01, 34.4-03, 34.4-04 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+
+34.4-04 done -- Humble library/sync + key-state channel registration (wave 1, depends_on: []).
+Created `humbleFlowRegistration.ts`, curated-importing `humble/user.ts`/`humble/library.ts`
+directly (never `humble/ipc_handler.ts`, which also registers the 6 channels Phase 34.4.1 owns),
+registering exactly 10 `ipcMain.handle` channels: `humbleGetUserInfo`/`humbleCheckHealth`/
+`humbleSync`/`humbleGetKeys`/`humbleGetSyncState` (library/sync) and `humbleGetGiftedAt`/
+`humbleMarkRedeemed`/`humbleUndoRedeemed`/`humbleGetRevealedKeyValue`/`humbleGetClaimAnnotations`
+(key-state, REQ-34.4-07). Copied `steamAuthFlowRegistration.ts`'s per-file
+`import '../storeManagers'`-first circular-dep fix (`humble/library.ts:41-42` reaches
+`storeManagers/steam/electronStores`+`steam/user` the same way `steam/user.ts` does). Wired
+`registerHumbleFlows()` into `handlers.ts` before `ensureStoresRegistered()`. Added
+`humbleFlows.test.ts` (17 tests) mirroring `steamAuthFlows.test.ts`'s real-shim over-the-wire
+pattern (bootstrap.ts's `init()`, `writeInvoke`, response-frame assertions), automocking
+`humble/user`/`humble/library`: per-channel round-trips for all 10, argument-fidelity for the 3
+`params`-taking channels (distinguishable gamekey/machineName values), a kind assertion (all 10
+invoke-only), a negative-scope registration guard (the 6 Phase 34.4.1 channels stay unregistered
+as handler AND listener), a wire-level `humbleRevealKey` Invariant B proof, and a curated-import
+source gate with self-tests. Classified `humbleFlows.test.ts` in `testContainment.test.ts`'s
+`STRUCTURALLY_CONTAINED_SUITES`. Two Rule 1 deviations found during the mandatory hand RED
+proof: (1) the module's own docstring used wildcard notation `storeManagers/steam/*`, whose
+literal `/*` inside a `//` line comment is misread by `stripSourceComments`' block-comment regex
+as an unclosed opener, silently deleting the module's own import statements from the text the
+curated-import guard inspects -- reworded to prose, no literal `/*` remains; (2) the curated-import
+guard's regex only matched `from '...'`/`require(...)` forms, missing the realistic bare
+side-effect-import shape (`import '../humble/ipc_handler'`, no `from` clause) that this codebase's
+own curated-import idiom (`import '../storeManagers'`) actually uses -- broadened the regex, added
+a self-test. The RED proof itself required importing AND CALLING `registerHumbleIpcHandlers()`
+(not a bare import) since `humble/ipc_handler.ts` has no top-level registration side effect; all
+3 target tests failed for the expected reason, then reverted (`git diff --stat` on the module
+confirmed byte-identical to the Task 1 commit, modulo the retained docstring fix). Full backend
+sweep: 2429/2432 tests, 114/117 suites -- only the 2 permanent pre-existing baselines
+(`rustInvokeChannel.test.ts`, wine `rest.test.ts`) plus, on one of two runs, the already-documented
+non-deterministic `library.ts` leaked-timer flake (confirmed clean on isolated re-run). No Rust
+files touched; `main.ts`/`humble/ipc_handler.ts` byte-unchanged. `electronReachLedger.test.ts`'s
+predicted red did NOT materialize -- measured (not assumed): its `ENTRY_POINTS` list was never
+extended to include `humbleFlowRegistration.ts` by this plan (per the plan's own instruction that
+34.4-08 owns that edit), so the ledger's traversal never reaches this module's electron-touching
+edges; recorded as a correction to the plan's prediction, not fixed. REQ-34.4-07 complete, see
+34.4-04-SUMMARY.md. Next: 34.4-02 (bottle/client-setup/redeem group, same file, wave 1).
 
 34.4-03 done -- GOG private-branch password channels (wave 1, depends_on: []). Registered
 `getPrivateBranchPassword`/`setPrivateBranchPassword` in `settingsFlowRegistration.ts` as GOG
