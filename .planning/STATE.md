@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-05-PLAN.md
-last_updated: "2026-07-26T10:52:00.000Z"
+stopped_at: Completed 34.3-06-PLAN.md
+last_updated: "2026-07-26T10:49:53.122Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 98
-  percent: 89
+  completed_plans: 99
+  percent: 67
 ---
 
 # Project State
@@ -34,8 +34,35 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 7 of 9 (wave 2 -- plan 05 now complete)
+Plan: 8 of 9 (wave 2 -- plan 06 now complete)
 discuss/plan.
+
+34.3-06 done -- Clipboard channel registration. Created `clipboardFlowRegistration.ts`
+exporting `registerClipboardFlows()`, registering the 3 clipboard channels
+(`clipboardWriteText`/`clipboardReadText`/`copySystemInfoToClipboard`) -- the ONLY
+consumers of this slice's 2 new Rust arms. `clipboardReadText` awaits
+`requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])` directly in its own handler (D-04),
+bypassing the sync, deliberately-dead `electronStub.clipboard.readText()` stub, resolving
+`''` on rejection or a non-string result rather than rejecting (`SIDLogin/index.tsx:137`
+consumes the value directly). `copySystemInfoToClipboard` curated-imports
+`getSystemInfo`/`formatSystemInfo` from `utils/systeminfo` directly (D-14), never
+`utils/ipc_handler.ts`, which would double-register 4 already-ported channels. Wired
+`registerClipboardFlows()` into `handlers.ts` after `registerShellFilesFlows()`. Added
+`clipboardFlows.test.ts` (11 cases) calling `registerClipboardFlows()` DIRECTLY rather
+than through the full sidecar bootstrap (mirrors `lifecycleStub.test.ts`'s lighter
+mock-only-the-Rust-boundary shape, since this module touches no store/config/environment
+surface) -- covers the write/read/systeminfo round-trips, D-04's stub-bypass (spied,
+never called), the send-vs-handle contract, and a negative-scope guard (snapshotted
+BEFORE `registerClipboardFlows()` ran) proving no registration leaked for the 8
+already-ported channels `utils/ipc_handler.ts`/`logger/ipc_handler.ts` also declare. One
+Rule 3 deviation: classified `clipboardFlows.test.ts` in `testContainment.test.ts`'s
+`STRUCTURALLY_CONTAINED_SUITES` (identical os/electron/electron-store mock kit already
+classified there), following 34.3-01's exact precedent for `shellFilesFlows.test.ts`.
+Full backend sweep: 2387/2389 passing, 114/116 suites -- only the 2 pre-existing,
+already-documented failures appear (`rustInvokeChannel.test.ts`, wine `rest.test.ts`).
+`tsc --noEmit`/`prettier --check` on all 4 touched files/`cargo check --quiet` (no Rust
+touched) all green. REQ-34.3-03/-04/-13 complete, see 34.3-06-SUMMARY.md. Next: 34.3-07
+(wave 3).
 
 34.3-05 done -- Clipboard forwarding + relaunch/quit race guard (D-01/D-02/D-03/D-04/D-06).
 `electronStub.clipboard.writeText` graduated from the Phase 31 logged no-op ("deferred to
@@ -933,7 +960,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1743,6 +1770,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P04 | 40min | 3 tasks | 5 files |
 | Phase 34.3 P02 | 90min | 2 tasks | 2 files |
 | Phase 34.3 P05 | ~50min | 3 tasks | 3 files |
+| Phase 34.3 P06 | 35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -2020,6 +2048,7 @@ Recent decisions affecting current work:
 - [Phase 34.3-02]: clearCache's refreshLibrary push rides pushFrontendMessage from ./sidecarRpc directly, per the plan's interfaces section
 - [Phase 34.3-02]: resetHeroic calls utils.ts's resetHeroic() completely unmodified -- no build-conditional branch; the relaunch/quit ordering race is left to plan 34.3-05
 - [Phase 34.3]: 34.3-05 D-06: relaunchInFlight guard lives entirely in electronStub.ts (never reset, relaunch is terminal); resetHeroic in utils.ts stays byte-identical, no isTauri() branch
+- [Phase 34.3]: clipboardFlows.test.ts calls registerClipboardFlows() directly rather than booting the full sidecar via bootstrap's init(), since the module touches no store/config/environment surface — Mirrors lifecycleStub.test.ts's lighter mock-only-the-Rust-boundary shape instead of the heavier appShellFlows/shellFilesFlows full-bootstrap harness
 
 ### Pending Todos
 
@@ -2090,7 +2119,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T10:34:34.278Z
+Last session: 2026-07-26T10:49:53.006Z
 Stopped at: Completed 34.3-04-PLAN.md
 Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
 (Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
