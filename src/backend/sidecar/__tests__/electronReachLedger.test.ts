@@ -52,7 +52,21 @@ const ENTRY_POINTS = [
   // to capture.
   join(REPO_ROOT, 'src/backend/sidecar/shellFilesFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/clipboardFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/loggerFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/loggerFlowRegistration.ts'),
+  // Phase 34.4 Plan 08 (REQ-34.4-10, D-10): this slice's ported surface.
+  // humbleFlowRegistration.ts is a brand-new registration module (plans
+  // 34.4-04/05) that was never added as an entry point by those plans --
+  // they explicitly deferred that edit to this plan. steamAuthFlowRegistration.ts
+  // and settingsFlowRegistration.ts are EXTENDED by this slice (plans
+  // 34.4-01/02/03) but, per the corrected reading recorded in this plan's
+  // <interfaces> section, were NOT already entry points -- 34.4-RESEARCH.md's
+  // claim that settingsFlowRegistration.ts was "already one of ENTRY_POINTS
+  // (added in Phase 34.2)" does not hold against the actual seven-entry list
+  // read at plan time. Adding all three is what makes the committed baseline
+  // below a trustworthy Phase 35 cutover work-list rather than a partial one.
+  join(REPO_ROOT, 'src/backend/sidecar/humbleFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/steamAuthFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/settingsFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -70,9 +84,60 @@ const ENTRY_POINTS = [
 // imports `app` from 'electron', reached transitively via
 // loggerFlowRegistration.ts). No other path appeared or disappeared; the
 // prior 34.2 baseline's 29 entries are unchanged.
+//
+// Phase 34.4 Plan 08 (REQ-34.4-10/15, D-10) extended ENTRY_POINTS with
+// humbleFlowRegistration.ts, steamAuthFlowRegistration.ts and
+// settingsFlowRegistration.ts and re-ran computeElectronReach() via the same
+// temporary-print-statement procedure (before: 30 electron-importing
+// modules / visitedFiles.size 202; after: 34 modules / visitedFiles.size
+// 217). The Steam and settings additions contributed ZERO new electron
+// reach, as predicted (the four Steam modules and settingsFlowRegistration's
+// libraryManagerMap import zero electron). The Humble half gained FOUR new
+// modules, not the three this plan's own <interfaces> section (and
+// RESEARCH.md) predicted -- the measurement disagreed with the prediction,
+// and per the plan's explicit rule the measurement wins:
+//   - src/backend/humble/user.ts        (predicted)
+//   - src/backend/humble/adapter.ts     (predicted)
+//   - src/backend/humble/expirationAlerts.ts (predicted, two-hop)
+//   - src/backend/humble/userAgent.ts   (NOT predicted by the plan or
+//     RESEARCH.md -- imports `app` from 'electron' at userAgent.ts:1, and is
+//     reached two-hop via humbleFlowRegistration.ts -> humble/user.ts:16
+//     (`import { standardBrowserUserAgent } from './userAgent'`), and again
+//     via humbleFlowRegistration.ts -> humble/library.ts:12 -> ./adapter ->
+//     adapter.ts:13's identical import. Neither RESEARCH.md's canonical_refs
+//     nor 34.4-CONTEXT.md's D-10 section named this module -- both
+//     enumerated only the two DIRECT electron imports in user.ts/adapter.ts
+//     and the one transitive edge through library.ts, missing this second,
+//     independently-electron-importing transitive dependency of both.
+// See 34.4-08-SUMMARY.md for the full before/after captured output.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
+  // Phase 34.4 Plan 08 (D-10): humbleFlowRegistration.ts -> humble/library.ts
+  // (direct) -> humble/library.ts:12
+  // (`import { getGamekeys, getOrderDetail, revealKey as adapterRevealKey } from './adapter'`)
+  // -> adapter.ts:2 `import { net } from 'electron'`.
+  'src/backend/humble/adapter.ts',
+  // Phase 34.4 Plan 08 (D-10): two-hop --
+  // humbleFlowRegistration.ts -> humble/library.ts:22
+  // (`import { detectAndNotifyExpirationTransitions } from './expirationAlerts'`)
+  // -> expirationAlerts.ts:1 `import { Notification } from 'electron'`. A
+  // depth-1 regex over humbleFlowRegistration.ts's own text cannot see this
+  // edge -- it only appears one hop further, inside library.ts.
+  'src/backend/humble/expirationAlerts.ts',
+  // Phase 34.4 Plan 08 (D-10): humbleFlowRegistration.ts -> humble/user.ts
+  // (direct) -- humble/user.ts:1 `import { safeStorage, session } from
+  // 'electron'`.
+  'src/backend/humble/user.ts',
+  // Phase 34.4 Plan 08 (D-10): NOT predicted by the plan's <interfaces>
+  // section or RESEARCH.md -- discovered only by running the traversal.
+  // userAgent.ts:1 `import { app } from 'electron'`. Reached two-hop via
+  // humbleFlowRegistration.ts -> humble/user.ts:16
+  // (`import { standardBrowserUserAgent } from './userAgent'`), and
+  // independently three-hop via
+  // humbleFlowRegistration.ts -> humble/library.ts:12 -> ./adapter ->
+  // adapter.ts:13's identical import of './userAgent'.
+  'src/backend/humble/userAgent.ts',
   'src/backend/ipc.ts',
   'src/backend/launcher.ts',
   // Phase 34.3 Plan 07 (D-10): new edge, pulled in via
@@ -302,7 +367,14 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/common/types.ts',
       // Phase 34.3 Plan 07 (D-10): the new edge itself is anti-vacuity-protected --
       // logger/uploader.ts, reached via loggerFlowRegistration.ts.
-      'src/backend/logger/uploader.ts'
+      'src/backend/logger/uploader.ts',
+      // Phase 34.4 Plan 08 (D-10): the four new Humble edges, each
+      // anti-vacuity-protected so a future refactor that quietly drops one
+      // fails this test instead of silently shrinking the measured set.
+      'src/backend/humble/user.ts',
+      'src/backend/humble/adapter.ts',
+      'src/backend/humble/expirationAlerts.ts',
+      'src/backend/humble/userAgent.ts'
     ]
     for (const requiredModule of requiredModules) {
       expect(measured.has(requiredModule)).toBe(true)
@@ -314,7 +386,12 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // to a measured 202. Raised the floor from 100 to 150 -- comfortably below
     // the measured size, so the guard stays meaningful (never lowered, per the
     // plan's explicit instruction).
-    expect(reachResult.visitedFiles.size).toBeGreaterThan(150)
+    //
+    // Phase 34.4 Plan 08 (D-10): three more new entry points grew
+    // visitedFiles.size further, to a measured 217. Raised the floor from
+    // 150 to 200 -- comfortably below the measured size, never lowered, per
+    // the same instruction.
+    expect(reachResult.visitedFiles.size).toBeGreaterThan(200)
   }, 30000)
 
   it('the gap-#3 edge is pinned as a known, documented fact: dispatch.ts reaches dialog.ts, which imports electron directly', () => {
