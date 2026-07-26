@@ -175,7 +175,15 @@ describe('sidecar bootstrap (headless boot)', () => {
   // channels must reject with the UNPORTED_CHANNEL_MARKER tag, not a bare message. The
   // renderer's on-page error surface keys off that marker to distinguish a documented seam
   // gap from a real bootstrap failure; without it, any module-scope `.then()` on an unported
-  // channel (e.g. getUploadedLogFiles) paints over the whole app at boot.
+  // channel (e.g. getLegendaryVersion) paints over the whole app at boot.
+  //
+  // Phase 34.3 plan 04: this test used `getUploadedLogFiles` as its "still
+  // genuinely unported" stand-in channel. That plan legitimately ports
+  // `getUploadedLogFiles`, so the example was substituted for
+  // `getLegendaryVersion` -- a Phase 34.5 channel confirmed still
+  // unregistered anywhere in the sidecar, following the exact precedent
+  // `34.3-01-SUMMARY.md` already documents for the same situation
+  // (`checkDiskSpace` -> `getLegendaryVersion` across 4 other test files).
   it('tags an unported-channel invoke as an expected seam gap', async () => {
     const input = new PassThrough()
     const output = new PassThrough()
@@ -186,7 +194,7 @@ describe('sidecar bootstrap (headless boot)', () => {
       `${JSON.stringify({
         id: 'test-unported-1',
         kind: 'invoke',
-        channel: 'getUploadedLogFiles',
+        channel: 'getLegendaryVersion',
         args: []
       })}\n`
     )
@@ -201,7 +209,7 @@ describe('sidecar bootstrap (headless boot)', () => {
     // Still an honest rejection -- only the reason is classified.
     expect(response.ok).toBe(false)
     expect(response.error).toContain(UNPORTED_CHANNEL_MARKER)
-    expect(response.error).toContain('getUploadedLogFiles')
+    expect(response.error).toContain('getLegendaryVersion')
   })
 
   // Behavior 3: importing REAL backend modules under the installed stub does

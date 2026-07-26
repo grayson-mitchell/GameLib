@@ -312,4 +312,100 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
 
     expect(stdoutSpy).not.toHaveBeenCalled()
   })
+
+  /**
+   * Phase 34.3 plan 04 (REQ-34.3-09/REQ-34.3-13) — `logInfo` counterparts of
+   * Test A and Test B above. `logInfo` is `logError`'s send-shape twin
+   * (`loggerFlowRegistration.ts`'s own docstring), registered by the SAME
+   * `registerLoggerFlows()` call this file's `beforeAll` already makes, so
+   * no additional setup is needed beyond swapping the channel name.
+   */
+
+  it('Test A (logInfo counterpart, async rejection, real module): a real ENOTDIR log-write rejection produces a call-site-attributed stderr diagnostic', async () => {
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+    const unhandledRejectionListener = jest.fn()
+    process.on('unhandledRejection', unhandledRejectionListener)
+
+    try {
+      const listener = listenerRegistry.get('logInfo')?.[0]
+      expect(listener).toBeDefined()
+      listener!(undefined, 'boom')
+
+      await flushUntil(
+        () =>
+          stderrSpy.mock.calls.some((call) =>
+            String(call[0]).includes('[loggerFlowRegistration]')
+          ) || unhandledRejectionListener.mock.calls.length > 0
+      )
+
+      const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
+      const callSiteDiagnostic = stderrLines.find((line) =>
+        line.includes('[loggerFlowRegistration] logInfo call-site rejection:')
+      )
+      expect(callSiteDiagnostic).toBeDefined()
+      expect(callSiteDiagnostic).toContain('ENOTDIR')
+
+      // Load-bearing NEGATIVE assertion, mirroring Test A above: a
+      // diagnostic-shaped stderr line alone is not evidence on its own --
+      // processGuards.ts's own generic absorption text must be ABSENT too.
+      for (const line of stderrLines) {
+        expect(line).not.toContain('unhandled promise rejection')
+      }
+      expect(unhandledRejectionListener).not.toHaveBeenCalled()
+      expect(stdoutSpy).not.toHaveBeenCalled()
+    } finally {
+      process.off('unhandledRejection', unhandledRejectionListener)
+    }
+  })
+
+  it('Test B (logInfo counterpart, synchronous throw): an unassigned writer does not escape the listener, and still writes a diagnostic', async () => {
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+    const stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true)
+
+    jest.isolateModules(() => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const freshElectronStub =
+        require('../electronStub') as typeof import('../electronStub')
+      const freshRegistration =
+        require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
+      /* eslint-enable @typescript-eslint/no-require-imports */
+
+      // No initHeadless()/init() call anywhere in this fresh, isolated
+      // module registry -- heroicLogWriter is never assigned, reproducing
+      // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
+      freshRegistration.registerLoggerFlows()
+      const freshListener =
+        freshElectronStub.listenerRegistry.get('logInfo')?.[0]
+      expect(freshListener).toBeDefined()
+
+      expect(() => freshListener!(undefined, 'boom')).not.toThrow()
+    })
+
+    // The synchronous throw above is converted to Promise.reject(error) at
+    // the call site, and that rejection's own .catch handler only runs on a
+    // later microtask/macrotask turn -- a plain synchronous test body would
+    // read stderrSpy before the diagnostic is ever written.
+    await flushUntil(() =>
+      stderrSpy.mock.calls.some((call) =>
+        String(call[0]).includes('[loggerFlowRegistration]')
+      )
+    )
+
+    const stderrLines = stderrSpy.mock.calls.map((call) => String(call[0]))
+    const diagnostic = stderrLines.find((line) =>
+      line.includes('[loggerFlowRegistration]')
+    )
+    expect(diagnostic).toBeDefined()
+    expect(diagnostic).toContain('logInfo')
+    expect(stdoutSpy).not.toHaveBeenCalled()
+  })
 })

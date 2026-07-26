@@ -77,8 +77,8 @@
 jest.unmock('i18next')
 
 import { PassThrough } from 'node:stream'
-import { existsSync, readFileSync } from 'fs'
-import { relative, resolve, isAbsolute } from 'path'
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs'
+import { relative, resolve, isAbsolute, dirname } from 'path'
 import { tmpdir } from 'os'
 
 const TMP_ROOT_NAME = `gamelib-loggerflows-test-home-${process.pid}`
@@ -215,6 +215,16 @@ jest.mock('../../online_monitor', () => ({
   onConnectivityChange: jest.fn()
 }))
 
+// ── sidecarRpc — Phase 34.3 plan 04: PARTIAL mock (mirrors
+// shellFilesFlows.test.ts), real startRpcServer/pushFrontendMessage,
+// scriptable requestRustInvoke only. Needed for showLogFileInFolder's
+// showItemInFolder -> electronStub.shell.showItemInFolder ->
+// requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, ...) round-trip. ───────
+jest.mock('../sidecarRpc', () => ({
+  ...jest.requireActual('../sidecarRpc'),
+  requestRustInvoke: jest.fn()
+}))
+
 // Deliberately NOT `jest.mock('backend/logger', ...)`: `backend/logger/
 // index.ts` and `log_writer.ts` import each other circularly. A `jest.mock`
 // factory that calls `jest.requireActual('backend/logger')` re-enters that
@@ -227,11 +237,17 @@ jest.mock('../../online_monitor', () => ({
 import { init } from '../bootstrap'
 import { GlobalConfig } from 'backend/config'
 import { handlerRegistry, listenerRegistry } from '../electronStub'
-import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
+import {
+  UNPORTED_CHANNEL_MARKER,
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER
+} from 'common/types/sidecarTransport'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
 import * as logger from '../../logger'
 import { LogPrefix } from '../../logger/constants'
+import { requestRustInvoke } from '../sidecarRpc'
+import { uploadedLogFileStore } from '../../logger/electronStores'
+import * as uploaderModule from '../../logger/uploader'
 
 // ── Containment guard (WR-10 correction, Phase 34.2 gap cycle 4, plan
 // 34.2-26). This `beforeAll` is a POST-HOC DETECTOR, not a preventer, and
@@ -274,6 +290,7 @@ beforeAll(() => {
 })
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+const mockRequestRustInvoke = requestRustInvoke as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -334,6 +351,38 @@ function writeSend(
   args: unknown[]
 ): void {
   input.write(`${JSON.stringify({ id, kind: 'send', channel, args })}\n`)
+}
+
+/** Writes a well-formed `invoke` (request-response) request frame to the sidecar's stdin. */
+function writeInvoke(
+  input: PassThrough,
+  id: string,
+  channel: string,
+  args: unknown[]
+): void {
+  input.write(`${JSON.stringify({ id, kind: 'invoke', channel, args })}\n`)
+}
+
+/**
+ * Polls `frames` (bounded, real setTimeout-based) until a response frame for
+ * `id` appears. Needed for the upload channels below, whose real work
+ * (fs/promises file read, a mocked-but-still-microtask-chained fetch) can
+ * outlast the fixed 3-tick `flush()` helper (34.3-01-SUMMARY.md's own
+ * precedent for `checkDiskSpace`/`getShellPath`).
+ */
+async function waitForResponse(
+  frames: Frame[],
+  id: string,
+  timeoutMs = 5000
+): Promise<Frame | undefined> {
+  const start = Date.now()
+  for (;;) {
+    const found = frames.find((f) => f.id === id)
+    if (found || Date.now() - start >= timeoutMs) {
+      return found
+    }
+    await new Promise((r) => setTimeout(r, 20))
+  }
 }
 
 function findResponse(
@@ -473,3 +522,192 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
 // .ts` modules end to end (real ENOTDIR rejection, real synchronous throw,
 // no spy or mock on the logger module anywhere), is
 // `src/backend/sidecar/__tests__/loggerCallSiteGuard.test.ts`.
+
+/**
+ * REQ-34.3-09 / REQ-34.3-01 Phase 34.3 plan 04 — round-trip coverage for the
+ * 5 logger channels this plan registers: `logInfo`, `showLogFileInFolder`,
+ * `uploadLogFile`, `deleteUploadedLogFile`, `getUploadedLogFiles`.
+ *
+ * `logInfo` is observed via the SAME mechanism the existing `logError` spy
+ * test above uses (`jest.spyOn` on the real `backend/logger` module,
+ * asserting the call arguments) — no new observation point is invented.
+ * `uploadLogFile`/`deleteUploadedLogFile`/`getUploadedLogFiles` mock only at
+ * the HTTP boundary (`global.fetch`) or the store boundary
+ * (`uploadedLogFileStore`), never by replacing the uploader functions
+ * themselves with a jest double that skips their own logic.
+ */
+describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
+  beforeEach(() => {
+    mockAppSettings({ language: 'en' })
+    mockRequestRustInvoke.mockReset()
+  })
+
+  it('REQ-34.3-09 logInfo (send) reaches the real logInfo path with LogPrefix.Frontend', async () => {
+    const spy = jest.spyOn(logger, 'logInfoSettled')
+    const message = `[loggerFlows.test.ts] logInfo-check-${process.pid}`
+
+    const { input } = startSidecar()
+    writeSend(input, 'li-1', 'logInfo', [message])
+    await flush()
+
+    expect(spy).toHaveBeenCalledWith(message, LogPrefix.Frontend)
+    spy.mockRestore()
+  })
+
+  it('REQ-34.3-01 showLogFileInFolder (send) reveals the real log file at the path getLogFilePath returns', async () => {
+    const logPath = getLogFilePath({})
+    mkdirSync(dirname(logPath), { recursive: true })
+    writeFileSync(logPath, 'x')
+
+    const { input } = startSidecar()
+    writeSend(input, 'slf-1', 'showLogFileInFolder', [{}])
+    await flush()
+
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+      RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+      [logPath]
+    )
+  })
+
+  it('REQ-34.3-01 send-vs-handle contract: logInfo/showLogFileInFolder/logError are listeners; uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers', async () => {
+    startSidecar()
+    await flush()
+
+    for (const channel of ['logError', 'logInfo', 'showLogFileInFolder']) {
+      expect(listenerRegistry.get(channel)?.length).toBeGreaterThanOrEqual(1)
+      expect(handlerRegistry.get(channel)).toBeUndefined()
+    }
+    for (const channel of [
+      'uploadLogFile',
+      'deleteUploadedLogFile',
+      'getUploadedLogFiles'
+    ]) {
+      expect(handlerRegistry.get(channel)).toBeDefined()
+      expect(listenerRegistry.get(channel)).toBeUndefined()
+    }
+
+    // The double-registration guard (T-34.3-15): logError must still be
+    // registered exactly once, even after this slice's 5 new registrations
+    // landed in the same module.
+    expect(listenerRegistry.get('logError')?.length).toBe(1)
+  })
+
+  describe('uploadLogFile / deleteUploadedLogFile / getUploadedLogFiles', () => {
+    const logPath = getLogFilePath({})
+
+    beforeEach(() => {
+      mkdirSync(dirname(logPath), { recursive: true })
+      writeFileSync(logPath, 'log content for the upload-channel tests')
+      uploadedLogFileStore.clear()
+    })
+
+    afterEach(() => {
+      uploadedLogFileStore.clear()
+      jest.restoreAllMocks()
+      delete (global as unknown as { fetch?: unknown }).fetch
+    })
+
+    it('REQ-34.3-01 uploadLogFile (invoke) resolves the paste URL and records it in uploadedLogFileStore', async () => {
+      const pasteUrl = `https://dpaste.com/upload-${process.pid}-${Math.random()
+        .toString(36)
+        .slice(2)}.txt`
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: () => Promise.resolve(pasteUrl)
+        })
+      ) as unknown as typeof fetch
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'ul-1', 'uploadLogFile', ['test-upload', {}])
+      const response = await waitForResponse(frames, 'ul-1')
+
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual([
+        pasteUrl,
+        expect.objectContaining({ name: 'test-upload' })
+      ])
+      expect(uploadedLogFileStore.get_nodefault(pasteUrl)).toEqual(
+        expect.objectContaining({ name: 'test-upload' })
+      )
+    })
+
+    it('REQ-34.3-01 uploadLogFile (invoke) rejects when the HTTP boundary fails, rather than resolving a falsely-successful value', async () => {
+      // A normal HTTP-level failure (a rejected fetch promise, or an
+      // ok:false response) is swallowed by logger/uploader.ts's own
+      // sendRequestToApi().catch(...) and surfaces as a resolved `false` --
+      // that is Electron parity, not a defect. To prove the invoke genuinely
+      // REJECTS (never a falsely-successful resolution) when the boundary
+      // itself is unusable, this mocks fetch to throw synchronously, which
+      // sendRequestToApi's `.catch()` chain never gets a chance to attach
+      // to -- the throw propagates through uploadLogFile's own await,
+      // converting the ipcMain.handle('uploadLogFile', ...) promise into a
+      // rejection, which dispatchInvoke turns into an { ok: false, error }
+      // frame (the same contract checkDiskSpace's ASVS V5 test already pins).
+      global.fetch = jest.fn(() => {
+        throw new Error('uploadLogFile HTTP boundary failure')
+      }) as unknown as typeof fetch
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'ul-2', 'uploadLogFile', ['test-upload-fail', {}])
+      const response = await waitForResponse(frames, 'ul-2')
+
+      expect(response?.ok).toBe(false)
+      expect(response?.error).toBeDefined()
+    })
+
+    it("REQ-34.3-01/D-08 deleteUploadedLogFile (invoke) dispatches to logger/uploader.ts's deleteUploadedLogFile -- proves DISPATCH ONLY, not that deletion actually works (uploader.ts:74-77's hardcoded token makes real deletion impossible in either build)", async () => {
+      const url = `https://dpaste.com/delete-${process.pid}.txt`
+      uploadedLogFileStore.set(url, {
+        name: 'seed',
+        token: '1',
+        uploadedAt: Date.now()
+      })
+
+      const spy = jest.spyOn(uploaderModule, 'deleteUploadedLogFile')
+      global.fetch = jest.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          text: () => Promise.resolve('')
+        })
+      ) as unknown as typeof fetch
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'dul-1', 'deleteUploadedLogFile', [url])
+      await waitForResponse(frames, 'dul-1')
+
+      expect(spy).toHaveBeenCalledWith(url)
+      spy.mockRestore()
+    })
+
+    it('REQ-34.3-01 getUploadedLogFiles (invoke) returns only the still-valid entry and prunes the expired one from the store', async () => {
+      const liveUrl = `https://dpaste.com/live-${process.pid}.txt`
+      const expiredUrl = `https://dpaste.com/expired-${process.pid}.txt`
+      uploadedLogFileStore.set(liveUrl, {
+        name: 'live',
+        token: '1',
+        uploadedAt: Date.now()
+      })
+      uploadedLogFileStore.set(expiredUrl, {
+        name: 'expired',
+        token: '1',
+        uploadedAt: Date.now() - 3 * 24 * 60 * 60 * 1000
+      })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'gul-1', 'getUploadedLogFiles', [])
+      const response = await waitForResponse(frames, 'gul-1')
+
+      expect(response?.ok).toBe(true)
+      expect(response?.result).toEqual({
+        [liveUrl]: expect.objectContaining({ name: 'live' })
+      })
+      expect(uploadedLogFileStore.get_nodefault(expiredUrl)).toBeUndefined()
+      expect(uploadedLogFileStore.get_nodefault(liveUrl)).toBeDefined()
+    })
+  })
+})
