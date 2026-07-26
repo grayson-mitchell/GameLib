@@ -21,7 +21,11 @@
  * Plan 06, D-04/D-07/D-10), the curated shell/files/diagnostics channels
  * (`registerShellFilesFlows()`, `shellFilesFlowRegistration.ts` — Phase 34.3
  * Plan 01, REQ-34.3-01/-02/-13 — the 14 link/reveal openers plus
- * checkDiskSpace/getShellPath/pathExists/removeFolder), the curated logger
+ * checkDiskSpace/getShellPath/pathExists/removeFolder), the curated clipboard
+ * channels (`registerClipboardFlows()`, `clipboardFlowRegistration.ts` — Phase
+ * 34.3 Plan 06, REQ-34.3-03/-04/-13 — clipboardWriteText/clipboardReadText/
+ * copySystemInfoToClipboard, the ONLY three consumers of this slice's two new
+ * Rust arms), the curated logger
  * channel (registered by `loggerFlowRegistration.ts` — Phase 34.2 gap cycle 2
  * plan 34.2-16, REQ-34.2-12 — `logError` only, an early port of a Phase
  * 34.3/slice-6 channel; Phase 34.3 must NOT register it again), and the
@@ -56,6 +60,7 @@ import { registerAppShellFlows } from './appShellFlowRegistration'
 import { registerGameDetailsFlows } from './gameDetailsFlowRegistration'
 import { registerEnrichmentFlows } from './enrichmentFlowRegistration'
 import { registerShellFilesFlows } from './shellFilesFlowRegistration'
+import { registerClipboardFlows } from './clipboardFlowRegistration'
 import { registerLoggerFlows } from './loggerFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
@@ -121,6 +126,14 @@ registerEnrichmentFlows()
 // runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerShellFilesFlows()
+// Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the 3 clipboard channels
+// (clipboardWriteText, clipboardReadText, copySystemInfoToClipboard) — the ONLY
+// three consumers of this slice's two new dispatch_rust_channel arms
+// (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
+// relative to the other calls above (own channel names, no cross-module runtime
+// dependency at registration time), placed alongside them, before
+// `ensureStoresRegistered()`.
+registerClipboardFlows()
 // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12): the single `logError`
 // send channel, ported early from its Phase 34.3/slice-6 slot because gap
 // cycle 1's renderer repair-failure handler now routes through it — an
