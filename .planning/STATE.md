@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready_to_execute
-stopped_at: "Gap cycle 4 PLANNED (34.2-25..30, 3 waves) — plan-checker VERIFICATION PASSED after one revision round. Gap source was 34.2-REVIEW-GAP-CYCLE-3.md (2 critical + 12 warnings; its frontmatter miscounts warnings as 11, the body's WR-01..WR-12 is authoritative), NOT the stale 34.2-VERIFICATION.md. All 14 findings covered: Wave 1 = 34.2-25 (CR-02 dual-specifier os/node:os containment + userInfo + mkdtemp 0700 root + setupFiles-time abort), 34.2-26 (CR-01 logErrorSettled sibling + sync-throw guard + stub-free ENOTDIR proof), 34.2-27 (WR-06 repairFailure silent catch), 34.2-28 (WR-04/WR-08 Rust gate comment-counting + literal-truncating stripper); Wave 2 = 34.2-29 (WR-01/02/05 + jest.config.js cross-project gate); Wave 3 = 34.2-30 (REQ-34.2-13 currency + currency-gate.py extension + D4-DEF-01/02). THREE deliberate divergences from the review's literal prescription, all checker-validated: (1) CR-01 does NOT expression-body the four logger/index.ts wrappers — measured 309 statement-position logError() call sites, none awaited, against @typescript-eslint/no-floating-promises:'warn' (eslint.config.mjs:39), i.e. ~309 new warnings for ZERO runtime change; deferred as D4-DEF-01. (2) WR-11's Test 6 drops userInfo() as its independent reference (34.2-25 now redirects it) and anchors on a pre-mock realHomeAtSetup capture + the per-run mkdtemp root, so it is non-vacuous on all 3 platforms. (3) The node:os source gate uses a declared 3-entry NODE_OS_GATE_EXEMPT_FILES allowlist rather than a blanket __tests__ exemption — a blanket one would reinstate containment-by-omission, the accepted-debt pattern 34.2-19 killed and that rotted within one cycle. NOTE a deliberate cross-wave red: 34.2-26's new suite trips testContainment.test.ts's Block C classification tripwire (evidence the tripwire is live); 34.2-29 closes it, and testContainment.test.ts is a FORWARD DECLARATION in 34.2-25's allowlist because wave-2 plans cannot edit wave-1's files_modified. Next: /gsd-execute-phase 34.2 (clear context first). [Previous entry] Gap cycle 3 (34.2-19..24) EXECUTED — all 24 plans of Phase 34.2 now have SUMMARYs; tsc clean, jest 2753/2754 (sole red = pre-existing rustInvokeChannel.test.ts). BUT the cycle-3 code review (34.2-REVIEW-GAP-CYCLE-3.md, 2 critical / 11 warning) empirically DISPROVED two of the cycle's three fixes, so Phase 34.2 is NOT verified and NOT complete. Verifier was deliberately SKIPPED by user decision — 34.2-VERIFICATION.md on disk is STALE (it is cycle 2's round). GAP SOURCE FOR CYCLE 4 = 34.2-REVIEW-GAP-CYCLE-3.md, not the stale VERIFICATION.md. Blockers: CR-01 the WR-02 .catch guard in loggerFlowRegistration.ts is inert because logger/index.ts:25-27 wrappers have block bodies with no return (logError() is undefined, not a promise) and its 4 new tests only pass because they spyOn a promise shape that never occurs at runtime; CR-02 jest.mock('os') in jest.setupContainment.ts does not cover the 'node:os' specifier (already used at depot/decompressPool.ts:18 + 8 test files) so containment leaks the real HOME. Also WR-01 Block D's HOME gate matches raw source and self-satisfies from a docblock at jest.setupContainment.ts:64; WR-03 both production files are prettier --check dirty at HEAD and CI runs pnpm prettier. Next: /gsd-plan-phase 34.2 --gaps (cycle 4)."
-last_updated: "2026-07-26T01:06:15.327Z"
-last_activity: 2026-07-26
+status: executing
+stopped_at: "Completed 34.2-25-PLAN.md (CR-02 node:os containment gap closed, gap cycle 4 plan 1 of 6)"
+last_updated: "2026-07-26T02:30:16.232Z"
+last_activity: 2026-07-26 -- Phase 34.2 execution started
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 101
-  completed_plans: 87
+  completed_plans: 88
   percent: 67
 ---
 
@@ -33,12 +33,14 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — GAP CYCLE 4 PLANNED, READY TO EXECUTE
-Plan: 24 of 30 done. Plans 34.2-01..24 executed (gap cycles 1–3); gap cycle 4 (34.2-25..30,
-3 waves) planned 2026-07-26 from `34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after
-one revision round (blocker: 34.2-25's Test 9 node:os source gate flagged its own sibling test —
-closed by a declared 3-entry exclusion allowlist with a self-match break check). Next step is
-`/gsd-execute-phase 34.2`, then a FOURTH verification round for the phase as a whole.
+Phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid) — EXECUTING (gap cycle 4)
+Plan: 25 of 30 done. Plans 34.2-01..25 executed (gap cycles 1–3 complete; gap cycle 4's wave 1
+plan 34.2-25 just completed). Gap cycle 4 (34.2-25..30, 3 waves) was planned 2026-07-26 from
+`34.2-REVIEW-GAP-CYCLE-3.md` and PASSED the plan-checker after one revision round (blocker:
+34.2-25's Test 9 node:os source gate flagged its own sibling test — closed by a declared 3-entry
+exclusion allowlist with a self-match break check). Next: continue wave 1 (34.2-26/27/28), then
+wave 2 (34.2-29), then wave 3 (34.2-30), then a FOURTH verification round for the phase as a
+whole.
 
 NOTE for the executor: 34.2-26's new suite deliberately trips `testContainment.test.ts`'s Block C
 classification tripwire — that red is EVIDENCE the tripwire is live, not a regression. 34.2-29
@@ -722,7 +724,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 87%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1523,6 +1525,7 @@ Closed/parked native-install phases:
 | Phase 34.2 P22 | 10min | 2 tasks | 2 files |
 | Phase 34.2 P23 | 50min | 2 tasks | 1 files |
 | Phase 34.2 P24 | 55min | 3 tasks | 4 files |
+| Phase 34.2 P25 | 90m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -1784,6 +1787,8 @@ Recent decisions affecting current work:
 - [Phase 34.2]: Test 5 non-vacuity check uses getGameSettings (a real ported channel) rather than a made-up string; jest gate matches RAW main.rs source (not the comment-stripped helper) since #[cfg(test)] sits adjacent to doc comments
 - [Phase 34.2]: Currency gate matches a specific pinned heading (Gap cycle 3 reconciliation) rather than a generic latest-section pattern, so a future gap cycle 4 extends its own token lists instead of overloading cycle 3's record.
 - [Phase 34.2]: Closed deferred-items.md entries are marked with a heading suffix plus a dated resolution block rather than deleted, preserving the historical record while making current status unambiguous.
+- [Phase ?]: 34.2-25: userInfo() failures (uv_os_get_passwd) fall back to a synthetic username/homedir object rather than propagating, since no real backend consumer reads homedir from userInfo()
+- [Phase ?]: 34.2-25: mkdtempSync + chmodSync(0o700) replaces the predictable pid-based containment root path; no teardown hook added, deliberately unchanged from gap cycle 3
 
 ### Pending Todos
 
@@ -1853,8 +1858,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T01:06:15.293Z
-Stopped at: Completed 34.2-24-PLAN.md (gap cycle 3 fully closed: PORTED-CHANNELS.md currency + deferred-items.md reasoned deferrals + VALIDATION.md extension + committed currency-gate.py). Phase 34.2 gap cycle 3 complete (34.2-19..24). Next: re-verification of Phase 34.2.
+Last session: 2026-07-26T02:30:16.225Z
+Stopped at: Completed 34.2-25-PLAN.md (CR-02 node:os containment gap closed, gap cycle 4 plan 1 of 6)
 Next: Execute 34.2-24-PLAN.md (gap cycle 3's final plan, wave 3, REQ-34.2-13 -- PORTED-CHANNELS.md currency + reasoned deferrals + currency-gate.py). Also still outstanding (unrelated to Phase 34.2): Phase 23's 23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
