@@ -27,7 +27,9 @@ function loadCargoToml(): string {
 function extractKeyringLine(source: string): string {
   const match = source.match(/^keyring\s*=\s*\{[^}]*\}/m)
   if (!match) {
-    throw new Error('No `keyring = { ... }` dependency line found in Cargo.toml')
+    throw new Error(
+      'No `keyring = { ... }` dependency line found in Cargo.toml'
+    )
   }
   return match[0]
 }
@@ -44,7 +46,9 @@ function extractTauriFeatures(source: string): string[] {
   }
   const featuresMatch = lineMatch[0].match(/features\s*=\s*\[([^\]]*)\]/)
   if (!featuresMatch) {
-    throw new Error('No `features = [...]` list found on the tauri dependency line')
+    throw new Error(
+      'No `features = [...]` list found on the tauri dependency line'
+    )
   }
   return featuresMatch[1]
     .split(',')
@@ -113,7 +117,14 @@ describe('REQ-34.1-07 Cargo.toml tauri tray-icon feature (Phase 34.1 Plan 06, D-
  * EXPECTED_LOCKFILE_CRATE_NAMES below was machine-generated from the current
  * `src-tauri/Cargo.lock` (`grep '^name = ' Cargo.lock | sed ... | sort -u`), not hand-typed.
  */
-const CARGO_LOCK_PATH = join(__dirname, '..', '..', '..', 'src-tauri', 'Cargo.lock')
+const CARGO_LOCK_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'src-tauri',
+  'Cargo.lock'
+)
 
 function loadCargoLock(): string {
   return readFileSync(CARGO_LOCK_PATH, 'utf-8')
@@ -129,49 +140,51 @@ function extractLockfileCrateNames(source: string): string[] {
 // prettier-ignore
 const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "adler2", "aho-corasick", "alloc-no-stdlib", "alloc-stdlib", "android_system_properties", "anyhow",
-  "arbitrary", "async-broadcast", "async-channel", "async-executor", "async-io", "async-lock",
-  "async-process", "async-recursion", "async-signal", "async-task", "async-trait", "atk",
-  "atk-sys", "atomic-waker", "autocfg", "base64", "bit-set", "bit-vec",
-  "bitflags", "block-buffer", "block2", "blocking", "brotli", "brotli-decompressor",
-  "bs58", "bumpalo", "bytemuck", "byteorder", "byteorder-lite", "bytes",
-  "cairo-rs", "cairo-sys-rs", "camino", "cargo-platform", "cargo_metadata", "cargo_toml",
-  "cc", "cesu8", "cfb", "cfg-expr", "cfg-if", "chrono",
-  "combine", "concurrent-queue", "cookie", "core-foundation", "core-foundation-sys", "core-graphics",
-  "core-graphics-types", "cpufeatures", "crc32fast", "crossbeam-channel", "crossbeam-utils", "crypto-common",
-  "cssparser", "cssparser-macros", "ctor", "ctor-proc-macro", "darling", "darling_core",
-  "darling_macro", "dbus", "dbus-secret-service", "deranged", "derive_arbitrary", "derive_more",
-  "derive_more-impl", "digest", "dirs", "dirs-sys", "dispatch2", "displaydoc",
-  "dlopen2", "dlopen2_derive", "dom_query", "dpi", "dtoa", "dtoa-short",
-  "dtor", "dtor-proc-macro", "dunce", "dyn-clone", "embed-resource", "embed_plist",
-  "encoding_rs", "endi", "enumflags2", "enumflags2_derive", "equivalent", "erased-serde",
-  "errno", "event-listener", "event-listener-strategy", "fastrand", "fdeflate", "field-offset",
-  "filetime", "find-msvc-tools", "flate2", "fnv", "foldhash", "foreign-types",
-  "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "futures-channel", "futures-core", "futures-executor",
-  "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task", "futures-util",
-  "gamelib-shell", "gdk", "gdk-pixbuf", "gdk-pixbuf-sys", "gdk-sys", "gdkwayland-sys",
-  "gdkx11", "gdkx11-sys", "generic-array", "getrandom", "gio", "gio-sys",
-  "glib", "glib-macros", "glib-sys", "glob", "gobject-sys", "gtk",
-  "gtk-sys", "gtk3-macros", "hashbrown", "heck", "hermit-abi", "hex",
-  "html5ever", "http", "http-body", "http-body-util", "httparse", "hyper",
-  "hyper-rustls", "hyper-util", "iana-time-zone", "iana-time-zone-haiku", "ico", "icu_collections",
-  "icu_locale_core", "icu_normalizer", "icu_normalizer_data", "icu_properties", "icu_properties_data", "icu_provider",
-  "ident_case", "idna", "idna_adapter", "image", "indexmap", "infer",
-  "ipnet", "is-docker", "is-wsl", "itoa", "javascriptcore-rs", "javascriptcore-rs-sys",
-  "jni", "jni-macros", "jni-sys", "jni-sys-macros", "js-sys", "json-patch",
-  "jsonptr", "keyboard-types", "keyring", "libappindicator", "libappindicator-sys", "libc",
-  "libdbus-sys", "libloading", "libredox", "linux-raw-sys", "litemap", "lock_api",
-  "log", "mac-notification-sys", "markup5ever", "memchr", "memoffset", "mime",
-  "minisign-verify", "miniz_oxide", "mio", "moxcms", "muda", "ndk",
-  "ndk-sys", "new_debug_unreachable", "notify-rust", "num-conv", "num-traits", "num_enum",
-  "num_enum_derive", "objc2", "objc2-app-kit", "objc2-cloud-kit", "objc2-core-data", "objc2-core-foundation",
-  "objc2-core-graphics", "objc2-core-image", "objc2-core-location", "objc2-core-text", "objc2-encode", "objc2-exception-helper",
-  "objc2-foundation", "objc2-io-surface", "objc2-osa-kit", "objc2-quartz-core", "objc2-ui-kit", "objc2-user-notifications",
-  "objc2-web-kit", "once_cell", "open", "openssl-probe", "option-ext", "ordered-stream",
-  "os_pipe", "osakit", "pango", "pango-sys", "parking", "parking_lot",
-  "parking_lot_core", "percent-encoding", "phf", "phf_codegen", "phf_generator", "phf_macros",
-  "phf_shared", "pin-project-lite", "piper", "pkg-config", "plist", "png",
-  "polling", "potential_utf", "powerfmt", "ppv-lite86", "precomputed-hash", "proc-macro-crate",
-  "proc-macro-error", "proc-macro-error-attr", "proc-macro2", "pxfm", "quick-xml", "quote",
+  "arbitrary", "arboard", "async-broadcast", "async-channel", "async-executor", "async-io",
+  "async-lock", "async-process", "async-recursion", "async-signal", "async-task", "async-trait",
+  "atk", "atk-sys", "atomic-waker", "autocfg", "base64", "bit-set",
+  "bit-vec", "bitflags", "block-buffer", "block2", "blocking", "brotli",
+  "brotli-decompressor", "bs58", "bumpalo", "bytemuck", "byteorder", "byteorder-lite",
+  "bytes", "cairo-rs", "cairo-sys-rs", "camino", "cargo-platform", "cargo_metadata",
+  "cargo_toml", "cc", "cesu8", "cfb", "cfg-expr", "cfg-if",
+  "chrono", "clipboard-win", "combine", "concurrent-queue", "cookie", "core-foundation",
+  "core-foundation-sys", "core-graphics", "core-graphics-types", "cpufeatures", "crc32fast", "crossbeam-channel",
+  "crossbeam-utils", "crunchy", "crypto-common", "cssparser", "cssparser-macros", "ctor",
+  "ctor-proc-macro", "darling", "darling_core", "darling_macro", "dbus", "dbus-secret-service",
+  "deranged", "derive_arbitrary", "derive_more", "derive_more-impl", "digest", "dirs",
+  "dirs-sys", "dispatch2", "displaydoc", "dlopen2", "dlopen2_derive", "dom_query",
+  "downcast-rs", "dpi", "dtoa", "dtoa-short", "dtor", "dtor-proc-macro",
+  "dunce", "dyn-clone", "embed-resource", "embed_plist", "encoding_rs", "endi",
+  "enumflags2", "enumflags2_derive", "equivalent", "erased-serde", "errno", "error-code",
+  "event-listener", "event-listener-strategy", "fastrand", "fax", "fdeflate", "field-offset",
+  "filetime", "find-msvc-tools", "fixedbitset", "flate2", "fnv", "foldhash",
+  "foreign-types", "foreign-types-macros", "foreign-types-shared", "form_urlencoded", "futures-channel", "futures-core",
+  "futures-executor", "futures-io", "futures-lite", "futures-macro", "futures-sink", "futures-task",
+  "futures-util", "gamelib-shell", "gdk", "gdk-pixbuf", "gdk-pixbuf-sys", "gdk-sys",
+  "gdkwayland-sys", "gdkx11", "gdkx11-sys", "generic-array", "gethostname", "getrandom",
+  "gio", "gio-sys", "glib", "glib-macros", "glib-sys", "glob",
+  "gobject-sys", "gtk", "gtk-sys", "gtk3-macros", "half", "hashbrown",
+  "heck", "hermit-abi", "hex", "html5ever", "http", "http-body",
+  "http-body-util", "httparse", "hyper", "hyper-rustls", "hyper-util", "iana-time-zone",
+  "iana-time-zone-haiku", "ico", "icu_collections", "icu_locale_core", "icu_normalizer", "icu_normalizer_data",
+  "icu_properties", "icu_properties_data", "icu_provider", "ident_case", "idna", "idna_adapter",
+  "image", "indexmap", "infer", "ipnet", "is-docker", "is-wsl",
+  "itoa", "javascriptcore-rs", "javascriptcore-rs-sys", "jni", "jni-macros", "jni-sys",
+  "jni-sys-macros", "js-sys", "json-patch", "jsonptr", "keyboard-types", "keyring",
+  "libappindicator", "libappindicator-sys", "libc", "libdbus-sys", "libloading", "libredox",
+  "linux-raw-sys", "litemap", "lock_api", "log", "mac-notification-sys", "markup5ever",
+  "memchr", "memoffset", "mime", "minisign-verify", "miniz_oxide", "mio",
+  "moxcms", "muda", "ndk", "ndk-sys", "new_debug_unreachable", "nom",
+  "notify-rust", "num-conv", "num-traits", "num_enum", "num_enum_derive", "objc2",
+  "objc2-app-kit", "objc2-cloud-kit", "objc2-core-data", "objc2-core-foundation", "objc2-core-graphics", "objc2-core-image",
+  "objc2-core-location", "objc2-core-text", "objc2-encode", "objc2-exception-helper", "objc2-foundation", "objc2-io-surface",
+  "objc2-osa-kit", "objc2-quartz-core", "objc2-ui-kit", "objc2-user-notifications", "objc2-web-kit", "once_cell",
+  "open", "openssl-probe", "option-ext", "ordered-stream", "os_pipe", "osakit",
+  "pango", "pango-sys", "parking", "parking_lot", "parking_lot_core", "percent-encoding",
+  "petgraph", "phf", "phf_codegen", "phf_generator", "phf_macros", "phf_shared",
+  "pin-project-lite", "piper", "pkg-config", "plist", "png", "polling",
+  "potential_utf", "powerfmt", "ppv-lite86", "precomputed-hash", "proc-macro-crate", "proc-macro-error",
+  "proc-macro-error-attr", "proc-macro2", "pxfm", "quick-error", "quick-xml", "quote",
   "r-efi", "rand", "rand_chacha", "rand_core", "raw-window-handle", "redox_syscall",
   "redox_users", "ref-cast", "ref-cast-impl", "regex", "regex-automata", "regex-syntax",
   "reqwest", "rfd", "ring", "rustc-hash", "rustc_version", "rustix",
@@ -185,36 +198,42 @@ const EXPECTED_LOCKFILE_CRATE_NAMES = [
   "softbuffer", "soup3", "soup3-sys", "stable_deref_trait", "string_cache", "string_cache_codegen",
   "strsim", "subtle", "swift-rs", "syn", "sync_wrapper", "synstructure",
   "system-deps", "tao", "tao-macros", "tar", "target-lexicon", "tauri",
-  "tauri-build", "tauri-codegen", "tauri-macros", "tauri-plugin", "tauri-plugin-dialog", "tauri-plugin-fs",
-  "tauri-plugin-notification", "tauri-plugin-opener", "tauri-plugin-shell", "tauri-plugin-updater", "tauri-runtime", "tauri-runtime-wry",
-  "tauri-utils", "tauri-winres", "tauri-winrt-notification", "tempfile", "tendril", "thiserror",
-  "thiserror-impl", "time", "time-core", "time-macros", "tinystr", "tinyvec",
-  "tinyvec_macros", "tokio", "tokio-rustls", "tokio-util", "toml", "toml_datetime",
-  "toml_edit", "toml_parser", "toml_writer", "tower", "tower-http", "tower-layer",
-  "tower-service", "tracing", "tracing-attributes", "tracing-core", "tray-icon", "try-lock",
-  "typeid", "typenum", "uds_windows", "unic-char-property", "unic-char-range", "unic-common",
-  "unic-ucd-ident", "unic-ucd-version", "unicode-ident", "unicode-segmentation", "untrusted", "url",
-  "urlpattern", "utf8_iter", "uuid", "version-compare", "version_check", "vswhom",
-  "vswhom-sys", "walkdir", "want", "wasi", "wasip2", "wasm-bindgen",
-  "wasm-bindgen-futures", "wasm-bindgen-macro", "wasm-bindgen-macro-support", "wasm-bindgen-shared", "wasm-streams", "web-sys",
-  "web_atoms", "webkit2gtk", "webkit2gtk-sys", "webpki-root-certs", "webview2-com", "webview2-com-macros",
-  "webview2-com-sys", "winapi", "winapi-i686-pc-windows-gnu", "winapi-util", "winapi-x86_64-pc-windows-gnu", "window-vibrancy",
-  "windows", "windows-collections", "windows-core", "windows-future", "windows-implement", "windows-interface",
-  "windows-link", "windows-numerics", "windows-result", "windows-strings", "windows-sys", "windows-targets",
-  "windows-threading", "windows-version", "windows_aarch64_gnullvm", "windows_aarch64_msvc", "windows_i686_gnu", "windows_i686_gnullvm",
-  "windows_i686_msvc", "windows_x86_64_gnu", "windows_x86_64_gnullvm", "windows_x86_64_msvc", "winnow", "winreg",
-  "wit-bindgen", "writeable", "wry", "x11", "x11-dl", "xattr",
-  "yoke", "yoke-derive", "zbus", "zbus_macros", "zbus_names", "zerocopy",
-  "zerocopy-derive", "zerofrom", "zerofrom-derive", "zeroize", "zeroize_derive", "zerotrie",
-  "zerovec", "zerovec-derive", "zip", "zmij", "zvariant", "zvariant_derive",
-  "zvariant_utils"
+  "tauri-build", "tauri-codegen", "tauri-macros", "tauri-plugin", "tauri-plugin-clipboard-manager", "tauri-plugin-dialog",
+  "tauri-plugin-fs", "tauri-plugin-notification", "tauri-plugin-opener", "tauri-plugin-shell", "tauri-plugin-updater", "tauri-runtime",
+  "tauri-runtime-wry", "tauri-utils", "tauri-winres", "tauri-winrt-notification", "tempfile", "tendril",
+  "thiserror", "thiserror-impl", "tiff", "time", "time-core", "time-macros",
+  "tinystr", "tinyvec", "tinyvec_macros", "tokio", "tokio-rustls", "tokio-util",
+  "toml", "toml_datetime", "toml_edit", "toml_parser", "toml_writer", "tower",
+  "tower-http", "tower-layer", "tower-service", "tracing", "tracing-attributes", "tracing-core",
+  "tray-icon", "tree_magic_mini", "try-lock", "typeid", "typenum", "uds_windows",
+  "unic-char-property", "unic-char-range", "unic-common", "unic-ucd-ident", "unic-ucd-version", "unicode-ident",
+  "unicode-segmentation", "untrusted", "url", "urlpattern", "utf8_iter", "uuid",
+  "version-compare", "version_check", "vswhom", "vswhom-sys", "walkdir", "want",
+  "wasi", "wasip2", "wasm-bindgen", "wasm-bindgen-futures", "wasm-bindgen-macro", "wasm-bindgen-macro-support",
+  "wasm-bindgen-shared", "wasm-streams", "wayland-backend", "wayland-client", "wayland-protocols", "wayland-protocols-wlr",
+  "wayland-scanner", "wayland-sys", "web-sys", "web_atoms", "webkit2gtk", "webkit2gtk-sys",
+  "webpki-root-certs", "webview2-com", "webview2-com-macros", "webview2-com-sys", "weezl", "winapi",
+  "winapi-i686-pc-windows-gnu", "winapi-util", "winapi-x86_64-pc-windows-gnu", "window-vibrancy", "windows", "windows-collections",
+  "windows-core", "windows-future", "windows-implement", "windows-interface", "windows-link", "windows-numerics",
+  "windows-result", "windows-strings", "windows-sys", "windows-targets", "windows-threading", "windows-version",
+  "windows_aarch64_gnullvm", "windows_aarch64_msvc", "windows_i686_gnu", "windows_i686_gnullvm", "windows_i686_msvc", "windows_x86_64_gnu",
+  "windows_x86_64_gnullvm", "windows_x86_64_msvc", "winnow", "winreg", "wit-bindgen", "wl-clipboard-rs",
+  "writeable", "wry", "x11", "x11-dl", "x11rb", "x11rb-protocol",
+  "xattr", "yoke", "yoke-derive", "zbus", "zbus_macros", "zbus_names",
+  "zerocopy", "zerocopy-derive", "zerofrom", "zerofrom-derive", "zeroize", "zeroize_derive",
+  "zerotrie", "zerovec", "zerovec-derive", "zip", "zmij", "zune-core",
+  "zune-jpeg", "zvariant", "zvariant_derive", "zvariant_utils"
 ]
 
 describe('Cargo.lock crate-name set pin (AR-34.1-07 / FOLLOW-UP-1, GAP-3)', () => {
   test('the full unique crate-name set in Cargo.lock matches the checked-in pin', () => {
     const actual = extractLockfileCrateNames(loadCargoLock())
-    const added = actual.filter((name) => !EXPECTED_LOCKFILE_CRATE_NAMES.includes(name))
-    const removed = EXPECTED_LOCKFILE_CRATE_NAMES.filter((name) => !actual.includes(name))
+    const added = actual.filter(
+      (name) => !EXPECTED_LOCKFILE_CRATE_NAMES.includes(name)
+    )
+    const removed = EXPECTED_LOCKFILE_CRATE_NAMES.filter(
+      (name) => !actual.includes(name)
+    )
     if (added.length > 0 || removed.length > 0) {
       throw new Error(
         'Cargo.lock crate-name set has changed since it was pinned by this test ' +
