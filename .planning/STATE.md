@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-04 done
-last_updated: "2026-07-27T22:04:00.000Z"
-last_activity: 2026-07-27 -- 34.4-04 executed (Humble library/sync + key-state channels, REQ-34.4-07)
+stopped_at: 34.4-06 done
+last_updated: "2026-07-27T22:20:00.000Z"
+last_activity: 2026-07-27 -- 34.4-06 executed (hardened electronStub.net.request, D-06, REQ-34.4-11)
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 105
-  percent: 71
+  completed_plans: 106
+  percent: 72
 ---
 
 # Project State
@@ -34,7 +34,36 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 3 of 10 (34.4-01, 34.4-03, 34.4-04 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+Plan: 4 of 10 (34.4-01, 34.4-03, 34.4-04, 34.4-06 done; 34.4-02 still pending -- wave 1 has no depends_on ordering)
+
+34.4-06 done -- Hardened electronStub.net.request to fail fast and legibly (wave 1, depends_on: []).
+`net.request()`'s previously-total-no-op `on()` now records handlers by event name and
+asynchronously (`setImmediate`) invokes a registered `'error'` handler with an Error naming the
+stub, Phase 34.4.1, and D-06 -- never a synchronous throw, never a rejecting promise
+(`sidecar-dialog-reject-crashes` discipline). `humblePostRequest`'s own already-wired
+`request.on('error', ...)` handler (`adapter.ts:328`) is now provably reachable: `net.isOnline`
+byte-unchanged. Added `netStub.test.ts` -- Group 1 pins the stub's own contract (async-only
+emission, no synchronous fire, safe with no handler registered); Group 2 drives `revealKey()`
+(the exported caller of the un-exported `humblePostRequest`) against the REAL, unmocked hardened
+stub and asserts the rejection carries D-06's seam text, not the pre-fix "Humble reveal request
+timed out" message, settling without `REQUEST_TIMEOUT_MS`'s `setTimeout` ever being advanced
+(fake timers, `setImmediate`/`nextTick` left real). Two Rule deviations: (1) Rule 1 -- fixed
+`lifecycleStub.test.ts`'s stale "request() member is unchanged" assertion, which called `req.on()`
+with zero args and no longer typechecked against the new 2-arg signature; (2) Rule 3 -- worked
+around a discovered `app.userAgentFallback` gap (electronStub's `app` has no such member, and
+`humble/userAgent.ts`'s `standardBrowserUserAgent()` -- called inside `humblePostRequest` BEFORE
+`request.on('error', ...)` is ever reached -- throws on it) entirely inside `netStub.test.ts`'s
+own `electron` mock factory, not in `electronStub.ts`; currently dormant in production since
+`humbleRevealKey` stays unregistered until 34.4.1. Hand RED-proofed by restoring the pre-D-06
+`electronStub.ts` (`git show HEAD~1`): Group 1 sees 0 handler calls, Group 2 never settles
+(Jest's 5000ms test timeout) since the fake timer is deliberately never advanced; a throwaway ad
+hoc check that forced the timer to elapse surfaced a SEPARATE, deeper, already-dormant gap --
+`humblePostRequest`'s timeout branch calls `request.abort()`, which the stub has never
+implemented (pre- or post-D-06) -- so the plan's predicted "misleading timeout message" is
+actually masked by a `TypeError: request.abort is not a function`; recorded for Phase 34.4.1,
+not fixed (out of scope per D-01/D-02). Restored `electronStub.ts` byte-identical to the Task 1
+commit before committing Task 2. REQ-34.4-11 complete, see 34.4-06-SUMMARY.md. Next: 34.4-02
+(bottle/client-setup/redeem group, same file, wave 1).
 
 34.4-04 done -- Humble library/sync + key-state channel registration (wave 1, depends_on: []).
 Created `humbleFlowRegistration.ts`, curated-importing `humble/user.ts`/`humble/library.ts`

@@ -1428,7 +1428,7 @@ Plans:
 - [x] 34.4-03-PLAN.md — The two **GOG** private-branch password channels via `libraryManagerMap` (wave 1)
 - [x] 34.4-04-PLAN.md — New `humbleFlowRegistration.ts` + `handlers.ts` wiring + 10 clean Humble channels (wave 1)
 - [ ] 34.4-05-PLAN.md — Ownership overrides, corrected `humbleRecordGiftLinkOpened` handle, `humbleDisconnect` send (D-05), `humbleRunValidation` guard (wave 2)
-- [ ] 34.4-06-PLAN.md — Fail-fast `electronStub.net.request` (D-06) (wave 1)
+- [x] 34.4-06-PLAN.md — Fail-fast `electronStub.net.request` (D-06) (wave 1)
 - [ ] 34.4-07-PLAN.md — Honest "not available on this build" login panel (D-04) (wave 1)
 - [ ] 34.4-08-PLAN.md — Reach-ledger extension (regenerated, 3 new edges) + structural additive/reversible sweep (wave 3)
 - [ ] 34.4-09-PLAN.md — `34.4-PORTED-CHANNELS.md` + self-tested gate script + SEAM.md §3→§1 (wave 4)
