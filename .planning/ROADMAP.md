@@ -1413,13 +1413,47 @@ Cross-cutting constraints:
 
 ### Phase 34.4: Tauri IPC re-plumb slice 7 — Steam completion and Humble (INSERTED)
 
-**Goal:** Port the **remaining Steam surface plus the whole Humble integration** (38 channels): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with all 21 `humble/ipc_handler.ts` channels from phases 10-15. Additive and reversible — the Electron build keeps working unchanged.
+**Goal:** Port the **remaining Steam surface plus the portable half of the Humble integration** (**31 channels** — was 38; see the re-scoping below): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with 16 of the 22 Humble channels from phases 10-15. Also: an honest "not available on this build" login surface (**D-04**), a fail-fast `electronStub.net.request` (**D-06**), and a **blocking 5-item live gate** (**D-08**). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** TBD — mint at `/gsd-plan-phase 34.4`
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
 **Plans:** 0 plans
 
+Re-scoped by `34.4-CONTEXT.md` on 2026-07-27: **38 → 31.** `isLoggedIn` → Phase 34.5 (**D-03**; it is `LegendaryUser.isLoggedIn()` — Epic, filed here only because the inventory grouped by file, same as 34.1 D-14's `callTool` move). The 6 Humble browser-auth channels → **Phase 34.4.1** (**D-01/D-02**; the `<webview>` + `session.fromPartition` seam is cross-cutting and 34.5 needs it too). `IPC-PORT-INVENTORY.md` updated to match.
+
 Plans:
 - [ ] TBD (run /gsd-plan-phase 34.4 to break down)
+
+### Phase 34.4.1: Tauri embedded-browser login seam (INSERTED)
+
+**Goal:** Replace the **Electron-only embedded-browser login path** — the single
+`<webview partition="persist:…">` in `src/frontend/screens/WebView/index.tsx:467` plus
+`session.fromPartition()` cookie capture — with something that works under Tauri, and port the
+**6 browser-auth channels** carved out of Phase 34.4 by its **D-01/D-02**: `humbleStartLogin`,
+`humbleReconnect`, `humbleStopLogin`, `humbleLoginNavigated`, `humbleGetLoginUserAgent`,
+`humbleRevealKey`. The seam is **not Humble-specific** — the same element serves Epic, GOG and
+Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
+depend on it. Additive and reversible — the Electron build keeps working unchanged.
+**Requirements**: TBD — mint at `/gsd-plan-phase 34.4.1`
+**Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
+**Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
+**Plans:** 0 plans
+
+**Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
+Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
+the system browser with a loopback or paste handoff; an iframe in the main webview. Landmines:
+CSP/`X-Frame-Options` likely kills the iframe; 34.3 **D-02** (the `"windows": ["main"]`
+capability grants are shared with untrusted remote content); **unverified** that Tauri's webview
+cookie API exists at our version or reaches the platform cookie jar (34.3 **D-05**'s lesson —
+verify empirically first). For `humbleRevealKey`: rounds 1–6 of the `humble-reveal-key-fails`
+debug session **falsified** cookie/header fidelity as sufficient — the blocker is axios's
+TLS/HTTP fingerprint, so reqwest and `tauri-plugin-http` are expected to fail identically; and
+Tauri's webview is **WKWebView on macOS, WebKitGTK on Linux, WebView2/Chromium only on
+Windows**, so macOS is the platform furthest from the stack that currently works.
+Also carries: `humbleDisconnect` must be revisited here to clear the new browser context
+(Phase 34.4 **D-05**).
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.4.1 to break down)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 

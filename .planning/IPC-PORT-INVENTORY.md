@@ -59,13 +59,37 @@ Note: `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — s
 above. It is NOT counted in this slice's 29 and must not be registered again by whichever plan
 ports this list.
 
-## Phase 34.4 — Slice 7 — Steam completion and Humble (38 channels)
+## Phase 34.4 — Slice 7 — Steam completion and Humble (31 channels)
 
-`getPrivateBranchPassword`, `getSteamInstallSize`, `getSteamSyncedAt`, `getSteamUserInfo`, `humbleCheckHealth`, `humbleClearOwnershipOverride`, `humbleDisconnect`, `humbleGetClaimAnnotations`, `humbleGetGiftedAt`, `humbleGetKeys`, `humbleGetLoginUserAgent`, `humbleGetOwnershipOverrides`, `humbleGetRevealedKeyValue`, `humbleGetSyncState`, `humbleGetUserInfo`, `humbleLoginNavigated`, `humbleMarkRedeemed`, `humbleReconnect`, `humbleRecordGiftLinkOpened`, `humbleRevealKey`, `humbleRunValidation`, `humbleSetOwnershipOverride`, `humbleStartLogin`, `humbleStopLogin`, `humbleSync`, `humbleUndoRedeemed`, `isLoggedIn`, `isSteamBottleProvisioned`, `logoutSteam`, `redeemSteamKey`, `setPrivateBranchPassword`, `steamBottleProvision`, `steamBottleStatus`, `steamClientSetupRecheck`, `steamClientSetupStart`, `steamPollCredential`, `steamStartCredentials`, `steamSubmitGuard`
+Re-scoped 2026-07-27 by `34.4-CONTEXT.md` **D-01/D-02/D-03**: the original 38 became 31.
+`isLoggedIn` moved to Phase 34.5 (it is `LegendaryUser.isLoggedIn()` — Epic auth, filed here
+only because this inventory grouped channels by file; same reassignment class as 34.1 D-14's
+`callTool`). The 6 Humble browser-auth channels moved to the new **Phase 34.4.1** below,
+because the `<webview>` + `session.fromPartition` seam they need is shared with Phase 34.5's
+Epic/GOG/Amazon logins and does not belong inside a store slice.
 
-## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (56 channels)
+`getPrivateBranchPassword`, `getSteamInstallSize`, `getSteamSyncedAt`, `getSteamUserInfo`, `humbleCheckHealth`, `humbleClearOwnershipOverride`, `humbleDisconnect`, `humbleGetClaimAnnotations`, `humbleGetGiftedAt`, `humbleGetKeys`, `humbleGetOwnershipOverrides`, `humbleGetRevealedKeyValue`, `humbleGetSyncState`, `humbleGetUserInfo`, `humbleMarkRedeemed`, `humbleRecordGiftLinkOpened`, `humbleRunValidation`, `humbleSetOwnershipOverride`, `humbleSync`, `humbleUndoRedeemed`, `isSteamBottleProvisioned`, `logoutSteam`, `redeemSteamKey`, `setPrivateBranchPassword`, `steamBottleProvision`, `steamBottleStatus`, `steamClientSetupRecheck`, `steamClientSetupStart`, `steamPollCredential`, `steamStartCredentials`, `steamSubmitGuard`
 
-`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
+Note: `humbleDisconnect` ships here as a **declared partial** (34.4 **D-05**) — it deletes the
+stored encrypted cookie (the real sign-out) but its `session.clearStorageData()` call no-ops
+against `electronStub.session`. Phase 34.4.1 must revisit it once a real browser context exists.
+
+## Phase 34.4.1 — the embedded-browser login seam (6 channels)
+
+`humbleGetLoginUserAgent`, `humbleLoginNavigated`, `humbleReconnect`, `humbleRevealKey`, `humbleStartLogin`, `humbleStopLogin`
+
+Carved out of slice 7 on 2026-07-27. Five of the six drive `HumbleUser.watchForLogin()`'s
+partition-cookie poll or the `<webview>`'s user-agent; `humbleRevealKey` is a *different*
+Chromium dependency — `humblePostRequest` (`humble/adapter.ts:264`) routes through Electron's
+`net.request` on the `persist:humble` partition specifically because Cloudflare Bot Management
+403s axios's TLS/HTTP fingerprint. **This phase runs BEFORE Phase 34.5**, whose Epic/GOG/Amazon
+logins depend on the same seam.
+
+## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
+
+Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
+
+`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
 ## Not an IPC channel, but blocks Phase 35
 
