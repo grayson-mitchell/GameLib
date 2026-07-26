@@ -138,3 +138,26 @@ unaudited. `/gsd-secure-phase 34.3` should close this before the phase is marked
 precisely so a dependency addition "fails a test rather than passing under a zero-packages
 rollup claim." It caught this. The gap was that plan 34.3-03 ran a *targeted* jest sweep
 that excluded `cargoFeatures.test.ts` — the phase-level post-merge gate is what surfaced it.
+
+---
+
+## From the phase-close gate — non-deterministic cross-suite flake
+
+Running the full `npx jest --selectProjects Backend` repeatedly at phase close produced a
+**second** failing suite on one run out of three:
+`enrichmentFlows.test.ts` › "REQ-34.2-07 with no data file at all, returns null rather than
+throwing" (a **Phase 34.2** test, not this phase's).
+
+Characterised, not waved through:
+- Isolated, it passes **5/5**.
+- In the full suite it appears intermittently, and lands on a **different suite each time** —
+  plan 34.3-02's executor saw the same flake on `reconcile.test.ts`, plan 34.3-05's saw it on
+  "a different suite again".
+- This is the repo's already-known leaked-timer / shared-state cross-suite pollution family
+  (see the `library.ts` leaked-timer jest exit-1 note carried since the Steam install work).
+
+Not caused by this phase and not fixable from inside it. The stable steady-state baseline is
+**2400/2401**, sole deterministic failure `rustInvokeChannel.test.ts` (Phase 34.1 baseline).
+
+Natural home: a dedicated test-isolation debug session — the fix is almost certainly an
+unclosed timer/handle in a shared module, not anything in the suites it lands on.
