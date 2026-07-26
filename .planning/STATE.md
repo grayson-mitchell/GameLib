@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.3-07-PLAN.md
-last_updated: "2026-07-26T11:01:42.319Z"
+stopped_at: Completed 34.3-08-PLAN.md
+last_updated: "2026-07-26T11:15:46.727Z"
 last_activity: 2026-07-26
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 110
-  completed_plans: 100
+  completed_plans: 101
   percent: 67
 ---
 
@@ -34,8 +34,20 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.3 (tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics) — EXECUTING
-Plan: 9 of 9 (wave 4 -- plan 07 now complete)
+Plan: 9 of 9 (wave 5 -- plan 08 now complete; plan 09, wave 6, the blocking live gate, remains)
 discuss/plan.
+
+34.3-08 done -- Declared ported-channel list + SEAM closure (wave 5, depends on 01-07).
+Wrote `34.3-PORTED-CHANNELS.md` (29 rows, no `logError` row, both framing corrections, the
+D-05 verified-no-fix finding naming tauri 2.11.5, the Humble key-copy KNOWN ACCEPTED RISK
+rider, `deleteUploadedLogFile`'s both-builds-dead declaration distinguished from 34.2's D-07,
+the filed-not-audited log-redaction statement) and `ported-channels-gate.py` (5 assertions,
+each self-test-proven to reject a synthetic violation). Closed SEAM.md's Incremental-Port
+Checklist steps 5/6 (new §1 CLOSED subsection, §3 row 9's `clipboard` moved from "untouched"
+to CLOSED). Filed `uploaded-log-delete-button-lies.md` and `log-upload-has-no-redaction.md`
+todos. REQ-34.3-12/REQ-34.3-13 complete, see 34.3-08-SUMMARY.md. Live-gate proof-level cells
+(`unit + LIVE (item N)`) are explicitly declared PENDING, not yet observed -- plan 34.3-09
+(the blocking live gate, non-autonomous) is next and has not run.
 
 34.3-07 done -- Automated-proof structural gates (the phase's structural-proof plan, wave 4,
 depends on 01/02/03/04/06). Extended `electronReachLedger.test.ts`'s `ENTRY_POINTS` with this
@@ -991,7 +1003,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1007,6 +1019,13 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
 Status: Ready to execute
+
+> NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
+> ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
+> narrative line rather than into the actual "Current Position" section below — the
+> same mis-targeted-write bug this cluster's notes document repeatedly. Reverted back
+> to its pre-session value (`Status: Ready to execute`) rather than trusted; the real
+> current status lives in the frontmatter (`status:`) and in "Current Position" above.
 
 Prior context (Phase 34 release/CI narrative, retained verbatim; the leading sentence was
 truncated by `state.planned-phase` overwriting the `Status:` line — content below is history,
@@ -1803,6 +1822,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P05 | ~50min | 3 tasks | 3 files |
 | Phase 34.3 P06 | 35min | 2 tasks | 4 files |
 | Phase 34.3 P07 | ~50min | 3 tasks | 2 files |
+| Phase 34.3 P08 | 70min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -2083,6 +2103,7 @@ Recent decisions affecting current work:
 - [Phase 34.3]: clipboardFlows.test.ts calls registerClipboardFlows() directly rather than booting the full sidecar via bootstrap's init(), since the module touches no store/config/environment surface — Mirrors lifecycleStub.test.ts's lighter mock-only-the-Rust-boundary shape instead of the heavier appShellFlows/shellFilesFlows full-bootstrap harness
 - [Phase 34.3-07]: Regenerated the electron-reach ledger baseline by running computeElectronReach(), not transcribing prose -- measured set gained exactly one module (logger/uploader.ts), matching D-10's named edge
 - [Phase 34.3-07]: Hardened tauriShellSource.test.ts's loadMainRsCode with the shared stripSourceComments util (block comments) layered under the existing local trailing-// pass, closing a vacuous-gate risk for Task 3's positive-existence assertions
+- [Phase 34.3]: Live-gate proof-level cells in 34.3-PORTED-CHANNELS.md (unit + LIVE (item N)) are explicitly marked pending, not observed, since plan 34.3-09 (the blocking live gate) had not executed as of this document's authorship
 
 ### Pending Todos
 
@@ -2153,12 +2174,12 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-26T11:01:30.510Z
-Stopped at: Completed 34.3-07-PLAN.md
-Next: Plan 34.3-01 (18/29 slice-6 channels ported, see 34.3-01-SUMMARY.md) and Plan 34.3-03
-(Rust clipboard seam + D-05 verified no-fix finding, see 34.3-03-SUMMARY.md) are both complete.
-Plan 34.3-02 (still no SUMMARY on disk) remains the other wave-1 plan; continue with it via
-`/gsd-execute-phase 34.3`. Also still outstanding (unrelated to Phase 34.3): Phase 34.2's owed
+Last session: 2026-07-26T11:13:05.317Z
+Stopped at: Completed 34.3-08-PLAN.md
+Next: Plan 34.3-09 (the phase's blocking, non-autonomous live gate -- 5 named items, items 1/2/3/5
+under `pnpm tauri:dev`, item 4 on a PACKAGED build; results recorded in `34.3-LIVE-GATE.md`) is
+the only remaining plan in Phase 34.3; continue via `/gsd-execute-phase 34.3`. Also still
+outstanding (unrelated to Phase 34.3): Phase 34.2's owed
 secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates
 (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md
 real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled
