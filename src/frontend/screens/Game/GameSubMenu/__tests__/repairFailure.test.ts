@@ -227,4 +227,150 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
     ]
     expect(options.message).toBe('Repair failed. See the log for details.')
   })
+
+  // WR-06 (gap cycle 4, plan 34.2-27, REQ-34.2-12/-14).
+  //
+  // repairFailure.ts wraps `window.api.logError(...)` (signal 2) in an empty
+  // catch. Under Tauri the single most likely failure of that call is that
+  // the preload factory did not attach it (`window.api` or `.logError`
+  // undefined) -- a TypeError, not a log-write failure -- and today it is
+  // discarded with zero trace: the exact silent-void class this phase exists
+  // to close, reproduced inside the very function written to close it.
+  // Separately, signal 3's `showDialogModal`/`t` calls are unguarded, so a
+  // throwing caller-supplied dependency still escapes `reportRepairFailure`
+  // into the un-awaited dialog-button handler at `index.tsx:158`.
+  describe('WR-06: individually-diagnosed signals, dialog survives a throwing t/showDialogModal', () => {
+    // RED-PROOF (confirmed by hand against unmodified repairFailure.ts): the
+    // empty catch means console.error is called once, not twice -- this test
+    // failed on the toHaveBeenCalledTimes(2) assertion.
+    it('Test 1: still calls showDialogModal once and diagnoses the log-signal failure when window.api.logError throws', () => {
+      logErrorMock.mockImplementation(() => {
+        throw new Error('no api')
+      })
+
+      expect(() =>
+        reportRepairFailure({
+          appName: 'MyGame',
+          error: new Error('boom'),
+          showDialogModal: showDialogModalMock,
+          t
+        })
+      ).not.toThrow()
+
+      expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(2)
+      const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
+        typeof first === 'string' &&
+        first.includes('repair-failure log signal unavailable')
+      )
+      expect(diagnosticCall).toBeDefined()
+    })
+
+    // RED-PROOF (confirmed by hand): with the empty catch, no diagnostic is
+    // ever emitted for an absent window.api -- this test failed on the
+    // diagnostic-presence assertion.
+    it('Test 2: still calls showDialogModal once and diagnoses the log-signal failure when window.api is entirely absent', () => {
+      const globalWithWindow = globalThis as unknown as {
+        window: { api?: { logError: jest.Mock } }
+      }
+      const savedApi = globalWithWindow.window.api
+      delete globalWithWindow.window.api
+
+      try {
+        expect(() =>
+          reportRepairFailure({
+            appName: 'MyGame',
+            error: new Error('boom'),
+            showDialogModal: showDialogModalMock,
+            t
+          })
+        ).not.toThrow()
+
+        expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+        const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
+          typeof first === 'string' &&
+          first.includes('repair-failure log signal unavailable')
+        )
+        expect(diagnosticCall).toBeDefined()
+      } finally {
+        globalWithWindow.window.api = savedApi
+      }
+    })
+
+    // RED-PROOF (confirmed by hand): the throw from `t` escapes
+    // reportRepairFailure entirely before showDialogModal is ever reached --
+    // this test failed with the thrown error visible in the failure output,
+    // not as an assertion diff.
+    it('Test 3: still renders a non-empty dialog title/message when t throws on the title key', () => {
+      const throwingT = ((key: string, defaultValue: string) => {
+        if (key === 'box.error.title') {
+          throw new Error('translation exploded')
+        }
+        return defaultValue
+      }) as never
+
+      expect(() =>
+        reportRepairFailure({
+          appName: 'MyGame',
+          error: new Error('boom'),
+          showDialogModal: showDialogModalMock,
+          t: throwingT
+        })
+      ).not.toThrow()
+
+      expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+      const [options] = showDialogModalMock.mock.calls[0] as [
+        { title: string; message: string }
+      ]
+      expect(options.title.length).toBeGreaterThan(0)
+      expect(options.message.length).toBeGreaterThan(0)
+    })
+
+    // RED-PROOF (confirmed by hand): the throw from showDialogModal
+    // propagates straight out of reportRepairFailure -- this test failed
+    // with the thrown error visible in the failure output, not as an
+    // assertion diff.
+    it('Test 4: does not throw and diagnoses the dialog-signal failure when showDialogModal throws', () => {
+      const throwingShowDialogModal = jest.fn(() => {
+        throw new Error('dialog exploded')
+      })
+
+      expect(() =>
+        reportRepairFailure({
+          appName: 'MyGame',
+          error: new Error('boom'),
+          showDialogModal: throwingShowDialogModal,
+          t
+        })
+      ).not.toThrow()
+
+      const diagnosticCall = consoleErrorSpy.mock.calls.find(([first]) =>
+        typeof first === 'string' &&
+        first.includes('repair-failure dialog signal unavailable')
+      )
+      expect(diagnosticCall).toBeDefined()
+    })
+
+    // Must stay GREEN before and after Task 2: a regression guard on the
+    // change, not a new capability.
+    it('Test 5: T-34.2-52 survives even when window.api.logError throws (dialog message never carries the raw error text)', () => {
+      const secretToken = 'SENTINEL-TOKEN-9f3a2c-/Users/secret/path'
+      logErrorMock.mockImplementation(() => {
+        throw new Error('no api')
+      })
+
+      reportRepairFailure({
+        appName: 'MyGame',
+        error: new Error(secretToken),
+        showDialogModal: showDialogModalMock,
+        t
+      })
+
+      expect(showDialogModalMock).toHaveBeenCalledTimes(1)
+      const [options] = showDialogModalMock.mock.calls[0] as [
+        { message: string }
+      ]
+      expect(options.message).not.toContain(secretToken)
+    })
+  })
 })
