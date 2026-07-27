@@ -1,0 +1,9 @@
+{"category":"control-server","data":{"origin":"http://localhost:17913"},"message":"listening","ms":0,"t":"2026-07-27T02:22:43.833Z"}
+{"category":"app","data":{"controlOrigin":"http://localhost:17913","mainThread":"ThreadId(1)"},"message":"started","ms":657,"t":"2026-07-27T02:22:44.490Z"}
+{"category":"env","data":{"controlOrigin":"http://localhost:17913","humbleUrl":"https://www.humblebundle.com/login","mainThreadCaptured":true,"tauri":"2.11.5 (Cargo.lock-pinned, matches src-tauri)","wry":"0.55.1"},"message":"environment","ms":2085,"t":"2026-07-27T02:22:45.918Z"}
+{"category":"window","data":{"incognito":false,"isolatedStore":false,"label":"login-control","spoofUa":false,"url":"http://localhost:17913/set"},"message":"opening","ms":39296,"t":"2026-07-27T02:23:23.129Z"}
+{"category":"window","data":{"label":"login-control"},"message":"opened","ms":39370,"t":"2026-07-27T02:23:23.202Z"}
+{"category":"navigation","data":{"url":"http://localhost:17913/set","window":"login-control"},"message":"on_navigation","ms":39410,"t":"2026-07-27T02:23:23.242Z"}
+{"category":"control-server","data":{"cookieHeader":"","cookieHeaderNames":[],"path":"/set","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"},"message":"request","ms":39416,"t":"2026-07-27T02:23:23.248Z"}
+{"category":"navigation","data":{"event":"started","title":"spike login — login-control","url":"http://localhost:17913/set","window":"login-control"},"message":"on_page_load","ms":39421,"t":"2026-07-27T02:23:23.254Z"}
+{"category":"navigation","data":{"event":"finished","title":"spike login — login-control","url":"http://localhost:17913/set","window":"login-control"},"message":"on_page_load","ms":39431,"t":"2026-07-27T02:23:23.264Z"}
