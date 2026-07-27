@@ -1416,7 +1416,7 @@ Cross-cutting constraints:
 **Goal:** Port the **remaining Steam surface plus the portable half of the Humble integration** (**31 channels** — was 38; see the re-scoping below): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with 16 of the 22 Humble channels from phases 10-15. Also: an honest "not available on this build" login surface (**D-04**), a fail-fast `electronStub.net.request` (**D-06**), and a **blocking 5-item live gate** (**D-08**). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.4-01..16
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 10 plans (5 waves) — **9/10 executed on disk** (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07, 34.4-08, 34.4-09 have SUMMARY.md)
+**Plans:** 10 plans (5 waves) — **10/10 executed on disk** (all plans have SUMMARY.md) — **PHASE COMPLETE**, blocking live gate PASSED 5/5 (34.4-LIVE-GATE.md); secure-phase 34.4 not yet run
 
 Re-scoped by `34.4-CONTEXT.md` on 2026-07-27: **38 → 31.** `isLoggedIn` → Phase 34.5 (**D-03**; it is `LegendaryUser.isLoggedIn()` — Epic, filed here only because the inventory grouped by file, same as 34.1 D-14's `callTool` move). The 6 Humble browser-auth channels → **Phase 34.4.1** (**D-01/D-02**; the `<webview>` + `session.fromPartition` seam is cross-cutting and 34.5 needs it too). `IPC-PORT-INVENTORY.md` updated to match.
 
@@ -1432,7 +1432,7 @@ Plans:
 - [x] 34.4-07-PLAN.md — Honest "not available on this build" login panel (D-04) (wave 1)
 - [x] 34.4-08-PLAN.md — Reach-ledger extension (regenerated, measured 4 new edges — 1 more than the plan's own 3-edge prediction) + structural additive/reversible sweep (wave 3)
 - [x] 34.4-09-PLAN.md — `34.4-PORTED-CHANNELS.md` + self-tested gate script + SEAM.md §3→§1 (wave 4)
-- [ ] 34.4-10-PLAN.md — Blocking 5-item live gate under `tauri:dev` (D-08/D-09/D-10) (wave 5)
+- [x] 34.4-10-PLAN.md — Blocking 5-item live gate under `tauri:dev` (D-08/D-09/D-10) — PASS 5/5, item 2 failed attempt 1 and was fixed in-phase (wave 5)
 
 ### Phase 34.4.1: Tauri embedded-browser login seam (INSERTED)
 

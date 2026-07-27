@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4-09 done
-last_updated: "2026-07-27T23:59:00.000Z"
-last_activity: 2026-07-27 -- 34.4-09 executed (34.4-PORTED-CHANNELS.md declares all 31 channels with honest proof levels, ported-channels-gate.py self-tested doc-shape gate (9/9 check_*-to-self-test), SEAM.md Incremental-Port Checklist steps 5/6 closed, REQ-34.4-14/16)
+stopped_at: 34.4-10 done -- Phase 34.4 fully executed on disk (10/10 plans)
+last_updated: "2026-07-27T13:05:00.000Z"
+last_activity: 2026-07-27 -- 34.4-10 executed (blocking 5-item live gate under pnpm tauri:dev, PASS 5/5 -- item 2 logoutSteam FAILED on attempt 1: a stale Phase 30 G-30-01 isTauri() guard in GlobalState.tsx made the ported logoutSteam send unreachable from the UI, invisible to the fully-green automated suite; fixed in-phase (1cf42d43b/52dfcfb66) closing the underlying fire-and-forget race via new SteamSignOut.ts's poll-then-confirm helper, re-tested PASS with a persisted-store present-to-absent proof stronger than the plan's UI-only check; item 5 surfaced a pre-existing, faithfully-ported Electron defect (steamBottleStatus.provisioned vs isSteamBottleProvisioned() disagree); Rule-1 fix 9f9f0402c for a broken WebView/index.tsx import found during the mandatory npm start regression check; REQ-34.4-13/15 complete, see 34.4-10-SUMMARY.md). Phase 34.4 (Tauri IPC re-plumb slice 7) is now fully executed; secure-phase 34.4 not yet run. Next: Phase 34.4.1 (embedded-browser login seam) or Phase 34.5 (slice 8), per ROADMAP ordering.
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
-  completed_plans: 111
-  percent: 75
+  completed_plans: 112
+  percent: 76
 ---
 
 # Project State
@@ -33,8 +33,47 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — EXECUTING
-Plan: 9 of 10 (34.4-01, 34.4-02, 34.4-03, 34.4-04, 34.4-05, 34.4-06, 34.4-07, 34.4-08, 34.4-09 done; 34.4-10 still pending)
+Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — COMPLETE (10/10 plans)
+Plan: 10 of 10 (34.4-01 through 34.4-10 all done; secure-phase 34.4 not yet run)
+
+34.4-10 done -- Ran the phase's blocking 5-item live gate under `pnpm tauri:dev`, recorded in
+`34.4-LIVE-GATE.md`. Task 1's automated sweep found and fixed one real Rule-1 build regression
+before spending human gate time: a bare `preload/tauriTransport` import in `WebView/index.tsx`
+(added by plan 34.4-07) had no matching Vite alias, breaking the Electron renderer dev server --
+invisible to `tsc --noEmit` (masked by `tsconfig.json`'s `baseUrl`) and to every jest suite (none
+run a real bundler), caught only by the required `npm start` regression check (commit `9f9f0402c`).
+**Item 2 (`logoutSteam`) FAILED on the human gate's first attempt** -- the whole justification for
+this phase's blocking-gate design (D-08): ten plans, every unit test, `tsc`, `cargo check`, the
+electron-reach ledger and the self-tested ported-channels gate were ALL green while Steam sign-out
+was completely unreachable from the UI. Root cause: `GlobalState.tsx`'s `steamLogout` still carried
+a Phase 30 G-30-01 `isTauri()` early-return that short-circuited before `window.api.logoutSteam()`
+was ever called; its own comment's premise ("no listener is registered on the sidecar under Tauri")
+had been falsified by plan 34.4-01 registering the channel, but no plan in this phase touched
+`GlobalState.tsx`, so the guard silently outlived the fact it was built on. Because `logoutSteam` is
+a `send` -- no reject, no timeout, no console line -- only a human driving the real UI could observe
+it. **Fixed in-phase, authorized by the user as a deviation rather than a separate gap cycle**
+(commits `1cf42d43b` fix, `52dfcfb66` test): removed the stale guard and closed the underlying
+fire-and-forget race (not just unblocked it) via new `src/frontend/state/SteamSignOut.ts`, which
+fires the send then polls the already-ported `getSteamUserInfo` invoke (20x150ms) to confirm
+sign-out before clearing local state/reloading, with an honest failure dialog on timeout. Item 2
+attempt 2 PASSED, proven at the persistence layer (a present-to-absent `userData`/`isLoggedIn`
+transition in `steam_store/config.json` across a full quit-and-relaunch) -- stronger evidence than
+the plan's UI-only check. Incidental positive finding: the surviving encrypted Electron
+`refreshToken` after Tauri sign-out is correct (separate, contractually unbridged store) and retires
+a latent risk flagged in the v0.8 partial audit. Items 1/3/4 PASSED; item 3 was verified from the
+web inspector console rather than the UI the plan described (neither channel has a usable display
+surface in this build) -- a stronger proof, recorded as a method deviation. Item 5 PASSED for port
+fidelity and surfaced a genuine pre-existing (not port-introduced) Electron defect:
+`steamBottleStatus().provisioned` (store flag) and `isSteamBottleProvisioned()` (live filesystem
+check) disagree on the test machine; on-disk truth confirms the filesystem check is correct; the
+sidecar handler is byte-identical to `main.ts:948-953` so the port faithfully carried the
+inconsistency across rather than introducing it. Gate verdict: PASS 5/5. REQ-34.4-13/15 complete,
+see 34.4-10-SUMMARY.md. **Phase 34.4 is now fully executed on disk (10/10 plans).** Carried, non-
+blocking: the bottle store-vs-filesystem split, `electronStub`'s missing `request.abort()`, six
+Humble channels deferred to Phase 34.4.1, the `rustInvokeChannel.test.ts` baseline failure, and two
+outstanding confirmatory checks (Electron bottle-status parity spot-check, Electron sign-out sanity
+check -- the item-2 fix changed Electron's logout path too and nothing covered `steamLogout` before
+this phase). Secure-phase 34.4 still owed. Next: Phase 34.4.1 or Phase 34.5.
 
 34.4-09 done -- Wrote 34.4-PORTED-CHANNELS.md declaring all 31 ported channels (13 genuinely-Steam
 + 2 corrected-to-GOG + 16 Humble) in one five-column table with honest per-row proof levels (unit /
