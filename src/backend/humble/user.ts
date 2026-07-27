@@ -1,12 +1,13 @@
 import { safeStorage, session } from 'electron'
 
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
 import { configStore, humbleLibraryStore, humbleSyncStore } from './electronStores'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_PARTITION,
+  HUMBLE_LOGIN_URL,
   HUMBLE_TOKEN_PREFIX,
   HUMBLE_TOKEN_STORE_KEY
 } from './constants'
@@ -14,6 +15,7 @@ import { getAccountIdentity, getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
+import { getLoginWindowSeam, classifyCookieRead } from './loginWindowSeam'
 
 // Re-exported so existing callers (ipc_handler.ts's humbleGetLoginUserAgent
 // handler, user.test.ts) are unaffected by the round-6 move into its own
@@ -180,6 +182,21 @@ export class HumbleUser {
   // Main-process-only, same secrecy discipline as getCsrfToken(): the value
   // must NEVER be logged or included in any sendFrontendMessage payload.
   static async getLiveCsrfToken(): Promise<string | undefined> {
+    const seam = getLoginWindowSeam()
+    if (seam !== null) {
+      // Under the Tauri seam there is no live login window at reveal time —
+      // the login watch already settled and closed its window (T-34.4.1-18).
+      // Reading via the seam here would require a label this call never has,
+      // and would otherwise hit the sidecar's `{}` electronStub session shape
+      // if it fell through to session.fromPartition below. Return the stored
+      // snapshot directly rather than throwing a TypeError into the catch.
+      // Electron behavior (below) is unchanged.
+      logInfo(
+        'Humble live csrf read: seam installed, no live login window at reveal time — using stored snapshot',
+        LogPrefix.Backend
+      )
+      return HumbleUser.getCsrfToken()
+    }
     try {
       const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
       const cookies = await ses.cookies.get({
@@ -253,14 +270,38 @@ export class HumbleUser {
       HumbleUser.activeWatch = null
     }
 
-    const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-    // Reinforcement UA set (Task 2's webview `useragent` attribute is the
-    // primary application point) so any main-process-initiated request on
-    // this partition also presents a standard Chrome UA.
-    ses.setUserAgent(standardBrowserUserAgent())
+    // D-01/D-02 (Phase 34.4.1 Plan 03): under Electron, `getLoginWindowSeam()`
+    // always returns null (nothing in the Electron build ever calls
+    // setLoginWindowSeam) — the `seam === null` branches below are the
+    // ORIGINAL, untouched session.fromPartition() behavior. Under the Tauri
+    // sidecar there is no session.fromPartition() shape at all
+    // (tauri-login-webview-cookies.md § "Requirements" #7), so a seam is
+    // installed at sidecar startup and drives a real Rust-owned login window
+    // instead.
+    const seam = getLoginWindowSeam()
+
+    let ses: ReturnType<typeof session.fromPartition> | null = null
+    if (seam === null) {
+      ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+      // Reinforcement UA set (Task 2's webview `useragent` attribute is the
+      // primary application point) so any main-process-initiated request on
+      // this partition also presents a standard Chrome UA.
+      ses.setUserAgent(standardBrowserUserAgent())
+    }
 
     return new Promise<LoginResult>((resolve) => {
       let settled = false
+
+      // Seam-path-only state. `seamLabel` is the Rust-owned login window's
+      // label, set once seam.open() resolves (null until then, and stays
+      // null on the Electron path). `everProvedLive` is the liveness proof
+      // classifyCookieRead needs to distinguish a genuinely empty jar from a
+      // dead cookie API (tauri-login-webview-cookies.md § "Liveness proof
+      // before any poll") — Humble hands 33 cookies to an ANONYMOUS visitor,
+      // so a first read of zero means the channel is dead, not "not logged
+      // in yet".
+      let seamLabel: string | null = null
+      let everProvedLive = false
 
       // Humble sets a `_simpleauth_sess` cookie for ANONYMOUS visitors too —
       // the login page's very first navigation already carries one. A cookie
@@ -273,7 +314,8 @@ export class HumbleUser {
       // permanently skipped — it is only THROTTLED on the poll path (so the
       // 1.5s poll doesn't hammer the gamekeys endpoint), and a forced
       // re-validation (relayed from the webview's navigation events via
-      // notifyLoginNavigated) ALWAYS re-checks regardless of value match or
+      // notifyLoginNavigated, or from a main-frame `finished` nav event
+      // drained from Rust) ALWAYS re-checks regardless of value match or
       // throttle.
       let lastRejectedValue: string | null = null
       let lastRejectedAt = 0
@@ -292,19 +334,115 @@ export class HumbleUser {
         clearTimeout(watchDeadline)
         HumbleUser.activeWatch = null
         resolve(result)
+        // T-34.4.1-18: close the Rust-owned login window exactly once, on
+        // every exit path (done, waiting, error, stop, deadline). Floated —
+        // a close() rejection must never throw out of settle() and strand
+        // this promise (WR-06 float discipline).
+        if (seam !== null && seamLabel !== null) {
+          const labelToClose = seamLabel
+          seam.close(labelToClose).catch((err) => {
+            logWarning(
+              ['Humble login window close failed (non-fatal):', err],
+              LogPrefix.Backend
+            )
+          })
+        }
       }
 
       async function checkCookie(forceValidation: boolean) {
         if (settled || validationInFlight) return
         try {
-          const cookies = await ses.cookies.get({
-            url: HUMBLE_BASE_URL,
-            name: '_simpleauth_sess'
-          })
-          if (settled || validationInFlight) return
-          if (cookies.length === 0) return
+          let cookieValue: string | undefined
 
-          const cookieValue = cookies[0].value
+          if (seam === null) {
+            // ── Electron path (unchanged) ─────────────────────────────────
+            const cookies = await ses!.cookies.get({
+              url: HUMBLE_BASE_URL,
+              name: '_simpleauth_sess'
+            })
+            if (settled || validationInFlight) return
+            if (cookies.length === 0) return
+            cookieValue = cookies[0].value
+          } else {
+            // ── Tauri seam path ─────────────────────────────────────────────
+            if (seamLabel === null) return // window not open yet
+
+            // REQ-34.4.1-03: drain main-frame-only nav events (Rust's
+            // on_page_load hook, never on_navigation — a third-party ad
+            // iframe must never re-arm this deadline) BEFORE the cookie read
+            // on every tick. A 'finished' event re-arms the deadline and
+            // forces this tick's read to bypass the throttle — the same
+            // signal notifyLoginNavigated()'s forceRevalidate() relays today.
+            try {
+              const events = await seam.takeEvents(seamLabel)
+              if (events.some((event) => event.event === 'finished')) {
+                armDeadline()
+                forceValidation = true
+              }
+            } catch (err) {
+              logWarning(
+                ['Humble login nav-event drain failed (non-fatal):', err],
+                LogPrefix.Backend
+              )
+            }
+            if (settled || validationInFlight) return
+
+            let total: number | null
+            let matched: Array<{ name: string; domain: string | null; value: string }> =
+              []
+            try {
+              // Deliberate host: the Rust arm does a proper domain-SUFFIX
+              // match, so the apex-domain `_simpleauth_sess` cookie IS
+              // returned for the 'www.' host — this is exactly the case
+              // wry's naive per-URL cookie filter silently drops on macOS
+              // (tauri-login-webview-cookies.md § "The killer").
+              const read = await seam.cookies(
+                seamLabel,
+                'www.humblebundle.com',
+                ['_simpleauth_sess']
+              )
+              total = read.total
+              matched = read.matched
+            } catch (err) {
+              total = null
+              logWarning(
+                ['Humble login-window cookie read failed:', err],
+                LogPrefix.Backend
+              )
+            }
+            if (settled || validationInFlight) return
+            if (total !== null && total > 0) everProvedLive = true
+
+            const verdict = classifyCookieRead({ total, everProvedLive })
+            if (verdict === 'UNDECIDABLE') {
+              // NEVER continue polling on this verdict — empty and no-op are
+              // indistinguishable by construction.
+              logWarning(
+                `Humble login-window cookie read UNDECIDABLE for window ${seamLabel} — aborting watch loudly (never poll on this verdict)`,
+                LogPrefix.Backend
+              )
+              settle({ status: 'error' })
+              return
+            }
+            if (verdict === 'UNSUPPORTED_OR_ERROR') {
+              logWarning(
+                `Humble login-window cookie read UNSUPPORTED_OR_ERROR for window ${seamLabel} — aborting watch`,
+                LogPrefix.Backend
+              )
+              settle({ status: 'error' })
+              return
+            }
+            if (verdict === 'SUPPORTED_BUT_EMPTY') {
+              return // genuine "not logged in yet"
+            }
+            // SUPPORTED_NONEMPTY — the jar is live, but the CANDIDATE cookie
+            // may still be absent from the filtered set (not logged in yet).
+            const match = matched.find((c) => c.name === '_simpleauth_sess')
+            if (!match) return
+            cookieValue = match.value
+          }
+
+          if (cookieValue === undefined) return
 
           // Poll-path throttle only: skip when the SAME value was rejected
           // within the throttle window. Forced revalidation bypasses this
@@ -322,7 +460,8 @@ export class HumbleUser {
             const outcome = await HumbleUser.finishLogin(
               cookieValue,
               settle,
-              () => settled
+              () => settled,
+              seam !== null ? seamLabel : null
             )
             if (outcome === 'rejected') {
               lastRejectedValue = cookieValue
@@ -370,13 +509,50 @@ export class HumbleUser {
           void checkCookie(true)
         }
       }
+
+      if (seam !== null) {
+        // Tauri path: open the Rust-owned login window with the standard
+        // Chrome UA (tauri-login-webview-cookies.md § "Why the UA is
+        // mandatory"). The window must stay open for the whole poll —
+        // closing it destroys the cookie handle even though the cookies
+        // survive (spike 015) — and is closed exactly once, inside settle()
+        // above.
+        seam
+          .open(HUMBLE_LOGIN_URL, {
+            visible: true,
+            userAgent: standardBrowserUserAgent()
+          })
+          .then((openedLabel) => {
+            if (settled) {
+              // The watch already settled (e.g. stopLogin() fired) before
+              // open() resolved — close the now-orphaned window immediately
+              // rather than leaking it.
+              seam.close(openedLabel).catch((err) => {
+                logWarning(
+                  ['Humble login window close failed (non-fatal):', err],
+                  LogPrefix.Backend
+                )
+              })
+              return
+            }
+            seamLabel = openedLabel
+          })
+          .catch((err) => {
+            logWarning(
+              ['Humble login window open failed:', err],
+              LogPrefix.Backend
+            )
+            settle({ status: 'error' })
+          })
+      }
     })
   }
 
   private static async finishLogin(
     cookieValue: string,
     settle: (result: LoginResult) => void,
-    isSettled: () => boolean
+    isSettled: () => boolean,
+    seamLabel: string | null
   ): Promise<'done' | 'rejected' | 'transient'> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
@@ -435,13 +611,27 @@ export class HumbleUser {
     // actually required. Same encryption treatment as the session cookie.
     // Main-process-only: NEVER included in sendFrontendMessage/HumbleAuthState.
     try {
-      const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-      const csrfCookies = await csrfSes.cookies.get({
-        url: HUMBLE_BASE_URL,
-        name: 'csrf_cookie'
-      })
-      if (csrfCookies.length > 0 && csrfCookies[0].value) {
-        configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+      const seam = getLoginWindowSeam()
+      if (seam !== null && seamLabel !== null) {
+        // Tauri path: read csrf_cookie from the SAME live login window whose
+        // _simpleauth_sess candidate was just accepted, via the seam rather
+        // than session.fromPartition (which has no shape under Tauri).
+        const csrfRead = await seam.cookies(seamLabel, 'www.humblebundle.com', [
+          'csrf_cookie'
+        ])
+        const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
+        if (match && match.value) {
+          configStore.set('csrfToken', encryptCookie(match.value))
+        }
+      } else {
+        const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+        const csrfCookies = await csrfSes.cookies.get({
+          url: HUMBLE_BASE_URL,
+          name: 'csrf_cookie'
+        })
+        if (csrfCookies.length > 0 && csrfCookies[0].value) {
+          configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+        }
       }
     } catch (err) {
       logWarning(
