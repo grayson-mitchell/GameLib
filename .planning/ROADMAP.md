@@ -1443,14 +1443,16 @@ Plans:
 ### Phase 34.4.1: Tauri embedded-browser login seam (INSERTED)
 
 **Goal:** Replace the **Electron-only embedded-browser login path** — the single
-`<webview partition="persist:…">` in `src/frontend/screens/WebView/index.tsx:467` plus
+`<webview partition="persist:…">` in `src/frontend/screens/WebView/index.tsx:488-503` (corrected
+2026-07-27 by 34.4.1-RESEARCH.md — the `:467` this entry previously carried predated 34.4's
+`WebviewUnavailablePanel` addition, which shifted the element down ~21 lines) plus
 `session.fromPartition()` cookie capture — with something that works under Tauri, and port the
 **6 browser-auth channels** carved out of Phase 34.4 by its **D-01/D-02**: `humbleStartLogin`,
 `humbleReconnect`, `humbleStopLogin`, `humbleLoginNavigated`, `humbleGetLoginUserAgent`,
 `humbleRevealKey`. The seam is **not Humble-specific** — the same element serves Epic, GOG and
 Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
-**Requirements**: TBD — mint at `/gsd-plan-phase 34.4.1`
+**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
 **Plans:** 0 plans
