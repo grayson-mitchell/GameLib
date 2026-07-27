@@ -1397,6 +1397,12 @@ fn main() {
 /// `timeout_for()` above, this project's CI runs no cargo step, so these are hand-run too —
 /// the arms' plugin calls themselves are proven by REQ-34.3-11's live-gate item 3, not by
 /// these tests.
+///
+/// Phase 34.4.1 Plan 01 / REQ-34.4.1-01/-09 extends this module further with
+/// `next_login_window_label`, `login_window_url_arg`, `cookie_domain_matches` and
+/// `login_event_value` — the pure logic behind the five `humble_login_*` dispatch arms,
+/// proven the same way (a `#[test]` cannot construct a live `WebviewWindowBuilder`); the
+/// arms' actual window/cookie API calls are proven by REQ-34.4.1-12's live gate instead.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1530,6 +1536,108 @@ mod tests {
         assert_eq!(
             clipboard_read_value(Err("boom".to_string())),
             Err("boom".to_string())
+        );
+    }
+
+    // ---- next_login_window_label (Phase 34.4.1 Plan 01, REQ-34.4.1-09, T-34.1-27) ----
+    //
+    // RED direction: a hard-coded or url-derived label would flip
+    // `login_window_label_is_never_reserved` / `_never_derived_from_url` to failing.
+
+    #[test]
+    fn humble_login_window_label_is_never_reserved() {
+        let label = next_login_window_label();
+        assert_ne!(label, "main");
+        assert_ne!(label, "about");
+        assert!(label.starts_with("loginwin-"));
+    }
+
+    #[test]
+    fn humble_login_window_labels_differ_across_calls() {
+        let first = next_login_window_label();
+        let second = next_login_window_label();
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn humble_login_window_label_is_never_derived_from_url() {
+        // A URL containing "humblebundle" is in scope while the label is generated, but
+        // `next_login_window_label()` takes no arguments at all — the label can
+        // structurally never be a function of any URL.
+        let _url_in_scope = "https://www.humblebundle.com/login";
+        let label = next_login_window_label();
+        assert!(!label.contains("humblebundle"));
+        assert!(!label.contains("www"));
+    }
+
+    // ---- login_window_url_arg (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----
+    //
+    // RED direction: an implementation using `unwrap_or("https://…")` or omitting the
+    // scheme check would flip the rejection cases below to `Ok`.
+
+    #[test]
+    fn humble_login_window_url_arg_rejects_absent_and_non_string() {
+        assert_eq!(
+            login_window_url_arg(&[]).unwrap_err(),
+            "humble_login_open:bad-args"
+        );
+        assert_eq!(
+            login_window_url_arg(&[json!(1)]).unwrap_err(),
+            "humble_login_open:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_window_url_arg_rejects_non_https() {
+        assert_eq!(
+            login_window_url_arg(&[json!("http://www.humblebundle.com/login")]).unwrap_err(),
+            "humble_login_open:bad-url"
+        );
+        assert_eq!(
+            login_window_url_arg(&[json!("file:///etc/passwd")]).unwrap_err(),
+            "humble_login_open:bad-url"
+        );
+        assert_eq!(
+            login_window_url_arg(&[json!("javascript:alert(1)")]).unwrap_err(),
+            "humble_login_open:bad-url"
+        );
+        let ok = login_window_url_arg(&[json!("https://www.humblebundle.com/login")]);
+        assert!(ok.is_ok());
+        assert_eq!(ok.unwrap().scheme(), "https");
+    }
+
+    // ---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----
+
+    #[test]
+    fn humble_login_cookie_domain_matches_the_www_regression_case() {
+        // THE single most consequential assertion in this file. wry's own
+        // cookies-for-url shortcut computes `cookie.domain() == url.domain()`, which for
+        // host "www.humblebundle.com" against a cookie domain of "humblebundle.com"
+        // evaluates to `"humblebundle.com" == "www.humblebundle.com"` -> false, silently
+        // dropping `_simpleauth_sess`. This function must get it right: a suffix match,
+        // not equality.
+        assert!(cookie_domain_matches(
+            "www.humblebundle.com",
+            Some("humblebundle.com")
+        ));
+    }
+
+    #[test]
+    fn humble_login_cookie_domain_matches_rejects_suffix_lookalikes() {
+        assert!(!cookie_domain_matches(
+            "www.humblebundle.com",
+            Some("evilhumblebundle.com")
+        ));
+        assert!(!cookie_domain_matches("www.humblebundle.com", None));
+    }
+
+    // ---- login_event_value (Phase 34.4.1 Plan 01, REQ-34.4.1-03) ----
+
+    #[test]
+    fn humble_login_event_value_shape() {
+        assert_eq!(
+            login_event_value("finished", "https://www.humblebundle.com/login"),
+            json!({ "event": "finished", "url": "https://www.humblebundle.com/login" })
         );
     }
 }
