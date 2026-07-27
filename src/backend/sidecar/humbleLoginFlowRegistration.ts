@@ -73,11 +73,26 @@ import {
   type LoginWindowCookieRead,
   type LoginWindowNavEvent
 } from '../humble/loginWindowSeam'
+import { logInfo, logWarning, LogPrefix } from '../logger'
 
+/**
+ * Routes this module's diagnostics to the SAME file logger every other backend module uses
+ * (`~/Library/Logs/GameLib/gamelib.log` on macOS), not to `console.warn`.
+ *
+ * Why (34.4.1-02 Task 4): the sidecar is a child process whose stdout/stderr is the RPC frame
+ * pipe, not a terminal — Phase 33 established that sidecar console output reaches neither
+ * `gamelib.log` nor the `tauri:dev` terminal. Every `console.warn` in this module was therefore
+ * writing to nowhere, which is the same silent-failure class as the sidecar `send` channels in
+ * G-30-01. It also made the A4 smoke gate below unobservable: its first run produced a booted app
+ * and zero evidence in either direction, because the only proof it emitted went into the void.
+ */
 function logSendFailure(channel: string, error: unknown): void {
-  console.warn(
-    `[humbleLoginFlowRegistration] ${channel} failed:`,
-    error instanceof Error ? error.message : String(error)
+  logWarning(
+    [
+      `[humbleLoginFlowRegistration] ${channel} failed:`,
+      error instanceof Error ? error.message : String(error)
+    ],
+    LogPrefix.Backend
   )
 }
 
@@ -276,28 +291,63 @@ export function registerHumbleLoginFlows(): void {
   // the cheapest reproduction harness for any future window-construction regression. Try/catch
   // wraps the whole hook so it can never affect a normal boot.
   if (process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1') {
-    void (async () => {
-      try {
-        const seam = getLoginWindowSeam()
-        if (!seam) return
-        const label = await seam.open('https://example.com', {
-          visible: true,
-          userAgent: standardBrowserUserAgent()
-        })
-        console.warn(
-          `[humbleLoginFlowRegistration] GAMELIB_LOGIN_SEAM_SMOKE: opened label=${label}`
-        )
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-        const closed = await seam.close(label)
-        console.warn(
-          `[humbleLoginFlowRegistration] GAMELIB_LOGIN_SEAM_SMOKE: closed=${closed}`
-        )
-      } catch (error) {
-        console.warn(
-          '[humbleLoginFlowRegistration] GAMELIB_LOGIN_SEAM_SMOKE failed:',
-          error instanceof Error ? error.message : String(error)
-        )
-      }
-    })()
+    // Deferred by one macrotask, and that placement is load-bearing (34.4.1-02 Task 4).
+    //
+    // `registerHumbleLoginFlows()` runs at MODULE-IMPORT time: `bootstrap.ts` line 40 does a
+    // static `import './handlers'`, and `handlers.ts` calls this function at its own module
+    // scope. But the sidecar's file logger is not constructed until `initLogger()` inside
+    // `bootstrap.ts`'s `init()` (line 133), which `sidecar/index.ts` calls only AFTER every
+    // static import has been evaluated. So at this function's module-scope moment,
+    // `heroicLogWriter` is still `undefined` and ANY `logInfo`/`logWarning` call here throws
+    // `TypeError: Cannot read properties of undefined`. Inside an async IIFE that throw becomes
+    // an unhandled rejection, which is swallowed — the gate then produces a booted app and zero
+    // evidence in either direction, which is precisely how its first two runs were lost.
+    //
+    // `init()` is synchronous (`: void`) and calls `initLogger()` as its first statement, so a
+    // single `setTimeout(0)` is sufficient and does not race: the whole synchronous
+    // import-then-`init()` sequence has completed before this callback fires.
+    setTimeout(() => {
+      void (async () => {
+        // Every branch logs, including both early exits, so "no output" can never again be
+        // mistaken for "not run". `smokeLog` additionally falls back to stderr if the logger is
+        // somehow still unavailable, so this gate can never be blackholed by its own logging.
+        const smokeLog = (message: string, warn = false): void => {
+          const line = `[humbleLoginFlowRegistration] GAMELIB_LOGIN_SEAM_SMOKE: ${message}`
+          try {
+            if (warn) {
+              logWarning(line, LogPrefix.Backend)
+            } else {
+              logInfo(line, LogPrefix.Backend)
+            }
+          } catch {
+            process.stderr.write(`${line}\n`)
+          }
+        }
+        smokeLog('starting')
+        try {
+          const seam = getLoginWindowSeam()
+          if (!seam) {
+            smokeLog(
+              'no seam installed — aborting (this is a FAIL, not a skip)',
+              true
+            )
+            return
+          }
+          const label = await seam.open('https://example.com', {
+            visible: true,
+            userAgent: standardBrowserUserAgent()
+          })
+          smokeLog(`opened label=${label}`)
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+          const closed = await seam.close(label)
+          smokeLog(`closed=${closed}`)
+        } catch (error) {
+          smokeLog(
+            `failed: ${error instanceof Error ? error.message : String(error)}`,
+            true
+          )
+        }
+      })()
+    }, 0)
   }
 }
