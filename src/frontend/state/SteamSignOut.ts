@@ -70,6 +70,22 @@ export const STEAM_SIGN_OUT_DEFAULT_INTERVAL_MS = 150
  * or `maxAttempts` is exhausted. Returns `true` once confirmed signed-out,
  * `false` on timeout -- callers MUST treat `false` as a real failure (surface
  * an honest error), never as a silent success.
+ *
+ * `getSteamUserInfo` is a real `invoke` channel, so a single read can reject
+ * (transport hiccup across the IPC seam, an unhandled exception inside
+ * `SteamUser.getUserDetails()`, etc). A rejection on one attempt is not a
+ * definitive answer -- it means "this read didn't confirm signed-out", the
+ * same as a resolved-but-still-signed-in read, so it's treated identically:
+ * logged, then retried on the next attempt within the existing budget. This
+ * is required, not just nice-to-have -- `performSteamLogout` below depends on
+ * this promise always *settling* (never rejecting) so it can call exactly
+ * one of `onSignedOut` / `onSignOutFailed`, per its own documented contract.
+ * Letting a rejection propagate out of this loop would break that contract
+ * silently (WR-01): neither callback would run, and the caller would be left
+ * with stale local state and no failure dialog. `console.warn` (not
+ * `window.api.logInfo`) is deliberate: this module is extracted precisely so
+ * it has no `window` dependency and stays importable under this project's
+ * `node`-environment frontend jest project (see the module docstring above).
  */
 export async function waitForSteamSignedOut(
   getSteamUserInfo: () => Promise<SteamUserData | undefined>,
@@ -80,9 +96,20 @@ export async function waitForSteamSignedOut(
   }: WaitForSteamSignedOutOptions = {}
 ): Promise<boolean> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const userInfo = await getSteamUserInfo()
-    if (!userInfo) {
-      return true
+    try {
+      const userInfo = await getSteamUserInfo()
+      if (!userInfo) {
+        return true
+      }
+    } catch (error) {
+      // Transient, not terminal: treat a failed read the same as "still
+      // signed in" for this attempt and keep polling until the budget
+      // above is exhausted. See the docstring above for why this must
+      // never propagate out of this loop.
+      console.warn(
+        `[SteamSignOut] getSteamUserInfo poll attempt ${attempt + 1}/${maxAttempts} failed, retrying:`,
+        error
+      )
     }
     if (attempt < maxAttempts - 1) {
       await delay(intervalMs)

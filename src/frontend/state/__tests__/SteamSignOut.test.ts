@@ -51,6 +51,52 @@ describe('waitForSteamSignedOut', () => {
     expect(result).toBe(false)
     expect(getSteamUserInfo).toHaveBeenCalledTimes(5)
   })
+
+  // WR-01 (34.4-REVIEW.md): a rejecting getSteamUserInfo must not propagate
+  // out of this promise -- performSteamLogout depends on it always settling
+  // so it can call exactly one of onSignedOut / onSignOutFailed.
+  it('does not reject when a poll attempt rejects — a transient read failure must not escape the promise', async () => {
+    const getSteamUserInfo = jest.fn<Promise<SteamUserData | undefined>, []>()
+    getSteamUserInfo.mockRejectedValue(new Error('transport error'))
+
+    await expect(
+      waitForSteamSignedOut(getSteamUserInfo, {
+        maxAttempts: 3,
+        delay: noopDelay
+      })
+    ).resolves.toBe(false)
+  })
+
+  it('treats a rejection as "not yet confirmed" and keeps polling within the existing budget — transient, not terminal', async () => {
+    const getSteamUserInfo = jest.fn<Promise<SteamUserData | undefined>, []>()
+    getSteamUserInfo
+      .mockRejectedValueOnce(new Error('transport error'))
+      .mockRejectedValueOnce(new Error('transport error'))
+      .mockResolvedValueOnce(undefined)
+
+    const result = await waitForSteamSignedOut(getSteamUserInfo, {
+      maxAttempts: 5,
+      delay: noopDelay
+    })
+
+    // A signed-out confirmation after two failed reads still counts —
+    // failed reads are retried, not treated as a definitive failure.
+    expect(result).toBe(true)
+    expect(getSteamUserInfo).toHaveBeenCalledTimes(3)
+  })
+
+  it('returns false (never throws) when every single poll attempt rejects — exhausting the budget is an honest timeout, not a crash', async () => {
+    const getSteamUserInfo = jest.fn<Promise<SteamUserData | undefined>, []>()
+    getSteamUserInfo.mockRejectedValue(new Error('transport error'))
+
+    const result = await waitForSteamSignedOut(getSteamUserInfo, {
+      maxAttempts: 4,
+      delay: noopDelay
+    })
+
+    expect(result).toBe(false)
+    expect(getSteamUserInfo).toHaveBeenCalledTimes(4)
+  })
 })
 
 describe('performSteamLogout', () => {
@@ -134,5 +180,59 @@ describe('performSteamLogout', () => {
     expect(getSteamUserInfo).toHaveBeenCalledTimes(3)
     expect(onSignedOut).not.toHaveBeenCalled()
     expect(onSignOutFailed).toHaveBeenCalledTimes(1)
+  })
+
+  // WR-01: the module's own docstring promises "never both, never neither".
+  // Before the fix, a rejecting getSteamUserInfo propagated straight out of
+  // performSteamLogout and NEITHER callback ran -- this proves that can no
+  // longer happen, for every poll attempt rejecting, not just one.
+  it('calls exactly one of onSignedOut / onSignOutFailed even when every getSteamUserInfo read rejects — never neither', async () => {
+    const getSteamUserInfo = jest.fn<Promise<SteamUserData | undefined>, []>()
+    getSteamUserInfo.mockRejectedValue(new Error('transport error'))
+
+    const logoutSteam = jest.fn()
+    const onSignedOut = jest.fn()
+    const onSignOutFailed = jest.fn()
+
+    await expect(
+      performSteamLogout({
+        logoutSteam,
+        getSteamUserInfo,
+        onSignedOut,
+        onSignOutFailed,
+        waitOptions: { maxAttempts: 3, delay: noopDelay }
+      })
+    ).resolves.toBeUndefined()
+
+    const totalCallbackInvocations =
+      onSignedOut.mock.calls.length + onSignOutFailed.mock.calls.length
+    expect(totalCallbackInvocations).toBe(1)
+    expect(onSignedOut).not.toHaveBeenCalled()
+    expect(onSignOutFailed).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onSignedOut when a rejecting read is followed by a confirmed signed-out read', async () => {
+    const getSteamUserInfo = jest.fn<Promise<SteamUserData | undefined>, []>()
+    getSteamUserInfo
+      .mockRejectedValueOnce(new Error('transport error'))
+      .mockResolvedValueOnce(undefined)
+
+    const logoutSteam = jest.fn()
+    const onSignedOut = jest.fn()
+    const onSignOutFailed = jest.fn()
+
+    await performSteamLogout({
+      logoutSteam,
+      getSteamUserInfo,
+      onSignedOut,
+      onSignOutFailed,
+      waitOptions: { maxAttempts: 5, delay: noopDelay }
+    })
+
+    const totalCallbackInvocations =
+      onSignedOut.mock.calls.length + onSignOutFailed.mock.calls.length
+    expect(totalCallbackInvocations).toBe(1)
+    expect(onSignedOut).toHaveBeenCalledTimes(1)
+    expect(onSignOutFailed).not.toHaveBeenCalled()
   })
 })
