@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.4.1 plan 01 complete -- ready to execute plan 02
-last_updated: "2026-07-27T05:37:47.976Z"
-last_activity: 2026-07-27 -- Phase 34.4.1 plan 01 (login-window Rust seam) executed
+stopped_at: Completed 34.4.1-02-PLAN.md
+last_updated: "2026-07-27T06:40:20.698Z"
+last_activity: 2026-07-27
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 112
-  percent: 87
+  completed_plans: 114
+  percent: 75
 ---
 
 # Project State
@@ -34,7 +34,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
+
+34.4.1-02 done -- Login-window seam (`LoginWindowSeam` + `classifyCookieRead`) and the 6 curated
+browser-auth channels registered on the sidecar (Tasks 1-3). Task 4 (blocking checkpoint,
+Assumption A4) hit three layered, stacked silent-failure defects before producing real evidence:
+console-only logging that reached neither `gamelib.log` nor the `tauri:dev` terminal, a
+logger-not-yet-initialized `TypeError` swallowed inside an unguarded async IIFE, and (this
+continuation agent's fix, commit `2ddeb716c`) `electronStub.app.userAgentFallback` left
+`undefined`, which `standardBrowserUserAgent()` reads unconditionally -- throwing before
+`seam.open()`, and therefore before `WebviewWindowBuilder::build()`, was ever reached. Fixed by
+populating a per-`process.platform` Chrome-shaped UA fallback (no `Electron/x.y.z` token, matching
+the function's happy-path regex directly); added `userAgent.test.ts` pinning it against the REAL
+`electronStub.ts`. Re-ran the smoke both headless (`node build/main/sidecar.js`, proves the
+rustInvoke frame reaches the transport) and live (`pnpm tauri:dev`): `gamelib.log` recorded
+`starting` -> `opened label=loginwin-0-18c611f5af550240-a7d77671` -> `closed=true`, zero panic
+matches in either the log or the terminal capture, app process alive after close. **Assumption A4
+VALIDATED** -- `WebviewWindowBuilder::build()` off the sidecar's `thread::spawn`'d rustInvoke
+worker does not panic on AppKit's main-thread affinity; no `run_on_main_thread` hop needed in
+plan 34.4.1-01's Rust arms. No `electronReachLedger.test.ts` update needed (`humble/userAgent.ts`
+was already tracked in the Phase 34.4 Plan 08 baseline). REQ-34.4.1-02/-03/-04/-05/-13 complete,
+see 34.4.1-02-SUMMARY.md. Next: 34.4.1-03.
 
 34.4-10 done -- Ran the phase's blocking 5-item live gate under `pnpm tauri:dev`, recorded in
 `34.4-LIVE-GATE.md`. Task 1's automated sweep found and fixed one real Rule-1 build regression
@@ -1319,7 +1339,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -2144,6 +2164,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P07 | ~50min | 3 tasks | 2 files |
 | Phase 34.3 P08 | 70min | 3 tasks | 5 files |
 | Phase 34.4.1 P01 | 45m | 3 tasks | 3 files |
+| Phase 34.4.1 P02 | 42min | 4 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -2427,6 +2448,8 @@ Recent decisions affecting current work:
 - [Phase 34.3]: Live-gate proof-level cells in 34.3-PORTED-CHANNELS.md (unit + LIVE (item N)) are explicitly marked pending, not observed, since plan 34.3-09 (the blocking live gate) had not executed as of this document's authorship
 - [Phase 34.4.1]: Used tauri::Url (the crate's own re-export of url::Url) instead of adding a new 'url' Cargo dependency for login_window_url_arg — Keeps plan 01's threat-model disposition T-34.4.1-SC accurate (installs ZERO new packages); tauri 2.11.2 re-exports url::Url at its crate root
 - [Phase 34.4.1]: Prefixed the new #[cfg(test)] pure-logic test functions with humble_login_ instead of the plan's literal bare names — Task 2's own acceptance criteria requires 'cargo test humble_login' to match >=8 passing tests, which is unreachable with names lacking that substring -- Rule 3 auto-fix of a self-inconsistent acceptance criterion
+- [Phase 34.4.1-02]: electronStub.app.userAgentFallback derives its platform token from process.platform, mirroring constants/environment.ts's isMac/isWindows/isLinux convention — The sidecar is cross-platform even though A4's smoke was only run on macOS hardware
+- [Phase 34.4.1-02]: Assumption A4 (WebviewWindowBuilder::build() off the sidecar main thread) VALIDATED against real hardware — Live gamelib.log evidence: starting, opened label=..., closed=true, no panic, app still alive -- no run_on_main_thread hop needed
 
 ### Pending Todos
 
@@ -2498,8 +2521,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T05:37:47.968Z
-Stopped at: Phase 34.4.1 plan 01 complete -- ready to execute plan 02
+Last session: 2026-07-27T06:40:20.687Z
+Stopped at: Completed 34.4.1-02-PLAN.md
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error

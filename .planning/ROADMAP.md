@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 1/9 plans executed
+**Plans:** 2/9 plans executed
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1473,7 +1473,7 @@ Also carries: `humbleDisconnect` must be revisited here to clear the new browser
 
 Plans:
 - [x] 34.4.1-01-PLAN.md — Rust login-window arms (open/cookies/nav-events/close/clear) + channel consts + cargo tests + the blocking gate contract (wave 1)
-- [ ] 34.4.1-02-PLAN.md — Dual-build login seam + curated registration of all 6 channels + humbleLoginFlows transport-shape test + A4 off-main-thread smoke checkpoint (wave 2, non-autonomous)
+- [x] 34.4.1-02-PLAN.md — Dual-build login seam + curated registration of all 6 channels + humbleLoginFlows transport-shape test + A4 off-main-thread smoke checkpoint (wave 2, non-autonomous)
 - [ ] 34.4.1-03-PLAN.md — watchForLogin drives the seam: liveness discriminator, on_page_load relay, csrf capture (wave 3)
 - [ ] 34.4.1-04-PLAN.md — humbleRevealKey in-webview POST: hidden on-demand window, escaped script, cancelled-navigation exfil (wave 3)
 - [ ] 34.4.1-05-PLAN.md — D-06 branch split: login panel vs reworded store/wiki panel + OAuth declared-blocked surface (wave 3)
