@@ -53,6 +53,7 @@ import type {
 } from './storeSearch'
 import type { GOGCloudSavesLocation, UserData } from './gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from './nile'
+import type { OAuthRunner, OAuthCaptureOutcome } from './oauthLogin'
 import type { GameOverride, SelectiveDownload } from './legendary'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 import type {
@@ -238,6 +239,16 @@ interface AsyncIPCFunctions {
     user: NileUserData | undefined
   }>
   authZoom: (url: string) => Promise<{ status: 'done' | 'error' }>
+  // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08): captures an OAuth redirect code/token for one
+  // of the four still-unported login runners (legendary/gog/nile/zoom) via the Tauri
+  // login-window seam. This channel captures a redirect -- it does NOT authenticate: `login`,
+  // `authGOG`, `authAmazon` and `authZoom` above remain unported and still reject with
+  // UNPORTED_CHANNEL_MARKER until Phase 34.5 (SEAM Invariant B). Tauri-only by construction --
+  // resolves `{ status: 'unsupported' }` under Electron (no seam installed there).
+  oauthCaptureLogin: (params: {
+    runner: OAuthRunner
+    url: string
+  }) => Promise<OAuthCaptureOutcome>
   steamStartQR: () => Promise<{
     status: 'done' | 'error'
     challengeUrl?: string

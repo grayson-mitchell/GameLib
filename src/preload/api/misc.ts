@@ -113,6 +113,11 @@ export const logoutGOG = makeListenerCaller('logoutGOG')
 export const getAmazonLoginData = makeHandlerInvoker('getAmazonLoginData')
 export const authAmazon = makeHandlerInvoker('authAmazon')
 export const logoutAmazon = makeHandlerInvoker('logoutAmazon')
+// Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08): captures an OAuth redirect for one of the four
+// still-unported login runners via the Tauri login-window seam. Tauri-only by construction --
+// makeHandlerInvoker's own isTauri() routing means the Electron path never reaches the sidecar
+// at all for this channel (there is no Electron-side handler for it, and none is needed).
+export const oauthCaptureLogin = makeHandlerInvoker('oauthCaptureLogin')
 export const checkGameUpdates = makeHandlerInvoker('checkGameUpdates')
 export const refreshLibrary = makeHandlerInvoker('refreshLibrary')
 // D-10 (Phase 34.1 Plan 05): Electron injects synthetic input via

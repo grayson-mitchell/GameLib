@@ -31,8 +31,13 @@
 
 import { getLoginWindowSeam } from '../humble/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
+// Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.
+// oauthCaptureLogin entry (Task 2) can reference both without common/ importing FROM
+// backend/sidecar — the import direction is always common -> backend/frontend, never the
+// reverse. Re-exported here so every existing caller of this module is unaffected.
+import type { OAuthRunner, OAuthCaptureOutcome } from '../../common/types/oauthLogin'
 
-export type OAuthRunner = 'legendary' | 'gog' | 'nile' | 'zoom'
+export type { OAuthRunner, OAuthCaptureOutcome }
 
 /** A single per-runner redirect match. `code` is `null` when the runner consumes the whole
  * redirect url rather than a single query param (reserved for a future runner shape — none of
@@ -41,13 +46,6 @@ export interface OAuthRedirectMatch {
   code: string | null
   redirectUrl: string
 }
-
-export type OAuthCaptureOutcome =
-  | { status: 'captured'; runner: OAuthRunner; code: string | null; redirectUrl: string }
-  | { status: 'cancelled' }
-  | { status: 'timeout' }
-  | { status: 'unsupported' }
-  | { status: 'error'; message: string }
 
 // Reproduces `WebView/index.tsx` L229-237 exactly (the per-runner UA selection inside its
 // `loadstop` handler), including Epic's distinct `EpicGamesLauncher` UA — read at plan-time off

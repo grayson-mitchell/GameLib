@@ -71,6 +71,7 @@ import { registerClipboardFlows } from './clipboardFlowRegistration'
 import { registerLoggerFlows } from './loggerFlowRegistration'
 import { registerHumbleFlows } from './humbleFlowRegistration'
 import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
+import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -172,6 +173,14 @@ registerHumbleFlows()
 // other calls above (own channel names, no cross-module runtime dependency at
 // registration time), placed alongside them, before `ensureStoresRegistered()`.
 registerHumbleLoginFlows()
+// Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the single `oauthCaptureLogin` handle channel that
+// drives the four OAuth runners' (legendary/gog/nile/zoom) redirect capture through the SAME
+// login-window seam Humble already installed above -- a completely separate concern from
+// Humble's own six browser-auth channels (this captures a redirect code, it does not
+// authenticate). No ordering constraint relative to the other calls above (own channel name,
+// no cross-module runtime dependency at registration time), placed alongside them, before
+// `ensureStoresRegistered()`.
+registerOAuthLoginFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

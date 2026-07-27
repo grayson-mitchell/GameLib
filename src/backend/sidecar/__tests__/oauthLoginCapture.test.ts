@@ -1,17 +1,24 @@
 /**
- * Redirect-shape + capture-driver proof for the four OAuth runners (Phase 34.4.1 Plan 09,
- * D-04, REQ-34.4.1-08 — Task 1).
+ * Redirect-shape + capture-driver + registration proof for the four OAuth runners (Phase
+ * 34.4.1 Plan 09, D-04, REQ-34.4.1-08).
  *
  * `matchOAuthRedirect` is proven against all four real redirect shapes (legendary/localhost,
  * gog/embed.gog.com, nile/openid.oa2.authorization_code, zoom/li_token), their near-miss
  * negatives, a malformed url, and the full cross-runner negative matrix — this IS the
  * REQ-34.4.1-08 evidence: a per-runner navigation-observation claim proven by an executable test,
- * not by a runner-agnosticism grep over Rust source.
+ * not by a runner-agnosticism grep over Rust source (Task 1).
  *
  * `captureOAuthLogin` is proven against a hand-written fake `LoginWindowSeam` (mirrors
  * `humble/__tests__/user.test.ts`'s "login window seam path" describe block) with jest fake
  * timers, asserting: opens exactly once, closes exactly once on every settled outcome, resolves
- * (never rejects) on every failure path, and never introduces a pending timer after settling.
+ * (never rejects) on every failure path, and never introduces a pending timer after settling
+ * (Task 1).
+ *
+ * `registerOAuthLoginFlows()` is proven against `electronStub`'s registry directly (mirrors
+ * `humbleLoginFlows.test.ts`'s "registration kind" describe block): `oauthCaptureLogin` is
+ * registered as `ipcMain.handle` and NOT as `ipcMain.on` — a send-vs-handle mismatch fails 100%
+ * SILENTLY at runtime — plus the two boundary-validation cases (unknown runner, non-https url)
+ * (Task 2).
  *
  * `backend/logger` is factory-mocked (mirrors `electronUntouched.test.ts`) — this module has no
  * other Electron-reaching import, so no `jest.mock('electron', ...)` is needed here at all.
@@ -42,6 +49,8 @@ import {
 } from '../oauthLoginCapture'
 import { setLoginWindowSeam, type LoginWindowSeam } from '../../humble/loginWindowSeam'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { registerOAuthLoginFlows } from '../oauthLoginFlowRegistration'
+import { handlerRegistry, listenerRegistry } from '../electronStub'
 
 const ALL_RUNNERS: OAuthRunner[] = ['legendary', 'gog', 'nile', 'zoom']
 
@@ -303,6 +312,60 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     } finally {
       jest.useRealTimers()
     }
+  })
+})
+
+// ── Registration kind + boundary validation (Task 2) ───────────────────────────────────────────
+// Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
+// module-scope maps; calling registerOAuthLoginFlows() more than once would stack a duplicate
+// listener onto the same channel array (clipboardFlowRegistration's own test docstring names
+// this hazard).
+registerOAuthLoginFlows()
+
+describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () => {
+  it('oauthCaptureLogin is registered as ipcMain.handle, and NOT as ipcMain.on', () => {
+    expect(handlerRegistry.has('oauthCaptureLogin')).toBe(true)
+    expect((listenerRegistry.get('oauthCaptureLogin') ?? []).length).toBe(0)
+  })
+
+  it('resolves { status: "error" } for an unknown runner, without ever reaching the seam', async () => {
+    setLoginWindowSeam(null)
+    const handler = handlerRegistry.get('oauthCaptureLogin')
+    expect(handler).toBeDefined()
+
+    const result = await handler?.(undefined, { runner: 'sideload', url: 'https://example.com' })
+
+    expect(result).toEqual({
+      status: 'error',
+      message: expect.stringContaining('unknown runner')
+    })
+  })
+
+  it('resolves { status: "error" } for a non-https url', async () => {
+    setLoginWindowSeam(null)
+    const handler = handlerRegistry.get('oauthCaptureLogin')
+
+    const result = await handler?.(undefined, {
+      runner: 'legendary',
+      url: 'http://not-secure.example.com'
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      message: expect.stringContaining('https')
+    })
+  })
+
+  it('forwards a valid { runner, url } pair to captureOAuthLogin (unsupported when no seam installed)', async () => {
+    setLoginWindowSeam(null)
+    const handler = handlerRegistry.get('oauthCaptureLogin')
+
+    const result = await handler?.(undefined, {
+      runner: 'gog',
+      url: 'https://auth.gog.com/auth'
+    })
+
+    expect(result).toEqual({ status: 'unsupported' })
   })
 })
 
