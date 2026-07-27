@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-02-PLAN.md
-last_updated: "2026-07-27T06:40:20.698Z"
+stopped_at: Completed 34.4.1-03-PLAN.md
+last_updated: "2026-07-27T07:03:27.250Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 114
-  percent: 75
+  completed_plans: 115
+  percent: 89
 ---
 
 # Project State
@@ -34,7 +34,28 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
+
+34.4.1-03 done -- Rewired `HumbleUser.watchForLogin()`, `finishLogin()`'s csrf capture, and
+`getLiveCsrfToken()` to drive the login-window seam when installed (Task 1, commit `bde1c4285`):
+Electron keeps the byte-for-byte untouched `session.fromPartition` path; the Tauri path opens a
+Rust-owned window on `HUMBLE_LOGIN_URL`, classifies every cookie read through `classifyCookieRead`
+(UNDECIDABLE/UNSUPPORTED_OR_ERROR both settle `{status:'error'}` loudly instead of ever polling on
+a dead channel), drains `seam.takeEvents()` before every read so a main-frame `'finished'` event
+re-arms the deadline and bypasses the poll-path throttle (REQ-34.4.1-03), and closes the window
+exactly once on every exit path via a floated, non-throwing `settle()`. `finishLogin()` threads the
+window label through as an explicit parameter for its csrf_cookie capture (same window as the
+accepted session cookie); `getLiveCsrfToken()` returns the stored snapshot under a seam (no live
+window exists at reveal time) rather than throwing into the Electron-only read. Task 2 (commit
+`a78536f95`, test-only -- items 2a/2b landed with Task 1 since they share the seamLabel plumbing,
+documented as a deviation) added 10 new tests in a dedicated seam-path describe block, including a
+hand RED-proof on the UNDECIDABLE discriminator (weakened to a bare `return`, confirmed the "does
+not tick again" case times out, restored, re-verified). 56/56 `user.test.ts` tests green (46
+pre-existing unchanged), `tsc --noEmit`/`codecheck` clean, `pnpm test:ci` at the documented baseline
+(1 pre-existing `rustInvokeChannel.test.ts` failure, 2989/2990 passing -- a `downloadqueue.test.ts`
+timeout seen on one run was confirmed flaky/pre-existing cross-test leak, not a regression, via
+isolation + a clean re-run). REQ-34.4.1-02/-03 complete (already marked by 34.4.1-02's own
+completion), see 34.4.1-03-SUMMARY.md. Next: 34.4.1-04.
 
 34.4.1-02 done -- Login-window seam (`LoginWindowSeam` + `classifyCookieRead`) and the 6 curated
 browser-auth channels registered on the sidecar (Tasks 1-3). Task 4 (blocking checkpoint,
@@ -1339,7 +1360,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -2165,6 +2186,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P08 | 70min | 3 tasks | 5 files |
 | Phase 34.4.1 P01 | 45m | 3 tasks | 3 files |
 | Phase 34.4.1 P02 | 42min | 4 tasks | 3 files |
+| Phase 34.4.1 P03 | 21min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2450,6 +2472,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: Prefixed the new #[cfg(test)] pure-logic test functions with humble_login_ instead of the plan's literal bare names — Task 2's own acceptance criteria requires 'cargo test humble_login' to match >=8 passing tests, which is unreachable with names lacking that substring -- Rule 3 auto-fix of a self-inconsistent acceptance criterion
 - [Phase 34.4.1-02]: electronStub.app.userAgentFallback derives its platform token from process.platform, mirroring constants/environment.ts's isMac/isWindows/isLinux convention — The sidecar is cross-platform even though A4's smoke was only run on macOS hardware
 - [Phase 34.4.1-02]: Assumption A4 (WebviewWindowBuilder::build() off the sidecar main thread) VALIDATED against real hardware — Live gamelib.log evidence: starting, opened label=..., closed=true, no panic, app still alive -- no run_on_main_thread hop needed
+- [Phase 34.4.1-03]: Nav-event bypass reassigns the current tick's forceValidation flag rather than recursing into checkCookie(true), producing the same bypass-throttle + armDeadline effect as notifyLoginNavigated() without re-entrant polling.
+- [Phase 34.4.1-03]: finishLogin() takes the seam window label as an explicit parameter (never a module global) so the accepted session cookie and the csrf capture read from the SAME window.
+- [Phase 34.4.1-03]: getLiveCsrfToken() returns the stored snapshot directly when a seam is installed (no live window exists at reveal time under Tauri) instead of attempting a live seam read.
 
 ### Pending Todos
 
@@ -2521,8 +2546,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T06:40:20.687Z
-Stopped at: Completed 34.4.1-02-PLAN.md
+Last session: 2026-07-27T07:03:27.241Z
+Stopped at: Completed 34.4.1-03-PLAN.md
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
