@@ -347,27 +347,26 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     )
   })
 
-  // Test 5 (Invariant B guard) — REWRITTEN by Phase 34.4 Plan 01. The
-  // ORIGINAL channel this test drove was `logoutSteam`, asserting it stayed
-  // "deliberately unported" per Phase 30 D-02. That contract is legitimately
-  // CHANGED by this plan: REQ-34.4-02 ports `logoutSteam` as a real `send`
-  // channel (see the describe block below for its own send-kind proof, plus
-  // the plan 34.4-10 live-gate item 2 for the residual jest structurally
-  // cannot reach). Re-pointed at `humbleRevealKey` instead — one of the 6
-  // Humble channels deliberately deferred to Phase 34.4.1 (D-02) and not
-  // registered by any 34.4 plan — to keep proving Invariant B (an unported
-  // channel stays a non-fatal rejection, and the RPC loop keeps serving)
-  // without silently dropping the assertion this test exists to make.
-  it('Test 5 (Invariant B guard): humbleRevealKey (deferred to Phase 34.4.1, D-02) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  // Test 5 (Invariant B guard) — REWRITTEN by Phase 34.4 Plan 01, RE-POINTED by Phase 34.4.1
+  // Plan 02. Two real channels have now been chased through this test in succession
+  // (`logoutSteam`, then `humbleRevealKey`), each ported away by a later plan and forcing this
+  // test to be re-pointed again. `dispatchInvoke`'s unported-channel fallback
+  // (`sidecarRpc.ts:108-123`) is entirely generic — it fires for ANY channel with no registered
+  // handler, regardless of name — so Invariant B (an unported channel stays a non-fatal
+  // rejection, and the RPC loop keeps serving) does not actually need a REAL, currently-deferred
+  // feature channel to prove. Pointed at a synthetic, deliberately-never-registered channel name
+  // instead, so this test can never again go stale as later plans legitimately port more real
+  // channels.
+  it('Test 5 (Invariant B guard): an unregistered channel rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'reveal-1', 'humbleRevealKey', [])
+    writeInvoke(input, 'unregistered-1', 'notARealChannel_34_4_1_02', [])
     await flush()
 
-    const revealResponse = frames.find((frame) => frame.id === 'reveal-1') as
-      | { ok: boolean; error?: string }
-      | undefined
-    expect(revealResponse?.ok).toBe(false)
-    expect(revealResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    const unregisteredResponse = frames.find(
+      (frame) => frame.id === 'unregistered-1'
+    ) as { ok: boolean; error?: string } | undefined
+    expect(unregisteredResponse?.ok).toBe(false)
+    expect(unregisteredResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
 
     writeInvoke(input, 'health-after-reveal', 'health', [])
     await flush()

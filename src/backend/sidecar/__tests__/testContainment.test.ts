@@ -469,6 +469,16 @@ const IN_SCOPE_SUITES = [
  * by hand, correcting the stale "28" figure above by one -- `humbleFlows.test.ts`
  * had already raised it to 29 without this comment being updated) puts the
  * directory at 30 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 26 below.
+ *
+ * `humbleLoginFlows.test.ts` (Phase 34.4.1 Plan 02) is classified as
+ * structurally contained: it uses the identical `electron`/`electron-store`
+ * mock kit already classified here for `humbleFlows.test.ts`/
+ * `clipboardFlows.test.ts`, calling `registerHumbleLoginFlows()` directly
+ * (mirroring `clipboardFlows.test.ts`'s style) rather than booting the full
+ * sidecar via `../bootstrap`'s `init()` -- its own frame-shape describe block
+ * drives the real `sidecarRpc` transport via the lighter-weight
+ * `startRpcServer()`, which shares the same underlying stream-binding
+ * containment guarantees as `init()`. No new containment surface.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -483,6 +493,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'fileStore.test.ts',
   'gameDetailsImportGate.test.ts',
   'humbleFlows.test.ts',
+  'humbleLoginFlows.test.ts',
   'installFlows.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',
