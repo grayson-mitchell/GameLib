@@ -2493,10 +2493,17 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-07-27T23:59:00.000Z
-Stopped at: Phase 34.4, plan 34.4-09 done (9/10 plans)
-Next: Plan 34.4-10 (the phase's blocking, non-autonomous live gate -- 5 named items, all under
-`pnpm tauri:dev`, deliberately no packaged-build item per D-10; results recorded in
-`34.4-LIVE-GATE.md`) is the only remaining plan in Phase 34.4; continue via
+Stopped at: Phase 34.4 COMPLETE (10/10 plans) -- blocking live gate PASSED 5/5, verification
+passed 16/16, code review 0 critical / 3 warning / 2 info
+Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
+(`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
+during sign-out leaves the user with a silently-failed logout), WR-02/WR-03 (runner-name
+display + i18n interpolation in `WebviewUnavailablePanel.tsx`), and two unrun confirmatory
+Electron checks (bottle-pair parity; Electron sign-out sanity, since the item-2 fix changed
+Electron's logout path too). Carried non-defects: `steamBottleStatus` vs
+`isSteamBottleProvisioned` disagreement (inherited Electron defect, faithfully ported),
+`electronStub` missing `request.abort()`, 6 Humble channels deferred to Phase 34.4.1.
+Superseded historical note (kept for provenance): plan 34.4-10 was the only remaining plan --
 `/gsd-execute-phase 34.4`. Also still outstanding (unrelated to Phase 34.4): Phase 34.3's
 34.3-09 live gate result reconciliation if not already closed; Phase 34.2's owed
 secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates
