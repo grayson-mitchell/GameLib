@@ -11,6 +11,7 @@ import {
   HUMBLE_REQUIRED_HEADERS
 } from './constants'
 import { standardBrowserUserAgent } from './userAgent'
+import { getLoginWindowSeam, type LoginWindowSeam } from './loginWindowSeam'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -228,8 +229,10 @@ function firstHeaderValue(value: string | string[] | undefined): string | null {
 
 /**
  * POST transport sibling to `humbleRequest` (D-14 revised, TRANSPORT SWAPPED
- * round 6): the codebase's one write-style Humble call (Phase 14 HCLAIM-01,
- * reveal/redeem) routes through this single function.
+ * round 6, DUAL-BUILD BRANCH Phase 34.4.1 Plan 04): the codebase's one
+ * write-style Humble call (Phase 14 HCLAIM-01, reveal/redeem) routes through
+ * this single function, which now branches on whether a Tauri login-window
+ * seam is installed (`getLoginWindowSeam()`).
  *
  * Debug session humble-reveal-key-fails, round 6: rounds 1-5 iterated on the
  * request's CONTENT (CSRF header, csrf_cookie double-submit, dropping
@@ -244,24 +247,110 @@ function firstHeaderValue(value: string | string[] | undefined): string | null {
  * no header or cookie content, however correct, can fix a transport-level
  * fingerprint mismatch from inside axios's plain Node.js HTTPS stack.
  *
- * Fix: route this ONE call through Electron's own Chromium network stack
- * (`net.request`) on the same `persist:humble` partition the login flow
- * already uses — a genuine Chromium TLS/HTTP2 fingerprint, indistinguishable
- * from a real browser tab, because it IS the same network stack a real
- * browser tab uses. `partition` + `useSessionCookies: true` +
- * `credentials: 'include'` make Chromium attach the partition's live cookie
- * jar NATIVELY (superseding round 5's hand-built
- * HumbleUser.getFullCookieHeader — see that removal's comment in user.ts) —
- * no manual Cookie header is set here at all. `csrf-prevention-token`
- * remains a manually-set header (round 1/3, LIVE-CONFIRMED CORRECT by round
- * 5's csrfTokenPresent=true evidence) since real Humble page JS also derives
- * it from `document.cookie` and sets it explicitly, rather than relying on
- * it being an automatically-attached header. GET paths (`humbleRequest`,
- * still axios) are UNCHANGED — round 4/5 evidence shows Cloudflare scores
- * this write endpoint far more aggressively than the read endpoints, so only
- * the one endpoint that has ever failed needs the swap.
+ * Under Electron (`humblePostRequestViaElectronNet`, unchanged): routes
+ * through Electron's own Chromium network stack (`net.request`) on the same
+ * `persist:humble` partition the login flow already uses — a genuine
+ * Chromium TLS/HTTP2 fingerprint, indistinguishable from a real browser tab.
+ *
+ * Under Tauri (`humblePostRequestViaSeam`, Phase 34.4.1 Plan 04 D-07): there
+ * is no `net.request`/partition equivalent at all (no Tauri `session`
+ * shape), so the ONE structurally-new option is the login window's OWN
+ * `fetch()` — a genuine WKWebView network stack, real in kind, not merely
+ * UA-spoofed. This branch does NOT re-run rounds 1-5 of
+ * `humble-reveal-key-fails`: cookie/header fidelity was already falsified as
+ * the cause under axios; only the TRANSPORT differs here too. Whatever
+ * Cloudflare returns against this genuine browser stack — pass or another
+ * 403 — is a DECLARABLE outcome (D-07), fed through the SAME
+ * `RevealResponseSchema`/error-mapping path either branch uses; see
+ * `humblePostRequestViaSeam`'s own doc comment below.
  */
 function humblePostRequest(
+  path: string,
+  body: string,
+  csrfToken?: string
+): Promise<HumbleRawResponse> {
+  const seam = getLoginWindowSeam()
+  return seam
+    ? humblePostRequestViaSeam(seam, path, body, csrfToken)
+    : humblePostRequestViaElectronNet(path, body, csrfToken)
+}
+
+/**
+ * D-07 Tauri transport branch: the webview's own `fetch()` replaces
+ * axios/`net.request`, but the request's CONTENT (csrf header, form body)
+ * and the response's SCHEMA (`RevealResponseSchema`, consumed by `revealKey`
+ * below) are byte-identical to the Electron path — this function's only job
+ * is to shape the seam's `{status, body}` result into the SAME
+ * `HumbleRawResponse`/`HumbleTransportHttpError` contract
+ * `humblePostRequestViaElectronNet` already produces, so every downstream
+ * caller is unchanged.
+ *
+ * Keeps `REQUEST_TIMEOUT_MS`'s existing semantics on this path too: the Rust
+ * arm's own 20s `recv_timeout` (`main.rs`) is a backstop, not a replacement
+ * — a hung seam call (a wedged `rustInvoke` round-trip) must still surface
+ * as the SAME recognizable timeout error `humblePostRequestViaElectronNet`
+ * has always thrown, rather than hanging the reveal indefinitely on this
+ * branch specifically.
+ */
+async function humblePostRequestViaSeam(
+  seam: LoginWindowSeam,
+  path: string,
+  body: string,
+  csrfToken?: string
+): Promise<HumbleRawResponse> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(
+        new Error(`Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`)
+      )
+    }, REQUEST_TIMEOUT_MS)
+  })
+  try {
+    const result = await Promise.race([
+      seam.revealPost({
+        originUrl: HUMBLE_BASE_URL,
+        path,
+        body,
+        csrfToken,
+        userAgent: standardBrowserUserAgent()
+      }),
+      timeoutPromise
+    ])
+    const data = coerceJsonBody(result.body)
+    if (result.status >= 200 && result.status < 300) {
+      return { data, contentType: null }
+    }
+    throw new HumbleTransportHttpError({
+      status: result.status,
+      headers: undefined,
+      data
+    })
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle)
+  }
+}
+
+/**
+ * Electron transport branch (D-14 revised, TRANSPORT SWAPPED round 6):
+ * routes through Electron's own Chromium network stack (`net.request`) on
+ * the same `persist:humble` partition the login flow already uses — a
+ * genuine Chromium TLS/HTTP2 fingerprint, indistinguishable from a real
+ * browser tab, because it IS the same network stack a real browser tab
+ * uses. `partition` + `useSessionCookies: true` + `credentials: 'include'`
+ * make Chromium attach the partition's live cookie jar NATIVELY
+ * (superseding round 5's hand-built HumbleUser.getFullCookieHeader — see
+ * that removal's comment in user.ts) — no manual Cookie header is set here
+ * at all. `csrf-prevention-token` remains a manually-set header (round 1/3,
+ * LIVE-CONFIRMED CORRECT by round 5's csrfTokenPresent=true evidence) since
+ * real Humble page JS also derives it from `document.cookie` and sets it
+ * explicitly, rather than relying on it being an automatically-attached
+ * header. GET paths (`humbleRequest`, still axios) are UNCHANGED — round 4/5
+ * evidence shows Cloudflare scores this write endpoint far more
+ * aggressively than the read endpoints, so only the one endpoint that has
+ * ever failed needs the swap.
+ */
+function humblePostRequestViaElectronNet(
   path: string,
   body: string,
   csrfToken?: string

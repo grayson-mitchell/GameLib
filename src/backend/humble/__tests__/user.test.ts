@@ -1012,6 +1012,11 @@ describe('HumbleUser', () => {
     const mockSeamTakeEvents = jest.fn()
     const mockSeamClose = jest.fn()
     const mockSeamClearCookies = jest.fn()
+    // Phase 34.4.1 Plan 04 (D-07): LoginWindowSeam gained revealPost. This describe block
+    // never exercises it (that path is covered by adapter.test.ts's seam-path describe) — the
+    // mock exists purely so this fake object still satisfies the (now five-plus-one-method)
+    // interface at compile time.
+    const mockSeamRevealPost = jest.fn()
 
     const fakeSeam: LoginWindowSeam = {
       open: (...args: Parameters<LoginWindowSeam['open']>) =>
@@ -1023,7 +1028,9 @@ describe('HumbleUser', () => {
       close: (...args: Parameters<LoginWindowSeam['close']>) =>
         mockSeamClose(...args),
       clearCookies: (...args: Parameters<LoginWindowSeam['clearCookies']>) =>
-        mockSeamClearCookies(...args)
+        mockSeamClearCookies(...args),
+      revealPost: (...args: Parameters<LoginWindowSeam['revealPost']>) =>
+        mockSeamRevealPost(...args)
     }
 
     beforeEach(() => {

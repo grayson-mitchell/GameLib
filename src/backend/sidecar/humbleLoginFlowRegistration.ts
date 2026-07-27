@@ -60,7 +60,8 @@ import {
   RUST_HUMBLE_LOGIN_COOKIES,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
-  RUST_HUMBLE_LOGIN_CLEAR_COOKIES
+  RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
+  RUST_HUMBLE_REVEAL_POST
 } from '../../common/types/sidecarTransport'
 import { HumbleUser } from '../humble/user'
 import { standardBrowserUserAgent } from '../humble/userAgent'
@@ -198,6 +199,35 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
         )
       }
       return result
+    },
+
+    // Phase 34.4.1 Plan 04 (D-07/D-08, REQ-34.4.1-05): `humblePostRequest`'s ONE Tauri
+    // transport branch. `csrfToken` crosses the wire as `null` (never `undefined`, which JSON
+    // cannot represent) when absent -- the Rust arm's own `reveal_post_args` maps a missing
+    // arg AND an explicit `null` to the same `None`, so either shape round-trips correctly.
+    // `status`/`body` are load-bearing, not defensive, exactly like every other coercion in
+    // this seam (see this function's own doc comment above): a malformed shape here must
+    // throw, never silently coerce a missing status/body into a value the caller's
+    // 2xx/non-2xx branch could misclassify.
+    async revealPost(input) {
+      const result = await requestRustInvoke(RUST_HUMBLE_REVEAL_POST, [
+        input.originUrl,
+        input.path,
+        input.body,
+        input.csrfToken ?? null,
+        input.userAgent
+      ])
+      const record = result as { status?: unknown; body?: unknown } | null
+      if (
+        !record ||
+        typeof record.status !== 'number' ||
+        typeof record.body !== 'string'
+      ) {
+        throw new Error(
+          `humble_reveal_post: malformed response (missing/non-numeric status, or non-string body): ${JSON.stringify(result)}`
+        )
+      }
+      return { status: record.status, body: record.body }
     }
   }
 }

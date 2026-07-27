@@ -4,6 +4,15 @@
  * (`backend/humble/adapter.ts`)'s own already-wired `request.on('error', ...)` handler --
  * not merely that the stub itself emits something in isolation.
  *
+ * RETIREMENT UPDATE (Phase 34.4.1 Plan 04, per 34.4.1-RESEARCH.md Discretion Finding (c)): the
+ * stub's error message no longer names a specific phase as "the missing seam" -- Plan 04
+ * wired the real `rustInvoke` seam that message used to point at, so a stale phase pointer
+ * would send a future reader chasing work that already shipped. The MECHANISM this file pins
+ * (async, non-synchronous `'error'` emission; reached through `humblePostRequest`'s real
+ * `request.on('error', ...)` handler; settles without `REQUEST_TIMEOUT_MS` ever firing) is
+ * UNCHANGED -- only the exact wording asserted below moved from a phase-specific string to a
+ * generic one.
+ *
  * Group 1 pins the stub's own contract in isolation (imports `net` directly from
  * `../electronStub`, mirroring `dialogStub.test.ts`'s direct-import convention for members
  * under test).
@@ -17,7 +26,9 @@
  * `nextTick` left real -- `user.test.ts:437`'s own precedent for this exact combination). A
  * test that only checked "it rejected" would pass identically against the pre-fix code, since
  * the pre-fix code also rejects (just 15s later, with the wrong cause) -- this is precisely the
- * failure mode D-06 exists to remove.
+ * failure mode D-06 exists to remove. This test only exercises the Electron path (no seam is
+ * ever installed in this suite) -- `getLoginWindowSeam()` returns `null`, so
+ * `humblePostRequest` still falls through to this exact `net.request` stub.
  *
  * `backend/logger` is mocked (mirrors `adapter.test.ts`'s own mock boundary) purely to avoid a
  * real log write from `mapAxiosError`'s `logError` call on the "genuinely unexpected error"
@@ -105,7 +116,7 @@ describe('electronStub net.request — D-06 own contract (Phase 34.4 Plan 06, RE
     expect(typeof req.setHeader).toBe('function')
   })
 
-  it("invokes a registered 'error' handler exactly once, after a flush, with a message naming Phase 34.4.1", async () => {
+  it("invokes a registered 'error' handler exactly once, after a flush, naming the missing seam (generic, no stale phase pointer -- Phase 34.4.1 retirement)", async () => {
     const req = net.request()
     const errorSpy = jest.fn()
     req.on('error', errorSpy)
@@ -115,7 +126,9 @@ describe('electronStub net.request — D-06 own contract (Phase 34.4 Plan 06, RE
     expect(errorSpy).toHaveBeenCalledTimes(1)
     const [err] = errorSpy.mock.calls[0]
     expect(err).toBeInstanceOf(Error)
-    expect((err as Error).message).toContain('34.4.1')
+    expect((err as Error).message).toContain('not implemented in the sidecar')
+    // The retired message must NOT resurrect a stale phase pointer.
+    expect((err as Error).message).not.toContain('34.4.1')
   })
 
   it("does NOT invoke the 'error' handler synchronously — nothing has fired before any flush", () => {
@@ -180,7 +193,9 @@ describe("humblePostRequest reaches its own on('error') handler through the real
 
       expect(caught).toBeInstanceOf(Error)
       const message = (caught as Error).message
-      expect(message).toContain('34.4.1')
+      expect(message).toContain('not implemented in the sidecar')
+      // The retired message must NOT resurrect a stale phase pointer.
+      expect(message).not.toContain('34.4.1')
       expect(message).not.toContain('Humble reveal request timed out')
 
       // The 15s REQUEST_TIMEOUT_MS fake timer was cleared by humblePostRequest's

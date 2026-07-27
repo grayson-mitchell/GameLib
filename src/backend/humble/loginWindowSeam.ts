@@ -53,6 +53,20 @@ export interface LoginWindowNavEvent {
 }
 
 /**
+ * The reveal POST's response, carried back from the hidden reveal window (Phase 34.4.1 Plan
+ * 04, D-07). `status` is the raw HTTP status the page's own `fetch()` observed -- a non-2xx
+ * value (e.g. a Cloudflare 403) is a normal, DECLARED outcome, never an error thrown by
+ * `revealPost` itself (see the interface method's own doc comment below). `body` is the raw
+ * response text, fed through the SAME `RevealResponseSchema`/`coerceJsonBody` path
+ * `humblePostRequest`'s Electron transport already uses -- this seam changes the transport
+ * only, never the response contract.
+ */
+export interface LoginWindowRevealPostResult {
+  status: number
+  body: string
+}
+
+/**
  * The platform-agnostic operations `humble/user.ts`'s login watch needs from a login window. One
  * runtime implementation exists per build: Electron's untouched `session.fromPartition` path needs
  * no implementation of this interface at all (the holder stays `null`); the Tauri sidecar installs
@@ -70,6 +84,22 @@ export interface LoginWindowSeam {
   close(label: string): Promise<boolean>
   /** Domain-scoped cookie clear (never a blanket wipe -- see `RUST_HUMBLE_LOGIN_CLEAR_COOKIES`). */
   clearCookies(label: string, domain: string): Promise<number>
+  /**
+   * Issues the Humble reveal-key POST from a hidden, on-demand child window's own JS `fetch()`
+   * (Phase 34.4.1 Plan 04, D-07/D-08, REQ-34.4.1-05) -- `humblePostRequest`'s (`humble/adapter.ts`)
+   * ONLY Tauri transport branch. Resolves `{status, body}` for ANY completed HTTP response,
+   * including a non-2xx one (a 403 is a normal, declared outcome under D-07 -- the caller maps
+   * it exactly as it already maps the Electron `net.request` path's non-2xx responses). Rejects
+   * ONLY on a structural failure: no window could be built, the injected script itself errored,
+   * or the reveal timed out -- never on the HTTP status of the reveal response itself.
+   */
+  revealPost(input: {
+    originUrl: string
+    path: string
+    body: string
+    csrfToken?: string
+    userAgent: string
+  }): Promise<LoginWindowRevealPostResult>
 }
 
 // Module-scoped holder. `null` in the Electron build (nothing ever calls setLoginWindowSeam there)

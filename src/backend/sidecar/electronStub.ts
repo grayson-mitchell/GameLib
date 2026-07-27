@@ -618,25 +618,24 @@ export const screen = {
 // `downloadmanager/utils.ts` read `undefined === 'online'` (false) forever because this member
 // did not exist, so every Steam install request under Tauri failed instantly with "App offline,
 // skipping install" even though the machine (and Steam) were fully online.
-// net.request (D-06, Phase 34.4 Plan 06): was previously a total silent dead end --
-// `on()` recorded nothing, so a caller's `request.on('error', ...)` handler could never fire.
-// This was added in Phase 33 purely so `net.isOnline` (below) could exist alongside it.
-//
-// `humblePostRequest` (`backend/humble/adapter.ts:264-336`) is the ONLY caller in the whole
-// backend, and it already has `request.on('error', ...)` wired at ~L328 -- it just never fired.
-// Its prior sole failure path was therefore its own `REQUEST_TIMEOUT_MS` timer (adapter.ts:277-
-// 287), which rejects after 15s with the misleading `"Humble reveal request timed out"` -- a
-// message that reads as a Humble outage rather than a missing transport seam, and would send a
-// future reader straight back into the Cloudflare investigation that six rounds of the
-// `humble-reveal-key-fails` debug session already falsified (rounds 1-6 established cookie/
-// header fidelity is NOT the problem -- a live 403 with fullCookieJarPresent=true pointed at
-// axios's TLS/HTTP transport fingerprint instead). The real seam belongs to Phase 34.4.1
-// (`humbleRevealKey` is deferred there per D-02) -- its owner must NOT re-run rounds 1-5.
+// net.request: was previously a total silent dead end -- `on()` recorded nothing, so a
+// caller's `request.on('error', ...)` handler could never fire. Added purely so `net.isOnline`
+// (below) could exist alongside it, then hardened (D-06) to emit a loud, named-seam error
+// instead of a bare timeout, and later RETIRED (a subsequent phase's D-06 retirement decision,
+// see that phase's RESEARCH.md Discretion Finding (c) if this history needs revisiting):
+// `humblePostRequest` (`backend/humble/adapter.ts`) now routes its reveal POST through a real
+// `rustInvoke` seam under Tauri, so this stub has no remaining callers on that path --
+// Electron's own real `net.request` is untouched, and no other caller of this stub exists in
+// the codebase. The stub itself is deliberately NOT deleted (an unguarded missing method is a
+// worse failure mode than a harmless logged no-op -- `sidecar-dialog-reject-crashes`'s
+// governing lesson, same reasoning as `session.fromPartition`'s D-09 stub immediately above),
+// but its error message no longer names a specific phase as "the missing seam" -- that seam
+// now exists, and a stale phase pointer would send a future reader chasing work that already
+// shipped.
 //
 // Fix: emit an asynchronous `'error'` event (via `setImmediate`) naming the missing seam, so
-// `humblePostRequest`'s existing handler clears its timeout and rejects immediately with an
-// accurate cause. Two constraints are load-bearing, not stylistic (`sidecar-dialog-reject-
-// crashes`):
+// any future caller's handler clears its own timeout and rejects immediately with an accurate
+// cause. Two constraints are load-bearing, not stylistic (`sidecar-dialog-reject-crashes`):
 //   1. Never throw or reject synchronously inside `request()` -- the caller registers
 //      `request.on('error', ...)` on the object THIS function returns, so a synchronous
 //      emission would fire before any handler could be attached and vanish silently.
@@ -653,8 +652,7 @@ export const net = {
     setImmediate(() => {
       handlers['error']?.(
         new Error(
-          '[electronStub] net.request(): not implemented in the sidecar -- this seam is ' +
-            "Phase 34.4.1's (Humble reveal POST). See D-06."
+          '[electronStub] net.request(): not implemented in the sidecar'
         )
       )
     })

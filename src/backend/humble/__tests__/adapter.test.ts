@@ -155,6 +155,10 @@ import {
   getAccountIdentity,
   revealKey
 } from '../adapter'
+import {
+  setLoginWindowSeam,
+  type LoginWindowSeam
+} from '../loginWindowSeam'
 
 const COOKIE = 'super-secret-cookie-value'
 
@@ -934,5 +938,109 @@ describe('revealKey', () => {
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(CSRF_TOKEN)
     }
+  })
+
+  // ── Phase 34.4.1 Plan 04 (D-07): the Tauri login-window seam transport ──
+  //
+  // `humblePostRequest` branches on `getLoginWindowSeam()` -- when a seam is installed
+  // (Tauri), the reveal POST routes through `seam.revealPost()` instead of `net.request`.
+  // Only the TRANSPORT changes: the response still flows through the SAME
+  // `RevealResponseSchema`/`mapAxiosError`/`HumbleTransportHttpError` path exercised by every
+  // `describe('revealKey', ...)` case above. `setLoginWindowSeam(null)` in `afterEach` is
+  // load-bearing -- the seam holder is a module-level singleton
+  // (`backend/humble/loginWindowSeam.ts`) and would otherwise leak into every OTHER test file
+  // that imports the real (unmocked) module in the same jest worker.
+  describe('revealKey via the Tauri login-window seam (D-07)', () => {
+    function fakeSeam(revealPost: LoginWindowSeam['revealPost']): LoginWindowSeam {
+      return {
+        open: jest.fn(),
+        cookies: jest.fn(),
+        takeEvents: jest.fn(),
+        close: jest.fn(),
+        clearCookies: jest.fn(),
+        revealPost
+      }
+    }
+
+    afterEach(() => {
+      setLoginWindowSeam(null)
+    })
+
+    test('a 200 JSON body resolves through the unchanged RevealResponseSchema, and net.request is never called', async () => {
+      setLoginWindowSeam(
+        fakeSeam(
+          jest.fn().mockResolvedValue({
+            status: 200,
+            body: JSON.stringify({ success: true, key: FAKE_KEY })
+          })
+        )
+      )
+      const result = await revealKey(undefined, params())
+      expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
+      expect(mockNetRequest).not.toHaveBeenCalled()
+    })
+
+    test('a 403 with an HTML (Cloudflare-shaped) body maps to access_denied via HumbleTransportHttpError, never a raw throw', async () => {
+      setLoginWindowSeam(
+        fakeSeam(
+          jest.fn().mockResolvedValue({
+            status: 403,
+            body: '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
+          })
+        )
+      )
+      const result = await revealKey(undefined, params())
+      expect(result).toEqual({ status: 'access_denied' })
+    })
+
+    test('a 401 body maps to session_expired, matching the Electron path', async () => {
+      setLoginWindowSeam(
+        fakeSeam(
+          jest.fn().mockResolvedValue({
+            status: 401,
+            body: JSON.stringify({ error_msg: 'expired' })
+          })
+        )
+      )
+      const result = await revealKey(undefined, params())
+      expect(result).toEqual({ status: 'session_expired' })
+    })
+
+    test('a seam rejection propagates exactly as a network-level error does on the Electron path', async () => {
+      setLoginWindowSeam(
+        fakeSeam(jest.fn().mockRejectedValue(new Error('humble_reveal_post:timeout')))
+      )
+      await expect(revealKey(undefined, params())).rejects.toThrow(
+        'humble_reveal_post:timeout'
+      )
+    })
+
+    test('calls seam.revealPost with HUMBLE_BASE_URL, the redeem path, the form-encoded body, the csrf token and a non-empty userAgent', async () => {
+      const revealPost = jest.fn().mockResolvedValue({
+        status: 200,
+        body: JSON.stringify({ success: true, key: FAKE_KEY })
+      })
+      setLoginWindowSeam(fakeSeam(revealPost))
+      await revealKey(CSRF_TOKEN, params(3))
+      expect(revealPost).toHaveBeenCalledTimes(1)
+      const [input] = revealPost.mock.calls[0]
+      expect(input.originUrl).toBe('https://www.humblebundle.com')
+      expect(input.path).toBe('/humbler/redeemkey')
+      expect(input.csrfToken).toBe(CSRF_TOKEN)
+      expect(typeof input.userAgent).toBe('string')
+      expect(input.userAgent.length).toBeGreaterThan(0)
+      const parsedBody = new URLSearchParams(input.body)
+      expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
+      expect(parsedBody.get('key')).toBe(GAMEKEY)
+      expect(parsedBody.get('keyindex')).toBe('3')
+    })
+
+    test('the Electron net.request path still runs unchanged when no seam is installed', async () => {
+      setLoginWindowSeam(null)
+      queueNetResponse(200, { success: true, key: FAKE_KEY })
+      const result = await revealKey(undefined, params())
+      expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
+      expect(mockNetRequest).toHaveBeenCalledTimes(1)
+    })
   })
 })
