@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 0 plans
+**Plans:** 8 plans (6 waves)
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1472,7 +1472,14 @@ Also carries: `humbleDisconnect` must be revisited here to clear the new browser
 (Phase 34.4 **D-05**).
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 34.4.1 to break down)
+- [ ] 34.4.1-01-PLAN.md — Rust login-window arms (open/cookies/nav-events/close/clear) + channel consts + cargo tests + the blocking gate contract (wave 1)
+- [ ] 34.4.1-02-PLAN.md — Dual-build login seam + curated registration of all 6 channels + humbleLoginFlows transport-shape test (wave 2)
+- [ ] 34.4.1-03-PLAN.md — watchForLogin drives the seam: liveness discriminator, on_page_load relay, csrf capture (wave 3)
+- [ ] 34.4.1-04-PLAN.md — humbleRevealKey in-webview POST: hidden on-demand window, escaped script, cancelled-navigation exfil (wave 3)
+- [ ] 34.4.1-05-PLAN.md — D-06 branch split: login panel vs reworded store/wiki panel + OAuth declared-blocked surface (wave 3)
+- [ ] 34.4.1-06-PLAN.md — Domain-scoped humbleDisconnect clear + reach-ledger regeneration + both Discretion sweeps (wave 4)
+- [ ] 34.4.1-07-PLAN.md — 34.4.1-PORTED-CHANNELS.md + SEAM §3→§1 + self-tested gate script (wave 5)
+- [ ] 34.4.1-08-PLAN.md — Blocking 4-item live gate under tauri:dev, results recorded, falsified statements struck (wave 6, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
