@@ -31,7 +31,9 @@
  *
  * D-01/D-02 (curated-import discipline, inherited from Phase 30 D-08 -> ... -> Phase 34.4 D-14):
  * import `../humble/user`, `../humble/userAgent`, `../humble/library` and
- * `../humble/loginWindowSeam` directly, and NEVER `../humble/ipc_handler`. That file ALSO
+ * `../humble/loginWindowSeam` directly (`standardBrowserUserAgent` comes straight from its own
+ * `userAgent.ts` module, not through `user.ts`'s re-export, so this module's dependency on it is
+ * explicit), and NEVER `../humble/ipc_handler`. That file ALSO
  * registers these same 6 channels (plus the 15 Phase 34.4 already ported) onto Electron's REAL
  * `ipcMain` at import time via `backend/ipc`'s `addHandler`/`addListener` -- a side-effect import
  * here would double-register all 21 channels this phase and Phase 34.4 own, and would drag
@@ -60,7 +62,8 @@ import {
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES
 } from '../../common/types/sidecarTransport'
-import { HumbleUser, standardBrowserUserAgent } from '../humble/user'
+import { HumbleUser } from '../humble/user'
+import { standardBrowserUserAgent } from '../humble/userAgent'
 import { HumbleLibrary } from '../humble/library'
 import {
   setLoginWindowSeam,
