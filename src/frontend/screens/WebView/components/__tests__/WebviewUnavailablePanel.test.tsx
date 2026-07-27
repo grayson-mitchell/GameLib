@@ -1,27 +1,27 @@
 /**
- * Tests for WebviewUnavailablePanel (D-04, REQ-34.4-12) plus two
- * source-text gates: proving `WebView/index.tsx`'s Electron arm stays
- * structurally distinct and provably unreachable (D-04's rider), and that
- * the panel itself never references `navigator.clipboard`
- * (navigator-clipboard-noops-under-tauri).
+ * Tests for WebviewUnavailablePanel (D-06, REQ-34.4.1-07) plus one
+ * source-text gate: proving `WebView/index.tsx`'s three arms (login/
+ * store-wiki/Electron) stay structurally distinct (D-06's rider).
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * src/frontend/jest.config.js's docstring) — the panel is invoked
  * directly as a plain function, the same DOM-less pattern
  * CrossoverBadge.test.tsx uses.
  *
- * Group 2's unreachability proof uses the STRUCTURAL FALLBACK, not the
- * "behavioral, preferred" form the plan names first: WebView/index.tsx is
- * a large hook-heavy component (useState/useEffect/useRef/useContext/
- * useNavigate/useLocation/useParams) that cannot be invoked as a plain
- * function outside a React render tree — doing so throws "Invalid hook
- * call" with no dispatcher present, and this project has no DOM harness to
- * render it properly (jest.config.js's own docstring). So this proves the
- * branch shape by reading and comment-stripping the real source text,
- * self-tested against synthetic merged/regressed sources per the plan's
- * own anti-vacuity requirement — the exact lesson Phase 34.2's four gap
- * cycles paid for (a source-text gate without a self-test is a vacuous
- * gate).
+ * `window.api` is stubbed at the `globalThis` level (mirrors
+ * StoreSearchRow.test.tsx's convention) because the "Open in browser"
+ * button calls `window.api.openExternalUrl` — this project's
+ * `testEnvironment: 'node'` jest config has no `window` global otherwise.
+ *
+ * Deviation note (34.4.1-05, Task 1+3 combined — see this plan's SUMMARY):
+ * the Group 2 structural gate below (previously named "Group 2" in this
+ * file, testing the two-arm shape) is REWRITTEN, not deleted, to assert the
+ * NEW three-arm shape `index.tsx`'s branch split produces. The reason: the
+ * old gate's `if (isTauri())` string search now happens to still match the
+ * (unrelated) store arm after the split, which would have let it pass
+ * vacuously without actually proving the login arm exists at all. Rewriting
+ * it to check all three arms explicitly closes that gap rather than relying
+ * on a coincidental string match.
  */
 import type { ReactElement } from 'react'
 import { readFileSync } from 'fs'
@@ -34,16 +34,25 @@ jest.mock('react-i18next', () => ({
   })
 }))
 
+const mockApi = {
+  openExternalUrl: jest.fn()
+}
+;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
+  api: mockApi
+}
+
 import WebviewUnavailablePanel from '../WebviewUnavailablePanel'
 
-type AnyReactElement = ReactElement<{ children?: unknown }>
+type AnyReactElement = ReactElement<{
+  children?: unknown
+  className?: string
+  onClick?: () => void
+}>
 
 /**
  * Recursively flattens a React element's `children` prop graph into a
  * single string. Operates purely on the plain element/props object graph
- * React elements already are before rendering — no DOM required. Assert on
- * the aggregated text, not on layout or nesting depth (a brittle
- * structural assertion would break on the next styling change).
+ * React elements already are before rendering — no DOM required.
  */
 function collectText(node: unknown): string {
   if (node === null || node === undefined || typeof node === 'boolean') {
@@ -62,46 +71,70 @@ function collectText(node: unknown): string {
   return ''
 }
 
-describe('WebviewUnavailablePanel (D-04, REQ-34.4-12)', () => {
-  it('renders a non-null element with a stable, greppable className — not a blank fragment', () => {
+/** Recursively finds the first descendant element with the given className. */
+function findByClassName(
+  node: unknown,
+  className: string
+): AnyReactElement | null {
+  if (node === null || node === undefined || typeof node !== 'object') {
+    return null
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findByClassName(child, className)
+      if (found) return found
+    }
+    return null
+  }
+  const el = node as AnyReactElement
+  if (el.props?.className === className) {
+    return el
+  }
+  return findByClassName(el.props?.children, className)
+}
+
+describe('WebviewUnavailablePanel (D-06, store/wiki-only)', () => {
+  it('renders a non-null element with a stable, greppable className', () => {
     const element = WebviewUnavailablePanel({}) as AnyReactElement
 
     expect(element).not.toBeNull()
-    expect(element.props).toBeDefined()
-    expect(
-      (element as ReactElement<{ className?: string }>).props.className
-    ).toBe('WebView__unavailablePanel')
+    expect(element.props.className).toBe('WebView__unavailablePanel')
   })
 
-  it('renders honest explanatory text naming the build limitation and the Electron workaround', () => {
+  it('renders honest copy naming in-app store/wiki browsing as the gap, never a login gap', () => {
     const element = WebviewUnavailablePanel({}) as AnyReactElement
     const text = collectText(element)
 
     expect(text).toContain('not available on this build')
-    expect(text).toContain('does not yet embed a browser view')
-    expect(text).toContain('Electron build')
-    expect(text.length).toBeGreaterThan(0)
+    expect(text.toLowerCase()).toContain('store and wiki')
+    expect(text.toLowerCase()).not.toMatch(/sign in|signing in|login/)
   })
 
-  it('names the attempted store/runner when provided', () => {
-    const element = WebviewUnavailablePanel({
-      runner: 'humble'
-    }) as AnyReactElement
-    const text = collectText(element)
-
-    expect(text).toContain('Humble')
-    expect(text).toContain('unavailable here')
-  })
-
-  it('still names the limitation honestly when no runner is provided (no crash, no blank content)', () => {
+  it('renders no Open in browser button when url is absent', () => {
     const element = WebviewUnavailablePanel({}) as AnyReactElement
-    const text = collectText(element)
+    const button = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
 
-    expect(text).toContain('not available on this build')
+    expect(button).toBeNull()
+  })
+
+  it('renders an Open in browser button that calls window.api.openExternalUrl with the exact url when present', () => {
+    const url = 'https://store.steampowered.com/'
+    const element = WebviewUnavailablePanel({ url }) as AnyReactElement
+    const button = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
+
+    expect(button).not.toBeNull()
+    button?.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
   })
 })
 
-describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 3)', () => {
+describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 2)', () => {
   const panelSourcePath = join(__dirname, '..', 'WebviewUnavailablePanel.tsx')
 
   function hasNavigatorClipboardReference(source: string): boolean {
@@ -136,7 +169,7 @@ describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 3)
   })
 })
 
-describe('WebView/index.tsx — Electron arm stays structurally distinct and unreachable (D-04 rider, Group 2)', () => {
+describe('WebView/index.tsx — three distinct arms: login / store-wiki / Electron (D-06 rider, Group 3)', () => {
   const webViewIndexPath = join(__dirname, '..', '..', 'index.tsx')
 
   /** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
@@ -159,14 +192,15 @@ describe('WebView/index.tsx — Electron arm stays structurally distinct and unr
   }
 
   /**
-   * The gate under test (D-04's rider, proven not asserted): the
-   * `!webviewPreloadPath` block must contain a nested `if (isTauri())`
-   * sub-block that renders WebviewUnavailablePanel, AND a `return <></>`
-   * that appears strictly AFTER that sub-block closes — i.e. a distinct,
-   * separate arm, not merged into a single expression/ternary and not
-   * nested inside the Tauri arm itself.
+   * The gate under test (D-06's rider, proven not asserted): the
+   * `!webviewPreloadPath` block must contain, IN ORDER: a login arm gated
+   * on `isLoginPathname(pathname)` rendering `TauriLoginPanel`, a distinct
+   * store/wiki arm gated on bare `isTauri()` rendering
+   * `WebviewUnavailablePanel` (and NOT `TauriLoginPanel`), and a final
+   * `return <></>` Electron arm reachable only after both Tauri arms —
+   * not nested inside either of them, and not merged into one return.
    */
-  function hasDistinctTauriAndElectronArms(strippedSource: string): boolean {
+  function hasThreeDistinctArms(strippedSource: string): boolean {
     let outerBlock: string
     try {
       outerBlock = extractBlock(strippedSource, 'if (!webviewPreloadPath)')
@@ -174,49 +208,81 @@ describe('WebView/index.tsx — Electron arm stays structurally distinct and unr
       return false
     }
 
-    const tauriIdx = outerBlock.indexOf('if (isTauri())')
-    if (tauriIdx === -1) {
+    const loginConditionIdx = outerBlock.indexOf('isLoginPathname(pathname)')
+    if (loginConditionIdx === -1) return false
+    const loginArmStart = outerBlock.lastIndexOf('if (', loginConditionIdx)
+    if (loginArmStart === -1) return false
+
+    let loginBlock: string
+    try {
+      loginBlock = extractBlock(outerBlock.slice(loginArmStart), 'if (')
+    } catch {
       return false
     }
+    const loginArmRendersLoginPanel = loginBlock.includes('TauriLoginPanel')
 
-    const tauriBlock = extractBlock(
-      outerBlock.slice(tauriIdx),
-      'if (isTauri())'
-    )
-    const tauriArmRendersPanel = tauriBlock.includes('WebviewUnavailablePanel')
+    const loginBlockEndInOuter =
+      outerBlock.indexOf(loginBlock, loginArmStart) + loginBlock.length
+    const afterLogin = outerBlock.slice(loginBlockEndInOuter)
 
-    const tauriBlockEndInOuter =
-      outerBlock.indexOf(tauriBlock, tauriIdx) + tauriBlock.length
-    const afterTauriBlock = outerBlock.slice(tauriBlockEndInOuter)
+    const storeMarkerIdx = afterLogin.indexOf('if (isTauri())')
+    if (storeMarkerIdx === -1) return false
+
+    let storeBlock: string
+    try {
+      storeBlock = extractBlock(
+        afterLogin.slice(storeMarkerIdx),
+        'if (isTauri())'
+      )
+    } catch {
+      return false
+    }
+    const storeArmRendersUnavailablePanel =
+      storeBlock.includes('WebviewUnavailablePanel') &&
+      !storeBlock.includes('TauriLoginPanel')
+
+    const storeBlockEndInAfterLogin =
+      afterLogin.indexOf(storeBlock, storeMarkerIdx) + storeBlock.length
+    const afterStore = afterLogin.slice(storeBlockEndInAfterLogin)
     const electronArmReturnsEmptyFragment = /return\s*<>\s*<\/>/.test(
-      afterTauriBlock
+      afterStore
     )
 
-    return tauriArmRendersPanel && electronArmReturnsEmptyFragment
+    return (
+      loginArmRendersLoginPanel &&
+      storeArmRendersUnavailablePanel &&
+      electronArmReturnsEmptyFragment
+    )
   }
 
-  it('the real source has a distinct isTauri() arm (rendering the panel) and a distinct, later return <></> arm', () => {
+  it('the real source has three distinct arms: login (TauriLoginPanel), store/wiki (WebviewUnavailablePanel), Electron (return <></>)', () => {
     const rawSource = readFileSync(webViewIndexPath, 'utf-8')
     const stripped = stripSourceComments(rawSource)
 
-    expect(hasDistinctTauriAndElectronArms(stripped)).toBe(true)
+    expect(hasThreeDistinctArms(stripped)).toBe(true)
   })
 
-  it('the real source calls window.api.logInfo naming the screen and the runner inside the Tauri arm', () => {
+  it('the real source calls window.api.logInfo naming the pathname inside the store/wiki arm', () => {
     const rawSource = readFileSync(webViewIndexPath, 'utf-8')
     const stripped = stripSourceComments(rawSource)
     const outerBlock = extractBlock(stripped, 'if (!webviewPreloadPath)')
-    const tauriBlock = extractBlock(
-      outerBlock.slice(outerBlock.indexOf('if (isTauri())')),
+    const loginConditionIdx = outerBlock.indexOf('isLoginPathname(pathname)')
+    const loginArmStart = outerBlock.lastIndexOf('if (', loginConditionIdx)
+    const loginBlock = extractBlock(outerBlock.slice(loginArmStart), 'if (')
+    const loginBlockEndInOuter =
+      outerBlock.indexOf(loginBlock, loginArmStart) + loginBlock.length
+    const afterLogin = outerBlock.slice(loginBlockEndInOuter)
+    const storeMarkerIdx = afterLogin.indexOf('if (isTauri())')
+    const storeBlock = extractBlock(
+      afterLogin.slice(storeMarkerIdx),
       'if (isTauri())'
     )
 
-    expect(tauriBlock).toContain('window.api.logInfo')
-    expect(tauriBlock).toContain('WebView')
-    expect(tauriBlock).toContain('runner')
+    expect(storeBlock).toContain('window.api.logInfo')
+    expect(storeBlock).toContain('pathname')
   })
 
-  it('self-test: the gate REJECTS a synthetic source where the arms have been merged into a single unconditional return (the exact hand RED-proof mutation)', () => {
+  it('self-test: the gate REJECTS a synthetic source where all arms were merged into one unconditional return', () => {
     const merged = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
@@ -225,51 +291,62 @@ describe('WebView/index.tsx — Electron arm stays structurally distinct and unr
       '}'
     ].join('\n')
 
-    expect(hasDistinctTauriAndElectronArms(merged)).toBe(false)
+    expect(hasThreeDistinctArms(merged)).toBe(false)
   })
 
-  it('self-test: the gate REJECTS a synthetic source where isTauri() is called but the Electron fallback return was dropped (behavior-changing regression)', () => {
+  it('self-test: the gate REJECTS a synthetic source where the Electron fallback return was dropped (behavior-changing regression)', () => {
     const droppedFallback = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
+      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '      return <TauriLoginPanel runner={runner} />',
+      '    }',
       '    if (isTauri()) {',
-      '      return <WebviewUnavailablePanel />',
+      '      window.api.logInfo("gap")',
+      '      return <WebviewUnavailablePanel url={startUrl} />',
       '    }',
       '  }',
       '}'
     ].join('\n')
 
-    expect(hasDistinctTauriAndElectronArms(droppedFallback)).toBe(false)
+    expect(hasThreeDistinctArms(droppedFallback)).toBe(false)
   })
 
-  it('self-test: the gate REJECTS a synthetic source where the Electron arm was silently changed to also render the panel', () => {
-    const bothArmsRenderPanel = [
+  it('self-test: the gate REJECTS a synthetic source where the store/wiki arm was silently changed to also render TauriLoginPanel (wrong-panel regression)', () => {
+    const wrongPanel = [
       'function WebView() {',
       '  if (!webviewPreloadPath) {',
-      '    if (isTauri()) {',
-      '      return <WebviewUnavailablePanel />',
+      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '      return <TauriLoginPanel runner={runner} />',
       '    }',
-      '    return <WebviewUnavailablePanel />',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(hasDistinctTauriAndElectronArms(bothArmsRenderPanel)).toBe(false)
-  })
-
-  it('self-test: the gate ACCEPTS the exact shape the plan specifies (positive control, proves the gate is not vacuously false either)', () => {
-    const correctShape = [
-      'function WebView() {',
-      '  if (!webviewPreloadPath) {',
       '    if (isTauri()) {',
-      '      window.api.logInfo("[WebView] gap")',
-      '      return <WebviewUnavailablePanel />',
+      '      window.api.logInfo("gap")',
+      '      return <TauriLoginPanel runner={runner} />',
       '    }',
       '    return <></>',
       '  }',
       '}'
     ].join('\n')
 
-    expect(hasDistinctTauriAndElectronArms(correctShape)).toBe(true)
+    expect(hasThreeDistinctArms(wrongPanel)).toBe(false)
+  })
+
+  it('self-test: the gate ACCEPTS the exact shape the real source uses (positive control, proves the gate is not vacuously false either)', () => {
+    const correctShape = [
+      'function WebView() {',
+      '  if (!webviewPreloadPath) {',
+      '    if (isTauri() && isLoginPathname(pathname)) {',
+      '      return <TauriLoginPanel runner={runner} />',
+      '    }',
+      '    if (isTauri()) {',
+      '      window.api.logInfo("gap")',
+      '      return <WebviewUnavailablePanel url={startUrl} />',
+      '    }',
+      '    return <></>',
+      '  }',
+      '}'
+    ].join('\n')
+
+    expect(hasThreeDistinctArms(correctShape)).toBe(true)
   })
 })

@@ -10,6 +10,8 @@ import LoginWarning from '../Login/components/LoginWarning'
 import { NileLoginData } from 'common/types/nile'
 import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
+import TauriLoginPanel from './components/TauriLoginPanel'
+import { isLoginPathname } from './loginRoutes'
 import {
   Dialog,
   DialogContent,
@@ -446,25 +448,32 @@ export default function WebView() {
   }, [webviewRef.current])
 
   if (!webviewPreloadPath) {
+    if (isTauri() && isLoginPathname(pathname)) {
+      // D-06 (REQ-34.4.1-07/-08): Phase 34.4.1 shipped a real Rust
+      // login-window seam, so the old blanket "not available on this
+      // build" message here would now be a lie for login routes. They
+      // drive TauriLoginPanel instead: Humble gets an honest in-progress
+      // surface, and the four OAuth runners get a declared-blocked one
+      // naming the exact backend channel and Phase 34.5.
+      return <TauriLoginPanel runner={runner} />
+    }
     if (isTauri()) {
-      // D-04 (REQ-34.4-12): 34.1 D-12 made getWebviewPreloadPath return a
-      // declared-empty '' under Tauri, so without this branch a user
-      // clicking "Log in to Humble" (or Epic/GOG/Amazon) saw a blank
-      // screen with no error, no log line, no explanation. Log the gap so
-      // it is legible to a developer too ("logged, never silent").
+      // D-05: in-app store and wiki browsing was never this phase's job --
+      // log the gap so it is legible to a developer too ("logged, never
+      // silent"), and let the user escape to the system browser via
+      // WebviewUnavailablePanel's Open-in-browser button.
       window.api.logInfo(
-        `[WebView] embedded login unavailable under Tauri (runner=${
-          runner ?? 'unknown'
-        }, webviewPreloadPath is empty) -- see Phase 34.4.1 D-01`
+        `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
       )
-      return <WebviewUnavailablePanel runner={runner} />
+      return <WebviewUnavailablePanel url={startUrl} />
     }
     // Structurally unreachable on Electron: it always resolves a real
     // preload path via getWebviewPreloadPath. Kept as a distinct branch
-    // (not merged with the Tauri case above) so a test can assert
-    // Electron's shape never changes (D-04's rider). The real fix — a
-    // shared <webview>/session.fromPartition seam — is Phase 34.4.1's
-    // (D-01).
+    // (not merged with the Tauri cases above) so a test can assert
+    // Electron's shape never changes (D-04's rider). What landed instead
+    // of the old single stopgap: TauriLoginPanel for login routes and a
+    // reworded WebviewUnavailablePanel for store/wiki routes (Phase
+    // 34.4.1 D-06).
     return <></>
   }
 
