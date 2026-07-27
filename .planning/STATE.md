@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready_to_plan
-stopped_at: Phase 34.4 complete (10/10) — ready to discuss Phase 34.4.1
-last_updated: 2026-07-27T01:31:09.160Z
-last_activity: 2026-07-27 -- 34.4-10 executed (blocking 5-item live gate under pnpm tauri:dev, PASS 5/5 -- item 2 logoutSteam FAILED on attempt 1: a stale Phase 30 G-30-01 isTauri() guard in GlobalState.tsx made the ported logoutSteam send unreachable from the UI, invisible to the fully-green automated suite; fixed in-phase (1cf42d43b/52dfcfb66) closing the underlying fire-and-forget race via new SteamSignOut.ts's poll-then-confirm helper, re-tested PASS with a persisted-store present-to-absent proof stronger than the plan's UI-only check; item 5 surfaced a pre-existing, faithfully-ported Electron defect (steamBottleStatus.provisioned vs isSteamBottleProvisioned() disagree); Rule-1 fix 9f9f0402c for a broken WebView/index.tsx import found during the mandatory npm start regression check; REQ-34.4-13/15 complete, see 34.4-10-SUMMARY.md). Phase 34.4 (Tauri IPC re-plumb slice 7) is now fully executed; secure-phase 34.4 not yet run. Next: Phase 34.4.1 (embedded-browser login seam) or Phase 34.5 (slice 8), per ROADMAP ordering.
+status: planning
+stopped_at: Phase 34.4.1 context gathered
+last_updated: "2026-07-27T01:56:53.470Z"
+last_activity: 2026-07-27 -- Phase 34.4.1 discuss-phase complete (34.4.1-CONTEXT.md + DISCUSSION-LOG.md, commit 6566971a0). 11 decisions across 4 gray areas. Headline scouting finding: the five logins sharing the one `<webview>` do NOT share one capture mechanism -- Epic/GOG/Amazon/Zoom read an OAuth code out of a redirect URL, ONLY Humble reads a cookie jar, so the unverified cookie API is one runner's risk and not the critical path (D-01). Candidate 1's scaffolding already exists: `tauriChildWindows.ts` (34.1 D-12) already builds fail-closed zero-capability WebviewWindows for untrusted remote content and `core:webview:allow-create-webview-window` is already granted, which also answers 34.3 D-02's landmine. Scope held to mechanism + Humble's 6, proven through Humble (D-04); store/wiki browsing deferred to its own work (D-05). D-11 requires an EXECUTED spike against Tauri 2.11.5/wry 0.55.1 before any plan is written (34.3 D-05's "an inference is not a measurement"). D-10 is a blocking 4-item live gate headlined by a from-scratch Humble login -- falsifying 34.4 D-09's "no Tauri path to create a Humble session". Note: gsd-sdk's state write corrupted the progress counters (16/12) and they were hand-corrected back to 17/11.
 progress:
   total_phases: 17
   completed_phases: 11
@@ -76,7 +76,9 @@ check -- the item-2 fix changed Electron's logout path too and nothing covered `
 this phase). Secure-phase 34.4 still owed. Next: Phase 34.4.1 or Phase 34.5.
 
 34.4-09 done -- Wrote 34.4-PORTED-CHANNELS.md declaring all 31 ported channels (13 genuinely-Steam
+
 + 2 corrected-to-GOG + 16 Humble) in one five-column table with honest per-row proof levels (unit /
+
 unit + LIVE (item N) / unit only, declared) drawn from what the 8 prior SUMMARYs actually record --
 never inflated to "seen working". Named all four framing corrections this phase owed its own
 upstream planning docs: humbleRecordGiftLinkOpened's corrected handle kind, the GOG reclassification
@@ -2493,8 +2495,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T23:59:00.000Z
-Stopped at: Phase 34.4 COMPLETE (10/10 plans) -- blocking live gate PASSED 5/5, verification
+Last session: 2026-07-27T01:56:53.458Z
+Stopped at: Phase 34.4.1 context gathered
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
