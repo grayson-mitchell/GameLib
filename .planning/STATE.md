@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-05-PLAN.md
-last_updated: "2026-07-27T07:56:58.349Z"
+stopped_at: Completed 34.4.1-09-PLAN.md (wave 4, out of sequence; 06/07/08 remain incomplete)
+last_updated: "2026-07-27T08:32:41.877Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 117
+  completed_plans: 118
   percent: 75
 ---
 
@@ -34,7 +34,25 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 6 of 9
+Plan: 6 of 9 complete (01/02/03/04/05/09 done; 09 executed out of sequence as wave 4, depends only
+on 02+05; 06/07/08 remain incomplete)
+
+34.4.1-09 done -- Wired all four OAuth runners (legendary/gog/nile/zoom) to the login-window seam
+(commits `c427330ea`, `f8e4bc1de`, `c76875e83`): Task 1 added `matchOAuthRedirect()` (pure, all
+four real redirect shapes individually proven by test) + `captureOAuthLogin()` (seam-driven,
+deadline-bounded, close-guaranteed, never rejects). Task 2 exposed one `oauthCaptureLogin` handle
+channel, boundary-validated, reaching `window.api` (verified by importing the assembled preload
+default export directly, not by grep alone). Task 3 added `useTauriOAuthLogin()`, which genuinely
+opens a login window per runner, captures the redirect, and hands the code to the still-unported
+`login`/`authGOG`/`authAmazon`/`authZoom` -- the `UNPORTED_CHANNEL_MARKER` rejection is caught and
+surfaced as `{ phase: 'blocked' }` (never swallowed, never an unhandled rejection, asserted live
+per runner), and `TauriLoginPanel` now renders the real capture phases via plan 05's reserved
+`state` prop. `OAuthRunner`/`OAuthCaptureOutcome` moved to `common/types/oauthLogin.ts` (common ->
+backend/frontend import direction preserved). `GlobalState.tsx` untouched (verified empty diff).
+One Rule-3 blocking fix: added the new sidecar test file to `testContainment.test.ts`'s declared
+containment list. `npm run test:ci`: 3084 passed / 1 failed (documented baseline) / 166 suites --
+no new failures. REQ-34.4.1-08 complete, see 34.4.1-09-SUMMARY.md. Next: 34.4.1-06/07/08 (still
+incomplete; this plan was executed out of sequence as its own wave).
 
 34.4.1-04 done -- Gave `humbleRevealKey` a real Tauri transport (commits `118fdffae`, `10312ad35`):
 Task 1 added the `humble_reveal_post` Rust dispatch arm -- a hidden, on-demand child window issues
@@ -2221,6 +2239,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P03 | 21min | 2 tasks | 2 files |
 | Phase 34.4.1 P04 | 40min | 2 tasks | 10 files |
 | Phase 34.4.1 P05 | 35min | 3 tasks | 7 files |
+| Phase 34.4.1 P09 | 70min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -2515,6 +2534,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-05]: Combined plan tasks 1+3 into one commit (WebviewUnavailablePanel's runner->url rename and TauriLoginPanel's wiring share one index.tsx call site; splitting them would leave tsc red between commits)
 - [Phase 34.4.1-05]: TauriLoginPanel logs window.api.logInfo synchronously in its render body, not useEffect, matching index.tsx's own convention and this project's hookless/DOM-less test-invocation pattern
 - [Phase 34.4.1-05]: REQ-34.4.1-08 only half-closed here (declared-blocked surface shipped); the wired/navigation-capture half is plan 34.4.1-09's per the plan's own frontmatter note
+- [Phase 34.4.1]: OAuthRunner/OAuthCaptureOutcome moved to common/types/oauthLogin.ts (not backend/sidecar) so common/types/ipc.ts can reference them without common/ importing from backend/sidecar -- common -> backend/frontend is the only established import direction.
+- [Phase 34.4.1]: TauriLoginPanel's state-absent/idle default keeps plan 05's original declared-blocked wording byte-identical; only the real post-capture 'blocked' phase gets the reworded 'captured, but can't finish yet' copy -- required since plan 05's TauriLoginPanel.test.tsx is not in plan 09's files_modified list and must keep passing unmodified.
+- [Phase 34.4.1]: useTauriOAuthLogin calls window.api.login/authGOG/authAmazon/authZoom directly rather than GlobalState's epicLogin/gogLogin/amazonLogin/zoomLogin wrappers, so the hook can own its try/catch of UNPORTED_CHANNEL_MARKER without touching GlobalState.tsx at all (verified empty diff).
 
 ### Pending Todos
 
@@ -2586,8 +2608,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T07:56:58.341Z
-Stopped at: Completed 34.4.1-05-PLAN.md
+Last session: 2026-07-27T08:32:41.867Z
+Stopped at: Completed 34.4.1-09-PLAN.md (wave 4, out of sequence; 06/07/08 remain incomplete)
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
