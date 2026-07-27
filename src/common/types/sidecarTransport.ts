@@ -236,6 +236,53 @@ export const RUST_CLIPBOARD_READ_TEXT = 'clipboard_read_text' as const
 export const RUST_TRAY_SET_ICON = 'tray_set_icon' as const
 
 /**
+ * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
+ * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
+ * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
+ * inherits for Epic/GOG/Amazon/Zoom too. Args: `[url: string, visible: boolean,
+ * userAgent: string]`. Resolves the generated window label (never `main`/`about`, never
+ * derived from `url` -- T-34.1-27).
+ */
+export const RUST_HUMBLE_LOGIN_OPEN = 'humble_login_open' as const
+
+/**
+ * Rust-side channel name: read the login window's cookie jar with a domain-suffix filter
+ * (Phase 34.4.1 Plan 01, D-02, REQ-34.4.1-01). Args: `[label: string, host: string,
+ * names: string[]]`. Resolves `{ total: number, matched: Array<{name, domain, value}> }`
+ * -- `total` is the UNFILTERED jar size, the liveness proof that distinguishes a
+ * genuinely empty jar from a silently dead cookie API
+ * (`navigator-clipboard-noops-under-tauri`'s failure shape). Never `cookies_for_url()`
+ * -- see `.claude/skills/spike-findings-gamelib/references/tauri-login-webview-cookies.md`.
+ */
+export const RUST_HUMBLE_LOGIN_COOKIES = 'humble_login_cookies' as const
+
+/**
+ * Rust-side channel name: drain the login window's queued main-frame navigation events
+ * (Phase 34.4.1 Plan 01, REQ-34.4.1-03). Args: `[label: string]`. Resolves an array of
+ * `{ event: 'started' | 'finished', url: string }`, relayed from `on_page_load` --
+ * NEVER `on_navigation`, which also fires for third-party iframes and would let an ad
+ * frame re-arm a login watch's deadline indefinitely.
+ */
+export const RUST_HUMBLE_LOGIN_TAKE_EVENTS = 'humble_login_take_events' as const
+
+/**
+ * Rust-side channel name: close a login window (Phase 34.4.1 Plan 01, D-01). Args:
+ * `[label: string]`. Resolves `Bool(existed)` -- a missing label is a healthy
+ * already-closed state, never an error.
+ */
+export const RUST_HUMBLE_LOGIN_CLOSE = 'humble_login_close' as const
+
+/**
+ * Rust-side channel name: domain-scoped cookie clear for `humbleDisconnect` (Phase
+ * 34.4.1 Plan 01, D-08, REQ-34.4.1-06). Args: `[label: string, domain: string]`.
+ * Resolves the deleted-cookie count. Never a blanket wipe -- the platform cookie jar is
+ * app-wide and will hold Epic/GOG/Amazon cookies once Phase 34.5 lands, so this is
+ * scoped strictly to `domain`'s suffix match, never `clear_all_browsing_data()`.
+ */
+export const RUST_HUMBLE_LOGIN_CLEAR_COOKIES =
+  'humble_login_clear_cookies' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -255,7 +302,12 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,
-  RUST_TRAY_SET_ICON
+  RUST_TRAY_SET_ICON,
+  RUST_HUMBLE_LOGIN_OPEN,
+  RUST_HUMBLE_LOGIN_COOKIES,
+  RUST_HUMBLE_LOGIN_TAKE_EVENTS,
+  RUST_HUMBLE_LOGIN_CLOSE,
+  RUST_HUMBLE_LOGIN_CLEAR_COOKIES
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

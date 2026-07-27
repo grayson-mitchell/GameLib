@@ -27,6 +27,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::{Arc, Mutex};
@@ -370,6 +371,109 @@ fn clipboard_read_value(read: Result<String, String>) -> Result<Value, String> {
     }
 }
 
+// ---- Login-window (child WebviewWindow) support (Phase 34.4.1 Plan 01, D-01/D-02) ----
+//
+// D-02's resolved shape: a runner-agnostic set of `dispatch_rust_channel` arms -- nothing
+// below knows what Humble is -- reached only via `requestRustInvoke()` from the headless
+// Node sidecar, the same pattern as the keyring/dialog_open/clipboard arms above and
+// below. Pure logic (label generation, URL validation, the domain-suffix filter, event
+// shaping) is extracted into `AppHandle`-free functions here, proven by
+// `#[cfg(test)] mod tests`; the arms' actual `WebviewWindowBuilder`/`cookies()`/
+// `delete_cookie()` calls are proven empirically instead, by this phase's REQ-34.4.1-12
+// blocking live gate (`34.4.1-LIVE-GATE.md`), the same split Phase 34.3's clipboard arms
+// use.
+
+/// Monotonic counter feeding `next_login_window_label()`. Process-static, mirrors this
+/// file's existing `SidecarState::next_id()` counter shape.
+static LOGIN_WINDOW_LABEL_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Navigation events observed by the `on_page_load` hook (Pattern 4 below), queued per
+/// window label and drained by `humble_login_take_events`. `Mutex<Option<HashMap<..>>>`
+/// rather than `Mutex<HashMap<..>>` because `HashMap::new()` is not a `const fn` (its
+/// default `RandomState` seed is not const-constructible) -- the map is created lazily on
+/// first use instead.
+static LOGIN_WINDOW_EVENTS: Mutex<Option<HashMap<String, Vec<Value>>>> = Mutex::new(None);
+
+/// Per-label cap on `LOGIN_WINDOW_EVENTS`, oldest-dropped past this bound (threat
+/// T-34.4.1-09): a page that navigates in a loop must not grow the queue without bound
+/// between `humble_login_take_events` drains.
+const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
+
+/// Generates a login-window label that can NEVER equal `main`/`about` and is NEVER
+/// derived from any caller-supplied argument (T-34.1-27, REQ-34.4.1-09) -- the Rust-side
+/// port of `tauriChildWindows.ts`'s `nextExternalWindowLabel()` discipline. The fixed
+/// `loginwin-` prefix (neither reserved label starts with it) plus a process-lifetime
+/// monotonic counter plus a nanosecond timestamp guarantee uniqueness; the trailing hex
+/// entropy (sourced from `RandomState`'s OS-seeded random keys -- std, no new dependency)
+/// means the label is not predictable from the counter/timestamp alone. Child labels
+/// never join `capabilities/default.json`'s `windows: ["main"]` array, so a label that is
+/// never `main`/`about` and never url-derived matches NO capability and gets zero Tauri
+/// command access.
+fn next_login_window_label() -> String {
+    let n = LOGIN_WINDOW_LABEL_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+    (n, nanos).hash(&mut hasher);
+    let entropy = (hasher.finish() & 0xffff_ffff) as u32;
+    format!("loginwin-{n:x}-{nanos:x}-{entropy:08x}")
+}
+
+/// This arm's entire ASVS V5 input validation (threat T-34.4.1-08): `args[0]` must be
+/// present, a JSON string, and parse as an absolute URL whose scheme is exactly `https`.
+/// `http://`, `file://` and `javascript:` are all rejected HERE, before any real OS
+/// window is constructed -- this is the arm's only gate.
+fn login_window_url_arg(args: &[Value]) -> Result<tauri::Url, String> {
+    let raw = args
+        .first()
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
+    let url = tauri::Url::parse(raw).map_err(|_| "humble_login_open:bad-url".to_string())?;
+    if url.scheme() != "https" {
+        return Err("humble_login_open:bad-url".to_string());
+    }
+    Ok(url)
+}
+
+/// The ONLY domain comparison in this file -- the wry cookies-for-url API (the plausible
+/// but WRONG shortcut this function replaces) MUST NOT appear anywhere in `main.rs` (see
+/// the cookie arms below). Proper suffix match: `host ==
+/// domain` OR `host` ends with `.{domain}`, never wry's `==`-only comparison, which
+/// silently drops `_simpleauth_sess` for `www.humblebundle.com` because Humble stores it
+/// against the apex domain `humblebundle.com` (spike 014a /
+/// `.claude/skills/spike-findings-gamelib/references/tauri-login-webview-cookies.md`).
+fn cookie_domain_matches(host: &str, domain: Option<&str>) -> bool {
+    match domain {
+        Some(d) => host == d || host.ends_with(&format!(".{d}")),
+        None => false,
+    }
+}
+
+/// Shapes one `LOGIN_WINDOW_EVENTS` queue entry -- the exact `{"event", "url"}` shape
+/// `humble_login_take_events`'s interface contract promises the sidecar.
+fn login_event_value(kind: &str, url: &str) -> Value {
+    serde_json::json!({ "event": kind, "url": url })
+}
+
+/// Pushes one navigation event onto `label`'s queue, capping it at
+/// `LOGIN_WINDOW_EVENTS_CAP` with oldest-dropped (T-34.4.1-09). Called from the
+/// `on_page_load` hook below, which may run off the calling thread -- hence the `Mutex`.
+/// A poisoned lock (only reachable after a prior panic elsewhere) fails this single push
+/// silently rather than panicking a webview navigation callback.
+fn push_login_window_event(label: &str, event: Value) {
+    let Ok(mut guard) = LOGIN_WINDOW_EVENTS.lock() else {
+        return;
+    };
+    let map = guard.get_or_insert_with(HashMap::new);
+    let queue = map.entry(label.to_string()).or_insert_with(Vec::new);
+    queue.push(event);
+    if queue.len() > LOGIN_WINDOW_EVENTS_CAP {
+        queue.remove(0);
+    }
+}
+
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -709,6 +813,154 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 Some(path) => Ok(Value::String(path.to_string())),
                 None => Ok(Value::Null),
             }
+        }
+        // Open a fail-closed child login window on any https URL (Phase 34.4.1 Plan 01,
+        // D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by design: nothing
+        // here knows what Humble is. `.user_agent()` is MANDATORY, not reinforcement --
+        // Tauri's default macOS UA carries no browser product token at all (spike 013).
+        // Deliberately NO `.title()` call (WR-07 anti-phishing: the loaded document's
+        // own title must show, never a hard-coded "GameLib"). The relay is wired to
+        // `on_page_load` (main-frame Started/Finished only), NEVER `on_navigation` --
+        // spike 013 measured 5 of 8 `on_navigation` events as third-party iframes, and
+        // relaying those would let an ad frame re-arm the sidecar's login-watch deadline
+        // forever (Pitfall 2).
+        "humble_login_open" => {
+            let url = login_window_url_arg(args)?;
+            let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
+            let user_agent = args
+                .get(2)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
+            let label = next_login_window_label();
+            let event_label = label.clone();
+            tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
+                .user_agent(user_agent)
+                .visible(visible)
+                .on_page_load(move |_webview, payload| {
+                    let kind = match payload.event() {
+                        tauri::webview::PageLoadEvent::Started => "started",
+                        tauri::webview::PageLoadEvent::Finished => "finished",
+                    };
+                    let event = login_event_value(kind, payload.url().as_str());
+                    push_login_window_event(&event_label, event);
+                })
+                .build()
+                .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
+            Ok(Value::String(label))
+        }
+        // Return the FULL unfiltered cookie count (`total`) alongside a domain/name
+        // filtered `matched` list (Phase 34.4.1 Plan 01, D-02, REQ-34.4.1-01). `total` is
+        // the liveness proof (34.4.1-RESEARCH.md Pattern 3) -- the sidecar's poll can
+        // distinguish "the jar is genuinely empty" from "the API is silently dead", the
+        // `navigator-clipboard-noops-under-tauri` failure shape. The wry cookies-for-url
+        // shortcut MUST NOT appear anywhere in this file -- see `cookie_domain_matches`
+        // above (the ONLY domain comparison this file uses). This arm
+        // never logs a cookie value (T-34.4.1-02); values are returned only to the
+        // caller's own explicit request over the already-allowlisted rustInvoke channel.
+        "humble_login_cookies" => {
+            let label = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_cookies:bad-args".to_string())?;
+            let host = args
+                .get(1)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_cookies:bad-args".to_string())?;
+            let names: Vec<&str> = args
+                .get(2)
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
+                .unwrap_or_default();
+            let window = app
+                .get_webview_window(label)
+                .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
+            let all = window.cookies().map_err(|e| e.to_string())?;
+            let total = all.len();
+            let matched: Vec<Value> = all
+                .into_iter()
+                .filter(|c| cookie_domain_matches(host, c.domain()))
+                .filter(|c| names.is_empty() || names.contains(&c.name()))
+                .map(|c| {
+                    serde_json::json!({
+                        "name": c.name(),
+                        "domain": c.domain().unwrap_or_default(),
+                        "value": c.value()
+                    })
+                })
+                .collect();
+            Ok(serde_json::json!({ "total": total, "matched": matched }))
+        }
+        // Drain (not merely read) `label`'s queued navigation events (Phase 34.4.1 Plan
+        // 01, REQ-34.4.1-03's navigation relay contract). An absent/never-navigated label
+        // resolves an empty array -- a healthy state, not an error.
+        "humble_login_take_events" => {
+            let label = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_take_events:bad-args".to_string())?;
+            let mut guard = LOGIN_WINDOW_EVENTS
+                .lock()
+                .map_err(|_| "humble_login_take_events:lock-poisoned".to_string())?;
+            let events = guard
+                .as_mut()
+                .and_then(|map| map.remove(label))
+                .unwrap_or_default();
+            Ok(Value::Array(events))
+        }
+        // Close the login window (Phase 34.4.1 Plan 01, D-01). A missing label is a
+        // healthy "already closed" state, not an error -- resolves `Bool(false)` rather
+        // than erroring, the same D-08 "no window is not a phase failure" shape as
+        // `tray_set_icon`'s missing-tray branch above.
+        "humble_login_close" => {
+            let label = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_close:bad-args".to_string())?;
+            match app.get_webview_window(label) {
+                Some(window) => {
+                    window.close().map_err(|e| e.to_string())?;
+                    if let Ok(mut guard) = LOGIN_WINDOW_EVENTS.lock() {
+                        if let Some(map) = guard.as_mut() {
+                            map.remove(label);
+                        }
+                    }
+                    Ok(Value::Bool(true))
+                }
+                None => Ok(Value::Bool(false)),
+            }
+        }
+        // Domain-SCOPED cookie clear (Phase 34.4.1 Plan 01, D-08, REQ-34.4.1-06, threat
+        // T-34.4.1-03). The wry clear-all-browsing-data shortcut MUST NOT appear anywhere
+        // in this file: the jar is app-wide and will hold Epic/GOG/Amazon cookies once Phase 34.5
+        // lands, so a blanket wipe would silently sign the user out of storefronts they
+        // never touched (Pitfall 3). No single "delete by domain" API exists -- this is
+        // `cookies()` + the suffix filter + a per-cookie `delete_cookie()` loop.
+        "humble_login_clear_cookies" => {
+            let label = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?;
+            let domain = args
+                .get(1)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?;
+            let window = app
+                .get_webview_window(label)
+                .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
+            let matching: Vec<_> = window
+                .cookies()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .filter(|c| match c.domain() {
+                    Some(d) => cookie_domain_matches(d, Some(domain)),
+                    None => false,
+                })
+                .collect();
+            let deleted = matching.len();
+            for cookie in matching {
+                window.delete_cookie(cookie).map_err(|e| e.to_string())?;
+            }
+            Ok(Value::Number(deleted.into()))
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
