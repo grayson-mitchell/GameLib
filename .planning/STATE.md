@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-04-PLAN.md
-last_updated: "2026-07-27T07:35:21.353Z"
+stopped_at: Completed 34.4.1-05-PLAN.md
+last_updated: "2026-07-27T07:56:58.349Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 116
+  completed_plans: 117
   percent: 75
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 
 34.4.1-04 done -- Gave `humbleRevealKey` a real Tauri transport (commits `118fdffae`, `10312ad35`):
 Task 1 added the `humble_reveal_post` Rust dispatch arm -- a hidden, on-demand child window issues
@@ -1386,7 +1386,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-04): the same splice-into-historical-prose bug recurred again this session --
@@ -2220,6 +2220,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P02 | 42min | 4 tasks | 3 files |
 | Phase 34.4.1 P03 | 21min | 2 tasks | 2 files |
 | Phase 34.4.1 P04 | 40min | 2 tasks | 10 files |
+| Phase 34.4.1 P05 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -2511,6 +2512,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-04]: reveal_post_script built via concat! of single-quoted-JS single-line pieces instead of a multi-line r#"..."# raw string — satisfies the repo's WR-08 per-line quote-balance gate, which a multi-line raw string's opening/closing lines each violate
 - [Phase 34.4.1-04]: humblePostRequestViaSeam wraps seam.revealPost() in the same REQUEST_TIMEOUT_MS bound the Electron branch uses — Promise.race so a hung rustInvoke round-trip surfaces the existing, recognizable timeout error instead of hanging the reveal
 - [Phase 34.4.1-04]: electronStub.net.request's error message retired to a generic 'not implemented in the sidecar' (no phase pointer) — the seam that message used to point at now exists; netStub.test.ts updated to match the retired wording
+- [Phase 34.4.1-05]: Combined plan tasks 1+3 into one commit (WebviewUnavailablePanel's runner->url rename and TauriLoginPanel's wiring share one index.tsx call site; splitting them would leave tsc red between commits)
+- [Phase 34.4.1-05]: TauriLoginPanel logs window.api.logInfo synchronously in its render body, not useEffect, matching index.tsx's own convention and this project's hookless/DOM-less test-invocation pattern
+- [Phase 34.4.1-05]: REQ-34.4.1-08 only half-closed here (declared-blocked surface shipped); the wired/navigation-capture half is plan 34.4.1-09's per the plan's own frontmatter note
 
 ### Pending Todos
 
@@ -2582,8 +2586,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T07:35:21.344Z
-Stopped at: Completed 34.4.1-04-PLAN.md
+Last session: 2026-07-27T07:56:58.341Z
+Stopped at: Completed 34.4.1-05-PLAN.md
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
