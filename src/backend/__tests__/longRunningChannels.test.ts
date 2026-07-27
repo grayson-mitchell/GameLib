@@ -23,6 +23,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { stripTrailingLineComment } from '../testUtils/stripSourceComments'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -127,7 +128,7 @@ function stripRustLineComments(source: string): string {
   return source
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
-    .map((line) => line.replace(/\/\/.*$/, ''))
+    .map(stripTrailingLineComment)
     .join('\n')
 }
 
@@ -328,30 +329,45 @@ describe('stripper integrity (WR-08)', () => {
     expect(unbalancedLines).toEqual([])
   })
 
-  // Self-test proving the guard above can actually FAIL (mirrors this file's other self-tests):
-  // a synthetic Rust line carrying a quoted `steam://` literal followed by a trailing `//`
-  // comment is exactly the future regression WR-08 predicts. Feeding it through the SAME
-  // `loadMainRsCode()` code path (via the optional `source` parameter) demonstrates the stripper
-  // truncates the literal, producing an ODD "-count on that line — i.e. that the (a)/(b) guards
-  // above would reject it.
+  // WR-08 is now RESOLVED rather than merely predicted (34.4.1 Plan 01 post-merge gate).
   //
-  // Honesty note (34.2-28 Task 2 resolution): the truncation is driven entirely by the FIRST `//`
-  // the naive stripper finds — here, the one embedded inside the `steam://` literal itself — not
-  // by the appended ` // trailing note`. That trailing comment is kept below (matching this
-  // plan's literal fixture request, so the title's claim is true), but removing ONLY it would
-  // leave the line's outcome unchanged: the embedded `//` alone already truncates the literal
-  // before the appended comment is ever reached. The genuine falsifiability lever is therefore
-  // the literal's OWN `//`, not the trailing comment — demonstrated by hand in 34.2-28-SUMMARY.md
-  // by temporarily removing the `//` from the literal itself (not the trailing comment) and
-  // observing this self-test fail (EVEN count), then restoring.
-  test('self-test: a synthetic code line with a quoted steam:// literal plus a trailing comment produces an ODD "-count on that line (proves the guard can fail)', () => {
+  // History: this self-test previously asserted the OPPOSITE — that the naive
+  // `line.replace(/\/\/.*$/, '')` pass truncates a quoted `//`-bearing literal, producing an ODD
+  // "-count, i.e. that guards (a)/(b) above would reject such a line. That was an honest
+  // description of a real defect, deliberately pinned so the defect could not be forgotten.
+  //
+  // The predicted regression then arrived: Phase 34.4.1's login-window arms gave main.rs's
+  // `#[cfg(test)]` fixtures six real `"https://..."` / `"http://..."` / `"file:///..."` literals
+  // on CODE lines, and the naive pass cut all six in half — tripping guard (b). Per the guard's
+  // own instruction ("this local pass must be reconsidered, not the assertion weakened"), the
+  // stripper became string-literal-aware (`stripTrailingLineComment`), so the two tests below
+  // replace the old truncation assertion:
+  //   1. the literal now SURVIVES intact while its trailing comment is still dropped — the exact
+  //      behaviour guards (a)/(b) need in order to be sound;
+  //   2. guard (b) can still FAIL, proven with a genuinely unbalanced line. This is the
+  //      falsifiability lever that the old test provided via truncation; without it, fixing the
+  //      stripper would have silently converted guard (b) into an unfalsifiable no-op.
+  test('self-test: a quoted steam:// literal SURVIVES stripping (EVEN "-count) while its trailing comment is still dropped', () => {
     const syntheticSource = [
       'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
       'const RUNGAME_PREFIX: &str = "steam://rungameid/"; // trailing note'
     ].join('\n')
-    const strippedLines = loadMainRsCode(syntheticSource).split('\n')
-    const truncatedLine = strippedLines[1]
-    const quoteCount = (truncatedLine.match(/"/g) ?? []).length
+    const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
+    const quoteCount = (strippedLine.match(/"/g) ?? []).length
+    expect({
+      quoteCount,
+      literalIntact: strippedLine.includes('"steam://rungameid/"'),
+      commentDropped: !strippedLine.includes('trailing note')
+    }).toEqual({ quoteCount: 2, literalIntact: true, commentDropped: true })
+  })
+
+  test('self-test: a genuinely unbalanced code line still produces an ODD "-count (proves guard (b) can fail)', () => {
+    const syntheticSource = [
+      'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
+      'const BROKEN: &str = "unterminated literal;'
+    ].join('\n')
+    const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
+    const quoteCount = (strippedLine.match(/"/g) ?? []).length
     expect(quoteCount % 2).toBe(1)
   })
 })

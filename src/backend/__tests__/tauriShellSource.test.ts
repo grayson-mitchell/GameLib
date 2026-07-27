@@ -16,7 +16,10 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { stripSourceComments } from '../testUtils/stripSourceComments'
+import {
+  stripSourceComments,
+  stripTrailingLineComment
+} from '../testUtils/stripSourceComments'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -51,8 +54,8 @@ const CAPABILITIES_PATH = join(
  *      `.kill()` / `try_state::<Arc<SidecarState>>`), so a block comment merely NAMING one of
  *      these tokens must not satisfy the gate.
  *   2. THEN a LOCAL trailing-`//` pass on that output — `stripSourceComments`'s own docstring
- *      permits a caller to layer this on top when it can show its own matchers never touch a
- *      `//`-bearing string literal (WR-08 tradeoff, see below). This drops:
+ *      directs callers needing trailing-comment stripping to layer its
+ *      `stripTrailingLineComment` helper here. This drops:
  *        - every line whose trimmed form starts with `//` (covers `//`, `///`, `//!`)
  *        - a trailing `// ...` fragment from any mixed code/comment line
  * This stripping exists because main.rs's doc comments quote the very strings under
@@ -60,17 +63,19 @@ const CAPABILITIES_PATH = join(
  * against a comment that merely mentions X was removed, and every "DOES contain X" test
  * could pass vacuously against a comment that merely describes X.
  *
- * Accepted WR-08 tradeoff: the local trailing-`//` pass in stage 2 can truncate a code line
- * containing a quoted `//`-bearing string literal (e.g. `"steam://..."`) — this is acceptable
- * here because none of this file's assertions match against such a literal. If a future
- * assertion needs to, this local pass must be reconsidered, not the assertion weakened.
+ * WR-08 (resolved in 34.4.1): stage 2 was a naive `/\/\/.*$/` replace, accepted on the premise
+ * that no assertion here matched a `//`-bearing string literal. Phase 34.4.1's login-window
+ * arms broke that premise — main.rs's `#[cfg(test)]` fixtures now assert on real
+ * `"https://..."` / `"file:///..."` URLs. Per that guard's own instruction the local pass was
+ * reconsidered, not the assertion weakened: it is now the string-literal-aware
+ * `stripTrailingLineComment`, which cuts only at a `//` found OUTSIDE a quoted string.
  */
 function loadMainRsCode(source?: string): string {
   const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
-    .map((line) => line.replace(/\/\/.*$/, ''))
+    .map(stripTrailingLineComment)
     .join('\n')
 }
 
@@ -222,7 +227,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // #[cfg(test)] mod) are the behavioral proof for these two; this gate only pins that no
       // OTHER, undeclared arm has crept in since.
       'clipboard_write_text',
-      'clipboard_read_text'
+      'clipboard_read_text',
+      // Phase 34.4.1 Plan 01 (D-01/D-02, REQ-34.4.1-01) legitimately added exactly these five
+      // login-window arms -- main.rs's own #[cfg(test)] mod is the behavioral proof for their
+      // pure logic (URL/arg validation, label generation, cookie domain-suffix matching); this
+      // gate only pins that no OTHER, undeclared arm has crept in since.
+      'humble_login_open',
+      'humble_login_cookies',
+      'humble_login_take_events',
+      'humble_login_close',
+      'humble_login_clear_cookies'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
