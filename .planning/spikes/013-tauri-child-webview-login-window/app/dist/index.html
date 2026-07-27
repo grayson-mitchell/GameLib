@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike 013/014/015 — Tauri login webview + cookie probe</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 18px 22px 40px;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #0e1116; color: #d7dde5;
+      }
+      h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .02em; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+           color: #7d8899; margin: 22px 0 8px; font-weight: 600; }
+      .sub { color: #6b7686; font-size: 11.5px; margin-bottom: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; align-items: center; }
+      button {
+        font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px;
+        border: 1px solid #2b3442; background: #171d26; color: #cfd8e3; cursor: pointer;
+      }
+      button:hover { background: #1e2732; border-color: #3a4657; }
+      button.p { background: #1b3a5c; border-color: #2d5c8f; color: #d7e9ff; }
+      button.g { background: #1c3d2a; border-color: #2c6141; color: #d3f2df; }
+      label.chk { display: inline-flex; gap: 5px; align-items: center; color: #8b96a6; font-size: 12px; }
+      .card { border: 1px solid #232c38; border-radius: 8px; background: #131922; padding: 12px 14px; margin-bottom: 10px; }
+      .verdict { font-size: 15px; font-weight: 700; letter-spacing: .03em; }
+      .v-SUPPORTED_NONEMPTY { color: #57d98a; }
+      .v-SUPPORTED_BUT_EMPTY { color: #59b0f2; }
+      .v-UNSUPPORTED_OR_ERROR { color: #ff8f6b; }
+      .v-UNDECIDABLE { color: #ffd166; }
+      .note { color: #97a3b4; font-size: 12px; margin-top: 5px; }
+      table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 11.5px; }
+      th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid #1e2732; }
+      th { color: #6f7b8c; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .07em; }
+      td.y { color: #57d98a; } td.n { color: #4d5765; }
+      #log { height: 260px; overflow: auto; border: 1px solid #232c38; border-radius: 8px;
+             background: #0b0f14; padding: 8px 10px; font-size: 11px; }
+      .ev { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+      .c-navigation { color: #8fb8ff; } .c-cookie-read { color: #ffd39b; }
+      .c-control-server { color: #9fe6bd; } .c-window { color: #c9a7ff; }
+      .c-remote-ipc { color: #ff9ecb; } .c-app, .c-env { color: #6f7b8c; }
+      code { background: #1a212c; padding: 1px 5px; border-radius: 4px; color: #9fd6ff; }
+      .ok { color: #57d98a; } .bad { color: #ff8f6b; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 013 / 014a / 014b / 015 — Tauri 2.11.5 child WebviewWindow + cookie read</h1>
+    <div class="sub" id="env">loading env…</div>
+
+    <h2>Step 1 — positive control (run this FIRST)</h2>
+    <div class="sub">
+      Until a control cookie has been read back through the Rust API, every empty read is
+      reported <code>UNDECIDABLE</code> — because that is the honest answer.
+    </div>
+    <div class="row">
+      <button class="g" onclick="openControl()">1a · Open control window → /set</button>
+      <button onclick="nav('login-control', ORIGIN + '/probe')">1b · → /probe (Cookie header oracle)</button>
+      <button class="p" onclick="read('login-control', null, 'sync')">1c · Rust cookies() [sync]</button>
+      <button class="p" onclick="read('login-control', ORIGIN, 'sync')">1d · cookies_for_url(localhost)</button>
+      <button onclick="read('login-control', 'http://127.0.0.1:17913', 'sync')">1e · cookies_for_url(127.0.0.1) — H1</button>
+      <button onclick="docCookie('login-control')">1f · document.cookie [014b]</button>
+    </div>
+
+    <h2>Step 2 — live site (humblebundle.com)</h2>
+    <div class="sub">
+      Anonymous load only. Humble hands <code>_simpleauth_sess</code> to anonymous visitors too,
+      so no login is needed to see whether the read channel works.
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="ua" checked /> spoof Chrome UA</label>
+      <label class="chk"><input type="checkbox" id="incog" /> incognito</label>
+      <label class="chk"><input type="checkbox" id="store" /> isolated data store (015)</label>
+      <button class="g" onclick="openHumble()">2a · Open Humble login window</button>
+      <button class="p" onclick="read('login-humble', null, 'sync')">2b · cookies() [sync]</button>
+      <button class="p" onclick="read('login-humble', 'https://www.humblebundle.com', 'sync')">2c · cookies_for_url(www.)</button>
+      <button onclick="read('login-humble', 'https://humblebundle.com', 'sync')">2d · cookies_for_url(apex) — H1</button>
+      <button onclick="docCookie('login-humble')">2e · document.cookie [014b]</button>
+    </div>
+
+    <h2>Step 3 — thread behaviour (H2) &amp; isolation (015)</h2>
+    <div class="row">
+      <button onclick="read(lastLabel(), null, 'async')">3a · cookies() from WORKER thread</button>
+      <button onclick="read(lastLabel(), null, 'main')">3b · cookies() hopped to MAIN thread</button>
+      <button onclick="read('main', null, 'sync')">3c · read from the MAIN app webview (isolation)</button>
+      <button onclick="close_(lastLabel())">3d · Close login window</button>
+      <button onclick="read(lastLabel(), null, 'sync')">3e · Read AFTER close (lifetime)</button>
+    </div>
+
+    <h2>Latest read</h2>
+    <div id="result" class="card"><span class="note">no read yet</span></div>
+
+    <h2>Event log <button style="float:right" onclick="exportLog()">Export JSON</button></h2>
+    <div id="log"></div>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+      let ORIGIN = 'http://localhost:17913';
+      let _last = 'login-control';
+      const lastLabel = () => _last;
+
+      const logEl = document.getElementById('log');
+      function push(ev) {
+        const d = document.createElement('div');
+        d.className = 'ev c-' + ev.category;
+        const data = typeof ev.data === 'object' ? JSON.stringify(ev.data) : String(ev.data);
+        d.textContent = `${ev.t.slice(11, 23)}  [${ev.category}] ${ev.message}  ${data.slice(0, 400)}`;
+        logEl.appendChild(d);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      listen('spike-log', (e) => push(e.payload));
+
+      (async () => {
+        const env = await invoke('env_report');
+        ORIGIN = await invoke('control_origin');
+        document.getElementById('env').innerHTML =
+          `tauri <code>${env.tauri}</code> · wry <code>${env.wry}</code> · control origin <code>${ORIGIN}</code>`;
+      })();
+
+      async function openControl() {
+        _last = 'login-control';
+        await invoke('open_login', {
+          label: 'login-control', url: ORIGIN + '/set',
+          spoofUa: false, incognito: false, isolatedStore: false
+        }).catch(showErr);
+      }
+
+      async function openHumble() {
+        _last = 'login-humble';
+        await invoke('open_login', {
+          label: 'login-humble', url: 'https://www.humblebundle.com/login',
+          spoofUa: document.getElementById('ua').checked,
+          incognito: document.getElementById('incog').checked,
+          isolatedStore: document.getElementById('store').checked
+        }).catch(showErr);
+      }
+
+      const nav = (label, url) => invoke('navigate', { label, url }).catch(showErr);
+      const close_ = (label) => invoke('close_login', { label }).catch(showErr);
+
+      async function read(label, url, mode) {
+        const cmd = mode === 'async' ? 'read_cookies_async'
+                  : mode === 'main' ? 'read_cookies_on_main'
+                  : 'read_cookies_sync';
+        try {
+          render(await invoke(cmd, { label, url }));
+        } catch (e) { showErr(e); }
+      }
+
+      async function docCookie(label) {
+        try { renderDoc(await invoke('read_document_cookie', { label })); }
+        catch (e) { showErr(e); }
+      }
+
+      function render(r) {
+        const rows = r.cookies.map((c) => `
+          <tr><td>${esc(c.name)}</td><td>${esc(c.value)}</td><td>${esc(c.domain)}</td>
+          <td>${esc(c.path)}</td><td class="${c.http_only ? 'y' : 'n'}">${c.http_only}</td>
+          <td class="${c.secure ? 'y' : 'n'}">${c.secure}</td><td>${esc(c.same_site)}</td></tr>`).join('');
+        document.getElementById('result').innerHTML = `
+          <div class="verdict v-${r.verdict}">${r.verdict}</div>
+          <div class="note">${esc(r.verdict_note)}</div>
+          <div class="note">api <code>${r.api}</code> · window <code>${esc(r.webview)}</code>
+            · url <code>${esc(r.url || '—')}</code> · thread <code>${r.thread}</code>
+            · ${r.elapsed_ms} ms · ok=<span class="${r.ok ? 'ok' : 'bad'}">${r.ok}</span>
+            ${r.error ? ' · err ' + esc(r.error) : ''}</div>
+          <div class="note">control cookies seen: <b>${r.control_cookies_seen.join(', ') || 'none'}</b></div>
+          ${r.count ? `<table><tr><th>name</th><th>value</th><th>domain</th><th>path</th>
+            <th>httpOnly</th><th>secure</th><th>sameSite</th></tr>${rows}</table>` : ''}`;
+      }
+
+      function renderDoc(v) {
+        document.getElementById('result').innerHTML = `
+          <div class="verdict ${v.documentCookieNames.length ? 'v-SUPPORTED_NONEMPTY' : 'v-UNDECIDABLE'}">
+            document.cookie → ${v.documentCookieNames.length} name(s)</div>
+          <div class="note">${esc(v.note)}</div>
+          <div class="note">names: <b>${esc(v.documentCookieNames.join(', ') || 'none')}</b></div>
+          <div class="note">raw: <code>${esc(v.documentCookieRaw)}</code></div>
+          <div class="note">remote-origin Tauri IPC: <code>${esc(v.remoteIpcStatus)}</code>
+            · channel ok=${v.ok} · ${v.elapsedMs} ms</div>`;
+      }
+
+      function showErr(e) {
+        document.getElementById('result').innerHTML =
+          `<div class="verdict v-UNSUPPORTED_OR_ERROR">COMMAND ERROR</div><div class="note">${esc(String(e))}</div>`;
+      }
+      const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+      async function exportLog() {
+        const p = await invoke('export_log');
+        push({ t: new Date().toISOString(), category: 'app', message: 'log exported', data: p });
+      }
+    </script>
+  </body>
+</html>

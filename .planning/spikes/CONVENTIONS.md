@@ -30,6 +30,26 @@ question requires otherwise.
   compiled binary + transient `steam_appid.txt`; commit source + scripts + README + `run.log`.
   Requires the live signed-in Steam client (user launches it).
 
+- **Live-webview / platform-behaviour spikes (Tauri line, 013–015):** a real `cargo`-run Tauri
+  app (no Tauri CLI: static `dist/index.html` as `frontendDist`, `bundle.active = false`, plus a
+  copied `icons/icon.png` which `generate_context!` demands even when bundling is off). Set
+  `CARGO_TARGET_DIR` to the project's own `src-tauri/target` **and match `Cargo.toml` feature
+  flags to `src-tauri/Cargo.toml`** — the ~600 cached rlibs are then reused and a clean harness
+  build takes **5 s instead of ~10 min**. Ship both an interactive control panel *and* a scripted
+  `SPIKE_AUTORUN=N` path, so the evidence is reproducible and diffable rather than
+  click-dependent.
+- **When the question is "does this API silently no-op?", build a POSITIVE CONTROL first.**
+  A read returning `[]` is uninterpretable on its own. Stand up a loopback origin whose state you
+  set exactly, prove the API can see it, and only then trust an empty result from the real
+  target. Classify every result into an explicit verdict — `SUPPORTED_NONEMPTY` /
+  `SUPPORTED_BUT_EMPTY` / `UNSUPPORTED_OR_ERROR` / `UNDECIDABLE` — and never report a bare
+  empty list. Prefer **three independent oracles** (the API under test, a self-hosted server that
+  echoes what the client actually sent, and an in-page JS view): in 014a two oracles agreeing on
+  a *surprising* 3-of-5 result is what proved the API faithful and my control design wrong.
+- **Redact secrets in spike logs.** Cookie/token values are logged as a 3-char prefix + length
+  unless the spike set them itself (`spike_*`). Enough to prove identity and change across polls;
+  never a real session token on disk. Mirrors `user.ts`'s existing secrecy discipline.
+
 ## Structure
 
 - One directory per spike: `.planning/spikes/NNN-descriptive-name/`. Sub-probes of a single

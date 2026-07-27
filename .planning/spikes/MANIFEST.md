@@ -234,6 +234,10 @@ manager, dialog, launcher.
 | 010 | steam-user-rust-vs-sidecar | comparison | Given Steam CM auth + owned-apps + depot download, when tested Rust-native (steam-vent) vs Node sidecar, then determine if the Steam differentiator can go Rust or must stay Node | ✓ WINNER = Node sidecar (steam-user runs headless in 341ms, 0 electron imports; steam-vent 0.5.0 is auth-only + experimental, no depot/CDN) | tauri, rust, steam, steam-user, sidecar |
 | 011 | electron-api-parity-in-tauri | standard | Given the Electron APIs 009 surfaces, when mapped to Tauri v2 plugins, then build a minimal Tauri app proving the riskiest equivalents (encrypted token store; steam:// launch) work | ✓ VALIDATED (13/16 full parity; safeStorage→Keychain + steam:// launch PROVEN LIVE in compiled Rust; only session/powerSaveBlocker are minor shims) | tauri, rust, electron-api, parity |
 | 012 | react-frontend-under-tauri | standard | Given GameLib's React renderer + preload bridge, when hosted in a Tauri v2 webview with the bridge shimmed, then the real UI renders and one round-trip IPC call succeeds | ✓ VALIDATED (renderer decoupled by design: 379 window.api calls, 1 direct ipcRenderer; whole surface = 3 preload factories; rebuilt live on mock-Tauri transport, 0 electron symbols) | tauri, rust, react, frontend, ipc |
+| 013 | tauri-child-webview-login-window | standard | Given Tauri 2.11.5, when a child WebviewWindow opens a live login site with a spoofed UA, then the page loads and the parent observes every navigation | ✓ VALIDATED (external URLs load with no allowlist; `.user_agent()` reaches real requests; **`on_navigation` also fires for subframes** — use `on_page_load`; no `page-title-updated` analog) | tauri, webview, navigation, login, user-agent |
+| 014a | cookie-read-rust-webview-api | comparison | Given a webview that provably received Set-Cookie incl. HttpOnly, when Rust `cookies()`/`cookies_for_url()` runs on macOS, then real values return — and empty is distinguishable from unsupported | ✓ **WINNER** — API is real (HttpOnly+Secure values, 2–4 ms, any thread) **BUT `cookies_for_url()` does exact domain `==` and silently drops `_simpleauth_sess` for `www.humblebundle.com`** | tauri, cookies, wkwebview, false-negative, humble |
+| 014b | cookie-read-injected-js | comparison | Same precondition, when read via injected JS `document.cookie`, then which subset is visible — and does HttpOnly vanish silently | ✗ INVALIDATED as a login channel (`_simpleauth_sess` is HttpOnly → structurally invisible; 27 other cookies make it *look* healthy; remote-origin IPC denied by the ACL) | tauri, javascript, httponly, ipc, capabilities |
+| 015 | cookie-jar-isolation-persistence | standard | Given a login jar, when the window closes and the app restarts, then cookies persist and stay isolated from the main webview | ✓ VALIDATED (24 cookies survived process exit; `data_store_identifier` genuinely partitions) — **but there is no `session.fromPartition()` shape: jar access requires a LIVE webview handle** | tauri, cookies, persistence, partition, data-store-identifier |
 
 > **Overall Idea C feasibility (spikes 009–012):** A Rust/Tauri rearchitecture is **FEASIBLE but is
 > a deliberate reshape, not a free lunch** — and the divorce from Heroic upstream is its dominant
@@ -255,3 +259,59 @@ manager, dialog, launcher.
 > Heroic upstream merge worth a large IPC-transport re-plumb for a smaller/faster binary + a Rust
 > platform layer." Toolchain note: cargo/rustc present; `keyring` builds & round-trips the macOS
 > Keychain; no Tauri CLI installed (not needed for these probes).
+
+### Requirements (Idea C — login webview / cookie surface, from spikes 013–015)
+
+Spike 011 rated Electron's `session` API as one of only 3 of 16 needing "a small shim". Spikes
+013–015 went and measured it. The shim is small; the **semantics underneath it are not the same**,
+and one difference silently breaks Humble login.
+
+- **NEVER use `Webview::cookies_for_url()`. Use `cookies()` plus your own domain filter.**
+  wry's macOS implementation compares domains with plain string equality
+  (`wry-0.55.1/src/wkwebview/mod.rs:1184`), not RFC 6265 domain-matching. Measured against the
+  live site in the same instant: `cookies_for_url("https://www.humblebundle.com")` returns **4
+  cookies with `_simpleauth_sess` absent**, while `cookies()` returns 33 **including** it, and
+  the apex spelling returns 25 including it. Since
+  `HUMBLE_BASE_URL = 'https://www.humblebundle.com'` (`src/backend/humble/constants.ts:13`) is
+  passed verbatim to both `watchForLogin()` and `getLiveCsrfToken()`, a literal port makes the
+  login poll spin silently for its full 5-minute deadline and then settle `{status:'waiting'}`
+  with no error anywhere. The replacement filter must be a suffix match
+  (`host === domain || host.endsWith('.' + domain)`). *(014a — the killer finding.)*
+- **A zero-cookie read is only actionable with a liveness proof.** `count === 0` cannot be
+  distinguished from a dead API without one. Cheapest proof: on watch start, do one unfiltered
+  `cookies()` and require `> 0` — a login page always sets something (Humble set 33 cookies to an
+  anonymous visitor). If that returns 0, fail loudly instead of entering the poll. *(014a.)*
+- **The Rust cookie API is the ONLY viable login-detection channel.** `document.cookie` cannot
+  see `_simpleauth_sess` (`HttpOnly`) and cannot report that it cannot — it returns a
+  healthy-looking 27-name list with the deciding cookie missing. Any design that detects login
+  from injected JS is wrong by construction. *(014b.)*
+- **Good news: the API itself is sound on macOS.** `cookies()` returns `HttpOnly` + `Secure`
+  values in full, in 2–4 ms, from the main thread, a worker thread, or a `run_on_main_thread`
+  hop. The documented Windows deadlock does not reproduce; wry's internal 1 s timeout is never
+  approached. This is **not** the `[[navigator-clipboard-noops-under-tauri]]` shape. *(014a.)*
+- **Wire the navigation relay to `on_page_load`, never `on_navigation`.** `on_navigation` fires
+  for subframes — 5 of 8 events on the Humble login page were iframes (Optimizely, Humble's
+  mailer, `about:blank`). `notifyLoginNavigated()` re-arms the watch deadline, so relaying
+  subframe navigations would let a third-party ad frame keep a login watch alive indefinitely,
+  defeating WR-03's timeout. *(013.)*
+- **The UA override is mandatory, not reinforcement.** Tauri's default macOS UA is
+  `…AppleWebKit/605.1.15 (KHTML, like Gecko)` with **no browser product token** — a worse
+  bot-management fingerprint than Electron's default. `.user_agent()` on the builder does reach
+  real HTTP requests (verified server-side), so D-05/D-07's Chrome UA requirement is portable.
+  *(013.)*
+- **Cookie persistence across restart is free; isolation costs a live window.** The default
+  `WKWebsiteDataStore` is already disk-backed (24 cookies incl. `_simpleauth_sess` survived
+  process exit), so `persist:` needs no equivalent. But by default **there is no isolation at
+  all** — the app's own `tauri://` webview reads the live site's session cookie. Real
+  partitioning needs `data_store_identifier([u8;16])` (macOS 14+/iOS 17+ only; Windows/Linux
+  parity **unverified**), and an isolated jar is readable *only* through a live webview built
+  with that identifier. *(015.)*
+- **There is no `session.fromPartition()` shape in Tauri.** Electron hands the backend a session
+  object with no window attached; Tauri only ever hands you a `Webview`. Closing the login window
+  destroys the handle (`no webview window labelled …`) even though the cookies survive. A cookie
+  poller must therefore be anchored to a webview that outlives the poll. *(015.)*
+- **Remote pages cannot invoke app commands, but they do get `window.__TAURI__`.** A capability
+  with `remote.urls` grants the webview remote-IPC eligibility but not ACL access to
+  `#[tauri::command]`s (`rejected: … Plugin not found`). Meanwhile the Tauri global **is**
+  injected into `https://www.humblebundle.com`. Threat-model that before shipping a store
+  browser. *(014b.)*

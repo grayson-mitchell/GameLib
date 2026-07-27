@@ -1,0 +1,1714 @@
+{
+  "apiProvenLive": true,
+  "eventCount": 38,
+  "events": [
+    {
+      "category": "control-server",
+      "data": {
+        "origin": "http://localhost:17913"
+      },
+      "message": "listening",
+      "ms": 0,
+      "t": "2026-07-27T02:13:25.105Z"
+    },
+    {
+      "category": "app",
+      "data": {
+        "controlOrigin": "http://localhost:17913",
+        "mainThread": "ThreadId(1)"
+      },
+      "message": "started",
+      "ms": 622,
+      "t": "2026-07-27T02:13:25.727Z"
+    },
+    {
+      "category": "env",
+      "data": {
+        "controlOrigin": "http://localhost:17913",
+        "humbleUrl": "https://www.humblebundle.com/login",
+        "mainThreadCaptured": true,
+        "tauri": "2.11.5 (Cargo.lock-pinned, matches src-tauri)",
+        "wry": "0.55.1"
+      },
+      "message": "environment",
+      "ms": 1126,
+      "t": "2026-07-27T02:13:26.231Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== ROUND 2 PHASE A: persistence across app restart ===",
+      "ms": 1827,
+      "t": "2026-07-27T02:13:26.932Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "control_cookies_seen": [],
+        "cookies": [
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "csrf_cookie",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "rj1…<redacted 29 chars>",
+            "value_len": 29
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:37.0 +00:00:00)",
+            "http_only": true,
+            "name": "_simpleauth_sess",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 80 chars>",
+            "value_len": 80
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelyEndUserId",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "oeu…<redacted 35 chars>",
+            "value_len": 35
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118237664r0.4681488700041755$$5860319721947136$$VMAP",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "",
+            "value_len": 0
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118237664r0.4681488700041755$$5860319721947136$$VPROF",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bro…<redacted 85 chars>",
+            "value_len": 85
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:37.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "5Ni…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelySession",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "178…<redacted 13 chars>",
+            "value_len": 13
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "OTGPPConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "DBA…<redacted 22 chars>",
+            "value_len": 22
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "OptanonConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "isG…<redacted 417 chars>",
+            "value_len": 417
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "v2_humblebundlelive",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "{%2…<redacted 54 chars>",
+            "value_len": 54
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_gcl_au",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1.1…<redacted 25 chars>",
+            "value_len": 25
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_rdt_uuid",
+            "path": "/",
+            "same_site": "Strict",
+            "secure": true,
+            "value": "178…<redacted 50 chars>",
+            "value_len": 50
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetsid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "5cf…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-21 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetvid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "5cf…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga_521T2JFWQS",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GS2…<redacted 53 chars>",
+            "value_len": 53
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GA1…<redacted 26 chars>",
+            "value_len": 26
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_fbp",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "fb.…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "IR_PI",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "5d2…<redacted 52 chars>",
+            "value_len": 52
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:42.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clck",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "4kn…<redacted 27 chars>",
+            "value_len": 27
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:10:43.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clsk",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "qxn…<redacted 55 chars>",
+            "value_len": 55
+          },
+          {
+            "domain": "d.mailer.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:38.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "FpM…<redacted 198 chars>",
+            "value_len": 198
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__cid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "b8d…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__sid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "e78…<redacted 17 chars>",
+            "value_len": 17
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-08-26 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "fu",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "1…<redacted 1 chars>",
+            "value_len": 1
+          }
+        ],
+        "count": 24,
+        "elapsed_ms": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "url": null,
+        "verdict": "SUPPORTED_NONEMPTY",
+        "verdict_note": "24 cookie(s) returned; API is demonstrably live.",
+        "webview": "main"
+      },
+      "message": "A1 cookies() at cold start, BEFORE opening any window (did round 1's jar survive process exit?)",
+      "ms": 1832,
+      "t": "2026-07-27T02:13:26.937Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== ROUND 2 PHASE B: UA override + document.cookie channel ===",
+      "ms": 1835,
+      "t": "2026-07-27T02:13:26.940Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "incognito": false,
+        "isolatedStore": false,
+        "label": "login-control",
+        "spoofUa": true,
+        "url": "http://localhost:17913/set"
+      },
+      "message": "opening",
+      "ms": 1836,
+      "t": "2026-07-27T02:13:26.941Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-control"
+      },
+      "message": "opened",
+      "ms": 1908,
+      "t": "2026-07-27T02:13:27.013Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/set",
+        "window": "login-control"
+      },
+      "message": "on_navigation",
+      "ms": 1938,
+      "t": "2026-07-27T02:13:27.043Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "",
+        "cookieHeaderNames": [],
+        "path": "/set",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 1945,
+      "t": "2026-07-27T02:13:27.050Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "title": "spike login — login-control",
+        "url": "http://localhost:17913/set",
+        "window": "login-control"
+      },
+      "message": "on_page_load",
+      "ms": 1952,
+      "t": "2026-07-27T02:13:27.057Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "title": "spike login — login-control",
+        "url": "http://localhost:17913/set",
+        "window": "login-control"
+      },
+      "message": "on_page_load",
+      "ms": 1960,
+      "t": "2026-07-27T02:13:27.065Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/report?tag=control&dc=spike_domain%3Decho5%3B%20spike_plain%3Dalpha1&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=http%3A%2F%2Flocalhost%3A17913&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-control"
+      },
+      "message": "on_navigation",
+      "ms": 3713,
+      "t": "2026-07-27T02:13:28.818Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "spike_domain=echo5; spike_httponly=bravo2; spike_plain=alpha1",
+        "cookieHeaderNames": [
+          "spike_domain",
+          "spike_httponly",
+          "spike_plain"
+        ],
+        "path": "/report?tag=control&dc=spike_domain%3Decho5%3B%20spike_plain%3Dalpha1&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=http%3A%2F%2Flocalhost%3A17913&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 3720,
+      "t": "2026-07-27T02:13:28.825Z"
+    },
+    {
+      "category": "js-channel",
+      "data": {
+        "documentCookieCount": 2,
+        "documentCookieNames": [
+          "spike_domain",
+          "spike_plain"
+        ],
+        "navigatorUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "origin": "http://localhost:17913",
+        "raw": "spike_domain=echo5; spike_plain=alpha1",
+        "remoteIpcStatus": "rejected: report_from_page not allowed. Plugin not found",
+        "tag": "control",
+        "tauriGlobalPresent": "true"
+      },
+      "message": "document.cookie exfiltrated via navigation",
+      "ms": 3720,
+      "t": "2026-07-27T02:13:28.825Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "title": "spike login — login-control",
+        "url": "http://localhost:17913/report?tag=control&dc=spike_domain%3Decho5%3B%20spike_plain%3Dalpha1&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=http%3A%2F%2Flocalhost%3A17913&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-control"
+      },
+      "message": "on_page_load",
+      "ms": 3724,
+      "t": "2026-07-27T02:13:28.829Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "title": "spike login — login-control",
+        "url": "http://localhost:17913/report?tag=control&dc=spike_domain%3Decho5%3B%20spike_plain%3Dalpha1&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=http%3A%2F%2Flocalhost%3A17913&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-control"
+      },
+      "message": "on_page_load",
+      "ms": 3726,
+      "t": "2026-07-27T02:13:28.831Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies_for_url",
+        "control_cookies_seen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": false,
+            "name": "spike_plain",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": true,
+            "name": "spike_httponly",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": false,
+            "name": "spike_domain",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          }
+        ],
+        "count": 3,
+        "elapsed_ms": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "url": "http://localhost:17913",
+        "verdict": "SUPPORTED_NONEMPTY",
+        "verdict_note": "3 cookie(s) returned; API is demonstrably live.",
+        "webview": "login-control"
+      },
+      "message": "B2 cookies_for_url(control origin) — the Rust-side counterpart of the same jar",
+      "ms": 6218,
+      "t": "2026-07-27T02:13:31.323Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== ROUND 2 PHASE C: isolated data store (015 partition parity) ===",
+      "ms": 6219,
+      "t": "2026-07-27T02:13:31.324Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "incognito": false,
+        "isolatedStore": true,
+        "label": "login-isolated",
+        "spoofUa": true,
+        "url": "https://www.humblebundle.com/login"
+      },
+      "message": "opening",
+      "ms": 6219,
+      "t": "2026-07-27T02:13:31.324Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-isolated"
+      },
+      "message": "opened",
+      "ms": 6267,
+      "t": "2026-07-27T02:13:31.372Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://www.humblebundle.com/login",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 6293,
+      "t": "2026-07-27T02:13:31.398Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "title": "spike login — login-isolated",
+        "url": "https://www.humblebundle.com/login",
+        "window": "login-isolated"
+      },
+      "message": "on_page_load",
+      "ms": 6898,
+      "t": "2026-07-27T02:13:32.003Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://a5532459098439680.cdn.optimizely.com/client_storage/a5532459098439680.html",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 7061,
+      "t": "2026-07-27T02:13:32.166Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 7085,
+      "t": "2026-07-27T02:13:32.191Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 7174,
+      "t": "2026-07-27T02:13:32.279Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://d.mailer.humblebundle.com/connect.html?connectUrl=https%3A%2F%2Fd.mailer.humblebundle.com&cookieDomain=humblebundle.com&cookieLife=365&sameSiteDisable=false&trackKey=humblebundlelive",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 7363,
+      "t": "2026-07-27T02:13:32.468Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 8391,
+      "t": "2026-07-27T02:13:33.496Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "title": "spike login — login-isolated",
+        "url": "https://www.humblebundle.com/login",
+        "window": "login-isolated"
+      },
+      "message": "on_page_load",
+      "ms": 11839,
+      "t": "2026-07-27T02:13:36.944Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "control_cookies_seen": [],
+        "cookies": [
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:31.0 +00:00:00)",
+            "http_only": false,
+            "name": "csrf_cookie",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "vtu…<redacted 29 chars>",
+            "value_len": 29
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:31.0 +00:00:00)",
+            "http_only": true,
+            "name": "_simpleauth_sess",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 80 chars>",
+            "value_len": 80
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:31.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelyEndUserId",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "oeu…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VMAP",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "",
+            "value_len": 0
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VPROF",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bro…<redacted 85 chars>",
+            "value_len": 85
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:43:32.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "zKc…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelySession",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "178…<redacted 13 chars>",
+            "value_len": 13
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OptanonConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "isG…<redacted 417 chars>",
+            "value_len": 417
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OTGPPConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "DBA…<redacted 22 chars>",
+            "value_len": 22
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "usprivacy",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1YN…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "v2_humblebundlelive",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "{%2…<redacted 54 chars>",
+            "value_len": 54
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_gcl_au",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1.1…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "zd_session_id",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "af8…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "zpack",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 308 chars>",
+            "value_len": 308
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_rdt_uuid",
+            "path": "/",
+            "same_site": "Strict",
+            "secure": true,
+            "value": "178…<redacted 50 chars>",
+            "value_len": 50
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_fbp",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "fb.…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "IR_gbd",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "hum…<redacted 16 chars>",
+            "value_len": 16
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "IR_25796",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "178…<redacted 39 chars>",
+            "value_len": 39
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetsid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "c4b…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-21 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetvid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "c4b…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga_521T2JFWQS",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GS2…<redacted 53 chars>",
+            "value_len": 53
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GA1…<redacted 26 chars>",
+            "value_len": 26
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "IR_PI",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "c4d…<redacted 52 chars>",
+            "value_len": 52
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:34.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clck",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1ac…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:13:35.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clsk",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1y0…<redacted 56 chars>",
+            "value_len": 56
+          },
+          {
+            "domain": "d.mailer.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:43:32.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "jbA…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__cid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "007…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:43:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__sid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bdc…<redacted 17 chars>",
+            "value_len": 17
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "optimizelySession",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "178…<redacted 13 chars>",
+            "value_len": 13
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-08-26 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "fu",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "1…<redacted 1 chars>",
+            "value_len": 1
+          }
+        ],
+        "count": 30,
+        "elapsed_ms": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "url": null,
+        "verdict": "SUPPORTED_NONEMPTY",
+        "verdict_note": "30 cookie(s) returned; API is demonstrably live.",
+        "webview": "login-isolated"
+      },
+      "message": "C1 cookies() on the ISOLATED-store window",
+      "ms": 15275,
+      "t": "2026-07-27T02:13:40.380Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "control_cookies_seen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "csrf_cookie",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "rj1…<redacted 29 chars>",
+            "value_len": 29
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:37.0 +00:00:00)",
+            "http_only": true,
+            "name": "_simpleauth_sess",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 80 chars>",
+            "value_len": 80
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelyEndUserId",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "oeu…<redacted 35 chars>",
+            "value_len": 35
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118237664r0.4681488700041755$$5860319721947136$$VMAP",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "",
+            "value_len": 0
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118237664r0.4681488700041755$$5860319721947136$$VPROF",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bro…<redacted 85 chars>",
+            "value_len": 85
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:37.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "5Ni…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:10:37.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelySession",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "178…<redacted 13 chars>",
+            "value_len": 13
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "OTGPPConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "DBA…<redacted 22 chars>",
+            "value_len": 22
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "OptanonConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "isG…<redacted 417 chars>",
+            "value_len": 417
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "v2_humblebundlelive",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "{%2…<redacted 54 chars>",
+            "value_len": 54
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_gcl_au",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1.1…<redacted 25 chars>",
+            "value_len": 25
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_rdt_uuid",
+            "path": "/",
+            "same_site": "Strict",
+            "secure": true,
+            "value": "178…<redacted 50 chars>",
+            "value_len": 50
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetsid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "5cf…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-21 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetvid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "5cf…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga_521T2JFWQS",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GS2…<redacted 53 chars>",
+            "value_len": 53
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GA1…<redacted 26 chars>",
+            "value_len": 26
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "_fbp",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "fb.…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "IR_PI",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "5d2…<redacted 52 chars>",
+            "value_len": 52
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:10:42.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clck",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "4kn…<redacted 27 chars>",
+            "value_len": 27
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:10:43.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clsk",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "qxn…<redacted 55 chars>",
+            "value_len": 55
+          },
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": false,
+            "name": "spike_plain",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": true,
+            "name": "spike_httponly",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "d.mailer.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:38.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "FpM…<redacted 198 chars>",
+            "value_len": 198
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:10:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__cid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "b8d…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:40:39.0 +00:00:00)",
+            "http_only": false,
+            "name": "__lt__sid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "e78…<redacted 17 chars>",
+            "value_len": 17
+          },
+          {
+            "domain": "localhost",
+            "expires": "Session",
+            "http_only": false,
+            "name": "spike_domain",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "www.humblebundle.com",
+            "expires": "DateTime(2026-08-26 2:10:38.0 +00:00:00)",
+            "http_only": false,
+            "name": "fu",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "1…<redacted 1 chars>",
+            "value_len": 1
+          }
+        ],
+        "count": 27,
+        "elapsed_ms": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "url": null,
+        "verdict": "SUPPORTED_NONEMPTY",
+        "verdict_note": "27 cookie(s) returned; API is demonstrably live.",
+        "webview": "main"
+      },
+      "message": "C2 cookies() on the MAIN webview — if this differs from C1, data_store_identifier really partitions",
+      "ms": 15284,
+      "t": "2026-07-27T02:13:40.389Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies_for_url",
+        "control_cookies_seen": [],
+        "cookies": [
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:31.0 +00:00:00)",
+            "http_only": false,
+            "name": "csrf_cookie",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "vtu…<redacted 29 chars>",
+            "value_len": 29
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:31.0 +00:00:00)",
+            "http_only": true,
+            "name": "_simpleauth_sess",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 80 chars>",
+            "value_len": 80
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:31.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelyEndUserId",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "oeu…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VMAP",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "",
+            "value_len": 0
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VPROF",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "bro…<redacted 85 chars>",
+            "value_len": 85
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-27 2:43:32.0 +00:00:00)",
+            "http_only": true,
+            "name": "__cf_bm",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "zKc…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-01-23 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "optimizelySession",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "178…<redacted 13 chars>",
+            "value_len": 13
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OptanonConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "isG…<redacted 417 chars>",
+            "value_len": 417
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "OTGPPConsent",
+            "path": "/",
+            "same_site": "Lax",
+            "secure": false,
+            "value": "DBA…<redacted 22 chars>",
+            "value_len": 22
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "usprivacy",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1YN…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:32.0 +00:00:00)",
+            "http_only": false,
+            "name": "v2_humblebundlelive",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "{%2…<redacted 54 chars>",
+            "value_len": 54
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_gcl_au",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1.1…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "zd_session_id",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "af8…<redacted 36 chars>",
+            "value_len": 36
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "zpack",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "eyJ…<redacted 308 chars>",
+            "value_len": 308
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_rdt_uuid",
+            "path": "/",
+            "same_site": "Strict",
+            "secure": true,
+            "value": "178…<redacted 50 chars>",
+            "value_len": 50
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-10-25 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_fbp",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "fb.…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "IR_gbd",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "hum…<redacted 16 chars>",
+            "value_len": 16
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "Session",
+            "http_only": false,
+            "name": "IR_25796",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "178…<redacted 39 chars>",
+            "value_len": 39
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetsid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "c4b…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-21 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_uetvid",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "c4b…<redacted 32 chars>",
+            "value_len": 32
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga_521T2JFWQS",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GS2…<redacted 53 chars>",
+            "value_len": 53
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-08-31 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "_ga",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "GA1…<redacted 26 chars>",
+            "value_len": 26
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:33.0 +00:00:00)",
+            "http_only": false,
+            "name": "IR_PI",
+            "path": "/",
+            "same_site": "None",
+            "secure": true,
+            "value": "c4d…<redacted 52 chars>",
+            "value_len": 52
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2027-07-27 2:13:34.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clck",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1ac…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "humblebundle.com",
+            "expires": "DateTime(2026-07-28 2:13:35.0 +00:00:00)",
+            "http_only": false,
+            "name": "_clsk",
+            "path": "/",
+            "same_site": "None",
+            "secure": false,
+            "value": "1y0…<redacted 56 chars>",
+            "value_len": 56
+          }
+        ],
+        "count": 25,
+        "elapsed_ms": 4,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "url": "https://humblebundle.com",
+        "verdict": "SUPPORTED_NONEMPTY",
+        "verdict_note": "25 cookie(s) returned; API is demonstrably live.",
+        "webview": "login-isolated"
+      },
+      "message": "C3 cookies_for_url(apex) on the isolated window",
+      "ms": 15292,
+      "t": "2026-07-27T02:13:40.397Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/report?tag=humble-isolated&dc=_clsk%3D1y0y9ot%255E1785118415517%255E1%255E1%255El.clarity.ms%252Fcollect%3B%20_clck%3D1acyj8t%255E2%255Eg83%255E1%255E2399%3B%20IR_25796%3D1785118413693%257C0%257C1785118413693%257C%257C%3B%20IR_PI%3Dc4d931df-8960-11f1-869b-7df5b98dd5a8%257C1785204813693%3B%20IR_gbd%3Dhumblebundle.com%3B%20_fbp%3Dfb.1.1785118413253.980278036507938219%3B%20_ga%3DGA1.1.766836115.1785118414%3B%20_ga_521T2JFWQS%3DGS2.1.s1785118413%24o1%24g0%24t1785118413%24j60%24l0%24h736009581%3B%20_gcl_au%3D1.1.663697457.1785118413%3B%20_rdt_uuid%3D1785118413172.ab60a745-6455-4490-a8bf-ca38138ba189%3B%20_uetsid%3Dc4b18b80896011f1b04defbacd215499%3B%20_uetvid%3Dc4b18c00896011f1a4024f0f60c24a01%3B%20zd_session_id%3Daf8f2eec-01ce-41c7-bd47-6eb70aae0a22%3B%20zpack%3DeyJ6ZGJiIjpudWxsLCJmcGlkIjpudWxsLCJwcGlkIjoiM2M5YzMzMmM0ZDBjNDBiMzhlZTAyNDdhMjg0MjA2YTEiLCJ1ZV9tMnMiOiIiLCJsY2xfaWQiOiIiLCJsb2MiOiJodHRwczovL3d3dy5odW1ibGVidW5kbGUuY29tL2xvZ2luIiwicHZfaWQiOiI4ODFhZjE4Yy1iZWZlLTQ4ZDEtYWRjNS1iOGE4NTE5Mzc0MmIiLCJzZXNzX2lkIjoiYWY4ZjJlZWMtMDFjZS00MWM3LWJkNDctNmViNzBhYWUwYTIyIn0%3D%3B%20__lt__cid%3D007891dd-b68c-4e32-813e-d123faba60bf%3B%20__lt__sid%3Dbdc04646-ba25a774%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VMAP%3D%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VPROF%3DbrowserId~~gc~~~~device~~desktop~~~~device_type~~desktop_laptop~~~~referrer~~-*null~~%3B%20OTGPPConsent%3DDBABLA~BVQqAAAAAACA.QA%3B%20OptanonConsent%3DisGpcEnabled%3D0%26datestamp%3DMon%2BJul%2B27%2B2026%2B14%253A13%253A32%2BGMT%252B1200%2B(New%2BZealand%2BStandard%2BTime)%26version%3D202604.2.0%26browserGpcFlag%3D0%26isDntEnabled%3D0%26isIABGlobal%3Dfalse%26genVendors%3D%26consentId%3D4c82702a-6ddc-436b-bf37-2dd56f1b873c%26interactionCount%3D0%26isAnonUser%3D1%26prevHadToken%3D0%26landingPath%3Dhttps%253A%252F%252Fwww.humblebundle.com%252Flogin%26GPPCookiesCount%3D1%26gppSid%3D7%26groups%3DC0001%253A1%252CC0002%253A1%252CC0003%253A1%252COSSTA_BG%253A1%252CC0004%253A1%3B%20optimizelySession%3D1785118412039%3B%20usprivacy%3D1YNY%3B%20v2_humblebundlelive%3D%7B%2522bid%2522%3A%2522015b61ab-bd74-47a9-9f41-230eda945b42%2522%7D%3B%20fu%3D1%3B%20csrf_cookie%3DvturBF6tyZFij4YG-1-1785118411%3B%20optimizelyEndUserId%3Doeu1785118412053r0.11149419239042468%3B%20optimizelySession%3D1785118412053&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=https%3A%2F%2Fwww.humblebundle.com&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-isolated"
+      },
+      "message": "on_navigation",
+      "ms": 15300,
+      "t": "2026-07-27T02:13:40.405Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "",
+        "cookieHeaderNames": [],
+        "path": "/report?tag=humble-isolated&dc=_clsk%3D1y0y9ot%255E1785118415517%255E1%255E1%255El.clarity.ms%252Fcollect%3B%20_clck%3D1acyj8t%255E2%255Eg83%255E1%255E2399%3B%20IR_25796%3D1785118413693%257C0%257C1785118413693%257C%257C%3B%20IR_PI%3Dc4d931df-8960-11f1-869b-7df5b98dd5a8%257C1785204813693%3B%20IR_gbd%3Dhumblebundle.com%3B%20_fbp%3Dfb.1.1785118413253.980278036507938219%3B%20_ga%3DGA1.1.766836115.1785118414%3B%20_ga_521T2JFWQS%3DGS2.1.s1785118413%24o1%24g0%24t1785118413%24j60%24l0%24h736009581%3B%20_gcl_au%3D1.1.663697457.1785118413%3B%20_rdt_uuid%3D1785118413172.ab60a745-6455-4490-a8bf-ca38138ba189%3B%20_uetsid%3Dc4b18b80896011f1b04defbacd215499%3B%20_uetvid%3Dc4b18c00896011f1a4024f0f60c24a01%3B%20zd_session_id%3Daf8f2eec-01ce-41c7-bd47-6eb70aae0a22%3B%20zpack%3DeyJ6ZGJiIjpudWxsLCJmcGlkIjpudWxsLCJwcGlkIjoiM2M5YzMzMmM0ZDBjNDBiMzhlZTAyNDdhMjg0MjA2YTEiLCJ1ZV9tMnMiOiIiLCJsY2xfaWQiOiIiLCJsb2MiOiJodHRwczovL3d3dy5odW1ibGVidW5kbGUuY29tL2xvZ2luIiwicHZfaWQiOiI4ODFhZjE4Yy1iZWZlLTQ4ZDEtYWRjNS1iOGE4NTE5Mzc0MmIiLCJzZXNzX2lkIjoiYWY4ZjJlZWMtMDFjZS00MWM3LWJkNDctNmViNzBhYWUwYTIyIn0%3D%3B%20__lt__cid%3D007891dd-b68c-4e32-813e-d123faba60bf%3B%20__lt__sid%3Dbdc04646-ba25a774%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VMAP%3D%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VPROF%3DbrowserId~~gc~~~~device~~desktop~~~~device_type~~desktop_laptop~~~~referrer~~-*null~~%3B%20OTGPPConsent%3DDBABLA~BVQqAAAAAACA.QA%3B%20OptanonConsent%3DisGpcEnabled%3D0%26datestamp%3DMon%2BJul%2B27%2B2026%2B14%253A13%253A32%2BGMT%252B1200%2B(New%2BZealand%2BStandard%2BTime)%26version%3D202604.2.0%26browserGpcFlag%3D0%26isDntEnabled%3D0%26isIABGlobal%3Dfalse%26genVendors%3D%26consentId%3D4c82702a-6ddc-436b-bf37-2dd56f1b873c%26interactionCount%3D0%26isAnonUser%3D1%26prevHadToken%3D0%26landingPath%3Dhttps%253A%252F%252Fwww.humblebundle.com%252Flogin%26GPPCookiesCount%3D1%26gppSid%3D7%26groups%3DC0001%253A1%252CC0002%253A1%252CC0003%253A1%252COSSTA_BG%253A1%252CC0004%253A1%3B%20optimizelySession%3D1785118412039%3B%20usprivacy%3D1YNY%3B%20v2_humblebundlelive%3D%7B%2522bid%2522%3A%2522015b61ab-bd74-47a9-9f41-230eda945b42%2522%7D%3B%20fu%3D1%3B%20csrf_cookie%3DvturBF6tyZFij4YG-1-1785118411%3B%20optimizelyEndUserId%3Doeu1785118412053r0.11149419239042468%3B%20optimizelySession%3D1785118412053&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=https%3A%2F%2Fwww.humblebundle.com&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 15356,
+      "t": "2026-07-27T02:13:40.461Z"
+    },
+    {
+      "category": "js-channel",
+      "data": {
+        "documentCookieCount": 27,
+        "documentCookieNames": [
+          "_clsk",
+          "_clck",
+          "IR_25796",
+          "IR_PI",
+          "IR_gbd",
+          "_fbp",
+          "_ga",
+          "_ga_521T2JFWQS",
+          "_gcl_au",
+          "_rdt_uuid",
+          "_uetsid",
+          "_uetvid",
+          "zd_session_id",
+          "zpack",
+          "__lt__cid",
+          "__lt__sid",
+          "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VMAP",
+          "OPTY$$oeu1785118412053r0.11149419239042468$$5860319721947136$$VPROF",
+          "OTGPPConsent",
+          "OptanonConsent",
+          "optimizelySession",
+          "usprivacy",
+          "v2_humblebundlelive",
+          "fu",
+          "csrf_cookie",
+          "optimizelyEndUserId",
+          "optimizelySession"
+        ],
+        "navigatorUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "origin": "https://www.humblebundle.com",
+        "raw": "<redacted 1964 chars>",
+        "remoteIpcStatus": "rejected: report_from_page not allowed. Plugin not found",
+        "tag": "humble-isolated",
+        "tauriGlobalPresent": "true"
+      },
+      "message": "document.cookie exfiltrated via navigation",
+      "ms": 15356,
+      "t": "2026-07-27T02:13:40.461Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "title": "spike login — login-isolated",
+        "url": "http://localhost:17913/report?tag=humble-isolated&dc=_clsk%3D1y0y9ot%255E1785118415517%255E1%255E1%255El.clarity.ms%252Fcollect%3B%20_clck%3D1acyj8t%255E2%255Eg83%255E1%255E2399%3B%20IR_25796%3D1785118413693%257C0%257C1785118413693%257C%257C%3B%20IR_PI%3Dc4d931df-8960-11f1-869b-7df5b98dd5a8%257C1785204813693%3B%20IR_gbd%3Dhumblebundle.com%3B%20_fbp%3Dfb.1.1785118413253.980278036507938219%3B%20_ga%3DGA1.1.766836115.1785118414%3B%20_ga_521T2JFWQS%3DGS2.1.s1785118413%24o1%24g0%24t1785118413%24j60%24l0%24h736009581%3B%20_gcl_au%3D1.1.663697457.1785118413%3B%20_rdt_uuid%3D1785118413172.ab60a745-6455-4490-a8bf-ca38138ba189%3B%20_uetsid%3Dc4b18b80896011f1b04defbacd215499%3B%20_uetvid%3Dc4b18c00896011f1a4024f0f60c24a01%3B%20zd_session_id%3Daf8f2eec-01ce-41c7-bd47-6eb70aae0a22%3B%20zpack%3DeyJ6ZGJiIjpudWxsLCJmcGlkIjpudWxsLCJwcGlkIjoiM2M5YzMzMmM0ZDBjNDBiMzhlZTAyNDdhMjg0MjA2YTEiLCJ1ZV9tMnMiOiIiLCJsY2xfaWQiOiIiLCJsb2MiOiJodHRwczovL3d3dy5odW1ibGVidW5kbGUuY29tL2xvZ2luIiwicHZfaWQiOiI4ODFhZjE4Yy1iZWZlLTQ4ZDEtYWRjNS1iOGE4NTE5Mzc0MmIiLCJzZXNzX2lkIjoiYWY4ZjJlZWMtMDFjZS00MWM3LWJkNDctNmViNzBhYWUwYTIyIn0%3D%3B%20__lt__cid%3D007891dd-b68c-4e32-813e-d123faba60bf%3B%20__lt__sid%3Dbdc04646-ba25a774%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VMAP%3D%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VPROF%3DbrowserId~~gc~~~~device~~desktop~~~~device_type~~desktop_laptop~~~~referrer~~-*null~~%3B%20OTGPPConsent%3DDBABLA~BVQqAAAAAACA.QA%3B%20OptanonConsent%3DisGpcEnabled%3D0%26datestamp%3DMon%2BJul%2B27%2B2026%2B14%253A13%253A32%2BGMT%252B1200%2B(New%2BZealand%2BStandard%2BTime)%26version%3D202604.2.0%26browserGpcFlag%3D0%26isDntEnabled%3D0%26isIABGlobal%3Dfalse%26genVendors%3D%26consentId%3D4c82702a-6ddc-436b-bf37-2dd56f1b873c%26interactionCount%3D0%26isAnonUser%3D1%26prevHadToken%3D0%26landingPath%3Dhttps%253A%252F%252Fwww.humblebundle.com%252Flogin%26GPPCookiesCount%3D1%26gppSid%3D7%26groups%3DC0001%253A1%252CC0002%253A1%252CC0003%253A1%252COSSTA_BG%253A1%252CC0004%253A1%3B%20optimizelySession%3D1785118412039%3B%20usprivacy%3D1YNY%3B%20v2_humblebundlelive%3D%7B%2522bid%2522%3A%2522015b61ab-bd74-47a9-9f41-230eda945b42%2522%7D%3B%20fu%3D1%3B%20csrf_cookie%3DvturBF6tyZFij4YG-1-1785118411%3B%20optimizelyEndUserId%3Doeu1785118412053r0.11149419239042468%3B%20optimizelySession%3D1785118412053&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=https%3A%2F%2Fwww.humblebundle.com&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-isolated"
+      },
+      "message": "on_page_load",
+      "ms": 15359,
+      "t": "2026-07-27T02:13:40.464Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "title": "spike login — login-isolated",
+        "url": "http://localhost:17913/report?tag=humble-isolated&dc=_clsk%3D1y0y9ot%255E1785118415517%255E1%255E1%255El.clarity.ms%252Fcollect%3B%20_clck%3D1acyj8t%255E2%255Eg83%255E1%255E2399%3B%20IR_25796%3D1785118413693%257C0%257C1785118413693%257C%257C%3B%20IR_PI%3Dc4d931df-8960-11f1-869b-7df5b98dd5a8%257C1785204813693%3B%20IR_gbd%3Dhumblebundle.com%3B%20_fbp%3Dfb.1.1785118413253.980278036507938219%3B%20_ga%3DGA1.1.766836115.1785118414%3B%20_ga_521T2JFWQS%3DGS2.1.s1785118413%24o1%24g0%24t1785118413%24j60%24l0%24h736009581%3B%20_gcl_au%3D1.1.663697457.1785118413%3B%20_rdt_uuid%3D1785118413172.ab60a745-6455-4490-a8bf-ca38138ba189%3B%20_uetsid%3Dc4b18b80896011f1b04defbacd215499%3B%20_uetvid%3Dc4b18c00896011f1a4024f0f60c24a01%3B%20zd_session_id%3Daf8f2eec-01ce-41c7-bd47-6eb70aae0a22%3B%20zpack%3DeyJ6ZGJiIjpudWxsLCJmcGlkIjpudWxsLCJwcGlkIjoiM2M5YzMzMmM0ZDBjNDBiMzhlZTAyNDdhMjg0MjA2YTEiLCJ1ZV9tMnMiOiIiLCJsY2xfaWQiOiIiLCJsb2MiOiJodHRwczovL3d3dy5odW1ibGVidW5kbGUuY29tL2xvZ2luIiwicHZfaWQiOiI4ODFhZjE4Yy1iZWZlLTQ4ZDEtYWRjNS1iOGE4NTE5Mzc0MmIiLCJzZXNzX2lkIjoiYWY4ZjJlZWMtMDFjZS00MWM3LWJkNDctNmViNzBhYWUwYTIyIn0%3D%3B%20__lt__cid%3D007891dd-b68c-4e32-813e-d123faba60bf%3B%20__lt__sid%3Dbdc04646-ba25a774%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VMAP%3D%3B%20OPTY%24%24oeu1785118412053r0.11149419239042468%24%245860319721947136%24%24VPROF%3DbrowserId~~gc~~~~device~~desktop~~~~device_type~~desktop_laptop~~~~referrer~~-*null~~%3B%20OTGPPConsent%3DDBABLA~BVQqAAAAAACA.QA%3B%20OptanonConsent%3DisGpcEnabled%3D0%26datestamp%3DMon%2BJul%2B27%2B2026%2B14%253A13%253A32%2BGMT%252B1200%2B(New%2BZealand%2BStandard%2BTime)%26version%3D202604.2.0%26browserGpcFlag%3D0%26isDntEnabled%3D0%26isIABGlobal%3Dfalse%26genVendors%3D%26consentId%3D4c82702a-6ddc-436b-bf37-2dd56f1b873c%26interactionCount%3D0%26isAnonUser%3D1%26prevHadToken%3D0%26landingPath%3Dhttps%253A%252F%252Fwww.humblebundle.com%252Flogin%26GPPCookiesCount%3D1%26gppSid%3D7%26groups%3DC0001%253A1%252CC0002%253A1%252CC0003%253A1%252COSSTA_BG%253A1%252CC0004%253A1%3B%20optimizelySession%3D1785118412039%3B%20usprivacy%3D1YNY%3B%20v2_humblebundlelive%3D%7B%2522bid%2522%3A%2522015b61ab-bd74-47a9-9f41-230eda945b42%2522%7D%3B%20fu%3D1%3B%20csrf_cookie%3DvturBF6tyZFij4YG-1-1785118411%3B%20optimizelyEndUserId%3Doeu1785118412053r0.11149419239042468%3B%20optimizelySession%3D1785118412053&ipc=rejected%3A%20report_from_page%20not%20allowed.%20Plugin%20not%20found&tauri=true&origin=https%3A%2F%2Fwww.humblebundle.com&ua=Mozilla%2F5.0%20(Macintosh%3B%20Intel%20Mac%20OS%20X%2010_15_7)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F131.0.0.0%20Safari%2F537.36",
+        "window": "login-isolated"
+      },
+      "message": "on_page_load",
+      "ms": 15363,
+      "t": "2026-07-27T02:13:40.468Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "apiProvenLive": true
+      },
+      "message": "=== ROUND 2 COMPLETE ===",
+      "ms": 17800,
+      "t": "2026-07-27T02:13:42.905Z"
+    }
+  ],
+  "exportedAt": "2026-07-27T02:13:42.906Z"
+}
