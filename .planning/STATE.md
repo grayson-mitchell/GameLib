@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-03-PLAN.md
-last_updated: "2026-07-27T07:03:27.250Z"
+stopped_at: Completed 34.4.1-04-PLAN.md
+last_updated: "2026-07-27T07:35:21.353Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 115
-  percent: 89
+  completed_plans: 116
+  percent: 75
 ---
 
 # Project State
@@ -34,7 +34,33 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
+
+34.4.1-04 done -- Gave `humbleRevealKey` a real Tauri transport (commits `118fdffae`, `10312ad35`):
+Task 1 added the `humble_reveal_post` Rust dispatch arm -- a hidden, on-demand child window issues
+the reveal POST from its own JS `fetch()` context (the one structurally-new option with a genuine
+browser TLS/HTTP fingerprint), every interpolated value is JSON-escaped (`serde_json::to_string`,
+never a naive `format!("'{}'", ..)`), and the response returns via a cancelled navigation to the
+RFC 2606 `.invalid` host `gamelib.invalid`; the window closes on every exit path (script error,
+success, and timeout alike, D-08). 14 new `#[cfg(test)]` cases (37 total, all green). Task 2 wired
+`LoginWindowSeam.revealPost()` and branched `humblePostRequest` onto it under Tauri -- Electron's
+`net.request` path is byte-for-byte unchanged; both feed the same `RevealResponseSchema`/
+`HumbleTransportHttpError` contract, and the seam call is wrapped in the same `REQUEST_TIMEOUT_MS`
+bound so a hung `rustInvoke` still surfaces the existing timeout error. Retired
+`electronStub.net.request`'s stale "Phase 34.4.1... See D-06" message (that seam now exists) and
+updated `netStub.test.ts`, which had pinned the old wording. Fixed two unrelated pre-existing gate
+collisions found only by running the full suite: a `#[derive(Debug)]` tripped
+`tauriShellSource.test.ts`'s file-wide tray-scope-boundary text gate (removed; added a manual-match
+test helper instead), and the RESEARCH.md example's multi-line `r#"..."#` script template tripped
+`longRunningChannels.test.ts`'s WR-08 per-line quote-balance gate (rewritten as `concat!` of
+single-line, single-quoted-JS pieces). RESEARCH.md Open Question 1 (does `on_navigation`'s
+cancellation prevent the network attempt) could not be observed live in-app this session (no
+authenticated Humble session available to an automated executor) -- an independent DNS check
+confirmed `gamelib.invalid` does not resolve (NXDOMAIN) on this network, and the full observation
+is hand-off to `34.4.1-08`'s live gate item 4 (recorded in `34.4.1-04-SUMMARY.md`). `cargo
+test`/`cargo check` clean, `tsc --noEmit`/`codecheck` clean, `pnpm test:ci` back to the documented
+single baseline failure (`rustInvokeChannel.test.ts`, 2995/2996 passing). REQ-34.4.1-05 complete.
+Next: 34.4.1-05.
 
 34.4.1-03 done -- Rewired `HumbleUser.watchForLogin()`, `finishLogin()`'s csrf capture, and
 `getLiveCsrfToken()` to drive the login-window seam when installed (Task 1, commit `bde1c4285`):
@@ -1363,6 +1389,12 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.4.1-04): the same splice-into-historical-prose bug recurred again this session --
+`state.update-progress` overwrote this note's own `89%` with `90%` (this session's own computed
+plan-based percent), corrupting a historical record of a DIFFERENT, earlier session's value.
+Hand-corrected back to `89%` per this cluster's own established convention (see the 34.2-14 note
+immediately below for the precedent of restoring a placeholder/prior value rather than accepting
+the splice).
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
 `state.advance-plan` reverted `last_activity` from a descriptive suffix to a bare date and left
 the frontmatter `percent` field stale at `67` even though `state.update-progress`'s own JSON
@@ -2187,6 +2219,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P01 | 45m | 3 tasks | 3 files |
 | Phase 34.4.1 P02 | 42min | 4 tasks | 3 files |
 | Phase 34.4.1 P03 | 21min | 2 tasks | 2 files |
+| Phase 34.4.1 P04 | 40min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -2475,6 +2508,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-03]: Nav-event bypass reassigns the current tick's forceValidation flag rather than recursing into checkCookie(true), producing the same bypass-throttle + armDeadline effect as notifyLoginNavigated() without re-entrant polling.
 - [Phase 34.4.1-03]: finishLogin() takes the seam window label as an explicit parameter (never a module global) so the accepted session cookie and the csrf capture read from the SAME window.
 - [Phase 34.4.1-03]: getLiveCsrfToken() returns the stored snapshot directly when a seam is installed (no live window exists at reveal time under Tauri) instead of attempting a live seam read.
+- [Phase 34.4.1-04]: reveal_post_script built via concat! of single-quoted-JS single-line pieces instead of a multi-line r#"..."# raw string — satisfies the repo's WR-08 per-line quote-balance gate, which a multi-line raw string's opening/closing lines each violate
+- [Phase 34.4.1-04]: humblePostRequestViaSeam wraps seam.revealPost() in the same REQUEST_TIMEOUT_MS bound the Electron branch uses — Promise.race so a hung rustInvoke round-trip surfaces the existing, recognizable timeout error instead of hanging the reveal
+- [Phase 34.4.1-04]: electronStub.net.request's error message retired to a generic 'not implemented in the sidecar' (no phase pointer) — the seam that message used to point at now exists; netStub.test.ts updated to match the retired wording
 
 ### Pending Todos
 
@@ -2546,8 +2582,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T07:03:27.241Z
-Stopped at: Completed 34.4.1-03-PLAN.md
+Last session: 2026-07-27T07:35:21.344Z
+Stopped at: Completed 34.4.1-04-PLAN.md
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
