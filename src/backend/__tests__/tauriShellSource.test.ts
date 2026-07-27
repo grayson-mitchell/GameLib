@@ -236,7 +236,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'humble_login_cookies',
       'humble_login_take_events',
       'humble_login_close',
-      'humble_login_clear_cookies'
+      'humble_login_clear_cookies',
+      // Phase 34.4.1 Plan 04 (D-07/D-08, REQ-34.4.1-05) legitimately added exactly this one
+      // reveal-POST arm -- main.rs's own #[cfg(test)] mod is the behavioral proof for its pure
+      // logic (arg validation, script templating/escaping); this gate only pins that no
+      // OTHER, undeclared arm has crept in since.
+      'humble_reveal_post'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

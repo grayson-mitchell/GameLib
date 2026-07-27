@@ -283,6 +283,23 @@ export const RUST_HUMBLE_LOGIN_CLEAR_COOKIES =
   'humble_login_clear_cookies' as const
 
 /**
+ * Rust-side channel name: issue the Humble reveal-key POST from a hidden, on-demand login
+ * window's own JS context (Phase 34.4.1 Plan 04, D-07/D-08, REQ-34.4.1-05). `humblePostRequest`
+ * (`backend/humble/adapter.ts`) routes here under Tauri instead of Electron's `net.request` --
+ * a genuine WKWebView `fetch()` is the one structurally-new transport with its own real
+ * browser TLS/HTTP fingerprint (the `humble-reveal-key-fails` debug session's rounds 1-5
+ * already falsified cookie/header fidelity as the cause; this channel does not re-run them).
+ * Args: `[originUrl: string, path: string, body: string, csrfToken: string | null,
+ * userAgent: string]`. Resolves `{ status: number, body: string }` -- a non-2xx `status` is a
+ * normal, DECLARED outcome (D-07), never an error thrown by this channel itself; only a
+ * structural failure (bad args, no window, a script error, or a timeout) rejects. The hidden
+ * window this arm opens is per-call: opened on demand and closed on EVERY exit path (success,
+ * script error, and timeout alike) -- no idle authenticated window persists between reveals
+ * (D-08, the orphan-session concern Phase 34 WR-03 raised for the sidecar itself).
+ */
+export const RUST_HUMBLE_REVEAL_POST = 'humble_reveal_post' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -307,7 +324,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_HUMBLE_LOGIN_COOKIES,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
-  RUST_HUMBLE_LOGIN_CLEAR_COOKIES
+  RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
+  RUST_HUMBLE_REVEAL_POST
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
