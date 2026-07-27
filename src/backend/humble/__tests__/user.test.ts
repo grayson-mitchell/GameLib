@@ -116,6 +116,11 @@ import {
   standardBrowserUserAgent,
   LOGIN_WATCH_TIMEOUT_MS
 } from '../user'
+import {
+  setLoginWindowSeam,
+  type LoginWindowSeam
+} from '../loginWindowSeam'
+import { HUMBLE_LOGIN_URL } from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -991,6 +996,321 @@ describe('HumbleUser', () => {
       for (const call of loggerCalls) {
         expect(JSON.stringify(call)).not.toContain(LIVE_SECRET)
       }
+    })
+  })
+
+  // ── Phase 34.4.1 Plan 03: login-window seam path ─────────────────────────
+  // watchForLogin()/finishLogin()/getLiveCsrfToken() drive a Rust-owned login
+  // window through LoginWindowSeam when one is installed (Tauri sidecar)
+  // instead of session.fromPartition (Electron). A fake seam is installed
+  // via setLoginWindowSeam() for this describe block only, and cleared in
+  // afterEach so it can never leak into the Electron-path tests above/below.
+
+  describe('login window seam path (Phase 34.4.1 Plan 03)', () => {
+    const mockSeamOpen = jest.fn()
+    const mockSeamCookies = jest.fn()
+    const mockSeamTakeEvents = jest.fn()
+    const mockSeamClose = jest.fn()
+    const mockSeamClearCookies = jest.fn()
+
+    const fakeSeam: LoginWindowSeam = {
+      open: (...args: Parameters<LoginWindowSeam['open']>) =>
+        mockSeamOpen(...args),
+      cookies: (...args: Parameters<LoginWindowSeam['cookies']>) =>
+        mockSeamCookies(...args),
+      takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
+        mockSeamTakeEvents(...args),
+      close: (...args: Parameters<LoginWindowSeam['close']>) =>
+        mockSeamClose(...args),
+      clearCookies: (...args: Parameters<LoginWindowSeam['clearCookies']>) =>
+        mockSeamClearCookies(...args)
+    }
+
+    beforeEach(() => {
+      // resetMocks:true already cleared these (top-of-file convention) —
+      // re-establish default implementations the same way the outer
+      // beforeEach does for the Electron-path mocks.
+      mockSeamOpen.mockResolvedValue('login-humble-0')
+      mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+      mockSeamTakeEvents.mockResolvedValue([])
+      mockSeamClose.mockResolvedValue(true)
+      mockSeamClearCookies.mockResolvedValue(0)
+      setLoginWindowSeam(fakeSeam)
+    })
+
+    afterEach(() => {
+      setLoginWindowSeam(null)
+    })
+
+    test('opens the login window once with HUMBLE_LOGIN_URL, visible: true, and the standard Chrome UA', async () => {
+      mockSeamCookies.mockResolvedValue({ total: 5, matched: [] })
+
+      const loginPromise = HumbleUser.startLogin()
+      await flushAsync()
+
+      expect(mockSeamOpen).toHaveBeenCalledTimes(1)
+      expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_LOGIN_URL, {
+        visible: true,
+        userAgent: standardBrowserUserAgent()
+      })
+
+      HumbleUser.stopLogin()
+      await loginPromise
+    })
+
+    test('UNDECIDABLE (a first read with total === 0) settles { status: "error" } and does NOT tick again', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync() // seam.open() resolves, seamLabel gets set
+
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+
+        await expect(loginPromise).resolves.toEqual({ status: 'error' })
+        expect(mockLogWarning).toHaveBeenCalled()
+        expect(mockGetGamekeys).not.toHaveBeenCalled()
+
+        // The watch is fully torn down — no further poll ticks fire.
+        mockSeamCookies.mockClear()
+        jest.advanceTimersByTime(10_000)
+        await flushAsync()
+        expect(mockSeamCookies).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('total > 0 with no matched _simpleauth_sess cookie keeps polling (liveness proven, still "not logged in yet"); a later matched value reaches finishLogin', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockSeamCookies.mockResolvedValue({ total: 5, matched: [] })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        expect(mockGetGamekeys).not.toHaveBeenCalled()
+
+        mockSeamCookies.mockResolvedValue({
+          total: 6,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'seam-cookie-value'
+            }
+          ]
+        })
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+
+        const result = await loginPromise
+        expect(result.status).toBe('done')
+        expect(mockGetGamekeys).toHaveBeenCalledWith('seam-cookie-value')
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test("a { event: 'finished' } nav event forces revalidation of the current candidate and re-arms the deadline", async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        // Liveness proven, but no matched candidate yet — cheap ticks (no
+        // gamekeys call) while time is advanced toward the deadline.
+        mockSeamCookies.mockResolvedValue({ total: 3, matched: [] })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+
+        // Advance to a few poll ticks short of the ORIGINAL deadline —
+        // deliberately NOT to the exact deadline instant, since both land on
+        // multiples of the 1500ms poll interval up to LOGIN_WATCH_TIMEOUT_MS
+        // (a 600000ms/1500ms boundary) and an exact-instant collision would
+        // let the deadline settle the watch before the forced tick below
+        // ever runs.
+        jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS - 4500)
+        await flushAsync()
+        expect(mockGetGamekeys).not.toHaveBeenCalled()
+
+        // A 'finished' nav event arrives WITH a matched candidate cookie on
+        // the next tick — re-arms the deadline and forces validation.
+        mockSeamTakeEvents.mockResolvedValueOnce([
+          { event: 'finished', url: 'https://www.humblebundle.com/' }
+        ])
+        mockSeamCookies.mockResolvedValueOnce({
+          total: 3,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'late-cookie-value'
+            }
+          ]
+        })
+        mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        expect(mockGetGamekeys).toHaveBeenCalledWith('late-cookie-value')
+
+        // The ORIGINAL deadline instant (3000ms further on from here) has
+        // now passed without settling — proof the nav event re-armed it.
+        let settled = false
+        void loginPromise.then(() => {
+          settled = true
+        })
+        jest.advanceTimersByTime(4000)
+        await flushAsync()
+        expect(settled).toBe(false)
+
+        HumbleUser.stopLogin()
+        await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('close(label) is called exactly once when the watch settles via a completed (done) login', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockSeamCookies.mockResolvedValue({
+          total: 3,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'close-done-cookie-value'
+            }
+          ]
+        })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+
+        const result = await loginPromise
+        expect(result.status).toBe('done')
+        expect(mockSeamClose).toHaveBeenCalledTimes(1)
+        expect(mockSeamClose).toHaveBeenCalledWith('login-humble-0')
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('close(label) is called exactly once when the watch settles via stopLogin() (silent cancel)', async () => {
+      const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
+
+      HumbleUser.stopLogin()
+
+      await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+      expect(mockSeamClose).toHaveBeenCalledTimes(1)
+      expect(mockSeamClose).toHaveBeenCalledWith('login-humble-0')
+    })
+
+    test('a close() rejection is swallowed — the watch still resolves', async () => {
+      mockSeamClose.mockRejectedValue(new Error('close failed'))
+
+      const loginPromise = HumbleUser.startLogin()
+      await flushAsync()
+
+      HumbleUser.stopLogin()
+
+      await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+      expect(mockLogWarning).toHaveBeenCalled()
+    })
+
+    test('captures csrf_cookie through the seam during a completed login, using the SAME window label as the session-cookie read', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+      mockSeamCookies.mockImplementation(
+        async (_label: string, _host: string, names: string[]) => {
+          if (names.includes('csrf_cookie')) {
+            return {
+              total: 4,
+              matched: [
+                {
+                  name: 'csrf_cookie',
+                  domain: 'humblebundle.com',
+                  value: 'seam-csrf-value'
+                }
+              ]
+            }
+          }
+          return {
+            total: 4,
+            matched: [
+              {
+                name: '_simpleauth_sess',
+                domain: 'humblebundle.com',
+                value: 'seam-session-value'
+              }
+            ]
+          }
+        }
+      )
+
+      const loginPromise = HumbleUser.startLogin()
+      await flushAsync()
+      jest.advanceTimersByTime(1500)
+      await flushAsync()
+      const result = await loginPromise
+      expect(result.status).toBe('done')
+
+      const csrfCall = mockConfigStore.set.mock.calls.find(
+        ([key]) => key === 'csrfToken'
+      )
+      expect(csrfCall).toBeDefined()
+      expect(csrfCall![1]).toMatch(/^humble:v1:/)
+
+      // Same window label used for every seam.cookies() call in this login.
+      const labelsUsed = new Set(
+        mockSeamCookies.mock.calls.map(([label]) => label)
+      )
+      expect(labelsUsed.size).toBe(1)
+      expect(labelsUsed.has('login-humble-0')).toBe(true)
+
+      // Never logs the raw csrf value.
+      const loggerCalls = [
+        ...mockLogInfo.mock.calls,
+        ...mockLogError.mock.calls,
+        ...mockLogWarning.mock.calls
+      ]
+      for (const call of loggerCalls) {
+        expect(JSON.stringify(call)).not.toContain('seam-csrf-value')
+      }
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('getLiveCsrfToken() returns the stored snapshot directly when a seam is installed, without touching session.fromPartition', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? 'stored-snapshot-under-seam' : undefined
+      )
+
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+        'stored-snapshot-under-seam'
+      )
+      expect(mockFromPartition).not.toHaveBeenCalled()
+    })
+
+    test('Electron regression: with NO seam installed, the existing session-based watch still runs unchanged', async () => {
+      setLoginWindowSeam(null)
+      mockCookiesGet.mockResolvedValue([])
+
+      const loginPromise = HumbleUser.startLogin()
+
+      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
+      expect(mockSeamOpen).not.toHaveBeenCalled()
+
+      HumbleUser.stopLogin()
+      await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
   })
 
