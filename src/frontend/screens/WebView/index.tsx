@@ -11,7 +11,14 @@ import { NileLoginData } from 'common/types/nile'
 import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
-import { isLoginPathname } from './loginRoutes'
+import { useTauriOAuthLogin } from './useTauriOAuthLogin'
+import type { OAuthRunner } from 'common/types/oauthLogin'
+import {
+  isLoginPathname,
+  EPIC_LOGIN_URL,
+  GOG_LOGIN_URL,
+  ZOOM_LOGIN_URL
+} from './loginRoutes'
 import {
   Dialog,
   DialogContent,
@@ -59,12 +66,21 @@ export default function WebView() {
   // login prompt
   const { store, runner } = useParams()
 
+  // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08): drives the real per-runner OAuth capture for
+  // the four still-unported login runners. Called unconditionally alongside this component's
+  // other hooks (React's rules-of-hooks) -- the hook's OWN internal guard is what makes it a
+  // no-op for `runner === 'humble'`/`undefined`/any non-OAuth value, not a conditional call
+  // here. Its result is only consumed by the `!webviewPreloadPath` branch below.
+  const oauthLoginState = useTauriOAuthLogin(runner as OAuthRunner | undefined)
+
   let lang = i18n.language
   if (i18n.language === 'pt') {
     lang = 'pt-BR'
   }
 
-  const epicLoginUrl = 'https://www.epicgames.com/id/login?responseType=code'
+  // Lifted into loginRoutes.ts (Phase 34.4.1 Plan 09) so useTauriOAuthLogin.ts can import the
+  // SAME literals rather than duplicating them — one definition, two consumers.
+  const epicLoginUrl = EPIC_LOGIN_URL
 
   const epicStore = `https://www.epicgames.com/store/${lang}/`
   const gogStore = `https://af.gog.com?as=1838482841`
@@ -74,10 +90,8 @@ export default function WebView() {
   const wikiURL =
     'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
   const gogEmbedRegExp = new RegExp('https://embed.gog.com/on_login_success?')
-  const gogLoginUrl =
-    'https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=galaxy'
-  const zoomLoginUrl =
-    'https://www.zoom-platform.com/login?li=heroic&return_li_token=true'
+  const gogLoginUrl = GOG_LOGIN_URL
+  const zoomLoginUrl = ZOOM_LOGIN_URL
   const humbleLoginUrl = 'https://www.humblebundle.com/login'
 
   const trueAsStr = 'true' as unknown as boolean | undefined
@@ -455,7 +469,7 @@ export default function WebView() {
       // drive TauriLoginPanel instead: Humble gets an honest in-progress
       // surface, and the four OAuth runners get a declared-blocked one
       // naming the exact backend channel and Phase 34.5.
-      return <TauriLoginPanel runner={runner} />
+      return <TauriLoginPanel runner={runner} state={oauthLoginState} />
     }
     if (isTauri()) {
       // D-05: in-app store and wiki browsing was never this phase's job --

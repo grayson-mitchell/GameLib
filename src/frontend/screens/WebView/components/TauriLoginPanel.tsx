@@ -1,21 +1,23 @@
 import { useTranslation } from 'react-i18next'
 
+import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
+
 interface Props {
   runner?: string
-  // Reserved for plan 34.4.1-09: a per-runner capture state (redirect
-  // succeeded/failed/pending) that will layer on top of this render tree
-  // without restructuring it. Always `undefined` today, which renders the
-  // static declared-blocked copy below for every non-Humble runner.
-  state?: unknown
+  // Wired by plan 34.4.1-09: the per-runner capture state useTauriOAuthLogin() produces.
+  // `undefined` (the default -- also what every plan-05 test still passes) renders the ORIGINAL
+  // static declared-blocked copy below, unchanged, so no pre-existing test regresses. A defined
+  // `state` layers the real capture phases on top of the SAME render tree, exactly as plan 05
+  // reserved this prop to allow.
+  state?: TauriOAuthLoginState
 }
 
-// D-04/REQ-34.4.1-08: the backend sign-in channel each OAuth runner's login
-// route is waiting on. Nothing about these names is Humble-specific -- the
-// Rust arms this panel's sibling seam drives (`humble_login_open` et al.,
-// `src-tauri/src/main.rs`) never reference Humble by name either, so the
-// SAME mechanism is capable of serving all five runners once each channel
-// below is ported (plan 34.4.1-09 wires the calls; this panel only names
-// the gap).
+// D-04/REQ-34.4.1-08: the backend sign-in channel each OAuth runner's login route is waiting on.
+// Nothing about these names is Humble-specific -- the Rust arms this panel's sibling seam drives
+// (`humble_login_open` et al., `src-tauri/src/main.rs`) never reference Humble by name either,
+// so the SAME mechanism serves all five runners. Plan 34.4.1-09 wires the real per-runner
+// capture (`useTauriOAuthLogin.ts`) in front of this panel; this map only names the gap for
+// whichever phase still needs to.
 const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
   legendary: 'login',
   gog: 'authGOG',
@@ -24,54 +26,34 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
 }
 
 /**
- * D-06/D-04 (REQ-34.4.1-07/REQ-34.4.1-08): the honest embedded-login
- * surface for the Tauri build's login routes -- the login half of the
- * branch `WebviewUnavailablePanel` used to cover alone with one blanket
- * "not available on this build" message. Phase 34.4.1 shipped a real Rust
- * login-window seam for Humble (plans 01-04), so showing Humble's login
- * route that message would now be a lie; the store/wiki-only half of the
- * old panel stayed behind in `WebviewUnavailablePanel` (this plan's Task 3).
+ * D-06/D-04 (REQ-34.4.1-07/REQ-34.4.1-08): the honest embedded-login surface for the Tauri
+ * build's login routes.
  *
- * Two surfaces, chosen by `runner`:
+ * Two top-level surfaces, chosen by `runner`:
  *
- *  - `runner === 'humble'`: an IN-PROGRESS surface. A native sign-in window
- *    is already open (see `WebView/index.tsx`'s humble login-watch effect,
- *    which starts it on mount); this page updates itself automatically once
- *    that watch resolves. No cancel button here -- leaving the route already
- *    issues `humbleStopLogin` via that effect's cleanup (D-06 silent
- *    cancel); a second, user-visible cancel path would need its own
- *    contract this plan does not define.
+ *  - `runner === 'humble'`: unchanged from plan 05 -- an IN-PROGRESS surface. A native sign-in
+ *    window is already open; this page updates itself automatically once that watch resolves.
  *
- *  - any other runner (`legendary`/`gog`/`nile`/`zoom`), or no runner at
- *    all: the DECLARED-BLOCKED surface. Names the exact backend channel
- *    that is not ported to this build yet and the phase it lands in
- *    (34.5), and logs the same fact once via `window.api.logInfo`
- *    ("logged, never silent" -- 34.1 D-13 house style). This is D-04's
- *    declaration made visible to the user instead of a blank screen or a
- *    silent hang.
+ *  - any other runner (`legendary`/`gog`/`nile`/`zoom`), or no runner at all: the OAuth surface,
+ *    now driven by `state` (plan 34.4.1-09):
+ *      - `state` undefined/absent, or `{ phase: 'idle' }`: the ORIGINAL plan-05 declared-blocked
+ *        copy (byte-identical wording) -- the safe default for a build where the capture hook
+ *        was never wired in front of this component at all.
+ *      - `{ phase: 'awaiting' }`: a real sign-in window is open and being watched.
+ *      - `{ phase: 'blocked', runner, channel }`: a REAL capture just succeeded and the backend
+ *        channel rejected it as unported -- REWORDED from plan 05's default so it never implies
+ *        nothing was attempted (see the module doc comment in `useTauriOAuthLogin.ts`).
+ *      - `{ phase: 'cancelled' | 'timeout' | 'error' }`: their own honest one-liners, each with a
+ *        Retry button (`window.location.reload()` -- no new hook, keeps this component
+ *        invocable as a plain function per this project's hookless/DOM-less test convention).
  *
- * WORDING CONSTRAINT (what makes this component reusable by plan 34.4.1-09
- * instead of rewritten by it): the declared-blocked copy is about the
- * BACKEND CHANNEL being unported, never about sign-in "not having been
- * attempted". Plan 34.4.1-09 wires a real per-runner capture in front of
- * this surface one wave later, and any claim that no sign-in was attempted
- * would become false at that point.
+ * No hooks besides `useTranslation` -- mirrors the `CrossoverBadge.tsx` / `WebviewUnavailablePanel.tsx`
+ * extraction pattern so this component can still be invoked directly as a plain function in its
+ * own test (no jsdom / react-test-renderer installed).
  *
- * No hooks besides `useTranslation` -- mirrors the `CrossoverBadge.tsx` /
- * `WebviewUnavailablePanel.tsx` extraction pattern so this component can be
- * invoked directly as a plain function in its own test (no jsdom /
- * react-test-renderer installed; see `src/frontend/jest.config.js`'s
- * docstring). The `window.api.logInfo` call therefore runs synchronously in
- * the render body rather than inside a `useEffect` -- the same convention
- * `WebView/index.tsx` already uses for its own Tauri-gap log line, and the
- * only shape a hookless, DOM-less test harness can observe.
- *
- * Never calls `navigator.clipboard` -- it resolves WITHOUT writing under
- * Tauri's WKWebView and never rejects (navigator-clipboard-noops-under-
- * tauri). Any future copy affordance here must use
- * `window.api.clipboardWriteText` instead.
+ * Never calls `navigator.clipboard` -- see `navigator-clipboard-noops-under-tauri`.
  */
-const TauriLoginPanel = ({ runner }: Props) => {
+const TauriLoginPanel = ({ runner, state }: Props) => {
   const { t } = useTranslation()
 
   if (runner === 'humble') {
@@ -98,10 +80,129 @@ const TauriLoginPanel = ({ runner }: Props) => {
     ? runner.charAt(0).toUpperCase() + runner.slice(1)
     : undefined
   const channelLabel = channel ? `\`${channel}\`` : 'the sign-in channel'
+  const phase = state?.phase
 
-  // "logged, never silent" (34.1 D-13): a developer watching the log sees
-  // exactly which runner/channel is blocked, even though the user-facing
-  // copy below is the primary signal (T-34.4.1-27).
+  const retryButton = (
+    <button
+      type="button"
+      className="WebView__unavailablePanel-retry"
+      onClick={() => window.location.reload()}
+    >
+      {t('webview.login.oauth.retry', 'Retry')}
+    </button>
+  )
+
+  if (phase === 'awaiting') {
+    const heading = t(
+      'webview.login.oauth.awaiting.heading',
+      runnerLabel ? `Signing in to ${runnerLabel}` : 'Signing in'
+    )
+    const body = t(
+      'webview.login.oauth.awaiting.body',
+      'A sign-in window has opened. Complete sign-in there.'
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+      </div>
+    )
+  }
+
+  if (phase === 'cancelled') {
+    const heading = t(
+      'webview.login.oauth.cancelled.heading',
+      runnerLabel ? `Signing in to ${runnerLabel} was cancelled` : 'Sign-in was cancelled'
+    )
+    const body = t(
+      'webview.login.oauth.cancelled.body',
+      'The sign-in window was closed before completing. You can try again.'
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] runner=${runner ?? 'unknown'} phase=cancelled`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+        {retryButton}
+      </div>
+    )
+  }
+
+  if (phase === 'timeout') {
+    const heading = t(
+      'webview.login.oauth.timeout.heading',
+      runnerLabel ? `Signing in to ${runnerLabel} timed out` : 'Sign-in timed out'
+    )
+    const body = t(
+      'webview.login.oauth.timeout.body',
+      'The sign-in window took too long to complete. You can try again.'
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] runner=${runner ?? 'unknown'} phase=timeout`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+        {retryButton}
+      </div>
+    )
+  }
+
+  if (phase === 'error') {
+    const heading = t(
+      'webview.login.oauth.error.heading',
+      runnerLabel ? `Signing in to ${runnerLabel} failed` : 'Sign-in failed'
+    )
+    const body = t(
+      'webview.login.oauth.error.body',
+      `Something went wrong while signing in: ${state?.message ?? 'unknown error'}`
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] runner=${runner ?? 'unknown'} phase=error message=${state?.message ?? 'unknown'}`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+        {retryButton}
+      </div>
+    )
+  }
+
+  if (state && phase === 'blocked') {
+    // REWORDED (Task 3): plan 05's default copy below is written for a world where no capture
+    // happened at all. Once a real capture has succeeded and the backend channel is what
+    // rejected it, the copy must say so -- never implying nothing was attempted.
+    const heading = t(
+      'webview.login.oauth.blocked.heading',
+      runnerLabel
+        ? `Signing in to ${runnerLabel} was captured, but can't finish yet`
+        : "Sign-in was captured, but can't finish yet"
+    )
+    const body = t(
+      'webview.login.oauth.blocked.body',
+      `Your sign-in was captured successfully, but the ${channelLabel} backend channel is not ` +
+        'ported to this build yet. This lands in Phase 34.5.'
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] captured-blocked: runner=${state.runner} channel=${state.channel} -- lands in Phase 34.5`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+      </div>
+    )
+  }
+
+  // phase is undefined ('idle') or `state` was never supplied at all -- the ORIGINAL plan-05
+  // declared-blocked default, byte-identical wording, so every plan-05 test keeps passing.
+  // "logged, never silent" (34.1 D-13): a developer watching the log sees exactly which
+  // runner/channel is blocked, even though the user-facing copy below is the primary signal
+  // (T-34.4.1-27).
   window.api.logInfo(
     `[TauriLoginPanel] declared-blocked: runner=${
       runner ?? 'unknown'

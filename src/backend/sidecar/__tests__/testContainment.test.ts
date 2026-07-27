@@ -479,6 +479,15 @@ const IN_SCOPE_SUITES = [
  * drives the real `sidecarRpc` transport via the lighter-weight
  * `startRpcServer()`, which shares the same underlying stream-binding
  * containment guarantees as `init()`. No new containment surface.
+ *
+ * `oauthLoginCapture.test.ts` (Phase 34.4.1 Plan 09) is classified as
+ * structurally contained: it factory-mocks only `backend/logger` (mirrors
+ * `electronUntouched.test.ts`'s convention) -- it never touches `electron`,
+ * `electron-store`, `pathShim`, or `../bootstrap`'s `init()` at all, because
+ * `oauthLoginCapture.ts`/`oauthLoginFlowRegistration.ts` import nothing from
+ * any of those (their only dependencies are `../humble/loginWindowSeam`,
+ * pure types with no I/O, and `./electronStub`'s `ipcMain` recorder). No new
+ * containment surface.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -499,6 +508,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
   'netStub.test.ts',
+  'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',
