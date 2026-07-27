@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: planning
-stopped_at: Phase 34.4.1 context gathered
-last_updated: "2026-07-27T01:56:53.470Z"
-last_activity: 2026-07-27 -- Phase 34.4.1 discuss-phase complete (34.4.1-CONTEXT.md + DISCUSSION-LOG.md, commit 6566971a0). 11 decisions across 4 gray areas. Headline scouting finding: the five logins sharing the one `<webview>` do NOT share one capture mechanism -- Epic/GOG/Amazon/Zoom read an OAuth code out of a redirect URL, ONLY Humble reads a cookie jar, so the unverified cookie API is one runner's risk and not the critical path (D-01). Candidate 1's scaffolding already exists: `tauriChildWindows.ts` (34.1 D-12) already builds fail-closed zero-capability WebviewWindows for untrusted remote content and `core:webview:allow-create-webview-window` is already granted, which also answers 34.3 D-02's landmine. Scope held to mechanism + Humble's 6, proven through Humble (D-04); store/wiki browsing deferred to its own work (D-05). D-11 requires an EXECUTED spike against Tauri 2.11.5/wry 0.55.1 before any plan is written (34.3 D-05's "an inference is not a measurement"). D-10 is a blocking 4-item live gate headlined by a from-scratch Humble login -- falsifying 34.4 D-09's "no Tauri path to create a Humble session". Note: gsd-sdk's state write corrupted the progress counters (16/12) and they were hand-corrected back to 17/11.
+status: executing
+stopped_at: Phase 34.4.1 planned — ready to execute
+last_updated: "2026-07-27T05:08:48.961Z"
+last_activity: 2026-07-27 -- Phase 34.4.1 PLANNED. 9 plans / 7 waves / 26 tasks. REQ-34.4.1-01..13 minted. D-11's "spike before planning" precondition was already discharged by executed spikes 013/014a/014b/015, whose evidence RESOLVED D-02 in favour of Rust-arms-driven-by-the-sidecar (the existing RUST_INVOKE_CHANNELS/dispatch_rust_channel pattern, shipped 3x already) and DE-RISKED D-03 -- `Webview::cookies()` is sound on macOS, but `cookies_for_url()` silently drops `_simpleauth_sess` (wry string-== domain compare) and `document.cookie` can never see it (HttpOnly). Research corrected an inherited miscite: the `<webview>` element is at WebView/index.tsx:488-503, not :467. Plan-checker round 1 found a BLOCKER -- the 4 OAuth runners were declared-blocked but never actually WIRED, which CONTEXT.md's Phase Boundary and D-04 ("the 4 get wired AND declared-blocked") both require, and navigation observation is precisely what Phase 34.5 inherits; fixed by new plan 34.4.1-09 (+ a 7th, genuinely-new `oauthCaptureLogin` channel -- the renderer has no other route to the Rust arms). Round 2 found a second BLOCKER (plan 06 promised but never instructed adding oauthLoginFlowRegistration.ts to the reach ledger's ENTRY_POINTS) -- fixed inline, along with splitting T-34.4.1-44 into 44a (mitigated, legendary/gog host-anchored) and 44b (ACCEPTED RESIDUAL, nile/zoom host-free match, forwarded as an obligation to Phase 34.5). NOTE: gsd-sdk's state write again corrupted the phase counters (17/11 -> 16/12) and spliced "Ready to execute" into the HISTORICAL "Prior phase: 34.1" block; both hand-corrected, per this cluster's established practice.
 progress:
   total_phases: 17
   completed_phases: 11
-  total_plans: 120
+  total_plans: 129
   completed_plans: 112
   percent: 65
 ---
@@ -1565,7 +1565,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-27
+Last activity: 2026-07-27 -- Phase 34.4.1 planning complete
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
