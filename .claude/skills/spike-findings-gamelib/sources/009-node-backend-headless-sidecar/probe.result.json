@@ -1,0 +1,37 @@
+{
+  "backend_bundle": "/Users/graysonmitchell/Projects/GameLib/build/main/main.js",
+  "distinct_electron_apis_touched_before_fault": [
+    "app",
+    "ipcMain",
+    "ipcRenderer",
+    "shell"
+  ],
+  "api_touch_counts": {
+    "app": 9,
+    "ipcMain": 1,
+    "ipcRenderer": 1,
+    "shell": 1
+  },
+  "total_touch_events": 12,
+  "faulted": true,
+  "fault": {
+    "message": "Cannot convert object to primitive value",
+    "stackTop": [
+      "TypeError: Cannot convert object to primitive value"
+    ]
+  },
+  "first_20_touches": [
+    "electron.app",
+    "electron.ipcMain",
+    "electron.ipcRenderer",
+    "electron.shell",
+    "electron.app",
+    "electron.app.getPath",
+    "electron.app.getPath()",
+    "electron.app.getPath().name",
+    "electron.app.getPath().name.toString",
+    "electron.app.getPath().name.toString()",
+    "electron.app.getPath().name.valueOf",
+    "electron.app.getPath().name.valueOf()"
+  ]
+}

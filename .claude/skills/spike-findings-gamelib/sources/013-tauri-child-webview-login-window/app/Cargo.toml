@@ -1,0 +1,16 @@
+[package]
+name = "spike-013-login-webview"
+version = "0.0.0"
+description = "Spike 013/014/015 harness — Tauri 2.11.5 child WebviewWindow on a live site, navigation observability, and cookie-read channel comparison with a positive control."
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Features deliberately MATCH src-tauri/Cargo.toml so the shared CARGO_TARGET_DIR
+# reuses the project's already-compiled `tauri` artifact instead of rebuilding it.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

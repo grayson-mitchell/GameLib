@@ -1,0 +1,12 @@
+[package]
+name = "parity-probe"
+version = "0.1.0"
+edition = "2021"
+
+# Spike 011 — prove the two RISKIEST Electron-API equivalents on real macOS:
+#   1. safeStorage (encrypted token store)  -> OS Keychain via `keyring`
+#      (the same macOS Security-framework store Electron safeStorage uses; also what
+#       tauri-plugin-stronghold / keyring-backed flows rely on).
+#   2. shell.openExternal("steam://...")     -> system opener (what tauri-plugin-opener wraps).
+[dependencies]
+keyring = { version = "3", features = ["apple-native"] }

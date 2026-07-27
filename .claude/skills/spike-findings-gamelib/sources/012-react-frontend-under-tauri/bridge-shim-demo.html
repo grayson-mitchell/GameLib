@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spike 012 — GameLib window.api under Tauri (no Electron)</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0; font: 15px/1.5 -apple-system, system-ui, sans-serif;
+        background: #0e1116; color: #e6edf3; padding: 24px;
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { color: #8b949e; margin: 0 0 20px; font-size: 13px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+      .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #8b949e; margin: 0 0 12px; }
+      button {
+        background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+        border-radius: 6px; padding: 8px 12px; margin: 0 6px 8px 0; cursor: pointer; font-size: 13px;
+      }
+      button:hover { background: #30363d; }
+      code { color: #79c0ff; }
+      #out { margin-top: 10px; padding: 10px; background: #0d1117; border-radius: 6px; min-height: 24px; }
+      #log {
+        font: 12px/1.5 ui-monospace, Menlo, monospace; background: #0d1117;
+        border: 1px solid #30363d; border-radius: 6px; padding: 12px; height: 340px; overflow: auto;
+      }
+      .ev-invoke { color: #7ee787; } .ev-send { color: #ffa657; } .ev-on { color: #d2a8ff; }
+      .ev-transport { color: #8b949e; }
+      .pill { display:inline-block; background:#238636; color:#fff; border-radius: 999px; padding: 1px 8px; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <h1>GameLib’s <code>window.api</code> running with <span class="pill">no Electron</span></h1>
+    <p class="sub">
+      Spike 012 — the exact contextBridge contract from <code>src/preload/</code>, rebuilt on a
+      mock-Tauri transport. The 379 renderer call-sites don’t change; only the 3 factory functions do.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Drive GameLib API calls</h2>
+        <button onclick="demoInvoke()">window.api.getHeroicVersion() → invoke</button>
+        <button onclick="demoLibrary()">window.api.refreshLibrary() → invoke</button>
+        <button onclick="demoLaunch()">window.api.openExternalUrl('steam://…') → send</button>
+        <button onclick="demoPush()">simulate backend push → frontendListenerSlot</button>
+        <div id="out">Result appears here…</div>
+      </div>
+      <div class="card">
+        <h2>Forensic bridge log</h2>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <script>
+      // ---- forensic log ---------------------------------------------------------
+      const logEl = document.getElementById('log')
+      function log(kind, msg) {
+        const t = new Date().toISOString().slice(11, 23)
+        const div = document.createElement('div')
+        div.className = 'ev-' + kind
+        div.textContent = `${t}  [${kind}]  ${msg}`
+        logEl.appendChild(div)
+        logEl.scrollTop = logEl.scrollHeight
+      }
+
+      // ---- MOCK TAURI TRANSPORT (stands in for @tauri-apps/api invoke + a Node sidecar) ----
+      // In the real port this is Tauri's invoke() bridging to the bundled Node backend
+      // (which spikes 009/010 showed runs headless). Here it answers a few channels so the
+      // demo is live end-to-end.
+      const sidecar = {
+        getHeroicVersion: async () => '0.7.0-tauri',
+        refreshLibrary: async () => ({ steam: 42, gog: 7, epic: 13, amazon: 3 }),
+        openExternalUrl: async (url) => {
+          log('transport', `sidecar would exec: open "${url}" (tauri-plugin-opener)`)
+          return { launched: true, url }
+        }
+      }
+      async function tauriInvoke(channel, args) {
+        log('transport', `invoke("${channel}") → sidecar`)
+        const fn = sidecar[channel]
+        if (!fn) throw new Error(`no handler for ${channel}`)
+        return fn(...args)
+      }
+
+      // ---- THE THREE FACTORIES — line-for-line the shape of src/preload/ipc.ts -----------
+      // Only these change to port GameLib's frontend to Tauri. Everything above window.api
+      // (the 379 call sites, the whole React tree) is untouched.
+      const frontendListeners = new Map()
+      function makeHandlerInvoker(channel) {
+        return (...args) => { log('invoke', `window.api.${channel}(${args.map(String).join(', ')})`); return tauriInvoke(channel, args) }
+      }
+      function makeListenerCaller(channel) {
+        return (...args) => { log('send', `window.api.${channel}(${args.map(String).join(', ')})`); tauriInvoke(channel, args).catch(() => {}) }
+      }
+      function frontendListenerSlot(event) {
+        return (cb) => { log('on', `subscribe "${event}"`); frontendListeners.set(event, cb); return () => frontendListeners.delete(event) }
+      }
+      // (real impl would also route makeListenerCaller through Tauri emit, and
+      //  frontendListenerSlot through Tauri's listen(); the CONTRACT is identical.)
+
+      // ---- window.api, assembled exactly like GameLib's preload/api/*.ts -----------------
+      window.api = {
+        getHeroicVersion: makeHandlerInvoker('getHeroicVersion'),
+        refreshLibrary: makeHandlerInvoker('refreshLibrary'),
+        openExternalUrl: makeListenerCaller('openExternalUrl'),
+        handleLibraryUpdate: frontendListenerSlot('libraryUpdated')
+      }
+      // A renderer component would call window.api.* — no knowledge it isn't Electron.
+      window.api.handleLibraryUpdate((_e, payload) =>
+        (document.getElementById('out').textContent = `backend pushed: ${JSON.stringify(payload)}`)
+      )
+
+      // ---- demo actions (what a React onClick would do) ---------------------------------
+      const out = document.getElementById('out')
+      async function demoInvoke() { out.textContent = 'version = ' + (await window.api.getHeroicVersion()) }
+      async function demoLibrary() { out.textContent = 'library counts = ' + JSON.stringify(await window.api.refreshLibrary()) }
+      function demoLaunch() { window.api.openExternalUrl('steam://rungameid/1145360'); out.textContent = 'launch dispatched (see log)' }
+      function demoPush() {
+        const cb = frontendListeners.get('libraryUpdated')
+        cb && cb({}, { newGames: 2, source: 'sidecar watcher' })
+      }
+
+      log('transport', 'window.api assembled from 3 factories over mock-Tauri transport — 0 Electron symbols')
+    </script>
+  </body>
+</html>

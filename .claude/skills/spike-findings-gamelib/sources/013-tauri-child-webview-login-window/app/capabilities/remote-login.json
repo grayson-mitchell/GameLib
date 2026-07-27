@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "remote-login",
+  "description": "Probe 014b: does a REMOTE page loaded in a child WebviewWindow get Tauri IPC access at all? Tauri v2 gates remote-origin IPC behind a capability's `remote.urls` (the v2 successor to v1's dangerousRemoteDomainIpcAccess). Without this, an injected script's invoke() is rejected — which is itself a finding.",
+  "windows": ["login-*"],
+  "remote": {
+    "urls": ["http://localhost:17913", "https://*.humblebundle.com"]
+  },
+  "permissions": ["core:default"]
+}

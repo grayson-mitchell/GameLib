@@ -1,0 +1,12 @@
+
+=== SPIKE 011 — Electron-API parity proof (macOS, no Electron) ===
+  [PASS] safeStorage -> OS Keychain (keyring crate)
+        wrote+read 41 bytes; match=true
+  [PASS] shell.openExternal(steam://) -> registered handler
+        /Applications/Steam.app handles steam://
+  [PASS] opener binary (/usr/bin/open) present
+        tauri-plugin-opener shells to this on macOS
+  [PASS] open accepts URL-style args
+        invoked /usr/bin/open (help) successfully
+
+verdict_signal: ALL PASS
