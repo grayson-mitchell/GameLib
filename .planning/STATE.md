@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.4.1 planned — ready to execute
-last_updated: "2026-07-27T05:08:48.961Z"
-last_activity: 2026-07-27 -- Phase 34.4.1 PLANNED. 9 plans / 7 waves / 26 tasks. REQ-34.4.1-01..13 minted. D-11's "spike before planning" precondition was already discharged by executed spikes 013/014a/014b/015, whose evidence RESOLVED D-02 in favour of Rust-arms-driven-by-the-sidecar (the existing RUST_INVOKE_CHANNELS/dispatch_rust_channel pattern, shipped 3x already) and DE-RISKED D-03 -- `Webview::cookies()` is sound on macOS, but `cookies_for_url()` silently drops `_simpleauth_sess` (wry string-== domain compare) and `document.cookie` can never see it (HttpOnly). Research corrected an inherited miscite: the `<webview>` element is at WebView/index.tsx:488-503, not :467. Plan-checker round 1 found a BLOCKER -- the 4 OAuth runners were declared-blocked but never actually WIRED, which CONTEXT.md's Phase Boundary and D-04 ("the 4 get wired AND declared-blocked") both require, and navigation observation is precisely what Phase 34.5 inherits; fixed by new plan 34.4.1-09 (+ a 7th, genuinely-new `oauthCaptureLogin` channel -- the renderer has no other route to the Rust arms). Round 2 found a second BLOCKER (plan 06 promised but never instructed adding oauthLoginFlowRegistration.ts to the reach ledger's ENTRY_POINTS) -- fixed inline, along with splitting T-34.4.1-44 into 44a (mitigated, legendary/gog host-anchored) and 44b (ACCEPTED RESIDUAL, nile/zoom host-free match, forwarded as an obligation to Phase 34.5). NOTE: gsd-sdk's state write again corrupted the phase counters (17/11 -> 16/12) and spliced "Ready to execute" into the HISTORICAL "Prior phase: 34.1" block; both hand-corrected, per this cluster's established practice.
+stopped_at: Phase 34.4.1 plan 01 complete -- ready to execute plan 02
+last_updated: "2026-07-27T05:37:47.976Z"
+last_activity: 2026-07-27 -- Phase 34.4.1 plan 01 (login-window Rust seam) executed
 progress:
-  total_phases: 17
-  completed_phases: 11
+  total_phases: 16
+  completed_phases: 12
   total_plans: 129
   completed_plans: 112
-  percent: 65
+  percent: 87
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.1 — tauri embedded browser login seam replace the electron webvi
+**Current focus:** Phase 34.4.1 — tauri-embedded-browser-login-seam-replace-the-electron-webvi
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,8 +33,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.4.1
-Plan: Not started
+Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
+Plan: 2 of 9
 
 34.4-10 done -- Ran the phase's blocking 5-item live gate under `pnpm tauri:dev`, recorded in
 `34.4-LIVE-GATE.md`. Task 1's automated sweep found and fixed one real Rule-1 build regression
@@ -1319,7 +1319,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 87%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.2-14, the final gap-cycle plan): the same corruption family recurred a fourth time.
@@ -1334,7 +1334,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to plan
+Status: Ready to execute
 
 > NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
 > ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
@@ -1565,7 +1565,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-27 -- Phase 34.4.1 planning complete
+Last activity: 2026-07-27
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -2143,6 +2143,7 @@ Closed/parked native-install phases:
 | Phase 34.3 P06 | 35min | 2 tasks | 4 files |
 | Phase 34.3 P07 | ~50min | 3 tasks | 2 files |
 | Phase 34.3 P08 | 70min | 3 tasks | 5 files |
+| Phase 34.4.1 P01 | 45m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -2424,6 +2425,8 @@ Recent decisions affecting current work:
 - [Phase 34.3-07]: Regenerated the electron-reach ledger baseline by running computeElectronReach(), not transcribing prose -- measured set gained exactly one module (logger/uploader.ts), matching D-10's named edge
 - [Phase 34.3-07]: Hardened tauriShellSource.test.ts's loadMainRsCode with the shared stripSourceComments util (block comments) layered under the existing local trailing-// pass, closing a vacuous-gate risk for Task 3's positive-existence assertions
 - [Phase 34.3]: Live-gate proof-level cells in 34.3-PORTED-CHANNELS.md (unit + LIVE (item N)) are explicitly marked pending, not observed, since plan 34.3-09 (the blocking live gate) had not executed as of this document's authorship
+- [Phase 34.4.1]: Used tauri::Url (the crate's own re-export of url::Url) instead of adding a new 'url' Cargo dependency for login_window_url_arg — Keeps plan 01's threat-model disposition T-34.4.1-SC accurate (installs ZERO new packages); tauri 2.11.2 re-exports url::Url at its crate root
+- [Phase 34.4.1]: Prefixed the new #[cfg(test)] pure-logic test functions with humble_login_ instead of the plan's literal bare names — Task 2's own acceptance criteria requires 'cargo test humble_login' to match >=8 passing tests, which is unreachable with names lacking that substring -- Rule 3 auto-fix of a self-inconsistent acceptance criterion
 
 ### Pending Todos
 
@@ -2495,8 +2498,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T01:56:53.458Z
-Stopped at: Phase 34.4.1 context gathered
+Last session: 2026-07-27T05:37:47.968Z
+Stopped at: Phase 34.4.1 plan 01 complete -- ready to execute plan 02
 passed 16/16, code review 0 critical / 3 warning / 2 info
 Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
 (`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
