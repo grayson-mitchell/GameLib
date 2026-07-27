@@ -145,6 +145,34 @@ export const ipcMain = {
 
 // ---- app ---------------------------------------------------------------------
 
+// app.userAgentFallback (34.4.1-02 Task 4, DEFECT 3): `standardBrowserUserAgent()`
+// (backend/humble/userAgent.ts:26-36) reads this property unconditionally and regex-extracts a
+// `(<platform>)` token and a `Chrome/<version>` token from it. Real Electron populates this at
+// startup with Chromium's own UA string; this stub previously left it `undefined`, so every call
+// under the sidecar threw `Cannot read properties of undefined (reading 'replace')` -- the A4
+// smoke gate's Task-4 DEFECT 3, discovered only once DEFECT 1/2's logging fixes made the sidecar
+// observable at all. Shaped to match the happy-path regex directly (platform token in parens,
+// `Chrome/<version>` present) rather than the function's own defensive fallback branch, and
+// DELIBERATELY carries no `Electron/x.y.z` token -- the whole point of `standardBrowserUserAgent`
+// is to strip that token so Google's SSO does not fingerprint an embedded browser, and a stub
+// that already omits it exercises the happy path the real runtime is meant to produce.
+// `Chrome/142.0.7444.52` is the real Chromium build electron@41.1.1 (this repo's pinned Electron
+// version, see package.json) ships -- the same pairing `humble/__tests__/user.test.ts` already
+// hardcodes for its own synthetic `userAgentFallback` fixture, kept in parity here rather than
+// invented fresh. The platform token is derived from `process.platform` (mirroring
+// `constants/environment.ts`'s `isMac`/`isWindows`/`isLinux` convention) rather than hardcoded to
+// macOS, since the sidecar itself is cross-platform.
+function stubUserAgentFallback(): string {
+  const chromeVersion = '142.0.7444.52'
+  const platformToken =
+    process.platform === 'darwin'
+      ? 'Macintosh; Intel Mac OS X 10_15_7'
+      : process.platform === 'win32'
+        ? 'Windows NT 10.0; Win64; x64'
+        : 'X11; Linux x86_64'
+  return `Mozilla/5.0 (${platformToken}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`
+}
+
 // app.quit()/exit()/relaunch() (Phase 33 Plan 04, D-05 app lifecycle essentials): forward a
 // real exit/relaunch request to Tauri's AppHandle via RUST_APP_EXIT/RUST_APP_RELAUNCH, mirroring
 // shell.openExternal's fire-and-forget void-forwarding shape below -- neither the two real
@@ -178,6 +206,7 @@ export const app = {
   isPackaged: false,
   getAppPath: (): string => process.cwd(),
   getVersion: (): string => pkgJson.version ?? '0.0.0',
+  userAgentFallback: stubUserAgentFallback(),
   whenReady: (): Promise<void> => Promise.resolve(),
   on: () => app,
   once: () => app,
