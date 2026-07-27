@@ -47,7 +47,7 @@ import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
-import { isTauri } from '../../preload/tauriTransport'
+import { performSteamLogout } from './SteamSignOut'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -739,49 +739,50 @@ class GlobalState extends PureComponent<Props> {
     return result.status
   }
 
+  // Phase 34.4 gap fix (REQ-34.4-02 / live-gate item 2): the earlier
+  // G-30-01 mitigation short-circuited this method entirely under Tauri, on
+  // the premise that no sidecar listener existed for `logoutSteam` at all.
+  // That premise expired the moment Phase 34.4 Plan 01 registered
+  // `steamAuthFlowRegistration.ts`'s `ipcMain.on('logoutSteam', ...)` -- the
+  // guard survived past that point only because no plan touched this file,
+  // leaving the sidecar reachable but permanently unreachable FROM here.
+  // `logoutSteam` is still a fire-and-forget `send` with no response
+  // protocol, so firing it and immediately wiping local state / reloading
+  // -- as this method used to do outright on Electron -- is a race that can
+  // silently revert the sign-out on reload (see SteamSignOut.ts's docstring
+  // for the full mechanism). `performSteamLogout` closes that race by
+  // polling the already-ported `getSteamUserInfo` invoke for confirmation
+  // before either branch below runs; it applies to both builds identically.
   steamLogout = async () => {
-    // G-30-01 fix: Steam sign-out is deliberately out of scope for the Tauri
-    // IPC re-plumb slice (30-CONTEXT.md D-02). `logoutSteam` is a
-    // fire-and-forget `send` (preload/ipc.ts's makeListenerCaller ->
-    // sidecar_send), and no listener is registered for it on the sidecar
-    // under Tauri (steamAuthFlowRegistration.ts deliberately excludes it,
-    // per its own docstring) -- so the call always "succeeds" from the
-    // caller's perspective while doing nothing server-side. Unlike an
-    // unported `invoke` channel (which at least rejects with
-    // UNPORTED_CHANNEL_MARKER), there is no rejection here to catch: `send`
-    // has no response protocol at all. Proceeding past this point anyway
-    // (as the Electron branch below does) optimistically wipes local state
-    // and reloads the page, which only masks the no-op -- after the reload,
-    // `steamConfigStore.userData` (never actually cleared) rehydrates the
-    // same signed-in identity, and the tile silently reverts to "Logout",
-    // presenting as an unresponsive button (the original G-30-01 symptom).
-    // Surface this honestly instead.
-    if (isTauri()) {
-      console.warn(
-        '[GameLib] logoutSteam is unavailable in this Tauri build (Phase ' +
-          '30 D-02 -- Steam sign-out is out of scope for this slice); no ' +
-          'action taken.'
-      )
-      this.handleShowDialogModal({
-        title: t('login.steam_logout_unavailable_title', 'Sign out unavailable'),
-        message: t(
-          'login.steam_logout_unavailable_message',
-          "Steam sign-out isn't available in this build yet. You'll remain signed in."
-        ),
-        buttons: [{ text: t('box.ok', 'OK') }]
-      })
-      return
-    }
-
-    window.api.logoutSteam()
-    this.setState({
-      steam: {
-        library: [],
-        username: null
+    await performSteamLogout({
+      logoutSteam: window.api.logoutSteam,
+      getSteamUserInfo: window.api.getSteamUserInfo,
+      onSignedOut: () => {
+        this.setState({
+          steam: {
+            library: [],
+            username: null
+          }
+        })
+        console.log('Logging out from steam')
+        window.location.reload()
+      },
+      onSignOutFailed: () => {
+        console.warn(
+          '[GameLib] logoutSteam did not confirm a signed-out state ' +
+            'within the poll window; leaving local state untouched rather ' +
+            'than reloading into a possibly-still-signed-in session.'
+        )
+        this.handleShowDialogModal({
+          title: t('login.steam_logout_failed_title', 'Sign-out failed'),
+          message: t(
+            'login.steam_logout_failed_message',
+            "Steam sign-out didn't finish in time. Please try again."
+          ),
+          buttons: [{ text: t('box.ok', 'OK') }]
+        })
       }
     })
-    console.log('Logging out from steam')
-    window.location.reload()
   }
 
   // Humble is not a Runner (v1.2 locked decision) — no library, no
