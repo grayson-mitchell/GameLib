@@ -1416,7 +1416,13 @@ Cross-cutting constraints:
 **Goal:** Port the **remaining Steam surface plus the portable half of the Humble integration** (**31 channels** — was 38; see the re-scoping below): Steam credential/SteamGuard/TOTP login, sign-out, bottle provisioning, client setup, key redemption and private-branch passwords — closing SEAM.md deferred item 5 (D-02) — together with 16 of the 22 Humble channels from phases 10-15. Also: an honest "not available on this build" login surface (**D-04**), a fail-fast `electronStub.net.request` (**D-06**), and a **blocking 5-item live gate** (**D-08**). Additive and reversible — the Electron build keeps working unchanged.
 **Requirements:** REQ-34.4-01..16
 **Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
-**Plans:** 10 plans (5 waves) — **10/10 executed on disk** (all plans have SUMMARY.md) — **PHASE COMPLETE**, blocking live gate PASSED 5/5 (34.4-LIVE-GATE.md); secure-phase 34.4 not yet run
+**Plans:** 10/10 plans complete (5 waves) — **PHASE COMPLETE 2026-07-27**. Blocking live gate
+PASSED 5/5 (`34.4-LIVE-GATE.md`) — item 2 (`logoutSteam`) FAILED on attempt 1 and was fixed
+in-phase. Verification passed 16/16; code review 0 critical / 3 warning / 2 info, WR-01 fixed
+(`1afef0345`). **Secure-phase 34.4 not yet run.** Open: WR-02/WR-03 (runner-name display +
+i18n interpolation in `WebviewUnavailablePanel.tsx`), and two unrun confirmatory Electron
+checks (bottle-pair parity; Electron sign-out sanity, since the item-2 fix changed Electron's
+logout path too).
 
 Re-scoped by `34.4-CONTEXT.md` on 2026-07-27: **38 → 31.** `isLoggedIn` → Phase 34.5 (**D-03**; it is `LegendaryUser.isLoggedIn()` — Epic, filed here only because the inventory grouped by file, same as 34.1 D-14's `callTool` move). The 6 Humble browser-auth channels → **Phase 34.4.1** (**D-01/D-02**; the `<webview>` + `session.fromPartition` seam is cross-cutting and 34.5 needs it too). `IPC-PORT-INVENTORY.md` updated to match.
 

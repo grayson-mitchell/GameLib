@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: 34.4-10 done -- Phase 34.4 fully executed on disk (10/10 plans)
-last_updated: "2026-07-27T13:05:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 34.4 complete (10/10) — ready to discuss Phase 34.4.1
+last_updated: 2026-07-27T01:31:09.160Z
 last_activity: 2026-07-27 -- 34.4-10 executed (blocking 5-item live gate under pnpm tauri:dev, PASS 5/5 -- item 2 logoutSteam FAILED on attempt 1: a stale Phase 30 G-30-01 isTauri() guard in GlobalState.tsx made the ported logoutSteam send unreachable from the UI, invisible to the fully-green automated suite; fixed in-phase (1cf42d43b/52dfcfb66) closing the underlying fire-and-forget race via new SteamSignOut.ts's poll-then-confirm helper, re-tested PASS with a persisted-store present-to-absent proof stronger than the plan's UI-only check; item 5 surfaced a pre-existing, faithfully-ported Electron defect (steamBottleStatus.provisioned vs isSteamBottleProvisioned() disagree); Rule-1 fix 9f9f0402c for a broken WebView/index.tsx import found during the mandatory npm start regression check; REQ-34.4-13/15 complete, see 34.4-10-SUMMARY.md). Phase 34.4 (Tauri IPC re-plumb slice 7) is now fully executed; secure-phase 34.4 not yet run. Next: Phase 34.4.1 (embedded-browser login seam) or Phase 34.5 (slice 8), per ROADMAP ordering.
 progress:
   total_phases: 17
   completed_phases: 11
   total_plans: 120
   completed_plans: 112
-  percent: 76
+  percent: 65
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4 — tauri ipc re plumb slice 7 steam completion and humble
+**Current focus:** Phase 34.4.1 — tauri embedded browser login seam replace the electron webvi
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -33,8 +33,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 34.4 (tauri-ipc-re-plumb-slice-7-steam-completion-and-humble) — COMPLETE (10/10 plans)
-Plan: 10 of 10 (34.4-01 through 34.4-10 all done; secure-phase 34.4 not yet run)
+Phase: 34.4.1
+Plan: Not started
 
 34.4-10 done -- Ran the phase's blocking 5-item live gate under `pnpm tauri:dev`, recorded in
 `34.4-LIVE-GATE.md`. Task 1's automated sweep found and fixed one real Rule-1 build regression
@@ -1563,7 +1563,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-27 -- Phase 34.4 planned: 10 plans in 5 waves, plan-checker PASSED
+Last activity: 2026-07-27
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -1948,7 +1948,7 @@ Closed/parked native-install phases:
 
 **Velocity (v0.1):**
 
-- Total plans completed: 151 (phases 1-4)
+- Total plans completed: 161 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -1981,6 +1981,7 @@ Closed/parked native-install phases:
 | 32 | 3 | - | - |
 | 34.2 | 30 | - | - |
 | 34.3 | 9 | - | - |
+| 34.4 | 10 | - | - |
 
 **v0.1 Detail Log:**
 
