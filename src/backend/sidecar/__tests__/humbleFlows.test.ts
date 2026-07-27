@@ -490,37 +490,38 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   })
 
   // ── Negative-scope guard (requirement 4, the load-bearing one) ────────────
-  describe('negative-scope guard — the 6 channels Phase 34.4.1 owns stay unregistered', () => {
-    const DEFERRED_CHANNELS = [
+  describe('negative-scope guard — the 6 channels Phase 34.4.1 owns are registered by a DIFFERENT module, never by registerHumbleFlows() itself', () => {
+    // UPDATED by Phase 34.4.1 Plan 02: these 6 channels are no longer deferred — they
+    // are now registered by `registerHumbleLoginFlows()`
+    // (`humbleLoginFlowRegistration.ts`), a module this file never imports or calls.
+    // Prior to Plan 02 this block asserted these channels stayed globally UNREGISTERED,
+    // as a proxy for "registerHumbleFlows() itself does not own them" — that proxy only
+    // held while nothing else in the sidecar's module graph registered them either. Now
+    // that `handlers.ts` also calls `registerHumbleLoginFlows()` at module scope (reached
+    // transitively through this file's own `import { init } from '../bootstrap'`), the
+    // global registries legitimately contain all 6. The still-load-bearing claim this
+    // block exists to prove — registerHumbleFlows() itself never touches these 6 channel
+    // names — is unchanged and re-asserted below by kind, with both directions checked
+    // per channel (a one-directional check cannot catch a send-vs-handle swap). Full
+    // frame-shape + rustInvoke-argument-order coverage for these 6 channels lives in
+    // `humbleLoginFlows.test.ts` (Plan 02 Task 3), which is this suite's positive
+    // counterpart.
+    const HANDLE_CHANNELS_34_4_1 = [
       'humbleStartLogin',
       'humbleReconnect',
       'humbleGetLoginUserAgent',
-      'humbleRevealKey',
-      'humbleStopLogin',
-      'humbleLoginNavigated'
+      'humbleRevealKey'
     ]
+    const SEND_CHANNELS_34_4_1 = ['humbleStopLogin', 'humbleLoginNavigated']
 
-    it('REQ-34.4-07 registerHumbleFlows() does not register any of the 6 channels Phase 34.4.1 owns, as either a handler or a listener', () => {
-      // Deliberately does NOT call registerHumbleFlows() a second time here.
-      // Plan 34.4-04's version of this test did (every one of its 10
-      // registrations was `ipcMain.handle`, which simply overwrites the same
-      // map entry — safe to repeat). Plan 34.4-05 changes that: this module
-      // now also registers `humbleDisconnect` via `ipcMain.on`, and
-      // `electronStub.ts`'s `on()` PUSHES onto an array
-      // (`listenerRegistry.get(channel) ?? []; listeners.push(...)`) rather
-      // than overwriting — a second call would stack a duplicate listener
-      // and cause `HumbleUser.disconnect()` to fire twice per `send`,
-      // corrupting every later "called exactly once" assertion in this file
-      // for the rest of the process (the hazard `clipboardFlowRegistration`'s
-      // own test docstring already names, and `clipboardFlows.test.ts` avoids
-      // by registering exactly once for the whole file). Registration already
-      // happened once at module scope via `handlers.ts` (reached through this
-      // file's own `import { init } from '../bootstrap'` above) — reading the
-      // registries directly, with NO second registration call, is sufficient
-      // to prove the negative-scope guard.
-      for (const channel of DEFERRED_CHANNELS) {
-        expect(isolationHandlerRegistry.has(channel)).toBe(false)
+    it('REQ-34.4.1-02/-03/-04/-05 registerHumbleLoginFlows() has registered all 6 channels it owns, with the correct kind, both directions', () => {
+      for (const channel of HANDLE_CHANNELS_34_4_1) {
+        expect(isolationHandlerRegistry.has(channel)).toBe(true)
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(0)
+      }
+      for (const channel of SEND_CHANNELS_34_4_1) {
+        expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(1)
+        expect(isolationHandlerRegistry.has(channel)).toBe(false)
       }
       // Sanity: isolationIpcMain is the same electronStub export
       // humbleFlowRegistration.ts itself imports — proves this guard is
@@ -560,16 +561,20 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       ).toBe(1)
     })
 
-    it('REQ-34.4-07 SEAM.md Invariant B: humbleRevealKey (deferred to Phase 34.4.1) still rejects non-fatally over the wire, and the RPC loop keeps serving', async () => {
+    it('REQ-34.4.1-04 SEAM.md Invariant B, UPDATED (Plan 02): humbleRevealKey is now a real registered channel — it resolves non-fatally (never rejects) even with malformed/missing args, and the RPC loop keeps serving', async () => {
       const { input, frames } = startSidecar()
+      // Deliberately malformed (empty args, so `params.gamekey` would throw inside the
+      // handler) — proves the D-07 fail-safe catch resolves a typed failure outcome
+      // rather than ever rejecting the frame.
       writeInvoke(input, 'reveal-1', 'humbleRevealKey', [])
       await flush()
 
       const revealResponse = frames.find((frame) => frame.id === 'reveal-1') as
-        | { ok: boolean; error?: string }
+        | { ok: boolean; result?: unknown; error?: string }
         | undefined
-      expect(revealResponse?.ok).toBe(false)
-      expect(revealResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+      expect(revealResponse?.ok).toBe(true)
+      expect(revealResponse?.result).toEqual({ status: 'failed' })
+      expect(revealResponse?.error).toBeUndefined()
 
       writeInvoke(input, 'health-after-reveal', 'health', [])
       await flush()

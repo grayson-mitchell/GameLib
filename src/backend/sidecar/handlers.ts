@@ -70,6 +70,7 @@ import { registerShellFilesFlows } from './shellFilesFlowRegistration'
 import { registerClipboardFlows } from './clipboardFlowRegistration'
 import { registerLoggerFlows } from './loggerFlowRegistration'
 import { registerHumbleFlows } from './humbleFlowRegistration'
+import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -164,6 +165,13 @@ registerLoggerFlows()
 // needs (all 9 Humble stores) is already registered by storeRegistration.ts
 // — zero new store plumbing.
 registerHumbleFlows()
+// Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the 6 browser-auth channels
+// (humbleStartLogin, humbleReconnect, humbleGetLoginUserAgent, humbleRevealKey,
+// humbleStopLogin, humbleLoginNavigated) plus installing the rustInvoke-backed
+// login-window seam (setLoginWindowSeam) — no ordering constraint relative to the
+// other calls above (own channel names, no cross-module runtime dependency at
+// registration time), placed alongside them, before `ensureStoresRegistered()`.
+registerHumbleLoginFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
