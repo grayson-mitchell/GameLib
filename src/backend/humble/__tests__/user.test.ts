@@ -120,7 +120,7 @@ import {
   setLoginWindowSeam,
   type LoginWindowSeam
 } from '../loginWindowSeam'
-import { HUMBLE_LOGIN_URL } from '../constants'
+import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -1318,6 +1318,86 @@ describe('HumbleUser', () => {
 
       HumbleUser.stopLogin()
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
+    })
+
+    // ── Phase 34.4.1 Plan 06 (D-08): disconnect() seam path ─────────────────
+    // Closes 34.4 D-05's declared partial — under the Tauri seam, disconnect's
+    // cookie wipe goes through a hidden window + domain-scoped clearCookies
+    // instead of session.fromPartition (which has no shape under Tauri).
+
+    describe('disconnect() — seam path (Phase 34.4.1 Plan 06, D-08)', () => {
+      test('credential store is cleared BEFORE the cookie step runs', async () => {
+        const callOrder: string[] = []
+        mockConfigStore.clear.mockImplementation(() => {
+          callOrder.push('configStore.clear')
+        })
+        mockSeamClearCookies.mockImplementation(async () => {
+          callOrder.push('clearCookies')
+          return 0
+        })
+
+        await HumbleUser.disconnect()
+
+        expect(callOrder).toEqual(['configStore.clear', 'clearCookies'])
+      })
+
+      test('opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-0')
+        mockSeamClearCookies.mockResolvedValue(3)
+
+        await HumbleUser.disconnect()
+
+        expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
+          visible: false,
+          userAgent: standardBrowserUserAgent()
+        })
+        expect(mockSeamClearCookies).toHaveBeenCalledWith(
+          'disconnect-window-0',
+          'humblebundle.com'
+        )
+      })
+
+      test('a rejecting clearCookies does not throw out of disconnect(), and the hidden window is still closed', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-1')
+        mockSeamClearCookies.mockRejectedValue(new Error('rust clear failed'))
+
+        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+        expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-1')
+        expect(mockLogWarning).toHaveBeenCalled()
+      })
+
+      test('a rejecting seam.close() after a successful clear does not throw out of disconnect()', async () => {
+        mockSeamOpen.mockResolvedValue('disconnect-window-2')
+        mockSeamClearCookies.mockResolvedValue(1)
+        mockSeamClose.mockRejectedValue(new Error('close failed'))
+
+        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+        expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-2')
+      })
+
+      test('a rejecting seam.open() is caught by the outer guarded step and does not throw out of disconnect()', async () => {
+        mockSeamOpen.mockRejectedValue(new Error('open failed'))
+
+        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+        // No window was ever obtained, so clearCookies/close must not run.
+        expect(mockSeamClearCookies).not.toHaveBeenCalled()
+        expect(mockSeamClose).not.toHaveBeenCalled()
+        expect(mockLogWarning).toHaveBeenCalled()
+      })
+
+      test('with no seam installed, the original five Electron wipe steps still run instead', async () => {
+        setLoginWindowSeam(null)
+
+        await HumbleUser.disconnect()
+
+        expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
+        expect(mockClearStorageData).toHaveBeenCalled()
+        expect(mockSeamOpen).not.toHaveBeenCalled()
+        expect(mockSeamClearCookies).not.toHaveBeenCalled()
+      })
     })
   })
 

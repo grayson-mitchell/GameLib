@@ -774,18 +774,69 @@ export class HumbleUser {
     humbleLibraryStore.clear()
     humbleSyncStore.clear()
 
-    // Best-effort partition wipe: each step guarded individually so one
-    // rejected Electron session API call does not abort the rest. Partial
-    // failures are logged (never thrown) — the disconnect itself already
-    // succeeded once the credential store is cleared.
-    const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-    const wipeSteps: Array<[string, () => Promise<unknown>]> = [
-      ['clearStorageData', async () => ses.clearStorageData()],
-      ['clearCache', async () => ses.clearCache()],
-      ['clearAuthCache', async () => ses.clearAuthCache()],
-      ['clearHostResolverCache', async () => ses.clearHostResolverCache()],
-      ['clearData', async () => ses.clearData()]
-    ]
+    // Best-effort wipe: each step guarded individually so one rejected
+    // step does not abort the rest. Partial failures are logged (never
+    // thrown) — the disconnect itself already succeeded once the credential
+    // store is cleared.
+    //
+    // Phase 34.4.1 Plan 06 (D-08, closes 34.4 D-05's declared partial): under
+    // Electron this is the ORIGINAL, untouched five-step session.fromPartition
+    // wipe. Under Tauri there is no session.fromPartition() shape at all — the
+    // login cookies live in the sidecar's app-wide webview jar, which is only
+    // reachable through a live webview handle (tauri-login-webview-cookies.md
+    // § "Persistence and isolation"). A single 'clearHumbleCookies' step opens
+    // a HIDDEN window (no visible UI flash on disconnect), clears ONLY
+    // humblebundle.com cookies through the domain-scoped Rust arm (T-34.4.1-30
+    // — the jar will hold Epic/GOG/Amazon cookies once Phase 34.5 lands, so a
+    // blanket wipe would sign the user out of storefronts they never touched),
+    // and closes the window in a `finally` so no path — success, rejection, or
+    // a thrown open() — ever leaves it open.
+    const seam = getLoginWindowSeam()
+    let wipeSteps: Array<[string, () => Promise<unknown>]>
+    if (seam === null) {
+      const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
+      wipeSteps = [
+        ['clearStorageData', async () => ses.clearStorageData()],
+        ['clearCache', async () => ses.clearCache()],
+        ['clearAuthCache', async () => ses.clearAuthCache()],
+        ['clearHostResolverCache', async () => ses.clearHostResolverCache()],
+        ['clearData', async () => ses.clearData()]
+      ]
+    } else {
+      wipeSteps = [
+        [
+          'clearHumbleCookies',
+          async () => {
+            const label = await seam.open(HUMBLE_BASE_URL, {
+              visible: false,
+              userAgent: standardBrowserUserAgent()
+            })
+            try {
+              const deleted = await seam.clearCookies(label, 'humblebundle.com')
+              // Only the COUNT is logged — never a cookie name, domain, or
+              // value (T-34.4.1-34, the removed-getFullCookieHeader discipline
+              // this file already enforces elsewhere).
+              logInfo(
+                `Humble disconnect: cleared ${deleted} humblebundle.com cookie(s)`,
+                LogPrefix.Backend
+              )
+            } finally {
+              // Closed unconditionally — even when clearCookies rejects —
+              // so a failed clear never leaks the hidden window.
+              await seam.close(label).catch((err) => {
+                logWarning(
+                  [
+                    'Humble disconnect: cookie-clear window close failed (non-fatal):',
+                    err
+                  ],
+                  LogPrefix.Backend
+                )
+              })
+            }
+          }
+        ]
+      ]
+    }
     for (const [name, step] of wipeSteps) {
       try {
         await step()
