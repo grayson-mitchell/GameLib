@@ -226,6 +226,74 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     jest.useRealTimers()
   })
 
+  // ── Phase 34.4.1 Plan 06 (T-34.1-27): extended label-discipline coverage ──
+  //
+  // The rule this whole block enforces -- generated window labels are never
+  // reserved names and never derived from the caller-supplied url -- is
+  // proven TWICE in this codebase, once per language: here, for the
+  // renderer-side `external-<n>`/`about` labels `nextExternalWindowLabel()`
+  // generates (tauriChildWindows.ts); and on the Rust side, for the
+  // sidecar-owned `loginwin-<n>` labels `next_login_window_label()`
+  // generates (src-tauri/src/main.rs's `#[cfg(test)] mod tests`, see
+  // `humble_login_window_label_is_never_reserved`,
+  // `humble_login_window_labels_differ_across_calls`, and
+  // `humble_login_window_label_is_never_derived_from_url`). Both halves
+  // implement the SAME rule independently (there is no shared code between a
+  // renderer TS module and a Rust sidecar binary) -- this comment exists so
+  // either side is discoverable from the other.
+
+  it('REQ-34.1-08/T-34.1-27: labels across FIVE successive generations are pairwise unique, not merely adjacent-distinct', () => {
+    for (let i = 0; i < 5; i += 1) {
+      tauriCreateNewWindow(`https://www.protondb.com/app/${i}`)
+    }
+
+    const labels = webviewWindowCtor.mock.calls.map(
+      ([label]) => label as string
+    )
+    expect(labels).toHaveLength(5)
+    expect(new Set(labels).size).toBe(5)
+  })
+
+  it('REQ-34.1-08/T-34.1-27: the SAME url called five times in a row never repeats a label', () => {
+    for (let i = 0; i < 5; i += 1) {
+      tauriCreateNewWindow('https://www.protondb.com/app/1')
+    }
+
+    const labels = webviewWindowCtor.mock.calls.map(
+      ([label]) => label as string
+    )
+    expect(new Set(labels).size).toBe(5)
+  })
+
+  it('REQ-34.1-08/T-34.1-27: no label from a batch of varied-url calls ever equals "main" or "about"', () => {
+    const urls = [
+      'https://www.protondb.com/app/1',
+      'https://areweanticheatyet.com/game/2',
+      'https://www.humblebundle.com/store/some-game',
+      'https://appledb.dev/app/3'
+    ]
+    for (const url of urls) {
+      tauriCreateNewWindow(url)
+    }
+
+    const labels = webviewWindowCtor.mock.calls.map(
+      ([label]) => label as string
+    )
+    for (const label of labels) {
+      expect(label).not.toBe('main')
+      expect(label).not.toBe('about')
+    }
+  })
+
+  it('REQ-34.1-08/T-34.1-27: no generated label contains any substring of the url\'s host, including a humblebundle.com url', () => {
+    tauriCreateNewWindow('https://www.humblebundle.com/store/some-game')
+    const [label] = webviewWindowCtor.mock.calls[0] as [string, unknown]
+
+    expect(label).not.toContain('humblebundle')
+    expect(label).not.toContain('www')
+    expect(label).not.toContain('store')
+  })
+
   it('REQ-34.1-08: with isTauri() false, helpers.ts exports call the IPC path and never touch WebviewWindow', () => {
     mockedIsTauri.mockReturnValue(false)
 

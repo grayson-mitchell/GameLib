@@ -66,7 +66,16 @@ const ENTRY_POINTS = [
   // below a trustworthy Phase 35 cutover work-list rather than a partial one.
   join(REPO_ROOT, 'src/backend/sidecar/humbleFlowRegistration.ts'),
   join(REPO_ROOT, 'src/backend/sidecar/steamAuthFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/settingsFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/settingsFlowRegistration.ts'),
+  // Phase 34.4.1 Plan 06 (REQ-34.4.1-06/09/11, D-08): this phase's two new
+  // sidecar registration modules -- the embedded-browser login seam
+  // (humbleLoginFlowRegistration.ts, plan 34.4.1-02) and the OAuth wiring
+  // (oauthLoginFlowRegistration.ts, plan 34.4.1-09). This plan runs LAST
+  // (wave 5), specifically so this regeneration sees the phase's COMPLETE
+  // diff -- a ledger measured before the last code plan lands is a ledger
+  // that has to be measured twice.
+  join(REPO_ROOT, 'src/backend/sidecar/humbleLoginFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/oauthLoginFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -110,6 +119,23 @@ const ENTRY_POINTS = [
 //     and the one transitive edge through library.ts, missing this second,
 //     independently-electron-importing transitive dependency of both.
 // See 34.4-08-SUMMARY.md for the full before/after captured output.
+//
+// Phase 34.4.1 Plan 06 (REQ-34.4.1-06/09/11, D-08) extended ENTRY_POINTS with
+// humbleLoginFlowRegistration.ts (plan 34.4.1-02, the embedded-browser login
+// seam) and oauthLoginFlowRegistration.ts (plan 34.4.1-09, the OAuth wiring)
+// and re-ran computeElectronReach() via the same temporary-print-statement
+// procedure (before: 34 electron-importing modules / visitedFiles.size 219;
+// after: 34 modules / visitedFiles.size 222). The measurement AGREED with the
+// prediction this plan's own <context> section made: neither registration
+// module, nor anything they transitively pull in (loginWindowSeam.ts,
+// oauthLoginCapture.ts, common/types/oauthLogin.ts, humble/user.ts,
+// humble/adapter.ts), imports 'electron' directly -- humble/user.ts and
+// humble/adapter.ts were already baselined by 34.4 Plan 08 above, and the
+// three OAuth-runner modules (frontend/screens/WebView/useTauriOAuthLogin.ts
+// and friends) are outside the sidecar's own entry-point graph. The set of
+// electron-importing modules is therefore UNCHANGED at 34; only
+// visitedFiles.size grew (+3), reflecting the three new first-party files now
+// walked. See 34.4.1-06-SUMMARY.md for the full before/after captured output.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
@@ -375,6 +401,11 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/humble/adapter.ts',
       'src/backend/humble/expirationAlerts.ts',
       'src/backend/humble/userAgent.ts'
+      // Phase 34.4.1 Plan 06 (D-08): no new edge is added here -- the
+      // measurement confirmed humbleLoginFlowRegistration.ts and
+      // oauthLoginFlowRegistration.ts contribute ZERO new electron-importing
+      // modules (see the BASELINE_ELECTRON_REACHING_MODULES header comment
+      // above for the full before/after). Nothing to anti-vacuity-protect.
     ]
     for (const requiredModule of requiredModules) {
       expect(measured.has(requiredModule)).toBe(true)
@@ -391,7 +422,13 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // visitedFiles.size further, to a measured 217. Raised the floor from
     // 150 to 200 -- comfortably below the measured size, never lowered, per
     // the same instruction.
-    expect(reachResult.visitedFiles.size).toBeGreaterThan(200)
+    //
+    // Phase 34.4.1 Plan 06 (D-08): two more new entry points
+    // (humbleLoginFlowRegistration.ts, oauthLoginFlowRegistration.ts) grew
+    // visitedFiles.size further, to a measured 222. Raised the floor from
+    // 200 to 220 -- comfortably below the measured size, never lowered, per
+    // the same instruction.
+    expect(reachResult.visitedFiles.size).toBeGreaterThan(220)
   }, 30000)
 
   it('the gap-#3 edge is pinned as a known, documented fact: dispatch.ts reaches dialog.ts, which imports electron directly', () => {
