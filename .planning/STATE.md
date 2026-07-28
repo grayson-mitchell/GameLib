@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-07-PLAN.md (wave 6; 08 remains incomplete)
-last_updated: "2026-07-28T19:44:14.000Z"
+stopped_at: 34.4.1-08 Task 1 done (preconditions evidenced, from-scratch Humble state
+  reached); HELD at Task 2's blocking human-verify live gate awaiting operator
+last_updated: "2026-07-29T09:20:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 16
@@ -36,6 +37,36 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
 Plan: 8 of 9 complete (01/02/03/04/05/06/07/09 done; 09 executed out of sequence as wave 4,
 depends only on 02+05; 08 remains incomplete)
+
+34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
+4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
+NOT verified. Task 1 evidenced the gate's 6 preconditions into `34.4.1-LIVE-GATE.md`: P1
+satisfied (clean rebuild, real `pnpm tauri:dev` launch, sidecar confirmed via `gamelib.log`
+growing 2196->4952 bytes and `ps aux` showing shell+wrapper+sidecar, then cleanly quit), P3
+satisfied (a LIVE Humble credential existed and was moved aside recoverably per explicit
+developer authorization -- TWO verified byte-identical backups at
+`~/Library/Application Support/GameLib/humble_store/config.json.pre-34.4.1-08-gate.bak` and
+the session scratchpad; the developer is signed out of Humble until the gate runs or a
+backup is restored), P5 satisfied (log path + 4952-byte tail baseline). P2/P4/P6 are
+honestly deferred to operator action at gate time with reasons stated, not softened: P2 is
+an attestation by nature; P4 (an unrevealed key exists) has a real ordering conflict with P3
+since reading the Keys page needs the session P3 destroys; P6 (plant a non-Humble control
+cookie) needs a live child window -- and its ordering is load-bearing, it MUST exist before
+item 3's disconnect or item 3(b)'s domain-scope proof has no control. Automated baseline
+recorded verbatim rather than rounded to green: `cargo test` exit 0 (37/37), but
+`npm run test:ci` exit **1** on both runs -- 2 failures / 3095, being the standing
+`rustInvokeChannel.test.ts` baseline plus one suite that lands differently each run
+(`settingsFlows.test.ts`, then `tray_icon.test.ts`) with the same
+`rustInvoke timed out after 60000ms: keyring_get` signature, i.e. the documented cross-test
+`rustInvoke`-mock frame-leak flake; both flaked suites pass in isolation and Task 1 touched
+zero source files. Plan 08 Task 1's acceptance criterion "test:ci and cargo test exit codes
+are recorded as 0" is therefore NOT met on the test:ci half -- unresolved, and a candidate
+gap item if the flake ever proves load-bearing.
+
+Also of note: this session's `gsd-sdk query state.begin-phase` corrupted this file in the
+documented way (`percent` 93->75, `Plan: 8 of 9 ...` -> `Plan: 1 of 9` leaving a dangling
+fragment, and `Status:` spliced into the historical "Prior phase: 34.1" block). The write was
+reverted and these fields hand-corrected.
 
 34.4.1-07 done -- Declared what actually shipped (docs-only, no source touched; commits
 `093b9ef83`, `6c7fa4d15`, `5d567ccb9`): Task 1 wrote `34.4.1-PORTED-CHANNELS.md`, a 7-row table
