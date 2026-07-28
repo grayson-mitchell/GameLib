@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-09-PLAN.md (wave 4, out of sequence; 06/07/08 remain incomplete)
-last_updated: "2026-07-27T08:32:41.877Z"
-last_activity: 2026-07-27
+stopped_at: Completed 34.4.1-06-PLAN.md
+last_updated: "2026-07-28T19:29:27.209Z"
+last_activity: 2026-07-28
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 118
+  completed_plans: 119
   percent: 75
 ---
 
@@ -34,8 +34,31 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 6 of 9 complete (01/02/03/04/05/09 done; 09 executed out of sequence as wave 4, depends only
-on 02+05; 06/07/08 remain incomplete)
+Plan: 7 of 9 complete (01/02/03/04/05/06/09 done; 09 executed out of sequence as wave 4, depends
+only on 02+05; 07/08 remain incomplete)
+
+34.4.1-06 done -- Closed 34.4 D-05's declared `humbleDisconnect` partial and ran the phase's
+guardrail sweeps (commits `d5dd150c6`, `8458db8af`): Task 1 gave `disconnect()`'s Tauri seam path
+a domain-scoped cookie clear -- opens a HIDDEN window on `HUMBLE_BASE_URL` (the only way to reach
+the app-wide jar), calls `seam.clearCookies(label, 'humblebundle.com')`, logs only the deleted
+count, and closes the window unconditionally in a `finally`; the credential store is still cleared
+first and unconditionally, and the cookie step is guarded (a rejecting `open`/`clearCookies`/
+`close` never throws out of `disconnect()`). Electron's original five-step
+`session.fromPartition` path is untouched. 6 new test cases prove ordering, exact scope, and all
+three rejection paths. Task 2 added `humbleLoginFlowRegistration.ts` and
+`oauthLoginFlowRegistration.ts` to the electron-reach ledger's `ENTRY_POINTS` and regenerated the
+baseline by measurement: 34 electron-importing modules before and after (unchanged, agreeing with
+the prediction), `visitedFiles.size` grew 219 -> 222 (floor raised 200 -> 220); extended
+`childWindows.test.ts` with 4 new T-34.1-27 cases cross-linked to the Rust-side
+`next_login_window_label()` tests. Task 3 ran both Discretion sweeps against the phase's complete
+diff and found zero defects: Sweep A found no stale `isTauri()` guards (the two new guards in
+`WebView/index.tsx` and `useTauriOAuthLogin.ts` are deliberate and correctly scoped; all 6 ported
+channels confirmed reachable), Sweep B confirmed `npm start` and `pnpm tauri:dev` both compile and
+run, Sweep C's four anti-pattern greps were all clean. `npm run test:ci`: 3094 passed / 1 failed
+(documented baseline) / 166 suites -- no new failures (confirmed by a second full run after an
+apparent second failure on the first run turned out to be the same pre-existing flake class,
+isolated-verified clean). `cargo test`: 37/37. REQ-34.4.1-06/09/11 complete, see
+34.4.1-06-SUMMARY.md. Next: 34.4.1-07/08 (still incomplete).
 
 34.4.1-09 done -- Wired all four OAuth runners (legendary/gog/nile/zoom) to the login-window seam
 (commits `c427330ea`, `f8e4bc1de`, `c76875e83`): Task 1 added `matchOAuthRedirect()` (pure, all
@@ -1404,7 +1427,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-04): the same splice-into-historical-prose bug recurred again this session --
@@ -1656,7 +1679,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-27
+Last activity: 2026-07-28
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -2240,6 +2263,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P04 | 40min | 2 tasks | 10 files |
 | Phase 34.4.1 P05 | 35min | 3 tasks | 7 files |
 | Phase 34.4.1 P09 | 70min | 3 tasks | 13 files |
+| Phase 34.4.1 P06 | 70min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -2537,6 +2561,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: OAuthRunner/OAuthCaptureOutcome moved to common/types/oauthLogin.ts (not backend/sidecar) so common/types/ipc.ts can reference them without common/ importing from backend/sidecar -- common -> backend/frontend is the only established import direction.
 - [Phase 34.4.1]: TauriLoginPanel's state-absent/idle default keeps plan 05's original declared-blocked wording byte-identical; only the real post-capture 'blocked' phase gets the reworded 'captured, but can't finish yet' copy -- required since plan 05's TauriLoginPanel.test.tsx is not in plan 09's files_modified list and must keep passing unmodified.
 - [Phase 34.4.1]: useTauriOAuthLogin calls window.api.login/authGOG/authAmazon/authZoom directly rather than GlobalState's epicLogin/gogLogin/amazonLogin/zoomLogin wrappers, so the hook can own its try/catch of UNPORTED_CHANNEL_MARKER without touching GlobalState.tsx at all (verified empty diff).
+- [Phase 34.4.1]: 34.4.1-06: disconnect()'s seam-path cookie clear opens a HIDDEN window on HUMBLE_BASE_URL solely for a live webview handle, closing it unconditionally in a finally so a rejecting clearCookies or close() never leaks the window or throws out of disconnect()
+- [Phase 34.4.1]: 34.4.1-06: electronReachLedger's baseline stayed at 34 electron-importing modules after adding humbleLoginFlowRegistration.ts and oauthLoginFlowRegistration.ts as entry points -- measurement agreed with prediction; visitedFiles.size grew 219->222, floor raised 200->220
+- [Phase 34.4.1]: 34.4.1-06: Sweep A found zero stale isTauri() guards on the login path; all 6 ported channels confirmed reachable from a real caller with no intervening early return
 
 ### Pending Todos
 
@@ -2608,24 +2635,31 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-27T08:32:41.867Z
-Stopped at: Completed 34.4.1-09-PLAN.md (wave 4, out of sequence; 06/07/08 remain incomplete)
-passed 16/16, code review 0 critical / 3 warning / 2 info
-Next: Secure-phase 34.4 has NOT been run and is owed. Also open: code-review WR-01
-(`SteamSignOut.ts` poll does not catch `getSteamUserInfo()` rejections -- a transport error
-during sign-out leaves the user with a silently-failed logout), WR-02/WR-03 (runner-name
-display + i18n interpolation in `WebviewUnavailablePanel.tsx`), and two unrun confirmatory
-Electron checks (bottle-pair parity; Electron sign-out sanity, since the item-2 fix changed
-Electron's logout path too). Carried non-defects: `steamBottleStatus` vs
-`isSteamBottleProvisioned` disagreement (inherited Electron defect, faithfully ported),
-`electronStub` missing `request.abort()`, 6 Humble channels deferred to Phase 34.4.1.
-Superseded historical note (kept for provenance): plan 34.4-10 was the only remaining plan --
-`/gsd-execute-phase 34.4`. Also still outstanding (unrelated to Phase 34.4): Phase 34.3's
-34.3-09 live gate result reconciliation if not already closed; Phase 34.2's owed
-secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's 23-UAT.md real-macOS D-07 gates
-(multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume) and Phase 21's 21-UAT.md
-real-hardware human verification (native .acf adoption, hard-DRM launch, cancel-recovery, bottled
-Steam adoption, client-setup flows) — both required before milestone v0.7 completion.
+Last session: 2026-07-28T19:29:27.200Z
+Stopped at: Completed 34.4.1-06-PLAN.md (wave 5; 07/08 remain incomplete)
+Next: 34.4.1-07/08. Plan 06 closed 34.4 D-05's declared `humbleDisconnect` partial with a
+domain-scoped hidden-window cookie clear, regenerated the electron-reach ledger by measurement
+(34 modules unchanged, visitedFiles.size 219->222), extended `childWindows.test.ts` with 4
+T-34.1-27 label-discipline cases, and ran both Discretion sweeps clean against the phase's
+complete diff (zero stale `isTauri()` guards found; zero broken bare/aliased imports -- `npm
+start` and `pnpm tauri:dev` both confirmed compiling and running). `npm run test:ci`: 3094
+passed / 1 failed (documented baseline `rustInvokeChannel.test.ts` flake, confirmed by a second
+full run) / 166 suites -- no new failures. `cargo test`: 37/37 passed. See
+34.4.1-06-SUMMARY.md.
+Also still outstanding (carried forward, unrelated to this plan): Secure-phase 34.4 has NOT been
+run and is owed. Also open from Phase 34.4: code-review WR-01 (`SteamSignOut.ts` poll does not
+catch `getSteamUserInfo()` rejections -- a transport error during sign-out leaves the user with a
+silently-failed logout), WR-02/WR-03 (runner-name display + i18n interpolation in
+`WebviewUnavailablePanel.tsx`), and two unrun confirmatory Electron checks (bottle-pair parity;
+Electron sign-out sanity, since the item-2 fix changed Electron's logout path too). Carried
+non-defects: `steamBottleStatus` vs `isSteamBottleProvisioned` disagreement (inherited Electron
+defect, faithfully ported), `electronStub` missing `request.abort()`. Also still outstanding
+(unrelated to Phase 34.4): Phase 34.3's 34.3-09 live gate result reconciliation if not already
+closed; Phase 34.2's owed secure-phase + 11 code-review warnings + 2 UAT items; Phase 23's
+23-UAT.md real-macOS D-07 gates (multi-depot Cyberpunk 2077, hard-DRM title, interrupt-then-resume)
+and Phase 21's 21-UAT.md real-hardware human verification (native .acf adoption, hard-DRM launch,
+cancel-recovery, bottled Steam adoption, client-setup flows) — both required before milestone v0.7
+completion.
 | 2026-07-10 | fast | Replace CrossOver icon with monochrome weave mark | ✅ |
 | 2026-07-11 | fast | Steam list-view store label showed 'Other' → 'Steam' (getStoreName) | ✅ |
 | 2026-07-11 | fast | Removed redundant Steam-specific refresh button from LibraryHeader | ✅ |
