@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-06-PLAN.md
-last_updated: "2026-07-28T19:29:27.209Z"
-last_activity: 2026-07-28
+stopped_at: Completed 34.4.1-07-PLAN.md (wave 6; 08 remains incomplete)
+last_updated: "2026-07-28T19:44:14.000Z"
+last_activity: 2026-07-29
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 129
-  completed_plans: 119
-  percent: 75
+  completed_plans: 120
+  percent: 93
 ---
 
 # Project State
@@ -34,8 +34,38 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 7 of 9 complete (01/02/03/04/05/06/09 done; 09 executed out of sequence as wave 4, depends
-only on 02+05; 07/08 remain incomplete)
+Plan: 8 of 9 complete (01/02/03/04/05/06/07/09 done; 09 executed out of sequence as wave 4,
+depends only on 02+05; 08 remains incomplete)
+
+34.4.1-07 done -- Declared what actually shipped (docs-only, no source touched; commits
+`093b9ef83`, `6c7fa4d15`, `5d567ccb9`): Task 1 wrote `34.4.1-PORTED-CHANNELS.md`, a 7-row table
+(6 `humble*` browser-auth channels + the new Tauri-only `oauthCaptureLogin`) with proof levels
+traced to source and to each prior plan's SUMMARY -- verified independently rather than inherited
+(confirmed 6 Rust dispatch arms, 4 handle + 2 send Humble channels, `oauthCaptureLogin` as a
+handle channel, 37/37 cargo tests, `classifyCookieRead`'s platform-independent truth table, all by
+direct source read). Named D-04/D-03's original acceptable bad case up front (from
+`34.4.1-DISCUSSION-LOG.md` Q3 -- Humble declared-degraded if the cookie-jar read failed) and
+recorded that it did NOT materialize at the unit-proof level, while being explicit that the real
+live login itself (gate item 1) remains unobserved. Declared Linux/Windows per-platform status by
+naming three specific unverified surfaces (`cookies_for_url()` domain-match, UA fingerprint gap,
+`data_store_identifier` gating) and the one platform-independent proof that does exist
+(`classifyCookieRead` has no platform branch). Recorded 34.4 D-05's `humbleDisconnect` partial as
+CLOSED (plan 06) and 34.4 D-09's "no Tauri path" statement as PENDING STRIKE (plan 08's call).
+Declared T-34.4.1-47 (shared cookie jar, accepted, domain-scoped clear makes it tolerable) and
+T-34.4.1-44b (nile/zoom host-free redirect match, forwarded obligation to Phase 34.5) as accepted
+residuals. Task 2 edited SEAM.md in exactly 2 hunks (new §1 subsection + §3 BrowserWindow row
+retirement), Invariant B byte-unchanged, `IPC-PORT-INVENTORY.md` verified unmodified (`git diff
+--stat` empty) -- its stale `humbleDisconnect` L73-75 note left unedited, flagged as a follow-up
+for plan 08. Task 3 wrote `ported-channels-gate.py`, 8 self-tested checks (row presence/count,
+invoke/send kind split, permitted proof-level forms, an inventory set-equality cross-check with
+`oauthCaptureLogin`'s exclusion asserted explicitly, inventory-untouched via `git diff --stat`,
+SEAM.md checklist closure, `oauthCaptureLogin`'s never-live pin); both the real-document run and
+`--self-test` exited 0 on the first attempt. `pnpm codecheck`: clean. `pnpm test:ci`: 3093 passed
+/ 2 failed / 3095 total / 166 suites -- one is the documented baseline (`rustInvokeChannel.test.ts`);
+the other (`gameDetailsFlows.test.ts`) is the same pre-existing cross-test frame-leak flake class
+prior plans (03, 06) already documented, confirmed clean in isolation (31/31), not a regression
+(this plan touched zero source files). REQ-34.4.1-10/13 complete, see 34.4.1-07-SUMMARY.md. Next:
+34.4.1-08 (the blocking 4-item live gate).
 
 34.4.1-06 done -- Closed 34.4 D-05's declared `humbleDisconnect` partial and ran the phase's
 guardrail sweeps (commits `d5dd150c6`, `8458db8af`): Task 1 gave `disconnect()`'s Tauri seam path
@@ -1427,7 +1457,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-04): the same splice-into-historical-prose bug recurred again this session --
@@ -2264,6 +2294,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P05 | 35min | 3 tasks | 7 files |
 | Phase 34.4.1 P09 | 70min | 3 tasks | 13 files |
 | Phase 34.4.1 P06 | 70min | 3 tasks | 4 files |
+| Phase 34.4.1 P07 | 110min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -2564,6 +2595,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: 34.4.1-06: disconnect()'s seam-path cookie clear opens a HIDDEN window on HUMBLE_BASE_URL solely for a live webview handle, closing it unconditionally in a finally so a rejecting clearCookies or close() never leaks the window or throws out of disconnect()
 - [Phase 34.4.1]: 34.4.1-06: electronReachLedger's baseline stayed at 34 electron-importing modules after adding humbleLoginFlowRegistration.ts and oauthLoginFlowRegistration.ts as entry points -- measurement agreed with prediction; visitedFiles.size grew 219->222, floor raised 200->220
 - [Phase 34.4.1]: 34.4.1-06: Sweep A found zero stale isTauri() guards on the login path; all 6 ported channels confirmed reachable from a real caller with no intervening early return
+- [Phase 34.4.1-07]: Verified every PORTED-CHANNELS claim against source (registration modules, main.rs dispatch arms, cargo test, classifyCookieRead) rather than inheriting the phase-provided claim summary verbatim
+- [Phase 34.4.1-07]: Left IPC-PORT-INVENTORY.md's stale humbleDisconnect partial note (L73-75) unedited despite plan 06 closing it -- recorded as a follow-up for plan 08, since editing that file is explicitly plan 08's call
 
 ### Pending Todos
 
@@ -2635,17 +2668,17 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-28T19:29:27.200Z
-Stopped at: Completed 34.4.1-06-PLAN.md (wave 5; 07/08 remain incomplete)
-Next: 34.4.1-07/08. Plan 06 closed 34.4 D-05's declared `humbleDisconnect` partial with a
-domain-scoped hidden-window cookie clear, regenerated the electron-reach ledger by measurement
-(34 modules unchanged, visitedFiles.size 219->222), extended `childWindows.test.ts` with 4
-T-34.1-27 label-discipline cases, and ran both Discretion sweeps clean against the phase's
-complete diff (zero stale `isTauri()` guards found; zero broken bare/aliased imports -- `npm
-start` and `pnpm tauri:dev` both confirmed compiling and running). `npm run test:ci`: 3094
-passed / 1 failed (documented baseline `rustInvokeChannel.test.ts` flake, confirmed by a second
-full run) / 166 suites -- no new failures. `cargo test`: 37/37 passed. See
-34.4.1-06-SUMMARY.md.
+Last session: 2026-07-28T19:44:14.000Z
+Stopped at: Completed 34.4.1-07-PLAN.md (wave 6; 08 remains incomplete)
+Next: 34.4.1-08 (the blocking 4-item live gate). Plan 07 declared what actually shipped: wrote
+`34.4.1-PORTED-CHANNELS.md` (7-row table, proof levels independently verified against source and
+each prior plan's SUMMARY, not inherited), closed SEAM.md's checklist steps in a 2-hunk diff with
+Invariant B untouched and `IPC-PORT-INVENTORY.md` verified unmodified, and wrote an 8-check
+self-tested `ported-channels-gate.py` (both the real-document run and `--self-test` exit 0). No
+source code touched. `pnpm codecheck`: clean. `pnpm test:ci`: 3093 passed / 2 failed (documented
+`rustInvokeChannel.test.ts` baseline + `gameDetailsFlows.test.ts`, confirmed clean in isolation,
+same pre-existing cross-test frame-leak flake class prior plans already documented) / 3095 total
+/ 166 suites -- no regression traced to this plan's diff. See 34.4.1-07-SUMMARY.md.
 Also still outstanding (carried forward, unrelated to this plan): Secure-phase 34.4 has NOT been
 run and is owed. Also open from Phase 34.4: code-review WR-01 (`SteamSignOut.ts` poll does not
 catch `getSteamUserInfo()` rejections -- a transport error during sign-out leaves the user with a
