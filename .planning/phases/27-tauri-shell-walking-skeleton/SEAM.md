@@ -544,6 +544,57 @@ size) plus the portable half of Humble (everything that does not touch Chromium)
   "seen working" for this cluster either — that is exactly how G-30-02 was declared fixed twice
   while the live build hung.
 
+### Embedded-browser login seam (real, Phase 34.4.1)
+
+**Ported in Phase 34.4.1** (`tauri-embedded-browser-login-seam-replace-the-electron-webvi`, plans
+34.4.1-01..34.4.1-09). Full enumerated list, one row per channel with its kind/registration
+module/proof level, in
+`.planning/phases/34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi/34.4.1-PORTED-CHANNELS.md`.
+This slice ports the 6 Humble browser-auth channels Phase 34.4 D-01/D-02 carved out of its own
+slice, plus one new Tauri-only channel — 7 total.
+
+- **The 6 ported channels: `humbleStartLogin`, `humbleReconnect`, `humbleGetLoginUserAgent`,
+  `humbleRevealKey` (sidecar invoke), `humbleStopLogin`, `humbleLoginNavigated` (sidecar send) —
+  plus the new Tauri-only `oauthCaptureLogin` (sidecar invoke, no inventory row by design).**
+  Registered from exactly two curated modules: `humbleLoginFlowRegistration.ts` (the 6 Humble
+  channels) and `oauthLoginFlowRegistration.ts` (`oauthCaptureLogin`), never through
+  `humble/ipc_handler.ts`, which stays Electron's own registration module and is read-only
+  reference for this slice.
+- **Six new `dispatch_rust_channel` arms** — `humble_login_open`/`humble_login_cookies`/
+  `humble_login_take_events`/`humble_login_close`/`humble_login_clear_cookies` (plan 01) plus
+  `humble_reveal_post` (plan 04) — the running arm count grows from 13 (last changed by Phase
+  34.3's clipboard pair) to 19. **This is a deliberate reversal of the 34.2/34.4 "zero new Rust
+  arms" rider, with a stated reason exactly as 34.3 D-03 did for clipboard:** Tauri has no
+  `session.fromPartition()` equivalent — jar access structurally requires a live `Webview`
+  handle, so a real Rust-owned window is unavoidable for any cookie-based login, unlike the
+  purely-Node Steam/Humble-data channels every prior slice since 34.4.1's predecessor could port
+  with zero Rust changes.
+- **The seam-injection shape:** `loginWindowSeam.ts` (`src/backend/humble/loginWindowSeam.ts`)
+  defines the `LoginWindowSeam` interface and the `classifyCookieRead()` four-verdict pure
+  discriminator; `humbleLoginFlowRegistration.ts` is the ONE call site of
+  `setLoginWindowSeam()` in the whole repo, installing a `rustInvoke`-backed implementation at
+  sidecar startup; `oauthLoginFlowRegistration.ts` reuses that SAME installed seam for all four
+  Phase 34.5 OAuth runners' redirect capture — one runner-agnostic window primitive, not a
+  Humble-specific construct.
+- **Navigation observation — not the cookie read — is what Phase 34.5 inherits, and this phase
+  already exercised it against all four of Phase 34.5's own OAuth redirect shapes.** Plan
+  34.4.1-09's `matchOAuthRedirect()` proved `legendary`'s `localhost`+`?code=`, `gog`'s
+  `embed.gog.com/on_login_success`+`?code=` (host-anchored, a deliberate tightening of
+  `index.tsx`'s own unanchored regex), `nile`'s `openid.oa2.authorization_code`, and `zoom`'s
+  `li_token` shapes — 39 assertions total — each via `captureOAuthLogin()` driving the SAME
+  `LoginWindowSeam` Humble's login flow uses. `oauthCaptureLogin` captures a redirect code/token
+  only; it authenticates nothing. `login`, `authGOG`, `authAmazon` and `authZoom` remain
+  unported and still reject `UNPORTED_CHANNEL_MARKER` — Load-Bearing Invariant B, below, is what
+  those four channels still depend on.
+- **Claim level: mixed, per row — see `34.4.1-PORTED-CHANNELS.md`'s own honesty framing.** Only
+  Assumption A4 (the `WebviewWindowBuilder::build()` construct/close primitive, off the sidecar's
+  worker thread) is live-hardware-proven this slice, on macOS. The actual Humble login flow, the
+  cookie read against the real origin, the reveal POST, and the domain-scoped disconnect clear
+  are unit-proven only as of this document, pending `34.4.1-08`'s blocking 4-item live gate
+  (`34.4.1-LIVE-GATE.md`). Linux/Windows are declared, never exercised, with three specific
+  unverified surfaces named in `34.4.1-PORTED-CHANNELS.md`'s own per-platform section. Do not
+  read "wired and unit-proven" as "seen working" for this cluster either.
+
 ---
 
 ## 2. Stubbed / Minimal (intentionally cut down to what these two flows need)
@@ -582,7 +633,7 @@ removed from this table — it graduated to §1 Ported in Phase 28.
 |---|---|---|---|
 | 1 | `app` (lifecycle beyond getPath/getName) | 26 | **Partially closed, Phase 33 + Phase 34.1** — `quit`/`exit`/`relaunch` are real since Phase 33 (`AppHandle::exit()`/`restart()`), fixing the "zombie sidecar" gap. **Tray registration is now CLOSED (Phase 34.1, bounded)** — see the new §1 subsection and `34.1-PORTED-CHANNELS.md`'s re-deferral list for exactly what's still out of scope (recent-games submenu, dock menu, etc., target Phase 35). Updater hooks and custom-protocol registration remain deferred — target **Phase 34/35** |
 | 2 | `dialog` | 9 | **Fully closed, Phase 33.** `showMessageBox` now real multi-button (`MessageDialogButtons::OkCancelCustom`, per-caller `cancelId` fail-safe, D-07) — retires the Phase 31 CR-01 safe-sentinel stopgap. Joins `showErrorBox`/`showSaveDialog` (Phase 31) and `dialog_open` (Phase 30). Only `showMessageBoxSync`/`showOpenDialogSync` remain deferred — logged no-ops, sync-over-async, no in-scope caller re-examined this phase, target **Phase 35** |
-| 3 | `BrowserWindow` (full window management) | 7 | **Partially closed, Phase 34.1** — real multi-window now exists via `WebviewWindow` for `createNewWindow`/`showAboutWindow` (D-12, renderer-side Tauri JS, zero new Rust arms). What remains deferred is the `<webview>` login story (navigation interception, OAuth redirect capture, session/cookie access) — **re-targeted from Phase 34.4 to Phase 34.4.1** (Phase 34.4 D-01: the seam is cross-cutting, shared with Phase 34.5's Epic/GOG/Amazon logins, and does not belong inside a store-completion slice; Phase 34.4.1 runs BEFORE Phase 34.5 for that reason) |
+| 3 | `BrowserWindow` (full window management) | 7 | **Mostly closed, Phase 34.1 + Phase 34.4.1.** Real multi-window exists via `WebviewWindow` for `createNewWindow`/`showAboutWindow` (Phase 34.1 D-12, renderer-side Tauri JS, zero new Rust arms). **The `<webview>` login story (navigation interception, OAuth redirect capture, session/cookie access) is now CLOSED, Phase 34.4.1** — see the new §1 subsection and `34.4.1-PORTED-CHANNELS.md` for the full per-channel detail, including which parts are live-hardware-proven (only the window construct/close primitive, Assumption A4) versus unit-proven pending `34.4.1-08`'s live gate. **What remains deferred:** the in-app `<webview>` for store/wiki browsing (Phase 34.4.1 D-05, out of scope by explicit choice — target its own future phase) and the full `Electron.WebviewTag` removal from `WebviewControls`/`Sidebar` (Phase 35) |
 | 4 | `shell` (remaining methods) | 5 | **Mostly closed, Phase 33** — `showItemInFolder`/`openPath` now real via `tauri-plugin-opener`. `trashItem` stays a LOGGED no-op (Accepted Constraint below, no vetted Tauri v2 plugin has trash capability) — target **Phase 35 revisit** |
 | 5 | Login channel (`startQRLogin`/`startCredentialLogin`) | n/a — new sidecar handler(s), not a stubbed Electron API | **Fully closed, Phase 34.4.** The QR branch closed in Phase 30 (`checkSteamInstalled`/`steamStartQR`/`steamPollQR`, wired and unit-proven, live scan deferred per D-04); the credential/SteamGuard/TOTP prompt path and sign-out (`steamStartCredentials`/`steamSubmitGuard`/`steamPollCredential`/`getSteamUserInfo`/`logoutSteam`) — deferred here since Phase 30 D-02 — are now also ported, unit-proven, and covered by a blocking live gate. See the new `### Steam completion and Humble cluster (real, Phase 34.4)` subsection in §1 above and `34.4-PORTED-CHANNELS.md` for the full per-channel detail |
 | 6 | `nativeImage` | 4 | **Partially addressed, Phase 34.1** — the new tray (see §1) uses compile-time `include_bytes!` images rather than a `nativeImage` API call; per-platform icon resizing stays deferred — target **Phase 34/35** |
