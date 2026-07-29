@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-07-PLAN.md
-last_updated: "2026-07-29T07:10:01.893Z"
+stopped_at: Completed 34.5-08-PLAN.md
+last_updated: "2026-07-29T07:45:12.012Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 127
-  percent: 88
+  completed_plans: 128
+  percent: 71
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 8 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 9 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -111,7 +111,43 @@ deferred to Phase 34.6 by D-03, so no further plan re-triggers this fix),
 following the exact `readConfig`/`getUserInfo` precedent plan 34.5-06 already
 established. Full backend suite recorded verbatim: 127/127 suites,
 2657/2657 tests passing. `tsc --noEmit` exit 0. The 5 channels plan 34.5-12
-owns remain unregistered.)
+owns remain unregistered.); 08 done — `shortcutsFlowRegistration.ts` filled in
+with all 4 of its declared channels: `shortcutsExists` (`ipcMain.handle`) plus
+the send-heaviest trio in the slice, `addShortcut`/`removeShortcut`/
+`processShortcut` (`ipcMain.on`, each guarded by the void-async-IIFE
+fire-and-forget shape), REQ-34.5-05 satisfied. `electronStub.ts` gained
+`fakeWindow.reload()`/`fakeWebContents.openDevTools()` logged no-ops
+(T-34.5-27) so `processShortcut`'s `ctrl+r`/`ctrl+shift+i` hotkeys no longer
+throw — both DECLARED DEGRADED under Tauri rather than reimplemented.
+Corrected a source-level attribution error CONTEXT.md D-09 and
+34.5-RESEARCH.md's Correction 3 both made: `shortcuts.ts:227` (the macOS
+`.app` `run.sh` launch command) belongs to `addShortcut`, reached only via
+`addShortcuts` -> `generateMacOsApp`, never `addToSteam` (plan 34.5-11).
+New 21-test `shortcutsFlows.test.ts` proves bidirectional registration kind,
+a forward-looking pin that `addToSteam`/`removeFromSteam`/`isAddedToSteam`
+remain unregistered, containment (asserted against `realHomeAtSetup`, no
+redundant local `os` mock — following `pathShim.test.ts`'s same-phase
+precedent), send-body-safety for all 3 send channels (verified by manually
+removing the guard and confirming the suite fails via a real
+`unhandledRejection`), the six-case `processShortcut` switch, and the darwin
+`GAMELIB_SHELL_EXE` pin (control/unset/empty) driving the REAL
+`shortcuts.ts` `addShortcuts`/`generateMacOsApp` chain end-to-end — not a
+re-implementation. Corrected the plan's own literal "directory listing
+unchanged" wording for the UNSET/EMPTY cases: `generateMacOsApp` writes the
+`.app`/Resources/MacOS scaffold and `Info.plist` BEFORE the `getPath('exe')`
+throw, so the security-relevant guarantee actually pinned is that `run.sh`
+specifically is never written. Found and fixed a real idempotence-guard gap
+in `shortcutsFlowRegistration.ts` (same class of bug plan 34.5-06 fixed for
+`registerRunnerAuthFlows()`): `electronStub`'s `ipcMain.on` appends to an
+array on every call, so this module's THREE send channels tripled their
+listener counts across `runnerSliceRegistration.test.ts`'s pre-existing
+idempotence check; added the matching `let registered = false` guard. Full
+backend suite recorded verbatim: 128/128 suites, 2682/2682 tests passing
+(`npx jest --selectProjects Backend`, run from repo root — `cd src/backend
+&& npx jest` again spuriously fails the same unrelated cwd-relative
+wine-downloader test plan 34.5-06/-07 both already noted). `tsc --noEmit`
+exit 0. Plan 34.5-11 owns the remaining Steam-add/remove trio
+(`addToSteam`/`removeFromSteam`/`isAddedToSteam`) in the same module file.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1588,7 +1624,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2437,6 +2473,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P05 | 55min | 3 tasks | 3 files |
 | Phase 34.5 P06 | 65min | 3 tasks | 7 files |
 | Phase 34.5 P07 | 20min | 2 tasks | 8 files |
+| Phase 34.5 P08 | 55min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -2755,6 +2792,8 @@ Recent decisions affecting current work:
 - [Phase 34.5-06]: registerRunnerAuthFlows() gained an idempotence guard (let registered = false) once a real ipcMain.on channel (logoutGOG) existed for the first time in this module family
 - [Phase 34.5-07]: getCometVersion is GOG's Galaxy Communication replacement channel, not Zoom's (D-04, gameInfo.runner === 'gog' at launcher.ts:973); Zoom is exactly 3 channels, all dropped by D-02
 - [Phase 34.5-07]: Invariant B guard canary channel rotated from getLegendaryVersion to winetricksInstall across 5 pre-existing test files, since winetricksInstall is permanently deferred to Phase 34.6 (D-03) and will not need re-swapping when plan 34.5-12 lands
+- [Phase 34.5-08]: Corrected shortcuts.ts:227 exe attribution from addToSteam to addShortcut — Source-verified: generateMacOsApp's only caller is addShortcuts, whose only IPC entry is addShortcut
+- [Phase 34.5-08]: Added registered-guard idempotence fix to shortcutsFlowRegistration.ts — electronStub ipcMain.on appends per call; 3 send channels needed the same guard runnerAuthFlowRegistration.ts already carries
 
 ### Pending Todos
 
@@ -2827,8 +2866,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T07:10:01.883Z
-Stopped at: Completed 34.5-07-PLAN.md
+Last session: 2026-07-29T07:45:12.002Z
+Stopped at: Completed 34.5-08-PLAN.md
   This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
   seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
   `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
