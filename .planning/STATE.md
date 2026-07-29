@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-06-PLAN.md
-last_updated: "2026-07-29T06:55:44.459Z"
+stopped_at: Completed 34.5-07-PLAN.md
+last_updated: "2026-07-29T07:10:01.893Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 126
-  percent: 71
+  completed_plans: 127
+  percent: 88
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 7 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 8 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -91,7 +91,27 @@ Updated `settingsFlows.test.ts`'s `getUserInfo` Invariant B guard from
 precedent. Full backend suite recorded verbatim: 126/126 suites, 2641/2641
 tests passing (run from repo root — `cd src/backend && npx jest` spuriously
 fails an unrelated cwd-relative wine-downloader test). `tsc --noEmit` exit 0.
-Amazon's 4 channels remain for plan 34.5-10.)
+Amazon's 4 channels remain for plan 34.5-10.); 07 done —
+`runnerMiscFlowRegistration.ts` filled in with 6 of its 11 declared channels:
+the 4 runner-CLI version probes (`getLegendaryVersion`/`getGogdlVersion`/
+`getCometVersion`/`getNileVersion`) and the 2 Wine-runtime channels
+(`downloadRuntime`/`isRuntimeInstalled`), all curated-import `ipcMain.handle`,
+REQ-34.5-06/REQ-34.5-09 satisfied. D-04 recorded in source above the
+`getCometVersion` registration (GOG's, not Zoom's; `launcher.ts:973`). New
+16-test `runnerMiscFlows.test.ts` proves bidirectional registration kind, the
+4 channels `utils/ipc_handler.ts` also registers are absent, no `ipc_handler`
+import, and forward-pins the 5 channels plan 34.5-12 owns as NOT YET
+registered. Fixed a real regression this plan's own port caused: 5
+pre-existing "Invariant B" guard tests (`bootstrap.test.ts`,
+`settingsFlows.test.ts`, `installFlows.test.ts`, `gameDetailsFlows.test.ts`,
+`enrichmentFlows.test.ts`) used `getLegendaryVersion` as their "genuinely
+still unported" canary — now real, invoking it throws instead of returning
+`UNPORTED_CHANNEL_MARKER`. Rotated all 5 to `winetricksInstall` (permanently
+deferred to Phase 34.6 by D-03, so no further plan re-triggers this fix),
+following the exact `readConfig`/`getUserInfo` precedent plan 34.5-06 already
+established. Full backend suite recorded verbatim: 127/127 suites,
+2657/2657 tests passing. `tsc --noEmit` exit 0. The 5 channels plan 34.5-12
+owns remain unregistered.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -2416,6 +2436,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P04 | 35min | 2 tasks | 8 files |
 | Phase 34.5 P05 | 55min | 3 tasks | 3 files |
 | Phase 34.5 P06 | 65min | 3 tasks | 7 files |
+| Phase 34.5 P07 | 20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -2732,6 +2753,8 @@ Recent decisions affecting current work:
 - [Phase 34.5-05]: wineToolsFlows.test.ts factory-mocks only '../../launcher'; config/wine-utils/dialog/backend_events load for real via the project-wide electron auto-mock, avoiding a bespoke per-suite mock kit
 - [Phase 34.5-06]: Epic cookie-clear domain is the apex 'epicgames.com' (suffix-matches www.epicgames.com), mirroring humble/user.ts's apex-domain convention for humblebundle.com
 - [Phase 34.5-06]: registerRunnerAuthFlows() gained an idempotence guard (let registered = false) once a real ipcMain.on channel (logoutGOG) existed for the first time in this module family
+- [Phase 34.5-07]: getCometVersion is GOG's Galaxy Communication replacement channel, not Zoom's (D-04, gameInfo.runner === 'gog' at launcher.ts:973); Zoom is exactly 3 channels, all dropped by D-02
+- [Phase 34.5-07]: Invariant B guard canary channel rotated from getLegendaryVersion to winetricksInstall across 5 pre-existing test files, since winetricksInstall is permanently deferred to Phase 34.6 (D-03) and will not need re-swapping when plan 34.5-12 lands
 
 ### Pending Todos
 
@@ -2804,8 +2827,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T06:55:44.451Z
-Stopped at: Completed 34.5-06-PLAN.md
+Last session: 2026-07-29T07:10:01.883Z
+Stopped at: Completed 34.5-07-PLAN.md
   This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
   seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
   `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
