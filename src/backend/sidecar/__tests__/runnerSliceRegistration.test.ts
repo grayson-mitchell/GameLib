@@ -25,12 +25,23 @@
  *      the ONLY set of channels that module may ever register: every channel it actually
  *      registers (via `listenerRegistry`/`handlerRegistry`) must be a member of its own set, and
  *      no channel belonging to another module's set (or outside the declared 38 entirely) may
- *      appear there. Today every module registers the empty set, which trivially satisfies the
- *      subset assertion; as plans 34.5-05 through 34.5-12 land, the sets fill in and the
- *      assertion keeps holding without an edit to this file. The COMPLETENESS check (all 38
- *      channels present, across all four modules) is DELIBERATELY NOT here — that belongs to
- *      plan 34.5-13, which runs after every cluster plan and is the only point in the phase at
- *      which "all 38 are registered" is a true statement.
+ *      appear there.
+ *   6. Completeness (Phase 34.5 Plan 13, REQ-34.5-10) — added once every cluster plan (34.5-05
+ *      through 34.5-12) has landed. This is the FIRST point in the phase at which "all 38
+ *      channels are registered" is a true statement: exactly 34 channels sit in `handlerRegistry`
+ *      and exactly 4 in `listenerRegistry`, the send set is asserted by SET EQUALITY (not size —
+ *      a size-only check would pass if two channels swapped kinds) against
+ *      `['logoutGOG', 'addShortcut', 'processShortcut', 'removeShortcut']`, and per-module counts
+ *      are pinned at 11/9/7/11.
+ *   7. SEAM Invariant B (Phase 34.5 Plan 13) — the 3 DROPPED Zoom channels (`authZoom`,
+ *      `getZoomUserInfo`, `logoutZoom`) and the 16 DEFERRED channels (EOS overlay 8, SteamGridDB
+ *      5, winetricks 3) are proven absent from both registries after all four modules are
+ *      registered, so they still reject with `UNPORTED_CHANNEL_MARKER` (`sidecarRpc.ts`'s
+ *      `handlerRegistry.get()` miss path) rather than silently gaining an implementation. All 19
+ *      names are listed explicitly — the whole point is that no new code exists for them.
+ *
+ * This suite is the phase's completeness gate: `34.5-PORTED-CHANNELS.md` (plan 34.5-14) declares
+ * the same 38 rows, and the two must agree — plan 34.5-14's gate script cross-checks them.
  */
 
 import { readFileSync } from 'fs'
@@ -40,8 +51,65 @@ import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from '../runnerMiscFlowRegistration'
-import { handlerRegistry, listenerRegistry } from '../electronStub'
+import {
+  handlerRegistry,
+  listenerRegistry,
+  IpcHandler,
+  IpcListener
+} from '../electronStub'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+// ── Canonical real-registration snapshot (Rule 1 fix, discovered building Phase 34.5 Plan
+// 13's completeness/SEAM-Invariant-B describes below) ──────────────────────────────────────────
+// `registerRunnerAuthFlows`/`registerShortcutsFlows` each carry a PERMANENT, module-scope
+// `let registered = false` idempotence guard (mirroring production's own double-registration
+// protection). Once flipped true by their first real call in this process, EVERY later call is
+// a silent no-op — including a call made AFTER `handlerRegistry`/`listenerRegistry` have been
+// cleared for an isolation test. Describe 5 below (`containment pin`) clears both registries
+// per module iteration and its own `afterAll` previously called all four `registerXFlows()`
+// functions again to "restore" state for later describes — but for these two guarded modules
+// that restore call is a no-op once Describe 3's own `it.each` has already made their first real
+// call, so the registries end up silently MISSING those two modules' channels. Confirmed by
+// running the suite: `handlerRegistry.size` after Describe 5's `afterAll` measured 20 (only
+// `wineTools`'s 9 + `runnerMisc`'s 11 — the two guard-free modules — survived), not 34.
+//
+// Fix: register all four ONCE here, at module scope, before any `describe`/`it` runs — this is
+// guaranteed to be the true first invocation of every `registerXFlows()` in this file's process
+// — then snapshot both registries into plain arrays. Every describe below that needs "all four
+// modules genuinely registered" restores from this snapshot via `restoreCanonicalRegistrations()`
+// rather than re-invoking the guarded functions, which cannot be trusted to do anything after
+// the first call. Describe 3's own idempotence assertions are unaffected: they call `register()`
+// then immediately capture `before`, so it does not matter whether that call is literally the
+// first-ever or a later no-op — the property under test (two more calls change nothing) holds
+// either way.
+handlerRegistry.clear()
+listenerRegistry.clear()
+registerRunnerAuthFlows()
+registerWineToolsFlows()
+registerShortcutsFlows()
+registerRunnerMiscFlows()
+
+const CANONICAL_HANDLER_ENTRIES: ReadonlyArray<[string, IpcHandler]> = [
+  ...handlerRegistry.entries()
+]
+const CANONICAL_LISTENER_ENTRIES: ReadonlyArray<[string, IpcListener[]]> = [
+  ...listenerRegistry.entries()
+].map(([channel, listeners]) => [channel, [...listeners]] as [string, IpcListener[]])
+
+/** Restores both registries to the canonical, fully-registered snapshot captured above —
+ * the only reliable way to get "all four modules genuinely registered" back after a test has
+ * cleared the registries, since two of the four modules' own `registerXFlows()` are permanent
+ * no-ops past their first call. */
+function restoreCanonicalRegistrations(): void {
+  handlerRegistry.clear()
+  listenerRegistry.clear()
+  for (const [channel, handler] of CANONICAL_HANDLER_ENTRIES) {
+    handlerRegistry.set(channel, handler)
+  }
+  for (const [channel, listeners] of CANONICAL_LISTENER_ENTRIES) {
+    listenerRegistry.set(channel, [...listeners])
+  }
+}
 
 // ── Declared channel sets (this plan's own <interfaces> block — 11/9/7/11) ─────────────────────
 const RUNNER_AUTH_CHANNELS = [
@@ -310,12 +378,148 @@ describe("containment pin — each module registers only its own declared channe
   afterAll(() => {
     // Leave the shared registries in a known state for any test file that runs after this one in
     // the same worker (electronStub's maps are module-scope singletons within a worker's module
-    // registry) — restore the module-scope registrations every other describe block in this file
-    // expects to already be present (each register() call below is a no-op today, and idempotent
-    // per Describe 3, so re-running all four here is safe).
-    registerRunnerAuthFlows()
-    registerWineToolsFlows()
-    registerShortcutsFlows()
-    registerRunnerMiscFlows()
+    // registry), and for Describes 6/7 below in THIS file. Rule 1 fix: re-invoking the four
+    // `registerXFlows()` functions here is NOT safe for `registerRunnerAuthFlows`/
+    // `registerShortcutsFlows` — their permanent idempotence guards make it a no-op after the
+    // canonical registration above, so it would silently leave the registries missing those two
+    // modules' channels. Restore from the canonical snapshot instead.
+    restoreCanonicalRegistrations()
+  })
+})
+
+// ── Describe 6: Completeness (Phase 34.5 Plan 13, REQ-34.5-10) ────────────────────────────────
+// The first point in the phase at which "all 38 channels are registered" is a true statement —
+// every cluster plan (34.5-05 through 34.5-12) has now landed. Unlike Describe 5 above, this
+// block registers all four modules TOGETHER against a single cleared pair of registries, because
+// the property under test here is the union across all four, not any one module in isolation.
+const SEND_CHANNELS = ['logoutGOG', 'addShortcut', 'processShortcut', 'removeShortcut']
+
+describe('completeness — all 38 channels are registered with the right kind, across all four modules together (Phase 34.5 Plan 13, REQ-34.5-10)', () => {
+  beforeAll(() => {
+    // Restore from the canonical snapshot (see the module-scope comment near the top of this
+    // file) rather than re-invoking the four `registerXFlows()` functions — two of them are
+    // permanent no-ops past their first call.
+    restoreCanonicalRegistrations()
+  })
+
+  it('exactly 34 channels are handle-kind and exactly 4 are listen-kind', () => {
+    const handleChannels = [...handlerRegistry.keys()]
+    const listenChannels = [...listenerRegistry.entries()]
+      .filter(([, listeners]) => listeners.length > 0)
+      .map(([channel]) => channel)
+
+    expect(handleChannels.length).toBe(34)
+    expect(listenChannels.length).toBe(4)
+  })
+
+  it('the send set is precisely the 4 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
+    const listenChannels = new Set(
+      [...listenerRegistry.entries()]
+        .filter(([, listeners]) => listeners.length > 0)
+        .map(([channel]) => channel)
+    )
+
+    expect(listenChannels).toEqual(new Set(SEND_CHANNELS))
+  })
+
+  it.each(MODULES.map((m) => [m.name, m.declaredChannels] as const))(
+    'per-module completeness: every one of %s declared channels is registered with the correct kind',
+    (_name, declaredChannels) => {
+      for (const channel of declaredChannels) {
+        if (SEND_CHANNELS.includes(channel)) {
+          expect((listenerRegistry.get(channel) ?? []).length).toBeGreaterThan(0)
+          expect(handlerRegistry.has(channel)).toBe(false)
+        } else {
+          expect(handlerRegistry.has(channel)).toBe(true)
+          expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+        }
+      }
+    }
+  )
+
+  it('per-module declared counts are exactly 11 / 9 / 7 / 11, totalling 38', () => {
+    const counts = MODULES.map((m) => m.declaredChannels.length)
+    expect(counts).toEqual([11, 9, 7, 11])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(38)
+  })
+
+  afterAll(() => {
+    // Leave the registries in the known-registered state Describe 7 below (and any test file
+    // that runs after this one in the same worker) expects.
+    restoreCanonicalRegistrations()
+  })
+})
+
+// ── Describe 7: SEAM Invariant B — dropped/deferred channels still reject (Phase 34.5 Plan 13) ─
+// The 3 DROPPED Zoom channels (34.5-CONTEXT.md D-02) and the 16 DEFERRED channels (D-03/D-05 —
+// EOS overlay 8, SteamGridDB artwork 5, winetricks 3, all moved to the new Phase 34.6 per
+// `.planning/IPC-PORT-INVENTORY.md` § "Phase 34.6") must NOT be registered by any of this
+// slice's four modules. Absence from `handlerRegistry` is what makes `sidecarRpc.ts`'s dispatch
+// (`const handler = handlerRegistry.get(request.channel); if (!handler) { ... reject with
+// UNPORTED_CHANNEL_MARKER ... }`) reject these channels honestly rather than silently — "drop"
+// and "defer" mean let it reject and say so, not build a degradation path.
+describe('SEAM Invariant B — the 3 dropped and 16 deferred channels are NOT registered by any of the four modules (Phase 34.5 Plan 13)', () => {
+  const DROPPED_ZOOM = ['authZoom', 'getZoomUserInfo', 'logoutZoom']
+
+  const DEFERRED_EOS_OVERLAY = [
+    'disableEosOverlay',
+    'enableEosOverlay',
+    'getEosOverlayStatus',
+    'getLatestEosOverlayVersion',
+    'installEosOverlay',
+    'isEosOverlayEnabled',
+    'removeEosOverlay',
+    'updateEosOverlayInfo'
+  ]
+
+  const DEFERRED_STEAMGRIDDB = [
+    'steamgriddb.getGrids',
+    'steamgriddb.getHeroes',
+    'steamgriddb.hasApiKey',
+    'steamgriddb.searchGame',
+    'steamgriddb.setApiKey'
+  ]
+
+  const DEFERRED_WINETRICKS = [
+    'winetricksAvailable',
+    'winetricksInstall',
+    'winetricksInstalled'
+  ]
+
+  const DROPPED_OR_DEFERRED = [
+    ...DROPPED_ZOOM,
+    ...DEFERRED_EOS_OVERLAY,
+    ...DEFERRED_STEAMGRIDDB,
+    ...DEFERRED_WINETRICKS
+  ]
+
+  beforeAll(() => {
+    // Self-contained: does not rely on Describe 6's afterAll ordering. Restores from the
+    // canonical snapshot so this describe's assertions hold regardless of file execution order.
+    restoreCanonicalRegistrations()
+  })
+
+  it('lists exactly 19 dropped-or-deferred channel names (3 dropped + 16 deferred)', () => {
+    expect(DROPPED_OR_DEFERRED.length).toBe(19)
+  })
+
+  it('none of the 19 dropped-or-deferred names appears in the declared 38', () => {
+    for (const channel of DROPPED_OR_DEFERRED) {
+      expect(ALL_38_CHANNELS).not.toContain(channel)
+    }
+  })
+
+  it.each(DROPPED_OR_DEFERRED)(
+    '%s is registered by none of the four modules — absent from handlerRegistry, and listenerRegistry has no active listener — so it still rejects with UNPORTED_CHANNEL_MARKER',
+    (channel) => {
+      expect(handlerRegistry.has(channel)).toBe(false)
+      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+    }
+  )
+
+  afterAll(() => {
+    // Leave the shared registries in a known state for any test file that runs after this one
+    // in the same worker.
+    restoreCanonicalRegistrations()
   })
 })
