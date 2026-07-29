@@ -3,9 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1-08 Task 1 done (preconditions evidenced, from-scratch Humble state
-  reached); HELD at Task 2's blocking human-verify live gate awaiting operator
-last_updated: "2026-07-29T09:20:00.000Z"
+stopped_at: 34.4.1-08 Task 1 done, HELD at Task 2's blocking human-verify live gate awaiting
+  operator (34.4.1 remains the active phase). Since then, off the critical path: the standing
+  test:ci flake was root-caused and FIXED (suite now exits 0, 3095/3095), and Phase 34.5
+  context was gathered
+last_updated: "2026-07-29T12:45:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 16
@@ -2699,9 +2701,21 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-28T19:44:14.000Z
-Stopped at: Completed 34.4.1-07-PLAN.md (wave 6; 08 remains incomplete)
-Next: 34.4.1-08 (the blocking 4-item live gate). Plan 07 declared what actually shipped: wrote
+Last session: 2026-07-29T12:45:00.000Z
+Stopped at: 34.4.1-08 Task 1 committed (`3f9562a3f`), HELD at Task 2's blocking live gate.
+  Off the critical path this session: the `test:ci` flake FIXED (`eee21bc02`), ROADMAP 34.5
+  corrections (`fb96e0090`), and 34.5 context gathered (`4be0e38a2`).
+Next: **34.4.1-08 Task 2 — the blocking 4-item live gate. Needs local hardware; the developer
+was remote this session.** Preconditions P1/P3/P5 are satisfied and evidenced; P2/P4/P6 are
+operator-at-gate-time (P6's control cookie is now MOOT — item 3(b) was recorded
+BLOCKED-UNOBSERVABLE pre-gate, so the gate CANNOT reach 4/4 and 3(b) becomes an in-phase gap
+cycle). **The developer's Humble credential is parked, not deleted** — restore from
+`~/Library/Application Support/GameLib/humble_store/config.json.pre-34.4.1-08-gate.bak`.
+Also queued and ready: **`/gsd-plan-phase 34.5`** (CONTEXT.md written) — but note its D-05
+requires inserting a new **Phase 34.6** into ROADMAP.md for the 16 deferred channels, which has
+NOT been done yet. Second deferred verification item from this session: cold-boot tray icon
+check under a real Tauri run (from the `eee21bc02` fix).
+Prior next-step context for 34.4.1-08 follows: Plan 07 declared what actually shipped: wrote
 `34.4.1-PORTED-CHANNELS.md` (7-row table, proof levels independently verified against source and
 each prior plan's SUMMARY, not inherited), closed SEAM.md's checklist steps in a 2-hunk diff with
 Invariant B untouched and `IPC-PORT-INVENTORY.md` verified unmodified, and wrote an 8-check
