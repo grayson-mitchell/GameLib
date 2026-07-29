@@ -153,8 +153,15 @@ function syncTrayIcon(): void {
  * Registers the 18 app-shell channels. Called once from `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
+ *
+ * `options.skipInitialTraySync` (sidecar-init-rustinvoke-leak, default `false`): lets
+ * `handlers.ts`'s own top-level, import-time-triggered call suppress the one-shot boot-time
+ * `tray_set_icon` correction under Jest, without changing this function's behavior for any
+ * caller that invokes it directly (see the call site below for the full rationale).
  */
-export function registerAppShellFlows(): void {
+export function registerAppShellFlows(
+  options: { skipInitialTraySync?: boolean } = {}
+): void {
   // ── invoke (8) ────────────────────────────────────────────────────────
 
   ipcMain.handle('getCustomThemes', async () => getCustomThemes())
@@ -314,5 +321,30 @@ export function registerAppShellFlows(): void {
   // `syncTrayIcon()`'s own try/catch additionally covers the same third path this
   // codebase's precedent already documented (a test file that imports `./handlers`
   // directly, without ever calling `init()`/`initLogger()`).
-  setImmediate(syncTrayIcon)
+  //
+  // Guarded (sidecar-init-rustinvoke-leak, fix/steam-native-install-stability): this call is
+  // UNCONDITIONAL and UNTRACKED (`.catch()` only, never awaited, no drain hook). In
+  // production `registerAppShellFlows()` runs exactly ONCE per process, so there is no
+  // ambiguity about which transport it targets. Under Jest, `handlers.ts` (and therefore
+  // this function) also runs exactly ONCE per test FILE -- Jest resets the module registry
+  // per file, and `handlers.ts`'s own top-level `registerAppShellFlows()` call
+  // (`handlers.ts`) fires unconditionally at import time -- but `bootstrap.test.ts` /
+  // `*Flows.test.ts` call `init()` MANY times per file with FRESH `stream.PassThrough`
+  // pairs. Because `sidecarRpc.ts`'s `outputStream` is a single module-level mutable
+  // rebound by every `startRpcServer()` call, this deferred write used to land on whichever
+  // `it` block happened to be running when the Node "check" phase reached it -- typically
+  // the first test in the file -- injecting an unexpected extra `rustInvoke` frame into that
+  // test's output stream, and (via that test's own assertion throwing before it could settle
+  // ITS OWN pending rustInvoke calls) leaving a real, unref'd `RUST_INVOKE_TIMEOUT_MS` timer
+  // running that later rejected into an arbitrary later suite under `jest --runInBand`.
+  //
+  // `skipInitialTraySync` is opt-in, defaulting to `false` (fire, exactly as before) so a
+  // DIRECT call to `registerAppShellFlows()` -- e.g. `appShellFlows.test.ts`'s own
+  // REQ-34.1-07 `jest.isolateModules` coverage, which proves this exact sync fires with the
+  // right args -- is completely unaffected. Only `handlers.ts`'s own top-level,
+  // import-time-triggered call (the actual leak source, decoupled from any specific `init()`
+  // invocation) passes `true` under Jest.
+  if (!options.skipInitialTraySync) {
+    setImmediate(syncTrayIcon)
+  }
 }

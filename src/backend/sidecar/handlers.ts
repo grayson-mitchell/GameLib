@@ -113,7 +113,18 @@ registerDownloadQueueFlows()
 // relative to the other calls above (own channel names, no cross-module
 // runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
-registerAppShellFlows()
+//
+// Guarded (sidecar-init-rustinvoke-leak): only this top-level, import-time-triggered call
+// suppresses the one-shot boot-time tray_set_icon correction under Jest -- a DIRECT call to
+// registerAppShellFlows() (e.g. appShellFlows.test.ts's own REQ-34.1-07 coverage) is
+// unaffected. See appShellFlowRegistration.ts's own docstring/inline comment for the full
+// mechanism this fixes. `JEST_WORKER_ID` is Jest's own zero-config "am I running under
+// Jest" signal (always set in a Jest worker, never set for the real Tauri sidecar process)
+// -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
+// before.
+registerAppShellFlows({
+  skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
+})
 // Phase 34.2 Plan 04: the 15 invoke-kind game-details/settings/override
 // channels — no ordering constraint relative to the other calls above (own
 // channel names, no cross-module runtime dependency at registration time),
