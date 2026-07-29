@@ -498,6 +498,18 @@ const IN_SCOPE_SUITES = [
  * docstring describes, not a hand-maintained kit of its own. The file's own direct
  * import of `../electronStub` (for `handlerRegistry`/`listenerRegistry`) touches no
  * filesystem at module scope. No new containment surface.
+ *
+ * `pathShim.test.ts` (Phase 34.5 Plan 01, REQ-34.5-01) is classified as
+ * structurally contained: it declares no `jest.mock(...)` call of any kind. It
+ * imports the real `os` `homedir` plus `realHomeAtSetup` from
+ * `backend/jest.setupContainment` precisely so it can assert `getPath()`
+ * resolves under the containment root -- the same "contained by construction,
+ * no per-suite opt-in required" floor Block C's docstring describes, not a
+ * hand-maintained kit. It cannot be an `IN_SCOPE_SUITE`: those are required to
+ * carry a `jest.mock('../pathShim', ...)` call, and this is the suite that
+ * tests `pathShim` itself. A `readdirSync` recount at this plan's execution
+ * time (not carried forward by hand, correcting the stale "30" figure above)
+ * puts the directory at 34 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 30 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -520,6 +532,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
+  'pathShim.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',

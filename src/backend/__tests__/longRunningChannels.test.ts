@@ -133,6 +133,23 @@ function stripRustLineComments(source: string): string {
 }
 
 /**
+ * Removes Rust CHAR literals (`'a'`, `'"'`, `'\''`, `'\\'`) from `source`.
+ *
+ * The WR-08 quote-balance guards below count `"` occurrences to detect a string literal that the
+ * comment stripper cut in half. A char literal holding a double-quote — `value.ends_with('"')`,
+ * which `main.rs`'s `#[cfg(test)]` module uses to assert `GAMELIB_SHELL_EXE` is never quoted —
+ * contributes exactly one `"` to its line and reads as "unbalanced" to a naive count, even though
+ * nothing was truncated. Normalising char literals away keeps the guard measuring the property it
+ * actually cares about (truncated STRING literals) instead of tripping on valid Rust.
+ *
+ * The pattern deliberately requires a closing `'` immediately after one char or escape, so Rust
+ * lifetimes (`'static`, `'a,`) are left alone.
+ */
+function stripRustCharLiterals(source: string): string {
+  return source.replace(/'(?:\\.|[^\\'])'/g, '')
+}
+
+/**
  * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for` via a
  * real `assert_eq!` call (not merely the identifier appearing somewhere in the region) and
  * iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a second duplicate list).
@@ -306,7 +323,7 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
  */
 describe('stripper integrity (WR-08)', () => {
   test('the real file: stripping does not cut a string literal in half (quote count stays EVEN)', () => {
-    const stripped = loadMainRsCode()
+    const stripped = stripRustCharLiterals(loadMainRsCode())
     const quoteCount = (stripped.match(/"/g) ?? []).length
     // Plain `toBe(0)` would only report "Expected: 0, Received: 1" on failure — the raw count
     // itself (needed to locate which literal got cut) would be lost. Assert via a labeled
@@ -321,12 +338,25 @@ describe('stripper integrity (WR-08)', () => {
       .map((line, index) => ({
         index,
         line,
-        quoteCount: (line.match(/"/g) ?? []).length
+        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
       }))
       .filter(({ quoteCount }) => quoteCount % 2 !== 0)
     // Reporting the full list of unbalanced lines (not just a boolean) makes a future failure
     // diagnosable at a glance rather than requiring a re-run with extra logging.
     expect(unbalancedLines).toEqual([])
+  })
+
+  test("stripRustCharLiterals removes '\"' and '\\'' without touching real string literals", () => {
+    // Pins the normalizer itself: a `'"'` char literal must vanish (it is not an unbalanced
+    // string), while a genuinely truncated `"steam://` literal must still read as odd.
+    expect(stripRustCharLiterals(`assert!(!v.ends_with('"'));`)).not.toContain(
+      '"'
+    )
+    expect(stripRustCharLiterals(`assert!(!v.ends_with('\\''));`)).not.toContain(
+      "'"
+    )
+    const truncated = stripRustCharLiterals('let s = "steam://')
+    expect((truncated.match(/"/g) ?? []).length % 2).toBe(1)
   })
 
   // WR-08 is now RESOLVED rather than merely predicted (34.4.1 Plan 01 post-merge gate).

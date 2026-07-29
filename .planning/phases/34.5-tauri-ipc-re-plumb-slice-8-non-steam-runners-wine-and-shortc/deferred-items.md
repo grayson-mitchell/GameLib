@@ -37,6 +37,28 @@ changes. Logged per the executor's scope-boundary rule rather than fixed inline.
    for this plan; flagged here for a future pass to either fix the stripper's char-literal
    handling or adjust the offending Rust literals.
 
+### Resolution — Wave 1 post-merge gate (orchestrator, 2026-07-29)
+
+- **Item 1 — RESOLVED.** `pathShim.test.ts` added to `STRUCTURALLY_CONTAINED_SUITES` with a
+  classification docstring. It declares no `jest.mock(...)` at all (it imports real `os`
+  `homedir` + `realHomeAtSetup` so it can assert `getPath()` resolves under the containment
+  root), so it is contained by construction and cannot be an `IN_SCOPE_SUITE` — those must
+  carry a `jest.mock('../pathShim', ...)`, and this is the suite that tests `pathShim`. Stale
+  "30 files" count in the docstring recomputed to 34 (4 in-scope + 30 contained).
+- **Item 3 — RESOLVED.** Root cause was the WR-08 guard, not the Rust. `assert!(!value.
+  ends_with('"'))` is a valid Rust CHAR literal contributing one `"` to its line; the guard's
+  naive `"`-count has no char-literal awareness, so it flagged untruncated code. Added
+  `stripRustCharLiterals()` (`/'(?:\\.|[^\\'])'/g` — requires a closing `'` right after one
+  char/escape, so lifetimes like `'static` are untouched) and applied it in both WR-08
+  assertions, plus a self-test pinning that `'"'` vanishes while a genuinely truncated
+  `"steam://` still reads as odd. The guard now measures truncated STRING literals, which is
+  the property it was written for. The Rust was left unchanged.
+- **Item 2 — NOT REPRODUCED.** `rest.test.ts`'s `unlinkFile` failure did not occur in either
+  orchestrator full-suite run (`src/backend`, 123/123 suites, 2603/2603 tests, twice). Treat as
+  environment-dependent/flaky rather than a standing failure — but per this project's standing
+  lesson ("a flake baseline can be an undiagnosed bug"), it should be reproduced in isolation
+  before being dismissed if it reappears.
+
 None of the three items above block this plan's own acceptance criteria (Task 1/Task 2 verify
 clauses concern only `npx tsc --noEmit`, the new
 `runnerSliceRegistration.test.ts` suite itself, and the recorded exit code/counts of the full
