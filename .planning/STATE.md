@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-03-PLAN.md
-last_updated: "2026-07-29T05:35:54.110Z"
+stopped_at: Completed 34.5-04-PLAN.md
+last_updated: "2026-07-29T06:00:47.198Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 123
-  percent: 71
+  completed_plans: 124
+  percent: 86
 ---
 
 # Project State
@@ -34,13 +34,25 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 4 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 5 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
 for the 16 deferred channels, IPC-PORT-INVENTORY.md's 57 reconciled as 38+3+16,
 REQ-34.5-11 fully satisfied. REQ-34.5-12 remains open until 34.5-15's live gate
-actually runs and records 5/5 PASS.)
+actually runs and records 5/5 PASS; 04 done — the four declared-but-empty
+registration seams for this slice's 38 channels (`runnerAuthFlowRegistration.ts`
+11, `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
+`runnerMiscFlowRegistration.ts` 11) created, wired into `handlers.ts`, and proven
+reachable by a growth-tolerant containment-pin test (27/27 passing), REQ-34.5-13
+satisfied. Fixed a self-inflicted `*/ipc_handler.ts` docstring bug that broke
+`tsc` mid-task. Full backend suite recorded verbatim (not rounded to green): exit
+1, 3 failed/2599 passed/2602 total — all three pre-existing and outside this
+plan's file set (`pathShim.test.ts` unclassified in `testContainment.test.ts`
+from already-committed plan 34.5-01; a wine-downloader `unlinkFile` test; a
+comment-stripper mismatch against `main.rs` literals plan 34.5-01 added),
+logged to `deferred-items.md` rather than fixed. Plans 05-12 can now each fill
+in exactly one module file.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1517,7 +1529,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 85%
+trusted blindly. The recurring `**Progress:**[█████████░] 86%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2362,6 +2374,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P01 | 30min | 3 tasks | 3 files |
 | Phase 34.5 P02 | 25min | 2 tasks | 2 files |
 | Phase 34.5 P03 | 15min | 3 tasks | 3 files |
+| Phase 34.5 P04 | 35min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -2670,6 +2683,9 @@ Recent decisions affecting current work:
 - [Phase 34.5-02]: www.amazon.com chosen as exact-host anchor for nile OAuth redirect matcher, closing T-34.4.1-44b; MEDIUM confidence per Assumption A1 pending live-gate item 3 confirmation
 - [Phase 34.5]: 34.5-03: 34.5-LIVE-GATE.md precondition 1 states its currently-unmet status explicitly (34.4.1-08 held at Task 2) rather than leaving it implicit
 - [Phase 34.5]: 34.5-03: IPC-PORT-INVENTORY.md Totals table (28/182) left unchanged, no channels actually ported by this docs-only plan
+- [Phase 34.5]: Only runnerAuthFlowRegistration.ts carries the ipcMain + load-bearing storeManagers import at plan 34.5-04's stage; the other three modules stay import-free until their cluster plans land
+- [Phase 34.5]: Growth-tolerant containment pin isolates each module (clear registries, call it alone, inspect, restore) rather than checking foreign channels against the shared global registry, to avoid false-positive cross-module leak detection once sibling clusters land
+- [Phase 34.5]: runnerSliceRegistration.test.ts classified as structurally contained in testContainment.test.ts (never overrides the electron mock; storeManagers resolves through the project-wide tmpdir-based electron auto-mock)
 
 ### Pending Todos
 
@@ -2684,6 +2700,7 @@ Recent decisions affecting current work:
 - Pre-push hook (`prettier` + `i18n --fail-on-update`) fails on **pre-existing repo debt** unrelated to Phase 7: ~141 files fail `prettier --check .` (likely a Prettier version bump; `pnpm-lock.yaml` already modified) and the locale files have orphaned-key drift. Phase 7 was pushed with `--no-verify` after independently verifying tsc/lint/tests. A separate housekeeping pass (`pnpm prettier --write .` + `pnpm i18n`) would clear it.
 - Phase 23 Plan 05 Task 3 (checkpoint:human-verify, gate=blocking-human): 23-UAT.md Gate 1 real-hardware re-run pending — human must install a multi-depot title (Hogwarts Legacy 990080 or Cyberpunk 2077 1091500) on real macOS hardware after deleting the stale appmanifest_990080.acf, confirm single monotonic progress percent through a pause/resume cycle, and confirm StateFlags=4 completion + launch. Code fix (single-flight guard + reconciliation) is landed and regression-tested (commits cc77a9df/ddde970d/7fccfb2a/f963de8b); this is the only remaining Phase 23 gap before Gates 2/3 can proceed.
 - G-30-01: Steam QR login logon button unresponsive under Tauri (Manage Accounts renders, QR tab never reached) — install/uninstall E2E for Phase 30 unreached as a direct consequence; see 30-HUMAN-UAT.md for reproduction and untested hypothesis
+- pathShim.test.ts (plan 34.5-01) unclassified in testContainment.test.ts's declared-suite lists — needs a one-line addition in a future pass (see deferred-items.md); not blocking 34.5-04's own completion
 
 ### Quick Tasks Completed
 
@@ -2741,15 +2758,24 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T05:35:54.102Z
-Stopped at: Completed 34.5-03-PLAN.md
-  This session: 34.5-03-PLAN.md executed — `34.5-LIVE-GATE.md` written as an empty 5-item
-  blocking contract (`60812e06c`), Phase 34.6 inserted into ROADMAP.md for the 16 deferred
-  channels + Phase 35's Depends-on line updated to 34.1-34.6 (`7ed5f7850`), and
-  IPC-PORT-INVENTORY.md's Phase 34.5 section reconciled as 38+3+16 (`9ba4f2ab0`). REQ-34.5-11
-  is now fully satisfied; the D-05 gap noted below ("has NOT been done yet") is now CLOSED.
-Next: **34.5-04-PLAN.md** (the four registration modules, wave 1) is the next plan on the
-critical path for Phase 34.5 itself. Separately, still blocking: **34.4.1-08 Task 2 — the
+Last session: 2026-07-29T06:00:47.188Z
+Stopped at: Completed 34.5-04-PLAN.md
+  This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
+  seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
+  `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
+  `runnerMiscFlowRegistration.ts` 11, commit `b4b31f5a1`), wired into `handlers.ts` and
+  proven reachable by `runnerSliceRegistration.test.ts`'s 27-test containment pin
+  (commit `d79ebf3f5`), REQ-34.5-13 satisfied. Fixed a self-inflicted `*/ipc_handler.ts`
+  docstring parse bug found by `tsc` mid-Task-1. Full backend suite recorded verbatim:
+  exit 1, 3 failed/2599 passed/2602 total, all three pre-existing and outside this
+  plan's file set (logged to `deferred-items.md`, NOT fixed): `pathShim.test.ts`
+  unclassified in `testContainment.test.ts` (plan 34.5-01's own gap), a wine-downloader
+  `unlinkFile` test, and a comment-stripper/`main.rs` literal mismatch (plan 34.5-01
+  added the offending lines). `npx tsc --noEmit` and the targeted
+  `runnerSliceRegistration.test.ts` suite both exit 0.
+Next: **34.5-05-PLAN.md** (wave 2, first cluster body — likely the runWineCommand
+seam + DXVK/VKD3D toggles per `wineToolsFlowRegistration.ts`) is next on the critical
+path for Phase 34.5. Separately, still blocking: **34.4.1-08 Task 2 — the
 blocking 4-item live gate. Needs local hardware; the developer was remote last session.**
 Preconditions P1/P3/P5 are satisfied and evidenced; P2/P4/P6 are operator-at-gate-time (P6's
 control cookie is now MOOT — item 3(b) was recorded BLOCKED-UNOBSERVABLE pre-gate, so the gate
