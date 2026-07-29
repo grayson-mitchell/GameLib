@@ -63,6 +63,7 @@ async function prepareImagesForSteam(props: {
     LogPrefix.Shortcuts
   )
 
+  const errors: string[] = []
   let bkgDataUrl = ''
   if (!props.steamID) {
     await generateImage(props.gameInfo.art_cover, 1920, 620)
@@ -72,7 +73,6 @@ async function prepareImagesForSteam(props: {
       )
   }
 
-  const errors: string[] = []
   const images = new Map<string, string>([
     [
       coverArt,
