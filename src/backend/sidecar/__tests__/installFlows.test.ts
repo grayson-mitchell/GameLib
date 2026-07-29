@@ -431,11 +431,18 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // UPDATED AGAIN (Phase 34.3 Plan 01): `checkDiskSpace` is ALSO no longer
   // unported — it is now registered for real by `shellFilesFlowRegistration.ts`
   // (REQ-34.3-02, `shellFilesFlows.test.ts` covers its ported behavior).
-  // `getLegendaryVersion` substitutes here as a channel this plan does not
-  // touch and that stays genuinely unported until Phase 34.5.
-  it('Test 6 (Invariant B guard): getLegendaryVersion (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  // `getLegendaryVersion` substituted here as a channel that plan did not
+  // touch and that stayed genuinely unported until Phase 34.5.
+  //
+  // UPDATED AGAIN (Phase 34.5 Plan 07, REQ-34.5-06): `getLegendaryVersion` is
+  // ALSO no longer unported — it is now registered for real by
+  // `runnerMiscFlowRegistration.ts` (`runnerMiscFlows.test.ts` covers its
+  // ported registration kind). `winetricksInstall` substitutes here as a
+  // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
+  // need a further substitution once plan 34.5-12 lands.
+  it('Test 6 (Invariant B guard): winetricksInstall (deliberately unported, deferred to Phase 34.6) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'disk-space-1', 'getLegendaryVersion', [])
+    writeInvoke(input, 'disk-space-1', 'winetricksInstall', [])
     await flush()
 
     const diskSpaceResponse = frames.find(

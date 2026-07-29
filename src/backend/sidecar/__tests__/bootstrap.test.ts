@@ -184,6 +184,13 @@ describe('sidecar bootstrap (headless boot)', () => {
   // unregistered anywhere in the sidecar, following the exact precedent
   // `34.3-01-SUMMARY.md` already documents for the same situation
   // (`checkDiskSpace` -> `getLegendaryVersion` across 4 other test files).
+  //
+  // UPDATED AGAIN (Phase 34.5 Plan 07, REQ-34.5-06): `getLegendaryVersion` is
+  // ALSO no longer unported -- it is now registered for real by
+  // `runnerMiscFlowRegistration.ts` (`runnerMiscFlows.test.ts` covers its
+  // ported registration kind). `winetricksInstall` substitutes here as a
+  // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
+  // need a further substitution once plan 34.5-12 lands.
   it('tags an unported-channel invoke as an expected seam gap', async () => {
     const input = new PassThrough()
     const output = new PassThrough()
@@ -194,7 +201,7 @@ describe('sidecar bootstrap (headless boot)', () => {
       `${JSON.stringify({
         id: 'test-unported-1',
         kind: 'invoke',
-        channel: 'getLegendaryVersion',
+        channel: 'winetricksInstall',
         args: []
       })}\n`
     )
@@ -209,7 +216,7 @@ describe('sidecar bootstrap (headless boot)', () => {
     // Still an honest rejection -- only the reason is classified.
     expect(response.ok).toBe(false)
     expect(response.error).toContain(UNPORTED_CHANNEL_MARKER)
-    expect(response.error).toContain('getLegendaryVersion')
+    expect(response.error).toContain('winetricksInstall')
   })
 
   // Behavior 3: importing REAL backend modules under the installed stub does

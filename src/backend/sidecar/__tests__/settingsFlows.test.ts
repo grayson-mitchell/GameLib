@@ -344,15 +344,21 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   // UPDATED (Phase 34.3 Plan 01): `checkDiskSpace` — this test's original
   // example channel — is no longer unported. It is now registered for real
   // by `shellFilesFlowRegistration.ts` (REQ-34.3-02, `shellFilesFlows.test.ts`
-  // covers its ported behavior). `getLegendaryVersion` substitutes here as a
-  // channel this plan does not touch and that stays genuinely unported until
-  // Phase 34.5, so this test keeps proving the invariant rather than
-  // asserting something Phase 34.3 deliberately made false (mirrors
-  // `installFlows.test.ts`'s own prior Phase 32 substitution of this exact
-  // example channel).
-  it('Invariant B guard: getLegendaryVersion (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  // covers its ported behavior). `getLegendaryVersion` substituted here as a
+  // channel that plan did not touch and that stayed genuinely unported until
+  // Phase 34.5.
+  //
+  // UPDATED AGAIN (Phase 34.5 Plan 07, REQ-34.5-06): `getLegendaryVersion` is
+  // ALSO no longer unported — it is now registered for real by
+  // `runnerMiscFlowRegistration.ts` (`runnerMiscFlows.test.ts` covers its
+  // ported registration kind). `winetricksInstall` substitutes here as a
+  // channel D-03 permanently DEFERS to Phase 34.6 (not merely unported by
+  // this slice's own wave sequencing), so this test keeps proving the
+  // invariant rather than asserting something Phase 34.5 deliberately made
+  // false, and will not need a further substitution once plan 34.5-12 lands.
+  it('Invariant B guard: winetricksInstall (deliberately unported, deferred to Phase 34.6) still rejects non-fatally, and the RPC loop keeps serving', async () => {
     const { input, frames } = startSidecar()
-    writeInvoke(input, 'disk-space-1', 'getLegendaryVersion', [])
+    writeInvoke(input, 'disk-space-1', 'winetricksInstall', [])
     await flush()
 
     const diskSpaceResponse = frames.find(

@@ -540,6 +540,22 @@ const IN_SCOPE_SUITES = [
  * those are required to carry a `jest.mock('../pathShim', ...)` call, which this suite has no
  * reason to make (it never touches `pathShim` at all). A `readdirSync` recount at this plan's
  * execution time puts the directory at 36 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 32 below.
+ *
+ * `runnerMiscFlows.test.ts` (Phase 34.5 Plan 07, REQ-34.5-06/REQ-34.5-09) is classified as
+ * structurally contained: it DOES declare its own `jest.mock('os', ...)` disposable-per-process-
+ * homedir override (mirroring `runnerAuthFlows.test.ts`'s own precedent), because
+ * `runnerMiscFlowRegistration.ts` reaches `backend/constants/paths.ts` transitively (via
+ * `wine/runtimes/runtimes.ts`), whose module-scope `homedir()` calls (`userHome`/`flatpakHome`)
+ * are real unless redirected — so it is defence-in-depth ON TOP OF the structural floor
+ * `jest.setupContainment.ts` already provides, not a suite relying solely on that floor. It also
+ * factory-mocks `backend/utils` and `backend/logger` (short-circuiting the heavy
+ * storeManagers/config/launcher/discord-rpc and GameConfig/GlobalConfig/backendEvents import
+ * graphs those two modules would otherwise eagerly construct at module scope), neither of which
+ * is invoked by this suite — only registration kind is proven, no handler body is ever called.
+ * It cannot be an `IN_SCOPE_SUITE`: those are required to carry a `jest.mock('../pathShim', ...)`
+ * call, which this suite has no reason to make (it never touches `pathShim` at all). A
+ * `readdirSync` recount at this plan's execution time puts the directory at 37 `*.test.ts` files:
+ * 4 `IN_SCOPE_SUITES` + 33 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -564,6 +580,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'onlineMonitorWiring.test.ts',
   'pathShim.test.ts',
   'runnerAuthFlows.test.ts',
+  'runnerMiscFlows.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',

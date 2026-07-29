@@ -1021,12 +1021,19 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     // UPDATED (Phase 34.3 Plan 01): `checkDiskSpace` — this test's original
     // example channel — is no longer unported. It is now registered for real
     // by `shellFilesFlowRegistration.ts` (REQ-34.3-02, `shellFilesFlows.test.ts`
-    // covers its ported behavior). `getLegendaryVersion` substitutes here as a
-    // channel this plan does not touch and that stays genuinely unported
+    // covers its ported behavior). `getLegendaryVersion` substituted here as a
+    // channel that plan did not touch and that stayed genuinely unported
     // until Phase 34.5.
-    it('REQ-34.2-14 an UNPORTED channel (getLegendaryVersion, owned by a later slice) still returns UNPORTED_CHANNEL_MARKER', async () => {
+    //
+    // UPDATED AGAIN (Phase 34.5 Plan 07, REQ-34.5-06): `getLegendaryVersion`
+    // is ALSO no longer unported — it is now registered for real by
+    // `runnerMiscFlowRegistration.ts` (`runnerMiscFlows.test.ts` covers its
+    // ported registration kind). `winetricksInstall` substitutes here as a
+    // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
+    // need a further substitution once plan 34.5-12 lands.
+    it('REQ-34.2-14 an UNPORTED channel (winetricksInstall, deferred to Phase 34.6) still returns UNPORTED_CHANNEL_MARKER', async () => {
       const { input, frames } = startSidecar()
-      writeInvoke(input, 'unported-1', 'getLegendaryVersion', [])
+      writeInvoke(input, 'unported-1', 'winetricksInstall', [])
       await flush()
 
       const response = findResponse(frames, 'unported-1')
