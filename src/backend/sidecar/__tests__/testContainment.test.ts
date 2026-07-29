@@ -510,6 +510,23 @@ const IN_SCOPE_SUITES = [
  * tests `pathShim` itself. A `readdirSync` recount at this plan's execution
  * time (not carried forward by hand, correcting the stale "30" figure above)
  * puts the directory at 34 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 30 below.
+ *
+ * `wineToolsFlows.test.ts` (Phase 34.5 Plan 05, REQ-34.5-03) is classified as
+ * structurally contained: it never calls `jest.mock('electron', ...)` itself,
+ * relying on the same project-wide, tmpdir-based `src/backend/__mocks__/electron.ts`
+ * auto-mock `runnerSliceRegistration.test.ts` already relies on for
+ * `wineToolsFlowRegistration.ts`'s real `../config`/`../wine/manager/utils`/
+ * `../dialog/dialog`/`../backend_events` import chain -- "contained by
+ * construction, no per-suite opt-in required," not a hand-maintained kit of
+ * its own. Its one per-suite addition is a factory mock of `../../launcher`
+ * (avoiding that heavier module's launch-orchestration/child_process side
+ * effects, irrelevant to proving registration kind and pass-through
+ * forwarding), and a direct import of `../electronStub` for
+ * `handlerRegistry`/`listenerRegistry` that touches no filesystem at module
+ * scope. No new containment surface. A `readdirSync` recount at this plan's
+ * execution time (not carried forward by hand, correcting the stale "34"
+ * figure above) puts the directory at 35 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 31 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -541,7 +558,8 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'steamAuthFlows.test.ts',
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
-  'testContainment.test.ts'
+  'testContainment.test.ts',
+  'wineToolsFlows.test.ts'
 ]
 
 describe('Block B: declared-list source gate over the four in-scope suites (34.2 gap cycle 2, plan 34.2-18)', () => {
