@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-05-PLAN.md
-last_updated: "2026-07-29T06:30:21.543Z"
+stopped_at: Completed 34.5-06-PLAN.md
+last_updated: "2026-07-29T06:55:44.459Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 125
+  completed_plans: 126
   percent: 71
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 6 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 7 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -67,7 +67,31 @@ the 9) remain for a later plan. Full backend suite is flaky independent of this
 plan's own files: two separate runs each surfaced ONE different unrelated
 pre-existing failure (`enrichmentFlows.test.ts` once, `depotPrimitives.test.ts`
 once), both passing in isolation; a third run was fully green. `tsc --noEmit`
-exit 0 throughout.)
+exit 0 throughout.); 06 done — `runnerAuthFlowRegistration.ts` filled in with
+the 7 Epic/GOG auth+sign-out channels (6 `ipcMain.handle` + `logoutGOG` as
+`ipcMain.on`), REQ-34.5-04 satisfied. Fixed a real defect found during
+implementation: `LegendaryUser.logout()` previously aborted mid-cleanup under
+the sidecar's `{}` session stub, skipping `configStore.delete('userInfo')` —
+restructured to the same guarded-step-loop/unconditional-credential-cleanup
+shape 34.4.1-06 established for Humble, with a domain-scoped Tauri cookie clear
+against the apex `epicgames.com`. `login`/`authGOG` validate their credential
+payload at the trust boundary (never logging the rejected value); `logoutGOG`
+wraps the SYNCHRONOUS `GOGUser.logout()` in try/catch, not `.catch()`. New
+6-case `legendary/__tests__/user.test.ts` (first test file for that module) and
+23-case `runnerAuthFlows.test.ts` (bidirectional kind cross-check, sign-out
+asymmetry, trust-boundary rejection, send-guard, dropped/deferred-channel
+absence); both classified/left correctly per `testContainment.test.ts`/
+`runnerSliceRegistration.test.ts`. Found and fixed a pre-existing idempotence-
+test bug in `runnerSliceRegistration.test.ts` (baseline captured before any
+`register()` call, compared against state after two calls — impossible once a
+real `ipcMain.on` channel exists) and added a matching `let registered = false`
+guard to `registerRunnerAuthFlows()` itself (mirrors `storeRegistration.ts`).
+Updated `settingsFlows.test.ts`'s `getUserInfo` Invariant B guard from
+"still unported" to "now real", following that file's own `readConfig`
+precedent. Full backend suite recorded verbatim: 126/126 suites, 2641/2641
+tests passing (run from repo root — `cd src/backend && npx jest` spuriously
+fails an unrelated cwd-relative wine-downloader test). `tsc --noEmit` exit 0.
+Amazon's 4 channels remain for plan 34.5-10.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1544,7 +1568,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 87%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2391,6 +2415,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P03 | 15min | 3 tasks | 3 files |
 | Phase 34.5 P04 | 35min | 2 tasks | 8 files |
 | Phase 34.5 P05 | 55min | 3 tasks | 3 files |
+| Phase 34.5 P06 | 65min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -2705,6 +2730,8 @@ Recent decisions affecting current work:
 - [Phase 34.5-05]: D-14 seam 3 (runWineCommand) registered in wave 2 despite D-07 listing it as wave-1 -- rationale recorded in-source, not just planning docs
 - [Phase 34.5-05]: sendFrontendMessage imported unmodified from '../ipc' for progressOfWineManager -- electronStub's BrowserWindow.webContents.send shim already relays it, confirmed via sidecarRpc.ts before use
 - [Phase 34.5-05]: wineToolsFlows.test.ts factory-mocks only '../../launcher'; config/wine-utils/dialog/backend_events load for real via the project-wide electron auto-mock, avoiding a bespoke per-suite mock kit
+- [Phase 34.5-06]: Epic cookie-clear domain is the apex 'epicgames.com' (suffix-matches www.epicgames.com), mirroring humble/user.ts's apex-domain convention for humblebundle.com
+- [Phase 34.5-06]: registerRunnerAuthFlows() gained an idempotence guard (let registered = false) once a real ipcMain.on channel (logoutGOG) existed for the first time in this module family
 
 ### Pending Todos
 
@@ -2777,8 +2804,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T06:28:18.658Z
-Stopped at: Completed 34.5-04-PLAN.md
+Last session: 2026-07-29T06:55:44.451Z
+Stopped at: Completed 34.5-06-PLAN.md
   This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
   seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
   `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
