@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-08-PLAN.md
-last_updated: "2026-07-29T07:45:12.012Z"
+stopped_at: Completed 34.5-09-PLAN.md
+last_updated: "2026-07-29T08:12:08.811Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 128
+  completed_plans: 129
   percent: 71
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 9 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 10 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -147,7 +147,18 @@ backend suite recorded verbatim: 128/128 suites, 2682/2682 tests passing
 && npx jest` again spuriously fails the same unrelated cwd-relative
 wine-downloader test plan 34.5-06/-07 both already noted). `tsc --noEmit`
 exit 0. Plan 34.5-11 owns the remaining Steam-add/remove trio
-(`addToSteam`/`removeFromSteam`/`isAddedToSteam`) in the same module file.)
+(`addToSteam`/`removeFromSteam`/`isAddedToSteam`) in the same module file.);
+09 done — the Wine cluster's final 3 channels (`toggleDXVK`/`toggleDXVKNVAPI`/
+`toggleVKD3D`) ported verbatim into `wineToolsFlowRegistration.ts`, completing it
+at 9-of-9, REQ-34.5-03 satisfied. D-15's mis-citation (`tools/index.ts:794`,
+DEFERRED winetricks cluster) corrected by direct read; the actually-reachable
+dialog (`tools/index.ts:137`) was already safe and is now pinned by a
+`jest.isolateModules()`-sandboxed test exercising the real `electronStub.dialog`
+fallback — no fix built for a path that didn't need one. A tool-literal
+regression test proves `toggleVKD3D` forwards `'vkd3d'`, not a copy-pasted
+`'dxvk'`. `GameConfig` import corrected to `../game_config` (not `../config`).
+Full backend suite: 173/173 suites, 3228/3228 tests, exit 0. `tsc --noEmit`
+exit 0. See `34.5-09-SUMMARY.md`.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1624,7 +1635,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 89%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2474,6 +2485,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P06 | 65min | 3 tasks | 7 files |
 | Phase 34.5 P07 | 20min | 2 tasks | 8 files |
 | Phase 34.5 P08 | 55min | 3 tasks | 5 files |
+| Phase 34.5 P09 | ~55min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2794,6 +2806,7 @@ Recent decisions affecting current work:
 - [Phase 34.5-07]: Invariant B guard canary channel rotated from getLegendaryVersion to winetricksInstall across 5 pre-existing test files, since winetricksInstall is permanently deferred to Phase 34.6 (D-03) and will not need re-swapping when plan 34.5-12 lands
 - [Phase 34.5-08]: Corrected shortcuts.ts:227 exe attribution from addToSteam to addShortcut — Source-verified: generateMacOsApp's only caller is addShortcuts, whose only IPC entry is addShortcut
 - [Phase 34.5-08]: Added registered-guard idempotence fix to shortcutsFlowRegistration.ts — electronStub ipcMain.on appends per call; 3 send channels needed the same guard runnerAuthFlowRegistration.ts already carries
+- [Phase 34.5-09]: DXVK/VKD3D toggle trio completes Wine cluster at 9/9 channels — D-15 mis-citation (tools/index.ts:794, inside Winetricks.checkDependencies, DEFERRED cluster) corrected; the actually-reachable dialog site is tools/index.ts:137, already safe per electronStub's non-throwing construction -- pinned by a jest.isolateModules() sandboxed test rather than a code fix
 
 ### Pending Todos
 
@@ -2866,24 +2879,29 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T07:45:12.002Z
-Stopped at: Completed 34.5-08-PLAN.md
-  This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
-  seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
-  `wineToolsFlowRegistration.ts` 9, `shortcutsFlowRegistration.ts` 7,
-  `runnerMiscFlowRegistration.ts` 11, commit `b4b31f5a1`), wired into `handlers.ts` and
-  proven reachable by `runnerSliceRegistration.test.ts`'s 27-test containment pin
-  (commit `d79ebf3f5`), REQ-34.5-13 satisfied. Fixed a self-inflicted `*/ipc_handler.ts`
-  docstring parse bug found by `tsc` mid-Task-1. Full backend suite recorded verbatim:
-  exit 1, 3 failed/2599 passed/2602 total, all three pre-existing and outside this
-  plan's file set (logged to `deferred-items.md`, NOT fixed): `pathShim.test.ts`
-  unclassified in `testContainment.test.ts` (plan 34.5-01's own gap), a wine-downloader
-  `unlinkFile` test, and a comment-stripper/`main.rs` literal mismatch (plan 34.5-01
-  added the offending lines). `npx tsc --noEmit` and the targeted
-  `runnerSliceRegistration.test.ts` suite both exit 0.
-Next: **34.5-05-PLAN.md** (wave 2, first cluster body — likely the runWineCommand
-seam + DXVK/VKD3D toggles per `wineToolsFlowRegistration.ts`) is next on the critical
-path for Phase 34.5. Separately, still blocking: **34.4.1-08 Task 2 — the
+Last session: 2026-07-29T08:12:08.801Z
+Stopped at: Completed 34.5-09-PLAN.md
+  This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
+  (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
+  `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
+  34.5-05 started. D-15's original citation (`tools/index.ts:794`, inside
+  `Winetricks.checkDependencies`, a DEFERRED cluster) was verified WRONG by direct
+  read; the actually-reachable dialog site (`tools/index.ts:137`, via
+  `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`) was confirmed
+  already safe (`electronStub.dialog.showErrorBox`/`showMessageBox` are structurally
+  non-throwing) and pinned by a new `jest.isolateModules()`-sandboxed test (commit
+  `473b957fb`) rather than "fixed" — no line of `dialog.ts`/`tools/index.ts`/
+  `electronStub.ts` was touched. `wineToolsFlows.test.ts` extended to all 9 channels
+  bidirectionally + an explicit `SEND_CHANNELS` empty assertion + a tool-literal
+  regression test proving `toggleVKD3D` forwards `'vkd3d'` not `'dxvk'` (commit
+  `d5d867f15`). Deviation: `GameConfig` corrected to import from `../game_config`
+  (not `../config`, which only exports `GlobalConfig`) after a grep-verified read.
+  Full backend suite recorded verbatim: `npm run test:ci` exit 0, 173/173 suites,
+  3228/3228 tests (baseline 3222 + this plan's 6 new/extended assertions). `npx tsc
+  --noEmit` exit 0. See `34.5-09-SUMMARY.md` for the full D-15 file:line trace.
+Next: **34.5-10-PLAN.md** is next on the critical path for Phase 34.5 (wave 3
+continues — `runnerAuthFlowRegistration.ts`'s remaining channels per plan 34.5-06's
+scaffold). Separately, still blocking: **34.4.1-08 Task 2 — the
 blocking 4-item live gate. Needs local hardware; the developer was remote last session.**
 Preconditions P1/P3/P5 are satisfied and evidenced; P2/P4/P6 are operator-at-gate-time (P6's
 control cookie is now MOOT — item 3(b) was recorded BLOCKED-UNOBSERVABLE pre-gate, so the gate
