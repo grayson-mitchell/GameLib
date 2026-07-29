@@ -44,12 +44,33 @@ jest.mock('../../launcher', () => ({
   validWine: jest.fn()
 }))
 
+// `../../game_config`'s `GameConfig.get(appName).getSettings()` would otherwise exercise real
+// config-file I/O for a fake `appName` -- factory-mocked so the tool-literal proof test (Describe
+// 5) controls exactly what `getSettings()` resolves to, without touching disk.
+jest.mock('../../game_config', () => ({
+  GameConfig: {
+    get: jest.fn()
+  }
+}))
+
+// `../../tools`'s `DXVK.installRemove` is the curated import target for the three toggle
+// handlers -- factory-mocked so Describe 5 can prove each toggle forwards its own tool literal
+// without running the real download/prefix-inspection logic.
+jest.mock('../../tools', () => ({
+  DXVK: {
+    getLatest: jest.fn(),
+    installRemove: jest.fn()
+  }
+}))
+
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../electronStub'
 import { runWineCommand } from '../../launcher'
+import { GameConfig } from '../../game_config'
+import { DXVK } from '../../tools'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../electronStub'
 
@@ -60,15 +81,24 @@ import type { IpcHandler } from '../electronStub'
 registerWineToolsFlows()
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
-describe('registration kind — the 6 ported channels are registered with the correct kind, both directions', () => {
+describe('registration kind — all 9 Wine channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
     'runWineCommand',
     'getAlternativeWine',
     'wine.isValidVersion',
     'installWineVersion',
     'refreshWineVersionInfo',
-    'removeWineVersion'
+    'removeWineVersion',
+    'toggleDXVK',
+    'toggleDXVKNVAPI',
+    'toggleVKD3D'
   ]
+
+  // 9 of 9 invoke, zero send -- a deliberate property of this cluster (no channel here is
+  // fire-and-forget). Kept as an explicit array (rather than just omitting the assertion) so a
+  // future accidental `ipcMain.on` addition to this module fails a test instead of silently
+  // passing.
+  const SEND_CHANNELS: string[] = []
 
   it.each(HANDLE_CHANNELS)(
     'REQ-34.5-03 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
@@ -77,6 +107,10 @@ describe('registration kind — the 6 ported channels are registered with the co
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
   )
+
+  it('REQ-34.5-03 SEND_CHANNELS is empty -- this cluster is 9-of-9 invoke, zero send', () => {
+    expect(SEND_CHANNELS).toHaveLength(0)
+  })
 })
 
 // ── Describe 2: Curated-import + deferred/foreign-channel guard ───────────────────────────────
@@ -208,5 +242,46 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
     } finally {
       process.off('unhandledRejection', onUnhandledRejection)
     }
+  })
+})
+
+// ── Describe 5: Tool-literal proof ────────────────────────────────────────────────────────────
+//
+// The three toggle bodies (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) are near-identical except
+// for one string literal. A copy-paste error swapping that literal (e.g. `toggleVKD3D` forwarding
+// `'dxvk'` instead of `'vkd3d'`) is otherwise completely silent -- it would install the wrong
+// component with no test failure and no runtime error (T-34.5-31). This proves `toggleVKD3D`
+// forwards its own literal, not a neighbour's.
+describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not 'dxvk'", () => {
+  it("T-34.5-31 the registered 'toggleVKD3D' handler forwards gameSettings and the literal 'vkd3d' to DXVK.installRemove", async () => {
+    const fakeGameSettings = { marker: 'fake-game-settings-for-toggleVKD3D-test' }
+    const mockGetSettings = jest.fn().mockResolvedValue(fakeGameSettings)
+    ;(GameConfig.get as jest.Mock).mockReturnValue({
+      getSettings: mockGetSettings
+    })
+
+    const mockInstallRemove = DXVK.installRemove as jest.MockedFunction<
+      typeof DXVK.installRemove
+    >
+    mockInstallRemove.mockClear()
+    mockInstallRemove.mockResolvedValue(true)
+
+    const handler = handlerRegistry.get('toggleVKD3D') as IpcHandler
+    expect(handler).toBeDefined()
+
+    await handler({} as never, { appName: 'test-app', action: 'backup' })
+
+    expect(GameConfig.get).toHaveBeenCalledWith('test-app')
+    expect(mockGetSettings).toHaveBeenCalledTimes(1)
+    expect(mockInstallRemove).toHaveBeenCalledTimes(1)
+
+    const [forwardedSettings, forwardedTool, forwardedAction] =
+      mockInstallRemove.mock.calls[0]
+    // Identity, not just deep-equality -- proves the handler forwards the resolved settings
+    // object rather than reshaping it.
+    expect(forwardedSettings).toBe(fakeGameSettings)
+    expect(forwardedTool).toBe('vkd3d')
+    expect(forwardedTool).not.toBe('dxvk')
+    expect(forwardedAction).toBe('backup')
   })
 })
