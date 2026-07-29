@@ -553,6 +553,24 @@ const fakeWebContents = {
   isDestroyed: (): boolean => false,
   send: (channel: string, ...args: unknown[]): void => {
     transport?.pushFrontendMessage(channel, ...args)
+  },
+  // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+shift+i` case
+  // (`main.ts:1465`, `mainWindow?.webContents?.openDevTools()`) is reachable under the sidecar
+  // via `shortcutsFlowRegistration.ts`'s `processShortcut` listener, which resolves
+  // `getMainWindow()` to this (truthy) fakeWebContents rather than `undefined` -- the missing
+  // method threw `TypeError: mainWindow.webContents.openDevTools is not a function` the moment
+  // that hotkey combination was ported. Missing today because devtools is a Chromium/Electron
+  // renderer-chrome concept with no Tauri WebView equivalent: opening devtools for a Tauri
+  // window is new shell work (a Rust-side WebView devtools toggle), not a port of existing
+  // Electron logic -- so a real implementation is out of scope here, same reasoning as `hide`'s
+  // Phase 34.1 Plan 04 precedent immediately below. DECLARED DEGRADED under Tauri: this hotkey
+  // is recorded as non-functional in `34.5-PORTED-CHANNELS.md`, not silently pretended to work.
+  // Logs once per call so the degradation is visible, never silent.
+  openDevTools: (): void => {
+    console.warn(
+      '[electronStub] fakeWebContents.openDevTools(): logged no-op (T-34.5-27, declared degraded) -- ' +
+        'devtools is a Chromium/renderer-chrome concept with no Tauri WebView equivalent under the sidecar'
+    )
   }
 }
 
@@ -566,7 +584,23 @@ const fakeWindow = {
   // the missing method threw `TypeError: mainWindow.hide is not a function` and
   // prevented `app.exit()` from ever being reached. A safe no-op is sufficient:
   // real window visibility is not a sidecar concern (there is no real window here).
-  hide: (): void => {}
+  hide: (): void => {},
+  // Phase 34.5 Plan 08 (T-34.5-27): `processShortcut`'s `ctrl+r` case (`main.ts:1465`,
+  // `mainWindow?.reload()`) is reachable under the sidecar via
+  // `shortcutsFlowRegistration.ts`'s `processShortcut` listener, which resolves
+  // `getMainWindow()` to this (truthy) fakeWindow rather than `undefined` -- the missing method
+  // threw `TypeError: mainWindow.reload is not a function` the moment that hotkey combination
+  // was ported. Missing today because a renderer reload is a real-window shell concern with no
+  // sidecar equivalent: routing it to an actual Tauri window reload would be new shell work, not
+  // a port of existing Electron logic. DECLARED DEGRADED under Tauri: this hotkey is recorded as
+  // non-functional in `34.5-PORTED-CHANNELS.md`, not silently pretended to work. Logs once per
+  // call so the degradation is visible, never silent.
+  reload: (): void => {
+    console.warn(
+      '[electronStub] fakeWindow.reload(): logged no-op (T-34.5-27, declared degraded) -- ' +
+        'a renderer reload has no sidecar/window equivalent under the sidecar'
+    )
+  }
 }
 
 export const BrowserWindow = {

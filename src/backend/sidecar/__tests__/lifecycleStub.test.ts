@@ -49,6 +49,7 @@ jest.mock('../sidecarRpc', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import {
+  BrowserWindow,
   Notification,
   app,
   clipboard,
@@ -506,5 +507,56 @@ describe('electronStub app.relaunch/quit race guard (Phase 34.3 Plan 05, D-06, R
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('a relaunch is already in flight')
     )
+  })
+})
+
+describe('electronStub fakeWindow.reload / fakeWebContents.openDevTools (Phase 34.5 Plan 08, T-34.5-27)', () => {
+  // `processShortcut`'s `ctrl+r` and `ctrl+shift+i` cases (`main.ts:1465`) call
+  // `mainWindow?.reload()` and `mainWindow?.webContents?.openDevTools()` respectively.
+  // `BrowserWindow.getAllWindows()[0]` is this module's (truthy) fakeWindow -- these two members
+  // did not exist on it before this plan, so calling either threw a TypeError the moment
+  // `processShortcut` was ported under the sidecar.
+
+  it('BrowserWindow.getAllWindows()[0].reload() returns undefined without throwing, and logs exactly once', () => {
+    const [win] = BrowserWindow.getAllWindows()
+
+    let result: unknown
+    expect(() => {
+      result = win.reload()
+    }).not.toThrow()
+
+    expect(result).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(String(warnSpy.mock.calls[0][0])).toContain('reload')
+  })
+
+  it('BrowserWindow.getAllWindows()[0].webContents.openDevTools() returns undefined without throwing, and logs exactly once', () => {
+    const [win] = BrowserWindow.getAllWindows()
+
+    let result: unknown
+    expect(() => {
+      result = win.webContents.openDevTools()
+    }).not.toThrow()
+
+    expect(result).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(String(warnSpy.mock.calls[0][0])).toContain('openDevTools')
+  })
+
+  it('both are declared as callable, void-returning functions on the stub surface', () => {
+    const [win] = BrowserWindow.getAllWindows()
+    expect(typeof win.reload).toBe('function')
+    expect(typeof win.webContents.openDevTools).toBe('function')
+  })
+
+  it('reload() and openDevTools() each log a DECLARED DEGRADED (T-34.5-27) message naming their own member', () => {
+    const [win] = BrowserWindow.getAllWindows()
+
+    win.reload()
+    expect(String(warnSpy.mock.calls[0][0])).toContain('T-34.5-27')
+
+    warnSpy.mockClear()
+    win.webContents.openDevTools()
+    expect(String(warnSpy.mock.calls[0][0])).toContain('T-34.5-27')
   })
 })
