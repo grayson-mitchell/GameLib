@@ -87,9 +87,43 @@ logins depend on the same seam.
 
 ## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (57 channels)
 
+**Re-scoped 2026-07-29 by `34.5-CONTEXT.md` D-01/D-02/D-03: the 57 below reconciles as
+38 ported + 3 dropped + 16 moved.**
+- **3 DROPPED permanently:** `authZoom`, `getZoomUserInfo`, `logoutZoom` — never ported; Zoom
+  sign-in dies at the Phase 35 cutover. Rationale (D-02): absent from GameLib's stated core value
+  ("Epic, GOG, Amazon, and Steam"), smallest storefront, purely inherited from Heroic. No new code
+  is needed — the `UNPORTED_CHANNEL_MARKER` machinery already catches them at boot and declares
+  them honestly.
+- **16 MOVED** to the new `## Phase 34.6` section below (EOS overlay 8, SteamGridDB artwork 5,
+  winetricks 3) — see that section for the full list by cluster. Rationale (D-03/D-05): deferred,
+  not dropped, and tracked in `ROADMAP.md`'s new Phase 34.6 entry so Phase 35's completion gate
+  stays honest rather than silently accepting the loss.
+- **Correction carried forward (D-04):** `getCometVersion` is GOG's, not Zoom's — `comet` is the
+  GOG Galaxy Communication replacement, gated on `gameInfo.runner === 'gog'`
+  (`src/backend/launcher.ts:973`). It **IS ported** in the 38, under Runner CLI versions; an
+  earlier discussion wrongly bundled it with Zoom.
+- `callTool` (arrived from Phase 34.1 per D-14) and `isLoggedIn` (arrived from Phase 34.4 per
+  D-03) are both already reflected in the 57 below — no further reassignment needed.
+
 Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
 `addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
+
+## Phase 34.6 — Slice 9 — EOS overlay, SteamGridDB and winetricks (16 channels)
+
+Split out of Phase 34.5's 57 on 2026-07-29 (D-03/D-05) — deferred, not dropped, because Phase
+35's cutover requires the IPC re-plumb to be **COMPLETE**. This phase runs BEFORE Phase 35.
+
+`disableEosOverlay`, `enableEosOverlay`, `getEosOverlayStatus`, `getLatestEosOverlayVersion`, `installEosOverlay`, `isEosOverlayEnabled`, `removeEosOverlay`, `updateEosOverlayInfo` (EOS overlay, 8)
+
+`steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey` (SteamGridDB artwork, 5)
+
+`winetricksAvailable`, `winetricksInstall`, `winetricksInstalled` (winetricks, 3)
+
+`winetricksInstall` is `addListener`/send-kind (`tools/ipc_handler.ts`) — inherits the send-channel
+silent-failure warning already documented for this project's other send channels. `callTool`'s
+`winetricks` branch already works from Phase 34.5 via `Winetricks.run()` on the shared
+`tools/index.ts` object; this phase is only about the three dedicated IPC channels above.
 
 ## Not an IPC channel, but blocks Phase 35
 
