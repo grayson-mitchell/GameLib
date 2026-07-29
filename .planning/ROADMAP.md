@@ -1496,14 +1496,14 @@ Plans:
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 4/15 plans executed
+**Plans:** 5/15 plans executed
 
 Plans:
 - [x] 34.5-01-PLAN.md — Wave-1 seam 1: pathShim desktop/exe/documents + GAMELIB_SHELL_EXE on both Rust spawn paths + pathShim.test.ts (wave 1)
 - [x] 34.5-02-PLAN.md — Wave-1 seam 2: host-anchor nile's redirect match on www.amazon.com, closing T-34.4.1-44b (wave 1)
 - [x] 34.5-03-PLAN.md — 34.5-LIVE-GATE.md written empty + Phase 34.6 inserted into ROADMAP + inventory reconciled 38/3/16 (wave 1)
 - [x] 34.5-04-PLAN.md — The four registration modules declared, wired into handlers.ts and wiring-proven (wave 1)
-- [ ] 34.5-05-PLAN.md — Register the runWineCommand seam (D-14 / seam 3) + probes + wine version management, 6 of 9 (wave 2 — seam 3 cannot be wave 1: every registration depends on 34.5-04's modules)
+- [x] 34.5-05-PLAN.md — Register the runWineCommand seam (D-14 / seam 3) + probes + wine version management, 6 of 9 (wave 2 — seam 3 cannot be wave 1: every registration depends on 34.5-04's modules)
 - [ ] 34.5-06-PLAN.md — Epic + GOG auth, 7 channels incl. the logoutGOG send asymmetry and the Epic sign-out ordering fix (wave 2)
 - [ ] 34.5-07-PLAN.md — 4 runner CLI version probes + 2 runtime channels (wave 2)
 - [ ] 34.5-08-PLAN.md — Shortcuts A: 3 send channels + shortcutsExists + electronStub reload/openDevTools no-ops (wave 2)

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-04-PLAN.md
-last_updated: "2026-07-29T06:00:47.198Z"
+stopped_at: Completed 34.5-05-PLAN.md
+last_updated: "2026-07-29T06:30:21.543Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 124
-  percent: 86
+  completed_plans: 125
+  percent: 71
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 5 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 6 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -52,7 +52,22 @@ plan's file set (`pathShim.test.ts` unclassified in `testContainment.test.ts`
 from already-committed plan 34.5-01; a wine-downloader `unlinkFile` test; a
 comment-stripper mismatch against `main.rs` literals plan 34.5-01 added),
 logged to `deferred-items.md` rather than fixed. Plans 05-12 can now each fill
-in exactly one module file.)
+in exactly one module file.); 05 done — `wineToolsFlowRegistration.ts` filled in
+with 6 of its 9 declared channels: the `runWineCommand` D-14 seam-3 pass-through
+(wave-2 placement rationale recorded in-source per D-06/D-07), the
+`getAlternativeWine`/`wine.isValidVersion` probe pair, and the
+`installWineVersion`/`refreshWineVersionInfo`/`removeWineVersion` trio ported
+verbatim plus their co-located `releasesInfoReady` subscription (T-34.5-16).
+REQ-34.5-03 satisfied. New 9-test `wineToolsFlows.test.ts` proves bidirectional
+registration kind, no `ipc_handler` import, no deferred-winetricks/
+`runWineCommandForGame` leakage, and `runWineCommand`'s pass-through-by-identity
+forwarding; classified in `testContainment.test.ts`'s structurally-contained
+list, `runnerSliceRegistration.test.ts` left unedited. DXVK/VKD3D toggles (3 of
+the 9) remain for a later plan. Full backend suite is flaky independent of this
+plan's own files: two separate runs each surfaced ONE different unrelated
+pre-existing failure (`enrichmentFlows.test.ts` once, `depotPrimitives.test.ts`
+once), both passing in isolation; a third run was fully green. `tsc --noEmit`
+exit 0 throughout.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1529,7 +1544,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 86%
+trusted blindly. The recurring `**Progress:**[█████████░] 87%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2375,6 +2390,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P02 | 25min | 2 tasks | 2 files |
 | Phase 34.5 P03 | 15min | 3 tasks | 3 files |
 | Phase 34.5 P04 | 35min | 2 tasks | 8 files |
+| Phase 34.5 P05 | 55min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -2686,6 +2702,9 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Only runnerAuthFlowRegistration.ts carries the ipcMain + load-bearing storeManagers import at plan 34.5-04's stage; the other three modules stay import-free until their cluster plans land
 - [Phase 34.5]: Growth-tolerant containment pin isolates each module (clear registries, call it alone, inspect, restore) rather than checking foreign channels against the shared global registry, to avoid false-positive cross-module leak detection once sibling clusters land
 - [Phase 34.5]: runnerSliceRegistration.test.ts classified as structurally contained in testContainment.test.ts (never overrides the electron mock; storeManagers resolves through the project-wide tmpdir-based electron auto-mock)
+- [Phase 34.5-05]: D-14 seam 3 (runWineCommand) registered in wave 2 despite D-07 listing it as wave-1 -- rationale recorded in-source, not just planning docs
+- [Phase 34.5-05]: sendFrontendMessage imported unmodified from '../ipc' for progressOfWineManager -- electronStub's BrowserWindow.webContents.send shim already relays it, confirmed via sidecarRpc.ts before use
+- [Phase 34.5-05]: wineToolsFlows.test.ts factory-mocks only '../../launcher'; config/wine-utils/dialog/backend_events load for real via the project-wide electron auto-mock, avoiding a bespoke per-suite mock kit
 
 ### Pending Todos
 
@@ -2758,7 +2777,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T06:00:47.188Z
+Last session: 2026-07-29T06:28:18.658Z
 Stopped at: Completed 34.5-04-PLAN.md
   This session: 34.5-04-PLAN.md executed — the four declared-but-empty registration
   seams for this slice's 38 channels created (`runnerAuthFlowRegistration.ts` 11,
