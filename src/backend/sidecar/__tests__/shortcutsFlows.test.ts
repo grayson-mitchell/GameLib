@@ -88,19 +88,31 @@ jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {}
 }))
 
-// ── backend/shortcuts/nonesteamgame/nonesteamgame — never invoked (every fixture below pins
-// addSteamShortcuts: false), mocked to avoid importing its own heavier dependency chain
-// (wiki_game_info, key_value_stores) for a branch this suite deliberately never takes.
-jest.mock('backend/shortcuts/nonesteamgame/nonesteamgame', () => ({
-  addNonSteamGame: jest.fn(),
-  removeNonSteamGame: jest.fn(),
-  isAddedToSteam: jest.fn()
-}))
+// ── backend/shortcuts/nonesteamgame/nonesteamgame — Plan 34.5-08 mocked this module wholesale
+// because none of its fixtures ever invoked it (addSteamShortcuts: false gates the addShortcuts
+// branch that would reach it). Plan 34.5-11's `addToSteam`/`removeFromSteam`/`isAddedToSteam`
+// channels call it DIRECTLY and their whole security property (the exe-in-VDF pin, T-34.5-39/40)
+// requires the REAL VDF-write code path -- a mock would prove nothing. So this module is left
+// UNMOCKED here; `backend/wiki_game_info/wiki_game_info` is auto-mocked below instead (mirroring
+// `nonesteamgame.test.ts`'s own precedent) to keep addNonSteamGame's real call chain network-free.
+jest.mock('backend/wiki_game_info/wiki_game_info')
 
-// ── backend/shortcuts/utils — getIcon is network/store-manager-touching; mocked to resolve a
-// fixture file path so convertPngToICNS's own readFileSync(iconPath) has a real file to read.
+// ── backend/shortcuts/utils — shared by two real, unmocked call chains this file now drives:
+// `shortcuts.ts`'s darwin `.app` icon path (getIcon) and, new in plan 34.5-11, `steamhelper.ts`'s
+// `prepareImagesForSteam` (checkImageExistsAlready/createImage/downloadImage/removeImage), reached
+// transitively from the real, unmocked `addNonSteamGame` above. `getIcon` resolves a fixture file
+// path so `convertPngToICNS`'s own readFileSync(iconPath) has a real file to read.
+// checkImageExistsAlready/createImage/downloadImage/removeImage are safe no-ops -- this suite's
+// addToSteam fixture (`makeGameInfo`) has no art_cover/art_square/art_logo/steamID, so
+// `prepareImagesForSteam` only reaches the logo branch's `createImage` call; none of these four
+// touch the filesystem for real, keeping every write this suite asserts against confined to the
+// shortcuts.vdf path it constructs itself.
 jest.mock('backend/shortcuts/utils', () => ({
-  getIcon: jest.fn()
+  getIcon: jest.fn(),
+  checkImageExistsAlready: jest.fn().mockReturnValue(false),
+  createImage: jest.fn().mockReturnValue(undefined),
+  downloadImage: jest.fn().mockReturnValue(undefined),
+  removeImage: jest.fn().mockReturnValue(undefined)
 }))
 
 // ── @shockpkg/icon-encoder — IconIcns is a real native-adjacent PNG->ICNS encoder; mocked so
@@ -132,9 +144,10 @@ jest.mock('electron-store', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
+import { dirSync, type DirResult } from 'tmp'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../electronStub'
@@ -258,9 +271,22 @@ afterAll(() => {
 })
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
-describe('registration kind — the 4 channels are registered with the correct kind, both directions', () => {
-  const HANDLE_CHANNELS = ['shortcutsExists']
+// Extended by plan 34.5-11: HANDLE_CHANNELS now carries all 4 invoke channels (shortcutsExists
+// from plan 34.5-08, plus addToSteam/removeFromSteam/isAddedToSteam from this plan), completing
+// the cluster at 7 (4 handle, 3 send).
+describe('registration kind — the 7 channels are registered with the correct kind, both directions', () => {
+  const HANDLE_CHANNELS = [
+    'shortcutsExists',
+    'addToSteam',
+    'removeFromSteam',
+    'isAddedToSteam'
+  ]
   const SEND_CHANNELS = ['addShortcut', 'removeShortcut', 'processShortcut']
+
+  it('the cluster is complete at 7: 4 handle + 3 send', () => {
+    expect(HANDLE_CHANNELS).toHaveLength(4)
+    expect(SEND_CHANNELS).toHaveLength(3)
+  })
 
   it.each(HANDLE_CHANNELS)(
     'REQ-34.5-05 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
@@ -275,19 +301,6 @@ describe('registration kind — the 4 channels are registered with the correct k
     (channel) => {
       expect((listenerRegistry.get(channel) ?? []).length).toBe(1)
       expect(handlerRegistry.has(channel)).toBe(false)
-    }
-  )
-})
-
-// Forward-looking pin (per this plan's own action item 6): plan 34.5-11 flips these three
-// assertions to the opposite kind pair — it MAY NOT delete them, only invert handlerRegistry/
-// listenerRegistry.has() to true/1.
-describe('forward-looking pin — addToSteam/removeFromSteam/isAddedToSteam are NOT yet registered by this module (plan 34.5-11 flips this)', () => {
-  it.each(['addToSteam', 'removeFromSteam', 'isAddedToSteam'])(
-    '%s is registered in NEITHER registry as of plan 34.5-08',
-    (channel) => {
-      expect(handlerRegistry.has(channel)).toBe(false)
-      expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
   )
 })
@@ -549,5 +562,131 @@ describe("addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects
         JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
     )
     expect(found).toBe(true)
+  })
+})
+
+// ── Describe 6: addToSteam's GAMELIB_SHELL_EXE pin (plan 34.5-11) ─────────────────────────────
+//
+// This is the security-relevant test of THIS plan, and the invoke-kind counterpart to Describe
+// 5's send-kind `addShortcut` pin above (which this suite does not delete, merge or weaken). Same
+// underlying property (T-34.5-39/40, D-10 rejects `process.execPath`), two different observable
+// shapes: `addShortcut` (send-kind) logs via `logSendFailure` and writes nothing; `addToSteam`
+// (invoke-kind) REJECTS to the caller and writes nothing.
+//
+// Drives the REAL `addNonSteamGame`/`removeNonSteamGame`/`isAddedToSteam` (`nonesteamgame.ts`,
+// left unmocked above) through the registered `addToSteam` handler in `handlerRegistry`, using a
+// disposable `tmp` Steam-root fixture (mirroring `nonesteamgame/__tests__/nonesteamgame.test.ts`'s
+// own proven harness) -- never the developer's real Steam userdata directory, and never the
+// structurally redirected home either (this fixture is self-contained and cleaned up per test via
+// `tmpDir.removeCallback()`, independent of `jest.setupContainment.ts`'s home redirection).
+describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterpart to addShortcut's send-kind pin above)", () => {
+  let tmpDir: DirResult
+  let steamUserConfigDir: string
+  let shortcutsFile: string
+  let savedShellExe: string | undefined
+
+  // The exact bytes of an empty, valid shortcuts.vdf ("\x00shortcuts\x00\x08\x08"), the same
+  // literal `nonesteamgame.test.ts`'s own "Create shortcuts.vdf if not exist" case asserts
+  // against. Pre-writing this (rather than starting from a missing file) is the PLAN-TIME
+  // CORRECTION this suite needs: `addNonSteamGame` creates an empty shortcuts.vdf via
+  // `writeShortcutFile` BEFORE it ever reaches `newEntry.Exe = getPath('exe')` (the `if
+  // (!existsSync(shortcutsFile))` branch runs first in the same iteration) -- so "no file
+  // exists" is not a byte-for-byte-safe assertion when the file starts absent. Starting from a
+  // pre-existing empty file sidesteps that branch entirely, so the load-bearing assertion below
+  // (byte-identical content, no entry appended) proves the entry-append itself never happened,
+  // mirroring plan 34.5-08's own "run.sh specifically absent" correction for the analogous
+  // send-kind pin.
+  const EMPTY_SHORTCUTS_VDF = Buffer.from([
+    0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8
+  ])
+
+  beforeEach(() => {
+    tmpDir = dirSync({ unsafeCleanup: true })
+    steamUserConfigDir = join(tmpDir.name, 'userdata', 'steam_user', 'config')
+    mkdirSync(steamUserConfigDir, { recursive: true })
+    shortcutsFile = join(steamUserConfigDir, 'shortcuts.vdf')
+    writeFileSync(shortcutsFile, EMPTY_SHORTCUTS_VDF)
+
+    mockGlobalConfigGet.mockReturnValue({
+      getSettings: () => ({
+        defaultSteamPath: tmpDir.name,
+        addDesktopShortcuts: false,
+        addStartMenuShortcuts: true,
+        addSteamShortcuts: false
+      })
+    })
+    mockGetGame.mockReturnValue({
+      getGameInfo: () => makeGameInfo({ title: 'AddToSteam Pin Game' })
+    })
+
+    savedShellExe = process.env.GAMELIB_SHELL_EXE
+  })
+
+  afterEach(() => {
+    tmpDir.removeCallback()
+    if (savedShellExe === undefined) {
+      delete process.env.GAMELIB_SHELL_EXE
+    } else {
+      process.env.GAMELIB_SHELL_EXE = savedShellExe
+    }
+  })
+
+  it('UNSET: rejects with "GAMELIB_SHELL_EXE was not set", and appends no entry to shortcuts.vdf', async () => {
+    delete process.env.GAMELIB_SHELL_EXE
+    const before = readFileSync(shortcutsFile)
+    const filesBefore = readdirSync(steamUserConfigDir)
+
+    const handler = handlerRegistry.get('addToSteam')
+    expect(handler).toBeDefined()
+    await expect(
+      handler?.(undefined, 'AddToSteam Pin Game', 'legendary')
+    ).rejects.toThrow(/GAMELIB_SHELL_EXE was not set/)
+
+    // The security-relevant guarantee (T-34.5-39): NOT merely that the promise rejected, but
+    // that shortcuts.vdf's own bytes are unchanged (no entry was appended) and the config dir's
+    // file listing is unchanged (no new file was created either).
+    expect(readFileSync(shortcutsFile)).toEqual(before)
+    expect(readdirSync(steamUserConfigDir)).toEqual(filesBefore)
+  })
+
+  it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — rejects, appends no entry', async () => {
+    process.env.GAMELIB_SHELL_EXE = ''
+    const before = readFileSync(shortcutsFile)
+    const filesBefore = readdirSync(steamUserConfigDir)
+
+    const handler = handlerRegistry.get('addToSteam')
+    await expect(
+      handler?.(undefined, 'AddToSteam Pin Game', 'legendary')
+    ).rejects.toThrow(/GAMELIB_SHELL_EXE was not set/)
+
+    expect(readFileSync(shortcutsFile)).toEqual(before)
+    expect(readdirSync(steamUserConfigDir)).toEqual(filesBefore)
+  })
+
+  it('SET: a plausible absolute GAMELIB_SHELL_EXE containing a space produces a shortcuts.vdf whose Exe field contains that exact value, never process.execPath', async () => {
+    process.env.GAMELIB_SHELL_EXE =
+      '/Applications/GameLib Test.app/Contents/MacOS/GameLib'
+
+    const handler = handlerRegistry.get('addToSteam')
+    const result = await handler?.(
+      undefined,
+      'AddToSteam Pin Game',
+      'legendary'
+    )
+
+    expect(result).toBe(true)
+    expect(existsSync(shortcutsFile)).toBe(true)
+
+    // shortcuts.vdf is steam-shortcut-editor's binary VDF format, but string field values
+    // (AppName, Exe, ...) are embedded as literal ASCII substrings between null-byte
+    // delimiters -- `.toContain()` against the raw buffer's string form is the same technique
+    // `nonesteamgame.test.ts` uses to assert on written VDF content.
+    const contents = readFileSync(shortcutsFile).toString()
+    expect(contents).toContain(
+      '"/Applications/GameLib Test.app/Contents/MacOS/GameLib"'
+    )
+    // D-10's explicitly rejected alternative: the node interpreter must never be the value
+    // written as the launch command.
+    expect(contents).not.toContain(process.execPath)
   })
 })
