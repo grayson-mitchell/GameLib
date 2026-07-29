@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-13-PLAN.md
-last_updated: "2026-07-29T09:34:52.402Z"
+stopped_at: Completed 34.5-14-PLAN.md
+last_updated: "2026-07-29T09:51:37.544Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 133
+  completed_plans: 134
   percent: 71
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 14 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 15 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -244,7 +244,34 @@ override); `npm start` and `pnpm tauri:dev` both compiled and booted live,
 sidecar output read from `gamelib.log`. Full green check recorded verbatim:
 `npm run test:ci` 173/173 suites, 3279/3279 tests, exit 0; `tsc --noEmit`
 exit 0; `cargo check` exit 0 (manual, no CI step); `cargo test` 40/40, exit
-0. See `34.5-13-SUMMARY.md`.)
+
+0. See `34.5-13-SUMMARY.md`.); 14 done — `34.5-PORTED-CHANNELS.md` declares all
+38 channels (11/9/7/11 per module) with kind, registration module, honest
+proof level and riders; every `LIVE (item N)` cell also reads PENDING since
+34.5-15's live gate has not run. `T-34.4.1-44b` closure (plan 34.5-02) cited
+in the obligations section; the three research corrections (D-15 dialog
+site, D-10 second `exe` site, D-12 `nile_config` label) and the resolved
+`documents` Discretion question recorded. Four accepted residuals named
+(`processShortcut`'s degraded hotkeys, the inherited Amazon/GOG cookie-jar
+residual T-34.4.1-47, the MEDIUM-confidence `www.amazon.com` anchor
+Assumption A1, `GAMELIB_SHELL_EXE`'s unproven macOS bundle behaviour
+Assumption A2). Two material corrections stated plainly per the wave-4
+measurement: `getDefaultSavePath` remains genuinely unported (GOG saves-sync
+does not resolve its default location under the sidecar until Phase 34.6),
+and `save_sync.ts` is NOT a new electron-reach entry (measured set stayed
+at 34 modules). Exactly two rows carry `LIVE (item 4)` — `addToSteam`
+(`nonesteamgame.ts:258`) and `addShortcut` (`shortcuts.ts:227`) — each
+naming its own distinct call site. `ported-channels-gate.py` (9 self-tested
+checks: row count, kind/send-set correctness, proof-level vocabulary,
+PENDING/PASS/FAIL state on LIVE cells, 38+3+16=57 arithmetic against
+`IPC-PORT-INVENTORY.md`, per-module counts, four residuals present,
+`T-34.4.1-44b` citation, item-4 two-channel scope) exits 0 against the real
+document and `--self-test`; a negative control (corrupting one row's proof
+level to a bare `done`, then restoring) proved the gate genuinely fails on
+bad input. REQ-34.5-11 satisfied. No source file touched (`git diff
+--name-only` shows only `.planning/` paths). `npm run test:ci` 173/173
+suites, 3279/3279 tests, exit 0 both before and after (unchanged, as
+expected); `tsc --noEmit` exit 0. See `34.5-14-SUMMARY.md`.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1721,7 +1748,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2576,6 +2603,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P11 | 45min | 2 tasks | 3 files |
 | Phase 34.5 P12 | 45min | 3 tasks | 2 files |
 | Phase 34.5 P13 | 55min | 3 tasks | 2 files |
+| Phase 34.5 P14 | 13min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2904,6 +2932,9 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Corrected CONTEXT.md D-09/RESEARCH.md Pitfall 1: syncGOGSaves does not itself reach save_sync.ts:146 (getDefaultGogSavePaths) — the actual, still-unported caller is getDefaultSavePath — Direct verification of storeManagers/gog/games.ts's syncSaves() method and SyncSaves/gog.tsx showed the frontend calls getDefaultSavePath separately before syncGOGSaves; logged to deferred-items.md item 4 for a future (likely 34.6) pass
 - [Phase ?]: 34.5-13: save_sync.ts is NOT a new electron-reach entry -- measurement disagreed with the plan's own prediction; syncGOGSaves never calls getDefaultGogSavePaths, the sole caller is the separate unported getDefaultSavePath channel
 - [Phase ?]: 34.5-13: fixed a Rule-1 bug in runnerSliceRegistration.test.ts's containment-pin afterAll -- re-invoking guarded registerXFlows() functions after a registry clear was a silent no-op, leaving handlerRegistry at 20/34 channels for later describes/files; replaced with a canonical registration snapshot captured once at module load
+- [Phase 34.5]: 34.5-14: Proof levels for the 11 auth channels assigned per actual login-flow involvement, not blanket-applied (only channels a real login exercises carry LIVE)
+- [Phase 34.5]: 34.5-14: Only runWineCommand carries LIVE (item 5) in the 9-channel Wine cluster, since item 5 scopes the gate to that one channel
+- [Phase 34.5]: 34.5-14: getDefaultSavePath-unported and save_sync.ts reach-baseline corrections given their own labeled subsection in PORTED-CHANNELS.md rather than folded silently into a Riders cell
 
 ### Pending Todos
 
@@ -2976,8 +3007,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T09:34:52.392Z
-Stopped at: Completed 34.5-13-PLAN.md
+Last session: 2026-07-29T09:51:37.534Z
+Stopped at: Completed 34.5-14-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
