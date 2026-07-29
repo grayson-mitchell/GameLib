@@ -63,3 +63,35 @@ None of the three items above block this plan's own acceptance criteria (Task 1/
 clauses concern only `npx tsc --noEmit`, the new
 `runnerSliceRegistration.test.ts` suite itself, and the recorded exit code/counts of the full
 suite — see `34.5-04-SUMMARY.md`'s verbatim recording).
+
+## Found during 34.5-12
+
+4. **`getDefaultSavePath` (`save_sync.ts:17-27`, `main.ts` handler) is genuinely unported and
+   is the ACTUAL live caller of `getDefaultGogSavePaths`/`save_sync.ts:146`'s
+   `getPath('documents')`, not `syncGOGSaves`.** CONTEXT.md's D-09 and 34.5-RESEARCH.md's Pitfall
+   1 both state `getPath('documents')` is "reached via `syncGOGSaves`". Direct verification for
+   this plan (reading `storeManagers/gog/library.ts:94`'s `getGame()` and
+   `storeManagers/gog/games.ts`'s `syncSaves()` method in full, plus
+   `SyncSaves/gog.tsx`'s `getLocations()`) shows `syncGOGSaves`'s own handler chain
+   (`getGame(appName).syncSaves(arg, '', gogSaves)`) never calls `getDefaultGogSavePaths` — it
+   only iterates the already-resolved `gogSaves` array it is given. The actual (and only) caller
+   of `getDefaultGogSavePaths` is the separate `getDefaultSavePath` channel, invoked by the
+   frontend BEFORE `syncGOGSaves`, in its own round trip. `getDefaultSavePath` is not one of this
+   slice's 38 channels (confirmed absent from `34.5-RESEARCH.md`'s channel list and from every
+   sidecar registration module via `grep -rn getDefaultSavePath src/backend/sidecar/`) and remains
+   genuinely unported after this plan. This does not change the Discretion question's resolution
+   (`documents` still belongs to the saves-sync domain, not shortcuts) — only the specific claim
+   about which channel's runtime call path reaches the line. Out of scope for this plan (adding
+   `getDefaultSavePath` is a new channel this plan's task list does not include); flagged here for
+   a future pass (likely Phase 34.6, alongside the other genuinely-deferred saves-sync/winetricks
+   work) to port `getDefaultSavePath` so the frontend's GOG saves-sync settings panel
+   (`SyncSaves/gog.tsx`) works end-to-end under the sidecar. See `34.5-12-SUMMARY.md` for the full
+   trace and `runnerMiscFlowRegistration.ts`'s header docstring for the in-source correction.
+
+5. **`Jest did not exit one second after the test run has completed` warning on the full
+   `npm run test:ci` run (173/173 suites, 3251/3251 tests, exit 0).** This warning is emitted by
+   Jest's own process-teardown check across the WHOLE suite, not isolated to this plan's file —
+   running `runnerMiscFlows.test.ts` alone (28/28 tests) completes in ~0.2s with no such warning,
+   and none of this plan's own mocks start a timer/interval/listener that could explain it. Exit
+   code is 0 either way (the warning does not fail the run). Not investigated further — out of
+   scope for this plan's two-file change set.
