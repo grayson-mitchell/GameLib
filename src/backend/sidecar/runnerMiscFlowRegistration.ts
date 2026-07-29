@@ -4,7 +4,7 @@
  * REQ-34.5-09).
  *
  * Plan 34.5-07 filled in 6 of this module's 11 declared channels: the four runner-CLI version
- * probes and the two Wine-runtime channels. Plan 34.5-12 Task 1 adds the three "other" channels
+ * probes and the two Wine-runtime channels. Plan 34.5-12 Task 1 added the three "other" channels
  * (`callTool`, `egsSync`, `getGOGLinuxInstallersLangs`), bringing this module to 9/11; Task 2 adds
  * the two saves-sync channels (`syncSaves`, `syncGOGSaves`) to complete it at 11/11.
  *
@@ -28,8 +28,8 @@
  *     - `callTool`                    -> tools/ipc_handler.ts:25 (DONE — plan 34.5-12 Task 1)
  *     - `egsSync`                     -> main.ts:1251 (DONE — plan 34.5-12 Task 1)
  *     - `getGOGLinuxInstallersLangs`  -> main.ts:840 (DONE — plan 34.5-12 Task 1)
- *     - `syncSaves`                   -> main.ts:1263 (plan 34.5-12 Task 2)
- *     - `syncGOGSaves`                -> main.ts:1255 (plan 34.5-12 Task 2)
+ *     - `syncSaves`                   -> main.ts:1263 (DONE — plan 34.5-12 Task 2)
+ *     - `syncGOGSaves`                -> main.ts:1255 (DONE — plan 34.5-12 Task 2)
  *     - `downloadRuntime`             -> wine/runtimes/ipc_handler.ts:4 (DONE — plan 34.5-07)
  *     - `isRuntimeInstalled`          -> wine/runtimes/ipc_handler.ts:6 (DONE — plan 34.5-07)
  *
@@ -47,6 +47,22 @@
  * slice-4 inventory purely because the inventory grouped channels by the Electron file they lived
  * in (`tools/ipc_handler.ts`). It is Wine tooling (`winetricks`/`winecfg`/`runExe` dispatch) —
  * this phase's domain — and was reassigned here rather than ported in 34.1.
+ *
+ * `documents` gray area (research Pitfall 1 / D-09): `pathShim.ts`'s `documents` case (plan
+ * 34.5-01, REQ-34.5-01) was added anticipating GOG saves-sync's need for it, and CONTEXT.md/
+ * RESEARCH.md both file the single `save_sync.ts:146 getPath('documents')` call site as reached
+ * "via `syncGOGSaves`". Direct verification for this plan (`storeManagers/gog/library.ts:94`'s
+ * `getGame()` + `storeManagers/gog/games.ts`'s `syncSaves()` method, both read in full) shows this
+ * is NOT quite right: `syncGOGSaves`'s handler chain (`getGame(appName).syncSaves(arg, '',
+ * gogSaves)`) never calls `getDefaultGogSavePaths` — it iterates the already-resolved `gogSaves`
+ * array it was given. The actual (and only) caller of `getDefaultGogSavePaths` is the separate
+ * `getDefaultSavePath` channel (`save_sync.ts:17-27`), which the frontend
+ * (`SyncSaves/gog.tsx`'s `getLocations()`) invokes BEFORE `syncGOGSaves`, in its own round trip.
+ * `getDefaultSavePath` is not one of this slice's 38 channels and remains genuinely unported after
+ * this plan (confirmed: no sidecar registration module references it). The Discretion question
+ * research resolved — `documents` belongs to the saves-sync domain, not shortcuts — still holds;
+ * only the specific claim that `syncGOGSaves` itself is the live call path is corrected here. See
+ * the SUMMARY for this plan for the full trace.
  */
 
 import { ipcMain } from './electronStub'
@@ -58,10 +74,13 @@ import {
 } from '../utils/helperBinaries'
 import { download, isInstalled } from '../wine/runtimes/runtimes'
 import type { RuntimeName, Runner } from 'common/types'
+import type { GOGCloudSavesLocation } from 'common/types/gog'
 import path from 'path'
 import { libraryManagerMap } from '../storeManagers'
 import { Winetricks, runWineCommandOnGame } from '../tools'
-import { sendGameStatusUpdate } from '../utils'
+import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
+import { isOnline } from '../online_monitor'
+import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 
 /**
@@ -69,9 +88,9 @@ import { sendFrontendMessage } from '../ipc'
  * owns no side effects at import time; the caller decides when registration onto the handler
  * registry happens.
  *
- * As of plan 34.5-12 Task 1, 9 of 11 are registered: the four runner-CLI-version probes and two
- * runtime channels (plan 34.5-07), plus the three "other" channels (this task). The two
- * saves-sync channels (`syncSaves`, `syncGOGSaves`) land in Task 2.
+ * The module is now complete at 11/11: the four runner-CLI-version probes and two runtime
+ * channels (plan 34.5-07), plus the three "other" channels and two saves-sync channels
+ * (plan 34.5-12).
  */
 export function registerRunnerMiscFlows(): void {
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
@@ -178,5 +197,75 @@ export function registerRunnerMiscFlows(): void {
     'getGOGLinuxInstallersLangs',
     async (_event: unknown, ...args: unknown[]) =>
       libraryManagerMap['gog'].getLinuxInstallersLanguages(args[0] as string)
+  )
+
+  // ── Saves-sync channels (main.ts:1255,1263) ────────────────────────────────
+  // Plan 34.5-12 Task 2.
+  ipcMain.handle(
+    'syncGOGSaves',
+    async (_event: unknown, ...args: unknown[]) => {
+      const gogSaves = args[0] as GOGCloudSavesLocation[]
+      const appName = args[1] as string
+      const arg = args[2] as string
+
+      // Research Pitfall 1 / D-09 (see this module's header docstring for the full correction):
+      // `pathShim`'s `documents` case exists for GOG saves-sync's sake — `save_sync.ts:146`
+      // (`getDefaultGogSavePaths`) is the sole `getPath('documents')` call site, gated on
+      // `game.isNative()`. Direct verification shows THIS handler's own call chain
+      // (`getGame(appName).syncSaves(arg, '', gogSaves)` -> `storeManagers/gog/games.ts`'s
+      // `syncSaves()`) does not itself reach that line — it consumes the already-resolved
+      // `gogSaves` array. The actual caller is the separate `getDefaultSavePath` channel, which
+      // the frontend invokes before this one and which remains unported after this plan. This
+      // channel is still the correct domain owner for the `documents` case (CONTEXT.md D-09
+      // wrongly filed it under shortcuts) — the correction is narrowly about which channel's
+      // runtime call path reaches the line, not about which domain owns the dependency.
+      return libraryManagerMap['gog']
+        .getGame(appName)
+        .syncSaves(arg, '', gogSaves)
+    }
+  )
+
+  ipcMain.handle(
+    'syncSaves',
+    async (_event: unknown, ...args: unknown[]) => {
+      const {
+        arg = '',
+        path: savesPath,
+        appName,
+        runner
+      } = args[0] as {
+        arg?: string
+        path: string
+        appName: string
+        runner: Runner
+      }
+
+      // Scope boundary: saves-sync CONFLICT BEHAVIOUR is explicitly out of scope for this phase.
+      // Both runners' sync paths use non-interactive CLI flags — legendary's `sync-saves` always
+      // sets `-y` (storeManagers/legendary/games.ts:843-873) and gog's `save-sync` loop
+      // (storeManagers/gog/games.ts:850-910) never prompts either — so no dialog/prompt is
+      // reachable from either path; D-15's fire-and-forget-rejection landmine does not apply
+      // here. This is a byte-faithful port of inherited Electron behaviour, not a redesign.
+      if (runner === 'legendary') {
+        const epicOffline = await isEpicServiceOffline()
+        if (epicOffline) {
+          logWarning(
+            'Epic is offline right now, cannot sync saves!',
+            LogPrefix.Backend
+          )
+          return 'Epic is offline right now, cannot sync saves!'
+        }
+      }
+      if (!isOnline()) {
+        logWarning('App is offline, cannot sync saves!', LogPrefix.Backend)
+        return 'App is offline, cannot sync saves!'
+      }
+
+      const output = await libraryManagerMap[runner]
+        .getGame(appName)
+        .syncSaves(arg, savesPath)
+      logInfo(output, LogPrefix.Backend)
+      return output
+    }
   )
 }
