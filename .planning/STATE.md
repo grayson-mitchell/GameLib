@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-02-PLAN.md
-last_updated: "2026-07-29T05:23:00.654Z"
+stopped_at: Completed 34.5-03-PLAN.md
+last_updated: "2026-07-29T05:35:54.110Z"
 last_activity: 2026-07-29
 progress:
-  total_phases: 16
+  total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 122
-  percent: 75
+  completed_plans: 123
+  percent: 71
 ---
 
 # Project State
@@ -34,8 +34,13 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 3 of 15 (01 done — pathShim desktop/exe/documents extension +
-GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01)
+Plan: 4 of 15 (01 done — pathShim desktop/exe/documents extension +
+GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
+host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
+written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
+for the 16 deferred channels, IPC-PORT-INVENTORY.md's 57 reconciled as 38+3+16,
+REQ-34.5-11 fully satisfied. REQ-34.5-12 remains open until 34.5-15's live gate
+actually runs and records 5/5 PASS.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -2356,6 +2361,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P07 | 110min | 3 tasks | 3 files |
 | Phase 34.5 P01 | 30min | 3 tasks | 3 files |
 | Phase 34.5 P02 | 25min | 2 tasks | 2 files |
+| Phase 34.5 P03 | 15min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -2662,6 +2668,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: documents attributed to the saves-sync cluster (syncGOGSaves), not shortcuts, resolving research Pitfall 1's open Discretion question
 - [Phase 34.5]: shortcuts.ts:227's exe consumer corrected to addShortcut (plan 34.5-08), not addToSteam as CONTEXT.md D-09 and research Correction 3 had it
 - [Phase 34.5-02]: www.amazon.com chosen as exact-host anchor for nile OAuth redirect matcher, closing T-34.4.1-44b; MEDIUM confidence per Assumption A1 pending live-gate item 3 confirmation
+- [Phase 34.5]: 34.5-03: 34.5-LIVE-GATE.md precondition 1 states its currently-unmet status explicitly (34.4.1-08 held at Task 2) rather than leaving it implicit
+- [Phase 34.5]: 34.5-03: IPC-PORT-INVENTORY.md Totals table (28/182) left unchanged, no channels actually ported by this docs-only plan
 
 ### Pending Todos
 
@@ -2733,20 +2741,25 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T05:23:00.645Z
-Stopped at: Completed 34.5-02-PLAN.md
-  Off the critical path this session: the `test:ci` flake FIXED (`eee21bc02`), ROADMAP 34.5
-  corrections (`fb96e0090`), and 34.5 context gathered (`4be0e38a2`).
-Next: **34.4.1-08 Task 2 — the blocking 4-item live gate. Needs local hardware; the developer
-was remote this session.** Preconditions P1/P3/P5 are satisfied and evidenced; P2/P4/P6 are
-operator-at-gate-time (P6's control cookie is now MOOT — item 3(b) was recorded
-BLOCKED-UNOBSERVABLE pre-gate, so the gate CANNOT reach 4/4 and 3(b) becomes an in-phase gap
-cycle). **The developer's Humble credential is parked, not deleted** — restore from
+Last session: 2026-07-29T05:35:54.102Z
+Stopped at: Completed 34.5-03-PLAN.md
+  This session: 34.5-03-PLAN.md executed — `34.5-LIVE-GATE.md` written as an empty 5-item
+  blocking contract (`60812e06c`), Phase 34.6 inserted into ROADMAP.md for the 16 deferred
+  channels + Phase 35's Depends-on line updated to 34.1-34.6 (`7ed5f7850`), and
+  IPC-PORT-INVENTORY.md's Phase 34.5 section reconciled as 38+3+16 (`9ba4f2ab0`). REQ-34.5-11
+  is now fully satisfied; the D-05 gap noted below ("has NOT been done yet") is now CLOSED.
+Next: **34.5-04-PLAN.md** (the four registration modules, wave 1) is the next plan on the
+critical path for Phase 34.5 itself. Separately, still blocking: **34.4.1-08 Task 2 — the
+blocking 4-item live gate. Needs local hardware; the developer was remote last session.**
+Preconditions P1/P3/P5 are satisfied and evidenced; P2/P4/P6 are operator-at-gate-time (P6's
+control cookie is now MOOT — item 3(b) was recorded BLOCKED-UNOBSERVABLE pre-gate, so the gate
+CANNOT reach 4/4 and 3(b) becomes an in-phase gap cycle). **The developer's Humble credential
+is parked, not deleted** — restore from
 `~/Library/Application Support/GameLib/humble_store/config.json.pre-34.4.1-08-gate.bak`.
-Also queued and ready: **`/gsd-plan-phase 34.5`** (CONTEXT.md written) — but note its D-05
-requires inserting a new **Phase 34.6** into ROADMAP.md for the 16 deferred channels, which has
-NOT been done yet. Second deferred verification item from this session: cold-boot tray icon
-check under a real Tauri run (from the `eee21bc02` fix).
+Per `34.5-LIVE-GATE.md` precondition 1, 34.5's own gate items 1-3 (Epic/GOG/Amazon OAuth) may
+not run live until 34.4.1-08's gate records PASS on its item 1 — this does not block wave 1-5
+plans (04 through 14), only wave 6's `34.5-15`. Second deferred verification item, still open:
+cold-boot tray icon check under a real Tauri run (from the `eee21bc02` fix).
 Prior next-step context for 34.4.1-08 follows: Plan 07 declared what actually shipped: wrote
 `34.4.1-PORTED-CHANNELS.md` (7-row table, proof levels independently verified against source and
 each prior plan's SUMMARY, not inherited), closed SEAM.md's checklist steps in a 2-hunk diff with
