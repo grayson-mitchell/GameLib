@@ -101,12 +101,26 @@ export function matchOAuthRedirect(
       return { code, redirectUrl: url }
     }
     case 'nile': {
-      // WebView/index.tsx L259-261: `openid.oa2.authorization_code`, no host constraint — the
-      // Electron original has none either, and Amazon's redirect host is account-dependent.
-      // Accepted, DECLARED residual (T-34.4.1-44b): a host-free param match, forwarded as an
-      // explicit obligation to Phase 34.5, which mints the credential and must host-anchor this
-      // before doing so. Not exploitable here: the captured value only ever reaches `authAmazon`,
-      // which rejects with UNPORTED_CHANNEL_MARKER (Task 3) — no credential is minted this phase.
+      // T-34.4.1-44b CLOSED for nile by this host check. Zoom's half of the same obligation is
+      // VOID — D-02 drops zoom permanently, so no zoom code exists to anchor.
+      //
+      // `www.amazon.com` derives from upstream `imLinguin/nile`'s `openid.return_to` parameter
+      // (`authorization.py`) — MEDIUM confidence (research Assumption A1) until live-gate item 3
+      // confirms it against one real captured redirect. If that capture instead shows a
+      // country-TLD variant (e.g. `amazon.co.uk`), the correct response is a documented suffix
+      // match, NOT removing the anchor.
+      if (parsed.hostname !== 'www.amazon.com') {
+        if (parsed.searchParams.has('openid.oa2.authorization_code')) {
+          // Sole automated evidence path for Assumption A1 — must survive until the live gate
+          // records item 3. Origin ONLY: never the code, the full url, or parsed.search — a
+          // captured authorization code is a credential (ASVS V5/V6).
+          logWarning(
+            `[oauthLoginCapture] runner=nile origin-mismatch origin=${parsed.origin}`,
+            LogPrefix.Backend
+          )
+        }
+        return null
+      }
       const code = parsed.searchParams.get('openid.oa2.authorization_code')
       if (!code) return null
       return { code, redirectUrl: url }
