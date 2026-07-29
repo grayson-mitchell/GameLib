@@ -5,16 +5,17 @@ milestone_name: — Tauri Shell
 status: executing
 stopped_at: 34.4.1-08 Task 1 done, HELD at Task 2's blocking human-verify live gate awaiting
   operator (34.4.1 remains the active phase). Since then, off the critical path: the standing
-  test:ci flake was root-caused and FIXED (suite now exits 0, 3095/3095), and Phase 34.5
-  context was gathered
-last_updated: "2026-07-29T12:45:00.000Z"
+  test:ci flake was root-caused and FIXED (suite now exits 0, 3095/3095), Phase 34.5 context
+  was gathered, and Phase 34.5 is now fully PLANNED (15 plans in 6 waves, REQ-34.5-01..13
+  minted) — planned only, not started; 34.4.1's gate is still the blocking item
+last_updated: "2026-07-29T18:30:00.000Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 16
   completed_phases: 12
-  total_plans: 129
+  total_plans: 144
   completed_plans: 120
-  percent: 93
+  percent: 83
 ---
 
 # Project State
@@ -64,6 +65,31 @@ recorded verbatim rather than rounded to green: `cargo test` exit 0 (37/37), but
 zero source files. Plan 08 Task 1's acceptance criterion "test:ci and cargo test exit codes
 are recorded as 0" is therefore NOT met on the test:ci half -- unresolved, and a candidate
 gap item if the flake ever proves load-bearing.
+
+**Phase 34.5 is PLANNED (2026-07-29), not started.** `/gsd-plan-phase 34.5` produced
+`34.5-RESEARCH.md`, `34.5-VALIDATION.md`, `34.5-PATTERNS.md` and **15 PLAN.md files in 6 waves**,
+and minted **REQ-34.5-01..13** into REQUIREMENTS.md (the ROADMAP `Requirements: TBD` line is
+replaced). Scope is **38 channels ported, not the inventory's 57** — Zoom's 3 dropped permanently
+(D-02) and 16 deferred to a **Phase 34.6 that does not exist in ROADMAP.md yet**; inserting it is
+REQ-34.5-11 / plan 03 Task 2, and Phase 35's "re-plumb complete" precondition is silently false
+until that lands. Wave 1 is seam-first per D-06; wave 6 is a BLOCKING 5-item live gate whose
+**numbered precondition 1 is that 34.4.1's own gate has recorded PASS** — so 34.5 can be built now
+but cannot ship a real OAuth credential path until the held gate above runs. Plan-checker: 0
+blockers across two passes.
+
+Two defects were found by reading source **during planning** and are baked into the plans; neither
+appears in CONTEXT.md or RESEARCH.md: (1) `LegendaryUser.logout()` (`legendary/user.ts:71`) calls
+`session.fromPartition('persist:epicstore')`, which `electronStub` returns `{}` for, so a verbatim
+port throws before `configStore.delete('userInfo')` runs — shipping a sign-out that revokes the CLI
+session but leaves the profile behind; (2) `processShortcut` (`main.ts:1465`) is an app-shell hotkey
+channel, not a game-shortcut one, and its ctrl+r / ctrl+shift+i cases throw because the stub's fake
+window is truthy but implements neither `reload()` nor `openDevTools()`.
+
+Note on tooling: `gsd-sdk query check.decision-coverage-plan` reported `passed: false` for D-01 and
+D-03 on this phase. That is a **false negative from a broken parse**, not a real gap — the handler
+read 12 decisions where CONTEXT.md has 15, and its "D-03" body is a mashup of D-03 and D-04's text.
+Both decisions are genuinely cited (D-01 in plan 03; D-03 in plans 03 and 14, where it drives the
+Phase 34.6 insertion). Verified by hand; no override was accepted because there was no gap.
 
 Also of note: this session's `gsd-sdk query state.begin-phase` corrupted this file in the
 documented way (`percent` 93->75, `Plan: 8 of 9 ...` -> `Plan: 1 of 9` leaving a dangling

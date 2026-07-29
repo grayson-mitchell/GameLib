@@ -1503,7 +1503,7 @@ Plans:
 - [ ] 34.5-02-PLAN.md — Wave-1 seam 2: host-anchor nile's redirect match on www.amazon.com, closing T-34.4.1-44b (wave 1)
 - [ ] 34.5-03-PLAN.md — 34.5-LIVE-GATE.md written empty + Phase 34.6 inserted into ROADMAP + inventory reconciled 38/3/16 (wave 1)
 - [ ] 34.5-04-PLAN.md — The four registration modules declared, wired into handlers.ts and wiring-proven (wave 1)
-- [ ] 34.5-05-PLAN.md — Wave-1 seam 3 in code: runWineCommand + probes + wine version management, 6 of 9 (wave 2)
+- [ ] 34.5-05-PLAN.md — Register the runWineCommand seam (D-14 / seam 3) + probes + wine version management, 6 of 9 (wave 2 — seam 3 cannot be wave 1: every registration depends on 34.5-04's modules)
 - [ ] 34.5-06-PLAN.md — Epic + GOG auth, 7 channels incl. the logoutGOG send asymmetry and the Epic sign-out ordering fix (wave 2)
 - [ ] 34.5-07-PLAN.md — 4 runner CLI version probes + 2 runtime channels (wave 2)
 - [ ] 34.5-08-PLAN.md — Shortcuts A: 3 send channels + shortcutsExists + electronStub reload/openDevTools no-ops (wave 2)
