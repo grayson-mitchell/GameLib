@@ -1484,9 +1484,18 @@ Plans:
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
-**Goal:** Port the **inherited non-Steam runner surface** (55 channels — the largest slice): Epic/GOG/Amazon/Zoom auth, sign-out, saves sync and CLI versions; the EOS overlay cluster; Wine version/runtime management and tooling (DXVK, VKD3D, winetricks); desktop shortcuts, add-to-Steam and SteamGridDB artwork. Carried across rather than dropped per the Phase 35 discussion — the keep/drop call is deliberately deferred to this phase own discuss-phase. Additive and reversible — the Electron build keeps working unchanged.
+**Goal:** Port the **inherited non-Steam runner surface** (**57 channels** — the largest slice): Epic/GOG/Amazon/Zoom auth, sign-out, saves sync and CLI versions; the EOS overlay cluster; Wine version/runtime management and tooling (DXVK, VKD3D, winetricks); desktop shortcuts, add-to-Steam and SteamGridDB artwork. Carried across rather than dropped per the Phase 35 discussion — the keep/drop call is deliberately deferred to this phase own discuss-phase. Additive and reversible — the Electron build keeps working unchanged.
+
+> Count corrected 2026-07-29: this line read **55** and was stale by two reassignments already recorded elsewhere — `callTool` (34.1 **D-14**, 55→56) and `isLoggedIn` (34.4 **D-03**, 56→57). `IPC-PORT-INVENTORY.md` § "Phase 34.5" was already correct at 57; its channel list was counted directly to confirm (57 entries, 57 unique, no duplicates). The inventory remains authoritative for the work-list.
+
 **Requirements:** TBD — mint at `/gsd-plan-phase 34.5`
-**Depends on:** Phase 34 (independent of the other slice-4..8 phases — these may run in any order or in parallel)
+**Depends on:** Phase 34, **and Phase 34.4.1** (the login seam — see the correction note below). Independent of slices 34.1/34.2/34.3, which may run in any order or in parallel.
+
+> Dependency corrected 2026-07-29: this line previously read "independent of the other slice-4..8 phases — these may run in any order or in parallel", which **contradicted three other statements in the record** and predated 34.4.1's insertion. Phase 34.4.1's own block states "**Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)"; its Goal states it "runs **before Phase 34.5** rather than after: 34.5's three logins depend on it"; and `IPC-PORT-INVENTORY.md` states "**This phase runs BEFORE Phase 34.5**". 34.4.1 was inserted *specifically* because the `<webview>`/`session.fromPartition` seam is cross-cutting and 34.5 needs it (34.4 **D-01/D-02**).
+>
+> **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
+>
+> **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
 **Plans:** 0 plans
 
 Plans:
