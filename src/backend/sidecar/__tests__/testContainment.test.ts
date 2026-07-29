@@ -488,6 +488,16 @@ const IN_SCOPE_SUITES = [
  * any of those (their only dependencies are `../humble/loginWindowSeam`,
  * pure types with no I/O, and `./electronStub`'s `ipcMain` recorder). No new
  * containment surface.
+ *
+ * `runnerSliceRegistration.test.ts` (Phase 34.5 Plan 04, REQ-34.5-13) is
+ * classified as structurally contained: it never calls `jest.mock('electron', ...)`
+ * itself, so `runnerAuthFlowRegistration.ts`'s load-bearing `import '../storeManagers'`
+ * (which eagerly constructs every store manager) resolves `electron` through the
+ * project-wide, tmpdir-based `src/backend/__mocks__/electron.ts` auto-mock -- the
+ * SAME "contained by construction, no per-suite opt-in required" floor Block C's own
+ * docstring describes, not a hand-maintained kit of its own. The file's own direct
+ * import of `../electronStub` (for `handlerRegistry`/`listenerRegistry`) touches no
+ * filesystem at module scope. No new containment surface.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -510,6 +520,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
+  'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',

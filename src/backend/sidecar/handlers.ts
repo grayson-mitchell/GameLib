@@ -47,6 +47,17 @@
  * be asked about already exists (REQ-29-01, 29-RESEARCH Pitfall 6) before
  * any RPC frame can reach a handler body.
  *
+ * Phase 34.5 Plan 04 (REQ-34.5-13) stakes this slice's four registration seams as declared,
+ * wired, EMPTY contracts — each registers 0 channels today so plans 05-12 each touch exactly
+ * one module file instead of contending for this file's import/call blocks. Every seam's full
+ * channel list, source line, and registration kind is pinned in its own module's header
+ * docstring (`runnerAuthFlowRegistration.ts` 11 channels/plans 34.5-06/34.5-10/REQ-34.5-04;
+ * `wineToolsFlowRegistration.ts` 9 channels/plans 34.5-05/34.5-09/REQ-34.5-03;
+ * `shortcutsFlowRegistration.ts` 7 channels/plans 34.5-08/34.5-11/REQ-34.5-05;
+ * `runnerMiscFlowRegistration.ts` 11 channels/plans 34.5-07/34.5-12/REQ-34.5-06/-07/-08/-09),
+ * and cross-checked (import called exactly once, curated-import guard, containment pin) by
+ * `__tests__/runnerSliceRegistration.test.ts`.
+ *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) because none of this file's channels are entries in the
  * existing `AsyncIPCFunctions` contract — and no file under this directory
@@ -72,6 +83,10 @@ import { registerLoggerFlows } from './loggerFlowRegistration'
 import { registerHumbleFlows } from './humbleFlowRegistration'
 import { registerHumbleLoginFlows } from './humbleLoginFlowRegistration'
 import { registerOAuthLoginFlows } from './oauthLoginFlowRegistration'
+import { registerRunnerAuthFlows } from './runnerAuthFlowRegistration'
+import { registerWineToolsFlows } from './wineToolsFlowRegistration'
+import { registerShortcutsFlows } from './shortcutsFlowRegistration'
+import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -192,6 +207,16 @@ registerHumbleLoginFlows()
 // no cross-module runtime dependency at registration time), placed alongside them, before
 // `ensureStoresRegistered()`.
 registerOAuthLoginFlows()
+// Phase 34.5 Plan 04 (REQ-34.5-13): the four declared-but-EMPTY registration seams for this
+// slice's 38 channels (runner auth/sign-out, Wine tools, shortcuts, runner misc). Each call
+// registers 0 channels today — the cluster plans (34.5-05 through 34.5-12) fill these in one
+// module at a time. No ordering constraint relative to the other calls above (own channel
+// names once populated, no cross-module runtime dependency at registration time), placed
+// alongside them, before `ensureStoresRegistered()`.
+registerRunnerAuthFlows()
+registerWineToolsFlows()
+registerShortcutsFlows()
+registerRunnerMiscFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown
