@@ -99,8 +99,23 @@ function logSendFailure(channel: string, error: unknown): void {
  *
  * The Steam-add/remove trio (`addToSteam`/`removeFromSteam`/`isAddedToSteam`) is NOT registered
  * here -- plan 34.5-11 owns those, in this same module.
+ *
+ * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
+ * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
+ * and by this plan's own `shortcutsFlows.test.ts`): `ipcMain.on` (`electronStub.ts`) appends to an
+ * array on every call, so a second unguarded call to this function would triple-register
+ * `addShortcut`/`removeShortcut`/`processShortcut`'s listeners -- unlike the single
+ * `ipcMain.handle` call above, which is naturally idempotent (`Map.set` replaces the existing
+ * entry). Mirrors `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself
+ * mirroring `storeRegistration.ts`'s original.
  */
+let registered = false
 export function registerShortcutsFlows(): void {
+  if (registered) {
+    return
+  }
+  registered = true
+
   // ── invoke (1) ──────────────────────────────────────────────────────────
 
   ipcMain.handle(

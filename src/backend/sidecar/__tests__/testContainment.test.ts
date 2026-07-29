@@ -556,6 +556,29 @@ const IN_SCOPE_SUITES = [
  * call, which this suite has no reason to make (it never touches `pathShim` at all). A
  * `readdirSync` recount at this plan's execution time puts the directory at 37 `*.test.ts` files:
  * 4 `IN_SCOPE_SUITES` + 33 below.
+ *
+ * `shortcutsFlows.test.ts` (Phase 34.5 Plan 08, REQ-34.5-05) is classified as structurally
+ * contained: it declares NO `jest.mock('os', ...)` of its own, deliberately -- its own header
+ * explains this follows `pathShim.test.ts`'s precedent (a second, differently-scoped `homedir()`
+ * override would be redundant with, and could disagree with, the structural
+ * `jest.setupContainment.ts` mock this suite specifically compares its resolved paths against via
+ * `realHomeAtSetup`). It DOES drive the real `shortcuts/shortcuts/shortcuts.ts` `addShortcuts`/
+ * `generateMacOsApp` chain (the darwin `.app`/`run.sh` write path, the first code path in this
+ * slice that writes real files outside the app-support dir by design) -- every one of those writes
+ * lands under the structurally redirected `os.homedir()`, never the developer's real
+ * `~/Applications`, exactly as the structural floor's own docstring promises for any suite that
+ * adds zero containment code of its own. It factory-mocks `backend/config`, `backend/utils`,
+ * `backend/ipc`, `backend/dialog/dialog`, `backend/logger`, `backend/storeManagers`,
+ * `backend/shortcuts/nonesteamgame/nonesteamgame`, `backend/shortcuts/utils` and
+ * `@shockpkg/icon-encoder` (isolating `convertPngToICNS`'s three real dependencies so its control
+ * case can succeed without a real 512x512 PNG fixture), plus the standard `electron`/
+ * `electron-store` real-shim preamble with `nativeImage.createFromBuffer` additionally overridden
+ * -- none of this is a containment mock, all of it is scoping which real code path runs. It cannot
+ * be an `IN_SCOPE_SUITE`: those are required to carry a `jest.mock('../pathShim', ...)` call, and
+ * this suite deliberately imports the REAL `pathShim.getPath` (via the real, unmocked
+ * `electronStub.app.getPath`) because proving the `GAMELIB_SHELL_EXE -> getPath('exe') ->
+ * shortcuts.ts:227` chain end-to-end is this suite's whole point. A `readdirSync` recount at this
+ * plan's execution time puts the directory at 38 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 34 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -585,6 +608,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
+  'shortcutsFlows.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'storeLayer.test.ts',
