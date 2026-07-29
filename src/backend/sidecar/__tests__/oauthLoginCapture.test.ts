@@ -88,8 +88,8 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
     ).toBeNull()
   })
 
-  it('nile: openid.oa2.authorization_code matches (host-free, T-34.4.1-44b)', () => {
-    const url = 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE1'
+  it('nile: openid.oa2.authorization_code from www.amazon.com matches (host-anchored, closes T-34.4.1-44b)', () => {
+    const url = 'https://www.amazon.com/?openid.oa2.authorization_code=NILE1'
     expect(matchOAuthRedirect('nile', url)).toEqual({
       code: 'NILE1',
       redirectUrl: url
@@ -98,8 +98,70 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
 
   it('nile: a plain `code` param (not the openid.oa2 name) does NOT match', () => {
     expect(
-      matchOAuthRedirect('nile', 'https://amazon.com/ap/signin?code=NILE1')
+      matchOAuthRedirect('nile', 'https://www.amazon.com/ap/signin?code=NILE1')
     ).toBeNull()
+  })
+
+  it('nile: an attacker-controlled origin carrying the identical param does NOT match', () => {
+    expect(
+      matchOAuthRedirect(
+        'nile',
+        'https://evil.example/?openid.oa2.authorization_code=NILE1'
+      )
+    ).toBeNull()
+  })
+
+  it('nile: a suffix-confusion origin (amazon.com.evil.example) does NOT match', () => {
+    expect(
+      matchOAuthRedirect(
+        'nile',
+        'https://amazon.com.evil.example/?openid.oa2.authorization_code=NILE1'
+      )
+    ).toBeNull()
+  })
+
+  it('nile: the near-miss `amazon.com` (no www.) does NOT match — pinned to the exact host; this is the case live-gate item 3 may falsify', () => {
+    expect(
+      matchOAuthRedirect(
+        'nile',
+        'https://amazon.com/?openid.oa2.authorization_code=NILE1'
+      )
+    ).toBeNull()
+  })
+
+  it('nile: www.amazon.com with no code param does NOT match', () => {
+    expect(matchOAuthRedirect('nile', 'https://www.amazon.com/')).toBeNull()
+  })
+
+  it('nile: a rejected off-origin candidate carrying the param logs the origin exactly once, and never the code value', () => {
+    const loggerModule = jest.requireMock('backend/logger') as {
+      logWarning: jest.Mock
+    }
+    loggerModule.logWarning.mockClear()
+
+    matchOAuthRedirect(
+      'nile',
+      'https://evil.example/?openid.oa2.authorization_code=SECRET_CODE_VALUE'
+    )
+
+    expect(loggerModule.logWarning).toHaveBeenCalledTimes(1)
+    const [emitted] = loggerModule.logWarning.mock.calls[0]
+    expect(emitted).toContain('https://evil.example')
+    expect(emitted).not.toContain('SECRET_CODE_VALUE')
+  })
+
+  it('guard: legendary and gog behaviours are unchanged by the nile host-anchor edit', () => {
+    const legendaryUrl = 'http://localhost:8080/?code=ABC'
+    expect(matchOAuthRedirect('legendary', legendaryUrl)).toEqual({
+      code: 'ABC',
+      redirectUrl: legendaryUrl
+    })
+
+    const gogUrl = 'https://embed.gog.com/on_login_success?origin=client&code=XYZ'
+    expect(matchOAuthRedirect('gog', gogUrl)).toEqual({
+      code: 'XYZ',
+      redirectUrl: gogUrl
+    })
   })
 
   it('zoom: li_token matches and returns the FULL redirect url (authZoom takes the url, not the token)', () => {
@@ -131,7 +193,7 @@ describe('matchOAuthRedirect — the four REQ-34.4.1-08 redirect shapes', () => 
     const MATCHING_URLS: Record<OAuthRunner, string> = {
       legendary: 'http://localhost:8080/?code=ABC',
       gog: 'https://embed.gog.com/on_login_success?origin=client&code=XYZ',
-      nile: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE1',
+      nile: 'https://www.amazon.com/?openid.oa2.authorization_code=NILE1',
       zoom: 'https://www.zoom-platform.com/?li_token=ZTOK'
     }
 
