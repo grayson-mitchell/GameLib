@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-09-PLAN.md
-last_updated: "2026-07-29T08:12:08.811Z"
+stopped_at: Completed 34.5-10-PLAN.md
+last_updated: "2026-07-29T08:30:06.088Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 129
+  completed_plans: 130
   percent: 71
 ---
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 10 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 11 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -158,7 +158,27 @@ fallback — no fix built for a path that didn't need one. A tool-literal
 regression test proves `toggleVKD3D` forwards `'vkd3d'`, not a copy-pasted
 `'dxvk'`. `GameConfig` import corrected to `../game_config` (not `../config`).
 Full backend suite: 173/173 suites, 3228/3228 tests, exit 0. `tsc --noEmit`
-exit 0. See `34.5-09-SUMMARY.md`.)
+exit 0. See `34.5-09-SUMMARY.md`.); 10 done — Amazon's 4 remaining auth
+channels (`getAmazonLoginData`/`authAmazon`/`getAmazonUserInfo`/`logoutAmazon`)
+ported into `runnerAuthFlowRegistration.ts`, completing the auth cluster at
+11-of-11, REQ-34.5-04 fully satisfied (jointly closed with plan 34.5-06's
+Epic/GOG half, verified unchanged before marking complete). `authAmazon`
+validates its payload against `NileRegisterData`'s real shape before invoking
+`NileUser.login`, never logging the rejected value; a comment above it
+records the ordering constraint (T-34.5-34) that plan 34.5-02's
+`www.amazon.com` host anchor on `oauthLoginCapture.ts`'s nile matcher must
+precede this credential mint, closing T-34.4.1-44b. `logoutAmazon` is an
+unmodified `NileUser.logout()` delegation (confirmed no Electron `session`
+usage, unlike Legendary's); no cookie clear added (T-34.5-37, inherited
+T-34.4.1-47 residual, accepted not fixed). `runnerAuthFlows.test.ts` extended
+from 23 to 30 assertions: bidirectional kind coverage for all 11 channels, a
+strengthened sign-out asymmetry check, a 5-case authAmazon trust-boundary
+block, and a 2-case integration block proving a URL that would have matched
+the old host-free nile matcher now yields `null` and never reaches
+`authAmazon` — the anchor-plus-mint pair fails together if either half
+regresses. Full backend suite recorded verbatim: 173/173 suites, 3235/3235
+tests passing (+7 from this plan's own new assertions). `tsc --noEmit` exit
+0. See `34.5-10-SUMMARY.md`.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -2486,6 +2506,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P07 | 20min | 2 tasks | 8 files |
 | Phase 34.5 P08 | 55min | 3 tasks | 5 files |
 | Phase 34.5 P09 | ~55min | 3 tasks | 2 files |
+| Phase 34.5 P10 | 35min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2807,6 +2828,8 @@ Recent decisions affecting current work:
 - [Phase 34.5-08]: Corrected shortcuts.ts:227 exe attribution from addToSteam to addShortcut — Source-verified: generateMacOsApp's only caller is addShortcuts, whose only IPC entry is addShortcut
 - [Phase 34.5-08]: Added registered-guard idempotence fix to shortcutsFlowRegistration.ts — electronStub ipcMain.on appends per call; 3 send channels needed the same guard runnerAuthFlowRegistration.ts already carries
 - [Phase 34.5-09]: DXVK/VKD3D toggle trio completes Wine cluster at 9/9 channels — D-15 mis-citation (tools/index.ts:794, inside Winetricks.checkDependencies, DEFERRED cluster) corrected; the actually-reachable dialog site is tools/index.ts:137, already safe per electronStub's non-throwing construction -- pinned by a jest.isolateModules() sandboxed test rather than a code fix
+- [Phase 34.5-10]: authAmazon reuses NileUser.login's own { status: 'failed', user: undefined } failure shape on a rejected payload, mirroring login/authGOG's precedent
+- [Phase 34.5-10]: logoutAmazon is an unmodified NileUser.logout() delegation (no Electron session usage); no cookie clear added — T-34.4.1-47 residual accepted
 
 ### Pending Todos
 
@@ -2879,8 +2902,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T08:12:08.801Z
-Stopped at: Completed 34.5-09-PLAN.md
+Last session: 2026-07-29T08:30:06.078Z
+Stopped at: Completed 34.5-10-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
