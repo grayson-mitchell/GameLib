@@ -1186,11 +1186,40 @@ fn use_dev_sidecar() -> bool {
     cfg!(debug_assertions)
 }
 
+/// Formats the result of `std::env::current_exe()` for the `GAMELIB_SHELL_EXE` spawn-time
+/// env var handoff (Phase 34.5 Plan 01, REQ-34.5-01, D-10/D-09). Pure and `AppHandle`-free so
+/// it can be proven by `#[cfg(test)] mod tests` below — a live spawn cannot be driven from a
+/// `#[test]`, mirroring `clipboard_text_arg`/`login_window_url_arg`'s own extraction pattern.
+///
+/// On `Ok`, returns the path's `display()` form, UNQUOTED — a path containing a space must
+/// survive verbatim, with no quotes added: `nonesteamgame.ts:258` adds its own `"..."`
+/// quoting for the Steam shortcut VDF `Exe` entry, and `shortcuts.ts:227` deliberately does
+/// NOT quote its macOS `.app` `run.sh` launch command, so this helper must never pre-empt
+/// either consumer's own formatting.
+///
+/// On `Err`, returns the EMPTY STRING, deliberately never panicking (T-34.5-03: the shell
+/// must still start and every other channel must still work even if `current_exe()` fails).
+/// `pathShim.ts`'s `case 'exe'` treats an empty string identically to an unset env var and
+/// throws a named error — so a failed `current_exe()` here surfaces as a loud JS-side error
+/// (T-34.5-01/02) rather than a silently-bad Steam VDF entry or a silently-bad macOS `.app`
+/// `run.sh`.
+fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBuf>) -> String {
+    current_exe
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| String::new())
+}
+
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
 /// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
 /// healthy sidecar — or a silent spawn failure — produced zero terminal output).
-fn spawn_sidecar_dev() -> std::io::Result<Child> {
+///
+/// `shell_exe` is handed down from `spawn_sidecar` (computed ONCE via `current_exe()`, not
+/// re-derived per spawn path) and set on the child's environment as `GAMELIB_SHELL_EXE` — the
+/// sidecar's `pathShim.getPath('exe')` reads it back synchronously (REQ-34.5-01, D-10). Logged
+/// here on the dev path only, so the live gate can read it back from
+/// `~/Library/Logs/GameLib/gamelib.log`.
+fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let cwd = std::env::current_dir()
         .map(|p| p.display().to_string())
@@ -1199,8 +1228,10 @@ fn spawn_sidecar_dev() -> std::io::Result<Child> {
     eprintln!("[shell] spawning sidecar (dev): node \"{entry}\"");
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
+    eprintln!("[shell]   GAMELIB_SHELL_EXE={shell_exe}");
     let child = Command::new("node")
         .arg(&entry)
+        .env("GAMELIB_SHELL_EXE", shell_exe)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1220,7 +1251,7 @@ fn spawn_sidecar_dev() -> std::io::Result<Child> {
 /// layouts; never a manual `cfg!(debug_assertions)` path branch here). The plugin's `Command`
 /// wrapper converts into a plain `std::process::Command` (`impl From<Command> for StdCommand`),
 /// so the rest of the spawn/pipe/diagnostic plumbing below is identical to the dev path.
-fn spawn_sidecar_packaged(app: &AppHandle) -> std::io::Result<Child> {
+fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<Child> {
     let shell_command: ShellCommand = app.shell().sidecar("gamelib-sidecar").map_err(|e| {
         std::io::Error::other(format!("sidecar externalBin resolution failed: {e}"))
     })?;
@@ -1234,6 +1265,7 @@ fn spawn_sidecar_packaged(app: &AppHandle) -> std::io::Result<Child> {
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
     let child = std_command
+        .env("GAMELIB_SHELL_EXE", shell_exe)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1247,12 +1279,15 @@ fn spawn_sidecar_packaged(app: &AppHandle) -> std::io::Result<Child> {
     child
 }
 
-/// Dispatches to the dev or packaged spawn path per `use_dev_sidecar()`.
+/// Dispatches to the dev or packaged spawn path per `use_dev_sidecar()`. Calls
+/// `std::env::current_exe()` exactly ONCE here and hands the formatted result down to both
+/// spawn paths (never re-derived per-path with two different fallbacks) — REQ-34.5-01, D-10.
 fn spawn_sidecar(app: &AppHandle) -> std::io::Result<Child> {
+    let shell_exe = shell_exe_env_value(std::env::current_exe());
     if use_dev_sidecar() {
-        spawn_sidecar_dev()
+        spawn_sidecar_dev(&shell_exe)
     } else {
-        spawn_sidecar_packaged(app)
+        spawn_sidecar_packaged(app, &shell_exe)
     }
 }
 
@@ -2023,5 +2058,40 @@ mod tests {
     fn humble_reveal_post_script_embeds_the_exfil_host_used_by_the_navigation_intercept() {
         let script = reveal_post_script("/humbler/redeemkey", "body", None, REVEAL_EXFIL_HOST);
         assert!(script.contains(&serde_json::to_string(REVEAL_EXFIL_HOST).unwrap()));
+    }
+
+    // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
+    //
+    // RED direction: an implementation that panics or `.unwrap()`s on `Err` would fail
+    // `shell_exe_env_value_err_yields_empty_string_never_panics`; one that adds its own
+    // quoting would fail `shell_exe_env_value_path_with_space_survives_unquoted`.
+
+    #[test]
+    fn shell_exe_env_value_ok_yields_the_paths_display_string() {
+        let path = std::path::PathBuf::from("/Applications/GameLib.app/Contents/MacOS/GameLib");
+        assert_eq!(
+            shell_exe_env_value(Ok(path.clone())),
+            path.display().to_string()
+        );
+    }
+
+    #[test]
+    fn shell_exe_env_value_err_yields_empty_string_never_panics() {
+        let err = std::io::Error::other("current_exe() failed");
+        assert_eq!(shell_exe_env_value(Err(err)), String::new());
+    }
+
+    #[test]
+    fn shell_exe_env_value_path_with_space_survives_unquoted() {
+        // nonesteamgame.ts:258 adds its own `"..."` quoting for the Steam VDF, and
+        // shortcuts.ts:227 deliberately adds none for the macOS `.app` run.sh — this helper
+        // must never pre-empt either by adding its own quotes.
+        let path = std::path::PathBuf::from("/Applications/Game Lib.app/Contents/MacOS/GameLib");
+        let value = shell_exe_env_value(Ok(path));
+        assert_eq!(value, "/Applications/Game Lib.app/Contents/MacOS/GameLib");
+        assert!(!value.starts_with('"'));
+        assert!(!value.starts_with('\''));
+        assert!(!value.ends_with('"'));
+        assert!(!value.ends_with('\''));
     }
 }
