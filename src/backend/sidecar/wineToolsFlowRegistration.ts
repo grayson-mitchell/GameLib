@@ -2,13 +2,12 @@
  * Curated Wine execution + DXVK/VKD3D toggle + Wine-version-management channel registration for
  * the Tauri sidecar (Phase 34.5 Plans 34.5-05/34.5-09, REQ-34.5-03).
  *
- * As of plan 34.5-05, this module registers 6 of the 9 declared channels: the `runWineCommand`
- * seam (D-14), the two Wine probe channels (`getAlternativeWine`, `wine.isValidVersion`), and the
+ * As of plan 34.5-09, this module registers all 9 declared channels: the `runWineCommand` seam
+ * (D-14), the two Wine probe channels (`getAlternativeWine`, `wine.isValidVersion`), the
  * Wine-version-management trio (`installWineVersion`/`refreshWineVersionInfo`/`removeWineVersion`)
  * plus their co-located wine-releases-ready event subscription (see the comment above that
- * subscription below for the exact event name). The remaining 3 (DXVK/VKD3D toggles)
- * land in a later plan (34.5-09 per this module's original scaffold) — do not "fix" this by
- * adding those bodies here; that plan owns them.
+ * subscription below for the exact event name), and the DXVK/VKD3D toggle trio
+ * (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) added by plan 34.5-09.
  *
  * Declared channel list (9 total, all invoke — verified against `main.ts` and the
  * `wine/manager/ipc_handler.ts` source by 34.5-RESEARCH.md and this plan's own `<interfaces>`
@@ -39,12 +38,14 @@
 import { ipcMain } from './electronStub'
 import { runWineCommand, validWine } from '../launcher'
 import { GlobalConfig } from '../config'
+import { GameConfig } from '../game_config'
 import {
   installWineVersion as installWineVersionForRelease,
   removeWineVersion as removeWineVersionForRelease,
   updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
+import { DXVK } from '../tools'
 import { sendFrontendMessage } from '../ipc'
 import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
@@ -58,12 +59,9 @@ import type {
 } from 'common/types'
 
 /**
- * Registers this cluster's 9 invoke-kind channels (6 as of this plan). Called once from
+ * Registers this cluster's 9 invoke-kind channels (all 9, as of plan 34.5-09). Called once from
  * `handlers.ts` — this module owns no side effects at import time; the caller decides when
  * registration onto the handler registry happens.
- *
- * DXVK/VKD3D toggle bodies (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) are still TODO as of
- * this plan — they land in a later plan per this module's original scaffold.
  */
 export function registerWineToolsFlows(): void {
   // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
@@ -168,6 +166,53 @@ export function registerWineToolsFlows(): void {
   backendEvents.on('releasesInfoReady', (releasesInfo) => {
     logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
     void updateWineListsIfOutdated(releasesInfo)
+  })
+
+  // ── DXVK/VKD3D toggle trio (main.ts:999,1007,1015) — the cluster's final 3 channels ─────────
+  //
+  // Ported verbatim: unpack `{ appName, action }`, resolve `GameConfig.get(appName).getSettings()`,
+  // and delegate to `DXVK.installRemove(gameSettings, <tool>, action)`. `DXVK` is imported by name
+  // from `../tools` (never `tools/ipc_handler.ts`, which also registers `runWineCommandForGame` and
+  // the DEFERRED winetricks trio).
+  //
+  // T-34.5-30 / D-15 (verified, not assumed — see 34.5-09-SUMMARY.md for the full file:line trace):
+  // the one dialog these three channels can reach is `showDialogBoxModalAuto`
+  // (`tools/index.ts:137`, via `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`
+  // on a download failure). Its primary path is the fire-and-forget
+  // `sendFrontendMessage('showDialog', ...)` push; its `catch` fallback lands on
+  // `electronStub.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
+  // construction (each has its own internal try/catch that never rethrows). No fix was built here
+  // — the existing wiring already satisfies the concern this plan set out to verify.
+  ipcMain.handle('toggleDXVK', async (_event: unknown, ...args: unknown[]) => {
+    const { appName, action } = args[0] as {
+      appName: string
+      action: 'backup' | 'restore'
+    }
+    const gameSettings = await GameConfig.get(appName).getSettings()
+    return DXVK.installRemove(gameSettings, 'dxvk', action)
+  })
+
+  ipcMain.handle('toggleDXVKNVAPI', async (_event: unknown, ...args: unknown[]) => {
+    const { appName, action } = args[0] as {
+      appName: string
+      action: 'backup' | 'restore'
+    }
+    const gameSettings = await GameConfig.get(appName).getSettings()
+    return DXVK.installRemove(gameSettings, 'dxvk-nvapi', action)
+  })
+
+  // D-13: on macOS, `tools/index.ts:228` (`if (isMac && tool !== 'dxvk') return true`) already
+  // permits `dxvk` only and already excludes `vkd3d` before any file I/O runs — VKD3D is therefore
+  // registered unconditionally here too, and the platform decision stays exactly where upstream
+  // Heroic made it. No `process.platform`/`isMac`/`isLinux` branch is introduced in this
+  // registration module — that would duplicate and eventually diverge from the guard.
+  ipcMain.handle('toggleVKD3D', async (_event: unknown, ...args: unknown[]) => {
+    const { appName, action } = args[0] as {
+      appName: string
+      action: 'backup' | 'restore'
+    }
+    const gameSettings = await GameConfig.get(appName).getSettings()
+    return DXVK.installRemove(gameSettings, 'vkd3d', action)
   })
 
   // D-13: the platform guards inherited from `tools/index.ts` — `tool.os !== process.platform`
