@@ -2,20 +2,24 @@
  * Curated non-Steam-game shortcut + "add/remove to Steam" channel registration for the Tauri
  * sidecar (Phase 34.5 Plans 34.5-08/34.5-11, REQ-34.5-05).
  *
- * This plan (34.5-08) fills in the desktop-shortcut trio (`addShortcut`/`removeShortcut`/
- * `shortcutsExists`) plus the app-shell hotkey channel `processShortcut`. Plan 34.5-11 adds the
- * remaining Steam-add/remove trio (`addToSteam`/`removeFromSteam`/`isAddedToSteam`).
+ * Plan 34.5-08 filled in the desktop-shortcut trio (`addShortcut`/`removeShortcut`/
+ * `shortcutsExists`) plus the app-shell hotkey channel `processShortcut`. THIS plan (34.5-11)
+ * completes the cluster at 7 with the Steam-add/remove trio (`addToSteam`/`removeFromSteam`/
+ * `isAddedToSteam`).
  *
- * Declared channel list, THIS plan's 4 (verified against `shortcuts/ipc_handler.ts` and
- * `main.ts` by 34.5-RESEARCH.md and this plan's own `<interfaces>` block):
+ * Declared channel list, all 7 (verified against `shortcuts/ipc_handler.ts` and `main.ts` by
+ * 34.5-RESEARCH.md and each plan's own `<interfaces>` block):
  *
- *   invoke (ipcMain.handle, 1):
- *     - `shortcutsExists`  -> shortcuts/ipc_handler.ts:33
+ *   invoke (ipcMain.handle, 4):
+ *     - `shortcutsExists`  -> shortcuts/ipc_handler.ts:33 (plan 34.5-08)
+ *     - `addToSteam`       -> shortcuts/ipc_handler.ts:60 (plan 34.5-11)
+ *     - `removeFromSteam`  -> shortcuts/ipc_handler.ts:65 (plan 34.5-11)
+ *     - `isAddedToSteam`   -> shortcuts/ipc_handler.ts:70 (plan 34.5-11)
  *
  *   send (ipcMain.on, 3):
- *     - `addShortcut`     -> shortcuts/ipc_handler.ts:14 SEND
- *     - `removeShortcut`  -> shortcuts/ipc_handler.ts:41 SEND
- *     - `processShortcut` -> main.ts:1465 SEND
+ *     - `addShortcut`     -> shortcuts/ipc_handler.ts:14 SEND (plan 34.5-08)
+ *     - `removeShortcut`  -> shortcuts/ipc_handler.ts:41 SEND (plan 34.5-08)
+ *     - `processShortcut` -> main.ts:1465 SEND (plan 34.5-08)
  *
  * A `send` channel's rejection reaches NO caller (no reject, no timeout, no console line to the
  * renderer) -- `sidecar-send-channels-fail-silently` project memory. Every send-kind body below is
@@ -25,29 +29,34 @@
  * no wrapping try/catch -- Electron's own listener registrar catches handler exceptions for you;
  * this sidecar's `electronStub.ts` recorder does not.
  *
- * PLAN-TIME CORRECTION, verified against source (supersedes CONTEXT.md D-09 and
- * 34.5-RESEARCH.md's Correction 3, both of which file `shortcuts.ts:227` under the `addToSteam`
- * cluster): `addShortcut` depends on `getPath('exe')` in TWO ways, not one --
+ * EXE ATTRIBUTION, verified against source (this supersedes CONTEXT.md D-09 and
+ * 34.5-RESEARCH.md's Correction 3, both of which originally filed `shortcuts.ts:227` under the
+ * `addToSteam` cluster -- corrected at plan 34.5-08 time and reaffirmed here): two distinct `exe`
+ * call sites feed a launch command, owned by two different channels --
  *
  *   1. `shortcuts.ts:227`, inside `generateMacOsApp` (`shortcuts.ts:176`), the macOS `.app`
  *      wrapper's `run.sh` launch command. `generateMacOsApp`'s ONLY caller is `addShortcuts`
  *      (`shortcuts.ts:33`) at `shortcuts.ts:111`, inside `case 'darwin':`, guarded by
  *      `if (addStartMenuShortcuts || fromMenu)`. The only IPC entry into `addShortcuts` is
- *      `shortcuts/ipc_handler.ts:15`, the `addShortcut` channel THIS module registers. This site
- *      belongs to `addShortcut` (this plan), NOT `addToSteam` (plan 34.5-11).
- *   2. `nonesteamgame.ts:258` (the Steam VDF `Exe` entry), reached when `addShortcuts` calls
- *      `addNonSteamGame(game)` at `shortcuts.ts:43-45`, gated on the global `addSteamShortcuts`
- *      setting. This is the SAME `exe` site `addToSteam` (plan 34.5-11) also reaches via its own
- *      direct call to `addNonSteamGame`.
+ *      `shortcuts/ipc_handler.ts:15`, the `addShortcut` channel. This site belongs to
+ *      `addShortcut` (plan 34.5-08, see its own registration and comment below), NOT `addToSteam`
+ *      (this plan, 34.5-11). Its doc comment and test cases are NOT relocated or duplicated here.
+ *   2. `nonesteamgame.ts:258` (the Steam VDF `Exe` entry) -- this plan's site. Reached directly by
+ *      `addToSteam` below via `addNonSteamGame`, and ALSO reachable from `addShortcut` when
+ *      `addShortcuts` calls `addNonSteamGame(game)` at `shortcuts.ts:43-45`, gated on the global
+ *      `addSteamShortcuts` setting. Same site, two entry points -- see the comment on the
+ *      `addToSteam` registration below for the full property this plan pins.
  *
  * Neither call site has an existence check in the Electron original, because `app.getPath('exe')`
  * could not meaningfully fail there. Under the sidecar, an unset/empty `GAMELIB_SHELL_EXE` makes
  * `pathShim.getPath('exe')` throw loudly (plan 34.5-01) -- this module adds NO catch, fallback or
- * default launch-command string around either path; the throw is caught only by `addShortcut`'s
- * own channel-level `logSendFailure` guard below, and nothing is written. Writing nothing is the
- * intended outcome: the alternative is a `.app` that launches nothing, or a Steam VDF entry
- * pointing at an empty string. Live-gate item 4 exercises this channel's `.app` path as well as
- * `addToSteam`'s VDF path.
+ * default launch-command string around either path. For `addShortcut` (send-kind), the throw is
+ * caught only by its own channel-level `logSendFailure` guard and nothing is written. For
+ * `addToSteam` (invoke-kind, this plan), the throw REJECTS to the caller -- no guard is added,
+ * because a rejection reaching the caller is the correct, loud outcome for an invoke channel.
+ * Writing nothing is the intended outcome for both: the alternative is a `.app` that launches
+ * nothing, or a Steam VDF entry pointing at an empty string. Live-gate item 4 exercises BOTH
+ * channels -- `addShortcut`'s `.app` path (plan 34.5-08) and `addToSteam`'s VDF path (this plan).
  *
  * `processShortcut` needs neither `desktop` nor `exe` -- it is an app-shell HOTKEY channel
  * (`main.ts:1465`, ctrl+r/q/k/j/l/shift+i), not a game-shortcut channel. Its `ctrl+r` and
@@ -75,6 +84,11 @@ import i18next from 'i18next'
 import { ipcMain } from './electronStub'
 import { getGame, handleExit } from '../utils'
 import { shortcutFiles } from '../shortcuts/shortcuts/shortcuts'
+import {
+  addNonSteamGame,
+  removeNonSteamGame,
+  isAddedToSteam
+} from '../shortcuts/nonesteamgame/nonesteamgame'
 import { notify } from '../dialog/dialog'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
@@ -93,21 +107,24 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this plan's 4 channels (1 invoke + 3 send). Called once from `handlers.ts` -- this
- * module owns no side effects at import time beyond the imports above; the caller decides when
- * registration onto the handler registry happens.
+ * Registers all 7 of this cluster's channels (4 invoke + 3 send). Called once from `handlers.ts`
+ * -- this module owns no side effects at import time beyond the imports above; the caller decides
+ * when registration onto the handler registry happens.
  *
- * The Steam-add/remove trio (`addToSteam`/`removeFromSteam`/`isAddedToSteam`) is NOT registered
- * here -- plan 34.5-11 owns those, in this same module.
+ * Plan 34.5-08 registered the desktop-shortcut trio + hotkey channel (`shortcutsExists` invoke;
+ * `addShortcut`/`removeShortcut`/`processShortcut` send). Plan 34.5-11 (this plan) adds the
+ * Steam-add/remove trio (`addToSteam`/`removeFromSteam`/`isAddedToSteam`, all invoke),
+ * completing the cluster at 7.
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
- * and by this plan's own `shortcutsFlows.test.ts`): `ipcMain.on` (`electronStub.ts`) appends to an
- * array on every call, so a second unguarded call to this function would triple-register
- * `addShortcut`/`removeShortcut`/`processShortcut`'s listeners -- unlike the single
- * `ipcMain.handle` call above, which is naturally idempotent (`Map.set` replaces the existing
- * entry). Mirrors `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself
- * mirroring `storeRegistration.ts`'s original.
+ * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `ipcMain.on` (`electronStub.ts`) appends to
+ * an array on every call, so a second unguarded call to this function would triple-register
+ * `addShortcut`/`removeShortcut`/`processShortcut`'s listeners -- unlike `ipcMain.handle`, which is
+ * naturally idempotent (`Map.set` replaces the existing entry) and therefore does not itself need
+ * this guard, though it still lives behind it since the guard covers the whole function. Mirrors
+ * `runnerAuthFlowRegistration.ts`'s own `let registered = false` guard, itself mirroring
+ * `storeRegistration.ts`'s original.
  */
 let registered = false
 export function registerShortcutsFlows(): void {
@@ -116,7 +133,7 @@ export function registerShortcutsFlows(): void {
   }
   registered = true
 
-  // ── invoke (1) ──────────────────────────────────────────────────────────
+  // ── invoke (4) ──────────────────────────────────────────────────────────
 
   ipcMain.handle(
     'shortcutsExists',
@@ -128,6 +145,53 @@ export function registerShortcutsFlows(): void {
       const [desktopFile, menuFile] = shortcutFiles(title)
 
       return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+    }
+  )
+
+  // Completes the shortcuts cluster at 7 (plan 34.5-11, REQ-34.5-05). This channel's write path
+  // reaches `nonesteamgame.ts:258`, where `newEntry.Exe = "${app.getPath('exe')}"` becomes the
+  // Steam shortcut VDF's launch command -- the value Steam later runs when the user clicks the
+  // entry in their Steam library. That call site has no existence check in the Electron original,
+  // because `app.getPath('exe')` could not meaningfully fail there. Under the sidecar,
+  // `pathShim.getPath('exe')` CAN fail (an unset/empty `GAMELIB_SHELL_EXE`), and per its own
+  // throw-loudly convention (plan 34.5-01) it throws rather than returning `''`. This channel is
+  // invoke-kind, so that throw REJECTS to the caller -- no catch, fallback or default launch
+  // string is added here or anywhere upstream; a rejection the caller can observe is strictly
+  // better than a silently-written Steam entry that launches nothing.
+  //
+  // The SECOND `exe` call site, `shortcuts.ts:227` (the macOS `.app` `run.sh` launch command),
+  // belongs to `addShortcut` (plan 34.5-08, see that channel's registration above in this same
+  // file) -- it is reached only via `addShortcuts` -> `generateMacOsApp`, never via
+  // `addNonSteamGame`. That comment and its test pins are NOT duplicated or relocated here.
+  // Live-gate item 4 exercises BOTH channels: `addShortcut`'s `.app` path and this channel's VDF
+  // path.
+  ipcMain.handle(
+    'addToSteam',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const game = getGame(appName, runner)
+      return addNonSteamGame(game)
+    }
+  )
+
+  ipcMain.handle(
+    'removeFromSteam',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const game = getGame(appName, runner)
+      await removeNonSteamGame(game)
+    }
+  )
+
+  ipcMain.handle(
+    'isAddedToSteam',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+      const game = getGame(appName, runner)
+      return isAddedToSteam(game)
     }
   )
 
