@@ -2,11 +2,12 @@
  * Curated Wine execution + DXVK/VKD3D toggle + Wine-version-management channel registration for
  * the Tauri sidecar (Phase 34.5 Plans 34.5-05/34.5-09, REQ-34.5-03).
  *
- * INTENTIONALLY EMPTY as of plan 34.5-04. This module registers nothing yet — that is correct,
- * not a bug, until plans 34.5-05 (the `runWineCommand` wave-1 seam + DXVK/VKD3D toggles) and
- * 34.5-09 (Wine-version install/refresh/remove) land. Do not "fix" this by adding handler bodies
- * here; this plan only stakes the seam so every later cluster plan touches exactly one module
- * file instead of contending for a shared import list in `handlers.ts`.
+ * As of plan 34.5-05, this module registers 6 of the 9 declared channels: the `runWineCommand`
+ * seam (D-14), the two Wine probe channels (`getAlternativeWine`, `wine.isValidVersion`), and the
+ * Wine-version-management trio (`installWineVersion`/`refreshWineVersionInfo`/`removeWineVersion`)
+ * plus their co-located `releasesInfoReady` subscription. The remaining 3 (DXVK/VKD3D toggles)
+ * land in a later plan (34.5-09 per this module's original scaffold) — do not "fix" this by
+ * adding those bodies here; that plan owns them.
  *
  * Declared channel list (9 total, all invoke — verified against `main.ts` and the
  * `wine/manager/ipc_handler.ts` source by 34.5-RESEARCH.md and this plan's own `<interfaces>`
@@ -34,12 +35,57 @@
  * `winetricksInstalled`) that belong to Phase 34.6, not this slice.
  */
 
+import { ipcMain } from './electronStub'
+import { runWineCommand, validWine } from '../launcher'
+import { GlobalConfig } from '../config'
+import type { WineCommandArgs, WineInstallation } from 'common/types'
+
 /**
  * Registers this cluster's 9 invoke-kind channels. Called once from `handlers.ts` — this module
  * owns no side effects at import time; the caller decides when registration onto the handler
  * registry happens.
  *
- * EMPTY as of plan 34.5-04 — the `runWineCommand`/DXVK/VKD3D bodies land in plan 34.5-05, the
- * Wine-version-management bodies land in plan 34.5-09.
+ * DXVK/VKD3D toggle bodies (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) are still TODO as of
+ * this plan — they land in a later plan per this module's original scaffold.
  */
-export function registerWineToolsFlows(): void {}
+export function registerWineToolsFlows(): void {
+  // ── D-14 seam 3: `runWineCommand` (main.ts:766) ─────────────────────────────────────────────
+  //
+  // This is D-14's seam, not a new construction: `runWineCommand` is pure Node `child_process`
+  // logic that already exists at `launcher.ts:1504` and is already exercised transitively by the
+  // ported Steam `install`/`launch` channels (`storeManagers/storeManagerCommon/games.ts:254`).
+  // Its Steam path is therefore already proven under the sidecar. Its NON-Steam path (Epic/GOG/
+  // Amazon/sideload calling this same function) has never run under the sidecar — that is
+  // live-gate item 5 (34.5-LIVE-GATE.md), not something this registration can prove by itself.
+  //
+  // Wave placement: D-07 lists `runWineCommand` among "the three wave-1 seams", but this
+  // registration lands in wave 2, deliberately, for three reasons: (1) research Pitfall 2 — this
+  // is pre-existing plumbing needing a live proof, not new construction, unlike seams 1/2 (which
+  // MODIFY existing files and genuinely build something in wave 1); (2) a registration cannot
+  // precede plan 34.5-04, which creates this module as an empty declared contract and is itself
+  // wave 1 — no channel registration in this slice can be wave 1; (3) no wave-2 plan depends on
+  // this one, so D-06's mid-execution-seam-discovery failure mode (the 34.4→34.4.1 carve-out)
+  // cannot recur here — the seam was fully scoped at planning time.
+  //
+  // Pass-through only: no wine-environment reconstruction, no platform branch, no retry logic.
+  // `runWineCommand` itself owns all of that (D-13, below).
+  ipcMain.handle('runWineCommand', async (_event: unknown, ...args: unknown[]) => {
+    return runWineCommand(args[0] as WineCommandArgs)
+  })
+
+  // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
+  ipcMain.handle('getAlternativeWine', async () => {
+    return GlobalConfig.get().getAlternativeWine()
+  })
+
+  ipcMain.handle('wine.isValidVersion', async (_event: unknown, ...args: unknown[]) => {
+    return validWine(args[0] as WineInstallation)
+  })
+
+  // D-13: the platform guards inherited from `tools/index.ts` — `tool.os !== process.platform`
+  // (:73), the `-DXMT` flag (:219), macOS permitting only `dxvk` (VKD3D already excluded, :228),
+  // `dxvk-macOS` (:245), `isMac ? macEnvs : linuxEnvs` (:642), and the two `if (!isLinux)` guards
+  // (:807/:843) — are trusted and UNCHANGED here: the sidecar is a real Node process on the same
+  // OS, so `process.platform` behaves identically. They are not re-decided by this port, and no
+  // `macEnvs`/`linuxEnvs` construction is duplicated into this module.
+}
