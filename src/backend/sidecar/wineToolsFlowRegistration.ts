@@ -5,7 +5,8 @@
  * As of plan 34.5-05, this module registers 6 of the 9 declared channels: the `runWineCommand`
  * seam (D-14), the two Wine probe channels (`getAlternativeWine`, `wine.isValidVersion`), and the
  * Wine-version-management trio (`installWineVersion`/`refreshWineVersionInfo`/`removeWineVersion`)
- * plus their co-located `releasesInfoReady` subscription. The remaining 3 (DXVK/VKD3D toggles)
+ * plus their co-located wine-releases-ready event subscription (see the comment above that
+ * subscription below for the exact event name). The remaining 3 (DXVK/VKD3D toggles)
  * land in a later plan (34.5-09 per this module's original scaffold) — do not "fix" this by
  * adding those bodies here; that plan owns them.
  *
@@ -38,12 +39,28 @@
 import { ipcMain } from './electronStub'
 import { runWineCommand, validWine } from '../launcher'
 import { GlobalConfig } from '../config'
-import type { WineCommandArgs, WineInstallation } from 'common/types'
+import {
+  installWineVersion as installWineVersionForRelease,
+  removeWineVersion as removeWineVersionForRelease,
+  updateWineVersionInfos,
+  updateWineListsIfOutdated
+} from '../wine/manager/utils'
+import { sendFrontendMessage } from '../ipc'
+import { notify } from '../dialog/dialog'
+import { logDebug, logError, LogPrefix } from '../logger'
+import { backendEvents } from '../backend_events'
+import { t } from 'i18next'
+import type {
+  WineCommandArgs,
+  WineInstallation,
+  WineManagerStatus,
+  WineVersionInfo
+} from 'common/types'
 
 /**
- * Registers this cluster's 9 invoke-kind channels. Called once from `handlers.ts` — this module
- * owns no side effects at import time; the caller decides when registration onto the handler
- * registry happens.
+ * Registers this cluster's 9 invoke-kind channels (6 as of this plan). Called once from
+ * `handlers.ts` — this module owns no side effects at import time; the caller decides when
+ * registration onto the handler registry happens.
  *
  * DXVK/VKD3D toggle bodies (`toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D`) are still TODO as of
  * this plan — they land in a later plan per this module's original scaffold.
@@ -80,6 +97,77 @@ export function registerWineToolsFlows(): void {
 
   ipcMain.handle('wine.isValidVersion', async (_event: unknown, ...args: unknown[]) => {
     return validWine(args[0] as WineInstallation)
+  })
+
+  // ── Wine-version-management trio (wine/manager/ipc_handler.ts:14,46,56) ─────────────────────
+  //
+  // Ported verbatim from `wine/manager/ipc_handler.ts` — behaviour preserved exactly, including
+  // the `onProgress` push, the `notify()` calls, and the swallow-and-return-undefined shape of
+  // `refreshWineVersionInfo`'s catch. Never imports `wine/manager/ipc_handler.ts` itself (that
+  // file double-registers these same channels onto Electron's real `ipcMain`); the underlying
+  // logic is imported directly from `wine/manager/utils.ts`.
+  ipcMain.handle('installWineVersion', async (_event: unknown, ...args: unknown[]) => {
+    const release = args[0] as WineVersionInfo
+
+    const onProgress = (state: WineManagerStatus) => {
+      sendFrontendMessage('progressOfWineManager', release.version, state)
+    }
+
+    notify({ title: release.version, body: t('notify.install.startInstall') })
+    onProgress({
+      status: 'downloading',
+      percentage: 0,
+      avgSpeed: 0,
+      eta: '00:00:00'
+    })
+
+    const result = await installWineVersionForRelease(release, onProgress)
+
+    let notifyBody: string | null = null
+    switch (result) {
+      case 'error':
+        notifyBody = t('notify.install.error')
+        break
+      case 'abort':
+        notifyBody = t('notify.install.canceled')
+        break
+      case 'success':
+        notifyBody = t('notify.install.finished')
+    }
+    if (notifyBody) notify({ title: release.version, body: notifyBody })
+    onProgress({
+      status: 'idle'
+    })
+  })
+
+  // Source: wine/manager/ipc_handler.ts:46 — the swallow-and-return-undefined shape on both the
+  // success and catch paths is inherited behaviour, kept as-is (not this port's decision to make).
+  ipcMain.handle('refreshWineVersionInfo', async (_event: unknown, ...args: unknown[]) => {
+    const fetch = args[0] as boolean | undefined
+    try {
+      await updateWineVersionInfos(fetch)
+      return
+    } catch (error) {
+      logError(error, LogPrefix.WineDownloader)
+      return
+    }
+  })
+
+  ipcMain.handle('removeWineVersion', async (_event: unknown, ...args: unknown[]) => {
+    const release = args[0] as WineVersionInfo
+    const result = await removeWineVersionForRelease(release)
+    if (result) notify({ title: release.version, body: t('notify.uninstalled') })
+  })
+
+  // Source: wine/manager/ipc_handler.ts:61-64 — NOT an IPC channel (no entry in the declared 9),
+  // but co-located with the trio above and the only caller of `updateWineListsIfOutdated`. The
+  // sidecar has no other init path that subscribes to this backend event, so omitting it would
+  // silently drop wine-list refresh behaviour the Electron build has, with nothing failing
+  // (T-34.5-16). Registered inside `registerWineToolsFlows()` so it is subject to plan 34.5-04's
+  // idempotence assertion.
+  backendEvents.on('releasesInfoReady', (releasesInfo) => {
+    logDebug('Releases info ready, checking wine releases', LogPrefix.Backend)
+    void updateWineListsIfOutdated(releasesInfo)
   })
 
   // D-13: the platform guards inherited from `tools/index.ts` — `tool.os !== process.platform`
