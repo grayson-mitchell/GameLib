@@ -1488,7 +1488,7 @@ Plans:
 
 > Count corrected 2026-07-29: this line read **55** and was stale by two reassignments already recorded elsewhere — `callTool` (34.1 **D-14**, 55→56) and `isLoggedIn` (34.4 **D-03**, 56→57). `IPC-PORT-INVENTORY.md` § "Phase 34.5" was already correct at 57; its channel list was counted directly to confirm (57 entries, 57 unique, no duplicates). The inventory remains authoritative for the work-list.
 
-**Requirements:** TBD — mint at `/gsd-plan-phase 34.5`
+**Requirements:** REQ-34.5-01..13 (minted 2026-07-29 during `/gsd-plan-phase 34.5`; **38 channels ported, not 57** — Zoom's 3 dropped permanently per D-02, 16 deferred to a newly-required Phase 34.6 per D-03/D-05)
 **Depends on:** Phase 34, **and Phase 34.4.1** (the login seam — see the correction note below). Independent of slices 34.1/34.2/34.3, which may run in any order or in parallel.
 
 > Dependency corrected 2026-07-29: this line previously read "independent of the other slice-4..8 phases — these may run in any order or in parallel", which **contradicted three other statements in the record** and predated 34.4.1's insertion. Phase 34.4.1's own block states "**Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)"; its Goal states it "runs **before Phase 34.5** rather than after: 34.5's three logins depend on it"; and `IPC-PORT-INVENTORY.md` states "**This phase runs BEFORE Phase 34.5**". 34.4.1 was inserted *specifically* because the `<webview>`/`session.fromPartition` seam is cross-cutting and 34.5 needs it (34.4 **D-01/D-02**).
