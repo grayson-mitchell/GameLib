@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-12-PLAN.md
-last_updated: "2026-07-29T09:11:26.281Z"
+stopped_at: Completed 34.5-13-PLAN.md
+last_updated: "2026-07-29T09:34:52.402Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 132
-  percent: 92
+  completed_plans: 133
+  percent: 71
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 13 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 14 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -217,7 +217,34 @@ slice's declared channels are now registered across the four registration
 modules, closing out the 38-channel port. `runnerMiscFlows.test.ts` grew
 from 16 to 28 tests. Full CI suite recorded verbatim: 173/173 suites,
 3251/3251 tests passing (+12 from this plan's own coverage extension).
-`tsc --noEmit` exit 0. See `34.5-12-SUMMARY.md`.)
+`tsc --noEmit` exit 0. See `34.5-12-SUMMARY.md`.); 13 done — measured (not
+transcribed) the electron-reach ledger's extension for the four
+registration modules: 34 electron-importing modules UNCHANGED, `visitedFiles.size`
+222→226. Corrected the plan's own prediction: `save_sync.ts` is NOT a new
+baseline entry — it is imported only from `main.ts` (Electron-only), and
+`syncGOGSaves` never calls `getDefaultGogSavePaths` (confirms deferred item
+4). `requiredModules` gained four independently-anchored paths
+(`shortcuts.ts`, `nonesteamgame.ts`, `legendary/user.ts`, `gog/user.ts`),
+floor raised 220→224. Added a completeness gate proving all 38 channels are
+registered with the correct kind (34 handle + 4 listen, set-equality on the
+4 send channels, per-module counts 11/9/7/11) and a SEAM Invariant B proof
+that all 19 dropped-or-deferred channels (3 Zoom, 16 moved to Phase 34.6)
+are absent from both registries and still reject with
+`UNPORTED_CHANNEL_MARKER`. REQ-34.5-10/REQ-34.5-13 satisfied. Fixed a
+Rule-1 bug found building the above: the pre-existing containment-pin
+test's `afterAll` re-invoked all four `registerXFlows()` to "restore"
+shared registry state, but two of the four carry a permanent module-scope
+idempotence guard, making that restore a silent no-op once first triggered
+— `handlerRegistry` was measured at 20/34 after that `afterAll`, not 34.
+Fixed via a canonical registration snapshot captured once at module load.
+Both Discretion sweeps run clean against this phase's own diff: zero stale
+`isTauri()` guards found (every one of the 38 channels routes through
+`preload/ipc.ts`'s single generic `isTauri()` switch, no per-channel
+override); `npm start` and `pnpm tauri:dev` both compiled and booted live,
+sidecar output read from `gamelib.log`. Full green check recorded verbatim:
+`npm run test:ci` 173/173 suites, 3279/3279 tests, exit 0; `tsc --noEmit`
+exit 0; `cargo check` exit 0 (manual, no CI step); `cargo test` 40/40, exit
+0. See `34.5-13-SUMMARY.md`.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -2548,6 +2575,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P10 | 35min | 2 tasks | 2 files |
 | Phase 34.5 P11 | 45min | 2 tasks | 3 files |
 | Phase 34.5 P12 | 45min | 3 tasks | 2 files |
+| Phase 34.5 P13 | 55min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2874,6 +2902,8 @@ Recent decisions affecting current work:
 - [Phase 34.5-11]: shortcutsFlowRegistration.ts completes the shortcuts cluster at 7 (addToSteam/removeFromSteam/isAddedToSteam) — invoke-kind exe-in-VDF pin proven byte-identical against a real shortcuts.vdf fixture, not merely a rejected promise; addNonSteamGame no longer mocked in shortcutsFlows.test.ts so the real VDF-write chain is exercised
 - [Phase 34.5-11]: Fixed a genuine pre-existing TDZ crash in steamhelper.ts's prepareImagesForSteam (errors referenced before its const declaration) surfaced by driving the real addNonSteamGame chain for the first time in an automated test (Rule 1)
 - [Phase 34.5]: Corrected CONTEXT.md D-09/RESEARCH.md Pitfall 1: syncGOGSaves does not itself reach save_sync.ts:146 (getDefaultGogSavePaths) — the actual, still-unported caller is getDefaultSavePath — Direct verification of storeManagers/gog/games.ts's syncSaves() method and SyncSaves/gog.tsx showed the frontend calls getDefaultSavePath separately before syncGOGSaves; logged to deferred-items.md item 4 for a future (likely 34.6) pass
+- [Phase ?]: 34.5-13: save_sync.ts is NOT a new electron-reach entry -- measurement disagreed with the plan's own prediction; syncGOGSaves never calls getDefaultGogSavePaths, the sole caller is the separate unported getDefaultSavePath channel
+- [Phase ?]: 34.5-13: fixed a Rule-1 bug in runnerSliceRegistration.test.ts's containment-pin afterAll -- re-invoking guarded registerXFlows() functions after a registry clear was a silent no-op, leaving handlerRegistry at 20/34 channels for later describes/files; replaced with a canonical registration snapshot captured once at module load
 
 ### Pending Todos
 
@@ -2946,8 +2976,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T09:11:26.270Z
-Stopped at: Completed 34.5-12-PLAN.md
+Last session: 2026-07-29T09:34:52.392Z
+Stopped at: Completed 34.5-13-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
