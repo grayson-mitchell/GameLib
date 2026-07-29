@@ -627,10 +627,9 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
     expect(mockedSteamGetGame).toHaveBeenCalledWith('999001')
   })
 
-  // Invariant B (REQ-31-07): getUserInfo (Epic-only) is deliberately NOT
-  // ported this phase (31-RESEARCH.md Q1 — not reached by the Settings
-  // screen) — it must keep rejecting non-fatally, and the RPC loop must keep
-  // serving afterward.
+  // Invariant B (REQ-31-07) ORIGINALLY: getUserInfo (Epic-only) was
+  // deliberately NOT ported in Phase 31 (31-RESEARCH.md Q1 — not reached by
+  // the Settings screen at the time) and rejected with UNPORTED_CHANNEL_MARKER.
   //
   // NOTE (Phase 34.2 Plan 04): `readConfig` — originally paired with
   // `getUserInfo` in this same "deliberately unported" guard — is now a REAL
@@ -639,16 +638,29 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   // assertion rather than left asserting a marker that no longer applies;
   // `readConfig`'s own real-dispatch coverage lives in
   // `gameDetailsFlows.test.ts`.
-  it('Invariant B guard: getUserInfo (deliberately unported) still rejects non-fatally, and the RPC loop keeps serving', async () => {
+  //
+  // NOTE (Phase 34.5 Plan 06, REQ-34.5-04): `getUserInfo` itself is now ALSO a
+  // REAL registration, owned by `runnerAuthFlowRegistration.ts`
+  // (`main.ts:868` -> `LegendaryUser.getUserInfo()`). This test is updated in
+  // place (following the `readConfig` precedent immediately above) to prove
+  // the OPPOSITE of what it originally proved: the channel now routes through
+  // the real function, not the unported marker.
+  it('getUserInfo routes through the REAL LegendaryUser.getUserInfo(), not the unported marker (Phase 34.5 Plan 06)', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'user-info-1', 'getUserInfo', [])
     await flush()
 
     const userInfoResponse = frames.find(
       (frame) => frame.id === 'user-info-1'
-    ) as { ok: boolean; error?: string } | undefined
-    expect(userInfoResponse?.ok).toBe(false)
-    expect(userInfoResponse?.error).toContain(UNPORTED_CHANNEL_MARKER)
+    ) as { ok: boolean; error?: string; result?: unknown } | undefined
+    expect(userInfoResponse?.ok).toBe(true)
+    expect(userInfoResponse?.error).toBeUndefined()
+    // No legendary user.json exists under this suite's disposable homedir
+    // (jest.setupContainment.ts / this file's own os mock), so the real
+    // LegendaryUser.isLoggedIn() is false and getUserInfo() resolves
+    // undefined — proving the REAL function ran, without fixturing legendary
+    // CLI state this suite has no reason to own.
+    expect(userInfoResponse?.result).toBeUndefined()
 
     writeInvoke(input, 'health-after-generic-reads', 'health', [])
     await flush()

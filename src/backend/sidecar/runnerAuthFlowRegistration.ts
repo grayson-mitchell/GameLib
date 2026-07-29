@@ -86,8 +86,21 @@ function logSendFailure(channel: string, error: unknown): void {
  * caller decides when registration onto the handler registry happens.
  *
  * Amazon's 4 channels land in plan 34.5-10 — do not add them here.
+ *
+ * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
+ * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners"
+ * case): `ipcMain.on` (`electronStub.ts`) appends to an array on every call, so a second
+ * unguarded call to this function would double-register `logoutGOG`'s listener — unlike the 6
+ * `ipcMain.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
+ * existing entry). Mirrors `storeRegistration.ts`'s own `let registered = false` guard.
  */
+let registered = false
 export function registerRunnerAuthFlows(): void {
+  if (registered) {
+    return
+  }
+  registered = true
+
   // Source: main.ts:772 -> `isEpicServiceOffline()`.
   ipcMain.handle('getEpicGamesStatus', async () => {
     return isEpicServiceOffline()

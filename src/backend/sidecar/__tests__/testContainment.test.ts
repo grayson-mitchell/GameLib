@@ -527,6 +527,19 @@ const IN_SCOPE_SUITES = [
  * execution time (not carried forward by hand, correcting the stale "34"
  * figure above) puts the directory at 35 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 31 below.
+ *
+ * `runnerAuthFlows.test.ts` (Phase 34.5 Plan 06, REQ-34.5-04) is classified as structurally
+ * contained: it DOES declare its own `jest.mock('os', ...)` disposable-per-process-homedir
+ * override (mirroring `steamAuthFlows.test.ts`'s own precedent exactly, same shape and same
+ * reason -- this suite reaches the real `configStore` chain transitively through
+ * `../storeManagers`'s load-bearing import, which eagerly constructs every store manager
+ * including `legendaryConfig`/`gogdlConfig`/`gog_store`), so it is defence-in-depth ON TOP OF
+ * the structural floor `jest.setupContainment.ts` already provides for every backend suite, not
+ * a suite relying SOLELY on the structural floor with zero containment code of its own (the bar
+ * `STRUCTURALLY_CONTAINED_SUITES`'s name literally describes). It cannot be an `IN_SCOPE_SUITE`:
+ * those are required to carry a `jest.mock('../pathShim', ...)` call, which this suite has no
+ * reason to make (it never touches `pathShim` at all). A `readdirSync` recount at this plan's
+ * execution time puts the directory at 36 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 32 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -550,6 +563,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
   'pathShim.test.ts',
+  'runnerAuthFlows.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
   'settingsFlows.test.ts',

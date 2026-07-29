@@ -171,6 +171,21 @@ describe('idempotence — calling registerXFlows() twice does not throw or stack
   it.each(MODULES.map((m) => [m.name, m.register, m.declaredChannels] as const))(
     '%s can be called twice without throwing, and listenerRegistry counts stay stable',
     (_name, register, declaredChannels) => {
+      // Plan 34.5-06 fix (Rule 1 — pre-existing bug, invisible until a real send-kind channel
+      // existed to expose it): the ORIGINAL baseline was captured BEFORE any call to register()
+      // at all, then compared against the count after TWO calls. That comparison can only ever
+      // hold if the module registers zero send-kind listeners — true for every module while all
+      // four were declared-but-empty (34.5-04), but mathematically incompatible with a real
+      // `ipcMain.on` registration (`electronStub.ts`'s listener array is appended to, so ANY
+      // genuine first registration makes the post-call count > 0, permanently unequal to a
+      // pre-any-call baseline of 0). This is exactly the case `registerRunnerAuthFlows` now
+      // triggers once it registers `logoutGOG` for real (34.5-06 Task 2). The fix: call
+      // register() ONCE to establish the real baseline this describe block's own docstring
+      // describes ("must not stack a DUPLICATE listener" — i.e. a second call must not add
+      // beyond what the first established), THEN capture `before`, THEN call once more and
+      // compare. This is the same assertion the test always intended to make.
+      register()
+
       const before = declaredChannels.map(
         (channel) => (listenerRegistry.get(channel) ?? []).length
       )
