@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-11-PLAN.md
-last_updated: "2026-07-29T08:45:47.582Z"
+stopped_at: Completed 34.5-12-PLAN.md
+last_updated: "2026-07-29T09:11:26.281Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 144
-  completed_plans: 131
-  percent: 71
+  completed_plans: 132
+  percent: 92
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 12 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 13 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
 written as an empty 5-item blocking contract, Phase 34.6 inserted into ROADMAP.md
@@ -180,6 +180,7 @@ regresses. Full backend suite recorded verbatim: 173/173 suites, 3235/3235
 tests passing (+7 from this plan's own new assertions). `tsc --noEmit` exit
 
 0. See `34.5-10-SUMMARY.md`.); 11 done — the remaining Steam-add/remove trio
+
 (`addToSteam`/`removeFromSteam`/`isAddedToSteam`) ported into
 `shortcutsFlowRegistration.ts`, completing the shortcuts cluster at 7-of-7
 (4 `ipcMain.handle` + 3 `ipcMain.on`), REQ-34.5-05 fully satisfied (jointly
@@ -201,7 +202,22 @@ declaration) — surfaced for the first time by this plan's SET case driving
 the real code path. `shortcutsFlows.test.ts` grew from 21 to 25 tests. Full
 CI suite recorded verbatim: 173/173 suites, 3239/3239 tests passing (+4
 from this plan's own coverage extension). `tsc --noEmit` exit 0. See
-`34.5-11-SUMMARY.md`.)
+`34.5-11-SUMMARY.md`.); 12 done — the misc module's remaining 5 channels
+(`callTool` — all four branches: `winetricks`/`winecfg`/`runExe`/gog
+post-step — `egsSync`, `getGOGLinuxInstallersLangs`, `syncSaves`,
+`syncGOGSaves`) ported into `runnerMiscFlowRegistration.ts`, completing it
+at 11-of-11; REQ-34.5-07/REQ-34.5-08 satisfied. `callTool`'s winetricks
+branch proven (in-source flag + dedicated test) to call `Winetricks.run()`
+live today, NOT gated on Phase 34.6's deferred winetricks channels
+(Pitfall 4). Corrected CONTEXT.md D-09/RESEARCH.md Pitfall 1's claim that
+`syncGOGSaves` reaches `save_sync.ts:146` (`getDefaultGogSavePaths`) — it
+does not; the actual, still-unported caller is `getDefaultSavePath`,
+logged to `deferred-items.md` item 4 for a future pass. All 38 of this
+slice's declared channels are now registered across the four registration
+modules, closing out the 38-channel port. `runnerMiscFlows.test.ts` grew
+from 16 to 28 tests. Full CI suite recorded verbatim: 173/173 suites,
+3251/3251 tests passing (+12 from this plan's own coverage extension).
+`tsc --noEmit` exit 0. See `34.5-12-SUMMARY.md`.)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
 4-item human-verify live gate. No SUMMARY written; the plan is NOT complete and the phase is
@@ -1678,7 +1694,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2531,6 +2547,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P09 | ~55min | 3 tasks | 2 files |
 | Phase 34.5 P10 | 35min | 2 tasks | 2 files |
 | Phase 34.5 P11 | 45min | 2 tasks | 3 files |
+| Phase 34.5 P12 | 45min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2856,6 +2873,7 @@ Recent decisions affecting current work:
 - [Phase 34.5-10]: logoutAmazon is an unmodified NileUser.logout() delegation (no Electron session usage); no cookie clear added — T-34.4.1-47 residual accepted
 - [Phase 34.5-11]: shortcutsFlowRegistration.ts completes the shortcuts cluster at 7 (addToSteam/removeFromSteam/isAddedToSteam) — invoke-kind exe-in-VDF pin proven byte-identical against a real shortcuts.vdf fixture, not merely a rejected promise; addNonSteamGame no longer mocked in shortcutsFlows.test.ts so the real VDF-write chain is exercised
 - [Phase 34.5-11]: Fixed a genuine pre-existing TDZ crash in steamhelper.ts's prepareImagesForSteam (errors referenced before its const declaration) surfaced by driving the real addNonSteamGame chain for the first time in an automated test (Rule 1)
+- [Phase 34.5]: Corrected CONTEXT.md D-09/RESEARCH.md Pitfall 1: syncGOGSaves does not itself reach save_sync.ts:146 (getDefaultGogSavePaths) — the actual, still-unported caller is getDefaultSavePath — Direct verification of storeManagers/gog/games.ts's syncSaves() method and SyncSaves/gog.tsx showed the frontend calls getDefaultSavePath separately before syncGOGSaves; logged to deferred-items.md item 4 for a future (likely 34.6) pass
 
 ### Pending Todos
 
@@ -2928,8 +2946,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T08:44:43.017Z
-Stopped at: Completed 34.5-10-PLAN.md
+Last session: 2026-07-29T09:11:26.270Z
+Stopped at: Completed 34.5-12-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
