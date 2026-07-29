@@ -1515,10 +1515,39 @@ Plans:
 - [ ] 34.5-14-PLAN.md — 34.5-PORTED-CHANNELS.md, 38 rows with honest proof levels, + self-tested gate script (wave 5)
 - [ ] 34.5-15-PLAN.md — Blocking 5-item live gate under tauri:dev, results recorded and propagated (wave 6, non-autonomous)
 
+### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
+
+**Goal:** Port the **16 channels** deferred by Phase 34.5's **D-03** — EOS overlay (8):
+`disableEosOverlay`, `enableEosOverlay`, `getEosOverlayStatus`, `getLatestEosOverlayVersion`,
+`installEosOverlay`, `isEosOverlayEnabled`, `removeEosOverlay`, `updateEosOverlayInfo`; SteamGridDB
+artwork (5): `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`,
+`steamgriddb.searchGame`, `steamgriddb.setApiKey`; winetricks (3): `winetricksAvailable`,
+`winetricksInstall`, `winetricksInstalled`. Additive and reversible still applies — the Electron
+build keeps working unchanged. EOS is Epic (core value) and is not needed to install or launch,
+only for overlay features; SteamGridDB is a pure enhancement behind a user-supplied API key;
+winetricks is Linux-centric power-user tooling — all three deferred rather than dropped because
+Phase 35's cutover requires the IPC re-plumb to be COMPLETE.
+
+`winetricksInstall` is `addListener`/send-kind (`tools/ipc_handler.ts`), same class as this
+slice's own send channels — the next slice inherits the send-channel warning (silent failure
+under the sidecar) rather than rediscovering it. `callTool`'s `winetricks` branch already works
+from Phase 34.5 via `Winetricks.run()` on the shared `tools/index.ts` object — this phase is about
+the three dedicated IPC channels above, not about making winetricks work at all.
+
+*Inserted by Phase 34.5 plan 03, 2026-07-29, per 34.5 D-03/D-05.*
+
+**Requirements:** TBD — mint at `/gsd-plan-phase 34.6`
+**Depends on:** Phase 34.5
+**Blocks:** Phase 35 (the IPC re-plumb must be COMPLETE before cutover)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34.6 to break down)
+
 ### Phase 35: Electron cutover — remove the Electron build
 
 **Goal:** Retire the Electron build: delete `electron-vite`/`electron-builder` config, the preload contextBridge path, and the `isTauri()` branches, leaving Tauri as the only shell. This is the one phase that deliberately breaks the additive/reversible invariant every prior phase preserved — so it runs last, and only once the `session`/`powerSaveBlocker` parity gaps are resolved or explicitly accepted, and the parked Electron-renderer bugs (see `debug-uninstall-game-vanishes-parked`) have been re-tested against Tauri rather than fixed in Electron.
-**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.5** (the IPC re-plumb must be complete — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
+**Depends on:** Phase 34 (all three platforms shipping on Tauri first) **and Phases 34.1–34.6** (the IPC re-plumb must be complete — see `.planning/IPC-PORT-INVENTORY.md`). As of 2026-07-25 only 27 of 210 IPC channels are on the sidecar; cutting over before the port finishes would strand ~183 channels. Also blocked on migrating the renderer off `electron-vite` onto plain Vite, since `tauri:dev` currently shells out to `electron-vite build` and `tauri.conf.json` serves its `build/` output as `frontendDist`.
 **Requirements:** TBD — mint at `/gsd-plan-phase 35`
 **Plans:** 0 plans
 
