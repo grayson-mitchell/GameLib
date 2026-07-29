@@ -75,7 +75,20 @@ const ENTRY_POINTS = [
   // diff -- a ledger measured before the last code plan lands is a ledger
   // that has to be measured twice.
   join(REPO_ROOT, 'src/backend/sidecar/humbleLoginFlowRegistration.ts'),
-  join(REPO_ROOT, 'src/backend/sidecar/oauthLoginFlowRegistration.ts')
+  join(REPO_ROOT, 'src/backend/sidecar/oauthLoginFlowRegistration.ts'),
+  // Phase 34.5 Plan 13 (REQ-34.5-10, 34.3 D-10 / 34.4 D-10 standing obligation): this
+  // slice's four registration modules. See SUMMARY for the full before/after measurement --
+  // the plan-time prediction that `save_sync.ts` would enter the measured baseline via
+  // `syncGOGSaves` did NOT hold: direct verification (deferred item 4, 34.5-12) shows
+  // `syncGOGSaves`'s own handler chain never calls `getDefaultGogSavePaths`; the sole caller
+  // of that function is the separate `getDefaultSavePath` channel, which is not one of this
+  // slice's 38 and is not reachable from any of the four modules below. `save_sync.ts` is
+  // imported ONLY by `main.ts` in this repo (grep-verified) -- an Electron-only file outside
+  // this ledger's entry-point graph -- so it correctly does NOT appear in the measured set.
+  join(REPO_ROOT, 'src/backend/sidecar/runnerAuthFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/wineToolsFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/shortcutsFlowRegistration.ts'),
+  join(REPO_ROOT, 'src/backend/sidecar/runnerMiscFlowRegistration.ts')
 ]
 
 // Regenerated at plan-execution time (2026-07-26, Phase 34.3 Plan 07), not
@@ -136,6 +149,42 @@ const ENTRY_POINTS = [
 // electron-importing modules is therefore UNCHANGED at 34; only
 // visitedFiles.size grew (+3), reflecting the three new first-party files now
 // walked. See 34.4.1-06-SUMMARY.md for the full before/after captured output.
+//
+// Phase 34.5 Plan 13 (REQ-34.5-10, D-10 standing obligation) extended
+// ENTRY_POINTS with this slice's four registration modules
+// (runnerAuthFlowRegistration.ts, wineToolsFlowRegistration.ts,
+// shortcutsFlowRegistration.ts, runnerMiscFlowRegistration.ts) and re-ran
+// computeElectronReach() via the same temporary-print-statement procedure
+// (before: 34 electron-importing modules / visitedFiles.size 222; after: 34
+// modules / visitedFiles.size 226). The measured set of electron-importing
+// modules is UNCHANGED at 34 -- only visitedFiles.size grew (+4, exactly the
+// four new entry-point files themselves; everything they transitively pull
+// in -- storeManagers/legendary/user.ts, storeManagers/gog/user.ts,
+// shortcuts/shortcuts/shortcuts.ts, shortcuts/nonesteamgame/nonesteamgame.ts,
+// tools/index.ts, wine/manager/utils.ts, etc. -- was already walked via prior
+// slices' entry points, most load-bearingly storeManagers/index.ts's own
+// eager cross-runner construction reached via steamAuthFlowRegistration.ts's
+// load-bearing first import).
+//
+// THE MEASUREMENT DISAGREED WITH THIS PLAN'S OWN PREDICTION, and per the
+// plan's explicit rule the measurement wins: <interfaces> predicted
+// `save_sync.ts` would be a CONFIRMED NEW entry (direct `import { app } from
+// 'electron'` at save_sync.ts:12). It did not appear. Direct verification
+// (this plan's own re-check of deferred item 4 from 34.5-12,
+// `deferred-items.md`) shows `save_sync.ts` is imported from exactly one
+// first-party file in this repo: `src/backend/main.ts` (grep-verified,
+// `grep -rln save_sync src/`) -- an Electron-only file that is not, and has
+// never been, one of this ledger's entry points. `syncGOGSaves`'s own
+// handler chain (`libraryManagerMap['gog'].getGame(appName).syncSaves(arg,
+// '', gogSaves)`, in runnerMiscFlowRegistration.ts) never calls
+// `getDefaultGogSavePaths`; the sole caller of that function is the separate
+// `getDefaultSavePath` channel (save_sync.ts:17-27), which is not one of this
+// slice's 38 channels and remains genuinely unported. CONTEXT.md's D-09 and
+// 34.5-RESEARCH.md's Pitfall 1 both asserted the `syncGOGSaves` reach claim;
+// both are wrong on this specific point and the correction is recorded here
+// rather than absorbed silently -- this is a planning-time gap, not a defect
+// in this measurement. See 34.5-13-SUMMARY.md for the full before/after
+// captured output and the corrected claim.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
@@ -400,12 +449,29 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       'src/backend/humble/user.ts',
       'src/backend/humble/adapter.ts',
       'src/backend/humble/expirationAlerts.ts',
-      'src/backend/humble/userAgent.ts'
-      // Phase 34.4.1 Plan 06 (D-08): no new edge is added here -- the
+      'src/backend/humble/userAgent.ts',
+      // Phase 34.4.1 Plan 06 (D-08): no new edge was added here -- the
       // measurement confirmed humbleLoginFlowRegistration.ts and
       // oauthLoginFlowRegistration.ts contribute ZERO new electron-importing
       // modules (see the BASELINE_ELECTRON_REACHING_MODULES header comment
-      // above for the full before/after). Nothing to anti-vacuity-protect.
+      // above for the full before/after).
+      //
+      // Phase 34.5 Plan 13 (REQ-34.5-10, D-10): the measurement found ZERO
+      // brand-new electron-importing modules (this phase's own prediction of
+      // a new `save_sync.ts` entry did NOT hold -- see the header comment
+      // above for the correction), so there is no new SET member to
+      // anti-vacuity-protect here. What this plan DOES add is independent
+      // anchoring: these four already-baselined paths are now reached
+      // DIRECTLY by this slice's own entry points (previously only reached
+      // transitively via steamAuthFlowRegistration.ts's load-bearing
+      // storeManagers/index.ts import and humbleFlowRegistration.ts), so a
+      // future refactor that broke ONLY those Steam/Humble edges would no
+      // longer silently stop covering these paths -- this phase's own
+      // modules independently require them.
+      'src/backend/shortcuts/shortcuts/shortcuts.ts', // direct: shortcutsFlowRegistration.ts
+      'src/backend/shortcuts/nonesteamgame/nonesteamgame.ts', // direct: shortcutsFlowRegistration.ts
+      'src/backend/storeManagers/legendary/user.ts', // direct: runnerAuthFlowRegistration.ts
+      'src/backend/storeManagers/gog/user.ts' // direct: runnerAuthFlowRegistration.ts
     ]
     for (const requiredModule of requiredModules) {
       expect(measured.has(requiredModule)).toBe(true)
@@ -428,7 +494,14 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
     // visitedFiles.size further, to a measured 222. Raised the floor from
     // 200 to 220 -- comfortably below the measured size, never lowered, per
     // the same instruction.
-    expect(reachResult.visitedFiles.size).toBeGreaterThan(220)
+    //
+    // Phase 34.5 Plan 13 (REQ-34.5-10, D-10): four more new entry points
+    // (runnerAuthFlowRegistration.ts, wineToolsFlowRegistration.ts,
+    // shortcutsFlowRegistration.ts, runnerMiscFlowRegistration.ts) grew
+    // visitedFiles.size further, to a measured 226. Raised the floor from
+    // 220 to 224 -- comfortably below the measured size, never lowered, per
+    // the same instruction.
+    expect(reachResult.visitedFiles.size).toBeGreaterThan(224)
   }, 30000)
 
   it('the gap-#3 edge is pinned as a known, documented fact: dispatch.ts reaches dialog.ts, which imports electron directly', () => {
