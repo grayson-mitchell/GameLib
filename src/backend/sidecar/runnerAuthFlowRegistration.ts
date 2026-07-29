@@ -2,9 +2,9 @@
  * Curated Epic (legendary)/GOG/Amazon (nile) auth + sign-out channel registration for the Tauri
  * sidecar (Phase 34.5 Plans 34.5-06/34.5-10, REQ-34.5-04).
  *
- * Plan 34.5-06 fills in the Epic + GOG channels (7 of the 11 declared below). Amazon's 4 channels
- * (`getAmazonLoginData`/`authAmazon`/`getAmazonUserInfo`/`logoutAmazon`) land in plan 34.5-10 —
- * do not add them here.
+ * Plan 34.5-06 filled in the Epic + GOG channels (7 of the 11 declared below). Plan 34.5-10 adds
+ * Amazon's 4 channels (`getAmazonLoginData`/`authAmazon`/`getAmazonUserInfo`/`logoutAmazon`),
+ * completing the cluster at 11.
  *
  * Declared channel list (11 total — verified against `main.ts` by 34.5-RESEARCH.md and this
  * plan's own `<interfaces>` block):
@@ -16,10 +16,10 @@
  *     - `getEpicGamesStatus`   -> main.ts:772 -> `isEpicServiceOffline()`
  *     - `logoutLegendary`      -> main.ts:879 -> `LegendaryUser.logout()`
  *     - `authGOG`              -> main.ts:878 -> `GOGUser.login(code)`
- *     - `getAmazonLoginData`   -> main.ts:882 -> `NileUser.getLoginData()`               [34.5-10]
- *     - `authAmazon`           -> main.ts:883 -> `NileUser.login(data)`                  [34.5-10]
- *     - `getAmazonUserInfo`    -> main.ts:872 -> `NileUser.getUserData()`                [34.5-10]
- *     - `logoutAmazon`         -> main.ts:884 -> `NileUser.logout()`                     [34.5-10]
+ *     - `getAmazonLoginData`   -> main.ts:882 -> `NileUser.getLoginData()`
+ *     - `authAmazon`           -> main.ts:883 -> `NileUser.login(data)`
+ *     - `getAmazonUserInfo`    -> main.ts:872 -> `NileUser.getUserData()`
+ *     - `logoutAmazon`         -> main.ts:884 -> `NileUser.logout()`
  *
  *   send (ipcMain.on, 1):
  *     - `logoutGOG` -> main.ts:880 SEND -> `GOGUser.logout()`. A `send` channel's rejection
@@ -29,9 +29,9 @@
  *       synchronous try/catch — NOT `.catch()`, which would itself throw a TypeError against a
  *       `void` return and make the failure invisible in exactly the way a send channel already
  *       is. This is the phase's only Repudiation surface (T-34.5-18); the asymmetry (Legendary
- *       and, once 34.5-10 lands, Amazon's sign-outs are handle-kind while GOG's is send-kind) is
- *       inherited Electron behaviour, deliberately preserved, and cross-checked in both
- *       directions by `__tests__/runnerAuthFlows.test.ts`.
+ *       and Amazon's sign-outs are handle-kind while GOG's is send-kind) is inherited Electron
+ *       behaviour, deliberately preserved, and cross-checked in both directions by
+ *       `__tests__/runnerAuthFlows.test.ts`.
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -40,14 +40,25 @@
  * Electron's real `ipcMain` via `backend/ipc`'s `addHandler`/`addListener`, an Electron-only path
  * this sidecar's curated import graph must never reach.
  *
- * Trust-boundary validation (T-34.5-21/T-34.5-22, ASVS V5, mirrors the ported `redeemSteamKey`
- * precedent in `steamAuthFlowRegistration.ts`): `login`'s `sid` and `authGOG`'s `code` are OAuth
- * credentials, untrusted at runtime despite their TypeScript type contracts. Both handlers reject
- * a non-string/empty payload BEFORE calling the runner method, returning the same
- * `{ status: 'failed', data: undefined }` shape `LegendaryUser.login`/`GOGUser.login`'s own
- * internal error path already uses (verified against `legendary/user.ts`'s `errorMessage()`
- * helper and `gog/user.ts:54-56,61-63`'s parse-failure returns) — never a bespoke shape, and
- * never a log line containing the rejected value itself.
+ * Trust-boundary validation (T-34.5-21/T-34.5-22/T-34.5-35, ASVS V5, mirrors the ported
+ * `redeemSteamKey` precedent in `steamAuthFlowRegistration.ts`): `login`'s `sid`, `authGOG`'s
+ * `code`, and `authAmazon`'s `data` payload are OAuth credentials, untrusted at runtime despite
+ * their TypeScript type contracts. All three handlers reject a malformed payload BEFORE calling
+ * the runner method — `login`/`authGOG` return the same `{ status: 'failed'/'error', data:
+ * undefined }` shape `LegendaryUser.login`/`GOGUser.login`'s own internal error path already uses
+ * (verified against `legendary/user.ts`'s `errorMessage()` helper and `gog/user.ts:54-56,61-63`'s
+ * parse-failure returns); `authAmazon` returns the same `{ status: 'failed', user: undefined }`
+ * shape `NileUser.login`'s own internal failure path already uses (`nile/user.ts:66-71`) — never
+ * a bespoke shape, and never a log line containing the rejected value itself (T-34.5-36).
+ *
+ * ORDERING CONSTRAINT (T-34.5-34, closes the exposure T-34.4.1-44b describes): `authAmazon` mints
+ * a real Amazon credential from a value produced by `oauthLoginCapture.ts`'s
+ * `matchOAuthRedirect('nile', …)`. That function's input-validation control — the exact-host
+ * anchor on `www.amazon.com` (plan 34.5-02, REQ-34.5-02) — MUST land before this channel is
+ * registered/consumed, or a code captured from a non-Amazon origin could reach this mint. The
+ * anchor's host value is MEDIUM confidence (research Assumption A1) until live-gate item 3
+ * confirms it against one real captured redirect — nothing in this file asserts the anchor is
+ * empirically correct, only that it is the control this channel depends on.
  */
 
 import { ipcMain } from './electronStub'
@@ -66,8 +77,10 @@ import { ipcMain } from './electronStub'
 import '../storeManagers'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
+import { NileUser } from '../storeManagers/nile/user'
 import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
+import type { NileRegisterData } from '../../common/types/nile'
 
 function logSendFailure(channel: string, error: unknown): void {
   logWarning(
@@ -80,12 +93,11 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this plan's 7 channels (6 invoke + 1 send): Epic's `getEpicGamesStatus`/`getUserInfo`/
- * `isLoggedIn`/`login`/`logoutLegendary` and GOG's `authGOG`/`logoutGOG`. Called once from
+ * Registers all 11 auth channels (10 invoke + 1 send): Epic's `getEpicGamesStatus`/`getUserInfo`/
+ * `isLoggedIn`/`login`/`logoutLegendary`, GOG's `authGOG`/`logoutGOG`, and Amazon's
+ * `getAmazonLoginData`/`authAmazon`/`getAmazonUserInfo`/`logoutAmazon`. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
- *
- * Amazon's 4 channels land in plan 34.5-10 — do not add them here.
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners"
@@ -152,6 +164,72 @@ export function registerRunnerAuthFlows(): void {
       return { status: 'error' }
     }
     return GOGUser.login(code)
+  })
+
+  // Source: main.ts:882 -> `NileUser.getLoginData()`. D-12, corrected: the nile CLI's own
+  // credential directory is `nile_config` (`nile/constants.ts:4`, wired via `NILE_CONFIG_PATH` at
+  // `nile/library.ts:486`) — not `nile_store` (`nile/electronStores.ts:13`), which is the
+  // separate PROFILE `configStore` cwd this handler's sibling `getAmazonUserInfo` reads/writes
+  // through. Both derive from `appFolder` and resolve through `pathShim`'s already-implemented
+  // `userData`, so this delegation needs no new path work.
+  ipcMain.handle('getAmazonLoginData', () => {
+    return NileUser.getLoginData()
+  })
+
+  // ORDERING CONSTRAINT (T-34.5-34, closes T-34.4.1-44b): Source: main.ts:883 ->
+  // `NileUser.login(data)`. This channel MINTS a real Amazon credential from a value that can
+  // only have reached it via `oauthLoginCapture.ts`'s `matchOAuthRedirect('nile', …)` — and that
+  // function's exact-host anchor on `www.amazon.com` (plan 34.5-02, REQ-34.5-02) is the
+  // input-validation control protecting this mint. That anchor lands BEFORE this channel is
+  // consumed; registering this handler without the anchor already in place would recreate the
+  // exposure T-34.4.1-44b describes. The anchor's host value is MEDIUM confidence (research
+  // Assumption A1) and its confirmation is live-gate item 3, not a claim this handler may make.
+  //
+  // `data` is `NileRegisterData` (`common/types/nile.ts:119`) — an authorization code plus its
+  // PKCE `code_verifier`/device `serial`/`client_id`, all credentials, untrusted at runtime
+  // despite the type contract (T-34.5-35). Rejects a payload that is not the shape
+  // `NileUser.login` expects WITHOUT calling it, returning the same `{ status: 'failed', user:
+  // undefined }` shape `NileUser.login`'s own internal failure path already uses
+  // (`nile/user.ts:66-71`). Never logs the payload value (T-34.5-36) — a captured authorization
+  // code is a credential.
+  ipcMain.handle('authAmazon', async (_event: unknown, ...args: unknown[]) => {
+    const data = args[0] as Partial<NileRegisterData> | undefined | null
+    const isValid =
+      typeof data === 'object' &&
+      data !== null &&
+      typeof data.code === 'string' &&
+      data.code.length > 0 &&
+      typeof data.code_verifier === 'string' &&
+      data.code_verifier.length > 0 &&
+      typeof data.serial === 'string' &&
+      data.serial.length > 0 &&
+      typeof data.client_id === 'string' &&
+      data.client_id.length > 0
+    if (!isValid) {
+      logWarning(
+        '[runnerAuthFlowRegistration] authAmazon rejected: payload does not match NileRegisterData',
+        LogPrefix.Backend
+      )
+      return { status: 'failed', user: undefined }
+    }
+    return NileUser.login(data as NileRegisterData)
+  })
+
+  // Source: main.ts:872 -> `NileUser.getUserData()`.
+  ipcMain.handle('getAmazonUserInfo', async () => {
+    return NileUser.getUserData()
+  })
+
+  // Source: main.ts:884 -> `NileUser.logout()`. Unchanged body — `NileUser.logout()`
+  // (`nile/user.ts:88-102`) has NO Electron `session` usage (verified: it runs the CLI `auth
+  // --logout`, then `configStore.delete('userData')` + `clearCache('nile')`), so unlike
+  // `LegendaryUser.logout()` it needs no ordering repair; the faithful port is this unmodified
+  // delegation. Amazon cookies landing in the app-wide jar is the INHERITED, already-accepted
+  // T-34.4.1-47 residual (T-34.5-37, `accept`) — Electron never cleared them either, so adding a
+  // cookie clear here would be a behaviour change, not a port. Do NOT add a cookie clear to this
+  // path.
+  ipcMain.handle('logoutAmazon', () => {
+    return NileUser.logout()
   })
 
   // Source: main.ts:880 -> `addListener('logoutGOG', () => GOGUser.logout())` — the phase's
