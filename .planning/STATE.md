@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-01-PLAN.md
-last_updated: "2026-07-29T05:11:36.792Z"
+stopped_at: Completed 34.5-02-PLAN.md
+last_updated: "2026-07-29T05:23:00.654Z"
 last_activity: 2026-07-29
 progress:
   total_phases: 16
   completed_phases: 12
   total_plans: 144
-  completed_plans: 121
-  percent: 84
+  completed_plans: 122
+  percent: 75
 ---
 
 # Project State
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
-Plan: 2 of 15 (01 done — pathShim desktop/exe/documents extension +
+Plan: 3 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01)
 
 34.4.1-08 PARTIAL (Task 1 of 3 done, commit `3f9562a3f`) -- HELD at Task 2, the blocking
@@ -1512,7 +1512,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 85%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2355,6 +2355,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P06 | 70min | 3 tasks | 4 files |
 | Phase 34.4.1 P07 | 110min | 3 tasks | 3 files |
 | Phase 34.5 P01 | 30min | 3 tasks | 3 files |
+| Phase 34.5 P02 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -2660,6 +2661,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: exe throws a named error on unset/empty GAMELIB_SHELL_EXE rather than returning an empty string (D-10, T-34.5-01/02)
 - [Phase 34.5]: documents attributed to the saves-sync cluster (syncGOGSaves), not shortcuts, resolving research Pitfall 1's open Discretion question
 - [Phase 34.5]: shortcuts.ts:227's exe consumer corrected to addShortcut (plan 34.5-08), not addToSteam as CONTEXT.md D-09 and research Correction 3 had it
+- [Phase 34.5-02]: www.amazon.com chosen as exact-host anchor for nile OAuth redirect matcher, closing T-34.4.1-44b; MEDIUM confidence per Assumption A1 pending live-gate item 3 confirmation
 
 ### Pending Todos
 
@@ -2731,8 +2733,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T05:11:36.784Z
-Stopped at: Completed 34.5-01-PLAN.md
+Last session: 2026-07-29T05:23:00.645Z
+Stopped at: Completed 34.5-02-PLAN.md
   Off the critical path this session: the `test:ci` flake FIXED (`eee21bc02`), ROADMAP 34.5
   corrections (`fb96e0090`), and 34.5 context gathered (`4be0e38a2`).
 Next: **34.4.1-08 Task 2 — the blocking 4-item live gate. Needs local hardware; the developer
