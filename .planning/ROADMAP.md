@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 11/20 plans executed
+**Plans:** 12/20 plans executed
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1490,7 +1490,7 @@ keyring slot design is fixed.
 
 - [x] 34.4.1-10-PLAN.md — SWEEP: mechanical two-axis seam-parity audit + a regression guard that FAILS when the two branches diverge again (wave 1)
 - [x] 34.4.1-11-PLAN.md — F-1a: compile-time keyring slot ALLOWLIST, all four arms slot-aware, T-28-03 preserved, Steam token untouched (wave 2)
-- [ ] 34.4.1-12-PLAN.md — F-1 (seam): dual-build Humble secret-store seam + async accessors, Electron behavior byte-identical (wave 3)
+- [x] 34.4.1-12-PLAN.md — F-1 (seam): dual-build Humble secret-store seam + async accessors, Electron behavior byte-identical (wave 3)
 - [ ] 34.4.1-13-PLAN.md — **F-1 CLOSED (code)**: keyring-backed Humble store + verified-readback plaintext migration + disconnect clears the slots (wave 4)
 - [ ] 34.4.1-14-PLAN.md — F-1b (steamgrid): settle reachability by measurement, then migrate or declare with evidence (wave 5)
 - [ ] 34.4.1-15-PLAN.md — F-6a: NEW origin-scoped storage-clear capability in Rust + seam method (wave 5)

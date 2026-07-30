@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-11-PLAN.md
-last_updated: "2026-07-30T08:21:04.662Z"
+stopped_at: Completed 34.4.1-12-PLAN.md
+last_updated: "2026-07-30T08:51:49.525Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 137
+  completed_plans: 138
   percent: 71
 ---
 
@@ -67,7 +67,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 12 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 13 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 **Phase 34.5 — HELD at plan 15 of 15.** Its live gate's precondition is 34.4.1's own
@@ -1789,7 +1789,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 88%
+trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2647,6 +2647,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P14 | 13min | 2 tasks | 2 files |
 | Phase 34.4.1 P10 | 65min | 2 tasks | 4 files |
 | Phase 34.4.1 P11 | 35min | 2 tasks | 4 files |
+| Phase 34.4.1 P12 | ~20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -2981,6 +2982,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: 34.4.1-10: DECLARED classification requires a category/term-level match, not id proximity, on BOTH axes -- an id-only bar would have wrongly cleared both F-6 (Axis A) and F-1 (Axis B, caught pre-commit)
 - [Phase 34.4.1]: 34.4.1-10: checkHealthAndFlagExpiry's unguarded session.fromPartition() call is a NEW finding (S-09), not anticipated at planning time, routed to plan 34.4.1-16 alongside F-6
 - [Phase 34.4.1-11]: D-GAP-01 implemented verbatim: compile-time keyring slot allowlist (steam-refresh-token/humble-session/humble-csrf); all 4 Rust arms slot-aware; SidecarKeyringTokenStore preserved via subclass — SteamGridDB slot withheld -- SEAM-PARITY-SWEEP found F-1b dormant/sidecar-unreachable, not live
+- [Phase 34.4.1-12]: encryptionDegraded stays in user.ts, not the secretStore seam -- UI concern driven off isAvailable(), not a storage concern
+- [Phase 34.4.1-12]: storeHumbleSecret() helper writes encryptionDegraded explicitly true/false after every setSecret() call, preserving WR-07's stale-warning-clear at all 4 write sites
 
 ### Pending Todos
 
@@ -3053,26 +3056,38 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T08:21:04.652Z
-Stopped at: Completed 34.4.1-11-PLAN.md
-  This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
-  (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
-  `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
-  34.5-05 started. D-15's original citation (`tools/index.ts:794`, inside
-  `Winetricks.checkDependencies`, a DEFERRED cluster) was verified WRONG by direct
-  read; the actually-reachable dialog site (`tools/index.ts:137`, via
-  `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`) was confirmed
-  already safe (`electronStub.dialog.showErrorBox`/`showMessageBox` are structurally
-  non-throwing) and pinned by a new `jest.isolateModules()`-sandboxed test (commit
-  `473b957fb`) rather than "fixed" — no line of `dialog.ts`/`tools/index.ts`/
-  `electronStub.ts` was touched. `wineToolsFlows.test.ts` extended to all 9 channels
-  bidirectionally + an explicit `SEND_CHANNELS` empty assertion + a tool-literal
-  regression test proving `toggleVKD3D` forwards `'vkd3d'` not `'dxvk'` (commit
-  `d5d867f15`). Deviation: `GameConfig` corrected to import from `../game_config`
-  (not `../config`, which only exports `GlobalConfig`) after a grep-verified read.
-  Full backend suite recorded verbatim: `npm run test:ci` exit 0, 173/173 suites,
-  3228/3228 tests (baseline 3222 + this plan's 6 new/extended assertions). `npx tsc
-  --noEmit` exit 0. See `34.5-09-SUMMARY.md` for the full D-15 file:line trace.
+Last session: 2026-07-30T08:51:49.516Z
+Stopped at: Completed 34.4.1-12-PLAN.md
+  This session: 34.4.1-12-PLAN.md executed (gap cycle wave 3, F-1 prep — pure refactor,
+  does NOT close F-1) — `src/backend/humble/secretStore.ts` created: a dual-build
+  `HumbleSecretStore` seam (interface + module holder + `ElectronHumbleSecretStore`
+  default), moving `user.ts`'s former `encryptionAvailable`/`encryptCookie`/
+  `decryptCookie` free functions verbatim (commit `ca6dfcee6`). `user.ts` then routed
+  through the seam: `getCredentials()`/`getCsrfToken()` converted to async
+  (mirroring Steam's Phase-28 precedent), `safeStorage` removed from the `'electron'`
+  import (`session` kept), a `storeHumbleSecret()` helper added to preserve WR-07's
+  explicit-encryptionDegraded-clear semantics at all 4 write sites, and the 5 non-
+  already-async call sites (`validation.ts`, `library.ts` x2, `user.ts` x2) updated to
+  `await` (commit `ff1ddf32a`). Deviation (Rule 1): `library.test.ts`'s single-flight-
+  guard test assumed `getGamekeys()` was reached synchronously before any `await` —
+  false once `getCredentials()` became async; fixed with one `await flushAsync()`
+  (a real timing bug the conversion exposed in test code, not production code — see
+  `34.4.1-12-SUMMARY.md` for the full cascade-failure trace). `electronReachLedger.test.ts`
+  baseline extended with `secretStore.ts` (34 -> 35 electron-importing modules — a NEW
+  edge, secretStore.ts's own direct `safeStorage` import). Verified: `npx jest
+  src/backend/humble/` 505/505; `npx tsc --noEmit` clean; `npm run test:ci` 175/175
+  suites, 3323/3323 tests, exit 0 (baseline 174/3307 -- +1 suite/+16 tests, exactly
+  `secretStore.test.ts`); `cargo test` 50/50 unchanged; `seamBranchParity.test.ts` 23/23.
+  **F-1 remains OPEN** — under Tauri the Humble session is still plaintext (secretStore's
+  un-overridden default resolves `safeStorage` to `electronStub.ts`'s dead stub exactly
+  as before); plan 13 installs the keyring-backed implementation via
+  `setHumbleSecretStore()`.
+Next: **34.4.1-13-PLAN.md** — installs the keyring-backed `HumbleSecretStore`
+  implementation (using plan 11's `SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)`/
+  `SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)`), proves the sidecar install
+  actually happened (not merely assumed), and is the plan that actually CLOSES F-1.
+
+Prior (now superseded) next-step context, retained for history:
 Next: **34.5-10-PLAN.md** is next on the critical path for Phase 34.5 (wave 3
 continues — `runnerAuthFlowRegistration.ts`'s remaining channels per plan 34.5-06's
 scaffold). Separately, still blocking: **34.4.1-08 Task 2 — the
