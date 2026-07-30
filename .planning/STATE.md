@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-12-PLAN.md
+stopped_at: 34.4.1 gap cycle — waves 1-3 done (plans 10,11,12). Resume at plan 13 (wave 4, F-1 CLOSED) via /gsd-execute-phase 34.4.1
 last_updated: "2026-07-30T08:51:49.525Z"
 last_activity: 2026-07-30
 progress:
@@ -69,6 +69,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
 Plan: 13 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
+
+> **D-GAP-03 (2026-07-30, user-approved) — sweep finding S-09 routed into plan 18.**
+> Plan 10's mechanical sweep found a FIFTH SILENTLY-DROPPED site that no gap-cycle plan owned:
+> `humble/user.ts:732-751`, the `csrf_cookie` backfill inside `checkHealthAndFlagExpiry()`, calls
+> `session.fromPartition()` with no `getLoginWindowSeam()` guard, so under Tauri it throws into its
+> own non-fatal catch and the capability silently no-ops. That backfill is the self-heal path for an
+> account that connected before the capture code shipped — under Tauri such an account never heals
+> and every reveal POST omits `csrf-prevention-token`. **Live-gate item 4 passed only because the
+> gate's account already held a token from `finishLogin`; the defect was masked, not absent.**
+> Scope addendum is committed into `34.4.1-18-PLAN.md` (commit `c88665f6a`) — plan 18 already owns
+> both `src-tauri/src/main.rs` and `humble/user.ts`. A `humble-csrf` keyring slot already exists
+> from plan 11 if the fix needs one.
+>
+> **Carry-forward for plan 19:** `REQ-34.4.1-GAP-04` returned `not_found` from
+> `requirements.mark-complete` — the gap-cycle `REQ-34.4.1-GAP-0*` IDs were never appended to
+> `REQUIREMENTS.md`'s traceability table. Plan 19 must reconcile them, not silently skip them.
+>
+> **Carry-forward for plan 14:** plan 10 proved `steamgrid/secureKey.ts` (F-1b) is NOT reachable
+> from the sidecar's curated import graph today — reached only from `src/backend/main.ts`, absent
+> from the 34-entry `BASELINE_ELECTRON_REACHING_MODULES`. F-1b is dormant, not live. Plan 11
+> deliberately did not add its keyring slot.
 
 **Phase 34.5 — HELD at plan 15 of 15.** Its live gate's precondition is 34.4.1's own
 gate, and 34.5-15 mints real OAuth credentials over the seam that F-1 leaves in
