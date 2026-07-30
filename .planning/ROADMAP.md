@@ -1490,7 +1490,7 @@ keyring slot design is fixed.
 
 - [ ] 34.4.1-10-PLAN.md — SWEEP: mechanical two-axis seam-parity audit + a regression guard that FAILS when the two branches diverge again (wave 1)
 - [ ] 34.4.1-11-PLAN.md — F-1a: compile-time keyring slot ALLOWLIST, all four arms slot-aware, T-28-03 preserved, Steam token untouched (wave 2)
-- [ ] 34.4.1-12-PLAN.md — F-1b: dual-build Humble secret-store seam + async accessors, Electron behavior byte-identical (wave 3)
+- [ ] 34.4.1-12-PLAN.md — F-1 (seam): dual-build Humble secret-store seam + async accessors, Electron behavior byte-identical (wave 3)
 - [ ] 34.4.1-13-PLAN.md — **F-1 CLOSED (code)**: keyring-backed Humble store + verified-readback plaintext migration + disconnect clears the slots (wave 4)
 - [ ] 34.4.1-14-PLAN.md — F-1b (steamgrid): settle reachability by measurement, then migrate or declare with evidence (wave 5)
 - [ ] 34.4.1-15-PLAN.md — F-6a: NEW origin-scoped storage-clear capability in Rust + seam method (wave 5)
