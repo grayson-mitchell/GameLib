@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-14-PLAN.md
-last_updated: "2026-07-30T09:32:07.380Z"
+stopped_at: Completed 34.4.1-15-PLAN.md
+last_updated: "2026-07-30T09:56:29.556Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 140
+  completed_plans: 141
   percent: 71
 ---
 
@@ -67,7 +67,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 15 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 16 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 > **D-GAP-03 (2026-07-30, user-approved) — sweep finding S-09 routed into plan 18.**
@@ -1810,7 +1810,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2676,6 +2676,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P12 | ~20min | 2 tasks | 8 files |
 | Phase 34.4.1 P13 | 40min | 2 tasks | 6 files |
 | Phase 34.4.1 P14 | 20min | 2 tasks | 2 files |
+| Phase 34.4.1 P15 | 55min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -3016,6 +3017,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: Migration write/readback calls requestRustInvoke directly rather than the totalized SidecarKeyringSlotStore methods, so each of the three failure modes can be distinguished and logged exactly once
 - [Phase 34.4.1]: encryptionDegraded is only ever explicitly cleared to false on migration success; a failure path never explicitly sets it true (it is already true on the Tauri plaintext shape being migrated)
 - [Phase 34.4.1-14]: F-1b (steamgrid API key) closed by evidenced declaration, not migration -- re-check confirmed still NOT REACHABLE from the sidecar; no Rust allowlist slot added (would address a slot nothing writes to yet)
+- [Phase 34.4.1-15]: Origin-vs-domain gap left OPEN, not silently closed: humble_login_clear_storage clears exactly the www. origin's storage (HUMBLE_BASE_URL); a hypothetical bare apex origin is not reached. Believed complete in practice per this phase's transcripts, but not proven -- plan 16/20 should re-confirm before treating F-6 as fully closed.
+- [Phase 34.4.1-15]: clear_storage_script built via a placeholder-token .replace() (@@EXFIL_HOST@@) instead of format!'s brace-escaping, since the script's heavy JS object/brace nesting would make brace-escaping unreadable/error-prone for its one interpolated value (exfil_host).
 
 ### Pending Todos
 
@@ -3088,8 +3091,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T09:32:07.372Z
-Stopped at: Completed 34.4.1-14-PLAN.md
+Last session: 2026-07-30T09:56:29.547Z
+Stopped at: Completed 34.4.1-15-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
   `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan
