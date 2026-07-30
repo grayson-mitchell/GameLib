@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-18-PLAN.md
-last_updated: "2026-07-30T11:03:05.460Z"
+stopped_at: Completed 34.4.1-19-PLAN.md
+last_updated: "2026-07-30T11:20:16.338Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 144
-  percent: 93
+  completed_plans: 145
+  percent: 94
 ---
 
 # Project State
@@ -40,9 +40,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > **GAP CYCLE PLANNED 2026-07-30 — plans 10–20, 10 waves** (`8561926b3`, checker fixes `4002f7c6f`).
 > Order: **10 sweep → 11 keyring allowlist → 12 secret-store seam → 13 F-1 CLOSED → 14 steamgrid ∥
 > 15 storage-clear capability → 16 F-6 CLOSED → 17 jar census/F-5 → 18 F-2/F-3/F-4/F-8 → 19 declare
-> → 20 blocking gate re-run (`autonomous: false`)**.
-> Next action: **`/gsd-execute-phase 34.4.1`** (starts at plan 10; plan 11's allowlist scope depends
-> on the sweep naming every secret-storage caller first).
+> (DONE 2026-07-30, `34.4.1-19-SUMMARY.md`) → 20 blocking gate re-run (`autonomous: false`)**.
+> Next action: **plan 20** — the blocking live-gate re-run. Plan 19 minted `REQ-34.4.1-GAP-01..06`,
+> reset `humbleStartLogin`/`humbleReconnect`'s riders to honest forward references, and left an
+> explicit GATED-updates checklist in `34.4.1-19-SUMMARY.md` for plan 20 Task 3 to consume.
 >
 > **Planning found a twin of F-6 already shipped:** `storeManagers/legendary/user.ts:107-151`
 > (Phase 34.5 plan 06) carries the same 5-vs-1 wipe-step asymmetry *verbatim*, with an in-source
@@ -67,7 +68,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 19 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 20 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 > **D-GAP-03 (2026-07-30, user-approved) — sweep finding S-09 routed into plan 18.**
@@ -82,9 +83,17 @@ execution starts at plan 10)
 > both `src-tauri/src/main.rs` and `humble/user.ts`. A `humble-csrf` keyring slot already exists
 > from plan 11 if the fix needs one.
 >
-> **Carry-forward for plan 19:** `REQ-34.4.1-GAP-04` returned `not_found` from
-> `requirements.mark-complete` — the gap-cycle `REQ-34.4.1-GAP-0*` IDs were never appended to
-> `REQUIREMENTS.md`'s traceability table. Plan 19 must reconcile them, not silently skip them.
+> **Carry-forward for plan 19 — RESOLVED 2026-07-30:** `REQ-34.4.1-GAP-01..06` are now minted in
+> `REQUIREMENTS.md`, each naming the existing requirement it extends and the finding it closes.
+> `REQ-34.4.1-02`/`-05`/`-06`/`-12` are reopened to UNCHECKED with dated riders. See
+> `34.4.1-19-SUMMARY.md`'s GATED-updates checklist for exactly what plan 20 may re-check.
+>
+> **New carry-forward, plan 19 → unassigned:** `seam-parity-sweep.py`'s `categories_for_labels()`
+> mapping table still doesn't recognize `clearHumbleStorage`/`clearEpicStorage` (S-07/S-10 report
+> stale SILENTLY-DROPPED for already-closed F-6), and `secretStore.ts`'s doc comment still can't
+> satisfy `is_axis_b_declared()`'s strict id+term bar (S-11 reports stale SILENTLY-DROPPED for
+> already-closed F-1). Plan 19's own `files_modified` didn't include the sweep script, so this is
+> logged to `deferred-items.md` and re-forwarded, not fixed — no plan currently owns it.
 >
 > **Carry-forward for plan 14:** plan 10 proved `steamgrid/secureKey.ts` (F-1b) is NOT reachable
 > from the sidecar's curated import graph today — reached only from `src/backend/main.ts`, absent
@@ -1810,7 +1819,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2680,6 +2689,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P16 | 50min | 3 tasks | 5 files |
 | Phase 34.4.1 P17 | 45min | 2 tasks | 4 files |
 | Phase 34.4.1 P18 | 30min | 4 tasks | 8 files |
+| Phase 34.4.1 P19 | 55min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -3028,6 +3038,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: Reveal transport label (F-8) is now derived from getLoginWindowSeam() !== null at log time -- the same condition humblePostRequest branches its dispatch on -- instead of a hardcoded 'electron-net transport' literal that went stale when Plan 04 landed
 - [Phase 34.4.1]: F-4: raise-and-focus-on-creation (.focused(true)) chosen over permanent always-on-top for the visible Humble login window; 900x700 inner size.
 - [Phase 34.4.1]: S-09: the login-window seam CAN serve a cookie read outside a live login window via a temporary hidden window (same pattern as disconnect's clearHumbleCookies step) -- not declared unreachable.
+- [Phase 34.4.1]: Gap-cycle GAP-01/GAP-04/GAP-06 checked (unit/cargo-proven, no live-gate dependency); GAP-02/GAP-03/GAP-05 stay unchecked (their own claim is what plan 20's live gate must observe)
+- [Phase 34.4.1]: seam-parity-sweep.py's S-07/S-10/S-11 categorization staleness re-forwarded, not fixed by plan 19 (out of its declared files_modified); no plan currently owns it
 
 ### Pending Todos
 
@@ -3100,7 +3112,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T11:03:05.451Z
+Last session: 2026-07-30T11:19:19.943Z
 Stopped at: Completed 34.4.1-18-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:

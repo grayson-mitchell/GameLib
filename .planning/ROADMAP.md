@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 18/20 plans executed
+**Plans:** 19/20 plans executed
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1497,7 +1497,7 @@ keyring slot design is fixed.
 - [x] 34.4.1-16-PLAN.md — **F-6 CLOSED (code)**: wire storage clear into Humble disconnect AND Legendary logout, parity guard upgraded to enforced (wave 6)
 - [x] 34.4.1-17-PLAN.md — F-5 + F-8: disconnect jar census makes domain scope observable; reveal transport label derived, not hardcoded (wave 7)
 - [x] 34.4.1-18-PLAN.md — F-2 + F-4 + F-3: state-change poll logging, sized/centered/raised login window (no title, WR-07), named identity endpoint (wave 8)
-- [ ] 34.4.1-19-PLAN.md — Declare the gap cycle in PORTED-CHANNELS + mint REQ-34.4.1-GAP-01..06; every item-3-gated update stays gated (wave 9)
+- [x] 34.4.1-19-PLAN.md — Declare the gap cycle in PORTED-CHANNELS + mint REQ-34.4.1-GAP-01..06; every item-3-gated update stays gated (wave 9)
 - [ ] 34.4.1-20-PLAN.md — **BLOCKING live gate RE-RUN**: items 1+3 in full, 2+4 for regression; gated record updates applied only on the measured result (wave 10, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
