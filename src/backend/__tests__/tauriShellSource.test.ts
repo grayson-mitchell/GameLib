@@ -241,7 +241,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // reveal-POST arm -- main.rs's own #[cfg(test)] mod is the behavioral proof for its pure
       // logic (arg validation, script templating/escaping); this gate only pins that no
       // OTHER, undeclared arm has crept in since.
-      'humble_reveal_post'
+      'humble_reveal_post',
+      // 34.4.1 gap cycle plan 15 (F-6 BLOCKING, REQ-34.4.1-06/REQ-34.4.1-GAP-03) legitimately
+      // added exactly this one origin-scoped storage-clear arm -- main.rs's own #[cfg(test)]
+      // mod is the behavioral proof for its pure logic (arg validation, script templating/
+      // escaping/await-ordering); this gate only pins that no OTHER, undeclared arm has crept
+      // in since.
+      'humble_login_clear_storage'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

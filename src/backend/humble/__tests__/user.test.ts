@@ -1059,6 +1059,10 @@ describe('HumbleUser', () => {
     // mock exists purely so this fake object still satisfies the (now five-plus-one-method)
     // interface at compile time.
     const mockSeamRevealPost = jest.fn()
+    // 34.4.1 gap cycle plan 15 (F-6): LoginWindowSeam gained clearStorage. Same reasoning as
+    // mockSeamRevealPost above — this describe block never exercises it (plan 16 wires the real
+    // call site), the mock exists purely so this fixture still satisfies the widened interface.
+    const mockSeamClearStorage = jest.fn()
 
     const fakeSeam: LoginWindowSeam = {
       open: (...args: Parameters<LoginWindowSeam['open']>) =>
@@ -1072,7 +1076,9 @@ describe('HumbleUser', () => {
       clearCookies: (...args: Parameters<LoginWindowSeam['clearCookies']>) =>
         mockSeamClearCookies(...args),
       revealPost: (...args: Parameters<LoginWindowSeam['revealPost']>) =>
-        mockSeamRevealPost(...args)
+        mockSeamRevealPost(...args),
+      clearStorage: (...args: Parameters<LoginWindowSeam['clearStorage']>) =>
+        mockSeamClearStorage(...args)
     }
 
     beforeEach(() => {

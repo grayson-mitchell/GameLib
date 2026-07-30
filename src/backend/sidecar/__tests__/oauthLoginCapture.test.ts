@@ -224,7 +224,8 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
       mockSeamTakeEvents(...args),
     close: (...args: Parameters<LoginWindowSeam['close']>) => mockSeamClose(...args),
     clearCookies: jest.fn(),
-    revealPost: jest.fn()
+    revealPost: jest.fn(),
+    clearStorage: jest.fn()
   }
 
   beforeEach(() => {

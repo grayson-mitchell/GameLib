@@ -61,7 +61,8 @@ import {
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
-  RUST_HUMBLE_REVEAL_POST
+  RUST_HUMBLE_REVEAL_POST,
+  RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from '../../common/types/sidecarTransport'
 import { HumbleUser } from '../humble/user'
 import { standardBrowserUserAgent } from '../humble/userAgent'
@@ -72,7 +73,9 @@ import {
   type LoginWindowSeam,
   type LoginWindowCookie,
   type LoginWindowCookieRead,
-  type LoginWindowNavEvent
+  type LoginWindowNavEvent,
+  type StorageClearCategoryResult,
+  type LoginWindowStorageClearResult
 } from '../humble/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
@@ -115,6 +118,25 @@ function coerceNavEvent(raw: unknown): LoginWindowNavEvent {
     event,
     url: typeof entry?.url === 'string' ? entry.url : ''
   }
+}
+
+/**
+ * Coerces one category value from a `humble_login_clear_storage` response (Phase 34.4.1 Plan
+ * 15, F-6 BLOCKING, T-34.4.1-67). A finite number or the literal string `'unsupported'` pass
+ * through unchanged; anything else (missing key, boolean, non-finite number, arbitrary string)
+ * is a malformed response and THROWS -- never silently coerced to `0`, which would recreate
+ * F-6's exact failure mode one layer down (see `createRustLoginWindowSeam`'s own doc comment).
+ */
+function coerceStorageClearCategory(raw: unknown): StorageClearCategoryResult {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw
+  }
+  if (raw === 'unsupported') {
+    return 'unsupported'
+  }
+  throw new Error(
+    `humble_login_clear_storage: malformed category value (expected a finite number or 'unsupported'): ${JSON.stringify(raw)}`
+  )
 }
 
 /**
@@ -228,6 +250,33 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
         )
       }
       return { status: record.status, body: record.body }
+    },
+
+    // 34.4.1 gap cycle plan 15 (F-6 BLOCKING, D-08/Pitfall 3, T-34.4.1-66/-67/-70,
+    // REQ-34.4.1-06/REQ-34.4.1-GAP-03): NOT yet called anywhere -- plan 16 wires this into the
+    // two disconnect paths. Unlike every other method on this seam, this one's rejection is
+    // deliberately propagated, not swallowed here -- plan 16's guarded `wipeSteps` entry owns
+    // that swallow. A seam method that faked success on a structural failure would recreate
+    // F-6's exact failure mode (disconnect silently not disconnecting) one layer down.
+    async clearStorage(originUrl, userAgent) {
+      const result = await requestRustInvoke(RUST_HUMBLE_LOGIN_CLEAR_STORAGE, [
+        originUrl,
+        userAgent
+      ])
+      const record = result as Record<string, unknown> | null
+      if (!record || typeof record !== 'object') {
+        throw new Error(
+          `humble_login_clear_storage: malformed response (expected an object): ${JSON.stringify(result)}`
+        )
+      }
+      const report: LoginWindowStorageClearResult = {
+        localStorage: coerceStorageClearCategory(record.localStorage),
+        sessionStorage: coerceStorageClearCategory(record.sessionStorage),
+        indexedDB: coerceStorageClearCategory(record.indexedDB),
+        caches: coerceStorageClearCategory(record.caches),
+        serviceWorkers: coerceStorageClearCategory(record.serviceWorkers)
+      }
+      return report
     }
   }
 }

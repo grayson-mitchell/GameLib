@@ -958,7 +958,8 @@ describe('revealKey', () => {
         takeEvents: jest.fn(),
         close: jest.fn(),
         clearCookies: jest.fn(),
-        revealPost
+        revealPost,
+        clearStorage: jest.fn()
       }
     }
 
