@@ -1452,10 +1452,10 @@ Plans:
 `humbleRevealKey`. The seam is **not Humble-specific** — the same element serves Epic, GOG and
 Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
-**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13
+**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 8/9 plans executed
+**Plans:** 9/20 plans executed — plans 10-20 are the GAP CYCLE opened by plan 08's FAILED live gate
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1480,7 +1480,25 @@ Plans:
 - [x] 34.4.1-09-PLAN.md — Wire the 4 OAuth runners to the seam: per-runner redirect capture (all four shapes), oauthCaptureLogin channel, UNPORTED_CHANNEL_MARKER surfaced as declared-blocked (wave 4)
 - [x] 34.4.1-06-PLAN.md — Domain-scoped humbleDisconnect clear + reach-ledger regeneration + both Discretion sweeps (wave 5)
 - [x] 34.4.1-07-PLAN.md — 34.4.1-PORTED-CHANNELS.md + SEAM §3→§1 + self-tested gate script (wave 6)
-- [ ] 34.4.1-08-PLAN.md — Blocking 4-item live gate under tauri:dev, results recorded, falsified statements struck (wave 7, non-autonomous)
+- [x] 34.4.1-08-PLAN.md — Blocking 4-item live gate under tauri:dev, results recorded, falsified statements struck (wave 7, non-autonomous) — **RAN 2026-07-30, VERDICT FAIL 2/4**; 8 findings, 2 blocking (F-1 plaintext session, F-6 disconnect does not disconnect)
+
+**GAP CYCLE (planned 2026-07-30 from `34.4.1-LIVE-GATE.md` § Verdict + D-GAP-01/D-GAP-02).**
+Ordering is binding: **sweep → F-1 → the rest → re-run the gate.** F-1 and F-6 share one root
+shape — an Electron capability silently dropped at the Tauri seam, invisible to a green
+3279/3279 suite — so the sweep runs first, with all secret-storage callers known before the
+keyring slot design is fixed.
+
+- [ ] 34.4.1-10-PLAN.md — SWEEP: mechanical two-axis seam-parity audit + a regression guard that FAILS when the two branches diverge again (wave 1)
+- [ ] 34.4.1-11-PLAN.md — F-1a: compile-time keyring slot ALLOWLIST, all four arms slot-aware, T-28-03 preserved, Steam token untouched (wave 2)
+- [ ] 34.4.1-12-PLAN.md — F-1b: dual-build Humble secret-store seam + async accessors, Electron behavior byte-identical (wave 3)
+- [ ] 34.4.1-13-PLAN.md — **F-1 CLOSED (code)**: keyring-backed Humble store + verified-readback plaintext migration + disconnect clears the slots (wave 4)
+- [ ] 34.4.1-14-PLAN.md — F-1b (steamgrid): settle reachability by measurement, then migrate or declare with evidence (wave 5)
+- [ ] 34.4.1-15-PLAN.md — F-6a: NEW origin-scoped storage-clear capability in Rust + seam method (wave 5)
+- [ ] 34.4.1-16-PLAN.md — **F-6 CLOSED (code)**: wire storage clear into Humble disconnect AND Legendary logout, parity guard upgraded to enforced (wave 6)
+- [ ] 34.4.1-17-PLAN.md — F-5 + F-8: disconnect jar census makes domain scope observable; reveal transport label derived, not hardcoded (wave 7)
+- [ ] 34.4.1-18-PLAN.md — F-2 + F-4 + F-3: state-change poll logging, sized/centered/raised login window (no title, WR-07), named identity endpoint (wave 8)
+- [ ] 34.4.1-19-PLAN.md — Declare the gap cycle in PORTED-CHANNELS + mint REQ-34.4.1-GAP-01..06; every item-3-gated update stays gated (wave 9)
+- [ ] 34.4.1-20-PLAN.md — **BLOCKING live gate RE-RUN**: items 1+3 in full, 2+4 for regression; gated record updates applied only on the measured result (wave 10, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
