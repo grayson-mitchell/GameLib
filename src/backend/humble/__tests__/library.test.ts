@@ -255,6 +255,10 @@ import {
   HUMBLE_CLASSIFIER_VERSION
 } from '../constants'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
+import {
+  setLoginWindowSeam,
+  type LoginWindowSeam
+} from '../loginWindowSeam'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -2770,6 +2774,53 @@ describe('HumbleLibrary', () => {
         machineName: 'gk1_key',
         keyindex: 'idx-1'
       })
+    })
+
+    // ── Phase 34.4.1 gap-cycle plan 17 (F-8) ──────────────────────────────
+    // The literal "electron-net transport" used to be stamped unconditionally.
+    // These two cases prove the label is now DERIVED from
+    // `getLoginWindowSeam()` at log time — the same condition
+    // `humblePostRequest` (`adapter.ts`) branches its dispatch on — so the
+    // log can never again contradict which transport actually ran.
+
+    test('F-8: with a login-window seam installed, the calling-adapter log line names the seam transport, not electron-net', async () => {
+      // adapterRevealKey is mocked in this file (see jest.mock('../adapter', ...)
+      // above) — this test only proves library.ts's LOG LABEL derivation,
+      // not the real adapter.ts dispatch (covered by adapter.test.ts).
+      setLoginWindowSeam({} as LoginWindowSeam)
+      try {
+        libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+        mockAdapterRevealKey.mockResolvedValue({
+          status: 'ok',
+          data: { key: 'K' }
+        })
+
+        await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+        const call = mockLogInfo.mock.calls.find((c) =>
+          String(c[0][0]).includes('login-window seam transport')
+        )
+        expect(call).toBeDefined()
+        expect(String(call?.[0][0])).not.toContain('electron-net transport')
+      } finally {
+        setLoginWindowSeam(null)
+      }
+    })
+
+    test('F-8: with no seam installed, the calling-adapter log line still names the electron-net transport (regression)', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({
+        status: 'ok',
+        data: { key: 'K' }
+      })
+
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      const call = mockLogInfo.mock.calls.find((c) =>
+        String(c[0][0]).includes('electron-net transport')
+      )
+      expect(call).toBeDefined()
+      expect(String(call?.[0][0])).not.toContain('login-window seam transport')
     })
 
     test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {

@@ -38,6 +38,7 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
+import { getLoginWindowSeam } from './loginWindowSeam'
 import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
 import { SteamUser } from 'backend/storeManagers/steam/user'
 import { GameInfo } from 'common/types'
@@ -1183,13 +1184,27 @@ async function doRevealKey(
   // value) — the open question of whether a given reveal attempt actually
   // carried the csrf-prevention-token header can otherwise only be answered
   // by re-deriving it from unrelated config.json timestamps. Round 6:
-  // "electron-net transport" is stamped into this line so the NEXT gamelib.log
-  // capture is unambiguous about which round's fix actually ran (round 5's
-  // fullCookieJarPresent field is retired along with getFullCookieHeader —
-  // superseded by the transport's native cookie attachment, see user.ts).
+  // "electron-net transport" was originally stamped into this line so the
+  // NEXT gamelib.log capture would be unambiguous about which round's fix
+  // actually ran (round 5's fullCookieJarPresent field is retired along with
+  // getFullCookieHeader — superseded by the transport's native cookie
+  // attachment, see user.ts).
+  //
+  // Phase 34.4.1 gap-cycle plan 17 (F-8): that literal was correct when
+  // written and became FALSE the moment Plan 04's seam transport landed —
+  // under Tauri the POST goes through `humblePostRequestViaSeam`
+  // (`adapter.ts`), not `net.request`, so the hardcoded string misreported
+  // its own capture. The label below is now DERIVED from
+  // `getLoginWindowSeam()` at the moment of logging — the exact same
+  // condition `humblePostRequest` (`adapter.ts`) branches its dispatch on —
+  // so the log line can never again contradict which transport actually ran.
+  const revealTransportLabel =
+    getLoginWindowSeam() !== null
+      ? 'login-window seam transport'
+      : 'electron-net transport'
   logInfo(
     [
-      'Humble reveal: calling adapter (electron-net transport), csrfTokenPresent=' +
+      `Humble reveal: calling adapter (${revealTransportLabel}), csrfTokenPresent=` +
         String(csrfToken !== undefined),
       gamekey,
       machineName
