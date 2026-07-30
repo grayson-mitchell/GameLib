@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1 gap cycle EXECUTING (plans 10-20) — starting at plan 10
-last_updated: "2026-07-30T07:15:12.867Z"
-last_activity: 2026-07-30 -- Phase 34.4.1 execution started
+stopped_at: Completed 34.4.1-10-PLAN.md
+last_updated: "2026-07-30T07:58:11.197Z"
+last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 134
+  completed_plans: 136
   percent: 71
 ---
 
@@ -67,7 +67,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 10 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 11 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 **Phase 34.5 — HELD at plan 15 of 15.** Its live gate's precondition is 34.4.1's own
@@ -1789,7 +1789,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 88%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
@@ -1814,7 +1814,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Executing Phase 34.4.1
+Status: Ready to execute
 
 > NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
 > ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
@@ -2045,7 +2045,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-30 -- Phase 34.4.1 execution started
+Last activity: 2026-07-30
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -2645,6 +2645,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P12 | 45min | 3 tasks | 2 files |
 | Phase 34.5 P13 | 55min | 3 tasks | 2 files |
 | Phase 34.5 P14 | 13min | 2 tasks | 2 files |
+| Phase 34.4.1 P10 | 65min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -2976,6 +2977,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: 34.5-14: Proof levels for the 11 auth channels assigned per actual login-flow involvement, not blanket-applied (only channels a real login exercises carry LIVE)
 - [Phase 34.5]: 34.5-14: Only runWineCommand carries LIVE (item 5) in the 9-channel Wine cluster, since item 5 scopes the gate to that one channel
 - [Phase 34.5]: 34.5-14: getDefaultSavePath-unported and save_sync.ts reach-baseline corrections given their own labeled subsection in PORTED-CHANNELS.md rather than folded silently into a Riders cell
+- [Phase 34.4.1]: 34.4.1-10: DECLARED classification requires a category/term-level match, not id proximity, on BOTH axes -- an id-only bar would have wrongly cleared both F-6 (Axis A) and F-1 (Axis B, caught pre-commit)
+- [Phase 34.4.1]: 34.4.1-10: checkHealthAndFlagExpiry's unguarded session.fromPartition() call is a NEW finding (S-09), not anticipated at planning time, routed to plan 34.4.1-16 alongside F-6
 
 ### Pending Todos
 
@@ -3048,8 +3051,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-29T09:51:37.534Z
-Stopped at: Completed 34.5-14-PLAN.md
+Last session: 2026-07-30T07:58:11.187Z
+Stopped at: Completed 34.4.1-10-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
