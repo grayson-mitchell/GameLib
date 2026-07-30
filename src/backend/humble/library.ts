@@ -787,7 +787,7 @@ async function runSync(): Promise<SyncOutcome> {
   const generation = currentSyncGeneration()
   const isStale = () => generation !== currentSyncGeneration()
 
-  const cookie = HumbleUser.getCredentials()
+  const cookie = await HumbleUser.getCredentials()
   if (!cookie) {
     return { status: 'failed' }
   }
@@ -1157,7 +1157,7 @@ async function doRevealKey(
   // cookie VALUE is no longer threaded into the adapter call (round 6: the
   // reveal POST's electron-net transport sources the live `persist:humble`
   // partition's cookie jar natively; see adapterRevealKey/humblePostRequest).
-  if (!HumbleUser.getCredentials()) {
+  if (!(await HumbleUser.getCredentials())) {
     logWarning(
       ['Humble reveal: failed (no stored credentials):', gamekey, machineName],
       LogPrefix.Backend

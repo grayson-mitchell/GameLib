@@ -849,7 +849,7 @@ describe('HumbleUser', () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'csrfToken' ? csrfCall![1] : undefined
       )
-      expect(HumbleUser.getCsrfToken()).toBe('raw-csrf-value')
+      await expect(HumbleUser.getCsrfToken()).resolves.toBe('raw-csrf-value')
     })
 
     test('csrf_cookie absent at login: nothing stored, login still completes, getCsrfToken() returns undefined (no crash)', async () => {
@@ -872,13 +872,13 @@ describe('HumbleUser', () => {
 
       // configStore never had a csrfToken written — get_nodefault's default
       // beforeEach() wiring (returns undefined) models this correctly.
-      expect(HumbleUser.getCsrfToken()).toBeUndefined()
+      await expect(HumbleUser.getCsrfToken()).resolves.toBeUndefined()
     })
 
-    test('getCsrfToken() returns undefined when configStore has never seen a csrfToken key at all', () => {
+    test('getCsrfToken() returns undefined when configStore has never seen a csrfToken key at all', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
       expect(() => HumbleUser.getCsrfToken()).not.toThrow()
-      expect(HumbleUser.getCsrfToken()).toBeUndefined()
+      await expect(HumbleUser.getCsrfToken()).resolves.toBeUndefined()
     })
 
     test('csrfToken lives on configStore and is wiped by disconnect() alongside the session cookie', async () => {

@@ -1113,6 +1113,12 @@ describe('HumbleLibrary', () => {
       const first = HumbleLibrary.sync()
       const second = HumbleLibrary.sync()
 
+      // Phase 34.4.1 Plan 12: HumbleUser.getCredentials() is now async
+      // (routed through the seam), inserting one microtask tick before
+      // runSync() reaches its getGamekeys() call — flush it before resolving,
+      // or resolveGamekeys is still the pre-call closure variable.
+      await flushAsync()
+
       resolveGamekeys({ status: 'ok', data: [] })
 
       await expect(first).resolves.toEqual({ status: 'ok' })

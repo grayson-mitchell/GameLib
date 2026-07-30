@@ -185,9 +185,31 @@ const ENTRY_POINTS = [
 // rather than absorbed silently -- this is a planning-time gap, not a defect
 // in this measurement. See 34.5-13-SUMMARY.md for the full before/after
 // captured output and the corrected claim.
+// Phase 34.4.1 Plan 12 (REQ-34.4.1-02/REQ-34.4.1-GAP-02, gap-cycle closure for
+// F-1/S-10, 34.3 D-10 standing rule) extended the measured set by exactly one
+// module: src/backend/humble/secretStore.ts. This plan moved the
+// encryptionAvailable/encryptCookie/decryptCookie bodies (which used to live
+// inline in humble/user.ts:1's `import { safeStorage, session } from
+// 'electron'`) into a new dedicated module, secretStore.ts, which now carries
+// its OWN direct `import { safeStorage } from 'electron'`. humble/user.ts is
+// unchanged in the baseline (it still imports `session` from 'electron'
+// directly at its own line 1) -- this is a NEW edge, not a moved one, since
+// user.ts's electron-importing status does not depend on secretStore.ts's.
+// Re-ran computeElectronReach() via the standing temporary-print-statement
+// procedure at execution time (before: 34 electron-importing modules; after:
+// 35 modules -- the ONE new addition below). No other module entered or left
+// the set.
 const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   'src/backend/constants/paths.ts',
   'src/backend/dialog/dialog.ts',
+  // Phase 34.4.1 Plan 12 (D-10 standing rule): humbleFlowRegistration.ts ->
+  // humble/user.ts (direct) -> humble/user.ts's
+  // `import { getHumbleSecretStore, type HumbleSecretKey } from
+  // './secretStore'` -> secretStore.ts:1 `import { safeStorage } from
+  // 'electron'`. This is the Electron-implementation half of the Humble
+  // secret-store seam (F-1's fix prerequisite) -- it must run under Electron,
+  // so unlike loginWindowSeam.ts it is not exempt from a direct import.
+  'src/backend/humble/secretStore.ts',
   // Phase 34.4 Plan 08 (D-10): humbleFlowRegistration.ts -> humble/library.ts
   // (direct) -> humble/library.ts:12
   // (`import { getGamekeys, getOrderDetail, revealKey as adapterRevealKey } from './adapter'`)

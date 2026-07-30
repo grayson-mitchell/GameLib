@@ -1,4 +1,4 @@
-import { safeStorage, session } from 'electron'
+import { session } from 'electron'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
@@ -7,15 +7,14 @@ import { configStore, humbleLibraryStore, humbleSyncStore } from './electronStor
 import {
   HUMBLE_BASE_URL,
   HUMBLE_LOGIN_PARTITION,
-  HUMBLE_LOGIN_URL,
-  HUMBLE_TOKEN_PREFIX,
-  HUMBLE_TOKEN_STORE_KEY
+  HUMBLE_LOGIN_URL
 } from './constants'
 import { getAccountIdentity, getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
 import { getLoginWindowSeam, classifyCookieRead } from './loginWindowSeam'
+import { getHumbleSecretStore, type HumbleSecretKey } from './secretStore'
 
 // Re-exported so existing callers (ipc_handler.ts's humbleGetLoginUserAgent
 // handler, user.test.ts) are unaffected by the round-6 move into its own
@@ -68,60 +67,29 @@ type LoginResult = {
   username?: string
 }
 
-// ── Encryption helpers ────────────────────────────────────────────────────
-// Mirrors src/backend/storeManagers/steam/user.ts's encryptToken/decryptToken
-// shape exactly, renamed for Humble's TOKEN_PREFIX. Required deviation
-// (success criterion 5 / Pitfall 5): when encryption is unavailable, this
-// records a user-visible `encryptionDegraded` flag in addition to the dev
-// log — Steam's verbatim behavior (log-only) under-delivers here.
-
-function encryptionAvailable(): boolean {
-  try {
-    return safeStorage.isEncryptionAvailable()
-  } catch {
-    return false
-  }
-}
-
-function encryptCookie(plain: string): string {
-  if (!plain) return ''
-  if (!encryptionAvailable()) {
-    logWarning(
-      'safeStorage unavailable — storing Humble session in plaintext (degraded encryption)',
-      LogPrefix.Backend
-    )
-    // Warn-and-store (Open Question 1 recommendation): do not refuse to
-    // persist the session, but make the degradation user-visible so the
-    // Manage Accounts tile can surface it rather than storing silently.
-    configStore.set('encryptionDegraded', true)
-    return plain
-  }
-  const ciphertext = safeStorage.encryptString(plain).toString('base64')
-  // WR-07: the healthy path clears the flag — a user who once logged in with
-  // safeStorage unavailable and later re-logs in on a fixed system (keychain
-  // unlocked, kwallet installed) must not keep seeing the stale
-  // reduced-encryption warning.
-  configStore.set('encryptionDegraded', false)
-  return `${HUMBLE_TOKEN_PREFIX}${ciphertext}`
-}
-
-function decryptCookie(stored: string): string {
-  if (!stored) return ''
-  if (!stored.startsWith(HUMBLE_TOKEN_PREFIX)) {
-    // Legacy/plaintext fallback (degraded-encryption path above)
-    return stored
-  }
-  if (!encryptionAvailable()) return ''
-  try {
-    const buf = Buffer.from(stored.slice(HUMBLE_TOKEN_PREFIX.length), 'base64')
-    return safeStorage.decryptString(buf)
-  } catch (err) {
-    logWarning(
-      ['Failed to decrypt Humble session cookie:', err],
-      LogPrefix.Backend
-    )
-    return ''
-  }
+// ── Credential encryption seam ───────────────────────────────────────────
+// Phase 34.4.1 Plan 12 (gap-cycle closure for F-1/S-10, REQ-34.4.1-02/
+// REQ-34.4.1-GAP-02): the encryptionAvailable/encryptCookie/decryptCookie
+// free functions that used to live here have moved verbatim into
+// secretStore.ts's ElectronHumbleSecretStore — this is the ONLY place their
+// bodies exist now. `user.ts` never touches the Electron encryption API
+// directly again; every read/write goes through `getHumbleSecretStore()`.
+//
+// The user-visible "encryption degraded" flag stays HERE (not in the seam):
+// it is a UI concern, driven off `isAvailable()`, that the Manage Accounts
+// tile surfaces — required deviation (success criterion 5 / Pitfall 5) from
+// Steam's verbatim behavior (log-only), which under-delivers for Humble.
+// WR-07: the healthy path always clears the flag (explicitly `false`, not
+// merely "not set to true") — a user who once logged in with encryption
+// unavailable and later re-logs in on a fixed system must not keep seeing
+// the stale reduced-encryption warning.
+async function storeHumbleSecret(
+  key: HumbleSecretKey,
+  value: string
+): Promise<void> {
+  const store = getHumbleSecretStore()
+  await store.setSecret(key, value)
+  configStore.set('encryptionDegraded', !(await store.isAvailable()))
 }
 
 // Handle to the currently-running login watch (if any), so stopLogin() /
@@ -148,25 +116,23 @@ export class HumbleUser {
     return configStore.get_nodefault('userData')
   }
 
-  static getCredentials(): string | undefined {
-    const stored = configStore.get_nodefault('sessionCookie')
-    if (!stored || typeof stored !== 'string') return undefined
-
-    const cookie = decryptCookie(stored)
+  // Async since Phase 34.4.1 Plan 12: routed through getHumbleSecretStore(),
+  // whose keyring-backed implementation (plan 13) cannot be synchronous.
+  // Precedent: storeManagers/steam/user.ts's SteamUser.getCredentials() has
+  // been async since Phase 28 for exactly this reason.
+  static async getCredentials(): Promise<string | undefined> {
+    const cookie = await getHumbleSecretStore().getSecret('sessionCookie')
     if (!cookie) return undefined
     return cookie
   }
 
   // ── Phase 14 (T-14-04): optional CSRF token for the reveal endpoint ──────
-  // Mirrors getCredentials() exactly — same encrypted-configStore-key
-  // pattern. Main-process-only: this value must NEVER be included in any
+  // Mirrors getCredentials() exactly — same seam-routed pattern. Main-
+  // process-only: this value must NEVER be included in any
   // sendFrontendMessage payload or HumbleAuthState (see finishLogin's
   // capture site and the class-level doc comment above).
-  static getCsrfToken(): string | undefined {
-    const stored = configStore.get_nodefault('csrfToken')
-    if (!stored || typeof stored !== 'string') return undefined
-
-    const token = decryptCookie(stored)
+  static async getCsrfToken(): Promise<string | undefined> {
+    const token = await getHumbleSecretStore().getSecret('csrfToken')
     if (!token) return undefined
     return token
   }
@@ -598,8 +564,7 @@ export class HumbleUser {
     // backend logged-in while the tile shows disconnected until restart.
     if (isSettled()) return 'transient'
 
-    const encrypted = encryptCookie(cookieValue)
-    configStore.set(HUMBLE_TOKEN_STORE_KEY, encrypted)
+    await storeHumbleSecret('sessionCookie', cookieValue)
     configStore.set('isLoggedIn', true)
     configStore.set('expired', false)
 
@@ -621,7 +586,7 @@ export class HumbleUser {
         ])
         const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
         if (match && match.value) {
-          configStore.set('csrfToken', encryptCookie(match.value))
+          await storeHumbleSecret('csrfToken', match.value)
         }
       } else {
         const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
@@ -630,7 +595,7 @@ export class HumbleUser {
           name: 'csrf_cookie'
         })
         if (csrfCookies.length > 0 && csrfCookies[0].value) {
-          configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+          await storeHumbleSecret('csrfToken', csrfCookies[0].value)
         }
       }
     } catch (err) {
@@ -686,7 +651,7 @@ export class HumbleUser {
   // ── HACCT-02: Startup/401 expiry health check (D-08/D-09) ────────────────
 
   static async checkHealthAndFlagExpiry(): Promise<void> {
-    const cookie = HumbleUser.getCredentials()
+    const cookie = await HumbleUser.getCredentials()
     if (!cookie) return
 
     let result: Awaited<ReturnType<typeof getGamekeys>>
@@ -729,7 +694,7 @@ export class HumbleUser {
     // self-healing the gap without requiring the user to disconnect/
     // reconnect. Best-effort/non-fatal, mirrors finishLogin's own capture
     // exactly (never blocks the health check, never logs the value).
-    if (result.status === 'ok' && !HumbleUser.getCsrfToken()) {
+    if (result.status === 'ok' && !(await HumbleUser.getCsrfToken())) {
       try {
         const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
         const csrfCookies = await csrfSes.cookies.get({
@@ -737,7 +702,7 @@ export class HumbleUser {
           name: 'csrf_cookie'
         })
         if (csrfCookies.length > 0 && csrfCookies[0].value) {
-          configStore.set('csrfToken', encryptCookie(csrfCookies[0].value))
+          await storeHumbleSecret('csrfToken', csrfCookies[0].value)
         }
       } catch (err) {
         logWarning(

@@ -21,7 +21,7 @@ import { getAccountIdentity, getGamekeys, getOrderDetail } from './adapter'
  */
 export async function runHumbleValidation(): Promise<HumbleValidationReport> {
   const timestamp = new Date().toISOString()
-  const cookie = HumbleUser.getCredentials()
+  const cookie = await HumbleUser.getCredentials()
 
   if (!cookie) {
     return {
