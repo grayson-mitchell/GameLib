@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1 gap cycle — waves 1-3 done (plans 10,11,12). Resume at plan 13 (wave 4, F-1 CLOSED) via /gsd-execute-phase 34.4.1
-last_updated: "2026-07-30T08:51:49.525Z"
+stopped_at: Completed 34.4.1-13-PLAN.md
+last_updated: "2026-07-30T09:21:13.952Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 138
+  completed_plans: 139
   percent: 71
 ---
 
@@ -67,7 +67,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 13 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 14 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 > **D-GAP-03 (2026-07-30, user-approved) — sweep finding S-09 routed into plan 18.**
@@ -1813,6 +1813,11 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 89%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
+`state.update-progress` overwrote this note's own `89%` with `90%` (this session's own computed
+plan-based percent), corrupting the historical record above a SECOND time (see the 34.4.1-04 note
+further below for the first recurrence against this exact line). Hand-corrected back to `89%`
+per this cluster's own established convention.
 NOTE (34.5-01): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `93%` with `84%` (this session's own computed
 plan-based percent), corrupting the historical record above. Hand-corrected back to `93%` per
@@ -2669,6 +2674,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P10 | 65min | 2 tasks | 4 files |
 | Phase 34.4.1 P11 | 35min | 2 tasks | 4 files |
 | Phase 34.4.1 P12 | ~20min | 2 tasks | 8 files |
+| Phase 34.4.1 P13 | 40min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -3005,6 +3011,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-11]: D-GAP-01 implemented verbatim: compile-time keyring slot allowlist (steam-refresh-token/humble-session/humble-csrf); all 4 Rust arms slot-aware; SidecarKeyringTokenStore preserved via subclass — SteamGridDB slot withheld -- SEAM-PARITY-SWEEP found F-1b dormant/sidecar-unreachable, not live
 - [Phase 34.4.1-12]: encryptionDegraded stays in user.ts, not the secretStore seam -- UI concern driven off isAvailable(), not a storage concern
 - [Phase 34.4.1-12]: storeHumbleSecret() helper writes encryptionDegraded explicitly true/false after every setSecret() call, preserving WR-07's stale-warning-clear at all 4 write sites
+- [Phase 34.4.1]: isAvailable() checks only the humble-session slot (both slots share one Keychain identity, differing only by account name)
+- [Phase 34.4.1]: Migration write/readback calls requestRustInvoke directly rather than the totalized SidecarKeyringSlotStore methods, so each of the three failure modes can be distinguished and logged exactly once
+- [Phase 34.4.1]: encryptionDegraded is only ever explicitly cleared to false on migration success; a failure path never explicitly sets it true (it is already true on the Tauri plaintext shape being migrated)
 
 ### Pending Todos
 
@@ -3077,38 +3086,45 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T08:51:49.516Z
-Stopped at: Completed 34.4.1-12-PLAN.md
-  This session: 34.4.1-12-PLAN.md executed (gap cycle wave 3, F-1 prep — pure refactor,
-  does NOT close F-1) — `src/backend/humble/secretStore.ts` created: a dual-build
-  `HumbleSecretStore` seam (interface + module holder + `ElectronHumbleSecretStore`
-  default), moving `user.ts`'s former `encryptionAvailable`/`encryptCookie`/
-  `decryptCookie` free functions verbatim (commit `ca6dfcee6`). `user.ts` then routed
-  through the seam: `getCredentials()`/`getCsrfToken()` converted to async
-  (mirroring Steam's Phase-28 precedent), `safeStorage` removed from the `'electron'`
-  import (`session` kept), a `storeHumbleSecret()` helper added to preserve WR-07's
-  explicit-encryptionDegraded-clear semantics at all 4 write sites, and the 5 non-
-  already-async call sites (`validation.ts`, `library.ts` x2, `user.ts` x2) updated to
-  `await` (commit `ff1ddf32a`). Deviation (Rule 1): `library.test.ts`'s single-flight-
-  guard test assumed `getGamekeys()` was reached synchronously before any `await` —
-  false once `getCredentials()` became async; fixed with one `await flushAsync()`
-  (a real timing bug the conversion exposed in test code, not production code — see
-  `34.4.1-12-SUMMARY.md` for the full cascade-failure trace). `electronReachLedger.test.ts`
-  baseline extended with `secretStore.ts` (34 -> 35 electron-importing modules — a NEW
-  edge, secretStore.ts's own direct `safeStorage` import). Verified: `npx jest
-  src/backend/humble/` 505/505; `npx tsc --noEmit` clean; `npm run test:ci` 175/175
-  suites, 3323/3323 tests, exit 0 (baseline 174/3307 -- +1 suite/+16 tests, exactly
-  `secretStore.test.ts`); `cargo test` 50/50 unchanged; `seamBranchParity.test.ts` 23/23.
-  **F-1 remains OPEN** — under Tauri the Humble session is still plaintext (secretStore's
-  un-overridden default resolves `safeStorage` to `electronStub.ts`'s dead stub exactly
-  as before); plan 13 installs the keyring-backed implementation via
-  `setHumbleSecretStore()`.
+Last session: 2026-07-30T09:21:13.942Z
+Stopped at: Completed 34.4.1-13-PLAN.md
+  This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
+  at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
+  `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan
+  11's slot-parameterized keyring store (`sessionCookie` -> `humble-session`,
+  `csrfToken` -> `humble-csrf`), total on every method (mirrors
+  `SidecarKeyringSlotStore` exactly — no fallback, `null` `keyring_get` is the healthy
+  first-run case, one warning per real failure naming the channel, never the value).
+  `installSidecarHumbleSecretStore()` wired into `bootstrap.ts` alongside the existing
+  Steam TokenStore install, logging an observable confirmation line plan 20's live-gate
+  re-run will grep for: `[bootstrap] Humble secret store installed: keyring-backed
+  (humble-session/humble-csrf slots)` (commit `6cd64efeb`). Task 2 added the one-time
+  plaintext migration (write -> readback -> exact-match compare -> only then delete the
+  `configStore` plaintext + clear `encryptionDegraded`), each secret migrated
+  independently so a `csrfToken` failure can never strand a migrated `sessionCookie`,
+  and wired `disconnect()` in `humble/user.ts` to call
+  `getHumbleSecretStore().clearSecrets()` right after the existing `configStore.clear()`
+  (WR-02/T-10-07 ordering preserved, guarded so a rejection is logged/swallowed, never
+  able to abort disconnect()) (commit `4795f3e2f`). Deviation (Rule 3): the new
+  `humbleSecretStore.test.ts` was unclassified by `testContainment.test.ts`'s Block C
+  declared-suite gate; registered it in `STRUCTURALLY_CONTAINED_SUITES`. Verified:
+  `npm run test:ci` 176/176 suites, 3347/3347 tests, exit 0 (no regression against the
+  175/3346 baseline); `npx tsc --noEmit` clean; `cargo test` 50/50 unchanged (no Rust
+  change this plan); `seamBranchParity.test.ts` green, no new `KNOWN_GAP` entry;
+  `electronReachLedger.test.ts` unaffected (`humbleSecretStore.ts` is sidecar-only,
+  outside the ledger's entry-point graph). **F-1 is closed at the CODE level only** —
+  a real macOS Keychain accepting the write is unproven until plan 20's live-gate
+  re-run, whose evidence is the `gamelib.log` line above plus a store file with no
+  `sessionCookie` field and `encryptionDegraded: false`.
+Next: **34.4.1-14-PLAN.md** — steamgrid (F-1b dormant-path follow-up), runs in
+  parallel (∥) with plan 15 (storage-clear capability) per the gap-cycle wave plan.
+
+Prior (now superseded) next-step context, retained for history:
 Next: **34.4.1-13-PLAN.md** — installs the keyring-backed `HumbleSecretStore`
   implementation (using plan 11's `SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)`/
   `SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)`), proves the sidecar install
   actually happened (not merely assumed), and is the plan that actually CLOSES F-1.
-
-Prior (now superseded) next-step context, retained for history:
+  [SUPERSEDED — this plan is now complete, see the current "This session" note above.]
 Next: **34.5-10-PLAN.md** is next on the critical path for Phase 34.5 (wave 3
 continues — `runnerAuthFlowRegistration.ts`'s remaining channels per plan 34.5-06's
 scaffold). Separately, still blocking: **34.4.1-08 Task 2 — the
