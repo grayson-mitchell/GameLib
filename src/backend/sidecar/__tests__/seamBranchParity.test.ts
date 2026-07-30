@@ -25,15 +25,25 @@
  * finding a gap the other calls clean, which is exactly the kind of drift a human reviewer should
  * catch on the next plan that touches either file).
  *
- * `KNOWN_GAP` is seeded with EXACTLY the divergences Task 1's sweep (`34.4.1-SEAM-PARITY-SWEEP.md`,
- * findings S-05/S-08) classified SILENTLY-DROPPED, so `npm run test:ci` stays green at the current
- * baseline while the gaps become explicit and un-ignorable — this is DELIBERATE, not an oversight:
- * a red baseline here would be indistinguishable from the pre-existing intermittent `rustInvoke`
- * mock frame-leak flake documented elsewhere in this project's history, and would train the next
- * reader to ignore a real failure. Plan 34.4.1-16 deletes these `KNOWN_GAP` entries once the
- * capability actually lands (closing F-6 and its twin) — at that point this file's own
- * `no stale KNOWN_GAP entries` test (below) starts FAILING until the entry is removed, and once it
- * is removed this file enforces TRUE parity with nothing left to soften it.
+ * `KNOWN_GAP` was originally seeded with EXACTLY the divergences Task 1's sweep
+ * (`34.4.1-SEAM-PARITY-SWEEP.md`, findings S-05/S-08) classified SILENTLY-DROPPED (`storage`/
+ * `cache`/`authCache`/`hostResolver` for both sites), so `npm run test:ci` stayed green at the
+ * then-current baseline while the gaps became explicit and un-ignorable. Plan 34.4.1-16 (this
+ * plan) landed the storage-clear capability for both sites, closing the `storage`/`cache`
+ * categories for real — those 4 `KNOWN_GAP` entries are DELETED below, not softened, per this
+ * file's own `no stale KNOWN_GAP entries` test, which would otherwise fail on a stale entry.
+ * `KNOWN_GAP` is now EMPTY (kept as a live, reusable mechanism for any future dual-branch site
+ * added to `SITES`, not deleted as dead code).
+ *
+ * `authCache`/`hostResolver` were never closeable by this design (no in-page JS equivalent exists
+ * for either network-stack cache) and are reclassified from `KNOWN_GAP` to `DECLARED` — a stricter
+ * bar than mere id-proximity. A `DECLARED` entry is only honoured if `isDeclaredInSource()` finds
+ * BOTH the entry's `threatId` AND at least one of its `categoryTerms` in the REAL source of the
+ * file being compared (never in this test file alone) — this is the exact discipline
+ * `seam-parity-sweep.py`'s own development caught itself needing (34.4.1-10-SUMMARY.md Deviation
+ * #3: an id-only check is vacuously true for ANY module carrying a decision id at all, which would
+ * have wrongly cleared a real defect). A `DECLARED` category that source review later closes for
+ * real becomes a stale-`DECLARED` failure below, exactly mirroring `KNOWN_GAP`'s own discipline.
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs'
@@ -51,7 +61,11 @@ const CATEGORY_MAP: Record<string, string[]> = {
   clearHostResolverCache: ['hostResolver'],
   clearData: ['storage', 'cache'],
   clearHumbleCookies: ['cookies'],
-  clearEpicCookies: ['cookies']
+  clearEpicCookies: ['cookies'],
+  // Phase 34.4.1 gap-cycle plan 16 (F-6 BLOCKING closure): the new storage-clear
+  // wipeSteps entries, covering the categories the cookie-only step never touched.
+  clearHumbleStorage: ['storage', 'cache'],
+  clearEpicStorage: ['storage', 'cache']
 }
 
 function categoriesForLabels(labels: string[]): Set<string> {
@@ -197,56 +211,12 @@ interface KnownGapEntry {
   closingPlan: string
 }
 
-const KNOWN_GAP: KnownGapEntry[] = [
-  {
-    site: 'humble/user.ts disconnect()',
-    droppedCategory: 'storage',
-    findingId: 'F-6',
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'humble/user.ts disconnect()',
-    droppedCategory: 'cache',
-    findingId: 'F-6',
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'humble/user.ts disconnect()',
-    droppedCategory: 'authCache',
-    findingId: 'F-6',
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'humble/user.ts disconnect()',
-    droppedCategory: 'hostResolver',
-    findingId: 'F-6',
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'storeManagers/legendary/user.ts logout()',
-    droppedCategory: 'storage',
-    findingId: "F-6's verbatim twin",
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'storeManagers/legendary/user.ts logout()',
-    droppedCategory: 'cache',
-    findingId: "F-6's verbatim twin",
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'storeManagers/legendary/user.ts logout()',
-    droppedCategory: 'authCache',
-    findingId: "F-6's verbatim twin",
-    closingPlan: '34.4.1-16'
-  },
-  {
-    site: 'storeManagers/legendary/user.ts logout()',
-    droppedCategory: 'hostResolver',
-    findingId: "F-6's verbatim twin",
-    closingPlan: '34.4.1-16'
-  }
-]
+// Phase 34.4.1 gap-cycle plan 16 (F-6 BLOCKING closure): the storage-clear capability landed for
+// BOTH sites (see CATEGORY_MAP's clearHumbleStorage/clearEpicStorage entries above), so the
+// `storage`/`cache` KNOWN_GAP entries this array used to carry for both sites are DELETED, not
+// softened — the capability genuinely closes them. KNOWN_GAP is intentionally empty; the
+// mechanism stays live for any future dual-branch site added to SITES.
+const KNOWN_GAP: KnownGapEntry[] = []
 
 function validateKnownGapEntry(entry: KnownGapEntry): string | null {
   if (!entry.site || !entry.site.trim()) return 'missing a site'
@@ -254,6 +224,61 @@ function validateKnownGapEntry(entry: KnownGapEntry): string | null {
   if (!entry.findingId || !entry.findingId.trim()) return 'missing a findingId'
   if (!entry.closingPlan || !entry.closingPlan.trim()) return 'missing a closingPlan'
   return null
+}
+
+// ── DECLARED registry — categories with NO in-page JS equivalent, reclassified from KNOWN_GAP ──
+//
+// Unlike KNOWN_GAP (a bare assertion trusted from this test file alone), a DECLARED entry must be
+// BACKED by real source: `isDeclaredInSource()` requires BOTH the entry's `threatId` AND at least
+// one of its `categoryTerms` to appear in the ACTUAL file being compared (read from disk, same
+// discipline as the rest of this file). This is what stops "declared" becoming a synonym for
+// "ignored" — an id alone is not enough (34.4.1-10-SUMMARY.md Deviation #3 found and fixed exactly
+// this vacuous-check shape in seam-parity-sweep.py's own development).
+
+interface DeclaredEntry {
+  site: string
+  droppedCategory: string
+  threatId: string
+  /** At least one of these (case-insensitive) must appear in the source alongside `threatId`. */
+  categoryTerms: string[]
+}
+
+const DECLARED: DeclaredEntry[] = [
+  {
+    site: 'humble/user.ts disconnect()',
+    droppedCategory: 'authCache',
+    threatId: 'T-34.4.1-73',
+    categoryTerms: ['clearAuthCache', 'auth cache']
+  },
+  {
+    site: 'humble/user.ts disconnect()',
+    droppedCategory: 'hostResolver',
+    threatId: 'T-34.4.1-73',
+    categoryTerms: ['clearHostResolverCache', 'DNS resolver', 'host resolver']
+  },
+  {
+    site: 'storeManagers/legendary/user.ts logout()',
+    droppedCategory: 'authCache',
+    threatId: 'T-34.4.1-73',
+    categoryTerms: ['clearAuthCache', 'auth cache']
+  },
+  {
+    site: 'storeManagers/legendary/user.ts logout()',
+    droppedCategory: 'hostResolver',
+    threatId: 'T-34.4.1-73',
+    categoryTerms: ['clearHostResolverCache', 'DNS resolver', 'host resolver']
+  }
+]
+
+/**
+ * A DECLARED entry is only honoured if the REAL source of the file it names carries both its
+ * threat id AND at least one of its category terms. An id with no matching term (the F-6 shape
+ * seam-parity-sweep.py itself was built to catch) or a term with no id are both rejected.
+ */
+function isDeclaredInSource(sourceText: string, entry: DeclaredEntry): boolean {
+  if (!sourceText.includes(entry.threatId)) return false
+  const lower = sourceText.toLowerCase()
+  return entry.categoryTerms.some((term) => lower.includes(term.toLowerCase()))
 }
 
 // ── The comparison itself — driven through the SAME function real-source and synthetic-source
@@ -299,12 +324,21 @@ function listFilesRecursive(dir: string): string[] {
 
 describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.1-11/REQ-34.4.1-GAP-04)', () => {
   describe('KNOWN_GAP entries are well-formed (every entry names a finding AND a closing plan)', () => {
-    it.each(KNOWN_GAP.map((entry, i) => [i, entry] as const))(
-      'entry %i (%j) has no missing field',
-      (_i, entry) => {
-        expect(validateKnownGapEntry(entry)).toBeNull()
-      }
-    )
+    // Phase 34.4.1 gap-cycle plan 16: KNOWN_GAP is now empty (both sites' storage/cache gaps
+    // closed for real). it.each rejects an empty table, so this check is skipped rather than
+    // silently vacuous when there is nothing to iterate — a future KNOWN_GAP entry re-arms it.
+    if (KNOWN_GAP.length > 0) {
+      it.each(KNOWN_GAP.map((entry, i) => [i, entry] as const))(
+        'entry %i (%j) has no missing field',
+        (_i, entry) => {
+          expect(validateKnownGapEntry(entry)).toBeNull()
+        }
+      )
+    } else {
+      it('KNOWN_GAP is currently empty by design (plan 16 closed the storage/cache gaps for real)', () => {
+        expect(KNOWN_GAP).toEqual([])
+      })
+    }
 
     it('anti-vacuity: an entry with an empty reason/findingId IS rejected by validateKnownGapEntry', () => {
       const badEntry: KnownGapEntry = {
@@ -327,23 +361,45 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
     })
   })
 
+  describe('DECLARED entries are well-formed (every entry names a threatId AND at least one category term)', () => {
+    it.each(DECLARED.map((entry, i) => [i, entry] as const))(
+      'entry %i (%j) has a non-empty threatId and a non-empty categoryTerms list',
+      (_i, entry) => {
+        expect(entry.threatId.trim().length).toBeGreaterThan(0)
+        expect(entry.categoryTerms.length).toBeGreaterThan(0)
+      }
+    )
+  })
+
   describe.each(SITES.map((site) => [site.label, site] as const))(
     'dual-branch site: %s',
     (_label, site) => {
+      let sourceText: string
       let electronCategories: Set<string>
       let tauriCategories: Set<string>
 
       beforeAll(() => {
-        const sourceText = readFileSync(site.file, 'utf-8')
+        sourceText = readFileSync(site.file, 'utf-8')
         const functionBody = findFunctionBody(sourceText, site.functionName)
         const { electronLabels, tauriLabels } = findWipeStepsIfElseBranches(functionBody)
         electronCategories = categoriesForLabels(electronLabels)
         tauriCategories = categoriesForLabels(tauriLabels)
       })
 
-      it('every Electron-only category is either present in Tauri OR covered by a dated KNOWN_GAP entry', () => {
-        const declaredForSite = KNOWN_GAP.filter((g) => g.site === site.label)
-        const drops = undeclaredDrops(electronCategories, tauriCategories, declaredForSite)
+      it('every Electron-only category is either present in Tauri, covered by a dated KNOWN_GAP entry, or a validated DECLARED entry', () => {
+        const knownGapForSite = KNOWN_GAP.filter((g) => g.site === site.label)
+        const declaredForSite = DECLARED.filter((d) => d.site === site.label)
+        const validDeclared = declaredForSite.filter((d) => isDeclaredInSource(sourceText, d))
+        const softenedCategories: KnownGapEntry[] = [
+          ...knownGapForSite,
+          ...validDeclared.map((d) => ({
+            site: d.site,
+            droppedCategory: d.droppedCategory,
+            findingId: d.threatId,
+            closingPlan: 'n/a (DECLARED, not a gap)'
+          }))
+        ]
+        const drops = undeclaredDrops(electronCategories, tauriCategories, softenedCategories)
         expect(drops).toEqual([])
       })
 
@@ -359,6 +415,29 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
           )
         }
         expect(stale).toEqual([])
+      })
+
+      it('no stale DECLARED entries (a declared category no longer actually dropped in Tauri must be removed)', () => {
+        const declaredForSite = DECLARED.filter((d) => d.site === site.label)
+        const actuallyDropped = new Set(
+          [...electronCategories].filter((c) => !tauriCategories.has(c))
+        )
+        const stale = declaredForSite.filter((d) => !actuallyDropped.has(d.droppedCategory))
+        if (stale.length > 0) {
+          throw new Error(
+            `seamBranchParity: DECLARED contains ${stale.length} stale entry(ies) for ` +
+              `'${site.label}' whose category is no longer actually dropped in source — the ` +
+              `capability landed; DELETE the entry: ${JSON.stringify(stale)}`
+          )
+        }
+        expect(stale).toEqual([])
+      })
+
+      it('every DECLARED entry for this site is actually validated by isDeclaredInSource (not silently unmatched)', () => {
+        const declaredForSite = DECLARED.filter((d) => d.site === site.label)
+        for (const entry of declaredForSite) {
+          expect(isDeclaredInSource(sourceText, entry)).toBe(true)
+        }
       })
     }
   )
@@ -416,6 +495,58 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
         { site: 'x', droppedCategory: 'storage', findingId: 'F-TEST', closingPlan: 'plan-x' }
       ]
       expect(staleKnownGapEntries(electron, tauri, declared)).toEqual([])
+    })
+
+    // ── isDeclaredInSource anti-vacuity (Phase 34.4.1 gap-cycle plan 16 Task 3) ────────────────
+    // Proves the DECLARED check itself rejects the bad input it exists to reject — the same
+    // discipline seam-parity-sweep.py's own development needed after catching an empty-term-set
+    // vacuous check (34.4.1-10-SUMMARY.md Deviation #3).
+
+    it('anti-vacuity: a synthetic entry declaring a category with NO matching in-source comment (neither id nor term) is rejected', () => {
+      const entry: DeclaredEntry = {
+        site: 'x',
+        droppedCategory: 'authCache',
+        threatId: 'T-34.4.1-73',
+        categoryTerms: ['clearAuthCache', 'auth cache']
+      }
+      const unrelatedSource = 'export function foo() { return 1 }'
+      expect(isDeclaredInSource(unrelatedSource, entry)).toBe(false)
+    })
+
+    it('anti-vacuity: an id-only comment with NO category term present is rejected (the mirror-image of the F-6 shape)', () => {
+      const entry: DeclaredEntry = {
+        site: 'x',
+        droppedCategory: 'authCache',
+        threatId: 'T-34.4.1-73',
+        categoryTerms: ['clearAuthCache', 'auth cache']
+      }
+      // Carries the threat id, but never names the category — exactly F-6's own original Tauri
+      // branch comment shape (T-34.4.1-30 present, storage/cache/authCache/hostResolver absent).
+      const idOnlySource = '// T-34.4.1-73: some unrelated decision, nothing else named here'
+      expect(isDeclaredInSource(idOnlySource, entry)).toBe(false)
+    })
+
+    it('anti-vacuity: a category term with NO threat id present is rejected', () => {
+      const entry: DeclaredEntry = {
+        site: 'x',
+        droppedCategory: 'authCache',
+        threatId: 'T-34.4.1-73',
+        categoryTerms: ['clearAuthCache', 'auth cache']
+      }
+      const termOnlySource = '// clearAuthCache is skipped here, no id cited'
+      expect(isDeclaredInSource(termOnlySource, entry)).toBe(false)
+    })
+
+    it('isDeclaredInSource ACCEPTS when both the threat id and a category term are present', () => {
+      const entry: DeclaredEntry = {
+        site: 'x',
+        droppedCategory: 'authCache',
+        threatId: 'T-34.4.1-73',
+        categoryTerms: ['clearAuthCache', 'auth cache']
+      }
+      const validSource =
+        '// T-34.4.1-73: clearAuthCache has no in-page equivalent, DECLARED not dropped'
+      expect(isDeclaredInSource(validSource, entry)).toBe(true)
     })
   })
 
