@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-14-PLAN.md
-last_updated: "2026-07-29T09:51:37.544Z"
-last_activity: 2026-07-29
+stopped_at: 34.4.1-08 live gate FAILED (2/4) — 34.4.1 gap cycle required before 34.5-15
+last_updated: "2026-07-30T06:25:00.000Z"
+last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
@@ -32,6 +32,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **⛔ ACTIVE BLOCKER — Phase 34.4.1's blocking live gate RAN 2026-07-30 and FAILED (2 of 4 clean).**
+> `34.4.1-08` is complete (all 9 plans now have summaries) but **Phase 34.4.1 DOES NOT CLOSE** — the
+> gate's own no-partial-pass rule makes the findings a gap cycle inside 34.4.1.
+> Next action: **`/gsd-plan-phase 34.4.1 --gaps`**.
+>
+> - **PASS:** item 2 (persistence proven at the store layer) and item 4 (real key revealed via the
+>   Tauri seam transport — not a 403 — so `humbleRevealKey` ships PROVEN, not declared-degraded).
+> - **F-1 (BLOCKING):** the Humble session cookie is persisted in **plaintext**. `humble/user.ts`
+>   still imports the sidecar's hardcoded-dead `safeStorage` stub instead of Phase 28's `TokenStore`
+>   seam. Steam is fine; `steamgrid/secureKey.ts` has the same shape but is unverified.
+> - **F-6 (BLOCKING):** **disconnect does not disconnect.** Electron's branch runs 5 wipe steps,
+>   Tauri's runs 1 (cookies only); localStorage/IndexedDB survive, so re-login auto-signs back in.
+> - 8 findings total. Both blocking defects were invisible to a green **3279/3279** suite and 40/40
+>   `cargo test` — the third consecutive slice where a live gate caught what automation could not.
+> - **34.4 D-09 is STRUCK** — a Tauri path to a Humble session now demonstrably exists.
+> - **Consequence for 34.5:** `34.5-15`'s precondition 1 is item 1 PASS, which the *mechanism*
+>   satisfies. But 34.5-15's items 1–3 mint real OAuth credentials over this seam, and F-1 means
+>   they would land in plaintext. **Recommendation: fix F-1 before 34.5-15 runs.** Developer's call;
+>   recorded, not taken.
+> - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
 Plan: 15 of 15 (01 done — pathShim desktop/exe/documents extension +
