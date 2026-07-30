@@ -778,6 +778,38 @@ export class HumbleUser {
     // blanket wipe would sign the user out of storefronts they never touched),
     // and closes the window in a `finally` so no path — success, rejection, or
     // a thrown open() — ever leaves it open.
+    //
+    // Phase 34.4.1 Plan 16 (F-6 BLOCKING closure): the cookie-only step above
+    // left the Tauri branch covering only 1 of Electron's 5 wipe categories
+    // (`cookies` vs `storage`/`cache`/`authCache`/`hostResolver`/`cookies` via
+    // `clearStorageData`/`clearCache`/`clearAuthCache`/`clearHostResolverCache`/
+    // `clearData`) — a genuine functional AND privacy regression: localStorage/
+    // IndexedDB/service workers survived a disconnect, so the very next login
+    // window auto-signed the next person on a shared machine straight back in.
+    // A second, INDEPENDENT 'clearHumbleStorage' step now calls Plan 15's
+    // `seam.clearStorage(HUMBLE_BASE_URL, ...)`, which clears localStorage,
+    // sessionStorage, IndexedDB, Cache Storage and service-worker registrations
+    // for Humble's own origin only — same-origin policy scopes it structurally,
+    // the same discipline `clearCookies`'s domain-suffix filter already
+    // achieves for cookies (T-34.4.1-66). This closes the `storage`/`cache`
+    // categories. It is a SEPARATE wipeSteps entry rather than folded into the
+    // cookie step, specifically so the guarded loop below keeps treating the
+    // two independently — one failing must never take the other down, which is
+    // the entire reason that loop exists. The window this capability opens is
+    // opened AND closed entirely inside the Rust arm itself
+    // (`humble_login_clear_storage`, Plan 15) — this call site never holds a
+    // window handle of its own to leak.
+    //
+    // `clearAuthCache`/`clearHostResolverCache` have NO in-page JavaScript
+    // equivalent — they are network-stack (HTTP auth / DNS resolver) caches,
+    // not web storage, and no Tauri/wry API exposes them to injected JS. This
+    // is DECLARED rather than silently dropped (T-34.4.1-73, STRIDE Repudiation,
+    // accepted): the residual risk is a cached HTTP auth credential or a DNS
+    // cache entry surviving a disconnect, and NEITHER carries a Humble session
+    // — the actual F-6 harm (auto-signed-back-in re-login) is fully closed by
+    // the cookie + storage steps above. `seamBranchParity.test.ts`'s DECLARED
+    // check (Plan 16 Task 3) requires this exact paragraph to name both
+    // categories and this threat ID before it will accept the classification.
     const seam = getLoginWindowSeam()
     let wipeSteps: Array<[string, () => Promise<unknown>]>
     if (seam === null) {
@@ -820,6 +852,26 @@ export class HumbleUser {
                 )
               })
             }
+          }
+        ],
+        [
+          'clearHumbleStorage',
+          async () => {
+            // Plan 15's clearStorage() opens and closes its OWN hidden window
+            // inside the Rust arm (humble_login_clear_storage) — no label is
+            // needed or returned here, unlike the cookie step above.
+            const report = await seam.clearStorage(
+              HUMBLE_BASE_URL,
+              standardBrowserUserAgent()
+            )
+            // Only COUNTS are logged — never a storage key or value
+            // (T-34.4.1-34 discipline, same as the cookie step above).
+            logInfo(
+              `Humble disconnect: cleared storage — localStorage=${report.localStorage}, ` +
+                `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
+                `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+              LogPrefix.Backend
+            )
           }
         ]
       ]

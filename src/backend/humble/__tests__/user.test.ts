@@ -1090,6 +1090,16 @@ describe('HumbleUser', () => {
       mockSeamTakeEvents.mockResolvedValue([])
       mockSeamClose.mockResolvedValue(true)
       mockSeamClearCookies.mockResolvedValue(0)
+      // Phase 34.4.1 gap-cycle plan 16 (F-6): default a healthy, fully-numeric
+      // report so tests that don't care about clearStorage's exact shape
+      // still exercise a realistic resolved value rather than undefined.
+      mockSeamClearStorage.mockResolvedValue({
+        localStorage: 0,
+        sessionStorage: 0,
+        indexedDB: 0,
+        caches: 0,
+        serviceWorkers: 0
+      })
       setLoginWindowSeam(fakeSeam)
     })
 
@@ -1445,6 +1455,84 @@ describe('HumbleUser', () => {
         expect(mockClearStorageData).toHaveBeenCalled()
         expect(mockSeamOpen).not.toHaveBeenCalled()
         expect(mockSeamClearCookies).not.toHaveBeenCalled()
+      })
+
+      // ── Phase 34.4.1 gap-cycle plan 16 (F-6 BLOCKING closure) ───────────────
+      // The Tauri wipeSteps array now has MORE THAN ONE entry — the direct
+      // inverse of the 5-vs-1 asymmetry F-6 named. These tests exercise the
+      // new 'clearHumbleStorage' step alongside the existing cookie step.
+
+      test('F-6: the Tauri wipeSteps run BOTH a cookie step and a storage step (more than one entry)', async () => {
+        mockSeamClearStorage.mockResolvedValue({
+          localStorage: 4,
+          sessionStorage: 2,
+          indexedDB: 1,
+          caches: 0,
+          serviceWorkers: 0
+        })
+
+        await HumbleUser.disconnect()
+
+        expect(mockSeamClearCookies).toHaveBeenCalled()
+        expect(mockSeamClearStorage).toHaveBeenCalledWith(
+          HUMBLE_BASE_URL,
+          standardBrowserUserAgent()
+        )
+      })
+
+      test('F-6: a rejecting clearStorage step still leaves disconnect() resolving, and the cookie step ran anyway', async () => {
+        mockSeamClearStorage.mockRejectedValue(new Error('rust storage clear failed'))
+        mockSeamClearCookies.mockResolvedValue(2)
+
+        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+        expect(mockSeamClearCookies).toHaveBeenCalled()
+        expect(mockLogWarning).toHaveBeenCalled()
+      })
+
+      test('F-6: a rejecting clearCookies step does not prevent the storage step from running', async () => {
+        mockSeamClearCookies.mockRejectedValue(new Error('rust cookie clear failed'))
+        mockSeamClearStorage.mockResolvedValue({
+          localStorage: 0,
+          sessionStorage: 0,
+          indexedDB: 0,
+          caches: 0,
+          serviceWorkers: 0
+        })
+
+        await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+        expect(mockSeamClearStorage).toHaveBeenCalledWith(
+          HUMBLE_BASE_URL,
+          standardBrowserUserAgent()
+        )
+      })
+
+      test('F-6: only counts are logged for the storage step, never a storage key or value', async () => {
+        mockSeamClearStorage.mockResolvedValue({
+          localStorage: 3,
+          sessionStorage: 1,
+          indexedDB: 'unsupported',
+          caches: 0,
+          serviceWorkers: 0
+        })
+
+        await HumbleUser.disconnect()
+
+        const loggerCalls = [
+          ...mockLogInfo.mock.calls,
+          ...mockLogError.mock.calls,
+          ...mockLogWarning.mock.calls
+        ]
+        const storageLogCall = mockLogInfo.mock.calls.find(([msg]) =>
+          typeof msg === 'string' ? msg.includes('cleared storage') : false
+        )
+        expect(storageLogCall).toBeDefined()
+        for (const call of loggerCalls) {
+          const serialized = JSON.stringify(call)
+          // No raw storage key/value ever appears -- only the numeric/'unsupported' counts.
+          expect(serialized).not.toMatch(/localStorage-key|session-storage-value/)
+        }
       })
     })
   })
