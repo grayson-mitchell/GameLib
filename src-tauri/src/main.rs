@@ -1098,6 +1098,22 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // spike 013 measured 5 of 8 `on_navigation` events as third-party iframes, and
         // relaying those would let an ad frame re-arm the sidecar's login-watch deadline
         // forever (Pitfall 2).
+        //
+        // F-4 fix (Phase 34.4.1 Plan 18, T-34.4.1-79/T-34.4.1-82): the live gate found
+        // the VISIBLE login window too small for Humble's login form plus a Humble
+        // Guard / OTP step, and lost behind other applications once the operator
+        // switched away to fetch a code. `.inner_size()`/`.center()`/`.focused(true)`
+        // below fix both, applied ONLY when `visible` is true -- the SAME arm also
+        // builds the hidden reveal/clear windows (disconnect's clear, reveal-POST),
+        // and sizing/centering/raising one of those would be wasted work at best and
+        // a visible flash at worst, on a path whose whole design is that nothing is
+        // shown (T-34.4.1-82). `.focused(true)` raises-and-focuses ONCE on creation,
+        // deliberately NOT `.always_on_top(true)`: a permanent flag would force the
+        // operator to fight past the login window to reach the very password-manager
+        // window or OS credential prompt they switched away to use, trading one
+        // findability problem for a worse one. The gate's own "sets no .title()" line
+        // is resolved here, not reopened: WR-07 stays intact, enforced by the grep
+        // gate in this plan's own acceptance criteria, not by intent alone.
         "humble_login_open" => {
             let url = login_window_url_arg(args)?;
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1107,9 +1123,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
-            tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
-                .user_agent(user_agent)
-                .visible(visible)
+            let mut builder =
+                tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
+                    .user_agent(user_agent)
+                    .visible(visible);
+            if visible {
+                builder = builder.inner_size(900.0, 700.0).center().focused(true);
+            }
+            builder
                 .on_page_load(move |_webview, payload| {
                     let kind = match payload.event() {
                         tauri::webview::PageLoadEvent::Started => "started",
