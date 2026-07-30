@@ -550,6 +550,51 @@ describe('getAccountIdentity', () => {
       expect(logged).not.toContain(COOKIE)
     }
   })
+
+  // F-3 fix (Phase 34.4.1 Plan 18): the live gate recorded an identity 404 as
+  // "unexplained" -- diagnosable only from a stack trace into a bundled
+  // sidecar.js offset. getAccountIdentity now opts into mapAxiosError's
+  // existing diagnostic context (same mechanism revealKey already uses,
+  // round 5), so an otherwise-unmapped status (like the gate's 404) logs the
+  // request PATH and HTTP status before falling through to the existing
+  // generic rethrow.
+  test('F-3: a 404 (unmapped status) logs the request path and HTTP status, then still rethrows', async () => {
+    mockGet.mockRejectedValue(makeAxiosError(404, { data: { error: 'not found' } }))
+    await expect(getAccountIdentity(COOKIE)).rejects.toThrow()
+    const call = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('HTTP failure diagnostic')
+    )
+    expect(call).toBeDefined()
+    const logged = JSON.stringify(call)
+    expect(logged).toContain('/api/v1/user/info')
+    expect(logged).toContain('status=404')
+  })
+
+  test('F-3: the identity-failure diagnostic never logs the response body — only status/contentType/shape', async () => {
+    mockGet.mockRejectedValue(
+      makeAxiosError(404, {
+        data: { error: 'not found', secret_should_not_leak: 'nope' },
+        headers: { 'content-type': 'application/json' }
+      })
+    )
+    await expect(getAccountIdentity(COOKIE)).rejects.toThrow()
+    for (const logged of allLoggedStrings()) {
+      expect(logged).not.toContain('secret_should_not_leak')
+      expect(logged).not.toContain('not found')
+    }
+  })
+
+  test('F-3: a mapped 401 ALSO now logs the request path alongside the existing session_expired mapping', async () => {
+    mockGet.mockRejectedValue(makeAxiosError(401))
+    const result = await getAccountIdentity(COOKIE)
+    expect(result).toEqual({ status: 'session_expired' })
+    const call = mockLogWarning.mock.calls.find((c) =>
+      JSON.stringify(c).includes('HTTP failure diagnostic')
+    )
+    expect(call).toBeDefined()
+    expect(JSON.stringify(call)).toContain('/api/v1/user/info')
+    expect(JSON.stringify(call)).toContain('status=401')
+  })
 })
 
 // ── Live-UAT round 2 regressions (debug: humble-keys-empty-list-flashing-sync)
@@ -769,11 +814,13 @@ describe('revealKey', () => {
   // Round 5 (debug session humble-reveal-key-fails): access_denied
   // previously collapsed a genuine Humble JSON denial and a Cloudflare Bot
   // Management HTML challenge page into an identical, silent status. revealKey
-  // is the ONE call site that opts into mapAxiosError's diagnostic context —
+  // was the FIRST call site to opt into mapAxiosError's diagnostic context —
   // structural-only (never body content, mirrors describeSchemaFailure's own
   // redaction discipline). Round 6: this diagnostic is exactly what
   // DECISIVELY confirmed the transport-fingerprint hypothesis live — see
-  // adapter.ts's humblePostRequest doc comment.
+  // adapter.ts's humblePostRequest doc comment. getAccountIdentity is now the
+  // second opt-in call site (Phase 34.4.1 Plan 18, F-3) — see its own
+  // describe block above for that coverage.
   test('round 5: a 403 with a Cloudflare-shaped HTML body logs a structural (never content) diagnostic', async () => {
     queueNetResponse(
       403,

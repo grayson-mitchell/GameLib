@@ -672,7 +672,21 @@ export async function getAccountIdentity(
     }
     return { status: 'ok', data: parsed.data }
   } catch (err) {
-    return mapAxiosError<HumbleUserData>(err)
+    // F-3 fix (Phase 34.4.1 Plan 18): the live gate recorded an identity 404
+    // as "unexplained" -- diagnosable only from a stack trace into a bundled
+    // sidecar.js offset. Opting into mapAxiosError's existing diagnostic
+    // context (already used by revealKey, round 5) names the request PATH
+    // and HTTP status for EVERY caught failure shape here, not just the
+    // mapped 401/403/429 ones -- a genuinely unexpected status (like the
+    // gate's 404) now logs 'Humble adapter: /api/v1/user/info HTTP failure
+    // diagnostic status=404 ...' before falling through to the existing
+    // generic 'unexpected request failure' line and rethrowing. Same
+    // structural-only redaction as describeSchemaFailure/revealKey's own
+    // diagnostic: status/content-type/body-shape/length, NEVER the response
+    // body, cookies, or headers. Does not change the return/throw shape at
+    // all -- login stays best-effort accepted regardless (unchanged in
+    // user.ts's finishLogin caller).
+    return mapAxiosError<HumbleUserData>(err, '/api/v1/user/info')
   }
 }
 
