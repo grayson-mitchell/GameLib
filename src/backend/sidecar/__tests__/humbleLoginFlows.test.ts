@@ -92,7 +92,8 @@ import {
   RUST_HUMBLE_LOGIN_COOKIES,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
-  RUST_HUMBLE_LOGIN_CLEAR_COOKIES
+  RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
+  RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 } from 'common/types/sidecarTransport'
 import { classifyCookieRead } from '../../humble/loginWindowSeam'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -330,6 +331,117 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
 
     input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: 2 })}\n`)
     await expect(promise).resolves.toBe(2)
+  })
+
+  // ── humble_login_clear_storage (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03)
+  it('humble_login_clear_storage: emits [originUrl, userAgent] and resolves the coerced per-category report', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.clearStorage(
+      'https://www.humblebundle.com',
+      FAKE_USER_AGENT
+    )
+    await flush()
+
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+    expect(frame).toBeDefined()
+    expect(frame?.kind).toBe('rustInvoke')
+    expect(frame?.args).toEqual([
+      'https://www.humblebundle.com',
+      FAKE_USER_AGENT
+    ])
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: {
+          localStorage: 4,
+          sessionStorage: 0,
+          indexedDB: 'unsupported',
+          caches: 2,
+          serviceWorkers: 0
+        }
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual({
+      localStorage: 4,
+      sessionStorage: 0,
+      indexedDB: 'unsupported',
+      caches: 2,
+      serviceWorkers: 0
+    })
+  })
+
+  // Load-bearing: an 'unsupported' category must survive verbatim, never coerced to 0 --
+  // conflating "the API is missing" with "the API cleared zero items" defeats the whole point of
+  // the discriminator, exactly as classifyCookieRead's own total/everProvedLive distinction does.
+  it("humble_login_clear_storage: an 'unsupported' category is not coerced to 0", async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.clearStorage(
+      'https://www.humblebundle.com',
+      FAKE_USER_AGENT
+    )
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: {
+          localStorage: 'unsupported',
+          sessionStorage: 'unsupported',
+          indexedDB: 'unsupported',
+          caches: 'unsupported',
+          serviceWorkers: 'unsupported'
+        }
+      })}\n`
+    )
+    const result = await promise
+    expect(result.localStorage).toBe('unsupported')
+    expect(result.localStorage).not.toBe(0)
+  })
+
+  it('humble_login_clear_storage: throws (never coerces to a fake success) on a malformed response', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.clearStorage(
+      'https://www.humblebundle.com',
+      FAKE_USER_AGENT
+    )
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: { localStorage: true } })}\n`
+    )
+    await expect(promise).rejects.toThrow(/malformed/)
+  })
+
+  it('humble_login_clear_storage: a rejecting requestRustInvoke surfaces as a rejection, never a swallowed fake success', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.clearStorage(
+      'https://www.humblebundle.com',
+      FAKE_USER_AGENT
+    )
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_CLEAR_STORAGE)
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: false,
+        error: 'humble_login_clear_storage:timeout'
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(/timeout/)
   })
 
   it('sanity: requestRustInvoke refuses a non-allowlisted channel without emitting a frame', async () => {

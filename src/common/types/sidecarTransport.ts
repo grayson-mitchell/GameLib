@@ -300,6 +300,22 @@ export const RUST_HUMBLE_LOGIN_CLEAR_COOKIES =
 export const RUST_HUMBLE_REVEAL_POST = 'humble_reveal_post' as const
 
 /**
+ * Rust-side channel name: origin-scoped storage clear (34.4.1 gap cycle plan 15, F-6 BLOCKING,
+ * REQ-34.4.1-06/REQ-34.4.1-GAP-03). Same hidden-window + navigation-intercept-exfil template as
+ * `RUST_HUMBLE_REVEAL_POST` -- clears `localStorage`, `sessionStorage`, IndexedDB, Cache Storage
+ * and service-worker registrations for the loaded page's OWN origin only, scoped by construction
+ * via same-origin policy rather than by a filter that could be got wrong. Args:
+ * `[originUrl: string, userAgent: string]`. Resolves `{ localStorage, sessionStorage, indexedDB,
+ * caches, serviceWorkers }`, where each value is a `number` (items cleared) or the literal string
+ * `'unsupported'` -- NEVER a coerced `0` for a category the engine does not expose. This is NOT a
+ * new IPC channel in the `humble*` ported-channel sense -- it is a Rust arm behind the existing
+ * `LoginWindowSeam`, so it adds no row to `34.4.1-PORTED-CHANNELS.md`'s 7-channel table. Not yet
+ * called anywhere -- plan 16 wires it into the two disconnect paths.
+ */
+export const RUST_HUMBLE_LOGIN_CLEAR_STORAGE =
+  'humble_login_clear_storage' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -325,7 +341,8 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
-  RUST_HUMBLE_REVEAL_POST
+  RUST_HUMBLE_REVEAL_POST,
+  RUST_HUMBLE_LOGIN_CLEAR_STORAGE
 ] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */

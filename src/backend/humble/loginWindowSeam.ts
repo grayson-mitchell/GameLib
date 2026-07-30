@@ -67,6 +67,32 @@ export interface LoginWindowRevealPostResult {
 }
 
 /**
+ * One storage-clear category's outcome (Phase 34.4.1 Plan 15, F-6 BLOCKING, D-08/Pitfall 3,
+ * T-34.4.1-67). Either a count of items cleared, or the literal string `'unsupported'` when the
+ * engine does not expose that category's API (`indexedDB.databases()` in particular is not
+ * universally available). An `'unsupported'` category must NEVER be coerced to `0` -- the two
+ * are structurally indistinguishable to a caller that ignores this discriminator, exactly the
+ * `navigator-clipboard-noops-under-tauri` failure shape (an API that resolves without acting)
+ * applied to storage. This mirrors `classifyCookieRead`'s own SUPPORTED_BUT_EMPTY-vs-UNDECIDABLE
+ * discriminator role.
+ */
+export type StorageClearCategoryResult = number | 'unsupported'
+
+/**
+ * Per-category outcome of a `clearStorage()` call (Phase 34.4.1 Plan 15, F-6 BLOCKING,
+ * REQ-34.4.1-06/REQ-34.4.1-GAP-03). Plan 16 reads this shape to decide whether the corresponding
+ * `wipeSteps` entry succeeded, partially succeeded (some categories unsupported), or failed
+ * structurally (the seam call itself rejected).
+ */
+export interface LoginWindowStorageClearResult {
+  localStorage: StorageClearCategoryResult
+  sessionStorage: StorageClearCategoryResult
+  indexedDB: StorageClearCategoryResult
+  caches: StorageClearCategoryResult
+  serviceWorkers: StorageClearCategoryResult
+}
+
+/**
  * The platform-agnostic operations `humble/user.ts`'s login watch needs from a login window. One
  * runtime implementation exists per build: Electron's untouched `session.fromPartition` path needs
  * no implementation of this interface at all (the holder stays `null`); the Tauri sidecar installs
@@ -100,6 +126,34 @@ export interface LoginWindowSeam {
     csrfToken?: string
     userAgent: string
   }): Promise<LoginWindowRevealPostResult>
+  /**
+   * Origin-scoped storage clear (Phase 34.4.1 Plan 15, F-6 BLOCKING, D-08/Pitfall 3,
+   * T-34.4.1-66/-67/-70). Clears `localStorage`, `sessionStorage`, IndexedDB, Cache Storage and
+   * service-worker registrations for `originUrl`'s OWN origin only -- same-origin policy makes
+   * any other origin structurally unreachable, so this is scoped by construction rather than by
+   * a filter that could be got wrong (the same discipline `clearCookies` achieves via its own
+   * domain-suffix filter). Resolves the per-category report for ANY completed run, including one
+   * where several categories are `'unsupported'` -- never coerced to `0`. Rejects ONLY on a
+   * structural failure: no window could be built, the injected script itself errored, or the
+   * clear timed out.
+   *
+   * Unlike `open`/`cookies`/`takeEvents`/`close` above, this method's rejection is NOT swallowed
+   * here -- plan 16's guarded `wipeSteps` entry owns that swallow; a seam method that faked
+   * success here would recreate F-6's exact failure mode one layer down.
+   *
+   * Origin-vs-domain limitation (T-34.4.1-70): cookies clear by DOMAIN suffix (`clearCookies`
+   * above), but web storage is scoped per ORIGIN (scheme+host+port). `HUMBLE_BASE_URL` is the
+   * `www.` origin, so this clears `https://www.humblebundle.com`'s storage but NOT a
+   * hypothetical bare `https://humblebundle.com` origin's storage -- see this plan's SUMMARY for
+   * the decision record.
+   *
+   * NOT yet called anywhere in this plan -- F-6 is not closed here. Plan 16 wires this into the
+   * two disconnect paths.
+   */
+  clearStorage(
+    originUrl: string,
+    userAgent: string
+  ): Promise<LoginWindowStorageClearResult>
 }
 
 // Module-scoped holder. `null` in the Electron build (nothing ever calls setLoginWindowSeam there)
