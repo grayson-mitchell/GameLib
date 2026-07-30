@@ -61,6 +61,35 @@ issues directly caused by the current task's changes).
   as-is (mechanically honest per the script's own current rules) — plan 19 owns reconciling S-07/
   S-10/S-11's disposition text against the fact that F-6 and F-1 are both already closed.
 
+## Plan 19 — `seam-parity-sweep.py`'s S-07/S-10/S-11 staleness re-forwarded, not fixed (2026-07-30)
+
+- **Found during:** Plan 19's own read of this file's Plan 18 entry (above) while writing
+  `34.4.1-19-PLAN.md` Task 1's declaration into `34.4.1-PORTED-CHANNELS.md`.
+- **Issue, unchanged from Plan 18's own description:** `seam-parity-sweep.py`'s
+  `categories_for_labels()` mapping table predates plans 15/16's `clearHumbleStorage`/
+  `clearEpicStorage` step labels, so the regenerated `34.4.1-SEAM-PARITY-SWEEP.md` still reports
+  S-07/S-10 as SILENTLY-DROPPED for `storage`/`cache` even though plan 16 closed both. Separately,
+  `is_axis_b_declared()`'s strict id+term bar (by design) cannot recognize `secretStore.ts`'s
+  prose-only module doc comment, so S-11 still reports SILENTLY-DROPPED even though plan 13 closed
+  F-1.
+- **Why not fixed here, despite plan 18 explicitly routing it to "plan 19":** `34.4.1-19-PLAN.md`'s
+  own `files_modified` frontmatter and task list name exactly three files
+  (`34.4.1-PORTED-CHANNELS.md`, `REQUIREMENTS.md`, `ROADMAP.md`) — `seam-parity-sweep.py` and
+  `34.4.1-SEAM-PARITY-SWEEP.md` are not among them, and this plan's own objective is explicit that
+  it must "change nothing whose truth the gate has not yet established" and must not expand scope
+  beyond what its own task list declares. `34.4.1-PORTED-CHANNELS.md`'s new gap-cycle section
+  records this staleness in prose (so a reader of the declared record is not misled) but does not
+  touch the script or the generated sweep document.
+- **Scope:** `seam-parity-sweep.py` and `34.4.1-SEAM-PARITY-SWEEP.md` are outside this plan's
+  declared files. Not fixed here.
+- **Disposition:** logged, re-forwarded. No plan currently owns this — neither plan 19 (this one)
+  nor plan 20 (the live-gate re-run, which touches `34.4.1-LIVE-GATE-RERUN.md`,
+  `34.4.1-LIVE-GATE.md`, `34.4.1-PORTED-CHANNELS.md` and `IPC-PORT-INVENTORY.md` only) lists this
+  file in scope. A future plan should fix `categories_for_labels()` for
+  `clearHumbleStorage`/`clearEpicStorage`, decide whether to add a formal decision id to
+  `secretStore.ts`'s header or accept S-11's SILENTLY-DROPPED read as a known false-negative of
+  the script's strict-by-design matching, and regenerate the sweep document.
+
 ## Plan 18 — `helperProcess.test.ts` full-suite-only flake (2026-07-30)
 
 - **Found during:** Plan 18's Task 4 `npm run test:ci` verification run (3386 passed / 3387 total,
