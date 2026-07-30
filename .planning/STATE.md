@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1 gap cycle PLANNED (plans 10-20) — execute from plan 10
-last_updated: "2026-07-30T06:25:00.000Z"
-last_activity: 2026-07-30
+stopped_at: 34.4.1 gap cycle EXECUTING (plans 10-20) — starting at plan 10
+last_updated: "2026-07-30T07:15:12.867Z"
+last_activity: 2026-07-30 -- Phase 34.4.1 execution started
 progress:
   total_phases: 17
   completed_phases: 12
-  total_plans: 144
+  total_plans: 155
   completed_plans: 134
   percent: 71
 ---
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.5 — tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc
+**Current focus:** Phase 34.4.1 — tauri-embedded-browser-login-seam-replace-the-electron-webvi
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -66,7 +66,14 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING
+Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
+Plan: 10 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+execution starts at plan 10)
+
+**Phase 34.5 — HELD at plan 15 of 15.** Its live gate's precondition is 34.4.1's own
+gate, and 34.5-15 mints real OAuth credentials over the seam that F-1 leaves in
+plaintext. The 34.5 execution narrative below is retained history, not current position:
+
 Plan: 15 of 15 (01 done — pathShim desktop/exe/documents extension +
 GAMELIB_SHELL_EXE spawn-time handoff, REQ-34.5-01; 02 done — nile OAuth redirect
 host-anchored on www.amazon.com, closing T-34.4.1-44b; 03 done — 34.5-LIVE-GATE.md
@@ -279,6 +286,7 @@ sidecar output read from `gamelib.log`. Full green check recorded verbatim:
 exit 0; `cargo check` exit 0 (manual, no CI step); `cargo test` 40/40, exit
 
 0. See `34.5-13-SUMMARY.md`.); 14 done — `34.5-PORTED-CHANNELS.md` declares all
+
 38 channels (11/9/7/11 per module) with kind, registration module, honest
 proof level and riders; every `LIVE (item N)` cell also reads PENDING since
 34.5-15's live gate has not run. `T-34.4.1-44b` closure (plan 34.5-02) cited
@@ -1806,7 +1814,7 @@ stale frontmatter `percent`/`last_activity` fields, both diffed against a pre-se
 `STATE.md` rather than trusted blindly, per this cluster's established practice.
 
 Prior phase: 34.1 (tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome) — COMPLETE, 8 of 8 executed (34.1-01 done -- D-04 capability grants + IPC-PORT-INVENTORY.md reconciliation, REQ-34.1-02/REQ-34.1-10 complete, see 34.1-01-SUMMARY.md; 34.1-02 done -- D-07/D-08 app-shell handler extraction, REQ-34.1-04/REQ-34.1-12 complete, see 34.1-02-SUMMARY.md; 34.1-03 done -- D-01/D-02 renderer-side window chrome + D-05/D-06 frameless runtime, REQ-34.1-01/REQ-34.1-03 complete, see 34.1-03-SUMMARY.md; 34.1-04 done -- D-03/D-09/D-13 sidecar registration of the 18 app-shell channels + new import-graph gate, REQ-34.1-05/REQ-34.1-09 complete, see 34.1-04-SUMMARY.md; 34.1-05 done -- D-10 renderer-side gamepadAction (DOM dispatch + geometric directional focus, replacing webContents.sendInputEvent), REQ-34.1-06 complete, see 34.1-05-SUMMARY.md; 34.1-06 done -- D-11 real Tauri tray (tray_set_icon rustInvoke arm + changeTrayColor registration), see 34.1-06-SUMMARY.md; 34.1-07 done -- D-12 createNewWindow/showAboutWindow as genuine renderer-side Tauri WebviewWindows, fail-closed per-window-label capability scoping (windows:["main"]), REQ-34.1-08 complete, see 34.1-07-SUMMARY.md; 34.1-08 done -- slice closure: declared 33-channel ported list w/ the third port kind (renderer-side Tauri JS), 10 deferred live-UAT items (34.1-HUMAN-UAT.md), validation contract closed (nyquist_compliant: true), SEAM.md ported/deferred split reconciled (headline tally 28->61 wired/re-routed total), REQ-34.1-11/REQ-34.1-12 complete, see 34.1-08-SUMMARY.md. **PHASE 34.1 COMPLETE — all 8 plans executed, 33 channels declared ported, unit-proven with ALL live UAT deferred per D-15. Next: Phase 34.2.**)
-Status: Ready to execute
+Status: Executing Phase 34.4.1
 
 > NOTE (34.3-08): `state.advance-plan` again spliced this session's current status
 > ("Phase complete — ready for verification") into this HISTORICAL "Prior phase: 34.1"
@@ -2037,7 +2045,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-29
+Last activity: 2026-07-30 -- Phase 34.4.1 execution started
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
