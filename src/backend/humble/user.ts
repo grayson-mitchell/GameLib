@@ -45,15 +45,19 @@ export { standardBrowserUserAgent }
 // Backstop cookie-detection poll cadence (Open Question 3) — supplements the
 // renderer's navigation relay (humbleLoginNavigated), which may not fire on
 // every SPA-style post-login state change on humblebundle.com [ASSUMED].
-const COOKIE_POLL_INTERVAL_MS = 1500
+// Exported (Phase 34.4.1 Plan 18, F-2) so a test can pin the value directly
+// rather than re-deriving it — a later "tidy" of the logging fix in this same
+// file must never alter timing under cover of that change.
+export const COOKIE_POLL_INTERVAL_MS = 1500
 
 // Poll-path validation throttle: a cookie VALUE that was just rejected is not
 // re-validated by the poll more often than this. Deliberately NOT a
 // permanent blacklist — Humble may keep the same value across the
 // anonymous → authenticated transition — and a forced re-validation (D-17,
 // relayed from the webview's navigation events) bypasses the throttle
-// entirely (see watchForLogin).
-const VALIDATION_THROTTLE_MS = 3000
+// entirely (see watchForLogin). Exported for the same pinning reason as
+// COOKIE_POLL_INTERVAL_MS above.
+export const VALIDATION_THROTTLE_MS = 3000
 
 // WR-03: hard deadline on the login watch. The only external teardown signal
 // is the renderer's humbleStopLogin on route unmount — which never fires
@@ -65,6 +69,15 @@ const VALIDATION_THROTTLE_MS = 3000
 // notifyLoginNavigated() relay so an actively-navigating user is never cut
 // off mid-login.
 export const LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000
+
+// F-2 fix (Phase 34.4.1 Plan 18): low-frequency liveness heartbeat for the
+// rejection-log collapse in watchForLogin()'s logRejectionStatus(). Elapsed-
+// time based (not iteration-count based) so it stays meaningful if
+// COOKIE_POLL_INTERVAL_MS's cadence ever changes. This is a NEW constant,
+// added alongside the three above rather than replacing any of them — none
+// of COOKIE_POLL_INTERVAL_MS/VALIDATION_THROTTLE_MS/LOGIN_WATCH_TIMEOUT_MS
+// change value because of this fix.
+const LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS = 30_000
 
 type LoginResult = {
   status: 'done' | 'waiting' | 'error'
@@ -293,6 +306,55 @@ export class HumbleUser {
       // concurrent validations (they could double-store or double-settle).
       let validationInFlight = false
 
+      // F-2 fix (Phase 34.4.1 Plan 18): the live gate found ~37 identical
+      // "rejected candidate session" warnings over ~2.5 minutes for one
+      // functionally-correct wait (one per throttled poll tick) — noisy, but
+      // adjacent in shape to a genuinely wedged watch. logRejectionStatus()
+      // collapses consecutive identical-status rejections to ONE line, logs
+      // again on any status CHANGE (a transition is information and must
+      // never be suppressed), and reports how many were suppressed since the
+      // last line so no information is lost. A low-frequency, elapsed-time
+      // liveness heartbeat (LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS) still fires
+      // during a long unchanged wait, so the fix for "too noisy" cannot
+      // create "silently wedged" — the strictly worse failure mode this gate
+      // exists to catch. None of the poll cadence, validation throttle, or
+      // deadline (and its navigation re-arm) are touched by this function.
+      let lastLoggedRejectionStatus: string | null = null
+      let suppressedSinceLastRejectionLog = 0
+      let lastRejectionLogAt = 0
+
+      function logRejectionStatus(status: string) {
+        const now = Date.now()
+        if (status !== lastLoggedRejectionStatus) {
+          logWarning(
+            suppressedSinceLastRejectionLog > 0
+              ? [
+                  `Humble login validation rejected candidate session (status changed; ${suppressedSinceLastRejectionLog} prior identical rejection(s) suppressed):`,
+                  status
+                ]
+              : ['Humble login validation rejected candidate session:', status],
+            LogPrefix.Backend
+          )
+          lastLoggedRejectionStatus = status
+          suppressedSinceLastRejectionLog = 0
+          lastRejectionLogAt = now
+          return
+        }
+        if (now - lastRejectionLogAt >= LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS) {
+          logWarning(
+            [
+              `Humble login still waiting (status unchanged; ${suppressedSinceLastRejectionLog} rejection(s) suppressed since the last line):`,
+              status
+            ],
+            LogPrefix.Backend
+          )
+          suppressedSinceLastRejectionLog = 0
+          lastRejectionLogAt = now
+          return
+        }
+        suppressedSinceLastRejectionLog += 1
+      }
+
       // Hoisted function declarations so `settle`/`checkCookie` can reference
       // each other regardless of textual order — both only ever run
       // asynchronously (interval/forced-revalidation callbacks), well after
@@ -431,7 +493,8 @@ export class HumbleUser {
               cookieValue,
               settle,
               () => settled,
-              seam !== null ? seamLabel : null
+              seam !== null ? seamLabel : null,
+              logRejectionStatus
             )
             if (outcome === 'rejected') {
               lastRejectedValue = cookieValue
@@ -522,7 +585,8 @@ export class HumbleUser {
     cookieValue: string,
     settle: (result: LoginResult) => void,
     isSettled: () => boolean,
-    seamLabel: string | null
+    seamLabel: string | null,
+    onRejected: (status: string) => void
   ): Promise<'done' | 'rejected' | 'transient'> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
@@ -552,12 +616,11 @@ export class HumbleUser {
       // watch running so the user can complete the real login. The caller
       // throttles poll-path re-validation of this value; forced
       // revalidations always re-check it (the value may stay IDENTICAL
-      // across anonymous → authenticated). Status-only log (never the cookie
-      // value).
-      logWarning(
-        ['Humble login validation rejected candidate session:', gamekeys.status],
-        LogPrefix.Backend
-      )
+      // across anonymous → authenticated). Status-only (never the cookie
+      // value) — logging itself is delegated to the caller's
+      // logRejectionStatus() (F-2 fix, Phase 34.4.1 Plan 18), which collapses
+      // consecutive identical-status rejections instead of logging every one.
+      onRejected(gamekeys.status)
       return 'rejected'
     }
 

@@ -121,7 +121,9 @@ jest.mock('../syncFence', () => ({
 import {
   HumbleUser,
   standardBrowserUserAgent,
-  LOGIN_WATCH_TIMEOUT_MS
+  LOGIN_WATCH_TIMEOUT_MS,
+  VALIDATION_THROTTLE_MS,
+  COOKIE_POLL_INTERVAL_MS
 } from '../user'
 import {
   setLoginWindowSeam,
@@ -539,6 +541,147 @@ describe('HumbleUser', () => {
       expect(result.status).toBe('done')
       expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+    })
+  })
+
+  // ── F-2 fix: state-change rejection logging (Phase 34.4.1 Plan 18) ───────
+
+  describe('startLogin() — rejection-log collapse (F-2, Phase 34.4.1 Plan 18)', () => {
+    test('N consecutive identical-status rejections produce ONE warning, not N', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+
+      expect(mockGetGamekeys).toHaveBeenCalledTimes(3)
+      const rejectionLines = mockLogWarning.mock.calls.filter((c) =>
+        String(c[0]).includes('rejected candidate session')
+      )
+      expect(rejectionLines.length).toBe(1)
+      expect(String(rejectionLines[0][0])).not.toContain('status changed')
+
+      HumbleUser.stopLogin()
+      await loginPromise
+    })
+
+    test('a status CHANGE logs again, reporting the suppressed count from the PREVIOUS status', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+      const loginPromise = HumbleUser.startLogin()
+      // Three identical rejections under 'session_expired' — one logged,
+      // two suppressed.
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+
+      // Status changes to 'access_denied' — must log again, never be
+      // silently absorbed into the prior suppression count.
+      mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+
+      const rejectionLines = mockLogWarning.mock.calls.filter((c) =>
+        String(c[0]).includes('rejected candidate session')
+      )
+      expect(rejectionLines.length).toBe(2)
+      expect(String(rejectionLines[0][0])).not.toContain('status changed')
+      expect(String(rejectionLines[1][0])).toContain('status changed')
+      expect(String(rejectionLines[1][0])).toContain(
+        '2 prior identical rejection(s) suppressed'
+      )
+      expect(rejectionLines[1][0][1]).toBe('access_denied')
+
+      HumbleUser.stopLogin()
+      await loginPromise
+    })
+
+    test('a long wait under the SAME status still produces periodic liveness evidence instead of total silence', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+      try {
+        mockCookiesGet.mockResolvedValue([{ value: 'still-anon-value' }])
+        mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+        const loginPromise = HumbleUser.startLogin()
+        HumbleUser.notifyLoginNavigated()
+        await flushAsync()
+
+        // Advance well past the liveness heartbeat interval (30s) while the
+        // SAME value keeps being rejected with the SAME status — poll ticks
+        // re-validate at each throttle-window boundary.
+        for (let i = 0; i < 24; i++) {
+          jest.advanceTimersByTime(1500)
+          await flushAsync()
+        }
+
+        const heartbeats = mockLogWarning.mock.calls.filter((c) =>
+          String(c[0]).includes('still waiting')
+        )
+        expect(heartbeats.length).toBeGreaterThan(0)
+
+        HumbleUser.stopLogin()
+        await loginPromise
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('acceptance is unaffected — a subsequent "ok" validation still completes login normally after prior suppressed rejections', async () => {
+      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+      const loginPromise = HumbleUser.startLogin()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await flushAsync()
+
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+      HumbleUser.notifyLoginNavigated()
+      const result = await loginPromise
+
+      expect(result.status).toBe('done')
+      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
+    })
+
+    test('the forced-revalidation path still bypasses the throttle even with the collapsed logging', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
+      try {
+        mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+        mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+
+        const loginPromise = HumbleUser.startLogin()
+        HumbleUser.notifyLoginNavigated()
+        await flushAsync()
+        expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
+
+        // Well INSIDE the 3000ms throttle window — a forced revalidation
+        // must still re-check (D-17), unlike an ordinary poll tick.
+        jest.advanceTimersByTime(500)
+        HumbleUser.notifyLoginNavigated()
+        await flushAsync()
+        expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
+
+        HumbleUser.stopLogin()
+        await loginPromise
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    test('pins the login-watch timing constants — a logging fix must never alter timing under cover', () => {
+      expect(LOGIN_WATCH_TIMEOUT_MS).toBe(10 * 60_000)
+      expect(VALIDATION_THROTTLE_MS).toBe(3000)
+      expect(COOKIE_POLL_INTERVAL_MS).toBe(1500)
     })
   })
 
