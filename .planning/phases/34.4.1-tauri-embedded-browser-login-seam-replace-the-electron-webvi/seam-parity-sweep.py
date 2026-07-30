@@ -62,18 +62,33 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "sidecar" / "electronStub.ts"
 
 # The expected-answer sites from 34.4.1-10-PLAN.md <interfaces> — checked against, never
 # substituted for the live walk. If the live walk finds fewer than this, the walk is broken.
+#
+# Line numbers refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10 wrote this
+# script): plans 11-17 (already committed) and this plan's own Task 1-3/S-09 edits shifted every
+# one of these lines. This is a LINE NUMBER refresh only, matching the SAME real call sites —
+# `git log -p` on each file confirms no site was added, removed, or moved to a different function
+# by this renumbering. The one genuinely NEW getLoginWindowSeam() call this plan adds
+# (checkHealthAndFlagExpiry's S-09 guard, user.ts:776) is deliberately NOT added here — this list
+# is a FLOOR against 34.4.1-10-PLAN.md's original <interfaces>, not an exhaustive site list; the
+# new site still surfaces in the real findings table below without needing a floor entry.
 EXPECTED_AXIS_A_SITES = [
     "src/backend/humble/adapter.ts:272",
-    "src/backend/humble/user.ts:185",
-    "src/backend/humble/user.ts:281",
-    "src/backend/humble/user.ts:614",
-    "src/backend/humble/user.ts:794",
+    "src/backend/humble/user.ts:168",  # was :185 (getLiveCsrfToken)
+    "src/backend/humble/user.ts:264",  # was :281 (watchForLogin)
+    "src/backend/humble/user.ts:646",  # was :614 (finishLogin's csrf capture)
+    "src/backend/humble/user.ts:943",  # was :794 (disconnect's wipeSteps)
     "src/backend/sidecar/oauthLoginCapture.ts:157",
-    "src/backend/storeManagers/legendary/user.ts:107",
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:358",
+    "src/backend/storeManagers/legendary/user.ts:137",  # was :107
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:407",  # was :358
 ]
+# Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
+# F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
+# dedicated seam module (secretStore.ts) that plan 13 installs a keyring-backed implementation
+# behind. user.ts itself no longer imports safeStorage from 'electron' at all — verified directly
+# (`grep -n "from 'electron'" src/backend/humble/user.ts` shows only `session`). This is an
+# IMPORTER-LOCATION update, not a re-litigation of F-1's classification.
 EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
-    "src/backend/humble/user.ts",
+    "src/backend/humble/secretStore.ts",
     "src/backend/steamgrid/secureKey.ts",
     "src/backend/storeManagers/steam/tokenStore.ts",
 ]
@@ -421,7 +436,18 @@ def find_function_body_by_name(text: str, name: str) -> str | None:
 # Sink extractors (shared across tiers)
 # ---------------------------------------------------------------------------------------------
 
-CONFIGSTORE_SET_RE = re.compile(r"configStore\.set\(\s*'([A-Za-z0-9_]+)'")
+# Widened Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12's secret-store seam
+# (already committed, landed AFTER this script was written) replaced finishLogin's direct
+# `configStore.set('csrfToken', ...)` sink with `storeHumbleSecret('csrfToken', ...)` for every
+# ENCRYPTED value (session cookie, csrf token) on BOTH the Electron and Tauri branches — the same
+# capability-sink SHAPE this tier already detects, just renamed. Matching only the literal
+# `configStore.set(` (this regex's original form) would have made this classifier blind to the
+# csrf-capture site's now-real sink, silently reporting "no configStore sink found" (None) instead
+# of a genuine identical-keys DECLARED finding — exactly the kind of drift this file's own
+# docstring says to fix in the SCRIPT, not paper over by hand-editing the generated .md.
+CONFIGSTORE_SET_RE = re.compile(
+    r"(?:configStore\.set|storeHumbleSecret)\(\s*'([A-Za-z0-9_]+)'"
+)
 RETURN_SNIPPET_RE = re.compile(r"\breturn\s+([^;\n]{1,80})")
 RESOLVE_SNIPPET_RE = re.compile(r"\bresolve\(\s*(\{[^;\n]{0,80})")
 THROW_CLASS_RE = re.compile(r"\b(?:throw|reject)\s*\(?\s*new\s+([A-Za-z0-9_]+)\(")
@@ -475,7 +501,12 @@ class Finding:
 # source change that invalidates the classification fails loudly instead of reporting stale text.
 SITE_PROFILES = {
     "src/backend/humble/user.ts::watchForLogin": {
-        "line_hint": 281,
+        # Line hint updated Phase 34.4.1 Plan 18 (F-2): the site itself is unchanged, but Plan
+        # 18's Task 2 (rejection-log collapse) inserted ~17 lines above it (a new
+        # LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS constant + doc comment) -- the +/-5 line-window
+        # match in run_axis_a() needs the hint kept current, exactly the kind of drift this
+        # profile's own anchor-count check exists to catch loudly rather than silently.
+        "line_hint": 264,
         "anchors": [
             "standardBrowserUserAgent()",  # must appear on BOTH the Electron ses.setUserAgent
             # call and the Tauri seam.open({userAgent: ...}) call -- 2+ occurrences is the
@@ -489,7 +520,9 @@ SITE_PROFILES = {
         "disposition": "correct — no action (D-01/D-02; UA parity verified by anchor count, not a capability drop)",
     },
     "src/backend/sidecar/humbleLoginFlowRegistration.ts::smokeHook": {
-        "line_hint": 358,
+        # Line hint refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10) — same site,
+        # shifted by intervening plans' additions to this file.
+        "line_hint": 407,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",
@@ -500,6 +533,28 @@ SITE_PROFILES = {
         "tauri_capability": "opens a diagnostic window against example.com, waits ~2s, closes it -- proves the seam construction path, not a user-facing feature",
         "classification": "DECLARED",
         "disposition": "correct — no action (env-gated diagnostic harness; no production capability on either branch to drop)",
+    },
+    # Added Phase 34.4.1 Plan 18 (F-2/F-3/F-4/S-09 gap-cycle closure). Plan 17 (already committed,
+    # landed AFTER this script was written in Plan 10) added a NEW getLoginWindowSeam() call site —
+    # a plain ternary EXPRESSION choosing a LOG LABEL STRING, not a two-named-function dispatch
+    # (so classify_ternary_site's find_function_body_by_name lookup does not match it) and not a
+    # wipeSteps/configStore sink either. Regenerating this document for S-09 hit this site as a
+    # hard stop (GATE FAILED) before any S-09-related change was made — fixing the SCRIPT (never
+    # hand-editing the generated .md) to classify a genuinely new site is exactly what this file's
+    # own docstring instructs.
+    "src/backend/humble/library.ts::revealTransportLabel": {
+        "line_hint": 1202,
+        "anchors": [
+            "revealTransportLabel",
+            "login-window seam transport",
+            "electron-net transport",
+        ],
+        "min_anchor_occurrences": {},
+        "id_anchor": None,
+        "electron_capability": "logs the fixed 'electron-net transport' label on the reveal-POST diagnostic line",
+        "tauri_capability": "logs 'login-window seam transport' -- a LABEL choice derived from the SAME getLoginWindowSeam() condition humblePostRequest (adapter.ts) branches its REAL dispatch on; this line does not itself dispatch anything",
+        "classification": "DECLARED",
+        "disposition": "correct — no action (Phase 34.4.1 gap-cycle plan 17, F-8: a diagnostic label choice, not a dropped capability -- the reveal POST's actual transport dispatch lives in adapter.ts's own getLoginWindowSeam() branch, unaffected by this line)",
     },
 }
 

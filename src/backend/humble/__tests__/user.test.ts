@@ -1521,6 +1521,137 @@ describe('HumbleUser', () => {
       await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
 
+    // ── S-09 fix (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03) ─────────
+    // checkHealthAndFlagExpiry()'s csrf_cookie backfill previously called
+    // session.fromPartition() unconditionally with NO getLoginWindowSeam()
+    // guard anywhere in the function -- under Tauri this silently no-op'd
+    // every health check. It now opens a temporary HIDDEN window through the
+    // seam (the same shape disconnect()'s clearHumbleCookies step uses), the
+    // same way finishLogin captures csrf_cookie during an active login.
+
+    describe('checkHealthAndFlagExpiry() — csrf_cookie backfill seam path (S-09, Plan 18)', () => {
+      function primeHealthyNoCsrfConfig() {
+        mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+          if (key === 'sessionCookie') {
+            return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+          }
+          // csrfToken never seen — models a pre-existing/missed-capture account.
+          return undefined
+        })
+        mockDecryptString.mockReturnValue('cookie')
+        mockGetGamekeys.mockResolvedValue({ status: 'ok' })
+      }
+
+      test('opens a temporary hidden window, reads csrf_cookie through the seam, stores it, and closes the window', async () => {
+        primeHealthyNoCsrfConfig()
+        mockSeamOpen.mockResolvedValue('csrf-backfill-window-0')
+        mockSeamCookies.mockResolvedValue({
+          total: 1,
+          matched: [
+            {
+              name: 'csrf_cookie',
+              domain: 'www.humblebundle.com',
+              value: 'seam-backfilled-csrf-value'
+            }
+          ]
+        })
+
+        await HumbleUser.checkHealthAndFlagExpiry()
+
+        expect(mockSeamOpen).toHaveBeenCalledWith(HUMBLE_BASE_URL, {
+          visible: false,
+          userAgent: standardBrowserUserAgent()
+        })
+        expect(mockSeamCookies).toHaveBeenCalledWith(
+          'csrf-backfill-window-0',
+          'www.humblebundle.com',
+          ['csrf_cookie']
+        )
+        const csrfCall = mockConfigStore.set.mock.calls.find(
+          ([key]) => key === 'csrfToken'
+        )
+        expect(csrfCall).toBeDefined()
+        expect(csrfCall![1]).toMatch(/^humble:v1:/)
+        expect(csrfCall![1]).not.toBe('seam-backfilled-csrf-value')
+        expect(mockSeamClose).toHaveBeenCalledWith('csrf-backfill-window-0')
+
+        // Redaction: the raw token value must never reach a log call.
+        for (const call of [
+          ...mockLogWarning.mock.calls,
+          ...mockLogInfo.mock.calls
+        ]) {
+          expect(JSON.stringify(call)).not.toContain(
+            'seam-backfilled-csrf-value'
+          )
+        }
+      })
+
+      test('never touches session.fromPartition under the seam path', async () => {
+        primeHealthyNoCsrfConfig()
+        mockSeamOpen.mockResolvedValue('csrf-backfill-window-1')
+        mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+
+        await HumbleUser.checkHealthAndFlagExpiry()
+
+        expect(mockFromPartition).not.toHaveBeenCalled()
+      })
+
+      test('a rejecting cookie read is non-fatal, and the window is still closed exactly once', async () => {
+        primeHealthyNoCsrfConfig()
+        mockSeamOpen.mockResolvedValue('csrf-backfill-window-2')
+        mockSeamCookies.mockRejectedValue(new Error('window jar read failed'))
+
+        await expect(
+          HumbleUser.checkHealthAndFlagExpiry()
+        ).resolves.toBeUndefined()
+
+        expect(mockSeamClose).toHaveBeenCalledTimes(1)
+        expect(mockSeamClose).toHaveBeenCalledWith('csrf-backfill-window-2')
+        expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+          'csrfToken',
+          expect.anything()
+        )
+        expect(mockLogWarning).toHaveBeenCalled()
+      })
+
+      test('a rejecting seam.open() is non-fatal and never attempts a close (no window to leak)', async () => {
+        primeHealthyNoCsrfConfig()
+        mockSeamOpen.mockRejectedValue(new Error('window build failed'))
+
+        await expect(
+          HumbleUser.checkHealthAndFlagExpiry()
+        ).resolves.toBeUndefined()
+
+        expect(mockSeamClose).not.toHaveBeenCalled()
+        expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+          'csrfToken',
+          expect.anything()
+        )
+      })
+
+      test('does NOT open a window when csrfToken is already cached (parity with the Electron path)', async () => {
+        mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+          if (key === 'sessionCookie') {
+            return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+          }
+          if (key === 'csrfToken') {
+            return 'humble:v1:' + Buffer.from('already-cached').toString('base64')
+          }
+          return undefined
+        })
+        mockDecryptString.mockReturnValue('cookie')
+        mockGetGamekeys.mockResolvedValue({ status: 'ok' })
+
+        await HumbleUser.checkHealthAndFlagExpiry()
+
+        expect(mockSeamOpen).not.toHaveBeenCalled()
+        expect(mockConfigStore.set).not.toHaveBeenCalledWith(
+          'csrfToken',
+          expect.anything()
+        )
+      })
+    })
+
     // ── Phase 34.4.1 Plan 06 (D-08): disconnect() seam path ─────────────────
     // Closes 34.4 D-05's declared partial — under the Tauri seam, disconnect's
     // cookie wipe goes through a hidden window + domain-scoped clearCookies
