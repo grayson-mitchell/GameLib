@@ -589,6 +589,18 @@ const IN_SCOPE_SUITES = [
  * any other backend module, so there is no `electron`/`electron-store`/`pathShim` import chain to
  * contain in the first place. A `readdirSync` recount at this plan's execution time puts the
  * directory at 39 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 35 below.
+ *
+ * `humbleSecretStore.test.ts` (Phase 34.4.1 gap-cycle plan 13, F-1 BLOCKING closure) is
+ * classified as structurally contained: it follows `keyringTokenStore.test.ts`'s own
+ * already-approved convention exactly -- it mocks `../sidecarRpc` (`requestRustInvoke`) and
+ * `../../logger` directly, and additionally mocks `../../humble/electronStores` with an in-memory
+ * map (never `requireActual`, per `tests-clobbering-real-steam-store`'s warning that an unmocked
+ * electron-store reaches the REAL app-support dir). `../humble/secretStore` is exercised for
+ * real (its own default `ElectronHumbleSecretStore` only ever touches the mocked `electron`
+ * (safeStorage) via the project-wide auto-mock and the mocked `electronStores` above -- no real
+ * `pathShim`/`os.homedir()` surface anywhere in this suite's import graph. A `readdirSync`
+ * recount at this plan's execution time puts the directory at 40 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 36 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -604,6 +616,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'gameDetailsImportGate.test.ts',
   'humbleFlows.test.ts',
   'humbleLoginFlows.test.ts',
+  'humbleSecretStore.test.ts',
   'installFlows.test.ts',
   'keyringTokenStore.test.ts',
   'lifecycleStub.test.ts',

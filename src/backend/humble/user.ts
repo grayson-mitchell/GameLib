@@ -733,6 +733,28 @@ export class HumbleUser {
     // disconnect (WR-02 / T-10-07).
     configStore.clear()
 
+    // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): clear the
+    // keyring-backed session/csrf secrets too, as part of the SAME credential
+    // cleanup as the configStore.clear() line just above -- distinct from the
+    // partition/browser storage clearing below (and from plan 16's
+    // browser-side storage clearing further out), neither of which replaces
+    // the other. configStore.clear() stays FIRST and this call is guarded so
+    // a rejection can never abort it or throw out of disconnect() -- the
+    // configStore credential delete remains the security boundary (WR-02/
+    // T-10-07); this is best-effort cleanup layered on top of it, not a
+    // replacement for it. getHumbleSecretStore().clearSecrets() is already
+    // total (never rejects) for both the Electron and keyring-backed
+    // implementations, but this guard is defense in depth matching the
+    // wipeSteps discipline below.
+    try {
+      await getHumbleSecretStore().clearSecrets()
+    } catch (err) {
+      logWarning(
+        ['Humble disconnect: keyring secret clear failed (non-fatal):', err],
+        LogPrefix.Backend
+      )
+    }
+
     // Phase 11 (HSYNC-02/D-04): the library cache + sync-state are fully
     // reconstructible from a re-sync, so they are wiped alongside the
     // credential — a stale key inventory must never survive a disconnect.

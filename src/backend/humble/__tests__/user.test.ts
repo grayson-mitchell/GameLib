@@ -79,7 +79,14 @@ const mockConfigStore = {
   get: jest.fn(),
   get_nodefault: jest.fn(),
   set: jest.fn(),
-  clear: jest.fn()
+  clear: jest.fn(),
+  // Phase 34.4.1 gap-cycle plan 13 (F-1 closure): the real (unmocked)
+  // ElectronHumbleSecretStore.clearSecrets() calls configStore.delete() twice
+  // -- disconnect() now invokes it via getHumbleSecretStore(), which this
+  // file does NOT mock (it exercises the real secretStore.ts module against
+  // this same electronStores mock, matching the rest of this file's
+  // convention).
+  delete: jest.fn()
 }
 // Phase 11 (HSYNC-02/D-04/D-30): disconnect() must clear these two but never
 // humbleRevealedStore (Pitfall 1 — a disconnect must not regress a
@@ -816,6 +823,41 @@ describe('HumbleUser', () => {
           'humbleSyncStore.clear'
         ])
       )
+    })
+
+    // ── Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure) ────────────────
+    // disconnect() now also clears the keyring-backed session/csrf secrets via
+    // getHumbleSecretStore().clearSecrets() -- these tests exercise the REAL
+    // (unmocked) secretStore.ts module against this file's own electronStores
+    // mock, same convention the rest of this describe block already uses.
+
+    test('F-1: disconnect() clears configStore BEFORE clearing the keyring-backed secrets', async () => {
+      const callOrder: string[] = []
+      mockConfigStore.clear.mockImplementation(() => {
+        callOrder.push('configStore.clear')
+      })
+      mockConfigStore.delete.mockImplementation((key: string) => {
+        callOrder.push(`configStore.delete:${key}`)
+      })
+
+      await HumbleUser.disconnect()
+
+      expect(callOrder[0]).toBe('configStore.clear')
+      expect(callOrder).toEqual(
+        expect.arrayContaining([
+          'configStore.delete:sessionCookie',
+          'configStore.delete:csrfToken'
+        ])
+      )
+    })
+
+    test('F-1: a rejecting keyring/configStore secret clear does not throw out of disconnect() and is logged', async () => {
+      mockConfigStore.delete.mockImplementation(() => {
+        throw new Error('delete failed')
+      })
+
+      await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+      expect(mockLogWarning).toHaveBeenCalled()
     })
   })
 
