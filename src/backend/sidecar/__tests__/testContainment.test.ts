@@ -579,6 +579,16 @@ const IN_SCOPE_SUITES = [
  * `electronStub.app.getPath`) because proving the `GAMELIB_SHELL_EXE -> getPath('exe') ->
  * shortcuts.ts:227` chain end-to-end is this suite's whole point. A `readdirSync` recount at this
  * plan's execution time puts the directory at 38 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 34 below.
+ *
+ * `seamBranchParity.test.ts` (Phase 34.4.1 gap cycle, plan 34.4.1-10 Task 2, REQ-34.4.1-11/
+ * REQ-34.4.1-GAP-04) is classified as structurally contained: it declares NO `jest.mock(...)` of
+ * any kind, the same "contained by construction, no per-suite opt-in required" floor
+ * `electronReachLedger.test.ts`/`pathShim.test.ts` already rely on. It reads real `.ts` source
+ * files off disk via plain `fs.readFileSync`/`readdirSync` for static text analysis only -- it
+ * never imports, requires, or executes `humble/user.ts`, `storeManagers/legendary/user.ts`, or
+ * any other backend module, so there is no `electron`/`electron-store`/`pathShim` import chain to
+ * contain in the first place. A `readdirSync` recount at this plan's execution time puts the
+ * directory at 39 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 35 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appShellFlows.test.ts',
@@ -606,6 +616,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'runnerMiscFlows.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
+  'seamBranchParity.test.ts',
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',
