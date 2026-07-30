@@ -13,7 +13,11 @@ import { getAccountIdentity, getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
-import { getLoginWindowSeam, classifyCookieRead } from './loginWindowSeam'
+import {
+  getLoginWindowSeam,
+  classifyCookieRead,
+  type CookieReadVerdict
+} from './loginWindowSeam'
 import { getHumbleSecretStore, type HumbleSecretKey } from './secretStore'
 
 // Re-exported so existing callers (ipc_handler.ts's humbleGetLoginUserAgent
@@ -831,7 +835,110 @@ export class HumbleUser {
               userAgent: standardBrowserUserAgent()
             })
             try {
+              // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
+              // before/after jar census, taken INSIDE this step against the
+              // SAME still-open window label the clear itself uses. F-7's
+              // process lesson: a measurement scheduled AROUND an operation
+              // cannot be reconstructed after the NEXT operation destroys its
+              // "after" — so the paired reads live here, not in a later
+              // diagnostic plan. The name filter is EMPTY (not just
+              // '_simpleauth_sess') so `matched` counts every humblebundle.com
+              // cookie — the domain-scope proof needs the whole Humble jar,
+              // not one cookie. Only integers/fixed text are ever logged —
+              // never a cookie name, domain, or value (T-34.4.1-34/-39,
+              // T-34.4.1-75).
+              let everProvedLive = false
+              interface Census {
+                total: number | null
+                matched: number
+                verdict: CookieReadVerdict
+              }
+              const readCensus = async (): Promise<Census> => {
+                try {
+                  const read = await seam.cookies(label, 'humblebundle.com', [])
+                  if (read.total > 0) everProvedLive = true
+                  return {
+                    total: read.total,
+                    matched: read.matched.length,
+                    verdict: classifyCookieRead({
+                      total: read.total,
+                      everProvedLive
+                    })
+                  }
+                } catch (err) {
+                  // A rejecting census read must NEVER block the clear or
+                  // throw out of disconnect() — the clear is the
+                  // user-visible operation; the census is evidence about it.
+                  logWarning(
+                    [
+                      'Humble disconnect: cookie census read failed (non-fatal, evidence unavailable for this side):',
+                      err
+                    ],
+                    LogPrefix.Backend
+                  )
+                  return {
+                    total: null,
+                    matched: 0,
+                    verdict: classifyCookieRead({ total: null, everProvedLive })
+                  }
+                }
+              }
+
+              const before = await readCensus()
               const deleted = await seam.clearCookies(label, 'humblebundle.com')
+              const after = await readCensus()
+
+              const fmtSide = (c: Census) =>
+                c.total === null
+                  ? 'total=unavailable, matched=unavailable, verdict=' + c.verdict
+                  : `total=${c.total}, matched=${c.matched}, verdict=${c.verdict}`
+              const survivingNonHumble =
+                after.total === null ? 'unavailable' : after.total - after.matched
+
+              // The one census log line plan 20's gate greps for. Exact
+              // format recorded verbatim in this plan's SUMMARY.
+              logInfo(
+                `Humble disconnect: cookie census before(${fmtSide(before)}) ` +
+                  `after(${fmtSide(after)}) deleted=${deleted} ` +
+                  `survivingNonHumble=${survivingNonHumble}`,
+                LogPrefix.Backend
+              )
+
+              // Domain-scoped <=> M1 == 0 AND (T0 - T1) == M0 AND D == M0.
+              // An UNDECIDABLE/unavailable side (either census read failed,
+              // or the jar was never proven live) can never PASS this check —
+              // it is reported as incomplete, never silently as a clean pass.
+              if (before.total === null || after.total === null) {
+                logWarning(
+                  'Humble disconnect: cookie census incomplete — domain-scope arithmetic cannot be verified (a census read was unavailable)',
+                  LogPrefix.Backend
+                )
+              } else {
+                const failures: string[] = []
+                if (after.matched !== 0) {
+                  failures.push(`matched-after=${after.matched} (expected 0)`)
+                }
+                const jarDelta = before.total - after.total
+                if (jarDelta !== before.matched) {
+                  failures.push(
+                    `jar shrank by ${jarDelta}, expected exactly matched-before=${before.matched}`
+                  )
+                }
+                if (deleted !== before.matched) {
+                  failures.push(
+                    `deleted=${deleted}, expected matched-before=${before.matched}`
+                  )
+                }
+                if (failures.length > 0) {
+                  // A blanket wipe (or any other non-domain-scoped clear) must
+                  // be LOUD, never inferred later from an absent line.
+                  logWarning(
+                    `Humble disconnect: cookie census discrepancy — clear may not have been domain-scoped: ${failures.join('; ')}`,
+                    LogPrefix.Backend
+                  )
+                }
+              }
+
               // Only the COUNT is logged — never a cookie name, domain, or
               // value (T-34.4.1-34, the removed-getFullCookieHeader discipline
               // this file already enforces elsewhere).

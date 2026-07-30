@@ -1534,6 +1534,147 @@ describe('HumbleUser', () => {
           expect(serialized).not.toMatch(/localStorage-key|session-storage-value/)
         }
       })
+
+      // ── Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)) ───────────────────
+      // A paired before/after cookie-jar census, taken from INSIDE the
+      // cookie-clear step, proving (or loudly disproving) that the clear was
+      // domain-scoped -- without ever reading or naming another origin's
+      // cookie (the planted-control-cookie precondition is genuinely moot).
+
+      describe('cookie census (Plan 17, F-5, item 3(b))', () => {
+        const humbleCookie = (name: string) => ({
+          name,
+          domain: '.humblebundle.com',
+          value: 'redacted-in-test-too'
+        })
+
+        test('census log line carries before/after totals, matched counts, deleted, and survivingNonHumble', async () => {
+          mockSeamCookies
+            .mockResolvedValueOnce({
+              total: 5,
+              matched: [
+                humbleCookie('_simpleauth_sess'),
+                humbleCookie('csrf_cookie'),
+                humbleCookie('other_humble_cookie')
+              ]
+            })
+            .mockResolvedValueOnce({ total: 2, matched: [] })
+          mockSeamClearCookies.mockResolvedValue(3)
+
+          await HumbleUser.disconnect()
+
+          const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
+            typeof msg === 'string' ? msg.includes('cookie census') : false
+          )
+          expect(censusCall).toBeDefined()
+          const line = String(censusCall?.[0])
+          expect(line).toContain('before(total=5, matched=3')
+          expect(line).toContain('after(total=2, matched=0')
+          expect(line).toContain('deleted=3')
+          expect(line).toContain('survivingNonHumble=2')
+
+          // Arithmetic holds -- no discrepancy warning.
+          const discrepancyCall = mockLogWarning.mock.calls.find((c) =>
+            String(c[0]).includes('discrepancy')
+          )
+          expect(discrepancyCall).toBeUndefined()
+        })
+
+        test('a simulated blanket wipe (jar drops further than the matched Humble count) triggers the discrepancy warning', async () => {
+          mockSeamCookies
+            .mockResolvedValueOnce({
+              total: 5,
+              matched: [
+                humbleCookie('_simpleauth_sess'),
+                humbleCookie('csrf_cookie'),
+                humbleCookie('other_humble_cookie')
+              ]
+            })
+            // Blanket wipe: ALL 5 cookies gone, not just the 3 Humble ones --
+            // the 2 non-Humble cookies that should have survived did not.
+            .mockResolvedValueOnce({ total: 0, matched: [] })
+          mockSeamClearCookies.mockResolvedValue(3)
+
+          await HumbleUser.disconnect()
+
+          const discrepancyCall = mockLogWarning.mock.calls.find((c) =>
+            String(c[0]).includes('discrepancy')
+          )
+          expect(discrepancyCall).toBeDefined()
+          expect(String(discrepancyCall?.[0])).toContain(
+            'may not have been domain-scoped'
+          )
+        })
+
+        test('a rejecting census read does not block the clear and disconnect() still resolves', async () => {
+          mockSeamCookies.mockRejectedValue(new Error('census read failed'))
+          mockSeamClearCookies.mockResolvedValue(0)
+
+          await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
+
+          expect(mockSeamClearCookies).toHaveBeenCalled()
+          const incompleteCall = mockLogWarning.mock.calls.find((c) =>
+            String(c[0]).includes('census incomplete')
+          )
+          expect(incompleteCall).toBeDefined()
+        })
+
+        test('the census log line contains no cookie name, domain, or value -- only integers and fixed text', async () => {
+          mockSeamCookies
+            .mockResolvedValueOnce({
+              total: 5,
+              matched: [
+                humbleCookie('_simpleauth_sess'),
+                humbleCookie('csrf_cookie'),
+                humbleCookie('other_humble_cookie')
+              ]
+            })
+            .mockResolvedValueOnce({ total: 2, matched: [] })
+          mockSeamClearCookies.mockResolvedValue(3)
+
+          await HumbleUser.disconnect()
+
+          const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
+            typeof msg === 'string' ? msg.includes('cookie census') : false
+          )
+          expect(censusCall).toBeDefined()
+          const line = String(censusCall?.[0])
+          expect(line).not.toMatch(
+            /_simpleauth_sess|csrf_cookie|other_humble_cookie|redacted-in-test-too/
+          )
+          // Only the fixed vocabulary + digits should appear after the label.
+          expect(line).toMatch(
+            /^Humble disconnect: cookie census before\(total=\d+, matched=\d+, verdict=\w+\) after\(total=\d+, matched=\d+, verdict=\w+\) deleted=\d+ survivingNonHumble=\d+$/
+          )
+        })
+
+        test('the window is closed exactly once, after the census, on the census-failure path too', async () => {
+          mockSeamOpen.mockResolvedValue('disconnect-window-census')
+          mockSeamCookies.mockRejectedValue(new Error('census read failed'))
+          mockSeamClearCookies.mockResolvedValue(0)
+
+          await HumbleUser.disconnect()
+
+          expect(mockSeamClose).toHaveBeenCalledTimes(1)
+          expect(mockSeamClose).toHaveBeenCalledWith('disconnect-window-census')
+        })
+
+        test('an UNDECIDABLE read (jar never proven live) is reported as undecidable, never collapsed to a clean zero', async () => {
+          // Both before/after reads return total=0 -- the jar's cookie API
+          // was never proven live within this census, so classifyCookieRead
+          // must return UNDECIDABLE, never a false-positive SUPPORTED_BUT_EMPTY.
+          mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+          mockSeamClearCookies.mockResolvedValue(0)
+
+          await HumbleUser.disconnect()
+
+          const censusCall = mockLogInfo.mock.calls.find(([msg]) =>
+            typeof msg === 'string' ? msg.includes('cookie census') : false
+          )
+          expect(censusCall).toBeDefined()
+          expect(String(censusCall?.[0])).toContain('verdict=UNDECIDABLE')
+        })
+      })
     })
   })
 
