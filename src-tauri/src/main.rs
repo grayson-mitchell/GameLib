@@ -645,6 +645,96 @@ fn reveal_post_script(path: &str, body: &str, csrf_token: Option<&str>, exfil_ho
     )
 }
 
+// ---- humble_login_clear_storage support (34.4.1 gap cycle plan 15, F-6 BLOCKING,
+// REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----
+//
+// New capability the Tauri seam has never had: `humble_login_clear_cookies` above only clears
+// cookies. Electron's disconnect additionally runs `clearStorageData`/`clearCache`/
+// `clearAuthCache`/`clearHostResolverCache`/`clearData` -- localStorage, sessionStorage,
+// IndexedDB, Cache Storage and service workers all survived a Tauri disconnect (F-6, the
+// blocking live-gate finding), so Humble's web app silently restored a session from what
+// remained. This arm's design mirrors `humble_reveal_post` (D-07/D-08's hidden-window +
+// navigation-intercept-exfil template), not `humble_login_clear_cookies` -- running the clear
+// as JS INSIDE the target page's own origin makes it origin-scoped BY CONSTRUCTION (same-origin
+// policy), satisfying both D-08/Pitfall 3's over-broad constraint (never touch another
+// origin/storefront's storage) and F-6's under-broad one (never leave the CURRENT origin's
+// storage untouched) at the same time. `clear_all_browsing_data()` MUST NOT appear anywhere in
+// this file.
+
+/// Bound on how long `humble_login_clear_storage` waits for the exfil channel to deliver a
+/// payload before treating the clear as a timeout (mirrors `REVEAL_POST_TIMEOUT`'s D-08
+/// discipline -- the hidden window must not linger indefinitely on any exit path).
+const CLEAR_STORAGE_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// The two parsed, validated args `humble_login_clear_storage` needs. `origin_url` is
+/// re-validated https-only via `login_window_url_arg` itself (never re-derived, mirrors
+/// `reveal_post_args`'s own discipline) -- a missing/wrong-typed arg AND a non-https origin both
+/// collapse to the single `humble_login_clear_storage:bad-args` error. Deliberately does NOT
+/// derive the standard formatting trait (REQ-34.1-07's file-wide text gate, same reasoning as
+/// `RevealPostArgs` above) -- `#[cfg(test)]`'s rejection assertions use a small manual-match
+/// helper instead of `.unwrap_err()`.
+struct ClearStorageArgs {
+    origin_url: tauri::Url,
+    user_agent: String,
+}
+
+/// This arm's entire ASVS V5 input validation (mirrors `reveal_post_args`/`login_window_url_arg`,
+/// T-34.4.1-08).
+fn clear_storage_args(args: &[Value]) -> Result<ClearStorageArgs, String> {
+    let origin_url = login_window_url_arg(args)
+        .map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
+    let user_agent = args
+        .get(1)
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?
+        .to_string();
+    Ok(ClearStorageArgs {
+        origin_url,
+        user_agent,
+    })
+}
+
+/// Builds the script injected by `humble_login_clear_storage`. Clears, for the loaded page's OWN
+/// origin only (same-origin policy makes any other origin structurally unreachable by this
+/// script -- T-34.4.1-66): `localStorage`, `sessionStorage`, every IndexedDB database, every
+/// Cache Storage entry, and every service-worker registration. Each category is wrapped in its
+/// OWN try/catch (mirrors the TS-side guarded `wipeSteps` shape plan 16 will wire this into) so
+/// one failing/absent category can never abort the rest, and every category reports either a
+/// numeric count or the literal string `'unsupported'` -- NEVER silently coercing a missing API
+/// (`indexedDB.databases()` in particular is not universally available) into a false "0
+/// cleared" (T-34.4.1-67, the `navigator-clipboard-noops-under-tauri` mitigation applied to
+/// storage). The async categories (IndexedDB deletion, `caches`, service-worker unregistration)
+/// are all `await`ed before the single `exfil()` call at the very end, or this would report
+/// success for work that has not actually happened yet.
+///
+/// The ONLY interpolated value is `exfil_host`, which goes through the SAME `serde_json::to_string`
+/// discipline `reveal_post_script` uses for its own interpolated values (T-34.4.1-65) -- via a
+/// placeholder-token `.replace()` rather than `format!`'s `{{`/`}}` brace-escaping, which this
+/// script's heavy JS object/brace nesting would make unreadable and error-prone to keep correct.
+/// Every JS string literal inside the template uses single quotes (mirrors `reveal_post_script`),
+/// so every `concat!` piece below is exactly one Rust string literal with a BALANCED (2, even)
+/// raw `"`-count per source line -- satisfying `longRunningChannels.test.ts`'s WR-08
+/// stripper-integrity guard trivially, with no escaped-quote bookkeeping required.
+fn clear_storage_script(exfil_host: &str) -> String {
+    let exfil_host_js =
+        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "function exfil(result) { location.href = 'https://' + @@EXFIL_HOST@@ + '/clear-storage?data=' + encodeURIComponent(JSON.stringify(result)); } ",
+        "(async function() { ",
+        "var report = {}; ",
+        "try { if (typeof localStorage !== 'undefined' && localStorage !== null) { var n0 = localStorage.length; localStorage.clear(); report.localStorage = n0; } else { report.localStorage = 'unsupported'; } } catch (e0) { report.localStorage = 'unsupported'; } ",
+        "try { if (typeof sessionStorage !== 'undefined' && sessionStorage !== null) { var n1 = sessionStorage.length; sessionStorage.clear(); report.sessionStorage = n1; } else { report.sessionStorage = 'unsupported'; } } catch (e1) { report.sessionStorage = 'unsupported'; } ",
+        "try { if (typeof indexedDB !== 'undefined' && indexedDB !== null && typeof indexedDB.databases === 'function') { var dbs = await indexedDB.databases(); var n2 = 0; for (var i = 0; i < dbs.length; i++) { if (dbs[i] && dbs[i].name) { await new Promise(function(resolve) { try { var req = indexedDB.deleteDatabase(dbs[i].name); req.onsuccess = function() { resolve(); }; req.onerror = function() { resolve(); }; req.onblocked = function() { resolve(); }; } catch (e4) { resolve(); } }); n2++; } } report.indexedDB = n2; } else { report.indexedDB = 'unsupported'; } } catch (e2) { report.indexedDB = 'unsupported'; } ",
+        "try { if (typeof caches !== 'undefined' && caches !== null && typeof caches.keys === 'function') { var keys = await caches.keys(); for (var j = 0; j < keys.length; j++) { await caches.delete(keys[j]); } report.caches = keys.length; } else { report.caches = 'unsupported'; } } catch (e3) { report.caches = 'unsupported'; } ",
+        "try { if (typeof navigator !== 'undefined' && navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') { var regs = await navigator.serviceWorker.getRegistrations(); for (var k = 0; k < regs.length; k++) { await regs[k].unregister(); } report.serviceWorkers = regs.length; } else { report.serviceWorkers = 'unsupported'; } } catch (e5) { report.serviceWorkers = 'unsupported'; } ",
+        "exfil(report); ",
+        "})(); ",
+        "})();"
+    );
+    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
+}
+
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -1213,6 +1303,71 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 Err(_) => Err("humble_reveal_post:timeout".to_string()),
             }
         }
+        // Origin-scoped storage clear (34.4.1 gap cycle plan 15, F-6 BLOCKING,
+        // REQ-34.4.1-06/REQ-34.4.1-GAP-03). Same hidden-window + navigation-intercept-exfil
+        // template as `humble_reveal_post` above, reused verbatim for its timeout/close
+        // discipline. Never logs the origin, the storage contents, key names or the exfil
+        // payload (T-34.4.1-21/T-28-04 convention) -- only the channel name and generic error
+        // text ever reach `eprintln!`.
+        //
+        // Every exit path below closes the window before returning (D-08 -- no idle
+        // authenticated window persists after a clear):
+        //   - bad-args / window-build-failure: no window was ever created, nothing to close.
+        //   - script injection failure: closed immediately below, then returns the error.
+        //   - success / script-parse-failure / timeout (after `rx.recv_timeout`): the single
+        //     close call right after the recv covers all three of these outcomes at once.
+        "humble_login_clear_storage" => {
+            let parsed = clear_storage_args(args)?;
+            let label = next_login_window_label();
+            let (tx, rx) = mpsc_channel::<String>();
+            let window = match tauri::WebviewWindowBuilder::new(
+                app,
+                &label,
+                tauri::WebviewUrl::External(parsed.origin_url.clone()),
+            )
+            .user_agent(&parsed.user_agent)
+            .visible(false) // D-08: hidden, on-demand -- never a visible login window
+            .on_navigation(move |url| {
+                if url.host_str() == Some(REVEAL_EXFIL_HOST) {
+                    if let Some((_, payload)) = url.query_pairs().find(|(k, _)| k == "data") {
+                        let _ = tx.send(payload.into_owned());
+                    }
+                    // Cancel -- gamelib.invalid is RFC 2606 reserved and never actually
+                    // resolves regardless (mirrors humble_reveal_post's Open Question 1
+                    // disposition), but this is the real guard.
+                    return false;
+                }
+                true
+            })
+            .build()
+            {
+                Ok(w) => w,
+                Err(e) => {
+                    eprintln!("[shell] humble_login_clear_storage: window build failed: {e}");
+                    return Err(format!("humble_login_clear_storage:window:{e}"));
+                }
+            };
+
+            let script = clear_storage_script(REVEAL_EXFIL_HOST);
+            if let Err(e) = window.eval(&script) {
+                let _ = window.close(); // close site 1: script injection itself failed
+                eprintln!("[shell] humble_login_clear_storage: script injection failed: {e}");
+                return Err(format!("humble_login_clear_storage:script:{e}"));
+            }
+
+            let outcome = rx.recv_timeout(CLEAR_STORAGE_TIMEOUT);
+            let _ = window.close(); // close site 2: covers success, parse-failure AND timeout below
+
+            match outcome {
+                Ok(raw) => serde_json::from_str::<Value>(&raw).map_err(|e| {
+                    eprintln!(
+                        "[shell] humble_login_clear_storage: exfil payload parse failed: {e}"
+                    );
+                    format!("humble_login_clear_storage:script:{e}")
+                }),
+                Err(_) => Err("humble_login_clear_storage:timeout".to_string()),
+            }
+        }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
 }
@@ -1695,6 +1850,14 @@ fn main() {
 /// `humble_reveal_post` dispatch arm, proven the same way; the arm's actual window/eval/
 /// navigation-intercept calls are proven empirically instead, by this plan's Task 1
 /// (RESEARCH.md Open Question 1) and by `34.4.1-08`'s live gate item 4 (Open Question 2).
+///
+/// 34.4.1 gap cycle plan 15 (F-6 BLOCKING, REQ-34.4.1-06/REQ-34.4.1-GAP-03) extends this module
+/// further with `clear_storage_args` and `clear_storage_script` — the pure arg-validation and
+/// script-templating logic behind the new `humble_login_clear_storage` dispatch arm, proven the
+/// same way; the arm's actual window/eval/navigation-intercept calls are NOT covered by this
+/// plan's own verification (no automated layer can drive a real WKWebView's storage APIs) and
+/// remain proven only by plan 20's blocking live-gate re-run, once plan 16 wires this capability
+/// into the two disconnect paths.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2113,6 +2276,160 @@ mod tests {
     fn humble_reveal_post_script_embeds_the_exfil_host_used_by_the_navigation_intercept() {
         let script = reveal_post_script("/humbler/redeemkey", "body", None, REVEAL_EXFIL_HOST);
         assert!(script.contains(&serde_json::to_string(REVEAL_EXFIL_HOST).unwrap()));
+    }
+
+    // ---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----
+    //
+    // RED direction: an implementation using `unwrap_or(...)` anywhere in the required-field
+    // chain would flip one of the cases below, mirroring `reveal_post_args`'s own RED-direction
+    // note.
+
+    fn valid_clear_storage_args() -> Vec<Value> {
+        vec![
+            json!("https://www.humblebundle.com"),
+            json!("Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"),
+        ]
+    }
+
+    /// Manual-match helper standing in for `.unwrap_err()` -- `ClearStorageArgs` deliberately
+    /// implements no auto-formatting trait (mirrors `RevealPostArgs`'s own `reveal_post_args_err`
+    /// helper and its reasoning, REQ-34.1-07).
+    fn clear_storage_args_err(result: Result<ClearStorageArgs, String>) -> String {
+        match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected clear_storage_args to reject this input"),
+        }
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_accepts_a_full_valid_set() {
+        let parsed = clear_storage_args(&valid_clear_storage_args()).unwrap();
+        assert_eq!(parsed.origin_url.as_str(), "https://www.humblebundle.com/");
+        assert_eq!(
+            parsed.user_agent,
+            "Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_missing_args_entirely() {
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&[])),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_https_origin() {
+        let mut args = valid_clear_storage_args();
+        args[0] = json!("http://www.humblebundle.com");
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_string_origin() {
+        let mut args = valid_clear_storage_args();
+        args[0] = json!(42);
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_missing_user_agent() {
+        let mut args = valid_clear_storage_args();
+        args.truncate(1); // drop user_agent (args[1]) entirely
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_string_user_agent() {
+        let mut args = valid_clear_storage_args();
+        args[1] = json!(null);
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    // ---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----
+    //
+    // RED direction: an implementation using naive `'{}'`-style interpolation for `exfil_host`
+    // would fail the escaping round-trip case below; one that skips `await` on an async category
+    // would fail the await-ordering case; one that coerces a missing API to a numeric 0 instead
+    // of the literal `'unsupported'` would fail the five-category case.
+
+    #[test]
+    fn humble_login_clear_storage_script_escapes_special_characters_and_round_trips_via_serde_json(
+    ) {
+        // Deliberately includes a single quote, a double quote, a backslash, and a `</script>`
+        // sequence -- the same character classes `reveal_post_script`'s own round-trip case
+        // covers (T-34.4.1-65/20). Two embedded double-quote characters (not one) so this Rust
+        // source line itself keeps an EVEN raw `"`-count (open delim + 2 embedded `\"` + close
+        // delim = 4) -- satisfying `longRunningChannels.test.ts`'s WR-08 per-line quote-balance
+        // guard, which this line would otherwise trip on the surrounding file scan. Still
+        // exercises a double quote, a single quote, a backslash and a `</script>` sequence.
+        let tricky_host = "gamelib.invalid\"a\"payload'x\\y</script>z";
+        let script = clear_storage_script(tricky_host);
+        let expected_literal = serde_json::to_string(tricky_host).unwrap();
+        assert!(
+            script.contains(&expected_literal),
+            "expected the properly-escaped JSON string literal to appear verbatim in the script"
+        );
+        let round_tripped: String = serde_json::from_str(&expected_literal).unwrap();
+        assert_eq!(round_tripped, tricky_host);
+        // The naive, UNESCAPED single-quote interpolation this function must never produce.
+        // Built via array-join (mirrors `reveal_post_script`'s own equivalent case) rather than a
+        // literal `format!("'{}'", ..)` call so this regression-guard test itself does not trip
+        // the source-text gate asserting no such naive interpolation exists in the real arm code.
+        let naive_interpolation = ["'", tricky_host, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_embeds_the_exfil_host_used_by_the_navigation_intercept() {
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains(&serde_json::to_string(REVEAL_EXFIL_HOST).unwrap()));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_clears_all_five_categories_with_an_unsupported_fallback()
+    {
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("localStorage.clear()"));
+        assert!(script.contains("report.localStorage = 'unsupported'"));
+        assert!(script.contains("sessionStorage.clear()"));
+        assert!(script.contains("report.sessionStorage = 'unsupported'"));
+        assert!(script.contains("indexedDB.deleteDatabase"));
+        assert!(script.contains("report.indexedDB = 'unsupported'"));
+        assert!(script.contains("caches.delete"));
+        assert!(script.contains("report.caches = 'unsupported'"));
+        assert!(script.contains("serviceWorker.getRegistrations"));
+        assert!(script.contains("report.serviceWorkers = 'unsupported'"));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_awaits_every_async_category_before_reporting() {
+        // If IndexedDB/caches/service-worker clearing fired without `await`, this arm would
+        // report success for work that has not happened yet (this plan's own explicit warning).
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("await indexedDB.databases()"));
+        assert!(script.contains("await new Promise(function(resolve)"));
+        assert!(script.contains("await caches.keys()"));
+        assert!(script.contains("await caches.delete(keys[j])"));
+        assert!(script.contains("await navigator.serviceWorker.getRegistrations()"));
+        assert!(script.contains("await regs[k].unregister()"));
+        // exfil() must run AFTER every await in the template, never before.
+        let exfil_call_index = script.rfind("exfil(report)").unwrap();
+        let last_await_index = script.rfind("await ").unwrap();
+        assert!(exfil_call_index > last_await_index);
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----
