@@ -44,7 +44,13 @@ jest.mock('backend/logger', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { requestRustInvoke } from '../sidecarRpc'
-import { SidecarKeyringTokenStore } from '../keyringTokenStore'
+import {
+  SidecarKeyringTokenStore,
+  SidecarKeyringSlotStore,
+  KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+  KEYRING_SLOT_HUMBLE_SESSION,
+  KEYRING_SLOT_HUMBLE_CSRF
+} from '../keyringTokenStore'
 
 type ProgrammedOutcome =
   | { type: 'resolve'; value: unknown }
@@ -78,13 +84,17 @@ describe('SidecarKeyringTokenStore', () => {
     })
   })
 
-  // Behavior 1: getToken() resolves 'abc' when the fake responder returns 'abc'.
+  // Behavior 1: getToken() resolves 'abc' when the fake responder returns 'abc'. Slot-aware
+  // (34.4.1 gap cycle plan 11, D-GAP-01): the Steam store must send its slot name as args[0],
+  // not an empty args array -- proven by exact-args assertion, not just the resolved value.
   it('getToken() resolves the stored token when keyring_get returns a string', async () => {
     programChannel('keyring_get', { type: 'resolve', value: 'abc' })
     const store = new SidecarKeyringTokenStore()
 
     await expect(store.getToken()).resolves.toBe('abc')
-    expect(callLog).toEqual([{ channel: 'keyring_get', args: [] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_get', args: [KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
   })
 
   // Behavior 2: getToken() resolves '' when the responder returns null (no entry yet) --
@@ -112,14 +122,18 @@ describe('SidecarKeyringTokenStore', () => {
     expect(String(warningArg)).toContain('keyring_get')
   })
 
-  // Behavior 4: setToken('abc') sends exactly one keyring_set with ['abc'] as args.
-  it('setToken() sends exactly one keyring_set request with the token as the sole arg', async () => {
+  // Behavior 4: setToken('abc') sends exactly one keyring_set with the secret FIRST and the
+  // slot SECOND, in that order (34.4.1 gap cycle plan 11, D-GAP-01 -- the position Task 1's
+  // Rust side established: `[secret, slot]`).
+  it('setToken() sends exactly one keyring_set request with the secret first and the slot second', async () => {
     programChannel('keyring_set', { type: 'resolve', value: true })
     const store = new SidecarKeyringTokenStore()
 
     await store.setToken('abc')
 
-    expect(callLog).toEqual([{ channel: 'keyring_set', args: ['abc'] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
   })
 
   // Behavior 5: setToken() when the responder rejects logs a warning and resolves (does not
@@ -132,7 +146,9 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringTokenStore()
 
     await expect(store.setToken('abc')).resolves.toBeUndefined()
-    expect(callLog).toEqual([{ channel: 'keyring_set', args: ['abc'] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
 
@@ -175,7 +191,9 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringTokenStore()
 
     await expect(store.clearToken()).resolves.toBeUndefined()
-    expect(callLog).toEqual([{ channel: 'keyring_delete', args: [] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_delete', args: [KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
     expect(mockLogWarning).toHaveBeenCalledTimes(1)
   })
 
@@ -213,15 +231,21 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringTokenStore()
 
     await store.getToken()
-    expect(callLog).toEqual([{ channel: 'keyring_get', args: [] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_get', args: [KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
 
     callLog = []
     await store.setToken('abc')
-    expect(callLog).toEqual([{ channel: 'keyring_set', args: ['abc'] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_set', args: ['abc', KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
 
     callLog = []
     await store.clearToken()
-    expect(callLog).toEqual([{ channel: 'keyring_delete', args: [] }])
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_delete', args: [KEYRING_SLOT_STEAM_REFRESH_TOKEN] }
+    ])
   })
 
   // Behavior 10: setToken failing does not leave the token recoverable from anywhere -- a
@@ -238,11 +262,90 @@ describe('SidecarKeyringTokenStore', () => {
     await expect(store.getToken()).resolves.toBe('')
   })
 
+  // ---- SidecarKeyringSlotStore (34.4.1 gap cycle plan 11, D-GAP-01) ----
+  //
+  // A store constructed for a non-Steam slot (humble-session) must send THAT slot name, and
+  // NEVER the Steam slot name, on all four operations -- the whole point of the allowlist is
+  // that a Humble write cannot be mistaken for (or silently fall back to) the Steam entry.
+
+  it('a humble-session slot store sends the humble-session slot, never steam-refresh-token, on all four operations', async () => {
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    programChannel('keyring_get', { type: 'resolve', value: 'humble-cookie' })
+    programChannel('keyring_set', { type: 'resolve', value: true })
+    programChannel('keyring_delete', { type: 'resolve', value: true })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await store.isAvailable()
+    await store.getToken()
+    await store.setToken('humble-cookie')
+    await store.clearToken()
+
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_available', args: [KEYRING_SLOT_HUMBLE_SESSION] },
+      { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] },
+      {
+        channel: 'keyring_set',
+        args: ['humble-cookie', KEYRING_SLOT_HUMBLE_SESSION]
+      },
+      { channel: 'keyring_delete', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+    ])
+    for (const call of callLog) {
+      expect(call.args).not.toContain(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+    }
+  })
+
+  it('a humble-session slot store implements TokenStore totality identically to the Steam store', async () => {
+    programChannel('keyring_get', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.getToken()).resolves.toBe('')
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    const [warningArg] = mockLogWarning.mock.calls[0]
+    expect(String(warningArg)).toContain('keyring_get')
+  })
+
+  it('the humble-session and humble-csrf slot constants are distinct and never collide', () => {
+    // Sanity-checked as real, non-empty strings first -- an accidentally-undefined export
+    // would otherwise make the distinctness assertions below vacuously true (toEqual/
+    // not.toEqual do not distinguish "both undefined" from "both a real, matching string").
+    for (const slot of [
+      KEYRING_SLOT_STEAM_REFRESH_TOKEN,
+      KEYRING_SLOT_HUMBLE_SESSION,
+      KEYRING_SLOT_HUMBLE_CSRF
+    ]) {
+      expect(typeof slot).toBe('string')
+      expect(slot.length).toBeGreaterThan(0)
+    }
+    expect(KEYRING_SLOT_HUMBLE_SESSION).not.toEqual(KEYRING_SLOT_HUMBLE_CSRF)
+    expect(KEYRING_SLOT_HUMBLE_SESSION).not.toEqual(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+    expect(KEYRING_SLOT_HUMBLE_CSRF).not.toEqual(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+  })
+
+  it('a humble-csrf slot store sends the humble-csrf slot on setToken, distinct from humble-session', async () => {
+    programChannel('keyring_set', { type: 'resolve', value: true })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+
+    await store.setToken('csrf-value')
+
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_set', args: ['csrf-value', KEYRING_SLOT_HUMBLE_CSRF] }
+    ])
+  })
+
   // Structural proof (mirrors 28-05's phase-level grep gate, in-test): this module has no
   // syntactic path to configStore, TOKEN_STORE_KEY, TOKEN_PREFIX, or a raw filesystem write --
   // its only storage reach is the four keyring channels over requestRustInvoke.
   it('source contains no reference to configStore/TOKEN_STORE_KEY/TOKEN_PREFIX/writeFileSync', () => {
     const src = readFileSync(join(__dirname, '../keyringTokenStore.ts'), 'utf-8')
     expect(src).not.toMatch(/configStore|TOKEN_STORE_KEY|TOKEN_PREFIX|writeFileSync/)
+  })
+
+  // Existing export name survives (D-04): bootstrap.ts must be able to keep calling
+  // `new SidecarKeyringTokenStore()` with no args, unedited.
+  it('SidecarKeyringTokenStore keeps its no-argument construction', () => {
+    expect(() => new SidecarKeyringTokenStore()).not.toThrow()
   })
 })
