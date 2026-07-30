@@ -104,6 +104,36 @@ export class LegendaryUser {
     // origin and clear only Epic's own cookies through the domain-scoped
     // seam — never a blanket wipe (T-34.5-20): the app-wide cookie jar
     // shares Humble/GOG/Amazon cookies under Tauri (inherited T-34.4.1-47).
+    //
+    // Phase 34.4.1 Plan 16 (F-6's verbatim twin, BLOCKING closure — a
+    // deliberate cross-phase edit into open Phase 34.5, recorded in this
+    // plan's own SUMMARY so 34.5's gate inherits it knowingly): the
+    // cookie-only step above left this Tauri branch covering only 1 of
+    // Electron's 5 wipe categories, the exact same shape as
+    // humble/user.ts's disconnect() before this same plan fixed it. A
+    // second, INDEPENDENT 'clearEpicStorage' step now calls Plan 15's
+    // `seam.clearStorage(EPIC_LOGIN_ORIGIN, ...)`, clearing localStorage,
+    // sessionStorage, IndexedDB, Cache Storage and service-worker
+    // registrations for Epic's own origin only (same-origin policy scopes
+    // it structurally, mirroring `clearCookies`'s domain-suffix filter).
+    // This closes the `storage`/`cache` categories. It is a SEPARATE
+    // wipeSteps entry, not folded into the cookie step, so the guarded loop
+    // below keeps treating the two independently. The window this
+    // capability opens is opened AND closed entirely inside the Rust arm
+    // itself (`humble_login_clear_storage`, Plan 15) — this call site never
+    // holds a window handle of its own to leak.
+    //
+    // `clearAuthCache`/`clearHostResolverCache` have NO in-page JavaScript
+    // equivalent — they are network-stack (HTTP auth / DNS resolver)
+    // caches, not web storage, and no Tauri/wry API exposes them to
+    // injected JS. This is DECLARED rather than silently dropped
+    // (T-34.4.1-73, STRIDE Repudiation, accepted): the residual risk is a
+    // cached HTTP auth credential or a DNS cache entry surviving a logout,
+    // and NEITHER carries an Epic session — the actual harm (auto-signed-
+    // back-in re-login) is fully closed by the cookie + storage steps
+    // above. `seamBranchParity.test.ts`'s DECLARED check (Plan 16 Task 3)
+    // requires this exact paragraph to name both categories and this
+    // threat ID before it will accept the classification.
     const seam = getLoginWindowSeam()
     let wipeSteps: Array<[string, () => Promise<unknown>]>
     if (seam === null) {
@@ -145,6 +175,27 @@ export class LegendaryUser {
                 )
               })
             }
+          }
+        ],
+        [
+          'clearEpicStorage',
+          async () => {
+            // Plan 15's clearStorage() opens and closes its OWN hidden
+            // window inside the Rust arm (humble_login_clear_storage) — no
+            // label is needed or returned here, unlike the cookie step
+            // above.
+            const report = await seam.clearStorage(
+              EPIC_LOGIN_ORIGIN,
+              standardBrowserUserAgent()
+            )
+            // Only COUNTS are logged — never a storage key or value
+            // (mirrors humble/user.ts's disconnect()).
+            logInfo(
+              `Legendary logout: cleared storage — localStorage=${report.localStorage}, ` +
+                `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
+                `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+              LogPrefix.Legendary
+            )
           }
         ]
       ]

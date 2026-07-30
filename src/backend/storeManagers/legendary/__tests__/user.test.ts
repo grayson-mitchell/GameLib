@@ -117,6 +117,7 @@ function makeMockSeam(
   open: jest.Mock
   clearCookies: jest.Mock
   close: jest.Mock
+  clearStorage: jest.Mock
 } {
   return {
     open: jest.fn().mockResolvedValue('window-label-1'),
@@ -125,11 +126,22 @@ function makeMockSeam(
     close: jest.fn().mockResolvedValue(true),
     clearCookies: jest.fn().mockResolvedValue(3),
     revealPost: jest.fn(),
+    // Phase 34.4.1 gap-cycle plan 16 (F-6's verbatim twin): LoginWindowSeam
+    // gained clearStorage in plan 15; logout()'s Tauri branch now calls it
+    // (this task). Default a healthy, fully-numeric report.
+    clearStorage: jest.fn().mockResolvedValue({
+      localStorage: 0,
+      sessionStorage: 0,
+      indexedDB: 0,
+      caches: 0,
+      serviceWorkers: 0
+    }),
     ...overrides
   } as LoginWindowSeam & {
     open: jest.Mock
     clearCookies: jest.Mock
     close: jest.Mock
+    clearStorage: jest.Mock
   }
 }
 
@@ -285,5 +297,99 @@ describe('LegendaryUser.logout()', () => {
     // T-34.5-20: never a blanket clear — this repo-wide invariant is also grep-asserted at the
     // phase level against the forbidden Rust-side blanket-wipe method name (see 34.5-06-PLAN.md's
     // verification block).
+  })
+
+  // ── Phase 34.4.1 gap-cycle plan 16 (F-6's verbatim twin, BLOCKING closure) ──────────────
+  // The Tauri wipeSteps array now has MORE THAN ONE entry — the same shape plan 16 closed in
+  // humble/user.ts's disconnect(), mirrored here so the two test files can be diffed for parity.
+
+  it('F-6 twin: the Tauri wipeSteps run BOTH a cookie step and a storage step (more than one entry)', async () => {
+    const seam = makeMockSeam({
+      clearStorage: jest.fn().mockResolvedValue({
+        localStorage: 4,
+        sessionStorage: 2,
+        indexedDB: 1,
+        caches: 0,
+        serviceWorkers: 0
+      })
+    })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    expect(seam.clearCookies).toHaveBeenCalled()
+    expect(seam.clearStorage).toHaveBeenCalledWith(
+      expect.stringContaining('epicgames.com'),
+      expect.any(String)
+    )
+  })
+
+  it('F-6 twin: the credential-side cleanup runs even when BOTH the cookie step and the storage step reject', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockRejectedValue(new Error('rust cookie clear failed')),
+      clearStorage: jest.fn().mockRejectedValue(new Error('rust storage clear failed'))
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(logWarning).toHaveBeenCalled()
+  })
+
+  it('F-6 twin: a rejecting clearStorage step still leaves logout() resolving, and the cookie step ran anyway', async () => {
+    const seam = makeMockSeam({
+      clearStorage: jest.fn().mockRejectedValue(new Error('rust storage clear failed'))
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(seam.clearCookies).toHaveBeenCalled()
+    expect(logWarning).toHaveBeenCalled()
+  })
+
+  it('F-6 twin: a rejecting clearCookies step does not prevent the storage step from running', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockRejectedValue(new Error('rust cookie clear failed'))
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(seam.clearStorage).toHaveBeenCalledWith(
+      expect.stringContaining('epicgames.com'),
+      expect.any(String)
+    )
+  })
+
+  it('REQ-34.5-04: with a full Electron-shaped session, all five clear calls still run in order (unchanged by plan 16)', async () => {
+    const callOrder: string[] = []
+    mockClearStorageData.mockImplementation(async () => {
+      callOrder.push('clearStorageData')
+    })
+    mockClearCache.mockImplementation(async () => {
+      callOrder.push('clearCache')
+    })
+    mockClearAuthCache.mockImplementation(async () => {
+      callOrder.push('clearAuthCache')
+    })
+    mockClearHostResolverCache.mockImplementation(async () => {
+      callOrder.push('clearHostResolverCache')
+    })
+    mockClearData.mockImplementation(async () => {
+      callOrder.push('clearData')
+    })
+
+    await LegendaryUser.logout()
+
+    expect(callOrder).toEqual([
+      'clearStorageData',
+      'clearCache',
+      'clearAuthCache',
+      'clearHostResolverCache',
+      'clearData'
+    ])
   })
 })
