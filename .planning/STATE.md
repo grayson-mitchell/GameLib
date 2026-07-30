@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1-08 live gate FAILED (2/4) — 34.4.1 gap cycle required before 34.5-15
+stopped_at: 34.4.1 gap cycle PLANNED (plans 10-20) — execute from plan 10
 last_updated: "2026-07-30T06:25:00.000Z"
 last_activity: 2026-07-30
 progress:
@@ -36,7 +36,19 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > **⛔ ACTIVE BLOCKER — Phase 34.4.1's blocking live gate RAN 2026-07-30 and FAILED (2 of 4 clean).**
 > `34.4.1-08` is complete (all 9 plans now have summaries) but **Phase 34.4.1 DOES NOT CLOSE** — the
 > gate's own no-partial-pass rule makes the findings a gap cycle inside 34.4.1.
-> Next action: **`/gsd-plan-phase 34.4.1 --gaps`**.
+>
+> **GAP CYCLE PLANNED 2026-07-30 — plans 10–20, 10 waves** (`8561926b3`, checker fixes `4002f7c6f`).
+> Order: **10 sweep → 11 keyring allowlist → 12 secret-store seam → 13 F-1 CLOSED → 14 steamgrid ∥
+> 15 storage-clear capability → 16 F-6 CLOSED → 17 jar census/F-5 → 18 F-2/F-3/F-4/F-8 → 19 declare
+> → 20 blocking gate re-run (`autonomous: false`)**.
+> Next action: **`/gsd-execute-phase 34.4.1`** (starts at plan 10; plan 11's allowlist scope depends
+> on the sweep naming every secret-storage caller first).
+>
+> **Planning found a twin of F-6 already shipped:** `storeManagers/legendary/user.ts:107-151`
+> (Phase 34.5 plan 06) carries the same 5-vs-1 wipe-step asymmetry *verbatim*, with an in-source
+> comment saying it copied Humble's shape. The incomplete pattern propagated before anyone knew it
+> was incomplete. Plan 16 closes both; this is a deliberate cross-phase edit into open Phase 34.5,
+> not a silent one.
 >
 > - **PASS:** item 2 (persistence proven at the store layer) and item 4 (real key revealed via the
 >   Tauri seam transport — not a 403 — so `humbleRevealKey` ships PROVEN, not declared-degraded).
