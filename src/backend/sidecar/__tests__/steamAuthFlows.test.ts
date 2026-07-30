@@ -124,6 +124,7 @@ import {
   steamBottleConfigStore
 } from '../../storeManagers/steam/electronStores'
 import { getTokenStore } from '../../storeManagers/steam/tokenStore'
+import { KEYRING_SLOT_STEAM_REFRESH_TOKEN } from '../keyringTokenStore'
 import {
   provisionBottle,
   isBottleProvisioned
@@ -295,7 +296,12 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         frame.kind === 'rustInvoke' && frame.channel === RUST_KEYRING_SET
     ) as { id: string; args: unknown[] } | undefined
     expect(rustInvokeFrame).toBeDefined()
-    expect(rustInvokeFrame?.args).toEqual(['QR-SESSION-TEST-TOKEN'])
+    // 34.4.1 gap cycle plan 11 (D-GAP-01): keyring_set now sends the secret first and the
+    // slot second -- the Steam TokenStore seam binds to the steam-refresh-token slot.
+    expect(rustInvokeFrame?.args).toStrictEqual([
+      'QR-SESSION-TEST-TOKEN',
+      KEYRING_SLOT_STEAM_REFRESH_TOKEN
+    ])
 
     // Simulate Rust's successful keyring_set response so setToken() resolves.
     input.write(
