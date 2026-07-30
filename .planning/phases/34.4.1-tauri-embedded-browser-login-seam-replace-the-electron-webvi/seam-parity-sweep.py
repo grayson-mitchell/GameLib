@@ -199,6 +199,20 @@ def find_enclosing_function(text: str, call_index: int) -> tuple[int, int] | Non
         pos = line_start - 1
 
 
+FILE_HEADER_SEARCH_WINDOW = 3000
+
+
+def extract_file_header_comment(text: str) -> str:
+    """The first `/** ... */` block within the file's leading window (imports, `'use strict'`,
+    etc. may legitimately precede the file's own top docstring — e.g. `tokenStore.ts` and
+    `secureKey.ts` both put their `import` lines before their class-level docblock). Deliberately
+    `re.search`, not `re.match`, and bounded to `FILE_HEADER_SEARCH_WINDOW` characters so a
+    docblock found deep inside an unrelated function body is never mistaken for the file's own
+    header declaration."""
+    m = re.search(r"/\*\*(.*?)\*/", text[:FILE_HEADER_SEARCH_WINDOW], re.DOTALL)
+    return m.group(0) if m else ""
+
+
 def preceding_doc_comment(text: str, def_body_start: int) -> str:
     """The contiguous /** ... */ or // block immediately above the function's own header line
     (walking back past the header line itself), so a docblock like adapter.ts's D-07 paragraph
@@ -696,9 +710,7 @@ def run_axis_a() -> list[Finding]:
         # capability" declaration sits in the file's top docstring, separated from the function by
         # matchOAuthRedirect() in between -- too far for a contiguous-comment walk to reach, but
         # still the file's own on-the-record declaration of why this site is not a reduction.
-        file_header_m = re.match(r"\s*/\*\*(.*?)\*/", text, re.DOTALL)
-        file_header = file_header_m.group(0) if file_header_m else ""
-        comment_scope = file_header
+        comment_scope = extract_file_header_comment(text)
         if enclosing is not None:
             comment_scope += text[enclosing[0] : enclosing[1]] + preceding_doc_comment(text, enclosing[0])
 
@@ -825,6 +837,30 @@ def parse_electron_stub_safestorage() -> dict[str, str]:
     return result
 
 
+AXIS_B_ALTERNATE_SEAM_TERMS = ("sidecar", "tauri", "keyring", "bypass")
+
+
+def is_axis_b_declared(doc_comment: str) -> tuple[bool, str | None]:
+    """The Axis B DECLARED check for a safeStorage importer's own module-doc-comment. Two paths,
+    both requiring an id: (a) the 'storage' term/synonym bar (is_declared_by_terms, matches
+    F-1-shaped prose that explicitly discusses storage/keychain in reduction language), or (b) an
+    explicit mention of an alternate seam (sidecar/tauri/keyring/bypass — the shape
+    `tokenStore.ts`'s own doc comment uses: "a future Tauri sidecar build installs a different
+    TokenStore implementation"). Deliberately NOT `is_declared_by_terms(doc_comment, set())` for
+    path (b) -- an EMPTY required_terms set makes that function's `for term in required_terms`
+    loop never execute, so it would vacuously return True for ANY doc comment containing an id at
+    all (every module in this codebase has several D-ids in its header) -- checked directly here
+    against a SPECIFIC term list instead, so a bare id presence is never enough on its own."""
+    declared, found_id = is_declared_by_terms(doc_comment, {"storage"})
+    if declared:
+        return declared, found_id
+    ids = ID_PATTERN.findall(doc_comment)
+    lowered = doc_comment.lower()
+    if ids and any(term in lowered for term in AXIS_B_ALTERNATE_SEAM_TERMS):
+        return True, ids[0]
+    return False, None
+
+
 def classify_axis_b() -> list[Finding]:
     stub_shape = parse_electron_stub_safestorage()
     for member, shape in stub_shape.items():
@@ -839,20 +875,10 @@ def classify_axis_b() -> list[Finding]:
     for path in find_safestorage_importers():
         rel = repo_relative(path)
         text = path.read_text(encoding="utf-8")
-        # Module-doc-comment = the leading /** ... */ block, if any.
-        doc_m = re.match(r"\s*/\*\*(.*?)\*/", text, re.DOTALL)
-        doc_comment = doc_m.group(1) if doc_m else ""
-        declared, found_id = is_declared_by_terms(
-            doc_comment, {"storage"}
-        )  # 'storage' synonym list includes bare 'storage' — matches "TokenStore"/"Keychain" prose poorly on purpose;
-        # tightened below with an OR against sidecar/keyring/tauri terms, which is what tokenStore.ts's
-        # own doc comment actually uses.
-        if not declared:
-            declared, found_id = is_declared_by_terms(doc_comment, set())  # id-only fallback
-            ids = ID_PATTERN.findall(doc_comment)
-            lowered = doc_comment.lower()
-            if ids and any(term in lowered for term in ("sidecar", "tauri", "keyring", "bypass")):
-                declared, found_id = True, ids[0]
+        # Module-doc-comment = the file's own leading /** ... */ block, if any (imports may
+        # legitimately precede it -- see extract_file_header_comment's docstring).
+        doc_comment = extract_file_header_comment(text)
+        declared, found_id = is_axis_b_declared(doc_comment)
         classification = "DECLARED" if declared else "SILENTLY-DROPPED"
         disposition = (
             f"correct — no action ({found_id}; module doc comment documents the bypass/alternate seam)"
@@ -1126,7 +1152,50 @@ def self_test() -> None:
         )
     case("Axis B safeStorage shape parser correctly flags a hardcoded-TRUE body as UNKNOWN SHAPE (would fail() the real run)")
 
-    expected_case_count = 9
+    # 10. is_axis_b_declared: a doc comment carrying ids but NONE of the alternate-seam terms
+    #    must be REJECTED -- this is the exact bug this plan's own Task 1 development hit (a
+    #    vacuous `is_declared_by_terms(text, set())` call briefly made ANY id-bearing doc comment
+    #    classify DECLARED, which would have wrongly cleared humble/user.ts's real F-1 finding).
+    id_only_doc_comment = (
+        "/**\n * HumbleUser -- the login/session auth service (D-05, D-18, D-16, D-08, D-09, "
+        "D-11, D-07). Captures a cookie, validates it against the gamekeys endpoint, and pushes "
+        "authoritative state to the renderer.\n */"
+    )
+    declared, _ = is_axis_b_declared(id_only_doc_comment)
+    if declared:
+        fail(
+            "self-test FAILED: is_axis_b_declared classified a doc comment carrying only ids "
+            "(no 'storage' term, no alternate-seam term) as DECLARED -- this is the exact vacuous-"
+            "check regression this plan's Task 1 introduced and then fixed; a bare id must never "
+            "be sufficient on its own"
+        )
+    case(
+        "is_axis_b_declared correctly REJECTS a doc comment with ids present but no storage/"
+        "alternate-seam term (the exact humble/user.ts F-1 shape, and the regression this plan "
+        "introduced then fixed during its own development)"
+    )
+
+    # 11. is_axis_b_declared: a doc comment carrying an id AND an alternate-seam term (the
+    #    tokenStore.ts shape) IS accepted.
+    alternate_seam_doc_comment = (
+        "/**\n * TokenStore (D-09). A future Tauri sidecar build installs a different "
+        "implementation via setTokenStore().\n */"
+    )
+    declared2, found_id2 = is_axis_b_declared(alternate_seam_doc_comment)
+    if not declared2 or found_id2 != "D-9" and found_id2 != "D-09":
+        # ID_PATTERN's D-\d+ group captures digits only, so 'D-09' matches as 'D-09' (regex is
+        # \d+ which permits a leading zero) -- accept either form defensively rather than assume.
+        if not declared2:
+            fail(
+                "self-test FAILED: is_axis_b_declared rejected a doc comment with both an id AND "
+                "an alternate-seam term present (the tokenStore.ts shape)"
+            )
+    case(
+        "is_axis_b_declared correctly ACCEPTS a doc comment with an id AND an alternate-seam "
+        "term present (the tokenStore.ts shape)"
+    )
+
+    expected_case_count = 11
     if case_count != expected_case_count:
         fail(
             f"self-test FAILED: ran {case_count} case(s) but expected exactly {expected_case_count} — "
