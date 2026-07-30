@@ -161,6 +161,48 @@ fn timeout_for(channel: &str) -> Option<Duration> {
 const KEYRING_SERVICE: &str = "com.gamelib.launcher";
 const KEYRING_ACCOUNT: &str = "steam-refresh-token";
 
+/// Compile-time keyring slot allowlist (34.4.1 gap cycle, D-GAP-01 -- binding). A caller supplies
+/// a slot NAME; this function is the ONLY place a slot name is mapped to a real Keychain account
+/// string, and it is the ONLY thing standing between a sidecar frame and `Entry::new`. T-28-03
+/// stays preserved, not reopened: the sidecar can only ever select one of the entries below, never
+/// an arbitrary account passed straight through from `args`. There is no wildcard/fallback arm --
+/// an unrecognised slot is `keyring:unknown-slot`, always, never a silent fallback to a real
+/// account (see `keyring_slot_arg` below for the SEPARATE, deliberate default that applies before
+/// a slot name ever reaches this function).
+///
+/// Two Humble slots exist because Humble holds two independent secrets today (the
+/// `_simpleauth_sess` session cookie and the csrf snapshot -- currently separate `configStore`
+/// keys, per `34.4.1-SEAM-PARITY-SWEEP.md` S-10): packing both into one slot would make a partial
+/// write corrupt both.
+///
+/// `steamgrid/secureKey.ts` (F-1b, `34.4.1-SEAM-PARITY-SWEEP.md` S-11) deliberately has NO slot
+/// here: the sweep found it unreachable from the sidecar's curated import graph today (reached
+/// only via `src/backend/main.ts`, Electron's own entry point, never the sidecar's
+/// `bootstrap.ts`/`handlers.ts` chain) -- it stays dormant, not live. A future plan adds its slot
+/// only once it is actually wired into a sidecar registration module.
+fn keyring_account(slot: &str) -> Result<&'static str, String> {
+    match slot {
+        "steam-refresh-token" => Ok(KEYRING_ACCOUNT),
+        "humble-session" => Ok("humble-session"),
+        "humble-csrf" => Ok("humble-csrf"),
+        _ => Err("keyring:unknown-slot".to_string()),
+    }
+}
+
+/// Reads the slot name argument for a keyring dispatch arm at `position`, defaulting to the
+/// `steam-refresh-token` slot when absent or non-string. **This default is deliberate and is what
+/// makes this change backward compatible**: every keyring frame the sidecar sent before this plan
+/// carried no slot argument at all, and it must keep resolving to the SAME Keychain entry it
+/// always has, with no user-visible re-login. Do not "tidy" this into a hard error -- an absent
+/// slot is the currently-shipping shape, not malformed input. This is a SEPARATE concern from
+/// `keyring_account`'s hard-error-on-unknown-slot: a present-but-unrecognised slot name is still
+/// always rejected; only an ABSENT slot argument gets this default.
+fn keyring_slot_arg(args: &[Value], position: usize) -> &str {
+    args.get(position)
+        .and_then(|v| v.as_str())
+        .unwrap_or("steam-refresh-token")
+}
+
 /// A request frame written to the sidecar's stdin (one JSON object per line).
 /// Mirrors SidecarRpcRequest. `id` is always a string (64-bit-safe).
 #[derive(Serialize)]
@@ -606,39 +648,46 @@ fn reveal_post_script(path: &str, body: &str, csrf_token: Option<&str>, exfil_ho
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
-/// The Keychain `service`/`account` are the compile-time `KEYRING_SERVICE`/`KEYRING_ACCOUNT`
-/// constants ONLY — never sourced from `args` (threat T-28-03: the sidecar must not be able
-/// to address an arbitrary Keychain entry). Error mapping follows this file's existing flat
-/// `String` convention (`.map_err(|e| e.to_string())`, see `open_external` above); a bare
-/// `keyring::Error` variant is never returned as-is.
+/// The Keychain `service` is the compile-time `KEYRING_SERVICE` constant; the `account` is
+/// resolved from a compile-time ALLOWLIST (`keyring_account`) keyed by a caller-supplied slot
+/// NAME (`keyring_slot_arg`) — never an account string sourced directly from `args` (threat
+/// T-28-03: the sidecar must not be able to address an arbitrary Keychain entry). **T-28-03
+/// still holds**: the slot can only ever select one of a fixed, compile-time set of accounts —
+/// the sidecar's reachable set is exactly the allowlist, not an open namespace. Error mapping
+/// follows this file's existing flat `String` convention (`.map_err(|e| e.to_string())`, see
+/// `open_external` above); a bare `keyring::Error` variant is never returned as-is.
 ///
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
 fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Result<Value, String> {
     match channel {
-        "keyring_get" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
-            Ok(entry) => match entry.get_password() {
-                Ok(secret) => Ok(Value::String(secret)),
-                // No entry yet is a healthy, expected first-run state — NOT an
-                // unavailable backend (Pitfall 1 / D-06). Must not be reported as an error.
-                Err(keyring::Error::NoEntry) => Ok(Value::Null),
+        "keyring_get" => {
+            let account = keyring_account(keyring_slot_arg(args, 0))?;
+            match Entry::new(KEYRING_SERVICE, account) {
+                Ok(entry) => match entry.get_password() {
+                    Ok(secret) => Ok(Value::String(secret)),
+                    // No entry yet is a healthy, expected first-run state — NOT an
+                    // unavailable backend (Pitfall 1 / D-06). Must not be reported as an error.
+                    Err(keyring::Error::NoEntry) => Ok(Value::Null),
+                    Err(e) => {
+                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        Err(format!("keyring:unavailable:{e}"))
+                    }
+                },
                 Err(e) => {
                     eprintln!("[shell] keyring {channel} failed: {e:?}");
                     Err(format!("keyring:unavailable:{e}"))
                 }
-            },
-            Err(e) => {
-                eprintln!("[shell] keyring {channel} failed: {e:?}");
-                Err(format!("keyring:unavailable:{e}"))
             }
-        },
+        }
         "keyring_set" => {
             let secret = match args.first().and_then(|v| v.as_str()) {
                 Some(s) => s,
                 None => return Err("keyring:bad-args".into()),
             };
-            match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
+            let account = keyring_account(keyring_slot_arg(args, 1))?;
+            match Entry::new(KEYRING_SERVICE, account) {
                 Ok(entry) => match entry.set_password(secret) {
                     Ok(()) => Ok(Value::Bool(true)),
                     Err(e) => {
@@ -653,37 +702,43 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }
             }
         }
-        "keyring_delete" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
-            Ok(entry) => match entry.delete_credential() {
-                // Deleting an already-absent entry is success, not an error.
-                Ok(()) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+        "keyring_delete" => {
+            let account = keyring_account(keyring_slot_arg(args, 0))?;
+            match Entry::new(KEYRING_SERVICE, account) {
+                Ok(entry) => match entry.delete_credential() {
+                    // Deleting an already-absent entry is success, not an error.
+                    Ok(()) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                    Err(e) => {
+                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        Err(format!("keyring:unavailable:{e}"))
+                    }
+                },
                 Err(e) => {
                     eprintln!("[shell] keyring {channel} failed: {e:?}");
                     Err(format!("keyring:unavailable:{e}"))
                 }
-            },
-            Err(e) => {
-                eprintln!("[shell] keyring {channel} failed: {e:?}");
-                Err(format!("keyring:unavailable:{e}"))
             }
-        },
-        "keyring_available" => match Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT) {
-            Ok(entry) => match entry.get_password() {
-                // Backend works, whether or not a token is currently stored.
-                Ok(_) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
-                // A *successful* report of unavailability (D-06's honest-unavailable signal),
-                // not an error — the caller asked "is it available", and the honest answer
-                // here is "no".
+        }
+        "keyring_available" => {
+            let account = keyring_account(keyring_slot_arg(args, 0))?;
+            match Entry::new(KEYRING_SERVICE, account) {
+                Ok(entry) => match entry.get_password() {
+                    // Backend works, whether or not a token is currently stored.
+                    Ok(_) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                    // A *successful* report of unavailability (D-06's honest-unavailable signal),
+                    // not an error — the caller asked "is it available", and the honest answer
+                    // here is "no".
+                    Err(e) => {
+                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        Ok(Value::Bool(false))
+                    }
+                },
                 Err(e) => {
                     eprintln!("[shell] keyring {channel} failed: {e:?}");
                     Ok(Value::Bool(false))
                 }
-            },
-            Err(e) => {
-                eprintln!("[shell] keyring {channel} failed: {e:?}");
-                Ok(Value::Bool(false))
             }
-        },
+        }
         // Native folder picker (Phase 30 Plan 03, D-09/REQ-30-07): blocks the calling thread
         // until the user picks or cancels, so callers MUST dispatch this on a spawned worker
         // thread, never the reader thread (T-30-13 — same reasoning as the keyring arms above,
@@ -2093,5 +2148,87 @@ mod tests {
         assert!(!value.starts_with('\''));
         assert!(!value.ends_with('"'));
         assert!(!value.ends_with('\''));
+    }
+
+    // ---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----
+    //
+    // Pure function, directly testable (a live Keychain call is not). RED direction: an
+    // implementation with a wildcard/fallback arm that maps any unrecognised slot onto a real
+    // account would fail every "unknown slot" case below instead of returning
+    // `keyring:unknown-slot`.
+
+    #[test]
+    fn keyring_account_maps_steam_refresh_token_to_its_constant_account() {
+        assert_eq!(keyring_account("steam-refresh-token"), Ok(KEYRING_ACCOUNT));
+    }
+
+    #[test]
+    fn keyring_account_maps_humble_session_to_its_own_distinct_account() {
+        assert_eq!(keyring_account("humble-session"), Ok("humble-session"));
+    }
+
+    #[test]
+    fn keyring_account_maps_humble_csrf_to_its_own_distinct_account() {
+        assert_eq!(keyring_account("humble-csrf"), Ok("humble-csrf"));
+    }
+
+    #[test]
+    fn keyring_account_humble_session_and_humble_csrf_never_collide() {
+        // Guards against a copy-paste that maps both Humble slots to the same account string,
+        // which would let a csrf write clobber the session cookie (or vice versa).
+        assert_ne!(
+            keyring_account("humble-session").unwrap(),
+            keyring_account("humble-csrf").unwrap()
+        );
+    }
+
+    #[test]
+    fn keyring_account_rejects_an_unknown_slot_with_no_fallback_to_a_real_account() {
+        let result = keyring_account("some-other-secret");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "keyring:unknown-slot");
+    }
+
+    #[test]
+    fn keyring_account_rejects_the_empty_string_slot() {
+        let result = keyring_account("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "keyring:unknown-slot");
+    }
+
+    #[test]
+    fn keyring_account_rejects_a_plausible_looking_near_miss_slot() {
+        // Near-misses of a real slot name must not silently resolve to that real slot.
+        assert!(keyring_account("steam-refresh-tokens").is_err());
+        assert!(keyring_account("Steam-Refresh-Token").is_err());
+        assert!(keyring_account("humble_session").is_err());
+    }
+
+    // ---- keyring_slot_arg (34.4.1 gap cycle plan 11, D-GAP-01) ----
+    //
+    // Separate concern from keyring_account: this is the ONE deliberate default (absent slot
+    // arg -> steam-refresh-token), which is what keeps every pre-this-plan caller's frame valid.
+
+    #[test]
+    fn keyring_slot_arg_defaults_to_steam_refresh_token_when_absent() {
+        assert_eq!(keyring_slot_arg(&[], 0), "steam-refresh-token");
+    }
+
+    #[test]
+    fn keyring_slot_arg_defaults_to_steam_refresh_token_when_non_string() {
+        assert_eq!(keyring_slot_arg(&[json!(1)], 0), "steam-refresh-token");
+        assert_eq!(keyring_slot_arg(&[Value::Null], 0), "steam-refresh-token");
+    }
+
+    #[test]
+    fn keyring_slot_arg_reads_a_present_string_slot_at_the_given_position() {
+        assert_eq!(
+            keyring_slot_arg(&[json!("humble-session")], 0),
+            "humble-session"
+        );
+        assert_eq!(
+            keyring_slot_arg(&[json!("a-secret"), json!("humble-csrf")], 1),
+            "humble-csrf"
+        );
     }
 }
