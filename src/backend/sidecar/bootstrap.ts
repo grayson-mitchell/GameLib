@@ -45,6 +45,7 @@ import {
 } from './sidecarRpc'
 import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
+import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 // Deviation (Rule 1 — bug, found live during the 33-05 install-hang gate,
 // fix/steam-native-install-stability): `initOnlineMonitor()` was previously wired ONLY at
 // `main.ts`'s `app.whenReady()`, which the headless sidecar never runs. With no init, `isOnline()`
@@ -202,6 +203,13 @@ export function init(
   // only fire from the RPC loop below, never at module-import time) so no handler ever
   // observes the default ElectronTokenStore in the sidecar build.
   installTokenStore(new SidecarKeyringTokenStore())
+  // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
+  // secret store the same way and at the same site as the Steam TokenStore just above. Must run
+  // AFTER startRpcServer() for the same reason installTokenStore() does (its migration logic
+  // calls requestRustInvoke, which needs a live transport), and harmless to call on every
+  // bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just reassigns a
+  // registry variable (no accumulating listener, unlike onlineMonitorInitialized's guard above).
+  installSidecarHumbleSecretStore()
   // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
   // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
   // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
