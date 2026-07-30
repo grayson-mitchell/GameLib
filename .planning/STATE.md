@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-10-PLAN.md
-last_updated: "2026-07-30T07:58:11.197Z"
+stopped_at: Completed 34.4.1-11-PLAN.md
+last_updated: "2026-07-30T08:21:04.662Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 136
+  completed_plans: 137
   percent: 71
 ---
 
@@ -67,7 +67,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 11 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
+Plan: 12 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
 execution starts at plan 10)
 
 **Phase 34.5 — HELD at plan 15 of 15.** Its live gate's precondition is 34.4.1's own
@@ -2646,6 +2646,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P13 | 55min | 3 tasks | 2 files |
 | Phase 34.5 P14 | 13min | 2 tasks | 2 files |
 | Phase 34.4.1 P10 | 65min | 2 tasks | 4 files |
+| Phase 34.4.1 P11 | 35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -2979,6 +2980,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: 34.5-14: getDefaultSavePath-unported and save_sync.ts reach-baseline corrections given their own labeled subsection in PORTED-CHANNELS.md rather than folded silently into a Riders cell
 - [Phase 34.4.1]: 34.4.1-10: DECLARED classification requires a category/term-level match, not id proximity, on BOTH axes -- an id-only bar would have wrongly cleared both F-6 (Axis A) and F-1 (Axis B, caught pre-commit)
 - [Phase 34.4.1]: 34.4.1-10: checkHealthAndFlagExpiry's unguarded session.fromPartition() call is a NEW finding (S-09), not anticipated at planning time, routed to plan 34.4.1-16 alongside F-6
+- [Phase 34.4.1-11]: D-GAP-01 implemented verbatim: compile-time keyring slot allowlist (steam-refresh-token/humble-session/humble-csrf); all 4 Rust arms slot-aware; SidecarKeyringTokenStore preserved via subclass — SteamGridDB slot withheld -- SEAM-PARITY-SWEEP found F-1b dormant/sidecar-unreachable, not live
 
 ### Pending Todos
 
@@ -3051,8 +3053,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T07:58:11.187Z
-Stopped at: Completed 34.4.1-10-PLAN.md
+Last session: 2026-07-30T08:21:04.652Z
+Stopped at: Completed 34.4.1-11-PLAN.md
   This session: 34.5-09-PLAN.md executed — the Wine cluster's final 3 of 9 channels
   (`toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) ported verbatim into
   `wineToolsFlowRegistration.ts` (commit `b70c854c0`), completing the module plan
