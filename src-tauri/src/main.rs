@@ -1162,6 +1162,21 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
+            // ---- SPIKE 016 TRIGGER -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 ----
+            // The probe arm (`spike016_cookie_probe`) takes a live login-window label, but
+            // labels are generated HERE by `next_login_window_label()` and are deliberately
+            // unguessable, never derived from the URL, and never handed back to any caller
+            // that could supply one (see the `humble_login_window_label_*` unit tests). With
+            // no TS-side caller either, the probe was unreachable and plan 21 Task 3 could
+            // not be driven AT ALL. This fires it in-process, where the label is in scope.
+            //
+            // Gated on `GAMELIB_SPIKE016` so it is inert in every normal run, and fired on
+            // the FIRST page-load `finished` only: Humble redirects several times during
+            // login and the probe DELETES cookies as part of its retry experiment, so a
+            // per-navigation firing would destroy the very jar it is measuring.
+            let spike016_app = app.clone();
+            let spike016_label = label.clone();
+            let spike016_fired = std::sync::atomic::AtomicBool::new(false);
             let mut builder =
                 tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
                     .user_agent(user_agent)
@@ -1177,6 +1192,26 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     };
                     let event = login_event_value(kind, payload.url().as_str());
                     push_login_window_event(&event_label, event);
+                    // SPIKE 016 TRIGGER -- THROWAWAY, REMOVED BY PLAN 22 TASK 1. See the
+                    // block above `builder` for why this exists and why it fires once.
+                    if kind == "finished"
+                        && std::env::var_os("GAMELIB_SPIKE016").is_some()
+                        && !spike016_fired.swap(true, std::sync::atomic::Ordering::SeqCst)
+                    {
+                        eprintln!("[spike016] trigger: firing probe on first page-load finished");
+                        let probe_args = vec![
+                            Value::String(spike016_label.clone()),
+                            Value::String("humblebundle.com".to_string()),
+                        ];
+                        match dispatch_rust_channel(
+                            "spike016_cookie_probe",
+                            &probe_args,
+                            &spike016_app,
+                        ) {
+                            Ok(_) => eprintln!("[spike016] trigger: probe completed"),
+                            Err(e) => eprintln!("[spike016] trigger: probe failed err={e}"),
+                        }
+                    }
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
