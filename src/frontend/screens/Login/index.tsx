@@ -89,6 +89,16 @@ export default React.memo(function NewLogin() {
   )
 
   useEffect(() => {
+    // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Emitted via window.api.logInfo (lands
+    // in gamelib.log) — discriminator: if this never fires on the first (blank) navigation, the
+    // defect is upstream of this component; if it fires and the screen is still blank, the defect
+    // is inside this component's own conditional render.
+    window.api.logInfo(
+      `TEMPORARY F-10 DIAGNOSTIC: Login component mounted seq=${Date.now()}`
+    )
+  }, [])
+
+  useEffect(() => {
     setLoading(false)
   }, [epic, gog])
 
@@ -114,6 +124,12 @@ export default React.memo(function NewLogin() {
     await refreshLibrary({ runInBackground: false })
     navigate('/')
   }
+
+  // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Records which render branch this pass
+  // took as a single boolean, so the branch taken on the first (blank) navigation is known.
+  window.api.logInfo(
+    `TEMPORARY F-10 DIAGNOSTIC: Login render loading=${loading} seq=${Date.now()}`
+  )
 
   if (loading) {
     return <UpdateComponent />
