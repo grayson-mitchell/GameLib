@@ -70,9 +70,34 @@ Epic/GOG/Amazon logins and does not belong inside a store slice.
 
 `getPrivateBranchPassword`, `getSteamInstallSize`, `getSteamSyncedAt`, `getSteamUserInfo`, `humbleCheckHealth`, `humbleClearOwnershipOverride`, `humbleDisconnect`, `humbleGetClaimAnnotations`, `humbleGetGiftedAt`, `humbleGetKeys`, `humbleGetOwnershipOverrides`, `humbleGetRevealedKeyValue`, `humbleGetSyncState`, `humbleGetUserInfo`, `humbleMarkRedeemed`, `humbleRecordGiftLinkOpened`, `humbleRunValidation`, `humbleSetOwnershipOverride`, `humbleSync`, `humbleUndoRedeemed`, `isSteamBottleProvisioned`, `logoutSteam`, `redeemSteamKey`, `setPrivateBranchPassword`, `steamBottleProvision`, `steamBottleStatus`, `steamClientSetupRecheck`, `steamClientSetupStart`, `steamPollCredential`, `steamStartCredentials`, `steamSubmitGuard`
 
-Note: `humbleDisconnect` ships here as a **declared partial** (34.4 **D-05**) — it deletes the
-stored encrypted cookie (the real sign-out) but its `session.clearStorageData()` call no-ops
-against `electronStub.session`. Phase 34.4.1 must revisit it once a real browser context exists.
+Note: `humbleDisconnect` shipped here as a **declared partial** (34.4 **D-05**) — it deleted the
+stored encrypted cookie (the real sign-out) but its `session.clearStorageData()` call no-opped
+against `electronStub.session`. **RESOLVED 2026-07-31 — the partial is CLOSED, live-proven by
+Phase 34.4.1's third gate run** (`34.4.1-LIVE-GATE-RERUN-3.md`, item 3 PASS, verdict 4/4):
+
+```
+Humble disconnect: cookie census before(total=34, matched=34, verdict=SUPPORTED_NONEMPTY)
+                                after(total=0,  matched=0,  verdict=SUPPORTED_BUT_EMPTY)
+                                deleted=34 survivingNonHumble=0
+Humble disconnect: cleared 34 humblebundle.com cookie(s)
+Humble disconnect: cleared storage — localStorage=29, sessionStorage=0, indexedDB=1, caches=0, serviceWorkers=0
+```
+
+The storage clear is real, per-category and reported: it is no longer a no-op. The reported clear
+count agrees with an independent post-removal re-read of the jar, and the behavioural half was
+verified separately — the re-login was genuinely fresh (**68 `session_expired` rejections over
+6 min 17 s**, against the failing run's ~3 seconds and zero poll lines).
+
+**It took three live gate runs to get here** (FAIL 2/4 → FAIL 3/4 → PASS 4/4), and a fully-green
+test suite was present for all three. Two distinct defects hid behind that green: a census reading
+the cookie jar in the **wrong direction** (undercounting Humble's own cookies), and a delete
+reporting an **attempted** count for an operation WebKit never actually performed.
+
+**One property remains explicitly UNTESTED and must not be read as closed here:** that the clear is
+**domain-scoped**. `survivingNonHumble=0` is vacuous, not passing — the jar held only Humble cookies
+(`total` 34 == `matched` 34), so nothing existed for the delete to spare. See
+`REQ-34.4.1-GAP-05`'s rider in `.planning/REQUIREMENTS.md`. Whichever phase next holds a
+multi-origin jar owns re-running that check.
 
 ## Phase 34.4.1 — the embedded-browser login seam (6 channels)
 

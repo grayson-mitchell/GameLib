@@ -1314,7 +1314,12 @@ def self_test() -> None:
         "term present (the tokenStore.ts shape)"
     )
 
-    expected_case_count = 11
+    # 2026-07-31 (plan 29 Task 3): 11 -> 13. Plan 28 added two check functions and their
+    # self-test cases (WIPE_STEP_CATEGORIES for clearHumbleStorage/clearEpicStorage, and the
+    # is_axis_b_declared strict-bar case closing S-11) but did not bump this constant, so the
+    # anti-vacuity guard itself has been failing ever since -- the guard that exists to prove
+    # every check can reject was the one check nobody was running.
+    expected_case_count = 13
     if case_count != expected_case_count:
         fail(
             f"self-test FAILED: ran {case_count} case(s) but expected exactly {expected_case_count} — "
