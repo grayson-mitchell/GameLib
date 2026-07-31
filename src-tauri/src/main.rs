@@ -514,8 +514,9 @@ fn website_data_record_matches_domain(display_name: &str, target: &str) -> bool 
 /// The measured-delete-count contract this plan establishes (Phase 34.4.1 Plan 23, F-6
 /// Defect B): `before - after`, saturating at zero rather than wrapping, so a jar that GREW
 /// between the two reads (a concurrent login racing the clear) can never produce a negative
-/// or wrapped count. This is deliberately NEVER `matching.len()` computed before any removal
-/// ran -- that attempted-count shape is the exact bug this plan closes. Both `before` and
+/// or wrapped count. This is deliberately NEVER the pre-removal size of the matched set,
+/// computed before any removal ran -- that attempted-count shape is the exact bug this plan
+/// closes. Both `before` and
 /// `after` must be counted with the SAME filter (the clear direction), or the subtraction is
 /// meaningless; callers are responsible for that symmetry.
 fn verified_delete_count(before: usize, after: usize) -> usize {
@@ -567,6 +568,17 @@ const REVEAL_EXFIL_HOST: &str = "gamelib.invalid";
 /// indefinitely). A backstop underneath the sidecar's own `RUST_INVOKE_TIMEOUT_MS` (60s,
 /// `sidecarRpc.ts`) -- this fires first and lets the window close well before that outer bound.
 const REVEAL_POST_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Bound on how long `humble_login_clear_cookies` waits, on macOS, for
+/// `removeDataOfTypes_forDataRecords_completionHandler`'s completion block to fire before
+/// falling through to the post-removal re-read anyway (Phase 34.4.1 Plan 23, F-6 Defect B,
+/// D-08: must not linger). Mirrors `REVEAL_POST_TIMEOUT`'s reasoning -- a backstop underneath
+/// the sidecar's own 60s `RUST_INVOKE_TIMEOUT_MS`. A timeout here does NOT short-circuit to an
+/// error: the verified count always comes from re-reading the jar, never from whether this
+/// signal arrived, so a missed signal still yields an honest (possibly zero) count rather than
+/// a false failure.
+#[cfg(target_os = "macos")]
+const CLEAR_COOKIES_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The five parsed, validated args `humble_reveal_post` needs. Kept as a plain struct (rather
 /// than returning a tuple) so the dispatch arm's body reads by field name, not position.
@@ -1253,12 +1265,33 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 None => Ok(Value::Bool(false)),
             }
         }
-        // Domain-SCOPED cookie clear (Phase 34.4.1 Plan 01, D-08, REQ-34.4.1-06, threat
-        // T-34.4.1-03). The wry clear-all-browsing-data shortcut MUST NOT appear anywhere
-        // in this file: the jar is app-wide and will hold Epic/GOG/Amazon cookies once Phase 34.5
-        // lands, so a blanket wipe would silently sign the user out of storefronts they
-        // never touched (Pitfall 3). No single "delete by domain" API exists -- this is
-        // `cookies()` + the suffix filter + a per-cookie `delete_cookie()` loop.
+        // Domain-SCOPED cookie clear (Phase 34.4.1 Plan 01/23, D-08, REQ-34.4.1-06, threat
+        // T-34.4.1-03/-98/-99/-100/-101/-102).
+        //
+        // What the live gate measured (plan 20 item 3): 25 `delete_cookie()` calls, every
+        // one `Ok(())`, the jar shrank by exactly 1. All 23 Humble cookies survived. Two
+        // INDEPENDENT bugs, both fixed by Plan 23:
+        //   1. The returned count used to be the pre-loop size of the matched set,
+        //      computed BEFORE the delete loop ran below -- an ATTEMPTED count that could
+        //      never report failure. Fixed
+        //      on EVERY platform (not just macOS): the count returned now is always
+        //      `verified_delete_count(before_matching, after_matching)`, a re-read taken
+        //      AFTER the removal actually ran.
+        //   2. On macOS specifically: wry's `delete_cookie()`
+        //      (wry-0.55.1/src/wkwebview/mod.rs:1248-1267) hands `WKHTTPCookieStore`'s
+        //      `deleteCookie` a FRESHLY RECONSTRUCTED `NSHTTPCookie` built from
+        //      `cookie_into_wkwebview()`; the completion handler fires unconditionally --
+        //      "the operation was processed", not "a cookie was found". The identical
+        //      round-trip-loses-a-property bug shape is a filed WebKit defect,
+        //      bugs.webkit.org #184938. `Ok(())` was never evidence of anything on this
+        //      platform. Fixed by bypassing the round trip entirely (see the macOS branch
+        //      below).
+        //
+        // D-08 is non-negotiable on every platform: never `clear_all_browsing_data()`
+        // (wry-0.55.1/src/lib.rs:2137) or any other blanket wipe -- the jar is app-wide and
+        // will hold Epic/GOG/Amazon cookies once Phase 34.5 lands. The macOS branch below
+        // uses `WKWebsiteDataRecord.displayName()` filtering (domain-suffix, the same
+        // discipline `cookie_domain_matches` uses) rather than a bulk API.
         "humble_login_clear_cookies" => {
             let label = args
                 .first()
@@ -1271,20 +1304,215 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let window = app
                 .get_webview_window(label)
                 .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
-            let matching: Vec<_> = window
-                .cookies()
-                .map_err(|e| e.to_string())?
-                .into_iter()
-                .filter(|c| match c.domain() {
-                    Some(d) => cookie_domain_matches(d, Some(domain)),
-                    None => false,
-                })
-                .collect();
-            let deleted = matching.len();
-            for cookie in matching {
-                window.delete_cookie(cookie).map_err(|e| e.to_string())?;
+
+            // The SAME clear-direction filter as before (unedited by Plan 23, Plan 22
+            // already proved it correct against Defect A): the cookie's OWN domain first,
+            // the caller's fixed target second. Used for BOTH the before- and after-reads,
+            // on every platform, so `verified_delete_count`'s subtraction is meaningful.
+            let count_matching = |w: &tauri::WebviewWindow| -> Result<usize, String> {
+                Ok(w.cookies()
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .filter(|c| match c.domain() {
+                        Some(d) => cookie_domain_matches(d, Some(domain)),
+                        None => false,
+                    })
+                    .count())
+            };
+
+            let before_matching = count_matching(&window)?;
+            // Nothing to remove -- `verified_delete_count` would return 0 regardless, and
+            // this also means a window that never authenticated never touches the macOS
+            // with_webview/WKWebsiteDataStore path below at all (behavior bullet in Task
+            // 1's own test, re-asserted here at the arm level).
+            if before_matching == 0 {
+                return Ok(Value::Number(0.into()));
             }
-            Ok(Value::Number(deleted.into()))
+
+            #[cfg(target_os = "macos")]
+            {
+                // ---- macOS: WKWebsiteDataStore, never wry's delete_cookie() (Plan 23). ----
+                //
+                // Threading (source-verified against tauri-runtime-wry-2.11.4's
+                // `send_user_message`/`webview_getter!`, NOT assumed from spike 016's raw
+                // measurement -- see this plan's SUMMARY for the full reasoning): this arm
+                // always runs on a SPAWNED WORKER THREAD (`start_reader`'s `rustInvoke`
+                // dispatch does `thread::spawn` before calling `dispatch_rust_channel`),
+                // never the tao main thread `with_webview()`'s own doc comment describes.
+                // Off the main thread, `Dispatcher::with_webview()` posts the closure via
+                // `context.proxy.send_event(...)` and returns `Ok(())` IMMEDIATELY, BEFORE
+                // the closure has run (`send_user_message` only runs a message inline when
+                // `current_thread().id() == context.main_thread_id`). Spike 016 measured
+                // `closure_ran_immediately_after_return=true`, but that measurement's
+                // trigger was a WKWebView navigation-delegate callback
+                // (`humble_login_open`'s `on_page_load` hook), which genuinely does run on
+                // the OS main thread -- a DIFFERENT call site from this arm's real one, and
+                // not representative of it. So this arm does NOT rely on `with_webview`'s
+                // return for synchrony: it uses the exact channel-plus-wait shape
+                // `humble_reveal_post`/`humble_login_clear_storage` already use (a plain
+                // `mpsc_channel` + `rx.recv_timeout`) -- the same blocking-on-a-channel
+                // pattern `window.cookies()` above already relies on internally
+                // (`webview_getter!`'s own `rx.recv()`). No `NSRunLoop` pump is needed here
+                // (unlike the throwaway spike016 probe, which ran ON the main thread and
+                // would have deadlocked its own run loop by blocking on it): the WORKER
+                // thread blocks, the MAIN thread's own event loop keeps servicing the
+                // completion handler independently.
+                let (tx, rx) = mpsc_channel::<()>();
+                let domain_for_closure = domain.to_string();
+                // `with_webview`'s `Ok(())` here is NOT proof the closure ran (see above) --
+                // only used to detect a structural dispatch failure (no such webview/event
+                // loop gone).
+                if let Err(e) = window.with_webview(move |webview| {
+                    let Some(mtm) = objc2::MainThreadMarker::new() else {
+                        // Structurally should not happen inside with_webview's closure
+                        // (T-34.4.1-101); fail safe by signalling "done, nothing removed"
+                        // rather than hanging the worker thread until CLEAR_COOKIES_TIMEOUT.
+                        let _ = tx.send(());
+                        return;
+                    };
+                    // SAFETY: tauri's own `with_webview` doc example casts
+                    // `webview.inner()` to `&objc2_web_kit::WKWebView` on macOS verbatim --
+                    // this mirrors that example exactly. The reference is valid for the
+                    // closure's duration (tauri guarantees `inner()` is a live `WKWebView*`
+                    // while the closure runs on the main thread, per its own doc comment).
+                    // This is the ONLY raw pointer cast in this arm, confined to the
+                    // closure `with_webview()` hands back for the label the caller already
+                    // resolved through `app.get_webview_window(label)` above -- the same
+                    // fail-closed, generated-label window every other arm in this file
+                    // addresses (T-34.4.1-101, D-01).
+                    let view: &objc2_web_kit::WKWebView = unsafe { &*webview.inner().cast() };
+                    let data_store = unsafe { view.configuration().websiteDataStore() };
+                    let data_store_for_removal = data_store.clone();
+                    // SAFETY: `mtm` proves this closure is running on the main thread.
+                    let all_types =
+                        unsafe { objc2_web_kit::WKWebsiteDataStore::allWebsiteDataTypes(mtm) };
+                    let tx_fetch = tx.clone();
+                    let target_domain = domain_for_closure.clone();
+                    let fetch_completion = block2::RcBlock::new(
+                        move |records: std::ptr::NonNull<
+                            objc2_foundation::NSArray<objc2_web_kit::WKWebsiteDataRecord>,
+                        >| {
+                            // SAFETY: WebKit hands the completion handler a valid, live
+                            // array pointer for the duration of this call.
+                            let records_ref = unsafe { records.as_ref() };
+                            let all_records: Vec<
+                                objc2::rc::Retained<objc2_web_kit::WKWebsiteDataRecord>,
+                            > = records_ref.to_vec();
+                            let matching_records: Vec<&objc2_web_kit::WKWebsiteDataRecord> =
+                                all_records
+                                    .iter()
+                                    .filter(|record| {
+                                        // SAFETY: `displayName()` is a simple ObjC accessor;
+                                        // `record` is a live, retained object from
+                                        // `all_records`. Never logged (T-34.4.1-39/-75/-91)
+                                        // -- passed only into the pure, count-only
+                                        // `website_data_record_matches_domain` filter.
+                                        let display_name =
+                                            unsafe { record.displayName() }.to_string();
+                                        website_data_record_matches_domain(
+                                            &display_name,
+                                            &target_domain,
+                                        )
+                                    })
+                                    .map(|record| &**record)
+                                    .collect();
+                            if matching_records.is_empty() {
+                                let _ = tx_fetch.send(());
+                                return;
+                            }
+                            // Scoped to WKWebsiteDataTypeCookies ONLY (spike 016's own
+                            // finding) -- a matched record may carry localStorage/
+                            // IndexedDB/cache data for the same domain too, and
+                            // `removeDataOfTypes` removes only the types named here,
+                            // never the whole record. Plans 15/16's separate
+                            // origin-scoped storage clear owns those other categories;
+                            // widening this clear into them would be a silent scope
+                            // regression, not a fix.
+                            // SAFETY: `WKWebsiteDataTypeCookies` is a valid static
+                            // `NSString` this crate exposes; reading an extern static is
+                            // the only unsafe part of this line.
+                            let cookies_type: &objc2_foundation::NSString =
+                                unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
+                            let cookies_type_set =
+                                objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                            let records_array =
+                                objc2_foundation::NSArray::from_slice(&matching_records);
+                            let tx_remove = tx_fetch.clone();
+                            let remove_completion = block2::RcBlock::new(move || {
+                                let _ = tx_remove.send(());
+                            });
+                            // SAFETY: `data_store_for_removal` is a live object obtained
+                            // on the main thread above; `cookies_type_set`/
+                            // `records_array` are freshly built, live objects;
+                            // `remove_completion` outlives the call (WebKit retains the
+                            // block for the duration of its async operation).
+                            unsafe {
+                                data_store_for_removal
+                                    .removeDataOfTypes_forDataRecords_completionHandler(
+                                        &cookies_type_set,
+                                        &records_array,
+                                        &remove_completion,
+                                    );
+                            }
+                        },
+                    );
+                    // SAFETY: `data_store`/`all_types` are live objects obtained above on
+                    // the main thread; `fetch_completion` outlives the call.
+                    unsafe {
+                        data_store
+                            .fetchDataRecordsOfTypes_completionHandler(&all_types, &fetch_completion);
+                    }
+                }) {
+                    eprintln!(
+                        "[shell] humble_login_clear_cookies: with_webview dispatch failed: {e}"
+                    );
+                    return Err(format!("humble_login_clear_cookies:dispatch:{e}"));
+                }
+
+                if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
+                    eprintln!(
+                        "[shell] humble_login_clear_cookies: WKWebsiteDataStore removal timed out waiting for the completion signal"
+                    );
+                    // Fall through to the re-read below regardless -- a timeout means the
+                    // SIGNAL was missed, not necessarily that nothing happened. The
+                    // verified count must always come from a re-read (binding constraint
+                    // 2), never from whether this signal arrived.
+                }
+
+                let after_matching = count_matching(&window)?;
+                Ok(Value::Number(
+                    verified_delete_count(before_matching, after_matching).into(),
+                ))
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            {
+                // ---- Linux/Windows: UNVERIFIED on the existing wry `delete_cookie()`
+                // path (D-09, REQ-34.4.1-13). This bug's root cause (wry's own
+                // `cookie_into_wkwebview()` round trip, wkwebview/mod.rs:1248-1267) is
+                // macOS/WebKit-specific and is NOT proven to exist in wry's `webview2`
+                // (webview2/mod.rs:1681) or `webkitgtk` (webkitgtk/mod.rs:1086)
+                // `delete_cookie` implementations -- separate code paths with their own
+                // conversions. Only the dishonest ATTEMPTED count is fixed here; the
+                // deletion mechanism itself is UNCHANGED and DECLARED unverified, never
+                // silently assumed fixed (nor silently assumed still broken).
+                let matching: Vec<_> = window
+                    .cookies()
+                    .map_err(|e| e.to_string())?
+                    .into_iter()
+                    .filter(|c| match c.domain() {
+                        Some(d) => cookie_domain_matches(d, Some(domain)),
+                        None => false,
+                    })
+                    .collect();
+                for cookie in matching {
+                    window.delete_cookie(cookie).map_err(|e| e.to_string())?;
+                }
+                let after_matching = count_matching(&window)?;
+                Ok(Value::Number(
+                    verified_delete_count(before_matching, after_matching).into(),
+                ))
+            }
         }
         // Issue the reveal-key POST from a hidden, on-demand child window's own JS `fetch()`
         // (Phase 34.4.1 Plan 04, D-07/D-08, REQ-34.4.1-05) -- the ONE structurally-new option

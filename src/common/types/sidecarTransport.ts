@@ -293,11 +293,19 @@ export const RUST_HUMBLE_LOGIN_TAKE_EVENTS = 'humble_login_take_events' as const
 export const RUST_HUMBLE_LOGIN_CLOSE = 'humble_login_close' as const
 
 /**
- * Rust-side channel name: domain-scoped cookie clear for `humbleDisconnect` (Phase
- * 34.4.1 Plan 01, D-08, REQ-34.4.1-06). Args: `[label: string, domain: string]`.
- * Resolves the deleted-cookie count. Never a blanket wipe -- the platform cookie jar is
- * app-wide and will hold Epic/GOG/Amazon cookies once Phase 34.5 lands, so this is
- * scoped strictly to `domain`'s suffix match, never `clear_all_browsing_data()`.
+ * Rust-side channel name: domain-scoped cookie clear for `humbleDisconnect` and
+ * `LegendaryUser.logout()`'s Tauri branch (Phase 34.4.1 Plan 01/23, D-08, REQ-34.4.1-06,
+ * F-6 Defect B). Args: `[label: string, domain: string]`. Resolves a measured delete
+ * count -- on every platform, the number is a re-read of the matching-cookie count taken
+ * AFTER the removal actually ran, never an attempted/pre-removal count, so a clear that
+ * removed nothing resolves `0` rather than reporting the size of what it merely tried to
+ * remove. On macOS this goes through `WKWebsiteDataStore` (never wry's `delete_cookie()`,
+ * whose `Ok(())` fires unconditionally regardless of whether anything was actually
+ * deleted -- bugs.webkit.org #184938); Linux/Windows keep the existing `delete_cookie()`
+ * path, UNVERIFIED and DECLARED as such (D-09/REQ-34.4.1-13). Never a blanket wipe -- the
+ * platform cookie jar is app-wide and will hold Epic/GOG/Amazon cookies once Phase 34.5
+ * lands, so this is scoped strictly to `domain`'s suffix match, never
+ * `clear_all_browsing_data()`.
  */
 export const RUST_HUMBLE_LOGIN_CLEAR_COOKIES =
   'humble_login_clear_cookies' as const
