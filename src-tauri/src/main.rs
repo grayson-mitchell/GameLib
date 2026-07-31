@@ -1208,6 +1208,22 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                             title.len()
                         );
                     });
+                // F-4 machine record (Phase 34.4.1 Plan 24): `.focused(true)` above is
+                // a ONE-SHOT raise-on-creation with no persistent state to inspect
+                // afterwards, so without this line there is no record of what
+                // presentation the operator was actually looking at -- F-4's raised
+                // half has now gone UNOBSERVED across two live gates
+                // (34.4.1-LIVE-GATE-RERUN.md Item 3). This line records only that
+                // sizing/centring/one-shot-focus were REQUESTED and that a persistent
+                // pin was deliberately NOT requested (research confirms the platform
+                // offers only one or the other, never both, and a persistent pin would
+                // trap the operator behind this window when they switch to a password
+                // manager -- exactly the switch F-4's observation asks them to
+                // perform). It does NOT prove the window actually raised; that
+                // observation belongs to plan 29 item 1 alone.
+                eprintln!(
+                    "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false"
+                );
             }
             builder
                 .on_page_load(move |_webview, payload| {
