@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-19-PLAN.md
+stopped_at: 34.4.1 gap cycle EXECUTED (plans 13-20). Live gate RE-RAN 2026-07-31 -> FAIL 3/4 (item 3). F-1 CLOSED live; F-6 OPEN. Next: /gsd-plan-phase 34.4.1 --gaps
 last_updated: "2026-07-30T11:20:16.338Z"
 last_activity: 2026-07-30
 progress:
@@ -68,8 +68,31 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 20 of 20 (plans 01-09 done; the gap cycle is plans 10-20 across 10 waves,
-execution starts at plan 10)
+Plan: 20 of 20 (ALL plans have summaries — the gap cycle 10-20 is fully executed)
+
+> **⛔ GATE RE-RUN 2026-07-31 — FAIL, 3 of 4. PHASE 34.4.1 STILL DOES NOT CLOSE.**
+> Items 1, 2, 4 PASS; **item 3 FAIL**. Record: `34.4.1-LIVE-GATE-RERUN.md` (`verdict: FAIL`),
+> summary `34.4.1-20-SUMMARY.md`.
+>
+> - **F-1 CLOSED, live-proven on the WRITE path** — Keychain slots deleted pre-boot, recreated by
+>   a credential+2FA login; store has no `sessionCookie`/`csrfToken`, `encryptionDegraded: false`.
+>   Item 2 confirms it survives relaunch. F-2/F-3/F-5/F-8 also confirmed closed live.
+> - **F-6 NOT closed — the DIAGNOSIS was incomplete, not the fix.** The four wipe steps the gap
+>   cycle built all work live (localStorage=32, IndexedDB=1, keyring cleared, store `{}`). The
+>   **pre-existing** cookie deletion reports `cleared 25 humblebundle.com cookie(s)` while the jar
+>   shrinks by **1** and **all 23 Humble cookies survive**. Re-login auto-signs back in with ZERO
+>   poll lines. Root cause for the next cycle: **the cookie delete silently does not delete** —
+>   third instance of the resolves-without-doing-the-work WKWebView class.
+> - **LESSON: a gap analysis that enumerates what is MISSING will not question what is PRESENT.**
+> - **WR-07 FAIL** — login window title reads `Tauri app` (framework default).
+> - Open + UNASSIGNED: **F-9** (60s `keyring_get` timeout, hits `humble-csrf`), **F-10** (Manage
+>   Accounts blank on FIRST navigation to the lazy `/login` route, renders on retry),
+>   `queryLocalFonts` unguarded in `Accessibility/index.tsx:63`, ~150 percent-encoded Steam
+>   artwork URLs.
+> - `IPC-PORT-INVENTORY.md` / `34.4.1-PORTED-CHANNELS.md` deliberately NOT updated — gated on
+>   item 3, which failed.
+>
+> Next action: **`/gsd-plan-phase 34.4.1 --gaps`**
 
 > **D-GAP-03 (2026-07-30, user-approved) — sweep finding S-09 routed into plan 18.**
 > Plan 10's mechanical sweep found a FIFTH SILENTLY-DROPPED site that no gap-cycle plan owned:
