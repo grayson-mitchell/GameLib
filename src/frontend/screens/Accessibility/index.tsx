@@ -18,6 +18,7 @@ import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
+import { queryLocalFontsSafe } from './queryLocalFontsSafe'
 
 const Accessibility = React.memo(function Accessibility() {
   const { t } = useTranslation()
@@ -60,12 +61,15 @@ const Accessibility = React.memo(function Accessibility() {
   ).getPropertyValue('--default-secondary-font-family')
 
   const getFonts = async () => {
-    const systemFonts = await queryLocalFonts()
-    setFonts([
+    // Capability check, not a platform sniff -- see queryLocalFontsSafe.ts
+    // for why (the stale-guard regression precedent this codebase already
+    // paid for), and for the single call site of the actual
+    // queryLocalFonts() browser API.
+    const options = await queryLocalFontsSafe([
       defaultSecondaryFont.trim(),
-      defaultPrimaryFont.trim(),
-      ...new Set(systemFonts.map((font) => font.family))
+      defaultPrimaryFont.trim()
     ])
+    setFonts(options)
   }
 
   useEffect(() => {
