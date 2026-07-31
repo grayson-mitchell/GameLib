@@ -493,6 +493,35 @@ fn cookie_domain_matches(host: &str, domain: Option<&str>) -> bool {
     }
 }
 
+/// Domain-suffix match for a `WKWebsiteDataRecord`'s `displayName()` (Phase 34.4.1 Plan 23,
+/// F-6 Defect B, REQ-34.4.1-06). `displayName` and a cookie's `domain()` share the exact same
+/// shape -- a bare host string, grouped by the public suffix list -- so this delegates to
+/// `cookie_domain_matches` above (the ONLY domain comparison this file uses, per its own
+/// comment) rather than reimplementing suffix discipline a second, subtly different way. A
+/// second ad hoc comparator in this file is exactly how Defect A happened (Plan 22): do not
+/// repeat that mistake here just because the input is a record instead of a cookie. The
+/// `display_name.is_empty()` guard is explicit rather than left implicit in
+/// `cookie_domain_matches`'s own logic, so an empty display name can never accidentally match
+/// (`cookie_domain_matches("", Some(d))` is already `false` for any non-empty `d`, but this
+/// states the guarantee in-source rather than relying on that as an unstated side effect).
+fn website_data_record_matches_domain(display_name: &str, target: &str) -> bool {
+    if display_name.is_empty() {
+        return false;
+    }
+    cookie_domain_matches(display_name, Some(target))
+}
+
+/// The measured-delete-count contract this plan establishes (Phase 34.4.1 Plan 23, F-6
+/// Defect B): `before - after`, saturating at zero rather than wrapping, so a jar that GREW
+/// between the two reads (a concurrent login racing the clear) can never produce a negative
+/// or wrapped count. This is deliberately NEVER `matching.len()` computed before any removal
+/// ran -- that attempted-count shape is the exact bug this plan closes. Both `before` and
+/// `after` must be counted with the SAME filter (the clear direction), or the subtraction is
+/// meaningless; callers are responsible for that symmetry.
+fn verified_delete_count(before: usize, after: usize) -> usize {
+    before.saturating_sub(after)
+}
+
 /// Shapes one `LOGIN_WINDOW_EVENTS` queue entry -- the exact `{"event", "url"}` shape
 /// `humble_login_take_events`'s interface contract promises the sidecar.
 fn login_event_value(kind: &str, url: &str) -> Value {
@@ -2227,6 +2256,69 @@ mod tests {
         // in this arm's own test group so a reviewer looking only at the new arm's tests can
         // see the poll's direction was checked, not merely assumed unaffected.
         assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
+    }
+
+    // ---- website_data_record_matches_domain / verified_delete_count (Phase 34.4.1 Plan 23,
+    // F-6 Defect B, REQ-34.4.1-06). The half of the WKWebsiteDataStore rewrite that can be
+    // proven without a live WebKit -- see 34.4.1-23-SUMMARY.md for the platform half, which
+    // by construction cannot be unit-tested here (only plan 29's live gate proves it). ----
+
+    #[test]
+    fn website_data_record_matches_domain_matches_bare_apex() {
+        assert!(website_data_record_matches_domain(
+            "humblebundle.com",
+            "humblebundle.com"
+        ));
+    }
+
+    #[test]
+    fn website_data_record_matches_domain_matches_subdomain() {
+        assert!(website_data_record_matches_domain(
+            "www.humblebundle.com",
+            "humblebundle.com"
+        ));
+    }
+
+    #[test]
+    fn website_data_record_matches_domain_matches_leading_dot() {
+        assert!(website_data_record_matches_domain(
+            ".humblebundle.com",
+            "humblebundle.com"
+        ));
+    }
+
+    #[test]
+    fn website_data_record_matches_domain_rejects_suffix_lookalike() {
+        // D-08 in the opposite direction from a blanket wipe: a displayName-driven filter
+        // that matched `nothumblebundle.com` would delete a third party's website data.
+        assert!(!website_data_record_matches_domain(
+            "nothumblebundle.com",
+            "humblebundle.com"
+        ));
+    }
+
+    #[test]
+    fn website_data_record_matches_domain_rejects_empty_display_name() {
+        assert!(!website_data_record_matches_domain("", "humblebundle.com"));
+    }
+
+    #[test]
+    fn verified_delete_count_is_the_measured_delta() {
+        assert_eq!(verified_delete_count(5, 2), 3);
+        assert_eq!(verified_delete_count(0, 0), 0);
+    }
+
+    #[test]
+    fn verified_delete_count_saturates_at_zero_when_the_jar_grew() {
+        // A jar that GREW between the two reads (a concurrent login racing the clear) must
+        // never produce a negative or wrapped count -- `before=3, after=5` would panic on a
+        // plain `before - after` in debug builds and silently wrap in release.
+        assert_eq!(verified_delete_count(3, 5), 0);
+    }
+
+    #[test]
+    fn verified_delete_count_is_zero_when_removal_changed_nothing() {
+        assert_eq!(verified_delete_count(7, 7), 0);
     }
 
     // ---- login_event_value (Phase 34.4.1 Plan 01, REQ-34.4.1-03) ----
