@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12, REQ-34.4.1-GAP-13
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 26/29 plans executed
+**Plans:** 28/29 plans executed
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1511,10 +1511,10 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 - [x] 34.4.1-22-PLAN.md — Defect A: give the disconnect census its own correctly-directed cookie match (wave 2)
 - [x] 34.4.1-23-PLAN.md — Defect B (BLOCKING): replace `delete_cookie()`'s reconstruct-and-delete path with `WKWebsiteDataStore.fetchDataRecords`/`removeData(for:)` via `with_webview()`, domain-scoped by `displayName` (wave 3)
 - [x] 34.4.1-24-PLAN.md — WR-07 (login window title) + F-4 (one-shot raise/focus, observed not assumed) (wave 4)
-- [ ] 34.4.1-25-PLAN.md — F-10: Manage Accounts `/login` route blank on first navigation (wave 5)
+- [x] 34.4.1-25-PLAN.md — F-10: Manage Accounts `/login` route blank on first navigation (wave 5)
 - [x] 34.4.1-26-PLAN.md — F-9: `keyring_get` bounded-timeout classified error, closing the silent 60s RPC-budget consumption (wave 5)
 - [x] 34.4.1-27-PLAN.md — Housekeeping: `queryLocalFonts` guard, Steam artwork percent-encoding, mint REQ-34.4.1-GAP-13 (wave 5)
-- [ ] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
+- [x] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
 - [ ] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
