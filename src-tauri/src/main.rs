@@ -1152,9 +1152,28 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // deliberately NOT `.always_on_top(true)`: a permanent flag would force the
         // operator to fight past the login window to reach the very password-manager
         // window or OS credential prompt they switched away to use, trading one
-        // findability problem for a worse one. The gate's own "sets no .title()" line
-        // is resolved here, not reopened: WR-07 stays intact, enforced by the grep
-        // gate in this plan's own acceptance criteria, not by intent alone.
+        // findability problem for a worse one.
+        //
+        // WR-07 CORRECTION (Phase 34.4.1 Plan 24, research Pitfall 3 in the flesh): an
+        // earlier version of this comment claimed WR-07 was "enforced by the grep gate
+        // in this plan's own acceptance criteria, not by intent alone." That claim was
+        // FALSE and misdirected two live gate operators, both of whom reported the
+        // title bar read the framework default, "Tauri app" -- neither Humble's own
+        // title (what WR-07 requires) nor a hard-coded "GameLib" (what WR-07
+        // prohibits). A grep gate proving `.title(` is never hard-coded can only
+        // establish the ABSENCE of the prohibited value; it structurally cannot
+        // establish the PRESENCE of the required one. Omitting `.title()` does NOT by
+        // itself make the OS window title track the loaded document's title -- that
+        // assumption was never spiked. Tauri's documented mechanism for this (an
+        // in-source example at `tauri-2.11.5/src/webview/mod.rs:564-567`) is the
+        // title-tracking builder callback wired below, inside the same `if visible`
+        // block as the F-4 presentation calls -- a hidden reveal/clear window has no
+        // title bar for a title to matter on. That callback sets ONLY the OS window
+        // title; it grants no capability and does not touch the fail-closed label
+        // scheme (`next_login_window_label()`, REQ-34.4.1-09) in any way. WR-07's
+        // negative half (no hard-coded title) stays grep-provable, unchanged; WR-07's
+        // positive half (Humble's own title actually shows) is provable only LIVE --
+        // see plan 24's SUMMARY and plan 29 item 1, the only thing that closes it.
         "humble_login_open" => {
             let url = login_window_url_arg(args)?;
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1169,7 +1188,26 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     .user_agent(user_agent)
                     .visible(visible);
             if visible {
-                builder = builder.inner_size(900.0, 700.0).center().focused(true);
+                builder = builder
+                    .inner_size(900.0, 700.0)
+                    .center()
+                    .focused(true)
+                    .on_document_title_changed(|window, title| {
+                        // Never .unwrap() on a live user-facing path (T-34.4.1-108): a
+                        // stale title bar is a cosmetic defect, a panic here would kill
+                        // the login flow outright. Never logs the title string itself
+                        // (T-34.4.1-106, remote page content must never reach an
+                        // uploadable log) -- only the fact that a change was applied
+                        // and its LENGTH, the only machine evidence able to
+                        // distinguish "the hook never fired" from "the hook fired and
+                        // the OS ignored it" if plan 29's operator still sees the
+                        // framework default title.
+                        let _ = window.set_title(&title);
+                        eprintln!(
+                            "[shell] humble_login_open: title change applied len={}",
+                            title.len()
+                        );
+                    });
             }
             builder
                 .on_page_load(move |_webview, payload| {
