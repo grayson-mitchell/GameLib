@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.5 gap cycle EXECUTING — 6 plans (34.5-16..21, 5 waves) closing G-1..G-6. The phase still does NOT close until the re-run gate (34.5-20) records 5/5.
-last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle execution started (plans 16-21)
+stopped_at: Completed 34.5-16-PLAN.md — GAMELIB_APP_ROOT handoff closes G-1 root cause
+last_updated: "2026-08-01T00:45:00.000Z"
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-16 executed (G-1 closed: GAMELIB_APP_ROOT handoff)
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 162
-  completed_plans: 156
-  percent: 96
+  total_plans: 170
+  completed_plans: 157
+  percent: 92
 ---
 
 # Project State
@@ -92,6 +92,13 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > **Next action:** `/gsd-execute-phase 34.5` — wave 4 stops at a blocking checkpoint for the
 > human-driven gate. Quit Steam before item 4 (it rewrites `shortcuts.vdf` from memory on exit),
 > and `ps aux | grep -E "gamelib-shell|sidecar.js"` to kill orphaned pairs first.
+>
+> **✅ WAVE 1 (`34.5-16`) EXECUTED 2026-08-01 — G-1 closed.** 3/3 tasks done, commits `b49272d37`
+> (sweep doc, 25 rows), `2072dc079` (Rust `GAMELIB_APP_ROOT` on both spawn paths, cargo 84/84, up
+> from 80), `ebe367f83` (`electronStub.getAppPath()` consumes it; `npx tsc --noEmit` clean;
+> `npm run test:ci` 179/179 suites, 3454/3454 tests, up from 3447). `34.5-16-SUMMARY.md` written,
+> self-check PASSED. `R-34.5-G1-PKG` (packaged asset root) recorded as an explicit, unclosed
+> residual — not claimed fixed. Wave 2 (`34.5-17`/`34.5-18`) is next.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -322,7 +329,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
-Plan: 15 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
+Plan: 16 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2141,7 +2148,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3018,6 +3025,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P24 | 40min | 3 tasks | 2 files |
 | Phase 34.4.1 P26 | 55min | 2 tasks | 8 files |
 | Phase 34.4.1 P27 | ~50min | 3 tasks | 9 files |
+| Phase 34.5 P16 | 45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -3384,6 +3392,9 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-26]: Added a process-lifetime read cache + in-flight dedupe to keyringTokenStore.ts/humbleSecretStore.ts (user-approved scope widening beyond this plan's declared files), invalidated before every setToken/clearToken write/delete
 - [Phase 34.4.1-27]: Extracted queryLocalFontsSafe.ts (new file) so the queryLocalFonts guard is unit-testable without importing Accessibility/index.tsx's MUI/.css-importing dependency tree under the jsdom-less frontend jest project; index.tsx remains the guard's sole caller
 - [Phase 34.4.1-27]: imageCacheSchemeAvailable() in preload/tauriTransport.ts is the single named predicate gating imagecache:// wrapping in CachedImage, written today as the negation of isTauri() with a documented forward obligation
+- [Phase 34.5-16]: One GAMELIB_APP_ROOT env-var seam (both Rust spawn paths -> electronStub.getAppPath()) rather than N per-call-site path patches — The per-call-site approach is the named cause of this being the 4th recurrence of the publicdir-getapppath-chunking family
+- [Phase 34.5-16]: electronStub.getAppPath() stays non-throwing on unset/empty GAMELIB_APP_ROOT — Module-scope call site; a pre-logger failure there would be invisible. Loudness deferred to plan 34.5-18's boot self-check
+- [Phase 34.5-16]: Packaged asset root explicitly NOT claimed fixed by this plan — Named residual R-34.5-G1-PKG -- electronStub.isPackaged stays false under the sidecar, so publicDir still appends 'public' against a packaged resource root that has no such child
 
 ### Pending Todos
 
@@ -3456,8 +3467,37 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T00:19:27.000Z
-Stopped at: Completed 34.5-15-PLAN.md — blocking 5-item live gate RAN, VERDICT FAIL 0/5
+Last session: 2026-08-01T00:45:00.000Z
+Stopped at: Completed 34.5-16-PLAN.md — GAMELIB_APP_ROOT handoff closes G-1 root cause
+  This session: executed 34.5-16 (gap cycle wave 1, sequential executor, all 3 tasks
+  autonomous). Task 1 (commit `b49272d37`): wrote `34.5-APP-ROOT-SWEEP.md`, a 25-row sweep of
+  every `publicDir`/`getAppPath()` consumer across the backend, each reachability decision made
+  by reading real import chains (never assumed) — 15 rows `FIXED BY ROOT`, 9 `SAFE`
+  (structurally unreachable from the sidecar module graph, e.g. `main.ts`/`tray_icon.ts` are
+  Electron-main-only), 1 residual named. Surfaced a previously-unnoticed silent failure:
+  `crossover_index/fetcher.ts:52`'s bundled-snapshot read has been silently falling back to
+  `null` under the sidecar the whole time (its own try/catch treats ENOENT as a normal cold
+  start). Decided the one-seam mechanism (`GAMELIB_APP_ROOT`) and rejected three alternatives
+  (cwd change, per-call-site patches, `__dirname` math). Named `R-34.5-G1-PKG` (packaged asset
+  root not claimed fixed).
+  Task 2 (commit `2072dc079`): added `app_root_env_value`/`resolve_dev_app_root`/
+  `resolve_packaged_app_root` to `main.rs`, mirroring `shell_exe_env_value`'s exact
+  non-panicking contract; wired `.env("GAMELIB_APP_ROOT", ...)` into both `spawn_sidecar_dev`
+  and `spawn_sidecar_packaged`. `cargo check` clean; `cargo test` 84/84 (up from 80).
+  Task 3 (commit `ebe367f83`): `electronStub.app.getAppPath()` now reads
+  `process.env.GAMELIB_APP_ROOT`, falling back to `process.cwd()` when unset/empty (deliberately
+  non-throwing — module-scope call site, pre-logger failure would be invisible). New suite
+  `appRootResolution.test.ts` covers both arms plus a source-text assertion against real
+  `main.rs`; classified in `testContainment.test.ts`'s `STRUCTURALLY_CONTAINED_SUITES`
+  (directory recount 40→41). `npx tsc --noEmit` clean; `npm run test:ci` 179/179 suites,
+  3454/3454 tests (up from 3447). SUMMARY written (`34.5-16-SUMMARY.md`, commit `453e7d389`),
+  self-check PASSED. No deviations beyond one process note (Rust RED/GREEN landed as a single
+  commit, following this repo's existing cargo-test convention).
+Next: `/gsd-execute-phase 34.5` — wave 2 (`34.5-17`/`34.5-18`, both autonomous), building on the
+  now-correct `publicDir` resolution under `pnpm tauri:dev`.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-15-PLAN.md
   This session (continuation agent): resumed 34.5-15 at Task 2's blocking human-verify
   checkpoint after a prior agent completed Task 1 (all 5 preconditions satisfied, commit
   `116a98bb9`). The developer drove the gate on real macOS hardware and reported "epic login
@@ -3481,14 +3521,7 @@ Stopped at: Completed 34.5-15-PLAN.md — blocking 5-item live gate RAN, VERDICT
   `--self-test` both re-run clean (exit 0). SUMMARY written (`34.5-15-SUMMARY.md`, commit
   `708f4ad30`) stating plainly that Phase 34.5 is NOT complete. No source-code edits — this
   plan records, it does not fix.
-Next: `/gsd-plan-phase 34.5 --gaps` — fix the `publicDir` resolution defect (sweep for other
-  `publicDir`-relative consumers first, per the `bootstrap.ts:156` process lesson), then re-run
-  the gate: items 1, 2, 3, 5 in full and item 4 (never attempted) for the first time. Epic and
-  GOG credential backups from Task 1's preconditions are still moved aside (restore paths in
-  `34.5-LIVE-GATE.md` precondition 3) — needed signed-out again for the re-run, so restoring
-  them now is optional.
 
-Prior session context, retained for history:
 Stopped at (superseded): Completed 34.4.1-27-PLAN.md
   This session: 34.4.1-27-PLAN.md executed (gap cycle 2, plan 7 of 9, wave 5) — closed the two
   code-side housekeeping findings the gate rerun left unassigned. Task 1: extracted a
