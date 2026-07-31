@@ -1542,7 +1542,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 21 plans (16 executed + a 6-plan gap cycle planned 2026-08-01, 1 of 6 gap plans now
+**Plans:** 21 plans (15 base plans + a 6-plan gap cycle planned 2026-08-01, 2 of 6 gap plans now
 executed) — **PHASE DOES NOT CLOSE YET.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS). See `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
 `34.5-16` through `34.5-21`
@@ -1570,7 +1570,7 @@ Plans:
 
 Gap cycle (planned 2026-08-01 via `/gsd-plan-phase 34.5 --gaps`; waves restart at 1 for this cycle):
 - [x] 34.5-16-PLAN.md — App-root consumer sweep + `GAMELIB_APP_ROOT` handed down from both Rust spawn paths + `electronStub.getAppPath()` consumes it (gap wave 1)
-- [ ] 34.5-17-PLAN.md — Existence-checked `archSpecificBinary` x64 fallback + real-filesystem coverage under sidecar-like cwd (`src-tauri/`) (gap wave 2)
+- [x] 34.5-17-PLAN.md — Existence-checked `archSpecificBinary` x64 fallback + real-filesystem coverage under sidecar-like cwd (`src-tauri/`) (gap wave 2)
 - [ ] 34.5-18-PLAN.md — Sidecar boot logging of the `GAMELIB_SHELL_EXE` it actually received + asset-root self-check, closing the precondition-5 gate-contract defect (gap wave 2)
 - [ ] 34.5-19-PLAN.md — `34.5-LIVE-GATE-RERUN.md` authored with `verdict: null`, 7 preconditions, all 5 items incl. the never-attempted item 4 (gap wave 3)
 - [ ] 34.5-20-PLAN.md — **BLOCKING live gate RE-RUN**, all 5 items on real hardware (gap wave 4, non-autonomous)

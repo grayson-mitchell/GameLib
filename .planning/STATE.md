@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-16-PLAN.md — GAMELIB_APP_ROOT handoff closes G-1 root cause
-last_updated: "2026-08-01T00:45:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-16 executed (G-1 closed: GAMELIB_APP_ROOT handoff)
+stopped_at: Completed 34.5-17-PLAN.md — archSpecificBinary existence-checked, real-filesystem sidecar coverage added, proven to fail on revert
+last_updated: "2026-07-31T21:38:51.418Z"
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-17 executed (G-1 fully closed: archSpecificBinary existence-checked + real-filesystem sidecar coverage, proven to fail on revert)
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 170
-  completed_plans: 157
-  percent: 92
+  completed_plans: 158
+  percent: 93
 ---
 
 # Project State
@@ -98,7 +98,18 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > from 80), `ebe367f83` (`electronStub.getAppPath()` consumes it; `npx tsc --noEmit` clean;
 > `npm run test:ci` 179/179 suites, 3454/3454 tests, up from 3447). `34.5-16-SUMMARY.md` written,
 > self-check PASSED. `R-34.5-G1-PKG` (packaged asset root) recorded as an explicit, unclosed
-> residual — not claimed fixed. Wave 2 (`34.5-17`/`34.5-18`) is next.
+> residual — not claimed fixed.
+>
+> **✅ WAVE 2 (`34.5-17`) EXECUTED 2026-08-01 — G-1 fully closed.** 2/2 tasks done, commits
+> `a79b33163` (`archSpecificBinary`'s x64 fallback existence-checked, throws naming both
+> candidate paths + resolved `publicDir`), `94a8fe7b0` (real-filesystem sidecar-conditions
+> coverage in `appRootResolution.test.ts`, cwd forced to `src-tauri/`, proven to go red on a
+> deliberate revert of `electronStub.getAppPath()` then restored green — verbatim outputs in
+> `34.5-17-SUMMARY.md`). `npx tsc --noEmit` clean; `cargo check` clean; `npm run test:ci`
+> 179/179 suites, 3459/3459 tests, up from 3454 (one unrelated pre-existing flake in
+> `enrichmentFlows.test.ts` observed on the first run, reproduced green standalone and on a
+> full-suite re-run — not caused by this plan's files). `34.5-17-SUMMARY.md` written, self-check
+> PASSED. `34.5-18` (G-3, still wave 2, autonomous) is next.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -329,7 +340,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
-Plan: 16 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
+Plan: 17 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3026,6 +3037,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P26 | 55min | 2 tasks | 8 files |
 | Phase 34.4.1 P27 | ~50min | 3 tasks | 9 files |
 | Phase 34.5 P16 | 45min | 3 tasks | 5 files |
+| Phase 34.5 P17 | 40min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -3395,6 +3407,9 @@ Recent decisions affecting current work:
 - [Phase 34.5-16]: One GAMELIB_APP_ROOT env-var seam (both Rust spawn paths -> electronStub.getAppPath()) rather than N per-call-site path patches — The per-call-site approach is the named cause of this being the 4th recurrence of the publicdir-getapppath-chunking family
 - [Phase 34.5-16]: electronStub.getAppPath() stays non-throwing on unset/empty GAMELIB_APP_ROOT — Module-scope call site; a pre-logger failure there would be invisible. Loudness deferred to plan 34.5-18's boot self-check
 - [Phase 34.5-16]: Packaged asset root explicitly NOT claimed fixed by this plan — Named residual R-34.5-G1-PKG -- electronStub.isPackaged stays false under the sidecar, so publicDir still appends 'public' against a packaged resource root that has no such child
+- [Phase 34.5-17]: archSpecificBinary's x64 fallback is now existence-checked; throws naming both attempted paths and the resolved publicDir instead of silently returning an unchecked path
+- [Phase 34.5-17]: Task 1's tests drive three independent exported getters (getLegendaryBin/getGOGdlBin/getCometBin) instead of jest.isolateModules; isolateModules combined with this file's pre-existing electron automock kept returning an already-reset mock instance across several isolation attempts
+- [Phase 34.5-17]: New real-filesystem coverage in appRootResolution.test.ts forces cwd to src-tauri/ and asserts against the real disk via the production constants/paths.ts code path (electron swapped for the real electronStub) rather than jest's own arithmetic; proven to go red by deliberately reverting the GAMELIB_APP_ROOT env read
 
 ### Pending Todos
 
@@ -3467,8 +3482,45 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T00:45:00.000Z
-Stopped at: Completed 34.5-16-PLAN.md — GAMELIB_APP_ROOT handoff closes G-1 root cause
+Last session: 2026-07-31T21:38:51.407Z
+Stopped at: Completed 34.5-17-PLAN.md — archSpecificBinary existence-checked, real-filesystem sidecar coverage added, proven to fail on revert
+  This session: executed 34.5-17 (gap cycle wave 2, sequential executor, both tasks
+  autonomous), building directly on 34.5-16's `GAMELIB_APP_ROOT` seam. Task 1 (commit
+  `a79b33163`): `archSpecificBinary`'s x64 fallback is now existence-checked — throws an `Error`
+  naming the binary, both attempted absolute paths, and the resolved `publicDir` when neither
+  exists, instead of returning an unchecked path that previously ENOENT'd six layers away at
+  `launcher.ts`'s `callRunner`. No-op when binaries are present (REQ-34.5-13). Coverage added to
+  `utils.test.ts` via three independently-memoised exported getters
+  (`getLegendaryBin`/`getGOGdlBin`/`getCometBin`) rather than `jest.isolateModules` — the latter
+  was tried first and rejected after several isolation-ordering attempts all reproduced the same
+  failure (a fresh module load's `app.getPath` mock kept resolving to the SAME already-
+  `resetMocks`-stripped instance from this file's pre-existing `import * as utils`/
+  `jest.mock('electron')`, not an independent fresh one).
+  Task 2 (commit `94a8fe7b0`): extended `appRootResolution.test.ts` with a real-filesystem
+  sidecar-conditions block — forces `process.cwd()` to `<repo>/src-tauri` and requires
+  `backend/constants/paths` fresh with `electron` swapped for the REAL (unmocked) `electronStub`,
+  so `publicDir` is computed by the production code path rather than restated. Negative arm:
+  unset `GAMELIB_APP_ROOT` resolves a `public` dir that does not exist on disk. Positive arm: env
+  set to repo root resolves 8 real assets (4 runner binaries + locales/changelog.json/icon.png/
+  webviewPreload.js), all existence-checked against the real filesystem.
+  `jest.isolateModules` worked cleanly for THIS file (unlike Task 1) because it never triggers
+  the project-wide `electron` automock at all. Proved the new suite detects a regression:
+  temporarily reverted `electronStub.getAppPath()`'s env read (never committed), confirmed the
+  positive arm went red with the exact expected-vs-received mismatch, restored via
+  `git checkout --` on the untouched file, re-confirmed green — both verbatim outputs recorded in
+  `34.5-17-SUMMARY.md`.
+  `npx tsc --noEmit` clean; `cargo check` clean; `npm run test:ci` 179/179 suites, 3459/3459
+  tests (up from 3454). One unrelated pre-existing flake observed on the first `test:ci` run
+  (`enrichmentFlows.test.ts`'s `getAnticheatInfo` channel row) — reproduced green both standalone
+  and on a full-suite re-run, confirmed not caused by this plan's files. SUMMARY written
+  (`34.5-17-SUMMARY.md`), self-check PASSED. No auto-fixed deviations (Rule 1-4); one process
+  note documenting the `jest.isolateModules` rejection for Task 1.
+Next: `/gsd-execute-phase 34.5` — wave 2's remaining plan `34.5-18` (G-3, autonomous), then waves
+  3-5 (`34.5-19`..`34.5-21`), with wave 4 (`34.5-20`) stopping at the blocking human-driven gate
+  re-run.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-16-PLAN.md
   This session: executed 34.5-16 (gap cycle wave 1, sequential executor, all 3 tasks
   autonomous). Task 1 (commit `b49272d37`): wrote `34.5-APP-ROOT-SWEEP.md`, a 25-row sweep of
   every `publicDir`/`getAppPath()` consumer across the backend, each reachability decision made
@@ -3493,8 +3545,6 @@ Stopped at: Completed 34.5-16-PLAN.md — GAMELIB_APP_ROOT handoff closes G-1 ro
   3454/3454 tests (up from 3447). SUMMARY written (`34.5-16-SUMMARY.md`, commit `453e7d389`),
   self-check PASSED. No deviations beyond one process note (Rust RED/GREEN landed as a single
   commit, following this repo's existing cargo-test convention).
-Next: `/gsd-execute-phase 34.5` — wave 2 (`34.5-17`/`34.5-18`, both autonomous), building on the
-  now-correct `publicDir` resolution under `pnpm tauri:dev`.
 
 Prior session context, retained for history:
 Stopped at (superseded): Completed 34.5-15-PLAN.md
