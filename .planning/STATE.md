@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-18-PLAN.md
+stopped_at: Completed 34.5-19-PLAN.md
 last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-18 executed (G-3 closed: GAMELIB_SHELL_EXE receipt logging + boot-time asset-root self-check)
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-19 executed (re-run contract authored, unrun)
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 162
-  completed_plans: 159
-  percent: 98
+  completed_plans: 160
+  percent: 99
 ---
 
 # Project State
@@ -109,7 +109,25 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > 179/179 suites, 3459/3459 tests, up from 3454 (one unrelated pre-existing flake in
 > `enrichmentFlows.test.ts` observed on the first run, reproduced green standalone and on a
 > full-suite re-run — not caused by this plan's files). `34.5-17-SUMMARY.md` written, self-check
-> PASSED. `34.5-18` (G-3, still wave 2, autonomous) is next.
+> PASSED.
+>
+> **✅ WAVE 2b (`34.5-18`) EXECUTED 2026-08-01 — G-3 closed.** 2/2 tasks done, commits `fd19f91ab`
+> (boot-time `[bootstrap] GAMELIB_SHELL_EXE received=` receipt log, closing the old precondition-5
+> gate-contract defect), `7af2747af` (boot-time asset-root self-check, one greppable
+> `SIDECAR ASSET ROOT DEFECT` line on any missing asset). `npx tsc --noEmit` clean;
+> `npm run test:ci` 179/179 suites, 3463/3463 tests, up from 3459. `34.5-18-SUMMARY.md` written,
+> self-check PASSED.
+>
+> **✅ WAVE 3 (`34.5-19`) EXECUTED 2026-08-01 — `34.5-LIVE-GATE-RERUN.md` authored, unrun.** 2/2
+> tasks done plus 1 Rule 2 fix, commits `010b97bf6` (frontmatter + 7 preconditions, precondition 4
+> proving the G-1 fix is present from `bootstrap.ts`'s own log, precondition 7 closing the old
+> precondition-5 defect), `cf5533832` (the 5 items + reserved Verdict table + "what this gate
+> falsifies" + arithmetic rule, all Result slots empty), `4369d5166` (added the missing
+> `T-34.5-G6-02` evidence-redaction instruction the threat model required). `verdict: null`
+> throughout; `34.5-LIVE-GATE.md` confirmed byte-unchanged after every commit;
+> `ported-channels-gate.py` re-run clean (exit 0) after every commit. `34.5-19-SUMMARY.md`
+> written, self-check PASSED. `34.5-20` (wave 4, the blocking live-gate re-run itself,
+> **non-autonomous**) is next.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -340,7 +358,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
-Plan: 18 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
+Plan: 19 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3039,6 +3057,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P16 | 45min | 3 tasks | 5 files |
 | Phase 34.5 P17 | 40min | 2 tasks | 3 files |
 | Phase 34.5 P18 | 55min | 2 tasks | 2 files |
+| Phase 34.5 P19 | 35min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -3412,6 +3431,7 @@ Recent decisions affecting current work:
 - [Phase 34.5-17]: Task 1's tests drive three independent exported getters (getLegendaryBin/getGOGdlBin/getCometBin) instead of jest.isolateModules; isolateModules combined with this file's pre-existing electron automock kept returning an already-reset mock instance across several isolation attempts
 - [Phase 34.5-17]: New real-filesystem coverage in appRootResolution.test.ts forces cwd to src-tauri/ and asserts against the real disk via the production constants/paths.ts code path (electron swapped for the real electronStub) rather than jest's own arithmetic; proven to go red by deliberately reverting the GAMELIB_APP_ROOT env read
 - [Phase 34.5]: Split plan 34.5-18's two tasks into two atomic commits by temporarily reverting Task 2's additions, verifying Task 1 alone, committing, then reapplying Task 2 — matches this phase's established one-commit-per-task convention even though both tasks were drafted together in one contiguous code region
+- [Phase 34.5-19]: Re-run goes in NEW 34.5-LIVE-GATE-RERUN.md, verdict:null, never edits superseded 34.5-LIVE-GATE.md; precondition 4 proves G-1 fix present from bootstrap.ts's own boot log before any login is attempted
 
 ### Pending Todos
 
@@ -3484,8 +3504,46 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T21:57:27.056Z
-Stopped at: Completed 34.5-18-PLAN.md
+Last session: 2026-08-01T00:00:00.000Z
+Stopped at: Completed 34.5-19-PLAN.md
+  This session (sequential executor): executed 34.5-19 (gap cycle wave 3, both tasks
+  autonomous), authoring `34.5-LIVE-GATE-RERUN.md` -- a CONTRACT for the blocking live-gate
+  re-run, written before any live work, `verdict: null` throughout. Runs NOTHING live. Task 1
+  (commit `010b97bf6`): frontmatter (`status: pending`, `blocking: true`, `items_passed: 0`,
+  `items_failed: 0`, `supersedes: 34.5-LIVE-GATE.md`) plus 7 numbered preconditions, each with
+  an empty `RESULT --` slot. Precondition 1 carries forward 34.4.1's own gate PASS verbatim.
+  Precondition 4 is the load-bearing check: quotes all four `[bootstrap]` log-line shapes
+  (`appRoot resolved=`, `publicDir resolved=`, `runner binary <name> path=`, and the
+  `SIDECAR ASSET ROOT DEFECT` block-condition) read directly from `bootstrap.ts` source at
+  authoring time, requiring `source=GAMELIB_APP_ROOT` (not `process.cwd`) and `exists=true`
+  throughout -- a `SIDECAR ASSET ROOT DEFECT` line BLOCKS items 1-3 outright. Precondition 7
+  closes the old precondition-5 gate-contract defect by citing
+  `[bootstrap] GAMELIB_SHELL_EXE received=` (plan 34.5-18's receipt log), carrying the
+  dev-vs-packaged caveat and `R-34.5-G1-PKG` parallel limit forward verbatim. Task 2 (commit
+  `cf5533832`): the five items, each with an empty `[ ] PASS   [ ] FAIL` slot, carrying
+  `34.5-LIVE-GATE.md`'s wording forward rather than re-deriving it -- item 3 adds a
+  CONFIRMED/FALSIFIED/UNTESTED three-way recording rule for the `www.amazon.com` anchor
+  (Assumption A1), item 4 carries the unconsumed Alan Wake groundwork plus a new
+  re-verify-still-installed instruction the old contract lacked, item 5 states Pitfall 2's
+  non-Steam Wine claim is not struck without a PASS here. Closed with a reserved Verdict table,
+  a "What this gate falsifies" section binding four standing claims to their items, and an
+  explicit arithmetic rule for a not-attempted item. Rule 2 fix (commit `4369d5166`,
+  discovered during pre-SUMMARY self-review of the plan's own threat_model): the contract was
+  missing an explicit instruction for `T-34.5-G6-02` (never paste `access_token`/
+  `refresh_token`/cookies/session-ids/the Steam `userdata` account id into a Result slot,
+  redact-in-place instead) -- added as a standalone "Evidence-handling rule" paragraph.
+  `34.5-LIVE-GATE.md` confirmed byte-unchanged (`git status --porcelain` empty) after all three
+  commits; `ported-channels-gate.py` re-run clean (exit 0) after each. SUMMARY written
+  (`34.5-19-SUMMARY.md`), self-check PASSED.
+Next: **34.5-20-PLAN.md** — wave 4 of the gap cycle, the BLOCKING live-gate re-run itself on
+  real macOS hardware (non-autonomous). Executes `34.5-LIVE-GATE-RERUN.md`'s 7 preconditions and
+  5 items in order, filling every Result slot and the reserved Verdict table. Precondition 4
+  must be satisfied (G-1 fix present, no `SIDECAR ASSET ROOT DEFECT` line) before items 1-3 are
+  attempted. Per D-08, any item recorded FAIL means the phase still does not close and another
+  gap cycle follows.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-18-PLAN.md
   This session (sequential executor): executed 34.5-18 (gap cycle wave 2's second plan, both
   tasks autonomous), closing G-3 (a gate-contract defect, not a code defect) and giving G-1's
   fix (34.5-16/34.5-17) a runtime witness. Task 1 (commit `fd19f91ab`): `init()` now logs
@@ -3513,12 +3571,7 @@ Stopped at: Completed 34.5-18-PLAN.md
   2's additions, verifying Task 1 alone, committing, then reapplying Task 2 -- matching this
   phase's one-commit-per-task convention. SUMMARY written (`34.5-18-SUMMARY.md`), self-check
   PASSED.
-Next: **34.5-19-PLAN.md** — wave 3 of the gap cycle, consuming this plan's two greppable log
-  prefixes (`GAMELIB_SHELL_EXE received=`, `SIDECAR ASSET ROOT DEFECT`) as evidence for the gate
-  re-run contract, then waves 4-5 (`34.5-20`..`34.5-21`), with wave 4 (`34.5-20`) stopping at the
-  blocking human-driven gate re-run.
 
-Prior session context, retained for history:
 Stopped at (superseded): Completed 34.5-17-PLAN.md
   This session: executed 34.5-17 (gap cycle wave 2, sequential executor, both tasks
   autonomous), building directly on 34.5-16's `GAMELIB_APP_ROOT` seam. Task 1 (commit
