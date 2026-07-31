@@ -155,3 +155,56 @@ but not a catastrophic one. **This must be tested before plan 26 is re-scoped** 
 - **Open question for whoever picks this up:** does the prompt storm reproduce on a properly
   signed build? That single test decides whether this is a release-blocking defect or a
   dev-ergonomics problem with a latent timeout tail.
+
+### Follow-up (2026-07-31, same day): signing hypothesis MECHANISM CONFIRMED, empirical test NOT RUNNABLE locally
+
+The row above marked "why does each read prompt at all" as an unproven hypothesis. The mechanism is
+now confirmed from the build itself; the *empirical* test remains unrun, and cannot be run on this
+machine.
+
+**Evidence gathered:**
+
+- `codesign -dvvv src-tauri/target/debug/gamelib-shell` → `Signature=adhoc`,
+  `TeamIdentifier=not set`, `Identifier=gamelib_shell-6d116d516af003c6`.
+- `security find-identity -v -p codesigning` → **0 valid identities found** on this machine.
+- `src-tauri/tauri.conf.json` has **no `bundle.macOS` block at all** — no `signingIdentity`, no
+  entitlements, no hardened-runtime settings. `bundle.targets` includes `dmg`;
+  `createUpdaterArtifacts` is `true`.
+- `.github/workflows/release-tauri.yml` signs **conditionally**: only when `APPLE_CERTIFICATE`,
+  `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are all present. Otherwise it emits
+  `::warning::... shipping unsigned` and continues.
+
+**Mechanism (confirmed):** keyring 3.6.3's `apple-native` feature stores generic passwords in the
+legacy login keychain, whose items carry a per-item ACL naming trusted applications by *designated
+requirement*. With an ad-hoc signature and no team, the DR degrades to a **cdhash** match.
+`tauri:dev` recompiles on every run → new cdhash every run → any "Always Allow" grant is stale on
+the next rebuild. The `gamelib_shell-<hash>` identifier suffix is Rust's compilation-metadata hash,
+so in dev not even the identifier is stable.
+
+**Correction to the severity note in the row above.** That note said a stably-signed release build
+would reduce this to a single prompt, and used that to argue the defect may be dev-only. That
+reasoning assumed the shipped build IS signed. It is not guaranteed to be: signing is conditional
+on CI secrets and the workflow explicitly ships unsigned when they are absent. On an **unsigned
+release**, the cdhash is fixed within a version — so a grant sticks — but `createUpdaterArtifacts`
+means every auto-update ships a new binary with a new cdhash, staling every grant. **The storm then
+returns after every update.** Signing does not de-risk the missing cache; it only decides whether a
+user meets it once per install or once per update.
+
+**Unexplained, and it matters for the fix.** Even ad-hoc, clicking **Always Allow** on the first
+prompt should silence subsequent reads of that same item *within the same boot* — the ACL grant
+applies to the running binary immediately. 20+ prompts in one boot therefore means either (a) the
+operator clicked **Allow** (one-shot) rather than Always Allow, or (b) grants are not sticking at
+all. These imply different fixes: (a) is purely the read-count defect; (b) means something is wrong
+with how the items' ACLs are created and is the more serious reading. **Determine which before
+scoping plan 26.**
+
+**Partial structural explanation of the count:** plan 11's allowlist defines THREE accounts
+(`steam-refresh-token`, `humble-session`, `humble-csrf`). Each is a separate keychain item with its
+own independent ACL — a grant on one never carries to the others. Three distinct dialogs are
+structurally unavoidable no matter how good the caching is; only the count *beyond* three is
+attributable to the missing cache.
+
+**Test status:** the "does it reproduce on a signed build?" question in the row above is
+**NOT runnable locally** (0 codesigning identities). It requires either a Developer ID cert
+installed on the test machine, or a CI run with the three Apple secrets populated. Do not record it
+as answered until one of those happens.
