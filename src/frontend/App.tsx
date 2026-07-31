@@ -6,8 +6,10 @@ import {
   Navigate,
   Outlet,
   RouterProvider,
-  useLocation
+  useLocation,
+  useRouteError
 } from 'react-router-dom'
+import ErrorComponent from './components/UI/ErrorComponent'
 import Sidebar from './components/UI/Sidebar'
 import ContextProvider from './state/ContextProvider'
 import { ControllerHints, Help, OfflineMessage } from './components/UI'
@@ -126,29 +128,28 @@ function Root() {
   )
 }
 
+// F-10 (34.4.1 plan 25): before this existed, no route in the tree had an
+// `errorElement`, so anything that threw while resolving or rendering a route
+// -- a rejected `lazy()` chunk import above all -- unmounted the whole router
+// subtree and left an empty document. That failure mode is visually identical
+// to F-10's real cause and cost a live gate run to tell apart. A route error
+// must always land on something the user can see.
+function RouteErrorSurface() {
+  const error = useRouteError()
+  const detail =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error)
+  return <ErrorComponent message={`Something went wrong: ${detail}`} />
+}
+
 function makeLazyFunc(
   importedFile: Promise<Record<'default', React.ComponentType>>
 ) {
   return async () => {
-    // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Emitted via window.api.logInfo
-    // (lands in gamelib.log; sidecar/webview console output is not reliably observable under
-    // Tauri) so a first-versus-second navigation's breadcrumb order can be compared.
-    window.api.logInfo(
-      `TEMPORARY F-10 DIAGNOSTIC: route lazy() await start seq=${Date.now()}`
-    )
-    const component = await importedFile.catch((err) => {
-      // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Re-thrown below — this does not
-      // swallow the rejection, it only makes it visible before it propagates.
-      const message = err instanceof Error ? err.message : String(err)
-      window.api.logError(
-        `TEMPORARY F-10 DIAGNOSTIC: route lazy() rejected seq=${Date.now()} error=${message}`
-      )
-      throw err
-    })
-    // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3
-    window.api.logInfo(
-      `TEMPORARY F-10 DIAGNOSTIC: route lazy() await resolved seq=${Date.now()}`
-    )
+    const component = await importedFile
     return { Component: component.default }
   }
 }
@@ -157,6 +158,7 @@ const router = createHashRouter([
   {
     path: '/',
     element: <Root />,
+    errorElement: <RouteErrorSurface />,
     children: [
       {
         index: true,

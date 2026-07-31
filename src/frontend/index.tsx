@@ -203,22 +203,11 @@ const container = document.getElementById('root')
 const root = createRoot(container!) // createRoot(container!) if you use TypeScript
 const App = lazy(async () => import('./App'))
 
-// TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Wraps the top-level Suspense fallback so
-// a breadcrumb fires exactly when the fallback renders (lands in gamelib.log via
-// window.api.logInfo) — distinguishes "the fallback is up and invisible" from "nothing is
-// rendering at all". Renders the same `Loading` output either way.
-function DiagnosticSuspenseFallback() {
-  window.api.logInfo(
-    `TEMPORARY F-10 DIAGNOSTIC: top-level Suspense fallback rendering seq=${Date.now()}`
-  )
-  return <Loading />
-}
-
 root.render(
   // <React.StrictMode>
   <GlobalState>
     <I18nextProvider i18n={i18next}>
-      <Suspense fallback={<DiagnosticSuspenseFallback />}>
+      <Suspense fallback={<Loading />}>
         <App />
       </Suspense>
     </I18nextProvider>

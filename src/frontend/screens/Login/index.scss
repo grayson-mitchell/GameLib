@@ -8,14 +8,33 @@
   position: relative;
 }
 
+// F-10 (34.4.1 plan 25): this layer is purely decorative and MUST NOT take
+// part in sizing `.loginPage`.
+//
+// It used to be an in-flow grid item with `height: 100%`, sharing cell 1/1
+// with `.loginContentWrapper`. That percentage had no definite basis to
+// resolve against -- the whole chain is percentages
+// (`.App` min-height:100vh with a `1fr` row -> `.content` min-height:100%
+// -> `.loginPage` height:100% -> here) -- so WebKit was free to resolve it
+// either way. Resolved one way everything collapsed to the content height
+// (770px, correct). Resolved the other way this div measured 23323px, which
+// became the grid row height, which centred `.loginContentWrapper` at
+// y=11277 -- roughly 11000px below the viewport. The login screen was
+// rendering perfectly and sitting far below the fold, which is what the
+// live gate recorded as "Manage Accounts renders blank": all that remained
+// on screen was this image at opacity 0.3.
+//
+// Taking it out of flow removes it from the grid's intrinsic sizing
+// entirely, so `.loginPage` can only ever be as tall as its real content.
+// `.loginPage` is already `position: relative`, so `inset: 0` still covers
+// it exactly. Keep this absolutely positioned -- an in-flow decorative
+// layer with a percentage height reintroduces F-10.
 .loginBackground {
-  height: 100%;
-  width: 100%;
+  position: absolute;
+  inset: 0;
   background: url('../../assets/login-background-1536x864.jpg');
   background-size: cover;
   opacity: 0.3;
-  grid-column: 1;
-  grid-row: 1;
 }
 
 .loginContentWrapper {
