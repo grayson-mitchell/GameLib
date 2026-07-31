@@ -484,3 +484,125 @@ describe('REQ-34.4.1-06 (Plan 23, F-6 Defect B) humble_login_clear_cookies never
     expect(regressed).toContain('matching.len()')
   })
 })
+
+// Phase 34.4.1 Plan 24 (WR-07 + F-4): research Pitfall 3 in the flesh. `main.rs:1114-1116`
+// (pre-Plan-24) claimed WR-07 was "enforced by the grep gate in this plan's own acceptance
+// criteria, not by intent alone" -- a claim that was FALSE and misdirected two live gate
+// operators, both of whom reported the title bar read the framework default ("Tauri app").
+// A grep gate proving `.title(` is never hard-coded can only establish the ABSENCE of the
+// prohibited value; it structurally cannot establish the PRESENCE of a tracking one. Every
+// assertion below is a SOURCE-LEVEL check only. None of them, individually or together, can
+// prove the live title bar tracks Humble's document title, or that the window actually
+// raises -- both remain plan 29 item 1's job alone, named explicitly in each test's own
+// title so a future reader who only sees a red/green dot still learns what did NOT close.
+describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation gating -- static half only, live half owned by plan 29 item 1', () => {
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces), counting depth rather than relying on a second string
+   * marker -- this arm's `if visible` block contains a nested closure with its own braces
+   * (`on_document_title_changed`'s callback) plus a `"...len={}"` format string, so a
+   * naive "next known statement" marker would be fragile against reordering inside the
+   * block. A `{}` pair inside a Rust string literal still nets to zero depth change, so it
+   * does not perturb the outer match.
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  test('on_document_title_changed is present in source -- static proof only, NOT proof the OS title bar tracks Humble\'s document title (that is plan 29 item 1)', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('on_document_title_changed')
+  })
+
+  test('always_on_top never appears in non-comment source (F-4) -- proves the persistent-pin option was never wired, NOT that the one-shot raise plan 29 item 1 must observe actually happens', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('always_on_top')
+  })
+
+  test('no WebviewWindowBuilder chain in this file hard-codes .title( -- WR-07\'s negative half, unchanged; proves absence only, never the presence plan 29 item 1 must observe', () => {
+    const code = loadMainRsCode()
+    // All three WebviewWindowBuilder call sites in this file (humble_login_open,
+    // humble_reveal_post, humble_login_clear_storage) -- each chain runs from its
+    // `tauri::WebviewWindowBuilder::new(` call to its own `.build()`.
+    const chainStarts = [
+      ...code.matchAll(/tauri::WebviewWindowBuilder::new\(/g)
+    ]
+    expect(chainStarts.length).toBeGreaterThanOrEqual(3)
+    for (const match of chainStarts) {
+      const start = match.index ?? 0
+      const end = code.indexOf('.build()', start)
+      expect(end).toBeGreaterThan(start)
+      const chain = code.slice(start, end + '.build()'.length)
+      expect(chain).not.toContain('.title(')
+    }
+  })
+
+  test('.inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open\'s if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)', () => {
+    const code = loadMainRsCode()
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    const armBody = code.slice(armStart, armEnd)
+
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    const visibleStart = armBody.indexOf(visibleBlock)
+    expect(visibleStart).toBeGreaterThan(-1)
+    const beforeVisible = armBody.slice(0, visibleStart)
+    const afterVisible = armBody.slice(visibleStart + visibleBlock.length)
+
+    const presentationTokens = [
+      '.inner_size(',
+      '.center()',
+      '.focused(true)',
+      'on_document_title_changed'
+    ]
+    for (const token of presentationTokens) {
+      // Load-bearing: each token must actually be found inside the block (guards
+      // against a future refactor silently dropping one of the four presentation
+      // calls without any test noticing).
+      expect(visibleBlock).toContain(token)
+      expect(beforeVisible).not.toContain(token)
+      expect(afterVisible).not.toContain(token)
+    }
+  })
+
+  test('the hidden reveal-post and storage-clear WebviewWindowBuilder chains gained neither the title hook nor the F-4 presentation calls', () => {
+    const code = loadMainRsCode()
+    const revealStart = code.indexOf('"humble_reveal_post" => {')
+    expect(revealStart).toBeGreaterThan(-1)
+    const revealEnd = code.indexOf('"humble_login_clear_storage" => {', revealStart)
+    expect(revealEnd).toBeGreaterThan(revealStart)
+    const clearStorageEnd = code.indexOf(
+      '"humble_login_cookies_for_domain" => {',
+      revealEnd
+    )
+    expect(clearStorageEnd).toBeGreaterThan(revealEnd)
+    const hiddenWindowsBody = code.slice(revealStart, clearStorageEnd)
+
+    for (const token of [
+      'on_document_title_changed',
+      '.inner_size(',
+      '.center()',
+      '.focused(true)'
+    ]) {
+      expect(hiddenWindowsBody).not.toContain(token)
+    }
+    // Both hidden builders stay explicitly non-visible.
+    expect((hiddenWindowsBody.match(/\.visible\(false\)/g) ?? []).length).toBe(2)
+  })
+})
