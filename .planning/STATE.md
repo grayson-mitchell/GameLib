@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-17-PLAN.md — archSpecificBinary existence-checked, real-filesystem sidecar coverage added, proven to fail on revert
-last_updated: "2026-07-31T21:38:51.418Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-17 executed (G-1 fully closed: archSpecificBinary existence-checked + real-filesystem sidecar coverage, proven to fail on revert)
+stopped_at: Completed 34.5-18-PLAN.md
+last_updated: "2026-07-31T21:57:27.067Z"
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-18 executed (G-3 closed: GAMELIB_SHELL_EXE receipt logging + boot-time asset-root self-check)
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 170
-  completed_plans: 158
-  percent: 93
+  completed_plans: 159
+  percent: 94
 ---
 
 # Project State
@@ -340,7 +340,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
-Plan: 17 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
+Plan: 18 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2159,7 +2159,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3038,6 +3038,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P27 | ~50min | 3 tasks | 9 files |
 | Phase 34.5 P16 | 45min | 3 tasks | 5 files |
 | Phase 34.5 P17 | 40min | 2 tasks | 3 files |
+| Phase 34.5 P18 | 55min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -3410,6 +3411,7 @@ Recent decisions affecting current work:
 - [Phase 34.5-17]: archSpecificBinary's x64 fallback is now existence-checked; throws naming both attempted paths and the resolved publicDir instead of silently returning an unchecked path
 - [Phase 34.5-17]: Task 1's tests drive three independent exported getters (getLegendaryBin/getGOGdlBin/getCometBin) instead of jest.isolateModules; isolateModules combined with this file's pre-existing electron automock kept returning an already-reset mock instance across several isolation attempts
 - [Phase 34.5-17]: New real-filesystem coverage in appRootResolution.test.ts forces cwd to src-tauri/ and asserts against the real disk via the production constants/paths.ts code path (electron swapped for the real electronStub) rather than jest's own arithmetic; proven to go red by deliberately reverting the GAMELIB_APP_ROOT env read
+- [Phase 34.5]: Split plan 34.5-18's two tasks into two atomic commits by temporarily reverting Task 2's additions, verifying Task 1 alone, committing, then reapplying Task 2 — matches this phase's established one-commit-per-task convention even though both tasks were drafted together in one contiguous code region
 
 ### Pending Todos
 
@@ -3482,8 +3484,42 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T21:38:51.407Z
-Stopped at: Completed 34.5-17-PLAN.md — archSpecificBinary existence-checked, real-filesystem sidecar coverage added, proven to fail on revert
+Last session: 2026-07-31T21:57:27.056Z
+Stopped at: Completed 34.5-18-PLAN.md
+  This session (sequential executor): executed 34.5-18 (gap cycle wave 2's second plan, both
+  tasks autonomous), closing G-3 (a gate-contract defect, not a code defect) and giving G-1's
+  fix (34.5-16/34.5-17) a runtime witness. Task 1 (commit `fd19f91ab`): `init()` now logs
+  `[bootstrap] GAMELIB_SHELL_EXE received=<value|<UNSET>>` -- the value the SIDECAR actually
+  observed, not the Rust shell's `eprintln!` claim at `main.rs:1231` (which only ever reaches
+  the shell's own stderr, never `gamelib.log`) -- closing the defect where `34.5-LIVE-GATE.md`
+  preconditions 5 and 2 could not previously both be satisfied. Reads
+  `process.env.GAMELIB_SHELL_EXE` directly, never `pathShim.getPath('exe')` (which throws on
+  unset/empty by design -- wrong for a diagnostic). Task 2 (commit `7af2747af`): added a
+  boot-time asset-root self-check, placed directly after the receipt log and before the i18next
+  block so it cannot be outrun by a login attempt (the 2026-08-01 `ENOENT` lines fired 6 seconds
+  before the first login). Logs the resolved app root + source, the resolved `publicDir` +
+  `existsSync`, and per-runner (legendary/gogdl/nile/comet) path + `existsSync`, mirroring
+  `archSpecificBinary`'s arch-native-first/x64-fallback resolution without importing it. Emits
+  exactly one `[bootstrap] SIDECAR ASSET ROOT DEFECT` line naming the resolved `publicDir` on
+  any absence. Extended the pre-existing `locales` warning's comment to name it as the
+  (previously ungeneralised) first member of this family. Both blocks are try/catch-wrapped and
+  NOT once-gated (re-observe `process.env` on every `init()` call). Test coverage for the
+  self-check required swapping this suite's default automocked `electron` (whose `getAppPath()`
+  always resolves to `os.tmpdir()`) for the real `electronStub` inside `jest.isolateModules`,
+  mirroring `appRootResolution.test.ts`'s established pattern -- since `publicDir` is a
+  module-scope constant fixed at import time. `npx tsc --noEmit` clean; `npm run test:ci`
+  179/179 suites, 3463/3463 tests (up from 3459). Process note (not a Rule 1-4 deviation): both
+  tasks were drafted together then split into two atomic commits by temporarily reverting Task
+  2's additions, verifying Task 1 alone, committing, then reapplying Task 2 -- matching this
+  phase's one-commit-per-task convention. SUMMARY written (`34.5-18-SUMMARY.md`), self-check
+  PASSED.
+Next: **34.5-19-PLAN.md** — wave 3 of the gap cycle, consuming this plan's two greppable log
+  prefixes (`GAMELIB_SHELL_EXE received=`, `SIDECAR ASSET ROOT DEFECT`) as evidence for the gate
+  re-run contract, then waves 4-5 (`34.5-20`..`34.5-21`), with wave 4 (`34.5-20`) stopping at the
+  blocking human-driven gate re-run.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-17-PLAN.md
   This session: executed 34.5-17 (gap cycle wave 2, sequential executor, both tasks
   autonomous), building directly on 34.5-16's `GAMELIB_APP_ROOT` seam. Task 1 (commit
   `a79b33163`): `archSpecificBinary`'s x64 fallback is now existence-checked — throws an `Error`
@@ -3518,8 +3554,6 @@ Stopped at: Completed 34.5-17-PLAN.md — archSpecificBinary existence-checked, 
 Next: `/gsd-execute-phase 34.5` — wave 2's remaining plan `34.5-18` (G-3, autonomous), then waves
   3-5 (`34.5-19`..`34.5-21`), with wave 4 (`34.5-20`) stopping at the blocking human-driven gate
   re-run.
-
-Prior session context, retained for history:
 Stopped at (superseded): Completed 34.5-16-PLAN.md
   This session: executed 34.5-16 (gap cycle wave 1, sequential executor, all 3 tasks
   autonomous). Task 1 (commit `b49272d37`): wrote `34.5-APP-ROOT-SWEEP.md`, a 25-row sweep of
