@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1-21 COMPLETE 2026-07-31 (gap cycle 2, plan 21 of 21-29, wave 1). Task 3's blocking checkpoint returned live hardware data — with_webview() runs synchronously inline, A2 holds (main thread, no hop needed), Defect A proven live and total (clear-direction matches 33/33, all cookies), retry flat 31/31/31 (identity mismatch, not timing). RECOMMENDATION: proceed with WKWebsiteDataStore rewrite in plan 23, but plan 22 (Defect A fix) MUST land first or a working delete wipes the whole shared jar. 34.4.1-SPIKE-016-FINDINGS.md and 34.4.1-21-SUMMARY.md written. Next: plan 22 (Defect A fix).
-last_updated: "2026-07-31T05:10:00Z"
+stopped_at: Completed 34.4.1-22-PLAN.md
+last_updated: "2026-07-31T05:30:28.393Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
-  total_plans: 155
-  completed_plans: 146
-  percent: 94
+  total_plans: 164
+  completed_plans: 148
+  percent: 71
 ---
 
 # Project State
@@ -32,6 +32,24 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **✅ PLAN 22 COMPLETE — 34.4.1-22 (gap cycle 2, plan 2 of 9, wave 2) — 2026-07-31.**
+> F-6 Defect A CLOSED: added `humble_login_cookies_for_domain`, a second, correctly-directed Rust
+> cookie-read arm (cookie's own domain first, fixed target second — mirrors the unedited
+> `humble_login_clear_cookies` filter), exposed as `cookiesForDomain()` on `LoginWindowSeam`, and
+> routed the disconnect census's before/after reads through it. The login-watch poll's own arm
+> (`humble_login_cookies`, page-host-first) is UNCHANGED and pinned by test on both the TS side
+> (`user.test.ts`) and the Rust source side (`tauriShellSource.test.ts`, extracting each arm's body
+> and asserting its exact `cookie_domain_matches(...)` call shape). Both direction-pin tests proven
+> load-bearing by a temporary argument swap (observed failure, reverted) — see `34.4.1-22-SUMMARY.md`
+> for the exact swap and failure text. Plan 21's `SPIKE 016` throwaway probe fully removed,
+> including a second removal site (a `GAMELIB_SPIKE016`-gated trigger inside `humble_login_open`)
+> the plan text itself didn't name. `cargo test`: 66/66 (was 60). `npm run test:ci`: 3394/3394
+> (baseline 3387). `npx tsc --noEmit`: clean. `ported-channels-gate.py` + `--self-test`: both OK.
+> `34.4.1-22-SUMMARY.md` records full detail, both swap experiments, the census log line's exact
+> (unchanged) format, and the `humble_login_cookies_for_domain` arg tuple plans 23/29 both consume.
+> Next action: plan 23 (Defect B fix — the `WKWebsiteDataStore` delete rewrite; this plan's fix was
+> the hard sequencing precondition plan 23 needed before it could land safely).
 
 > **✅ PLAN 21 COMPLETE — 34.4.1-21 (gap cycle 2, plan 1 of 9, wave 1) — 2026-07-31.**
 > Phase 34.4.1 still does NOT close (gate FAILED 3/4 on `34.4.1-20`, item 3). Gap cycle 2 (plans
@@ -61,8 +79,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Also captured mid-session (out of plan 21's declared scope, forwarded to plan 26): F-9's Keychain
 >   prompt storm root-cause traced to an ad-hoc code signature destabilizing the Keychain ACL under
 >   `tauri:dev` — logged in `deferred-items.md`, not fixed here.
-> `34.4.1-21-SUMMARY.md` records the full task-by-task detail and headline numbers table. Next
-> action: plan 22 (Defect A fix), then resume `/gsd-execute-phase 34.4.1`.
+> `34.4.1-21-SUMMARY.md` records the full task-by-task detail and headline numbers table. Plan 22
+> (Defect A fix) is now COMPLETE — see the plan 22 block above. Next action: plan 23 (Defect B fix),
+> then resume `/gsd-execute-phase 34.4.1`.
 
 > **⛔ ACTIVE BLOCKER — Phase 34.4.1's blocking live gate RAN 2026-07-30 and FAILED (2 of 4 clean).**
 > `34.4.1-08` is complete (all 9 plans now have summaries) but **Phase 34.4.1 DOES NOT CLOSE** — the
@@ -99,7 +118,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 22 of 29 (plans 01-21 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 (Defect A fix) is next; plans 23-29 unexecuted)
+Plan: 23 of 29 (plans 01-22 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 (Defect B fix) is next; plans 24-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -1918,7 +1937,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[█████████░] 90%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2179,7 +2198,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-30
+Last activity: 2026-07-31
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -2790,6 +2809,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P18 | 30min | 4 tasks | 8 files |
 | Phase 34.4.1 P19 | 55min | 2 tasks | 3 files |
 | Phase 34.4.1 P21 | 75min | 3 tasks | 7 files |
+| Phase 34.4.1 P22 | 30min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -3147,6 +3167,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-21]: Retry experiment (delete->wait->re-read x3 on the existing wry path) returned flat 31/31/31 -- rules out timing/race, supports identity mismatch; RECOMMENDATION for plan 23 is REWRITE (WKWebsiteDataStore + objc2-web-kit), not a retry/backoff pattern
 - [Phase 34.4.1-21]: plan 23 must scope removeData to WKWebsiteDataTypeCookies specifically, not remove the whole WKWebsiteDataRecord (which would drop localStorage/IndexedDB/caches too, widening F-6's clear scope beyond what plans 15/16 already handle correctly)
 - [Phase 34.4.1-21]: F-9 Keychain prompt storm probable root cause found opportunistically during Task 3's live session (not spike 016's own scope) — ad-hoc code signature (no TeamIdentifier) degrades the Keychain ACL's designated requirement under tauri:dev's per-run recompiles; forwarded to plan 26 in deferred-items.md, not fixed here
+- [Phase 34.4.1-22]: Kept the two cookie-read arms structurally separate (new arm, not an edit to humble_login_cookies) — research's rejected option (b) explicitly warned that changing the existing arm's direction would break the login poll to fix the census
+- [Phase 34.4.1-22]: Every non-Tauri LoginWindowSeam test double updated in place to implement cookiesForDomain rather than widening the interface to optional — an optional method would let a future implementation silently omit the correctly-directed read, recreating F-6's silent-degradation shape
 
 ### Pending Todos
 
@@ -3219,8 +3241,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-30T11:19:19.943Z
-Stopped at: Completed 34.4.1-18-PLAN.md
+Last session: 2026-07-31T05:30:28.381Z
+Stopped at: Completed 34.4.1-22-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
   `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan
