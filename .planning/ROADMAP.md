@@ -1452,7 +1452,7 @@ Plans:
 `humbleRevealKey`. The seam is **not Humble-specific** — the same element serves Epic, GOG and
 Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
-**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12
+**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12, REQ-34.4.1-GAP-13
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
 **Plans:** 25/29 plans executed

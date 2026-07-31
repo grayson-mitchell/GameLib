@@ -682,6 +682,23 @@ live run.
   window points UPSTREAM of the lazy-loaded component itself, not at a missing Suspense boundary.
   This box stays UNCHECKED — live-observed. *(extends REQ-34.4.1-12, it blocked
   `34.4.1-20`'s item 3 gate; closes F-10)*
+- [ ] **REQ-34.4.1-GAP-13**: Known WKWebView-degraded frontend capabilities are GUARDED rather
+  than assumed. Adopts two rows that sat "unassigned" in `34.4.1-LIVE-GATE-RERUN.md`'s findings
+  register: `queryLocalFonts` (Chromium-only, throws under WKWebView) cannot escape as an
+  unhandled rejection and instead degrades to the CSS-declared default fonts; and no image source
+  is wrapped in the `imagecache://` URL scheme on a shell that does not register it (Electron-only,
+  ~150 guaranteed `unsupported URL` failures per library render under Tauri), with the scheme
+  decision held in one named predicate (`imageCacheSchemeAvailable()` in
+  `preload/tauriTransport.ts`) rather than a platform sniff repeated per consumer. **Split claim:**
+  the `queryLocalFonts` half is closed by unit evidence alone — a capability check is fully
+  testable by deleting/throwing the API on `globalThis`, which plan 27's
+  `queryLocalFontsSafe.test.ts`-equivalent coverage does directly, including unhandled-rejection
+  tracking. The artwork half's user-visible proof — that the library renders with zero
+  `unsupported URL` console errors under a real Tauri build — is a LIVE observation belonging to
+  plan 29's gate; unit tests here only prove no `imagecache://` URL is ever emitted when the
+  scheme is unavailable, not that the resulting page is error-free end to end. This box stays
+  UNCHECKED on that live-only half. *(extends REQ-34.4.1-11; adopts the `queryLocalFonts` and
+  ~150 percent-encoded Steam artwork URL findings from `34.4.1-LIVE-GATE-RERUN.md`)*
 
 Phase 34.5 (Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts). Minted 2026-07-29 during `/gsd-plan-phase 34.5` from 34.5-CONTEXT.md D-01..D-15 + 34.5-RESEARCH.md "Proposed Requirement Decomposition" candidate table (ROADMAP read `TBD — mint at /gsd-plan-phase 34.5`). The slice is **38 channels ported, not 57** — re-scoped during discussion by D-01/D-02/D-03, which **drop Zoom permanently** (3 channels — `authZoom`, `getZoomUserInfo`, `logoutZoom`) and **defer 16 to a newly-required Phase 34.6** (EOS overlay 8, SteamGridDB artwork 5, winetricks 3). **Research CORRECTED three claims in CONTEXT.md, each verified against source by the orchestrator before minting:** (1) **D-15's dialog citation is wrong** — `tools/index.ts:794` calls only `appendMessage`/`logWarning`, has no dialog of any kind, and sits inside `Winetricks.checkDependencies`, a **deferred** cluster unreachable from any of the 38; the real in-scope dialog is `showDialogBoxModalAuto` at `tools/index.ts:137` (`installOrUpdateTool`, reached via `toggleDXVK`/`toggleVKD3D`), and it is **already safe** — `electronStub.dialog` is Rust-backed and non-throwing, so D-15's "dialog reject crashes the app" landmine does not apply to this phase's surface; (2) **D-10 names only one of two `getPath('exe')` call sites** — `shortcuts/shortcuts/shortcuts.ts:227` (`generateMacOsApp`'s `run.sh` launch command) is a second, independent site with the identical failure mode, so neither the fix nor its live proof may be scoped to `nonesteamgame.ts` alone; (3) **D-12 misnames nile's CLI-credential directory** — it is `nile_config` (`nile/constants.ts:4`, wired via `NILE_CONFIG_PATH` at `nile/library.ts:486`), while `nile_store` (`nile/electronStores.ts:13`) is the *profile* `configStore` cwd, the other half of D-12's own distinction; both resolve through `pathShim`'s already-implemented `userData`, so no scope consequence. Research also **resolved a Discretion question CONTEXT.md left open**: `documents` (D-09's third missing `pathShim` name) belongs to the **saves-sync** cluster (`save_sync.ts:146`, `syncGOGSaves`), not shortcuts — so saves-sync is blocked on the wave-1 shim work too. And it surfaced a finding CONTEXT.md did not anticipate: **`runWineCommand` has never actually run for a non-Steam runner under the sidecar** (its Steam path is proven via already-ported `install`/`launch`, but no non-Steam login has ever worked there), which narrows D-14's wave-1 burden from "build it" to "prove it live once" (REQ-34.5-03/12).
 
