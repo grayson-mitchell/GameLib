@@ -140,6 +140,28 @@ export default React.memo(function NewLogin() {
       window.api.logInfo(
         `TEMPORARY F-10 DIAGNOSTIC: layout ${phase} viewport=${window.innerWidth}x${window.innerHeight} | ${chain.join(' <- ')}`
       )
+
+      // The ancestor chain proves `.App` is the runaway (23323px on a blank
+      // render, 770px on a correct one) but not WHICH of its children drives
+      // it. Walk one level down from each container on the path so the origin
+      // is named instead of inferred.
+      for (const sel of ['.App', '.loginPage', '.loginContentWrapper']) {
+        const parent = document.querySelector(sel)
+        if (!parent) continue
+        const kids = Array.from(parent.children).map((c) => {
+          const r = c.getBoundingClientRect()
+          const cls =
+            typeof c.className === 'string' && c.className
+              ? c.className.split(/\s+/).join('.')
+              : '(no-class)'
+          return `${c.tagName.toLowerCase()}.${cls}=${Math.round(
+            r.width
+          )}x${Math.round(r.height)}@${Math.round(r.top)}`
+        })
+        window.api.logInfo(
+          `TEMPORARY F-10 DIAGNOSTIC: children ${phase} ${sel} -> ${kids.join(' | ')}`
+        )
+      }
     }
 
     measure('sync')
