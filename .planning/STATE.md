@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-20-PLAN.md — live-gate re-run FAILED 0/5 (3 FAIL, 2 NOT ATTEMPTED); Phase 34.5 does not close; 34.5-21 (verdict propagation) is next
+stopped_at: Completed 34.5-21-PLAN.md — RE-RUN verdict (FAIL 0/5) propagated to PORTED-CHANNELS/deferred-items/IPC-PORT-INVENTORY/ROADMAP/STATE; Phase 34.5 does not close; next step is /gsd-plan-phase 34.5 --gaps
 last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-20 executed (blocking live-gate re-run: verdict FAIL 0/5)
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-21 executed (propagation of live-gate RE-RUN verdict FAIL 0/5; all 21 plans of this phase now have summaries; phase still does not close)
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 162
-  completed_plans: 161
-  percent: 99
+  completed_plans: 162
+  percent: 100
 ---
 
 # Project State
@@ -33,101 +33,70 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN 2026-08-01 and FAILED (0 of 5 clean).**
-> `34.5-15` is complete (all 3 tasks done, `34.5-15-SUMMARY.md` written) but **Phase 34.5 DOES NOT
-> CLOSE** — the gate's own no-partial-pass rule (D-08) makes the findings a gap cycle inside 34.5.
+> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RE-RAN 2026-08-01 and FAILED AGAIN (0 of 5
+> clean).** All 21 plans (`34.5-01` through `34.5-21`) are now complete, each with a SUMMARY — but
+> **Phase 34.5 STILL DOES NOT CLOSE.** D-08's no-partial-pass rule applies unchanged: this second
+> FAIL is another gap cycle inside 34.5, not a deferred UAT entry, not an advisory note, and not a
+> pre-authorized override.
 >
-> - **FAIL — item 1 (Epic login):** `spawn ./legendary ENOENT`. OAuth capture itself worked (login
->   window opened, redirect registered); the runner binary could not spawn, so login never
->   completed — observed by the developer as a hang, not a visible error.
-> - **FAIL — item 2 (GOG login):** `spawn ./gogdl ENOENT` at startup, before any interaction.
-> - **FAIL — item 3 (Amazon login):** `spawn ./nile ENOENT` at startup. Assumption A1 (the
->   `www.amazon.com` anchor) stays **UNTESTED**, not confirmed or falsified — the code path was
->   never reached.
-> - **NOT ATTEMPTED — item 4 (shortcuts):** developer's choice, independent of items 1-3's defect.
->   Not PASS, FAIL, or BLOCKED.
-> - **FAIL by blockage — item 5 (Wine):** requires a working non-Steam login from items 1-3; none
->   succeeded. Research Pitfall 2's standing claim ("no non-Steam runner has ever executed a Wine
->   command under the sidecar") is **NOT retired**.
-> - **Root cause, single and fully diagnosed** (blocks items 1/2/3 directly, 5 transitively):
->   `app.getAppPath()` resolves to `process.cwd()` under the sidecar
->   (`src/backend/sidecar/electronStub.ts:207`), which is `src-tauri/`, so `publicDir`
->   (`src/backend/constants/paths.ts:73`) resolves to `src-tauri/public` — nonexistent. The
->   `x64`-on-arm64 log line is a symptom of this (`archSpecificBinary`'s fallback is never
->   existence-checked), not a separate arch defect. **4th recurrence of this project's
->   `publicdir-getapppath-chunking` failure family** — `src/backend/sidecar/bootstrap.ts:156`
->   already documented the `getAppPath()`/`process.cwd()` equivalence but never generalized it past
->   `locales/`.
-> - **What this gate falsifies: nothing.** No item passed, so no standing claim is retired — all
->   four (Epic/GOG/Amazon session end-to-end, the `www.amazon.com` anchor, `GAMELIB_SHELL_EXE`
->   correctness, the non-Steam Wine claim) remain explicitly standing.
-> - Full detail, evidence and root-cause chain: `34.5-LIVE-GATE.md` § Root cause / § Verdict;
->   `34.5-15-SUMMARY.md` for the plan-level record.
-> - **Developer note carried forward:** the Epic and GOG credential backups made during this
->   plan's Task 1 precondition work are still moved aside (restore paths recorded under
->   `34.5-LIVE-GATE.md` precondition 3) — a gate re-run after the fix will need signed-out state
->   again, so restoring them now is optional.
+> **The first run's root cause is CLOSED and live-proven.** `34.5-LIVE-GATE-RERUN.md` precondition 4
+> quotes THIS session's `gamelib.log`: `source=GAMELIB_APP_ROOT` (not `process.cwd`), `publicDir
+> exists=true`, all four runner binaries `exists=true`, no `SIDECAR ASSET ROOT DEFECT` line. Items 2
+> and 3 both reached backend `status=captured` for the first time this phase — the first run never
+> got past `spawn ENOENT` at startup. The failure has MOVED to a new, previously-unknown layer
+> downstream of OAuth capture; it is real progress on the root cause, not a wash.
 >
-> **GAP CYCLE PLANNED 2026-08-01** — `/gsd-plan-phase 34.5 --gaps` ran and produced **6 new plans
-> (`34.5-16`..`34.5-21`) in 5 waves**, commit `c2b283ec5`. Plans 01–15 and their SUMMARYs are
-> untouched; this cycle is additive. Plan-checker: **VERIFICATION PASSED, no blockers.**
+> - **FAIL — item 1 (Epic):** correct window title, but a "greyed out" form that never resolved —
+>   3 login-window opens, 3 `status=timeout`, 0 `status=captured`. This is upstream of anything
+>   items 2/3 exposed; the redirect is never even produced to capture.
+> - **FAIL — item 2 (GOG):** backend reached `status=captured` (11:15:45), but Manage Accounts
+>   stayed stuck on "Signing in to Gog / A sign-in window has opened. Complete sign-in there."; no
+>   follow-up `gogdl auth` CLI invocation and no frontend `[TauriLoginPanel] captured-blocked`
+>   transition ever fire; GOG library never populated, GOG absent from the Library filter options.
+> - **FAIL — item 3 (Amazon):** backend reached `status=captured` (11:10:10), same
+>   downstream-of-capture pattern as item 2; account manager never reflected a signed-in account.
+>   **Assumption A1 (the `www.amazon.com` anchor) is CONFIRMED** — a sub-clause pass, proven
+>   structurally from `matchOAuthRedirect`'s own code plus a zero-count `origin-mismatch` grep — but
+>   this does NOT upgrade the item to a PASS; the item's compound requirement (matched redirect AND
+>   populated library) still fails on the library half.
+> - **NOT ATTEMPTED — items 4, 5:** confirmed explicitly by the developer. Item 4 needed a
+>   populated GOG install item 2 did not deliver; item 5 needed an authenticated non-Steam runner no
+>   item delivered. Neither is PASS, FAIL, or BLOCKED.
+> - **What this gate falsifies: nothing.** No item passed, so no standing claim is retired —
+>   including A1, whose sub-clause was independently confirmed while its parent item still FAILed.
+>   All four standing claims (Epic/GOG/Amazon session end-to-end, the broader `www.amazon.com`
+>   anchor claim, `GAMELIB_SHELL_EXE` correctness at both `exe` call sites, the non-Steam Wine
+>   claim) remain explicitly STANDING.
+> - Full evidence and diagnosis: `34.5-LIVE-GATE-RERUN.md`. Propagated into
+>   `34.5-PORTED-CHANNELS.md`, `deferred-items.md`, `IPC-PORT-INVENTORY.md` and `ROADMAP.md` by
+>   `34.5-21` (this plan) — `34.5-LIVE-GATE.md` and `34.5-LIVE-GATE-RERUN.md` are both records and
+>   were left byte-unchanged throughout.
 >
-> | Wave | Plan | Closes | Autonomous |
-> |---|---|---|---|
-> | 1 | `34.5-16` | **G-1** — sweep every `publicDir`/`getAppPath()` consumer, then install ONE authoritative app root: Rust hands `GAMELIB_APP_ROOT` down **both** spawn paths, `electronStub.getAppPath()` consumes it | yes |
-> | 2 | `34.5-17` | **G-1** — existence-check `archSpecificBinary`'s x64 fallback + real-filesystem coverage with cwd forced to `src-tauri/`, proven red on a deliberate revert | yes |
-> | 2 | `34.5-18` | **G-3** — sidecar logs the `GAMELIB_SHELL_EXE` it actually *received* (`[bootstrap] GAMELIB_SHELL_EXE received=`) + an asset-root boot self-check | yes |
-> | 3 | `34.5-19` | **G-2/G-4/G-6** — author `34.5-LIVE-GATE-RERUN.md` (`verdict: null`, 7 preconditions, 5 items); `34.5-LIVE-GATE.md` is NOT overwritten | yes |
-> | 4 | `34.5-20` | **G-6/G-2/G-4/G-5** — the blocking 5-item gate RE-RUN on real hardware, incl. the never-attempted item 4 (both `exe` call sites) | **no** |
-> | 5 | `34.5-21` | **G-6** — propagate the verdict: `34.5-PORTED-CHANNELS.md` + gate script, inventory, ROADMAP, STATE | yes |
+> **Six new findings for the next gap cycle's scoping** (`deferred-items.md` items 6-11,
+> `F-34.5-G6-01..06`, observation-only, not diagnosed): Epic's login form never becomes
+> interactive; GOG/Amazon's successful backend captures are never consumed into a completed login;
+> GOG library/filter never populated; the login window shows no URL/origin (a
+> usability/phishing-resistance defect — the developer could not tell which stored credential
+> applied); black-on-black text in Amazon's verification-code field (unreadable until highlighted);
+> GOG sign-out prompted for Keychain approval twice. `R-34.5-G1-PKG` (the packaged Tauri build's
+> asset root) also remains open, with its future home named as the packaging work, not Phase 34.6's
+> channel port.
 >
-> **Design calls worth remembering:** one app-root seam rather than N per-call-site patches (all
-> `publicDir` consumers derive from the single expression at `paths.ts:73`, so patching the stub
-> repairs every row and cannot drift); the **packaged** asset root is deliberately NOT claimed —
-> `electronStub.isPackaged` stays `false` and packaged Tauri's `<resource>/public` is recorded as
-> named residual **`R-34.5-G1-PKG`**, made loud by plan 18's boot self-check rather than silently
-> assumed away. Why the green 3447-test suite missed this: jest runs at repo-root cwd, where
-> `publicDir` resolves correctly **by accident**.
+> **Two durable lessons this cycle bought, worth carrying into the next planner:**
+> 1. The `publicdir-getapppath-chunking` family reached FOUR recurrences because a known gotcha was
+>    documented at exactly one call site (`bootstrap.ts:156`, for `locales/`) and never swept across
+>    its siblings — `34.5-APP-ROOT-SWEEP.md` is the sweep that should have existed from the FIRST
+>    recurrence, not the fourth. The lesson generalizes: a gotcha comment at one call site is not a
+>    fix, it is a debt marker for every sibling call site until something sweeps them all.
+> 2. A green suite (3447/3447, later 3463/3463) coexisted with this defect through the entire first
+>    run, because jest runs at repo-root cwd, where `publicDir` resolves correctly BY ACCIDENT.
+>    Coverage that does not reproduce the deployment's actual cwd proves nothing about the
+>    deployment — a green suite is necessary but never sufficient evidence of parity; only an
+>    assertion built to reproduce the real deployment conditions is.
 >
-> **Next action:** `/gsd-execute-phase 34.5` — wave 4 stops at a blocking checkpoint for the
-> human-driven gate. Quit Steam before item 4 (it rewrites `shortcuts.vdf` from memory on exit),
-> and `ps aux | grep -E "gamelib-shell|sidecar.js"` to kill orphaned pairs first.
->
-> **✅ WAVE 1 (`34.5-16`) EXECUTED 2026-08-01 — G-1 closed.** 3/3 tasks done, commits `b49272d37`
-> (sweep doc, 25 rows), `2072dc079` (Rust `GAMELIB_APP_ROOT` on both spawn paths, cargo 84/84, up
-> from 80), `ebe367f83` (`electronStub.getAppPath()` consumes it; `npx tsc --noEmit` clean;
-> `npm run test:ci` 179/179 suites, 3454/3454 tests, up from 3447). `34.5-16-SUMMARY.md` written,
-> self-check PASSED. `R-34.5-G1-PKG` (packaged asset root) recorded as an explicit, unclosed
-> residual — not claimed fixed.
->
-> **✅ WAVE 2 (`34.5-17`) EXECUTED 2026-08-01 — G-1 fully closed.** 2/2 tasks done, commits
-> `a79b33163` (`archSpecificBinary`'s x64 fallback existence-checked, throws naming both
-> candidate paths + resolved `publicDir`), `94a8fe7b0` (real-filesystem sidecar-conditions
-> coverage in `appRootResolution.test.ts`, cwd forced to `src-tauri/`, proven to go red on a
-> deliberate revert of `electronStub.getAppPath()` then restored green — verbatim outputs in
-> `34.5-17-SUMMARY.md`). `npx tsc --noEmit` clean; `cargo check` clean; `npm run test:ci`
-> 179/179 suites, 3459/3459 tests, up from 3454 (one unrelated pre-existing flake in
-> `enrichmentFlows.test.ts` observed on the first run, reproduced green standalone and on a
-> full-suite re-run — not caused by this plan's files). `34.5-17-SUMMARY.md` written, self-check
-> PASSED.
->
-> **✅ WAVE 2b (`34.5-18`) EXECUTED 2026-08-01 — G-3 closed.** 2/2 tasks done, commits `fd19f91ab`
-> (boot-time `[bootstrap] GAMELIB_SHELL_EXE received=` receipt log, closing the old precondition-5
-> gate-contract defect), `7af2747af` (boot-time asset-root self-check, one greppable
-> `SIDECAR ASSET ROOT DEFECT` line on any missing asset). `npx tsc --noEmit` clean;
-> `npm run test:ci` 179/179 suites, 3463/3463 tests, up from 3459. `34.5-18-SUMMARY.md` written,
-> self-check PASSED.
->
-> **✅ WAVE 3 (`34.5-19`) EXECUTED 2026-08-01 — `34.5-LIVE-GATE-RERUN.md` authored, unrun.** 2/2
-> tasks done plus 1 Rule 2 fix, commits `010b97bf6` (frontmatter + 7 preconditions, precondition 4
-> proving the G-1 fix is present from `bootstrap.ts`'s own log, precondition 7 closing the old
-> precondition-5 defect), `cf5533832` (the 5 items + reserved Verdict table + "what this gate
-> falsifies" + arithmetic rule, all Result slots empty), `4369d5166` (added the missing
-> `T-34.5-G6-02` evidence-redaction instruction the threat model required). `verdict: null`
-> throughout; `34.5-LIVE-GATE.md` confirmed byte-unchanged after every commit;
-> `ported-channels-gate.py` re-run clean (exit 0) after every commit. `34.5-19-SUMMARY.md`
-> written, self-check PASSED. `34.5-20` (wave 4, the blocking live-gate re-run itself,
-> **non-autonomous**) is next.
+> **Next action:** `/gsd-plan-phase 34.5 --gaps` — scope a new gap cycle against the
+> downstream-of-capture defect family (F-34.5-G6-01/02/03) and the three usability findings
+> (F-34.5-G6-04/05/06) recorded above.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
