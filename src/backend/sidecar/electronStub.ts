@@ -204,7 +204,27 @@ export const app = {
   getName: (): string => 'GameLib',
   setName: (): void => {},
   isPackaged: false,
-  getAppPath: (): string => process.cwd(),
+  // GAMELIB_APP_ROOT (Phase 34.5 Plan 16, Task 3, G-1): the root cause of live-gate items
+  // 1/2/3/5 was this line returning `process.cwd()`, which under the sidecar is `src-tauri/`
+  // -- so `paths.ts:73`'s `publicDir = resolve(app.getAppPath(), ...)` resolved to
+  // `src-tauri/public`, a directory that does not exist, and every bundled runner binary
+  // (`legendary`/`gogdl`/`nile`/`comet`) ENOENT'd on spawn (see `34.5-APP-ROOT-SWEEP.md` for
+  // the full consumer sweep this single line repairs).
+  //
+  // The value comes from the Tauri shell's own app root, handed down at spawn time exactly
+  // like `GAMELIB_SHELL_EXE` (`main.rs`'s `resolve_dev_app_root`/`resolve_packaged_app_root`,
+  // set on BOTH spawn paths). Returned verbatim, never resolved or existence-checked here --
+  // the shell is the authority for its own root.
+  //
+  // Deliberately non-throwing, unlike `pathShim`'s `case 'exe'`: `getAppPath()` is called at
+  // MODULE SCOPE by `backend/constants/paths.ts`, and a throw there would take the whole
+  // sidecar down at import time, before the logger exists (the standing
+  // `sidecar-console-and-logger-are-invisible` gotcha means that failure would be invisible).
+  // So an unset or empty `GAMELIB_APP_ROOT` falls back to today's `process.cwd()` behaviour
+  // instead -- this is REQ-34.5-13's invariant: jest and any non-Tauri host (including the
+  // real Electron build, which never sets this var) see NO behaviour change. The loudness
+  // lives in plan 34.5-18's boot self-check instead, not here.
+  getAppPath: (): string => process.env.GAMELIB_APP_ROOT || process.cwd(),
   getVersion: (): string => pkgJson.version ?? '0.0.0',
   userAgentFallback: stubUserAgentFallback(),
   whenReady: (): Promise<void> => Promise.resolve(),

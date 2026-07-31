@@ -601,8 +601,22 @@ const IN_SCOPE_SUITES = [
  * `pathShim`/`os.homedir()` surface anywhere in this suite's import graph. A `readdirSync`
  * recount at this plan's execution time puts the directory at 40 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 36 below.
+ *
+ * `appRootResolution.test.ts` (Phase 34.5 gap cycle, plan 34.5-16 Task 3, G-1) is classified as
+ * structurally contained: it declares no `jest.mock(...)` of any kind. It imports the real
+ * `../electronStub` (asserting `app.getAppPath()`'s two arms directly, saving/restoring
+ * `process.env.GAMELIB_APP_ROOT` around every test and spying on `process.cwd()` rather than
+ * mocking any module) and reads real `.ts`/`.rs` source files off disk via plain
+ * `fs.readFileSync` for its static text assertions against `main.rs` -- the same "contained by
+ * construction, no per-suite opt-in required" floor `electronReachLedger.test.ts`/
+ * `seamBranchParity.test.ts` already rely on. It cannot be an `IN_SCOPE_SUITE`: those are
+ * required to carry a `jest.mock('../pathShim', ...)` call, which this suite has no reason to
+ * make (it never touches `pathShim` at all -- `electronStub.getAppPath()` is the seam under
+ * test, not `pathShim`'s own `case 'exe'`). A `readdirSync` recount at this plan's execution
+ * time puts the directory at 41 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 37 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
+  'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
   'bootstrap.test.ts',
