@@ -95,3 +95,60 @@ suite — see `34.5-04-SUMMARY.md`'s verbatim recording).
    and none of this plan's own mocks start a timer/interval/listener that could explain it. Exit
    code is 0 either way (the warning does not fail the run). Not investigated further — out of
    scope for this plan's two-file change set.
+
+## Found during the 34.5-19/34.5-20 blocking live-gate RE-RUN (2026-08-01), scoped for the next gap cycle
+
+Observation-only findings from `34.5-LIVE-GATE-RERUN.md` (its own "New findings" section) plus the
+developer's own verbatim reports. None diagnosed here, per that document's own instruction — this
+entry exists so the next gap-cycle plan has a single place to start scoping from, in addition to the
+gate document itself. Root causes are UNKNOWN; do not assume any of these share a single fix.
+
+6. **F-34.5-G6-01 — Epic (`legendary`) login form renders but is non-interactive ("greyed out"),
+   never resolves.** Item 1's own evidence: 3 login-window opens, 3 `status=timeout`, 0
+   `status=captured`, across three separate attempts. Developer, verbatim: *"there is a 'greyed
+   out' form. that does not resolve."* Blocks item 1 upstream of everything items 2/3 exposed — the
+   OAuth redirect is never even produced to capture. See `34.5-LIVE-GATE-RERUN.md` item 1.
+
+7. **F-34.5-G6-02 — GOG and Amazon both reach `status=captured` at the backend, but nothing
+   consumes the capture into a completed, UI-visible login.** Evidence: `runner=gog status=captured`
+   (11:15:45) and `runner=nile status=captured` (11:10:10) — in both cases, no follow-up runner-CLI
+   auth invocation (`gogdl auth ...` / `nile auth --login ...`) appears anywhere in the log
+   afterward, and the frontend's own `[TauriLoginPanel] captured-blocked: runner=...` log line never
+   fires for either runner (only the pre-capture `declared-blocked` line is present). The UI stays on
+   the "Signing in..." panel. This is downstream of the OAuth capture mechanism itself, which both
+   cases prove works — the gap is in whatever is supposed to consume
+   `{status: 'captured', code, redirectUrl}` and finish the login. See `34.5-LIVE-GATE-RERUN.md`
+   items 2 and 3, and the "Item 2/3 downstream-of-capture" pattern in its Verdict section.
+
+8. **F-34.5-G6-03 — GOG library not populated post-login; GOG absent from the Library filter
+   options.** Developer, verbatim: *"I confirmed that GOG games are not showing in Library and Gog
+   is not available as a filter option."* Likely the same root cause as item 7 above (nothing
+   consumes the capture), but recorded separately since it is the user-visible SYMPTOM the next gap
+   cycle will verify against, distinct from the log-level evidence in item 7.
+
+9. **F-34.5-G6-04 — the login window displays no URL/origin to the user.** Developer, verbatim: *"as
+   there is no url displayed in the logon flow could not be sure which logon to use."* A usability
+   and phishing-resistance defect: the user cannot verify which site they are entering credentials
+   into, nor disambiguate between multiple stored credentials for the same domain (the developer
+   went to their password manager and could not tell which Amazon login applied).
+
+10. **F-34.5-G6-05 — black-on-black text in the Amazon verification-code field, unreadable until
+    highlighted.** Developer, verbatim: *"the text was black on black so could not tell my cut and
+    paste worked until i highlighted."* A contrast/theming defect surfacing specifically under the
+    embedded WKWebView-driven login window.
+
+11. **F-34.5-G6-06 — signing out of GOG prompted for Keychain approval twice.** Developer, verbatim:
+    *"when i signed out was asked to approve keycahin twice."*
+
+12. **`R-34.5-G1-PKG` — the packaged Tauri build's asset root is unresolved; NOT covered by this gap
+    cycle's G-1 fix.** Named in `34.5-APP-ROOT-SWEEP.md` § 3: the `GAMELIB_APP_ROOT` handoff (plan
+    34.5-16) and the boot self-check (plan 34.5-18) are both proven correct/loud for a **dev** build
+    only (`pnpm tauri:dev`, precondition 2/3 of both live-gate contracts). In a packaged build, the
+    handed-down root is Tauri's `resource_dir()`, which has no `public/` child — `publicDir`'s
+    unconditional `'public'` append (since `electronStub.app.isPackaged` stays `false` under the
+    sidecar) would resolve to a path that does not exist, the same defect shape this cycle just
+    closed for dev. **Future home: the packaging work, not Phase 34.6's channel port** — this is not
+    an unported IPC channel (Phase 34.6 scopes 16 specific channel names: EOS overlay, SteamGridDB,
+    winetricks), it is a build/bundle-layout question that only a real `.app` packaging pass can
+    resolve and self-check. Whichever plan first exercises a packaged (non-dev) build is the correct
+    place to close this residual.
