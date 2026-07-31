@@ -208,3 +208,49 @@ attributable to the missing cache.
 **NOT runnable locally** (0 codesigning identities). It requires either a Developer ID cert
 installed on the test machine, or a CI run with the three Apple secrets populated. Do not record it
 as answered until one of those happens.
+
+### Resolution of the "Always Allow" ambiguity (2026-07-31)
+
+The entry above listed two readings of the 20+ prompts and said they imply different fixes.
+**Operator confirms they clicked "Always Allow", not one-shot "Allow"** — i.e. reading (b), grants
+not sticking. Investigation of the live Keychain narrows this to a single surviving cause.
+
+**Alternatives tested and ELIMINATED:**
+
+| Candidate | Verdict | Evidence |
+|---|---|---|
+| Per-call item churn (service/account varying per call) | Ruled out | `KEYRING_SERVICE` / `keyring_account()` are compile-time constants (`src-tauri/src/main.rs:168-196`); every `Entry::new` uses `KEYRING_SERVICE` + an allowlisted account |
+| Duplicate items, each carrying its own ACL | Ruled out | `security dump-keychain` → exactly 4 items under `com.gamelib.launcher`, no duplicate account names |
+| Allowlist bypassed / unlisted accounts being written | Ruled out | The one non-allowlisted item (`steam-refresh-token-selfcheck`, `cdat` 2026-07-22) is written by NO current code — grep of `src-tauri/src/` and `src/backend/` finds zero references. Dead cruft from an earlier build. |
+
+**Surviving cause:** the ad-hoc code signature. "Always Allow" adds the requesting app to the
+item's ACL as a `SecTrustedApplication` (a path plus a code requirement). For an ad-hoc-signed
+binary with no TeamIdentifier that requirement degrades to a bare cdhash, and such records do not
+durably persist — the dialog accepts the grant, but it does not take effect. This is consistent
+with every observation. **Status: inference by elimination, NOT proof.** Every locally-testable
+alternative has been eliminated; the confirming test still requires a signed build and this machine
+has 0 codesigning identities.
+
+**Severity, resolved:**
+
+- **Properly signed build:** ~3 prompts total, ever (one per keychain item, on first access). The
+  read count is invisible to users.
+- **Ad-hoc / unsigned build:** N prompts, where N *is* the read count. The missing cache is the
+  entire problem.
+
+This partially reinstates the ORIGINAL severity read and softens the correction recorded above —
+but that correction still stands on one point: `release-tauri.yml` ships unsigned when the Apple
+secrets are absent, and `createUpdaterArtifacts: true` restales grants on every update. **The cache
+fix remains warranted**; it is what protects users on the unsigned release path.
+
+**Consequence for plan 26 / F-9 — caching alone does NOT close it.** F-9's 60s `keyring_get`
+timeout is now fully explained (a read blocked behind a modal dialog exceeds
+`RUST_INVOKE_TIMEOUT_MS`). But the FIRST read still blocks on a dialog even with a perfect cache.
+A complete fix needs both: (1) eliminate redundant reads, and (2) handle "this call is waiting on
+the user" honestly rather than letting it hit a bare 60s timeout and reject. Scope plan 26 for
+both, or it will close the symptom and leave the failure mode.
+
+**Minor hygiene item, unowned:** the orphaned `steam-refresh-token-selfcheck` entry sits in the
+operator's login keychain from a 2026-07-22 build. Harmless and no longer written, but a probe
+artifact was left in a real user keychain — worth a look at whether any current self-check path can
+still strand entries. NOT deleted here (it is the operator's keychain, not this plan's to modify).
