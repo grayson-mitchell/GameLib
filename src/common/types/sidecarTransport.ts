@@ -257,6 +257,26 @@ export const RUST_HUMBLE_LOGIN_OPEN = 'humble_login_open' as const
 export const RUST_HUMBLE_LOGIN_COOKIES = 'humble_login_cookies' as const
 
 /**
+ * Rust-side channel name: read the login window's cookie jar with a domain-suffix filter,
+ * in the OPPOSITE argument direction from `RUST_HUMBLE_LOGIN_COOKIES` above (Phase 34.4.1
+ * Plan 22, F-6 Defect A, REQ-34.4.1-GAP-07). `RUST_HUMBLE_LOGIN_COOKIES` answers "does this
+ * cookie's domain cover the page I am on?" (page host first) -- the correct direction for
+ * `watchForLogin()`'s poll, proven by spike 014a, and NEVER used for this channel. This
+ * channel answers the DIFFERENT question the disconnect census asks: "does this cookie
+ * belong to the target domain or any of its subdomains?" (the cookie's OWN domain first, the
+ * fixed target second). Passing a fixed apex through the page-host-first direction can never
+ * match a leading-dot- or subdomain-scoped cookie, which is exactly how the census silently
+ * undercounted (spike 016, live: total=33, page-host direction=29, this direction=33 -- see
+ * `34.4.1-SPIKE-016-FINDINGS.md`). Args: `[label: string, domain: string, names: string[]]`.
+ * Resolves the SAME `{ total: number, matched: Array<{name, domain, value}> }` shape as
+ * `RUST_HUMBLE_LOGIN_COOKIES` -- `total` is still the UNFILTERED jar size, the same liveness
+ * proof. Never `cookies_for_url()` -- see
+ * `.claude/skills/spike-findings-gamelib/references/tauri-login-webview-cookies.md`.
+ */
+export const RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN =
+  'humble_login_cookies_for_domain' as const
+
+/**
  * Rust-side channel name: drain the login window's queued main-frame navigation events
  * (Phase 34.4.1 Plan 01, REQ-34.4.1-03). Args: `[label: string]`. Resolves an array of
  * `{ event: 'started' | 'finished', url: string }`, relayed from `on_page_load` --
@@ -338,6 +358,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_TRAY_SET_ICON,
   RUST_HUMBLE_LOGIN_OPEN,
   RUST_HUMBLE_LOGIN_COOKIES,
+  RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,

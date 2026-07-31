@@ -34,13 +34,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-// SPIKE 016 -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2). Direct
-// macOS-only crates promoted from ALREADY-RESOLVED transitive deps of `wry` (Cargo.toml's
-// `[target.'cfg(target_os = "macos")'.dependencies]` section), used only by
-// `spike016_cookie_probe` below and its `spike016_wait_for_records` helper.
-#[cfg(target_os = "macos")]
-use objc2_foundation::{ns_string, NSArray, NSDate, NSRunLoop};
-
 use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
@@ -742,38 +735,6 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
-// ---- SPIKE 016 support -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2) ----
-//
-// Mirrors `wry-0.55.1/src/wkwebview/mod.rs`'s own `wait_for_blocking_operation` shape exactly
-// (same 2ms-interval / 1s-limit / `NSRunLoop::mainRunLoop().acceptInputForMode_beforeDate`
-// pump) -- proven-in-production precedent for waiting on a WebKit completion handler from the
-// same thread that must also service it. Returns `None` on timeout rather than panicking or
-// blocking indefinitely (D-08's "must not linger" discipline, same bound shape as
-// `REVEAL_POST_TIMEOUT`/`CLEAR_STORAGE_TIMEOUT` above).
-
-#[cfg(target_os = "macos")]
-fn spike016_wait_for_records(
-    rx: std::sync::mpsc::Receiver<(usize, usize)>,
-) -> Option<(usize, usize)> {
-    let interval = Duration::from_millis(2);
-    let interval_as_secs = interval.as_secs_f64();
-    let limit = 1.0;
-    let mut elapsed = 0.0;
-    loop {
-        if let Ok(result) = rx.recv_timeout(interval) {
-            return Some(result);
-        }
-        elapsed += interval_as_secs;
-        if elapsed >= limit {
-            return None;
-        }
-        let rl = NSRunLoop::mainRunLoop();
-        let limit_date = NSDate::dateWithTimeIntervalSinceNow(interval_as_secs);
-        let mode = ns_string!("NSDefaultRunLoopMode");
-        rl.acceptInputForMode_beforeDate(mode, &limit_date);
-    }
-}
-
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -1162,21 +1123,6 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
-            // ---- SPIKE 016 TRIGGER -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 ----
-            // The probe arm (`spike016_cookie_probe`) takes a live login-window label, but
-            // labels are generated HERE by `next_login_window_label()` and are deliberately
-            // unguessable, never derived from the URL, and never handed back to any caller
-            // that could supply one (see the `humble_login_window_label_*` unit tests). With
-            // no TS-side caller either, the probe was unreachable and plan 21 Task 3 could
-            // not be driven AT ALL. This fires it in-process, where the label is in scope.
-            //
-            // Gated on `GAMELIB_SPIKE016` so it is inert in every normal run, and fired on
-            // the FIRST page-load `finished` only: Humble redirects several times during
-            // login and the probe DELETES cookies as part of its retry experiment, so a
-            // per-navigation firing would destroy the very jar it is measuring.
-            let spike016_app = app.clone();
-            let spike016_label = label.clone();
-            let spike016_fired = std::sync::atomic::AtomicBool::new(false);
             let mut builder =
                 tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
                     .user_agent(user_agent)
@@ -1192,26 +1138,6 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     };
                     let event = login_event_value(kind, payload.url().as_str());
                     push_login_window_event(&event_label, event);
-                    // SPIKE 016 TRIGGER -- THROWAWAY, REMOVED BY PLAN 22 TASK 1. See the
-                    // block above `builder` for why this exists and why it fires once.
-                    if kind == "finished"
-                        && std::env::var_os("GAMELIB_SPIKE016").is_some()
-                        && !spike016_fired.swap(true, std::sync::atomic::Ordering::SeqCst)
-                    {
-                        eprintln!("[spike016] trigger: firing probe on first page-load finished");
-                        let probe_args = vec![
-                            Value::String(spike016_label.clone()),
-                            Value::String("humblebundle.com".to_string()),
-                        ];
-                        match dispatch_rust_channel(
-                            "spike016_cookie_probe",
-                            &probe_args,
-                            &spike016_app,
-                        ) {
-                            Ok(_) => eprintln!("[spike016] trigger: probe completed"),
-                            Err(e) => eprintln!("[spike016] trigger: probe failed err={e}"),
-                        }
-                    }
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
@@ -1463,190 +1389,61 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 Err(_) => Err("humble_login_clear_storage:timeout".to_string()),
             }
         }
-        // SPIKE 016 -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2). Answers
-        // Open Question 1 (with_webview synchrony), assumption A2 (thread identity), Defect A
-        // (cookie_domain_matches's two argument directions, counted against the SAME live jar
-        // snapshot) and the delete/retry timing-vs-identity discriminator, in one manually-driven
-        // run against a real Humble-cookie-bearing jar. NEVER registered in
-        // `sidecarTransport.ts`, no seam method, no allowlist beyond this match arm itself --
-        // unreachable from any product caller (T-34.4.1-90). Findings recorded in
-        // `34.4.1-SPIKE-016-FINDINGS.md`. Every `eprintln!` below formats counts, booleans,
-        // thread names and fixed text ONLY -- never a cookie name, domain or value
-        // (T-34.4.1-39/-75/-91). Deletes cookies via the EXISTING (broken) wry path as part of
-        // the retry experiment (T-34.4.1-92, disclosed in the checkpoint) -- fetches and counts
-        // only via the new `WKWebsiteDataStore` path, no `removeData` call (T-34.4.1-93).
-        "spike016_cookie_probe" => {
+        // Correctly-directed domain-scoped cookie read (Phase 34.4.1 Plan 22, F-6 Defect A,
+        // REQ-34.4.1-GAP-07). `cookie_domain_matches` (above) is directional: `host == d ||
+        // host.ends_with(".{d}")` only ever fires when `host` is the NARROWER string. The
+        // existing `humble_login_cookies` arm passes the caller's `host` first -- exactly
+        // right for `watchForLogin()`'s question ("does this cookie's domain cover the page
+        // I am on?"), proven correct by spike 014a, and left UNCHANGED here. It is exactly
+        // WRONG for the disconnect census's question ("does this cookie belong to the target
+        // domain or any of its subdomains?"): with a FIXED apex as `host`, the suffix branch
+        // can never fire, so a caller passing a fixed domain through that arm only ever
+        // matches cookies whose domain attribute is the bare target string, silently
+        // undercounting every leading-dot- and subdomain-scoped cookie (spike 016 measured
+        // this live: total=33, that arm's direction=29, this arm's direction=33/33 -- see
+        // `34.4.1-SPIKE-016-FINDINGS.md`). This arm exists SOLELY to answer that second
+        // question -- it filters with the cookie's OWN domain first, the caller's fixed
+        // target second, mirroring `humble_login_clear_cookies`'s (unchanged) filter exactly.
+        // Two arms exist, not one, because the two call sites ask two different questions of
+        // the same directional function; collapsing them would break the login poll to fix
+        // the census. Same `total`-is-the-liveness-proof contract, same never-`cookies_for_url()`
+        // / never-`clear_all_browsing_data()` discipline, same never-logs-a-cookie-value
+        // discipline (T-34.4.1-02, T-34.4.1-94) as `humble_login_cookies` above.
+        "humble_login_cookies_for_domain" => {
             let label = args
                 .first()
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| "spike016_cookie_probe:bad-args".to_string())?;
+                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;
             let domain = args
                 .get(1)
                 .and_then(|v| v.as_str())
-                .ok_or_else(|| "spike016_cookie_probe:bad-args".to_string())?;
+                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;
+            let names: Vec<&str> = args
+                .get(2)
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
+                .unwrap_or_default();
             let window = app
                 .get_webview_window(label)
-                .ok_or_else(|| format!("spike016_cookie_probe:no-window:{label}"))?;
-
-            // ---- A2: thread identity, BEFORE any with_webview call ----
-            let thread_name = thread::current().name().unwrap_or("<unnamed>").to_string();
-            #[cfg(target_os = "macos")]
-            let mtm_before = objc2::MainThreadMarker::new().is_some();
-            #[cfg(not(target_os = "macos"))]
-            let mtm_before = false;
-            eprintln!(
-                "[spike016] A2 thread_name={thread_name} mtm_before_with_webview={mtm_before}"
-            );
-
-            // ---- Defect A: the SAME jar snapshot counted through BOTH argument directions ----
-            let jar = window.cookies().map_err(|e| e.to_string())?;
-            let total = jar.len();
-            let census_direction = jar
-                .iter()
-                .filter(|c| cookie_domain_matches(domain, c.domain()))
-                .count();
-            let clear_direction = jar
-                .iter()
+                .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;
+            let all = window.cookies().map_err(|e| e.to_string())?;
+            let total = all.len();
+            let matched: Vec<Value> = all
+                .into_iter()
                 .filter(|c| match c.domain() {
                     Some(d) => cookie_domain_matches(d, Some(domain)),
                     None => false,
                 })
-                .count();
-            eprintln!(
-                "[spike016] DefectA total={total} census_direction={census_direction} clear_direction={clear_direction}"
-            );
-
-            // ---- Q1: with_webview synchrony + record-fetch reachability (counts only) ----
-            let ran_flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
-            let ran_flag_inner = Arc::clone(&ran_flag);
-            #[cfg(target_os = "macos")]
-            let record_counts: Arc<Mutex<Option<(usize, usize)>>> = Arc::new(Mutex::new(None));
-            #[cfg(target_os = "macos")]
-            let record_counts_inner = Arc::clone(&record_counts);
-            let domain_for_closure = domain.to_string();
-
-            let with_webview_ok = window
-                .with_webview(move |_webview| {
-                    ran_flag_inner.store(true, Ordering::SeqCst);
-                    #[cfg(target_os = "macos")]
-                    {
-                        let mtm_inside = objc2::MainThreadMarker::new();
-                        eprintln!(
-                            "[spike016] Q1 closure_ran=true mtm_inside={}",
-                            mtm_inside.is_some()
-                        );
-                        if let Some(mtm) = mtm_inside {
-                            // SAFETY: tauri's own `with_webview` doc example casts
-                            // `webview.inner()` to `&objc2_web_kit::WKWebView` on macOS
-                            // verbatim -- this mirrors that example. The reference is valid
-                            // for the closure's duration (tauri guarantees `inner()` is a live
-                            // `WKWebView*` while the closure runs on the main thread).
-                            let view: &objc2_web_kit::WKWebView =
-                                unsafe { &*_webview.inner().cast() };
-                            let data_store = unsafe { view.configuration().websiteDataStore() };
-                            let all_types =
-                                unsafe { objc2_web_kit::WKWebsiteDataStore::allWebsiteDataTypes(mtm) };
-                            let (tx, rx) = mpsc_channel::<(usize, usize)>();
-                            let target_domain = domain_for_closure.clone();
-                            let completion = block2::RcBlock::new(
-                                move |records: std::ptr::NonNull<
-                                    NSArray<objc2_web_kit::WKWebsiteDataRecord>,
-                                >| {
-                                    // SAFETY: WebKit hands the completion handler a valid,
-                                    // live array pointer for the duration of this call.
-                                    let records = unsafe { records.as_ref() };
-                                    let fetched_total = records.len();
-                                    let mut matching = 0usize;
-                                    for i in 0..fetched_total {
-                                        let record = records.objectAtIndex(i);
-                                        // SAFETY: `displayName()` is a simple ObjC accessor;
-                                        // `record` is a live, retained object from `records`.
-                                        let display_name = unsafe { record.displayName() }.to_string();
-                                        if cookie_domain_matches(&display_name, Some(&target_domain))
-                                        {
-                                            matching += 1;
-                                        }
-                                    }
-                                    let _ = tx.send((fetched_total, matching));
-                                },
-                            );
-                            // SAFETY: `data_store`/`all_types` are live objects obtained above
-                            // on the main thread; `completion` outlives the call (fetch is
-                            // synchronous from this thread's perspective via the run-loop pump
-                            // below, mirroring wry's own `delete_cookie` pattern).
-                            unsafe {
-                                data_store
-                                    .fetchDataRecordsOfTypes_completionHandler(&all_types, &completion);
-                            }
-                            match spike016_wait_for_records(rx) {
-                                Some(counts) => {
-                                    *record_counts_inner.lock().unwrap() = Some(counts);
-                                }
-                                None => {
-                                    eprintln!("[spike016] Q1 record_fetch=timed-out");
-                                }
-                            }
-                        }
-                    }
+                .filter(|c| names.is_empty() || names.contains(&c.name()))
+                .map(|c| {
+                    serde_json::json!({
+                        "name": c.name(),
+                        "domain": c.domain().unwrap_or_default(),
+                        "value": c.value()
+                    })
                 })
-                .is_ok();
-            let closure_ran_immediately_after_return = ran_flag.load(Ordering::SeqCst);
-            eprintln!(
-                "[spike016] Q1 with_webview_ok={with_webview_ok} closure_ran_immediately_after_return={closure_ran_immediately_after_return}"
-            );
-            #[cfg(target_os = "macos")]
-            {
-                let counts = record_counts.lock().unwrap();
-                match *counts {
-                    Some((fetched_total, matching)) => eprintln!(
-                        "[spike016] Q1 record_fetch_total={fetched_total} record_fetch_matching={matching}"
-                    ),
-                    None => eprintln!("[spike016] Q1 record_fetch=unavailable"),
-                }
-            }
-
-            // ---- Retry experiment: delete -> re-read -> wait -> retry, on the EXISTING wry
-            // path (research Item 1's own "cheap experiment before the rewrite" instruction).
-            // Deletes cookies -- this is the "you will lose this session" step the checkpoint
-            // discloses.
-            let mut retry_surviving: Vec<usize> = Vec::with_capacity(3);
-            for attempt in 1..=3u32 {
-                let jar_now = window.cookies().map_err(|e| e.to_string())?;
-                let matching: Vec<_> = jar_now
-                    .into_iter()
-                    .filter(|c| match c.domain() {
-                        Some(d) => cookie_domain_matches(d, Some(domain)),
-                        None => false,
-                    })
-                    .collect();
-                for cookie in matching {
-                    let _ = window.delete_cookie(cookie);
-                }
-                if attempt < 3 {
-                    thread::sleep(Duration::from_millis(500));
-                }
-                let jar_after = window.cookies().map_err(|e| e.to_string())?;
-                let survived = jar_after
-                    .into_iter()
-                    .filter(|c| match c.domain() {
-                        Some(d) => cookie_domain_matches(d, Some(domain)),
-                        None => false,
-                    })
-                    .count();
-                eprintln!("[spike016] Retry attempt={attempt} surviving={survived}");
-                retry_surviving.push(survived);
-            }
-
-            Ok(serde_json::json!({
-                "thread_name": thread_name,
-                "mtm_before_with_webview": mtm_before,
-                "total": total,
-                "census_direction": census_direction,
-                "clear_direction": clear_direction,
-                "with_webview_ok": with_webview_ok,
-                "closure_ran_immediately_after_return": closure_ran_immediately_after_return,
-                "retry_surviving": retry_surviving,
-            }))
+                .collect();
+            Ok(serde_json::json!({ "total": total, "matched": matched }))
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
@@ -2364,6 +2161,72 @@ mod tests {
             Some("evilhumblebundle.com")
         ));
         assert!(!cookie_domain_matches("www.humblebundle.com", None));
+    }
+
+    // ---- humble_login_cookies_for_domain's direction (Phase 34.4.1 Plan 22, F-6 Defect A,
+    // REQ-34.4.1-GAP-07). `humble_login_cookies_for_domain`'s filter calls
+    // `cookie_domain_matches(d, Some(domain))` -- the cookie's OWN domain first, the caller's
+    // fixed target second -- mirroring `humble_login_clear_cookies`'s (unchanged) filter
+    // exactly. These cases assert that call shape directly against `cookie_domain_matches`,
+    // the same "test the pure comparison, not a window-backed arm" convention the two cases
+    // above already use. ----
+
+    #[test]
+    fn humble_login_cookies_for_domain_matches_bare_apex_cookie() {
+        // A cookie whose domain attribute is the bare apex matches a query for that apex.
+        assert!(cookie_domain_matches("humblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn humble_login_cookies_for_domain_matches_leading_dot_cookie() {
+        // A cookie whose domain attribute carries the leading-dot form (RFC 6265's
+        // wildcard-subdomain marker) still matches a query for the bare apex -- this is
+        // Defect A's headline case: `humble_login_cookies`' direction cannot ever match this
+        // shape against a FIXED target (see the asymmetry test below).
+        assert!(cookie_domain_matches(".humblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn humble_login_cookies_for_domain_matches_subdomain_cookie() {
+        // A cookie scoped to a subdomain matches a query for the parent apex.
+        assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn humble_login_cookies_for_domain_rejects_suffix_lookalikes() {
+        // Same lookalike guard as the existing poll-direction case above, proven in this
+        // arm's own direction: a literal `.` separator is required, so a domain that merely
+        // ENDS WITH the target string as a substring (no separator) must not match.
+        assert!(!cookie_domain_matches("nothumblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn humble_login_cookies_for_domain_direction_is_the_defect_a_fix() {
+        // THE single most consequential assertion in THIS arm's test group -- documents the
+        // asymmetry by test rather than by prose (spike 016 measured this live: total=33,
+        // the OLD/poll direction against a fixed apex target=29, this arm's direction=33 --
+        // see `34.4.1-SPIKE-016-FINDINGS.md`).
+        //
+        // The OLD/poll direction (`cookie_domain_matches(fixed_target, Some(cookie_domain))`)
+        // is exactly what the disconnect census used to call through `humble_login_cookies`.
+        // With a FIXED apex as the first ("host") argument, the suffix branch can never fire
+        // for a leading-dot cookie domain, so it silently fails to match:
+        assert!(!cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
+        // The NEW/census direction this arm uses -- cookie's own domain first, fixed target
+        // second -- matches the identical leading-dot cookie correctly:
+        assert!(cookie_domain_matches(".humblebundle.com", Some("humblebundle.com")));
+    }
+
+    #[test]
+    fn humble_login_cookies_for_domain_does_not_disturb_the_poll_direction() {
+        // Regression pin (binding constraint 1): the existing `humble_login_cookies` arm's
+        // OWN call site (`cookie_domain_matches(host, c.domain())`, unedited by this plan)
+        // must still match the www-page-host-vs-apex-cookie case it was proven correct
+        // against by spike 014a. This is the SAME assertion as
+        // `humble_login_cookie_domain_matches_the_www_regression_case` above, re-stated here
+        // in this arm's own test group so a reviewer looking only at the new arm's tests can
+        // see the poll's direction was checked, not merely assumed unaffected.
+        assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
     }
 
     // ---- login_event_value (Phase 34.4.1 Plan 01, REQ-34.4.1-03) ----
