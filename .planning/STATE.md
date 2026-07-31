@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1 gap cycle 2 PLANNED 2026-07-31 (plans 21-29, 7 waves, checker PASSED). F-6 root cause source-verified (2 compounding defects in the Rust/wry cookie arms). Next: /gsd-execute-phase 34.4.1
-last_updated: "2026-07-30T11:20:16.338Z"
-last_activity: 2026-07-30
+stopped_at: 34.4.1-21 EXECUTING 2026-07-31 (gap cycle 2, plan 21 of 21-29, wave 1, non-autonomous). Task 1 (REQ-34.4.1-GAP-07..12 minted, ROADMAP/STATE corrected) and Task 2 (throwaway spike016_cookie_probe arm, cargo check/test 60/60, tsc/test:ci 3387/3387) complete. Task 3 is the BLOCKING checkpoint: run the spike live, record 34.4.1-SPIKE-016-FINDINGS.md. F-6 root cause source-verified (2 compounding defects in the Rust/wry cookie arms). Next: run Task 3's spike live and resume execution.
+last_updated: "2026-07-31T03:25:50Z"
+last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
@@ -32,6 +32,23 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **▶ EXECUTING — 34.4.1-21 (gap cycle 2, plan 1 of 9, wave 1, non-autonomous) — 2026-07-31.**
+> Phase 34.4.1 still does NOT close (gate FAILED 3/4 on `34.4.1-20`, item 3). Gap cycle 2 (plans
+> 21-29, 7 waves) is the response. **Plan 21's Task 1 and Task 2 are DONE**: `REQ-34.4.1-GAP-07..12`
+> minted in `REQUIREMENTS.md`, `ROADMAP.md`'s GAP CYCLE 2 block and Requirements line updated,
+> this STATE.md hand-corrected; the throwaway `spike016_cookie_probe` Rust arm + its four macOS-only
+> `objc2`/`block2` deps (promoted from already-resolved transitive deps, zero new supply-chain
+> surface, `Cargo.lock` diff shows only the transitive→direct move) are built — `cargo check`/`cargo
+> test` (60/60) and `npx tsc --noEmit`/`npm run test:ci` (3387/3387) all pass. **Plan 21's Task 3 is
+> the BLOCKING checkpoint**: drive the probe live under `pnpm tauri:dev` against a real
+> Humble-cookie-bearing jar and record `34.4.1-SPIKE-016-FINDINGS.md` (Q1 with_webview synchrony,
+> A2 thread identity, Defect A both directions, the WKWebsiteDataRecord fetch count, and the
+> delete/retry timing-vs-identity experiment) before plan 22/23 are written. F-6's root cause is
+> source-verified as two compounding defects (Defect A: census arm's argument order backwards;
+> Defect B, BLOCKING: `delete_cookie()`'s WebKit completion handler fires unconditionally whether
+> or not anything matched). Next action: run Task 3's spike live with the developer at the
+> keyboard, then resume `/gsd-execute-phase 34.4.1`.
 
 > **⛔ ACTIVE BLOCKER — Phase 34.4.1's blocking live gate RAN 2026-07-30 and FAILED (2 of 4 clean).**
 > `34.4.1-08` is complete (all 9 plans now have summaries) but **Phase 34.4.1 DOES NOT CLOSE** — the
@@ -67,8 +84,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — READY TO EXECUTE
-Plan: 20 of 29 (plans 01-20 all have summaries; **gap cycle 2 = plans 21-29, planned 2026-07-31, unexecuted**)
+Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
+Plan: 21 of 29 (plans 01-20 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 IN PROGRESS: Tasks 1-2 done, Task 3 is the blocking spike checkpoint; plans 22-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.

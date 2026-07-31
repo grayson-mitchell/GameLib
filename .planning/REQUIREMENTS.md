@@ -625,6 +625,64 @@ evidence discipline.
   channel into the sidecar MUST migrate onto the `HumbleSecretStore`-shaped seam and add its
   allowlist slot BEFORE porting the channel. *(D-GAP-01; extends REQ-34.4.1-GAP-01, closes F-1b)*
 
+Gap cycle 2 (minted 2026-07-31 during `34.4.1-21` from `34.4.1-LIVE-GATE-RERUN.md` § Verdict +
+`34.4.1-RESEARCH-GAP-CYCLE-2.md`). Same no-upgrade-on-unit-evidence discipline as GAP-01..06 above:
+a box stays `[ ]` when the claim is what the THIRD blocking live gate (plan 29) must observe, and
+is `[x]` only where the requirement's own claim is genuinely unit/cargo/script-provable without a
+live run.
+
+- [ ] **REQ-34.4.1-GAP-07**: The disconnect **census** reads the cookie jar through a
+  correctly-directed domain match. `cookie_domain_matches` is directional
+  (`host.ends_with(".{domain}")` only fires when `host` is the narrower string); the census call
+  site (`humble/user.ts:984`) currently passes the fixed target as `host` and each cookie's own
+  domain as `domain` — the reverse of the direction the arm's suffix check requires — so it only
+  ever matches cookies whose domain attribute is the bare apex string, silently undercounting
+  every subdomain/leading-dot-scoped Humble cookie. Plan 22 gives the census its own
+  correctly-directed arm (or an explicit `mode` argument) rather than reusing an arm whose
+  direction was designed for `watchForLogin()`'s page-host-vs-cookie-domain question. This box
+  stays UNCHECKED until plan 29 records a live corrected census. *(extends REQ-34.4.1-GAP-05,
+  REQ-34.4.1-06; closes F-6's Defect A)*
+- [ ] **REQ-34.4.1-GAP-08**: The domain-scoped cookie **clear** actually removes cookies, and its
+  reported count is VERIFIED by a post-removal re-read rather than computed before the operation
+  runs. Source-verified root cause (`wry-0.55.1/src/wkwebview/mod.rs:1248-1267`):
+  `delete_cookie()` reconstructs an `NSHTTPCookie` from scratch via
+  `cookieWithProperties(_:)`, and for a pure session cookie with no explicit Max-Age/Expires (the
+  common shape for `_simpleauth_sess`) the reconstructed object's Version/Expires block is skipped
+  entirely — `WKHTTPCookieStore.deleteCookie(_:completionHandler:)`'s completion handler fires
+  unconditionally regardless of whether anything actually matched and was removed (same shape as
+  WebKit bugzilla #184938). Plan 23 replaces the reconstruct-and-delete path with
+  `WKWebsiteDataStore.fetchDataRecords`/`removeData(for:)` reached through
+  `WebviewWindow::with_webview()` + `objc2-web-kit`, which hands back and removes WebKit's own
+  *live* record objects — no round-trip identity question. Domain-scoped by `displayName`, so
+  D-08's never-a-blanket-wipe constraint still holds. This box stays UNCHECKED — live-only.
+  *(extends REQ-34.4.1-06; closes F-6's Defect B, the BLOCKING finding)*
+- [ ] **REQ-34.4.1-GAP-09**: The login window's presentation is live-observed on BOTH halves: the
+  OS title bar shows the loaded document's own title (WR-07's positive claim — `34.4.1-20`'s gate
+  found it still reads the framework default `Tauri app`, which the existing grep-based gate
+  structurally cannot prove either way) and the one-shot raise/focus behaviour is observed rather
+  than assumed (F-4's unobserved half). This box stays UNCHECKED — live-only. *(extends
+  REQ-34.4.1-09; closes WR-07 and F-4)*
+- [x] **REQ-34.4.1-GAP-10**: A mechanical WKWebView silent-no-op sweep exists, runs, and files its
+  output as a BACKLOG rather than resolving every finding inline; and `seam-parity-sweep.py`'s own
+  staleness (S-07/S-10/S-11 — `categories_for_labels()` not recognizing
+  `clearHumbleStorage`/`clearEpicStorage`, `secretStore.ts`'s doc comment not satisfying
+  `is_axis_b_declared()`'s id+term bar) is closed. This is a testing instrument, not a live
+  behaviour — proven correct by its own self-tests, same shape as `REQ-34.4.1-GAP-04`. No
+  live-gate dependency. *(extends REQ-34.4.1-GAP-04, REQ-34.4.1-11)*
+- [ ] **REQ-34.4.1-GAP-11**: `keyring_get` cannot silently consume the sidecar's whole 60s RPC
+  budget — it returns a classified, bounded-timeout error instead of hanging until the outer
+  `RUST_INVOKE_TIMEOUT_MS` fires with no diagnostic. Explicitly an OBSERVABILITY requirement, not
+  a root-cause fix for F-9 (the `keyring_get`/`humble-csrf` 60s timeout finding), whose underlying
+  cause is not yet established. This box stays UNCHECKED — live-only. *(extends
+  REQ-34.4.1-GAP-01)*
+- [ ] **REQ-34.4.1-GAP-12**: The Manage Accounts (`/login`) route renders on FIRST navigation, not
+  only on retry. Research falsified the original suspected cause — `App.tsx:147-150` DOES already
+  register a per-route lazy boundary (eager `import()` at module eval, no `errorElement`
+  anywhere), and `Login/index.tsx:118-120` renders a visible spinner — so a truly blank first-nav
+  window points UPSTREAM of the lazy-loaded component itself, not at a missing Suspense boundary.
+  This box stays UNCHECKED — live-observed. *(extends REQ-34.4.1-12, it blocked
+  `34.4.1-20`'s item 3 gate; closes F-10)*
+
 Phase 34.5 (Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts). Minted 2026-07-29 during `/gsd-plan-phase 34.5` from 34.5-CONTEXT.md D-01..D-15 + 34.5-RESEARCH.md "Proposed Requirement Decomposition" candidate table (ROADMAP read `TBD — mint at /gsd-plan-phase 34.5`). The slice is **38 channels ported, not 57** — re-scoped during discussion by D-01/D-02/D-03, which **drop Zoom permanently** (3 channels — `authZoom`, `getZoomUserInfo`, `logoutZoom`) and **defer 16 to a newly-required Phase 34.6** (EOS overlay 8, SteamGridDB artwork 5, winetricks 3). **Research CORRECTED three claims in CONTEXT.md, each verified against source by the orchestrator before minting:** (1) **D-15's dialog citation is wrong** — `tools/index.ts:794` calls only `appendMessage`/`logWarning`, has no dialog of any kind, and sits inside `Winetricks.checkDependencies`, a **deferred** cluster unreachable from any of the 38; the real in-scope dialog is `showDialogBoxModalAuto` at `tools/index.ts:137` (`installOrUpdateTool`, reached via `toggleDXVK`/`toggleVKD3D`), and it is **already safe** — `electronStub.dialog` is Rust-backed and non-throwing, so D-15's "dialog reject crashes the app" landmine does not apply to this phase's surface; (2) **D-10 names only one of two `getPath('exe')` call sites** — `shortcuts/shortcuts/shortcuts.ts:227` (`generateMacOsApp`'s `run.sh` launch command) is a second, independent site with the identical failure mode, so neither the fix nor its live proof may be scoped to `nonesteamgame.ts` alone; (3) **D-12 misnames nile's CLI-credential directory** — it is `nile_config` (`nile/constants.ts:4`, wired via `NILE_CONFIG_PATH` at `nile/library.ts:486`), while `nile_store` (`nile/electronStores.ts:13`) is the *profile* `configStore` cwd, the other half of D-12's own distinction; both resolve through `pathShim`'s already-implemented `userData`, so no scope consequence. Research also **resolved a Discretion question CONTEXT.md left open**: `documents` (D-09's third missing `pathShim` name) belongs to the **saves-sync** cluster (`save_sync.ts:146`, `syncGOGSaves`), not shortcuts — so saves-sync is blocked on the wave-1 shim work too. And it surfaced a finding CONTEXT.md did not anticipate: **`runWineCommand` has never actually run for a non-Steam runner under the sidecar** (its Steam path is proven via already-ported `install`/`launch`, but no non-Steam login has ever worked there), which narrows D-14's wave-1 burden from "build it" to "prove it live once" (REQ-34.5-03/12).
 
 - [x] **REQ-34.5-01**: **Wave-1 seam 1 — `pathShim` extension + `exe` semantics.** `src/backend/sidecar/pathShim.ts` gains the three missing path names (`desktop`, `exe`, `documents`), verified against source as implementing only 4 (`appData`, `userData`, `temp`, `home`) and **throwing loudly** on anything else. `exe` resolves to the **Tauri shell binary** via a new `GAMELIB_SHELL_EXE` environment variable set by `src-tauri/src/main.rs` at sidecar-spawn time on **both** `spawn_sidecar_dev` and `spawn_sidecar_packaged` — **not** a `rustInvoke` round-trip (`getPath()` is synchronous) and **not** `process.execPath` (which is node, and would write the interpreter into a Steam VDF). Covers **both** `exe` call sites: `nonesteamgame.ts:258` and the previously-uncited `shortcuts.ts:227`. Unset `GAMELIB_SHELL_EXE` **throws loudly, never returns an empty string** — matching pathShim's existing convention and preventing a silently-bad launch command. Rust-side path formatting is extracted into an `AppHandle`-free pure helper with `#[cfg(test)]` tests, mirroring the existing `clipboard_text_arg`/`login_window_url_arg` pattern. *(D-07, D-09, D-10; research Correction 3)*

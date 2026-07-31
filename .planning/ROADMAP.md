@@ -1452,10 +1452,10 @@ Plans:
 `humbleRevealKey`. The seam is **not Humble-specific** — the same element serves Epic, GOG and
 Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
-**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06
+**Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 19/20 plans executed
+**Plans:** 20/29 plans executed (gap cycle 2 = plans 21-29, planned 2026-07-31)
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1498,7 +1498,24 @@ keyring slot design is fixed.
 - [x] 34.4.1-17-PLAN.md — F-5 + F-8: disconnect jar census makes domain scope observable; reveal transport label derived, not hardcoded (wave 7)
 - [x] 34.4.1-18-PLAN.md — F-2 + F-4 + F-3: state-change poll logging, sized/centered/raised login window (no title, WR-07), named identity endpoint (wave 8)
 - [x] 34.4.1-19-PLAN.md — Declare the gap cycle in PORTED-CHANNELS + mint REQ-34.4.1-GAP-01..06; every item-3-gated update stays gated (wave 9)
-- [ ] 34.4.1-20-PLAN.md — **BLOCKING live gate RE-RUN**: items 1+3 in full, 2+4 for regression; gated record updates applied only on the measured result (wave 10, non-autonomous)
+- [x] 34.4.1-20-PLAN.md — **BLOCKING live gate RE-RUN**: items 1+3 in full, 2+4 for regression; gated record updates applied only on the measured result (wave 10, non-autonomous) — **RAN 2026-07-31, VERDICT FAIL 3/4** (items 1/2/4 PASS, item 3 FAIL); F-1 CLOSED live-proven; F-6 diagnosis incomplete (cookie delete silently doesn't delete); WR-07 FAIL; F-9/F-10 open
+
+**GAP CYCLE 2 (planned 2026-07-31 from `34.4.1-LIVE-GATE-RERUN.md` § Verdict +
+`34.4.1-RESEARCH-GAP-CYCLE-2.md`).** F-6's root cause is now source-verified as TWO compounding,
+independent defects (Defect A: the census read arm's argument order is backwards; Defect B,
+blocking: `delete_cookie()`'s WebKit completion handler fires unconditionally regardless of
+whether anything matched). Ordering is binding: **spike-first → Defect A → Defect B → WR-07/F-4 →
+F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
+
+- [ ] 34.4.1-21-PLAN.md — Declare gap cycle 2 (REQ-34.4.1-GAP-07..12, ROADMAP, STATE) + spike the F-6 fix's own API (`with_webview` synchrony, thread identity, both cookie_domain_matches directions, delete/retry experiment) before it is built (wave 1, non-autonomous)
+- [ ] 34.4.1-22-PLAN.md — Defect A: give the disconnect census its own correctly-directed cookie match (wave 2)
+- [ ] 34.4.1-23-PLAN.md — Defect B (BLOCKING): replace `delete_cookie()`'s reconstruct-and-delete path with `WKWebsiteDataStore.fetchDataRecords`/`removeData(for:)` via `with_webview()`, domain-scoped by `displayName` (wave 3)
+- [ ] 34.4.1-24-PLAN.md — WR-07 (login window title) + F-4 (one-shot raise/focus, observed not assumed) (wave 4)
+- [ ] 34.4.1-25-PLAN.md — F-10: Manage Accounts `/login` route blank on first navigation (wave 5)
+- [ ] 34.4.1-26-PLAN.md — F-9: `keyring_get` bounded-timeout classified error, closing the silent 60s RPC-budget consumption (wave 5)
+- [ ] 34.4.1-27-PLAN.md — Housekeeping: `queryLocalFonts` guard, Steam artwork percent-encoding, mint REQ-34.4.1-GAP-13 (wave 5)
+- [ ] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
+- [ ] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous)
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
