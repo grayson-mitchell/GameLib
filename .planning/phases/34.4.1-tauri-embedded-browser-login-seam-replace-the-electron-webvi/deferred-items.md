@@ -350,3 +350,172 @@ The two rows that would have mattered are already **VERIFIED-LIVE** and need no 
 failure class, **three were found by a human driving a UI and none by a scanner**. This tool would
 not have caught `navigator.clipboard`, `queryLocalFonts` or `delete_cookie` before the fact. It
 narrows where to look next; it does not replace the live gate.
+
+---
+
+## Plan 29 — findings from the THIRD live gate run (2026-07-31)
+
+The gate passed 4/4 and Phase 34.4.1 closes. Everything below is a finding the run produced that
+**no plan owns**. None was fixed at gate time — Task 2 is run-and-record, and inventing a fix mid-gate
+would ship unproven code, which plans 08 and 20 both declined to do.
+
+**Read the ownership rule first.** Plan 28 closed a sweep-staleness item that had been logged and
+correctly re-forwarded **twice** without being done, each time because `seam-parity-sweep.py` was
+never in any plan's `files_modified`. **A carry-forward without an owning plan that declares the
+file is a note, not a task.** Every entry below therefore names the file that must be declared.
+
+### D-29-01 — Manage Accounts does not self-refresh after a successful sign-in (NEW, UX-blocking)
+
+After sign-in completed, the Manage Accounts page kept rendering its in-progress state:
+
+> Signing in to Humble Bundle
+> A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.
+
+The page's own promise was not kept. Navigating away and back loads correctly and shows Humble
+connected, so **the session is fine — this is a stale view, not lost auth**. Severity is
+UX-blocking-but-not-data-affecting: a user following the on-screen instruction sees no sign their
+login worked and is told to keep waiting for an update that never arrives.
+
+**Files to declare:** `src/frontend/screens/Login/` (the Manage Accounts route) and whatever
+publishes the login-completed signal to it.
+
+### D-29-02 — post-login `/api/v1/user/info` returns a 232-byte HTML 404
+
+```
+Humble adapter: /api/v1/user/info HTTP failure diagnostic
+  status=404 contentType=text/html; charset=utf-8 bodyIsString=true looksLikeHtml=true bodyLength=232
+Humble post-login identity fetch threw (best-effort, login already accepted): AxiosError 404
+```
+
+Non-blocking — the fetch is best-effort, login was already accepted, and the adapter's error
+discipline held (message only, never body or cookie). Two candidate explanations, **neither
+established**: the endpoint path has moved, or an interstitial is answering in its place.
+`looksLikeHtml=true` on a 404 fits both.
+
+**Possible shared root cause with D-29-01 — HYPOTHESIS, NOT A CONCLUSION.** An identity fetch that
+throws is a plausible reason the UI never receives the account details it waits on. The two are
+consistent and share a moment in time, which is exactly the evidence shape that cost F-10 nine live
+runs when it was treated as proof.
+
+**Discriminator, cheap and mandatory before either is fixed:** determine whether Manage Accounts'
+update path is gated on `getAccountIdentity`'s result. If yes, one fix closes both. If it renders
+from the login-accepted signal independently, these are two unrelated defects that coincided.
+**Settle it by reading the code, not by assuming the tidier answer.**
+
+**Files to declare:** `src/backend/.../humble/adapter.ts`, `humble/user.ts` (`finishLogin` /
+`getAccountIdentity`).
+
+### D-29-03 — a SUCCESSFUL `humbleRevealKey` logs no completion line (observability)
+
+The log records `Humble reveal: calling adapter (...)` and then nothing — no status, no duration.
+Failure paths **are** instrumented (D-29-02's 404 produced a full diagnostic), so the asymmetry is
+specifically that success is silent.
+
+**Consequence, which is why it is filed rather than shrugged off:** item 4's central outcome — *did
+the real network call work* — was **not verifiable from the log at all** and rested entirely on the
+operator's screen. A future automated or semi-automated gate cannot confirm this item without a
+human present.
+
+**Suggested shape:** one INFO line on the success path carrying HTTP status and duration and
+**explicitly no body**. The redaction discipline is proven correct (the revealed value appears in no
+log and no document) and must be preserved by any such line.
+
+**File to declare:** `humble/adapter.ts`.
+
+### D-29-04 — `len=0`: an empty document title is applied to the login window unguarded
+
+`[shell] humble_login_open: title change applied len=0` fires mid-sequence (`22` → `0` → `42`). The
+shell forwards WebKit's reported document title with no non-empty guard.
+
+**Explicitly REFUTED as the cause of the visible `Tauri app` flash — do not write it up as such.**
+It was proposed as that cause and disposed of by ordering: the flash is one-way and completes before
+the first title application (`len=22`), whereas `len=0` fires only after the bar already reads
+`Humble Bundle - Log In`. **Filed on its own merits as a latent smell**, not as an explanation for
+anything observed.
+
+**File to declare:** `src-tauri/src/main.rs` (`humble_login_open`'s `on_document_title_changed`).
+
+### D-29-05 — `Tauri app` visible between window presentation and first title application
+
+Cosmetic. Root cause established from ordering evidence: `presentation requested` precedes
+`title change applied len=22` in the same scrollback, and the interval between them is a titleless
+window showing the application default. Fix, if ever wanted, is to create the window with a
+provisional title rather than the framework default.
+
+**File to declare:** `src-tauri/src/main.rs`.
+
+### D-29-06 — F-9: a generic RPC timeout fired live; co-occurrence UNDETERMINED
+
+```
+[shell] response for unknown/timed-out id=1575 (dropped)
+```
+
+A request timed out, was abandoned, and its response arrived to find no waiter. **`keyring:timeout`
+specifically did NOT fire** — plan 26's classified 8s message never appeared, and the post-relaunch
+boot in item 2 was clean.
+
+**The contract's specific question — did it co-occur with a cookie operation — is UNDETERMINED and
+is recorded as such rather than rounded to "no".** `id=1575` carries no channel name; answering it
+requires locating the request that opened that id in the same scrollback.
+
+**A methodological correction is embedded here and is the transferable part:** this was first
+recorded as "F-9 watch CLEAN" on the strength of a `gamelib.log` grep. That grep could not have seen
+it — shell `eprintln!` never reaches the log file. **A clean grep of the wrong source is not
+evidence of absence.**
+
+**Status:** F-9 remains OPEN and unassigned, as it was after run 2.
+
+### D-29-07 — domain-scoping of the cookie clear is UNTESTED, and the gate contract is why
+
+`survivingNonHumble=0` in item 3's census is **vacuous, not passing**: `before total=34` equalled
+`matched=34`, so no non-Humble cookie existed for the delete to spare and the zero is
+arithmetically forced.
+
+**Root cause is the contract, not the operator.** Precondition 6 of `34.4.1-LIVE-GATE-RERUN-3.md`
+STRUCK the planted non-Humble cookie as moot, reasoning that plan 17's census *"supplies the
+evidence without it."* That conflates the **measuring apparatus** with the **thing measured** — a
+census cannot report `survivingNonHumble > 0` against a single-origin jar however correct its
+counting. Item 1's from-scratch reset then guaranteed the single-origin condition. **The contract
+instructed the operator not to plant a cookie, then required an outcome only a planted cookie could
+produce.** No action available during the run could have satisfied it.
+
+**Next cycle MUST unstrike precondition 6** and re-run item 3(b) against a jar holding at least one
+non-Humble cookie of known name and domain. The planted cookie and the census are **complements,
+not alternatives** — which is what the strike got wrong.
+
+### D-29-08 — Epic logout: expected fixed by construction, UNOBSERVED
+
+No authenticated Epic session was available, so the shared Rust arm's second caller was never
+exercised. No `clearEpicCookies` count line was seen; the removed-nothing warning was neither
+observed to fire nor observed not to fire. No new Epic OAuth login was opened (D-04, Phase 34.5
+scope).
+
+Epic's logout calls the **same** arm that Humble's disconnect just proved fixed, so the structural
+argument is sound — but it is an **inference from shared code, not a measurement**, which is
+precisely the distinction that let run 2's failure hide behind a fully-green suite. **No document
+may describe Epic's logout as verified on this basis.**
+
+**Owner:** Phase 34.5, which holds the Epic auth surface.
+
+### D-29-09 — REQUIREMENTS checkboxes were `[x]` while their own riders said "stays UNCHECKED"
+
+Found while applying Task 3's gated updates. `REQ-34.4.1-06`, `-GAP-03`, `-GAP-05`, `-GAP-07` and
+`-GAP-08` were all already `[x]` **despite each carrying prose stating the box stays UNCHECKED until
+the gate records a PASS** — and the gate had failed twice at that point.
+
+The end state is now correct (the gate passed, so `[x]` is right), but **for the whole of gap cycle
+2 the requirements register overstated closure**, and plan 29's own FAIL-branch acceptance criterion
+would have caught it only on a failure. Recorded because it is the same class this phase keeps
+catching: **a claim not matched by its artifact.**
+
+**Suggested guard:** a check that a requirement whose body contains "stays UNCHECKED" cannot be
+`[x]` — mechanically enforceable, unlike the prose convention it protects.
+
+### D-29-10 — `seam-parity-sweep.py`'s anti-vacuity guard was itself failing
+
+Plan 28 added two check functions with self-test cases but left `expected_case_count = 11`, so
+`--self-test` exited non-zero from plan 28 until plan 29 Task 3 bumped it to 13. **The guard that
+exists to prove every check can reject was the one check nobody was running.**
+
+Fixed as a recorded deviation (the file is not in plan 29's `files_modified`). Filed so the pattern
+is visible: **a self-test's own bookkeeping needs a test too, or it silently stops running.**

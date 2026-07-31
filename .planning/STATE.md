@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-27-PLAN.md
-last_updated: "2026-07-31T07:25:52.280Z"
+stopped_at: Completed 34.4.1-29-PLAN.md — PHASE 34.4.1 COMPLETE (third live gate, 4/4 PASS)
+last_updated: "2026-07-31T23:20:00.000Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 156
-  completed_plans: 152
-  percent: 97
+  completed_plans: 154
+  percent: 99
 ---
 
 # Project State
@@ -32,6 +32,56 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
+>
+> **Plan 29 of 29 done; all 29 plans across 2 gap cycles complete.** The blocking gate
+> (`34.4.1-LIVE-GATE-RERUN-3.md`) ran a third time and passed every item. Verdict history:
+> **FAIL 2/4 → FAIL 3/4 → PASS 4/4.**
+>
+> | Item | Result |
+> |---|---|
+> | pre-check (F-10) | PASS — renders first-time; **zero** `unsupported URL` (was ~150/render) |
+> | 1 login from scratch | PASS — 75B keyring store, no `sessionCookie`, install line present |
+> | 2 survives relaunch | PASS — store byte-identical, both PIDs changed, 29/29 authenticated sync |
+> | 3 disconnect | PASS — **F-6 CLOSED** |
+> | 4 `humbleRevealKey` | PASS — `login-window seam transport`, secret absent from logs |
+>
+> **F-6 — the defect that failed this gate twice — is closed behaviourally, not by a success
+> report:** census `before(34/34) after(0/0) deleted=34` with the reported count agreeing with an
+> independent post-removal re-read, and a genuinely fresh re-login (**68 `session_expired`
+> rejections over 6m17s**, vs run 2's ~3s and zero poll lines — a surviving session cannot emit
+> that reason). **WR-07, F-4, F-10 and GAP-13 also closed.** 12 requirement boxes checked with
+> dated riders; the gated `IPC-PORT-INVENTORY.md` / `34.4.1-PORTED-CHANNELS.md` updates applied.
+>
+> **The suite was fully green for all three runs (3279/3279, 3387/3387) while F-1 and both of
+> F-6's defects were live. Every blocking defect in this phase was found by a human driving the
+> UI; none by automation.**
+>
+> **NOT closed — carried out explicitly so nothing reads as more proven than it is:**
+> - **Domain-scoping of the cookie clear is UNTESTED.** `survivingNonHumble=0` is vacuous, not
+>   passing: the jar held only Humble cookies. Root cause is the gate contract's own precondition
+>   6, which struck the planted non-Humble cookie — the contract told the operator not to plant one
+>   and then required an outcome only a planted cookie could produce. **Next cycle must unstrike
+>   it.** (`D-29-07`)
+> - **Epic logout: expected fixed by construction, UNOBSERVED** — shared-code-path argument only,
+>   no session was available. No document may call it verified. → **Phase 34.5** (`D-29-08`)
+> - **F-9 OPEN, unassigned** — a generic RPC timeout fired live; co-occurrence with a cookie
+>   operation is UNDETERMINED, not "no" (`D-29-06`)
+>
+> **10 findings filed** in `deferred-items.md` as `D-29-01`..`D-29-10`, including a NEW UX-blocking
+> one: **Manage Accounts does not self-refresh after sign-in** (stale view, auth itself correct),
+> possibly sharing a root cause with a post-login `/api/v1/user/info` HTML 404 — recorded as a
+> **hypothesis with a named discriminator**, not a conclusion.
+>
+> **Process failure recorded against this run: F-7 recurred.** Item 2 was skipped and its session
+> destroyed by item 3 before its readings were taken, despite a written warning in the contract. It
+> was recovered at zero extra credential cost. The fix is not "warn harder" — item 2's snapshot must
+> become an executor-captured artifact gated before the disconnect affordance is described.
+>
+> **Next action:** Phase 34.5 plan 15's live gate is now **UNBLOCKED** — its precondition was this
+> gate. Note **Phase 34.6 has no directory and no plans**, so Phase 35's stated precondition is
+> still silently false.
 
 > **✅ PLAN 27 COMPLETE — 34.4.1-27 (gap cycle 2, plan 7 of 9, wave 5) — 2026-07-31.**
 > Closes the two **code-side** housekeeping findings the gate rerun left unassigned:

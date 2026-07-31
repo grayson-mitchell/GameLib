@@ -1453,6 +1453,17 @@ Plans:
 Amazon, which is why this runs **before Phase 34.5** rather than after: 34.5's three logins
 depend on it. Additive and reversible — the Electron build keeps working unchanged.
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12, REQ-34.4.1-GAP-13
+
+**Status:** ✅ **COMPLETE 2026-07-31** — 29 plans across 2 gap cycles, closed by a **4/4 PASS** on the
+third blocking live gate (`34.4.1-LIVE-GATE-RERUN-3.md`). The gate ran three times: FAIL 2/4
+(2026-07-30) → FAIL 3/4 (2026-07-31) → **PASS 4/4** (2026-07-31). **The test suite was fully green
+for all three runs** (3279/3279, then 3387/3387) while F-1 and both of F-6's defects were live —
+every blocking defect in this phase was found by a human driving the UI, none by automation.
+**Carried out, not closed:** the cookie clear's **domain-scoping is UNTESTED** (`REQ-34.4.1-GAP-05`'s
+rider — the gate contract's own precondition 6 struck the planted non-Humble cookie, making a
+required PASS condition unsatisfiable on a single-origin jar; the next cycle must unstrike it), Epic
+logout is **expected-fixed-by-construction but UNOBSERVED** (→ Phase 34.5), and **F-9 remains open
+and unassigned**. Ten findings filed in `deferred-items.md` as `D-29-01`..`D-29-10`.
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
 **Plans:** 28/29 plans executed
@@ -1515,7 +1526,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 - [x] 34.4.1-26-PLAN.md — F-9: `keyring_get` bounded-timeout classified error, closing the silent 60s RPC-budget consumption (wave 5)
 - [x] 34.4.1-27-PLAN.md — Housekeeping: `queryLocalFonts` guard, Steam artwork percent-encoding, mint REQ-34.4.1-GAP-13 (wave 5)
 - [x] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
-- [ ] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous)
+- [x] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous) — **DONE 2026-07-31: VERDICT 4/4 PASS.** F-6 CLOSED live-proven (census 34/34/0 with the reported count agreeing with an independent re-read, and a genuinely fresh re-login: 68 `session_expired` rejections over 6m17s vs run 2's 3s and zero poll lines). WR-07, F-4, F-10 and GAP-13 also closed. Gated set applied. **NOT closed:** domain-scoping is UNTESTED (the contract's own precondition 6 struck the planted cookie, making a required PASS condition unsatisfiable on a single-origin jar), Epic logout is unobserved (→ 34.5), F-9 stays open. 10 findings filed in `deferred-items.md`.
 
 ### Phase 34.5: Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts (INSERTED)
 
