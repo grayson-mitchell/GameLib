@@ -973,6 +973,24 @@ export class HumbleUser {
               // not one cookie. Only integers/fixed text are ever logged —
               // never a cookie name, domain, or value (T-34.4.1-34/-39,
               // T-34.4.1-75).
+              //
+              // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): this
+              // call site previously read through the seam's OTHER cookie
+              // method (the one `watchForLogin()`'s poll below correctly
+              // keeps using) — the SAME page-host-first direction. That
+              // direction is wrong here: with a FIXED apex
+              // ('humblebundle.com') passed as the "host" argument,
+              // `cookie_domain_matches`'s suffix branch can never fire, so it
+              // only ever matched cookies whose domain attribute was the bare
+              // string 'humblebundle.com' — every leading-dot- and
+              // subdomain-scoped Humble cookie was silently excluded from
+              // `matched`, and the three equalities below were being
+              // evaluated against undercounted numbers (spike 016, live:
+              // total=33, that direction=29, the correct direction=33 — see
+              // `34.4.1-SPIKE-016-FINDINGS.md`). `cookiesForDomain` below asks
+              // the correctly-directed question instead — the cookie's own
+              // domain first, the fixed target second, mirroring
+              // `clearCookies`'s own filter exactly.
               let everProvedLive = false
               interface Census {
                 total: number | null
@@ -981,7 +999,11 @@ export class HumbleUser {
               }
               const readCensus = async (): Promise<Census> => {
                 try {
-                  const read = await seam.cookies(label, 'humblebundle.com', [])
+                  const read = await seam.cookiesForDomain(
+                    label,
+                    'humblebundle.com',
+                    []
+                  )
                   if (read.total > 0) everProvedLive = true
                   return {
                     total: read.total,

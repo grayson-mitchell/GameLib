@@ -1516,6 +1516,43 @@ describe('HumbleUser', () => {
       expect(mockFromPartition).not.toHaveBeenCalled()
     })
 
+    // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): adjacent-already-present
+    // regression pin (binding constraint 1) -- watchForLogin()'s poll must keep calling
+    // `cookies()`, the page-host-first direction spike 014a proved correct, and must NEVER be
+    // repointed at `cookiesForDomain()` (the census-only, opposite direction). Both mocks are
+    // distinct jest.fn()s installed on the same fakeSeam, so a call landing on the wrong one is
+    // directly observable.
+    test('F-6 Defect A regression: the login-watch poll calls cookies() with the page host, never cookiesForDomain()', async () => {
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        mockSeamCookies.mockResolvedValue({
+          total: 4,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'seam-session-value'
+            }
+          ]
+        })
+
+        const loginPromise = HumbleUser.startLogin()
+        await flushAsync()
+        jest.advanceTimersByTime(1500)
+        await flushAsync()
+        await loginPromise
+
+        expect(mockSeamCookies).toHaveBeenCalledWith(
+          expect.any(String),
+          'www.humblebundle.com',
+          expect.any(Array)
+        )
+        expect(mockSeamCookiesForDomain).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     test('Electron regression: with NO seam installed, the existing session-based watch still runs unchanged', async () => {
       setLoginWindowSeam(null)
       mockCookiesGet.mockResolvedValue([])
@@ -1831,7 +1868,7 @@ describe('HumbleUser', () => {
         })
 
         test('census log line carries before/after totals, matched counts, deleted, and survivingNonHumble', async () => {
-          mockSeamCookies
+          mockSeamCookiesForDomain
             .mockResolvedValueOnce({
               total: 5,
               matched: [
@@ -1863,7 +1900,7 @@ describe('HumbleUser', () => {
         })
 
         test('a simulated blanket wipe (jar drops further than the matched Humble count) triggers the discrepancy warning', async () => {
-          mockSeamCookies
+          mockSeamCookiesForDomain
             .mockResolvedValueOnce({
               total: 5,
               matched: [
@@ -1889,7 +1926,7 @@ describe('HumbleUser', () => {
         })
 
         test('a rejecting census read does not block the clear and disconnect() still resolves', async () => {
-          mockSeamCookies.mockRejectedValue(new Error('census read failed'))
+          mockSeamCookiesForDomain.mockRejectedValue(new Error('census read failed'))
           mockSeamClearCookies.mockResolvedValue(0)
 
           await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
@@ -1902,7 +1939,7 @@ describe('HumbleUser', () => {
         })
 
         test('the census log line contains no cookie name, domain, or value -- only integers and fixed text', async () => {
-          mockSeamCookies
+          mockSeamCookiesForDomain
             .mockResolvedValueOnce({
               total: 5,
               matched: [
@@ -1932,7 +1969,7 @@ describe('HumbleUser', () => {
 
         test('the window is closed exactly once, after the census, on the census-failure path too', async () => {
           mockSeamOpen.mockResolvedValue('disconnect-window-census')
-          mockSeamCookies.mockRejectedValue(new Error('census read failed'))
+          mockSeamCookiesForDomain.mockRejectedValue(new Error('census read failed'))
           mockSeamClearCookies.mockResolvedValue(0)
 
           await HumbleUser.disconnect()
@@ -1945,7 +1982,7 @@ describe('HumbleUser', () => {
           // Both before/after reads return total=0 -- the jar's cookie API
           // was never proven live within this census, so classifyCookieRead
           // must return UNDECIDABLE, never a false-positive SUPPORTED_BUT_EMPTY.
-          mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+          mockSeamCookiesForDomain.mockResolvedValue({ total: 0, matched: [] })
           mockSeamClearCookies.mockResolvedValue(0)
 
           await HumbleUser.disconnect()

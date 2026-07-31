@@ -247,7 +247,13 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // mod is the behavioral proof for its pure logic (arg validation, script templating/
       // escaping/await-ordering); this gate only pins that no OTHER, undeclared arm has crept
       // in since.
-      'humble_login_clear_storage'
+      'humble_login_clear_storage',
+      // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07) legitimately added exactly this
+      // one correctly-directed domain-scoped cookie-read arm -- main.rs's own #[cfg(test)] mod
+      // (the humble_login_cookies_for_domain_* cases) is the behavioral proof for its
+      // direction; the describe block below this one pins that direction specifically. This
+      // gate only pins that no OTHER, undeclared arm has crept in since.
+      'humble_login_cookies_for_domain'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
@@ -373,5 +379,71 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
   test('REQ-34.3-08 / D-02 zero-capability-grant: capabilities/default.json contains no "clipboard" string', () => {
     const capabilitiesRaw = readFileSync(CAPABILITIES_PATH, 'utf-8')
     expect(capabilitiesRaw).not.toContain('clipboard')
+  })
+})
+
+// Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): a static pin, from the JS suite,
+// on the Rust-side directional asymmetry between the two cookie-read arms. Neither TS test
+// double nor Rust unit test alone can observe this: `humble_login_cookies` and
+// `humble_login_cookies_for_domain` each call the SAME `cookie_domain_matches` function with
+// their arguments in OPPOSITE orders on purpose (the poll's page-host-first question vs. the
+// census's cookie-domain-first question). A future "simplification" that collapsed the two
+// arms into one, or silently swapped one arm's argument order to match the other, would break
+// either the login poll (spike 014a's proven direction) or the disconnect census (this plan's
+// fix) -- and neither this file's OWN existing gates nor any TS-side mock would catch it,
+// because both arms still compile, both still resolve the same `{ total, matched }` shape, and
+// the divergence is purely in argument ORDER inside a match arm body. This describe block
+// extracts each arm's body from the (comment-stripped) source and pins the exact call shape.
+describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-correct cookie_domain_matches direction (Plan 22, F-6 Defect A)', () => {
+  /**
+   * Slices `code` from `startMarker` (inclusive) up to (but not including) `endMarker`, the
+   * same "arm body" extraction shape the app_relaunch test above already uses. Throws loudly
+   * (via the `toBeGreaterThan(-1)` assertions below) rather than silently slicing an empty or
+   * wrong range if either marker has drifted.
+   */
+  function extractArmBody(
+    code: string,
+    startMarker: string,
+    endMarker: string
+  ): string {
+    const start = code.indexOf(startMarker)
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf(endMarker, start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  test('both arms exist in source', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('"humble_login_cookies" => {')
+    expect(code).toContain('"humble_login_cookies_for_domain" => {')
+  })
+
+  test('humble_login_cookies (the poll arm) still calls cookie_domain_matches with the caller-supplied host FIRST', () => {
+    const code = loadMainRsCode()
+    const armBody = extractArmBody(
+      code,
+      '"humble_login_cookies" => {',
+      '"humble_login_take_events" => {'
+    )
+    // The poll's direction, unedited by Plan 22: host (caller-supplied) first, the cookie's
+    // own domain second.
+    expect(armBody).toContain('cookie_domain_matches(host, c.domain())')
+    // And NOT the census direction anywhere in this arm's body.
+    expect(armBody).not.toContain('cookie_domain_matches(d, Some(domain))')
+  })
+
+  test('humble_login_cookies_for_domain (the census arm) calls cookie_domain_matches with the cookie\'s OWN domain FIRST', () => {
+    const code = loadMainRsCode()
+    const armBody = extractArmBody(
+      code,
+      '"humble_login_cookies_for_domain" => {',
+      '_ => Err(format!("rustInvoke:unknown-channel'
+    )
+    // The census's direction: the cookie's own domain (from the match on c.domain()) first,
+    // the fixed target `domain` second -- mirrors humble_login_clear_cookies's own filter.
+    expect(armBody).toContain('cookie_domain_matches(d, Some(domain))')
+    // And NOT the poll's direction anywhere in this arm's body.
+    expect(armBody).not.toContain('cookie_domain_matches(host, c.domain())')
   })
 })
