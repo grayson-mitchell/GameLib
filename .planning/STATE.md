@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-24-PLAN.md
-last_updated: "2026-07-31T06:20:27.563Z"
+stopped_at: Completed 34.4.1-26-PLAN.md
+last_updated: "2026-07-31T07:00:38.307Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 156
-  completed_plans: 150
-  percent: 96
+  completed_plans: 151
+  percent: 97
 ---
 
 # Project State
@@ -32,6 +32,33 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **✅ PLAN 26 COMPLETE — 34.4.1-26 (gap cycle 2, plan 6 of 9, wave 5) — 2026-07-31. Plan 25
+> SKIPPED (unexecuted, no summary) — orchestrator dispatched 26 directly; not this plan's to
+> resolve.**
+> F-9 (the intermittent 60s `keyring_get` RPC timeout hitting `humble-csrf`) gets both an
+> observability fix and a read-count fix. **Task 1's hardware-run timing harness REFUTES the
+> original "missing entry is slower" hypothesis** — two live runs on this machine measured an
+> absent-entry read at 40-102ms (fast, `NoEntry`) against a present-entry (`steam-refresh-token`)
+> read that stalled **48.9s then 291s**, both times failing `PlatformFailure(-60008, "Unable to
+> obtain authorization for this operation")` — direct hardware evidence for `deferred-items.md`'s
+> ad-hoc-signature/Keychain-ACL theory. Task 2: `keyring_get` now runs on a worker thread bounded
+> at `KEYRING_READ_TIMEOUT` (8s, chosen from those measurements), rejecting the classified
+> `keyring:timeout` well under the sidecar's 60s RPC budget; `NoEntry`/unknown-slot-rejection are
+> proven untouched. **User-approved scope widening** (both halves required, not optional) added a
+> process-lifetime read cache + in-flight dedupe to `keyringTokenStore.ts`/`humbleSecretStore.ts`
+> — outside this plan's original `files_modified` — cutting the 20+ Keychain reads/boot toward the
+> structural floor of 3 (one per allowlisted slot). Cache invalidated BEFORE every
+> `setToken()`/`clearToken()` write/delete (no resurrected session after disconnect, proven by 6
+> dedicated tests). Caught and fixed its own regression: `migrateOneSecret()`'s direct-write
+> bypass left a stale pre-migration cache in place until an explicit `invalidateCache()` call was
+> added. `cargo test`: 80/80 (was 74), `cargo check` clean. `npm run test:ci`: 3427/3427 (was
+> 3407). `npx tsc --noEmit` clean. `ported-channels-gate.py` + `--self-test`: both OK,
+> `IPC-PORT-INVENTORY.md`/`PORTED-CHANNELS.md` diff empty. **Nothing in this plan proves F-9 no
+> longer occurs live, or that the read-count reduction is observable on a real boot** — plan 29's
+> gate is the only remaining verification step; see `34.4.1-26-SUMMARY.md`'s "Next Phase
+> Readiness" for exactly what it should watch for.
+> Next action: plan 27 (or resolve plan 25's skip first — developer's call).
 
 > **✅ PLAN 24 COMPLETE — 34.4.1-24 (gap cycle 2, plan 4 of 9, wave 4) — 2026-07-31.**
 > WR-07's positive half CLOSED as far as static code can carry it: `humble_login_open`'s
@@ -163,7 +190,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 25 of 29 (plans 01-24 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); plan 25 is next; plans 26-29 unexecuted)
+Plan: 27 of 29 (plans 01-24, 26 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); **plan 25 SKIPPED by the orchestrator — no summary, unexecuted**; plan 26 COMPLETE, F-9 timeout classification + read-cache; plan 27 is next; plans 28-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -1982,7 +2009,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2857,6 +2884,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P22 | 30min | 3 tasks | 11 files |
 | Phase 34.4.1 P23 | 50min | 3 tasks | 6 files |
 | Phase 34.4.1 P24 | 40min | 3 tasks | 2 files |
+| Phase 34.4.1 P26 | 55min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -3219,6 +3247,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: Plan 23: used mpsc_channel + rx.recv_timeout() (not with_webview's own return) for the WKWebsiteDataStore clear's synchrony -- source inspection of tauri-runtime-wry-2.11.4 shows with_webview() is fire-and-forget off the main thread and this arm's real caller always runs on a spawned worker thread; spike 016's synchronous measurement was taken from a different, main-thread call site.
 - [Phase 34.4.1]: Plan 23: scoped the WKWebsiteDataStore removal to WKWebsiteDataTypeCookies only, even though the record fetch uses allWebsiteDataTypes, so a matched domain record's localStorage/IndexedDB/cache data is never touched by this arm.
 - [Phase 34.4.1-24]: Corrected WR-07's comment to avoid the literal on_document_title_changed identifier in prose (kept to the one code call site) and used focus_once/persistent_pin instead of always_on_top in the presentation-config log, satisfying both tasks' exact-count grep gates without weakening the message.
+- [Phase 34.4.1-26]: KEYRING_READ_TIMEOUT=8s bound on keyring_get, chosen from a hardware-measured 40ms-291s spread (present-entry Keychain reads can stall due to ad-hoc-signature ACL authorization failures, PlatformFailure(-60008))
+- [Phase 34.4.1-26]: Added a process-lifetime read cache + in-flight dedupe to keyringTokenStore.ts/humbleSecretStore.ts (user-approved scope widening beyond this plan's declared files), invalidated before every setToken/clearToken write/delete
 
 ### Pending Todos
 
@@ -3291,8 +3321,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T06:20:27.553Z
-Stopped at: Completed 34.4.1-24-PLAN.md
+Last session: 2026-07-31T07:00:38.297Z
+Stopped at: Completed 34.4.1-26-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
   `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan

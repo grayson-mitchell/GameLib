@@ -669,7 +669,7 @@ live run.
   `is_axis_b_declared()`'s id+term bar) is closed. This is a testing instrument, not a live
   behaviour — proven correct by its own self-tests, same shape as `REQ-34.4.1-GAP-04`. No
   live-gate dependency. *(extends REQ-34.4.1-GAP-04, REQ-34.4.1-11)*
-- [ ] **REQ-34.4.1-GAP-11**: `keyring_get` cannot silently consume the sidecar's whole 60s RPC
+- [x] **REQ-34.4.1-GAP-11**: `keyring_get` cannot silently consume the sidecar's whole 60s RPC
   budget — it returns a classified, bounded-timeout error instead of hanging until the outer
   `RUST_INVOKE_TIMEOUT_MS` fires with no diagnostic. Explicitly an OBSERVABILITY requirement, not
   a root-cause fix for F-9 (the `keyring_get`/`humble-csrf` 60s timeout finding), whose underlying
