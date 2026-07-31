@@ -34,6 +34,13 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+// SPIKE 016 -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2). Direct
+// macOS-only crates promoted from ALREADY-RESOLVED transitive deps of `wry` (Cargo.toml's
+// `[target.'cfg(target_os = "macos")'.dependencies]` section), used only by
+// `spike016_cookie_probe` below and its `spike016_wait_for_records` helper.
+#[cfg(target_os = "macos")]
+use objc2_foundation::{ns_string, NSArray, NSDate, NSRunLoop};
+
 use keyring::Entry;
 use serde::Serialize;
 use serde_json::Value;
@@ -735,6 +742,38 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- SPIKE 016 support -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2) ----
+//
+// Mirrors `wry-0.55.1/src/wkwebview/mod.rs`'s own `wait_for_blocking_operation` shape exactly
+// (same 2ms-interval / 1s-limit / `NSRunLoop::mainRunLoop().acceptInputForMode_beforeDate`
+// pump) -- proven-in-production precedent for waiting on a WebKit completion handler from the
+// same thread that must also service it. Returns `None` on timeout rather than panicking or
+// blocking indefinitely (D-08's "must not linger" discipline, same bound shape as
+// `REVEAL_POST_TIMEOUT`/`CLEAR_STORAGE_TIMEOUT` above).
+
+#[cfg(target_os = "macos")]
+fn spike016_wait_for_records(
+    rx: std::sync::mpsc::Receiver<(usize, usize)>,
+) -> Option<(usize, usize)> {
+    let interval = Duration::from_millis(2);
+    let interval_as_secs = interval.as_secs_f64();
+    let limit = 1.0;
+    let mut elapsed = 0.0;
+    loop {
+        if let Ok(result) = rx.recv_timeout(interval) {
+            return Some(result);
+        }
+        elapsed += interval_as_secs;
+        if elapsed >= limit {
+            return None;
+        }
+        let rl = NSRunLoop::mainRunLoop();
+        let limit_date = NSDate::dateWithTimeIntervalSinceNow(interval_as_secs);
+        let mode = ns_string!("NSDefaultRunLoopMode");
+        rl.acceptInputForMode_beforeDate(mode, &limit_date);
+    }
+}
+
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -1388,6 +1427,191 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }),
                 Err(_) => Err("humble_login_clear_storage:timeout".to_string()),
             }
+        }
+        // SPIKE 016 -- THROWAWAY, REMOVED BY PLAN 22 TASK 1 (34.4.1-21-PLAN.md Task 2). Answers
+        // Open Question 1 (with_webview synchrony), assumption A2 (thread identity), Defect A
+        // (cookie_domain_matches's two argument directions, counted against the SAME live jar
+        // snapshot) and the delete/retry timing-vs-identity discriminator, in one manually-driven
+        // run against a real Humble-cookie-bearing jar. NEVER registered in
+        // `sidecarTransport.ts`, no seam method, no allowlist beyond this match arm itself --
+        // unreachable from any product caller (T-34.4.1-90). Findings recorded in
+        // `34.4.1-SPIKE-016-FINDINGS.md`. Every `eprintln!` below formats counts, booleans,
+        // thread names and fixed text ONLY -- never a cookie name, domain or value
+        // (T-34.4.1-39/-75/-91). Deletes cookies via the EXISTING (broken) wry path as part of
+        // the retry experiment (T-34.4.1-92, disclosed in the checkpoint) -- fetches and counts
+        // only via the new `WKWebsiteDataStore` path, no `removeData` call (T-34.4.1-93).
+        "spike016_cookie_probe" => {
+            let label = args
+                .first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "spike016_cookie_probe:bad-args".to_string())?;
+            let domain = args
+                .get(1)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "spike016_cookie_probe:bad-args".to_string())?;
+            let window = app
+                .get_webview_window(label)
+                .ok_or_else(|| format!("spike016_cookie_probe:no-window:{label}"))?;
+
+            // ---- A2: thread identity, BEFORE any with_webview call ----
+            let thread_name = thread::current().name().unwrap_or("<unnamed>").to_string();
+            #[cfg(target_os = "macos")]
+            let mtm_before = objc2::MainThreadMarker::new().is_some();
+            #[cfg(not(target_os = "macos"))]
+            let mtm_before = false;
+            eprintln!(
+                "[spike016] A2 thread_name={thread_name} mtm_before_with_webview={mtm_before}"
+            );
+
+            // ---- Defect A: the SAME jar snapshot counted through BOTH argument directions ----
+            let jar = window.cookies().map_err(|e| e.to_string())?;
+            let total = jar.len();
+            let census_direction = jar
+                .iter()
+                .filter(|c| cookie_domain_matches(domain, c.domain()))
+                .count();
+            let clear_direction = jar
+                .iter()
+                .filter(|c| match c.domain() {
+                    Some(d) => cookie_domain_matches(d, Some(domain)),
+                    None => false,
+                })
+                .count();
+            eprintln!(
+                "[spike016] DefectA total={total} census_direction={census_direction} clear_direction={clear_direction}"
+            );
+
+            // ---- Q1: with_webview synchrony + record-fetch reachability (counts only) ----
+            let ran_flag = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let ran_flag_inner = Arc::clone(&ran_flag);
+            #[cfg(target_os = "macos")]
+            let record_counts: Arc<Mutex<Option<(usize, usize)>>> = Arc::new(Mutex::new(None));
+            #[cfg(target_os = "macos")]
+            let record_counts_inner = Arc::clone(&record_counts);
+            let domain_for_closure = domain.to_string();
+
+            let with_webview_ok = window
+                .with_webview(move |_webview| {
+                    ran_flag_inner.store(true, Ordering::SeqCst);
+                    #[cfg(target_os = "macos")]
+                    {
+                        let mtm_inside = objc2::MainThreadMarker::new();
+                        eprintln!(
+                            "[spike016] Q1 closure_ran=true mtm_inside={}",
+                            mtm_inside.is_some()
+                        );
+                        if let Some(mtm) = mtm_inside {
+                            // SAFETY: tauri's own `with_webview` doc example casts
+                            // `webview.inner()` to `&objc2_web_kit::WKWebView` on macOS
+                            // verbatim -- this mirrors that example. The reference is valid
+                            // for the closure's duration (tauri guarantees `inner()` is a live
+                            // `WKWebView*` while the closure runs on the main thread).
+                            let view: &objc2_web_kit::WKWebView =
+                                unsafe { &*_webview.inner().cast() };
+                            let data_store = unsafe { view.configuration().websiteDataStore() };
+                            let all_types =
+                                unsafe { objc2_web_kit::WKWebsiteDataStore::allWebsiteDataTypes(mtm) };
+                            let (tx, rx) = mpsc_channel::<(usize, usize)>();
+                            let target_domain = domain_for_closure.clone();
+                            let completion = block2::RcBlock::new(
+                                move |records: std::ptr::NonNull<
+                                    NSArray<objc2_web_kit::WKWebsiteDataRecord>,
+                                >| {
+                                    // SAFETY: WebKit hands the completion handler a valid,
+                                    // live array pointer for the duration of this call.
+                                    let records = unsafe { records.as_ref() };
+                                    let fetched_total = records.len();
+                                    let mut matching = 0usize;
+                                    for i in 0..fetched_total {
+                                        let record = records.objectAtIndex(i);
+                                        // SAFETY: `displayName()` is a simple ObjC accessor;
+                                        // `record` is a live, retained object from `records`.
+                                        let display_name = unsafe { record.displayName() }.to_string();
+                                        if cookie_domain_matches(&display_name, Some(&target_domain))
+                                        {
+                                            matching += 1;
+                                        }
+                                    }
+                                    let _ = tx.send((fetched_total, matching));
+                                },
+                            );
+                            // SAFETY: `data_store`/`all_types` are live objects obtained above
+                            // on the main thread; `completion` outlives the call (fetch is
+                            // synchronous from this thread's perspective via the run-loop pump
+                            // below, mirroring wry's own `delete_cookie` pattern).
+                            unsafe {
+                                data_store
+                                    .fetchDataRecordsOfTypes_completionHandler(&all_types, &completion);
+                            }
+                            match spike016_wait_for_records(rx) {
+                                Some(counts) => {
+                                    *record_counts_inner.lock().unwrap() = Some(counts);
+                                }
+                                None => {
+                                    eprintln!("[spike016] Q1 record_fetch=timed-out");
+                                }
+                            }
+                        }
+                    }
+                })
+                .is_ok();
+            let closure_ran_immediately_after_return = ran_flag.load(Ordering::SeqCst);
+            eprintln!(
+                "[spike016] Q1 with_webview_ok={with_webview_ok} closure_ran_immediately_after_return={closure_ran_immediately_after_return}"
+            );
+            #[cfg(target_os = "macos")]
+            {
+                let counts = record_counts.lock().unwrap();
+                match *counts {
+                    Some((fetched_total, matching)) => eprintln!(
+                        "[spike016] Q1 record_fetch_total={fetched_total} record_fetch_matching={matching}"
+                    ),
+                    None => eprintln!("[spike016] Q1 record_fetch=unavailable"),
+                }
+            }
+
+            // ---- Retry experiment: delete -> re-read -> wait -> retry, on the EXISTING wry
+            // path (research Item 1's own "cheap experiment before the rewrite" instruction).
+            // Deletes cookies -- this is the "you will lose this session" step the checkpoint
+            // discloses.
+            let mut retry_surviving: Vec<usize> = Vec::with_capacity(3);
+            for attempt in 1..=3u32 {
+                let jar_now = window.cookies().map_err(|e| e.to_string())?;
+                let matching: Vec<_> = jar_now
+                    .into_iter()
+                    .filter(|c| match c.domain() {
+                        Some(d) => cookie_domain_matches(d, Some(domain)),
+                        None => false,
+                    })
+                    .collect();
+                for cookie in matching {
+                    let _ = window.delete_cookie(cookie);
+                }
+                if attempt < 3 {
+                    thread::sleep(Duration::from_millis(500));
+                }
+                let jar_after = window.cookies().map_err(|e| e.to_string())?;
+                let survived = jar_after
+                    .into_iter()
+                    .filter(|c| match c.domain() {
+                        Some(d) => cookie_domain_matches(d, Some(domain)),
+                        None => false,
+                    })
+                    .count();
+                eprintln!("[spike016] Retry attempt={attempt} surviving={survived}");
+                retry_surviving.push(survived);
+            }
+
+            Ok(serde_json::json!({
+                "thread_name": thread_name,
+                "mtm_before_with_webview": mtm_before,
+                "total": total,
+                "census_direction": census_direction,
+                "clear_direction": clear_direction,
+                "with_webview_ok": with_webview_ok,
+                "closure_ran_immediately_after_return": closure_ran_immediately_after_return,
+                "retry_surviving": retry_surviving,
+            }))
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }

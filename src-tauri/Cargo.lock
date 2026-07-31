@@ -1237,7 +1237,11 @@ dependencies = [
 name = "gamelib-shell"
 version = "0.7.0"
 dependencies = [
+ "block2",
  "keyring",
+ "objc2",
+ "objc2-foundation",
+ "objc2-web-kit",
  "serde",
  "serde_json",
  "tauri",

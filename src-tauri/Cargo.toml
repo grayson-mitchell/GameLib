@@ -23,6 +23,26 @@ tauri-plugin-updater = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-clipboard-manager = "2"
 
+# SPIKE 016 (34.4.1-21-PLAN.md Task 2) -- promoted from ALREADY-RESOLVED transitive
+# dependencies of `wry` (see Cargo.lock) to direct, macOS-only dependencies at their
+# identical pinned versions, so the F-6 fix's own load-bearing API
+# (`WebviewWindow::with_webview()` + `objc2-web-kit`'s `WKWebsiteDataStore`) can be
+# spiked before it is built. Must never leak into Linux/Windows builds
+# (REQ-34.4.1-13's declared-per-platform discipline).
+#
+# `objc2-web-kit` deliberately does NOT use default features: its `default` list is ~200
+# legacy WebKit1 DOM* classes that pull in two crates never otherwise resolved in this tree
+# (`objc2-javascript-core`, `objc2-security`) -- a real new supply-chain surface the T-34.4.1-SC
+# mitigation forbids. `std`/`block2`/`WKWebView`/`WKWebViewConfiguration`/`WKWebsiteDataStore`
+# are already unioned in from `wry`'s own (non-default) feature request (`wry-0.55.1/Cargo.toml`)
+# -- the ONLY feature this spike needs that wry does not already request is
+# `WKWebsiteDataRecord` (for `fetchDataRecordsOfTypes_completionHandler`'s record type).
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6.2"
+objc2 = "0.6.4"
+objc2-foundation = "0.3.2"
+objc2-web-kit = { version = "0.3.2", default-features = false, features = ["WKWebsiteDataRecord"] }
+
 [profile.release]
 opt-level = "s"
 lto = true
