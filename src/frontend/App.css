@@ -41,7 +41,26 @@ body {
   display: flex;
   grid-area: content;
   flex-direction: column;
-  min-height: 100%;
+  /*
+   * F-10 (34.4.1 plan 25): `min-height: 100%` MUST NOT come back here.
+   *
+   * This element sits in `.App`'s `1fr` row. A percentage min-height resolves
+   * against that row's height -- but the row is `1fr`, so its height is
+   * itself derived from what this element contributes. The dependency is
+   * circular, and WebKit does not resolve it to `auto` the way the spec
+   * expects: it feeds the result back in and converges on a garbage value.
+   * Measured live under WKWebView, `.App`'s rows came out
+   * `0px 23323.0625px 0px` -- a 23323px middle row on a 768px viewport, with
+   * the fractional .0625 the fingerprint of an iterative solve. The login
+   * screen then centred its content at y=11277, ~11000px below the fold, and
+   * presented as a blank window. See 34.4.1-F10-DIAGNOSIS.md.
+   *
+   * The declaration was redundant anyway: a grid item defaults to
+   * `align-self: stretch`, so this already fills the `1fr` row, and the row
+   * still grows past the viewport for tall routes because `.App` is
+   * `min-height: 100vh` with an auto height. Stretch gives the intended
+   * "at least full height" with no percentage and no cycle.
+   */
   &:not(:has(.gameConfigContainer img.backgroundImage)) {
     background: var(--gradient-body-background, var(--body-background));
   }

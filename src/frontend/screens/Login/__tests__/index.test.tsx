@@ -10,17 +10,23 @@
  * in its own title what it does and does not prove.
  *
  * What F-10 actually was, since it determines what is worth gating:
- * `.loginBackground` — an empty, purely decorative div — was an in-flow grid
- * item with `height: 100%`, sharing cell 1/1 with `.loginContentWrapper`. The
- * percentage had no definite basis anywhere up the chain
- * (`.App` min-height:100vh + `1fr` row -> `.content` min-height:100% ->
- * `.loginPage` height:100% -> `.loginBackground` height:100%), so WebKit could
- * resolve it either way. One way, everything collapsed to the content height
- * (770px, correct). The other way, this div measured 23323px, became the grid
- * row height, and centred `.loginContentWrapper` at y=11277 — about 11000px
- * below a 768px viewport. The screen the live gate recorded as "blank" was
- * this background image at opacity 0.3 with the real content far below the
- * fold. Measured live; see 34.4.1-F10-DIAGNOSIS.md.
+ * `.App .content` carried `min-height: 100%` while sitting in `.App`'s `1fr`
+ * grid row. The percentage resolves against that row's height, but the row is
+ * `1fr`, so its height derives from what `.content` contributes — a circular
+ * dependency. The spec says resolve it to `auto`; WebKit instead feeds the
+ * result back and converges on garbage. Measured live under WKWebView,
+ * `.App`'s used `grid-template-rows` came out `0px 23323.0625px 0px` on a
+ * 768px viewport, with `.content`'s `min-height` still reporting the literal
+ * unresolved string `100%`. The fractional `.0625` is the fingerprint of an
+ * iterative solve rather than a content-derived height.
+ *
+ * Everything downstream then inherited 23323px, and `.loginContentWrapper`
+ * (vertically centred) landed at y=11277 — roughly 11000px below the fold.
+ * The window the live gate recorded as "blank" was the login screen rendering
+ * perfectly, far off-screen. Because the failure depends on the order WebKit
+ * happens to resolve the cycle in, it reproduced intermittently and defeated
+ * several plausible-but-wrong theories (boot timing, viewport size,
+ * navigation count) before being measured. See 34.4.1-F10-DIAGNOSIS.md.
  *
  * The first test is the regression gate and fails against the pre-fix
  * stylesheet.
@@ -37,6 +43,7 @@ const read = (relPath: string) =>
 const LOGIN_SCSS = 'src/frontend/screens/Login/index.scss'
 const LOGIN_TSX = 'src/frontend/screens/Login/index.tsx'
 const APP_TSX = 'src/frontend/App.tsx'
+const APP_CSS = 'src/frontend/App.css'
 const INDEX_TSX = 'src/frontend/index.tsx'
 const LOADING_TSX = 'src/frontend/screens/Loading/index.tsx'
 const UPDATE_COMPONENT_TSX = 'src/frontend/components/UI/UpdateComponent/index.tsx'
@@ -64,23 +71,38 @@ function cssBlock(source: string, selector: string): string {
   throw new Error(`unterminated block for ${selector}`)
 }
 
-describe('F-10: the decorative login background must not size the layout', () => {
-  it('REGRESSION GATE — .loginBackground is out of flow, so it cannot drive .loginPage height (fails against the pre-fix stylesheet, which had height: 100%)', () => {
+describe('F-10: no percentage height may resolve against .App\'s 1fr row', () => {
+  it('REGRESSION GATE — .App .content declares no percentage min-height (this is the declaration that caused F-10; fails against the pre-fix stylesheet)', () => {
+    const block = cssBlock(read(APP_CSS), '.App .content')
+
+    // `min-height: 100%` here is the cycle. `min-height: 0` or an absolute
+    // length would be fine, so gate the percentage specifically rather than
+    // the property -- an over-broad gate would block a legitimate future fix.
+    expect(block).not.toMatch(/min-height:\s*[\d.]+%/)
+  })
+
+  it('.App still guarantees at least a viewport-tall shell, so removing that min-height did not trade a runaway for a collapse', () => {
+    // The deleted declaration was redundant, not load-bearing: `.content` is a
+    // grid item and defaults to `align-self: stretch`, so it fills the `1fr`
+    // row, and the row is at least viewport-tall because of this. If this
+    // min-height ever goes away, the redundancy argument goes with it.
+    expect(cssBlock(read(APP_CSS), '.App')).toMatch(/min-height:\s*100vh/)
+  })
+
+  it('SECONDARY HARDENING (not the F-10 fix) — .loginBackground stays out of flow so a decorative layer cannot contribute intrinsic height', () => {
+    // Honest scope: this was committed as the F-10 fix and did NOT fix it --
+    // the blank screen reproduced with this already in place. It is retained
+    // because a purely decorative layer participating in intrinsic sizing is a
+    // real fragility, not because it closed the bug.
     const block = cssBlock(read(LOGIN_SCSS), '.loginBackground')
-
     expect(block).toMatch(/position:\s*absolute/)
-
-    // The exact pre-fix declarations. Any of them returning puts this div back
-    // into the grid's intrinsic sizing and reintroduces the 23323px runaway.
     expect(block).not.toMatch(/(^|[;{\s])height:/)
-    expect(block).not.toMatch(/grid-row:/)
-    expect(block).not.toMatch(/grid-column:/)
   })
 
   it('.loginPage stays position: relative, which is what makes the absolute background cover it exactly rather than the viewport', () => {
-    // This pairing is the whole fix. If .loginPage loses `position: relative`,
-    // `inset: 0` resolves against the initial containing block instead and the
-    // background silently detaches from the page it decorates.
+    // If .loginPage loses `position: relative`, `inset: 0` resolves against the
+    // initial containing block instead and the background silently detaches
+    // from the page it decorates.
     expect(cssBlock(read(LOGIN_SCSS), '.loginPage')).toMatch(
       /position:\s*relative/
     )
