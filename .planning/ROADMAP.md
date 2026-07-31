@@ -1542,15 +1542,21 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 21 plans (15 base plans + a 6-plan gap cycle planned 2026-08-01, 4 of 6 gap plans now
-executed) — **PHASE DOES NOT CLOSE YET.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
-2026-08-01 and FAILED (0/5 PASS). See `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
-`34.5-16` through `34.5-21`
-fixes the single diagnosed root cause (a wrong `publicDir` under the sidecar — 4th recurrence of
-the `publicdir-getapppath-chunking` family), closes the gate-contract defect in the old
-precondition 5, and RE-RUNS the full 5-item gate into a NEW document,
-`34.5-LIVE-GATE-RERUN.md` (authored, unrun, by `34.5-19-PLAN.md`). The phase closes only on a
-clean 5/5 (D-08 — no partial-pass closure).
+**Plans:** 21 plans (15 base plans + a 6-plan gap cycle planned 2026-08-01, all 6 gap plans now
+executed) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
+2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
+`34.5-16` through `34.5-18` fixed the single diagnosed root cause (a wrong `publicDir` under the
+sidecar — 4th recurrence of the `publicdir-getapppath-chunking` family) and closed the
+gate-contract defect in the old precondition 5. Plan `34.5-19` authored a RE-RUN contract,
+`34.5-LIVE-GATE-RERUN.md`, and plan `34.5-20` executed it on real hardware 2026-08-01: **FAIL
+again, 0 of 5 clean** (3 FAIL — items 1/2/3 — and 2 NOT ATTEMPTED — items 4/5). The RE-RUN proved
+the `publicDir` root cause CLOSED (all four runner binaries `exists=true`, no asset-root defect
+line, items 2/3 both reached backend `status=captured` for the first time this phase) but
+surfaced a NEW, downstream-of-capture defect: Epic's login form never becomes interactive, and
+GOG/Amazon's successful backend captures are never consumed into a completed, UI-visible,
+library-populated login. Per D-08's no-partial-pass rule, **the phase still does not close** —
+another gap cycle inside Phase 34.5 is next. See `34.5-LIVE-GATE-RERUN.md` for full evidence and
+`34.5-21-SUMMARY.md` for this propagation pass.
 
 Plans:
 - [x] 34.5-01-PLAN.md — Wave-1 seam 1: pathShim desktop/exe/documents + GAMELIB_SHELL_EXE on both Rust spawn paths + pathShim.test.ts (wave 1)
@@ -1574,8 +1580,8 @@ Gap cycle (planned 2026-08-01 via `/gsd-plan-phase 34.5 --gaps`; waves restart a
 - [x] 34.5-17-PLAN.md — Existence-checked `archSpecificBinary` x64 fallback + real-filesystem coverage under sidecar-like cwd (`src-tauri/`) (gap wave 2)
 - [x] 34.5-18-PLAN.md — Sidecar boot logging of the `GAMELIB_SHELL_EXE` it actually received + asset-root self-check, closing the precondition-5 gate-contract defect (gap wave 2)
 - [x] 34.5-19-PLAN.md — `34.5-LIVE-GATE-RERUN.md` authored with `verdict: null`, 7 preconditions, all 5 items incl. the never-attempted item 4 (gap wave 3)
-- [ ] 34.5-20-PLAN.md — **BLOCKING live gate RE-RUN**, all 5 items on real hardware (gap wave 4, non-autonomous)
-- [ ] 34.5-21-PLAN.md — Propagation: `34.5-PORTED-CHANNELS.md` LIVE cells, gate script, inventory, ROADMAP, STATE (gap wave 5)
+- [x] 34.5-20-PLAN.md — **BLOCKING live gate RE-RUN**, all 5 items on real hardware (gap wave 4, non-autonomous) — **RAN 2026-08-01, VERDICT FAIL 0/5** (items 1/2/3 FAIL: Epic's login form never becomes interactive 0/3 captures; GOG/Amazon both reach backend `status=captured` but nothing consumes the capture into a completed login; items 4/5 NOT ATTEMPTED). `publicDir` root cause CONFIRMED CLOSED (precondition 4); Assumption A1 CONFIRMED. See `34.5-LIVE-GATE-RERUN.md`. **Phase 34.5 STILL DOES NOT CLOSE** — another gap cycle required.
+- [x] 34.5-21-PLAN.md — Propagation: `34.5-PORTED-CHANNELS.md` LIVE cells, gate script, inventory, ROADMAP, STATE (gap wave 5)
 
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
 

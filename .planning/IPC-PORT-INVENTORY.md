@@ -134,6 +134,20 @@ Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
 `addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
+**Status (2026-08-01): the blocking live gate has run TWICE and FAILED both times — channel
+membership and the 38/3/16 split above are unchanged by either run.** The first run
+(`34.5-LIVE-GATE.md`, plan 34.5-15) FAILED 0/5 on a `publicDir`-resolution defect that kept the
+`legendary`/`gogdl`/`nile` runner binaries from spawning at all. A gap cycle (plans 34.5-16
+through 34.5-18) closed that defect at the code level, and a RE-RUN
+(**`34.5-LIVE-GATE-RERUN.md`**, plan 34.5-20) re-attempted all five items: **FAIL, 0 of 5 clean**
+(3 FAIL — items 1/2/3 — and 2 NOT ATTEMPTED — items 4/5). The RE-RUN proved the runner-binary
+spawn defect closed (all four binaries `exists=true`, no asset-root defect line) and that the
+OAuth redirect-capture mechanism itself works for `gog` and `nile`, but surfaced a new,
+downstream-of-capture defect: nothing consumes a successful capture into a completed,
+UI-visible, library-populated login. Per D-08's no-partial-pass rule, Phase 34.5 does NOT close
+on this result; see `34.5-LIVE-GATE-RERUN.md` for full evidence and `34.5-21-SUMMARY.md` for this
+propagation pass.
+
 ## Phase 34.6 — Slice 9 — EOS overlay, SteamGridDB and winetricks (16 channels)
 
 Split out of Phase 34.5's 57 on 2026-07-29 (D-03/D-05) — deferred, not dropped, because Phase
