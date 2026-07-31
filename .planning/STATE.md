@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 34.5 gap cycle PLANNED — 6 new plans (34.5-16..21, 5 waves) closing G-1..G-6. Ready to execute; the phase still does NOT close until the re-run gate records 5/5.
+stopped_at: Phase 34.5 gap cycle EXECUTING — 6 plans (34.5-16..21, 5 waves) closing G-1..G-6. The phase still does NOT close until the re-run gate (34.5-20) records 5/5.
 last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle execution started (plans 16-21)
 progress:
   total_phases: 17
   completed_phases: 13
@@ -321,8 +321,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — GATE FAILED, GAP CYCLE NEEDED
-Plan: 15 of 15 (all 15 plans have summaries; **plan 15 was the blocking 5-item live gate — RAN 2026-08-01, VERDICT FAIL 0/5, phase does NOT close**; see the blocker block above)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
+Plan: 15 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
