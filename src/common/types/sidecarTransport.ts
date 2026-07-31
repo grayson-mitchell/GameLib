@@ -130,7 +130,19 @@ export const SIDECAR_STORE_SNAPSHOT = 'sidecar_store_snapshot' as const
  */
 export const RUST_INVOKE_KIND = 'rustInvoke' as const
 
-/** Rust-side channel name: read the Steam refresh token from the OS Keychain via `keyring`. */
+/**
+ * Rust-side channel name: read the Steam refresh token from the OS Keychain via `keyring`.
+ *
+ * 34.4.1 gap cycle 2 plan 26 (F-9 observability half, REQ-34.4.1-GAP-01/REQ-34.4.1-GAP-11): the
+ * Rust-side arm bounds its own Keychain read at `KEYRING_READ_TIMEOUT` (`src-tauri/src/main.rs`)
+ * and rejects with the classified `keyring:timeout` error string when that bound is exceeded —
+ * well before this file's own `RUST_INVOKE_TIMEOUT_MS` (60s) generic RPC timeout would otherwise
+ * fire. Seeing `keyring:timeout` for this channel is the EXPECTED, better-behaved outcome of a
+ * blocked Keychain read (e.g. an unanswered Allow/Deny prompt); seeing the generic `rustInvoke
+ * timed out after 60000ms: keyring_get` message for this channel AFTER this plan means something
+ * else is wrong (the Rust-side bound itself failed to fire), not that the underlying Keychain
+ * call is slow.
+ */
 export const RUST_KEYRING_GET = 'keyring_get' as const
 
 /** Rust-side channel name: write the Steam refresh token to the OS Keychain via `keyring`. */

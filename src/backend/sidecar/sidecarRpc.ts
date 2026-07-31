@@ -277,7 +277,13 @@ export function requestOpenExternal(url: string): void {
  * writes back (handled by `handleFrame()`'s response-to-self branch above).
  *
  * Refuses to emit a frame for any channel not in `RUST_INVOKE_CHANNELS` (T-28-03) -- rejects
- * immediately instead. Unanswered requests reject after `RUST_INVOKE_TIMEOUT_MS` (T-28-05).
+ * immediately instead. Unanswered requests reject after `RUST_INVOKE_TIMEOUT_MS` (T-28-05). The
+ * rejection message below already NAMES the timed-out channel (`` `...: ${channel}` ``), so a
+ * `keyring_get` stall is distinguishable in a log line from a cookie/dialog arm's stall without
+ * any additional formatting -- see `RUST_KEYRING_GET`'s doc comment (`sidecarTransport.ts`,
+ * 34.4.1 gap cycle 2 plan 26) for why this generic message should almost never fire for
+ * `keyring_get` specifically after that plan: the Rust side now bounds its own Keychain read and
+ * rejects with a distinct, faster `keyring:timeout` first.
  */
 export function requestRustInvoke(
   channel: RustInvokeChannel,

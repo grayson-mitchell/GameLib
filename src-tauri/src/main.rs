@@ -580,6 +580,30 @@ const REVEAL_POST_TIMEOUT: Duration = Duration::from_secs(20);
 #[cfg(target_os = "macos")]
 const CLEAR_COOKIES_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// Bound on how long `keyring_get` waits for its worker-thread Keychain read before classifying
+/// the call as `keyring:timeout` (34.4.1 gap cycle 2 plan 26, F-9 observability half,
+/// T-34.4.1-114/T-34.4.1-115). This is OBSERVABILITY, not a fix for F-9's cause, which this plan
+/// does NOT establish as a single clean answer (see
+/// `keyring_read_timing_hypothesis_absent_vs_present_entry`'s own doc comment and
+/// `34.4.1-26-SUMMARY.md` for the full timed verdict).
+///
+/// Chosen from that harness's own recorded timings on this machine: an absent-entry read
+/// completed in 40-102ms across two runs (fast, `NoEntry`, no authorization needed). A
+/// present-entry read against the real `steam-refresh-token` account took 48.9s on one run and
+/// **291s** on another, both ultimately resolving `PlatformFailure(-60008, "Unable to obtain
+/// authorization for this operation")` -- live, hardware-measured evidence for
+/// `deferred-items.md`'s ad-hoc-signature/Keychain-ACL theory, reproduced from this same-machine,
+/// non-interactive `cargo test` process (a different code identity than the built `gamelib-shell`
+/// app, so these exact numbers are illustrative of the MECHANISM, not a promise about the app's
+/// own timing). 8 seconds is comfortably above the fast/normal case, and far enough below both
+/// the 291s worst case measured here AND the sidecar's own 60s `RUST_INVOKE_TIMEOUT_MS` budget
+/// (`sidecarRpc.ts`) that this bound converts what would otherwise be an unattributable multi-
+/// minute hang into a fast, named `keyring:timeout`. A timed-out worker thread is ABANDONED, not
+/// cancelled: `SecItemCopyMatching` has no interrupt API, so this bound protects the RPC round
+/// trip, not the underlying OS call -- the abandoned thread keeps running (and, per this
+/// harness's own measurement, may keep running for minutes) on its own.
+const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(8);
+
 /// The five parsed, validated args `humble_reveal_post` needs. Kept as a plain struct (rather
 /// than returning a tuple) so the dispatch arm's body reads by field name, not position.
 /// Deliberately does NOT derive the standard formatting trait this doc comment is avoiding
@@ -776,6 +800,51 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+/// Classifies a raw `keyring` crate outcome (`Entry::new(...).and_then(|e| e.get_password())`)
+/// into the arm's `Value`/`String` contract (34.4.1 gap cycle 2 plan 26, F-9 observability
+/// half). Extracted as its own pure function so this classification is directly testable
+/// without a live Keychain (mirrors `keyring_account`'s own "pure function, directly testable"
+/// precedent) -- Task 2's acceptance criteria requires the `NoEntry`-still-null path proven,
+/// and this is the seam that proves it. `NoEntry` is the healthy first-run state (Pitfall 1 /
+/// D-06) and resolves `Value::Null`, never an error; every other variant collapses into the
+/// file's existing flat `keyring:unavailable:{e}` string convention.
+fn keyring_get_result(result: Result<String, keyring::Error>) -> Result<Value, String> {
+    match result {
+        Ok(secret) => Ok(Value::String(secret)),
+        Err(keyring::Error::NoEntry) => Ok(Value::Null),
+        Err(e) => Err(format!("keyring:unavailable:{e}")),
+    }
+}
+
+/// Runs `read` on a worker thread and bounds the wait for its result at `bound`, returning
+/// `Err("keyring:timeout")` if `read` has not completed in time (34.4.1 gap cycle 2 plan 26,
+/// T-34.4.1-114/T-34.4.1-115). Follows `humble_reveal_post`'s existing `mpsc_channel` +
+/// `rx.recv_timeout()` shape rather than inventing a second one. Generic over the read
+/// operation specifically so the timeout path is provable in a unit test with an injected
+/// slow/never-returning closure, never by waiting on a real Keychain (this plan's own
+/// acceptance criteria) -- see `bounded_keyring_read_times_out_as_keyring_timeout_on_a_never_
+/// returning_operation` below.
+///
+/// A timed-out worker thread is ABANDONED, not cancelled -- there is no API to interrupt a
+/// blocked platform call, so this function protects the caller's wait, not the underlying
+/// operation. If `read` eventually completes after the bound has already elapsed, its result is
+/// sent into a channel whose receiver has already been dropped; `Sender::send` on a
+/// disconnected channel simply returns an `Err` this function discards, so the abandoned
+/// thread's late result is silently dropped rather than causing a panic.
+fn bounded_keyring_read<F>(bound: Duration, read: F) -> Result<Value, String>
+where
+    F: FnOnce() -> Result<Value, String> + Send + 'static,
+{
+    let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+    thread::spawn(move || {
+        let _ = tx.send(read());
+    });
+    match rx.recv_timeout(bound) {
+        Ok(result) => result,
+        Err(_) => Err("keyring:timeout".to_string()),
+    }
+}
+
 // ---- Rust-side keyring dispatch (Phase 28: sidecar->Rust rustInvoke channel) ----
 
 /// Dispatches a `rustInvoke` frame's `channel`/`args` to the matching keyring operation.
@@ -793,24 +862,47 @@ fn clear_storage_script(exfil_host: &str) -> String {
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
 fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Result<Value, String> {
     match channel {
+        // OBSERVABILITY, not a root-cause fix (34.4.1 gap cycle 2 plan 26, F-9). F-9's cause is
+        // NOT established by this plan -- the missing-entry hypothesis's harness verdict is
+        // recorded in `keyring_read_timing_hypothesis_absent_vs_present_entry`'s doc comment and
+        // in `34.4.1-26-SUMMARY.md`. What this wrapper DOES do: bound the wait on
+        // `entry.get_password()` at `KEYRING_READ_TIMEOUT`, well under the sidecar's own 60s
+        // `RUST_INVOKE_TIMEOUT_MS` (`sidecarRpc.ts`), so a blocked read (e.g. an unanswered
+        // Keychain prompt -- `phase-28-keyring-complete`'s Deny -> `PlatformFailure(-128)` is a
+        // real, reachable state) fails fast as a NAMED `keyring:timeout` instead of silently
+        // consuming the sidecar's whole RPC budget and surfacing as an unattributable generic
+        // RPC timeout. It does NOT make a blocking Keychain call return faster -- the worker
+        // thread is abandoned on timeout, not cancelled (`bounded_keyring_read`'s own doc
+        // comment).
+        //
+        // Sibling arms deliberately NOT wrapped: `keyring_set` and `keyring_delete` below keep
+        // their original unbounded synchronous shape. Reads (`keyring_get`) fire transparently
+        // and repeatedly behind the scenes on every credential/csrf lookup (the read-count
+        // defect this gap cycle's `deferred-items.md` traces as F-9's likely amplifier); writes
+        // and deletes fire only on an explicit user action (sign-in, disconnect) the user is
+        // already actively engaged with, at far lower frequency, so a modal prompt there is a
+        // single expected step in a flow the user just started, not a silent stall behind an
+        // unrelated background call. `keyring_available` (below `keyring_delete`) is likewise
+        // left unwrapped: it exists as a read-adjacent probe and would be a natural Task-scope
+        // candidate for a later plan, but this plan's own harness and fix are scoped to the
+        // exact `keyring_get` signature F-9 was observed on.
         "keyring_get" => {
             let account = keyring_account(keyring_slot_arg(args, 0))?;
-            match Entry::new(KEYRING_SERVICE, account) {
-                Ok(entry) => match entry.get_password() {
-                    Ok(secret) => Ok(Value::String(secret)),
-                    // No entry yet is a healthy, expected first-run state — NOT an
-                    // unavailable backend (Pitfall 1 / D-06). Must not be reported as an error.
-                    Err(keyring::Error::NoEntry) => Ok(Value::Null),
-                    Err(e) => {
-                        eprintln!("[shell] keyring {channel} failed: {e:?}");
-                        Err(format!("keyring:unavailable:{e}"))
-                    }
-                },
-                Err(e) => {
-                    eprintln!("[shell] keyring {channel} failed: {e:?}");
-                    Err(format!("keyring:unavailable:{e}"))
+            let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
+                let outcome =
+                    Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
+                keyring_get_result(outcome)
+            });
+            if let Err(ref e) = result {
+                if e == "keyring:timeout" {
+                    eprintln!(
+                        "[shell] keyring {channel} timed out after {KEYRING_READ_TIMEOUT:?} (worker thread abandoned, not cancelled -- see KEYRING_READ_TIMEOUT's doc comment)"
+                    );
+                } else {
+                    eprintln!("[shell] keyring {channel} failed: {e}");
                 }
             }
+            result
         }
         "keyring_set" => {
             let secret = match args.first().and_then(|v| v.as_str()) {
@@ -3066,6 +3158,72 @@ mod tests {
         );
     }
 
+    // ---- keyring_get_result (34.4.1 gap cycle 2 plan 26, F-9 observability half,
+    // REQ-34.4.1-GAP-01/REQ-34.4.1-GAP-11) ----
+    //
+    // Pure classification, extracted so the arm's Ok/NoEntry/other-Err mapping is directly
+    // testable without a live Keychain -- mirrors keyring_account's own "pure function, directly
+    // testable" precedent above. Task 2's acceptance criteria requires the NoEntry-still-null
+    // and other-error-still-classified paths to be proven, and this is the seam that proves them.
+
+    #[test]
+    fn keyring_get_result_maps_ok_to_a_string_value() {
+        assert_eq!(
+            keyring_get_result(Ok("a-secret".to_string())),
+            Ok(Value::String("a-secret".to_string()))
+        );
+    }
+
+    #[test]
+    fn keyring_get_result_maps_no_entry_to_null_not_an_error() {
+        // Pitfall 1 / D-06: a missing entry is the healthy first-run state, never an error.
+        assert_eq!(
+            keyring_get_result(Err(keyring::Error::NoEntry)),
+            Ok(Value::Null)
+        );
+    }
+
+    #[test]
+    fn keyring_get_result_maps_other_errors_to_a_classified_unavailable_string() {
+        let result = keyring_get_result(Err(keyring::Error::Invalid(
+            "account".to_string(),
+            "test-injected failure".to_string(),
+        )));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().starts_with("keyring:unavailable:"));
+    }
+
+    // ---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----
+    //
+    // Generic over the read operation specifically so the timeout path is provable with an
+    // injected slow/never-returning closure, never by waiting on a real Keychain (this plan's
+    // own acceptance criteria). The spawned worker thread in the never-returning case is
+    // deliberately abandoned when the test function returns -- exactly the "abandoned, not
+    // cancelled" behavior documented on KEYRING_READ_TIMEOUT and on the keyring_get arm itself,
+    // proven here rather than merely asserted in a comment.
+
+    #[test]
+    fn bounded_keyring_read_returns_the_inner_result_when_it_completes_within_the_bound() {
+        let result = bounded_keyring_read(Duration::from_secs(2), || Ok(Value::Null));
+        assert_eq!(result, Ok(Value::Null));
+    }
+
+    #[test]
+    fn bounded_keyring_read_propagates_an_inner_error_when_it_completes_within_the_bound() {
+        let result =
+            bounded_keyring_read(Duration::from_secs(2), || Err("keyring:unavailable:x".to_string()));
+        assert_eq!(result, Err("keyring:unavailable:x".to_string()));
+    }
+
+    #[test]
+    fn bounded_keyring_read_times_out_as_keyring_timeout_on_a_never_returning_operation() {
+        let result = bounded_keyring_read(Duration::from_millis(50), || {
+            thread::sleep(Duration::from_secs(999));
+            Ok(Value::Null)
+        });
+        assert_eq!(result, Err("keyring:timeout".to_string()));
+    }
+
     // ---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----
     //
     // Times two DIRECT `keyring` crate reads -- one against a guaranteed-absent account, one
@@ -3101,7 +3259,7 @@ mod tests {
     // process's request to access an existing protected item triggers a real, and sometimes
     // extremely long, authorization negotiation) rather than for "a missing entry is the slow
     // path". See `34.4.1-26-SUMMARY.md` for the full writeup and its consequence for
-    // `KEYRING_READ_TIMEOUT`'s chosen bound (Task 2).
+    // `KEYRING_READ_TIMEOUT`'s chosen bound.
     #[test]
     #[ignore]
     fn keyring_read_timing_hypothesis_absent_vs_present_entry() {

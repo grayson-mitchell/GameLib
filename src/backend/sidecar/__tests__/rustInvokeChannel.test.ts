@@ -29,7 +29,11 @@ jest.mock('../../online_monitor', () => ({
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { requestRustInvoke } from '../sidecarRpc'
-import { RUST_KEYRING_GET, type RustInvokeChannel } from 'common/types/sidecarTransport'
+import {
+  RUST_KEYRING_GET,
+  RUST_CLIPBOARD_READ_TEXT,
+  type RustInvokeChannel
+} from 'common/types/sidecarTransport'
 
 /** Buffers newline-delimited output from a PassThrough into discrete lines. */
 function collectLines(stream: PassThrough): string[] {
@@ -216,5 +220,31 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
     jest.advanceTimersByTime(60_000)
 
     await assertion
+  })
+
+  // Behavior 9 (34.4.1 gap cycle 2 plan 26, F-9 observability half): the generic RPC timeout
+  // message NAMES the channel that timed out, so a keyring_get stall is distinguishable from a
+  // cookie/dialog arm's stall from the log line alone -- proven for two distinct channels (not
+  // just keyring_get) so a future regression that hardcodes one channel's name into the message
+  // text, or drops the interpolation entirely, is caught either way.
+  it('names the timed-out channel in the rejection message, distinguishing keyring_get from another channel', async () => {
+    jest.useFakeTimers()
+    const input = new PassThrough()
+    const output = new PassThrough()
+    init(input, output)
+
+    const keyringPromise = requestRustInvoke(RUST_KEYRING_GET, [])
+    const keyringAssertion = expect(keyringPromise).rejects.toThrow(
+      'rustInvoke timed out after 60000ms: keyring_get'
+    )
+    const clipboardPromise = requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])
+    const clipboardAssertion = expect(clipboardPromise).rejects.toThrow(
+      'rustInvoke timed out after 60000ms: clipboard_read_text'
+    )
+
+    jest.advanceTimersByTime(60_000)
+
+    await keyringAssertion
+    await clipboardAssertion
   })
 })

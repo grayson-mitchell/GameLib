@@ -12,6 +12,16 @@
  * mocked with an in-memory backing object (never `requireActual` — `tests-clobbering-real-steam-store`
  * documents that an unmocked electron-store reaches the REAL app-support dir and `afterAll` is
  * not a safety net).
+ *
+ * 34.4.1 gap cycle 2 plan 26 (F-9's read-count half, user-approved scope widening) added a
+ * process-lifetime read cache to `SidecarKeyringSlotStore`. `SidecarHumbleSecretStore` delegates
+ * to `SLOT_STORES`, a MODULE-LEVEL singleton created once when `../humbleSecretStore` is first
+ * imported — every `new SidecarHumbleSecretStore()` in every test below shares the SAME two
+ * underlying slot-store instances (and this project's Jest config has no `resetModules`, so that
+ * singleton persists for this whole test FILE's run, not just one `it()`). Without an explicit
+ * reset, an earlier test's successfully-cached read would silently shadow a later test's own
+ * scripted `requestRustInvoke` outcome. `resetSidecarHumbleSecretStoreCachesForTests()` (imported
+ * above) is the isolation seam for exactly this — called from `beforeEach` below.
  */
 
 import { readFileSync } from 'fs'
@@ -66,7 +76,8 @@ import {
   SidecarHumbleSecretStore,
   installSidecarHumbleSecretStore,
   migrateOneSecret,
-  migrateHumbleSecrets
+  migrateHumbleSecrets,
+  resetSidecarHumbleSecretStoreCachesForTests
 } from '../humbleSecretStore'
 import { getHumbleSecretStore } from '../../humble/secretStore'
 
@@ -88,6 +99,10 @@ describe('SidecarHumbleSecretStore', () => {
     program = {}
     callLog = []
     backingStore = {}
+    // Must run before any test body issues a read -- see this file's header doc comment on the
+    // module-level SLOT_STORES singleton and why a fresh `new SidecarHumbleSecretStore()` per
+    // test does NOT give a fresh cache.
+    resetSidecarHumbleSecretStoreCachesForTests()
     mockConfigStore.get_nodefault.mockImplementation((key: string) => backingStore[key])
     mockConfigStore.set.mockImplementation((key: string, value: unknown) => {
       backingStore[key] = value
@@ -424,6 +439,82 @@ describe('SidecarHumbleSecretStore', () => {
       expect(before).toBe('') // honest pre-migration state: nothing in the keyring yet
       expect(after).toBe('round-trip-value')
       expect(backingStore['sessionCookie']).toBeUndefined()
+    })
+  })
+
+  // ── Read caching, inherited from SidecarKeyringSlotStore (34.4.1 gap cycle 2 plan 26) ───────
+
+  describe('read caching (inherited from SidecarKeyringSlotStore via the shared SLOT_STORES singleton)', () => {
+    it('getSecret() caches a successful read -- a second call for the same key issues NO further keyring_get', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
+      const store = new SidecarHumbleSecretStore()
+
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('cookie-value')
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('cookie-value')
+
+      expect(callLog).toStrictEqual([
+        { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+      ])
+    })
+
+    it('sessionCookie and csrfToken cache INDEPENDENTLY -- reading one never suppresses a real read of the other', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'shared-scripted-value' })
+      const store = new SidecarHumbleSecretStore()
+
+      await store.getSecret('sessionCookie')
+      await store.getSecret('csrfToken')
+
+      const getCalls = callLog.filter((c) => c.channel === 'keyring_get')
+      expect(getCalls).toHaveLength(2)
+      expect(getCalls).toEqual(
+        expect.arrayContaining([
+          { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] },
+          { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_CSRF] }
+        ])
+      )
+    })
+
+    it('clearSecrets() invalidates BOTH slots\' caches -- a disconnect can never resurrect a stale cached session or csrf value', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'pre-disconnect-value' })
+      const store = new SidecarHumbleSecretStore()
+
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('pre-disconnect-value')
+      await expect(store.getSecret('csrfToken')).resolves.toBe('pre-disconnect-value')
+
+      programChannel('keyring_delete', { type: 'resolve', value: true })
+      await store.clearSecrets()
+
+      // Both deletes succeeded -- the confirmed-empty value is now cached, and getSecret() must
+      // resolve '' WITHOUT resurrecting the pre-disconnect cached value and WITHOUT a further
+      // keyring_get round trip.
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('')
+      await expect(store.getSecret('csrfToken')).resolves.toBe('')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+    })
+
+    it('setSecret() invalidates that slot\'s cache -- a subsequent getSecret() for the same key returns the newly-set value, never a stale one', async () => {
+      programChannel('keyring_get', { type: 'resolve', value: 'old-cookie' })
+      const store = new SidecarHumbleSecretStore()
+
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('old-cookie')
+
+      programChannel('keyring_set', { type: 'resolve', value: true })
+      await store.setSecret('sessionCookie', 'new-cookie')
+
+      await expect(store.getSecret('sessionCookie')).resolves.toBe('new-cookie')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+    })
+
+    it('isAvailable() caches its result -- a second call issues NO further keyring_available', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: true })
+      const store = new SidecarHumbleSecretStore()
+
+      await expect(store.isAvailable()).resolves.toBe(true)
+      await expect(store.isAvailable()).resolves.toBe(true)
+
+      expect(callLog).toStrictEqual([
+        { channel: 'keyring_available', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+      ])
     })
   })
 

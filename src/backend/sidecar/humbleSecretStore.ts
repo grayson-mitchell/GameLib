@@ -24,6 +24,19 @@
  * rather than retyping the literals `'humble-session'`/`'humble-csrf'` — a drift between the TS
  * literal and Rust's `keyring_account()` allowlist (`src-tauri/src/main.rs`) would otherwise
  * surface only at runtime as `keyring:unknown-slot`, nowhere earlier.
+ *
+ * **Read caching is inherited, not reimplemented (34.4.1 gap cycle 2 plan 26, F-9's read-count
+ * half — user-approved scope widening, see `34.4.1-26-SUMMARY.md`).** `SLOT_STORES` below holds
+ * exactly ONE `SidecarKeyringSlotStore` per secret, created once at module load and reused for
+ * the sidecar's entire lifetime — every `getSecret`/`setSecret`/`isAvailable`/`clearSecrets` call
+ * across the whole process, regardless of how many `SidecarHumbleSecretStore` wrapper instances
+ * exist, hits the SAME two slot-store instances. `SidecarKeyringSlotStore`'s own cache + in-flight
+ * dedupe (see its doc comment) therefore applies here for free: `storeHumbleSecret()`'s
+ * `isAvailable()` probe after every write, and every `HumbleUser.getCredentials()`/
+ * `getCsrfToken()` call, no longer each cost a fresh Keychain round trip. `clearSecrets()`
+ * delegates to both slots' own `clearToken()`, which invalidates BEFORE issuing the delete (see
+ * `keyringTokenStore.ts`) — a Humble disconnect through this store cannot resurrect a stale
+ * cached session, the same correctness floor `SidecarKeyringSlotStore` documents for itself.
  */
 
 import { logInfo, logWarning, LogPrefix } from '../logger'
@@ -71,7 +84,9 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
   async clearSecrets(): Promise<void> {
     // Both underlying clearToken() calls are already total (never reject) -- Promise.allSettled
     // documents the "clear BOTH independently of each other's outcome" intent explicitly for a
-    // future reader, matching the seam's "resolves even if one delete rejects" contract.
+    // future reader, matching the seam's "resolves even if one delete rejects" contract. Each
+    // clearToken() call invalidates its OWN cache before issuing its delete (see
+    // keyringTokenStore.ts) -- no additional invalidation is needed here.
     await Promise.allSettled([
       SLOT_STORES.sessionCookie.clearToken(),
       SLOT_STORES.csrfToken.clearToken()
@@ -157,6 +172,18 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
     return
   }
 
+  // The write went straight to `requestRustInvoke` (bypassing SLOT_STORES[key]'s own
+  // setToken(), which is what normally invalidates its cache) BECAUSE this migration must prove
+  // the readback came from a REAL keyring round trip, not a cache (the "liveness proof" this
+  // function's own doc comment describes) -- but that same bypass means the store's cache is
+  // now stale relative to what the keyring actually holds, and must be invalidated here
+  // explicitly (34.4.1 gap cycle 2 plan 26 regression found by
+  // `migrateHumbleSecrets (both secrets, independently)`'s existing round-trip test: without
+  // this line, a `getSecret()` called BEFORE migration -- which legitimately caches the
+  // pre-migration '' -- would keep resolving that stale cached '' forever after, even though the
+  // migration just wrote a real value).
+  SLOT_STORES[key].invalidateCache()
+
   let readback: unknown
   try {
     readback = await requestRustInvoke(RUST_KEYRING_GET, [slot])
@@ -187,4 +214,19 @@ export async function migrateOneSecret(key: HumbleSecretKey): Promise<void> {
 export async function migrateHumbleSecrets(): Promise<void> {
   await migrateOneSecret('sessionCookie')
   await migrateOneSecret('csrfToken')
+}
+
+/**
+ * Test-only reset hook (34.4.1 gap cycle 2 plan 26). `SLOT_STORES` is a module-level singleton
+ * (see this module's own doc comment) that outlives any individual `SidecarHumbleSecretStore`
+ * instance and persists for the lifetime of the whole test FILE (this project's Jest config has
+ * no `resetModules`) -- creating a fresh `new SidecarHumbleSecretStore()` per test does NOT give
+ * a fresh cache. This export is `humbleSecretStore.test.ts`'s isolation seam: called from that
+ * file's `beforeEach`, it clears both slots' read cache so each test's own scripted
+ * `requestRustInvoke` outcome is actually exercised, never shadowed by an earlier test's cached
+ * success. Never called from production code.
+ */
+export function resetSidecarHumbleSecretStoreCachesForTests(): void {
+  SLOT_STORES.sessionCookie.invalidateCache()
+  SLOT_STORES.csrfToken.invalidateCache()
 }

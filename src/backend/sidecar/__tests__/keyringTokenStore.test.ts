@@ -348,4 +348,226 @@ describe('SidecarKeyringTokenStore', () => {
   it('SidecarKeyringTokenStore keeps its no-argument construction', () => {
     expect(() => new SidecarKeyringTokenStore()).not.toThrow()
   })
+
+  // ---- Read caching + in-flight dedupe (34.4.1 gap cycle 2 plan 26, F-9's read-count half --
+  // user-approved scope widening, see 34.4.1-26-SUMMARY.md) ----
+
+  it('caches a successful getToken() result: a second call issues NO further keyring_get', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'cached-token' })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.getToken()).resolves.toBe('cached-token')
+    await expect(store.getToken()).resolves.toBe('cached-token')
+
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+    ])
+  })
+
+  it('caches a healthy null (no-entry) getToken() result too -- a second call issues NO further keyring_get', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: null })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.getToken()).resolves.toBe('')
+    await expect(store.getToken()).resolves.toBe('')
+
+    expect(callLog).toHaveLength(1)
+  })
+
+  it('does NOT cache a failed getToken() -- a second call retries the keyring', async () => {
+    programChannel('keyring_get', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.getToken()).resolves.toBe('')
+    await expect(store.getToken()).resolves.toBe('')
+
+    expect(callLog).toHaveLength(2)
+    expect(mockLogWarning).toHaveBeenCalledTimes(2)
+  })
+
+  it('a failed read does not poison a later successful read once the keyring recovers', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    await expect(store.getToken()).resolves.toBe('')
+
+    programChannel('keyring_get', { type: 'resolve', value: 'recovered-token' })
+    await expect(store.getToken()).resolves.toBe('recovered-token')
+
+    // The now-successful read IS cached -- a third call issues no further request.
+    await expect(store.getToken()).resolves.toBe('recovered-token')
+    expect(callLog).toHaveLength(2)
+  })
+
+  it('concurrent getToken() calls before the first settles share ONE in-flight request', async () => {
+    let resolveInvoke: (value: unknown) => void = () => {}
+    mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
+      callLog.push({ channel, args })
+      return new Promise((resolve) => {
+        resolveInvoke = resolve
+      })
+    })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    const first = store.getToken()
+    const second = store.getToken()
+    const third = store.getToken()
+
+    expect(callLog).toHaveLength(1) // only ONE real request issued for three concurrent callers
+
+    resolveInvoke('dedup-token')
+
+    await expect(first).resolves.toBe('dedup-token')
+    await expect(second).resolves.toBe('dedup-token')
+    await expect(third).resolves.toBe('dedup-token')
+    expect(callLog).toHaveLength(1)
+  })
+
+  it('caches a successful isAvailable() result: a second call issues NO further keyring_available', async () => {
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.isAvailable()).resolves.toBe(true)
+    await expect(store.isAvailable()).resolves.toBe(true)
+
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_available', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+    ])
+  })
+
+  it('caches a successful "unavailable" (false) isAvailable() result too -- not just the "true" case', async () => {
+    programChannel('keyring_available', { type: 'resolve', value: false })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await expect(store.isAvailable()).resolves.toBe(false)
+    await expect(store.isAvailable()).resolves.toBe(false)
+
+    expect(callLog).toHaveLength(1)
+  })
+
+  it('does NOT cache a rejected isAvailable() -- a second call retries the keyring', async () => {
+    programChannel('keyring_available', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    await store.isAvailable()
+    await store.isAvailable()
+
+    expect(callLog).toHaveLength(2)
+  })
+
+  // ---- Cache invalidation on write/delete -- the correctness floor ----
+  //
+  // A cache must NOT survive setToken()/clearToken(). clearToken() in particular is the
+  // disconnect/sign-out path: a stale cached value surviving it would resurrect a logged-out
+  // session, which this suite treats as the single most important property of the cache.
+
+  it('setToken() invalidates a stale cached getToken() result -- the next read is fresh, not the old cached value', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', { type: 'resolve', value: 'old-token' })
+    await expect(store.getToken()).resolves.toBe('old-token')
+
+    programChannel('keyring_set', { type: 'resolve', value: true })
+    await store.setToken('new-token')
+
+    // setToken() populates the cache with the just-written value on success -- no extra
+    // keyring_get round trip is needed, but the value returned MUST be the new one, never the
+    // stale 'old-token'.
+    await expect(store.getToken()).resolves.toBe('new-token')
+    expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+  })
+
+  it('a FAILED setToken() still invalidates the stale cache -- the next read goes back to the keyring, never a stale value', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', { type: 'resolve', value: 'old-token' })
+    await expect(store.getToken()).resolves.toBe('old-token')
+
+    programChannel('keyring_set', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    await store.setToken('attempted-new-token')
+
+    // Cache was invalidated before the (failed) write -- the next getToken() must NOT return
+    // the stale 'old-token' from before the write attempt. It issues a fresh read.
+    programChannel('keyring_get', { type: 'resolve', value: 'reread-token' })
+    await expect(store.getToken()).resolves.toBe('reread-token')
+    expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+  })
+
+  it('clearToken() invalidates the cache -- a subsequent read never resurrects the pre-disconnect value (the F-6-adjacent correctness floor)', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', { type: 'resolve', value: 'session-cookie-value' })
+    await expect(store.getToken()).resolves.toBe('session-cookie-value')
+
+    programChannel('keyring_delete', { type: 'resolve', value: true })
+    await store.clearToken()
+
+    // clearToken() succeeded -- the cache is now confirmed-empty, and getToken() must resolve
+    // '' WITHOUT resurrecting the pre-disconnect cached value, and without a further keyring_get
+    // round trip (the delete's own success already tells us the slot is empty).
+    await expect(store.getToken()).resolves.toBe('')
+    expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+  })
+
+  it('a FAILED clearToken() still invalidates the cache rather than leaving the pre-disconnect value cached', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', { type: 'resolve', value: 'session-cookie-value' })
+    await expect(store.getToken()).resolves.toBe('session-cookie-value')
+
+    programChannel('keyring_delete', {
+      type: 'reject',
+      error: new Error('keyring:unavailable:PlatformFailure')
+    })
+    await store.clearToken()
+
+    // The delete failed -- we do NOT know the true state, so the cache must be left
+    // invalidated (never optimistically treated as cleared, and never left holding the stale
+    // pre-disconnect value either). The next getToken() issues a fresh read.
+    programChannel('keyring_get', { type: 'resolve', value: 'still-there-after-failed-delete' })
+    await expect(store.getToken()).resolves.toBe('still-there-after-failed-delete')
+    expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+  })
+
+  it('setToken()/clearToken() also invalidate a cached isAvailable() result, not just getToken()', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    await expect(store.isAvailable()).resolves.toBe(true)
+
+    programChannel('keyring_available', { type: 'resolve', value: false })
+    programChannel('keyring_set', { type: 'resolve', value: true })
+    await store.setToken('x')
+
+    await expect(store.isAvailable()).resolves.toBe(false)
+    expect(callLog.filter((c) => c.channel === 'keyring_available')).toHaveLength(2)
+  })
+
+  it('invalidateCache() is exposed and clears both cached values on demand', async () => {
+    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+    programChannel('keyring_get', { type: 'resolve', value: 'first-read' })
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    await store.getToken()
+    await store.isAvailable()
+    expect(callLog).toHaveLength(2)
+
+    store.invalidateCache()
+
+    await store.getToken()
+    await store.isAvailable()
+    expect(callLog).toHaveLength(4)
+  })
 })
