@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-15-PLAN.md — blocking 5-item live gate RAN, VERDICT FAIL 0/5. Phase 34.5 does NOT close; gap cycle required.
-last_updated: "2026-08-01T00:19:27.000Z"
+stopped_at: Phase 34.5 gap cycle PLANNED — 6 new plans (34.5-16..21, 5 waves) closing G-1..G-6. Ready to execute; the phase still does NOT close until the re-run gate records 5/5.
+last_updated: "2026-08-01T00:00:00.000Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 156
+  total_plans: 162
   completed_plans: 156
-  percent: 100
+  percent: 96
 ---
 
 # Project State
@@ -68,9 +68,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   `34.5-LIVE-GATE.md` precondition 3) — a gate re-run after the fix will need signed-out state
 >   again, so restoring them now is optional.
 >
-> **Next action:** `/gsd-plan-phase 34.5 --gaps` — fix the `publicDir` resolution defect (sweep
-> for other `publicDir`-relative consumers first, per the bootstrap.ts:156 lesson), then re-run
-> items 1, 2, 3, 4 (never attempted) and 5 in full.
+> **GAP CYCLE PLANNED 2026-08-01** — `/gsd-plan-phase 34.5 --gaps` ran and produced **6 new plans
+> (`34.5-16`..`34.5-21`) in 5 waves**, commit `c2b283ec5`. Plans 01–15 and their SUMMARYs are
+> untouched; this cycle is additive. Plan-checker: **VERIFICATION PASSED, no blockers.**
+>
+> | Wave | Plan | Closes | Autonomous |
+> |---|---|---|---|
+> | 1 | `34.5-16` | **G-1** — sweep every `publicDir`/`getAppPath()` consumer, then install ONE authoritative app root: Rust hands `GAMELIB_APP_ROOT` down **both** spawn paths, `electronStub.getAppPath()` consumes it | yes |
+> | 2 | `34.5-17` | **G-1** — existence-check `archSpecificBinary`'s x64 fallback + real-filesystem coverage with cwd forced to `src-tauri/`, proven red on a deliberate revert | yes |
+> | 2 | `34.5-18` | **G-3** — sidecar logs the `GAMELIB_SHELL_EXE` it actually *received* (`[bootstrap] GAMELIB_SHELL_EXE received=`) + an asset-root boot self-check | yes |
+> | 3 | `34.5-19` | **G-2/G-4/G-6** — author `34.5-LIVE-GATE-RERUN.md` (`verdict: null`, 7 preconditions, 5 items); `34.5-LIVE-GATE.md` is NOT overwritten | yes |
+> | 4 | `34.5-20` | **G-6/G-2/G-4/G-5** — the blocking 5-item gate RE-RUN on real hardware, incl. the never-attempted item 4 (both `exe` call sites) | **no** |
+> | 5 | `34.5-21` | **G-6** — propagate the verdict: `34.5-PORTED-CHANNELS.md` + gate script, inventory, ROADMAP, STATE | yes |
+>
+> **Design calls worth remembering:** one app-root seam rather than N per-call-site patches (all
+> `publicDir` consumers derive from the single expression at `paths.ts:73`, so patching the stub
+> repairs every row and cannot drift); the **packaged** asset root is deliberately NOT claimed —
+> `electronStub.isPackaged` stays `false` and packaged Tauri's `<resource>/public` is recorded as
+> named residual **`R-34.5-G1-PKG`**, made loud by plan 18's boot self-check rather than silently
+> assumed away. Why the green 3447-test suite missed this: jest runs at repo-root cwd, where
+> `publicDir` resolves correctly **by accident**.
+>
+> **Next action:** `/gsd-execute-phase 34.5` — wave 4 stops at a blocking checkpoint for the
+> human-driven gate. Quit Steam before item 4 (it rewrites `shortcuts.vdf` from memory on exit),
+> and `ps aux | grep -E "gamelib-shell|sidecar.js"` to kill orphaned pairs first.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
