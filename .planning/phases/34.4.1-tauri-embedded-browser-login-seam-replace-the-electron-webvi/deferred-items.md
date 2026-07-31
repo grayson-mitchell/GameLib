@@ -104,3 +104,54 @@ issues directly caused by the current task's changes).
   files (`src-tauri/src/main.rs`, `src/backend/humble/user.ts`, `src/backend/humble/adapter.ts`,
   and their tests). Not fixed here per the scope-boundary rule.
 - **Disposition:** logged, not fixed.
+
+## Live observation — Keychain prompt storm at boot, and F-9's probable root cause (2026-07-31)
+
+- **Found during:** Plan 21 Task 3's human checkpoint. The operator booted the app to drive the
+  spike-016 probe and was prompted for the Keychain password **20+ times on a single boot**. The
+  probe itself was NOT run — this observation is not spike 016's answer, and Task 3 remains open.
+- **Second observation, same boot:** the Humble session survived the relaunch — **no re-login was
+  required**. This is plan 13's F-1 fix (session cookie held in the `humble-session` keyring slot)
+  behaving correctly across a real process restart. Not gate evidence on its own, but it is the
+  first live signal that F-1's closure holds outside the test suite.
+
+### Why this matters beyond the annoyance: it is very likely **F-9's root cause**
+
+F-9 is recorded as *"the intermittent 60-second `keyring_get` timeout that hit the `humble-csrf`
+slot"* and is currently owned by **plan 26**, whose objective is framed as making an intermittent
+timeout reproducible. That framing now looks wrong.
+
+A modal Keychain prompt blocks `keyring::Entry::get_password()` until the operator answers it.
+Queued behind ~20 other prompts, a single call trivially exceeds `RUST_INVOKE_TIMEOUT_MS`
+(`src/backend/sidecar/sidecarRpc.ts:58` — 60_000) and rejects as a timeout. That is F-9's exact
+signature, and it explains the "intermittent" qualifier precisely: whether it fires depends on how
+quickly the operator dismissed the dialog. F-9 is then not a flake to be stabilised but a
+**consequence of an unbounded keyring read count**.
+
+### Two separable causes, different confidence levels
+
+| Question | Cause | Confidence |
+|---|---|---|
+| Why **20+** reads per boot | **No caching anywhere in the keyring read path.** `SidecarKeyringSlotStore.getToken()` / `.isAvailable()` (`src/backend/sidecar/keyringTokenStore.ts:64-90`) issue an unconditional `requestRustInvoke` per call — no memo, no in-flight dedupe, no process-lifetime cache. Every `HumbleUser.getCredentials()` / `getCsrfToken()` call site (`humble/user.ts:141,152`; callers in `humble/library.ts:791,1161`, `humble/validation.ts:24`, `humble/adapter.ts:711`) is a fresh Keychain hit, and `storeHumbleSecret()` adds an `isAvailable()` probe after *every* write (`humble/user.ts:109`). | **Source-verified** (verified by absence of any cache/memo/inflight symbol in both `keyringTokenStore.ts` and `humbleSecretStore.ts`) |
+| Why **each** read prompts at all | Hypothesis: `pnpm tauri:dev` re-links and ad-hoc re-signs the binary on each rebuild; macOS binds Keychain ACLs to the code signature, so a prior "Always Allow" grant does not carry across rebuilds. | **UNPROVEN hypothesis** — not tested. Stated here so a later reader does not mistake it for a finding. |
+
+The second row governs **severity**: if the per-read prompt is dev-signature churn, a stably-signed
+release build would grant once and the read count would be invisible to users. The missing cache
+would remain a real defect (latency, and a genuine timeout exposure on any slow/locked Keychain),
+but not a catastrophic one. **This must be tested before plan 26 is re-scoped** — the fix for
+"unsigned dev builds re-prompt" and the fix for "we read the Keychain 20 times" are different work.
+
+### Scope and disposition
+
+- **Scope:** entirely outside plan 21's declared `files_modified` (`REQUIREMENTS.md`, `ROADMAP.md`,
+  `STATE.md`, `src-tauri/Cargo.toml`, `src-tauri/src/main.rs`, `34.4.1-SPIKE-016-FINDINGS.md`).
+  Not fixed here.
+- **Disposition:** logged, **not fixed**, and explicitly **forwarded to plan 26** as a scope
+  change to be decided by the operator before that plan executes. Plan 26 currently owns F-9 and
+  names `src-tauri/src/main.rs`, `src/backend/sidecar/sidecarRpc.ts` and its test — a read-count
+  fix would additionally touch `keyringTokenStore.ts` / `humbleSecretStore.ts`, which plan 26 does
+  **not** currently declare. Re-scoping plan 26 (or minting a new plan) is required; do not let an
+  executor silently widen it.
+- **Open question for whoever picks this up:** does the prompt storm reproduce on a properly
+  signed build? That single test decides whether this is a release-blocking defect or a
+  dev-ergonomics problem with a latent timeout tail.
