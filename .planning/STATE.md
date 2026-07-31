@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-26-PLAN.md
-last_updated: "2026-07-31T07:00:38.307Z"
+stopped_at: Completed 34.4.1-27-PLAN.md
+last_updated: "2026-07-31T07:25:52.280Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 156
-  completed_plans: 151
+  completed_plans: 152
   percent: 97
 ---
 
@@ -32,6 +32,28 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **✅ PLAN 27 COMPLETE — 34.4.1-27 (gap cycle 2, plan 7 of 9, wave 5) — 2026-07-31.**
+> Closes the two **code-side** housekeeping findings the gate rerun left unassigned:
+> `queryLocalFonts` throwing unguarded under WKWebView, and ~150 `unsupported URL` Steam artwork
+> requests per library render. `getFonts()` now calls a new dependency-free
+> `queryLocalFontsSafe()` (extracted from `Accessibility/index.tsx` — that file pulls in MUI +
+> several `.css`-importing components the jsdom-less frontend jest project cannot `require()`;
+> the guard remains the file's only caller and index.tsx still literally contains
+> `queryLocalFonts`), degrading to the two CSS-declared default fonts on both absent-and-throwing
+> failure shapes, logging once via `window.api.logError`, never letting a rejection escape.
+> `CachedImage` now gates `imagecache://` wrapping on a new `imageCacheSchemeAvailable()`
+> predicate in `preload/tauriTransport.ts` (today the negation of `isTauri()`, one line to change
+> if a Tauri-side handler ever lands) at both the primary `useCache` init and the
+> fallback-advance path — no `imagecache://` URL is emitted when the scheme isn't served. A
+> source-reading test pins `CachedImage` free of any direct `isTauri(` reference (house pattern
+> from `GlobalStateSteamLogout.test.ts`); proved load-bearing live via a temporary
+> reintroduction + observed failure + revert. `REQ-34.4.1-GAP-13` minted, `[ ]` — honestly split:
+> `queryLocalFonts` half closed by unit evidence here, artwork half's zero-`unsupported-URL`
+> observation still owed to plan 29's live gate. `npm run test:ci`: 177 suites/3436 tests (was
+> 176/3427). `npx tsc --noEmit`: clean. `ported-channels-gate.py` + `--self-test`: both OK,
+> `IPC-PORT-INVENTORY.md`/`PORTED-CHANNELS.md` diff empty. See `34.4.1-27-SUMMARY.md`.
+> Next action: plan 28 (WKWebView sweep — can allowlist both of this plan's guarded sites).
 
 > **✅ PLAN 26 COMPLETE — 34.4.1-26 (gap cycle 2, plan 6 of 9, wave 5) — 2026-07-31. Plan 25
 > SKIPPED (unexecuted, no summary) — orchestrator dispatched 26 directly; not this plan's to
@@ -190,7 +212,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 27 of 29 (plans 01-24, 26 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); **plan 25 SKIPPED by the orchestrator — no summary, unexecuted**; plan 26 COMPLETE, F-9 timeout classification + read-cache; plan 27 is next; plans 28-29 unexecuted)
+Plan: 28 of 29 (plans 01-24, 26 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); **plan 25 SKIPPED by the orchestrator — no summary, unexecuted**; plan 26 COMPLETE, F-9 timeout classification + read-cache; plan 27 is next; plans 28-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2009,7 +2031,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2885,6 +2907,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P23 | 50min | 3 tasks | 6 files |
 | Phase 34.4.1 P24 | 40min | 3 tasks | 2 files |
 | Phase 34.4.1 P26 | 55min | 2 tasks | 8 files |
+| Phase 34.4.1 P27 | ~50min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -3249,6 +3272,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-24]: Corrected WR-07's comment to avoid the literal on_document_title_changed identifier in prose (kept to the one code call site) and used focus_once/persistent_pin instead of always_on_top in the presentation-config log, satisfying both tasks' exact-count grep gates without weakening the message.
 - [Phase 34.4.1-26]: KEYRING_READ_TIMEOUT=8s bound on keyring_get, chosen from a hardware-measured 40ms-291s spread (present-entry Keychain reads can stall due to ad-hoc-signature ACL authorization failures, PlatformFailure(-60008))
 - [Phase 34.4.1-26]: Added a process-lifetime read cache + in-flight dedupe to keyringTokenStore.ts/humbleSecretStore.ts (user-approved scope widening beyond this plan's declared files), invalidated before every setToken/clearToken write/delete
+- [Phase 34.4.1-27]: Extracted queryLocalFontsSafe.ts (new file) so the queryLocalFonts guard is unit-testable without importing Accessibility/index.tsx's MUI/.css-importing dependency tree under the jsdom-less frontend jest project; index.tsx remains the guard's sole caller
+- [Phase 34.4.1-27]: imageCacheSchemeAvailable() in preload/tauriTransport.ts is the single named predicate gating imagecache:// wrapping in CachedImage, written today as the negation of isTauri() with a documented forward obligation
 
 ### Pending Todos
 
@@ -3321,8 +3346,34 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T07:00:38.297Z
-Stopped at: Completed 34.4.1-26-PLAN.md
+Last session: 2026-07-31T07:25:52.270Z
+Stopped at: Completed 34.4.1-27-PLAN.md
+  This session: 34.4.1-27-PLAN.md executed (gap cycle 2, plan 7 of 9, wave 5) — closed the two
+  code-side housekeeping findings the gate rerun left unassigned. Task 1: extracted a
+  dependency-free `queryLocalFontsSafe()` (new file — `Accessibility/index.tsx` pulls in MUI +
+  several `.css`-importing components the jsdom-less frontend jest project cannot `require()`;
+  `index.tsx` remains the guard's sole caller) that degrades to the two CSS-declared default
+  fonts on both the absent and throwing failure shapes, logging once via `window.api.logError`,
+  never letting a rejection escape (commit `53e6c8b01`). Task 2: added
+  `imageCacheSchemeAvailable()` to `preload/tauriTransport.ts` beside `isTauri()` (today its
+  negation, documented forward obligation), consumed by `CachedImage` at both the primary
+  `useCache` init and the fallback-advance path so no `imagecache://` URL is ever emitted on a
+  shell that doesn't serve the scheme — eliminating the ~150 guaranteed-failing `unsupported URL`
+  requests per library render under Tauri. A source-reading test pins `CachedImage` free of any
+  direct `isTauri(` reference (mirrors `GlobalStateSteamLogout.test.ts`'s house pattern); proved
+  load-bearing live via a temporary reintroduction + observed failure + revert (commit
+  `d40cb20a1`). Task 3: minted `REQ-34.4.1-GAP-13`, `[ ]` — honestly split between the
+  unit-closed `queryLocalFonts` half and the artwork half's zero-`unsupported-URL` live
+  observation still owed to plan 29's gate; extended ROADMAP.md's Phase 34.4.1 Requirements line
+  in the same plan (commit `7e8fa3b5f`). Verified: `npm run test:ci` 177/177 suites, 3436/3436
+  tests (was 176/3427); `npx tsc --noEmit` clean; `ported-channels-gate.py` + `--self-test` both
+  OK, `IPC-PORT-INVENTORY.md`/`PORTED-CHANNELS.md` diff empty. See `34.4.1-27-SUMMARY.md`.
+Next: **34.4.1-28-PLAN.md** — the WKWebView sweep; can allowlist both of this plan's guarded
+  sites (`queryLocalFontsSafe()`, `imageCacheSchemeAvailable()`-gated `CachedImage`) as
+  already-closed findings.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.4.1-26-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
   `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan
