@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-29-PLAN.md — PHASE 34.4.1 COMPLETE (third live gate, 4/4 PASS)
-last_updated: "2026-07-31T23:20:00.000Z"
-last_activity: 2026-07-31
+stopped_at: Completed 34.5-15-PLAN.md — blocking 5-item live gate RAN, VERDICT FAIL 0/5. Phase 34.5 does NOT close; gap cycle required.
+last_updated: "2026-08-01T00:19:27.000Z"
+last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 156
-  completed_plans: 154
-  percent: 99
+  completed_plans: 156
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 34.4.1 — tauri-embedded-browser-login-seam-replace-the-electron-webvi
+**Current focus:** Phase 34.5 — tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -32,6 +32,45 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN 2026-08-01 and FAILED (0 of 5 clean).**
+> `34.5-15` is complete (all 3 tasks done, `34.5-15-SUMMARY.md` written) but **Phase 34.5 DOES NOT
+> CLOSE** — the gate's own no-partial-pass rule (D-08) makes the findings a gap cycle inside 34.5.
+>
+> - **FAIL — item 1 (Epic login):** `spawn ./legendary ENOENT`. OAuth capture itself worked (login
+>   window opened, redirect registered); the runner binary could not spawn, so login never
+>   completed — observed by the developer as a hang, not a visible error.
+> - **FAIL — item 2 (GOG login):** `spawn ./gogdl ENOENT` at startup, before any interaction.
+> - **FAIL — item 3 (Amazon login):** `spawn ./nile ENOENT` at startup. Assumption A1 (the
+>   `www.amazon.com` anchor) stays **UNTESTED**, not confirmed or falsified — the code path was
+>   never reached.
+> - **NOT ATTEMPTED — item 4 (shortcuts):** developer's choice, independent of items 1-3's defect.
+>   Not PASS, FAIL, or BLOCKED.
+> - **FAIL by blockage — item 5 (Wine):** requires a working non-Steam login from items 1-3; none
+>   succeeded. Research Pitfall 2's standing claim ("no non-Steam runner has ever executed a Wine
+>   command under the sidecar") is **NOT retired**.
+> - **Root cause, single and fully diagnosed** (blocks items 1/2/3 directly, 5 transitively):
+>   `app.getAppPath()` resolves to `process.cwd()` under the sidecar
+>   (`src/backend/sidecar/electronStub.ts:207`), which is `src-tauri/`, so `publicDir`
+>   (`src/backend/constants/paths.ts:73`) resolves to `src-tauri/public` — nonexistent. The
+>   `x64`-on-arm64 log line is a symptom of this (`archSpecificBinary`'s fallback is never
+>   existence-checked), not a separate arch defect. **4th recurrence of this project's
+>   `publicdir-getapppath-chunking` failure family** — `src/backend/sidecar/bootstrap.ts:156`
+>   already documented the `getAppPath()`/`process.cwd()` equivalence but never generalized it past
+>   `locales/`.
+> - **What this gate falsifies: nothing.** No item passed, so no standing claim is retired — all
+>   four (Epic/GOG/Amazon session end-to-end, the `www.amazon.com` anchor, `GAMELIB_SHELL_EXE`
+>   correctness, the non-Steam Wine claim) remain explicitly standing.
+> - Full detail, evidence and root-cause chain: `34.5-LIVE-GATE.md` § Root cause / § Verdict;
+>   `34.5-15-SUMMARY.md` for the plan-level record.
+> - **Developer note carried forward:** the Epic and GOG credential backups made during this
+>   plan's Task 1 precondition work are still moved aside (restore paths recorded under
+>   `34.5-LIVE-GATE.md` precondition 3) — a gate re-run after the fix will need signed-out state
+>   again, so restoring them now is optional.
+>
+> **Next action:** `/gsd-plan-phase 34.5 --gaps` — fix the `publicDir` resolution defect (sweep
+> for other `publicDir`-relative consumers first, per the bootstrap.ts:156 lesson), then re-run
+> items 1, 2, 3, 4 (never attempted) and 5 in full.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -261,8 +300,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 28 of 29 (plans 01-24, 26 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); **plan 25 SKIPPED by the orchestrator — no summary, unexecuted**; plan 26 COMPLETE, F-9 timeout classification + read-cache; plan 27 is next; plans 28-29 unexecuted)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — GATE FAILED, GAP CYCLE NEEDED
+Plan: 15 of 15 (all 15 plans have summaries; **plan 15 was the blocking 5-item live gate — RAN 2026-08-01, VERDICT FAIL 0/5, phase does NOT close**; see the blocker block above)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3396,8 +3435,40 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T07:25:52.270Z
-Stopped at: Completed 34.4.1-27-PLAN.md
+Last session: 2026-08-01T00:19:27.000Z
+Stopped at: Completed 34.5-15-PLAN.md — blocking 5-item live gate RAN, VERDICT FAIL 0/5
+  This session (continuation agent): resumed 34.5-15 at Task 2's blocking human-verify
+  checkpoint after a prior agent completed Task 1 (all 5 preconditions satisfied, commit
+  `116a98bb9`). The developer drove the gate on real macOS hardware and reported "epic login
+  hang"; the orchestrator diagnosed the hang from `~/Library/Logs/GameLib/gamelib.log` before
+  this agent recorded it. Task 2 (commit `631dda6cd`): filled all 5 item Result slots —
+  items 1/2/3 FAIL (`legendary`/`gogdl`/`nile` binaries `spawn ./{runner} ENOENT` at sidecar
+  startup, before any login interaction — the OAuth capture seam itself worked, which is why
+  the defect presented as a hang rather than a visible error); item 3's Assumption A1
+  (`www.amazon.com` anchor) recorded UNTESTED, not confirmed or falsified; item 4 recorded NOT
+  ATTEMPTED (developer's choice); item 5 FAIL by blockage (requires a working non-Steam login
+  from items 1-3, none succeeded — research Pitfall 2's claim stands). Added a "Root cause"
+  section to `34.5-LIVE-GATE.md` with the full verified causal chain: `app.getAppPath()`
+  resolves to `process.cwd()` under the sidecar (`electronStub.ts:207`), which is `src-tauri/`,
+  so `publicDir` (`paths.ts:73`) resolves to a nonexistent `src-tauri/public` — 4th recurrence
+  of the `publicdir-getapppath-chunking` family; `bootstrap.ts:156` already half-knew this.
+  Task 3 (commit `ab4192752`): frontmatter verdict FAIL, items_passed 0, items_failed 4 (item 4
+  counts toward neither, explicitly stated), Verdict table filled, "What this gate falsifies"
+  struck NOTHING (no item passed), `34.5-PORTED-CHANNELS.md`'s LIVE cells for items 1/2/3/5
+  flipped PENDING→FAIL with gate-item pointers, item 4's two cells stay PENDING with a reason
+  note, residuals section keeps Assumption A1/A2 both OPEN. `ported-channels-gate.py` and
+  `--self-test` both re-run clean (exit 0). SUMMARY written (`34.5-15-SUMMARY.md`, commit
+  `708f4ad30`) stating plainly that Phase 34.5 is NOT complete. No source-code edits — this
+  plan records, it does not fix.
+Next: `/gsd-plan-phase 34.5 --gaps` — fix the `publicDir` resolution defect (sweep for other
+  `publicDir`-relative consumers first, per the `bootstrap.ts:156` process lesson), then re-run
+  the gate: items 1, 2, 3, 5 in full and item 4 (never attempted) for the first time. Epic and
+  GOG credential backups from Task 1's preconditions are still moved aside (restore paths in
+  `34.5-LIVE-GATE.md` precondition 3) — needed signed-out again for the re-run, so restoring
+  them now is optional.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.4.1-27-PLAN.md
   This session: 34.4.1-27-PLAN.md executed (gap cycle 2, plan 7 of 9, wave 5) — closed the two
   code-side housekeeping findings the gate rerun left unassigned. Task 1: extracted a
   dependency-free `queryLocalFontsSafe()` (new file — `Accessibility/index.tsx` pulls in MUI +
