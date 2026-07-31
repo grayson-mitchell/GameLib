@@ -80,6 +80,7 @@ import {
   logDebug,
   logInfo,
   logWarning,
+  logError,
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
@@ -172,6 +173,84 @@ export function init(
     )
   }
 
+  // ---- Boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18) -------------------
+  // Makes plan 34.5-16's GAMELIB_APP_ROOT handoff observable at the exact boot moment, before
+  // any login can be attempted: on 2026-08-01 the `spawn ./{legendary,gogdl,nile} ENOENT` lines
+  // fired at 00:06:26, six seconds before the first login interaction at 00:06:32
+  // (`34.5-LIVE-GATE.md`'s "Root cause" section) -- this diagnosis must be present by then, so
+  // it runs directly after the receipt log above and before the i18next block below (the first
+  // other startup diagnostic, and cannot be outrun by a login attempt).
+  //
+  // This is the FOURTH recurrence of the `publicdir-getapppath-chunking` family. The `locales`
+  // existsSync warning immediately below (D-02) already half-knew this in 2026 -- it added a
+  // loud existsSync check for ONE publicDir-relative consumer and never generalised the
+  // implication to every other one (`bin/`, the most costly). This block is that
+  // generalisation, named here so a future reader sees the lesson at the exact site where it
+  // was previously missed.
+  //
+  // Deliberately does NOT import `archSpecificBinary` (private to `utils.ts`) -- widening that
+  // module's public surface just for a diagnostic costs more than duplicating its four-line
+  // join here, and `appRootResolution.test.ts`'s real-filesystem block is what keeps the two
+  // resolutions honest (it fails if they diverge). Under the packaged Tauri build this check is
+  // EXPECTED to report `exists=false` until residual R-34.5-G1-PKG (`34.5-16-SUMMARY.md`) is
+  // resolved -- that is the point of this check: loud, not silent. Wrapped in try/catch -- a
+  // diagnostic must never fail boot (T-34.5-G3-02).
+  try {
+    const appRootEnv = process.env.GAMELIB_APP_ROOT
+    const appRootSource = appRootEnv ? 'GAMELIB_APP_ROOT' : 'process.cwd'
+    logInfo(
+      `[bootstrap] appRoot resolved=${electronStub.app.getAppPath()} source=${appRootSource}`,
+      LogPrefix.Backend
+    )
+
+    const publicDirExists = existsSync(publicDir)
+    logInfo(
+      `[bootstrap] publicDir resolved=${publicDir} exists=${publicDirExists}`,
+      LogPrefix.Backend
+    )
+
+    let assetMissing = !publicDirExists
+    for (const runnerBinaryName of ['legendary', 'gogdl', 'nile', 'comet']) {
+      // Mirrors archSpecificBinary's own arch-native-first, x64-fallback resolution
+      // (utils.ts:517-527) without importing it -- see comment above.
+      const archNativePath = join(
+        publicDir,
+        'bin',
+        process.arch,
+        process.platform,
+        runnerBinaryName
+      )
+      const x64FallbackPath = join(
+        publicDir,
+        'bin',
+        'x64',
+        process.platform,
+        runnerBinaryName
+      )
+      const resolvedRunnerPath = existsSync(archNativePath)
+        ? archNativePath
+        : x64FallbackPath
+      const runnerExists = existsSync(resolvedRunnerPath)
+      if (!runnerExists) assetMissing = true
+      logInfo(
+        `[bootstrap] runner binary ${runnerBinaryName} path=${resolvedRunnerPath} exists=${runnerExists}`,
+        LogPrefix.Backend
+      )
+    }
+
+    if (assetMissing) {
+      logError(
+        `[bootstrap] SIDECAR ASSET ROOT DEFECT -- resolved publicDir "${publicDir}" is missing required assets; see 34.5-APP-ROOT-SWEEP.md for the full consumer sweep`,
+        LogPrefix.Backend
+      )
+    }
+  } catch (error) {
+    logWarning(
+      `[bootstrap] Asset-root self-check failed: ${error}`,
+      LogPrefix.Backend
+    )
+  }
+
   // i18next initialization (D-02): mirrors main.ts:460-472's
   // `i18next.use(Backend).init({...})` call -- the ONLY i18next.init() call site in the
   // whole backend, which only ever runs inside Electron's `app.whenReady()` and therefore
@@ -197,6 +276,16 @@ export function init(
       // absent, warn loudly naming the resolved path rather than silently falling back --
       // i18next's own `fallbackLng`/key-return behavior below is still strictly better than
       // the current permanent `undefined`.
+      //
+      // Phase 34.5 plan 34.5-18 (G-3): this check was, for a long time, the ONLY member of
+      // this family in the codebase -- and it stopped short. The implication ("publicDir can
+      // be wrong under the sidecar") was known here but never generalised past `locales/` to
+      // every other publicDir-relative consumer, most costly `bin/` (the runner binaries) --
+      // that gap cost live-gate items 1/2/3 (`spawn ./{legendary,gogdl,nile} ENOENT`,
+      // `34.5-LIVE-GATE.md`'s "Root cause" section, the fourth recurrence of this family). The
+      // boot-time asset-root self-check above generalises this exact pattern to `publicDir`
+      // itself and every bundled runner binary, run earlier in `init()` than this block so it
+      // cannot be outrun by a login attempt.
       if (!existsSync(localesDir)) {
         logWarning(
           `[bootstrap] i18next locales directory not found at "${localesDir}" -- backend-side translated strings will fall back to their keys`,

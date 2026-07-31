@@ -64,7 +64,8 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 import { tmpdir } from 'os'
-import { isAbsolute, relative, resolve } from 'path'
+import { isAbsolute, join, relative, resolve } from 'path'
+import { mkdtempSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { handlerRegistry } from '../electronStub'
@@ -307,6 +308,100 @@ describe('sidecar bootstrap (headless boot)', () => {
       expect(lines).toContain(READY_SENTINEL)
 
       logWarningSpy.mockRestore()
+    })
+  })
+
+  // Phase 34.5 Plan 18, Task 2 (G-1/G-3, REQ-34.5-12). `publicDir` (`constants/paths.ts:73`) is
+  // a MODULE-SCOPE constant computed once, at import time, from `electronStub.app.getAppPath()`
+  // -- and THIS test file (like every other backend suite that does not opt out) runs under
+  // Jest's automatic `electron` mock (`src/backend/__mocks__/electron.ts`), whose
+  // `getAppPath()` returns `os.tmpdir()` unconditionally, never the real repo. So neither arm
+  // can use this file's already-imported `init`/`publicDir` -- both need a fresh module
+  // instance resolved against the REAL `electronStub`, exactly the way
+  // `appRootResolution.test.ts`'s "real-filesystem sidecar-conditions" block already does:
+  // `jest.isolateModules` + `jest.doMock('electron', () => jest.requireActual('../electronStub'))`
+  // swaps out the automock for the one real production code actually runs against, then
+  // `require('../bootstrap')` fresh so `constants/paths.ts`'s `publicDir` is computed against
+  // whatever `GAMELIB_APP_ROOT` each arm sets, never restated by hand.
+  describe('boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18)', () => {
+    const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
+
+    /**
+     * Requires `../bootstrap` fresh inside an isolated module registry with `electron` resolved
+     * to the REAL, unmocked `electronStub` (never this file's default automock), calls its
+     * `init()`, and returns the isolated `logError` spy's calls plus the transport output lines
+     * -- so each arm below only supplies the env var and the assertions.
+     */
+    function runIsolatedInitAndCollectLogErrors(): {
+      defectCalls: unknown[][]
+      lines: string[]
+    } {
+      let result!: { defectCalls: unknown[][]; lines: string[] }
+      jest.isolateModules(() => {
+        jest.doMock('electron', () => jest.requireActual('../electronStub'))
+        /* eslint-disable @typescript-eslint/no-var-requires */
+        const isolatedLogger = require('../../logger')
+        const { init: isolatedInit } = require('../bootstrap')
+        /* eslint-enable @typescript-eslint/no-var-requires */
+
+        const logErrorSpy = jest.spyOn(isolatedLogger, 'logError')
+
+        const input = new PassThrough()
+        const output = new PassThrough()
+        const lines = collectLines(output)
+
+        isolatedInit(input, output)
+
+        result = {
+          defectCalls: logErrorSpy.mock.calls.filter(([message]) =>
+            String(message).includes('SIDECAR ASSET ROOT DEFECT')
+          ),
+          lines
+        }
+
+        logErrorSpy.mockRestore()
+      })
+      return result
+    }
+
+    it('healthy arm: emits no SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT resolves the real repo assets, and init() still reaches READY_SENTINEL', () => {
+      const savedAppRoot = process.env.GAMELIB_APP_ROOT
+      process.env.GAMELIB_APP_ROOT = REPO_ROOT
+
+      try {
+        const { defectCalls, lines } = runIsolatedInitAndCollectLogErrors()
+
+        expect(defectCalls).toHaveLength(0)
+        expect(lines).toContain(READY_SENTINEL)
+      } finally {
+        if (savedAppRoot === undefined) {
+          delete process.env.GAMELIB_APP_ROOT
+        } else {
+          process.env.GAMELIB_APP_ROOT = savedAppRoot
+        }
+      }
+    })
+
+    it('missing-asset arm: emits exactly ONE SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT points at an empty temp directory, and init() still reaches READY_SENTINEL', () => {
+      const savedAppRoot = process.env.GAMELIB_APP_ROOT
+      const emptyAppRoot = mkdtempSync(
+        join(tmpdir(), 'gamelib-bootstrap-assetroot-')
+      )
+      process.env.GAMELIB_APP_ROOT = emptyAppRoot
+
+      try {
+        const { defectCalls, lines } = runIsolatedInitAndCollectLogErrors()
+
+        expect(defectCalls).toHaveLength(1)
+        expect(String(defectCalls[0][0])).toContain(emptyAppRoot)
+        expect(lines).toContain(READY_SENTINEL)
+      } finally {
+        if (savedAppRoot === undefined) {
+          delete process.env.GAMELIB_APP_ROOT
+        } else {
+          process.env.GAMELIB_APP_ROOT = savedAppRoot
+        }
+      }
     })
   })
 })
