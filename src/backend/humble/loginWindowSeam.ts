@@ -104,6 +104,24 @@ export interface LoginWindowSeam {
   open(url: string, options: { visible: boolean; userAgent: string }): Promise<string>
   /** Reads the login window's cookie jar, filtered by `host` (domain-suffix match) and `names`. */
   cookies(label: string, host: string, names: string[]): Promise<LoginWindowCookieRead>
+  /**
+   * Reads the login window's cookie jar, filtered by `domain` in the OPPOSITE direction from
+   * `cookies()` above (Phase 34.4.1 Plan 22, F-6 Defect A, REQ-34.4.1-GAP-07). `cookies()`
+   * asks the *page-host* question -- "does this cookie's domain cover the page I am on?"
+   * (`host` first, the correct direction for `watchForLogin()`'s poll, proven by spike 014a).
+   * `cookiesForDomain()` asks the DIFFERENT *cookie-domain-under-target* question -- "does
+   * this cookie belong to `domain` or any of its subdomains?" (the cookie's own domain first,
+   * the fixed `domain` second). The two are NOT interchangeable: passing a fixed domain
+   * through `cookies()`'s direction can never match a leading-dot- or subdomain-scoped
+   * cookie, which is exactly how the disconnect census silently undercounted every such
+   * cookie before this method existed (spike 016, live: total=33, `cookies()`'s
+   * direction=29, this direction=33 -- see `34.4.1-SPIKE-016-FINDINGS.md`).
+   */
+  cookiesForDomain(
+    label: string,
+    domain: string,
+    names: string[]
+  ): Promise<LoginWindowCookieRead>
   /** Drains the login window's queued main-frame navigation events. */
   takeEvents(label: string): Promise<LoginWindowNavEvent[]>
   /** Closes the login window. Resolves whether a window with that label existed. */

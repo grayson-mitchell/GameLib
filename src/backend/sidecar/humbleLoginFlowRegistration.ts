@@ -58,6 +58,7 @@ import { requestRustInvoke } from './sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
   RUST_HUMBLE_LOGIN_COOKIES,
+  RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
@@ -179,6 +180,34 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
       ) {
         throw new Error(
           `humble_login_cookies: malformed response (missing/non-numeric total, or non-array matched): ${JSON.stringify(result)}`
+        )
+      }
+      const read: LoginWindowCookieRead = {
+        total: record.total,
+        matched: record.matched.map(coerceCookie)
+      }
+      return read
+    },
+
+    // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): the correctly-directed cookie
+    // read `cookies()` above cannot answer -- see this method's own interface docstring
+    // (`loginWindowSeam.ts`) for why the two are not interchangeable. Same malformed-response
+    // guard as `cookies()`, deliberately: a missing/non-numeric `total` here would recreate
+    // F-6's exact silent-degradation shape one layer down.
+    async cookiesForDomain(label, domain, names) {
+      const result = await requestRustInvoke(RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN, [
+        label,
+        domain,
+        names
+      ])
+      const record = result as { total?: unknown; matched?: unknown } | null
+      if (
+        !record ||
+        typeof record.total !== 'number' ||
+        !Array.isArray(record.matched)
+      ) {
+        throw new Error(
+          `humble_login_cookies_for_domain: malformed response (missing/non-numeric total, or non-array matched): ${JSON.stringify(result)}`
         )
       }
       const read: LoginWindowCookieRead = {

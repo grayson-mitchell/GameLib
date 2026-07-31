@@ -90,6 +90,7 @@ import { startRpcServer, requestRustInvoke } from '../sidecarRpc'
 import {
   RUST_HUMBLE_LOGIN_OPEN,
   RUST_HUMBLE_LOGIN_COOKIES,
+  RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN,
   RUST_HUMBLE_LOGIN_TAKE_EVENTS,
   RUST_HUMBLE_LOGIN_CLOSE,
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
@@ -263,6 +264,77 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     const promise = seam.cookies('login-humble-1', 'www.humblebundle.com', [
       '_simpleauth_sess'
     ])
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_COOKIES)
+
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: { matched: [] } })}\n`
+    )
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
+  // ── humble_login_cookies_for_domain (Phase 34.4.1 Plan 22, F-6 Defect A, REQ-34.4.1-GAP-07)
+  it('humble_login_cookies_for_domain: emits [label, domain, names] and resolves { total, matched }', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.cookiesForDomain('login-humble-1', 'humblebundle.com', [])
+    await flush()
+
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN
+    )
+    expect(frame).toBeDefined()
+    expect(frame?.kind).toBe('rustInvoke')
+    expect(frame?.args).toEqual(['login-humble-1', 'humblebundle.com', []])
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: {
+          total: 33,
+          matched: [
+            { name: '_simpleauth_sess', domain: '.humblebundle.com', value: 'abc' }
+          ]
+        }
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual({
+      total: 33,
+      matched: [
+        { name: '_simpleauth_sess', domain: '.humblebundle.com', value: 'abc' }
+      ]
+    })
+  })
+
+  // Load-bearing: this arm must reject a coerced-zero total exactly like `cookies()` does above
+  // -- a missing/non-numeric total must THROW, never silently become 0. Asserted separately from
+  // the `cookies()` case above so the pre-existing guard is verified adjacent to the new one,
+  // not merely assumed to still hold.
+  it('humble_login_cookies_for_domain: throws (never coerces to 0) when the response omits total', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.cookiesForDomain('login-humble-1', 'humblebundle.com', [])
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN
+    )
+
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: { matched: [] } })}\n`
+    )
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
+  // Same guard, re-asserted for the PRE-EXISTING `cookies()` flow -- the already-present arm
+  // adjacent to the new code, checked by name per this plan's own binding constraint 1.
+  it('humble_login_cookies: (adjacent-already-present check) still throws when the response omits total', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.cookies('login-humble-1', 'www.humblebundle.com', [])
     await flush()
     const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_COOKIES)
 

@@ -220,6 +220,7 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
   const fakeSeam: LoginWindowSeam = {
     open: (...args: Parameters<LoginWindowSeam['open']>) => mockSeamOpen(...args),
     cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
     takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
       mockSeamTakeEvents(...args),
     close: (...args: Parameters<LoginWindowSeam['close']>) => mockSeamClose(...args),

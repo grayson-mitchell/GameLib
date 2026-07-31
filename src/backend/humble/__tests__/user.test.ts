@@ -1206,12 +1206,19 @@ describe('HumbleUser', () => {
     // mockSeamRevealPost above — this describe block never exercises it (plan 16 wires the real
     // call site), the mock exists purely so this fixture still satisfies the widened interface.
     const mockSeamClearStorage = jest.fn()
+    // Phase 34.4.1 Plan 22 (F-6 Defect A): LoginWindowSeam gained cookiesForDomain. The
+    // disconnect-census tests below (Plan 22 Task 3) drive this directly; every other test in
+    // this describe block gets the same healthy default `mockSeamCookies` already gets.
+    const mockSeamCookiesForDomain = jest.fn()
 
     const fakeSeam: LoginWindowSeam = {
       open: (...args: Parameters<LoginWindowSeam['open']>) =>
         mockSeamOpen(...args),
       cookies: (...args: Parameters<LoginWindowSeam['cookies']>) =>
         mockSeamCookies(...args),
+      cookiesForDomain: (
+        ...args: Parameters<LoginWindowSeam['cookiesForDomain']>
+      ) => mockSeamCookiesForDomain(...args),
       takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
         mockSeamTakeEvents(...args),
       close: (...args: Parameters<LoginWindowSeam['close']>) =>
@@ -1230,6 +1237,7 @@ describe('HumbleUser', () => {
       // beforeEach does for the Electron-path mocks.
       mockSeamOpen.mockResolvedValue('login-humble-0')
       mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+      mockSeamCookiesForDomain.mockResolvedValue({ total: 0, matched: [] })
       mockSeamTakeEvents.mockResolvedValue([])
       mockSeamClose.mockResolvedValue(true)
       mockSeamClearCookies.mockResolvedValue(0)

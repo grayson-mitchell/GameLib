@@ -1002,6 +1002,7 @@ describe('revealKey', () => {
       return {
         open: jest.fn(),
         cookies: jest.fn(),
+        cookiesForDomain: jest.fn(),
         takeEvents: jest.fn(),
         close: jest.fn(),
         clearCookies: jest.fn(),

@@ -122,6 +122,7 @@ function makeMockSeam(
   return {
     open: jest.fn().mockResolvedValue('window-label-1'),
     cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
     takeEvents: jest.fn(),
     close: jest.fn().mockResolvedValue(true),
     clearCookies: jest.fn().mockResolvedValue(3),
