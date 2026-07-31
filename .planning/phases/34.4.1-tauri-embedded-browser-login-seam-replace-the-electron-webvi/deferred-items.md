@@ -254,3 +254,32 @@ both, or it will close the symptom and leave the failure mode.
 operator's login keychain from a 2026-07-22 build. Harmless and no longer written, but a probe
 artifact was left in a real user keychain — worth a look at whether any current self-check path can
 still strand entries. NOT deleted here (it is the operator's keychain, not this plan's to modify).
+
+### Upgrade (2026-07-31): the ACL theory now has DIRECT hardware evidence, not just elimination
+
+Plan 26's Task 1 timing harness (`keyring_read_timing_hypothesis_absent_vs_present_entry`, `#[ignore]`d,
+in `src-tauri/src/main.rs`) was run live on this machine, twice. It **refuted** the research
+hypothesis ("a missing Keychain entry blocks longer than a present one") — and refuted it in the
+opposite direction:
+
+| Case | Observed |
+|---|---|
+| Absent entry | 40–102 ms |
+| **Present** entry (real `steam-refresh-token` account) | **48.9 s**, then **291 s** — both failing `PlatformFailure(-60008, "Unable to obtain authorization for this operation")` |
+
+`-60008 / "Unable to obtain authorization for this operation"` is the **ACL authorization check
+failing** — which is exactly what the ad-hoc-signature theory predicts, and it arrives as a direct
+observation rather than as the inference-by-elimination recorded above. The entries above should be
+read with that upgrade in mind: the mechanism is no longer only "the surviving candidate", it is
+measured.
+
+It also fully accounts for F-9's severity. A 291-second stall does not merely brush
+`RUST_INVOKE_TIMEOUT_MS` (60 s) — it exceeds it nearly fivefold, so the timeout was always going to
+fire and the "intermittent" qualifier was only ever about how quickly the operator dismissed the
+dialog.
+
+**Still NOT proven, unchanged:** whether a properly signed build collapses the storm. This machine
+has 0 codesigning identities; the confirming test remains a CI run with the Apple secrets or a cert
+installed locally. Plan 26 shipped a bounded `KEYRING_READ_TIMEOUT` (8 s, justified from the
+measured 40 ms–291 s spread) plus a read cache — it does not, and cannot, prove the prompt count
+drops on a real boot. That is plan 29's gate.
