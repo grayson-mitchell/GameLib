@@ -16,9 +16,22 @@
  * Containment: this suite declares no `jest.mock('../pathShim', ...)`, so it belongs in
  * `testContainment.test.ts`'s `STRUCTURALLY_CONTAINED_SUITES`, not `IN_SCOPE_SUITES` — see
  * that file's own classification comment for this suite.
+ *
+ * EXTENDED Phase 34.5 Plan 17 (G-1, REQ-34.5-12/REQ-34.5-13) — Task 2, see the
+ * "real-filesystem sidecar-conditions" describe block below. The suite above proves both JS-side
+ * arms of `getAppPath()` in isolation; it does NOT prove that a correctly-resolved app root
+ * actually reaches a real bundled asset on disk. `34.5-16-SUMMARY.md` records the full suite green
+ * at 3447/3447 while the underlying app-root defect was live in production, because jest runs
+ * with `process.cwd()` already at the repository root, where `publicDir` (`paths.ts:73`) resolves
+ * correctly BY ACCIDENT. A test that recomputes the source's own `join(...)` arithmetic and
+ * compares two strings proves nothing about that failure mode (the standing
+ * `live-gate-beats-green-suite-three-times` lesson) — the block below instead forces
+ * `process.cwd()` to `<repo>/src-tauri`, the REAL sidecar condition, and asserts against the REAL
+ * filesystem, resolving `publicDir` through the actual production code path
+ * (`backend/constants/paths.ts`) rather than restating it.
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   stripSourceComments,
@@ -155,5 +168,97 @@ describe('main.rs sets GAMELIB_APP_ROOT on BOTH sidecar spawn paths (Rust half o
       'fn resolve_dev_app_root('
     )
     expect(body).not.toMatch(/\.unwrap\(\)|\.expect\(/)
+  })
+})
+
+// Phase 34.5 Plan 17, Task 2 (G-1, REQ-34.5-12/REQ-34.5-13).
+//
+// THE ARITHMETIC TRAP (read this before touching anything below): the full suite ran green at
+// 3447/3447 (`34.5-16-SUMMARY.md`) while the app-root defect was live in production. That
+// happened because jest's own `process.cwd()` is already the repository root, where `publicDir`
+// (`backend/constants/paths.ts:73`) resolves correctly BY ACCIDENT — no test in that 3447 ever
+// forced `cwd` to the real sidecar condition (`src-tauri/`). A test that recomputes the same
+// `join(...)` the source computes and compares two strings would repeat exactly that mistake and
+// prove nothing (the standing `live-gate-beats-green-suite-three-times` lesson). Every assertion
+// below therefore does two things together: (1) forces `process.cwd()` to `<repo>/src-tauri`, the
+// literal sidecar condition, and (2) calls the REAL, unmocked `node:fs` `existsSync` against
+// paths resolved by the actual production code path (`backend/constants/paths.ts`, required fresh
+// with `electron` swapped for the real, non-mocked `electronStub` — never restated by hand).
+describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src-tauri (Phase 34.5 G-1, plan 34.5-17)', () => {
+  // Derived from THIS file's own __dirname (src/backend/sidecar/__tests__), never from
+  // process.cwd() -- this block mocks process.cwd() for the very things under test, so anything
+  // derived from it here would be testing its own mock.
+  const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
+  const SRC_TAURI_DIR = join(REPO_ROOT, 'src-tauri')
+
+  let cwdSpy: jest.SpyInstance<string, []>
+  let savedAppRoot: string | undefined
+
+  beforeEach(() => {
+    cwdSpy = jest.spyOn(process, 'cwd').mockReturnValue(SRC_TAURI_DIR)
+    savedAppRoot = process.env.GAMELIB_APP_ROOT
+  })
+
+  afterEach(() => {
+    cwdSpy.mockRestore()
+    // Restore exactly, including "was absent" -- see this file's own established precedent above.
+    if (savedAppRoot === undefined) {
+      delete process.env.GAMELIB_APP_ROOT
+    } else {
+      process.env.GAMELIB_APP_ROOT = savedAppRoot
+    }
+  })
+
+  /**
+   * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox, with
+   * `electron` resolved to the REAL, unmocked `electronStub` module (not the project-wide
+   * `jest.mock('electron')` automock — this suite never calls that). This means `publicDir` is
+   * computed by `paths.ts:73` itself, against this test's mocked `process.cwd()` and whatever
+   * `GAMELIB_APP_ROOT` the calling test set, exactly the way the real sidecar computes it --
+   * never recomputed by this test file.
+   */
+  function requirePathsUnderSidecarConditions(): typeof import('../../constants/paths') {
+    let isolatedPaths!: typeof import('../../constants/paths')
+    jest.isolateModules(() => {
+      jest.doMock('electron', () => jest.requireActual('../electronStub'))
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      isolatedPaths = require('../../constants/paths')
+    })
+    return isolatedPaths
+  }
+
+  it('negative arm: with GAMELIB_APP_ROOT unset, the app-root fallback resolves a public directory that does NOT exist on disk -- this is the exact defect shape that cost live-gate items 1/2/3', () => {
+    delete process.env.GAMELIB_APP_ROOT
+
+    const paths = requirePathsUnderSidecarConditions()
+
+    expect(paths.publicDir).toBe(join(SRC_TAURI_DIR, 'public'))
+    expect(existsSync(paths.publicDir)).toBe(false)
+  })
+
+  it('positive arm: with GAMELIB_APP_ROOT set to the dev value the Rust shell actually hands down, every sidecar-reachable asset resolves to a path that EXISTS on the real filesystem', () => {
+    process.env.GAMELIB_APP_ROOT = REPO_ROOT
+
+    const paths = requirePathsUnderSidecarConditions()
+
+    expect(paths.publicDir).toBe(join(REPO_ROOT, 'public'))
+
+    // All four bundled runner binaries for the CURRENT host arch/platform -- the exact family
+    // that ENOENT'd six layers away at launcher.ts's callRunner (34.5-LIVE-GATE.md root cause).
+    for (const binaryName of ['legendary', 'gogdl', 'nile', 'comet']) {
+      const binaryPath = join(
+        paths.publicDir,
+        'bin',
+        process.arch,
+        process.platform,
+        binaryName
+      )
+      expect(existsSync(binaryPath)).toBe(true)
+    }
+
+    expect(existsSync(join(paths.publicDir, 'locales'))).toBe(true)
+    expect(existsSync(join(paths.publicDir, 'changelog.json'))).toBe(true)
+    expect(existsSync(join(paths.publicDir, 'icon.png'))).toBe(true)
+    expect(existsSync(join(paths.publicDir, 'webviewPreload.js'))).toBe(true)
   })
 })
