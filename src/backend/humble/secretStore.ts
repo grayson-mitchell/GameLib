@@ -1,13 +1,14 @@
-import { safeStorage } from 'electron'
-
-import { logWarning, LogPrefix } from 'backend/logger'
-
-import { configStore } from './electronStores'
-import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
-
 /**
  * HumbleSecretStore — Humble's credential encryption seam (Phase 34.4.1 Plan
  * 12, gap-cycle closure for F-1/S-10, REQ-34.4.1-02/REQ-34.4.1-GAP-02).
+ *
+ * **T-34.4.1-56**: the decision this module carries -- the Humble session
+ * secret moves off a world-readable JSON file and behind the OS keyring,
+ * because under the Tauri sidecar the `safeStorage` import below is a dead
+ * stub. Stated as a formal id here, beside the reduction, because
+ * `seam-parity-sweep.py` requires an id CO-LOCATED with the seam terms; prose
+ * alone reads as SILENTLY-DROPPED (S-11). Keep this comment under
+ * `FILE_HEADER_SEARCH_WINDOW` (3000 chars) or the sweep stops reading it.
  *
  * `humble/user.ts` used to call `safeStorage` directly. Under the Tauri
  * sidecar, `safeStorage` resolves to `electronStub.ts`'s hardcoded-dead stub
@@ -46,6 +47,13 @@ import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
  * sidecar transport package -- its RPC module runs a Node `readline`/stdio
  * loop that does not exist in the Electron main process.
  */
+
+import { safeStorage } from 'electron'
+
+import { logWarning, LogPrefix } from 'backend/logger'
+
+import { configStore } from './electronStores'
+import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
 
 /** The two secrets `user.ts` persists today. A closed union, not a free
  * string -- the TS-side counterpart of Rust's keyring slot allowlist

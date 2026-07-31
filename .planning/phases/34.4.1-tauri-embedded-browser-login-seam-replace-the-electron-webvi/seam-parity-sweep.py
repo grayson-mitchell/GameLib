@@ -79,7 +79,7 @@ EXPECTED_AXIS_A_SITES = [
     "src/backend/humble/user.ts:943",  # was :794 (disconnect's wipeSteps)
     "src/backend/sidecar/oauthLoginCapture.ts:157",
     "src/backend/storeManagers/legendary/user.ts:137",  # was :107
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:407",  # was :358
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:436",  # was :407, was :358
 ]
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -265,6 +265,15 @@ WIPE_STEP_CATEGORIES: dict[str, set[str]] = {
     "clearData": {"storage", "cache"},
     "clearHumbleCookies": {"cookies"},
     "clearEpicCookies": {"cookies"},
+    # Added Phase 34.4.1 gap cycle 2, plan 28 (item 7). Plans 15/16 introduced these two step
+    # labels and never added them here, so `categories_for_labels()` bucketed them as
+    # `UNKNOWN:clearHumbleStorage` / `UNKNOWN:clearEpicStorage` and S-07/S-10 kept reporting
+    # SILENTLY-DROPPED for storage/cache that plan 16 had ALREADY closed. Plan 18 found it and
+    # routed it to plan 19; plan 19 declined because this file was not in its files_modified;
+    # plan 20's scope missed it too. Twice re-forwarded for the same reason both times -- which is
+    # why plan 28 lists this file explicitly.
+    "clearHumbleStorage": {"storage", "cache"},
+    "clearEpicStorage": {"storage", "cache"},
 }
 
 CATEGORY_SYNONYMS: dict[str, list[str]] = {
@@ -522,7 +531,11 @@ SITE_PROFILES = {
     "src/backend/sidecar/humbleLoginFlowRegistration.ts::smokeHook": {
         # Line hint refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10) — same site,
         # shifted by intervening plans' additions to this file.
-        "line_hint": 407,
+        # Refreshed AGAIN in gap cycle 2 plan 28: 407 -> 436, shifted by plans 22-27's additions
+        # to this file. The +/-5 window in run_axis_a() means a 29-line drift is a hard stop, not
+        # a silent mismatch -- which is the design working, and the reason a regeneration always
+        # costs one hint sweep per cycle that moved code.
+        "line_hint": 436,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",
@@ -1111,6 +1124,57 @@ def self_test() -> None:
     if not declared or found_id != "T-99-02":
         fail("self-test FAILED: is_declared_by_terms rejected a comment with both id and term present")
     case("is_declared_by_terms correctly ACCEPTS an id-and-term-present comment")
+
+    # 4b. WIPE_STEP_CATEGORIES must recognise the two labels plans 15/16 introduced. Added gap
+    #     cycle 2 plan 28. Before this, `clearHumbleStorage`/`clearEpicStorage` fell through to
+    #     the `UNKNOWN:` bucket, so S-07/S-10 kept reporting storage+cache as dropped after
+    #     plan 16 had closed both. This case fails if either mapping entry is removed.
+    for label in ("clearHumbleStorage", "clearEpicStorage"):
+        cats = categories_for_labels([label])
+        if any(c.startswith("UNKNOWN:") for c in cats):
+            fail(
+                f"self-test FAILED: categories_for_labels({label!r}) produced {sorted(cats)} — an "
+                "UNKNOWN bucket means the WIPE_STEP_CATEGORIES entry is missing, which is exactly "
+                "the staleness plan 28 closed"
+            )
+        if not {"storage", "cache"} <= cats:
+            fail(
+                f"self-test FAILED: categories_for_labels({label!r}) = {sorted(cats)}, expected it "
+                "to cover both 'storage' and 'cache'"
+            )
+    case(
+        "WIPE_STEP_CATEGORIES maps clearHumbleStorage/clearEpicStorage to storage+cache rather "
+        "than an UNKNOWN bucket (plan 28, item 7)"
+    )
+
+    # 4c. is_axis_b_declared's id+term bar, both directions. The strictness is deliberate and was
+    #     NOT loosened to close S-11 — a real id was added to secretStore.ts instead. If this bar
+    #     is ever relaxed, the accept case keeps passing but the REJECT case below fails, which is
+    #     the whole point of asserting both directions.
+    idless = (
+        "/** Keyring-backed store: the sidecar installs a Tauri implementation that reaches the "
+        "OS keyring. */"
+    )
+    declared, _ = is_axis_b_declared(idless)
+    if declared:
+        fail(
+            "self-test FAILED: is_axis_b_declared ACCEPTED an id-less doc comment — the bar that "
+            "keeps F-6's own near-miss classified as dropped has been loosened"
+        )
+    withid = (
+        "/** T-34.4.1-56: the secret moves behind the OS keyring because under the Tauri sidecar "
+        "safeStorage is a dead stub. */"
+    )
+    declared, found_id = is_axis_b_declared(withid)
+    if not declared or found_id != "T-34.4.1-56":
+        fail(
+            "self-test FAILED: is_axis_b_declared rejected a doc comment carrying BOTH a formal id "
+            f"and a seam term (got declared={declared}, id={found_id})"
+        )
+    case(
+        "is_axis_b_declared still REJECTS an id-less keyring doc comment and ACCEPTS one carrying "
+        "a formal id — the strict bar is intact, not loosened to close S-11"
+    )
 
     # 5. find_seam_ternary + classify_ternary_site: two functions with a DIFFERENT thrown class on
     #    the Electron side must be flagged as a difference (dropped_throws non-empty).
