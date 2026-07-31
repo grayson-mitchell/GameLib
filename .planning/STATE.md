@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-19-PLAN.md
+stopped_at: Completed 34.5-20-PLAN.md — live-gate re-run FAILED 0/5 (3 FAIL, 2 NOT ATTEMPTED); Phase 34.5 does not close; 34.5-21 (verdict propagation) is next
 last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-19 executed (re-run contract authored, unrun)
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-20 executed (blocking live-gate re-run: verdict FAIL 0/5)
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 162
-  completed_plans: 160
+  completed_plans: 161
   percent: 99
 ---
 
@@ -3058,6 +3058,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P17 | 40min | 2 tasks | 3 files |
 | Phase 34.5 P18 | 55min | 2 tasks | 2 files |
 | Phase 34.5 P19 | 35min | 2 tasks | 1 files |
+| Phase 34.5 P20 | 55min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -3432,6 +3433,7 @@ Recent decisions affecting current work:
 - [Phase 34.5-17]: New real-filesystem coverage in appRootResolution.test.ts forces cwd to src-tauri/ and asserts against the real disk via the production constants/paths.ts code path (electron swapped for the real electronStub) rather than jest's own arithmetic; proven to go red by deliberately reverting the GAMELIB_APP_ROOT env read
 - [Phase 34.5]: Split plan 34.5-18's two tasks into two atomic commits by temporarily reverting Task 2's additions, verifying Task 1 alone, committing, then reapplying Task 2 — matches this phase's established one-commit-per-task convention even though both tasks were drafted together in one contiguous code region
 - [Phase 34.5-19]: Re-run goes in NEW 34.5-LIVE-GATE-RERUN.md, verdict:null, never edits superseded 34.5-LIVE-GATE.md; precondition 4 proves G-1 fix present from bootstrap.ts's own boot log before any login is attempted
+- [Phase 34.5]: Verdict recorded FAIL 0/5 on the live-gate re-run (34.5-20): items 1-3 FAIL on a new downstream-of-capture defect (G-1 spawn defect confirmed closed by precondition 4; items 2/3 both reached status=captured at the backend for the first time, but nothing consumes the capture into a completed login), items 4-5 NOT ATTEMPTED. Assumption A1 (www.amazon.com anchor) CONFIRMED via code-structural proof despite item 3's own FAIL.
 
 ### Pending Todos
 
@@ -3505,7 +3507,39 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-08-01T00:00:00.000Z
-Stopped at: Completed 34.5-19-PLAN.md
+Stopped at: Completed 34.5-20-PLAN.md — live-gate re-run FAILED 0/5 (3 FAIL, 2 NOT ATTEMPTED); Phase 34.5 does not close; 34.5-21 (verdict propagation) is next
+  This session (continuation executor): executed 34.5-20 Tasks 2-3 (Task 1 -- the 7
+  preconditions -- was completed by a prior agent, commit `8ea770e2f`, all SATISFIED including
+  precondition 4's proof that the G-1 publicDir/runner-binary fix from plans 34.5-16..18 is
+  present in this build). Task 2 (commit `a3b22cadb`): recorded the developer's real-hardware
+  run into `34.5-LIVE-GATE-RERUN.md`'s 5 Result slots, cross-checked directly against
+  `gamelib.log` rather than trusted at face value -- corrected a pre-supplied "4 legendary
+  timeouts" reading to the log's actual count of 3. Item 1 (Epic) FAIL: 3 opens, 3 timeouts, 0
+  captures, login form renders "greyed out" and non-interactive. Items 2 (GOG) and 3 (Amazon)
+  FAIL: both reach `status=captured` at the backend for the first time this phase (proving G-1 is
+  closed), but nothing consumes the capture -- no follow-up runner-CLI auth call, and
+  `TauriLoginPanel.tsx`'s own `captured-blocked` log line never fires for either runner; UI stays
+  on "Signing in...", library never populated. Item 3's Assumption A1 (`www.amazon.com` anchor)
+  recorded CONFIRMED via a structural proof read directly from `matchOAuthRedirect`'s source (a
+  `nile` `status=captured` outcome is only reachable via an exact hostname match), which does not
+  retire item 3's own FAIL. Items 4-5 NOT ATTEMPTED, confirmed explicitly by the developer. Added
+  a "New findings" register (F-34.5-G6-01..06) for six defects the developer's report surfaced
+  beyond the five items' own scope (greyed-out Epic form, capture-without-UI-update, unpopulated
+  GOG library, no origin shown in login window, black-on-black Amazon verification text, double
+  Keychain prompts on GOG sign-out), diagnosis deferred. Task 3 (commit `fe799e29b`): frontmatter
+  `verdict: FAIL`, `items_passed: 0`, `items_failed: 3`, `items_not_attempted: 2`; Verdict table;
+  "What this gate falsifies" -- nothing struck, with the A1-confirmed-but-item-3-FAILs distinction
+  spelled out explicitly so a future reader cannot conflate the two. `34.5-LIVE-GATE.md` confirmed
+  byte-unchanged after every commit; no credential value in either diff. SUMMARY written
+  (`34.5-20-SUMMARY.md`), self-check PASSED.
+Next: **34.5-21-PLAN.md** — wave 5 of the gap cycle, propagate the FAIL 0/5 verdict:
+  `34.5-PORTED-CHANNELS.md`, the gate script, `IPC-PORT-INVENTORY.md`, ROADMAP.md, and STATE.md.
+  Per D-08, Phase 34.5 does not close; the downstream-of-capture defect (items 2/3) and Epic's
+  non-interactive login form (item 1) are new gap-cycle candidates once 34.5-21 completes
+  propagation.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-19-PLAN.md
   This session (sequential executor): executed 34.5-19 (gap cycle wave 3, both tasks
   autonomous), authoring `34.5-LIVE-GATE-RERUN.md` -- a CONTRACT for the blocking live-gate
   re-run, written before any live work, `verdict: null` throughout. Runs NOTHING live. Task 1
@@ -3535,14 +3569,8 @@ Stopped at: Completed 34.5-19-PLAN.md
   `34.5-LIVE-GATE.md` confirmed byte-unchanged (`git status --porcelain` empty) after all three
   commits; `ported-channels-gate.py` re-run clean (exit 0) after each. SUMMARY written
   (`34.5-19-SUMMARY.md`), self-check PASSED.
-Next: **34.5-20-PLAN.md** — wave 4 of the gap cycle, the BLOCKING live-gate re-run itself on
-  real macOS hardware (non-autonomous). Executes `34.5-LIVE-GATE-RERUN.md`'s 7 preconditions and
-  5 items in order, filling every Result slot and the reserved Verdict table. Precondition 4
-  must be satisfied (G-1 fix present, no `SIDECAR ASSET ROOT DEFECT` line) before items 1-3 are
-  attempted. Per D-08, any item recorded FAIL means the phase still does not close and another
-  gap cycle follows.
 
-Prior session context, retained for history:
+Earlier session context, retained for history:
 Stopped at (superseded): Completed 34.5-18-PLAN.md
   This session (sequential executor): executed 34.5-18 (gap cycle wave 2's second plan, both
   tasks autonomous), closing G-3 (a gate-contract defect, not a code defect) and giving G-1's
