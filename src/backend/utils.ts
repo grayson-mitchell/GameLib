@@ -501,7 +501,19 @@ function archSpecificBinary(binaryName: string) {
   if (process.platform === 'win32') binaryName += '.exe'
 
   // Try to use the arch-native binary first, if that doesn't exist fall back to
-  // the x64 version (assume a compatibility layer like box64 is installed)
+  // the x64 version (assume a compatibility layer like box64 is installed).
+  //
+  // Phase 34.5 G-1 (34.5-17): the x64 fallback used to be returned
+  // unconditionally, without ever checking it exists. When `publicDir`
+  // itself was wrong (the sidecar's `getAppPath()`/`process.cwd()` defect,
+  // see `34.5-APP-ROOT-SWEEP.md` row 10), that turned a wrong app root into
+  // `spawn ./legendary ENOENT` six layers away at `launcher.ts`'s
+  // `callRunner` (whose LOGGED absolute path disagreed with its relative
+  // spawn argument) -- the exact shape that cost live-gate items 1/2/3
+  // (`34.5-LIVE-GATE.md` root cause step 5). Existence-checking the
+  // fallback and throwing here instead makes the fault loud at the point of
+  // resolution, naming both attempted paths, rather than silent until a
+  // spawn six layers downstream.
   const archSpecificPath = join(
     publicDir,
     'bin',
@@ -510,7 +522,15 @@ function archSpecificBinary(binaryName: string) {
     binaryName
   )
   if (existsSync(archSpecificPath)) return archSpecificPath
-  return join(publicDir, 'bin', 'x64', process.platform, binaryName)
+
+  const x64Path = join(publicDir, 'bin', 'x64', process.platform, binaryName)
+  if (existsSync(x64Path)) return x64Path
+
+  throw new Error(
+    `[archSpecificBinary] Could not locate runner binary "${binaryName}". ` +
+      `Tried arch-native path: "${archSpecificPath}" and x64 fallback path: "${x64Path}" ` +
+      `(resolved publicDir: "${publicDir}"). Neither exists on disk.`
+  )
 }
 
 let defaultLegendaryPath: string | undefined = undefined
