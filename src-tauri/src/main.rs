@@ -1899,6 +1899,68 @@ fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBuf>) -> Stri
         .unwrap_or_else(|_| String::new())
 }
 
+/// Formats a resolved app-root `PathBuf` for the `GAMELIB_APP_ROOT` spawn-time env var handoff
+/// (Phase 34.5 Plan 16, Task 2, G-1). This is the fix for the root cause of live-gate items
+/// 1/2/3 and (transitively) 5: under the sidecar, `electronStub.getAppPath()` resolved to
+/// `process.cwd()` (`src-tauri/`), so `publicDir` (`paths.ts:73`) resolved to a directory that
+/// does not exist and every bundled runner binary ENOENT'd on spawn. Pure and `AppHandle`-free
+/// so it can be proven by `#[cfg(test)] mod tests` below, mirroring `shell_exe_env_value`'s
+/// exact contract shape one function up:
+///
+/// - `Ok(path)` returns the path's `display()` form, UNQUOTED and UNTRIMMED.
+/// - `Err(_)` returns the EMPTY STRING, deliberately never panicking — the shell must still
+///   start even if app-root resolution fails, and `electronStub.getAppPath()` (JS side) treats
+///   an empty string exactly like an unset env var, falling back to today's `process.cwd()`
+///   behaviour (REQ-34.5-13: the Electron build and the jest suite see no behaviour change).
+///
+/// The error type is a plain `String`, not the caller's own error type — the dev path's failure
+/// (`CARGO_MANIFEST_DIR` has no parent; unreachable in practice) and the packaged path's failure
+/// (a `tauri::Error` from `resource_dir()`) are unrelated types with nothing in common. Both
+/// callers map their own error to a string before calling this, keeping this helper generic and
+/// `AppHandle`-free.
+fn app_root_env_value(app_root: Result<std::path::PathBuf, String>) -> String {
+    app_root
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| String::new())
+}
+
+/// Resolves the DEV-mode `GAMELIB_APP_ROOT` value: the repository root, i.e. the parent of
+/// `CARGO_MANIFEST_DIR` (`src-tauri/..`) — baked at compile time exactly as
+/// `resolve_sidecar_entry()` above bakes its own path, and for the identical reason:
+/// `std::env::current_dir()`'s unreliability under `tauri dev` is what that function's own doc
+/// comment already records. Honours a pre-set `GAMELIB_APP_ROOT` in the shell's own environment
+/// as an override before falling back to the computed value, mirroring
+/// `resolve_sidecar_entry()`'s `GAMELIB_SIDECAR_ENTRY` override shape one function up — that
+/// override read is untested at the Rust unit level for the same reason this one is: neither
+/// this file's existing `#[cfg(test)] mod tests` nor this plan mutates process-global env vars
+/// inside a parallel `cargo test` run. `src/backend/__tests__/tauriShellSource.test.ts`'s sibling
+/// suite `appRootResolution.test.ts` (Task 3) proves the DEV/PACKAGED spawn-path wiring
+/// structurally instead, against the real source text.
+fn resolve_dev_app_root() -> String {
+    if let Ok(root) = std::env::var("GAMELIB_APP_ROOT") {
+        return root;
+    }
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = manifest_dir
+        .parent()
+        .map(|p| p.to_path_buf())
+        .ok_or_else(|| "CARGO_MANIFEST_DIR has no parent".to_string());
+    app_root_env_value(repo_root)
+}
+
+/// Resolves the PACKAGED-mode `GAMELIB_APP_ROOT` value from `app.path().resource_dir()`
+/// (`Manager` is already imported at line 43, so no new import is needed). A failure there
+/// yields the empty string via `app_root_env_value`'s `Err` arm, never a panic — see
+/// `app_root_env_value`'s own doc comment for why an empty value is safe here (the JS side
+/// treats it as unset). `electronStub.app.isPackaged` stays `false` under the sidecar
+/// regardless of this value, so `publicDir` still appends `'public'`, not `'build'`, even when
+/// this resolves correctly — the packaged asset root itself is a named, deliberately unclosed
+/// residual (`R-34.5-G1-PKG`, `34.5-APP-ROOT-SWEEP.md` § 3), not something this function claims
+/// to fix.
+fn resolve_packaged_app_root(app: &AppHandle) -> String {
+    app_root_env_value(app.path().resource_dir().map_err(|e| e.to_string()))
+}
+
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
 /// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
@@ -1911,6 +1973,7 @@ fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBuf>) -> Stri
 /// `~/Library/Logs/GameLib/gamelib.log`.
 fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
+    let app_root = resolve_dev_app_root();
     let cwd = std::env::current_dir()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".into());
@@ -1919,9 +1982,11 @@ fn spawn_sidecar_dev(shell_exe: &str) -> std::io::Result<Child> {
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
     eprintln!("[shell]   GAMELIB_SHELL_EXE={shell_exe}");
+    eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
     let child = Command::new("node")
         .arg(&entry)
         .env("GAMELIB_SHELL_EXE", shell_exe)
+        .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1946,6 +2011,7 @@ fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<C
         std::io::Error::other(format!("sidecar externalBin resolution failed: {e}"))
     })?;
     let mut std_command: Command = shell_command.into();
+    let app_root = resolve_packaged_app_root(app);
     let program = std_command.get_program().to_string_lossy().to_string();
     let cwd = std::env::current_dir()
         .map(|p| p.display().to_string())
@@ -1954,8 +2020,10 @@ fn spawn_sidecar_packaged(app: &AppHandle, shell_exe: &str) -> std::io::Result<C
     eprintln!("[shell] spawning sidecar (packaged): \"{program}\"");
     eprintln!("[shell]   cwd={cwd}");
     eprintln!("[shell]   entry_exists={exists}");
+    eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
     let child = std_command
         .env("GAMELIB_SHELL_EXE", shell_exe)
+        .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -3074,6 +3142,55 @@ mod tests {
         assert!(!value.starts_with('\''));
         assert!(!value.ends_with('"'));
         assert!(!value.ends_with('\''));
+    }
+
+    // ---- app_root_env_value (Phase 34.5 Plan 16, Task 2, G-1) ----
+    //
+    // RED direction: an implementation that panics or `.unwrap()`s on `Err` would fail
+    // `app_root_env_value_err_yields_empty_string_never_panics`; one that trims or quotes the
+    // path would fail `app_root_env_value_ok_yields_the_paths_display_string_untrimmed`.
+
+    #[test]
+    fn app_root_env_value_ok_yields_the_paths_display_string_untrimmed() {
+        let path = std::path::PathBuf::from("/Users/dev/GameLib");
+        assert_eq!(
+            app_root_env_value(Ok(path.clone())),
+            path.display().to_string()
+        );
+    }
+
+    #[test]
+    fn app_root_env_value_err_yields_empty_string_never_panics() {
+        let err = "resource_dir() failed".to_string();
+        assert_eq!(app_root_env_value(Err(err)), String::new());
+    }
+
+    #[test]
+    fn app_root_env_value_path_with_space_survives_unquoted() {
+        // Mirrors shell_exe_env_value_path_with_space_survives_unquoted -- this helper must
+        // never pre-empt a consumer's own quoting/escaping.
+        let path = std::path::PathBuf::from("/Users/dev/Game Lib");
+        let value = app_root_env_value(Ok(path));
+        assert_eq!(value, "/Users/dev/Game Lib");
+        assert!(!value.starts_with('"'));
+        assert!(!value.ends_with('"'));
+    }
+
+    #[test]
+    fn resolve_dev_app_root_resolves_to_the_parent_of_cargo_manifest_dir_when_unset() {
+        // No env-var mutation here (this file's existing #[cfg(test)] mod never mutates
+        // process-global env vars inside a parallel `cargo test` run -- see
+        // resolve_dev_app_root's own doc comment for why). This asserts the un-overridden
+        // computed value directly against the same env!() the function itself bakes from.
+        if std::env::var("GAMELIB_APP_ROOT").is_ok() {
+            // If the developer's own shell happens to have this set, the override branch
+            // (untested here, same as resolve_sidecar_entry's GAMELIB_SIDECAR_ENTRY) would
+            // take over and this assertion would no longer be about the computed value.
+            return;
+        }
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let expected = manifest_dir.parent().unwrap().display().to_string();
+        assert_eq!(resolve_dev_app_root(), expected);
     }
 
     // ---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----
