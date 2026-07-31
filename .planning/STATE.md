@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1 gap cycle EXECUTED (plans 13-20). Live gate RE-RAN 2026-07-31 -> FAIL 3/4 (item 3). F-1 CLOSED live; F-6 OPEN. Next: /gsd-plan-phase 34.4.1 --gaps
+stopped_at: 34.4.1 gap cycle 2 PLANNED 2026-07-31 (plans 21-29, 7 waves, checker PASSED). F-6 root cause source-verified (2 compounding defects in the Rust/wry cookie arms). Next: /gsd-execute-phase 34.4.1
 last_updated: "2026-07-30T11:20:16.338Z"
 last_activity: 2026-07-30
 progress:
@@ -67,8 +67,53 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 20 of 20 (ALL plans have summaries — the gap cycle 10-20 is fully executed)
+Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — READY TO EXECUTE
+Plan: 20 of 29 (plans 01-20 all have summaries; **gap cycle 2 = plans 21-29, planned 2026-07-31, unexecuted**)
+
+> **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
+> Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
+>
+> **F-6's root cause is now SOURCE-VERIFIED, not guessed** — read out of the vendored `wry-0.55.1` /
+> `tauri-2.11.5` crate sources. TWO compounding, independent defects:
+> - **Defect A:** the census/read arm calls `cookie_domain_matches(host, domain)` with arguments in
+>   the OPPOSITE order from the clear arm, so it undercounts every leading-dot/subdomain cookie.
+>   This alone explains the gate's `25 attempted / 23 matched` asymmetry. → plan 22.
+> - **Defect B (blocking):** `humble_login_clear_cookies` reports an *attempted* count computed
+>   BEFORE the delete loop runs, and wry's `delete_cookie()` returning `Ok(())` on macOS means only
+>   that WebKit's completion handler fired — not that anything matched. Same shape as WebKit
+>   bugzilla #184938. → plan 23, via `WKWebsiteDataStore.fetchDataRecords`/`removeData(for:)` through
+>   `WebviewWindow::with_webview()` + `objc2-web-kit` (**already in `Cargo.lock`** — no new deps).
+>   Domain-scoped by `displayName`, so D-08's never-a-blanket-wipe constraint still holds.
+>
+> **`storeManagers/legendary/user.ts`'s Epic logout calls the IDENTICAL broken Rust arm** — confirmed
+> by source (`clearEpicCookies` → same `RUST_HUMBLE_LOGIN_CLEAR_COOKIES` channel), not inferred from
+> shape. Fixing the arm fixes both callers; plan 23 T3 instruments Epic's, plan 29 re-verifies it.
+> Declared cross-phase edit into open Phase 34.5, not a silent one.
+>
+> **Process finding worth keeping:** `34.4.1-RESEARCH.md` and `IPC-PORT-INVENTORY.md` NAMED
+> `delete_cookie()` and `on_document_title_changed` at planning time as APIs the D-11 spike never
+> tested — and both shipped anyway with no follow-up spike. F-6 and WR-07 are exactly those two
+> written-down risks materializing. Plan 21 is spike-first to avoid a third instance.
+>
+> Waves: **21** declare+spike (`autonomous: false`) → **22** Defect A → **23** Defect B → **24**
+> WR-07/F-4 → **25** F-10 ∥ **26** F-9 ∥ **27** housekeeping → **28** sweeps → **29** THIRD BLOCKING
+> LIVE GATE (`autonomous: false`, owns the GATED `IPC-PORT-INVENTORY.md` / `34.4.1-PORTED-CHANNELS.md`
+> updates via plan 19's 13-row checklist).
+>
+> Plan 21 T1 owns the ROADMAP.md / REQUIREMENTS.md (GAP-07..12) / STATE.md edits as EXECUTABLE work —
+> deliberately not done planner-side, because STATE.md must be hand-corrected per the
+> `gsd-sdk-state-writes-corrupt-state-md` gotcha. Plan 27 T3 mints GAP-13.
+>
+> Two research assumptions corrected during planning: **A3 is FALSIFIED** — `App.tsx:147-150` DOES
+> register a per-route lazy boundary (eager `import()` at module eval, no `errorElement` anywhere),
+> and `Login/index.tsx:118-120` renders a *visible* spinner, so a truly blank window points UPSTREAM
+> of the component (plan 25 carries this). And the **Steam artwork cause is located, not speculative**:
+> `CachedImage/index.tsx:64` wraps every http source in `imagecache://`, a scheme registered ONLY by
+> Electron's `protocol.handle` at `images_cache.ts:17` from a `whenReady()` init the sidecar never
+> runs — plan 27 gates it on a named `imageCacheSchemeAvailable()` predicate, NOT another `isTauri()`
+> sniff (a stale `isTauri()` guard already caused Phase 34.4's gate failure).
+>
+> Next action: **`/gsd-execute-phase 34.4.1`**
 
 > **⛔ GATE RE-RUN 2026-07-31 — FAIL, 3 of 4. PHASE 34.4.1 STILL DOES NOT CLOSE.**
 > Items 1, 2, 4 PASS; **item 3 FAIL**. Record: `34.4.1-LIVE-GATE-RERUN.md` (`verdict: FAIL`),
