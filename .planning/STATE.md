@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-23-PLAN.md
-last_updated: "2026-07-31T06:01:45.292Z"
+stopped_at: Completed 34.4.1-24-PLAN.md
+last_updated: "2026-07-31T06:20:27.563Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 156
-  completed_plans: 149
+  completed_plans: 150
   percent: 96
 ---
 
@@ -32,6 +32,30 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **✅ PLAN 24 COMPLETE — 34.4.1-24 (gap cycle 2, plan 4 of 9, wave 4) — 2026-07-31.**
+> WR-07's positive half CLOSED as far as static code can carry it: `humble_login_open`'s
+> `if visible` block now wires Tauri's documented `on_document_title_changed` builder
+> callback (`tauri-2.11.5/src/webview/mod.rs:564-567`), so the OS title bar tracks the
+> loaded document's own title instead of the framework default two live gate operators
+> reported ("Tauri app"). Corrected the arm's own comment, which previously (falsely)
+> claimed WR-07 was "enforced by the grep gate ... not by intent alone" — the corrected
+> text states a grep gate can only prove absence of a hard-coded title, never presence of
+> a tracking one, and names plan 29 item 1 as the sole owner of the live claim. Added a
+> greppable `eprintln!` recording F-4's `.focused(true)` presentation request (size,
+> center, one-shot focus, no persistent pin) — the first machine record of what was
+> requested, since the raised half has gone unobserved across two live gates. Added 5
+> static tests to `tauriShellSource.test.ts` (36 → 41): title hook present,
+> `always_on_top` absent, no hard-coded `.title(` on any `WebviewWindowBuilder` chain, the
+> four presentation calls confined to `if visible` (Plan 18's gating, never tested until
+> now — proved load-bearing by a real temporary `.center()` move + observed failure +
+> byte-identical restore), and the two hidden windows untouched. `cargo check`/`cargo
+> test`: 74/74. `npx jest tauriShellSource.test.ts`: 41/41. `npx tsc --noEmit`: clean.
+> `npm run test:ci`: 176 suites/3407 tests. `ported-channels-gate.py` + `--self-test`:
+> both OK; `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` diff empty. **Neither WR-07
+> nor F-4 is CLOSED by this plan — both remain OPEN pending plan 29 item 1's live
+> observation of the title bar and the window raise.**
+> Next action: plan 25 (gap cycle 2, wave 4/5).
 
 > **✅ PLAN 23 COMPLETE — 34.4.1-23 (gap cycle 2, plan 3 of 9, wave 3) — 2026-07-31.**
 > F-6 Defect B CLOSED (the BLOCKING defect this whole gap cycle exists to close): on macOS,
@@ -139,7 +163,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 24 of 29 (plans 01-22 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 (Defect B fix) is next; plans 24-29 unexecuted)
+Plan: 25 of 29 (plans 01-24 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 COMPLETE, F-6 Defect B closed; plan 24 COMPLETE, WR-07 positive half + F-4 machine record (static half only); plan 25 is next; plans 26-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2832,6 +2856,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P21 | 75min | 3 tasks | 7 files |
 | Phase 34.4.1 P22 | 30min | 3 tasks | 11 files |
 | Phase 34.4.1 P23 | 50min | 3 tasks | 6 files |
+| Phase 34.4.1 P24 | 40min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -3193,6 +3218,7 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-22]: Every non-Tauri LoginWindowSeam test double updated in place to implement cookiesForDomain rather than widening the interface to optional — an optional method would let a future implementation silently omit the correctly-directed read, recreating F-6's silent-degradation shape
 - [Phase 34.4.1]: Plan 23: used mpsc_channel + rx.recv_timeout() (not with_webview's own return) for the WKWebsiteDataStore clear's synchrony -- source inspection of tauri-runtime-wry-2.11.4 shows with_webview() is fire-and-forget off the main thread and this arm's real caller always runs on a spawned worker thread; spike 016's synchronous measurement was taken from a different, main-thread call site.
 - [Phase 34.4.1]: Plan 23: scoped the WKWebsiteDataStore removal to WKWebsiteDataTypeCookies only, even though the record fetch uses allWebsiteDataTypes, so a matched domain record's localStorage/IndexedDB/cache data is never touched by this arm.
+- [Phase 34.4.1-24]: Corrected WR-07's comment to avoid the literal on_document_title_changed identifier in prose (kept to the one code call site) and used focus_once/persistent_pin instead of always_on_top in the presentation-config log, satisfying both tasks' exact-count grep gates without weakening the message.
 
 ### Pending Todos
 
@@ -3265,8 +3291,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T06:01:25.226Z
-Stopped at: Completed 34.4.1-22-PLAN.md
+Last session: 2026-07-31T06:20:27.553Z
+Stopped at: Completed 34.4.1-24-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:
   `SidecarHumbleSecretStore` implements plan 12's `HumbleSecretStore` seam over plan
