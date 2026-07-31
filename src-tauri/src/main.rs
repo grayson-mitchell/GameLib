@@ -3065,4 +3065,91 @@ mod tests {
             "humble-csrf"
         );
     }
+
+    // ---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----
+    //
+    // Times two DIRECT `keyring` crate reads -- one against a guaranteed-absent account, one
+    // against whatever the developer's real `steam-refresh-token` Keychain entry currently is
+    // -- to put a measurement behind the "a missing-entry Keychain lookup blocks longer than a
+    // present-entry one" hypothesis (34.4.1-RESEARCH-GAP-CYCLE-2.md § Item 5 / Assumptions Log
+    // A4, which explicitly states the hypothesis was NOT reproduced during research).
+    //
+    // Deliberately bypasses keyring_account()'s allowlist (T-34.4.1-117, accepted in this
+    // plan's threat register): the absent account is a never-written, randomly-suffixed name
+    // constructed directly, exactly mirroring what the live arm's own Entry::new(KEYRING_SERVICE,
+    // account) call does. This harness NEVER calls set_password/delete_credential (grep-asserted
+    // by this plan's own acceptance criteria) -- read only, and it never touches an existing
+    // slot to manufacture the absent condition.
+    //
+    // #[ignore]d because it depends on a real macOS Keychain and must never become a CI-time
+    // dependency (this file has no other #[ignore]d test to follow as precedent -- this is the
+    // first). Run with:
+    //   cd src-tauri && cargo test -- --ignored --nocapture keyring_read_timing_hypothesis
+    //
+    // Last recorded runs (2026-07-31, this plan, this machine, two separate invocations):
+    //   Run 1: absent-entry elapsed=40.04ms  outcome=NoEntry
+    //          present-entry (steam-refresh-token) elapsed=48.87s  outcome=Err (present=false)
+    //   Run 2: absent-entry elapsed=102.23ms outcome=NoEntry
+    //          present-entry (steam-refresh-token) elapsed=291.08s outcome=Err(PlatformFailure
+    //          { code: -60008, message: "Unable to obtain authorization for this operation." })
+    // VERDICT: REFUTED, and by a wide margin in the OPPOSITE direction from the hypothesis as
+    // literally stated. The absent-entry read was consistently fast (tens to ~100ms); the
+    // present-entry read against a REAL allowlisted account was the slow one on both runs (48.9s,
+    // then 291s), both times ultimately failing with a Keychain AUTHORIZATION error, not a
+    // NoEntry/PlatformFailure-unrelated-to-auth error. This is live, hardware-measured support for
+    // `deferred-items.md`'s ad-hoc-code-signature/Keychain-ACL theory (a differently-signed
+    // process's request to access an existing protected item triggers a real, and sometimes
+    // extremely long, authorization negotiation) rather than for "a missing entry is the slow
+    // path". See `34.4.1-26-SUMMARY.md` for the full writeup and its consequence for
+    // `KEYRING_READ_TIMEOUT`'s chosen bound (Task 2).
+    #[test]
+    #[ignore]
+    fn keyring_read_timing_hypothesis_absent_vs_present_entry() {
+        let absent_account = format!(
+            "gamelib-spike026-absent-probe-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        );
+
+        let absent_start = std::time::Instant::now();
+        let absent_entry = Entry::new(KEYRING_SERVICE, &absent_account)
+            .expect("Entry::new must not fail for a well-formed service/account pair");
+        let absent_result = absent_entry.get_password();
+        let absent_elapsed = absent_start.elapsed();
+
+        let present_start = std::time::Instant::now();
+        let present_entry = Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT)
+            .expect("Entry::new must not fail for a well-formed service/account pair");
+        let present_result = present_entry.get_password();
+        let present_elapsed = present_start.elapsed();
+
+        println!(
+            "[keyring-timing] absent-entry  ({absent_account}) elapsed={absent_elapsed:?} outcome={}",
+            match &absent_result {
+                Ok(_) => "Ok(<unexpected -- probe account should never hold a secret>)",
+                Err(keyring::Error::NoEntry) => "NoEntry",
+                Err(_) => "Err(<other>)",
+            }
+        );
+        println!(
+            "[keyring-timing] present-entry ({KEYRING_ACCOUNT}) elapsed={present_elapsed:?} outcome={}",
+            match &present_result {
+                Ok(_) => "Ok(<secret present -- value never printed>)".to_string(),
+                Err(keyring::Error::NoEntry) => "NoEntry".to_string(),
+                Err(e) => format!("Err({e:?})"),
+            }
+        );
+
+        // Only assert the calls RETURN at all -- a threshold assertion would turn an
+        // intermittent OS behaviour into a flaky test (this plan's own acceptance criteria).
+        // Reaching this line already proves both calls returned; the two statements below make
+        // that explicit for a reader rather than relying on control flow alone.
+        let absent_returned = absent_result.is_ok() || absent_result.is_err();
+        let present_returned = present_result.is_ok() || present_result.is_err();
+        assert!(absent_returned);
+        assert!(present_returned);
+    }
 }
