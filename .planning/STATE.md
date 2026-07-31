@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.4.1-22-PLAN.md
-last_updated: "2026-07-31T05:30:28.393Z"
+stopped_at: Completed 34.4.1-23-PLAN.md
+last_updated: "2026-07-31T06:01:45.292Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 156
-  completed_plans: 148
-  percent: 95
+  completed_plans: 149
+  percent: 96
 ---
 
 # Project State
@@ -32,6 +32,27 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
 
 ## Current Position
+
+> **✅ PLAN 23 COMPLETE — 34.4.1-23 (gap cycle 2, plan 3 of 9, wave 3) — 2026-07-31.**
+> F-6 Defect B CLOSED (the BLOCKING defect this whole gap cycle exists to close): on macOS,
+> `humble_login_clear_cookies` now deletes through the live `WKWebsiteDataStore`
+> (`fetchDataRecordsOfTypes_completionHandler` + `removeDataOfTypes_forDataRecords_completionHandler`
+> scoped to `WKWebsiteDataTypeCookies`), never wry's `delete_cookie()` (whose `Ok(())` fires
+> unconditionally regardless of whether anything was deleted — bugs.webkit.org #184938). Every
+> platform now returns `verified_delete_count(before_matching, after_matching)`, a re-read taken
+> AFTER removal, never the old `matching.len()` attempted count. Threading was source-verified
+> (not assumed from spike 016's raw measurement, which was taken from a different, main-thread
+> call site) against `tauri-runtime-wry-2.11.4`: this arm's real caller runs on a spawned worker
+> thread, so `with_webview()` is fire-and-forget there — the arm uses `mpsc_channel` +
+> `rx.recv_timeout()` instead of trusting `with_webview`'s own return. Epic's `clearEpicCookies`
+> (the shared arm's second, already-shipped caller, unverified since Phase 34.5 plan 06) is now
+> instrumented with a measured-count log + a zero-count warning and tested. `cargo test`: 74/74
+> (was 66). `npm run test:ci`: 3402/3402 (was 3394). `npx tsc --noEmit`: clean.
+> `ported-channels-gate.py` + `--self-test`: both OK. Two temporary-break experiments proven
+> load-bearing (suffix-separator removal, `matching.len()` reintroduction) — see
+> `34.4.1-23-SUMMARY.md` for both. **Nothing in this plan proves the removal works live — plan
+> 29 item 3's live gate is the ONLY remaining proof.**
+> Next action: plan 24 (gap cycle 2, wave 4).
 
 > **✅ PLAN 22 COMPLETE — 34.4.1-22 (gap cycle 2, plan 2 of 9, wave 2) — 2026-07-31.**
 > F-6 Defect A CLOSED: added `humble_login_cookies_for_domain`, a second, correctly-directed Rust
@@ -118,7 +139,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 23 of 29 (plans 01-22 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 (Defect B fix) is next; plans 24-29 unexecuted)
+Plan: 24 of 29 (plans 01-22 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 COMPLETE, F-6 Defect A closed; plan 23 (Defect B fix) is next; plans 24-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -1937,7 +1958,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 90%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -2810,6 +2831,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P19 | 55min | 2 tasks | 3 files |
 | Phase 34.4.1 P21 | 75min | 3 tasks | 7 files |
 | Phase 34.4.1 P22 | 30min | 3 tasks | 11 files |
+| Phase 34.4.1 P23 | 50min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -3169,6 +3191,8 @@ Recent decisions affecting current work:
 - [Phase 34.4.1-21]: F-9 Keychain prompt storm probable root cause found opportunistically during Task 3's live session (not spike 016's own scope) — ad-hoc code signature (no TeamIdentifier) degrades the Keychain ACL's designated requirement under tauri:dev's per-run recompiles; forwarded to plan 26 in deferred-items.md, not fixed here
 - [Phase 34.4.1-22]: Kept the two cookie-read arms structurally separate (new arm, not an edit to humble_login_cookies) — research's rejected option (b) explicitly warned that changing the existing arm's direction would break the login poll to fix the census
 - [Phase 34.4.1-22]: Every non-Tauri LoginWindowSeam test double updated in place to implement cookiesForDomain rather than widening the interface to optional — an optional method would let a future implementation silently omit the correctly-directed read, recreating F-6's silent-degradation shape
+- [Phase 34.4.1]: Plan 23: used mpsc_channel + rx.recv_timeout() (not with_webview's own return) for the WKWebsiteDataStore clear's synchrony -- source inspection of tauri-runtime-wry-2.11.4 shows with_webview() is fire-and-forget off the main thread and this arm's real caller always runs on a spawned worker thread; spike 016's synchronous measurement was taken from a different, main-thread call site.
+- [Phase 34.4.1]: Plan 23: scoped the WKWebsiteDataStore removal to WKWebsiteDataTypeCookies only, even though the record fetch uses allWebsiteDataTypes, so a matched domain record's localStorage/IndexedDB/cache data is never touched by this arm.
 
 ### Pending Todos
 
@@ -3241,7 +3265,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-07-31T05:30:28.381Z
+Last session: 2026-07-31T06:01:25.226Z
 Stopped at: Completed 34.4.1-22-PLAN.md
   This session: 34.4.1-13-PLAN.md executed (gap cycle wave 4 — **F-1 (BLOCKING) CLOSED
   at the code level**) — Task 1 added `src/backend/sidecar/humbleSecretStore.ts`:

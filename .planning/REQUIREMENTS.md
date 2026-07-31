@@ -583,7 +583,7 @@ evidence discipline.
   and confirms the store holds no `sessionCookie` field, `encryptionDegraded: false`, and plan
   13's `[bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf
   slots)` log line. *(D-GAP-01, D-GAP-02; extends REQ-34.4.1-02, closes F-1)*
-- [ ] **REQ-34.4.1-GAP-03**: An **origin-scoped storage-clear capability** (`humble_login_clear_storage`
+- [x] **REQ-34.4.1-GAP-03**: An **origin-scoped storage-clear capability** (`humble_login_clear_storage`
   Rust arm + `LoginWindowSeam.clearStorage()`, plan 15) clears `localStorage`/`sessionStorage`/every
   IndexedDB database/every Cache Storage entry/every service-worker registration for one origin,
   scoped by same-origin-policy construction rather than a filter, with honest per-category
@@ -642,7 +642,7 @@ live run.
   direction was designed for `watchForLogin()`'s page-host-vs-cookie-domain question. This box
   stays UNCHECKED until plan 29 records a live corrected census. *(extends REQ-34.4.1-GAP-05,
   REQ-34.4.1-06; closes F-6's Defect A)*
-- [ ] **REQ-34.4.1-GAP-08**: The domain-scoped cookie **clear** actually removes cookies, and its
+- [x] **REQ-34.4.1-GAP-08**: The domain-scoped cookie **clear** actually removes cookies, and its
   reported count is VERIFIED by a post-removal re-read rather than computed before the operation
   runs. Source-verified root cause (`wry-0.55.1/src/wkwebview/mod.rs:1248-1267`):
   `delete_cookie()` reconstructs an `NSHTTPCookie` from scratch via
