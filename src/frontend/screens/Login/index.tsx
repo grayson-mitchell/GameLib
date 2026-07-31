@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
 import './index.scss'
 import Runner from './components/Runner'
 import { useTranslation } from 'react-i18next'
@@ -97,6 +97,63 @@ export default React.memo(function NewLogin() {
       `TEMPORARY F-10 DIAGNOSTIC: Login component mounted seq=${Date.now()}`
     )
   }, [])
+
+  // TEMPORARY F-10 DIAGNOSTIC, REMOVED BY PLAN 25 TASK 3. Every breadcrumb added by Task 1 sits
+  // UPSTREAM of layout, and they proved identical on a blank render and a correct one -- so the
+  // defect is after React's render phase. This measures the one thing that separates the remaining
+  // candidates: whether `.loginPage` reaches the DOM, and if so whether it has a box and is
+  // visible. Sampled three times because each answers a different question:
+  //   layout - did it get a box synchronously, before any paint?
+  //   paint  - did it still have one on the frame the user actually sees?
+  //   +1500ms - does it settle later on its own (a race) or stay broken (a hard layout failure)?
+  // Geometry and class names only; no account data is reachable from here.
+  useLayoutEffect(() => {
+    if (loading) return
+
+    const measure = (phase: string) => {
+      const node = document.querySelector('.loginPage')
+      if (!node) {
+        window.api.logInfo(
+          `TEMPORARY F-10 DIAGNOSTIC: layout ${phase} .loginPage ABSENT from DOM`
+        )
+        return
+      }
+      const chain: string[] = []
+      let el: Element | null = node
+      for (let depth = 0; el && depth < 6; depth++) {
+        const r = el.getBoundingClientRect()
+        const s = getComputedStyle(el)
+        const name = `${el.tagName.toLowerCase()}.${
+          typeof el.className === 'string' && el.className
+            ? el.className.split(/\s+/).join('.')
+            : '(no-class)'
+        }`
+        chain.push(
+          `${name} box=${Math.round(r.width)}x${Math.round(r.height)}@${Math.round(
+            r.left
+          )},${Math.round(r.top)} display=${s.display} visibility=${
+            s.visibility
+          } opacity=${s.opacity} overflow=${s.overflow} children=${el.childElementCount}`
+        )
+        el = el.parentElement
+      }
+      window.api.logInfo(
+        `TEMPORARY F-10 DIAGNOSTIC: layout ${phase} viewport=${window.innerWidth}x${window.innerHeight} | ${chain.join(' <- ')}`
+      )
+    }
+
+    measure('sync')
+    const raf = requestAnimationFrame(() => {
+      measure('paint')
+    })
+    const timer = window.setTimeout(() => {
+      measure('t+1500ms')
+    }, 1500)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(timer)
+    }
+  }, [loading])
 
   useEffect(() => {
     setLoading(false)
