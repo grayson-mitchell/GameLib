@@ -58,6 +58,34 @@ export function isTauri(): boolean {
 }
 
 /**
+ * Whether the running shell registers the `imagecache://` custom URL scheme
+ * (34.4.1 gap cycle 2, plan 27, Task 2).
+ *
+ * SINGLE SOURCE OF TRUTH: `src/backend/images_cache.ts`'s
+ * `protocol.handle('imagecache', ...)` registration, which runs from an
+ * Electron-only `whenReady()` init. The sidecar does NOT run Electron
+ * `whenReady()` inits (project memory `phase-33-complete`), so under Tauri
+ * that registration never happens and any `imagecache://...` request
+ * WKWebView issues fails with `unsupported URL` -- measured at ~150 failed
+ * requests per library render (one per http-sourced game tile), each
+ * recovered by `CachedImage`'s `onError` retry at the cost of a doubled
+ * request and a visible load flash.
+ *
+ * Today that makes this predicate the negation of `isTauri()`. If a
+ * Tauri-side `imagecache://` handler is ever added, THIS is the one line
+ * that changes -- every consumer (starting with `CachedImage`) follows
+ * without touching a single call site. Consumers must call this predicate
+ * rather than checking `isTauri()` directly, so the scheme decision lives in
+ * exactly one named place (the same discipline `isTauri()` above and the
+ * stale-guard regression at
+ * `frontend/state/__tests__/GlobalStateSteamLogout.test.ts` exist to
+ * enforce).
+ */
+export function imageCacheSchemeAvailable(): boolean {
+  return !isTauri()
+}
+
+/**
  * Mirrors `makeHandlerInvoker`'s req/resp shape: `invoke(channel, args) -> Promise<Ret>`.
  * Relayed by the Rust shell's `sidecar_invoke` command to the sidecar's stdio JSON-RPC loop.
  */

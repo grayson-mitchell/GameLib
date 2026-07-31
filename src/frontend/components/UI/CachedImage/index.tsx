@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import classNames from 'classnames'
+import { imageCacheSchemeAvailable } from 'preload/tauriTransport'
 
 interface CachedImageProps {
   src: string
@@ -14,6 +15,18 @@ interface CachedImageProps {
 
 type Props = React.ImgHTMLAttributes<HTMLImageElement> & CachedImageProps
 
+// Wrapping an http(s) source in imagecache:// only makes sense on a shell
+// that actually serves that scheme (src/backend/images_cache.ts's
+// Electron-only protocol.handle registration -- see
+// imageCacheSchemeAvailable's doc comment in preload/tauriTransport.ts).
+// Requesting it anywhere else guarantees an `unsupported URL` failure --
+// measured at ~150 per library render under Tauri, each recovered by
+// onError's retry below at the cost of a doubled request and a load flash.
+// This is a capability check consumed from one named predicate, never a
+// direct platform sniff repeated per consumer.
+const shouldUseCache = (source: string | undefined): boolean =>
+  imageCacheSchemeAvailable() && (source?.startsWith('http') ?? false)
+
 const CachedImage = (props: Props) => {
   // Normalize the fallback prop to an ordered array so a single string and a
   // string[] share one code path. Undefined -> [].
@@ -23,9 +36,7 @@ const CachedImage = (props: Props) => {
       ? [props.fallback]
       : []
 
-  const [useCache, setUseCache] = useState(
-    props.src?.startsWith('http') || false
-  )
+  const [useCache, setUseCache] = useState(shouldUseCache(props.src))
   const [loaded, setLoaded] = useState(false)
   // -1 means "showing the primary src"; 0..n-1 indexes into `fallbacks`.
   const [fallbackIndex, setFallbackIndex] = useState(-1)
@@ -33,7 +44,7 @@ const CachedImage = (props: Props) => {
   useEffect(() => {
     setLoaded(false)
     setFallbackIndex(-1)
-    setUseCache(props.src?.startsWith('http') || false)
+    setUseCache(shouldUseCache(props.src))
   }, [props.src])
 
   const onError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -46,7 +57,7 @@ const CachedImage = (props: Props) => {
       const nextIndex = fallbackIndex + 1
       if (nextIndex < fallbacks.length) {
         setFallbackIndex(nextIndex)
-        setUseCache(fallbacks[nextIndex].startsWith('http'))
+        setUseCache(shouldUseCache(fallbacks[nextIndex]))
       }
     }
     props.onError?.(e)
