@@ -23,7 +23,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 // default is (re)established in this file's own beforeEach below, which
 // runs after Jest's automatic reset.
 const mockImageCacheSchemeAvailable = jest.fn<boolean, []>()
-jest.mock('preload/tauriTransport', () => ({
+jest.mock('../../../../../preload/tauriTransport', () => ({
   imageCacheSchemeAvailable: () => mockImageCacheSchemeAvailable()
 }))
 

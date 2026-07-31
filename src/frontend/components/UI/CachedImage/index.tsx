@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import classNames from 'classnames'
-import { imageCacheSchemeAvailable } from 'preload/tauriTransport'
+// Relative, not the bare `preload/...` specifier: electron.vite.config.ts's
+// srcAliases only aliases backend/frontend/common, so a `preload/` alias
+// resolves under tsc and Jest but fails Rollup at build time. Every other
+// frontend->preload import in this tree is relative for the same reason.
+import { imageCacheSchemeAvailable } from '../../../../preload/tauriTransport'
 
 interface CachedImageProps {
   src: string
