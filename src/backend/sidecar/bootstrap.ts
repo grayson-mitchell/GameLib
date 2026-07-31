@@ -78,6 +78,7 @@ import { initOnlineMonitor } from '../online_monitor'
 import {
   initHeadless as initLogger,
   logDebug,
+  logInfo,
   logWarning,
   LogPrefix
 } from '../logger'
@@ -134,6 +135,43 @@ export function init(
     initLogger()
     loggerInitialized = true
   }
+
+  // ---- Boot-time receipt logging (Phase 34.5 G-3, plan 34.5-18) -----------
+  // Logs the GAMELIB_SHELL_EXE value the SIDECAR ACTUALLY RECEIVED, not what the Rust shell's
+  // own `eprintln!` at main.rs:1231 CLAIMS it sent (that line only ever reaches the shell
+  // process's own stderr -- the `pnpm tauri:dev` terminal -- never `gamelib.log`). The child's
+  // own observation is strictly stronger evidence: it proves what pathShim can actually see,
+  // not merely what the parent set on the spawn call. `34.5-LIVE-GATE.md` precondition 5 cites
+  // this exact prefix (`GAMELIB_SHELL_EXE received=`) as its evidence source -- the gate's
+  // re-run reads it from here, not the terminal.
+  //
+  // Reads `process.env.GAMELIB_SHELL_EXE` directly rather than `pathShim.getPath('exe')`,
+  // which THROWS on an unset/empty value (T-34.5-01) -- this diagnostic must report an unset
+  // value, never crash boot trying to report it. Placement (after `initLogger()` above, before
+  // `output.write(READY_SENTINEL)` below) is load-bearing per the standing
+  // `sidecar-console-and-logger-are-invisible` finding: anything logged before `initLogger()`
+  // throws into a swallowed rejection, and the sidecar's stdout IS the RPC pipe, so `console.*`
+  // is invisible too. Wrapped in try/catch -- a diagnostic must never fail boot (T-34.5-G3-02).
+  try {
+    const shellExeReceived = process.env.GAMELIB_SHELL_EXE
+    if (shellExeReceived) {
+      logInfo(
+        `[bootstrap] GAMELIB_SHELL_EXE received=${shellExeReceived}`,
+        LogPrefix.Backend
+      )
+    } else {
+      logWarning(
+        '[bootstrap] GAMELIB_SHELL_EXE received=<UNSET>',
+        LogPrefix.Backend
+      )
+    }
+  } catch (error) {
+    logWarning(
+      `[bootstrap] Failed to log GAMELIB_SHELL_EXE receipt: ${error}`,
+      LogPrefix.Backend
+    )
+  }
+
   // i18next initialization (D-02): mirrors main.ts:460-472's
   // `i18next.use(Backend).init({...})` call -- the ONLY i18next.init() call site in the
   // whole backend, which only ever runs inside Electron's `app.whenReady()` and therefore

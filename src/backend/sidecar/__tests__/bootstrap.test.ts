@@ -69,6 +69,7 @@ import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { handlerRegistry } from '../electronStub'
 import { getLogFilePath } from '../../logger/paths'
+import * as loggerModule from '../../logger'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -239,5 +240,73 @@ describe('sidecar bootstrap (headless boot)', () => {
     expect(() => require('backend/storeManagers/steam/library')).not.toThrow()
 
     expect(handlerRegistry.has('health')).toBe(true)
+  })
+
+  // Phase 34.5 Plan 18, Task 1 (G-3, REQ-34.5-01). Asserts on the emitted log TEXT, not merely
+  // that a logger function was called -- the exact prefix
+  // (`[bootstrap] GAMELIB_SHELL_EXE received=`) is a contract `34.5-LIVE-GATE.md` precondition
+  // 5 depends on. `jest.spyOn` (not `jest.mock`) wraps the real, already-loaded `backend/logger`
+  // module object in place so the real implementation still runs (mirrors
+  // `sidecarRejectionGuard.test.ts`'s established precedent for this exact module).
+  describe('boot-time GAMELIB_SHELL_EXE receipt logging (Phase 34.5 G-3, plan 34.5-18)', () => {
+    let savedShellExe: string | undefined
+
+    beforeEach(() => {
+      savedShellExe = process.env.GAMELIB_SHELL_EXE
+    })
+
+    afterEach(() => {
+      // Restore exactly, including "was absent" -- pathShim.test.ts's own established
+      // precedent for this same env var.
+      if (savedShellExe === undefined) {
+        delete process.env.GAMELIB_SHELL_EXE
+      } else {
+        process.env.GAMELIB_SHELL_EXE = savedShellExe
+      }
+    })
+
+    it('set arm: logs the value verbatim at info level, and init() still reaches READY_SENTINEL', () => {
+      process.env.GAMELIB_SHELL_EXE =
+        '/Users/dev/GameLib/src-tauri/target/debug/gamelib-shell'
+      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      const lines = collectLines(output)
+
+      init(input, output)
+
+      expect(
+        logInfoSpy.mock.calls.some(
+          ([message]) =>
+            message ===
+            '[bootstrap] GAMELIB_SHELL_EXE received=/Users/dev/GameLib/src-tauri/target/debug/gamelib-shell'
+        )
+      ).toBe(true)
+      expect(lines).toContain(READY_SENTINEL)
+
+      logInfoSpy.mockRestore()
+    })
+
+    it('unset arm: logs <UNSET> at warning level, does not throw, and init() still reaches READY_SENTINEL', () => {
+      delete process.env.GAMELIB_SHELL_EXE
+      const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      const lines = collectLines(output)
+
+      expect(() => init(input, output)).not.toThrow()
+
+      expect(
+        logWarningSpy.mock.calls.some(
+          ([message]) =>
+            message === '[bootstrap] GAMELIB_SHELL_EXE received=<UNSET>'
+        )
+      ).toBe(true)
+      expect(lines).toContain(READY_SENTINEL)
+
+      logWarningSpy.mockRestore()
+    })
   })
 })
