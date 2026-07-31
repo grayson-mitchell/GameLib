@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 34.4.1-21 EXECUTING 2026-07-31 (gap cycle 2, plan 21 of 21-29, wave 1, non-autonomous). Task 1 (REQ-34.4.1-GAP-07..12 minted, ROADMAP/STATE corrected) and Task 2 (throwaway spike016_cookie_probe arm, cargo check/test 60/60, tsc/test:ci 3387/3387) complete. Task 3 is the BLOCKING checkpoint: run the spike live, record 34.4.1-SPIKE-016-FINDINGS.md. F-6 root cause source-verified (2 compounding defects in the Rust/wry cookie arms). Next: run Task 3's spike live and resume execution.
-last_updated: "2026-07-31T03:25:50Z"
+stopped_at: 34.4.1-21 COMPLETE 2026-07-31 (gap cycle 2, plan 21 of 21-29, wave 1). Task 3's blocking checkpoint returned live hardware data — with_webview() runs synchronously inline, A2 holds (main thread, no hop needed), Defect A proven live and total (clear-direction matches 33/33, all cookies), retry flat 31/31/31 (identity mismatch, not timing). RECOMMENDATION: proceed with WKWebsiteDataStore rewrite in plan 23, but plan 22 (Defect A fix) MUST land first or a working delete wipes the whole shared jar. 34.4.1-SPIKE-016-FINDINGS.md and 34.4.1-21-SUMMARY.md written. Next: plan 22 (Defect A fix).
+last_updated: "2026-07-31T05:10:00Z"
 last_activity: 2026-07-31
 progress:
   total_phases: 17
   completed_phases: 12
   total_plans: 155
-  completed_plans: 145
+  completed_plans: 146
   percent: 94
 ---
 
@@ -33,22 +33,36 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-> **▶ EXECUTING — 34.4.1-21 (gap cycle 2, plan 1 of 9, wave 1, non-autonomous) — 2026-07-31.**
+> **✅ PLAN 21 COMPLETE — 34.4.1-21 (gap cycle 2, plan 1 of 9, wave 1) — 2026-07-31.**
 > Phase 34.4.1 still does NOT close (gate FAILED 3/4 on `34.4.1-20`, item 3). Gap cycle 2 (plans
-> 21-29, 7 waves) is the response. **Plan 21's Task 1 and Task 2 are DONE**: `REQ-34.4.1-GAP-07..12`
-> minted in `REQUIREMENTS.md`, `ROADMAP.md`'s GAP CYCLE 2 block and Requirements line updated,
-> this STATE.md hand-corrected; the throwaway `spike016_cookie_probe` Rust arm + its four macOS-only
+> 21-29, 7 waves) is the response, and plan 21 (declare + spike, `autonomous: false`) is now DONE —
+> all three tasks, including the blocking Task 3 checkpoint. `REQ-34.4.1-GAP-07..12` minted in
+> `REQUIREMENTS.md`, `ROADMAP.md`'s GAP CYCLE 2 block and Requirements line updated, this STATE.md
+> hand-corrected; the throwaway `spike016_cookie_probe` Rust arm + its four macOS-only
 > `objc2`/`block2` deps (promoted from already-resolved transitive deps, zero new supply-chain
-> surface, `Cargo.lock` diff shows only the transitive→direct move) are built — `cargo check`/`cargo
-> test` (60/60) and `npx tsc --noEmit`/`npm run test:ci` (3387/3387) all pass. **Plan 21's Task 3 is
-> the BLOCKING checkpoint**: drive the probe live under `pnpm tauri:dev` against a real
-> Humble-cookie-bearing jar and record `34.4.1-SPIKE-016-FINDINGS.md` (Q1 with_webview synchrony,
-> A2 thread identity, Defect A both directions, the WKWebsiteDataRecord fetch count, and the
-> delete/retry timing-vs-identity experiment) before plan 22/23 are written. F-6's root cause is
-> source-verified as two compounding defects (Defect A: census arm's argument order backwards;
-> Defect B, BLOCKING: `delete_cookie()`'s WebKit completion handler fires unconditionally whether
-> or not anything matched). Next action: run Task 3's spike live with the developer at the
-> keyboard, then resume `/gsd-execute-phase 34.4.1`.
+> surface, `Cargo.lock` diff shows only the transitive→direct move) were built and driven live under
+> `pnpm tauri:dev` against a real Humble-cookie-bearing jar. **`34.4.1-SPIKE-016-FINDINGS.md` is
+> written and committed** (`64588395a`), answering all three questions D-11 required before the F-6
+> fix is written:
+> - **A2 holds** — `thread_name=main`, `mtm_before_with_webview=true` — no `run_on_main_thread` hop
+>   needed anywhere in plan 22/23's arms.
+> - **Q1 answered** — `with_webview()`'s closure runs SYNCHRONOUSLY INLINE — plan 23 can write the
+>   fix directly in the closure with no async/callback restructuring.
+> - **Defect A proven live, and worse than research's original framing** — `total=33`,
+>   `census_direction=29`, `clear_direction=33`. The clear-direction predicate matches **100% of the
+>   jar**, not a subset — it does not filter at all.
+> - **Retry experiment flat: 31/31/31** across three delete+wait attempts on the existing broken wry
+>   path — rules out timing/race, supports identity mismatch. **RECOMMENDATION: proceed with the
+>   `WKWebsiteDataStore` rewrite in plan 23, not a retry pattern.**
+> - **Sequencing hazard recorded as a hard ordering requirement: plan 22 (Defect A fix) MUST land
+>   before plan 23 (Defect B fix).** If plan 23's delete-fix lands while the clear-direction predicate
+>   still matches everything, a real Humble disconnect will delete EVERY cookie in the shared jar —
+>   Epic's and GOG's included — turning a silent no-op into cross-provider data loss.
+> - Also captured mid-session (out of plan 21's declared scope, forwarded to plan 26): F-9's Keychain
+>   prompt storm root-cause traced to an ad-hoc code signature destabilizing the Keychain ACL under
+>   `tauri:dev` — logged in `deferred-items.md`, not fixed here.
+> `34.4.1-21-SUMMARY.md` records the full task-by-task detail and headline numbers table. Next
+> action: plan 22 (Defect A fix), then resume `/gsd-execute-phase 34.4.1`.
 
 > **⛔ ACTIVE BLOCKER — Phase 34.4.1's blocking live gate RAN 2026-07-30 and FAILED (2 of 4 clean).**
 > `34.4.1-08` is complete (all 9 plans now have summaries) but **Phase 34.4.1 DOES NOT CLOSE** — the
@@ -85,7 +99,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.4.1 (tauri-embedded-browser-login-seam-replace-the-electron-webvi) — EXECUTING
-Plan: 21 of 29 (plans 01-20 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 IN PROGRESS: Tasks 1-2 done, Task 3 is the blocking spike checkpoint; plans 22-29 unexecuted)
+Plan: 22 of 29 (plans 01-21 all have summaries; **gap cycle 2 = plans 21-29** — plan 21 COMPLETE with `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified; plan 22 (Defect A fix) is next; plans 23-29 unexecuted)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2775,6 +2789,7 @@ Closed/parked native-install phases:
 | Phase 34.4.1 P17 | 45min | 2 tasks | 4 files |
 | Phase 34.4.1 P18 | 30min | 4 tasks | 8 files |
 | Phase 34.4.1 P19 | 55min | 2 tasks | 3 files |
+| Phase 34.4.1 P21 | 75min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -3125,6 +3140,13 @@ Recent decisions affecting current work:
 - [Phase 34.4.1]: S-09: the login-window seam CAN serve a cookie read outside a live login window via a temporary hidden window (same pattern as disconnect's clearHumbleCookies step) -- not declared unreachable.
 - [Phase 34.4.1]: Gap-cycle GAP-01/GAP-04/GAP-06 checked (unit/cargo-proven, no live-gate dependency); GAP-02/GAP-03/GAP-05 stay unchecked (their own claim is what plan 20's live gate must observe)
 - [Phase 34.4.1]: seam-parity-sweep.py's S-07/S-10/S-11 categorization staleness re-forwarded, not fixed by plan 19 (out of its declared files_modified); no plan currently owns it
+- [Phase 34.4.1-21]: A2 confirmed live — spike016 measured thread_name=main and MainThreadMarker::new()==Some BEFORE any with_webview() call; no run_on_main_thread hop is needed in plan 22/23's arms
+- [Phase 34.4.1-21]: Open Question 1 answered live — with_webview()'s closure runs SYNCHRONOUSLY INLINE (closure_ran flag already true immediately after the call returns); plan 23 writes its fix directly inside the closure, no async/callback restructuring
+- [Phase 34.4.1-21]: Defect A proven live and stronger than research's original framing — clear_direction (33) EQUALS jar total (33): the clear-direction cookie_domain_matches predicate matches every cookie, not merely a mis-scoped subset
+- [Phase 34.4.1-21]: Sequencing decision — plan 22 (Defect A fix) MUST land before plan 23 (Defect B fix); landing them in the other order would let a working delete wipe the ENTIRE shared jar (Epic/GOG cookies included), since the clear predicate currently matches everything
+- [Phase 34.4.1-21]: Retry experiment (delete->wait->re-read x3 on the existing wry path) returned flat 31/31/31 -- rules out timing/race, supports identity mismatch; RECOMMENDATION for plan 23 is REWRITE (WKWebsiteDataStore + objc2-web-kit), not a retry/backoff pattern
+- [Phase 34.4.1-21]: plan 23 must scope removeData to WKWebsiteDataTypeCookies specifically, not remove the whole WKWebsiteDataRecord (which would drop localStorage/IndexedDB/caches too, widening F-6's clear scope beyond what plans 15/16 already handle correctly)
+- [Phase 34.4.1-21]: F-9 Keychain prompt storm probable root cause found opportunistically during Task 3's live session (not spike 016's own scope) — ad-hoc code signature (no TeamIdentifier) degrades the Keychain ACL's designated requirement under tauri:dev's per-run recompiles; forwarded to plan 26 in deferred-items.md, not fixed here
 
 ### Pending Todos
 

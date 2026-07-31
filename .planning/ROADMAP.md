@@ -1455,7 +1455,7 @@ depend on it. Additive and reversible — the Electron build keeps working uncha
 **Requirements**: REQ-34.4.1-01, REQ-34.4.1-02, REQ-34.4.1-03, REQ-34.4.1-04, REQ-34.4.1-05, REQ-34.4.1-06, REQ-34.4.1-07, REQ-34.4.1-08, REQ-34.4.1-09, REQ-34.4.1-10, REQ-34.4.1-11, REQ-34.4.1-12, REQ-34.4.1-13, REQ-34.4.1-GAP-01, REQ-34.4.1-GAP-02, REQ-34.4.1-GAP-03, REQ-34.4.1-GAP-04, REQ-34.4.1-GAP-05, REQ-34.4.1-GAP-06, REQ-34.4.1-GAP-07, REQ-34.4.1-GAP-08, REQ-34.4.1-GAP-09, REQ-34.4.1-GAP-10, REQ-34.4.1-GAP-11, REQ-34.4.1-GAP-12
 **Depends on:** Phase 34.4 (which defers these channels and seeds this phase's research)
 **Blocks:** Phase 34.5 (Epic/GOG/Amazon logins use the identical seam)
-**Plans:** 20/29 plans executed (gap cycle 2 = plans 21-29, planned 2026-07-31)
+**Plans:** 21/29 plans executed (gap cycle 2 = plans 21-29, planned 2026-07-31; plan 21 DONE 2026-07-31)
 
 **Seeded by `34.4-CONTEXT.md` D-07 — read it before researching.** Candidates: a dedicated
 Tauri `WebviewWindow` on the login origin with cookies read via Tauri's own webview cookie API;
@@ -1507,7 +1507,7 @@ blocking: `delete_cookie()`'s WebKit completion handler fires unconditionally re
 whether anything matched). Ordering is binding: **spike-first → Defect A → Defect B → WR-07/F-4 →
 F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 
-- [ ] 34.4.1-21-PLAN.md — Declare gap cycle 2 (REQ-34.4.1-GAP-07..12, ROADMAP, STATE) + spike the F-6 fix's own API (`with_webview` synchrony, thread identity, both cookie_domain_matches directions, delete/retry experiment) before it is built (wave 1, non-autonomous)
+- [x] 34.4.1-21-PLAN.md — Declare gap cycle 2 (REQ-34.4.1-GAP-07..12, ROADMAP, STATE) + spike the F-6 fix's own API (`with_webview` synchrony, thread identity, both cookie_domain_matches directions, delete/retry experiment) before it is built (wave 1, non-autonomous) — **DONE 2026-07-31**: `34.4.1-SPIKE-016-FINDINGS.md` live-hardware-verified — A2 holds (main thread, no hop needed), Q1 answered (closure runs synchronously inline), Defect A proven live and total (clear-direction matches 33/33, all cookies — worse than research's original framing), retry flat 31/31/31 (identity mismatch, not timing). RECOMMENDATION: WKWebsiteDataStore rewrite in plan 23, but **plan 22 must land first** or a working delete wipes the whole shared jar (Epic/GOG included).
 - [ ] 34.4.1-22-PLAN.md — Defect A: give the disconnect census its own correctly-directed cookie match (wave 2)
 - [ ] 34.4.1-23-PLAN.md — Defect B (BLOCKING): replace `delete_cookie()`'s reconstruct-and-delete path with `WKWebsiteDataStore.fetchDataRecords`/`removeData(for:)` via `with_webview()`, domain-scoped by `displayName` (wave 3)
 - [ ] 34.4.1-24-PLAN.md — WR-07 (login window title) + F-4 (one-shot raise/focus, observed not assumed) (wave 4)
