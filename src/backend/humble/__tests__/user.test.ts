@@ -1925,6 +1925,39 @@ describe('HumbleUser', () => {
           )
         })
 
+        test('Phase 34.4.1 Plan 23 (F-6 Defect B): a deleted count that disagrees with matched-before still triggers the discrepancy warning, now that deleted is a MEASURED count rather than an attempted one', async () => {
+          // Jar totals stay perfectly consistent (before=5,matched=3 -> after=2) -- the
+          // Plan 22 jarDelta check alone would PASS. Only seam.clearCookies' own returned
+          // count disagrees with matched-before, isolating the `deleted !== before.matched`
+          // branch this plan re-asserts: a re-read-derived count can still legitimately
+          // diverge from the census's own matched-before count (e.g. a cookie set
+          // concurrently by the still-open login window between the census read and the
+          // clear), and that divergence must still be surfaced loudly.
+          mockSeamCookiesForDomain
+            .mockResolvedValueOnce({
+              total: 5,
+              matched: [
+                humbleCookie('_simpleauth_sess'),
+                humbleCookie('csrf_cookie'),
+                humbleCookie('other_humble_cookie')
+              ]
+            })
+            .mockResolvedValueOnce({ total: 2, matched: [] })
+          // Measured delete count (2) disagrees with matched-before (3), even though the
+          // jar arithmetic (before.total - after.total === 3) still checks out.
+          mockSeamClearCookies.mockResolvedValue(2)
+
+          await HumbleUser.disconnect()
+
+          const discrepancyCall = mockLogWarning.mock.calls.find((c) =>
+            String(c[0]).includes('discrepancy')
+          )
+          expect(discrepancyCall).toBeDefined()
+          expect(String(discrepancyCall?.[0])).toContain(
+            'deleted=2, expected matched-before=3'
+          )
+        })
+
         test('a rejecting census read does not block the clear and disconnect() still resolves', async () => {
           mockSeamCookiesForDomain.mockRejectedValue(new Error('census read failed'))
           mockSeamClearCookies.mockResolvedValue(0)

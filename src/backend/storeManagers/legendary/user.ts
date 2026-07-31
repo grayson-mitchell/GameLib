@@ -150,6 +150,16 @@ export class LegendaryUser {
         [
           'clearEpicCookies',
           async () => {
+            // Phase 34.4.1 Plan 23 (F-6 Defect B, deliberate cross-phase edit into open
+            // Phase 34.5 -- see this plan's own SUMMARY): `seam.clearCookies` routes to
+            // the exact SAME `humble_login_clear_cookies` Rust arm `humble/user.ts`'s
+            // disconnect() uses. This call site carried F-6's Defect B (a returned count
+            // that could never report failure, and on macOS a deletion that reported
+            // success while deleting nothing) verbatim since Phase 34.5 plan 06 -- it was
+            // never independently verified, only assumed fixed by inheritance once the
+            // shared arm was fixed. Plan 23 fixed the arm for BOTH callers; this step adds
+            // the observability Humble already had, so the fix is provable here too,
+            // rather than merely assumed.
             const label = await seam.open(EPIC_LOGIN_ORIGIN, {
               visible: false,
               userAgent: standardBrowserUserAgent()
@@ -157,11 +167,22 @@ export class LegendaryUser {
             try {
               const deleted = await seam.clearCookies(label, EPIC_COOKIE_HOST)
               // Only the COUNT is logged — never a cookie name, domain, or
-              // value (mirrors humble/user.ts's disconnect()).
+              // value (mirrors humble/user.ts's disconnect()). `deleted` is a
+              // measured post-removal delta (Plan 23), not an attempted count:
+              // it comes from a re-read of the jar taken AFTER the removal ran.
               logInfo(
-                `Legendary logout: cleared ${deleted} ${EPIC_COOKIE_HOST} cookie(s)`,
+                `Legendary logout: cleared ${deleted} ${EPIC_COOKIE_HOST} cookie(s) (measured post-removal delta)`,
                 LogPrefix.Legendary
               )
+              if (deleted === 0) {
+                // Same loudness discipline as humble/user.ts's census discrepancy
+                // warning: a domain-scoped clear that measured zero removed is a
+                // signal worth a WARNING, not silence, even without a full census.
+                logWarning(
+                  `Legendary logout: domain-scoped cookie clear removed nothing for ${EPIC_COOKIE_HOST}`,
+                  LogPrefix.Legendary
+                )
+              }
             } finally {
               // Closed unconditionally — even when clearCookies rejects —
               // so a failed clear never leaks the hidden window.

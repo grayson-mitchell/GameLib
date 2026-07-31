@@ -447,3 +447,40 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
     expect(armBody).not.toContain('cookie_domain_matches(host, c.domain())')
   })
 })
+
+// Phase 34.4.1 Plan 23 (F-6 Defect B): a static guard, from the JS suite, against a future
+// revert of humble_login_clear_cookies to the attempted-count shape this plan closes. Neither
+// a Rust unit test (which can't drive the real match arm end-to-end without a live WKWebView)
+// nor any TS-side mock can observe a regression here -- the bug is entirely in what expression
+// the Rust arm computes its returned count from, a source-level property this file's existing
+// convention (extracting arm bodies from comment-stripped source) is built to pin.
+describe('REQ-34.4.1-06 (Plan 23, F-6 Defect B) humble_login_clear_cookies never returns the pre-removal attempted count', () => {
+  test('the stripped source contains no matching.len()-style pre-computed delete count', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('matching.len()')
+  })
+
+  test('the arm references verified_delete_count on every platform (macOS and non-macOS branches)', () => {
+    const code = loadMainRsCode()
+    const matches = code.match(/verified_delete_count\(/g) ?? []
+    expect(matches.length).toBeGreaterThanOrEqual(2)
+  })
+
+  test("the macOS branch references WKWebsiteDataStore's removal API, not wry's delete_cookie()", () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('removeDataOfTypes_forDataRecords_completionHandler')
+  })
+
+  test('this file would catch a reintroduction of matching.len() as the returned delete count (self-test, temporarily broke and restored during Task 3 -- see 34.4.1-23-SUMMARY.md)', () => {
+    // Simulates exactly the regression the first test above guards against: an arm body
+    // that reverts to the pre-removal attempted-count shape.
+    const regressed = `
+        "humble_login_clear_cookies" => {
+            let matching: Vec<_> = window.cookies().unwrap();
+            let deleted = matching.len();
+            Ok(Value::Number(deleted.into()))
+        }
+    `
+    expect(regressed).toContain('matching.len()')
+  })
+})

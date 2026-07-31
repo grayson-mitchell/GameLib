@@ -105,7 +105,7 @@ jest.mock('../../../humble/userAgent', () => ({
 
 import { LegendaryUser } from '../user'
 import { clearCache } from '../../../utils'
-import { logError, logWarning } from 'backend/logger'
+import { logError, logInfo, logWarning } from 'backend/logger'
 import {
   setLoginWindowSeam,
   type LoginWindowSeam
@@ -392,5 +392,59 @@ describe('LegendaryUser.logout()', () => {
       'clearHostResolverCache',
       'clearData'
     ])
+  })
+
+  // ── Phase 34.4.1 Plan 23 (F-6 Defect B): Epic's clearEpicCookies step is the second, ──────
+  // already-shipped caller of the SAME humble_login_clear_cookies Rust arm humble/user.ts's
+  // disconnect() uses. It carried Defect B verbatim since Phase 34.5 plan 06 and was never
+  // independently verified -- these tests give it the same observability Humble already had.
+
+  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B): clearEpicCookies logs the measured count the clear returned', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockResolvedValue(4)
+    })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('cleared 4 epicgames.com cookie(s)'),
+      'Legendary'
+    )
+    // States the count is a measured post-removal delta, not an attempted count.
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('measured post-removal delta'),
+      'Legendary'
+    )
+  })
+
+  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B): a clearCookies count of 0 triggers a distinct removed-nothing warning', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockResolvedValue(0)
+    })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'domain-scoped cookie clear removed nothing for epicgames.com'
+      ),
+      'Legendary'
+    )
+  })
+
+  it('REQ-34.4.1-06 (Plan 23, F-6 Defect B): a healthy non-zero clearCookies count does NOT trigger the removed-nothing warning', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockResolvedValue(2)
+    })
+    setLoginWindowSeam(seam)
+
+    await LegendaryUser.logout()
+
+    const removedNothingCall = (logWarning as jest.Mock).mock.calls.find((c) =>
+      String(c[0]).includes('removed nothing')
+    )
+    expect(removedNothingCall).toBeUndefined()
   })
 })
