@@ -425,7 +425,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 4 (supersedes gap cycle 3 below; plans 34.5-29/30/31 HALTED by `BINDING DECISION: fix-first`, see 34.5-CYCLE4-ROUTING.md)
-Plan: 36 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound, this session) done — wave 1 is now FULLY complete; 36/37 wave 2 remain — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
+Plan: 37 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound) done — wave 1 FULLY complete; 36 (dev-only secret vault) and 37 (Epic Electron-vs-Tauri discriminator-2, verdict E1) done — wave 2 FULLY complete, gap cycle 4 scope exhausted; the blocking five-item gate is STILL NOT authored, NOT run this cycle — phase does NOT close until a future cycle's gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3542,6 +3542,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: KEYRING_FAILURE_MEMO_MS set to 120s: exceeds the observed 101s live-session interval; now a tested cross-language invariant (>=2x KEYRING_READ_TIMEOUT)
 - [Phase 34.5]: No env-var escape hatch or Keychain bypass added for the keyring-race fix -- T-34.5-C4-34 accept-and-forbid holds; dev-only vault stays plan 34.5-36's scope
 - [Phase 34.5-36]: devSecretVault.ts is env-gated (GAMELIB_DEV_SECRET_VAULT=1 exact match), packaged-build-refused, and wired into bootstrap.ts as an EXCLUSIVE branch against the two keyring stores — prevents migrateHumbleSecrets() firing underneath a vault-enabled boot; U-34.5-01 records the Keychain path as UNPROVEN whenever the vault is in use
+- [Phase 34.5-37]: F-34.5-G6-01 second Epic discriminator (Electron-vs-Tauri) verdict **E1 SELECTED**: Electron's Epic login form accepted a full credential exchange (real login completed, contradicting the contract's own no-credentials precondition, recorded as a named deviation) while Tauri's stayed non-interactive across two full 300s timeouts on the identical EPIC_LOGIN_URL -- implicates the Tauri/WKWebView seam specifically, not an Epic-side change independent of the port. Routes to instrumenting the login window's own console/script-error signal to confirm/refute R2; USER_AGENTS/EPIC_LOGIN_URL/matchOAuthRedirect remain untouched. U-34.5-06 stays OPEN (no status=captured reached on either Tauri attempt). Gap cycle 4 (plans 32-37, both waves) is now fully executed; the blocking five-item gate is still NOT authored/run this cycle.
 
 ### Pending Todos
 
@@ -3614,8 +3615,39 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T10:22:26.085Z
-Stopped at: Completed 34.5-36-PLAN.md
+Last session: 2026-08-01T11:00:00.000Z
+Stopped at: Completed 34.5-37-PLAN.md
+  This session (continuation executor): resumed 34.5-37 from its Task 2 checkpoint (human-verify,
+  answered by the developer). Task 1 (commit `0b982d23c`, prior session) had already committed
+  `34.5-G6-EPIC-DISCRIMINATOR-2.md` with `verdict: null`. Task 2 was a human checkpoint (no
+  commit) -- the developer ran both arms on real hardware: Arm E (Electron, `npm start`) form
+  interactive, a real Epic login completed (`legendary auth --code`, `Game list updated, got 15
+  games & DLCs`, logged out ~12s later) -- a deviation from the contract's own no-credentials
+  precondition, named explicitly rather than absorbed silently; Arm T (Tauri, `pnpm tauri:dev`,
+  stock UA) form non-interactive across two full 300s timeouts, single hostname
+  `www.epicgames.com`, no visible error text. Task 3 (docs, commit `1afac838b`): filled the
+  Result section from Task 2's evidence, re-verified every pasted log line directly against
+  `gamelib.log.old`/`gamelib.log` (zero discrepancies), applied the pre-registered decision rule
+  exactly as written -- Electron interactive AND Tauri non-interactive selects **E1 SELECTED**
+  (Tauri/WKWebView seam implicated, not an Epic-side change independent of the port). Added a
+  `## Routing` section: routes to instrumenting the login window's own console/script-error
+  signal to confirm/refute R2, explicitly not a fix -- `USER_AGENTS`/`EPIC_LOGIN_URL`/
+  `matchOAuthRedirect` untouched. `U-34.5-06` recorded explicitly as still OPEN (no
+  `status=captured` reached on either Tauri attempt). Verified `git diff 0b982d23c` shows changes
+  confined to the frontmatter `verdict` line and everything below `## Result` -- readings,
+  prediction table, decision rule byte-identical to their pre-registered form. Verified:
+  `npx tsc --noEmit` exit 0; `npm run test:ci` 3547/3547 across 181 suites (unchanged baseline --
+  this plan shipped no `.ts`/`.tsx`/`.rs` file); `git diff --name-only` across both plan commits
+  lists exactly one file. Plans 34.5-29/30/31 remain HALTED (untouched) per the binding
+  `fix-first` decision. See `34.5-37-SUMMARY.md`.
+Next: Gap cycle 4 (plans 34.5-32..37, both waves) is now fully executed. Phase 34.5 STILL does
+  not reach its blocking five-item gate this cycle -- the `fix-first` binding decision keeps
+  34.5-29/30/31 (the third gate contract + its run) halted pending a further gap cycle's
+  authorisation. The next diagnostic step named by this session's Routing (console/script-error
+  instrumentation for Epic, F-34.5-G6-01) is not yet scoped into any plan.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-36-PLAN.md
   This session (sequential executor): executed 34.5-36 (gap cycle 4, wave 2 -- the
   developer-scoped dev-only secret vault Routing addition, REQ-34.5-11/-12/-13). Task 1 (feat,
   commit `f95451cd2`): added `src/backend/sidecar/devSecretVault.ts` -- `installDevSecretVault()`,
