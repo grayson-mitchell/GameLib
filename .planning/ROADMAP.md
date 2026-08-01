@@ -1542,7 +1542,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 25/31 plans executed (15 base plans + gap cycle 2's 6 plans, all executed, + gap cycle
+**Plans:** 26/31 plans executed
 3's plans 22-25 of 10 executed) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
 `34.5-16` through `34.5-18` fixed the single diagnosed root cause (a wrong `publicDir` under the
@@ -1593,7 +1593,7 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 - [x] 34.5-23-PLAN.md — F-G6-02 layer 1: exempt `oauthCaptureLogin` from the 60 s `INVOKE_TIMEOUT`, make the transport failure loud, add the self-tested standing guard (gap wave 2)
 - [x] 34.5-24-PLAN.md — F-G6-01 instrumentation: hostname-only nav logging + `GAMELIB_OAUTH_UA_LEGENDARY` override + the discriminator contract, `verdict: null` (gap wave 2)
 - [x] 34.5-25-PLAN.md — F-G6-06: diagnose the double Keychain prompt and count the shared arm's blast radius, then dedupe reads and bound the failure memo (gap wave 2)
-- [ ] 34.5-26-PLAN.md — F-G6-02 layer 2 / F-G6-03: route the captured code through the post-login completion path so the library actually refreshes (gap wave 3)
+- [x] 34.5-26-PLAN.md — F-G6-02 layer 2 / F-G6-03: route the captured code through the post-login completion path so the library actually refreshes (gap wave 3)
 - [ ] 34.5-27-PLAN.md — F-G6-04 origin shown in the login window's own chrome (phishing-resistance) + F-G6-05 light interface style for the login webview (gap wave 3)
 - [ ] 34.5-28-PLAN.md — Diagnostic live checkpoint: two-arm Epic UA discriminator + one-runner capture-to-library smoke, before committing to the full gate (gap wave 4, non-autonomous)
 - [ ] 34.5-29-PLAN.md — Apply the Epic fix the discriminator SELECTED (three of four branches ship no code) + verified preflight for the never-attempted items 4 and 5 (gap wave 5)
