@@ -379,6 +379,124 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
   })
 })
 
+// ── nav host logging (plan 34.5-24 Task 1, F-34.5-G6-01 discriminator, T-34.5-G6-11) ───────────
+
+describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
+  const mockSeamOpen = jest.fn()
+  const mockSeamTakeEvents = jest.fn()
+  const mockSeamClose = jest.fn()
+
+  const fakeSeam: LoginWindowSeam = {
+    open: (...args: Parameters<LoginWindowSeam['open']>) => mockSeamOpen(...args),
+    cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
+    takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
+      mockSeamTakeEvents(...args),
+    close: (...args: Parameters<LoginWindowSeam['close']>) => mockSeamClose(...args),
+    clearCookies: jest.fn(),
+    revealPost: jest.fn(),
+    clearStorage: jest.fn()
+  }
+
+  beforeEach(() => {
+    mockSeamOpen.mockResolvedValue('oauth-capture-nav-0')
+    mockSeamTakeEvents.mockResolvedValue([])
+    mockSeamClose.mockResolvedValue(true)
+    setLoginWindowSeam(fakeSeam)
+    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    loggerModule.logInfo.mockClear()
+  })
+
+  afterEach(() => {
+    setLoginWindowSeam(null)
+  })
+
+  function navHostLines(): string[] {
+    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    return loggerModule.logInfo.mock.calls
+      .map(([msg]: [unknown]) => String(msg))
+      .filter((msg: string) => msg.includes('nav host='))
+  }
+
+  it('logs "nav host=" exactly once for two consecutive events on the SAME host', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([
+        { event: 'started', url: 'https://www.epicgames.com/id/login' },
+        { event: 'finished', url: 'https://www.epicgames.com/id/other?x=1' }
+      ])
+
+      const promise = captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
+        deadlineMs: 1000,
+        pollMs: 500
+      })
+      await flushAsync()
+
+      const lines = navHostLines()
+      expect(lines.length).toBe(1)
+      expect(lines[0]).toContain('nav host=www.epicgames.com')
+      // Hostname only -- never path, query string, or fragment.
+      expect(lines[0]).not.toMatch(/\/id\/|[?]x=1/)
+
+      jest.advanceTimersByTime(1000)
+      await flushAsync()
+      await promise
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('logs "nav host=<unparseable>" for a malformed url and does not throw', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([{ event: 'started', url: 'not a url' }])
+
+      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth', {
+        deadlineMs: 1000,
+        pollMs: 500
+      })
+      await flushAsync()
+
+      const lines = navHostLines()
+      expect(lines.length).toBe(1)
+      expect(lines[0]).toContain('nav host=<unparseable>')
+
+      jest.advanceTimersByTime(1000)
+      await flushAsync()
+      await promise
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('never logs a captured code value (SECRETVALUE) in any logged line, even on a matching event', async () => {
+    const loggerModule = jest.requireMock('backend/logger') as {
+      logInfo: jest.Mock
+      logWarning: jest.Mock
+    }
+
+    mockSeamTakeEvents.mockResolvedValue([
+      { event: 'finished', url: 'http://localhost:8080/?code=SECRETVALUE' }
+    ])
+
+    const result = await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login')
+
+    const allLoggedStrings = [
+      ...loggerModule.logInfo.mock.calls.map((call: unknown[]) => JSON.stringify(call)),
+      ...loggerModule.logWarning.mock.calls.map((call: unknown[]) => JSON.stringify(call))
+    ]
+    for (const line of allLoggedStrings) {
+      expect(line).not.toContain('SECRETVALUE')
+    }
+    expect(result).toEqual({
+      status: 'captured',
+      runner: 'legendary',
+      code: 'SECRETVALUE',
+      redirectUrl: 'http://localhost:8080/?code=SECRETVALUE'
+    })
+  })
+})
+
 // ── Registration kind + boundary validation (Task 2) ───────────────────────────────────────────
 // Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
 // module-scope maps; calling registerOAuthLoginFlows() more than once would stack a duplicate
