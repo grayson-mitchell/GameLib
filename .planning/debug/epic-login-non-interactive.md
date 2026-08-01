@@ -2,7 +2,7 @@
 status: investigating
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T00:45:00
+updated: 2026-08-02T02:00:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -297,6 +297,78 @@ finding: F-34.5-G6-01
     BENIGN, re-confirmed: viewport `minimal-ui` warning, the 7x source-map 403s, the manifest
     cross-origin warning, the 4x font preload warnings.
 
+- timestamp: 2026-08-02T01:10:00
+  source: live hardware, `pnpm tauri:dev`, Safari Web Inspector "Break on All Exceptions" armed in
+    the Debugger panel, developer checkpoint response — the FIRST named exception + call stack this
+    investigation has produced in any cycle
+  note: |
+    This is the direct test of THREAD 2's pre-registered prediction (see prior Current Focus). The
+    debugger paused. Recorded verbatim, per this project's F-10 discipline (record the raw result
+    before reasoning about it):
+
+    PAUSE REASON (verbatim):
+    ```
+    TypeError: reflect.construct requires the third argument to be a constructor if present
+    ```
+
+    CALL STACK (verbatim, top to bottom):
+    ```
+    c (index-GFazdAUR.js:1442)
+    (anonymous function) (index-GFazdAUR.js:1464)
+    Pa (index-GFazdAUR.js:48)
+    (anonymous function) (index-BMTfSvFa.js:64276)
+    ```
+    All four frames are inside Epic's own app bundles (`index-GFazdAUR.js`, `index-BMTfSvFa.js`) —
+    NOT inside a blackboxed polyfill. Developer confirmed `stable-*`, `es.array.from-*`, `ie11-*`
+    were blackboxed for this session and `polyfill-*` did not even load this run, so this is not a
+    polyfill artifact being misattributed.
+
+    LOCAL VARIABLES at frame `c`, for the argument at the `newTarget` (third-argument) position of
+    the `Reflect.construct` call (verbatim):
+    ```
+    d: function()
+      arguments: TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context.
+      caller:    TypeError: 'arguments', 'callee', and 'caller' cannot be accessed in this context.
+      length: 1
+      name: "call"
+    ```
+
+    IDENTIFICATION: `name: "call"`, `length: 1`, and the strict-mode-poisoned `arguments`/`caller`
+    accessors together identify `d` as `Function.prototype.call` itself (or a bound/wrapped
+    derivative of it) — this is the standard fingerprint of a native built-in function read back out
+    of the engine, not authored/minified application code (authored code does not have poisoned
+    `arguments`/`caller` accessors under normal circumstances the way an intrinsic does). Built-in
+    methods have no `[[Construct]]` internal slot, so passing one as `Reflect.construct`'s third
+    argument (`newTarget`) throws exactly this `TypeError` — this is engine-correct behavior once a
+    non-constructible value reaches that argument position, not evidence of a WKWebView-specific
+    behavior in itself.
+
+    STILL OUTSTANDING (requested from developer, not yet received): source at
+    `index-BMTfSvFa.js:64276` (~5 lines, minified acceptable) — this is the app-level call site that
+    leads into frame `c`, and would name which class Epic's code intended to construct, which in
+    turn would name the specific global whose value resolved to `Function.prototype.call` instead
+    of a constructor.
+
+    STILL OUTSTANDING (requested from developer, not yet received): whether this pause is caught or
+    fatal — i.e., does Resuming through every subsequent paused exception eventually produce a
+    rendered form, or does the session run out (300s deadline / manual stop) still on the empty-DOM
+    skeleton with no form ever appearing.
+
+    CORRECTION, 2026-08-02T02:00:00 (self-retraction — see Eliminated and Current Focus below): the
+    "all four frames are inside Epic's own app bundles" framing above is WRONG in the sense that
+    mattered. `index-GFazdAUR.js` LOOKED like an app chunk because of its `index-` filename prefix,
+    but the developer-supplied source excerpt (see Eliminated entry below) proves it is a vendored
+    core-js chunk, not application code — its three frames (`c`, the anonymous wrapper, `Pa`) are all
+    inside core-js's `isConstructor` feature-detection routine. Only `(anonymous function)
+    (index-BMTfSvFa.js:64276)` is genuine app code, and direct inspection of that frame (see
+    Eliminated entry below) shows it is core-js's IMPORT/MODULE-LOAD site at startup — not a failure
+    site, not a call site that "intended to construct" anything. The "STILL OUTSTANDING" asks above
+    for `index-BMTfSvFa.js:64276` source and caught-vs-fatal status are SUPERSEDED — that source has
+    now been supplied and read (see Eliminated entry below), and it answers a different question than
+    originally asked: it shows core-js's self-test importing/running, not an app-level constructor
+    call. This whole pause is the intended, caught outcome of core-js's own feature detection, not a
+    signal about Epic's application logic at all.
+
 ## Eliminated
 
 - hypothesis: ITP/third-party-storage sub-hypothesis — WKWebView's default third-party-cookie
@@ -352,95 +424,153 @@ finding: F-34.5-G6-01
     that reconfirmed R3's kill (see Evidence 2026-08-02T00:20:00 and the new Current Focus entry).
     R3 killed one instance of the injection-breaks-the-page family; it did not kill the family.
 
+- hypothesis: "CLOBBERED GLOBAL" mechanism — something in the Tauri environment substitutes/clobbers
+  a global that Epic's bundle expects to resolve to a constructor with `Function.prototype.call`,
+  causing the `Reflect.construct` `TypeError` observed at 2026-08-02T01:10:00, and this substitution
+  is the (or a) cause of the empty DOM.
+  eliminated_by: developer-supplied source excerpt of `index-GFazdAUR.js` at the breaking frame,
+    2026-08-02.
+  note: |
+    SELF-RETRACTION. This was the PRIOR CYCLE'S OWN INTERPRETIVE INFERENCE, not a developer
+    observation — the developer only ever supplied raw debugger pause data (pause reason, call
+    stack, local variables at frame `c`). The "something in Tauri substitutes
+    `Function.prototype.call` for a constructor" narrative was this investigation's own reasoning
+    layered on top of that raw data, and it is now shown false.
+
+    The developer-supplied source is core-js's own `isConstructor` feature-detection routine:
+    ```js
+    c = function(d) {
+        if (!t(d)) return !1;
+        try { return s(o, [], d), !0 }
+        catch (y) { return !1 }
+    },
+    ...
+    return l.sham = !0, ni = !s || e(function() {
+        var h;
+        return c(c.call) || !c(Object) || !c(function() { h = !0 }) || h
+    }) ? l : c, ni
+    ```
+    where `s = n("Reflect", "construct")`. This proves `c(c.call)` deliberately passes
+    `Function.prototype.call` into the detector `c` to verify the detector correctly REJECTS a
+    known non-constructor, as one leg of a self-test (`c(c.call) || !c(Object) || !c(function(){...})
+    || h`). The `Reflect.construct(o, [], d)` call sits inside a `try` whose `catch` returns `false`
+    — the `TypeError` observed at 2026-08-02T01:10:00 is the INTENDED, CAUGHT outcome of this
+    self-test, not an uncaught failure reaching Epic's application logic.
+
+    This falsifies the specific mechanism (Tauri clobbers a constructor-holding global) as the
+    explanation for THIS exception. It does not by itself prove anything about the empty-DOM
+    symptom's actual cause — it only removes this one story. Any downstream reasoning that leaned on
+    it (including "Epic's code must be receiving a real constructor at this position under Electron,
+    and something under Tauri substitutes it") is VOID and must not be carried forward.
+
+    Also corrects a second, related error from the same prior cycle: `index-GFazdAUR.js` was
+    described as being "inside Epic's own app bundles" alongside `index-BMTfSvFa.js`. It is not —
+    despite its `index-` filename prefix (which resembles the app bundle's own `index-BMTfSvFa.js`
+    naming and is why it was misread), `index-GFazdAUR.js` is a vendored core-js/polyfill chunk, not
+    application code. Of the four call-stack frames recorded at 2026-08-02T01:10:00, only
+    `(anonymous function) (index-BMTfSvFa.js:64276)` is genuine app code — and it is core-js's
+    IMPORT/MODULE-LOAD site at startup (where the app bundle pulls in and runs the core-js polyfill
+    module containing the self-test above), not a failure site and not a constructor call site. The
+    "index-BMTfSvFa.js:64276 names which class Epic intended to construct" framing from the prior
+    cycle's Current Focus is also therefore wrong and is retracted along with the mechanism.
+
+    METHOD LESSON: Break on All Exceptions is a poor instrument against this specific page. core-js
+    performs feature detection via deliberate try/caught throws (this is standard core-js practice,
+    not unique to this bundle), so the technique yields a stream of false positives, each costing a
+    developer round trip to resolve. Two vendor chunks have now trapped this technique this way
+    (`stable-*`/`es.array.from-*`/`ie11-*` blackboxed in an earlier run; `index-GFazdAUR.js` caught
+    this one because it was NOT blackboxed, its `index-` prefix having disguised it as app code). Any
+    FURTHER use of break-on-exceptions on this page MUST blackbox all vendor chunks first, including
+    `index-GFazdAUR.js`. `index-BMTfSvFa.js` must NEVER be blackboxed — it is the genuine app bundle
+    and the only place a real, informative application-level exception would live.
+
 ## Current Focus
 
 hypothesis: |
-  The Class A/B DOM-disabled-vs-event-delivery split from the prior cycle is FALSIFIED at the root
-  (see Symptoms correction and Evidence 2026-08-02T00:20:00): there is no form in the DOM at all
-  (`inputs:0 forms:0 iframes:[] text:""`), so neither "disabled inputs" (Class A) nor "healthy
-  inputs not receiving events" (Class B) can be the mechanism — both presuppose a form that does
-  not exist. The ITP/third-party-storage sub-hypothesis, which was pre-registered under Class A, is
-  FALSIFIED on its own stated terms (`cookieLen: 85`, `localStorage OK` — see Eliminated). What is
-  visually present is a CSS skeleton/placeholder, not real rendered content.
+  RETRACTION CYCLE, 2026-08-02. The prior cycle's "CLOBBERED GLOBAL" mechanism — that something in
+  the Tauri environment substitutes `Function.prototype.call` for a constructor at Epic's
+  `Reflect.construct` call site, and that this substitution is the (or a) cause of the empty DOM —
+  is FALSIFIED and moved to Eliminated (see above). The developer-supplied source of
+  `index-GFazdAUR.js` at the breaking frame proves the observed `TypeError` is core-js's
+  `isConstructor` feature-detection routine deliberately passing `Function.prototype.call` into a
+  `Reflect.construct` probe, inside a `try` whose `catch` returns `false` — an intentional, caught
+  self-test, not an uncaught failure reaching application logic. This was this investigation's OWN
+  interpretive error layered onto raw pause data the developer supplied (pause reason, call stack,
+  local variables) — not a developer observation that turned out wrong. No part of the retracted
+  mechanism — including "Epic's code must receive a real constructor under Electron and Tauri
+  substitutes it" — may be carried forward as live reasoning.
 
-  TWO THREADS ARE NOW OPEN. They are not yet shown to be the same mechanism and must be evaluated
-  independently — do not let a plausible connection between them substitute for evidence connecting
-  them.
+  Correspondingly, `index-GFazdAUR.js` is now known to be a vendored core-js chunk, not application
+  code, despite its `index-` prefix. Of the four 2026-08-02T01:10:00 call-stack frames, only
+  `(anonymous function) (index-BMTfSvFa.js:64276)` is genuine app code, and it is core-js's
+  import/module-load site at startup — not a failure site, not a constructor call site. The prior
+  cycle's outstanding ask for that source (to "name the constructor Epic intended to build") is
+  superseded and answered differently than expected: there is no such constructor call to name at
+  that frame.
 
-  THREAD 1 (reopened, not yet the active lead) — Tauri's CORE IPC bootstrap injection, distinct
-  from R3: the console shows `[Warning] IPC custom protocol failed, Tauri will now use the
-  postMessage interface instead – TypeError: Load failed (user-script:103, line 106)` followed by a
-  bare `TypeError: Load failed`. `user-script:103` is Tauri's own framework-injected script, not
-  Epic's bundle and not a plugin — a different injection mechanism than the notification plugin
-  that R3 killed. This keeps the general "Tauri's injected user-scripts break Epic's page" claim
-  alive as a family, even though R3 killed one specific member of that family. UNCONFIRMED: whether
-  this IPC-transport failure has any causal relationship to the empty DOM, or is an independent,
-  benign fallback (the warning itself says Tauri "will now use the postMessage interface instead" —
-  phrasing that suggests a handled fallback, not a fatal failure, though this has not been verified
-  against Tauri's source).
+  THREAD 1 (Tauri's core injected user-script, `user-script:103`, "IPC custom protocol failed ...
+  TypeError: Load failed") REVERTS to open and unconfirmed. It loses the specific mechanism proposed
+  for it in the prior cycle and must not retain credibility borrowed from that now-void mechanism.
+  It is supported ONLY by the already-recorded Evidence 2026-08-02T00:20:00 line showing Tauri's own
+  core IPC bootstrap script failing in this same page load — a real, distinct observation, but with
+  NO currently-proposed mechanism connecting it to the empty DOM.
 
-  THREAD 2 (PRE-REGISTERED as the active lead, stated before the confirming test per this project's
-  F-10 discipline) — Sentry-swallowed-exception: Epic's actual application bundle demonstrably
-  loaded and executed real logic (`[Warning] WARN – "[Statsig]" – ... (index-BMTfSvFa.js, line
-  501)` — a Statsig feature-gate evaluation, which only runs from inside Epic's own running code,
-  not framework boilerplate). Separately, Sentry's own error-ingest endpoint (`envelope`) returned
-  a 429 (rate-limited) in the same session. Reading: Epic's bundle is throwing repeatedly during
-  bootstrap, an error boundary is catching those throws internally (React error boundaries and
-  similar patterns catch-and-report without re-throwing to the global scope), and shipping enough
-  reports to Sentry fast enough to trip its rate limiter — while rendering nothing (hence the empty
-  DOM) and leaving no trace in the console, because a caught exception is never an uncaught one.
-  This is offered as the explanation for why four consecutive cycles found "no error" in the
-  console: the errors most likely exist and are being caught, not that there truly are none.
+  The causal mechanism for the empty-DOM symptom (F-34.5-G6-01) remains UNKNOWN. Four hypotheses are
+  now eliminated (ITP, R1, E2, R3) plus this retracted clobbered-global mechanism. Do not let
+  hypothesis-count pressure produce a premature fix — no root cause has been named by evidence yet.
 
-  PREDICTION, stated now, before the test: IF Thread 2 is correct, THEN arming "Break on All
-  Exceptions" in the Web Inspector Debugger panel (which stops at a `throw` regardless of whether
-  something downstream catches it — unlike a normal breakpoint or the console, which only surface
-  what's left uncaught) and reloading the login window WILL produce at least one concrete exception
-  with a message and call stack pointing into Epic's own bundle or a specific browser API it calls.
-  Falsification: if Break on All Exceptions is correctly armed and the page reloads through to the
-  same empty-DOM state with ZERO exceptions breaking (not "none we noticed" — the debugger must
-  actually pause at least once for the thread to survive), Thread 2 is wrong and the Sentry 429 has
-  some other explanation (e.g. Epic's own client-side rate-limiting telemetry, or non-exception
-  error reports such as network failures reported without a JS throw). In that case, fall back to
-  reading the Sentry `envelope` request's payload directly in the Network tab (contains Epic's own
-  serialized exception + stack), with the caveat that Safari's request-body viewer is known to be
-  unreliable for this payload shape — if both approaches come up empty, Thread 2 should be
-  downgraded the same way ITP and R2 were: not chased further without new evidence.
+  METHOD LESSON recorded (see Eliminated entry for full text): Break on All Exceptions is a poor
+  instrument against Epic's login page specifically because core-js performs feature detection via
+  deliberate try/caught throws, producing a stream of false positives. If break-on-exceptions is
+  used again, ALL vendor chunks must be blackboxed first — the polyfills already blackboxed
+  (`stable-*`, `es.array.from-*`, `ie11-*`), PLUS now `index-GFazdAUR.js`. `index-BMTfSvFa.js` (the
+  genuine app bundle) must NEVER be blackboxed, since it is the only place a real, informative
+  application-level exception would live.
 test: |
-  Cannot be run by this agent — requires live Web Inspector Debugger-panel interaction on real
-  Tauri/WKWebView hardware (arming "Break on All Exceptions", triggering a reload, and reading a
-  live paused-debugger call stack), none of which this agent can do. Handed to the developer as a
-  CHECKPOINT (see returned checkpoint). No code change or further instrumentation is needed —
-  devtools are already wired to the `loginwin-*` window from two cycles ago.
+  Not yet designed — this cycle is a record-correction/retraction cycle only, per instruction. Two
+  candidate next tests are being offered to the developer as a choice (see CHECKPOINT REACHED
+  returned to the user), not pre-selected by this agent:
+    (a) read the Sentry `envelope` request's payload in the Network tab — the already-observed 429
+        on that endpoint (Evidence 2026-08-02T00:20:00) proves Epic's app is already assembling and
+        transmitting its real exception; the payload should contain the exception + stack with zero
+        vendor-chunk noise, and is cheaper than another debugger round trip;
+    (b) re-arm Break on All Exceptions, this time with `index-GFazdAUR.js` blackboxed alongside the
+        already-blackboxed polyfill chunks, leaving `index-BMTfSvFa.js` un-blackboxed, so any future
+        pause is a genuine app-level exception instead of a core-js self-test false positive.
 expecting: |
-  Exception message + top call-stack frames pointing at a specific Epic bundle function or browser
-  API → CONFIRMS Thread 2 and names a concrete, fixable root cause (the specific API/call that
-  throws). Debugger never pauses across a full reload → FALSIFIES Thread 2 as stated; fall back to
-  reading the Sentry `envelope` payload in the Network tab; if that is also unproductive,
-  reconsider Thread 2 entirely and re-open investigation into Thread 1 (the core IPC bootstrap
-  failure) as an independent line, or return to open-ended DOM/timing investigation (e.g. does the
-  skeleton ever get replaced, even after 300s, or is it eternally static — a hung-forever-on-a-
-  promise signature distinct from a caught throw).
+  Whichever option the developer picks: (a) a readable Sentry envelope payload names Epic's real
+  uncaught/caught exception directly, with a stack pointing at genuine app logic — this would likely
+  let the investigation skip straight to a call-site read without another debugger round trip. If
+  the payload is unreadable or unhelpful (Safari's request-body viewer was previously flagged as
+  unreliable for this kind of payload — see checkpoint), fall back to (b). (b) a properly-blackboxed
+  Break on All Exceptions pause, if it occurs, is now credible as an app-level exception rather than
+  a vendor self-test, and its call stack + local variables become the next evidence entry.
 next_action: |
-  BLOCKED on human hardware. See CHECKPOINT REACHED returned to the user for the exact Break-on-
-  All-Exceptions steps and the Network-tab fallback. Do NOT apply any fix and do NOT touch Thread 1
-  (the core IPC script) before that response — Thread 2 is the pre-registered active lead and must
-  be tested on its own before Thread 1 is investigated further, to avoid conflating two untested
-  mechanisms.
+  BLOCKED on human hardware and human choice. See CHECKPOINT REACHED returned to the user: presents
+  both options (a) Sentry envelope payload read, (b) re-armed Break on All Exceptions with
+  `index-GFazdAUR.js` now blackboxed, and asks which the developer prefers to try (or suggests (a)
+  first as the cheaper probe, with (b) as fallback). Do NOT apply any fix — no root cause is named.
+  Do NOT touch source code this cycle. Do NOT re-propose the retracted clobbered-global mechanism in
+  any form without new evidence that specifically identifies a real (non-core-js-self-test) global
+  substitution.
 reasoning_checkpoint: |
-  This project's own F-10 lesson keeps recurring and keeps being the right lesson: the prior
-  cycle's Class A/B + ITP framing was itself a plausible, self-consistent story built on a symptom
-  description ("greyed out", "non-interactive form") that nobody had actually verified against the
-  DOM — and it was wrong, not because the reasoning was bad, but because the underlying observation
-  it reasoned from was imprecise. The correction this cycle is the same shape as R3's: go back to
-  the rawest available signal (DOM state, full-filter console) before trusting any inherited
-  description of the symptom. Thread 2 is written as PRE-REGISTERED specifically so the next
-  hardware read is evaluated against this stated prediction, not fitted to whatever is found. Blind
-  spot, stated honestly: Thread 1 and Thread 2 could both be real and could even be related (a
-  broken core IPC transport is exactly the kind of thing that could cause a framework-level promise
-  to hang or throw inside application code) — but no evidence yet connects them, and reaching for
-  that connection before testing Thread 2 directly would be exactly the kind of comfortable,
-  unearned unification this project's history keeps punishing.
+  This retraction is itself an instance of the F-10 discipline this file has invoked repeatedly: a
+  compelling story (named exception, concrete mechanism, corroborating evidence from a different
+  injected script) is exactly the kind of evidence previously mistaken for confirmation in this
+  investigation, and it happened again here — the very discipline this file preaches did not
+  prevent this investigation from constructing an unearned narrative on top of correctly-recorded
+  raw data. The lesson generalizes beyond this one exception: raw pause data (pause reason, stack,
+  locals) is reliable; the narrative layered on top of it is not, until independently corroborated
+  by reading the actual source at the call site — which is exactly the "STILL OUTSTANDING" ask the
+  prior cycle itself flagged as unmet before treating the mechanism as load-bearing enough to
+  elevate Thread 1. The lesson here: even a hypothesis that names its own outstanding proof
+  requirements can still leak into Current Focus's framing (e.g., "THIS ELEVATES THREAD 1 to the
+  prime suspect") before those requirements are met. Future cycles should hold elevation language
+  until requirement 1 (identify the specific global) is actually satisfied by a source read, not
+  merely requested. Blind spot, stated honestly: this retraction does not itself advance the
+  investigation toward the real cause — it only removes a wrong turn. The empty-DOM mechanism is
+  exactly as unknown now as it was before the Reflect.construct pause was ever recorded, apart from
+  the now-firm fact that this particular exception is not it.
 
 ## Constraints
 
