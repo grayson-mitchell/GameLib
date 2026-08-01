@@ -48,6 +48,7 @@ import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { performSteamLogout } from './SteamSignOut'
+import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogin'
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
@@ -592,6 +593,19 @@ class GlobalState extends PureComponent<Props> {
       library: runner
     })
   }
+
+  // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): `useTauriOAuthLogin.ts` deliberately
+  // calls the RAW window.api.login/authGOG/authAmazon/authZoom channels itself (so it keeps
+  // owning the UNPORTED_CHANNEL_MARKER catch), so it cannot call epicLogin/gogLogin/amazonLogin/
+  // zoomLogin below without invoking the auth channel a second time. This exposes exactly the
+  // post-login half of those wrappers -- setState of the signed-in username, then routing
+  // through the EXISTING `handleSuccessfulLogin` (never a second, parallel refresh path) -- as a
+  // single method on context, built by the exported (and independently unit-tested)
+  // `createOAuthLoginCompletion` factory. None of the four wrappers below change.
+  completeOAuthLogin = createOAuthLoginCompletion({
+    setState: (update) => this.setState(update),
+    handleSuccessfulLogin: (runner) => this.handleSuccessfulLogin(runner)
+  })
 
   epicLogin = async (sid: string) => {
     console.log('logging epic')
@@ -1480,6 +1494,7 @@ class GlobalState extends PureComponent<Props> {
       <ContextProvider.Provider
         value={{
           ...this.state,
+          completeOAuthLogin: this.completeOAuthLogin,
           epic: {
             library: epic.library,
             username: epic.username,

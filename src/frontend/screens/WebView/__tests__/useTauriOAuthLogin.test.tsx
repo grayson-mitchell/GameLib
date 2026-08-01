@@ -93,6 +93,7 @@ const mockApi = {
   authAmazon: jest.fn(),
   authZoom: jest.fn(),
   getAmazonLoginData: jest.fn(),
+  getZoomUserInfo: jest.fn(),
   logInfo: jest.fn()
 }
 ;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
@@ -101,7 +102,11 @@ const mockApi = {
 
 // Imported after the mocks above (textual order -- this project's ts-jest setup does not
 // hoist jest.mock like babel-jest; see useDebouncedStoreSearch.test.ts).
-import { useTauriOAuthLogin, type TauriOAuthLoginState } from '../useTauriOAuthLogin'
+import {
+  useTauriOAuthLogin,
+  type TauriOAuthLoginState,
+  type OAuthLoginCompletionPayload
+} from '../useTauriOAuthLogin'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 
 const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]'
@@ -117,15 +122,17 @@ function harness(): HookHarness {
   return jest.requireMock('react') as unknown as HookHarness
 }
 
-function mount(runner: OAuthRunner | undefined): Hook {
+type OnLoginSuccess = (payload: OAuthLoginCompletionPayload) => void
+
+function mount(runner: OAuthRunner | undefined, onLoginSuccess?: OnLoginSuccess): Hook {
   harness().__resetMount()
   harness().__beginRender()
-  return useTauriOAuthLogin(runner)
+  return useTauriOAuthLogin(runner, onLoginSuccess)
 }
 
-function rerender(runner: OAuthRunner | undefined): Hook {
+function rerender(runner: OAuthRunner | undefined, onLoginSuccess?: OnLoginSuccess): Hook {
   harness().__beginRender()
-  return useTauriOAuthLogin(runner)
+  return useTauriOAuthLogin(runner, onLoginSuccess)
 }
 
 function unmount(): void {
@@ -141,11 +148,14 @@ function flushPromises(): Promise<void> {
 /** Mirrors useDebouncedStoreSearch.test.ts's `settle()` -- flushes microtasks and re-invokes
  * the hook a fixed number of times so any chain of out-of-render state mutations has enough
  * render-hops to become observable. */
-async function settle(runner: OAuthRunner | undefined): Promise<Hook> {
+async function settle(
+  runner: OAuthRunner | undefined,
+  onLoginSuccess?: OnLoginSuccess
+): Promise<Hook> {
   let value: Hook = { phase: 'idle' }
   for (let i = 0; i < 8; i++) {
     await flushPromises()
-    value = rerender(runner)
+    value = rerender(runner, onLoginSuccess)
   }
   return value
 }
@@ -165,6 +175,7 @@ beforeEach(() => {
   mockApi.authAmazon.mockReset()
   mockApi.authZoom.mockReset()
   mockApi.getAmazonLoginData.mockReset()
+  mockApi.getZoomUserInfo.mockReset()
   mockApi.logInfo.mockReset()
   mockApi.getAmazonLoginData.mockResolvedValue(AMAZON_LOGIN_DATA)
 })
@@ -252,12 +263,13 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
       mockApi[apiMethod].mockRejectedValue(
         new Error(`${UNPORTED_CHANNEL_MARKER} No handler registered for channel '${apiMethod}'`)
       )
+      const onLoginSuccess = jest.fn()
 
       const unhandled = jest.fn()
       process.on('unhandledRejection', unhandled)
       try {
-        mount(runner)
-        const hook = await settle(runner)
+        mount(runner, onLoginSuccess)
+        const hook = await settle(runner, onLoginSuccess)
 
         expect(hook).toEqual({ phase: 'blocked', runner, channel: expectedChannel })
         expect(mockApi[apiMethod]).toHaveBeenCalledTimes(1)
@@ -267,6 +279,8 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
       // The mocked UNPORTED_CHANNEL_MARKER rejection was consumed by the hook's own catch --
       // it must never surface as an unhandled rejection.
       expect(unhandled).not.toHaveBeenCalled()
+      // A blocked/refused channel must never be mistaken for a successful login.
+      expect(onLoginSuccess).not.toHaveBeenCalled()
     }
   )
 
@@ -343,14 +357,18 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
       redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
     })
     mockApi.authGOG.mockRejectedValue(new Error('backend exploded'))
+    const onLoginSuccess = jest.fn()
 
-    mount('gog')
-    const hook = await settle('gog')
+    mount('gog', onLoginSuccess)
+    const hook = await settle('gog', onLoginSuccess)
 
     expect(hook).toEqual({ phase: 'error', message: 'backend exploded' })
+    expect(onLoginSuccess).not.toHaveBeenCalled()
   })
+})
 
-  it('a resolved (non-rejecting) auth channel call falls through to idle, never forcing "blocked"', async () => {
+describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 34.5 Plan 26, F-34.5-G6-02 layer 2)', () => {
+  it('a resolved { status: "done" } auth channel call falls through to idle, never forcing "blocked"', async () => {
     mockApi.oauthCaptureLogin.mockResolvedValue({
       status: 'captured',
       runner: 'gog',
@@ -363,6 +381,159 @@ describe('useTauriOAuthLogin — captured -> auth channel -> blocked (D-04)', ()
     const hook = await settle('gog')
 
     expect(hook).toEqual({ phase: 'idle' })
+  })
+
+  it('on { status: "done" }, invokes the injected onLoginSuccess exactly once with the correct runner and username', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    const onLoginSuccess = jest.fn()
+
+    mount('gog', onLoginSuccess)
+    const hook = await settle('gog', onLoginSuccess)
+
+    expect(hook).toEqual({ phase: 'idle' })
+    expect(onLoginSuccess).toHaveBeenCalledTimes(1)
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'gog',
+      username: 'grayson',
+      user_id: undefined
+    })
+  })
+
+  it('legendary: onLoginSuccess receives displayName as username', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'legendary',
+      code: 'EPIC-CODE',
+      redirectUrl: 'http://localhost:8080/?code=EPIC-CODE'
+    })
+    mockApi.login.mockResolvedValue({
+      status: 'done',
+      data: { account_id: 'acc-1', displayName: 'Epic Grayson', user: 'epic-user' }
+    })
+    const onLoginSuccess = jest.fn()
+
+    mount('legendary', onLoginSuccess)
+    await settle('legendary', onLoginSuccess)
+
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'legendary',
+      username: 'Epic Grayson',
+      user_id: undefined
+    })
+  })
+
+  it('nile: onLoginSuccess receives both username (user.name) and user_id', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'nile',
+      code: 'NILE-CODE',
+      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
+    })
+    mockApi.authAmazon.mockResolvedValue({
+      status: 'done',
+      user: {
+        account_pool: 'pool-1',
+        user_id: 'nile-user-1',
+        home_region: 'us',
+        name: 'Nile Grayson',
+        given_name: 'Grayson'
+      }
+    })
+    const onLoginSuccess = jest.fn()
+
+    mount('nile', onLoginSuccess)
+    await settle('nile', onLoginSuccess)
+
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'nile',
+      username: 'Nile Grayson',
+      user_id: 'nile-user-1'
+    })
+  })
+
+  it('zoom: fetches getZoomUserInfo() only after status is "done" and forwards its username', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'zoom',
+      code: 'ZTOK',
+      redirectUrl: 'https://www.zoom-platform.com/?li_token=ZTOK'
+    })
+    mockApi.authZoom.mockResolvedValue({ status: 'done' })
+    mockApi.getZoomUserInfo.mockResolvedValue({ username: 'Zoom Grayson' })
+    const onLoginSuccess = jest.fn()
+
+    mount('zoom', onLoginSuccess)
+    await settle('zoom', onLoginSuccess)
+
+    expect(mockApi.getZoomUserInfo).toHaveBeenCalledTimes(1)
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'zoom',
+      username: 'Zoom Grayson',
+      user_id: undefined
+    })
+  })
+
+  it('zoom: does NOT call getZoomUserInfo() when authZoom resolves a non-"done" status', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'zoom',
+      code: 'ZTOK',
+      redirectUrl: 'https://www.zoom-platform.com/?li_token=ZTOK'
+    })
+    mockApi.authZoom.mockResolvedValue({ status: 'error' })
+    const onLoginSuccess = jest.fn()
+
+    mount('zoom', onLoginSuccess)
+    const hook = await settle('zoom', onLoginSuccess)
+
+    expect(mockApi.getZoomUserInfo).not.toHaveBeenCalled()
+    expect(onLoginSuccess).not.toHaveBeenCalled()
+    expect(hook).toEqual({
+      phase: 'error',
+      message: 'Login failed for zoom: status=error'
+    })
+  })
+
+  it('a resolved-but-refused ({ status: "failed" }) response settles { phase: "error" } naming the status, never masquerading as "blocked" or invoking onLoginSuccess', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'legendary',
+      code: 'EPIC-CODE',
+      redirectUrl: 'http://localhost:8080/?code=EPIC-CODE'
+    })
+    mockApi.login.mockResolvedValue({ status: 'failed', data: undefined })
+    const onLoginSuccess = jest.fn()
+
+    mount('legendary', onLoginSuccess)
+    const hook = await settle('legendary', onLoginSuccess)
+
+    expect(hook).toEqual({
+      phase: 'error',
+      message: 'Login failed for legendary: status=failed'
+    })
+    expect(onLoginSuccess).not.toHaveBeenCalled()
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) => typeof line === 'string' && line.includes('auth channel refused: status=failed')
+    )
+    expect(matching).toHaveLength(1)
+  })
+
+  it('outside Tauri (isTauri() false), onLoginSuccess is never invoked even for a real OAuth runner', async () => {
+    mockIsTauri.mockReturnValue(false)
+    const onLoginSuccess = jest.fn()
+
+    const hook = await settle('gog', onLoginSuccess)
+
+    expect(hook).toEqual({ phase: 'idle' })
+    expect(onLoginSuccess).not.toHaveBeenCalled()
+    expect(mockApi.authGOG).not.toHaveBeenCalled()
   })
 })
 

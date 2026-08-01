@@ -7,16 +7,28 @@ import type { NileLoginData } from 'common/types/nile'
 import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
 
 /**
- * The renderer half of REQ-34.4.1-08's "wired" claim (Phase 34.4.1 Plan 09, D-04): drives
- * `window.api.oauthCaptureLogin` for one of the four OAuth login runners, then hands the
- * captured code/token to that runner's still-unported auth channel (`login`/`authGOG`/
- * `authAmazon`/`authZoom`) inside a `try`/`catch` that turns the EXPECTED
- * `UNPORTED_CHANNEL_MARKER` rejection into the declared Phase-34.5 `blocked` state — never
- * swallowed, never mislabelled, and never allowed to float as an unhandled rejection.
- * `GlobalState.tsx`'s `epicLogin`/`gogLogin`/`amazonLogin`/`zoomLogin` have no try/catch of
- * their own (verified read-only, T-34.4.1-46) — this hook calls the raw `window.api.*` channels
- * directly rather than those wrappers, precisely so it can own the catch without touching
- * `GlobalState.tsx` (byte-identical for Electron, per D-04's rider).
+ * The renderer half of REQ-34.4.1-08's "wired" claim (Phase 34.4.1 Plan 09, D-04), extended by
+ * Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): drives `window.api.oauthCaptureLogin`
+ * for one of the four OAuth login runners, then hands the captured code/token directly to that
+ * runner's now-ported auth channel (`login`/`authGOG`/`authAmazon`/`authZoom`) inside a
+ * `try`/`catch` that turns an `UNPORTED_CHANNEL_MARKER` rejection into `{ phase: 'blocked' }`
+ * (legacy defensive code, kept for any channel a future runner has not yet ported) and any other
+ * rejection into `{ phase: 'error' }` — never swallowed, never mislabelled, and never allowed to
+ * float as an unhandled rejection.
+ *
+ * Once Phase 34.5 ported these channels for real, a resolved `{ status: 'done' }` response
+ * stopped being merely "the hook's job is done" — it is the ONE place a Tauri OAuth login can
+ * trigger the post-login completion work `GlobalState.tsx`'s `epicLogin`/`gogLogin`/
+ * `amazonLogin`/`zoomLogin` wrappers perform for Electron's `<webview>` path (`setState` of the
+ * signed-in username plus `handleSuccessfulLogin(runner)` -> `refreshLibrary`). This hook still
+ * calls the raw `window.api.*` channel itself (so it keeps owning the `UNPORTED_CHANNEL_MARKER`
+ * catch — the wrappers have no try/catch of their own, verified read-only as T-34.4.1-46) and,
+ * on `status === 'done'`, invokes the injected `onLoginSuccess` completion callback with exactly
+ * the payload `createOAuthLoginCompletion` below needs to reproduce that same post-login work —
+ * routed through `GlobalState`'s own `handleSuccessfulLogin`, never a second, parallel refresh
+ * path. `GlobalState.tsx` wires `completeOAuthLogin = createOAuthLoginCompletion({...})` and
+ * exposes it on context; `index.tsx` passes it as this hook's second argument. Electron never
+ * reaches any of this — the `isTauri()` guard below is still first and unconditional.
  */
 export type TauriOAuthLoginState =
   | { phase: 'idle' }
@@ -46,13 +58,70 @@ function isOAuthRunner(value: unknown): value is OAuthRunner {
   )
 }
 
+// Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2): the minimal shape a `status === 'done'` auth-channel
+// response is reduced to before it is handed to the completion callback. Deliberately loose
+// (username/user_id, never the raw per-runner response object) so `GlobalState.tsx` never has to
+// import this hook's runner-specific response-shape knowledge -- it only needs to know what to
+// DO with a signed-in username, exactly like its own epicLogin/gogLogin/amazonLogin/zoomLogin
+// wrappers already do.
+export type OAuthLoginCompletionPayload = {
+  runner: OAuthRunner
+  username?: string
+  user_id?: string
+}
+
+// Dependencies `createOAuthLoginCompletion` needs to reproduce the post-login half of
+// GlobalState.tsx's epicLogin/gogLogin/amazonLogin/zoomLogin wrappers -- setting the runner's
+// username into state, then routing through the EXISTING `handleSuccessfulLogin` (which itself
+// calls `refreshLibrary`), never a second, parallel refresh path (per this plan's domain
+// context). `setState` is intentionally loosely typed: GlobalState's own `PureComponent<Props>`
+// has no explicit State generic (defaults to `{}`), so `this.setState(...)` already accepts any
+// shape at the call site this factory is bound into.
+export type OAuthLoginCompletionDeps = {
+  setState: (update: Record<string, unknown>) => void
+  handleSuccessfulLogin: (runner: OAuthRunner) => void
+}
+
+/**
+ * Builds the completion callback `GlobalState.tsx` exposes on context as `completeOAuthLogin`
+ * (Phase 34.5 Plan 26). Exported (rather than inlined into the class) so this exact wiring can be
+ * driven directly in tests, with `setState`/`handleSuccessfulLogin` spied, without instantiating
+ * the full `GlobalState` React component (see `useTauriOAuthLogin.test.tsx`'s "library refresh"
+ * suite).
+ */
+export function createOAuthLoginCompletion(
+  deps: OAuthLoginCompletionDeps
+): (payload: OAuthLoginCompletionPayload) => void {
+  return ({ runner, username, user_id }) => {
+    switch (runner) {
+      case 'legendary':
+        deps.setState({ epic: { library: [], username } })
+        break
+      case 'gog':
+        deps.setState({ gog: { library: [], username } })
+        break
+      case 'nile':
+        deps.setState({ amazon: { library: [], user_id, username } })
+        break
+      case 'zoom':
+        deps.setState({ zoom: { library: [], username, enabled: true } })
+        break
+    }
+    deps.handleSuccessfulLogin(runner)
+  }
+}
+
 /**
  * Guard first: outside Tauri, or for any runner that isn't one of the four OAuth runners
  * (`undefined`, `'humble'`, an unrecognized string), this is a total no-op — `{ phase: 'idle' }`
- * and nothing started. No other gate exists (a stale premise in a guard's own comment is exactly
- * how 34.4's gate item 2 shipped a registered-but-unreachable channel).
+ * and nothing started, and `onLoginSuccess` is never invoked. No other gate exists (a stale
+ * premise in a guard's own comment is exactly how 34.4's gate item 2 shipped a
+ * registered-but-unreachable channel).
  */
-export function useTauriOAuthLogin(runner: OAuthRunner | undefined): TauriOAuthLoginState {
+export function useTauriOAuthLogin(
+  runner: OAuthRunner | undefined,
+  onLoginSuccess?: (payload: OAuthLoginCompletionPayload) => void
+): TauriOAuthLoginState {
   const [state, setState] = useState<TauriOAuthLoginState>({ phase: 'idle' })
 
   useEffect(() => {
@@ -141,35 +210,72 @@ export function useTauriOAuthLogin(runner: OAuthRunner | undefined): TauriOAuthL
         return
       }
 
-      // outcome.status === 'captured' -- hand the code/token to the still-unported auth
-      // channel. D-04/SEAM Invariant B: this call is EXPECTED to reject with
-      // UNPORTED_CHANNEL_MARKER until Phase 34.5 -- that rejection is caught below, never
-      // thrown past this function.
+      // outcome.status === 'captured' -- hand the code/token to the runner's now-ported auth
+      // channel. A registered-but-not-yet-ported runner is EXPECTED to reject with
+      // UNPORTED_CHANNEL_MARKER -- that rejection is caught below, never thrown past this
+      // function. A resolved response is checked for `status === 'done'` before this hook ever
+      // treats the login as successful (F-34.5-G6-02 layer 2, F-34.5-G6-03): a resolved-but-
+      // refused response must never masquerade as "not wired up yet".
       try {
+        let status: string
+        let username: string | undefined
+        let user_id: string | undefined
+
         if (activeRunner === 'legendary') {
-          await window.api.login(outcome.code ?? '')
+          const response = await window.api.login(outcome.code ?? '')
+          status = response.status
+          username = response.data?.displayName
         } else if (activeRunner === 'gog') {
-          await window.api.authGOG(outcome.code ?? '')
+          const response = await window.api.authGOG(outcome.code ?? '')
+          status = response.status
+          username = response.data?.username
         } else if (activeRunner === 'nile') {
           if (!amazonData) {
             throw new Error('missing Amazon login data for authAmazon')
           }
-          await window.api.authAmazon({
+          const response = await window.api.authAmazon({
             client_id: amazonData.client_id,
             code: outcome.code ?? '',
             code_verifier: amazonData.code_verifier,
             serial: amazonData.serial
           })
+          status = response.status
+          username = response.user?.name
+          user_id = response.user?.user_id
         } else {
-          // zoom: authZoom takes the FULL redirect url, never the token value.
-          await window.api.authZoom(outcome.redirectUrl)
+          // zoom: authZoom takes the FULL redirect url, never the token value. Its response
+          // carries no user data -- mirrors GlobalState.tsx's zoomLogin, which fetches
+          // getZoomUserInfo() separately only once status is confirmed 'done'.
+          const response = await window.api.authZoom(outcome.redirectUrl)
+          status = response.status
+          if (status === 'done') {
+            const userInfo = await window.api.getZoomUserInfo()
+            username = userInfo?.username
+          }
         }
         if (cancelled) return
-        // Resolved WITHOUT throwing -- Phase 34.5 has landed and this channel is real now.
-        // This hook's own job (capture) is done; fall through to idle rather than forcing
-        // 'blocked' -- it must never become the thing that blocks 34.5.
-        window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=idle (channel resolved)`)
-        setState({ phase: 'idle' })
+
+        if (status === 'done') {
+          // The auth channel accepted the captured code -- hand the login on to the SAME
+          // completion path GlobalState.tsx's own wrappers use (setState +
+          // handleSuccessfulLogin -> refreshLibrary), never a second, parallel refresh path.
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=idle (login completed, library refresh triggered)`
+          )
+          onLoginSuccess?.({ runner: activeRunner, username, user_id })
+          setState({ phase: 'idle' })
+        } else {
+          // A resolved-but-refused response (e.g. { status: 'failed' }/{ status: 'error' }) is a
+          // REAL backend refusal, not a "channel not wired up yet" state -- it must never present
+          // as blocked, and onLoginSuccess must never be invoked for it.
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=error (auth channel refused: status=${status})`
+          )
+          setState({
+            phase: 'error',
+            message: `Login failed for ${activeRunner}: status=${status}`
+          })
+        }
       } catch (error) {
         if (cancelled) return
         const message = error instanceof Error ? error.message : String(error)
@@ -192,7 +298,7 @@ export function useTauriOAuthLogin(runner: OAuthRunner | undefined): TauriOAuthL
     return () => {
       cancelled = true
     }
-  }, [runner])
+  }, [runner, onLoginSuccess])
 
   return state
 }

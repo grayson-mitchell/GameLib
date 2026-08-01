@@ -55,6 +55,7 @@ const initialContext: ContextType = {
   isIntelMac: false,
   refresh: async () => Promise.resolve(),
   refreshLibrary: async () => Promise.resolve(),
+  completeOAuthLogin: () => null,
   refreshing: false,
   refreshingInTheBackground: true,
   steamMetadataSyncing: false,

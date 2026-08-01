@@ -46,7 +46,7 @@ export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
   const { t } = useTranslation()
-  const { epic, gog, amazon, zoom, humble, connectivity } =
+  const { epic, gog, amazon, zoom, humble, connectivity, completeOAuthLogin } =
     useContext(ContextProvider)
   const [loading, setLoading] = useState<{
     refresh: boolean
@@ -66,12 +66,19 @@ export default function WebView() {
   // login prompt
   const { store, runner } = useParams()
 
-  // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08): drives the real per-runner OAuth capture for
-  // the four still-unported login runners. Called unconditionally alongside this component's
-  // other hooks (React's rules-of-hooks) -- the hook's OWN internal guard is what makes it a
-  // no-op for `runner === 'humble'`/`undefined`/any non-OAuth value, not a conditional call
-  // here. Its result is only consumed by the `!webviewPreloadPath` branch below.
-  const oauthLoginState = useTauriOAuthLogin(runner as OAuthRunner | undefined)
+  // Phase 34.4.1 Plan 09 (D-04, REQ-34.4.1-08), extended by Phase 34.5 Plan 26 (F-34.5-G6-02
+  // layer 2, F-34.5-G6-03): drives the real per-runner OAuth capture for the four OAuth login
+  // runners. Called unconditionally alongside this component's other hooks (React's
+  // rules-of-hooks) -- the hook's OWN internal guard is what makes it a no-op for
+  // `runner === 'humble'`/`undefined`/any non-OAuth value, not a conditional call here. Its
+  // result is only consumed by the `!webviewPreloadPath` branch below. `completeOAuthLogin` is
+  // GlobalState.tsx's own post-login completion path (setState + handleSuccessfulLogin ->
+  // refreshLibrary) -- passing it here is what makes a captured OAuth login actually refresh the
+  // library instead of silently landing nowhere.
+  const oauthLoginState = useTauriOAuthLogin(
+    runner as OAuthRunner | undefined,
+    completeOAuthLogin
+  )
 
   let lang = i18n.language
   if (i18n.language === 'pt') {

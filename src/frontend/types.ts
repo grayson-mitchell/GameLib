@@ -18,6 +18,7 @@ import {
 } from 'common/types'
 import { NileLoginData, NileRegisterData } from 'common/types/nile'
 import { HumbleKey } from 'common/types/humble'
+import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
 
 export type Category =
   | 'all'
@@ -43,6 +44,11 @@ export interface ContextType {
   isIntelMac: boolean
   refresh: (library: Runner, checkUpdates?: boolean) => Promise<void>
   refreshLibrary: (options: RefreshOptions) => Promise<void>
+  // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): completes a Tauri OAuth login whose
+  // captured code has already been handed to the runner's real auth channel by
+  // useTauriOAuthLogin.ts. Sets the signed-in username into state and routes through the
+  // EXISTING handleSuccessfulLogin -> refreshLibrary path, never a second, parallel one.
+  completeOAuthLogin: (payload: OAuthLoginCompletionPayload) => void
   refreshing: boolean
   refreshingInTheBackground: boolean
   // True while Steam per-game metadata/art is streaming in the background.
