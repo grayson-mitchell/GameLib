@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-34-PLAN.md (gap cycle 4 wave 1 -- useTauriOAuthLogin cancellation instrumentation + post-teardown propagation fix, Routing item 4; unit/structural proof only, U-34.5-09 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-35 (wave 1 remainder, keyring bound), then 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
-last_updated: "2026-08-01T09:17:21.365Z"
+stopped_at: "Completed 34.5-35-PLAN.md (gap cycle 4 wave 1 remainder -- KEYRING_READ_TIMEOUT 8s->45s + KEYRING_FAILURE_MEMO_MS 15s->120s, Routing item 3; unit/structural proof only, U-34.5-10 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
+last_updated: "2026-08-01T09:37:21.769Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 186
-  completed_plans: 172
-  percent: 92
+  completed_plans: 173
+  percent: 93
 ---
 
 # Project State
@@ -412,7 +412,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 4 (supersedes gap cycle 3 below; plans 34.5-29/30/31 HALTED by `BINDING DECISION: fix-first`, see 34.5-CYCLE4-ROUTING.md)
-Plan: 34 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), and 34 (Routing item 4, this session) done; 35 is the wave-1 remainder (Routing item 3, keyring bound), 36/37 wave 2 — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
+Plan: 35 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound, this session) done — wave 1 is now FULLY complete; 36/37 wave 2 remain — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2231,7 +2231,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 92%
+trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-28): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3130,6 +3130,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P32 | 25m | 2 tasks | 2 files |
 | Phase 34.5 P33 | 50min | 2 tasks | 5 files |
 | Phase 34.5 P34 | 35min | 2 tasks | 3 files |
+| Phase 34.5 P35 | 55min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -3523,6 +3524,9 @@ Recent decisions affecting current work:
 - [Phase 34.5-34]: Cancellation gates React state updates only, never an irreversible (persisted credential) or perishable (single-use OAuth code) side effect in useTauriOAuthLogin.ts
 - [Phase 34.5-34]: onLoginSuccess is invoked unconditionally on status='done' regardless of cancelled, guarded only against double-invocation via a reachedTerminal flag (bound to GlobalState, referentially stable across this hook's unmount)
 - [Phase 34.5-34]: Added ledger row U-34.5-09 -- Routing item 4 (capture-without-propagation race) stays OPEN, proven only by unit tests (48 tests, test:ci 3528/3528), pending live evidence
+- [Phase 34.5]: KEYRING_READ_TIMEOUT set to 45s: comfortably above human Keychain-approval time, 15s headroom under RUST_INVOKE_TIMEOUT_MS; deliberately does not cover the 291s dev-build worst case
+- [Phase 34.5]: KEYRING_FAILURE_MEMO_MS set to 120s: exceeds the observed 101s live-session interval; now a tested cross-language invariant (>=2x KEYRING_READ_TIMEOUT)
+- [Phase 34.5]: No env-var escape hatch or Keychain bypass added for the keyring-race fix -- T-34.5-C4-34 accept-and-forbid holds; dev-only vault stays plan 34.5-36's scope
 
 ### Pending Todos
 
@@ -3595,8 +3599,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T09:17:21.354Z
-Stopped at: Completed 34.5-34-PLAN.md (gap cycle 4 wave 1 -- useTauriOAuthLogin cancellation instrumentation + post-teardown propagation fix, Routing item 4; unit/structural proof only, U-34.5-09 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-35 (wave 1 remainder, keyring bound), then 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle.
+Last session: 2026-08-01T09:37:21.758Z
+Stopped at: Completed 34.5-35-PLAN.md (gap cycle 4 wave 1 remainder -- KEYRING_READ_TIMEOUT 8s->45s + KEYRING_FAILURE_MEMO_MS 15s->120s, Routing item 3; unit/structural proof only, U-34.5-10 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle.
   This session (sequential executor): executed 34.5-26 (gap cycle 3, wave 3). Task 1 (feat,
   commit `ac578a842`): `useTauriOAuthLogin.ts` now checks the resolved auth-channel response's
   `status` before treating a captured login as successful; on `status==='done'` it invokes an
