@@ -151,8 +151,12 @@ import { runHumbleValidation } from '../humble/validation'
  * treat the build as packaged (i.e. do NOT register the dev-only channel) —
  * and log the fallback once, mirroring `electronStub.ts`'s own "fails loudly
  * with a clear log line" house style (D-09/D-06).
+ *
+ * Exported (34.5 gap cycle 4 plan 36) so `devSecretVault.ts`'s production-refusal guardrail can
+ * REUSE this exact fail-closed detector rather than re-deriving a second copy — see that
+ * module's own header for why a second copy is the exact hazard this avoids.
  */
-function isPackagedSidecar(): boolean {
+export function isPackagedSidecar(): boolean {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires -- node:sea
     // is a Node builtin; a guarded runtime require (not a relative/alias
