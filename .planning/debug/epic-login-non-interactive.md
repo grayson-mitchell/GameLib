@@ -2,7 +2,7 @@
 status: investigating
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T02:30:00
+updated: 2026-08-02T03:30:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -369,6 +369,182 @@ finding: F-34.5-G6-01
     call. This whole pause is the intended, caught outcome of core-js's own feature detection, not a
     signal about Epic's application logic at all.
 
+- timestamp: 2026-08-02T03:00:00
+  source: developer checkpoint response, `pnpm tauri:dev`, live hardware, the
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` request-capture instrumentation's `[GAMELIB-DIAG]`
+    console stream (the version shipped in the immediately prior cycle, before this cycle's
+    response-capture extension below)
+  note: |
+    FIRST GENUINELY DECISIVE LEAD of this investigation. Verbatim `[GAMELIB-DIAG]` stream
+    excerpt, in order:
+    ```
+    {kind: "xhr.send", url: "/id/api/authenticate", method: "GET"}
+    {kind: "xhr.send", url: "/id/api/redirect?flow=login&responseType=code", method: "GET"}
+    [Error] Failed to load resource: the server responded with a status of 400 () (redirect, line 0)
+    ```
+    `/id/api/redirect?flow=login&responseType=code` returns HTTP 400. No form ever renders
+    after it. The already-recorded Sentry `envelope` 429 and the empty DOM (both Evidence
+    2026-08-02T00:20:00) are plausibly downstream of this single rejected request -- Epic's
+    bootstrap has nothing to render a login form into if the request that is supposed to
+    hand it a redirect target/session context fails.
+
+    LOAD-BEARING DETAIL: the query string is `flow=login&responseType=code` -- there is NO
+    `client_id` parameter. This is a CORRELATION worth investigating, NOT yet a proven
+    identical mechanism, with the already-Eliminated R1 entry's Arm B visible error, quoted
+    verbatim in that entry below: `Something went wrong Parameter "client_id" is required`.
+    Two different observation methods (a rendered error page under a Chrome-shaped UA vs. a
+    silent 400 on this exact endpoint under the stock UA) both point at the same missing-
+    parameter shape. This does not by itself prove the two are the same failure.
+
+    OTHER NETWORK ACTIVITY CAPTURED, recorded as context (only `/id/api/redirect` failed):
+    hCaptcha (`https://866d8f28082f.w.hcaptcha.com/logo.png`), Statsig/`featureassets.org`/
+    `prodregistryv2.org` telemetry, `/id/api/authenticate`, `/id/api/analytics`,
+    `/id/api/location`. Consistent with the already-recorded Evidence 2026-08-02T00:20:00
+    finding that Epic's real application bundle loaded and executed (the Statsig
+    gate-evaluation warning at `index-BMTfSvFa.js:501`) -- the bundle runs, most of its
+    network calls succeed, and exactly one named endpoint fails.
+
+- timestamp: 2026-08-02T03:10:00
+  source: direct read this cycle, `src/frontend/screens/WebView/index.tsx:245-259,324` and
+    `src-tauri/src/main.rs:1601-1604,1695-1696`
+  note: |
+    VERIFIED at the source level (not transcribed from the checkpoint data without
+    checking). Recorded as a confirmed SOURCE-LEVEL DIFFERENCE only -- NOT yet established
+    to be the cause of the 400.
+
+    Electron (`WebView/index.tsx`): the UA-setting call sits inside `loadstop` (line 245),
+    registered as the handler for `webview.addEventListener('dom-ready', loadstop)` at
+    line 324. Confirmed exact conditional (lines 252-259):
+    ```
+    if (runner !== 'humble') {
+      const userAgent =
+        startUrl === epicLoginUrl
+          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
+          : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+      if (webview.getUserAgent() != userAgent) {
+        webview.setUserAgent(userAgent)
+      }
+    }
+    ```
+    `dom-ready` fires once the current document has finished loading, so this handler --
+    and therefore `setUserAgent` -- cannot run until AFTER the initial HTML document for
+    `epicLoginUrl` has already been fetched and parsed under whatever UA the webview
+    already had (Electron's real Chromium UA on a fresh `<webview>`'s first navigation).
+    Whether Epic's own bootstrap script's first `/id/api/*` calls (synchronous
+    module-script execution close to DOMContentLoaded) race ahead of or behind this
+    handler is NOT established by this read alone -- `webContents.setUserAgent()` affects
+    subsequent requests from the SAME already-loaded page too, not only future
+    navigations, so this is a genuine timing race, not a guaranteed miss.
+
+    Tauri (`main.rs`): the `humble_login_open` arm's `WebviewWindowBuilder` chain (shared
+    by all five runners -- Evidence 2026-08-01T23:15:00) sets `.user_agent(user_agent)`
+    directly on the builder at line 1603, before `.build()` at lines 1695-1696. This is a
+    build-time construction option, not a post-load reaction to any event -- it applies
+    from the moment the OS-level webview is constructed, so the very first HTTP request the
+    window ever issues carries `EpicGamesLauncher`. No race: the UA is fixed before the
+    window exists.
+
+    NET: the source confirms a real, mechanically plausible asymmetry -- Tauri's login
+    window guarantees the overridden UA from the first byte; Electron's guarantees it only
+    from `dom-ready` onward, with earlier requests' outcome depending on an unresolved
+    timing race. This alone does not explain why the SAME literal `EpicGamesLauncher`
+    string, applied at two different lifecycle points, would produce two different
+    HTTP-level outcomes for `/id/api/redirect` unless Epic's own logic is itself sensitive
+    to WHEN the header first appears (e.g. session/fingerprint continuity across the first
+    vs. a later request) -- that additional claim is NOT established here and must not be
+    treated as settled. CANDIDATE MECHANISM ONLY.
+
+- timestamp: 2026-08-02T03:20:00
+  source: direct read this cycle, `src-tauri/src/main.rs:2431-2458` (`spawn_sidecar_dev`,
+    grepped for `env_clear` -- zero matches in the whole file) and
+    `src/backend/sidecar/oauthLoginCapture.ts:84-95` (`resolveUserAgent`, and its sole call
+    site at line 284)
+  note: |
+    Investigating the tension the checkpoint flagged: R1 was eliminated using a run where
+    `GAMELIB_OAUTH_UA_LEGENDARY` was set to a realistic UA and the form still did not
+    render. That elimination is only sound if the env var actually reached the sidecar's
+    `process.env` AND `resolveUserAgent` recognized it as non-empty.
+
+    PROPAGATION PATH, confirmed from source: `spawn_sidecar_dev` builds its child with
+    `Command::new("node").arg(&entry).env("GAMELIB_SHELL_EXE", shell_exe).env(
+    "GAMELIB_APP_ROOT", &app_root)...` -- only these two vars are set explicitly, and there
+    is no `.env_clear()` anywhere in `main.rs`. `std::process::Command` inherits the
+    spawning process's FULL environment by default unless `.env_clear()` is called;
+    explicit `.env()` calls only add/override the named keys on top of that inherited set.
+    So there is no code path in this file that would strip `GAMELIB_OAUTH_UA_LEGENDARY`
+    between the Rust host process and the spawned Node sidecar -- IF the Rust host process
+    itself had that variable in its environment when it started.
+
+    WHAT THIS READ CANNOT ESTABLISH, stated explicitly rather than assumed: whether
+    `pnpm tauri:dev`'s own spawn chain (pnpm -> tauri CLI -> the compiled Rust binary)
+    preserves an exported shell variable through to the Rust process was not traced this
+    cycle (outside this file); and whether the ACTUAL prior R1 run had the variable
+    exported in the same shell/session before that specific invocation (vs. e.g. set in a
+    different terminal, or set after the process was already running) cannot be
+    reconstructed from source -- only the developer's memory or that run's saved
+    `gamelib.log` can settle it, and this agent has not re-inspected that specific prior
+    log this cycle.
+
+    THE INDEPENDENT-CONFIRMATION SIGNAL EXISTS, confirmed in source:
+    `resolveUserAgent` (`oauthLoginCapture.ts:84-95`) logs
+    `[oauthLoginCapture] runner=${runner} user-agent-override len=${override.length}` via
+    `logInfo(..., LogPrefix.Backend)`, but ONLY inside the branch guarded by
+    `override !== undefined && override.trim() !== ''` (lines 86-92). This line's PRESENCE
+    in the R1 run's `gamelib.log` would prove the env var reached the sidecar and was
+    accepted as non-empty; its ABSENCE would prove it did not. NOT YET CHECKED against that
+    specific prior log this cycle -- see Current Focus / checkpoint below for the request to
+    the developer.
+
+- timestamp: 2026-08-02T03:30:00
+  source: this cycle's edit, `src-tauri/src/main.rs` (`DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
+    fetch + XHR wrappers), verified via `cargo check`, `cargo test`, and
+    `npx jest src/backend/__tests__/tauriShellSource.test.ts`
+  note: |
+    Extended the dev-only diagnostic to capture RESPONSE status + body for any non-2xx
+    response on both wrappers, gated identically to the whole script
+    (`#[cfg(debug_assertions)]` + `if visible`, unchanged):
+      - fetch: attaches a SEPARATE `.then/.catch` chain off the promise returned by the
+        real `originalFetch(input, init)` call (never chained onto the value returned to
+        the caller), so Epic's own code's await/resolution is never altered. Uses
+        `res.clone()` before reading `.text()` so the original response stream Epic's code
+        consumes is never touched.
+      - XHR: adds a `load` listener via `addEventListener` (never overwrites `onload` or
+        any handler Epic's own bundle attaches) that reads `.status`/`.responseText` once
+        the request completes; `.responseText` access is wrapped in try/catch since it
+        throws for a non-text `responseType`.
+      - Both record only when `status < 200 || status >= 300`; both reuse the existing
+        `truncate()` helper (20,000-char cap, same marker convention). Deliberately NOT
+        gated by `isSentryLike` -- unlike request bodies (redacted to Sentry-shaped URLs
+        only, to avoid capturing credential-shaped outgoing data), a FAILED response body
+        is exactly the diagnostic payload this instrumentation exists to retrieve, and
+        same-origin 4xx/5xx bodies are not expected to echo credentials back.
+      - No cookies, Authorization headers, or token-shaped data captured anywhere in either
+        addition -- neither wrapper reads request or response headers at all.
+    `cargo check` (src-tauri): 0 errors. `cargo test` (src-tauri): 92 passed, 0 failed, 1
+    ignored (pre-existing, unrelated -- unchanged from the prior cycle's count). `npx jest
+    src/backend/__tests__/tauriShellSource.test.ts`: 46/46 passing, NO test modification
+    needed -- confirmed by direct grep of the test file for `DEV_LOGIN_DIAGNOSTIC`,
+    `initialization_script`, `fetch`, `XMLHttpRequest`, `GAMELIB-DIAG`: zero hits, so none
+    of this file's arm-body/negative-bound assertions can see this change (matches the
+    prior cycle's own finding for the same reason).
+
+    `bodyLen` populated / `body: undefined` ANOMALY -- investigated, NOT a bug. Read the
+    prior cycle's own capture code (fetch and XHR `send` wrappers, unchanged by this edit):
+    `bodyLen` is set unconditionally whenever the outgoing body is a string; `bodyPreview`
+    (the `body` field) is set ONLY `if (isSentryLike(url))`. This is synchronous code with
+    no promise/await gap between setting `bodyLen` and the `record()` call, ruling out a
+    "read before populated" timing bug. The observed pattern (bodyLen 24/134/116/564, body
+    undefined) is the INTENDED behavior of the privacy boundary already documented in this
+    constant's own doc comment ("Request bodies are captured ONLY when the destination URL
+    substring-matches a Sentry-ingest shape") -- those four POSTs were simply to
+    non-Sentry-shaped URLs (Epic's own API/telemetry endpoints), so redacting their body
+    content is correct, not broken. No fix applied; none needed. For the developer: a
+    future capture that needs a specific non-Sentry body's content would require
+    deliberately widening the `isSentryLike` gate (a scoped, reviewable change) -- not
+    something this cycle did, since it would weaken the request-body privacy boundary and
+    was not asked for; this cycle's new RESPONSE capture is intentionally NOT gated the
+    same way, per the entry above, since failing-response bodies are the stated target.
+
 ## Eliminated
 
 - hypothesis: ITP/third-party-storage sub-hypothesis — WKWebView's default third-party-cookie
@@ -485,6 +661,90 @@ finding: F-34.5-G6-01
     and the only place a real, informative application-level exception would live.
 
 ## Current Focus
+
+hypothesis: |
+  2026-08-02, EVIDENCE-RECORDING CYCLE (the first cycle with a concrete rejected HTTP
+  request in hand, not just console noise). `/id/api/redirect?flow=login&responseType=code`
+  returns HTTP 400 and no form ever renders afterward (Evidence 2026-08-02T03:00:00). The
+  query string carries no `client_id`, which CORRELATES with (but is not yet proven
+  identical to) the already-Eliminated R1 entry's Arm B visible error, `Something went
+  wrong Parameter "client_id" is required`.
+
+  A candidate contributing mechanism is now CONFIRMED AT THE SOURCE LEVEL (Evidence
+  2026-08-02T03:10:00), not just asserted: Tauri's `humble_login_open` arm sets
+  `.user_agent()` on the `WebviewWindowBuilder` before `.build()`, so `EpicGamesLauncher`
+  applies from the very first request the login window ever issues. Electron's
+  `WebView/index.tsx` only calls `webview.setUserAgent()` from inside a `dom-ready`
+  handler, which cannot fire until the initial document has already loaded under whatever
+  UA the webview already had -- a genuine, unresolved timing race for whether Epic's own
+  earliest `/id/api/*` calls see the overridden UA or Electron's real Chromium UA. This is
+  recorded as a CANDIDATE MECHANISM ONLY -- it does not by itself explain why the same UA
+  string applied at two different lifecycle points would change an HTTP-level outcome,
+  unless Epic's own logic is itself sensitive to timing/session continuity, which is
+  unestablished.
+
+  The tension the checkpoint flagged (R1 already eliminated using a run where
+  `GAMELIB_OAUTH_UA_LEGENDARY` was set and the form still failed) has been investigated as
+  far as source alone permits (Evidence 2026-08-02T03:20:00): nothing in `main.rs`'s
+  sidecar-spawn path would strip that env var before it reaches the sidecar (no
+  `.env_clear()`, `Command` inherits the parent's environment by default), and
+  `resolveUserAgent` logs a `user-agent-override len=` line specifically diagnostic of
+  whether it was received. Whether that line actually appeared in the R1 run's
+  `gamelib.log` is UNCHECKED this cycle -- requires the developer (see next_action).
+
+  E2 (Epic-side change independent of the port) REMAINS FALSIFIED by the Electron control
+  arm -- that verdict is not disturbed by anything this cycle found. But IF the
+  400/missing-`client_id` theory holds, something about Electron's request to the same
+  endpoint must make Epic tolerate the missing parameter there while rejecting Tauri's --
+  UA-timing is one candidate (see above), prior-session cookies persisting across Electron
+  runs is another, unexamined this cycle. This needs evidence before being treated as
+  settled; it is not being built into a fix.
+
+  The instrumentation has been extended this cycle (Evidence 2026-08-02T03:30:00) to
+  capture RESPONSE status + body for any non-2xx response on both the fetch and XHR
+  wrappers, ungated by the Sentry-URL-shape restriction that still governs REQUEST bodies.
+  Epic's own 400 body for `/id/api/redirect` is the next piece of direct evidence that
+  could settle the missing-`client_id` question outright.
+
+  Root cause is NOT YET NAMED. Do not act on the UA-timing mechanism as if it were
+  confirmed -- it is a candidate explaining an asymmetry that exists in source, not yet
+  shown to cause the specific 400.
+test: |
+  Re-run the reproduction with the now-extended instrumentation and read
+  `window.__GAMELIB_DIAG__`'s `fetch.response`/`xhr.response` records for
+  `/id/api/redirect`'s actual status + body. Separately, for the UA-propagation tension:
+  set `GAMELIB_OAUTH_UA_LEGENDARY` to a realistic UA for one run and read
+  `navigator.userAgent` directly from the live login window's console, and check whether
+  that run's `gamelib.log` contains a `user-agent-override len=` line.
+expecting: |
+  If `/id/api/redirect`'s response body names `client_id` (or another parameter) as
+  missing, the correlation with the R1 Arm B error strengthens from "worth investigating"
+  toward "same underlying failure," and attention shifts to WHAT differs between
+  Electron's and Tauri's actual requests to that endpoint (UA timing, cookies, or
+  something not yet considered) as the next thing to test -- not yet a fix target.
+  If `navigator.userAgent` reads `EpicGamesLauncher` despite the override being set, the
+  override did not propagate for that run -- R1 was UNTESTED, not falsified, and its
+  original elimination needs re-examination; the presence/absence of `user-agent-override
+  len=` in that run's log independently corroborates which. If `navigator.userAgent` reads
+  the overridden value and the form still fails, the UA-timing mechanism is seriously
+  weakened and the missing-`client_id` explanation (independent of UA) moves to the front.
+next_action: |
+  BLOCKED on human hardware. Run `pnpm tauri:dev` -> Manage Accounts -> Epic with the
+  now-extended instrumentation live, and after the page settles or times out, run
+  `JSON.stringify(window.__GAMELIB_DIAG__, null, 2)` in the console and paste the full
+  output -- specifically look for `fetch.response`/`xhr.response` records naming
+  `/id/api/redirect`'s status + body. In a SEPARATE run, set `GAMELIB_OAUTH_UA_LEGENDARY`
+  to a realistic Chrome-shaped UA, repeat the repro, report `navigator.userAgent` from the
+  console, and report whether `gamelib.log` for that run contains a line matching
+  `user-agent-override len=`. Do NOT apply any fix -- root cause is not yet named. Do NOT
+  treat the UA-timing asymmetry as confirmed causal without the response-body evidence
+  above.
+constraints_respected: |
+  `USER_AGENTS`, `EPIC_LOGIN_URL`, and `matchOAuthRedirect` were read (to verify the
+  UA-timing claim) but NOT modified. `34.5-G6-EPIC-DISCRIMINATOR.md` and
+  `34.5-G6-EPIC-DISCRIMINATOR-2.md` were not touched. Plans 34.5-29/30/31 remain untouched
+  and HALTED. No fix was applied this cycle -- this was evidence-recording,
+  source-verification, and instrumentation-extension only, per instruction.
 
 instrumentation_added: |
   2026-08-02, INSTRUMENTATION CYCLE (not evidence yet -- no observation has been made). Added a

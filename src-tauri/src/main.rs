@@ -497,13 +497,24 @@ const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
 /// - Any captured body/text is truncated at 20,000 chars with an explicit truncation
 ///   marker appended.
 /// - Captures NO cookie values, NO `Authorization`/header values, and NO token-shaped
-///   data at any point -- it never reads request headers at all. Request bodies are
+///   data at any point -- it never reads request headers at all. REQUEST bodies are
 ///   captured ONLY when the destination URL substring-matches a Sentry-ingest shape
-///   (`/envelope`, `ingest.sentry.io`, `sentry`), the one target this cycle's checkpoint
-///   asked for by name (Epic's own assembled exception report, unreadable in Safari's
-///   Network tab). All other requests record structural facts only (URL, method, body
-///   length), never body content. This debug file may get pasted console output
-///   committed to a public fork, so this boundary is deliberate, not incidental.
+///   (`/envelope`, `ingest.sentry.io`, `sentry`), the one target the prior cycle's
+///   checkpoint asked for by name (Epic's own assembled exception report, unreadable in
+///   Safari's Network tab). All other requests record structural facts only (URL,
+///   method, body length), never request-body content. This debug file may get pasted
+///   console output committed to a public fork, so this boundary is deliberate, not
+///   incidental.
+/// - RESPONSE capture (added 2026-08-02, this cycle, for fetch and XHR): for any
+///   response with a status outside [200, 300), the status code and response body
+///   (same 20,000-char truncation convention) are recorded -- for EVERY URL, not just
+///   Sentry-shaped ones. This is deliberately asymmetric with the request-body boundary
+///   above: a failing API response's body is the exact diagnostic payload this
+///   instrumentation exists to retrieve (e.g. Epic naming a missing required parameter
+///   on a 400), and a same-origin 4xx/5xx API error body is not expected to echo back
+///   credential-shaped request data. fetch uses `res.clone()` so the original response
+///   stream Epic's own code reads is never consumed; XHR uses an added (never replacing)
+///   `load` listener so any handler Epic's bundle attaches keeps firing unmodified.
 #[cfg(debug_assertions)]
 const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
 (function () {
@@ -571,9 +582,12 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
       if (window.fetch) {
         var originalFetch = window.fetch.bind(window);
         window.fetch = function (input, init) {
+          var url = ''; var method = 'GET';
           try {
-            var url = (typeof input === 'string') ? input : ((input && input.url) || '');
-            var method = (init && init.method) || (input && input.method) || 'GET';
+            url = (typeof input === 'string') ? input : ((input && input.url) || '');
+            method = (init && init.method) || (input && input.method) || 'GET';
+          } catch (eUrl) {}
+          try {
             var bodyLen; var bodyPreview;
             try {
               var rawBody = (init && init.body) || undefined;
@@ -584,7 +598,34 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
             } catch (eBody) {}
             record({ kind: 'fetch', url: String(url), method: String(method), bodyLen: bodyLen, body: bodyPreview });
           } catch (eOuter) {}
-          return originalFetch(input, init);
+          var fetchPromise = originalFetch(input, init);
+          // Non-2xx RESPONSE capture (added in the same cycle that captured the first
+          // decisive lead: /id/api/redirect returning 400 with no readable body via any
+          // route tried so far). Deliberately NOT gated by isSentryLike -- unlike request
+          // bodies (which can carry credential-shaped data and are redacted to the Sentry
+          // envelope only), a FAILED response's body is the exact diagnostic payload this
+          // instrumentation exists to retrieve, and Epic's own API responses are not
+          // expected to echo secrets back on a 4xx. Attached as a SEPARATE .then/.catch
+          // chain off `fetchPromise`, never chained onto the value returned to the caller,
+          // so this observer can never alter what Epic's own code awaits or receives --
+          // and `res.clone()` is used so the original response stream reaching Epic's code
+          // is never consumed.
+          try {
+            fetchPromise.then(function (res) {
+              try {
+                if (res && typeof res.status === 'number' && (res.status < 200 || res.status >= 300)) {
+                  try {
+                    res.clone().text().then(function (text) {
+                      try {
+                        record({ kind: 'fetch.response', url: String(url), method: String(method), status: res.status, body: truncate(String(text)) });
+                      } catch (eRec) {}
+                    }).catch(function () {});
+                  } catch (eClone) {}
+                }
+              } catch (eResp) {}
+            }).catch(function () {});
+          } catch (eAttach) {}
+          return fetchPromise;
         };
       }
     } catch (eFetch) {}
@@ -617,9 +658,9 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
           return originalOpen.apply(this, arguments);
         };
         XMLHttpRequest.prototype.send = function (body) {
+          var url = this && this.__gamelibDiagUrl;
+          var method = this && this.__gamelibDiagMethod;
           try {
-            var url = this && this.__gamelibDiagUrl;
-            var method = this && this.__gamelibDiagMethod;
             var bodyLen; var bodyPreview;
             try {
               if (typeof body === 'string') {
@@ -635,6 +676,33 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
               body: bodyPreview
             });
           } catch (eOuter) {}
+          // Non-2xx RESPONSE capture, mirrors the fetch wrapper's rationale above. Added
+          // via `addEventListener('load', ...)` rather than overwriting `onload` so any
+          // handler Epic's own bundle attaches (via either `onload=` or its own
+          // `addEventListener`) keeps firing exactly as before -- this listener is purely
+          // additive. `responseText` access is guarded because it throws a DOMException
+          // for a non-text `responseType` (e.g. 'json'/'blob'/'arraybuffer'); the fallback
+          // string is recorded instead of letting that throw propagate.
+          try {
+            var self = this;
+            self.addEventListener('load', function () {
+              try {
+                var status = self.status;
+                if (typeof status === 'number' && (status < 200 || status >= 300)) {
+                  var respBody;
+                  try { respBody = truncate(String(self.responseText)); }
+                  catch (eRT) { respBody = '[GAMELIB-DIAG unreadable responseText]'; }
+                  record({
+                    kind: 'xhr.response',
+                    url: url ? String(url) : undefined,
+                    method: method ? String(method) : undefined,
+                    status: status,
+                    body: respBody
+                  });
+                }
+              } catch (eLoad) {}
+            });
+          } catch (eAttachLoad) {}
           return originalSend.apply(this, arguments);
         };
       }
