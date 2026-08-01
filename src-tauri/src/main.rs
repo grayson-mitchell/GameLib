@@ -1472,6 +1472,23 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             if visible {
                 let _ = window.set_title(&login_window_title(&origin, None));
             }
+            // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
+            // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
+            // above (main.rs:2476-2487, guarded by the same #[cfg(debug_assertions)]), but
+            // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
+            // -- and it has never had devtools wired up. That gap left the login page's own
+            // JS console unread across four debug cycles despite it being the one webview
+            // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
+            // `visible` to match every other presentation-only call in this arm (the hidden
+            // reveal/clear windows built elsewhere in this file are unaffected) and on
+            // `#[cfg(debug_assertions)]` so it can never reach a packaged build.
+            #[cfg(debug_assertions)]
+            if visible {
+                window.open_devtools();
+                eprintln!(
+                    "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
+                );
+            }
             Ok(Value::String(label))
         }
         // Return the FULL unfiltered cookie count (`total`) alongside a domain/name
