@@ -497,6 +497,98 @@ describe('captureOAuthLogin — nav host logging (plan 34.5-24 Task 1)', () => {
   })
 })
 
+// ── resolveUserAgent — diagnostic UA override (plan 34.5-24 Task 2) ────────────────────────────
+
+describe('resolveUserAgent — diagnostic UA override, exercised via captureOAuthLogin (plan 34.5-24 Task 2)', () => {
+  const mockSeamOpen = jest.fn()
+  const mockSeamTakeEvents = jest.fn()
+  const mockSeamClose = jest.fn()
+  const DEFAULT_LEGENDARY_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
+  const DEFAULT_GOG_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
+  const ORIGINAL_ENV = { ...process.env }
+
+  const fakeSeam: LoginWindowSeam = {
+    open: (...args: Parameters<LoginWindowSeam['open']>) => mockSeamOpen(...args),
+    cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
+    takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
+      mockSeamTakeEvents(...args),
+    close: (...args: Parameters<LoginWindowSeam['close']>) => mockSeamClose(...args),
+    clearCookies: jest.fn(),
+    revealPost: jest.fn(),
+    clearStorage: jest.fn()
+  }
+
+  beforeEach(() => {
+    mockSeamOpen.mockResolvedValue('oauth-capture-ua-0')
+    mockSeamTakeEvents.mockResolvedValue([])
+    mockSeamClose.mockResolvedValue(true)
+    setLoginWindowSeam(fakeSeam)
+  })
+
+  afterEach(() => {
+    setLoginWindowSeam(null)
+    process.env = { ...ORIGINAL_ENV }
+  })
+
+  it('with GAMELIB_OAUTH_UA_LEGENDARY UNSET, the seam receives exactly the default literal agent', async () => {
+    delete process.env.GAMELIB_OAUTH_UA_LEGENDARY
+
+    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', {
+      deadlineMs: 5
+    })
+
+    expect(mockSeamOpen).toHaveBeenCalledWith('https://www.epicgames.com/id/login', {
+      visible: true,
+      userAgent: DEFAULT_LEGENDARY_UA
+    })
+  })
+
+  it("setting GAMELIB_OAUTH_UA_LEGENDARY changes only legendary's argument, and gog stays at its default in the same suite run", async () => {
+    process.env.GAMELIB_OAUTH_UA_LEGENDARY = 'Mozilla/5.0 TestOverrideAgent'
+
+    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', { deadlineMs: 5 })
+    await captureOAuthLogin('gog', 'https://auth.gog.com/auth', { deadlineMs: 5 })
+
+    expect(mockSeamOpen).toHaveBeenNthCalledWith(1, 'https://www.epicgames.com/id/login', {
+      visible: true,
+      userAgent: 'Mozilla/5.0 TestOverrideAgent'
+    })
+    expect(mockSeamOpen).toHaveBeenNthCalledWith(2, 'https://auth.gog.com/auth', {
+      visible: true,
+      userAgent: DEFAULT_GOG_UA
+    })
+  })
+
+  it('a whitespace-only override falls back to the default (an empty UA is the forbidden failure mode)', async () => {
+    process.env.GAMELIB_OAUTH_UA_LEGENDARY = '   '
+
+    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', { deadlineMs: 5 })
+
+    expect(mockSeamOpen).toHaveBeenCalledWith('https://www.epicgames.com/id/login', {
+      visible: true,
+      userAgent: DEFAULT_LEGENDARY_UA
+    })
+  })
+
+  it('logs exactly one user-agent-override line naming the runner and the override LENGTH (never the value) when an override is in effect', async () => {
+    const loggerModule = jest.requireMock('backend/logger') as { logInfo: jest.Mock }
+    loggerModule.logInfo.mockClear()
+    const override = 'Mozilla/5.0 TestOverrideAgent'
+    process.env.GAMELIB_OAUTH_UA_LEGENDARY = override
+
+    await captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login', { deadlineMs: 5 })
+
+    const overrideLines = loggerModule.logInfo.mock.calls
+      .map(([msg]: [unknown]) => String(msg))
+      .filter((msg: string) => msg.includes('user-agent-override'))
+    expect(overrideLines.length).toBe(1)
+    expect(overrideLines[0]).toContain('runner=legendary')
+    expect(overrideLines[0]).toContain(`len=${override.length}`)
+    expect(overrideLines[0]).not.toContain(override)
+  })
+})
+
 // ── Registration kind + boundary validation (Task 2) ───────────────────────────────────────────
 // Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
 // module-scope maps; calling registerOAuthLoginFlows() more than once would stack a duplicate
