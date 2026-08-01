@@ -3600,13 +3600,24 @@ mod tests {
         // assertion enforces.
         const RUST_INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
         const ROUND_TRIP_MARGIN: Duration = Duration::from_secs(10);
+        // Message built via `concat!` of single-line literal fragments (each individually
+        // quote-balanced) rather than a backslash-continued multi-line literal -- the latter
+        // trips longRunningChannels.test.ts's per-line WR-08 quote-balance stripper guard, which
+        // counts `"` occurrences on each SOURCE line independently and cannot see that a
+        // continuation resolves the count across lines.
         assert!(
             KEYRING_READ_TIMEOUT < RUST_INVOKE_TIMEOUT - ROUND_TRIP_MARGIN,
-            "KEYRING_READ_TIMEOUT ({KEYRING_READ_TIMEOUT:?}) must stay strictly under \
-             RUST_INVOKE_TIMEOUT_MS (src/backend/sidecar/sidecarRpc.ts, currently {RUST_INVOKE_TIMEOUT:?}) \
-             minus a {ROUND_TRIP_MARGIN:?} round-trip margin, or a slow keyring read stops being \
-             reported as the specific keyring:timeout and starts being reported as an opaque \
-             transport timeout by the sidecar's outer layer instead"
+            concat!(
+                "KEYRING_READ_TIMEOUT ({read:?}) must stay strictly under ",
+                "RUST_INVOKE_TIMEOUT_MS (src/backend/sidecar/sidecarRpc.ts, currently ",
+                "{invoke:?}) minus a {margin:?} round-trip margin, or ",
+                "a slow keyring read stops being reported as the specific keyring:timeout and ",
+                "starts being reported as an opaque transport timeout by the sidecar's outer ",
+                "layer instead"
+            ),
+            read = KEYRING_READ_TIMEOUT,
+            invoke = RUST_INVOKE_TIMEOUT,
+            margin = ROUND_TRIP_MARGIN
         );
     }
 
