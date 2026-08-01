@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-32-PLAN.md (gap cycle 4 wave 1 -- authored 34.5-CYCLE4-ROUTING.md recording plans 29/30/31 HALTED by BINDING DECISION: fix-first, and opened 34.5-UNTESTED-ITEMS.md with six seeded rows). Next: 34.5-33/34/35 (wave 1 remainder), then 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
-last_updated: "2026-08-01T21:00:00.000Z"
+stopped_at: "Completed 34.5-33-PLAN.md (gap cycle 4 wave 1 -- runner-aware sidecar refreshLibrary dispatch + origin-tagged undefined-proof frontend log line, Routing items 1 and 2; both closed at the unit/structural level only, U-34.5-07/08 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-34/35 (wave 1 remainder), then 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
+last_updated: "2026-08-01T09:00:10.705Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 186
-  completed_plans: 170
-  percent: 91
+  completed_plans: 171
+  percent: 92
 ---
 
 # Project State
@@ -411,8 +411,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 29 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 4 (supersedes gap cycle 3 below; plans 34.5-29/30/31 HALTED by `BINDING DECISION: fix-first`, see 34.5-CYCLE4-ROUTING.md)
+Plan: 33 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger) and 33 (Routing items 1+2, this session) done; 34/35 wave-1 remainder, 36/37 wave 2 — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3128,6 +3128,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P27 | 45min | 2 tasks | 2 files |
 | Phase 34.5 P28 | 25min | 4 tasks | 1 files |
 | Phase 34.5 P32 | 25m | 2 tasks | 2 files |
+| Phase 34.5 P33 | 50min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -3515,6 +3516,9 @@ Recent decisions affecting current work:
 - [Phase 34.5]: 34.5-27: Task 1 (origin-first login title) and Task 2 (light interface style) committed together in 9255c0255 because both interleave inside the same if-visible builder chain of humble_login_open
 - [Phase 34.5]: F-34.5-G6-01 Epic UA discriminator: R1 (user-agent gating) FALSIFIED live; R2 not confirmed — both stock and Chrome-shaped UA arms produced non-interactive Epic login forms; routed to a further diagnosis cycle rather than shipping R2 unconfirmed
 - [Phase 34.5]: BINDING DECISION: fix-first -- plans 34.5-29/30 halt at their authorisation gates, blocking gate not authored this cycle — GOG smoke test showed capture-to-hook propagation fixed (F-34.5-G6-02/03 closed) but library never populates; a five-item gate cannot pass on a build whose one-runner smoke already failed
+- [Phase 34.5]: 34.5-33: sidecar refreshLibrary now dispatches to libraryManagerMap[runner] (own-property-checked) instead of unconditionally refreshing Steam; unknown runners throw rather than silently falling through
+- [Phase 34.5]: 34.5-33: frontend refreshLibrary log line coalesces an omitted runner to 'all' and adds an origin field naming the call site, so it can never print the literal word 'undefined'
+- [Phase 34.5]: 34.5-33: both fixes proven only by unit tests / a structural gate, not live evidence -- added as U-34.5-07/08 to the standing 34.5-UNTESTED-ITEMS.md ledger per its own rule that a passing suite never retires a row
 
 ### Pending Todos
 
@@ -3587,8 +3591,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T08:28:57.420Z
-Stopped at: Completed 34.5-28-PLAN.md (F-34.5-G6-01 Epic discriminator R1-FALSIFIED live; GOG smoke shows capture-to-hook fixed but library never populates; BINDING DECISION: fix-first -- blocking gate NOT authored this cycle)
+Last session: 2026-08-01T09:00:10.694Z
+Stopped at: Completed 34.5-33-PLAN.md
   This session (sequential executor): executed 34.5-26 (gap cycle 3, wave 3). Task 1 (feat,
   commit `ac578a842`): `useTauriOAuthLogin.ts` now checks the resolved auth-channel response's
   `status` before treating a captured login as successful; on `status==='done'` it invokes an
