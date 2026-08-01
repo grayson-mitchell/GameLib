@@ -455,6 +455,221 @@ static LOGIN_WINDOW_EVENTS: Mutex<Option<HashMap<String, Vec<Value>>>> = Mutex::
 /// between `humble_login_take_events` drains.
 const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
 
+/// Dev-only pre-page-script diagnostic (epic-login-non-interactive investigation,
+/// 2026-08-02, F-34.5-G6-01): injected as a Tauri `initialization_script()` on the LOGIN
+/// window ONLY (see the `humble_login_open` arm below), gated identically to that arm's
+/// existing `open_devtools()` call -- `#[cfg(debug_assertions)]` AND `if visible` -- so
+/// it can never reach a packaged build. Initialization scripts run BEFORE any page
+/// script, including Epic's own bundle, which is the entire point: every technique tried
+/// in this investigation so far (console reads, Break on All Exceptions) could only
+/// observe AFTER the page's own bootstrap had already run and, per the evidence trail in
+/// `.planning/debug/epic-login-non-interactive.md`, already failed silently into a
+/// caught error boundary.
+///
+/// Deliberately does NOT relay via Tauri IPC in any form -- this page's IPC transport is
+/// independently confirmed broken in the same debug file (`IPC custom protocol failed,
+/// Tauri will now use the postMessage interface instead -- TypeError: Load failed`, and
+/// Epic's CSP refuses `ipc://localhost` outright). A diagnostic that depended on the
+/// broken transport would silently capture nothing -- the exact failure mode this
+/// project already named in `sidecar-send-channels-fail-silently`. Instead this script
+/// keeps everything in-page: it accumulates records into a plain array at
+/// `window.__GAMELIB_DIAG__` (capped, see MAX_RECORDS below) and ALSO `console.warn`s
+/// each record immediately with the literal `[GAMELIB-DIAG]` prefix so it is visible
+/// live and greppable in the Web Inspector console the developer already has open --
+/// zero dependency on IPC, the file logger, or Safari's Network request-body viewer (the
+/// three routes this investigation has already exhausted).
+///
+/// Reusable as-is for GOG/Amazon/Nile/Zoom's login windows: this call lives in the SAME
+/// `humble_login_open` arm that (per this file's own prior-cycle comment above
+/// `open_devtools()`) is not Humble-specific and is shared by all five runners.
+///
+/// Robustness, all load-bearing (a diagnostic that breaks the page it measures is worse
+/// than none):
+/// - The whole script is one outer try/catch; each individual hook (error listener,
+///   unhandledrejection listener, fetch/sendBeacon/XHR.send wrappers, console.error
+///   passthrough) is ALSO independently try/caught so one hook's failure cannot take
+///   down the others or the page.
+/// - Adds listeners only -- never removes or overwrites existing handlers -- and the
+///   fetch/sendBeacon/XHR.send wrappers always call through to the TRUE original
+///   implementation after recording, preserving page behavior exactly.
+/// - `window.__GAMELIB_DIAG__` is capped at 200 records; once full, new records simply
+///   stop being pushed (never evicted/grown) so a rejection loop cannot exhaust memory.
+/// - Any captured body/text is truncated at 20,000 chars with an explicit truncation
+///   marker appended.
+/// - Captures NO cookie values, NO `Authorization`/header values, and NO token-shaped
+///   data at any point -- it never reads request headers at all. Request bodies are
+///   captured ONLY when the destination URL substring-matches a Sentry-ingest shape
+///   (`/envelope`, `ingest.sentry.io`, `sentry`), the one target this cycle's checkpoint
+///   asked for by name (Epic's own assembled exception report, unreadable in Safari's
+///   Network tab). All other requests record structural facts only (URL, method, body
+///   length), never body content. This debug file may get pasted console output
+///   committed to a public fork, so this boundary is deliberate, not incidental.
+#[cfg(debug_assertions)]
+const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
+(function () {
+  try {
+    var MAX_RECORDS = 200;
+    var MAX_BODY_LEN = 20000;
+    var TRUNC_MARKER = '...[GAMELIB-DIAG TRUNCATED]';
+    if (!window.__GAMELIB_DIAG__) { window.__GAMELIB_DIAG__ = []; }
+    var diag = window.__GAMELIB_DIAG__;
+
+    function truncate(s) {
+      try {
+        if (typeof s !== 'string') return s;
+        if (s.length > MAX_BODY_LEN) { return s.slice(0, MAX_BODY_LEN) + TRUNC_MARKER; }
+        return s;
+      } catch (e) { return '[GAMELIB-DIAG truncate error]'; }
+    }
+
+    function isSentryLike(url) {
+      try {
+        var u = String(url || '');
+        return u.indexOf('/envelope') !== -1 || u.indexOf('ingest.sentry.io') !== -1 || u.indexOf('sentry') !== -1;
+      } catch (e) { return false; }
+    }
+
+    function record(entry) {
+      try {
+        entry.t = Date.now();
+        if (diag.length < MAX_RECORDS) { diag.push(entry); }
+        try { console.warn('[GAMELIB-DIAG]', entry); } catch (eWarn) {}
+      } catch (e) {}
+    }
+
+    try {
+      window.addEventListener('error', function (ev) {
+        try {
+          record({
+            kind: 'error',
+            message: ev && ev.message,
+            filename: ev && ev.filename,
+            lineno: ev && ev.lineno,
+            colno: ev && ev.colno,
+            stack: (ev && ev.error && ev.error.stack) ? truncate(String(ev.error.stack)) : undefined
+          });
+        } catch (eInner) {}
+      });
+    } catch (eListenError) {}
+
+    try {
+      window.addEventListener('unhandledrejection', function (ev) {
+        try {
+          var reason = ev && ev.reason;
+          var reasonMessage;
+          try { reasonMessage = (reason && reason.message) ? String(reason.message) : String(reason); }
+          catch (eMsg) { reasonMessage = '[GAMELIB-DIAG unreadable reason]'; }
+          var reasonStack;
+          try { reasonStack = (reason && reason.stack) ? truncate(String(reason.stack)) : undefined; }
+          catch (eStack) {}
+          record({ kind: 'unhandledrejection', reason: truncate(reasonMessage), stack: reasonStack });
+        } catch (eInner) {}
+      });
+    } catch (eListenRejection) {}
+
+    try {
+      if (window.fetch) {
+        var originalFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+          try {
+            var url = (typeof input === 'string') ? input : ((input && input.url) || '');
+            var method = (init && init.method) || (input && input.method) || 'GET';
+            var bodyLen; var bodyPreview;
+            try {
+              var rawBody = (init && init.body) || undefined;
+              if (typeof rawBody === 'string') {
+                bodyLen = rawBody.length;
+                if (isSentryLike(url)) { bodyPreview = truncate(rawBody); }
+              }
+            } catch (eBody) {}
+            record({ kind: 'fetch', url: String(url), method: String(method), bodyLen: bodyLen, body: bodyPreview });
+          } catch (eOuter) {}
+          return originalFetch(input, init);
+        };
+      }
+    } catch (eFetch) {}
+
+    try {
+      if (navigator && navigator.sendBeacon) {
+        var originalSendBeacon = navigator.sendBeacon.bind(navigator);
+        navigator.sendBeacon = function (url, data) {
+          try {
+            var bodyLen; var bodyPreview;
+            try {
+              if (typeof data === 'string') {
+                bodyLen = data.length;
+                if (isSentryLike(url)) { bodyPreview = truncate(data); }
+              }
+            } catch (eBody) {}
+            record({ kind: 'sendBeacon', url: String(url), bodyLen: bodyLen, body: bodyPreview });
+          } catch (eOuter) {}
+          return originalSendBeacon(url, data);
+        };
+      }
+    } catch (eBeacon) {}
+
+    try {
+      if (window.XMLHttpRequest && XMLHttpRequest.prototype && XMLHttpRequest.prototype.send) {
+        var originalOpen = XMLHttpRequest.prototype.open;
+        var originalSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+          try { this.__gamelibDiagUrl = url; this.__gamelibDiagMethod = method; } catch (eSet) {}
+          return originalOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function (body) {
+          try {
+            var url = this && this.__gamelibDiagUrl;
+            var method = this && this.__gamelibDiagMethod;
+            var bodyLen; var bodyPreview;
+            try {
+              if (typeof body === 'string') {
+                bodyLen = body.length;
+                if (isSentryLike(url)) { bodyPreview = truncate(body); }
+              }
+            } catch (eBody) {}
+            record({
+              kind: 'xhr.send',
+              url: url ? String(url) : undefined,
+              method: method ? String(method) : undefined,
+              bodyLen: bodyLen,
+              body: bodyPreview
+            });
+          } catch (eOuter) {}
+          return originalSend.apply(this, arguments);
+        };
+      }
+    } catch (eXhr) {}
+
+    try {
+      var originalConsoleError = console.error ? console.error.bind(console) : null;
+      console.error = function () {
+        try {
+          var args = Array.prototype.slice.call(arguments);
+          var joined;
+          try {
+            joined = args.map(function (a) {
+              try {
+                if (typeof a === 'string') return a;
+                if (a && a.stack) return String(a.stack);
+                return JSON.stringify(a);
+              } catch (eJ) { return String(a); }
+            }).join(' ');
+          } catch (eJoin) { joined = '[GAMELIB-DIAG unjoinable console.error args]'; }
+          record({ kind: 'console.error', message: truncate(joined) });
+        } catch (eOuter) {}
+        if (originalConsoleError) {
+          try { return originalConsoleError.apply(console, arguments); } catch (eCall) {}
+        }
+      };
+    } catch (eConsole) {}
+
+    try { console.warn('[GAMELIB-DIAG] instrumentation installed'); } catch (eFinal) {}
+  } catch (outerError) {
+    try { console.warn('[GAMELIB-DIAG] instrumentation failed to install', outerError); } catch (eReport) {}
+  }
+})();
+"#;
+
 /// Generates a login-window label that can NEVER equal `main`/`about` and is NEVER
 /// derived from any caller-supplied argument (T-34.1-27, REQ-34.4.1-09) -- the Rust-side
 /// port of `tauriChildWindows.ts`'s `nextExternalWindowLabel()` discipline. The fixed
@@ -1439,6 +1654,19 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 eprintln!(
                     "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true"
                 );
+            }
+            // Dev-only diagnostic instrumentation (epic-login-non-interactive
+            // investigation, 2026-08-02): injects `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
+            // (defined above, near `LOGIN_WINDOW_EVENTS_CAP`) as a Tauri
+            // `initialization_script()` on this window BEFORE `.build()` runs --
+            // initialization scripts execute before any page script, so this captures
+            // Epic's own bootstrap failure instead of only what survives to a later
+            // console read. Gated identically to this arm's `open_devtools()` call
+            // below -- `#[cfg(debug_assertions)]` AND `if visible` -- so it can never
+            // reach a packaged build.
+            #[cfg(debug_assertions)]
+            if visible {
+                builder = builder.initialization_script(DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT);
             }
             let page_load_origin = Arc::clone(&current_origin);
             let window = builder

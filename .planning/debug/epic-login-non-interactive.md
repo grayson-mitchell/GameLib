@@ -2,7 +2,7 @@
 status: investigating
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T02:00:00
+updated: 2026-08-02T02:30:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -486,6 +486,73 @@ finding: F-34.5-G6-01
 
 ## Current Focus
 
+instrumentation_added: |
+  2026-08-02, INSTRUMENTATION CYCLE (not evidence yet -- no observation has been made). Added a
+  dev-only `.initialization_script(DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT)` call to the `humble_login_open`
+  arm's `WebviewWindowBuilder` chain in `src-tauri/src/main.rs`, gated identically to that same arm's
+  pre-existing `open_devtools()` call: `#[cfg(debug_assertions)]` AND `if visible`, so it can never
+  reach a packaged build. The script constant `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` is declared at
+  module level near `LOGIN_WINDOW_EVENTS_CAP` (also `#[cfg(debug_assertions)]`-gated), and the builder
+  call site sits between the arm's existing `if visible { ... }` presentation block and
+  `let page_load_origin = ...`, i.e. before `.build()`.
+
+  WHY THIS MECHANISM: initialization scripts run BEFORE any page script (including Epic's own
+  bundle) -- every technique tried in this investigation so far (console-only reads across four
+  cycles, Break on All Exceptions) could only observe AFTER Epic's bootstrap had already run and
+  (per the evidence trail above) already failed silently into a caught error boundary. This is the
+  first instrument in this investigation capable of observing PRE-bootstrap and DURING-bootstrap
+  behavior directly.
+
+  ZERO DEPENDENCY on the three routes already exhausted this investigation:
+    - Tauri IPC: NOT used at all. The console already proves IPC is degraded on this exact page
+      (`IPC custom protocol failed, Tauri will now use the postMessage interface instead --
+      TypeError: Load failed`, Evidence 2026-08-02T00:20:00; Epic's CSP separately refuses
+      `ipc://localhost`). A diagnostic depending on that transport would silently capture nothing
+      (`sidecar-send-channels-fail-silently` is exactly this failure mode). Instead the script
+      accumulates records into a plain in-page array, `window.__GAMELIB_DIAG__`, and separately
+      `console.warn`s each record immediately with a literal `[GAMELIB-DIAG]` prefix.
+    - The file logger: NOT used. Nothing in this script touches Rust-side logging; it is pure
+      in-page JS state, read out manually via the console.
+    - Safari's Network request-body viewer: NOT used. The Sentry `envelope` 429's request body
+      (unreadable in Web Inspector per this cycle's checkpoint) is instead captured DIRECTLY at the
+      JS call site -- the script wraps `window.fetch`, `navigator.sendBeacon`, and
+      `XMLHttpRequest.prototype.send`, and when the destination URL substring-matches a
+      Sentry-ingest shape (`/envelope`, `ingest.sentry.io`, `sentry`), records the outgoing request
+      body verbatim (truncated at 20,000 chars). All other requests record structural facts only
+      (URL, method, body length) -- no header values, no cookies, no `Authorization`, no
+      token-shaped data are ever read or recorded.
+
+  WHAT IT CAPTURES: `window.onerror`-equivalent (`addEventListener('error', ...)` -- message,
+  filename, lineno, colno, `error.stack`), `unhandledrejection` (reason + stack), fetch/sendBeacon/
+  XHR.send URL+method+body-when-Sentry-shaped, and a `console.error` passthrough (records then calls
+  through to the real `console.error`, never silences it).
+
+  ROBUSTNESS: one outer try/catch around the whole IIFE, plus each hook independently try/caught, so
+  no single hook's failure can break another hook or Epic's page. Adds listeners only, never removes
+  or overwrites existing ones. `window.__GAMELIB_DIAG__` capped at 200 records (stops pushing past
+  that, never evicts/grows unbounded). Captured text truncated at 20,000 chars with an explicit
+  `...[GAMELIB-DIAG TRUNCATED]` marker when truncated.
+
+  REUSABLE: this call lives in the same `humble_login_open` arm already established (Evidence
+  2026-08-01T23:15:00) as shared, non-Humble-specific, across all five runners -- so this
+  instrumentation is live for GOG, Amazon, Nile, and Zoom's login windows too, not just Epic's,
+  without any further code change.
+
+  VERIFIED: `cargo check` (src-tauri) clean, 0 errors. `cargo test` (src-tauri): 92 passed, 0
+  failed, 1 ignored (pre-existing ignore, unrelated). `npx jest
+  src/backend/__tests__/tauriShellSource.test.ts`: 46/46 passing WITH NO TEST MODIFICATION NEEDED --
+  the JS payload lives entirely inside the module-level `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` constant
+  (declared outside the `humble_login_open` match arm), so none of this file's arm-body string-match
+  assertions (the `.title(` negative-bound scan across every `WebviewWindowBuilder::new(...)
+  .build()` chain, the if-visible presentation-token scan, the `on_navigation` negative bound) ever
+  see the injected JS text at all; the arm body itself gained only a two-line conditional
+  `builder = builder.initialization_script(...)` call, which does not collide with any existing
+  assertion.
+
+  STILL OWED: the actual observation. This is instrumentation only -- no root cause is confirmed or
+  advanced by this entry. The causal mechanism for F-34.5-G6-01 remains UNKNOWN (see prior Current
+  Focus below, retained for continuity).
+
 hypothesis: |
   RETRACTION CYCLE, 2026-08-02. The prior cycle's "CLOBBERED GLOBAL" mechanism — that something in
   the Tauri environment substitutes `Function.prototype.call` for a constructor at Epic's
@@ -546,13 +613,22 @@ expecting: |
   Break on All Exceptions pause, if it occurs, is now credible as an app-level exception rather than
   a vendor self-test, and its call stack + local variables become the next evidence entry.
 next_action: |
-  BLOCKED on human hardware and human choice. See CHECKPOINT REACHED returned to the user: presents
-  both options (a) Sentry envelope payload read, (b) re-armed Break on All Exceptions with
-  `index-GFazdAUR.js` now blackboxed, and asks which the developer prefers to try (or suggests (a)
-  first as the cheaper probe, with (b) as fallback). Do NOT apply any fix — no root cause is named.
-  Do NOT touch source code this cycle. Do NOT re-propose the retracted clobbered-global mechanism in
-  any form without new evidence that specifically identifies a real (non-core-js-self-test) global
-  substitution.
+  SUPERSEDED, 2026-08-02, by the `instrumentation_added` entry above. The (a)/(b) choice this field
+  previously offered (manual Sentry envelope payload read in the Network tab / re-armed Break on All
+  Exceptions with `index-GFazdAUR.js` blackboxed) is no longer the next step -- both manual routes
+  are recorded EXHAUSTED in this cycle's checkpoint response (429 with an empty response body in
+  Safari's Network viewer; each debugger round trip costing a full human hardware cycle). The new
+  instrumentation captures the Sentry envelope's REQUEST body directly at the JS call site (no
+  Network-tab dependency) and captures runtime errors/rejections directly (no debugger-breakpoint
+  dependency), so it supersedes rather than complements options (a)/(b).
+
+  BLOCKED on human hardware only (not human choice this time): run `pnpm tauri:dev`, open Manage
+  Accounts -> Epic, wait for the page to settle or the 300s timeout, then in the console run
+  `JSON.stringify(window.__GAMELIB_DIAG__, null, 2)` and paste the full output. Also, if already
+  available from the separately-requested `JSON.stringify(Object.keys(window.__SENTRY__ || {}))`
+  probe, include that too. Do NOT apply any fix -- no root cause is named. Do NOT re-propose the
+  retracted clobbered-global mechanism in any form without new evidence that specifically identifies
+  a real (non-core-js-self-test) global substitution.
 reasoning_checkpoint: |
   This retraction is itself an instance of the F-10 discipline this file has invoked repeatedly: a
   compelling story (named exception, concrete mechanism, corroborating evidence from a different
