@@ -6,14 +6,14 @@
  * code paths unchanged (per the plan's own objective — prove the real logic
  * runs behind the new transport, not a reimplementation):
  *
- *   - `refreshLibrary` -> the real `SteamLibraryManager.refresh()`, which
- *     ALREADY calls `sendFrontendMessage('pushGameToLibrary', gameInfo)`
- *     once per resolved game (backend/storeManagers/steam/library.ts) —
- *     that existing call is what reaches the renderer as a
- *     `SidecarNotification` once `backend/ipc.ts`'s `sendFrontendMessage`
- *     -> `getMainWindow()` -> electronStub's fake
- *     `BrowserWindow.webContents.send` is wired to the RPC transport
- *     (27-02). Nothing here re-implements that push.
+ *   - `refreshLibrary` -> the real `libraryManagerMap[runner].refresh()`
+ *     (Gap cycle 4, plan 34.5-33 — see below), which for `steam` ALREADY
+ *     calls `sendFrontendMessage('pushGameToLibrary', gameInfo)` once per
+ *     resolved game (backend/storeManagers/steam/library.ts) — that
+ *     existing call is what reaches the renderer as a `SidecarNotification`
+ *     once `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()` ->
+ *     electronStub's fake `BrowserWindow.webContents.send` is wired to the
+ *     RPC transport (27-02). Nothing here re-implements that push.
  *   - `launch` -> the real `SteamGame.launch()`, whose native branch
  *     already funnels through `buildSteamProtocolUrl` (T-27-08's
  *     numeric-appId guard) + `shell.openExternal` (bridged to the Rust
@@ -21,63 +21,215 @@
  *
  * Deliberately does NOT import `launcher.ts`'s `launchEventCallback` (the
  * full Wine/GameConfig/DownloadManager pipeline the Electron build's own
- * 'launch' handler delegates to) or `storeManagers/index.ts`'s eagerly
- * constructed `libraryManagerMap` (every OTHER store manager) — only
- * `SteamLibraryManager` and `SteamGame` are imported here, holding the
- * sidecar's import graph to exactly what these two flows touch (must_haves:
- * "only the 2–4 channels... not the 220-endpoint surface").
+ * 'launch' handler delegates to) — only `SteamGame` is imported for that
+ * flow, holding the sidecar's import graph to exactly what these two flows
+ * touch (must_haves: "only the 2–4 channels... not the 220-endpoint
+ * surface").
+ *
+ * GAP CYCLE 4 (34.5-33, Routing item 1): `refreshLibrary` used to be an
+ * argument-less Phase 27 walking-skeleton stub that unconditionally called
+ * `new SteamLibraryManager().refresh()` regardless of which runner the
+ * renderer asked for — so a GOG/legendary/nile/zoom refresh request under
+ * Tauri silently refreshed Steam instead, with no error and no log line
+ * naming the mismatch. The handler below reproduces `main.ts:1051`'s
+ * dispatch semantics (single-runner / all-runners / Humble ownership
+ * recompute tail) against the SAME `libraryManagerMap` singleton every
+ * other store manager consumer in this codebase uses (see the import note
+ * immediately below) instead of a locally-constructed, second
+ * `SteamLibraryManager` instance.
  */
 
-import { ipcMain } from './electronStub'
-// Load-bearing FIRST import (Phase 27 Plan 05 circular-dep fix): force
-// `storeManagers/index.ts` to be the INITIALIZATION ENTRY before the direct
-// `steam/library`/`steam/games` imports below resolve. `storeManagers/index.ts`
+// Load-bearing FIRST import (Phase 27 Plan 05 circular-dep fix, refined by
+// gap cycle 4 / plan 34.5-33): force `storeManagers/index.ts` to be the
+// INITIALIZATION ENTRY before anything in this file's import graph could
+// reach `steam/library.ts` a second, different way. `storeManagers/index.ts`
 // imports `steam/library` at its OWN top and only THEN constructs its eager
-// `libraryManagerMap` (`new SteamLibraryManager()` ...), so entering through it
-// lets `steam/library.ts` finish defining its class export first. Entering
-// through `steam/library` DIRECTLY (as this file's own imports below do) makes
-// `steam/library`'s transitive `utils.ts -> storeManagers/index.ts` chain
-// re-enter `index.ts` while `steam/library` is still mid-evaluation — so
-// `index.ts`'s `new SteamLibraryManager()` sees an undefined class and throws
-// `SteamLibraryManager is not a constructor`, crashing the sidecar on boot
-// (only in the esbuild bundle's init order; ts-jest's differs, which is why
-// 27-04's tests passed). This mirrors 27-02's own convention of routing every
-// `libraryManagerMap` access through `storeManagers/index.ts`, never the
-// individual manager modules.
-import '../storeManagers'
-import SteamLibraryManager from '../storeManagers/steam/library'
+// `libraryManagerMap` (`new SteamLibraryManager()` ...). Entering through
+// `steam/library` DIRECTLY instead (as an earlier version of this file did,
+// via its own `import SteamLibraryManager from '../storeManagers/steam/
+// library'`) makes `steam/library`'s transitive `utils.ts ->
+// storeManagers/index.ts` chain re-enter `index.ts` while `steam/library` is
+// still mid-evaluation — so `index.ts`'s `new SteamLibraryManager()` sees an
+// undefined class and throws `SteamLibraryManager is not a constructor`,
+// crashing the sidecar on boot (only in the esbuild bundle's init order;
+// ts-jest's differs, which is why 27-04's own tests passed). This module no
+// longer imports `steam/library` directly at all — the handler below reads
+// the steam manager (and every other manager) off THIS named import instead
+// — so the direct-import hazard this docstring describes cannot recur here
+// by construction, not merely by convention.
+import { libraryManagerMap } from '../storeManagers'
+
+import { ipcMain } from './electronStub'
 import SteamGame from '../storeManagers/steam/games'
-import type { LaunchParams, StatusPromise } from 'common/types'
+import { HumbleLibrary } from '../humble/library'
+import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
+import type { LaunchParams, Runner, StatusPromise } from 'common/types'
 import type LogWriter from '../logger/log_writer'
 
-const steamLibraryManager = new SteamLibraryManager()
+/**
+ * The `refreshLibrary` handler body, extracted to a named function (rather
+ * than inlined into the `ipcMain.handle` call) so the single registration
+ * of this channel in `registerSteamFlows()` below fits on one line,
+ * matching this task's own acceptance-criteria grep for a single-line,
+ * single-occurrence registration.
+ *
+ * Reproduces `main.ts:1051`'s dispatch semantics:
+ *   - a named runner (not `undefined`/`'all'`) refreshes ONLY that runner's
+ *     manager, and rethrows (unsettled) if that refresh rejects;
+ *   - `undefined`/`'all'` refreshes every manager via `Promise.allSettled`,
+ *     so one rejecting manager never wedges the others;
+ *   - a Steam-inclusive refresh (`undefined`/`'all'`/`'steam'`) triggers the
+ *     Humble ownership recompute tail (Phase 12, D-47/D-48).
+ */
+async function handleRefreshLibrary(
+  _event: unknown,
+  ...args: unknown[]
+): Promise<void> {
+  const rawRunner = args[0] as string | undefined
+
+  // Single-runner branch — reproduces main.ts:1051-1053's
+  // `library !== undefined && library !== 'all'` gate.
+  if (rawRunner !== undefined && rawRunner !== 'all') {
+    // T-34.5-C4-10 mitigation: an own-property check (never `in`, which
+    // would also match inherited names like `constructor`/`toString`) — an
+    // unknown runner throws naming itself and NEVER falls through to the
+    // all-branch, and NEVER silently refreshes Steam. That silent fallback
+    // is the exact defect this gap-cycle plan exists to close.
+    if (!Object.prototype.hasOwnProperty.call(libraryManagerMap, rawRunner)) {
+      logWarning(
+        `refreshLibrary failed runner=${rawRunner}: unknown runner`,
+        LogPrefix.Backend
+      )
+      throw new Error(`refreshLibrary: unknown runner '${rawRunner}'`)
+    }
+
+    const runner = rawRunner as Runner
+
+    // T-34.5-C4-11 mitigation: a rejecting single-runner refresh must still
+    // log before rethrowing — an un-logged rejection is indistinguishable
+    // from a hang. Matches main.ts's own un-settled `await
+    // libraryManagerMap[library].refresh()` — a throw here exits the
+    // handler immediately, so neither the Humble tail below nor a
+    // "complete" line ever fires on this path (parity with main.ts, which
+    // has no try/catch around this specific await either).
+    try {
+      await libraryManagerMap[runner].refresh()
+    } catch (err) {
+      logWarning(
+        [`refreshLibrary failed runner=${runner}:`, err],
+        RunnerToLogPrefixMap[runner]
+      )
+      throw err
+    }
+
+    logInfo(
+      `refreshLibrary complete runner=${runner} managers=1`,
+      RunnerToLogPrefixMap[runner]
+    )
+
+    // Phase 12 (Plan 04, D-47/D-48) tail, ported from main.ts:1070-1079: a
+    // Steam-inclusive refresh triggers the Humble ownership recompute.
+    // `HumbleLibrary` is already in this sidecar bundle's import graph (via
+    // `humbleFlowRegistration.ts`, registered separately in `handlers.ts`)
+    // and has no dependency on `storeManagers`/`steam/library`, so
+    // importing it here directly adds no new module to the bundle and
+    // carries none of this file's circular-import risk.
+    if (runner === 'steam') {
+      try {
+        HumbleLibrary.recomputeOwnership()
+      } catch (err) {
+        logWarning(
+          ['Humble ownership recompute after Steam refresh failed:', err],
+          LogPrefix.Backend
+        )
+      }
+    }
+
+    // WR-05 CrossOver rating re-resolve (main.ts:1081-1086) is DELIBERATELY
+    // NOT PORTED to this handler. `refreshCrossoverRatingMap()` is a
+    // module-PRIVATE function in `main.ts` (never exported), built on
+    // `buildCrossoverRatingMap()` — a filesystem/network-scanning helper
+    // with its own import graph entirely unrelated to anything already
+    // loaded by this sidecar bundle. Porting it would mean either exporting
+    // a new cross-cutting helper out of an Electron-only entry file or
+    // duplicating its logic here — both are out of scope for a defect fix
+    // whose blocking behaviour is "GOG library never lands", not "CrossOver
+    // badges go stale by one session". Left as a deliberate,
+    // explicitly-recorded follow-up rather than an unexplained omission
+    // (per this task's own instruction: never import a module into the
+    // sidecar bundle without saying why it is there — the converse holds
+    // too, an omission needs the same explicit reasoning).
+    return
+  }
+
+  // All-runners branch — reproduces main.ts:1054-1060's
+  // `Promise.allSettled` fan-out. Runs for BOTH `rawRunner === undefined`
+  // and `rawRunner === 'all'`, matching main.ts exactly.
+  const managers = Object.entries(libraryManagerMap)
+  const results = await Promise.allSettled(
+    managers.map(([, manager]) => manager.refresh())
+  )
+
+  // T-34.5-C4-14 mitigation: one rejecting manager must never wedge the
+  // others — Promise.allSettled already guarantees that; this only logs the
+  // count for observability.
+  const failedCount = results.filter(
+    (result) => result.status === 'rejected'
+  ).length
+  if (failedCount > 0) {
+    logWarning(
+      `refreshLibrary: ${failedCount}/${managers.length} manager(s) failed during runner=all refresh`,
+      LogPrefix.Backend
+    )
+  }
+
+  logInfo(
+    `refreshLibrary complete runner=all managers=${managers.length}`,
+    LogPrefix.Backend
+  )
+
+  // Phase 12 (Plan 04, D-47/D-48) tail — undefined/'all' both include Steam
+  // via libraryManagerMap, so this always runs on this branch, matching
+  // main.ts:1070's `library === undefined || library === 'all'`.
+  try {
+    HumbleLibrary.recomputeOwnership()
+  } catch (err) {
+    logWarning(
+      ['Humble ownership recompute after Steam refresh failed:', err],
+      LogPrefix.Backend
+    )
+  }
+
+  // WR-05 CrossOver re-resolve — see the single-runner branch's comment
+  // above; the same deliberate-scope decision applies here.
+}
+
+/**
+ * The `launch` handler body, extracted for the same one-line-registration
+ * reason as `handleRefreshLibrary` above.
+ */
+async function handleLaunch(
+  _event: unknown,
+  ...args: unknown[]
+): Promise<Awaited<StatusPromise>> {
+  const { appName } = (args[0] ?? {}) as LaunchParams
+  const game = new SteamGame(appName)
+  // The LogWriter parameter is unused by SteamGame.launch()'s native/
+  // action-flow branch (retained only for the shared Game interface
+  // signature) — a headless sidecar has no per-game log-file lifecycle,
+  // which belongs to launcher.ts's full pipeline (explicitly out of scope
+  // here, see module docstring above).
+  const launched = await game.launch(undefined as unknown as LogWriter)
+  return { status: launched ? 'done' : 'error' }
+}
 
 /**
  * Registers the read-flow (`refreshLibrary`) and action-flow (`launch`)
  * invoke handlers. Called once from `handlers.ts` — this module owns no
- * side effects at import time beyond constructing the manager instance;
- * the caller decides when registration onto the handler registry happens.
+ * side effects at import time beyond registration; the caller decides when
+ * registration onto the handler registry happens.
  */
 export function registerSteamFlows(): void {
-  ipcMain.handle('refreshLibrary', async () => {
-    await steamLibraryManager.refresh()
-  })
-
-  ipcMain.handle(
-    'launch',
-    async (
-      _event: unknown,
-      ...args: unknown[]
-    ): Promise<Awaited<StatusPromise>> => {
-      const { appName } = (args[0] ?? {}) as LaunchParams
-      const game = new SteamGame(appName)
-      // The LogWriter parameter is unused by SteamGame.launch()'s native/
-      // action-flow branch (retained only for the shared Game interface
-      // signature) — a headless sidecar has no per-game log-file lifecycle,
-      // which belongs to launcher.ts's full pipeline (explicitly out of
-      // scope here, see module docstring above).
-      const launched = await game.launch(undefined as unknown as LogWriter)
-      return { status: launched ? 'done' : 'error' }
-    }
-  )
+  ipcMain.handle('refreshLibrary', handleRefreshLibrary)
+  ipcMain.handle('launch', handleLaunch)
 }

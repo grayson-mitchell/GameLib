@@ -138,6 +138,7 @@ import { SteamUser } from '../../storeManagers/steam/user'
 import { getSteamLibraries } from 'backend/utils'
 import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
 import { configStore } from 'backend/constants/key_value_stores'
+import { libraryManagerMap } from '../../storeManagers'
 
 type Frame = Record<string, unknown>
 
@@ -212,13 +213,27 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // the RPC server, with steam-user's owned-apps path stubbed to return >=1
   // app, produces >=1 `pushGameToLibrary` SidecarNotification carrying a
   // steam GameInfo.
+  //
+  // GAP CYCLE 4 (34.5-33): an empty args array now means "all" (the same
+  // semantics `main.ts:1051` always had) rather than the old stub's
+  // unconditional Steam-only call — every OTHER manager in
+  // `libraryManagerMap` (gog/legendary/nile/zoom/sideload) also has its real
+  // `refresh()` invoked here, unmocked. This is safe and fast: each of those
+  // managers' `refresh()` self-gates on `isLoggedIn()`/`existsSync()` checks
+  // against this suite's disposable tmp home directory (see the module
+  // docstring's `os` mock) and returns near-instantly with no games and no
+  // network call, so the Steam assertions below are unaffected — constrains
+  // the environment rather than weakening the assertion, per this plan's own
+  // instruction.
   it('Test 1 (read flow): refreshLibrary invoke produces a pushGameToLibrary notification carrying a steam GameInfo', async () => {
     jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
     const fakeClient = {
       steamID: 'STEAMID_TEST',
       getUserOwnedApps: jest.fn().mockResolvedValue({
         app_count: 1,
-        apps: [{ appid: 999001, name: 'Skeleton Test Game', playtime_forever: 0 }]
+        apps: [
+          { appid: 999001, name: 'Skeleton Test Game', playtime_forever: 0 }
+        ]
       })
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -230,7 +245,8 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
 
     const pushes = frames.filter(
       (frame) =>
-        frame.kind === 'frontendMessage' && frame.channel === 'pushGameToLibrary'
+        frame.kind === 'frontendMessage' &&
+        frame.channel === 'pushGameToLibrary'
     )
     expect(pushes.length).toBeGreaterThanOrEqual(1)
 
@@ -357,7 +373,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // also announces itself as a storeChanged frontendMessage frame (D-06).
     it('a storeSet write persists and is visible in a fresh snapshot fetch, and announces a storeChanged event', async () => {
       const { input, frames } = startSidecar()
-      writeSend(input, 'set-1', 'storeSet', ['configStore', 'theme', 'gsd-probe'])
+      writeSend(input, 'set-1', 'storeSet', [
+        'configStore',
+        'theme',
+        'gsd-probe'
+      ])
       await flush()
 
       // FRESH snapshot fetch — a new invoke round-trip, not a read of any local state.
@@ -387,7 +407,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // storeChanged frame with deleted: true.
     it('a storeDelete removes the key from a subsequent snapshot and emits a change event with deleted: true', async () => {
       const { input, frames } = startSidecar()
-      writeSend(input, 'set-2', 'storeSet', ['configStore', 'theme', 'gsd-probe-2'])
+      writeSend(input, 'set-2', 'storeSet', [
+        'configStore',
+        'theme',
+        'gsd-probe-2'
+      ])
       await flush()
       writeSend(input, 'del-1', 'storeDelete', ['configStore', 'theme'])
       await flush()
@@ -405,7 +429,8 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         (frame) =>
           frame.kind === 'frontendMessage' &&
           frame.channel === 'storeChanged' &&
-          ((frame.args as unknown[])[0] as { deleted?: boolean })?.deleted === true
+          ((frame.args as unknown[])[0] as { deleted?: boolean })?.deleted ===
+            true
       )
       expect(deleteEvent).toBeDefined()
       expect((deleteEvent?.args as unknown[])[0]).toEqual({
@@ -484,9 +509,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       // The RPC loop keeps serving after the rejections.
       writeInvoke(input, 'health-after-proto', 'health', [])
       await flush()
-      expect(frames.find((frame) => frame.id === 'health-after-proto')).toMatchObject(
-        { ok: true, result: 'ok' }
-      )
+      expect(
+        frames.find((frame) => frame.id === 'health-after-proto')
+      ).toMatchObject({ ok: true, result: 'ok' })
     })
 
     // WR-12 (Phase 29 code review): guard (c) — the very control this phase claims to
@@ -521,7 +546,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       // Nothing landed in a fresh snapshot either.
       writeInvoke(input, 'snapshot-secret-1', 'sidecar:store-snapshot', [])
       await flush()
-      const response = frames.find((frame) => frame.id === 'snapshot-secret-1') as
+      const response = frames.find(
+        (frame) => frame.id === 'snapshot-secret-1'
+      ) as
         | {
             ok: boolean
             result: Record<string, Record<string, unknown> | undefined>
@@ -552,8 +579,13 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
 
       writeInvoke(input, 'snapshot-cache-1', 'sidecar:store-snapshot', [])
       await flush()
-      const response = frames.find((frame) => frame.id === 'snapshot-cache-1') as
-        | { ok: boolean; result: { legendary_library?: Record<string, unknown> } }
+      const response = frames.find(
+        (frame) => frame.id === 'snapshot-cache-1'
+      ) as
+        | {
+            ok: boolean
+            result: { legendary_library?: Record<string, unknown> }
+          }
         | undefined
       expect(response?.ok).toBe(true)
       expect(response?.result.legendary_library?.library).toEqual([
@@ -583,12 +615,20 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
 
       const { input } = startSidecar()
-      writeSend(input, 'new-junk-1', 'storeNew', ['attacker_junk_store', undefined])
-      writeSend(input, 'new-junk-2', 'storeNew', ['aaaaaaaaaaaaaaaaaaaaaaaa', undefined])
+      writeSend(input, 'new-junk-1', 'storeNew', [
+        'attacker_junk_store',
+        undefined
+      ])
+      writeSend(input, 'new-junk-2', 'storeNew', [
+        'aaaaaaaaaaaaaaaaaaaaaaaa',
+        undefined
+      ])
       await flush()
 
       const after = existsSync(cacheDir) ? readdirSync(cacheDir) : []
-      expect(after.filter((f) => f.startsWith('attacker_junk_store'))).toEqual([])
+      expect(after.filter((f) => f.startsWith('attacker_junk_store'))).toEqual(
+        []
+      )
       expect(after.filter((f) => f.startsWith('aaaaaaaa'))).toEqual([])
       expect(after.length).toBe(before.length)
     })
@@ -619,6 +659,113 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         id: 'health-after-bad',
         ok: true,
         result: 'ok'
+      })
+    })
+  })
+
+  // GAP CYCLE 4 (34.5-33, Routing item 1): the runner-aware refreshLibrary
+  // dispatch. These tests assert on which manager MOCK had `refresh()`
+  // called — never on the handler's resolved value alone, which is
+  // `undefined` in every passing case and therefore proves nothing about
+  // which manager actually ran (the exact blind spot the old stub hid
+  // behind for two live-gate failures).
+  //
+  // Per the plan's own objective: a passing suite here proves DISPATCH
+  // only. Item 1 ("GOG library never lands after successful auth") stays
+  // OPEN until a live `pnpm tauri:dev` session shows a populated GOG
+  // library following a real login — see 34.5-33-SUMMARY.md.
+  describe('refreshLibrary runner dispatch (gap cycle 4)', () => {
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    it("invoking refreshLibrary with ['gog'] calls the gog manager's refresh() and does NOT call the steam manager's refresh()", async () => {
+      const gogSpy = jest
+        .spyOn(libraryManagerMap.gog, 'refresh')
+        .mockResolvedValue({ stdout: '', stderr: '' })
+      const steamSpy = jest
+        .spyOn(libraryManagerMap.steam, 'refresh')
+        .mockResolvedValue({ stdout: '', stderr: '' })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'gog-refresh-1', 'refreshLibrary', ['gog'])
+      await flush()
+
+      expect(gogSpy).toHaveBeenCalledTimes(1)
+      expect(steamSpy).not.toHaveBeenCalled()
+
+      const response = frames.find((frame) => frame.id === 'gog-refresh-1')
+      expect(response).toMatchObject({ id: 'gog-refresh-1', ok: true })
+    })
+
+    it("invoking refreshLibrary with ['all'] calls every manager's refresh()", async () => {
+      const spies = Object.entries(libraryManagerMap).map(([, manager]) =>
+        jest
+          .spyOn(manager, 'refresh')
+          .mockResolvedValue({ stdout: '', stderr: '' })
+      )
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'all-refresh-1', 'refreshLibrary', ['all'])
+      await flush()
+
+      spies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1))
+
+      const response = frames.find((frame) => frame.id === 'all-refresh-1')
+      expect(response).toMatchObject({ id: 'all-refresh-1', ok: true })
+    })
+
+    it('an unknown runner rejects with an error naming it, and calls no manager’s refresh()', async () => {
+      const spies = Object.values(libraryManagerMap).map((manager) =>
+        jest
+          .spyOn(manager, 'refresh')
+          .mockResolvedValue({ stdout: '', stderr: '' })
+      )
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'unknown-refresh-1', 'refreshLibrary', [
+        'not-a-real-runner'
+      ])
+      await flush()
+
+      spies.forEach((spy) => expect(spy).not.toHaveBeenCalled())
+
+      const response = frames.find(
+        (frame) => frame.id === 'unknown-refresh-1'
+      ) as { id: string; ok: boolean; error?: string } | undefined
+      expect(response?.ok).toBe(false)
+      expect(response?.error).toEqual(
+        expect.stringContaining('not-a-real-runner')
+      )
+    })
+
+    it('in the all-branch, one manager rejecting does not reject the handler and the other managers still ran', async () => {
+      const rejectingSpy = jest
+        .spyOn(libraryManagerMap.gog, 'refresh')
+        .mockRejectedValue(new Error('gog refresh boom'))
+      const otherSpies = Object.entries(libraryManagerMap)
+        .filter(([runner]) => runner !== 'gog')
+        .map(([, manager]) =>
+          jest
+            .spyOn(manager, 'refresh')
+            .mockResolvedValue({ stdout: '', stderr: '' })
+        )
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'all-refresh-partial-fail-1', 'refreshLibrary', [
+        'all'
+      ])
+      await flush()
+
+      expect(rejectingSpy).toHaveBeenCalledTimes(1)
+      otherSpies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1))
+
+      const response = frames.find(
+        (frame) => frame.id === 'all-refresh-partial-fail-1'
+      )
+      expect(response).toMatchObject({
+        id: 'all-refresh-partial-fail-1',
+        ok: true
       })
     })
   })
