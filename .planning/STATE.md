@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-22-PLAN.md (diagnostic — no source changes). F-34.5-G6-02 diagnosed to shape (c); next: 34.5-23 implements the cited fix."
-last_updated: "2026-08-01T01:55:21.290Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle 3, plan 22 EXECUTED (diagnostic-only, no source changes): F-34.5-G6-02 diagnosed to shape (c) with a cited implied fix for 34.5-23; gate-run log preserved off-repo; phase still does not close until 34.5-31's third re-run gate PASSes 5/5
+stopped_at: "Completed 34.5-23-PLAN.md (F-34.5-G6-02 fix: exempted oauthCaptureLogin/humbleStartLogin/humbleReconnect from the 60s invoke bound, made a rejected capture round-trip loud, added a standing guard). Next: 34.5-24 onward per gap-cycle-3 wave ordering."
+last_updated: "2026-08-01T02:46:32.809Z"
+last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 180
-  completed_plans: 163
+  completed_plans: 164
   percent: 91
 ---
 
@@ -358,7 +358,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 22 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Plan: 23 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2177,7 +2177,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 94%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3060,6 +3060,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P19 | 35min | 2 tasks | 1 files |
 | Phase 34.5 P20 | 55min | 3 tasks | 1 files |
 | Phase 34.5 P22 | 50min | 3 tasks | 1 files |
+| Phase 34.5 P23 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3437,6 +3438,10 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Verdict recorded FAIL 0/5 on the live-gate re-run (34.5-20): items 1-3 FAIL on a new downstream-of-capture defect (G-1 spawn defect confirmed closed by precondition 4; items 2/3 both reached status=captured at the backend for the first time, but nothing consumes the capture into a completed login), items 4-5 NOT ATTEMPTED. Assumption A1 (www.amazon.com anchor) CONFIRMED via code-structural proof despite item 3's own FAIL.
 - [Phase 34.5]: F-34.5-G6-02 diagnosed to shape (c): oauthCaptureLogin's 300s internal deadline exceeds main.rs's 60s INVOKE_TIMEOUT (absent from LONG_RUNNING_CHANNELS), rejecting the renderer promise before the sidecar settles; the rejection lands on an unguarded await at useTauriOAuthLogin.ts:99 — R-A selected over R-B on structural grounds: sidecar_invoke's async fn has already returned by the time the 60s bound fires, so Tauri's own command contract forecloses a true hang
 - [Phase 34.5]: Recurrence count for the 60s-invoke-bound-vs-internal-deadline defect is 3, not 1: humbleStartLogin and humbleReconnect share the identical shape (600s LOGIN_WATCH_TIMEOUT_MS) and were not exercised by this session's live gate
+- [Phase 34.5]: Scoped the 60s invoke-bound fix to all 3 channels the 34.5-22 recurrence count named (oauthCaptureLogin, humbleStartLogin, humbleReconnect), not just oauthCaptureLogin
+- [Phase 34.5]: Renderer-side try/catch around oauthCaptureLogin is defense-in-depth only -- no second competing deadline was added; the sidecar's own DEFAULT_DEADLINE_MS/LOGIN_WATCH_TIMEOUT_MS remain sole authority
+- [Phase 34.5]: capture-transport-failed kept as a distinct log literal, never folded into the existing generic phase=error line, so a transport failure and a backend-reported failure stay greppable apart
+- [Phase 34.5]: Standing guard (longRunningChannels.test.ts) scoped to a declared table of named deadline constants, not a source-wide scan; proven load-bearing by an actual local revert-and-observe-failure exercise, then restored
 
 ### Pending Todos
 
@@ -3509,8 +3514,48 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T01:55:21.281Z
-Stopped at: Completed 34.5-22-PLAN.md (diagnostic — no source changes). F-34.5-G6-02 diagnosed to shape (c); next: 34.5-23 implements the cited fix.
+Last session: 2026-08-01T02:46:32.798Z
+Stopped at: Completed 34.5-23-PLAN.md (F-34.5-G6-02 fix: exempted oauthCaptureLogin/humbleStartLogin/humbleReconnect from the 60s invoke bound, made a rejected capture round-trip loud, added a standing guard). Next: 34.5-24 onward per gap-cycle-3 wave ordering.
+  This session (sequential executor): executed 34.5-23 (gap cycle 3, wave 2 -- the fix
+  34.5-22's diagnosis specified). Task 1 (commit `d3061e65f`): added `oauthCaptureLogin`,
+  `humbleStartLogin` and `humbleReconnect` to `main.rs`'s `LONG_RUNNING_CHANNELS` (all three
+  named by 34.5-22 Task 2's recurrence count, not just the one channel that session's gate
+  happened to exercise long enough to observe) with justifying comments citing the 2026-08-01
+  gate's measured durations, mirrored into `EXPECTED_LONG_RUNNING_CHANNELS`, and extended
+  `main.rs`'s `#[cfg(test)]` module with a behavioral assertion plus a non-member control
+  (`getUserInfo` stays bounded). `cargo test` 86/86 (was 84/84), `npx jest
+  longRunningChannels.test.ts` 21/21 (was 20/20), `cargo check` clean, `from_secs(60)` count
+  unchanged at 2. Task 2 (commit `e7a803237`): wrapped `useTauriOAuthLogin.ts:99`'s previously
+  bare `await window.api.oauthCaptureLogin(...)` -- the ONLY unguarded await in `run()`, and the
+  direct cause of zero renderer log lines against six real backend outcomes (34.5-G6-FINDINGS.md
+  evidence item 1) -- in try/catch; a rejection now honours the `cancelled` guard first, emits a
+  distinct `capture-transport-failed` log line (never folded into the existing generic
+  `phase=error` line), and settles `{ phase: 'error', message }` instead of floating as an
+  unhandled rejection. No renderer-side timeout was added -- the sidecar's own
+  `DEFAULT_DEADLINE_MS` stays the sole deadline authority. `npx jest useTauriOAuthLogin.test.tsx`
+  26/26 (was 22/22), `grep -c capture-transport-failed` == 1, `tsc --noEmit` clean. Task 3
+  (commit `7ed5ea530`): added a standing guard to `longRunningChannels.test.ts` -- a declared
+  `DEADLINE_CONSTANT_TABLE` (channel -> {sourcePath, constantName}) parses the real ms deadline
+  out of `oauthLoginCapture.ts`/`humble/user.ts` (reusing the file's existing shared
+  `stripSourceComments`/`stripTrailingLineComment` helpers) and asserts `LONG_RUNNING_CHANNELS`
+  membership whenever that deadline exceeds `INVOKE_TIMEOUT`; proved load-bearing by actually
+  reverting Task 1's three-channel `main.rs` addition locally, observing the guard's own test
+  throw `"oauthCaptureLogin's internal deadline (300000ms) exceeds INVOKE_TIMEOUT (60000ms) but
+  is absent from LONG_RUNNING_CHANNELS"` (3 tests failed), then restoring (`git diff --stat`
+  confirmed zero residual change -- no `git stash`/`reset --hard` used). `npx jest
+  longRunningChannels.test.ts` 28/28 (was 21/21). `npm run test:ci` 179/179 suites, 3475/3475
+  tests (was 3454/3454, comfortably above the 3463 gate baseline), exit 0;
+  `ported-channels-gate.py` exit 0. SUMMARY written (`34.5-23-SUMMARY.md`), self-check PASSED.
+  This plan closes layer 1 of F-34.5-G6-02 only -- it does NOT make a login succeed on its own;
+  layer 2 (nothing runs the post-login library refresh) remains 34.5-26's scope.
+Next: **34.5-24-PLAN.md** (or whichever gap-cycle-3 plan is next per the wave ordering) --
+  34.5-23's fix is unproven live until the third blocking gate re-run actually drives a real
+  GOG/Amazon login past 60s and observes a non-empty `grep -c "useTauriOAuthLogin"
+  ~/Library/Logs/GameLib/gamelib.log`, per 34.5-G6-FINDINGS.md's "Implied fix" observable-effect
+  standard -- a green test suite alone does not clear that bar. Phase 34.5 does NOT close until
+  34.5-31's third re-run gate records 5/5.
+
+Stopped at (superseded): Completed 34.5-22-PLAN.md
   This session (sequential executor): executed 34.5-22 (gap cycle 3, wave 1, diagnostic plan --
   NO source-code edits, per the plan's own explicit prohibition). Task 1: preserved this
   session's `gamelib.log` (351,376 bytes) and `gamelib.log.old` (5,062 bytes) to
@@ -3542,6 +3587,7 @@ Next: **34.5-23-PLAN.md** — implements the four-item fix `34.5-G6-FINDINGS.md`
   section specifies: the `LONG_RUNNING_CHANNELS` edit (`main.rs`) + matching
   `EXPECTED_LONG_RUNNING_CHANNELS` edit, the `useTauriOAuthLogin.ts:99` try/catch, and the
   standing guard test. Phase 34.5 does NOT close until 34.5-31's third re-run gate records 5/5.
+  [SUPERSEDED — this plan is now complete, see the current "This session" note above.]
 
 Stopped at (superseded): Completed 34.5-20-PLAN.md
   This session (continuation executor): executed 34.5-20 Tasks 2-3 (Task 1 -- the 7
