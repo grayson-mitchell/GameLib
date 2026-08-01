@@ -2,7 +2,7 @@
 status: investigating
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T00:15:00
+updated: 2026-08-02T00:45:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -18,6 +18,21 @@ finding: F-34.5-G6-01
   never becomes interactive. The full 300s sidecar deadline elapses and the attempt ends
   `status=timeout`. The `nav host=` sequence never leaves the single hostname
   `www.epicgames.com` — no second hostname is ever reached.
+
+  **CORRECTED 2026-08-02, from a real DOM/Network read (see Evidence 2026-08-02T00:20:00):** every
+  prior cycle's phrasing of this symptom — "form not interactive", "greyed out", "non-interactive
+  form" — was imprecise and sent the investigation down the wrong path (the Class A/B disabled-vs-
+  event-delivery framing from the immediately prior cycle). The actual, DOM-measured state is that
+  there is **no form at all**: `document.querySelectorAll('input').length === 0`,
+  `document.querySelectorAll('form').length === 0`, `document.querySelectorAll('iframe').length
+  === 0`, and `document.body.innerText === ""`. Class A ("Epic's own code disabled its inputs") and
+  Class B ("healthy inputs not receiving events") are both wrong on their face — there is nothing
+  in the DOM to be disabled or to receive events. What is visually present on screen is a CSS
+  skeleton/placeholder pattern (developer, verbatim: "a blank screen with a 'dummy pattern' that
+  vaguely looks like a data form that is blurred") — i.e. loading-skeleton styling, not real
+  rendered content. `localStorage` and cookies both work in this webview (`cookieLen: 85`,
+  `localStorage OK` — see Evidence), so the empty DOM is not a storage-blocked rendering failure of
+  the kind ITP would cause.
 - **Error messages:** NONE visible in the page under the stock user agent (developer, verbatim:
   "no error text"). The backend log shows only `status=timeout`. The login page's own JavaScript
   console has never been read by anyone, in any cycle.
@@ -214,7 +229,91 @@ finding: F-34.5-G6-01
     diagnostic edit in `main.rs` has been reverted and `cargo check` is clean (0 errors) as of
     this update.
 
+- timestamp: 2026-08-02T00:20:00
+  source: live hardware, `pnpm tauri:dev`, developer console read against the pre-registered Class
+    A/B + ITP prediction from the prior cycle's Current Focus, DOM one-liners run directly in the
+    login window's console, Network/Console filter set to ALL (previous cycles were Errors-only)
+  note: |
+    DOM state (falsifies Class A/B framing itself, not just the ITP sub-hypothesis):
+    ```
+    {"inputs":0,"forms":0,"iframes":[],"text":"","cookieLen":85}
+    localStorage OK
+    ```
+    Zero inputs, zero forms, zero iframes, empty `innerText`. There is no form in the DOM to be
+    disabled (Class A) or to fail to receive events (Class B) — both branches of the pre-registered
+    split presupposed a real form existed, and it does not. `cookieLen: 85` and `localStorage OK`
+    prove storage/cookies are NOT blocked in this webview, directly falsifying the pre-registered
+    ITP/third-party-storage sub-hypothesis (see Eliminated) on its own stated terms — the
+    Falsification clause fires: no disabled-DOM evidence was even available to pair with cross-
+    origin trouble, and the storage primitives the theory said would be silently blocked are
+    demonstrably not blocked.
+
+    Full console, filter=ALL (previous reads were Errors-only, which is why the two Warnings below
+    were never seen in any earlier cycle):
+    ```
+    [Error] Refused to connect to ipc://localhost/plugin%3Anotification%7Cis_permission_granted
+      because it appears in neither the connect-src directive nor the default-src directive of the
+      Content Security Policy.
+    [Error] Viewport argument key "minimal-ui" not recognized and ignored. (login, line 6)
+    [Warning] IPC custom protocol failed, Tauri will now use the postMessage interface instead –
+      TypeError: Load failed (user-script:103, line 106)
+    TypeError: Load failed
+    [Error] Unhandled Promise Rejection: notification.is_permission_granted not allowed on window
+      "loginwin-4-18c7c66faa4316e0-a9905812", webview "loginwin-4-...",
+      URL: https://www.epicgames.com/id/login?responseType=co...
+    [Warning] Parsing application manifest
+      https://static-assets-prod.unrealengine.com/account-portal/static/manifest.json: The
+      start_url's origin of "https://static-assets-prod.unrealengine.com" is different from the
+      document's origin of "https://www.epicgames.com".
+    [Warning] WARN – "[Statsig]" – "The user does not have the required id_type \"tracking_uuid\"
+      for Gate \"accountportal_-_fe_test\"" (index-BMTfSvFa.js, line 501)
+    [Error] Source Map loading errors (x7)  [seven *.js.map 403s — Epic does not serve maps
+      publicly; confirmed benign in a prior cycle]
+    [Error] Failed to load resource: the server responded with a status of 429 () (envelope, line 0)
+    [Warning] x4 font preload-but-unused warnings for Inter*.woff2 from
+      static-assets-prod.unrealengine.com
+    ```
+    The two notification-plugin lines are expected to be present again in this read — the R3
+    diagnostic (plugin registration commented out) was correctly reverted at the end of the prior
+    cycle. Their presence here is not a regression.
+
+    LOAD-BEARING NEW FACTS, not seen in any prior cycle because filter was Errors-only:
+    (1) `[Warning] IPC custom protocol failed, Tauri will now use the postMessage interface instead
+    – TypeError: Load failed` at `user-script:103, line 106`, followed by a bare `TypeError: Load
+    failed`. `user-script:103` is Tauri's own injected bootstrap (not Epic's bundle, not a
+    plugin) — this is the framework's CORE IPC transport initialization failing inside Epic's page,
+    a distinct mechanism from the already-falsified R3 (which was the notification plugin's
+    `init-iife.js` specifically). This reopens the general "Tauri's injected user-scripts break
+    Epic's page" claim as UNRESOLVED — only its notification-specific instance was killed.
+    (2) `index-BMTfSvFa.js, line 501` firing a Statsig gate-evaluation warning proves Epic's actual
+    application bundle loaded and executed real application logic — the empty DOM is not caused by
+    the bundle failing to load or parse.
+    (3) `envelope` (Sentry's error-ingest endpoint) returned 429 — rate-limited, meaning enough
+    error reports were sent in a short window to trip Sentry's own rate limiter. Read together with
+    (2): the bundle ran, threw repeatedly, an error boundary likely caught those throws internally
+    (which is why none of them ever appeared as an uncaught console error in four cycles of
+    console-only reads), and shipped them to Sentry fast enough to get throttled.
+
+    BENIGN, re-confirmed: viewport `minimal-ui` warning, the 7x source-map 403s, the manifest
+    cross-origin warning, the 4x font preload warnings.
+
 ## Eliminated
+
+- hypothesis: ITP/third-party-storage sub-hypothesis — WKWebView's default third-party-cookie
+  blocking (Intelligent Tracking Prevention) silently stalls a cross-origin captcha/fingerprint/
+  storage-access dependency in Epic's bootstrap, holding the form disabled with no JS throw.
+  eliminated_by: live hardware DOM/console read, 2026-08-02T00:20:00 entry above, run against the
+    prior cycle's own pre-registered prediction and falsification clause.
+  note: |
+    FALSIFIED on its own stated terms, recorded honestly rather than reworded to survive. This
+    sub-hypothesis was pre-registered before the test, per this project's F-10 discipline, with an
+    explicit falsification clause: "if Class A evidence is found but the Network tab shows no
+    cross-origin captcha/challenge activity ... the ITP sub-hypothesis is wrong." The actual result
+    is more direct than that clause even anticipated — there is no Class A evidence to pair with
+    anything, because the DOM has no form to disable in the first place — and the storage
+    primitives the theory predicted would be silently blocked are directly proven NOT blocked:
+    `cookieLen: 85`, `localStorage OK`. ITP is not the mechanism here. Do not re-open this
+    sub-hypothesis without new evidence specifically implicating cross-origin storage/cookie access.
 
 - hypothesis: R1 — the user agent string is what breaks Epic's login form.
   eliminated_by: 34.5-G6-EPIC-DISCRIMINATOR.md, verdict R1-FALSIFIED.
@@ -245,92 +344,103 @@ finding: F-34.5-G6-01
     REAL, separately-fixable defect (see the new Current Focus entry below), but it is not the
     cause of F-34.5-G6-01. Diagnostic line reverted in `main.rs`; `cargo check` clean, 0 errors.
 
+    SCOPE CORRECTION, 2026-08-02: this verdict falsifies ONLY the notification plugin's specific
+    injected script (`tauri-plugin-notification`'s `init-iife.js`) as a cause. It must NOT be read
+    as falsifying the broader claim "Tauri's injected user-scripts break Epic's page" — that
+    broader claim is now separately, actively open again, driven by a DIFFERENT injected script
+    (Tauri's own core IPC bootstrap, `user-script:103`) observed failing in the same console read
+    that reconfirmed R3's kill (see Evidence 2026-08-02T00:20:00 and the new Current Focus entry).
+    R3 killed one instance of the injection-breaks-the-page family; it did not kill the family.
+
 ## Current Focus
 
 hypothesis: |
-  R3 is FALSIFIED (see Eliminated) — clean kill, both named console lines gone, form still
-  non-interactive. R2's original framing ("a Chromium-only web API THROWS in Epic's own script
-  during bootstrap") is now WEAK-TO-DEAD: with the notification injection removed, the console is
-  clean of every page-script error (only a benign viewport warning, 7 expected source-map 403s,
-  and Epic's own Sentry 429 remain) — nothing throws, anywhere, in this repro. R2 is not formally
-  falsified (a throw could theoretically be swallowed before reaching the console, or occur in a
-  code path devtools doesn't surface), but treating it as a live lead any longer would be
-  comfortable, not evidenced. It is downgraded to "unlikely, not re-examined unless everything
-  below is exhausted."
+  The Class A/B DOM-disabled-vs-event-delivery split from the prior cycle is FALSIFIED at the root
+  (see Symptoms correction and Evidence 2026-08-02T00:20:00): there is no form in the DOM at all
+  (`inputs:0 forms:0 iframes:[] text:""`), so neither "disabled inputs" (Class A) nor "healthy
+  inputs not receiving events" (Class B) can be the mechanism — both presuppose a form that does
+  not exist. The ITP/third-party-storage sub-hypothesis, which was pre-registered under Class A, is
+  FALSIFIED on its own stated terms (`cookieLen: 85`, `localStorage OK` — see Eliminated). What is
+  visually present is a CSS skeleton/placeholder, not real rendered content.
 
-  PRE-REGISTERED (per this project's F-10 discipline — predictions stated BEFORE the test is run,
-  not fitted afterward) NEW HYPOTHESIS, replacing R2/R3 as the active lead:
+  TWO THREADS ARE NOW OPEN. They are not yet shown to be the same mechanism and must be evaluated
+  independently — do not let a plausible connection between them substitute for evidence connecting
+  them.
 
-  The "renders, greyed out, clean console" symptom splits into two mutually exclusive, DOM-
-  observable classes that have never been distinguished because nobody has opened the Elements or
-  Network tab (only the console has been read, in every cycle so far):
+  THREAD 1 (reopened, not yet the active lead) — Tauri's CORE IPC bootstrap injection, distinct
+  from R3: the console shows `[Warning] IPC custom protocol failed, Tauri will now use the
+  postMessage interface instead – TypeError: Load failed (user-script:103, line 106)` followed by a
+  bare `TypeError: Load failed`. `user-script:103` is Tauri's own framework-injected script, not
+  Epic's bundle and not a plugin — a different injection mechanism than the notification plugin
+  that R3 killed. This keeps the general "Tauri's injected user-scripts break Epic's page" claim
+  alive as a family, even though R3 killed one specific member of that family. UNCONFIRMED: whether
+  this IPC-transport failure has any causal relationship to the empty DOM, or is an independent,
+  benign fallback (the warning itself says Tauri "will now use the postMessage interface instead" —
+  phrasing that suggests a handled fallback, not a fatal failure, though this has not been verified
+  against Tauri's source).
 
-  - CLASS A — Epic's own page code disabled its own inputs. The email/password `<input>` elements
-    (or a wrapping form/container) carry `disabled`, `aria-disabled`, a `pointer-events: none`
-    style, or a loading/disabled CSS class in the live DOM, and the page is deliberately holding
-    the form inert while awaiting something that never arrives.
-  - CLASS B — the inputs are structurally normal (not disabled, no blocking overlay) but never
-    receive click/keyboard events. This would be a WKWebView input/event-delivery problem (hit-
-    testing, focus, first-responder, or a transparent overlay element), unrelated to Epic's page
-    logic at all — "greyed out" would then just be normal unfocused/placeholder styling
-    misinterpreted as disabled.
+  THREAD 2 (PRE-REGISTERED as the active lead, stated before the confirming test per this project's
+  F-10 discipline) — Sentry-swallowed-exception: Epic's actual application bundle demonstrably
+  loaded and executed real logic (`[Warning] WARN – "[Statsig]" – ... (index-BMTfSvFa.js, line
+  501)` — a Statsig feature-gate evaluation, which only runs from inside Epic's own running code,
+  not framework boilerplate). Separately, Sentry's own error-ingest endpoint (`envelope`) returned
+  a 429 (rate-limited) in the same session. Reading: Epic's bundle is throwing repeatedly during
+  bootstrap, an error boundary is catching those throws internally (React error boundaries and
+  similar patterns catch-and-report without re-throwing to the global scope), and shipping enough
+  reports to Sentry fast enough to trip its rate limiter — while rendering nothing (hence the empty
+  DOM) and leaving no trace in the console, because a caught exception is never an uncaught one.
+  This is offered as the explanation for why four consecutive cycles found "no error" in the
+  console: the errors most likely exist and are being caught, not that there truly are none.
 
-  STRUCTURAL SUB-HYPOTHESIS for Class A specifically, pre-registered with its own falsifiable
-  prediction before any DOM evidence is collected: WKWebView enforces Intelligent Tracking
-  Prevention and blocks third-party/cross-site cookies BY DEFAULT, unlike Chromium/Electron. If
-  Epic's login flow depends on a cross-origin resource — a captcha/bot-check widget (Arkose Labs
-  and hCaptcha are both known to be used by Epic's login), a fingerprinting script, or a storage-
-  access-requiring iframe — ITP would silently block or alter that resource's request/cookie
-  access with NO JavaScript throw (a blocked network response or an altered result is not an
-  exception), leaving Epic's own bootstrap code waiting forever on a signal that never resolves and
-  holding the form disabled as a result. This fits every fact on the table: renders fine, console
-  clean, single `nav host=` (no redirect to a challenge domain), full 300s timeout, and it works
-  under Electron/Chromium where third-party cookies are not blocked by default.
-
-  PREDICTION, stated now, before the test: IF Class A evidence is found (disabled/aria-disabled
-  inputs or a disabling wrapper), THEN expect ALSO to find, in the same DOM snapshot or the Network
-  tab: a captcha/challenge widget (Arkose/FunCaptcha/hCaptcha-shaped markup, e.g. an iframe or div
-  with those vendor names) present but blank/unloaded, AND/OR a pending-forever or blocked/failed
-  cross-origin request tied to such a widget. Confirmation requires BOTH the DOM disabled-state
-  signal AND a related cross-origin resource in trouble — either alone is suggestive, not decisive.
-  Falsification: if Class A evidence is found but the Network tab shows no cross-origin
-  captcha/challenge activity at all (nothing pending, nothing blocked, nothing related), the ITP
-  sub-hypothesis is wrong even though the Class A/B split itself would still be correctly resolved
-  — the two are separable and must not be conflated when reporting back.
-  If Class B evidence is found instead (inputs look normal, not disabled), the ITP sub-hypothesis
-  is moot regardless of Network tab contents, and investigation pivots entirely to WKWebView
-  input/event delivery (hit-testing, focus, window-level first-responder behavior) — a completely
-  different code area than anything examined in this session so far.
+  PREDICTION, stated now, before the test: IF Thread 2 is correct, THEN arming "Break on All
+  Exceptions" in the Web Inspector Debugger panel (which stops at a `throw` regardless of whether
+  something downstream catches it — unlike a normal breakpoint or the console, which only surface
+  what's left uncaught) and reloading the login window WILL produce at least one concrete exception
+  with a message and call stack pointing into Epic's own bundle or a specific browser API it calls.
+  Falsification: if Break on All Exceptions is correctly armed and the page reloads through to the
+  same empty-DOM state with ZERO exceptions breaking (not "none we noticed" — the debugger must
+  actually pause at least once for the thread to survive), Thread 2 is wrong and the Sentry 429 has
+  some other explanation (e.g. Epic's own client-side rate-limiting telemetry, or non-exception
+  error reports such as network failures reported without a JS throw). In that case, fall back to
+  reading the Sentry `envelope` request's payload directly in the Network tab (contains Epic's own
+  serialized exception + stack), with the caveat that Safari's request-body viewer is known to be
+  unreliable for this payload shape — if both approaches come up empty, Thread 2 should be
+  downgraded the same way ITP and R2 were: not chased further without new evidence.
 test: |
-  Cannot be run by this agent — requires live DOM/Network inspection on real Tauri/WKWebView
-  hardware, which this agent has no access to. Handed to the developer as a CHECKPOINT (see
-  returned checkpoint). Devtools are already wired to the `loginwin-*` window from the prior
-  cycle's instrumentation (main.rs `humble_login_open` arm, `#[cfg(debug_assertions)]`-gated,
-  confirmed working) — no further code change is needed to run this test, only manual DOM/Network
-  inspection during the existing repro.
+  Cannot be run by this agent — requires live Web Inspector Debugger-panel interaction on real
+  Tauri/WKWebView hardware (arming "Break on All Exceptions", triggering a reload, and reading a
+  live paused-debugger call stack), none of which this agent can do. Handed to the developer as a
+  CHECKPOINT (see returned checkpoint). No code change or further instrumentation is needed —
+  devtools are already wired to the `loginwin-*` window from two cycles ago.
 expecting: |
-  See the hypothesis block's PREDICTION paragraph above for the full decision table (Class A vs
-  Class B, and within Class A, ITP-confirmed vs ITP-falsified). Summary: Class A + captcha/cross-
-  origin trouble → proceed to design an ITP/storage-access-scoped fix candidate. Class A + no
-  cross-origin trouble → Class A is real but the ITP theory specifically is wrong; need a fresh
-  hypothesis for WHY Epic's own code is holding the form disabled. Class B → pivot entirely to
-  WKWebView event-delivery investigation, unrelated to anything examined so far.
+  Exception message + top call-stack frames pointing at a specific Epic bundle function or browser
+  API → CONFIRMS Thread 2 and names a concrete, fixable root cause (the specific API/call that
+  throws). Debugger never pauses across a full reload → FALSIFIES Thread 2 as stated; fall back to
+  reading the Sentry `envelope` payload in the Network tab; if that is also unproductive,
+  reconsider Thread 2 entirely and re-open investigation into Thread 1 (the core IPC bootstrap
+  failure) as an independent line, or return to open-ended DOM/timing investigation (e.g. does the
+  skeleton ever get replaced, even after 300s, or is it eternally static — a hung-forever-on-a-
+  promise signature distinct from a caught throw).
 next_action: |
-  BLOCKED on human hardware. See CHECKPOINT REACHED returned to the user for exact DOM/Network
-  inspection steps. Do NOT run any new code diagnostic before that response — the next action is
-  observation, not an experiment requiring a code change.
+  BLOCKED on human hardware. See CHECKPOINT REACHED returned to the user for the exact Break-on-
+  All-Exceptions steps and the Network-tab fallback. Do NOT apply any fix and do NOT touch Thread 1
+  (the core IPC script) before that response — Thread 2 is the pre-registered active lead and must
+  be tested on its own before Thread 1 is investigated further, to avoid conflating two untested
+  mechanisms.
 reasoning_checkpoint: |
-  This project's own F-10 lesson (a green suite / a plausible story is not confirmation) is binding
-  again: the prior cycle's "capability gap -> injected script -> unhandled rejection -> non-
-  interactive form" story was self-consistent and comfortable, and it was WRONG — the removal
-  experiment cleanly falsified it. The lesson generalizes: three console-only investigation cycles
-  in a row have all reasoned from the console alone. The console is not the only signal available;
-  the DOM and Network tabs have never been looked at, and "greyed out" is itself an unverified
-  visual description that could mean CSS opacity, a disabled attribute, or nothing structural at
-  all. This pre-registration is written BEFORE the DOM/Network evidence is collected, specifically
-  so that whatever is found next gets evaluated against a stated prediction rather than a post-hoc
-  story built to fit the observation — the exact trap the prior R3 cycle should have (and mostly
-  did) guard against, but which the confidence of a "complete" story nearly obscured.
+  This project's own F-10 lesson keeps recurring and keeps being the right lesson: the prior
+  cycle's Class A/B + ITP framing was itself a plausible, self-consistent story built on a symptom
+  description ("greyed out", "non-interactive form") that nobody had actually verified against the
+  DOM — and it was wrong, not because the reasoning was bad, but because the underlying observation
+  it reasoned from was imprecise. The correction this cycle is the same shape as R3's: go back to
+  the rawest available signal (DOM state, full-filter console) before trusting any inherited
+  description of the symptom. Thread 2 is written as PRE-REGISTERED specifically so the next
+  hardware read is evaluated against this stated prediction, not fitted to whatever is found. Blind
+  spot, stated honestly: Thread 1 and Thread 2 could both be real and could even be related (a
+  broken core IPC transport is exactly the kind of thing that could cause a framework-level promise
+  to hang or throw inside application code) — but no evidence yet connects them, and reaching for
+  that connection before testing Thread 2 directly would be exactly the kind of comfortable,
+  unearned unification this project's history keeps punishing.
 
 ## Constraints
 
