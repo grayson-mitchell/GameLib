@@ -715,6 +715,33 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       expect(response).toMatchObject({ id: 'all-refresh-1', ok: true })
     })
 
+    // LIVE REGRESSION (2026-08-01, follow-up to 34.5-33): a live `pnpm tauri:dev`
+    // session proved the mount-time "refresh everything" call
+    // (`window.api.refreshLibrary(undefined)`, GlobalState.tsx) arrives at this
+    // handler as `rawRunner === null`, never `undefined` — Tauri's RPC args cross
+    // the wire JSON-encoded, and `JSON.stringify([undefined])` produces `[null]`.
+    // Every OTHER test in this describe block invokes with `['gog']`/`['all']`/an
+    // unknown-string element, or (Test 1, above this block) an EMPTY args array —
+    // none of those exercise a literal `null` element, which is exactly why a
+    // 3546-green suite missed this. Dispatching with `[null]` here reproduces the
+    // real transport shape byte for byte.
+    it("invoking refreshLibrary with [null] (the JSON-transport shape of the frontend's mount-time undefined call) calls every manager's refresh(), the same as ['all']", async () => {
+      const spies = Object.entries(libraryManagerMap).map(([, manager]) =>
+        jest
+          .spyOn(manager, 'refresh')
+          .mockResolvedValue({ stdout: '', stderr: '' })
+      )
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'null-refresh-1', 'refreshLibrary', [null])
+      await flush()
+
+      spies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1))
+
+      const response = frames.find((frame) => frame.id === 'null-refresh-1')
+      expect(response).toMatchObject({ id: 'null-refresh-1', ok: true })
+    })
+
     it('an unknown runner rejects with an error naming it, and calls no manager’s refresh()', async () => {
       const spies = Object.values(libraryManagerMap).map((manager) =>
         jest
