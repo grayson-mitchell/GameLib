@@ -23,7 +23,10 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { stripTrailingLineComment } from '../testUtils/stripSourceComments'
+import {
+  stripSourceComments,
+  stripTrailingLineComment
+} from '../testUtils/stripSourceComments'
 
 const MAIN_RS_PATH = join(
   __dirname,
@@ -413,5 +416,199 @@ describe('stripper integrity (WR-08)', () => {
     const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
     const quoteCount = (strippedLine.match(/"/g) ?? []).length
     expect(quoteCount % 2).toBe(1)
+  })
+})
+
+/**
+ * Standing guard (Phase 34.5 gap cycle 3, plan 34.5-23, Task 3): closes the class of defect
+ * F-34.5-G6-02 diagnosed, not just today's three named channels. The invariant this pins:
+ * **a channel whose sidecar handler carries its own wall-clock deadline longer than
+ * `INVOKE_TIMEOUT` must appear in `LONG_RUNNING_CHANNELS`.** Without this, a NINTH channel with
+ * the same shape could be added tomorrow and the exact silent-drop defect this cycle just spent
+ * two blocking live-gate failures diagnosing would recur unnoticed — three fully green suites
+ * (3279, 3387, 3447 tests) already coexisted with every blocking defect this phase has found, so
+ * "the suite is green" is deliberately never treated as proof on its own; this guard exists
+ * specifically so IT can go red on the next occurrence.
+ *
+ * `DEADLINE_CONSTANT_TABLE` is a declared, explicit table (channel name -> the source file/
+ * constant that bounds it) rather than a scan, per the plan's own scope: at minimum
+ * `oauthCaptureLogin` -> `DEFAULT_DEADLINE_MS` (`oauthLoginCapture.ts`) and
+ * `humbleStartLogin`/`humbleReconnect` -> `LOGIN_WATCH_TIMEOUT_MS` (`humble/user.ts`), the exact
+ * three channels 34.5-22 Task 2's recurrence count named.
+ */
+const DEADLINE_CONSTANT_TABLE: Array<{
+  channel: string
+  sourcePath: string
+  constantName: string
+}> = [
+  {
+    channel: 'oauthCaptureLogin',
+    sourcePath: join(__dirname, '..', 'sidecar', 'oauthLoginCapture.ts'),
+    constantName: 'DEFAULT_DEADLINE_MS'
+  },
+  {
+    channel: 'humbleStartLogin',
+    sourcePath: join(__dirname, '..', 'humble', 'user.ts'),
+    constantName: 'LOGIN_WATCH_TIMEOUT_MS'
+  },
+  {
+    channel: 'humbleReconnect',
+    sourcePath: join(__dirname, '..', 'humble', 'user.ts'),
+    constantName: 'LOGIN_WATCH_TIMEOUT_MS'
+  }
+]
+
+/**
+ * Parses a `const NAME = EXPR` (or `export const NAME = EXPR`, optionally type-annotated)
+ * numeric-millisecond constant out of already comment-stripped `source` text. Reuses this
+ * suite's existing shared `stripSourceComments`/`stripTrailingLineComment` helpers (grep-gate
+ * hygiene, per this task's own instruction) rather than a fresh copy — a bare `grep -c` against
+ * an un-stripped file would let Task 1's justifying prose (which names every constant discussed
+ * here) satisfy the parse on comment text alone.
+ *
+ * `EXPR` is restricted to digits, underscores (Rust/TS numeric separators, stripped before
+ * evaluation), whitespace and `+ - * / ( )` before being evaluated — this is a narrow arithmetic
+ * evaluator for trusted first-party source, not a general expression parser, and rejects
+ * anything outside that character set rather than risk evaluating unexpected code.
+ */
+function parseMsConstantFromSource(source: string, constantName: string): number {
+  const stripped = stripSourceComments(source)
+    .split('\n')
+    .map(stripTrailingLineComment)
+    .join('\n')
+  const pattern = new RegExp(
+    `const\\s+${constantName}(?:\\s*:\\s*\\w+)?\\s*=\\s*([^\\n;]+)`
+  )
+  const match = stripped.match(pattern)
+  if (!match) {
+    throw new Error(`${constantName} not found in the given source`)
+  }
+  const expr = match[1].trim().replace(/_/g, '')
+  if (!/^[\d\s*+\-/().]+$/.test(expr)) {
+    throw new Error(
+      `${constantName}'s expression "${expr}" contains characters outside the allowed numeric-arithmetic set`
+    )
+  }
+  // eslint-disable-next-line no-new-func -- expr is validated above to be numeric arithmetic only
+  const value = Function(`"use strict"; return (${expr});`)() as unknown
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    throw new Error(`${constantName}'s expression "${expr}" did not evaluate to a number`)
+  }
+  return value
+}
+
+function parseMsConstantFromFile(sourcePath: string, constantName: string): number {
+  return parseMsConstantFromSource(readFileSync(sourcePath, 'utf-8'), constantName)
+}
+
+/** Parses `INVOKE_TIMEOUT`'s seconds literal from `main.rs` and returns it in milliseconds. */
+function extractInvokeTimeoutMs(): number {
+  const code = loadMainRsCode()
+  const match = code.match(
+    /const INVOKE_TIMEOUT: Duration = Duration::from_secs\((\d+)\)/
+  )
+  if (!match) {
+    throw new Error('INVOKE_TIMEOUT literal not found in main.rs')
+  }
+  return Number(match[1]) * 1000
+}
+
+/**
+ * The invariant itself, factored so both the real-file test and the self-tests below drive the
+ * SAME logic (WR-04 pattern) rather than two copies drifting apart. Throws naming the first
+ * offending channel; asserts nothing on its own (callers wrap in `expect(...).not.toThrow()` /
+ * `.toThrow(...)`).
+ */
+function assertDeadlinesAreExempted(
+  rows: Array<{ channel: string; deadlineMs: number }>,
+  longRunningChannels: string[],
+  invokeTimeoutMs: number
+): void {
+  for (const row of rows) {
+    if (row.deadlineMs > invokeTimeoutMs && !longRunningChannels.includes(row.channel)) {
+      throw new Error(
+        `${row.channel}'s internal deadline (${row.deadlineMs}ms) exceeds INVOKE_TIMEOUT ` +
+          `(${invokeTimeoutMs}ms) but is absent from LONG_RUNNING_CHANNELS`
+      )
+    }
+  }
+}
+
+describe('F-34.5-G6-02 standing guard: a channel whose internal deadline exceeds INVOKE_TIMEOUT must be a LONG_RUNNING_CHANNELS member', () => {
+  test('deadline longer than INVOKE_TIMEOUT implies membership of LONG_RUNNING_CHANNELS, for every row in DEADLINE_CONSTANT_TABLE', () => {
+    const invokeTimeoutMs = extractInvokeTimeoutMs()
+    const longRunningChannels = extractLongRunningChannels()
+    const rows = DEADLINE_CONSTANT_TABLE.map((row) => ({
+      channel: row.channel,
+      deadlineMs: parseMsConstantFromFile(row.sourcePath, row.constantName)
+    }))
+
+    // Non-vacuous: every row's real deadline genuinely exceeds the bound (otherwise this test
+    // would pass even if the throw-on-violation logic below were deleted entirely).
+    for (const row of rows) {
+      expect(row.deadlineMs).toBeGreaterThan(invokeTimeoutMs)
+    }
+
+    expect(() =>
+      assertDeadlinesAreExempted(rows, longRunningChannels, invokeTimeoutMs)
+    ).not.toThrow()
+  })
+
+  // Self-test (WR-08 style): proves the guard can actually FAIL. A synthetic channel with a
+  // 300_000ms deadline, absent from LONG_RUNNING_CHANNELS, must trip the assertion and name the
+  // channel in its failure message -- a guard that has never been shown to fail is not a guard
+  // (this file's own header comment on the class of defect this phase's fully-green suites kept
+  // missing).
+  test('self-test: a synthetic 300_000ms-deadline channel absent from LONG_RUNNING_CHANNELS trips the guard', () => {
+    const rows = [{ channel: 'probeChannel', deadlineMs: 300_000 }]
+    const longRunningChannelsWithoutProbe = extractLongRunningChannels() // real list, does not contain 'probeChannel'
+
+    expect(() =>
+      assertDeadlinesAreExempted(rows, longRunningChannelsWithoutProbe, 60_000)
+    ).toThrow(/probeChannel/)
+  })
+
+  // Second self-test: the SAME synthetic channel, once added to the exemption list, no longer
+  // trips the guard -- proves the assertion is checking real membership, not merely "some list
+  // was non-empty".
+  test('self-test: the same synthetic channel does NOT trip the guard once added to LONG_RUNNING_CHANNELS', () => {
+    const rows = [{ channel: 'probeChannel', deadlineMs: 300_000 }]
+    const longRunningChannelsWithProbe = [...extractLongRunningChannels(), 'probeChannel']
+
+    expect(() =>
+      assertDeadlinesAreExempted(rows, longRunningChannelsWithProbe, 60_000)
+    ).not.toThrow()
+  })
+
+  // Third self-test: a deadline at or below INVOKE_TIMEOUT never trips the guard even when
+  // absent from the exemption list -- proves the ">" comparison is real, not a channel-name-only
+  // check.
+  test('self-test: a deadline at or below INVOKE_TIMEOUT never trips the guard, even when absent from LONG_RUNNING_CHANNELS', () => {
+    const rows = [{ channel: 'probeChannel', deadlineMs: 60_000 }]
+    const longRunningChannelsWithoutProbe = extractLongRunningChannels()
+
+    expect(() =>
+      assertDeadlinesAreExempted(rows, longRunningChannelsWithoutProbe, 60_000)
+    ).not.toThrow()
+  })
+
+  test('parseMsConstantFromSource ignores a comment-only mention and reads only the real declaration', () => {
+    const syntheticSource = [
+      '// FAKE_DEADLINE_MS = 999_000 -- a comment naming a value that must NOT be read',
+      'const FAKE_DEADLINE_MS = 300_000'
+    ].join('\n')
+    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(300_000)
+  })
+
+  test('parseMsConstantFromSource evaluates a multiplication expression (mirrors LOGIN_WATCH_TIMEOUT_MS = 10 * 60_000)', () => {
+    const syntheticSource = 'export const FAKE_DEADLINE_MS = 10 * 60_000'
+    expect(parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')).toBe(600_000)
+  })
+
+  test('parseMsConstantFromSource rejects an expression containing characters outside the allowed numeric-arithmetic set', () => {
+    const syntheticSource = 'const FAKE_DEADLINE_MS = someFunctionCall(300_000)'
+    expect(() =>
+      parseMsConstantFromSource(syntheticSource, 'FAKE_DEADLINE_MS')
+    ).toThrow(/outside the allowed numeric-arithmetic set/)
   })
 })
