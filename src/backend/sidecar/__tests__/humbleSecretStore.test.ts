@@ -170,7 +170,11 @@ describe('SidecarHumbleSecretStore', () => {
     const store = new SidecarHumbleSecretStore()
 
     await expect(store.getSecret('sessionCookie')).resolves.toBe('')
-    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    // Two lines: the pre-existing "getToken() ... failed" warning from SidecarKeyringSlotStore,
+    // plus its memo-bookkeeping line added by Phase 34.5 gap cycle 4 plan 35 (Routing item 3) --
+    // getSecret() delegates straight to SidecarKeyringSlotStore.getToken(), so this store inherits
+    // that behaviour unchanged.
+    expect(mockLogWarning).toHaveBeenCalledTimes(2)
     const [warningArg] = mockLogWarning.mock.calls[0]
     expect(String(warningArg)).toContain('keyring_get')
   })

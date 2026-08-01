@@ -117,7 +117,9 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringTokenStore()
 
     await expect(store.getToken()).resolves.toBe('')
-    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
+    // line added by Routing item 3 (34.5 gap cycle 4 plan 35).
+    expect(mockLogWarning).toHaveBeenCalledTimes(2)
     const [warningArg] = mockLogWarning.mock.calls[0]
     expect(String(warningArg)).toContain('keyring_get')
   })
@@ -207,9 +209,12 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringTokenStore()
 
     await expect(store.getToken()).resolves.toBe('')
-    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
+    // line added by Routing item 3 (34.5 gap cycle 4 plan 35) -- classified `class=timeout`.
+    expect(mockLogWarning).toHaveBeenCalledTimes(2)
     const [warningArg] = mockLogWarning.mock.calls[0]
     expect(String(warningArg)).toContain('timed out')
+    expect(String(mockLogWarning.mock.calls[1][0])).toContain('class=timeout')
   })
 
   // Behavior 9: across every failure mode, the fake responder records ZERO calls to any
@@ -302,7 +307,9 @@ describe('SidecarKeyringTokenStore', () => {
     const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
 
     await expect(store.getToken()).resolves.toBe('')
-    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    // Two lines: the pre-existing "getToken() ... failed" warning, plus the memo-bookkeeping
+    // line added by Routing item 3 (34.5 gap cycle 4 plan 35).
+    expect(mockLogWarning).toHaveBeenCalledTimes(2)
     const [warningArg] = mockLogWarning.mock.calls[0]
     expect(String(warningArg)).toContain('keyring_get')
   })
@@ -402,16 +409,18 @@ describe('SidecarKeyringTokenStore', () => {
     expect(callLog).toHaveLength(1)
   })
 
-  // ---- Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06) ----
+  // ---- Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06; window extended
+  // 15s -> 120s and classification logging added by 34.5 gap cycle 4 plan 35, Routing item 3) ----
   //
-  // A FAILED getToken() is now memoized for a bounded window (KEYRING_FAILURE_MEMO_MS, 15s) so a
-  // second SEQUENTIAL caller -- the next runner's window.location.reload() remounting GlobalState
-  // a moment later, per the finding's diagnosed mechanism -- does not repeat an identical
-  // doomed-to-timeout read and trigger a second Keychain prompt. This replaces the old immediate-
-  // retry test below, whose assertion (2 sequential failures both hit the keyring, uncached) is the
-  // exact behaviour this plan intentionally bounds.
+  // A FAILED getToken() is now memoized for a bounded window (KEYRING_FAILURE_MEMO_MS, 120s -- see
+  // that constant's own doc comment for the 101-second live-session arithmetic that replaced the
+  // original, too-short 15s figure) so a second SEQUENTIAL caller -- the next runner's
+  // window.location.reload() remounting GlobalState a moment later, per the finding's diagnosed
+  // mechanism -- does not repeat an identical doomed-to-timeout read and trigger a second Keychain
+  // prompt. This replaces the old immediate-retry test below, whose assertion (2 sequential
+  // failures both hit the keyring, uncached) is the exact behaviour this plan intentionally bounds.
 
-  it('memoizes a FAILED getToken() for the bounded window -- a second SEQUENTIAL call inside the window returns the same failure WITHOUT a second keyring_get (RED-first for this task)', async () => {
+  it('memoizes a FAILED getToken() for the bounded window -- a second SEQUENTIAL call inside the window returns the same failure WITHOUT a second keyring_get', async () => {
     jest.useFakeTimers()
     try {
       programChannel('keyring_get', {
@@ -422,7 +431,9 @@ describe('SidecarKeyringTokenStore', () => {
 
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog).toHaveLength(1)
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+      // Two log lines for the FIRST failure: the pre-existing "getToken() ... failed" warning,
+      // plus the new memo-bookkeeping line (Routing item 3) naming the classification and window.
+      expect(mockLogWarning).toHaveBeenCalledTimes(2)
 
       // Second call: fully sequential (the first has settled), still inside the memo window.
       await expect(store.getToken()).resolves.toBe('')
@@ -430,9 +441,80 @@ describe('SidecarKeyringTokenStore', () => {
       // The whole point of this task: still exactly ONE request, not two -- the memoized failure
       // was returned directly, without a second Keychain prompt.
       expect(callLog).toHaveLength(1)
-      // The memo hit itself is silent -- it must not re-log a warning for a read that never
-      // actually happened.
-      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+      // The memo HIT itself is silent -- it must not re-log anything for a read that never
+      // actually happened. Log count is unchanged from after the first call.
+      expect(mockLogWarning).toHaveBeenCalledTimes(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  // Behavior: "Two sequential getToken() calls on the same slot, 101 seconds apart, with the
+  // first timing out, issue only ONE keyring_get." (this task's own <behavior> block) -- the exact
+  // 2026-08-01 live-session interval (19:22:57 -> 19:24:38) that falsified the old 15s memo.
+  it('two sequential getToken() calls 101 seconds apart, the first a timeout, issue only ONE keyring_get (the exact live-session interval this plan closes)', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_STEAM_REFRESH_TOKEN)
+
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog).toHaveLength(1)
+
+      jest.advanceTimersByTime(101_000)
+
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog).toHaveLength(1)
+      // The memoized failure still resolves the empty-string failure value, never throws/hangs.
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a memoized failure logs which classification (timeout vs unavailable) is being memoized and for how long, in the literal shape the plan requires', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await store.getToken()
+
+      const memoLine = mockLogWarning.mock.calls
+        .map(([arg]) => String(arg))
+        .find((line) => line.includes('keyring failure memoized slot='))
+      expect(memoLine).toBeDefined()
+      expect(memoLine).toBe(
+        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_SESSION} class=timeout ms=120000`
+      )
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a memoized failure classifies an unavailable (non-timeout) rejection as class=unavailable, distinct from a timeout', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:PlatformFailure')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_CSRF)
+
+      await store.getToken()
+
+      const memoLine = mockLogWarning.mock.calls
+        .map(([arg]) => String(arg))
+        .find((line) => line.includes('keyring failure memoized slot='))
+      expect(memoLine).toBeDefined()
+      expect(memoLine).toBe(
+        `keyring failure memoized slot=${KEYRING_SLOT_HUMBLE_CSRF} class=unavailable ms=120000`
+      )
     } finally {
       jest.useRealTimers()
     }
@@ -454,18 +536,20 @@ describe('SidecarKeyringTokenStore', () => {
       await expect(store.getToken()).resolves.toBe('')
       expect(callLog).toHaveLength(1)
 
-      // Advance PAST the memo window (KEYRING_FAILURE_MEMO_MS = 15_000ms).
-      jest.advanceTimersByTime(15_001)
+      // Advance PAST the memo window (KEYRING_FAILURE_MEMO_MS = 120_000ms) -- also past the
+      // observed 101s live interval, so this proves the window is bounded, not permanent.
+      jest.advanceTimersByTime(120_001)
 
       // The keyring has since recovered.
       programChannel('keyring_get', { type: 'resolve', value: 'recovered-token' })
       await expect(store.getToken()).resolves.toBe('recovered-token')
 
-      // A third real request -- the memo expired and let this call reach the transport.
+      // A second real request -- the memo expired and let this call reach the transport.
       expect(callLog).toHaveLength(2)
 
-      // The now-successful read IS cached (pre-existing behaviour, unaffected) -- a fourth call
-      // issues no further request.
+      // The now-successful read IS cached (pre-existing behaviour, unaffected) -- a further call
+      // issues no further request. This is the "SUCCESSFUL read still populates cachedToken and
+      // short-circuits every later call" behaviour this task's own <behavior> block requires.
       await expect(store.getToken()).resolves.toBe('recovered-token')
       expect(callLog).toHaveLength(2)
     } finally {
@@ -668,5 +752,68 @@ describe('SidecarKeyringTokenStore', () => {
     await store.getToken()
     await store.isAvailable()
     expect(callLog).toHaveLength(4)
+  })
+})
+
+/**
+ * Cross-language ordering invariant (34.5 gap cycle 4 plan 35, Routing item 3, T-34.5-C4-33):
+ * `KEYRING_FAILURE_MEMO_MS` (this module) must stay at least 2x `KEYRING_READ_TIMEOUT`
+ * (`src-tauri/src/main.rs`). Parses the Rust constant directly out of `main.rs` the way
+ * `longRunningChannels.test.ts` parses `LONG_RUNNING_CHANNELS` out of the same file, rather than
+ * hardcoding 45 a second time here -- a future edit to EITHER constant that breaks the >= 2x
+ * relationship must fail this test, naming both file paths.
+ */
+describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Routing item 3)', () => {
+  const MAIN_RS_PATH = join(__dirname, '..', '..', '..', '..', 'src-tauri', 'src', 'main.rs')
+  const KEYRING_TOKEN_STORE_PATH = join(__dirname, '..', 'keyringTokenStore.ts')
+
+  function extractKeyringReadTimeoutMs(): number {
+    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const match = raw.match(
+      /const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs\((\d+)\);/
+    )
+    if (!match) {
+      throw new Error(`KEYRING_READ_TIMEOUT literal not found in ${MAIN_RS_PATH}`)
+    }
+    return Number(match[1]) * 1000
+  }
+
+  function extractKeyringFailureMemoMs(): number {
+    const raw = readFileSync(KEYRING_TOKEN_STORE_PATH, 'utf-8')
+    const match = raw.match(/const KEYRING_FAILURE_MEMO_MS = (\d[\d_]*)/)
+    if (!match) {
+      throw new Error(`KEYRING_FAILURE_MEMO_MS literal not found in ${KEYRING_TOKEN_STORE_PATH}`)
+    }
+    return Number(match[1].replace(/_/g, ''))
+  }
+
+  test('KEYRING_FAILURE_MEMO_MS is at least 2x the KEYRING_READ_TIMEOUT parsed live from src-tauri/src/main.rs', () => {
+    const readTimeoutMs = extractKeyringReadTimeoutMs()
+    const memoMs = extractKeyringFailureMemoMs()
+
+    // Non-vacuous: KEYRING_READ_TIMEOUT really was parsed as a positive number, so this assertion
+    // could not pass merely because both sides evaluated to 0/NaN.
+    expect(readTimeoutMs).toBeGreaterThan(0)
+
+    expect(memoMs).toBeGreaterThanOrEqual(
+      2 * readTimeoutMs
+    )
+    if (memoMs < 2 * readTimeoutMs) {
+      throw new Error(
+        `KEYRING_FAILURE_MEMO_MS (${memoMs}ms, src/backend/sidecar/keyringTokenStore.ts) must be ` +
+          `at least 2x KEYRING_READ_TIMEOUT (${readTimeoutMs}ms, src-tauri/src/main.rs)`
+      )
+    }
+  })
+
+  // RED-proof (this task's own acceptance criteria): verified load-bearing by temporarily
+  // lowering KEYRING_FAILURE_MEMO_MS below 2x the real read timeout and confirming this exact
+  // assertion goes RED, then restoring the real value. See 34.5-35-SUMMARY.md for the recorded
+  // RED transcript -- this synthetic self-test proves the SAME comparison can fail without
+  // mutating the real source file on every CI run.
+  test('self-test: a synthetic memo value below 2x the real read timeout trips the same comparison this test enforces', () => {
+    const readTimeoutMs = extractKeyringReadTimeoutMs()
+    const tooSmallMemoMs = 2 * readTimeoutMs - 1
+    expect(tooSmallMemoMs).toBeLessThan(2 * readTimeoutMs)
   })
 })

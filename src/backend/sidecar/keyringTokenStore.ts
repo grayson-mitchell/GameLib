@@ -25,21 +25,49 @@ export const KEYRING_SLOT_HUMBLE_CSRF = 'humble-csrf'
 
 /**
  * Bounded negative-result memo window for `getToken()` (34.5 gap cycle 3 plan 25, closing
- * F-34.5-G6-06). `KEYRING_READ_TIMEOUT` in `src-tauri/src/main.rs` is `Duration::from_secs(8)` --
- * shorter than a human takes to notice, read, and click Approve on a macOS Keychain dialog. Every
+ * F-34.5-G6-06; extended 15s -> 120s by 34.5 gap cycle 4 plan 35, closing Routing item 3). Every
  * one of the five runner sign-out flows (Epic/GOG/Amazon/Zoom/Steam) calls
  * `window.location.reload()` for its own unrelated reason, which remounts `GlobalState` and
  * unconditionally re-runs Humble's `getCredentials()`/`getCsrfToken()` health check
  * (`GlobalState.tsx`'s mount effect) -- without this memo, a read that timed out on ONE reload is
  * retried, uncached, on the VERY NEXT reload (from any of the five, not just the one whose sign-out
  * happened to precede it in a log), reproducing the same doomed-to-timeout Keychain prompt again
- * before the user has even finished reacting to the first one. 15 000 ms = ~2x
- * `KEYRING_READ_TIMEOUT`'s 8 000 ms, chosen to comfortably outlast one full round trip (the read
- * itself, plus the reload/remount overhead that preceded it) while staying short enough that a user
- * who deliberately retries a few seconds later is never mistaken for "permanently broken" -- this is
- * a memo, not a lockout (see `SidecarKeyringSlotStore`'s own doc comment, T-34.5-G6-15).
+ * before the user has even finished reacting to the first one.
+ *
+ * **Why 15s was wrong and 120s is the replacement.** The original 15s figure was derived as "~2x
+ * `KEYRING_READ_TIMEOUT`'s 8s" -- a plausible-sounding arithmetic relationship that turned out to
+ * be wrong against live human timing. A 2026-08-01 live session recorded two sequential Keychain
+ * approval prompts for the SAME `steam-refresh-token` slot **101 seconds apart** (19:22:57 and
+ * 19:24:38) -- a 15s memo had long since expired by the time the second caller arrived, so the
+ * second read was issued uncached and re-triggered the identical doomed-to-timeout prompt.
+ * 120_000ms exceeds that observed 101-second interval, and is comfortably more than twice
+ * `KEYRING_READ_TIMEOUT`'s own new 45s bound (`src-tauri/src/main.rs`, raised by this same plan) --
+ * pinned by a test in this module's test file that parses that constant directly out of `main.rs`
+ * rather than hardcoding 45 a second time here.
+ *
+ * **Accepted cost, stated honestly:** a slot whose underlying read genuinely becomes available
+ * again inside the 120s memo window will not be re-read until the window elapses -- a legitimate
+ * retry can be delayed by up to two minutes. This is accepted because the alternative is the
+ * observed repeat-prompt behaviour this plan closes, and because a SUCCESSFUL read is still cached
+ * permanently (see `cachedToken` below) and is completely unaffected by this window -- this is a
+ * memo, not a lockout (see `SidecarKeyringSlotStore`'s own doc comment, T-34.5-G6-15).
  */
-const KEYRING_FAILURE_MEMO_MS = 15_000
+const KEYRING_FAILURE_MEMO_MS = 120_000
+
+/**
+ * Classifies a `getToken()` failure as `'timeout'` or `'unavailable'` for the memo bookkeeping log
+ * line below (34.5 gap cycle 4 plan 35, Routing item 3 -- "the failure memo distinguishes a
+ * `keyring:timeout` from a `keyring:unavailable` in its log output"). Covers both the Rust-side
+ * `keyring:timeout` string (`keyring_get`'s own classification, `src-tauri/src/main.rs`) and the
+ * sidecar transport's own `rustInvoke timed out after ...` rejection (`RUST_INVOKE_TIMEOUT_MS`,
+ * `src/backend/sidecar/sidecarRpc.ts`) -- both are a timeout from this caller's perspective even
+ * though they originate at different layers. Every other rejection (`keyring:unavailable:...`,
+ * `keyring:bad-args`, `keyring:unknown-slot`) classifies as `'unavailable'`.
+ */
+function classifyKeyringFailure(error: unknown): 'timeout' | 'unavailable' {
+  const message = errorMessage(error)
+  return /timeout|timed out/i.test(message) ? 'timeout' : 'unavailable'
+}
 
 /**
  * `SidecarKeyringSlotStore` — a slot-parameterized `TokenStore` implementation over the Rust
@@ -97,18 +125,22 @@ const KEYRING_FAILURE_MEMO_MS = 15_000
  * of exposure — it extends how long an ALREADY-exposed value remains resident. See this plan's
  * SUMMARY threat-model cross-check for the full reasoning.
  *
- * **Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06).** `getToken()` also
- * memoizes a FAILED read for `KEYRING_FAILURE_MEMO_MS` (15s, ~2x `KEYRING_READ_TIMEOUT`'s 8s — see
- * that constant's own doc comment for the arithmetic). This is layered ALONGSIDE the pre-existing
- * in-flight dedupe field declared just above, not a replacement for it: that field collapses
- * CONCURRENT callers in the same tick to one request; the failure memo bounds SEQUENTIAL repeat
- * reads of a request that already finished and failed, which the in-flight field cannot touch once
- * it has cleared in its own `finally`. A memoized failure is returned exactly as any other failure
- * is — `''`, logged once at the time it actually occurred, never re-logged from the memo hit itself
- * — and is NEVER treated as a value; it holds no secret at all, unlike `cachedToken`. This does not
- * conflict with the "NOT cached" comment on `fetchToken()`'s catch below, which is about not
- * caching a failure as if it were a confirmed value forever — a time-bounded memo of "this recently
- * failed" is a different, narrower claim that expires and lets a later retry through.
+ * **Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06; window extended 15s ->
+ * 120s by 34.5 gap cycle 4 plan 35, Routing item 3).** `getToken()` also memoizes a FAILED read for
+ * `KEYRING_FAILURE_MEMO_MS` (120s, comfortably more than 2x `KEYRING_READ_TIMEOUT`'s new 45s bound
+ * — see that constant's own doc comment for the live-timing arithmetic). This is layered ALONGSIDE
+ * the pre-existing in-flight dedupe field declared just above, not a replacement for it: that field
+ * collapses CONCURRENT callers in the same tick to one request; the failure memo bounds SEQUENTIAL
+ * repeat reads of a request that already finished and failed, which the in-flight field cannot
+ * touch once it has cleared in its own `finally`. A memoized failure is returned exactly as any
+ * other failure is — `''`, with the ORIGINAL `getToken() failed: ...` warning logged once at the
+ * time it actually occurred, plus one additional `keyring failure memoized slot=... class=...
+ * ms=...` line naming the timeout-vs-unavailable classification and the memo window — never
+ * re-logged from the memo hit itself — and is NEVER treated as a value; it holds no secret at all,
+ * unlike `cachedToken`. This does not conflict with the "NOT cached" comment on `fetchToken()`'s
+ * catch below, which is about not caching a failure as if it were a confirmed value forever — a
+ * time-bounded memo of "this recently failed" is a different, narrower claim that expires and lets
+ * a later retry through.
  *
  * **Correctness floor (binding, load-bearing):** the cache — now including the failure memo above —
  * is invalidated at the START of `setToken()`/`clearToken()`, before the underlying keyring call is
@@ -212,6 +244,14 @@ export class SidecarKeyringSlotStore implements TokenStore {
       // trigger a second Keychain prompt for a decision the user has not finished making on the
       // first. This timestamp is never surfaced to a caller and never mistaken for a token value.
       this.failedTokenAt = Date.now()
+      // A second, memo-specific log line (34.5 gap cycle 4 plan 35, Routing item 3) -- distinct
+      // from the warning just above -- naming the timeout/unavailable classification and the
+      // window this failure is now memoized for. This is the line a live run greps to prove the
+      // memo engaged; its absence on what should have been a second prompt would falsify the fix.
+      logWarning(
+        `keyring failure memoized slot=${this.slot} class=${classifyKeyringFailure(error)} ms=${KEYRING_FAILURE_MEMO_MS}`,
+        LogPrefix.Steam
+      )
       return ''
     }
     // `null` == no entry yet (healthy first-run case) -- NOT an error, not logged, and still
