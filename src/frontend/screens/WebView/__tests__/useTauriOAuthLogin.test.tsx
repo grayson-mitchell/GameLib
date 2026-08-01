@@ -104,6 +104,7 @@ const mockApi = {
 // hoist jest.mock like babel-jest; see useDebouncedStoreSearch.test.ts).
 import {
   useTauriOAuthLogin,
+  createOAuthLoginCompletion,
   type TauriOAuthLoginState,
   type OAuthLoginCompletionPayload
 } from '../useTauriOAuthLogin'
@@ -534,6 +535,122 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     expect(hook).toEqual({ phase: 'idle' })
     expect(onLoginSuccess).not.toHaveBeenCalled()
     expect(mockApi.authGOG).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTauriOAuthLogin — completion callback drives the real GlobalState-shaped wiring (Task 2)', () => {
+  // Constructs the completion callback EXACTLY as index.tsx wires it: `createOAuthLoginCompletion`
+  // is the same factory GlobalState.tsx uses to build `completeOAuthLogin`, with `setState` and
+  // `handleSuccessfulLogin` spied so the OBSERVABLE downstream effect (a library refresh, not the
+  // mutating call's own report) can be asserted -- per this phase's standing lesson that a green
+  // suite is not evidence of parity unless something asserts parity.
+  function wireCompletionCallback() {
+    const setState = jest.fn()
+    const handleSuccessfulLogin = jest.fn()
+    const onLoginSuccess = createOAuthLoginCompletion({ setState, handleSuccessfulLogin })
+    return { setState, handleSuccessfulLogin, onLoginSuccess }
+  }
+
+  it('a successful GOG capture calls setState with the gog slice and handleSuccessfulLogin with "gog"', async () => {
+    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+
+    mount('gog', onLoginSuccess)
+    await settle('gog', onLoginSuccess)
+
+    // Asserted by VALUE, not merely "was called" -- a future change that refreshed the wrong
+    // library would still make a bare "was called" assertion pass.
+    expect(setState).toHaveBeenCalledWith({ gog: { library: [], username: 'grayson' } })
+    expect(handleSuccessfulLogin).toHaveBeenCalledTimes(1)
+    expect(handleSuccessfulLogin).toHaveBeenCalledWith('gog')
+    // No other runner's slice was ever touched by this single GOG login.
+    expect(setState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ epic: expect.anything() })
+    )
+    expect(setState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ amazon: expect.anything() })
+    )
+    expect(setState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ zoom: expect.anything() })
+    )
+  })
+
+  it('a successful nile capture sets both user_id and username, leaving other runners untouched', async () => {
+    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'nile',
+      code: 'NILE-CODE',
+      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-CODE'
+    })
+    mockApi.authAmazon.mockResolvedValue({
+      status: 'done',
+      user: {
+        account_pool: 'pool-1',
+        user_id: 'nile-user-1',
+        home_region: 'us',
+        name: 'Nile Grayson',
+        given_name: 'Grayson'
+      }
+    })
+
+    mount('nile', onLoginSuccess)
+    await settle('nile', onLoginSuccess)
+
+    expect(setState).toHaveBeenCalledWith({
+      amazon: { library: [], user_id: 'nile-user-1', username: 'Nile Grayson' }
+    })
+    expect(handleSuccessfulLogin).toHaveBeenCalledWith('nile')
+    expect(setState).not.toHaveBeenCalledWith(expect.objectContaining({ gog: expect.anything() }))
+    expect(setState).not.toHaveBeenCalledWith(
+      expect.objectContaining({ epic: expect.anything() })
+    )
+  })
+
+  it('a capture that ends { phase: "blocked" } never calls setState or handleSuccessfulLogin', async () => {
+    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockRejectedValue(new Error(UNPORTED_CHANNEL_MARKER))
+
+    mount('gog', onLoginSuccess)
+    const hook = await settle('gog', onLoginSuccess)
+
+    expect(hook).toEqual({ phase: 'blocked', runner: 'gog', channel: 'authGOG' })
+    expect(setState).not.toHaveBeenCalled()
+    expect(handleSuccessfulLogin).not.toHaveBeenCalled()
+  })
+
+  it('a capture that ends { phase: "error" } (resolved-but-refused) never calls setState or handleSuccessfulLogin', async () => {
+    const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
+
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'error', data: undefined })
+
+    mount('gog', onLoginSuccess)
+    const hook = await settle('gog', onLoginSuccess)
+
+    expect(hook.phase).toBe('error')
+    expect(setState).not.toHaveBeenCalled()
+    expect(handleSuccessfulLogin).not.toHaveBeenCalled()
   })
 })
 
