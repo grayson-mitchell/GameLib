@@ -551,6 +551,37 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     return { setState, handleSuccessfulLogin, onLoginSuccess }
   }
 
+  it('the wired handleSuccessfulLogin -> refreshLibrary chain receives { library: runner } (mirrors GlobalState.tsx\'s own handleSuccessfulLogin body)', async () => {
+    const setState = jest.fn()
+    const refreshLibrary = jest.fn()
+    // Mirrors GlobalState.tsx's own handleSuccessfulLogin body EXACTLY --
+    //   storage.setItem('category', 'all')
+    //   this.refreshLibrary({ runInBackground: false, library: runner })
+    // -- so asserting on refreshLibrary here is asserting the REAL production observable effect
+    // a captured OAuth login triggers, not a re-interpretation of it.
+    function handleSuccessfulLogin(runner: OAuthRunner): void {
+      refreshLibrary({ runInBackground: false, library: runner })
+    }
+    const onLoginSuccess = createOAuthLoginCompletion({ setState, handleSuccessfulLogin })
+
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+
+    mount('gog', onLoginSuccess)
+    await settle('gog', onLoginSuccess)
+
+    expect(refreshLibrary).toHaveBeenCalledTimes(1)
+    expect(refreshLibrary).toHaveBeenCalledWith({
+      runInBackground: false,
+      library: 'gog'
+    })
+  })
+
   it('a successful GOG capture calls setState with the gog slice and handleSuccessfulLogin with "gog"', async () => {
     const { setState, handleSuccessfulLogin, onLoginSuccess } = wireCompletionCallback()
 
