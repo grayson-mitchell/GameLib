@@ -493,6 +493,27 @@ fn login_window_url_arg(args: &[Value]) -> Result<tauri::Url, String> {
     Ok(url)
 }
 
+/// Composes the login window's OS title with the SHELL-RESOLVED origin FIRST, always
+/// (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/T-34.5-G6-23). `AppHandle`-free and
+/// `#[cfg(test)]`-covered, mirroring `clipboard_text_arg`/`login_window_url_arg`'s own
+/// pure-helper convention.
+///
+/// `origin` MUST come from the URL the shell itself validated (`login_window_url_arg`'s
+/// return value, via `tauri::Url::origin().ascii_serialization()`) -- NEVER from page
+/// content. `document_title` is the page's own `document.title`, which is fully
+/// attacker-controlled: the loaded page can set it to anything, including a string
+/// crafted to look like a URL or an origin (T-34.5-G6-23). That is exactly why the
+/// document title can never be trusted as an origin indicator on its own, and exactly why
+/// this helper places `origin` first, unconditionally, with the document title (if any)
+/// appended only AFTER it -- a truncated title bar still shows the trustworthy part first,
+/// and the page's text can never precede or replace it.
+fn login_window_title(origin: &str, document_title: Option<&str>) -> String {
+    match document_title {
+        Some(title) if !title.is_empty() => format!("{origin} — {title}"),
+        _ => origin.to_string(),
+    }
+}
+
 /// The ONLY domain comparison in this file -- the wry cookies-for-url API (the plausible
 /// but WRONG shortcut this function replaces) MUST NOT appear anywhere in `main.rs` (see
 /// the cookie arms below). Proper suffix match: `host ==
@@ -1280,8 +1301,49 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // negative half (no hard-coded title) stays grep-provable, unchanged; WR-07's
         // positive half (Humble's own title actually shows) is provable only LIVE --
         // see plan 24's SUMMARY and plan 29 item 1, the only thing that closes it.
+        //
+        // ANTI-PHISHING ORIGIN (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23/39): the
+        // title-tracking callback above shows the loaded DOCUMENT's title -- a value the
+        // remote page fully controls -- and nothing else. That is NOT an origin indicator:
+        // an attacker-influenced or redirected login page can title itself anything,
+        // including a string designed to look like a real address bar (T-34.5-G6-23), and
+        // this window has no address bar of its own for the operator to check instead.
+        // `login_window_title()` fixes this by prefixing the SHELL-RESOLVED origin --
+        // derived from the validated URL this arm already holds, never from page content
+        // -- ahead of the document title, unconditionally. The origin is seeded from the
+        // open URL immediately after `.build()` (visible from the moment the window
+        // appears, not only after the first title event) and kept current via the SAME
+        // `on_page_load` hook this arm already trusts for the login relay above --
+        // main-frame `Started`/`Finished` only, NEVER `on_navigation`: spike 013 measured
+        // 5 of 8 `on_navigation` events as third-party iframes, the callback carries no
+        // frame-type flag to filter them, and an iframe overwriting the title bar's origin
+        // would be the exact inverse of the guarantee this exists to provide
+        // (T-34.5-G6-39). This is the SAME rule the login relay above already follows, now
+        // also covering the title's origin source -- one convention, not two. The origin
+        // is shared between the `on_page_load` hook and the `on_document_title_changed`
+        // hook via `current_origin` (an `Arc<Mutex<String>>`) so a title change arriving
+        // between navigations is still composed against the page's CURRENT host, never a
+        // stale one.
+        //
+        // LIGHT INTERFACE STYLE (Phase 34.5 Plan 27, F-34.5-G6-05): the developer's live
+        // gate report was verbatim "the text was black on black so could not tell my cut
+        // and paste worked until i highlighted" on Amazon's verification-code field. The
+        // likely mechanism is a dark `prefers-color-scheme` the webview inherits from the
+        // host system, mismatched against a page stylesheet that only sets text colour.
+        // `.theme(Some(tauri::Theme::Light))` below (the builder method at
+        // `tauri-2.11.5/src/webview/webview_window.rs:882`, "Forces a theme or uses the
+        // system settings if None was provided") requests a light interface style on our
+        // OWN window -- it changes what the page is TOLD, not what it runs. No CSS or
+        // script is injected into the third-party credential page (that would trade a
+        // legibility defect for a materially worse security posture: running script in a
+        // live credential context). Applied ONLY inside `if visible`, matching every other
+        // presentation-only call in this arm -- the hidden reveal/clear windows have no
+        // user-visible rendering. FALSIFIABLE, not assumed closed: if plan 34.5-28's live
+        // check still shows unreadable text, `prefers-color-scheme` was not the mechanism
+        // and this fix must be recorded as NOT closing F-34.5-G6-05.
         "humble_login_open" => {
             let url = login_window_url_arg(args)?;
+            let origin = url.origin().ascii_serialization();
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
             let user_agent = args
                 .get(2)
@@ -1289,16 +1351,24 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
+            // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
+            // validated open URL so it is never empty, updated only from `on_page_load`
+            // (main-frame only, per this arm's own doc comment above), and read by
+            // `on_document_title_changed` so a title change is always composed against
+            // the CURRENT host, not the one the window opened on.
+            let current_origin = Arc::new(Mutex::new(origin.clone()));
             let mut builder =
                 tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
                     .user_agent(user_agent)
                     .visible(visible);
             if visible {
+                let title_origin = Arc::clone(&current_origin);
                 builder = builder
                     .inner_size(900.0, 700.0)
                     .center()
                     .focused(true)
-                    .on_document_title_changed(|window, title| {
+                    .theme(Some(tauri::Theme::Light))
+                    .on_document_title_changed(move |window, title| {
                         // Never .unwrap() on a live user-facing path (T-34.4.1-108): a
                         // stale title bar is a cosmetic defect, a panic here would kill
                         // the login flow outright. Never logs the title string itself
@@ -1307,8 +1377,17 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // and its LENGTH, the only machine evidence able to
                         // distinguish "the hook never fired" from "the hook fired and
                         // the OS ignored it" if plan 29's operator still sees the
-                        // framework default title.
-                        let _ = window.set_title(&title);
+                        // framework default title. `origin_now` is read from the
+                        // shared `current_origin` (Phase 34.5 Plan 27) rather than
+                        // recomputed here, so this composed title always reflects the
+                        // most recent MAIN-FRAME origin, never this callback's own
+                        // page-content input.
+                        let origin_now = title_origin
+                            .lock()
+                            .map(|guard| guard.clone())
+                            .unwrap_or_default();
+                        let composed = login_window_title(&origin_now, Some(&title));
+                        let _ = window.set_title(&composed);
                         eprintln!(
                             "[shell] humble_login_open: title change applied len={}",
                             title.len()
@@ -1326,22 +1405,47 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // trap the operator behind this window when they switch to a password
                 // manager -- exactly the switch F-4's observation asks them to
                 // perform). It does NOT prove the window actually raised; that
-                // observation belongs to plan 29 item 1 alone.
+                // observation belongs to plan 29 item 1 alone. `light_theme_requested`
+                // records only that Plan 27's `.theme(Some(tauri::Theme::Light))` call
+                // above was REQUESTED, mirroring this line's existing discipline --
+                // whether the field actually rendered legibly is plan 34.5-28's live
+                // check alone.
                 eprintln!(
-                    "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false"
+                    "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true"
                 );
             }
-            builder
-                .on_page_load(move |_webview, payload| {
+            let page_load_origin = Arc::clone(&current_origin);
+            let window = builder
+                .on_page_load(move |window, payload| {
                     let kind = match payload.event() {
                         tauri::webview::PageLoadEvent::Started => "started",
                         tauri::webview::PageLoadEvent::Finished => "finished",
                     };
                     let event = login_event_value(kind, payload.url().as_str());
                     push_login_window_event(&event_label, event);
+                    // Main-frame-only origin refresh (Phase 34.5 Plan 27): this hook is
+                    // ALREADY the arm's trusted main-frame-only signal (see the
+                    // ANTI-PHISHING ORIGIN comment above) -- never `on_navigation`,
+                    // which spike 013 measured as 5-of-8 third-party-iframe noise. Gated
+                    // on `visible` because this same closure also fires for the hidden
+                    // reveal/clear windows this arm builds, which have no title bar for
+                    // a title to matter on.
+                    if visible {
+                        let new_origin = payload.url().origin().ascii_serialization();
+                        if let Ok(mut guard) = page_load_origin.lock() {
+                            *guard = new_origin.clone();
+                        }
+                        let _ = window.set_title(&login_window_title(&new_origin, None));
+                    }
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
+            // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
+            // it is visible from the moment the window appears, rather than only after the
+            // first `on_page_load`/`on_document_title_changed` event.
+            if visible {
+                let _ = window.set_title(&login_window_title(&origin, None));
+            }
             Ok(Value::String(label))
         }
         // Return the FULL unfiltered cookie count (`total`) alongside a domain/name
@@ -2637,6 +2741,83 @@ mod tests {
         let ok = login_window_url_arg(&[json!("https://www.humblebundle.com/login")]);
         assert!(ok.is_ok());
         assert_eq!(ok.unwrap().scheme(), "https");
+    }
+
+    // ---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----
+    //
+    // RED direction: an implementation that puts the document title first, or that
+    // returns the document title alone when it looks URL-shaped, would flip these to
+    // failing.
+
+    #[test]
+    fn humble_login_window_title_puts_origin_before_document_title() {
+        let title = login_window_title("https://www.humblebundle.com", Some("Sign In"));
+        assert!(title.starts_with("https://www.humblebundle.com"));
+        assert!(title.contains("Sign In"));
+        // The origin's END must come before the document title's START -- not merely
+        // "both substrings present somewhere" -- so a naive implementation that
+        // concatenates in the wrong order cannot pass on a substring check alone.
+        let origin_end = title.find("https://www.humblebundle.com").unwrap()
+            + "https://www.humblebundle.com".len();
+        let title_start = title.find("Sign In").unwrap();
+        assert!(origin_end <= title_start);
+    }
+
+    #[test]
+    fn humble_login_window_title_a_url_shaped_document_title_cannot_precede_the_real_origin() {
+        // T-34.5-G6-23: a malicious or compromised page could set document.title to
+        // something that itself looks like an address bar, attempting to impersonate a
+        // DIFFERENT origin than the one the shell actually validated and opened.
+        let title = login_window_title(
+            "https://www.humblebundle.com",
+            Some("https://accounts.google.com/signin"),
+        );
+        assert!(title.starts_with("https://www.humblebundle.com"));
+        // The real, shell-resolved origin's end must land before the impersonating
+        // text's start -- the impersonating string is still present (never hidden or
+        // stripped, this helper does not sanitize page content), it just can never lead.
+        let real_origin_end = title.find("https://www.humblebundle.com").unwrap()
+            + "https://www.humblebundle.com".len();
+        let impersonation_start = title.find("https://accounts.google.com").unwrap();
+        assert!(real_origin_end <= impersonation_start);
+    }
+
+    #[test]
+    fn humble_login_window_title_no_document_title_returns_the_origin_alone() {
+        assert_eq!(
+            login_window_title("https://www.humblebundle.com", None),
+            "https://www.humblebundle.com"
+        );
+    }
+
+    #[test]
+    fn humble_login_window_title_empty_document_title_is_treated_as_absent() {
+        // An empty string is not a meaningful document title (e.g. before the page's
+        // first title event) -- must not produce a title with a trailing empty suffix.
+        assert_eq!(
+            login_window_title("https://www.humblebundle.com", Some("")),
+            "https://www.humblebundle.com"
+        );
+    }
+
+    #[test]
+    fn humble_login_window_open_seeds_the_shared_origin_from_the_validated_url_before_any_page_load(
+    ) {
+        // Mirrors the EXACT expression the humble_login_open arm uses to seed
+        // `current_origin` (its `Arc<Mutex<String>>`) before the window is built and
+        // before any `on_page_load` event can possibly fire --
+        // `url.origin().ascii_serialization()`, fed through `login_window_title` with no
+        // document title, is precisely what the arm's initial `window.set_title()` call
+        // (right after `.build()`) composes. Proves the origin is present from the seed
+        // alone, with no page-load event required.
+        let url =
+            login_window_url_arg(&[json!("https://www.humblebundle.com/login?x=1")]).unwrap();
+        let seeded_origin = url.origin().ascii_serialization();
+        assert_eq!(seeded_origin, "https://www.humblebundle.com");
+        assert_eq!(
+            login_window_title(&seeded_origin, None),
+            "https://www.humblebundle.com"
+        );
     }
 
     // ---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----

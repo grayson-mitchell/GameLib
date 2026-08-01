@@ -606,3 +606,63 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     expect((hiddenWindowsBody.match(/\.visible\(false\)/g) ?? []).length).toBe(2)
   })
 })
+
+// Phase 34.5 Plan 27 (F-34.5-G6-04, T-34.5-G6-22/23/39): the login window shows no
+// origin indicator, so the operator cannot tell which site they are entering
+// credentials into. Both assertions below are scoped to the humble_login_open arm's
+// OWN comment-stripped body (armStart -> the next arm's own start marker), never an
+// unfiltered file-wide search -- this plan's own justifying prose names `on_navigation`
+// repeatedly (explaining why it must NOT be used here), so a naive unscoped count would
+// be satisfied by the prose alone even if the real arm still used it.
+describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_load, never on_navigation', () => {
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  test('POSITIVE: the title-refresh call (set_title) lives inside the arm\'s .on_page_load( hook body', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const pageLoadStart = armBody.indexOf('.on_page_load(')
+    expect(pageLoadStart).toBeGreaterThan(-1)
+    const pageLoadEnd = armBody.indexOf('.build()', pageLoadStart)
+    expect(pageLoadEnd).toBeGreaterThan(pageLoadStart)
+    const pageLoadBlock = armBody.slice(pageLoadStart, pageLoadEnd)
+    expect(pageLoadBlock).toContain('set_title(')
+  })
+
+  test('NEGATIVE: the humble_login_open arm contains no .on_navigation( call anywhere in its own body', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    expect(armBody).not.toContain('.on_navigation(')
+  })
+
+  test('the login_window_title pure helper exists (AppHandle-free, mirrors clipboard_text_arg/login_window_url_arg)', () => {
+    expect(loadMainRsCode()).toContain('fn login_window_title(')
+  })
+
+  test('the arm seeds its shared origin state from the validated open URL before .build()', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const seedIdx = armBody.indexOf('Arc::new(Mutex::new(origin.clone()))')
+    const buildIdx = armBody.indexOf('.build()')
+    expect(seedIdx).toBeGreaterThan(-1)
+    expect(buildIdx).toBeGreaterThan(seedIdx)
+  })
+})
+
+// Phase 34.5 Plan 27 (F-34.5-G6-05): black-on-black text in Amazon's verification-code
+// field, unreadable until highlighted. Scoped to the same humble_login_open arm body as
+// the describe block above, using the same extraction pattern this file already uses
+// throughout (armStart -> the next arm's own start marker).
+describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style', () => {
+  test('the humble_login_open arm requests .theme(Some(tauri::Theme::Light)) on the visible builder', () => {
+    const code = loadMainRsCode()
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    const armBody = code.slice(armStart, armEnd)
+    expect(armBody).toContain('.theme(Some(tauri::Theme::Light))')
+  })
+})
