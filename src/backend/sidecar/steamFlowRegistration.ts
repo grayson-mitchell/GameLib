@@ -37,6 +37,15 @@
  * other store manager consumer in this codebase uses (see the import note
  * immediately below) instead of a locally-constructed, second
  * `SteamLibraryManager` instance.
+ *
+ * LIVE REGRESSION FIX (2026-08-01, follow-up to 34.5-33): 34.5-33's dispatch
+ * gate (`rawRunner !== undefined && rawRunner !== 'all'`) only excluded
+ * `undefined`, and a live `pnpm tauri:dev` session proved the mount-time
+ * "refresh everything" call arrives here as `rawRunner === null` (JSON
+ * transport, not structured clone) — so it fell into the single-runner
+ * branch and threw `unknown runner 'null'`, failing the refresh outright.
+ * `handleRefreshLibrary`'s gate now excludes `null` alongside `undefined`;
+ * see the comment directly above that gate for the full mechanism.
  */
 
 // Load-bearing FIRST import (Phase 27 Plan 05 circular-dep fix, refined by
@@ -85,11 +94,27 @@ async function handleRefreshLibrary(
   _event: unknown,
   ...args: unknown[]
 ): Promise<void> {
-  const rawRunner = args[0] as string | undefined
+  // LIVE REGRESSION (2026-08-01, fix/34.5-33): `GlobalState.tsx`'s
+  // `refreshLibrary()` calls `window.api.refreshLibrary(library)` with
+  // `library` genuinely `undefined` for the mount-time "refresh everything"
+  // call. Under Electron, structured-clone IPC preserves that `undefined`
+  // untouched. Under the Tauri sidecar, RPC request args cross the wire
+  // JSON-encoded — `JSON.stringify([undefined])` produces `[null]` — so the
+  // SAME call arrives here as `rawRunner === null`, never `undefined`. A
+  // strict `!== undefined` gate treats `null` as a "named runner", falls
+  // into the single-runner branch below, fails the `hasOwnProperty` check,
+  // and throws `unknown runner 'null'` — silently breaking the mount-time
+  // refresh under Tauri (live-observed: `~/Library/Logs/GameLib/gamelib.log`
+  // 2026-08-01 22:37:44, `refreshLibrary failed runner=null: unknown
+  // runner`). `null` must be treated exactly like `undefined` here — do NOT
+  // "simplify" this back to a single `!== undefined` check; the JSON
+  // transport is the reason both need to be excluded.
+  const rawRunner = args[0] as string | undefined | null
 
   // Single-runner branch — reproduces main.ts:1051-1053's
-  // `library !== undefined && library !== 'all'` gate.
-  if (rawRunner !== undefined && rawRunner !== 'all') {
+  // `library !== undefined && library !== 'all'` gate, extended to also
+  // exclude `null` (see comment above).
+  if (rawRunner !== undefined && rawRunner !== null && rawRunner !== 'all') {
     // T-34.5-C4-10 mitigation: an own-property check (never `in`, which
     // would also match inherited names like `constructor`/`toString`) — an
     // unknown runner throws naming itself and NEVER falls through to the
@@ -163,8 +188,10 @@ async function handleRefreshLibrary(
   }
 
   // All-runners branch — reproduces main.ts:1054-1060's
-  // `Promise.allSettled` fan-out. Runs for BOTH `rawRunner === undefined`
-  // and `rawRunner === 'all'`, matching main.ts exactly.
+  // `Promise.allSettled` fan-out. Runs for `rawRunner === undefined`,
+  // `rawRunner === null` (the JSON-transport shape of the same call under
+  // Tauri — see the comment above this function), and `rawRunner === 'all'`,
+  // matching main.ts's `undefined`/`'all'` semantics.
   const managers = Object.entries(libraryManagerMap)
   const results = await Promise.allSettled(
     managers.map(([, manager]) => manager.refresh())
