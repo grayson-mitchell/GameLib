@@ -25,8 +25,9 @@
  * Pattern 6 forbids.
  *
  * Logging discipline (T-34.4.1-45, mirrors the cookie-value ban T-34.4.1-19): every `logInfo`/
- * `logWarning` call below carries only `runner`, `label`, or `status` — never the captured
- * `code`, `token`, or any `redirectUrl`/`url` value.
+ * `logWarning` call below carries only `runner`, `label`, `status`, or a navigated page's
+ * `hostname` (T-34.5-G6-11, plan 34.5-24 — never origin/pathname/search/href) — never the
+ * captured `code`, `token`, or any `redirectUrl`/full `url` value.
  */
 
 import { getLoginWindowSeam } from '../humble/loginWindowSeam'
@@ -174,6 +175,11 @@ export function captureOAuthLogin(
     let pollInFlight = false
     let pollInterval: ReturnType<typeof setInterval> | null = null
     let deadlineTimer: ReturnType<typeof setTimeout> | null = null
+    // Plan 34.5-24 (F-34.5-G6-01 discriminator instrument). Tracks the last hostname LOGGED (not
+    // merely observed) so a 500ms poll loop over a five-minute deadline cannot flood the log with
+    // repeats of the SAME hostname -- only a transition to a NEW hostname (or the first hostname of
+    // the attempt) is ever written.
+    let lastLoggedHost: string | null = null
 
     async function settle(outcome: OAuthCaptureOutcome): Promise<void> {
       if (settled) return
@@ -202,6 +208,22 @@ export function captureOAuthLogin(
         const events = await activeSeam.takeEvents(label)
         if (settled) return
         for (const event of events) {
+          // T-34.5-G6-11: hostname ONLY -- never origin, pathname, search, or href. Epic's
+          // redirect carries the authorization code in the query string (the `legendary` branch
+          // below reads it via `searchParams.get('code')`), so logging anything past the hostname
+          // would write a live credential into a log the user can upload. De-duplicated against
+          // the last LOGGED hostname so a same-host poll sequence writes exactly one line.
+          let navHost: string
+          try {
+            navHost = new URL(event.url).hostname
+          } catch {
+            navHost = '<unparseable>'
+          }
+          if (navHost !== lastLoggedHost) {
+            lastLoggedHost = navHost
+            logInfo(`[oauthLoginCapture] runner=${runner} nav host=${navHost}`, LogPrefix.Backend)
+          }
+
           const match = matchOAuthRedirect(runner, event.url)
           if (match) {
             await settle({
