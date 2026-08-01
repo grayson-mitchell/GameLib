@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-36-PLAN.md
-last_updated: "2026-08-01T10:22:26.095Z"
+stopped_at: "Gap cycle 4 executed: plans 34.5-32/33/34/35/36 COMPLETE. Plan 34.5-37 is at a BLOCKING checkpoint:human-verify (task 1 of 3 done -- `34.5-G6-EPIC-DISCRIMINATOR-2.md` authored with `verdict: null`; tasks 2/3 need real macOS hardware, both Electron and Tauri arms). Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is still neither authored nor run. Phase verification intentionally NOT run: incomplete plans remain."
+last_updated: "2026-08-01T22:40:00.000Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
