@@ -952,7 +952,7 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
 })
 
 describe('useTauriOAuthLogin — unmount safety', () => {
-  it('unmounting mid-capture does not call setState afterward (no leak)', async () => {
+  it('unmounting mid-capture does not throw, and a captured code still reaches the auth channel (Plan 34.5-34 Task 2 -- a perishable code is never abandoned)', async () => {
     let resolveCapture: (value: unknown) => void = () => {}
     mockApi.oauthCaptureLogin.mockImplementation(
       () =>
@@ -960,6 +960,7 @@ describe('useTauriOAuthLogin — unmount safety', () => {
           resolveCapture = resolve
         })
     )
+    mockApi.login.mockRejectedValue(new Error(UNPORTED_CHANNEL_MARKER))
 
     mount('legendary')
     await flushPromises()
@@ -968,9 +969,10 @@ describe('useTauriOAuthLogin — unmount safety', () => {
 
     unmount()
 
-    // Capture resolves AFTER unmount -- must not throw, and must not be observable on a
-    // subsequent render (there is no subsequent render in a real unmount, but re-mounting
-    // fresh proves the stale promise's resolution never wrote into a stale slot either).
+    // Capture resolves AFTER unmount -- must not throw. Prior to Plan 34.5-34 Task 2 this
+    // discarded the captured code; now the code is perishable and single-use, so the auth
+    // exchange still proceeds -- asserted on the fake channel's call record, never on the
+    // hook's returned state (there is no subsequent render after a real unmount).
     resolveCapture({
       status: 'captured',
       runner: 'legendary',
@@ -979,8 +981,171 @@ describe('useTauriOAuthLogin — unmount safety', () => {
     })
     await flushPromises()
 
-    // No error thrown, and mockApi.login (the next step after a real capture) was never
-    // reached -- the cancelled guard stopped the chain before it got there.
+    expect(mockApi.login).toHaveBeenCalledWith('STALE-CODE')
+  })
+})
+
+describe('useTauriOAuthLogin — cancellation suppresses state updates only (Plan 34.5-34 Task 2)', () => {
+  it('a capture resolving { status: "captured" } AFTER teardown still hands its code to the runner auth channel', async () => {
+    let resolveCapture: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCapture = resolve
+        })
+    )
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+
+    mount('gog')
+    await flushPromises()
+    rerender('gog')
+
+    unmount()
+
+    resolveCapture({
+      status: 'captured',
+      runner: 'gog',
+      code: 'X',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=X'
+    })
+    await flushPromises()
+
+    expect(mockApi.authGOG).toHaveBeenCalledWith('X')
+  })
+
+  it('an auth channel returning { status: "done" } AFTER teardown still invokes onLoginSuccess exactly once', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    let resolveAuth: (value: unknown) => void = () => {}
+    mockApi.authGOG.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAuth = resolve
+        })
+    )
+    const onLoginSuccess = jest.fn()
+
+    mount('gog', onLoginSuccess)
+    await settle('gog', onLoginSuccess)
+    expect(mockApi.authGOG).toHaveBeenCalledTimes(1)
+
+    unmount()
+
+    resolveAuth({ status: 'done', data: { username: 'grayson' } })
+    await flushPromises()
+
+    expect(onLoginSuccess).toHaveBeenCalledTimes(1)
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'gog',
+      username: 'grayson',
+      user_id: undefined
+    })
+  })
+
+  it('after teardown, the hook never performs a setState -- no console warning, and no observable state change across a flush', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      mockApi.oauthCaptureLogin.mockResolvedValue({
+        status: 'captured',
+        runner: 'gog',
+        code: 'GOG-CODE',
+        redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+      })
+      let resolveAuth: (value: unknown) => void = () => {}
+      mockApi.authGOG.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveAuth = resolve
+          })
+      )
+
+      const preUnmount = mount('gog')
+      await settle('gog')
+      const stateBeforeUnmount = rerender('gog')
+      expect(stateBeforeUnmount).toEqual({ phase: 'awaiting' })
+
+      unmount()
+
+      resolveAuth({ status: 'done', data: { username: 'grayson' } })
+      await flushPromises()
+      await flushPromises()
+
+      // No subsequent render happens after a real unmount, so there is nothing new to read --
+      // the harness's own state slot is the only thing that COULD have been mutated, and this
+      // asserts the pre-unmount snapshot is what a fresh mount would still see (i.e. nothing
+      // wrote into the torn-down slot).
+      expect(stateBeforeUnmount).toEqual({ phase: 'awaiting' })
+      expect(preUnmount).toEqual({ phase: 'idle' })
+      expect(consoleError).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('onLoginSuccess is called exactly once, never twice, when the effect re-runs mid-flight', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    let resolveAuth: (value: unknown) => void = () => {}
+    mockApi.authGOG.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAuth = resolve
+        })
+    )
+    const onLoginSuccess = jest.fn()
+
+    mount('gog', onLoginSuccess)
+    await settle('gog', onLoginSuccess)
+    expect(mockApi.authGOG).toHaveBeenCalledTimes(1)
+
+    // The effect re-runs with a DIFFERENT runner while the gog auth call is still pending --
+    // this tears down the gog closure (cancelled=true) without abandoning it, and starts a
+    // fresh legendary closure.
+    mockApi.oauthCaptureLogin.mockResolvedValue({ status: 'cancelled' })
+    rerender('legendary', onLoginSuccess)
+    await flushPromises()
+
+    resolveAuth({ status: 'done', data: { username: 'grayson' } })
+    await flushPromises()
+    await flushPromises()
+
+    expect(onLoginSuccess).toHaveBeenCalledTimes(1)
+    expect(onLoginSuccess).toHaveBeenCalledWith({
+      runner: 'gog',
+      username: 'grayson',
+      user_id: undefined
+    })
+  })
+
+  it('a post-teardown { status: "timeout" } outcome does NOT call any auth channel', async () => {
+    let resolveCapture: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCapture = resolve
+        })
+    )
+
+    mount('gog')
+    await flushPromises()
+    rerender('gog')
+
+    unmount()
+
+    resolveCapture({ status: 'timeout' })
+    await flushPromises()
+
+    expect(mockApi.authGOG).not.toHaveBeenCalled()
     expect(mockApi.login).not.toHaveBeenCalled()
+    expect(mockApi.authAmazon).not.toHaveBeenCalled()
+    expect(mockApi.authZoom).not.toHaveBeenCalled()
   })
 })
