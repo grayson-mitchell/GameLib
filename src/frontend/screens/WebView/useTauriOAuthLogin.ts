@@ -29,6 +29,11 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * path. `GlobalState.tsx` wires `completeOAuthLogin = createOAuthLoginCompletion({...})` and
  * exposes it on context; `index.tsx` passes it as this hook's second argument. Electron never
  * reaches any of this — the `isTauri()` guard below is still first and unconditional.
+ *
+ * Plan 34.5-34: cancellation (effect teardown) suppresses React state updates ONLY — it must
+ * never abandon an irreversible side effect (a credential already written to disk) or a
+ * perishable one (a single-use OAuth code); a future "cleanup" that restores an early return on
+ * `cancelled` at the capture or auth-exchange sites would silently reintroduce that defect.
  */
 export type TauriOAuthLoginState =
   | { phase: 'idle' }
@@ -137,11 +142,21 @@ export function useTauriOAuthLogin(
     let cancelled = false
     // Plan 34.5-34 Task 1: distinguishes "the effect was torn down while nothing was in
     // flight" from "the effect was torn down mid-login" -- set true at every terminal path of
-    // `run()`, read only by the cleanup's teardown-diagnostic line below.
+    // `run()`, read only by the cleanup's teardown-diagnostic line below. Plan 34.5-34 Task 2
+    // reuses this SAME flag to guard against invoking `onLoginSuccess` twice.
     let reachedTerminal = false
 
+    // Plan 34.5-34 Task 2: the ONE place `cancelled` is allowed to have any effect at all --
+    // every state update in `run()` goes through this helper instead of the raw setter, so the
+    // gate is checkable in one place rather than scattered across N early returns.
+    function safeSetState(next: TauriOAuthLoginState): void {
+      if (!cancelled) {
+        setState(next)
+      }
+    }
+
     async function run(): Promise<void> {
-      setState({ phase: 'awaiting' })
+      safeSetState({ phase: 'awaiting' })
 
       let url: string
       let amazonData: NileLoginData | undefined
@@ -171,7 +186,7 @@ export function useTauriOAuthLogin(
           `[useTauriOAuthLogin] runner=${activeRunner} phase=error (failed to resolve login url)`
         )
         reachedTerminal = true
-        setState({ phase: 'error', message })
+        safeSetState({ phase: 'error', message })
         return
       }
 
@@ -197,34 +212,39 @@ export function useTauriOAuthLogin(
           `[useTauriOAuthLogin] runner=${activeRunner} phase=error capture-transport-failed message=${message}`
         )
         reachedTerminal = true
-        setState({ phase: 'error', message })
+        safeSetState({ phase: 'error', message })
         return
       }
       if (cancelled) {
-        // Plan 34.5-34: reached with a possibly-`captured` outcome holding a single-use OAuth
-        // code -- this line is diagnostic-only in Task 1 (no control-flow change yet).
+        // Plan 34.5-34 Task 2: `cancelled` gates state updates only -- a `captured` outcome
+        // holds a single-use OAuth code that would otherwise be discarded forever, so it falls
+        // through to the auth exchange below instead of returning. Every OTHER outcome carries
+        // nothing to propagate, so it still returns here (nothing lost by returning).
         window.api.logInfo(
           `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=capture`
         )
-        return
+        if (outcome.status !== 'captured') {
+          reachedTerminal = true
+          return
+        }
       }
 
       if (outcome.status === 'cancelled') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled`)
         reachedTerminal = true
-        setState({ phase: 'cancelled' })
+        safeSetState({ phase: 'cancelled' })
         return
       }
       if (outcome.status === 'timeout') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=timeout`)
         reachedTerminal = true
-        setState({ phase: 'timeout' })
+        safeSetState({ phase: 'timeout' })
         return
       }
       if (outcome.status === 'unsupported') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error (unsupported)`)
         reachedTerminal = true
-        setState({
+        safeSetState({
           phase: 'error',
           message: 'OAuth capture is not supported on this build'
         })
@@ -233,7 +253,7 @@ export function useTauriOAuthLogin(
       if (outcome.status === 'error') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
         reachedTerminal = true
-        setState({ phase: 'error', message: outcome.message })
+        safeSetState({ phase: 'error', message: outcome.message })
         return
       }
 
@@ -281,25 +301,29 @@ export function useTauriOAuthLogin(
           }
         }
         if (cancelled) {
-          // Plan 34.5-34: reached AFTER the backend has already written the credential to disk
-          // (or refused it) -- `authStatus=done` here is the unambiguous signature of a
-          // completed authentication being discarded. Diagnostic-only in Task 1.
+          // Plan 34.5-34 Task 2: reached AFTER the backend has already written the credential
+          // to disk (or refused it) -- `authStatus=done` here is the unambiguous signature of a
+          // completed authentication that must still propagate below. `cancelled` gates the
+          // state update (via safeSetState) only; it never gates `onLoginSuccess`.
           window.api.logInfo(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=auth authStatus=${status}`
           )
-          return
         }
 
         if (status === 'done') {
           // The auth channel accepted the captured code -- hand the login on to the SAME
           // completion path GlobalState.tsx's own wrappers use (setState +
           // handleSuccessfulLogin -> refreshLibrary), never a second, parallel refresh path.
+          // Always fires, whether or not teardown landed first (Plan 34.5-34 Task 2) -- an
+          // already-persisted credential must never be discarded.
           window.api.logInfo(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=idle (login completed, library refresh triggered)`
           )
-          reachedTerminal = true
-          onLoginSuccess?.({ runner: activeRunner, username, user_id })
-          setState({ phase: 'idle' })
+          if (!reachedTerminal) {
+            reachedTerminal = true
+            onLoginSuccess?.({ runner: activeRunner, username, user_id })
+          }
+          safeSetState({ phase: 'idle' })
         } else {
           // A resolved-but-refused response (e.g. { status: 'failed' }/{ status: 'error' }) is a
           // REAL backend refusal, not a "channel not wired up yet" state -- it must never present
@@ -308,7 +332,7 @@ export function useTauriOAuthLogin(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=error (auth channel refused: status=${status})`
           )
           reachedTerminal = true
-          setState({
+          safeSetState({
             phase: 'error',
             message: `Login failed for ${activeRunner}: status=${status}`
           })
@@ -326,12 +350,12 @@ export function useTauriOAuthLogin(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=blocked channel=${channel}`
           )
           reachedTerminal = true
-          setState({ phase: 'blocked', runner: activeRunner, channel })
+          safeSetState({ phase: 'blocked', runner: activeRunner, channel })
         } else {
           // A REAL backend failure must never be mislabelled as "waiting for Phase 34.5".
           window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
           reachedTerminal = true
-          setState({ phase: 'error', message })
+          safeSetState({ phase: 'error', message })
         }
       }
     }
