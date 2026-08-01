@@ -1,8 +1,20 @@
 ---
-status: investigating
+status: root_cause_confirmed_post_auth_only
+root_cause_scope: |
+  SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the
+  POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized
+  the session, WKWebView silently refuses the client-side navigation to the localhost
+  redirectUrl (full evidenced chain: Evidence 2026-08-02T05:05:00, Resolution.root_cause).
+  The PRE-AUTHENTICATION half -- whether Epic's real login form (email/password fields,
+  hCaptcha) renders and accepts input for a genuinely LOGGED-OUT user under WKWebView -- is
+  UNVERIFIED. Every single observation in this entire multi-cycle investigation came from an
+  ALREADY-AUTHENTICATED webview (cookies persisted from an earlier manual login); nobody has
+  ever driven this shell through a fresh, logged-out Epic sign-in. Do not read
+  `root_cause_confirmed_*` as "the whole login flow is understood" -- see Current Focus,
+  `pending_question`, for the live test that resolves this before implementation proceeds.
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T03:30:00
+updated: 2026-08-02T05:30:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -33,6 +45,26 @@ finding: F-34.5-G6-01
   rendered content. `localStorage` and cookies both work in this webview (`cookieLen: 85`,
   `localStorage OK` — see Evidence), so the empty DOM is not a storage-blocked rendering failure of
   the kind ITP would cause.
+
+  **SECOND MATERIAL CORRECTION, 2026-08-02T04:30:00 (see Evidence 2026-08-02T04:25:00), recorded
+  honestly as a second instance of the same process failure the first correction already named:**
+  the "empty DOM / blurred skeleton" is not a failed login-form render at all. The correlated
+  per-request instrumentation proved Epic's own `/id/api/redirect` request — the SAME request, id
+  15, sent from inside the login window's own bootstrap, not a manual probe — returned HTTP 200
+  with a full authorization payload in this run. A 200 carrying a valid `authorizationCode` means
+  the user is **already authenticated** in that webview at the moment the skeleton is observed —
+  Epic's page has no login form to render at that point because there is nothing left to log in;
+  its only remaining job is to navigate the window out to the `redirectUrl` it just received. The
+  CSS skeleton is a page **in transit**, mid-bootstrap, waiting to leave — not a broken render of a
+  login form that should have appeared. Every earlier framing of this defect as "the login form
+  does not render" (including the first correction above, which only fixed "no inputs" vs.
+  "disabled inputs" but still implicitly assumed a login form was the thing that should have
+  appeared) was describing the wrong artifact. This is the second time this file's own recorded
+  symptom description has been materially wrong and has misdirected a prior stretch of
+  investigation (first: assuming a form existed to be disabled/undelivered; second: assuming the
+  skeleton was standing in for a login form at all, rather than a page waiting to exit). Recorded
+  per this project's own F-10 discipline: get the symptom description right, do not let a
+  plausible-sounding early framing calcify.
 - **Error messages:** NONE visible in the page under the stock user agent (developer, verbatim:
   "no error text"). The backend log shows only `status=timeout`. The login page's own JavaScript
   console has never been read by anyone, in any cycle.
@@ -545,6 +577,480 @@ finding: F-34.5-G6-01
     was not asked for; this cycle's new RESPONSE capture is intentionally NOT gated the
     same way, per the entry above, since failing-response bodies are the stated target.
 
+- timestamp: 2026-08-02T04:00:00
+  source: developer checkpoint response, live hardware, `pnpm tauri:dev`, manual diagnostic
+    fetch to `/id/api/redirect?flow=login&responseType=code` run directly in the login
+    window's console, Console filter corrected to ALL (previous cycles' reads sat behind
+    an Errors+Warnings-only filter)
+  note: |
+    BREAKTHROUGH. `/id/api/redirect?flow=login&responseType=code` returned HTTP 200 in
+    ~1256ms with a full, valid authorization payload. JSON response body carried the keys
+    `warning`, `redirectUrl`, `authorizationCode`, `exchangeCode`, `sid` (null).
+    `redirectUrl` was of the shape `https://localhost/launcher/authorized?code=<REDACTED>`.
+
+    MANDATORY REDACTION APPLIED: the actual `authorizationCode`/`exchangeCode`/`code`
+    values are LIVE Epic OAuth credentials and are never recorded in this file, in any
+    form, per this project's public-fork secret-handling requirement -- only key names,
+    HTTP status, timing, and URL shape are recorded here. Structure is the evidence; the
+    values are not needed to prove anything.
+
+    LOAD-BEARING COMPARISON: the query string (`flow=login&responseType=code`, no
+    `client_id`) is IDENTICAL to the query string that returned HTTP 400 in Evidence
+    2026-08-02T03:00:00. The same literal request shape produced a 400 in one run and a
+    200 in another. This weakens (does not falsify) the "missing `client_id` causes a
+    deterministic rejection" reading of the earlier 400 that Current Focus had been
+    carrying as a live candidate -- a parameter-validation error should not be
+    intermittent across otherwise-identical requests, whereas an intermittent
+    network-level failure would produce exactly this pattern (sometimes reaches Epic's
+    validation and gets a real response, sometimes does not complete cleanly). Not yet
+    proven either way; recorded as a comparison, not a conclusion.
+
+    CONSEQUENCE: this retracts the standing "the request hangs forever / produces no
+    result" reading that had been the working assumption across the cycles between
+    `2666ef498` and now (see the next Evidence entry for the specific mechanism). Epic's
+    `/id/api/redirect` endpoint is not rejecting this webview outright -- it can and does
+    hand back a real authorization code. What fails is that Epic's page never NAVIGATES
+    the window to the returned `redirectUrl` -- the `nav host=` sequence in every prior
+    Evidence entry never leaves `www.epicgames.com`, and per the checkpoint, Epic's own
+    bundle (`index-BMTfSvFa.js:426`) was separately observed logging
+    `{"status":408,"response":{"data":{"message":"error.serviceUnavailable"}}}` via
+    `console.error` (captured by this script's existing passthrough hook), alongside a
+    browser-level `Failed to load resource: The network connection was lost. (analytics)`
+    -- `NSURLErrorNetworkConnectionLost` (-1005), a WKWebView/CFNetwork-specific failure
+    with no Chromium equivalent. This is now the strongest remaining lead (see Current
+    Focus): Epic's OWN app-level request(s) intermittently fail under WKWebView, its code
+    treats the failure as service-unavailable, and abandons the flow before navigating to
+    the (successfully obtained) `redirectUrl` -- NOT YET CONFIRMED to be the same request
+    as the one that returned 200 above; that is precisely this cycle's crux test (see
+    Current Focus).
+
+- timestamp: 2026-08-02T04:05:00
+  source: direct read this cycle of `src-tauri/src/main.rs` (grep for `console\.log`,
+    `console\.warn`, `console\.error` across the whole file; direct read of
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s `record()` function), plus `git log -S` / `git
+    show` archaeology on the same file's history
+  note: |
+    VERIFIED, not just transcribed from the checkpoint: every one of
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s six `record()`-sink kinds (`error`,
+    `unhandledrejection`, `fetch`, `sendBeacon`, `xhr.send`, `console.error`) routes
+    through the SAME single call, `console.warn('[GAMELIB-DIAG]', entry)`, inside
+    `record()`; the two installation-boundary announcements (`instrumentation installed` /
+    `instrumentation failed to install`) are also bare `console.warn` calls.
+    `grep -n "console\.log"` across the ENTIRE file returns exactly one hit, and it is a
+    comment (`// non-JSON diagnostic line (console.log etc.)`), not executable code. Zero
+    literal `console.log(...)` calls exist anywhere in `main.rs`.
+
+    CONCLUSION: the shipped GAMELIB-DIAG instrumentation's own visibility design was
+    NEVER at risk from a console level filter -- confirmed at the source level. The
+    console-level-filter artifact the checkpoint describes ("no output" wrongly read as
+    "nothing happened") must therefore have affected DIFFERENT, ad-hoc probes the
+    developer typed directly into the console during live debugging sessions (e.g. an
+    `Image()` favicon-load test, and a manual `.then(...)`-style read of a control
+    fetch's result) -- NOT the shipped Rust-injected script.
+
+    GIT ARCHAEOLOGY -- this mechanism already operated ONCE in this investigation,
+    unrecorded in this file until now:
+      - `2666ef498` "chore(debug): capture non-2xx response status and body in login
+        diagnostics" added a response-capture increment (fetch `res.clone()`, XHR
+        `load` listener) to this same script, ~40 minutes before the next commit.
+      - `6c8a779ef` "revert(debug): drop response-body capture — it hung every fetch"
+        reverted it, reasoning (commit message, structure quoted, no secret content): a
+        control fetch to `/id/api/location` "never resolved" while an `Image()` load of
+        `favicon.ico` "returned 404 in milliseconds," concluding "Network healthy,
+        wrapper broken."
+      - That diagnosis depended on reading the control fetch's outcome via a
+        `console.log`-shaped manual probe -- exactly the class of probe this checkpoint
+        now identifies as invisible under an Errors+Warnings-only filter. The commit
+        message's own tell was present and unrecognized at the time: it reports seeing
+        the BROWSER's native 404 log line (visible regardless of filter, since Safari
+        surfaces failed-resource loads at Errors level) but does not report seeing any
+        of the probe's OWN printed confirmation lines -- silence exactly where a
+        `console.log`-based probe would go missing.
+
+    RETRACTED, per this cycle's checkpoint: neither the base request-only wrapper
+    (`bf5394a20`) nor the reverted response-capture increment (`2666ef498`) was ever
+    actually broken. Fetch promises resolved fine in both; the developer's own
+    console.log-based read of that resolution was what went missing, not the resolution
+    itself. The "wrapper broken" diagnosis in `6c8a779ef` is VOID and must not be carried
+    forward.
+
+    METHOD LESSON (generalizes beyond this one commit pair): ANY diagnostic console
+    probe -- shipped Rust-injected instrumentation or a developer's own ad-hoc
+    typed-in-console test -- MUST use `console.warn`/`console.error`, never
+    `console.log`, for anything whose absence would be read as a finding. An observed
+    "no output" must be checked against the console's active level filter before being
+    trusted as evidence of anything. This investigation lost one full cycle
+    (`2666ef498` → `6c8a779ef`) acting on a false negative produced by exactly this gap.
+
+- timestamp: 2026-08-02T04:10:00
+  source: direct read this cycle, `src/backend/sidecar/oauthLoginCapture.ts:101-119`
+    (`matchOAuthRedirect`, `legendary` case)
+  note: |
+    VERIFIED against source, not assumed. For `runner === 'legendary'` (the runner used
+    for Epic throughout this file's evidence -- every `nav host=`/`label=loginwin-`
+    log line is `runner=legendary`), the matcher requires exactly:
+    ```
+    if (parsed.hostname !== 'localhost') return null
+    const code = parsed.searchParams.get('code')
+    if (!code) return null
+    return { code, redirectUrl: url }
+    ```
+    i.e. STRICT equality on `hostname === 'localhost'` (not a substring/prefix match) AND
+    a non-empty `code` query parameter.
+
+    The redacted `redirectUrl` shape from the breakthrough entry above,
+    `https://localhost/launcher/authorized?code=<REDACTED>`, parses to
+    `hostname === 'localhost'` with a present, non-empty `code` param -- both conditions
+    the matcher requires are satisfied by this shape.
+
+    CONCLUSION, bounded to what source alone can show: IF the login window's webview
+    ever issues a real browser-level navigation to this `redirectUrl`, the existing,
+    UNMODIFIED `matchOAuthRedirect` logic is already written correctly to catch it. This
+    is a source-level structural check only, not a live-fire confirmation -- no
+    navigation to this URL has been observed happening in any run to date (every prior
+    Evidence entry's `nav host=` sequence stays on `www.epicgames.com`). Nothing about
+    the matcher itself is indicated as needing a change; `matchOAuthRedirect` was read,
+    per the Constraints section, but not modified.
+
+- timestamp: 2026-08-02T04:15:00
+  source: this cycle's edit, `src-tauri/src/main.rs` (`DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
+    fetch + XHR wrappers), verified via `cargo check`, `cargo test`, and
+    `npx jest src/backend/__tests__/tauriShellSource.test.ts`
+  note: |
+    Given the 2026-08-02T04:05:00 entry's finding -- the response-capture increment
+    reverted in `6c8a779ef` was wrongly diagnosed as broken -- re-added the capability
+    this cycle with a corrected design, aimed directly at this cycle's crux test (see
+    Current Focus): whether Epic's OWN request to `/id/api/redirect` succeeds or fails in
+    the SAME run a 200 is observed elsewhere.
+
+    DESIGN CHANGES from the reverted `2666ef498` version:
+      - STATUS is now recorded for EVERY response (2xx included), not only non-2xx --
+        the prior design's silence-on-success meant a successful app-level request would
+        leave no trace at all, an ambiguity this cycle's crux test cannot tolerate.
+      - BODY text is STILL captured ONLY for non-2xx responses -- this boundary is now
+        MORE important than before, not less: `/id/api/redirect`'s 200 body carries a
+        real Epic OAuth `authorizationCode`/`exchangeCode` (confirmed this cycle, see
+        2026-08-02T04:00:00 entry), and this instrumentation must never capture, print
+        (even via `console.warn`), or store that value. Recording status-only for 2xx
+        responses achieves the crux test's goal (did Epic's own request succeed?)
+        without ever touching the credential-bearing body.
+      - NEW: a rejected fetch promise (no HTTP response at all -- e.g. a WKWebView
+        `NSURLErrorNetworkConnectionLost`) is now recorded as
+        `{kind: 'fetch.response', status: 'rejected', message: <rejection message>}`;
+        XHR's `error` event (the XHR-level analogue of a connection-level failure) is
+        recorded as `{kind: 'xhr.response', status: 'network-error'}`. Neither existed in
+        the reverted version. This targets the checkpoint's WKWebView network-failure
+        lead directly -- a connection-level failure is now distinguishable in the
+        capture from an HTTP-level 408/other status, rather than indistinguishable
+        silence.
+      - fetch's response observer remains a SEPARATE `.then/.catch` chain never chained
+        onto the value returned to the caller (`fetchPromise` is returned unmodified),
+        and still uses `res.clone()` -- same non-interference guarantee as the reverted
+        version, unchanged.
+      - XHR's response observer remains additive `addEventListener` calls (`load`, now
+        also `error`), never overwriting `onload`/`onerror` -- same non-interference
+        guarantee, unchanged.
+
+    VERIFICATION: `cargo check` (src-tauri): 0 errors. `cargo test` (src-tauri): 92
+    passed, 0 failed, 1 ignored (pre-existing, unrelated) -- identical counts to this
+    file's most recent prior verification entry. `npx jest
+    src/backend/__tests__/tauriShellSource.test.ts`: 46/46 passing, no test modification
+    needed -- same reason as every prior cycle's edit to this constant: the JS payload
+    lives entirely inside a module-level string constant this test file's arm-body/
+    negative-bound assertions cannot see.
+
+    GATING unchanged: `#[cfg(debug_assertions)]` AND `if visible`, identical to every
+    other addition to this constant -- cannot reach a packaged build. No secrets, header
+    values, or cookies captured anywhere in this edit; only status codes, structural URL/
+    method facts, and non-2xx body text (existing boundary, unchanged).
+
+- timestamp: 2026-08-02T04:25:00
+  source: this cycle's mechanism upgrade, applied ON TOP OF the response-capture design
+    recorded in the 2026-08-02T04:15:00 entry above -- direct re-read of the ACTUAL
+    current `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` in `src-tauri/src/main.rs` (twice, before
+    and during this cycle -- the file changed on disk BETWEEN those two reads, see
+    correction below), then a further extension edit, verified via `cargo check`, `cargo test`,
+    and `npx jest src/backend/__tests__/tauriShellSource.test.ts`. RECORDED AS A
+    MECHANISM UPGRADE, NOT EVIDENCE -- no new observation of Epic's login flow has been
+    made yet; nothing here narrows or supports any hypothesis about F-34.5-G6-01.
+  note: |
+    CORRECTION TO THE PRIOR CYCLE'S EVIDENCE ENTRY (2026-08-02T03:30:00 above), made by
+    direct re-read rather than by trusting that entry's own narrative, per this cycle's
+    explicit instruction to verify the actual file state independent of any cited commit
+    hash: the FIRST read this cycle took of `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` showed
+    `record()` calls at send-time ONLY (`fetch`, `sendBeacon`, `xhr.send`) plus
+    `error`/`unhandledrejection`/`console.error` hooks -- there was NO response capture
+    of any kind (no `.then`/`.catch` chain on fetch, no XHR `load` listener) at that
+    exact moment. This directly contradicts the 2026-08-02T03:30:00 entry's claim that
+    response capture had already been added and verified. The file was THEN independently
+    modified on disk before this agent's first edit attempt (the edit tool reported "File
+    has been modified since read"), and a second read showed a DIFFERENT version already
+    present: fetch response handling via a `.then/.catch` chain (status always recorded;
+    body captured only for non-2xx responses, via `res.clone()`), and XHR `load` +
+    `error` listeners (status always recorded on `load`; body captured only for non-2xx).
+    This SECOND version is the one this cycle's edit actually started from and extended
+    -- it is recorded here as the verified ACTUAL baseline, not the false-premise
+    "0.100%-broken, needs full rebuild" framing from the checkpoint, and not the
+    "already-complete" framing the immediately prior cycle's own entry claimed. Neither
+    prior framing was independently confirmed against the file at the time it was
+    written; this entry is. No conclusion is drawn about WHY the file changed between the
+    two reads (out of scope, not investigated) -- only that it did, and this entry
+    records the actual state that resulted, honestly, rather than assuming either cited
+    commit hash's content applied.
+
+    GAP FOUND AND CLOSED in that verified baseline, independent of the missing
+    correlation/timeout/abort capabilities the checkpoint asked for: the baseline's
+    non-2xx body capture (both fetch and XHR) had NO credential-shaped-URL guard at
+    all -- a non-2xx response body from `/id/api/redirect` (or any OAuth code/token
+    endpoint) would have been captured and mirrored via `console.warn` IN FULL, in
+    violation of this session's mandatory secret-handling boundary. (2xx bodies were
+    already never captured in that baseline, so the specific 200-body leak scenario
+    was already closed by accident; the non-2xx gap was not.) This cycle added
+    `isCredentialShapedUrl()` -- substring match on `/redirect`, `exchangecode`,
+    `authorizationcode`, `/token`, `oauth`, fails CLOSED (treats a thrown check as
+    credential-shaped) -- and a shared `captureResponseBody()` policy function used by
+    BOTH fetch and XHR: for a credential-shaped URL, body content is NEVER captured at
+    ANY status, only status/timing/top-level-JSON-key-names (via `Object.keys()`,
+    never values); for any other URL, the pre-existing non-2xx-only body capture is
+    preserved unchanged.
+
+    ADDED this cycle, per the checkpoint's REQUIRED CAPABILITIES list, on top of the
+    verified baseline above:
+      1. Monotonic per-request `id` (`nextRequestId()`), assigned at send time and
+         recorded on every `fetch.send`/`xhr.send` record AND every outcome record
+         (`fetch.response`/`fetch.error`/`xhr.response`/`xhr.error`/`xhr.timeout`/
+         `xhr.abort`), so a reader can pair a specific outcome to a specific send
+         unambiguously even when the same URL is requested more than once.
+      2. `elapsedMs` (milliseconds since send, `Date.now()` delta) on every outcome
+         record, fetch and XHR alike.
+      3. XHR `error`, `timeout`, and `abort` listeners added via `addEventListener`
+         (additive only, `onload`/`onerror` and any handler Epic's own bundle attaches
+         are untouched) -- the baseline had `load` and `error`, but NOT `timeout` or
+         `abort`. `error` already existed in the baseline but did not carry `elapsedMs`
+         or an `id`; both now added, and it is now named `xhr.error` (was
+         `xhr.response` with `status: 'network-error'`) to make it visibly distinct
+         from a real HTTP response with no ambiguity.
+      4. fetch's `.catch()` path is now named `fetch.error` (was `fetch.response` with
+         `status: 'rejected'`), carries `errorName` + `errorMessage` + `elapsedMs` +
+         `id`, and is a structurally distinct outcome kind from `fetch.response`.
+      5. Diffing method for in-flight/never-resolved requests, documented in the
+         constant's own doc comment: every send is unconditionally recorded with its
+         `id`; a reader diffs the set of `id`s on `*.send` records against the set of
+         `id`s on ANY outcome record (`*.response`/`*.error`/`xhr.timeout`/`xhr.abort`)
+         in the dumped `window.__GAMELIB_DIAG__` array -- an `id` present only on the
+         send side never got an outcome (still in-flight, or the array hit its 200-cap,
+         or the session ended first).
+      6. `console.log` audit: grepped the ENTIRE script body (and the whole of
+         `main.rs`) for `console.log` -- zero actual calls found (one unrelated code
+         COMMENT elsewhere in the file mentions "console.log etc." as an example, not a
+         real call). No conversion was needed; every mirrored record already routes
+         through the script's single `record()` function's one `console.warn(...)`
+         call, plus two standalone `console.warn(...)` install/failure messages. This
+         is stated explicitly rather than assumed, since an unaudited claim of "already
+         all console.warn" is exactly the kind of unverified claim this cycle exists to
+         stop propagating.
+
+    VERIFIED: `cargo check` (src-tauri) -- 0 errors. `cargo test` (src-tauri) -- 92
+    passed, 0 failed, 1 ignored (same pre-existing ignore as every prior cycle this
+    investigation, unchanged). `npx jest
+    src/backend/__tests__/tauriShellSource.test.ts` -- 46/46 passing, NO test
+    modification needed (confirmed directly: this test file has zero references to
+    `DEV_LOGIN_DIAGNOSTIC`, `initialization_script`, `fetch`, `XMLHttpRequest`, or
+    `GAMELIB-DIAG`, so none of its arm-body/negative-bound string-match assertions can
+    see this constant's contents at all).
+
+    STILL OWED, unchanged: the actual observation. This entry is instrumentation only.
+    The crux question -- does Epic's OWN `/id/api/redirect` request return 200, error,
+    or never resolve, in the SAME run where a manual diagnostic fetch to it already
+    returned 200 -- is not answered by anything in this entry. That requires one more
+    live run with this now-extended instrumentation.
+
+- timestamp: 2026-08-02T04:25:00
+  source: developer checkpoint response, live hardware, `pnpm tauri:dev`, correlated
+    per-request `[GAMELIB-DIAG]` stream from the id/elapsedMs-extended instrumentation
+    (Evidence 2026-08-02T04:15:00), single repro run, THE CRUX TEST pre-registered in the
+    immediately prior cycle's Current Focus
+  note: |
+    DECISIVE RESULT. THE QUESTION IS ANSWERED. Recorded verbatim (structure/status only,
+    per this session's mandatory secret-handling boundary -- no credential-shaped value is
+    reproduced here):
+    ```
+    {kind: "xhr.send",     id: 15, url: "/id/api/redirect?flow=login&responseType=code", method: "GET"}
+    {kind: "xhr.response", id: 15, url: "/id/api/redirect?flow=login&responseType=code", method: "GET", status: 200}
+    ```
+    Correlated by `id: 15` -- this is Epic's OWN request, issued from inside the login
+    window's own bootstrap (an `xhr.send`/`xhr.response` pair, not a manual `fetch()` typed
+    into the console), not a parallel manual probe. HTTP 200. Not a timeout, not a rejected
+    promise, not a non-2xx status, not still pending at the time the array was read.
+
+    EVERY OTHER REQUEST in the same run also succeeded, zero network failures anywhere in
+    the run: id 6 `/id/api/location` 200, id 8 `/id/api/analytics` 200, id 13
+    `/id/api/analytics` 200, id 14 `/id/api/authenticate` 200, ids 9/10/11/12/16 telemetry
+    200/202. No `fetch.error`, no `xhr.error`, no `xhr.timeout`, no `xhr.abort` record
+    appears anywhere in the dumped `window.__GAMELIB_DIAG__` array for this run.
+
+    THIS IS A DISTINCT RUN/OBSERVATION FROM Evidence 2026-08-02T04:00:00's 408
+    `error.serviceUnavailable` / `NSURLErrorNetworkConnectionLost` ("The network connection
+    was lost") reading -- that reading came from an earlier, separate run, before this
+    cycle's id-correlated instrumentation existed to pin outcomes to specific sends. The two
+    entries are NOT the same observation and must not be conflated: one run showed an
+    app-level 408/connection-loss signature; this run, with the SAME overall flow and the
+    SAME endpoint, showed a completely clean 200 with zero network failures of any kind.
+
+    CONSEQUENCES, all recorded here per this cycle's instruction:
+    - This is branch 1 of the three the prior cycle's `expecting` field specified: Epic's
+      own request to `/id/api/redirect` succeeded IN THE SAME RUN. The failure is therefore
+      in what happens AFTER a successful response is received -- not in the network, and not
+      in this specific request failing to complete.
+    - THE WKWEBVIEW-NETWORK-FAILURE LEAD IS DEAD as an explanation for the core symptom. It
+      is moved to Eliminated below. This does not mean WKWebView networking is flawless in
+      general -- only that it is eliminated as the cause of F-34.5-G6-01 specifically.
+    - See the Symptoms section's SECOND MATERIAL CORRECTION (added this cycle) for the
+      reframing this result forces: a 200 with a valid `authorizationCode` means the user is
+      already authenticated, and the empty-DOM/skeleton is a page in transit awaiting exit
+      navigation, not a failed login-form render.
+
+- timestamp: 2026-08-02T05:00:00
+  source: developer checkpoint response, live hardware, `pnpm tauri:dev`, manual navigation
+    test run directly in the Epic login window's OWN console — THE decisive test
+    pre-registered by the immediately prior cycle's Current Focus (`test:` field, Evidence
+    2026-08-02T04:35:00's Current Focus block).
+  note: |
+    DECISIVE. THE ROOT CAUSE MECHANISM IS NAMED. Command run, verbatim:
+    ```
+    location.href = 'https://localhost/launcher/authorized?code=TESTVALUE'
+    ```
+    (`TESTVALUE` is a non-credential placeholder the developer typed directly — not a real
+    Epic code; this test isolates whether the NAVIGATION ITSELF completes, independent of
+    whatever value it carries.)
+
+    RESULT, triple-confirmed:
+    1. The assignment expression echoed the assigned string in the console — expected; this
+       is JS returning the RHS of an assignment, not evidence of navigation having occurred.
+    2. A subsequent bare `location.href` read, in the same console, returned
+       `"https://www.epicgames.com/id/login?responseType=code"` — UNCHANGED from before the
+       assignment. The document did not navigate.
+    3. Developer, verbatim, asked whether the window visibly changed: "no login window did
+       not change" — no error page, no "cannot connect" interstitial, no blank page, no
+       flash, nothing observable at all.
+
+    CONCLUSION: WKWebView silently refuses the navigation to `https://localhost/...`. Not an
+    error, not a failed load, not a visible interstitial, not a caught exception — the
+    navigation simply does not occur, and produces ZERO observable signal at any layer this
+    investigation has instrumented (console, DOM, `nav host=` log line, on_page_load event).
+    This resolves the two-branch split this cycle's prior Current Focus posed
+    (attempted-and-blocked vs. never-attempted): it is attempted-and-blocked, but "blocked"
+    undersells it — nothing about the block is visible from the failure side. It is an
+    ABSENCE, not a failure.
+
+- timestamp: 2026-08-02T05:05:00
+  source: synthesis of this cycle's decisive test (2026-08-02T05:00:00 above) against the
+    full evidence trail already recorded in this file, plus a read-only re-confirmation this
+    cycle of `src-tauri/src/main.rs:1704-1713` (the `humble_login_open` arm's doc comment
+    naming `on_page_load`, deliberately not `on_navigation`, for the login window) and
+    `src/frontend/screens/WebView/index.tsx` (Electron's `<webview>` `did-navigate` capture
+    flow, for contrast).
+  note: |
+    THE COMPLETE, FULLY-EVIDENCED CAUSAL CHAIN (root cause), every link cross-referenced to
+    its own supporting Evidence entry above:
+
+    1. Epic's page authenticates and authorizes successfully in this webview. Evidence
+       2026-08-02T04:25:00: Epic's OWN `xhr.send`/`xhr.response` pair, `id: 15`, to
+       `/id/api/redirect?flow=login&responseType=code`, returns HTTP 200 — not a manual
+       probe, the app's own bootstrap request. Every other request in the same run also
+       succeeded (zero network failures).
+    2. The 200 response body carries a full authorization payload, confirmed structurally
+       (keys only, no values ever recorded) at Evidence 2026-08-02T04:00:00: `warning`,
+       `redirectUrl`, `authorizationCode`, `exchangeCode`, `sid`. `redirectUrl` is shaped
+       `https://localhost/launcher/authorized?code=<REDACTED>`.
+    3. Epic's page has nothing left to do but navigate the window to that `redirectUrl` —
+       this is what the empty-DOM CSS skeleton IS: a page in transit awaiting exit
+       navigation, per the Symptoms section's SECOND MATERIAL CORRECTION, itself derived
+       from this same 200/authorizationCode finding.
+    4. That navigation to `https://localhost/...` is silently refused by WKWebView — proven
+       directly this cycle (2026-08-02T05:00:00 above): a manually-forced identical-shaped
+       navigation, typed straight into the login window's own console, produces the same
+       total absence of signal (no error, no interstitial, `location.href` reads back
+       unchanged).
+    5. Because the navigation never completes (or never even starts in any sense WKWebView
+       surfaces), the login window's `on_page_load` hook — the ONLY navigation signal this
+       arm listens for (`src-tauri/src/main.rs:1710-1713`, deliberately `on_page_load`, never
+       `on_navigation`, confirmed by direct re-read this cycle) — never fires for `localhost`.
+       This is consistent with, and now explains, EVERY prior run's `nav host=` sequence in
+       this file staying on `www.epicgames.com` for the attempt's entire life (Evidence
+       2026-08-01T22:38:17 and every run since — no exception across this whole phase).
+    6. With no `on_page_load` event ever carrying a `localhost` URL, nothing is ever pushed
+       into `LOGIN_WINDOW_EVENTS` for this navigation, so `oauthLoginCapture.ts`'s poll loop
+       (`src/backend/sidecar/oauthLoginCapture.ts:235-277`) never sees it, and
+       `matchOAuthRedirect`'s `legendary` arm — verified this file, Evidence
+       2026-08-02T04:10:00, as ALREADY structurally correct for this exact `redirectUrl`
+       shape — never gets a chance to run at all. The capture logic was never broken; it was
+       never fed.
+    7. The attempt runs the full 300s `DEFAULT_DEADLINE_MS`
+       (`src/backend/sidecar/oauthLoginCapture.ts:64`) and settles `status=timeout` — Evidence
+       2026-08-01T22:38:17 and every prior run this phase.
+    8. The empty CSS skeleton is visible on screen for the attempt's entire remaining life
+       because the page is not broken and not still loading a form — it is finished with its
+       own job and permanently waiting on an exit navigation that will never be observed to
+       happen.
+
+    ANNOTATION ON THE E1 DISCRIMINATOR VERDICT (`34.5-G6-EPIC-DISCRIMINATOR-2.md`, verdict
+    E1 — Tauri fails, Electron works, identical `EPIC_LOGIN_URL` literal): the VERDICT was
+    correct throughout this entire investigation. Every MECHANISM this investigation
+    proposed to explain it was wrong, in order: R1 (user-agent) — FALSIFIED (Eliminated).
+    R3 (notification-plugin `init-iife.js` injection) — FALSIFIED, a clean kill
+    (Eliminated). The retracted CLOBBERED-GLOBAL mechanism (core-js self-test
+    misidentified as a real failure) — SELF-RETRACTED (Eliminated). ITP/third-party-storage
+    — FALSIFIED (Eliminated). WKWEBVIEW-NETWORK-FAILURE (a connection-level failure on
+    Epic's own request) — FALSIFIED for this symptom specifically (Eliminated). None of
+    these five were the mechanism. The REAL mechanism, now directly demonstrated
+    (2026-08-02T05:00:00 above): Electron's `<webview>` fires `did-navigate` even for a load
+    that FAILS (`WebView/index.tsx`'s capture flow reads the code off the localhost URL that
+    the event reports, regardless of whether that URL's underlying HTTP request actually
+    completed) — this is why Electron's capture has always worked, including on the exact
+    same non-resolvable-shaped `localhost` target Tauri fails on. WKWebView's
+    `on_page_load` hook (the ONLY navigation signal this codebase's Tauri path listens for)
+    fires for NEITHER a successful NOR a failed load of a silently-refused navigation — there
+    is no event of any kind for this investigation's instrumentation to observe. Two shells
+    handle "navigate to a URL nothing is listening on" in structurally different ways: one
+    reports it (as a failed load); the other reports nothing at all. This is a genuine
+    shell-level behavioral difference, exactly as E1 asserted — the discriminator's verdict
+    was right from the start; only the explanation attached to it, across four cycles, was
+    wrong every time until now.
+
+- timestamp: 2026-08-02T05:10:00
+  source: this cycle's own reflection on the full arc of this investigation, grounded
+    specifically in the 2026-08-02T05:00:00/05:05:00 results above, not a generic claim.
+  note: |
+    METHOD LESSON, the most valuable output of this multi-cycle investigation, recorded
+    prominently per this cycle's instruction: this defect was invisible to four full cycles
+    of console reads, stack traces, Break-on-All-Exceptions debugger passes, and correlated
+    network-request captures — ALL of them failure-hunting techniques — because the defect
+    IS NOT A FAILURE. It is an ABSENCE. A navigation that WKWebView silently refuses, with no
+    thrown exception, no rejected promise, no failed-resource console line, no
+    `on_page_load` event, and no visible interstitial, leaves categorically nothing for any
+    technique built to find "what broke" to find. Every hypothesis this investigation formed
+    — R1, R3, ITP, CLOBBERED-GLOBAL, WKWEBVIEW-NETWORK-FAILURE — shared one implicit
+    assumption: that SOMETHING was going wrong somewhere and would leave a trace if
+    instrumented finely enough. Nothing was going wrong. Something that SHOULD have happened
+    (a navigation, an `on_page_load` Started/Finished pair) simply never happened, and a
+    thing that never happens cannot throw, log, or reject.
+
+    GENERALIZATION for future sessions: when repeated failure-hunting — console reads,
+    exception breakpoints, network captures, correlated request/response instrumentation —
+    turns up nothing across multiple independent techniques, that pattern is itself a
+    signal. The next move is not a fifth failure-hunting technique aimed more precisely at
+    the same kind of evidence; it is to ask what should have HAPPENED and manually force it
+    to see whether it happens at all (as this cycle's `location.href` test did), rather than
+    continuing to search for what broke. This investigation's own history is the clearest
+    illustration available: three of its five eliminated hypotheses (R3, CLOBBERED-GLOBAL,
+    WKWEBVIEW-NETWORK-FAILURE) were built and later retracted specifically because each one
+    interpreted a real, confirmed observation (a console error, a caught exception, an
+    intermittent connection-loss log line) as causal, when each was either a red herring or
+    a single incidental event unrelated to the actual defect. The actual defect never
+    produced any observation at all until this cycle stopped looking for one and tested for
+    an absence directly.
+
 ## Eliminated
 
 - hypothesis: ITP/third-party-storage sub-hypothesis — WKWebView's default third-party-cookie
@@ -660,253 +1166,366 @@ finding: F-34.5-G6-01
     `index-GFazdAUR.js`. `index-BMTfSvFa.js` must NEVER be blackboxed — it is the genuine app bundle
     and the only place a real, informative application-level exception would live.
 
+- hypothesis: WKWEBVIEW-NETWORK-FAILURE — Epic's own app-level request(s), plausibly
+  `/id/api/redirect` itself, intermittently fail under WKWebView at the connection layer
+  (`NSURLErrorNetworkConnectionLost`), surfacing inside Epic's code as an app-level 408
+  `error.serviceUnavailable`, causing Epic's code to abandon the flow before navigating to
+  the `redirectUrl` it may have already received.
+  eliminated_by: correlated per-request instrumentation, Evidence 2026-08-02T04:25:00 — the
+    crux test pre-registered in the immediately prior cycle's Current Focus.
+  note: |
+    FALSIFIED for THIS run's `/id/api/redirect` request specifically. The id-correlated
+    stream shows Epic's OWN request (`id: 15`, `xhr.send`/`xhr.response` pair, not a manual
+    probe) returned a clean HTTP 200, and every other request in the same run also
+    succeeded — zero `fetch.error`/`xhr.error`/`xhr.timeout`/`xhr.abort` records anywhere.
+    The earlier 408 `error.serviceUnavailable` / `NSURLErrorNetworkConnectionLost` reading
+    (Evidence 2026-08-02T04:00:00) came from a DIFFERENT, earlier run, before this cycle's
+    id-correlation existed — it did NOT recur in this run despite an otherwise-equivalent
+    flow (same endpoint, same overall bootstrap sequence). Recorded precisely: this is
+    incidental flakiness observed ONCE, not a reproducible mechanism, and it is eliminated
+    as the explanation for the core symptom (F-34.5-G6-01). This does NOT establish that
+    WKWebView networking is flawless in general, and does NOT retroactively explain away the
+    earlier 408/connection-loss observation as fake — only that it is eliminated as the
+    cause of THIS symptom, since the symptom (empty DOM / no exit navigation) reproduces
+    even in a run where zero network failures of any kind occurred. Do not re-open this
+    hypothesis for F-34.5-G6-01 without new evidence specifically correlating a network
+    failure, by request id, to the same run where the symptom is observed.
+
 ## Current Focus
 
-hypothesis: |
-  2026-08-02, EVIDENCE-RECORDING CYCLE (the first cycle with a concrete rejected HTTP
-  request in hand, not just console noise). `/id/api/redirect?flow=login&responseType=code`
-  returns HTTP 400 and no form ever renders afterward (Evidence 2026-08-02T03:00:00). The
-  query string carries no `client_id`, which CORRELATES with (but is not yet proven
-  identical to) the already-Eliminated R1 entry's Arm B visible error, `Something went
-  wrong Parameter "client_id" is required`.
+<!-- OVERWRITTEN 2026-08-02T05:30:00 -- SCOPE CLARIFICATION + IMPLEMENTATION HOLD this cycle.
+     The immediately prior cycle (2026-08-02T05:15:00) confirmed root cause for the
+     POST-AUTHENTICATION half of the flow and produced a prose fix design. This cycle does
+     NOT change that design or the confirmed root cause -- it records a critical gap found in
+     review (see SCOPE CAVEAT below) and holds implementation pending one specific live test.
+     Documentation only: no source file touched, no build/test/compile command run. -->
 
-  A candidate contributing mechanism is now CONFIRMED AT THE SOURCE LEVEL (Evidence
-  2026-08-02T03:10:00), not just asserted: Tauri's `humble_login_open` arm sets
-  `.user_agent()` on the `WebviewWindowBuilder` before `.build()`, so `EpicGamesLauncher`
-  applies from the very first request the login window ever issues. Electron's
-  `WebView/index.tsx` only calls `webview.setUserAgent()` from inside a `dom-ready`
-  handler, which cannot fire until the initial document has already loaded under whatever
-  UA the webview already had -- a genuine, unresolved timing race for whether Epic's own
-  earliest `/id/api/*` calls see the overridden UA or Electron's real Chromium UA. This is
-  recorded as a CANDIDATE MECHANISM ONLY -- it does not by itself explain why the same UA
-  string applied at two different lifecycle points would change an HTTP-level outcome,
-  unless Epic's own logic is itself sensitive to timing/session continuity, which is
-  unestablished.
+SCOPE_CAVEAT (read first): |
+  `root_cause_confirmed_post_auth_only` (frontmatter `status`) is CONFIRMED for the
+  POST-AUTHENTICATION half of the Epic login flow ONLY. Every observation in this entire
+  session -- the empty-DOM/skeleton reads, the `/id/api/redirect` 200s, the silently-refused
+  `localhost` navigation test -- came from an ALREADY-AUTHENTICATED webview (cookies
+  persisted from an earlier manual login). Nobody has verified that Epic's REAL login form
+  (email/password fields, hCaptcha) renders and accepts input for a genuinely LOGGED-OUT
+  user under WKWebView. That is a SEPARATE, UNTESTED surface. A future reader must not
+  read "root cause confirmed" as "the whole login flow is understood" -- see
+  `pending_question` below for the live test that resolves this, and do not authorize or
+  begin implementation of the fix design until it is resolved.
 
-  The tension the checkpoint flagged (R1 already eliminated using a run where
-  `GAMELIB_OAUTH_UA_LEGENDARY` was set and the form still failed) has been investigated as
-  far as source alone permits (Evidence 2026-08-02T03:20:00): nothing in `main.rs`'s
-  sidecar-spawn path would strip that env var before it reaches the sidecar (no
-  `.env_clear()`, `Command` inherits the parent's environment by default), and
-  `resolveUserAgent` logs a `user-agent-override len=` line specifically diagnostic of
-  whether it was received. Whether that line actually appeared in the R1 run's
-  `gamelib.log` is UNCHECKED this cycle -- requires the developer (see next_action).
+  This is the same class of risk this project's own Phase 34.4.1 gate hit: a
+  precondition nobody checked, sitting quietly inside what otherwise looked like a
+  complete, passing result. Phase 34.4.1's gate read 4/4 PASS while its own struck
+  precondition #6 left a whole surface untested underneath the pass. This file's fix design
+  is at risk of the identical failure mode if implementation proceeds on the strength of the
+  post-auth diagnosis alone: it would be built and "verified" entirely against an
+  already-authenticated session, exactly the blind spot that made 34.4.1's precondition go
+  unnoticed until it was checked directly.
 
-  E2 (Epic-side change independent of the port) REMAINS FALSIFIED by the Electron control
-  arm -- that verdict is not disturbed by anything this cycle found. But IF the
-  400/missing-`client_id` theory holds, something about Electron's request to the same
-  endpoint must make Epic tolerate the missing parameter there while rejecting Tauri's --
-  UA-timing is one candidate (see above), prior-session cookies persisting across Electron
-  runs is another, unexamined this cycle. This needs evidence before being treated as
-  settled; it is not being built into a fix.
+status_note: |
+  Two corrections to the immediately prior cycle's framing, both confirmed as genuine
+  developer input, not inferred: (1) the `pnpm tauri:dev` hardware-session build freeze WAS
+  genuinely lifted -- the developer sent "closed" as a live message confirming the session
+  was quit. (2) Fix authorization is also genuine -- offered a choice between honouring the
+  discriminator's no-fix-without-a-contract rule (option A) and overriding it to fix
+  immediately (option B), the developer replied "B". Both are real, load-bearing user input,
+  not assumed.
 
-  The instrumentation has been extended this cycle (Evidence 2026-08-02T03:30:00) to
-  capture RESPONSE status + body for any non-2xx response on both the fetch and XHR
-  wrappers, ungated by the Sentry-URL-shape restriction that still governs REQUEST bodies.
-  Epic's own 400 body for `/id/api/redirect` is the next piece of direct evidence that
-  could settle the missing-`client_id` question outright.
+  NOTWITHSTANDING both of those being genuine: this cycle holds implementation anyway,
+  because a critical gap was identified in review AFTER that authorization was given -- see
+  SCOPE_CAVEAT and `pending_question` above/below. The "B" authorization stands as
+  authorization-in-principle for the already-designed fix; it does not by itself resolve
+  whether that fix is being built against a fully-understood flow. That is what this cycle
+  exists to check before any source is touched.
 
-  Root cause is NOT YET NAMED. Do not act on the UA-timing mechanism as if it were
-  confirmed -- it is a candidate explaining an asymmetry that exists in source, not yet
-  shown to cause the specific 400.
-test: |
-  Re-run the reproduction with the now-extended instrumentation and read
-  `window.__GAMELIB_DIAG__`'s `fetch.response`/`xhr.response` records for
-  `/id/api/redirect`'s actual status + body. Separately, for the UA-propagation tension:
-  set `GAMELIB_OAUTH_UA_LEGENDARY` to a realistic UA for one run and read
-  `navigator.userAgent` directly from the live login window's console, and check whether
-  that run's `gamelib.log` contains a `user-agent-override len=` line.
-expecting: |
-  If `/id/api/redirect`'s response body names `client_id` (or another parameter) as
-  missing, the correlation with the R1 Arm B error strengthens from "worth investigating"
-  toward "same underlying failure," and attention shifts to WHAT differs between
-  Electron's and Tauri's actual requests to that endpoint (UA timing, cookies, or
-  something not yet considered) as the next thing to test -- not yet a fix target.
-  If `navigator.userAgent` reads `EpicGamesLauncher` despite the override being set, the
-  override did not propagate for that run -- R1 was UNTESTED, not falsified, and its
-  original elimination needs re-examination; the presence/absence of `user-agent-override
-  len=` in that run's log independently corroborates which. If `navigator.userAgent` reads
-  the overridden value and the form still fails, the UA-timing mechanism is seriously
-  weakened and the missing-`client_id` explanation (independent of UA) moves to the front.
+pending_question: |
+  THE CURRENT, PRE-REGISTERED TEST -- replaces the "implementation ready" framing of the
+  immediately prior cycle. Implementation does not proceed until this resolves.
+
+  test: |
+    Sign the webview out via `location.href = 'https://www.epicgames.com/id/logout'`, then
+    navigate back to the Epic login URL. Both actions are same-origin
+    (`www.epicgames.com` -> `www.epicgames.com`), which is why this test is possible at all
+    without touching the cross-origin-refused `localhost` path this cycle's root cause
+    already names -- it does not depend on, and is not blocked by, the confirmed defect.
+    Report whether a real, usable login form (email/password fields, hCaptcha) appears on
+    screen and accepts keyboard/mouse input.
+
+  branch_a: |
+    FORM RENDERS AND ACCEPTS INPUT. The already-diagnosed refused-localhost-navigation is
+    the ONLY defect in the flow. The existing fix design (relay `redirectUrl` via the
+    `on_navigation` + non-resolvable-host exfiltration pattern already proven for
+    `humble_reveal_post`/`humble_login_clear_storage`) stands as-is, unchanged, and can
+    proceed to implementation once re-authorized for this cycle's specific go-ahead.
+
+  branch_b: |
+    FORM DOES NOT RENDER, OR RENDERS BUT WILL NOT ACCEPT INPUT. A SECOND, INDEPENDENT
+    defect exists in the pre-authentication path, distinct from the confirmed
+    post-authentication navigation-refusal defect. It must be diagnosed on its own, with its
+    own evidence trail, before any fix is built. The exfiltration design goes back on the
+    shelf -- NOT discarded, since it would still be needed for the post-auth half once the
+    pre-auth defect is separately found and fixed -- but nothing is implemented from it
+    until the pre-auth defect is understood.
+
+  status: AWAITING the developer's report from the sign-out/sign-back-in test. Already
+    dispatched by the coordinator; not a new request from this cycle.
+
+fix_design: |
+  ## FIX DESIGN (ready for review, NOT implemented)
+
+  ### Core idea
+  Stop depending on the `localhost` navigation entirely -- WKWebView will never fire it
+  observably (confirmed root cause). Epic's own page ALREADY computed the exact value the
+  existing capture pipeline needs (`redirectUrl`, shape
+  `https://localhost/launcher/authorized?code=<code>`) and handed it to us once, inside the
+  200 response body of `/id/api/redirect` (Evidence 2026-08-02T04:00:00). The fix is to
+  read that value out of the page via an in-page response observer, and get it to Rust
+  through a mechanism that does NOT depend on Tauri's IPC transport (independently
+  confirmed broken on this exact page -- Evidence 2026-08-02T00:20:00: `IPC custom
+  protocol failed... TypeError: Load failed`, plus Epic's CSP separately refusing
+  `ipc://localhost` outright). This codebase ALREADY HAS a proven, shipped mechanism that
+  does exactly this shape of thing for a different flow -- see "Existing proven pattern"
+  below, which this design reuses almost verbatim.
+
+  ### Existing proven pattern this design reuses (confirmed by direct source read this
+  cycle, NOT assumed)
+  `humble_reveal_post` and `humble_login_clear_storage`
+  (`src-tauri/src/main.rs:2269-2322` and `:2336`+) already solve "get a value out of a
+  webview's page-JS context, into Rust, without Tauri IPC":
+  1. Rust injects a script into the page via `window.eval(&script)` (`WebviewWindow::eval`,
+     fire-and-forget -- NOT the broken invoke-based IPC transport).
+  2. That script does its work in-page (for `humble_reveal_post`, a `fetch()`; for this
+     design, reading an already-observed response instead) and "exfiltrates" the result by
+     assigning `location.href` to a URL on a non-resolvable host
+     (`REVEAL_EXFIL_HOST = "gamelib.invalid"`, RFC 2606-reserved, `main.rs:1013-1018`),
+     JSON-encoded in the query string.
+  3. The SAME window's builder has an `.on_navigation(move |url| { ... })` closure
+     (`main.rs:2280-2290`) -- a Tauri navigation-POLICY hook that fires BEFORE any actual
+     network/DNS activity for the attempted navigation, synchronously, on every navigation
+     attempt in that window. It checks `url.host_str() == Some(REVEAL_EXFIL_HOST)`; if so,
+     it extracts the `data` query param, sends it over an in-process `mpsc_channel` to the
+     waiting Rust code, and returns `false` (cancel -- the navigation never actually
+     resolves anywhere). For any other host it returns `true` (allow), so it does not
+     interfere with real page navigation.
+  4. This is confirmed WORKING in this codebase today -- it is the shipped transport for
+     Humble's reveal-key POST (Phase 34.4.1 Plan 04, D-07/D-08, REQ-34.4.1-05) and the
+     storage-clear flow (Plan 15).
+
+  WHY THIS SIDESTEPS THE CONFIRMED DEFECT, mechanistically: `on_navigation` is a policy
+  DECISION callback -- it fires on navigation INTENT, before WKWebView attempts to actually
+  resolve/connect to anything. The silently-refused-navigation defect this investigation
+  found (Evidence 2026-08-02T05:00:00) was observed on a navigation whose outcome (success
+  or failure) was never reported by ANY event this app listens for (`on_page_load` only).
+  An `on_navigation` intercept never needs WKWebView to report an outcome at all -- it reads
+  the target URL and cancels before any outcome exists to report. This reasoning is
+  supported by the fact that `humble_reveal_post`'s own exfil target
+  (`gamelib.invalid`) is ALSO a host nothing will ever answer for (guaranteed non-resolvable
+  by RFC 2606) -- structurally the same "nothing is listening" shape as the `localhost`
+  navigation that silently failed -- and that pattern works today. This is inference from a
+  working analog, not yet a live-fire proof for THIS specific window/page combination (see
+  Open Questions below).
+
+  ### Design, addressing each required consideration
+
+  **(a) Logged-out-user case.** This design changes NOTHING about how the login window is
+  opened, shown, or behaves for a user who has not yet authenticated with Epic. The new
+  in-page script is a PURELY ADDITIVE observer (mirrors the non-interference guarantees
+  already proven this session for `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s fetch/XHR wrappers:
+  a separate `.then()`/`.catch()` chain off the ORIGINAL promise, `res.clone()` before any
+  body read, never chains onto or alters the value Epic's own code awaits). It does nothing
+  until it observes a response matching the specific redirect endpoint shape returning 200
+  with an `authorizationCode` field -- for a fresh, logged-out user, that response never
+  arrives until they complete Epic's real login form (email/password/2FA), which this
+  design does not touch, block, or intercept in any way. OPEN QUESTION, honestly flagged:
+  nobody in this entire investigation has yet observed this shell against a genuinely
+  fresh, logged-out Epic account -- every capture this session happened to already be
+  authenticated (cookies persisted from an earlier manual login). Whether Epic's REAL login
+  FORM (as opposed to the already-authenticated redirect skeleton this investigation
+  studied) renders and is interactive under WKWebView is UNTESTED and this design does not
+  claim to know the answer. It is a strict prerequisite to verify before shipping this fix.
+
+  **(b) Readiness detection: event-driven, not polling.** Recommend an in-page
+  fetch/XMLHttpRequest response OBSERVER (reusing the exact non-interfering wrapper
+  technique already built and proven this session for
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s response-capture increment -- Evidence
+  2026-08-02T04:15:00/04:25:00) scoped narrowly to responses whose URL matches Epic's known
+  redirect-endpoint shape (pathname `/id/api/redirect`, not a broad credential-shaped
+  substring match). The moment such a response resolves with status 200 and a JSON body
+  containing `redirectUrl`, the observer immediately triggers the exfil navigation. This is
+  recommended over a sidecar-side poll of `/id/api/redirect` for three reasons: (i) it
+  reuses the EXACT request the page already issues, adding zero extra load or
+  bot-shaped traffic against Epic's endpoint; (ii) it fires at the precise moment the real
+  payload exists, with no polling-interval latency or guesswork; (iii) a sidecar-side poll
+  would need to independently authenticate as the same session (cookies, fingerprint) to
+  get a meaningful answer, which is exactly the kind of parallel, un-vetted mechanism this
+  file's own `deferred_considerations` history already warned against building without a
+  named root cause -- that warning is now moot (root cause IS named) but the "don't build a
+  parallel path when an existing one can be fed instead" reasoning still favors the observer
+  design.
+
+  **(c) Interaction with `matchOAuthRedirect`'s localhost matcher: UNCHANGED, by design.**
+  `matchOAuthRedirect`'s `legendary` arm (`src/backend/sidecar/oauthLoginCapture.ts:113-119`)
+  requires exactly `hostname === 'localhost'` plus a non-empty `code` param. Epic's own
+  `redirectUrl` field is ALREADY shaped exactly this way (Evidence 2026-08-02T04:00:00) --
+  this design proposes relaying that EXACT string, verbatim, into the SAME
+  `LOGIN_WINDOW_EVENTS` queue the `on_page_load` hook already feeds
+  (`push_login_window_event`, `main.rs:442-456`), formatted as an ordinary nav event whose
+  `.url` field is that `redirectUrl`. `oauthLoginCapture.ts`'s poll loop
+  (`:235-277`), `matchOAuthRedirect`, `useTauriOAuthLogin.ts`, and the `LoginWindowSeam`
+  interface (`takeEvents`/`LoginWindowNavEvent`) all require ZERO changes -- this is a
+  strength of the design, not an incidental convenience: every constraint in this file's own
+  `## Constraints` section ("Do NOT change ... `matchOAuthRedirect`") is satisfied by
+  construction, not by restraint. The matcher continues to serve the Electron `<webview>`
+  path exactly as today, untouched -- Electron does not have this defect (its
+  `did-navigate` fires even for a failed load, per Evidence 2026-08-02T05:05:00's
+  annotation) and needs no change.
+
+  **(d) Conveying the code from page context to sidecar, given IPC is degraded on this
+  page.** Reuse the `on_navigation` + exfil-to-non-resolvable-host pattern verbatim (see
+  "Existing proven pattern" above) rather than Tauri's page-to-Rust `invoke()` transport.
+  Concretely: add `.on_navigation(...)` to the SAME `humble_login_open` builder that
+  already carries `.on_page_load(...)` for the login window (confirmed this cycle, by
+  direct read of the vendored `tauri` 2.11.5 crate source,
+  `tauri-2.11.5/src/webview/mod.rs:275,277`: `navigation_handler` and
+  `on_page_load_handler` are independent `Option` fields on the same builder-attributes
+  struct -- both hooks CAN be set on one window with no structural conflict; this removes
+  what would otherwise be an open engineering question). The new `on_navigation` closure
+  filters ONLY for a dedicated exfil host/path distinct from `humble_reveal_post`'s own (to
+  avoid any namespace collision between the long-lived, shared, VISIBLE login window this
+  arm builds and the short-lived HIDDEN windows `humble_reveal_post`/
+  `humble_login_clear_storage` build for a single call) -- for every other host it returns
+  `true` (allow), unconditionally, so no real page navigation (including legitimate
+  same-origin or third-party iframe navigation already tolerated by this arm's existing
+  `on_page_load`-only design) is ever affected. On a match, it extracts the payload and
+  calls the EXISTING `push_login_window_event(&event_label, event)` with a synthesized nav
+  event carrying `url: redirectUrl` (Epic's own literal value, unmodified) -- then cancels
+  the navigation (`return false`), exactly mirroring `humble_reveal_post`'s own cancellation
+  discipline.
+
+  ### Secret handling -- first-class constraint, addressed per mechanism
+  - **In-page JS (the response observer):** the `authorizationCode`/`redirectUrl` value
+    exists only as a transient local variable inside the observer's closure, read via
+    `response.clone().json()` (mirrors the existing non-interference `res.clone()`
+    discipline). It is NEVER passed to `console.log`/`console.warn`/`console.error`, and
+    NEVER written to `window.__GAMELIB_DIAG__` (that array is the DEV-only diagnostic and
+    mirrors everything to console -- this new script must be an entirely separate,
+    non-debug-gated, narrowly-scoped production script, not a reuse or extension of
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`). It is used exactly once, synchronously, to build
+    the exfil URL's query string, and the variable then falls out of scope as the page
+    navigates away (cancelled navigation still discards the in-page JS environment's
+    reference once the closure returns).
+  - **The exfil navigation itself:** the value transits as a URL query parameter through
+    WKWebView's internal navigation-decision pipeline into the `on_navigation` Rust
+    closure. That closure MUST follow the EXACT discipline `humble_reveal_post`'s own doc
+    comment already states and enforces (`main.rs`, comment above the `"humble_reveal_post"`
+    arm, T-34.4.1-21/T-28-04 convention): never `eprintln!` the script, the payload, or any
+    part of the exfil URL -- only channel names and generic, value-free error text may ever
+    reach a log line.
+  - **In Rust memory:** the value moves via an in-process `mpsc_channel` (or, per the design
+    above, is folded directly into a `LOGIN_WINDOW_EVENTS` entry) -- never touches disk,
+    never serializes to a file. `LOGIN_WINDOW_EVENTS` already carries other runners'
+    `code`-bearing redirect URLs today (nile/gog/zoom all relay real codes/tokens through
+    this identical queue via the existing `on_page_load` path) with the SAME privacy
+    profile this design proposes -- this is not a new class of sensitive data moving through
+    this queue, only a new source event feeding it.
+  - **Downstream (unchanged):** `oauthLoginCapture.ts`'s poll loop logs ONLY the
+    hostname (`nav host=localhost`) per its existing T-34.5-G6-11 discipline -- never the
+    code. `useTauriOAuthLogin.ts` hands `outcome.code` directly to `window.api.login(...)`
+    -> `LegendaryUser.login(authorizationCode)` -> `legendary auth --code <value>`
+    (`src/backend/storeManagers/legendary/user.ts:26-33`) -- the exact same
+    already-in-production call the Electron path uses today for the same value. No new
+    logging surface is introduced anywhere downstream of the capture.
+
+  ### Scope
+  Recommend scoping this fix to `legendary`/Epic ONLY for the first implementation cycle --
+  the only runner this investigation confirmed affected (F-34.5-G6-01). Do NOT
+  speculatively generalize to gog/nile/zoom without independent evidence each has the same
+  defect (this project's own F-10 discipline: this investigation has already built and
+  retracted three plausible-sounding-but-wrong generalizations this session alone --
+  R3/CLOBBERED-GLOBAL/WKWEBVIEW-NETWORK-FAILURE -- an untested generalization to three more
+  runners would repeat that exact failure mode at larger scope).
+
+  ### Open questions / risks (this is a design for review, not a decision)
+  1. UNTESTED: whether Epic's REAL login form (not the already-authenticated skeleton this
+     investigation studied) renders and is interactive under WKWebView for a genuinely
+     fresh, logged-out account. This blocks (a) above and must be checked live before this
+     fix is considered complete, independent of whether the exfil mechanism itself works.
+  2. UNTESTED, THIS SPECIFIC CASE: the `on_navigation` exfil pattern is proven working for
+     `humble_reveal_post`/`humble_login_clear_storage`'s HIDDEN, short-lived, single-purpose
+     windows. It has never been combined with `on_page_load` on the SAME window, nor added
+     to the long-lived, VISIBLE, user-interactive login window this arm shares across five
+     runners. The Rust crate source confirms no structural conflict (both hooks are
+     independent builder fields), but that is a static-source confirmation, not a live-fire
+     one -- whether wiring both hooks together on the visible window behaves exactly as
+     each does independently (e.g. does firing `on_navigation`'s cancellation for the exfil
+     host ever race or interact with the WR-07 anti-phishing title-tracking logic that also
+     lives in this arm's `on_page_load` closure) needs a live check.
+  3. UNVERIFIED: whether pathname-matching `/id/api/redirect` is a stable-enough signal --
+     if Epic changes this endpoint's path/shape upstream, the observer silently stops
+     firing (fails closed to "never captures," not to a wrong value, which is the safer
+     failure direction, but still needs a monitoring/fallback story this design does not
+     yet specify).
+  4. NOT DESIGNED HERE: exact error/timeout handling if the exfil never arrives (e.g. if
+     Epic's response shape changes, or the observer's own script throws) -- should very
+     likely reuse this arm's existing 300s `DEFAULT_DEADLINE_MS` behavior (falls through to
+     `status=timeout` exactly as today, a strict improvement over today's silent
+     always-timeout, never a regression) rather than inventing a new timeout, but this has
+     not been thought through in detail and needs its own pass at implementation time.
+  5. NOT DESIGNED HERE: the exact new exfil host/path constant and where it lives (a
+     sibling constant to `REVEAL_EXFIL_HOST`, or a parameterized version of the existing
+     one) -- an implementation detail, not a decision this design cycle needs to fix in
+     advance.
+
 next_action: |
-  BLOCKED on human hardware. Run `pnpm tauri:dev` -> Manage Accounts -> Epic with the
-  now-extended instrumentation live, and after the page settles or times out, run
-  `JSON.stringify(window.__GAMELIB_DIAG__, null, 2)` in the console and paste the full
-  output -- specifically look for `fetch.response`/`xhr.response` records naming
-  `/id/api/redirect`'s status + body. In a SEPARATE run, set `GAMELIB_OAUTH_UA_LEGENDARY`
-  to a realistic Chrome-shaped UA, repeat the repro, report `navigator.userAgent` from the
-  console, and report whether `gamelib.log` for that run contains a line matching
-  `user-agent-override len=`. Do NOT apply any fix -- root cause is not yet named. Do NOT
-  treat the UA-timing asymmetry as confirmed causal without the response-body evidence
-  above.
+  HOLD IMPLEMENTATION -- explicit, procedural, and distinct from "not yet authorized".
+  Implementation of the exfiltration design remains AUTHORIZED-IN-PRINCIPLE (the developer's
+  "B" response to the coordinator's fix-now-vs-plan-fix framing is genuine and stands -- see
+  status_note above) but is PROCEDURALLY BLOCKED pending resolution of `pending_question`'s
+  branch A/B split. Do not build, do not edit source, do not run any build/test/compile
+  command this cycle -- this cycle is documentation-only by explicit instruction.
+
+  When the developer reports the sign-out/sign-back-in test result:
+  - If BRANCH A (form renders, accepts input): proceed exactly per the immediately prior
+    cycle's next_action -- (1) implement the `on_navigation` + exfil addition to
+    `humble_login_open`'s builder; (2) implement the new production (non-debug-gated)
+    response-observer init script, scoped to `legendary` only; (3) verify via
+    `cargo check`/`cargo test`/the existing Jest suite exactly as every prior cycle's edits
+    to this arm have; (4) run a full live gate: fresh logged-out Epic login completes, an
+    already-authenticated Epic session's redirect is captured, and library refresh
+    triggers -- mirroring this file's own Symptoms section's original "Expected behavior."
+  - If BRANCH B (form does not render / does not accept input): do NOT implement the
+    exfiltration design this cycle. Open a new investigation thread for the pre-auth defect
+    (new hypothesis, new evidence trail, same file or a linked one) before returning to the
+    fix design. The post-auth root cause and fix design remain valid and preserved for reuse
+    once the pre-auth defect is separately closed.
+
 constraints_respected: |
-  `USER_AGENTS`, `EPIC_LOGIN_URL`, and `matchOAuthRedirect` were read (to verify the
-  UA-timing claim) but NOT modified. `34.5-G6-EPIC-DISCRIMINATOR.md` and
-  `34.5-G6-EPIC-DISCRIMINATOR-2.md` were not touched. Plans 34.5-29/30/31 remain untouched
-  and HALTED. No fix was applied this cycle -- this was evidence-recording,
-  source-verification, and instrumentation-extension only, per instruction.
+  NO source file was edited this cycle. NO `cargo`/`npm`/`pnpm`/`jest`/`tsc` or any
+  build/test/compile/analysis command was run this cycle. This cycle is DOCUMENTATION ONLY:
+  it records a pending question and its two branches, and clarifies the scope of the
+  already-confirmed root cause -- per this cycle's explicit hard constraint to hold
+  implementation. `USER_AGENTS`, `EPIC_LOGIN_URL`, and `matchOAuthRedirect` were NOT touched
+  this cycle (not even read -- no source read of any kind was needed for a documentation-only
+  update). `34.5-G6-EPIC-DISCRIMINATOR.md`/`34.5-G6-EPIC-DISCRIMINATOR-2.md` were not
+  touched. Plans 34.5-29/30/31 remain untouched and HALTED. `34.5-UNTESTED-ITEMS.md` was not
+  touched. No literal secret/authorization-code/exchange-code value appears anywhere in this
+  file; this cycle's own additions were re-read in full before finishing and use structural,
+  non-secret language throughout, matching every prior cycle's discipline.
 
-instrumentation_added: |
-  2026-08-02, INSTRUMENTATION CYCLE (not evidence yet -- no observation has been made). Added a
-  dev-only `.initialization_script(DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT)` call to the `humble_login_open`
-  arm's `WebviewWindowBuilder` chain in `src-tauri/src/main.rs`, gated identically to that same arm's
-  pre-existing `open_devtools()` call: `#[cfg(debug_assertions)]` AND `if visible`, so it can never
-  reach a packaged build. The script constant `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` is declared at
-  module level near `LOGIN_WINDOW_EVENTS_CAP` (also `#[cfg(debug_assertions)]`-gated), and the builder
-  call site sits between the arm's existing `if visible { ... }` presentation block and
-  `let page_load_origin = ...`, i.e. before `.build()`.
-
-  WHY THIS MECHANISM: initialization scripts run BEFORE any page script (including Epic's own
-  bundle) -- every technique tried in this investigation so far (console-only reads across four
-  cycles, Break on All Exceptions) could only observe AFTER Epic's bootstrap had already run and
-  (per the evidence trail above) already failed silently into a caught error boundary. This is the
-  first instrument in this investigation capable of observing PRE-bootstrap and DURING-bootstrap
-  behavior directly.
-
-  ZERO DEPENDENCY on the three routes already exhausted this investigation:
-    - Tauri IPC: NOT used at all. The console already proves IPC is degraded on this exact page
-      (`IPC custom protocol failed, Tauri will now use the postMessage interface instead --
-      TypeError: Load failed`, Evidence 2026-08-02T00:20:00; Epic's CSP separately refuses
-      `ipc://localhost`). A diagnostic depending on that transport would silently capture nothing
-      (`sidecar-send-channels-fail-silently` is exactly this failure mode). Instead the script
-      accumulates records into a plain in-page array, `window.__GAMELIB_DIAG__`, and separately
-      `console.warn`s each record immediately with a literal `[GAMELIB-DIAG]` prefix.
-    - The file logger: NOT used. Nothing in this script touches Rust-side logging; it is pure
-      in-page JS state, read out manually via the console.
-    - Safari's Network request-body viewer: NOT used. The Sentry `envelope` 429's request body
-      (unreadable in Web Inspector per this cycle's checkpoint) is instead captured DIRECTLY at the
-      JS call site -- the script wraps `window.fetch`, `navigator.sendBeacon`, and
-      `XMLHttpRequest.prototype.send`, and when the destination URL substring-matches a
-      Sentry-ingest shape (`/envelope`, `ingest.sentry.io`, `sentry`), records the outgoing request
-      body verbatim (truncated at 20,000 chars). All other requests record structural facts only
-      (URL, method, body length) -- no header values, no cookies, no `Authorization`, no
-      token-shaped data are ever read or recorded.
-
-  WHAT IT CAPTURES: `window.onerror`-equivalent (`addEventListener('error', ...)` -- message,
-  filename, lineno, colno, `error.stack`), `unhandledrejection` (reason + stack), fetch/sendBeacon/
-  XHR.send URL+method+body-when-Sentry-shaped, and a `console.error` passthrough (records then calls
-  through to the real `console.error`, never silences it).
-
-  ROBUSTNESS: one outer try/catch around the whole IIFE, plus each hook independently try/caught, so
-  no single hook's failure can break another hook or Epic's page. Adds listeners only, never removes
-  or overwrites existing ones. `window.__GAMELIB_DIAG__` capped at 200 records (stops pushing past
-  that, never evicts/grows unbounded). Captured text truncated at 20,000 chars with an explicit
-  `...[GAMELIB-DIAG TRUNCATED]` marker when truncated.
-
-  REUSABLE: this call lives in the same `humble_login_open` arm already established (Evidence
-  2026-08-01T23:15:00) as shared, non-Humble-specific, across all five runners -- so this
-  instrumentation is live for GOG, Amazon, Nile, and Zoom's login windows too, not just Epic's,
-  without any further code change.
-
-  VERIFIED: `cargo check` (src-tauri) clean, 0 errors. `cargo test` (src-tauri): 92 passed, 0
-  failed, 1 ignored (pre-existing ignore, unrelated). `npx jest
-  src/backend/__tests__/tauriShellSource.test.ts`: 46/46 passing WITH NO TEST MODIFICATION NEEDED --
-  the JS payload lives entirely inside the module-level `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` constant
-  (declared outside the `humble_login_open` match arm), so none of this file's arm-body string-match
-  assertions (the `.title(` negative-bound scan across every `WebviewWindowBuilder::new(...)
-  .build()` chain, the if-visible presentation-token scan, the `on_navigation` negative bound) ever
-  see the injected JS text at all; the arm body itself gained only a two-line conditional
-  `builder = builder.initialization_script(...)` call, which does not collide with any existing
-  assertion.
-
-  STILL OWED: the actual observation. This is instrumentation only -- no root cause is confirmed or
-  advanced by this entry. The causal mechanism for F-34.5-G6-01 remains UNKNOWN (see prior Current
-  Focus below, retained for continuity).
-
-hypothesis: |
-  RETRACTION CYCLE, 2026-08-02. The prior cycle's "CLOBBERED GLOBAL" mechanism — that something in
-  the Tauri environment substitutes `Function.prototype.call` for a constructor at Epic's
-  `Reflect.construct` call site, and that this substitution is the (or a) cause of the empty DOM —
-  is FALSIFIED and moved to Eliminated (see above). The developer-supplied source of
-  `index-GFazdAUR.js` at the breaking frame proves the observed `TypeError` is core-js's
-  `isConstructor` feature-detection routine deliberately passing `Function.prototype.call` into a
-  `Reflect.construct` probe, inside a `try` whose `catch` returns `false` — an intentional, caught
-  self-test, not an uncaught failure reaching application logic. This was this investigation's OWN
-  interpretive error layered onto raw pause data the developer supplied (pause reason, call stack,
-  local variables) — not a developer observation that turned out wrong. No part of the retracted
-  mechanism — including "Epic's code must receive a real constructor under Electron and Tauri
-  substitutes it" — may be carried forward as live reasoning.
-
-  Correspondingly, `index-GFazdAUR.js` is now known to be a vendored core-js chunk, not application
-  code, despite its `index-` prefix. Of the four 2026-08-02T01:10:00 call-stack frames, only
-  `(anonymous function) (index-BMTfSvFa.js:64276)` is genuine app code, and it is core-js's
-  import/module-load site at startup — not a failure site, not a constructor call site. The prior
-  cycle's outstanding ask for that source (to "name the constructor Epic intended to build") is
-  superseded and answered differently than expected: there is no such constructor call to name at
-  that frame.
-
-  THREAD 1 (Tauri's core injected user-script, `user-script:103`, "IPC custom protocol failed ...
-  TypeError: Load failed") REVERTS to open and unconfirmed. It loses the specific mechanism proposed
-  for it in the prior cycle and must not retain credibility borrowed from that now-void mechanism.
-  It is supported ONLY by the already-recorded Evidence 2026-08-02T00:20:00 line showing Tauri's own
-  core IPC bootstrap script failing in this same page load — a real, distinct observation, but with
-  NO currently-proposed mechanism connecting it to the empty DOM.
-
-  The causal mechanism for the empty-DOM symptom (F-34.5-G6-01) remains UNKNOWN. Four hypotheses are
-  now eliminated (ITP, R1, E2, R3) plus this retracted clobbered-global mechanism. Do not let
-  hypothesis-count pressure produce a premature fix — no root cause has been named by evidence yet.
-
-  METHOD LESSON recorded (see Eliminated entry for full text): Break on All Exceptions is a poor
-  instrument against Epic's login page specifically because core-js performs feature detection via
-  deliberate try/caught throws, producing a stream of false positives. If break-on-exceptions is
-  used again, ALL vendor chunks must be blackboxed first — the polyfills already blackboxed
-  (`stable-*`, `es.array.from-*`, `ie11-*`), PLUS now `index-GFazdAUR.js`. `index-BMTfSvFa.js` (the
-  genuine app bundle) must NEVER be blackboxed, since it is the only place a real, informative
-  application-level exception would live.
-test: |
-  Not yet designed — this cycle is a record-correction/retraction cycle only, per instruction. Two
-  candidate next tests are being offered to the developer as a choice (see CHECKPOINT REACHED
-  returned to the user), not pre-selected by this agent:
-    (a) read the Sentry `envelope` request's payload in the Network tab — the already-observed 429
-        on that endpoint (Evidence 2026-08-02T00:20:00) proves Epic's app is already assembling and
-        transmitting its real exception; the payload should contain the exception + stack with zero
-        vendor-chunk noise, and is cheaper than another debugger round trip;
-    (b) re-arm Break on All Exceptions, this time with `index-GFazdAUR.js` blackboxed alongside the
-        already-blackboxed polyfill chunks, leaving `index-BMTfSvFa.js` un-blackboxed, so any future
-        pause is a genuine app-level exception instead of a core-js self-test false positive.
-expecting: |
-  Whichever option the developer picks: (a) a readable Sentry envelope payload names Epic's real
-  uncaught/caught exception directly, with a stack pointing at genuine app logic — this would likely
-  let the investigation skip straight to a call-site read without another debugger round trip. If
-  the payload is unreadable or unhelpful (Safari's request-body viewer was previously flagged as
-  unreliable for this kind of payload — see checkpoint), fall back to (b). (b) a properly-blackboxed
-  Break on All Exceptions pause, if it occurs, is now credible as an app-level exception rather than
-  a vendor self-test, and its call stack + local variables become the next evidence entry.
-next_action: |
-  SUPERSEDED, 2026-08-02, by the `instrumentation_added` entry above. The (a)/(b) choice this field
-  previously offered (manual Sentry envelope payload read in the Network tab / re-armed Break on All
-  Exceptions with `index-GFazdAUR.js` blackboxed) is no longer the next step -- both manual routes
-  are recorded EXHAUSTED in this cycle's checkpoint response (429 with an empty response body in
-  Safari's Network viewer; each debugger round trip costing a full human hardware cycle). The new
-  instrumentation captures the Sentry envelope's REQUEST body directly at the JS call site (no
-  Network-tab dependency) and captures runtime errors/rejections directly (no debugger-breakpoint
-  dependency), so it supersedes rather than complements options (a)/(b).
-
-  BLOCKED on human hardware only (not human choice this time): run `pnpm tauri:dev`, open Manage
-  Accounts -> Epic, wait for the page to settle or the 300s timeout, then in the console run
-  `JSON.stringify(window.__GAMELIB_DIAG__, null, 2)` and paste the full output. Also, if already
-  available from the separately-requested `JSON.stringify(Object.keys(window.__SENTRY__ || {}))`
-  probe, include that too. Do NOT apply any fix -- no root cause is named. Do NOT re-propose the
-  retracted clobbered-global mechanism in any form without new evidence that specifically identifies
-  a real (non-core-js-self-test) global substitution.
-reasoning_checkpoint: |
-  This retraction is itself an instance of the F-10 discipline this file has invoked repeatedly: a
-  compelling story (named exception, concrete mechanism, corroborating evidence from a different
-  injected script) is exactly the kind of evidence previously mistaken for confirmation in this
-  investigation, and it happened again here — the very discipline this file preaches did not
-  prevent this investigation from constructing an unearned narrative on top of correctly-recorded
-  raw data. The lesson generalizes beyond this one exception: raw pause data (pause reason, stack,
-  locals) is reliable; the narrative layered on top of it is not, until independently corroborated
-  by reading the actual source at the call site — which is exactly the "STILL OUTSTANDING" ask the
-  prior cycle itself flagged as unmet before treating the mechanism as load-bearing enough to
-  elevate Thread 1. The lesson here: even a hypothesis that names its own outstanding proof
-  requirements can still leak into Current Focus's framing (e.g., "THIS ELEVATES THREAD 1 to the
-  prime suspect") before those requirements are met. Future cycles should hold elevation language
-  until requirement 1 (identify the specific global) is actually satisfied by a source read, not
-  merely requested. Blind spot, stated honestly: this retraction does not itself advance the
-  investigation toward the real cause — it only removes a wrong turn. The empty-DOM mechanism is
-  exactly as unknown now as it was before the Reflect.construct pause was ever recorded, apart from
-  the now-firm fact that this particular exception is not it.
+deferred_considerations: |
+  STANDING CAUTION, extended this cycle -- originally recorded in the immediately prior
+  cycle against a premature sidecar-side polling workaround (see fix_design section (b)
+  above: "don't build a parallel path when an existing one can be fed instead"). That
+  caution now explicitly covers the pre-auth-verification gap too, as a single standing
+  rule for this fix: NO FIX SHIPS UNTIL THE LOGGED-OUT PATH HAS BEEN OBSERVED WORKING END TO
+  END ON REAL HARDWARE -- not inferred from the fact that an authenticated session's flow
+  was independently understood, and not assumed to follow automatically from the
+  post-auth root cause being confirmed. Two independent things must each be true before this
+  finding is considered closed and the fix shipped: (1) the post-auth navigation-refusal fix
+  works end to end (exfil mechanism delivers the code, capture/login completes) -- not yet
+  built; and (2) the pre-auth login form is confirmed to render and accept input for a
+  genuinely logged-out user -- not yet tested at all, pending `pending_question` above. A
+  passing verification of (1) alone must never be read as verification of the finding as a
+  whole while (2) remains unresolved.
 
 ## Constraints
 
@@ -924,7 +1543,38 @@ reasoning_checkpoint: |
 
 ## Resolution
 
-root_cause:
-fix:
+root_cause: |
+  CONFIRMED 2026-08-02, evidenced end-to-end (full chain and cross-references: Evidence
+  2026-08-02T05:05:00). Epic's login page, once authenticated in the Tauri login webview,
+  successfully obtains a valid OAuth authorization payload from its own
+  `/id/api/redirect?flow=login&responseType=code` request (HTTP 200, body carries
+  `redirectUrl` shaped `https://localhost/launcher/authorized?code=<code>`) and its only
+  remaining job is a client-side navigation of the window to that `redirectUrl`. WKWebView
+  SILENTLY REFUSES that navigation: no error, no rejected promise, no console line, no
+  `on_page_load` Started/Finished event, no visible interstitial — `location.href` reads
+  back unchanged after the assignment, and the window is visually unaffected (directly
+  demonstrated by a manual, developer-run `location.href` test to the identical URL shape,
+  Evidence 2026-08-02T05:00:00). Because this codebase's Tauri login-window arm
+  (`humble_login_open`, `src-tauri/src/main.rs`) listens for navigation ONLY via
+  `on_page_load` (deliberately never `on_navigation`, to exclude third-party iframe noise —
+  `main.rs:1710-1713`), and that hook never fires for this silently-refused navigation, the
+  authorization code is never relayed into `LOGIN_WINDOW_EVENTS`, `oauthLoginCapture.ts`'s
+  poll loop never observes a `localhost` hostname, and the already-correct, unmodified
+  `matchOAuthRedirect` legendary matcher never gets a URL to evaluate. The attempt exhausts
+  the full 300s deadline and settles `status=timeout`. The empty CSS skeleton visible on
+  screen throughout is Epic's page in transit, permanently waiting on an exit navigation
+  that produces no observable trace of ever having been attempted. Electron's equivalent
+  path works because Chromium's `<webview>` fires `did-navigate` even for a load that FAILS
+  (reading the code off the URL regardless of whether the underlying request completed) —
+  WKWebView has no equivalent "reports the failure" behavior for this specific
+  silently-refused-navigation case; it reports nothing at all. This is a genuine
+  shell-level behavioral difference, matching the `34.5-G6-EPIC-DISCRIMINATOR-2.md` E1
+  verdict exactly — see Evidence 2026-08-02T05:05:00's annotation for the full account of
+  which five proposed mechanisms for E1 were tried and falsified before this one was found.
+fix: |
+  NOT YET APPLIED. A fix approach has been DESIGNED this cycle (prose only, no source edits)
+  — see "FIX DESIGN (ready for review, NOT implemented)" in Current Focus below. Awaiting
+  explicit confirmation the developer's `pnpm tauri:dev` hardware session is closed and the
+  build freeze is lifted before any implementation cycle begins.
 verification:
 files_changed:

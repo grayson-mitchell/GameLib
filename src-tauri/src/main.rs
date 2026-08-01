@@ -497,13 +497,64 @@ const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
 /// - Any captured body/text is truncated at 20,000 chars with an explicit truncation
 ///   marker appended.
 /// - Captures NO cookie values, NO `Authorization`/header values, and NO token-shaped
-///   data at any point -- it never reads request headers at all. Request bodies are
+///   data at any point -- it never reads request headers at all. REQUEST bodies are
 ///   captured ONLY when the destination URL substring-matches a Sentry-ingest shape
-///   (`/envelope`, `ingest.sentry.io`, `sentry`), the one target this cycle's checkpoint
-///   asked for by name (Epic's own assembled exception report, unreadable in Safari's
-///   Network tab). All other requests record structural facts only (URL, method, body
-///   length), never body content. This debug file may get pasted console output
-///   committed to a public fork, so this boundary is deliberate, not incidental.
+///   (`/envelope`, `ingest.sentry.io`, `sentry`). All other requests record structural
+///   facts only (URL, method, body length), never request-body content. This debug file
+///   may get pasted console output committed to a public fork, so this boundary is
+///   deliberate, not incidental.
+/// - Every mirrored record uses `console.warn`, NEVER `console.log` (audited across the
+///   whole script, 2026-08-02 -- a developer's Web Inspector console can have an active
+///   level filter that hides Log-level output while leaving Warn/Error visible, and this
+///   exact ambiguity produced two false "the request hangs forever" conclusions in this
+///   investigation before it was noticed; `console.log` must never be reintroduced here).
+///
+/// PER-REQUEST OUTCOME CORRELATION (2026-08-02 cycle, epic-login-non-interactive crux
+/// test -- does Epic's OWN `/id/api/redirect` request succeed or fail in the same run
+/// where a manual diagnostic fetch to it returned HTTP 200?): every intercepted `fetch`
+/// and `XMLHttpRequest.send` call is assigned a monotonic integer `id`
+/// (`nextRequestId()`) at send time, recorded on its `fetch.send`/`xhr.send` record.
+/// EVERY response is now recorded, 2xx and non-2xx alike (previously the code path
+/// existed for this already; this cycle added the missing `id`/`elapsedMs` correlation
+/// and closed a credential-shaped-URL body gap -- see below), each outcome record
+/// carrying the SAME `id` plus `elapsedMs` (milliseconds since send):
+///   - `fetch.response` -- any status, 2xx or non-2xx.
+///   - `fetch.error` -- the `.catch()` path: a rejection that never produced a
+///     `Response` object at all (e.g. a dropped connection), with `errorName` +
+///     `errorMessage`, distinct from `fetch.response`.
+///   - `xhr.response` -- the `load` event, any status.
+///   - `xhr.error` -- a network-level failure with NO response at all. This is
+///     specifically the shape `NSURLErrorNetworkConnectionLost` (-1005) surfaces as --
+///     a `load` listener alone would record NOTHING for exactly this failure mode.
+///   - `xhr.timeout` / `xhr.abort` -- the two other XHR terminal events, each fires at
+///     most once per request per the XHR spec, so there is no double-recording.
+/// EVERY send is unconditionally recorded, so a reader can diff the `id`s present on
+/// `fetch.send`/`xhr.send` records against the `id`s present on ANY outcome record in
+/// the dumped `window.__GAMELIB_DIAG__` array: an `id` with a send but no matching
+/// outcome record was still in flight when the page settled, the array filled (200-cap),
+/// or the session ended.
+///
+/// fetch's response observer is a SEPARATE `.then()`/`.catch()` chain attached to the
+/// promise `originalFetch()` returns -- never to the value returned to the caller -- so
+/// attaching it cannot alter what or when Epic's own code awaits/resolves (multiple
+/// `.then()` handlers on one promise are independent by spec). `res.clone()` is used
+/// before any body read, so the response stream Epic's own code consumes is never
+/// touched. XHR uses additive `load`/`error`/`timeout`/`abort` listeners, never
+/// overwriting `onload`/`onerror`/etc., so any handler Epic's own bundle attaches keeps
+/// firing unmodified.
+///
+/// RESPONSE BODY capture follows a policy STRICTER than request bodies and is the
+/// mandatory secret-handling boundary for this public fork: for any URL that looks
+/// credential-shaped (substring match on `/redirect`, `exchangecode`,
+/// `authorizationcode`, `/token`, `oauth` -- covers Epic's `/id/api/redirect`, which
+/// returns a real `authorizationCode`/`exchangeCode` in its response), body CONTENT is
+/// NEVER captured, at ANY status code -- only status, elapsed time, and (if the body
+/// parses as JSON) the top-level KEY NAMES via `Object.keys()`, never values. This check
+/// fails CLOSED (a thrown/unexpected input is treated as credential-shaped). For all
+/// other URLs, body text is captured (truncated, same convention as request bodies) only
+/// for non-2xx responses -- 2xx responses to non-credential URLs record status/timing
+/// only, since a successful response is not the diagnostic payload this instrument
+/// exists to retrieve and capturing it unconditionally would be needless exposure.
 #[cfg(debug_assertions)]
 const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
 (function () {
@@ -513,6 +564,12 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
     var TRUNC_MARKER = '...[GAMELIB-DIAG TRUNCATED]';
     if (!window.__GAMELIB_DIAG__) { window.__GAMELIB_DIAG__ = []; }
     var diag = window.__GAMELIB_DIAG__;
+    var REQUEST_ID_COUNTER = 0;
+
+    function nextRequestId() {
+      REQUEST_ID_COUNTER += 1;
+      return REQUEST_ID_COUNTER;
+    }
 
     function truncate(s) {
       try {
@@ -527,6 +584,49 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
         var u = String(url || '');
         return u.indexOf('/envelope') !== -1 || u.indexOf('ingest.sentry.io') !== -1 || u.indexOf('sentry') !== -1;
       } catch (e) { return false; }
+    }
+
+    // Credential-shaped: any URL that could plausibly return an OAuth code, token, or
+    // exchange credential in its response body (e.g. Epic's `/id/api/redirect`, which
+    // returns `authorizationCode`/`exchangeCode`). Mandatory secret-handling boundary:
+    // response BODIES for these URLs are NEVER captured, at any status code -- only
+    // status, timing, and (if the body parses as JSON) top-level KEY NAMES, never
+    // values. Fails CLOSED: if the check itself throws, the URL is treated as
+    // credential-shaped so a bug in this function cannot leak a body.
+    function isCredentialShapedUrl(url) {
+      try {
+        var u = String(url || '').toLowerCase();
+        return u.indexOf('/redirect') !== -1 ||
+          u.indexOf('exchangecode') !== -1 ||
+          u.indexOf('authorizationcode') !== -1 ||
+          u.indexOf('/token') !== -1 ||
+          u.indexOf('oauth') !== -1;
+      } catch (e) { return true; }
+    }
+
+    // Shared response-body capture policy for both fetch and XHR outcome recording.
+    // `status` is ALWAYS known to the caller separately -- this function only decides
+    // what (if anything) of the BODY gets attached.
+    function captureResponseBody(url, status, rawText) {
+      try {
+        if (isCredentialShapedUrl(url)) {
+          try {
+            var parsed = JSON.parse(rawText);
+            if (parsed && typeof parsed === 'object') {
+              return { bodyKeys: Object.keys(parsed), body: undefined, bodyRedacted: true };
+            }
+          } catch (eParse) {}
+          return { bodyKeys: undefined, body: undefined, bodyRedacted: true };
+        }
+        if (typeof status === 'number' && status >= 200 && status < 300) {
+          // Non-credential 2xx: status/timing is enough; body is not the diagnostic
+          // payload this instrument exists to retrieve, so it is not captured.
+          return { bodyKeys: undefined, body: undefined, bodyRedacted: false };
+        }
+        return { bodyKeys: undefined, body: truncate(String(rawText)), bodyRedacted: false };
+      } catch (e) {
+        return { bodyKeys: undefined, body: undefined, bodyRedacted: true };
+      }
     }
 
     function record(entry) {
@@ -567,13 +667,28 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
       });
     } catch (eListenRejection) {}
 
+    // fetch: every send gets a monotonic `id` (also on its 'fetch.send' record) and a
+    // `startTime`. A SEPARATE .then/.catch chain is attached to the promise
+    // `originalFetch(...)` returns -- never to the value returned to the caller -- so
+    // Epic's own await/resolution of that SAME promise is unaffected (independent
+    // `.then()` handlers on one promise never disturb each other or the promise's own
+    // resolution). `res.clone()` is used before any body read, so the response stream
+    // Epic's own code consumes is never touched. Exactly one outcome record per
+    // request: 'fetch.response' (any status, 2xx or non-2xx alike) or 'fetch.error'
+    // (the .catch() path -- a rejection that never produced a Response object at all,
+    // e.g. a dropped connection).
     try {
       if (window.fetch) {
         var originalFetch = window.fetch.bind(window);
         window.fetch = function (input, init) {
+          var url = ''; var method = 'GET';
+          var reqId = nextRequestId();
+          var startTime = Date.now();
           try {
-            var url = (typeof input === 'string') ? input : ((input && input.url) || '');
-            var method = (init && init.method) || (input && input.method) || 'GET';
+            url = (typeof input === 'string') ? input : ((input && input.url) || '');
+            method = (init && init.method) || (input && input.method) || 'GET';
+          } catch (eUrl) {}
+          try {
             var bodyLen; var bodyPreview;
             try {
               var rawBody = (init && init.body) || undefined;
@@ -582,9 +697,48 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
                 if (isSentryLike(url)) { bodyPreview = truncate(rawBody); }
               }
             } catch (eBody) {}
-            record({ kind: 'fetch', url: String(url), method: String(method), bodyLen: bodyLen, body: bodyPreview });
+            record({ kind: 'fetch.send', id: reqId, url: String(url), method: String(method), bodyLen: bodyLen, body: bodyPreview });
           } catch (eOuter) {}
-          return originalFetch(input, init);
+          var fetchPromise = originalFetch(input, init);
+          try {
+            fetchPromise.then(function (res) {
+              try {
+                var elapsed = Date.now() - startTime;
+                var status = (res && typeof res.status === 'number') ? res.status : undefined;
+                try {
+                  res.clone().text().then(function (text) {
+                    try {
+                      var capture = captureResponseBody(url, status, text);
+                      record({
+                        kind: 'fetch.response', id: reqId, url: String(url), method: String(method),
+                        status: status, elapsedMs: elapsed,
+                        bodyLen: (typeof text === 'string' ? text.length : undefined),
+                        bodyKeys: capture.bodyKeys, body: capture.body, bodyRedacted: capture.bodyRedacted
+                      });
+                    } catch (eRec) {}
+                  }).catch(function () {
+                    try {
+                      record({ kind: 'fetch.response', id: reqId, url: String(url), method: String(method), status: status, elapsedMs: elapsed, bodyReadError: true });
+                    } catch (eRec2) {}
+                  });
+                } catch (eClone) {
+                  try {
+                    record({ kind: 'fetch.response', id: reqId, url: String(url), method: String(method), status: status, elapsedMs: elapsed, cloneError: true });
+                  } catch (eRec3) {}
+                }
+              } catch (eResp) {}
+            }).catch(function (fetchErr) {
+              try {
+                var elapsed = Date.now() - startTime;
+                record({
+                  kind: 'fetch.error', id: reqId, url: String(url), method: String(method), elapsedMs: elapsed,
+                  errorName: (fetchErr && fetchErr.name) ? String(fetchErr.name) : undefined,
+                  errorMessage: (fetchErr && fetchErr.message) ? truncate(String(fetchErr.message)) : String(fetchErr)
+                });
+              } catch (eRejRec) {}
+            });
+          } catch (eAttach) {}
+          return fetchPromise;
         };
       }
     } catch (eFetch) {}
@@ -594,6 +748,7 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
         var originalSendBeacon = navigator.sendBeacon.bind(navigator);
         navigator.sendBeacon = function (url, data) {
           try {
+            var reqId = nextRequestId();
             var bodyLen; var bodyPreview;
             try {
               if (typeof data === 'string') {
@@ -601,13 +756,27 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
                 if (isSentryLike(url)) { bodyPreview = truncate(data); }
               }
             } catch (eBody) {}
-            record({ kind: 'sendBeacon', url: String(url), bodyLen: bodyLen, body: bodyPreview });
+            record({ kind: 'sendBeacon', id: reqId, url: String(url), bodyLen: bodyLen, body: bodyPreview });
           } catch (eOuter) {}
           return originalSendBeacon(url, data);
         };
       }
     } catch (eBeacon) {}
 
+    // XHR: `open` still only tags the instance with the URL/method it will send
+    // (unchanged). `send` now assigns a monotonic `id` and `startTime`, then registers
+    // ADDITIVE `addEventListener` handlers (never overwrites `onload`/`onerror`/any
+    // handler Epic's own bundle attaches) for FOUR distinct terminal events, not just
+    // 'load':
+    //   - 'load'    -> 'xhr.response' outcome (status + elapsedMs + body policy, any status)
+    //   - 'error'   -> 'xhr.error' outcome (a network-level failure with NO response at
+    //                  all -- this is the event NSURLErrorNetworkConnectionLost / -1005
+    //                  surfaces as; a 'load'-only listener would record NOTHING for
+    //                  exactly this failure)
+    //   - 'timeout' -> 'xhr.timeout' outcome
+    //   - 'abort'   -> 'xhr.abort' outcome
+    // Each of these four is a distinct terminal event per the XHR spec -- at most one
+    // ever fires per request, so there is no double-recording.
     try {
       if (window.XMLHttpRequest && XMLHttpRequest.prototype && XMLHttpRequest.prototype.send) {
         var originalOpen = XMLHttpRequest.prototype.open;
@@ -617,9 +786,11 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
           return originalOpen.apply(this, arguments);
         };
         XMLHttpRequest.prototype.send = function (body) {
+          var url = this && this.__gamelibDiagUrl;
+          var method = this && this.__gamelibDiagMethod;
+          var reqId = nextRequestId();
+          var startTime = Date.now();
           try {
-            var url = this && this.__gamelibDiagUrl;
-            var method = this && this.__gamelibDiagMethod;
             var bodyLen; var bodyPreview;
             try {
               if (typeof body === 'string') {
@@ -629,12 +800,45 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
             } catch (eBody) {}
             record({
               kind: 'xhr.send',
+              id: reqId,
               url: url ? String(url) : undefined,
               method: method ? String(method) : undefined,
               bodyLen: bodyLen,
               body: bodyPreview
             });
           } catch (eOuter) {}
+          try {
+            var self = this;
+            function recordXhrOutcome(eventType) {
+              try {
+                var elapsed = Date.now() - startTime;
+                var status;
+                try { status = self.status; } catch (eStatus) {}
+                if (eventType === 'load') {
+                  var text;
+                  try { text = self.responseText; } catch (eRT) {}
+                  var capture;
+                  try { capture = captureResponseBody(url, status, text); }
+                  catch (eCap) { capture = { bodyKeys: undefined, body: undefined, bodyRedacted: true }; }
+                  record({
+                    kind: 'xhr.response', id: reqId, url: url ? String(url) : undefined,
+                    method: method ? String(method) : undefined, status: status, elapsedMs: elapsed,
+                    bodyLen: (typeof text === 'string' ? text.length : undefined),
+                    bodyKeys: capture.bodyKeys, body: capture.body, bodyRedacted: capture.bodyRedacted
+                  });
+                } else {
+                  record({
+                    kind: 'xhr.' + eventType, id: reqId, url: url ? String(url) : undefined,
+                    method: method ? String(method) : undefined, status: status, elapsedMs: elapsed
+                  });
+                }
+              } catch (eOutcome) {}
+            }
+            self.addEventListener('load', function () { recordXhrOutcome('load'); });
+            self.addEventListener('error', function () { recordXhrOutcome('error'); });
+            self.addEventListener('timeout', function () { recordXhrOutcome('timeout'); });
+            self.addEventListener('abort', function () { recordXhrOutcome('abort'); });
+          } catch (eAttachLoad) {}
           return originalSend.apply(this, arguments);
         };
       }
