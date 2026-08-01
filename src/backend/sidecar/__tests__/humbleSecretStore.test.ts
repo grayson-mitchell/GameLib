@@ -474,6 +474,35 @@ describe('SidecarHumbleSecretStore', () => {
       )
     })
 
+    // 34.5 gap cycle 3 plan 25 (F-34.5-G6-06): each slot's bounded failure memo is independent --
+    // a memoized sessionCookie failure must never suppress (or be confused with) a real csrfToken
+    // read, matching the pre-existing cache's own per-slot independence proven above.
+    it('sessionCookie and csrfToken each memoize their OWN failed read independently -- one slot\'s memoized failure never suppresses a real read of the other', async () => {
+      jest.useFakeTimers()
+      try {
+        programChannel('keyring_get', {
+          type: 'reject',
+          error: new Error('keyring:timeout')
+        })
+        const store = new SidecarHumbleSecretStore()
+
+        // sessionCookie fails and is memoized.
+        await expect(store.getSecret('sessionCookie')).resolves.toBe('')
+        // csrfToken's slot has never been read -- it must still reach the transport, not be
+        // shadowed by sessionCookie's unrelated memoized failure.
+        await expect(store.getSecret('csrfToken')).resolves.toBe('')
+
+        expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+
+        // A second sessionCookie read, still inside the memo window: served from ITS OWN memo,
+        // no third request.
+        await expect(store.getSecret('sessionCookie')).resolves.toBe('')
+        expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     it('clearSecrets() invalidates BOTH slots\' caches -- a disconnect can never resurrect a stale cached session or csrf value', async () => {
       programChannel('keyring_get', { type: 'resolve', value: 'pre-disconnect-value' })
       const store = new SidecarHumbleSecretStore()

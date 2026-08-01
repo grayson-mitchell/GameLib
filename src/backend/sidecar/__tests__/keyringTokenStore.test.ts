@@ -374,38 +374,11 @@ describe('SidecarKeyringTokenStore', () => {
     expect(callLog).toHaveLength(1)
   })
 
-  it('does NOT cache a failed getToken() -- a second call retries the keyring', async () => {
-    programChannel('keyring_get', {
-      type: 'reject',
-      error: new Error('keyring:unavailable:PlatformFailure')
-    })
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
-
-    await expect(store.getToken()).resolves.toBe('')
-    await expect(store.getToken()).resolves.toBe('')
-
-    expect(callLog).toHaveLength(2)
-    expect(mockLogWarning).toHaveBeenCalledTimes(2)
-  })
-
-  it('a failed read does not poison a later successful read once the keyring recovers', async () => {
-    const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
-
-    programChannel('keyring_get', {
-      type: 'reject',
-      error: new Error('keyring:unavailable:PlatformFailure')
-    })
-    await expect(store.getToken()).resolves.toBe('')
-
-    programChannel('keyring_get', { type: 'resolve', value: 'recovered-token' })
-    await expect(store.getToken()).resolves.toBe('recovered-token')
-
-    // The now-successful read IS cached -- a third call issues no further request.
-    await expect(store.getToken()).resolves.toBe('recovered-token')
-    expect(callLog).toHaveLength(2)
-  })
-
-  it('concurrent getToken() calls before the first settles share ONE in-flight request', async () => {
+  // CHARACTERIZATION ONLY -- this pins the PRE-EXISTING pendingToken in-flight dedupe from commit
+  // 2d1abe64a, which this plan (34.5 gap cycle 3 plan 25) does NOT touch or reimplement. It is
+  // expected GREEN before plan 25's edit as well as after -- a regression guard proving the
+  // bounded failure memo added below is layered ALONGSIDE this dedupe, not a replacement for it.
+  it('concurrent getToken() calls before the first settles share ONE in-flight request (pins the pre-existing pendingToken dedupe, commit 2d1abe64a -- regression guard, not new behaviour)', async () => {
     let resolveInvoke: (value: unknown) => void = () => {}
     mockRequestRustInvoke.mockImplementation((channel: string, args: unknown[]) => {
       callLog.push({ channel, args })
@@ -427,6 +400,132 @@ describe('SidecarKeyringTokenStore', () => {
     await expect(second).resolves.toBe('dedup-token')
     await expect(third).resolves.toBe('dedup-token')
     expect(callLog).toHaveLength(1)
+  })
+
+  // ---- Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06) ----
+  //
+  // A FAILED getToken() is now memoized for a bounded window (KEYRING_FAILURE_MEMO_MS, 15s) so a
+  // second SEQUENTIAL caller -- the next runner's window.location.reload() remounting GlobalState
+  // a moment later, per the finding's diagnosed mechanism -- does not repeat an identical
+  // doomed-to-timeout read and trigger a second Keychain prompt. This replaces the old immediate-
+  // retry test below, whose assertion (2 sequential failures both hit the keyring, uncached) is the
+  // exact behaviour this plan intentionally bounds.
+
+  it('memoizes a FAILED getToken() for the bounded window -- a second SEQUENTIAL call inside the window returns the same failure WITHOUT a second keyring_get (RED-first for this task)', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog).toHaveLength(1)
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+
+      // Second call: fully sequential (the first has settled), still inside the memo window.
+      await expect(store.getToken()).resolves.toBe('')
+
+      // The whole point of this task: still exactly ONE request, not two -- the memoized failure
+      // was returned directly, without a second Keychain prompt.
+      expect(callLog).toHaveLength(1)
+      // The memo hit itself is silent -- it must not re-log a warning for a read that never
+      // actually happened.
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a getToken() call AFTER the memo window expires issues a fresh keyring_get -- the memo is not permanent', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog).toHaveLength(1)
+
+      // Still inside the window -- memoized, no second request (mirrors the test above).
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog).toHaveLength(1)
+
+      // Advance PAST the memo window (KEYRING_FAILURE_MEMO_MS = 15_000ms).
+      jest.advanceTimersByTime(15_001)
+
+      // The keyring has since recovered.
+      programChannel('keyring_get', { type: 'resolve', value: 'recovered-token' })
+      await expect(store.getToken()).resolves.toBe('recovered-token')
+
+      // A third real request -- the memo expired and let this call reach the transport.
+      expect(callLog).toHaveLength(2)
+
+      // The now-successful read IS cached (pre-existing behaviour, unaffected) -- a fourth call
+      // issues no further request.
+      await expect(store.getToken()).resolves.toBe('recovered-token')
+      expect(callLog).toHaveLength(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('clearToken() invalidates a memoized failure -- the next getToken() reaches the keyring fresh, never the stale memo (the sign-out floor)', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.getToken()).resolves.toBe('')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(1)
+
+      // A FAILED clearToken(): unlike a SUCCESSFUL one (which correctly repopulates the cache
+      // with a confirmed-empty value, per this store's own pre-existing contract), a failed
+      // delete must leave state fully invalidated -- neither a stale value NOR a stale failure
+      // memo may survive it, since the true post-delete state is unknown.
+      programChannel('keyring_delete', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:PlatformFailure')
+      })
+      await store.clearToken()
+
+      // Still well inside what would otherwise be the memo window -- but clearToken() must have
+      // invalidated the memo too, so this call reaches the transport again rather than returning
+      // the stale memoized failure.
+      programChannel('keyring_get', { type: 'resolve', value: 'post-signout-token' })
+      await expect(store.getToken()).resolves.toBe('post-signout-token')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a memoized failure is surfaced to the caller as a failure ("") and is never mistaken for a token value', async () => {
+    jest.useFakeTimers()
+    try {
+      programChannel('keyring_get', {
+        type: 'reject',
+        error: new Error('keyring:timeout')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const firstResult = await store.getToken()
+      const secondResult = await store.getToken() // served from the memo, per the test above
+
+      expect(firstResult).toBe('')
+      expect(secondResult).toBe('')
+      expect(typeof secondResult).toBe('string')
+      // The memo carries a timestamp only -- never a secret or a truthy stand-in for one.
+      expect(secondResult).not.toMatch(/./)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('caches a successful isAvailable() result: a second call issues NO further keyring_available', async () => {

@@ -24,6 +24,24 @@ export const KEYRING_SLOT_HUMBLE_SESSION = 'humble-session'
 export const KEYRING_SLOT_HUMBLE_CSRF = 'humble-csrf'
 
 /**
+ * Bounded negative-result memo window for `getToken()` (34.5 gap cycle 3 plan 25, closing
+ * F-34.5-G6-06). `KEYRING_READ_TIMEOUT` in `src-tauri/src/main.rs` is `Duration::from_secs(8)` --
+ * shorter than a human takes to notice, read, and click Approve on a macOS Keychain dialog. Every
+ * one of the five runner sign-out flows (Epic/GOG/Amazon/Zoom/Steam) calls
+ * `window.location.reload()` for its own unrelated reason, which remounts `GlobalState` and
+ * unconditionally re-runs Humble's `getCredentials()`/`getCsrfToken()` health check
+ * (`GlobalState.tsx`'s mount effect) -- without this memo, a read that timed out on ONE reload is
+ * retried, uncached, on the VERY NEXT reload (from any of the five, not just the one whose sign-out
+ * happened to precede it in a log), reproducing the same doomed-to-timeout Keychain prompt again
+ * before the user has even finished reacting to the first one. 15 000 ms = ~2x
+ * `KEYRING_READ_TIMEOUT`'s 8 000 ms, chosen to comfortably outlast one full round trip (the read
+ * itself, plus the reload/remount overhead that preceded it) while staying short enough that a user
+ * who deliberately retries a few seconds later is never mistaken for "permanently broken" -- this is
+ * a memo, not a lockout (see `SidecarKeyringSlotStore`'s own doc comment, T-34.5-G6-15).
+ */
+const KEYRING_FAILURE_MEMO_MS = 15_000
+
+/**
  * `SidecarKeyringSlotStore` — a slot-parameterized `TokenStore` implementation over the Rust
  * keyring bridge (Phase 28 Plan 04, D-06/D-04; made multi-slot by the 34.4.1 gap cycle plan 11,
  * D-GAP-01). The slot passed at construction selects which allowlisted Keychain account this
@@ -79,11 +97,25 @@ export const KEYRING_SLOT_HUMBLE_CSRF = 'humble-csrf'
  * of exposure — it extends how long an ALREADY-exposed value remains resident. See this plan's
  * SUMMARY threat-model cross-check for the full reasoning.
  *
- * **Correctness floor (binding, load-bearing):** the cache is invalidated at the START of
- * `setToken()`/`clearToken()`, before the underlying keyring call is even issued — a cached
- * value must never survive a write or a delete. `clearToken()` is Humble's disconnect / Steam's
- * sign-out path; a stale cached session token surviving a disconnect would resurrect a logged-out
- * session, which is a strictly worse bug than the read-count problem this cache exists to fix
+ * **Bounded negative-result memo (34.5 gap cycle 3 plan 25, F-34.5-G6-06).** `getToken()` also
+ * memoizes a FAILED read for `KEYRING_FAILURE_MEMO_MS` (15s, ~2x `KEYRING_READ_TIMEOUT`'s 8s — see
+ * that constant's own doc comment for the arithmetic). This is layered ALONGSIDE the pre-existing
+ * in-flight dedupe field declared just above, not a replacement for it: that field collapses
+ * CONCURRENT callers in the same tick to one request; the failure memo bounds SEQUENTIAL repeat
+ * reads of a request that already finished and failed, which the in-flight field cannot touch once
+ * it has cleared in its own `finally`. A memoized failure is returned exactly as any other failure
+ * is — `''`, logged once at the time it actually occurred, never re-logged from the memo hit itself
+ * — and is NEVER treated as a value; it holds no secret at all, unlike `cachedToken`. This does not
+ * conflict with the "NOT cached" comment on `fetchToken()`'s catch below, which is about not
+ * caching a failure as if it were a confirmed value forever — a time-bounded memo of "this recently
+ * failed" is a different, narrower claim that expires and lets a later retry through.
+ *
+ * **Correctness floor (binding, load-bearing):** the cache — now including the failure memo above —
+ * is invalidated at the START of `setToken()`/`clearToken()`, before the underlying keyring call is
+ * even issued — a cached value (or a memoized failure) must never survive a write or a delete.
+ * `clearToken()` is Humble's disconnect / Steam's sign-out path; a stale cached session token
+ * surviving a disconnect would resurrect a logged-out session, which is a strictly worse bug than
+ * the read-count problem this cache exists to fix
  * (this phase's own headline defect, F-6, is exactly this class of "disconnect didn't disconnect"
  * failure on the cookie side — this cache must not reintroduce it on the token side). On a
  * SUCCESSFUL write/delete, the cache is repopulated with the now-known-correct value (the token
@@ -100,6 +132,11 @@ export class SidecarKeyringSlotStore implements TokenStore {
   private cachedToken: { value: string } | undefined
   /** The in-flight `getToken()` fetch, shared by every concurrent caller until it settles. */
   private pendingToken: Promise<string> | undefined
+  /** `Date.now()` of the most recent FAILED `getToken()` read, or `undefined` if none is
+   * memoized (never failed yet, the memo expired, or the cache was invalidated by a write/delete).
+   * Holds a timestamp only — never a secret, never a value — see `KEYRING_FAILURE_MEMO_MS`'s doc
+   * comment for why this exists and why it is time-bounded rather than permanent. */
+  private failedTokenAt: number | undefined
 
   /** Last successful `isAvailable()` result. Same `undefined`-means-uncached convention as
    * `cachedToken` above. */
@@ -139,6 +176,17 @@ export class SidecarKeyringSlotStore implements TokenStore {
   async getToken(): Promise<string> {
     if (this.cachedToken) return this.cachedToken.value
     if (this.pendingToken) return this.pendingToken
+    // Bounded negative-result memo (F-34.5-G6-06): a read that failed within the last
+    // KEYRING_FAILURE_MEMO_MS is returned directly as the same failure, WITHOUT issuing a second
+    // keyring_get -- and therefore without a second Keychain prompt. This is checked only after
+    // both the success cache and the in-flight dedupe above have already missed, so it never
+    // shadows a fresher successful read or an already-in-flight request.
+    if (
+      this.failedTokenAt !== undefined &&
+      Date.now() - this.failedTokenAt < KEYRING_FAILURE_MEMO_MS
+    ) {
+      return ''
+    }
     this.pendingToken = this.fetchToken()
     try {
       return await this.pendingToken
@@ -156,8 +204,14 @@ export class SidecarKeyringSlotStore implements TokenStore {
         `SidecarKeyringSlotStore(${this.slot}).getToken(): ${RUST_KEYRING_GET} failed: ${errorMessage(error)}`,
         LogPrefix.Steam
       )
-      // NOT cached -- a failed/unavailable read must not poison subsequent reads (a later
-      // retry, once the Keychain is reachable again, must actually try again).
+      // NOT cached as a VALUE -- a failed/unavailable read must not poison subsequent reads
+      // forever (a later retry, once the Keychain is reachable again, must actually try again).
+      // It IS memoized as a FAILURE for a bounded window (see KEYRING_FAILURE_MEMO_MS) so the
+      // very next sequential caller -- e.g. the next runner's window.location.reload() remounting
+      // GlobalState a moment later -- does not repeat an identical doomed-to-timeout read and
+      // trigger a second Keychain prompt for a decision the user has not finished making on the
+      // first. This timestamp is never surfaced to a caller and never mistaken for a token value.
+      this.failedTokenAt = Date.now()
       return ''
     }
     // `null` == no entry yet (healthy first-run case) -- NOT an error, not logged, and still
@@ -166,6 +220,9 @@ export class SidecarKeyringSlotStore implements TokenStore {
     // to close.
     const value = typeof result === 'string' ? result : ''
     this.cachedToken = { value }
+    // A SUCCESSFUL read clears any stale failure memo -- there is nothing left to bound once a
+    // real value (or a confirmed no-entry) is cached above and short-circuits future calls first.
+    this.failedTokenAt = undefined
     return value
   }
 
@@ -205,17 +262,21 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
   }
 
-  /** Clears both cached values (token + availability) so the next call of either method issues
-   * a fresh `requestRustInvoke`. Called internally by `setToken`/`clearToken` above; also public
-   * so a test (or a future singleton-holding caller, e.g. `humbleSecretStore.ts`'s `SLOT_STORES`)
-   * can force invalidation without reaching into private state. Does NOT touch an in-flight
-   * `pendingToken`/`pendingAvailable` promise — that request was already sent and will resolve
-   * (and cache) independently; there is no way to un-send it, and this mirrors the same
+  /** Clears both cached values (token + availability) AND the failure memo (F-34.5-G6-06) so the
+   * next call of either method issues a fresh `requestRustInvoke`. Called internally by
+   * `setToken`/`clearToken` above -- this is the correctness-floor extension: a memoized failure
+   * must never survive a write or a delete any more than a cached value may, since a caller
+   * reading immediately after a sign-out must always reach the keyring fresh, never a stale memo.
+   * Also public so a test (or a future singleton-holding caller, e.g. `humbleSecretStore.ts`'s
+   * `SLOT_STORES`) can force invalidation without reaching into private state. Does NOT touch an
+   * in-flight `pendingToken`/`pendingAvailable` promise — that request was already sent and will
+   * resolve (and cache) independently; there is no way to un-send it, and this mirrors the same
    * best-effort reasoning `bounded_keyring_read`'s "abandoned, not cancelled" doc comment uses
    * on the Rust side for exactly the same class of already-in-flight operation. */
   invalidateCache(): void {
     this.cachedToken = undefined
     this.cachedAvailable = undefined
+    this.failedTokenAt = undefined
   }
 }
 
