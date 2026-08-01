@@ -142,6 +142,20 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "repair",
     // readConfig('library') calls legendary.refresh(), the same work refreshLibrary is exempted for; readConfig('user') is fast, so this trades a 60s rejection for a never-settling promise if it ever wedges.
     "readConfig",
+    // Phase 34.5 gap cycle 3, F-34.5-G6-02: oauthCaptureLogin drives a HUMAN interaction (typing
+    // credentials, solving a challenge, fetching a mailed verification code) and carries its own
+    // 300_000ms deadline (DEFAULT_DEADLINE_MS, src/backend/sidecar/oauthLoginCapture.ts) -- five
+    // times this shell's 60s bound. The 2026-08-01 live gate measured every real attempt exceeding
+    // 60s (GOG captured at 68s, Amazon at 91s, Epic timed out at 300s x3); with the bound in place
+    // the shell returns Err("sidecar invoke timed out") at 60s AND the real late response is
+    // dropped by the reader thread as an unknown id, so the outcome can never arrive.
+    "oauthCaptureLogin",
+    // Same shape as oauthCaptureLogin above (F-34.5-G6-02 recurrence count, 34.5-22 Task 2):
+    // humbleStartLogin/humbleReconnect both await HumbleUser.watchForLogin()
+    // (src/backend/humble/user.ts), bounded by its own LOGIN_WATCH_TIMEOUT_MS = 600_000ms -- ten
+    // times this shell's 60s bound, an even larger mismatch than oauthCaptureLogin's.
+    "humbleStartLogin",
+    "humbleReconnect",
 ];
 
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
@@ -2433,6 +2447,22 @@ mod tests {
     fn get_crossover_index_is_exempt() {
         // Added by REQ-34.2-12 / D-10.
         assert_eq!(timeout_for("getCrossoverIndex"), None);
+    }
+
+    #[test]
+    fn oauth_capture_login_and_humble_login_channels_are_exempt() {
+        // Phase 34.5 gap cycle 3, F-34.5-G6-02 (plan 34.5-23): each carries its own internal
+        // deadline (300_000ms / 600_000ms) far exceeding INVOKE_TIMEOUT's 60s.
+        assert_eq!(timeout_for("oauthCaptureLogin"), None);
+        assert_eq!(timeout_for("humbleStartLogin"), None);
+        assert_eq!(timeout_for("humbleReconnect"), None);
+    }
+
+    #[test]
+    fn a_channel_not_on_the_list_is_still_bounded() {
+        // getUserInfo is definitely absent from LONG_RUNNING_CHANNELS -- pins that this task's
+        // exemption is scoped to the three named channels, not a relaxation of the guardrail.
+        assert_eq!(timeout_for("getUserInfo"), Some(INVOKE_TIMEOUT));
     }
 
     #[test]

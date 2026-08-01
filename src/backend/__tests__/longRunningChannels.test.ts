@@ -43,7 +43,14 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   'refreshLibrary',
   'getCrossoverIndex',
   'repair',
-  'readConfig'
+  'readConfig',
+  // Phase 34.5 gap cycle 3, F-34.5-G6-02 (plan 34.5-23): oauthCaptureLogin's own
+  // DEFAULT_DEADLINE_MS (300_000ms, src/backend/sidecar/oauthLoginCapture.ts) and
+  // humbleStartLogin/humbleReconnect's shared LOGIN_WATCH_TIMEOUT_MS (600_000ms,
+  // src/backend/humble/user.ts) both far exceed the 60s INVOKE_TIMEOUT bound.
+  'oauthCaptureLogin',
+  'humbleStartLogin',
+  'humbleReconnect'
 ]
 
 /**
@@ -308,6 +315,13 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
 
   test('REQ-34.2-12 getWikiGameInfo is NOT exempted — the 2026-07-25 cold-cache measurement (1190ms/957ms/702ms) stayed comfortably under the 60s bound', () => {
     expect(extractLongRunningChannels()).not.toContain('getWikiGameInfo')
+  })
+
+  test('F-34.5-G6-02 oauthCaptureLogin, humbleStartLogin and humbleReconnect are members (plan 34.5-23, gap cycle 3)', () => {
+    const channels = extractLongRunningChannels()
+    expect(channels).toContain('oauthCaptureLogin')
+    expect(channels).toContain('humbleStartLogin')
+    expect(channels).toContain('humbleReconnect')
   })
 })
 
