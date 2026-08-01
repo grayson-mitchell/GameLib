@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Planned Phase 34.5 gap cycle 4 (plans 34.5-32..37, 2 waves; plan-checker PASSED). Ready to execute. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is NOT authored or run this cycle."
-last_updated: "2026-08-01T20:15:00.000Z"
+stopped_at: "Completed 34.5-32-PLAN.md (gap cycle 4 wave 1 -- authored 34.5-CYCLE4-ROUTING.md recording plans 29/30/31 HALTED by BINDING DECISION: fix-first, and opened 34.5-UNTESTED-ITEMS.md with six seeded rows). Next: 34.5-33/34/35 (wave 1 remainder), then 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
+last_updated: "2026-08-01T21:00:00.000Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 186
-  completed_plans: 169
-  percent: 76
+  completed_plans: 170
+  percent: 91
 ---
 
 # Project State
@@ -173,8 +173,15 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > literal `D-03:` string in any plan. Nothing was retagged and no locked decision was edited.
 > Verify-phase should re-surface this rather than treat it as closed.
 >
-> **Next action:** `/gsd-execute-phase 34.5` — run gap cycle 4 (plans 32–37). Phase 34.5 does not
-> reach its blocking gate this cycle by design; a cycle 5 authors and runs it.
+> **34.5-32 EXECUTED 2026-08-01** (`ea25984a2`, `0646f1d61`) — `34.5-CYCLE4-ROUTING.md` records
+> plans 29/30/31 HALTED (29 by two independent gates: its own self-halt plus its R1-FALSIFIED verdict
+> branch; 30 halted-not-authored; 31 halted-not-run) and maps all six Routing scope items to plans
+> 34.5-33..37. `34.5-UNTESTED-ITEMS.md` opened with six seeded rows (`U-34.5-01`..`06`), each
+> retirable only by a named live observation. No `34.5-LIVE-GATE-RERUN-2.md` created — verified absent.
+>
+> **Next action:** `/gsd-execute-phase 34.5` — continue gap cycle 4 (wave 1 remainder: plans
+> 33/34/35; then wave 2: 36/37). Phase 34.5 does not reach its blocking gate this cycle by design; a
+> cycle 5 authors and runs it.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -405,7 +412,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 28 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Plan: 29 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2224,7 +2231,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-28): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3120,6 +3127,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P26 | 50min | 3 tasks | 6 files |
 | Phase 34.5 P27 | 45min | 2 tasks | 2 files |
 | Phase 34.5 P28 | 25min | 4 tasks | 1 files |
+| Phase 34.5 P32 | 25m | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -3579,7 +3587,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T07:45:51.061Z
+Last session: 2026-08-01T08:28:57.420Z
 Stopped at: Completed 34.5-28-PLAN.md (F-34.5-G6-01 Epic discriminator R1-FALSIFIED live; GOG smoke shows capture-to-hook fixed but library never populates; BINDING DECISION: fix-first -- blocking gate NOT authored this cycle)
   This session (sequential executor): executed 34.5-26 (gap cycle 3, wave 3). Task 1 (feat,
   commit `ac578a842`): `useTauriOAuthLogin.ts` now checks the resolved auth-channel response's
