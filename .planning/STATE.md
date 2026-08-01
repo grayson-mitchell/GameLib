@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 34.5-27-PLAN.md (F-34.5-G6-04 origin-first login title + F-34.5-G6-05 light interface style closed at the code level; live proof owed to 34.5-28)
-last_updated: "2026-08-01T06:33:42.605Z"
+stopped_at: "Completed 34.5-28-PLAN.md (F-34.5-G6-01 Epic discriminator R1-FALSIFIED live; GOG smoke shows capture-to-hook fixed but library never populates; BINDING DECISION: fix-first -- blocking gate NOT authored this cycle)"
+last_updated: "2026-08-01T07:45:51.073Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 180
-  completed_plans: 168
+  completed_plans: 169
   percent: 76
 ---
 
@@ -358,7 +358,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 27 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Plan: 28 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2180,6 +2180,10 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 93%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.5-28): the same splice-into-historical-prose bug recurred yet again this session --
+`state.update-progress` overwrote this note's own `93%` with `94%` (this session's own computed
+plan-based percent), corrupting the historical record above yet again. Hand-corrected back to
+`93%` per this cluster's own established convention.
 NOTE (34.5-24): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `91%` with `92%` (this session's own computed
 plan-based percent), corrupting the historical record above yet again. Hand-corrected back to
@@ -3068,6 +3072,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P25 | 35min | 2 tasks | 4 files |
 | Phase 34.5 P26 | 50min | 3 tasks | 6 files |
 | Phase 34.5 P27 | 45min | 2 tasks | 2 files |
+| Phase 34.5 P28 | 25min | 4 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -3453,6 +3458,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Plan 26: Shape A over Shape B for OAuth completion — hook keeps calling the raw auth channel itself and GlobalState gains a new completeOAuthLogin context method, avoiding a double auth-channel call and keeping the four Electron login wrappers byte-identical
 - [Phase 34.5]: Plan 26: createOAuthLoginCompletion factory lives in useTauriOAuthLogin.ts (not GlobalState.tsx) so both GlobalState's completeOAuthLogin and its own unit tests construct it identically without importing GlobalState.tsx's heavy side-effecting module graph
 - [Phase 34.5]: 34.5-27: Task 1 (origin-first login title) and Task 2 (light interface style) committed together in 9255c0255 because both interleave inside the same if-visible builder chain of humble_login_open
+- [Phase 34.5]: F-34.5-G6-01 Epic UA discriminator: R1 (user-agent gating) FALSIFIED live; R2 not confirmed — both stock and Chrome-shaped UA arms produced non-interactive Epic login forms; routed to a further diagnosis cycle rather than shipping R2 unconfirmed
+- [Phase 34.5]: BINDING DECISION: fix-first -- plans 34.5-29/30 halt at their authorisation gates, blocking gate not authored this cycle — GOG smoke test showed capture-to-hook propagation fixed (F-34.5-G6-02/03 closed) but library never populates; a five-item gate cannot pass on a build whose one-runner smoke already failed
 
 ### Pending Todos
 
@@ -3525,8 +3532,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T06:33:42.594Z
-Stopped at: Completed 34.5-27-PLAN.md (F-34.5-G6-04 origin-first login title + F-34.5-G6-05 light interface style closed at the code level; live proof owed to 34.5-28)
+Last session: 2026-08-01T07:45:51.061Z
+Stopped at: Completed 34.5-28-PLAN.md (F-34.5-G6-01 Epic discriminator R1-FALSIFIED live; GOG smoke shows capture-to-hook fixed but library never populates; BINDING DECISION: fix-first -- blocking gate NOT authored this cycle)
   This session (sequential executor): executed 34.5-26 (gap cycle 3, wave 3). Task 1 (feat,
   commit `ac578a842`): `useTauriOAuthLogin.ts` now checks the resolved auth-channel response's
   `status` before treating a captured login as successful; on `status==='done'` it invokes an
