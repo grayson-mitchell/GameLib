@@ -759,7 +759,7 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
     expect(hook).toEqual({ phase: 'error', message: 'raw-string-rejection' })
   })
 
-  it('a late rejection after unmount produces no setState and no log line (cancelled guard first)', async () => {
+  it('a late rejection after unmount produces no setState, logging only the Plan 34.5-34 cancelled-midflight diagnostic (Task 1 supersedes the old "no log line" assertion)', async () => {
     let rejectCapture: (reason: unknown) => void = () => {}
     mockApi.oauthCaptureLogin.mockImplementation(
       () =>
@@ -786,7 +786,14 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
     }
 
     expect(unhandled).not.toHaveBeenCalled()
-    expect(mockApi.logInfo).not.toHaveBeenCalled()
+    // Plan 34.5-34 Task 1: this site now emits a diagnostic line naming the cancellation
+    // window instead of staying silent -- but it must still be the ONLY line (no error/state
+    // line pretending the rejection was handled as live), and it must carry the permitted
+    // vocabulary only (no message content from the rejection).
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockApi.logInfo).toHaveBeenCalledWith(
+      '[useTauriOAuthLogin] runner=legendary phase=cancelled-midflight at=capture-transport'
+    )
   })
 })
 

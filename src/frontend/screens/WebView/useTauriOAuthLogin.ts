@@ -135,6 +135,10 @@ export function useTauriOAuthLogin(
     // reference inside `run()` explicit about which runner it belongs to.
     const activeRunner = runner
     let cancelled = false
+    // Plan 34.5-34 Task 1: distinguishes "the effect was torn down while nothing was in
+    // flight" from "the effect was torn down mid-login" -- set true at every terminal path of
+    // `run()`, read only by the cleanup's teardown-diagnostic line below.
+    let reachedTerminal = false
 
     async function run(): Promise<void> {
       setState({ phase: 'awaiting' })
@@ -156,11 +160,17 @@ export function useTauriOAuthLogin(
           url = amazonData.url
         }
       } catch (error) {
-        if (cancelled) return
+        if (cancelled) {
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=login-url`
+          )
+          return
+        }
         const message = error instanceof Error ? error.message : String(error)
         window.api.logInfo(
           `[useTauriOAuthLogin] runner=${activeRunner} phase=error (failed to resolve login url)`
         )
+        reachedTerminal = true
         setState({ phase: 'error', message })
         return
       }
@@ -172,7 +182,12 @@ export function useTauriOAuthLogin(
           url
         })
       } catch (error) {
-        if (cancelled) return
+        if (cancelled) {
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=capture-transport`
+          )
+          return
+        }
         const message = error instanceof Error ? error.message : String(error)
         // Distinct literal on purpose (mirrors UNPORTED_CHANNEL_MARKER/STORE_LAZY_MISS_MARKER):
         // a transport failure (e.g. the pre-34.5-23 60s/300s invoke-bound mismatch, F-34.5-G6-02)
@@ -181,23 +196,34 @@ export function useTauriOAuthLogin(
         window.api.logInfo(
           `[useTauriOAuthLogin] runner=${activeRunner} phase=error capture-transport-failed message=${message}`
         )
+        reachedTerminal = true
         setState({ phase: 'error', message })
         return
       }
-      if (cancelled) return
+      if (cancelled) {
+        // Plan 34.5-34: reached with a possibly-`captured` outcome holding a single-use OAuth
+        // code -- this line is diagnostic-only in Task 1 (no control-flow change yet).
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=capture`
+        )
+        return
+      }
 
       if (outcome.status === 'cancelled') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled`)
+        reachedTerminal = true
         setState({ phase: 'cancelled' })
         return
       }
       if (outcome.status === 'timeout') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=timeout`)
+        reachedTerminal = true
         setState({ phase: 'timeout' })
         return
       }
       if (outcome.status === 'unsupported') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error (unsupported)`)
+        reachedTerminal = true
         setState({
           phase: 'error',
           message: 'OAuth capture is not supported on this build'
@@ -206,6 +232,7 @@ export function useTauriOAuthLogin(
       }
       if (outcome.status === 'error') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
+        reachedTerminal = true
         setState({ phase: 'error', message: outcome.message })
         return
       }
@@ -253,7 +280,15 @@ export function useTauriOAuthLogin(
             username = userInfo?.username
           }
         }
-        if (cancelled) return
+        if (cancelled) {
+          // Plan 34.5-34: reached AFTER the backend has already written the credential to disk
+          // (or refused it) -- `authStatus=done` here is the unambiguous signature of a
+          // completed authentication being discarded. Diagnostic-only in Task 1.
+          window.api.logInfo(
+            `[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled-midflight at=auth authStatus=${status}`
+          )
+          return
+        }
 
         if (status === 'done') {
           // The auth channel accepted the captured code -- hand the login on to the SAME
@@ -262,6 +297,7 @@ export function useTauriOAuthLogin(
           window.api.logInfo(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=idle (login completed, library refresh triggered)`
           )
+          reachedTerminal = true
           onLoginSuccess?.({ runner: activeRunner, username, user_id })
           setState({ phase: 'idle' })
         } else {
@@ -271,12 +307,17 @@ export function useTauriOAuthLogin(
           window.api.logInfo(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=error (auth channel refused: status=${status})`
           )
+          reachedTerminal = true
           setState({
             phase: 'error',
             message: `Login failed for ${activeRunner}: status=${status}`
           })
         }
       } catch (error) {
+        // Not one of Task 1's four named cancellation sites (`capture`, `auth`, `login-url`,
+        // `capture-transport`) -- this guard catches a REJECTED auth-channel call, which (like
+        // login-url/capture-transport) has nothing irreversible to lose, so it is intentionally
+        // left un-instrumented per this plan's fixed `<site>` vocabulary.
         if (cancelled) return
         const message = error instanceof Error ? error.message : String(error)
         if (message.includes(UNPORTED_CHANNEL_MARKER)) {
@@ -284,10 +325,12 @@ export function useTauriOAuthLogin(
           window.api.logInfo(
             `[useTauriOAuthLogin] runner=${activeRunner} phase=blocked channel=${channel}`
           )
+          reachedTerminal = true
           setState({ phase: 'blocked', runner: activeRunner, channel })
         } else {
           // A REAL backend failure must never be mislabelled as "waiting for Phase 34.5".
           window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=error`)
+          reachedTerminal = true
           setState({ phase: 'error', message })
         }
       }
@@ -297,6 +340,12 @@ export function useTauriOAuthLogin(
 
     return () => {
       cancelled = true
+      // Plan 34.5-34 Task 1: the observation that distinguishes "torn down while nothing was
+      // happening" from "torn down mid-login" -- the discrimination the checkpoint could not
+      // make from the log alone.
+      window.api.logInfo(
+        `[useTauriOAuthLogin] runner=${activeRunner} phase=teardown inflight=${!reachedTerminal}`
+      )
     }
   }, [runner, onLoginSuccess])
 
