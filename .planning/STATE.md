@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-28-PLAN.md (F-34.5-G6-01 Epic discriminator R1-FALSIFIED live; GOG smoke shows capture-to-hook fixed but library never populates; BINDING DECISION: fix-first -- blocking gate NOT authored this cycle)"
-last_updated: "2026-08-01T07:45:51.073Z"
+stopped_at: "Planned Phase 34.5 gap cycle 4 (plans 34.5-32..37, 2 waves; plan-checker PASSED). Ready to execute. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is NOT authored or run this cycle."
+last_updated: "2026-08-01T20:15:00.000Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 180
+  total_plans: 186
   completed_plans: 169
   percent: 76
 ---
@@ -125,9 +125,56 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >    deployment — a green suite is necessary but never sufficient evidence of parity; only an
 >    assertion built to reproduce the real deployment conditions is.
 >
-> **Next action:** `/gsd-plan-phase 34.5 --gaps` — scope a new gap cycle against the
-> downstream-of-capture defect family (F-34.5-G6-01/02/03) and the three usability findings
-> (F-34.5-G6-04/05/06) recorded above.
+> **GAP CYCLE 4 PLANNED 2026-08-01 — plans `34.5-32`..`34.5-37`, 2 waves** (`ca32c5243`;
+> plan-checker returned VERIFICATION PASSED with one non-blocking warning, since closed). Scoped
+> strictly by `34.5-G6-EPIC-DISCRIMINATOR.md` § Routing under its `BINDING DECISION: fix-first`.
+> **Plans `34.5-29`/`30`/`31` stay HALTED — the blocking five-item gate is neither authored nor run
+> this cycle**, and plan 32's own automated verify asserts `34.5-LIVE-GATE-RERUN-2.md` does not
+> exist. Wave 1 (all autonomous, zero `files_modified` overlap): **32** record the halt + open the
+> explicitly-untested ledger ∥ **33** routing items 1+2 ∥ **34** routing item 4 (the propagation
+> race) ∥ **35** routing item 3 (keyring bound). Wave 2: **36** dev-only secret vault ∥ **37**
+> Epic Electron-vs-Tauri discriminator (`autonomous: false`, ships no fix).
+>
+> **Two root causes were pinned at SOURCE during planning — neither was known when the checkpoint
+> routed, and both were statically diagnosable all along.**
+> 1. **Routing item 1 has a one-line cause.** `src/backend/sidecar/steamFlowRegistration.ts:62`
+>    registers `ipcMain.handle('refreshLibrary', async () => { await steamLibraryManager.refresh() })`
+>    — a Phase 27 walking-skeleton stub that takes **no arguments**. Every
+>    `window.api.refreshLibrary('gog')` therefore ran a *Steam* refresh. This explains the entire
+>    observed pattern at once: `No cache found, getting data from gog...` repeating with no
+>    completion line, **and** `Steam: fetched 377 owned games` → `sync complete` appearing in the
+>    same session — those Steam lines *are* the GOG refresh calls' actual effect. The Electron
+>    original (`main.ts:1051`) dispatches on the runner correctly.
+> 2. **Routing item 4's race has a signature that matches its cause.** `useTauriOAuthLogin.ts` has
+>    four `if (cancelled) return` sites; two sit *after* irreversible work — one holding a captured
+>    single-use OAuth code, one after the auth channel already persisted the credential — and both
+>    return with **no log output**. That is exactly the observed shape: backend side effects present
+>    in the log, hook side effects entirely absent. Plan 34's fix is race-independent by
+>    construction (cancellation gates `setState` only; `onLoginSuccess` is `GlobalState`'s
+>    referentially-stable `completeOAuthLogin`), verified against source by the plan-checker rather
+>    than taken on trust.
+>
+> **The vault's cost is tracked, not implied.** `34.5-UNTESTED-ITEMS.md` (plan 32) seeds
+> `U-34.5-01`..`06`, each with a mechanically-checkable retirement condition and a standing rule
+> that a passing suite never retires a row. `U-34.5-01` carries the literal **KEYCHAIN PATH
+> UNPROVEN** plus a bar on any vault run serving as evidence for plan 35's item-3 claim — written
+> specifically against the trap Phase 34.4.1's gate fell into, where a struck precondition silently
+> left domain-scoping untested inside a 4/4 PASS.
+>
+> **Decision-coverage gate OVERRIDE recorded 2026-08-01 (cycle-4 planning).** The gate reports
+> **10/12** CONTEXT.md decisions covered; **D-01** and **D-03** are uncovered and the developer
+> chose *proceed + record* rather than cite-or-retag. Both are original discuss-phase **scope**
+> decisions, out of scope for a defect-fixing cycle, and both have been uncovered across all 31
+> prior plans and three gap cycles — this is pre-existing, not introduced here. **D-01** is a
+> meta-decision about *how* keep/drop was judged (case-by-case, not by blanket principle) and is
+> effectively informational. **D-03** (EOS 8 + SteamGridDB 5 + winetricks 3 = 16 channels DEFERRED,
+> not dropped) is **materially satisfied** — plan `34.5-03` inserted Phase 34.6 and reconciled the
+> inventory to 38/3/16, and `deferred-items.md` tracks the 16 — it is simply never cited as a
+> literal `D-03:` string in any plan. Nothing was retagged and no locked decision was edited.
+> Verify-phase should re-surface this rather than treat it as closed.
+>
+> **Next action:** `/gsd-execute-phase 34.5` — run gap cycle 4 (plans 32–37). Phase 34.5 does not
+> reach its blocking gate this cycle by design; a cycle 5 authors and runs it.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
