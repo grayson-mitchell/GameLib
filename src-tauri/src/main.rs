@@ -2388,6 +2388,20 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        // DIAGNOSTIC REVERTED (epic-login-non-interactive, F-34.5-G6-01, 2026-08-01):
+        // this line was briefly commented out to test whether tauri-plugin-notification's
+        // globally-injected init-iife.js (which unconditionally overwrites
+        // `window.Notification` and self-invokes `plugin:notification|is_permission_granted`
+        // in EVERY webview -- confirmed by direct read of tauri-2.11.5's manager/webview.rs
+        // prepare_pending_webview: plugin init scripts are appended to
+        // webview_attributes.initialization_scripts for ALL windows, NOT gated by the
+        // `"windows": ["main"]` capability scope) is why Epic's login form never becomes
+        // interactive. Hardware result: R3 FALSIFIED -- the injection was confirmed removed
+        // (both console error lines gone) but the login form remained non-interactive with a
+        // clean console. This line is restored. The notification-plugin JS-injection defect
+        // is real but unrelated to F-34.5-G6-01; see the debug file's Evidence/Eliminated
+        // sections for the separate finding. Do not remove this line again without a fresh,
+        // pre-registered diagnostic tied to a NEW hypothesis.
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
