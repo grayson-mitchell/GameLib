@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-35-PLAN.md (gap cycle 4 wave 1 remainder -- KEYRING_READ_TIMEOUT 8s->45s + KEYRING_FAILURE_MEMO_MS 15s->120s, Routing item 3; unit/structural proof only, U-34.5-10 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle."
-last_updated: "2026-08-01T09:37:21.769Z"
+stopped_at: Completed 34.5-36-PLAN.md
+last_updated: "2026-08-01T10:22:26.095Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 186
-  completed_plans: 173
-  percent: 93
+  completed_plans: 174
+  percent: 76
 ---
 
 # Project State
@@ -179,9 +179,22 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > 34.5-33..37. `34.5-UNTESTED-ITEMS.md` opened with six seeded rows (`U-34.5-01`..`06`), each
 > retirable only by a named live observation. No `34.5-LIVE-GATE-RERUN-2.md` created — verified absent.
 >
-> **Next action:** `/gsd-execute-phase 34.5` — continue gap cycle 4 (wave 1 remainder: plans
-> 33/34/35; then wave 2: 36/37). Phase 34.5 does not reach its blocking gate this cycle by design; a
-> cycle 5 authors and runs it.
+> **Wave 1 remainder (33/34/35) EXECUTED** — each has its own `SUMMARY.md` on disk
+> (`34.5-33-SUMMARY.md`/`34.5-34-SUMMARY.md`/`34.5-35-SUMMARY.md`); ledger rows `U-34.5-07`..`10`
+> were added per plan, all UNIT/STRUCTURAL proof only, all still OPEN pending live observation.
+>
+> **34.5-36 EXECUTED 2026-08-01** (`f95451cd2`, `4424923fa`, `815c67c67`) — the developer-scoped
+> dev-only secret vault (wave 2). `devSecretVault.ts` installs exclusively against the two real
+> keyring stores in `bootstrap.ts`, env-gated on an exact `GAMELIB_DEV_SECRET_VAULT=1` match,
+> refused in a packaged build (reuses `isPackagedSidecar()`, now exported). `U-34.5-01` populated
+> with the exact enabling variable, the exact `gamelib.log` grep, a 4-condition retirement rule,
+> and a bar on using a vault run as evidence for plan 34.5-35's item-3 claim. `npm run test:ci`
+> 181/181 suites, 3546/3546 tests. See `34.5-36-SUMMARY.md`.
+>
+> **Next action:** `/gsd-execute-phase 34.5` — wave 2's remaining plan, `34.5-37` (Epic
+> Electron-vs-Tauri discriminator, `autonomous: false`, ships no fix). After 34.5-37, gap cycle 4
+> is complete but Phase 34.5 still does not reach its blocking gate this cycle by design; a cycle 5
+> authors and runs it.
 
 > # ✅ PHASE 34.4.1 COMPLETE — 2026-07-31. THIRD LIVE GATE: **4/4 PASS**.
 >
@@ -412,7 +425,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 4 (supersedes gap cycle 3 below; plans 34.5-29/30/31 HALTED by `BINDING DECISION: fix-first`, see 34.5-CYCLE4-ROUTING.md)
-Plan: 35 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound, this session) done — wave 1 is now FULLY complete; 36/37 wave 2 remain — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
+Plan: 36 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound, this session) done — wave 1 is now FULLY complete; 36/37 wave 2 remain — the blocking five-item gate is NOT authored, NOT run this cycle; phase does NOT close until a future cycle's gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2231,7 +2244,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 93%
+trusted blindly. The recurring `**Progress:**[█████████░] 94%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-28): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3131,6 +3144,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P33 | 50min | 2 tasks | 5 files |
 | Phase 34.5 P34 | 35min | 2 tasks | 3 files |
 | Phase 34.5 P35 | 55min | 2 tasks | 5 files |
+| Phase 34.5 P36 | 45min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -3527,6 +3541,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: KEYRING_READ_TIMEOUT set to 45s: comfortably above human Keychain-approval time, 15s headroom under RUST_INVOKE_TIMEOUT_MS; deliberately does not cover the 291s dev-build worst case
 - [Phase 34.5]: KEYRING_FAILURE_MEMO_MS set to 120s: exceeds the observed 101s live-session interval; now a tested cross-language invariant (>=2x KEYRING_READ_TIMEOUT)
 - [Phase 34.5]: No env-var escape hatch or Keychain bypass added for the keyring-race fix -- T-34.5-C4-34 accept-and-forbid holds; dev-only vault stays plan 34.5-36's scope
+- [Phase 34.5-36]: devSecretVault.ts is env-gated (GAMELIB_DEV_SECRET_VAULT=1 exact match), packaged-build-refused, and wired into bootstrap.ts as an EXCLUSIVE branch against the two keyring stores — prevents migrateHumbleSecrets() firing underneath a vault-enabled boot; U-34.5-01 records the Keychain path as UNPROVEN whenever the vault is in use
 
 ### Pending Todos
 
@@ -3599,8 +3614,44 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T09:37:21.758Z
-Stopped at: Completed 34.5-35-PLAN.md (gap cycle 4 wave 1 remainder -- KEYRING_READ_TIMEOUT 8s->45s + KEYRING_FAILURE_MEMO_MS 15s->120s, Routing item 3; unit/structural proof only, U-34.5-10 added to 34.5-UNTESTED-ITEMS.md). Next: 34.5-36/37 (wave 2). Blocking five-item gate remains NOT authored, NOT run this cycle.
+Last session: 2026-08-01T10:22:26.085Z
+Stopped at: Completed 34.5-36-PLAN.md
+  This session (sequential executor): executed 34.5-36 (gap cycle 4, wave 2 -- the
+  developer-scoped dev-only secret vault Routing addition, REQ-34.5-11/-12/-13). Task 1 (feat,
+  commit `f95451cd2`): added `src/backend/sidecar/devSecretVault.ts` -- `installDevSecretVault()`,
+  env-gated on an EXACT `GAMELIB_DEV_SECRET_VAULT === '1'` match (never truthiness), refused in a
+  packaged build or whenever build kind cannot be determined (reuses `humbleFlowRegistration.ts`'s
+  `isPackagedSidecar()` verbatim, now exported, rather than re-deriving a second fail-closed
+  detector), loudly warning on install/read/write while never logging a secret value/substring/
+  length, backing file created with owner-only `0o600` reasserted on every write. 11 tests
+  (unset/'0'/'false' no-install, packaged-build refusal, `isPackagedSidecar()` throwing fail-closed,
+  file-permission-failure refusal, successful dev-build install, mode 0o600, a leak-scan proving no
+  logged argument ever contains a stored secret). Task 2 (feat, commit `4424923fa`): wired the vault
+  into `bootstrap.ts`'s `init()` as an EXCLUSIVE branch against the two real keyring installs --
+  `installDevSecretVault()` called first; when true, neither `installTokenStore` nor
+  `installSidecarHumbleSecretStore()` runs (so `migrateHumbleSecrets()` never fires either); when
+  false, both run exactly as before. Emits `[bootstrap] secret stores: <keyring|dev-vault>` as a
+  live-log receipt. Task 3 (docs, commit `815c67c67`): populated ledger row `U-34.5-01` in
+  `34.5-UNTESTED-ITEMS.md` with the exact enabling variable, the exact `gamelib.log` grep (verified
+  character-for-character against `bootstrap.ts`'s own literal), a 4-condition mechanically
+  checkable retirement rule, and a new `## Interaction with plan 34.5-35` section barring a
+  vault-backed run from serving as that plan's item-3 (keyring-race) evidence. Deviation (Rule 3 --
+  blocking): `testContainment.test.ts`'s Block C declared-list gate required classifying the new
+  `devSecretVault.test.ts`; added it to `STRUCTURALLY_CONTAINED_SUITES`. Verified: `npm run test:ci`
+  181/181 suites, 3546/3546 tests; `npx jest src/backend/sidecar/__tests__` 42/42 suites, 913/913
+  tests (stable across 3 repeated runs); `npx tsc --noEmit` clean; `git diff --name-only` since the
+  prior commit shows exactly the 5 declared files + 1 Rule-3 deviation file, zero `src-tauri/`
+  paths, nothing under `src/backend/` outside `src/backend/sidecar/`. Plans 34.5-29/30/31 remain
+  HALTED (untouched) per the binding `fix-first` decision; this plan did not author, execute, or
+  create any part of them. See `34.5-36-SUMMARY.md`.
+Next: **34.5-37-PLAN.md** -- the remaining wave-2 plan in gap cycle 4 (Epic diagnosis, explicitly
+  NOT a UA fix per `34.5-CYCLE4-ROUTING.md`'s routing item 5). After 34.5-37, gap cycle 4 is
+  complete but Phase 34.5 STILL does not reach its blocking gate this cycle -- the `fix-first`
+  binding decision keeps 34.5-29/30/31 (the third gate contract + its run) halted pending a further
+  gap cycle's authorisation.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-26-PLAN.md
   This session (sequential executor): executed 34.5-26 (gap cycle 3, wave 3). Task 1 (feat,
   commit `ac578a842`): `useTauriOAuthLogin.ts` now checks the resolved auth-channel response's
   `status` before treating a captured login as successful; on `status==='done'` it invokes an
@@ -3622,10 +3673,12 @@ Stopped at: Completed 34.5-35-PLAN.md (gap cycle 4 wave 1 remainder -- KEYRING_R
   179/179 suites; `npx tsc --noEmit` clean; zero `src-tauri/` paths touched. F-34.5-G6-02 (both
   layers) + F-34.5-G6-03 closed at the CODE level only -- the blocking live gate (34.5-31) still
   owes confirming a real captured login populates the Library/account UI live.
-Next: **34.5-27-PLAN.md** (or whichever gap-cycle-3 plan is next per STATE.md's wave ordering) --
-  F-34.5-G6-02/F-34.5-G6-03 closed at the code level; 34.5-31's live gate still owes confirming a
-  real captured login populates the Library and account-manager UI. Phase 34.5 does NOT close
-  until 34.5-31's third re-run gate records 5/5.
+Next (superseded): 34.5-27-PLAN.md (or whichever gap-cycle-3 plan is next per STATE.md's wave
+  ordering) -- F-34.5-G6-02/F-34.5-G6-03 closed at the code level; 34.5-31's live gate still owes
+  confirming a real captured login populates the Library and account-manager UI. Phase 34.5 does
+  NOT close until 34.5-31's third re-run gate records 5/5. [SUPERSEDED -- see wave-2/gap-cycle-4
+  plans 32-37 above, routed by `34.5-CYCLE4-ROUTING.md` after the `34.5-28` discriminator's
+  `fix-first` decision.]
 
 Prior session context, retained for history:
 Stopped at (superseded): Completed 34.5-25-PLAN.md (F-34.5-G6-06 diagnosed and fixed: the "double Keychain"
