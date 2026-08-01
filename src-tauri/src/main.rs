@@ -617,8 +617,9 @@ const CLEAR_COOKIES_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Bound on how long `keyring_get` waits for its worker-thread Keychain read before classifying
 /// the call as `keyring:timeout` (34.4.1 gap cycle 2 plan 26, F-9 observability half,
-/// T-34.4.1-114/T-34.4.1-115). This is OBSERVABILITY, not a fix for F-9's cause, which this plan
-/// does NOT establish as a single clean answer (see
+/// T-34.4.1-114/T-34.4.1-115; raised 8s -> 45s by Phase 34.5 gap cycle 4 plan 35, closing Routing
+/// item 3). This is OBSERVABILITY, not a fix for F-9's underlying cause, which this plan does NOT
+/// establish as a single clean answer (see
 /// `keyring_read_timing_hypothesis_absent_vs_present_entry`'s own doc comment and
 /// `34.4.1-26-SUMMARY.md` for the full timed verdict).
 ///
@@ -630,14 +631,39 @@ const CLEAR_COOKIES_TIMEOUT: Duration = Duration::from_secs(10);
 /// `deferred-items.md`'s ad-hoc-signature/Keychain-ACL theory, reproduced from this same-machine,
 /// non-interactive `cargo test` process (a different code identity than the built `gamelib-shell`
 /// app, so these exact numbers are illustrative of the MECHANISM, not a promise about the app's
-/// own timing). 8 seconds is comfortably above the fast/normal case, and far enough below both
-/// the 291s worst case measured here AND the sidecar's own 60s `RUST_INVOKE_TIMEOUT_MS` budget
-/// (`sidecarRpc.ts`) that this bound converts what would otherwise be an unattributable multi-
-/// minute hang into a fast, named `keyring:timeout`. A timed-out worker thread is ABANDONED, not
-/// cancelled: `SecItemCopyMatching` has no interrupt API, so this bound protects the RPC round
-/// trip, not the underlying OS call -- the abandoned thread keeps running (and, per this
-/// harness's own measurement, may keep running for minutes) on its own.
-const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(8);
+/// own timing).
+///
+/// **Why 8s was wrong and 45s is the replacement.** A 2026-08-01 live session recorded TWO
+/// separate macOS Keychain approval prompts for the same `steam-refresh-token` slot, 19:22:57 and
+/// 19:24:38 -- the exact outcome plan 34.5-25's own decision rule defines as FALSIFIED. 8 seconds
+/// is shorter than the time a human plausibly takes to notice, read and approve a Keychain
+/// authorization dialog, so a human-speed approval could never complete inside the old bound; the
+/// read timed out, the worker thread that eventually got the real (human-approved) answer was
+/// already abandoned, and the next caller had to prompt again. Two selecting constraints pick 45s:
+/// it must exceed ordinary human Keychain-approval time (8s demonstrably does not), and it must
+/// stay strictly under the sidecar's own `RUST_INVOKE_TIMEOUT_MS` (60_000ms,
+/// `src/backend/sidecar/sidecarRpc.ts`) with enough round-trip headroom that a slow read is still
+/// reported as the specific, named `keyring:timeout` rather than degrading into an opaque
+/// transport timeout raised by that outer layer instead. 45s satisfies both: comfortably above
+/// human approval time, and 15s of raw headroom under the 60s invoke bound -- of which this
+/// file's own `#[cfg(test)]` assertion
+/// (`keyring_read_timeout_stays_strictly_under_the_sidecar_invoke_bound_with_round_trip_headroom`)
+/// enforces at least 10s as a minimum round-trip margin.
+///
+/// **45s does NOT cover the 291s worst case measured above, and that is deliberate.** That
+/// worst-case number is attributed to `deferred-items.md`'s ad-hoc-code-signing /
+/// Keychain-ACL-non-persistence theory -- a likely DEV-BUILD severity modifier (an ad-hoc dev
+/// signature means the Keychain ACL never persists, so every run re-triggers a slow authorization
+/// negotiation), not an established production cause, and this plan does not investigate or fix
+/// it. A read that genuinely takes 291s will still time out under the new bound exactly as it did
+/// under the old one; only the human-speed-approval case (the live-confirmed defect) is fixed
+/// here.
+///
+/// A timed-out worker thread is ABANDONED, not cancelled: `SecItemCopyMatching` has no interrupt
+/// API, so this bound protects the RPC round trip, not the underlying OS call -- the abandoned
+/// thread keeps running (and, per this harness's own measurement, may keep running for minutes)
+/// on its own.
+const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(45);
 
 /// The five parsed, validated args `humble_reveal_post` needs. Kept as a plain struct (rather
 /// than returning a tuple) so the dispatch arm's body reads by field name, not position.
@@ -3550,6 +3576,38 @@ mod tests {
             Ok(Value::Null)
         });
         assert_eq!(result, Err("keyring:timeout".to_string()));
+    }
+
+    // ---- KEYRING_READ_TIMEOUT vs RUST_INVOKE_TIMEOUT_MS ordering invariant (Phase 34.5 gap
+    // cycle 4 plan 35, Routing item 3, T-34.5-C4-33) ----
+    //
+    // `KEYRING_READ_TIMEOUT` (this file) and `RUST_INVOKE_TIMEOUT_MS` (60_000ms,
+    // `src/backend/sidecar/sidecarRpc.ts`) carry an ordering invariant that lives in two
+    // independently-editable files in two languages: the Rust bound must stay strictly UNDER the
+    // TS bound, with round-trip headroom, or a slow keyring read stops being reported as the
+    // specific, named `keyring:timeout` and starts being reported as an opaque transport timeout
+    // by the sidecar's outer layer instead. This assertion pins that invariant on the Rust side so
+    // a future edit to `KEYRING_READ_TIMEOUT` that reorders the two bounds fails loudly here,
+    // rather than silently at 2am in a live login flow. The TS side pins the same invariant
+    // independently by parsing this constant out of this file (see
+    // `src/backend/sidecar/__tests__/keyringTokenStore.test.ts`).
+    #[test]
+    fn keyring_read_timeout_stays_strictly_under_the_sidecar_invoke_bound_with_round_trip_headroom()
+    {
+        // Mirrors sidecarRpc.ts's RUST_INVOKE_TIMEOUT_MS (60_000ms) verbatim -- this is the outer
+        // bound KEYRING_READ_TIMEOUT must stay under. Margin is 10s round-trip headroom, leaving
+        // KEYRING_READ_TIMEOUT (45s) 5s of additional slack below the strict 50s ceiling this
+        // assertion enforces.
+        const RUST_INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
+        const ROUND_TRIP_MARGIN: Duration = Duration::from_secs(10);
+        assert!(
+            KEYRING_READ_TIMEOUT < RUST_INVOKE_TIMEOUT - ROUND_TRIP_MARGIN,
+            "KEYRING_READ_TIMEOUT ({KEYRING_READ_TIMEOUT:?}) must stay strictly under \
+             RUST_INVOKE_TIMEOUT_MS (src/backend/sidecar/sidecarRpc.ts, currently {RUST_INVOKE_TIMEOUT:?}) \
+             minus a {ROUND_TRIP_MARGIN:?} round-trip margin, or a slow keyring read stops being \
+             reported as the specific keyring:timeout and starts being reported as an opaque \
+             transport timeout by the sidecar's outer layer instead"
+        );
     }
 
     // ---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----
