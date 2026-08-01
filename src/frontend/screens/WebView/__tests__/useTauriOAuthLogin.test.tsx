@@ -399,6 +399,78 @@ describe('useTauriOAuthLogin — non-captured outcomes map to their own phases',
   })
 })
 
+describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34.5-23)', () => {
+  it('a rejected oauthCaptureLogin settles on { phase: "error", message } instead of staying "awaiting"', async () => {
+    mockApi.oauthCaptureLogin.mockRejectedValue(new Error('sidecar invoke timed out'))
+
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      mount('gog')
+      const hook = await settle('gog')
+
+      expect(hook).toEqual({ phase: 'error', message: 'sidecar invoke timed out' })
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+    // The rejection must never escape as an unhandled promise rejection -- this was the
+    // exact defect shape F-34.5-G6-02 diagnosed (a bare, unguarded await).
+    expect(unhandled).not.toHaveBeenCalled()
+  })
+
+  it('emits exactly one logInfo line containing capture-transport-failed and the runner name', async () => {
+    mockApi.oauthCaptureLogin.mockRejectedValue(new Error('sidecar invoke timed out'))
+
+    mount('gog')
+    await settle('gog')
+
+    const matching = mockApi.logInfo.mock.calls.filter(([line]) =>
+      typeof line === 'string' && line.includes('capture-transport-failed')
+    )
+    expect(matching).toHaveLength(1)
+    expect(matching[0][0]).toContain('runner=gog')
+  })
+
+  it('a non-Error rejection value still produces a { phase: "error" } state via String(error)', async () => {
+    mockApi.oauthCaptureLogin.mockRejectedValue('raw-string-rejection')
+
+    mount('zoom')
+    const hook = await settle('zoom')
+
+    expect(hook).toEqual({ phase: 'error', message: 'raw-string-rejection' })
+  })
+
+  it('a late rejection after unmount produces no setState and no log line (cancelled guard first)', async () => {
+    let rejectCapture: (reason: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectCapture = reject
+        })
+    )
+
+    mount('legendary')
+    await flushPromises()
+    const beforeUnmount = rerender('legendary')
+    expect(beforeUnmount).toEqual({ phase: 'awaiting' })
+
+    unmount()
+    mockApi.logInfo.mockClear()
+
+    const unhandled = jest.fn()
+    process.on('unhandledRejection', unhandled)
+    try {
+      rejectCapture(new Error('sidecar invoke timed out'))
+      await flushPromises()
+    } finally {
+      process.off('unhandledRejection', unhandled)
+    }
+
+    expect(unhandled).not.toHaveBeenCalled()
+    expect(mockApi.logInfo).not.toHaveBeenCalled()
+  })
+})
+
 describe('useTauriOAuthLogin — unmount safety', () => {
   it('unmounting mid-capture does not call setState afterward (no leak)', async () => {
     let resolveCapture: (value: unknown) => void = () => {}

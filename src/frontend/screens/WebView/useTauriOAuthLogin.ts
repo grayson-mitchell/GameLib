@@ -96,10 +96,25 @@ export function useTauriOAuthLogin(runner: OAuthRunner | undefined): TauriOAuthL
         return
       }
 
-      const outcome: OAuthCaptureOutcome = await window.api.oauthCaptureLogin({
-        runner: activeRunner,
-        url
-      })
+      let outcome: OAuthCaptureOutcome
+      try {
+        outcome = await window.api.oauthCaptureLogin({
+          runner: activeRunner,
+          url
+        })
+      } catch (error) {
+        if (cancelled) return
+        const message = error instanceof Error ? error.message : String(error)
+        // Distinct literal on purpose (mirrors UNPORTED_CHANNEL_MARKER/STORE_LAZY_MISS_MARKER):
+        // a transport failure (e.g. the pre-34.5-23 60s/300s invoke-bound mismatch, F-34.5-G6-02)
+        // is a different defect from a resolved { status: 'error' } outcome below, and a future
+        // reader must be able to tell them apart from the log alone.
+        window.api.logInfo(
+          `[useTauriOAuthLogin] runner=${activeRunner} phase=error capture-transport-failed message=${message}`
+        )
+        setState({ phase: 'error', message })
+        return
+      }
       if (cancelled) return
 
       if (outcome.status === 'cancelled') {
