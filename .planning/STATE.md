@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-23-PLAN.md (F-34.5-G6-02 fix: exempted oauthCaptureLogin/humbleStartLogin/humbleReconnect from the 60s invoke bound, made a rejected capture round-trip loud, added a standing guard). Next: 34.5-24 onward per gap-cycle-3 wave ordering."
-last_updated: "2026-08-01T02:46:32.809Z"
+stopped_at: "Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: hostname-only nav logging, source-free UA override seam, pre-registered R1/R2 experiment with verdict: null). Next: 34.5-25 onward per gap-cycle-3 wave ordering; 34.5-28 executes this discriminator live, 34.5-29 applies whichever fix it selects."
+last_updated: "2026-08-01T03:36:12.285Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 180
-  completed_plans: 164
-  percent: 91
+  completed_plans: 165
+  percent: 92
 ---
 
 # Project State
@@ -358,7 +358,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 23 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Plan: 24 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2180,6 +2180,10 @@ hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each t
 trusted blindly. The recurring `**Progress:**[█████████░] 91%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
+NOTE (34.5-24): the same splice-into-historical-prose bug recurred yet again this session --
+`state.update-progress` overwrote this note's own `91%` with `92%` (this session's own computed
+plan-based percent), corrupting the historical record above yet again. Hand-corrected back to
+`91%` per this cluster's own established convention.
 NOTE (34.4.1-13): the same splice-into-historical-prose bug recurred yet again this session --
 `state.update-progress` overwrote this note's own `89%` with `90%` (this session's own computed
 plan-based percent), corrupting the historical record above a SECOND time (see the 34.4.1-04 note
@@ -3514,8 +3518,46 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T02:46:32.798Z
-Stopped at: Completed 34.5-23-PLAN.md (F-34.5-G6-02 fix: exempted oauthCaptureLogin/humbleStartLogin/humbleReconnect from the 60s invoke bound, made a rejected capture round-trip loud, added a standing guard). Next: 34.5-24 onward per gap-cycle-3 wave ordering.
+Last session: 2026-08-01T03:36:12.285Z
+Stopped at: Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: hostname-only nav
+  logging, source-free UA override seam, pre-registered R1/R2 experiment with verdict: null).
+  Next: 34.5-25 onward per gap-cycle-3 wave ordering.
+  This session (sequential executor): executed 34.5-24 (gap cycle 3, wave 2, parallel to 34.5-23 --
+  builds the DISCRIMINATOR for F-34.5-G6-01, does not fix it). Both tasks 1 and 2 (tdd="true") ran
+  as genuine RED->GREEN pairs: source reverted to HEAD via `git checkout --`, failing tests
+  confirmed by an actual jest run, then re-applied and confirmed passing -- never written to pass
+  on the first attempt. Task 1 RED (commit `cac635fec`) / GREEN (commit `688a216de`): added
+  `nav host=${hostname}` logging inside `poll()`'s event loop in `oauthLoginCapture.ts` --
+  hostname ONLY (T-34.5-G6-11, never origin/pathname/search/href, since Epic's own redirect shape
+  carries its code in the query string), computed inside its own try/catch (`<unparseable>` on a
+  parse failure, never throws), de-duplicated against the last LOGGED (not merely observed) host
+  so a 500ms poll over the 300s deadline cannot flood the log. 45/45 tests (was 42/42). Task 2 RED
+  (commit `d4b88810c`) / GREEN (commit `dea15578f`): added `resolveUserAgent(runner)`, reading
+  `GAMELIB_OAUTH_UA_<RUNNER-UPPERCASED>` -- unset/empty/whitespace-only falls back to the existing
+  default byte-for-byte, logs the runner + override LENGTH only (never the value, T-34.5-G6-13)
+  when in effect. This is a DIAGNOSTIC-ONLY seam: plan 34.5-28 runs Epic's login twice (stock
+  `EpicGamesLauncher` UA vs. the Chrome-shaped agent GOG/Amazon already use) against ONE build via
+  ONE env var, comparing the `nav host=` sequences Task 1 now logs -- never a hand-edit-and-rebuild
+  between arms, which would make the two arms non-comparable. 49/49 tests (was 45/45). Task 3
+  (commit `5d4151d4d`): wrote `34.5-G6-EPIC-DISCRIMINATOR.md` (`verdict: null`,
+  `executed_by: 34.5-28-PLAN.md`) naming R1 (user-agent gated) and R2 (a Chromium-only API
+  throwing under WKWebView, mirroring the confirmed `queryLocalFonts` precedent), with a
+  decision-rule table covering all four outcome combinations (including the two that FALSIFY
+  rather than confirm a reading, and "neither fits -> stop and escalate") -- every Result slot left
+  empty, reconciled explicitly against `34.5-G6-FINDINGS.md` (no divergence: F-34.5-G6-01 stays
+  separate from, and upstream of, the already-closed F-34.5-G6-02). `npm run test:ci` 179/179
+  suites, 3482/3482 tests (was 3475/3475), exit 0 (run twice, identical); `npx tsc --noEmit` clean;
+  zero `.rs` files touched (`git diff --name-only be3ca4be7 HEAD -- src-tauri/` empty). SUMMARY
+  written (`34.5-24-SUMMARY.md`), self-check PASSED. This plan does NOT resolve F-34.5-G6-01 --
+  Epic's login still does not work; it makes the failure legible and pre-registers how to
+  interpret plan 34.5-28's live run.
+Next: **34.5-25-PLAN.md** (or whichever gap-cycle-3 plan is next per the wave ordering, e.g.
+  34.5-25/26/27 which run in parallel to or after this plan per the wave-2/3 ordering) --
+  `34.5-G6-EPIC-DISCRIMINATOR.md`'s experiment is unrun until plan 34.5-28's live checkpoint drives
+  both arms on real hardware and fills in its Result slots; plan 34.5-29 applies whichever fix the
+  recorded verdict selects. Phase 34.5 does NOT close until 34.5-31's third re-run gate records 5/5.
+
+Stopped at (superseded): Completed 34.5-23-PLAN.md (F-34.5-G6-02 fix: exempted oauthCaptureLogin/humbleStartLogin/humbleReconnect from the 60s invoke bound, made a rejected capture round-trip loud, added a standing guard). Next: 34.5-24 onward per gap-cycle-3 wave ordering.
   This session (sequential executor): executed 34.5-23 (gap cycle 3, wave 2 -- the fix
   34.5-22's diagnosis specified). Task 1 (commit `d3061e65f`): added `oauthCaptureLogin`,
   `humbleStartLogin` and `humbleReconnect` to `main.rs`'s `LONG_RUNNING_CHANNELS` (all three
