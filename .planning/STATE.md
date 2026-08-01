@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: ready to execute
-stopped_at: Planned Phase 34.5 gap cycle 3 — 10 plans (34.5-22..34.5-31) in 7 waves, checker VERIFICATION PASSED after one revision round; next step is /gsd-execute-phase 34.5
-last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle 3 PLANNED (10 plans closing F-34.5-G6-01..06 and the two never-attempted gate items; ends in a third blocking live gate; phase still does not close until it PASSes 5/5)
+status: executing
+stopped_at: "Completed 34.5-22-PLAN.md (diagnostic — no source changes). F-34.5-G6-02 diagnosed to shape (c); next: 34.5-23 implements the cited fix."
+last_updated: "2026-08-01T01:55:21.290Z"
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle 3, plan 22 EXECUTED (diagnostic-only, no source changes): F-34.5-G6-02 diagnosed to shape (c) with a cited implied fix for 34.5-23; gate-run log preserved off-repo; phase still does not close until 34.5-31's third re-run gate PASSes 5/5
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 172
-  completed_plans: 162
-  percent: 94
+  total_plans: 180
+  completed_plans: 163
+  percent: 91
 ---
 
 # Project State
@@ -357,8 +357,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE
-Plan: 19 of 21 complete (plans 01–15 done; **plan 15's blocking live gate RAN 2026-08-01, VERDICT FAIL 0/5**; gap plans 34.5-16..21 now executing across 5 waves to close G-1..G-6 — the phase does NOT close until 34.5-20's re-run gate records 5/5)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
+Plan: 22 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2438,7 +2438,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-07-31
+Last activity: 2026-08-01
 (0 blockers, 2 doc warnings both fixed). Prior same-day activity: quick task 260727-c42
 (graphify graph consolidation), which `state.planned-phase` clobbered off this line.
 
@@ -3059,6 +3059,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P18 | 55min | 2 tasks | 2 files |
 | Phase 34.5 P19 | 35min | 2 tasks | 1 files |
 | Phase 34.5 P20 | 55min | 3 tasks | 1 files |
+| Phase 34.5 P22 | 50min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -3434,6 +3435,8 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Split plan 34.5-18's two tasks into two atomic commits by temporarily reverting Task 2's additions, verifying Task 1 alone, committing, then reapplying Task 2 — matches this phase's established one-commit-per-task convention even though both tasks were drafted together in one contiguous code region
 - [Phase 34.5-19]: Re-run goes in NEW 34.5-LIVE-GATE-RERUN.md, verdict:null, never edits superseded 34.5-LIVE-GATE.md; precondition 4 proves G-1 fix present from bootstrap.ts's own boot log before any login is attempted
 - [Phase 34.5]: Verdict recorded FAIL 0/5 on the live-gate re-run (34.5-20): items 1-3 FAIL on a new downstream-of-capture defect (G-1 spawn defect confirmed closed by precondition 4; items 2/3 both reached status=captured at the backend for the first time, but nothing consumes the capture into a completed login), items 4-5 NOT ATTEMPTED. Assumption A1 (www.amazon.com anchor) CONFIRMED via code-structural proof despite item 3's own FAIL.
+- [Phase 34.5]: F-34.5-G6-02 diagnosed to shape (c): oauthCaptureLogin's 300s internal deadline exceeds main.rs's 60s INVOKE_TIMEOUT (absent from LONG_RUNNING_CHANNELS), rejecting the renderer promise before the sidecar settles; the rejection lands on an unguarded await at useTauriOAuthLogin.ts:99 — R-A selected over R-B on structural grounds: sidecar_invoke's async fn has already returned by the time the 60s bound fires, so Tauri's own command contract forecloses a true hang
+- [Phase 34.5]: Recurrence count for the 60s-invoke-bound-vs-internal-deadline defect is 3, not 1: humbleStartLogin and humbleReconnect share the identical shape (600s LOGIN_WATCH_TIMEOUT_MS) and were not exercised by this session's live gate
 
 ### Pending Todos
 
@@ -3506,8 +3509,41 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T00:00:00.000Z
-Stopped at: Completed 34.5-20-PLAN.md — live-gate re-run FAILED 0/5 (3 FAIL, 2 NOT ATTEMPTED); Phase 34.5 does not close; 34.5-21 (verdict propagation) is next
+Last session: 2026-08-01T01:55:21.281Z
+Stopped at: Completed 34.5-22-PLAN.md (diagnostic — no source changes). F-34.5-G6-02 diagnosed to shape (c); next: 34.5-23 implements the cited fix.
+  This session (sequential executor): executed 34.5-22 (gap cycle 3, wave 1, diagnostic plan --
+  NO source-code edits, per the plan's own explicit prohibition). Task 1: preserved this
+  session's `gamelib.log` (351,376 bytes) and `gamelib.log.old` (5,062 bytes) to
+  `~/Library/Logs/GameLib/gamelib.log.34.5-g6-gate2` / `.old.34.5-g6-gate2`, outside the
+  repository, both `cmp` byte-identical to their originals -- the only primary evidence for
+  findings F-34.5-G6-01..06, otherwise destroyed by the next `pnpm tauri:dev` launch. No repo
+  commit for this task (nothing in the working tree changed). Task 2 (commit `7a4c297e1`):
+  diagnosed F-34.5-G6-02 to shape (c) -- exists-but-never-reached -- from source and the
+  preserved log: `oauthCaptureLogin` is absent from `main.rs`'s `LONG_RUNNING_CHANNELS`, so it
+  inherits the default 60s `INVOKE_TIMEOUT`, while its own `DEFAULT_DEADLINE_MS` is 300,000ms;
+  all six real backend terminal outcomes this session (3 legendary timeouts, 1 nile timeout, 1
+  nile capture at 91s, 1 gog capture at 68s) exceeded 60s, and the renderer's own
+  `[useTauriOAuthLogin]` log line fired ZERO times against those six backend outcomes -- the
+  signature of an unhandled promise rejection at the unguarded `await` on
+  `useTauriOAuthLogin.ts:99` (its enclosing `try` closes at line 97). R-A (transport rejected,
+  swallowed) selected over R-B (never settles) on structural grounds: `sidecar_invoke`'s async fn
+  has already returned by the time the 60s bound fires, foreclosing a true hang.
+  F-34.5-G6-01 (Epic's greyed-out form) recorded as a SEPARATE upstream defect -- item 1 had zero
+  captures, so this finding's mechanism never had anything to lose. Counted the recurrence:
+  `humbleStartLogin`/`humbleReconnect` share the identical shape (600s `LOGIN_WATCH_TIMEOUT_MS`),
+  bringing the known-instance count to 3, not 1. Task 3 (commit `59cd17d0e`): appended a
+  four-item implied-fix specification for plan 34.5-23 (the `LONG_RUNNING_CHANNELS` edit, the
+  paired `EXPECTED_LONG_RUNNING_CHANNELS` test edit, a `try`/`catch` defense-in-depth fix, and a
+  standing guard test that catches a future channel by shape), each with an observable downstream
+  effect that is explicitly not "the test suite is green." `git diff --name-only HEAD` matched
+  zero `.ts`/`.tsx`/`.rs` files across both commits. SUMMARY written (`34.5-22-SUMMARY.md`),
+  self-check PASSED.
+Next: **34.5-23-PLAN.md** — implements the four-item fix `34.5-G6-FINDINGS.md`'s "Implied fix"
+  section specifies: the `LONG_RUNNING_CHANNELS` edit (`main.rs`) + matching
+  `EXPECTED_LONG_RUNNING_CHANNELS` edit, the `useTauriOAuthLogin.ts:99` try/catch, and the
+  standing guard test. Phase 34.5 does NOT close until 34.5-31's third re-run gate records 5/5.
+
+Stopped at (superseded): Completed 34.5-20-PLAN.md
   This session (continuation executor): executed 34.5-20 Tasks 2-3 (Task 1 -- the 7
   preconditions -- was completed by a prior agent, commit `8ea770e2f`, all SATISFIED including
   precondition 4's proof that the G-1 publicDir/runner-binary fix from plans 34.5-16..18 is
