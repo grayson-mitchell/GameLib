@@ -1583,6 +1583,23 @@ Gap cycle (planned 2026-08-01 via `/gsd-plan-phase 34.5 --gaps`; waves restart a
 - [x] 34.5-20-PLAN.md — **BLOCKING live gate RE-RUN**, all 5 items on real hardware (gap wave 4, non-autonomous) — **RAN 2026-08-01, VERDICT FAIL 0/5** (items 1/2/3 FAIL: Epic's login form never becomes interactive 0/3 captures; GOG/Amazon both reach backend `status=captured` but nothing consumes the capture into a completed login; items 4/5 NOT ATTEMPTED). `publicDir` root cause CONFIRMED CLOSED (precondition 4); Assumption A1 CONFIRMED. See `34.5-LIVE-GATE-RERUN.md`. **Phase 34.5 STILL DOES NOT CLOSE** — another gap cycle required.
 - [x] 34.5-21-PLAN.md — Propagation: `34.5-PORTED-CHANNELS.md` LIVE cells, gate script, inventory, ROADMAP, STATE (gap wave 5)
 
+Gap cycle 3 (planned 2026-08-01 via `/gsd-plan-phase 34.5 --gaps`; waves restart at 1 for this cycle).
+Scoped against the RE-RUN's six findings (F-34.5-G6-01..06) plus gate items 4 and 5, NOT ATTEMPTED on
+both prior runs. Planning established a **second defect layer the RE-RUN did not name**: beyond the
+capture never reaching the renderer, `useTauriOAuthLogin` calls the RAW auth channels rather than
+`GlobalState.tsx`'s wrappers, so `handleSuccessfulLogin` → `refreshLibrary` never runs — fixing only
+the transport would have produced a third FAIL for a different reason (F-34.5-G6-03).
+- [ ] 34.5-22-PLAN.md — Preserve the gate-run log off the rotation path; diagnose F-34.5-G6-02 to one of three named gap shapes, from source (gap wave 1)
+- [ ] 34.5-23-PLAN.md — F-G6-02 layer 1: exempt `oauthCaptureLogin` from the 60 s `INVOKE_TIMEOUT`, make the transport failure loud, add the self-tested standing guard (gap wave 2)
+- [ ] 34.5-24-PLAN.md — F-G6-01 instrumentation: hostname-only nav logging + `GAMELIB_OAUTH_UA_LEGENDARY` override + the discriminator contract, `verdict: null` (gap wave 2)
+- [ ] 34.5-25-PLAN.md — F-G6-06: diagnose the double Keychain prompt and count the shared arm's blast radius, then dedupe reads and bound the failure memo (gap wave 2)
+- [ ] 34.5-26-PLAN.md — F-G6-02 layer 2 / F-G6-03: route the captured code through the post-login completion path so the library actually refreshes (gap wave 3)
+- [ ] 34.5-27-PLAN.md — F-G6-04 origin shown in the login window's own chrome (phishing-resistance) + F-G6-05 light interface style for the login webview (gap wave 3)
+- [ ] 34.5-28-PLAN.md — Diagnostic live checkpoint: two-arm Epic UA discriminator + one-runner capture-to-library smoke, before committing to the full gate (gap wave 4, non-autonomous)
+- [ ] 34.5-29-PLAN.md — Apply the Epic fix the discriminator SELECTED (three of four branches ship no code) + verified preflight for the never-attempted items 4 and 5 (gap wave 5)
+- [ ] 34.5-30-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, nine preconditions, all five items (gap wave 6)
+- [ ] 34.5-31-PLAN.md — **BLOCKING live gate, third run**, all 5 items on real hardware, verdict + propagation (gap wave 7, non-autonomous)
+
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
 
 **Goal:** Port the **16 channels** deferred by Phase 34.5's **D-03** — EOS overlay (8):
