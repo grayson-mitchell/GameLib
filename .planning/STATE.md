@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: Completed 34.5-21-PLAN.md — RE-RUN verdict (FAIL 0/5) propagated to PORTED-CHANNELS/deferred-items/IPC-PORT-INVENTORY/ROADMAP/STATE; Phase 34.5 does not close; next step is /gsd-plan-phase 34.5 --gaps
+status: ready to execute
+stopped_at: Planned Phase 34.5 gap cycle 3 — 10 plans (34.5-22..34.5-31) in 7 waves, checker VERIFICATION PASSED after one revision round; next step is /gsd-execute-phase 34.5
 last_updated: "2026-08-01T00:00:00.000Z"
-last_activity: 2026-08-01 -- Phase 34.5 gap cycle plan 34.5-21 executed (propagation of live-gate RE-RUN verdict FAIL 0/5; all 21 plans of this phase now have summaries; phase still does not close)
+last_activity: 2026-08-01 -- Phase 34.5 gap cycle 3 PLANNED (10 plans closing F-34.5-G6-01..06 and the two never-attempted gate items; ends in a third blocking live gate; phase still does not close until it PASSes 5/5)
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 162
+  total_plans: 172
   completed_plans: 162
-  percent: 100
+  percent: 94
 ---
 
 # Project State
@@ -81,6 +81,37 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > GOG sign-out prompted for Keychain approval twice. `R-34.5-G1-PKG` (the packaged Tauri build's
 > asset root) also remains open, with its future home named as the packaging work, not Phase 34.6's
 > channel port.
+>
+> **GAP CYCLE 3 PLANNED 2026-08-01 — plans `34.5-22`..`34.5-31`, 7 waves** (`ac01ae9cb`, checker
+> fixes `06863e354`; plan-checker returned VERIFICATION PASSED after one revision round). Order:
+> **22 preserve the gate log + diagnose F-G6-02 → 23 exempt `oauthCaptureLogin` from the 60 s
+> `INVOKE_TIMEOUT` ∥ 24 Epic UA discriminator ∥ 25 F-G6-06 keyring → 26 route the capture through
+> the post-login completion path ∥ 27 origin-in-chrome + Amazon contrast → 28 diagnostic live
+> checkpoint (`autonomous: false`, ends in a BLOCKING `checkpoint:decision`) → 29 apply the fix the
+> discriminator SELECTED → 30 author `34.5-LIVE-GATE-RERUN-2.md` → 31 blocking live gate, third run
+> (`autonomous: false`)**.
+>
+> **What planning found that the gate itself never named — F-34.5-G6-02 has TWO layers, and fixing
+> only one would have produced a third FAIL.** Layer 1: `oauthCaptureLogin` is absent from
+> `LONG_RUNNING_CHANNELS` while `INVOKE_TIMEOUT` is 60 s (`main.rs:104`) and the sidecar's own
+> deadline is 300 s (`oauthLoginCapture.ts:62`) — GOG captured at 68 s, Amazon at 91 s, Epic timed
+> out at 300 s, so every attempt exceeded the shell's bound, the late real response was dropped as
+> an unknown id, and the unguarded `await` at `useTauriOAuthLogin.ts:99` vanished as an unhandled
+> rejection. Layer 2: `useTauriOAuthLogin.ts` deliberately calls the RAW `authGOG`/`login`/
+> `authAmazon` channels rather than `GlobalState.tsx`'s wrappers, and those wrappers are the only
+> thing that runs `handleSuccessfulLogin(runner)` → `refreshLibrary({library: runner})` — so even a
+> delivered capture leaves the library empty and the runner absent from the filter list. That is
+> F-34.5-G6-03, and it is why plan 23 is explicitly marked as not sufficient on its own.
+>
+> **F-34.5-G6-06 is not a GOG bug.** The log shows GOG's `Logging user out` at 11:14:17 followed by
+> a **`humble-csrf`** keyring read failing at 11:14:34. `humble/user.ts` reads two slots = two
+> Keychain entries = two prompts, and `keyringTokenStore.ts:159` does not cache failures while
+> `KEYRING_READ_TIMEOUT` is 8 s — shorter than a human takes to approve the dialog, so each timeout
+> re-prompts.
+>
+> **The primary evidence is perishable.** `~/Library/Logs/GameLib/gamelib.log` (351 KB, 11:15) still
+> holds the entire gate run and rotates on the next app start — preserving it off the rotation path
+> is task 1 of wave 1, before anything that could trigger a rebuild.
 >
 > **Two durable lessons this cycle bought, worth carrying into the next planner:**
 > 1. The `publicdir-getapppath-chunking` family reached FOUR recurrences because a known gotcha was
