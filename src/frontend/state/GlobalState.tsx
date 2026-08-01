@@ -55,6 +55,19 @@ const globalSettings = configStore.get_nodefault('settings')
 
 const RTL_LANGUAGES = ['fa', 'ar']
 
+// GAP CYCLE 4 (34.5-33, Routing item 2): `origin` identifies which call site
+// triggered a refresh, instrumenting the search for the runner-less
+// `refreshLibrary` emitters (candidates: `main.ts:789`'s
+// `sendFrontendMessage('refreshLibrary')` and
+// `shellFilesFlowRegistration.ts:274`'s `pushFrontendMessage('refreshLibrary')`,
+// both Electron/sidecar-side pushes with no runner argument) that produced
+// three `Refreshing undefined Library` lines in the 2026-08-01 checkpoint
+// session. Kept local to this file rather than added to the shared
+// `common/types.ts` RefreshOptions — this plan's files_modified is scoped to
+// GlobalState.tsx only; threading `origin` into `common/types.ts` and the
+// `window.api.refreshLibrary` preload signature is a follow-up.
+type RefreshLibraryOptions = RefreshOptions & { origin?: string }
+
 type T = TFunction<'gamepage'> & TFunction<'translations'>
 
 interface Props {
@@ -590,7 +603,8 @@ class GlobalState extends PureComponent<Props> {
     storage.setItem('category', 'all')
     this.refreshLibrary({
       runInBackground: false,
-      library: runner
+      library: runner,
+      origin: 'login-success'
     })
   }
 
@@ -747,7 +761,8 @@ class GlobalState extends PureComponent<Props> {
       })
       this.refreshLibrary({
         runInBackground: true,
-        library: 'steam'
+        library: 'steam',
+        origin: 'steam-login'
       })
     }
     return result.status
@@ -974,15 +989,28 @@ class GlobalState extends PureComponent<Props> {
   refreshLibrary = async ({
     checkForUpdates,
     runInBackground = true,
-    library = undefined
-  }: RefreshOptions): Promise<void> => {
+    library = undefined,
+    origin = 'unknown'
+  }: RefreshLibraryOptions): Promise<void> => {
     if (this.state.refreshing) return
 
     this.setState({
       refreshing: true,
       refreshingInTheBackground: runInBackground
     })
-    window.api.logInfo(`Refreshing ${library} Library`)
+    // GAP CYCLE 4 (34.5-33, item 2): this line used to be
+    // `Refreshing ${library} Library`, which printed the literal word
+    // `undefined` whenever `library` was omitted — indistinguishable from a
+    // genuine runner name in a live log. `library ?? 'all'` matches the
+    // semantics `window.api.refreshLibrary(undefined)` already carries at
+    // main.ts:1051 and (gap cycle 4, plan 34.5-33) now carries in the
+    // sidecar handler too — the runner-less case IS "all", never a mystery
+    // value. `origin` names the call site so a live log can attribute a
+    // refresh to its trigger.
+    const runnerScope = library ?? 'all'
+    window.api.logInfo(
+      `[refreshLibrary] runner=${runnerScope} origin=${origin}`
+    )
     try {
       await window.api.refreshLibrary(library)
       return await this.refresh(library, checkForUpdates)
@@ -1066,7 +1094,8 @@ class GlobalState extends PureComponent<Props> {
         this.refreshLibrary({
           checkForUpdates: true,
           runInBackground: true,
-          library: runner
+          library: runner,
+          origin: 'game-status'
         })
 
         storage.setItem('updates', JSON.stringify(updatedGamesUpdates))
@@ -1076,7 +1105,11 @@ class GlobalState extends PureComponent<Props> {
         })
       }
 
-      this.refreshLibrary({ runInBackground: true, library: runner })
+      this.refreshLibrary({
+        runInBackground: true,
+        library: runner,
+        origin: 'game-status'
+      })
 
       this.setState({ libraryStatus: newLibraryStatus })
     }
@@ -1155,7 +1188,8 @@ class GlobalState extends PureComponent<Props> {
       this.refreshLibrary({
         checkForUpdates: false,
         runInBackground: true,
-        library: runner
+        library: runner,
+        origin: 'push'
       })
     })
 
@@ -1377,7 +1411,8 @@ class GlobalState extends PureComponent<Props> {
           epic.library.length !== 0 ||
           gog.library.length !== 0 ||
           amazon.library.length !== 0 ||
-          ((this.state.zoom.enabled && zoom.library) || []).length !== 0
+          ((this.state.zoom.enabled && zoom.library) || []).length !== 0,
+        origin: 'mount'
       })
     }
 
