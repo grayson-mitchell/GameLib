@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: hostname-only nav logging, source-free UA override seam, pre-registered R1/R2 experiment with verdict: null). Next: 34.5-25 onward per gap-cycle-3 wave ordering; 34.5-28 executes this discriminator live, 34.5-29 applies whichever fix it selects."
-last_updated: "2026-08-01T03:36:12.285Z"
+stopped_at: "Completed 34.5-25-PLAN.md (F-34.5-G6-06 diagnosed + fixed at the code level: the double Keychain prompt on GOG sign-out is not GOG-specific — it's window.location.reload(), shared by all 5 runner sign-out flows, remounting GlobalState and re-running Humble's own health check; fixed with a bounded 15s negative-result memo on SidecarKeyringSlotStore.getToken()). Next: 34.5-26 onward per gap-cycle-3 wave ordering; 34.5-31's live gate still owes confirming the prompt count live."
+last_updated: "2026-08-01T04:07:14.453Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 180
-  completed_plans: 165
+  completed_plans: 166
   percent: 92
 ---
 
@@ -358,7 +358,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 3
-Plan: 24 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
+Plan: 25 of 31 complete (plans 01–21 done; **the live gate has FAILED 0/5 twice**; gap plans 34.5-22..31 now executing across 7 waves to close F-34.5-G6-01..06 and the two never-attempted gate items — the phase does NOT close until 34.5-31's third re-run gate records 5/5)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -2177,7 +2177,7 @@ hand-corrected once, after `state.advance-plan`) back to the stale `34.2-10` val
 and `state.record-session` dropped the ` -- Phase 34.2 gap cycle 1 EXECUTING, ...` descriptive
 suffix off both the frontmatter and body `Stopped at:`/`Next:` fields when it wrote them. All
 hand-corrected via targeted `Edit`, diffed against a pre-session snapshot each time rather than
-trusted blindly. The recurring `**Progress:**[█████████░] 91%
+trusted blindly. The recurring `**Progress:**[█████████░] 92%
 happened to land on the SAME value this session's own `update-progress` computed, so no further
 edit was needed there this time — coincidence, not a fix.
 NOTE (34.5-24): the same splice-into-historical-prose bug recurred yet again this session --
@@ -3065,6 +3065,7 @@ Closed/parked native-install phases:
 | Phase 34.5 P20 | 55min | 3 tasks | 1 files |
 | Phase 34.5 P22 | 50min | 3 tasks | 1 files |
 | Phase 34.5 P23 | 55min | 3 tasks | 4 files |
+| Phase 34.5 P25 | 35min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -3446,6 +3447,7 @@ Recent decisions affecting current work:
 - [Phase 34.5]: Renderer-side try/catch around oauthCaptureLogin is defense-in-depth only -- no second competing deadline was added; the sidecar's own DEFAULT_DEADLINE_MS/LOGIN_WATCH_TIMEOUT_MS remain sole authority
 - [Phase 34.5]: capture-transport-failed kept as a distinct log literal, never folded into the existing generic phase=error line, so a transport failure and a backend-reported failure stay greppable apart
 - [Phase 34.5]: Standing guard (longRunningChannels.test.ts) scoped to a declared table of named deadline constants, not a source-wide scan; proven load-bearing by an actual local revert-and-observe-failure exercise, then restored
+- [Phase 34.5-25]: F-34.5-G6-06 is not GOG-specific -- window.location.reload() (shared by all 5 runner sign-out flows) remounts GlobalState and re-runs Humble's own two-slot health check; K1 (failure-not-cached + 8s-timeout) selected over K2 via the pre-existing success cache as discriminator — Fix applied to the shared SidecarKeyringSlotStore base class (bounded 15s negative-result memo), not a GOG- or Humble-specific patch
 
 ### Pending Todos
 
@@ -3518,8 +3520,51 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T03:36:12.285Z
-Stopped at: Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: hostname-only nav
+Last session: 2026-08-01T04:07:14.441Z
+Stopped at: Completed 34.5-25-PLAN.md (F-34.5-G6-06 diagnosed and fixed: the "double Keychain
+  prompt on GOG sign-out" is NOT GOG-specific -- window.location.reload() (shared by all 5 runner
+  sign-out flows: Epic/GOG/Amazon/Zoom/Steam) remounts GlobalState, whose mount effect
+  unconditionally re-runs Humble's OWN getCredentials()/getCsrfToken() health check).
+  This session (sequential executor): executed 34.5-25 (gap cycle 3, wave 2). Task 1 (docs,
+  commit `50e0993`, zero source files touched -- verified by the task's own automated gate):
+  appended a `## F-34.5-G6-06` section to `34.5-G6-FINDINGS.md`, tracing the code path
+  `gogLogout()` -> `window.location.reload()` -> `GlobalState` remount -> its mount-time effect
+  (`GlobalState.tsx:1233-1234`) -> `HumbleUser.checkHealthAndFlagExpiry()` ->
+  `getCredentials()`/`getCsrfToken()` -> `SidecarKeyringSlotStore('humble-session'|'humble-csrf')
+  .getToken()`; confirmed GOG's own `logout()` touches zero keyring slots; counted the preserved
+  gate log's session-wide blast radius at 7 `keyring_get failed` lines (3 `keyring:unavailable`, 4
+  `keyring:timeout`) across all 3 slots (steam-refresh-token, humble-session, humble-csrf) and at
+  least 7 distinct call sites; selected K1 (failure-not-cached + 8s `KEYRING_READ_TIMEOUT`
+  interaction) over K2 (two prompts are an unavoidable cost) using the pre-existing success cache's
+  own behaviour as the discriminator -- a slot that succeeds once never prompts again for the rest
+  of the process, which only K1 predicts. Task 2 (fix, commit `64e8110`, TDD-flavored): added
+  `KEYRING_FAILURE_MEMO_MS = 15_000` (~2x `KEYRING_READ_TIMEOUT`'s 8s) and a `failedTokenAt`
+  timestamp field to `SidecarKeyringSlotStore` in `keyringTokenStore.ts` -- `getToken()` now
+  returns a memoized failure for 15s after a real failure, WITHOUT a second `keyring_get`/Keychain
+  prompt, layered ALONGSIDE (not replacing) the pre-existing `pendingToken` in-flight dedupe
+  (commit `2d1abe64a`; `grep -c pendingToken` confirmed unchanged at 6 before/after). `getToken()`'s
+  memo check runs after both the success cache and the in-flight dedupe, so it never shadows a
+  fresher read or an in-flight request. `invalidateCache()` (called by `setToken()`/`clearToken()`
+  before their underlying call) was extended to also clear the memo -- the sign-out floor cannot be
+  blocked by, or resurrect through, a stale memoized failure. `isAvailable()` was deliberately left
+  untouched. Relabeled the pre-existing concurrent-dedupe test as an explicit characterization/
+  regression guard citing commit `2d1abe64a`; replaced the now-superseded "second call always
+  retries" test with 4 new memo-specific tests (within-window memoized -- RED-first for this task;
+  post-window fresh retry via `jest.advanceTimersByTime`; `clearToken()`-invalidates-the-memo via a
+  FAILED delete, since a successful one correctly repopulates the value cache instead and would not
+  exercise the memo path; memoized failure surfaced as `''`, never a value) plus one new test in
+  `humbleSecretStore.test.ts` proving the two Humble slots' memos are independent. `npm run
+  test:ci` 179/179 suites, 3485/3485 tests (was 3482/3482, +3 net new); `npx tsc --noEmit` clean;
+  zero `src-tauri/` files touched (`KEYRING_READ_TIMEOUT` untouched, per plan constraint -- belongs
+  to plans 34.5-23/27). SUMMARY written (`34.5-25-SUMMARY.md`), self-check PASSED. Closed at the
+  CODE level only, per this phase's own F-1 precedent -- the actual live Keychain-prompt count on a
+  real sign-out is still owed to 34.5-31's live gate.
+Next: **34.5-26-PLAN.md** (or whichever gap-cycle-3 plan is next per the wave ordering) -- F-34.5-
+  G6-06 is closed at the code level; 34.5-31's live gate still owes confirming the actual Keychain
+  prompt count dropped on a real GOG (and ideally at least one other of the five) sign-out. Phase
+  34.5 does NOT close until 34.5-31's third re-run gate records 5/5.
+
+Stopped at (superseded): Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: hostname-only nav
   logging, source-free UA override seam, pre-registered R1/R2 experiment with verdict: null).
   Next: 34.5-25 onward per gap-cycle-3 wave ordering.
   This session (sequential executor): executed 34.5-24 (gap cycle 3, wave 2, parallel to 34.5-23 --
@@ -3551,7 +3596,7 @@ Stopped at: Completed 34.5-24-PLAN.md (F-34.5-G6-01 discriminator instrument: ho
   written (`34.5-24-SUMMARY.md`), self-check PASSED. This plan does NOT resolve F-34.5-G6-01 --
   Epic's login still does not work; it makes the failure legible and pre-registers how to
   interpret plan 34.5-28's live run.
-Next: **34.5-25-PLAN.md** (or whichever gap-cycle-3 plan is next per the wave ordering, e.g.
+Next (superseded): **34.5-25-PLAN.md** (or whichever gap-cycle-3 plan is next per the wave ordering, e.g.
   34.5-25/26/27 which run in parallel to or after this plan per the wave-2/3 ordering) --
   `34.5-G6-EPIC-DISCRIMINATOR.md`'s experiment is unrun until plan 34.5-28's live checkpoint drives
   both arms on real hardware and fills in its Result slots; plan 34.5-29 applies whichever fix the
