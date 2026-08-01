@@ -25,9 +25,10 @@
  * Pattern 6 forbids.
  *
  * Logging discipline (T-34.4.1-45, mirrors the cookie-value ban T-34.4.1-19): every `logInfo`/
- * `logWarning` call below carries only `runner`, `label`, `status`, or a navigated page's
- * `hostname` (T-34.5-G6-11, plan 34.5-24 — never origin/pathname/search/href) — never the
- * captured `code`, `token`, or any `redirectUrl`/full `url` value.
+ * `logWarning` call below carries only `runner`, `label`, `status`, a navigated page's `hostname`
+ * (T-34.5-G6-11, plan 34.5-24 — never origin/pathname/search/href), or a diagnostic UA override's
+ * `length` (T-34.5-G6-13) — never the captured `code`, `token`, or any `redirectUrl`/full `url`
+ * value.
  */
 
 import { getLoginWindowSeam } from '../humble/loginWindowSeam'
@@ -62,6 +63,36 @@ const USER_AGENTS: Record<OAuthRunner, string> = {
 // short-lived interaction, not an open-ended session watch.
 const DEFAULT_DEADLINE_MS = 300_000
 const DEFAULT_POLL_MS = 500
+
+/**
+ * DIAGNOSTIC seam (plan 34.5-24, F-34.5-G6-01 discriminator). Returns `USER_AGENTS[runner]`
+ * unless `GAMELIB_OAUTH_UA_<RUNNER-UPPERCASED>` holds a non-empty, non-whitespace value, in which
+ * case that value is used instead -- for that runner ONLY, every other runner's default is
+ * unaffected. With the variable unset, empty, or whitespace-only, the return value is
+ * byte-identical to the pre-existing `USER_AGENTS[runner]` lookup -- no behaviour change on the
+ * default path.
+ *
+ * Why this exists rather than a source edit: plan 34.5-28 runs the same Epic login twice -- once
+ * with Epic's stock `EpicGamesLauncher` agent, once with the Chrome-shaped agent GOG/Amazon
+ * already use successfully -- and compares the two `nav host=` sequences this plan's Task 1 now
+ * logs. Asking a developer to hand-edit and rebuild between the two arms would make the two arms
+ * non-comparable (different binaries); an environment variable makes them one build, one variable.
+ *
+ * This is a DIAGNOSTIC-ONLY seam. Removing it later requires a live re-proof of whichever user
+ * agent the discriminator (`34.5-G6-EPIC-DISCRIMINATOR.md`) selects as correct.
+ */
+export function resolveUserAgent(runner: OAuthRunner): string {
+  const envVar = `GAMELIB_OAUTH_UA_${runner.toUpperCase()}`
+  const override = process.env[envVar]
+  if (override !== undefined && override.trim() !== '') {
+    logInfo(
+      `[oauthLoginCapture] runner=${runner} user-agent-override len=${override.length}`,
+      LogPrefix.Backend
+    )
+    return override
+  }
+  return USER_AGENTS[runner]
+}
 
 /**
  * PURE. No seam, no timers, no logging of values. Parses `url` inside a try/catch that returns
@@ -250,7 +281,7 @@ export function captureOAuthLogin(
     }, deadlineMs)
 
     activeSeam
-      .open(loginUrl, { visible: true, userAgent: USER_AGENTS[runner] })
+      .open(loginUrl, { visible: true, userAgent: resolveUserAgent(runner) })
       .then((openedLabel) => {
         if (settled) {
           // The capture already settled (e.g. the deadline fired) before open() resolved —
