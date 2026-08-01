@@ -46,6 +46,11 @@ import {
 import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
+// 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
+// that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
+// only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
+// set; this file only decides WHICH arm runs and records which one did.
+import { installDevSecretVault } from './devSecretVault'
 // Deviation (Rule 1 — bug, found live during the 33-05 install-hang gate,
 // fix/steam-native-install-stability): `initOnlineMonitor()` was previously wired ONLY at
 // `main.ts`'s `app.whenReady()`, which the headless sidecar never runs. With no init, `isOnline()`
@@ -328,15 +333,39 @@ export function init(
   // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
   // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
   // only fire from the RPC loop below, never at module-import time) so no handler ever
-  // observes the default ElectronTokenStore in the sidecar build.
-  installTokenStore(new SidecarKeyringTokenStore())
-  // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
-  // secret store the same way and at the same site as the Steam TokenStore just above. Must run
-  // AFTER startRpcServer() for the same reason installTokenStore() does (its migration logic
-  // calls requestRustInvoke, which needs a live transport), and harmless to call on every
-  // bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just reassigns a
-  // registry variable (no accumulating listener, unlike onlineMonitorInitialized's guard above).
-  installSidecarHumbleSecretStore()
+  // observes the default ElectronTokenStore in the sidecar build. This constraint is inherited
+  // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
+  // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
+  // replaces on the OTHER side of this branch needs the same live transport
+  // installSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
+  // below startRpcServer() regardless of which arm a given boot takes.
+  //
+  // Exclusive, not additive (34.5 gap cycle 4 plan 36, Routing's developer-scoped dev-vault
+  // item): calling installDevSecretVault() first and checking its return value BEFORE touching
+  // either keyring install is deliberate. Running the vault install alongside or after the
+  // keyring installs would leave installSidecarHumbleSecretStore()'s fire-and-forget
+  // migrateHumbleSecrets() already dispatched -- a migration that reads the keyring and writes
+  // configStore, i.e. precisely the Keychain interaction this branch exists to let a developer
+  // avoid -- and would mean a boot that both prompted for Keychain access AND then discarded the
+  // result underneath the vault. Exactly one arm below ever runs. The `[bootstrap] secret
+  // stores: ` line is the receipt: `34.5-UNTESTED-ITEMS.md`'s `U-34.5-01` row keys its
+  // retirement condition directly off this exact string, so a live `gamelib.log` can prove which
+  // arm a given gate run actually used.
+  const devSecretVaultInstalled = installDevSecretVault()
+  if (devSecretVaultInstalled) {
+    logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
+  } else {
+    installTokenStore(new SidecarKeyringTokenStore())
+    // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
+    // secret store the same way and at the same site as the Steam TokenStore just above. Must
+    // run AFTER startRpcServer() for the same reason installTokenStore() does (its migration
+    // logic calls requestRustInvoke, which needs a live transport), and harmless to call on
+    // every bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just
+    // reassigns a registry variable (no accumulating listener, unlike
+    // onlineMonitorInitialized's guard above).
+    installSidecarHumbleSecretStore()
+    logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
+  }
   // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
   // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
   // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live

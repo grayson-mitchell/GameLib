@@ -14,48 +14,59 @@
  * black-box-over-mocking-fs precedent, `bootstrap.test.ts`'s own header) rather than the
  * developer's real `os.tmpdir()` shared across concurrent test runs.
  *
- * `../humbleFlowRegistration` is mocked at the MODULE level (not `jest.spyOn` on the real
- * export) specifically so importing it here never pulls in that module's real transitive graph
- * (`../storeManagers`, `../humble/user`, `../humble/library`) — see that module's own test
- * file, `humbleFlows.test.ts`, for how heavy driving the REAL module is. This file only needs
- * `isPackagedSidecar()`'s return value, scripted per test.
+ * `../humbleFlowRegistration` is mocked with `jest.requireActual(...)` spread + a single
+ * overridden `isPackagedSidecar` — NOT a full replacement — because the second describe block
+ * below (Task 2) drives the REAL `../bootstrap` `init()`, whose `./handlers` import graph calls
+ * the REAL `registerHumbleFlows()` from this same module at ITS OWN module scope
+ * (`handlers.ts:194`); a full-replacement mock would leave that call undefined and throw the
+ * instant `../bootstrap` — or anything importing it — is required. Only `isPackagedSidecar`
+ * needs to be scriptable per test; everything else stays real.
  */
 
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
-// ── logger mock — mirrors keyringTokenStore.test.ts's established convention; captures every
-// call so tests can scan arguments for a leaked secret value. ──────────────────────────────────
-const mockLogInfo = jest.fn()
-const mockLogWarning = jest.fn()
-const mockLogError = jest.fn()
-jest.mock('backend/logger', () => ({
-  logInfo: (...args: unknown[]) => mockLogInfo(...args),
-  logWarning: (...args: unknown[]) => mockLogWarning(...args),
-  logError: (...args: unknown[]) => mockLogError(...args),
-  LogPrefix: {
-    Steam: 'Steam',
-    Backend: 'Backend',
-    Gog: 'Gog',
-    Legendary: 'Legendary',
-    Nile: 'Nile',
-    Sideload: 'Sideload',
-    Zoom: 'Zoom'
-  }
-}))
+// ── logger — NOT `jest.mock()`'d at all (deliberately). `backend/logger` and `backend/config`
+// have a real circular import (`config.ts` imports `logError`/`logInfo`/`LogPrefix` from
+// `./logger`; `logger/index.ts` imports `GlobalConfig` from `backend/config`) — a
+// `jest.mock('backend/logger', () => ({ ...jest.requireActual(...), ... }))` spread is fragile
+// against that cycle: depending on which side of the cycle this file's larger import graph
+// (Task 2's real `../bootstrap`) resolves FIRST, `jest.requireActual` can return the
+// STILL-EVALUATING module's PARTIAL exports (its own `export { ... LogPrefix, getLogFilePath }`
+// list runs at the very end of the file), silently spreading in an incomplete object. `jest.spyOn`
+// on the REAL, already-fully-loaded module (mirrors `bootstrap.test.ts`'s own established
+// `jest.spyOn(loggerModule, 'logInfo')` convention) sidesteps this: it mutates the ALREADY-real
+// module's exports object in place after normal evaluation completed, never re-entering the
+// cycle. `mockImplementation(() => {})` on top is required for TASK 1's tests specifically —
+// they call `installDevSecretVault()` directly without ever calling `../bootstrap`'s `init()`,
+// so `heroicLogWriter` is never constructed and a REAL `logWarning`/`logError` call-through
+// would throw (`sidecar-console-and-logger-are-invisible`, this project's own recorded gotcha).
+// The real import lives in the "Imports (after mocks)" block below; only the spy handles are
+// declared here. ─────────────────────────────────────────────────────────────────────────────
+let mockLogInfo: jest.SpyInstance
+let mockLogWarning: jest.SpyInstance
+let mockLogError: jest.SpyInstance
 
-// ── pathShim mock — every test's vault file resolves inside a disposable per-test mkdtemp dir,
-// never the developer's real os.tmpdir(). ───────────────────────────────────────────────────────
+// ── pathShim mock — REAL module for every name except 'temp', which each test points at a
+// disposable per-test mkdtemp dir (never the developer's real os.tmpdir()). Must stay REAL for
+// every other name: `electronStub.ts`'s `app.getPath` is a direct re-export of THIS SAME
+// module's `getPath` (`electronStub.ts:39,203`), and `backend/constants/paths.ts` calls
+// `app.getPath('appData'|'userData')` at MODULE SCOPE — a full-replacement mock (Task 1's
+// original, pre-Task-2 shape) would throw on that call the instant anything in this file
+// imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
+const realPathShim = jest.requireActual('../pathShim') as typeof import('../pathShim')
 const mockGetPath = jest.fn()
 jest.mock('../pathShim', () => ({
   getPath: (name: string) => mockGetPath(name)
 }))
 
-// ── humbleFlowRegistration mock — see file header for why this is a full module mock, not a
-// spy on the real export. ────────────────────────────────────────────────────────────────────
+// ── humbleFlowRegistration mock — see file header for why this preserves every REAL export
+// (Task 2's bootstrap wiring block needs the real registerHumbleFlows()) and overrides only
+// isPackagedSidecar, scriptable per test. ───────────────────────────────────────────────────
 const mockIsPackagedSidecar = jest.fn()
 jest.mock('../humbleFlowRegistration', () => ({
+  ...jest.requireActual('../humbleFlowRegistration'),
   isPackagedSidecar: () => mockIsPackagedSidecar()
 }))
 
@@ -70,12 +81,28 @@ jest.mock('graceful-fs', () => ({
   )
 }))
 
+// ── online_monitor — full-surface mock, identical to `bootstrap.test.ts`'s own block (needed
+// ONLY by Task 2's bootstrap wiring describe block below, which drives the REAL `init()`; see
+// that file's header for why the real `initOnlineMonitor()` throws under the default 'electron'
+// automock this project applies to every backend test file). ─────────────────────────────────
+jest.mock('../../online_monitor', () => ({
+  initOnlineMonitor: jest.fn(),
+  isOnline: jest.fn(() => true),
+  runOnceWhenOnline: jest.fn((callback: () => unknown) => callback()),
+  onConnectivityChange: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────────
+import { PassThrough } from 'node:stream'
 import { statSync, readFileSync } from 'fs'
 import { chmodSync as mockedChmodSync } from 'graceful-fs'
+import * as loggerModule from 'backend/logger'
 import { installDevSecretVault } from '../devSecretVault'
+import * as devSecretVaultModule from '../devSecretVault'
 import * as tokenStoreModule from 'backend/storeManagers/steam/tokenStore'
 import * as secretStoreModule from 'backend/humble/secretStore'
+import * as humbleSecretStoreModule from '../humbleSecretStore'
+import { init } from '../bootstrap'
 
 const ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
 
@@ -88,16 +115,27 @@ describe('devSecretVault', () => {
     delete process.env[ENV_VAR]
 
     vaultDir = mkdtempSync(join(tmpdir(), 'gamelib-dev-secret-vault-test-'))
-    mockGetPath.mockImplementation((name: string) => {
-      if (name === 'temp') return vaultDir
-      throw new Error(`unexpected getPath('${name}') in devSecretVault.test.ts`)
-    })
+    mockGetPath.mockImplementation((name: string) =>
+      // 'temp' is the only name this suite ever redirects — every other name (Task 2's real
+      // bootstrap `init()` needs 'appData'/'userData'/etc. via electronStub's app.getPath) falls
+      // through to the REAL pathShim, see the mock declaration's own comment above.
+      name === 'temp' ? vaultDir : realPathShim.getPath(name)
+    )
 
     mockIsPackagedSidecar.mockReset()
     ;(mockedChmodSync as jest.Mock).mockImplementation(
       (...args: Parameters<typeof import('fs').chmodSync>) =>
         jest.requireActual('graceful-fs').chmodSync(...args)
     )
+
+    // See the module-scope comment above `let mockLogInfo: jest.SpyInstance` for why this is a
+    // real jest.spyOn(), not a jest.mock() factory. `mockImplementation(() => {})` suppresses
+    // the real write path (Task 1's tests never call `../bootstrap`'s `init()`, so
+    // `heroicLogWriter` is never constructed) while still recording every call for the leak-scan
+    // and receipt-line assertions below.
+    mockLogInfo = jest.spyOn(loggerModule, 'logInfo').mockImplementation(() => {})
+    mockLogWarning = jest.spyOn(loggerModule, 'logWarning').mockImplementation(() => {})
+    mockLogError = jest.spyOn(loggerModule, 'logError').mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -107,6 +145,10 @@ describe('devSecretVault', () => {
       process.env[ENV_VAR] = savedEnvValue
     }
     rmSync(vaultDir, { recursive: true, force: true })
+
+    mockLogInfo.mockRestore()
+    mockLogWarning.mockRestore()
+    mockLogError.mockRestore()
   })
 
   // ── Guardrail (a): exact-'1' env opt-in ────────────────────────────────────────────────────
@@ -293,5 +335,93 @@ describe('devSecretVault', () => {
     // sit at this path despite `installDevSecretVault()` never having been called here.
     const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
     expect(() => readFileSync(vaultPath)).toThrow()
+  })
+
+  // ── Task 2: the exclusive branch in bootstrap.ts's init() ─────────────────────────────────
+  //
+  // Drives the REAL `../bootstrap` `init()` (nested inside this describe block so it inherits
+  // the outer `beforeEach`'s fresh `vaultDir`/`mockGetPath`/mock-reset setup, even though these
+  // tests mock `installDevSecretVault` directly rather than driving it through a real env var).
+  // `installDevSecretVault` itself is spied and forced to a fixed return value per test — Task 1
+  // above already proves its OWN real behavior; this block proves only which arm `init()` takes
+  // given that return value, and that the branch is exclusive (never both, never neither).
+  describe('bootstrap wiring — exclusive secret-store branch (Task 2)', () => {
+    it('vault disabled: installs the keyring stores exactly as today, and emits the keyring receipt line', () => {
+      const installDevSecretVaultSpy = jest
+        .spyOn(devSecretVaultModule, 'installDevSecretVault')
+        .mockReturnValue(false)
+      const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
+      const installSidecarHumbleSecretStoreSpy = jest.spyOn(
+        humbleSecretStoreModule,
+        'installSidecarHumbleSecretStore'
+      )
+
+      try {
+        const input = new PassThrough()
+        const output = new PassThrough()
+        init(input, output)
+
+        expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
+        expect(installSidecarHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
+        expect(
+          mockLogInfo.mock.calls.some(
+            ([message]) => message === '[bootstrap] secret stores: keyring'
+          )
+        ).toBe(true)
+        expect(
+          mockLogInfo.mock.calls.some(
+            ([message]) => message === '[bootstrap] secret stores: dev-vault'
+          )
+        ).toBe(false)
+      } finally {
+        installDevSecretVaultSpy.mockRestore()
+        setTokenStoreSpy.mockRestore()
+        installSidecarHumbleSecretStoreSpy.mockRestore()
+      }
+    })
+
+    it('vault enabled: does not install the keyring stores or fire the Humble migration, and emits the dev-vault receipt line', () => {
+      const installDevSecretVaultSpy = jest
+        .spyOn(devSecretVaultModule, 'installDevSecretVault')
+        .mockReturnValue(true)
+      const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
+      const installSidecarHumbleSecretStoreSpy = jest.spyOn(
+        humbleSecretStoreModule,
+        'installSidecarHumbleSecretStore'
+      )
+      const migrateHumbleSecretsSpy = jest.spyOn(
+        humbleSecretStoreModule,
+        'migrateHumbleSecrets'
+      )
+
+      try {
+        const input = new PassThrough()
+        const output = new PassThrough()
+        init(input, output)
+
+        expect(setTokenStoreSpy).not.toHaveBeenCalled()
+        expect(installSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
+        // migrateHumbleSecrets() is only ever fired FROM INSIDE installSidecarHumbleSecretStore()
+        // (humbleSecretStore.ts) — asserting it directly, not merely inferring it from the line
+        // above, is this test's own regression guard against a future edit that calls it from a
+        // second site.
+        expect(migrateHumbleSecretsSpy).not.toHaveBeenCalled()
+        expect(
+          mockLogInfo.mock.calls.some(
+            ([message]) => message === '[bootstrap] secret stores: dev-vault'
+          )
+        ).toBe(true)
+        expect(
+          mockLogInfo.mock.calls.some(
+            ([message]) => message === '[bootstrap] secret stores: keyring'
+          )
+        ).toBe(false)
+      } finally {
+        installDevSecretVaultSpy.mockRestore()
+        setTokenStoreSpy.mockRestore()
+        installSidecarHumbleSecretStoreSpy.mockRestore()
+        migrateHumbleSecretsSpy.mockRestore()
+      }
+    })
   })
 })

@@ -614,6 +614,19 @@ const IN_SCOPE_SUITES = [
  * make (it never touches `pathShim` at all -- `electronStub.getAppPath()` is the seam under
  * test, not `pathShim`'s own `case 'exe'`). A `readdirSync` recount at this plan's execution
  * time puts the directory at 41 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 37 below.
+ *
+ * `devSecretVault.test.ts` (34.5 gap cycle 4 plan 36) is classified as structurally contained: it
+ * DOES declare its own `jest.mock('../pathShim', ...)` -- but unlike `IN_SCOPE_SUITES`'s four
+ * suites, that mock is a REAL-module pass-through for every name except `'temp'` (redirected to a
+ * disposable per-test `mkdtemp` dir), not the four-element hostile-env-var containment kit
+ * `IN_SCOPE_SUITES` requires (Block B's own gate) -- so it cannot be an `IN_SCOPE_SUITE`. Its
+ * second describe block (Task 2, the bootstrap wiring exclusivity proof) drives the REAL
+ * `../bootstrap` `init()`, whose real `electronStub.app.getPath('appData'|'userData')` resolution
+ * relies on the structural floor (`jest.setupContainment.ts`) precisely because this suite adds no
+ * hand-rolled `homedir()`/env-var containment of its own -- exactly the "contained by
+ * construction, no per-suite opt-in required" guarantee this whole Block C exists to prove. A
+ * `readdirSync` recount at this plan's execution time puts the directory at 42 `*.test.ts` files:
+ * 4 `IN_SCOPE_SUITES` + 38 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -622,6 +635,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'bootstrap.test.ts',
   'bootstrapWirings.test.ts',
   'clipboardFlows.test.ts',
+  'devSecretVault.test.ts',
   'dialogStub.test.ts',
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
