@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Gap cycle 4 executed: plans 34.5-32/33/34/35/36 COMPLETE. Plan 34.5-37 is at a BLOCKING checkpoint:human-verify (task 1 of 3 done -- `34.5-G6-EPIC-DISCRIMINATOR-2.md` authored with `verdict: null`; tasks 2/3 need real macOS hardware, both Electron and Tauri arms). Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is still neither authored nor run. Phase verification intentionally NOT run: incomplete plans remain."
-last_updated: "2026-08-01T22:40:00.000Z"
+stopped_at: "GAP CYCLE 4 FULLY EXECUTED 2026-08-01: plans 34.5-32..37 all COMPLETE (34 of 37 plans done). Epic discriminator-2 ran on real hardware and returned `verdict: E1` -- Electron interactive, Tauri non-interactive on the identical EPIC_LOGIN_URL, so the Tauri/WKWebView seam is the differentiator and E2 (an Epic-side change independent of the port) is FALSIFIED. Routes to instrumenting the login window's own console/script-error signal; ships no fix. Plus one LIVE-PROVEN regression found and fixed mid-cycle: plan 34.5-33's refreshLibrary handler rejected `null` (JSON transport turns `undefined` into `null`), breaking mount-time refresh under Tauri -- fixed and swept across 10 sidecar sites (`34.5-JSON-TRANSPORT-SWEEP.md`). Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is still neither authored nor run; a cycle 5 authors and runs it. Phase verification intentionally NOT run: 3 incomplete plans remain."
+last_updated: "2026-08-01T23:15:00.000Z"
 last_activity: 2026-08-01
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 186
   completed_plans: 174
-  percent: 76
+  percent: 94
 ---
 
 # Project State
