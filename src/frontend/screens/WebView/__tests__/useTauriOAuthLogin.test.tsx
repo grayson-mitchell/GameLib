@@ -790,6 +790,160 @@ describe('useTauriOAuthLogin — capture-transport-failed (F-34.5-G6-02, plan 34
   })
 })
 
+describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-34 Task 1)', () => {
+  it('unmounting while the capture promise is still pending logs phase=cancelled-midflight at=capture', async () => {
+    let resolveCapture: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCapture = resolve
+        })
+    )
+
+    mount('legendary')
+    await flushPromises()
+    const beforeUnmount = rerender('legendary')
+    expect(beforeUnmount).toEqual({ phase: 'awaiting' })
+
+    unmount()
+    mockApi.logInfo.mockClear()
+
+    resolveCapture({
+      status: 'captured',
+      runner: 'legendary',
+      code: 'STALE-CODE',
+      redirectUrl: 'http://localhost:8080/?code=STALE-CODE'
+    })
+    await flushPromises()
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('phase=cancelled-midflight') &&
+        line.includes('at=capture')
+    )
+    expect(matching.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('unmounting while the auth-exchange promise is still pending, then resolving { status: "done" }, logs at=auth authStatus=done', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    let resolveAuth: (value: unknown) => void = () => {}
+    mockApi.authGOG.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAuth = resolve
+        })
+    )
+
+    mount('gog')
+    await settle('gog')
+    expect(mockApi.authGOG).toHaveBeenCalledTimes(1)
+
+    unmount()
+    mockApi.logInfo.mockClear()
+
+    resolveAuth({ status: 'done', data: { username: 'grayson' } })
+    await flushPromises()
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('at=auth') &&
+        line.includes('authStatus=done')
+    )
+    expect(matching.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('a normal, uncancelled login to completion never logs a cancelled-midflight line', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+
+    mount('gog')
+    await settle('gog')
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) => typeof line === 'string' && line.includes('cancelled-midflight')
+    )
+    expect(matching).toHaveLength(0)
+  })
+
+  it('the cleanup logs a phase=teardown line naming whether a run was still in flight', async () => {
+    let resolveCapture: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCapture = resolve
+        })
+    )
+
+    mount('legendary')
+    await flushPromises()
+    rerender('legendary')
+
+    unmount()
+
+    const teardownLines = mockApi.logInfo.mock.calls.filter(
+      ([line]) => typeof line === 'string' && line.includes('phase=teardown')
+    )
+    expect(teardownLines).toHaveLength(1)
+    expect(teardownLines[0][0]).toContain('inflight=true')
+
+    // Avoid leaking the still-pending promise into a later test.
+    resolveCapture({ status: 'cancelled' })
+  })
+
+  it('every logInfo argument uses only the permitted key vocabulary -- never a code, token, redirect URL, or raw username', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'nile',
+      code: 'NILE-SECRET-CODE',
+      redirectUrl: 'https://amazon.com/ap/signin?openid.oa2.authorization_code=NILE-SECRET-CODE'
+    })
+    mockApi.authAmazon.mockResolvedValue({
+      status: 'done',
+      user: {
+        account_pool: 'pool-1',
+        user_id: 'nile-user-1',
+        home_region: 'us',
+        name: 'SecretUsername',
+        given_name: 'Grayson'
+      }
+    })
+
+    mount('nile')
+    await settle('nile')
+
+    const permittedKeys = ['runner', 'phase', 'at', 'authStatus', 'inflight', 'channel', 'message']
+    const forbidden = ['NILE-SECRET-CODE', 'SecretUsername', 'authorization_code']
+
+    for (const [line] of mockApi.logInfo.mock.calls) {
+      expect(typeof line).toBe('string')
+      for (const banned of forbidden) {
+        expect(line as string).not.toContain(banned)
+      }
+      const keysInLine = permittedKeys.filter((key) => (line as string).includes(`${key}=`))
+      // Every logged line uses `key=value` tokens drawn only from the permitted vocabulary --
+      // this loop asserts no OTHER `=`-delimited token sneaks in unnoticed.
+      const allTokens = (line as string).match(/(\w+)=/g) ?? []
+      for (const token of allTokens) {
+        const key = token.slice(0, -1)
+        expect(permittedKeys).toContain(key)
+      }
+      void keysInLine
+    }
+  })
+})
+
 describe('useTauriOAuthLogin — unmount safety', () => {
   it('unmounting mid-capture does not call setState afterward (no leak)', async () => {
     let resolveCapture: (value: unknown) => void = () => {}
