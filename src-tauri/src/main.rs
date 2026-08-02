@@ -798,13 +798,28 @@ const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
                 if (isSentryLike(url)) { bodyPreview = truncate(body); }
               }
             } catch (eBody) {}
+            // Read (never set) the page's OWN configured `.timeout` on this instance,
+            // if any -- this is Epic's own client-side timeout budget for this specific
+            // request, not this diagnostic's classification of the outcome. 0/undefined
+            // means the page left the browser default (no explicit timeout) in place.
+            // Purely observational: read-only, no assignment, cannot change request
+            // behavior. Added to discriminate "Epic's own short timeout collided with
+            // WKWebView connection latency" from "a general connection-level failure"
+            // without needing a second live run.
+            var configuredTimeoutMs;
+            try {
+              if (typeof this.timeout === 'number' && this.timeout > 0) {
+                configuredTimeoutMs = this.timeout;
+              }
+            } catch (eTimeout) {}
             record({
               kind: 'xhr.send',
               id: reqId,
               url: url ? String(url) : undefined,
               method: method ? String(method) : undefined,
               bodyLen: bodyLen,
-              body: bodyPreview
+              body: bodyPreview,
+              configuredTimeoutMs: configuredTimeoutMs
             });
           } catch (eOuter) {}
           try {
@@ -1868,9 +1883,29 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // console read. Gated identically to this arm's `open_devtools()` call
             // below -- `#[cfg(debug_assertions)]` AND `if visible` -- so it can never
             // reach a packaged build.
+            //
+            // THIRD GATE ADDED 2026-08-02, and it DEFAULTS OFF: `GAMELIB_LOGIN_DIAG=1`.
+            // This script is an `initialization_script`, so it runs BEFORE Epic's own
+            // bundle and replaces `XMLHttpRequest.prototype.open/send` and
+            // `window.fetch`. Epic's anti-bot service (Talon) fingerprints the page
+            // environment and ships a 6-15 KB attestation payload; patched network
+            // primitives on the prototype chain are a canonical automation signal.
+            // `/id/api/email/exists` returns a deterministic HTTP 403 whose on-screen
+            // copy is the stock anti-bot challenge ("enable javascript and cookies to
+            // continue"), and EVERY 403 observation in
+            // `.planning/debug/epic-login-non-interactive.md` postdates the commit that
+            // added this script (`bf5394a20`) -- before it, symptoms were blank pages
+            // and timeouts, never a 403. So the instrumentation is a live suspect for
+            // CAUSING the defect it was added to observe, and it must be switchable
+            // WITHOUT a rebuild so both arms can be compared in one sitting.
+            // Off by default is the safer direction: a diagnostic that perturbs its own
+            // measurement should be opt-in, not something a routine dev run inherits.
             #[cfg(debug_assertions)]
-            if visible {
+            if visible && std::env::var("GAMELIB_LOGIN_DIAG").as_deref() == Ok("1") {
                 builder = builder.initialization_script(DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT);
+                eprintln!(
+                    "[shell] humble_login_open: GAMELIB-DIAG init script INJECTED for '{label}' (GAMELIB_LOGIN_DIAG=1)"
+                );
             }
             let page_load_origin = Arc::clone(&current_origin);
             let window = builder
