@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: "GAP CYCLE 4 FULLY EXECUTED 2026-08-01: plans 34.5-32..37 all COMPLETE (34 of 37 plans done). Epic discriminator-2 ran on real hardware and returned `verdict: E1` -- Electron interactive, Tauri non-interactive on the identical EPIC_LOGIN_URL, so the Tauri/WKWebView seam is the differentiator and E2 (an Epic-side change independent of the port) is FALSIFIED. Routes to instrumenting the login window's own console/script-error signal; ships no fix. Plus one LIVE-PROVEN regression found and fixed mid-cycle: plan 34.5-33's refreshLibrary handler rejected `null` (JSON transport turns `undefined` into `null`), breaking mount-time refresh under Tauri -- fixed and swept across 10 sidecar sites (`34.5-JSON-TRANSPORT-SWEEP.md`). Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first -- the blocking five-item gate is still neither authored nor run; a cycle 5 authors and runs it. Phase verification intentionally NOT run: 3 incomplete plans remain."
-last_updated: "2026-08-01T23:15:00.000Z"
-last_activity: 2026-08-01
+status: Ready to execute
+stopped_at: "GAP CYCLE 5 PLANNED 2026-08-02 via `/gsd-plan-phase 34.5 --gaps` -- plans 34.5-38..42 written in 5 sequential waves (39 of 42 plans now exist unexecuted at 38..42; 34 executed; 29/30/31 still HALTED and superseded, not deleted). This is the cycle that AUTHORS AND RUNS the blocking five-item gate cycles 3 and 4 both deferred. Two binding developer decisions, made 2026-08-02: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` is authored with `verdict: null` (plan 40, wave 3) strictly before it is run (plan 41, wave 4), and gate item 1 (Epic) enters as BLOCKED with the parked pre-auth 403 named as cause, so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- accepted knowingly, which per the ledger's own binding statement keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN and requires both to be named as known holes in the gate contract per ledger Rule 3. Plan 34.5-29's Tasks 2/3 (the item-4/item-5 preflight) are RE-HOMED into plan 39, wave 2, one wave before the contract, with a gate-time staleness re-check as contract precondition 11 -- deliberately, because groundwork written days early is what caused both prior item-4/5 skips. D-08 still binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase, and a BLOCKED item 1 means it is EXPECTED not to -- but plan 40's opportunistic-attempt clause makes a genuine 5/5 reachable, so every closure criterion is keyed to the four recorded counters rather than presupposing non-closure. Plan checker: 0 blockers (1 warning closed in `bd2b23572`, its stale second copy in `df7ad5fa2`). DECISION-COVERAGE OVERRIDE: D-01 and D-03 are uncovered by ID across all 42 plans; both are cycle-1 scope decisions already honoured in substance (Phase 34.6 exists in ROADMAP with exactly D-03's 16 deferred channels; the 38/3/16 split is reconciled in IPC-PORT-INVENTORY.md by executed plan 34.5-03) -- a citation-form miss, not dropped scope. Recorded here so verify-phase re-surfaces it."
+last_updated: "2026-08-02T19:45:00.000Z"
+last_activity: 2026-08-02
 progress:
   total_phases: 17
   completed_phases: 13
-  total_plans: 186
+  total_plans: 191
   completed_plans: 174
-  percent: 94
+  percent: 91
 ---
 
 # Project State
