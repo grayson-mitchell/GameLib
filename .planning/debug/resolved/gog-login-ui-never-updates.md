@@ -521,6 +521,36 @@ React-state clause. Pinned by a new self-tested source-text gate
 (`GlobalStateRefreshCacheGuard.test.ts`) that was verified to go RED against a real injected
 regression, not merely against synthetic strings. `test:ci` 3579/3579, 183/183, exit 0.
 
+**LIVE-VERIFIED 2026-08-03 01:56-01:57 — the fix works, and it does NOT materially reduce
+the wait, because the dominant cost is elsewhere.**
+
+Pre-registered prediction (`No cache found` must not appear at all, since the cache is
+non-empty after login) held exactly: **count 0**, and exactly ONE
+`Getting GOG library` → `Saved games data` → `refreshLibrary complete` cycle after login
+where there were previously two. The redundant leg is gone.
+
+Developer's wall-clock verdict: *"about the same time"*. Measured breakdown of this run:
+
+| Segment | Duration |
+|---|---|
+| `status=captured` 01:57:06 → `Login Successful` 01:57:29 | **23 s — the `gogdl auth` CLI call** |
+| → `[useTauriOAuthLogin] phase=idle` 01:57:34 | 5 s |
+| → `Getting GOG library` 01:57:39 | 5 s |
+| → `Saved games data` + `refreshLibrary complete` 01:57:45 | 6 s |
+| **capture → library persisted** | **~39 s** |
+
+**The single `gogdl auth` invocation is >50% of the total.** That is a runner-CLI round trip;
+no frontend or store change can touch it. The ~10 s this fix removed was real but is a minor
+leg of the budget — the original "~10 s of ~50 s" framing was accurate about the saving and
+misleading about the impact.
+
+**Consequence for any future latency work:** start at `gogdl auth`, not the frontend. The
+remaining frontend legs are ~5 s each and there are only three of them. Anyone tempted to
+optimise `refresh()` further should read this table first — the budget is not where the
+React code is.
+
+Original (now answered) framing follows.
+
 **NOT YET VERIFIED LIVE, and the headline number is still open.** The measured wait was
 **~50 s**; this removes a leg measured at ~10 s of it. The remaining ~40 s has no diagnosis
 at all — do not assume this fix makes the login feel fast. A live re-measure is the only
