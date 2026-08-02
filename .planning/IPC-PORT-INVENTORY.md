@@ -134,8 +134,8 @@ Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
 `addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
-**Status (2026-08-01): the blocking live gate has run TWICE and FAILED both times — channel
-membership and the 38/3/16 split above are unchanged by either run.** The first run
+**Status (2026-08-02): the blocking live gate has now run THREE times and FAILED all three —
+channel membership and the 38/3/16 split above are unchanged by any of them.** The first run
 (`34.5-LIVE-GATE.md`, plan 34.5-15) FAILED 0/5 on a `publicDir`-resolution defect that kept the
 `legendary`/`gogdl`/`nile` runner binaries from spawning at all. A gap cycle (plans 34.5-16
 through 34.5-18) closed that defect at the code level, and a RE-RUN
@@ -144,8 +144,34 @@ through 34.5-18) closed that defect at the code level, and a RE-RUN
 spawn defect closed (all four binaries `exists=true`, no asset-root defect line) and that the
 OAuth redirect-capture mechanism itself works for `gog` and `nile`, but surfaced a new,
 downstream-of-capture defect: nothing consumes a successful capture into a completed,
-UI-visible, library-populated login. Per D-08's no-partial-pass rule, Phase 34.5 does NOT close
-on this result; see `34.5-LIVE-GATE-RERUN.md` for full evidence and `34.5-21-SUMMARY.md` for this
+UI-visible, library-populated login.
+
+A THIRD run (**`34.5-LIVE-GATE-RERUN-2.md`**, plan 34.5-41, gap cycle 5) attempted all five items
+again: **FAIL, 0 of 5 clean** — `items_passed: 0`, `items_failed: 2` (items 2, 4),
+`items_blocked: 1` (item 1), `items_not_attempted: 2` (items 3, 5). It closed the RE-RUN's own
+downstream-of-capture defect (F-34.5-G6-02): GOG's full chain — capture → `gogdl auth` →
+`refreshLibrary complete runner=gog managers=1` → 7 titles persisted — ran end to end, with
+`[useTauriOAuthLogin] runner=gog phase=idle (login completed, library refresh triggered)` firing
+twice where run 2 produced zero such lines. The failure moved again, to a frontend-render layer:
+the library data lands on disk and the UI shows nothing. **Items 4 and 5 carry a result for the
+first time in this phase's history** — item 4 FAIL, item 5 NOT ATTEMPTED with its blocking
+prerequisite explicitly recorded rather than silently skipped.
+
+⚠ **This inventory is NOT exhaustive, and its incompleteness is of UNKNOWN extent
+(F-34.5-G6-10, 2026-08-02).** The third gate found `getInstallInfo` — a real channel
+(`src/common/types/ipc.ts:218`, exposed via `src/preload/api/helpers.ts:43` as
+`makeHandlerInvoker`) — to be unported AND absent from every bucket in this document: it is not
+among the 38 ported, the 3 dropped, or the 16 deferred to Phase 34.6. It surfaced live as
+`[GAMELIB_UNPORTED_CHANNEL] No handler registered for channel 'getInstallInfo'`, blocking the game
+page outright. **The header rule above — "Phase 35 must not run while any channel below is
+unported" — cannot catch a channel that was never listed.** `ported-channels-gate.py` verifies
+that the 38+3+16=57 split reconciles *internally*; it does not verify that this inventory covers
+the real preload surface. No audit of that surface has been performed, so the true number of
+missing channels is unknown and **must not be assumed to be one**. Auditing it is a Phase 35
+precondition and is scoped to gap cycle 6.
+
+Per D-08's no-partial-pass rule, Phase 34.5 does NOT close on any of these three results; see
+`34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence and `34.5-42-SUMMARY.md` for this
 propagation pass.
 
 ## Phase 34.6 — Slice 9 — EOS overlay, SteamGridDB and winetricks (16 channels)
