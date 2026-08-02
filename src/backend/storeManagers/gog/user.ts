@@ -49,8 +49,9 @@ export class GOGUser {
       }
     )
 
+    let data: GOGLoginData
     try {
-      const data: GOGLoginData = JSON.parse(stdout.trim())
+      data = JSON.parse(stdout.trim())
       if (data?.error) {
         return { status: 'error' }
       }
@@ -63,11 +64,21 @@ export class GOGUser {
     }
     logInfo('Login Successful', LogPrefix.Gog)
     configStore.set('isLoggedIn', true)
-    const userDetails = await this.getUserDetails()
+    // `data.access_token` is already the fresh token this exact `gogdl auth --code` call
+    // just obtained -- pass it straight through so `getUserDetails()` doesn't spawn a
+    // SECOND `gogdl auth` subprocess (via `getCredentials()`) just to re-derive the same
+    // value. Measured live (debug/manage-accounts-slow-update.md): that redundant call
+    // cost a reproducible ~5s on the critical path between the OAuth window closing and
+    // the frontend's in-progress screen clearing.
+    const userDetails = await this.getUserDetails(data.access_token)
     return { status: 'done', data: userDetails }
   }
 
-  public static async getUserDetails() {
+  // `accessToken`: when the caller already has a fresh token in hand (only `login()`,
+  // immediately after a `gogdl auth --code` exchange), pass it here to skip
+  // `getCredentials()`'s own `gogdl auth` CLI subprocess call. Omit it (as the boot-time
+  // caller in main.ts does) to keep the existing disk-read/refresh behavior.
+  public static async getUserDetails(accessToken?: string) {
     if (!isOnline()) {
       logError('Unable to login information, Heroic offline', LogPrefix.Gog)
       return
@@ -77,15 +88,15 @@ export class GOGUser {
       logWarning('User is not logged in', LogPrefix.Gog)
       return
     }
-    const user = await this.getCredentials()
-    if (!user) {
+    const token = accessToken ?? (await this.getCredentials())?.access_token
+    if (!token) {
       logError("No credentials, can't get login information", LogPrefix.Gog)
       return
     }
     const response = await axios
       .get(`https://embed.gog.com/userData.json`, {
         headers: {
-          Authorization: `Bearer ${user.access_token}`,
+          Authorization: `Bearer ${token}`,
           'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`
         }
       })
