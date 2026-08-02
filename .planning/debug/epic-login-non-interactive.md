@@ -1193,7 +1193,108 @@ finding: F-34.5-G6-01
 
 ## Current Focus
 
-<!-- OVERWRITTEN 2026-08-02T05:30:00 -- SCOPE CLARIFICATION + IMPLEMENTATION HOLD this cycle.
+<!-- SUPERSEDING BLOCK 2026-08-02T06:30:00 -- everything below this block is HISTORICAL.
+     The `pending_question` it holds (does Epic's login form render for a logged-out user?)
+     has been ANSWERED on hardware. Read this block first; the older block is retained for
+     its reasoning trail, not as current state. -->
+
+resolved_pending_question: |
+  ANSWERED 2026-08-02 on hardware. The SCOPE_CAVEAT below was well-founded and the hold was
+  correct — but the answer is not the one either branch predicted.
+
+  Epic's real login form DOES render for a logged-out user under WKWebView, DOES accept
+  keyboard input, and DOES submit. The developer typed a full username and submitted it.
+  So there is NO "the form cannot render" defect. The original blank-skeleton symptom was
+  never a broken form: the webview was already authenticated, so Epic's page had no form to
+  show and went straight to exiting via `https://localhost/...`, which WKWebView silently
+  refuses — a page frozen mid-exit, permanently.
+
+  Reaching a genuinely logged-out state required navigating the login window to
+  `https://www.epicgames.com/id/logout`. Two earlier attempts did NOT take effect, and the
+  session-state discriminator is `/id/api/authenticate`: it returns **200 when
+  authenticated** and **204 when logged out**. Verify auth state with that status before
+  drawing ANY conclusion from a login-window observation — three separate observations this
+  session were invalidated by an unrecognised authenticated state.
+
+second_defect_found: |
+  A SECOND, INDEPENDENT DEFECT exists in the pre-authentication half, distinct from the
+  confirmed post-auth one. On username submission:
+
+      {kind:"xhr.send",     id:20, url:"/id/api/email/exists", method:"POST"}
+      {kind:"xhr.response", id:20, url:"/id/api/email/exists", method:"POST", status:403, elapsedMs:342}
+
+  HTTP 403. The page then re-renders the username step — a login loop — and displays an
+  error telling the user to enable cookies.
+
+  THAT COOKIE MESSAGE IS MISLEADING; IT IS EPIC'S GENERIC 403 COPY. Cookies are present and
+  readable in the page: `document.cookie` = 130 bytes, names `XSRF-TOKEN`, `_epicSID`,
+  `_tald`. Cookie storage under WKWebView is working. Do not chase a cookie-storage defect
+  on the strength of that on-screen message.
+
+  Epic's anti-bot service Talon (`talon-service-prod.ecosec.on.epicgames.com`, whose cookie
+  is `_tald`) ran and SUCCEEDED throughout the same flow: `/v1/init` 200,
+  `/v1/init/execute` 200, `/v1/phaser/batch` 204 (x3). Talon is not refusing to run; the
+  403 is specific to `/id/api/email/exists`.
+
+leading_hypothesis_UNTESTED: |
+  UA/ENGINE FINGERPRINT MISMATCH. The run that produced the 403 sent
+  `GAMELIB_OAUTH_UA_LEGENDARY="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+  (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 EpicGamesLauncher"` — i.e. it claims
+  Chrome-on-Windows while actually running WebKit-on-macOS. Anti-bot fingerprinting exists
+  to catch exactly that inconsistency, and a 403 on the first credential-adjacent request is
+  consistent with it. THIS IS A HYPOTHESIS, NOT A FINDING. It has not been tested.
+
+  NEXT TEST (one run, no code change): a TRUTHFUL Safari UA, which is both accurate and
+  self-consistent because WKWebView genuinely is WebKit:
+
+      GAMELIB_OAUTH_UA_LEGENDARY="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15" pnpm tauri:dev
+
+  Reach a logged-out state (verify `/id/api/authenticate` = 204), submit a username, then:
+
+      JSON.stringify(window.__GAMELIB_DIAG__.filter(r=>String(r.url||'').includes('email/exists')).map(({kind,url,status,elapsedMs})=>({kind,url,status,elapsedMs})))
+
+  200 => fingerprint mismatch confirmed as the pre-auth defect; the fix is a truthful UA.
+  403 => hypothesis falsified; the 403 has some other cause and needs fresh diagnosis.
+
+  CAVEAT that must not be lost: a Safari UA was tried earlier this session and produced
+  `client_id is required`. That was in the AUTHENTICATED state, where the flow never reaches
+  `/id/api/email/exists`. This is a genuinely different test in a state only recently
+  reachable — it is not a repeat.
+
+transient_noise_do_not_chase: |
+  One run showed three `xhr.timeout` records at ~10 s (`/id/api/analytics` x2,
+  `/id/api/location`), a `console.error` of `{"status":408,...,"error.serviceUnavailable"}`,
+  and `/id/api/i18n` taking 12.3 s. The very next run showed ZERO timeouts with everything
+  sub-second. This is transient network noise, NOT a mechanism. An earlier cycle already
+  eliminated `WKWEBVIEW-NETWORK-FAILURE` on separate grounds; this reinforces it. Do not
+  resurrect it.
+
+two_defects_summary: |
+  | Half      | Defect                                                        | Status              |
+  |-----------|---------------------------------------------------------------|---------------------|
+  | Pre-auth  | `/id/api/email/exists` -> 403, login loops to username step    | FOUND, undiagnosed  |
+  | Post-auth | WKWebView silently refuses the `https://localhost/...` redirect | ROOT CAUSE CONFIRMED |
+
+  The post-auth fix design (on_navigation + non-resolvable-host exfiltration, reusing the
+  `humble_reveal_post` pattern at `src-tauri/src/main.rs:2269-2322`) remains valid and is
+  now UNBLOCKED by the form question — but it fixes only the post-auth half. Shipping it
+  alone would relay an authorization code that a logged-out user still cannot reach, because
+  the pre-auth 403 stops them first. BOTH defects must be closed for Epic login to work.
+
+separately_established_and_worth_keeping: |
+  The user agent materially changes Epic's behaviour and this is proven, independent of the
+  403 question. `USER_AGENTS.legendary`'s stock value
+  `'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'` carries NO engine tokens;
+  it produced an HTTP 400 on `/id/api/redirect` with Epic's own visible error
+  `Parameter "client_id" is required`. Adding Chromium engine tokens CLEARED that 400, live.
+  Electron never hits this because `index.tsx:324` applies its UA on `dom-ready` (after the
+  document loads) and Chromium composes its own product tokens underneath a `setUserAgent`
+  call; Tauri sets `.user_agent()` on the builder before `.build()` and sends the string
+  verbatim. Whatever the final UA turns out to be, it MUST carry engine tokens, and that
+  needs a test pinning it so a future "cleanup" cannot silently reintroduce the 400.
+
+<!-- HISTORICAL FROM HERE DOWN -- superseded by the block above.
+     OVERWRITTEN 2026-08-02T05:30:00 -- SCOPE CLARIFICATION + IMPLEMENTATION HOLD this cycle.
      The immediately prior cycle (2026-08-02T05:15:00) confirmed root cause for the
      POST-AUTHENTICATION half of the flow and produced a prose fix design. This cycle does
      NOT change that design or the confirmed root cause -- it records a critical gap found in
