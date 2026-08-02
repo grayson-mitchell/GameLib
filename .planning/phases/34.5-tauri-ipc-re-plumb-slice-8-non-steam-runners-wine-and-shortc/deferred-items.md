@@ -152,3 +152,100 @@ gate document itself. Root causes are UNKNOWN; do not assume any of these share 
     winetricks), it is a build/bundle-layout question that only a real `.app` packaging pass can
     resolve and self-check. Whichever plan first exercises a packaged (non-dev) build is the correct
     place to close this residual.
+
+## Found during the 34.5-40/34.5-41 blocking live-gate RE-RUN 2 (2026-08-02) — gap cycle 5
+
+Verdict `FAIL`: `items_passed: 0`, `items_failed: 2` (items 2, 4), `items_blocked: 1` (item 1),
+`items_not_attempted: 2` (items 3, 5). Evidence: `34.5-LIVE-GATE-RERUN-2.md`. The run spanned two
+sessions with different secret-store arms — session A (21:23:55) `keyring`, a deviation from
+D-CYCLE5-B; session B (21:42:53) `dev-vault`. Both preserved as
+`~/Library/Logs/GameLib/gamelib.log.34.5-g6-gate3-sessionA` / `-sessionB`.
+
+### Disposition of items 6-11 (F-34.5-G6-01..06) against this run
+
+- **Item 6 / F-34.5-G6-01 (Epic non-interactive) — STILL OPEN.** This run drove two login windows
+  and reproduced the parked pre-auth defect: operator-observed HTTP 403 on `/id/api/email/exists`
+  (webview devtools, not in the log) plus two `[oauthLoginCapture] runner=legendary status=timeout`
+  lines (21:31:10, 21:32:33) and zero `status=captured`. 403 and `timeout` are recorded as DISTINCT
+  observations, per the debug file's own instruction not to treat them as interchangeable. Whether
+  `epic_oauth_redirect_observer_script` injected was NOT OBSERVED — recorded as not observed, not as
+  absent.
+- **Item 7 / F-34.5-G6-02 (capture reaches the backend, nothing consumes it) — CLOSED, live-proven.**
+  `[useTauriOAuthLogin] runner=gog phase=idle (login completed, library refresh triggered)` fired
+  TWICE (21:30:41, 21:31:51), against run 2's six backend terminal outcomes and zero such lines. The
+  full chain ran: capture → `gogdl auth` → `refreshLibrary complete runner=gog managers=1` →
+  7 games persisted to `store_cache/gog_library.json`.
+- **Item 8 / F-34.5-G6-03 (GOG library not populated) — STILL OPEN, but RE-CHARACTERISED.** It is no
+  longer a data-acquisition failure: the backend persisted 7 titles. The remaining defect is
+  frontend-render-only — a third distinct layer, downstream of both prior runs' root causes. See
+  item 19 below.
+- **Item 9 / F-34.5-G6-04 (login window shows no URL/origin) — NOT RE-OBSERVED.** The title-bar
+  transcription items 1-3 require was not gathered. The log does show a backend nav-origin change
+  (`host=login.gog.com` 21:30:02 → `host=embed.gog.com` 21:30:30), which is log-observed, NOT the
+  title-bar transcription the item asks for.
+- **Item 10 / F-34.5-G6-05 (black-on-black Amazon code field) — NOT RE-OBSERVED.** Item 3 was NOT
+  ATTEMPTED; no Amazon login window was opened.
+- **Item 11 / F-34.5-G6-06 (GOG sign-out prompted for Keychain twice) — NOT RE-OBSERVED.** Session A
+  ran the `keyring` arm but its reads TIMED OUT rather than prompting to completion
+  (`keyring failure memoized slot=humble-session class=timeout ms=120000` and the same for
+  `slot=steam-refresh-token`, both 21:24:40). Session B ran `dev-vault` and issues no real
+  `keyring_get` at all.
+
+### New findings, carried observation-only and undiagnosed
+
+13. **F-34.5-G6-07 — the `nativeImage` sidecar stub structurally blocks every macOS `.app`
+    shortcut.** `src/backend/sidecar/electronStub.ts:651` exports
+    `nativeImage = { createFromPath, createFromDataURL, createEmpty }`, each returning a bare `{}`;
+    `createFromBuffer` does not exist. `convertPngToICNS` (`shortcuts.ts:256-263`) calls
+    `nativeImage.createFromBuffer(...)` and throws `TypeError: import_electron20.nativeImage.createFromBuffer is not a function`,
+    caught into `return false`, surfacing only as the generic `Error generating MacOS App`
+    (21:59:52). Even with `createFromBuffer` present, the chained `.resize().crop().toPNG()` would
+    throw on the bare `{}`. **This makes `addShortcut` → `generateMacOsApp` → `shortcuts.ts:227`
+    unreachable for EVERY macOS game — not target-specific, not icon-format-specific.** Same family
+    as the known `safeStorage` dead-stub defect; the stub is commented "safe no-ops; out of scope per
+    27-CONTEXT". Scope for gap cycle 6.
+14. **F-34.5-G6-08 — `addToSteam` returns `undefined` instead of a boolean while its side effect
+    succeeds.** `await window.api.addToSteam('1207659037','gog')` returned `undefined`, yet
+    `shortcuts.vdf` was written and `Alan Wake was successfully added to Steam.` logged (22:00:22).
+    `GameSubMenu/index.tsx:220` does `.then((added) => setAddedToSteam(added))`, so the UI toggle
+    would never flip even on success.
+15. **F-34.5-G6-09 — the Tauri shell ignores Electron-shaped launch arguments and boots a second
+    instance.** Running the VDF's own recorded invocation
+    (`gamelib-shell --no-gui --no-sandbox "gamelib://launch?appName=1207659037&runner=gog"`) started
+    a whole second GameLib: it spawned its own sidecar, opened devtools and re-initialised the
+    library stores. It did not honour `--no-gui`, did not handle the `gamelib://` deep link (zero
+    `handleProtocol` lines) and did not detect the running instance. `--no-sandbox` is an Electron
+    flag.
+16. **F-34.5-G6-10 — `getInstallInfo` is unported AND absent from `IPC-PORT-INVENTORY.md`.** It is a
+    real channel (`src/common/types/ipc.ts:218`, `src/preload/api/helpers.ts:43` via
+    `makeHandlerInvoker`), it is not registered in the sidecar, and it appears in none of the
+    inventory's buckets. It blocked the game page entirely
+    (`[GAMELIB_UNPORTED_CHANNEL] No handler registered for channel 'getInstallInfo'`).
+    **The inventory that gates Phase 35 is therefore not exhaustive**; `ported-channels-gate.py`
+    verifies the 38+3+16=57 split reconciles internally, NOT that the inventory covers the real
+    preload surface. No audit of that surface has been done, so **the extent is UNKNOWN and must not
+    be assumed to be one channel.**
+17. **F-34.5-G6-11 — the contract's own prescribed item-4 invocation would have been a guaranteed
+    non-event.** This machine's globals are `addDesktopShortcuts: false`, `addStartMenuShortcuts:
+    false`, `addSteamShortcuts: false`; `shortcuts.ts:65,71` gate the writes on
+    `if (addDesktopShortcuts || fromMenu)` / `if (addStartMenuShortcuts || fromMenu)`. The
+    preflight's `addShortcut(appName, runner, false)` (`fromMenu=false`) would have written nothing
+    and raised nothing. The operator used `true`. Recorded as a DEVIATION from the contract AND as a
+    contract/preflight defect of the same class the preflight itself caught for item 5's
+    toolkit/VKD3D traps.
+18. **F-34.5-G6-12 — GOG's backend chain fully succeeds while the UI renders nothing.** 7 titles
+    persisted (`store_cache/gog_library.json`, 9867 bytes, 21:33) with no games visible in the
+    Library. A third distinct failure layer.
+19. **F-34.5-G6-13 — `phase=cancelled-midflight at=auth authStatus=done` fires immediately before
+    each successful `phase=idle`** (21:30:41, 21:31:51). Recorded without diagnosis.
+20. **F-34.5-G6-14 — `[refreshLibrary] runner=all origin=unknown` still occurs** (21:32:47),
+    violating item 2's clause (g) requirement that every `[refreshLibrary]` line carry a
+    non-`unknown` origin.
+21. **F-34.5-G6-15 — `gamelib.log` rotated mid-gate and the live file lost the run.** Evidence was
+    recovered from `gamelib.log.old` and preserved under the `.34.5-g6-gate3-sessionA/B` suffixes. A
+    gate that reads its evidence from the live log is one rotation away from losing it.
+22. **REQUIREMENTS.md inconsistency, for gap cycle 6 to scope.** REQ-34.5-01/02/03/04/05/12 are
+    already checked `[x]` from earlier build-out plans, predating any gate run — yet those
+    requirements carry gate-passing conditions that have now FAILED three times. Flagged by plan
+    34.5-41 and left untouched by both 34.5-41 and 34.5-42, since `REQUIREMENTS.md` is in neither
+    plan's `files_modified`.
