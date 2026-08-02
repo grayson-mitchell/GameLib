@@ -1,5 +1,5 @@
 ---
-status: fixed_pending_live_verification
+status: fixed
 trigger: "After a successful GOG login the Manage Accounts panel never updates — it stays on 'Signing in to Gog' even though the login succeeded and the library refreshed"
 created: 2026-08-03T02:10:00Z
 updated: 2026-08-03T02:10:00Z
@@ -111,6 +111,56 @@ verification: |
 files_changed:
   - src/frontend/screens/WebView/index.tsx
   - src/frontend/screens/WebView/__tests__/WebViewOAuthNavigation.test.ts (new)
+
+## LIVE VERIFICATION — PASSED (with a caveat) 2026-08-03 02:09-02:10
+
+Developer confirmation: an initial *"no effect, same stuck panel"* was withdrawn —
+*"could be slow though... can see now, might be 'fixed'"*. **Third time this session a
+too-early check read as a failure**; the navigation fires at `phase=idle`, ~30 s after
+capture, not at the moment the login window closes.
+
+Build was confirmed current before trusting the result: `build/assets/*.js` written 02:09,
+fix commit 02:08:43, boot 02:09:28. (Note for future checks: grepping the RENDERER bundle
+for an identifier like `handleTauriOAuthSuccess` proves nothing — minification renames
+locals. Use the bundle mtime against the commit time. The SIDECAR bundle is different:
+`build/main/sidecar.js` keeps enough identifiers to grep.)
+
+**The log signature changed decisively.** Before:
+
+```
+phase=teardown inflight=true                        <- torn down MID-flight
+phase=cancelled-midflight at=auth authStatus=done
+phase=idle
+```
+
+After (02:10:27):
+
+```
+phase=idle (login completed, library refresh triggered)
+phase=teardown inflight=false                       <- torn down AFTER completion
+```
+
+`cancelled-midflight` is absent and `inflight=false`, i.e. the login had reached terminal
+before the teardown ran. The ordering flipped: the teardown is now a CONSEQUENCE of
+`navigate('/login')` unmounting the route, which is exactly what the fix does.
+
+### The mid-flight teardown's cause is STILL NOT CLOSED — do not read this as having fixed it
+
+The obvious inference — that wrapping `onLoginSuccess` in `useCallback` stabilised a
+churning effect dependency — **was checked and is FALSE**. `GlobalState.tsx:1558` passes
+`completeOAuthLogin: this.completeOAuthLogin`, a class field created once
+(`GlobalState.tsx:619`), so `onLoginSuccess`'s identity was already stable before this
+change. `useCallback` cannot have removed an instability that did not exist.
+
+So the disappearance of `cancelled-midflight` is currently **unexplained**, and rests on a
+SINGLE post-fix run. Two live possibilities, not discriminated:
+  (a) the fix genuinely reordered things — plausible if the pre-fix mid-flight teardown had
+      the same root as whatever now fires post-completion, merely earlier;
+  (b) run-to-run variance — the pre-fix teardown fired at `Login Successful` time, which is
+      timing-sensitive.
+
+Retiring this needs several consecutive runs showing zero `cancelled-midflight` lines, not
+one. Until then the blind spot recorded in `reasoning_checkpoint` stands.
 
 ## Not closed by this
 
