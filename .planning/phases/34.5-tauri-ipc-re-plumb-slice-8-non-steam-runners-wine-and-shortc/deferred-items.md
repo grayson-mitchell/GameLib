@@ -249,3 +249,33 @@ D-CYCLE5-B; session B (21:42:53) `dev-vault`. Both preserved as
     requirements carry gate-passing conditions that have now FAILED three times. Flagged by plan
     34.5-41 and left untouched by both 34.5-41 and 34.5-42, since `REQUIREMENTS.md` is in neither
     plan's `files_modified`.
+
+### 23. Steam identity in the repo — DEVELOPER DECISION RECORDED 2026-08-02: redact forward, do not rewrite history
+
+Found by plan 34.5-42's credential sweep. **Two values for the same identity, with opposite exposure:**
+
+| Value | Files at HEAD | Already published | Earliest commit |
+|---|---|---|---|
+| SteamID3 account id (`userdata/<id>`) | 4, all `.planning/phases` | **0** | `49fdaad79`, 2026-07-29, unpushed |
+| SteamID64 (the profile-URL number) | 37 | **37 — public since 2026-07-14** | `fb84eb850`, published |
+
+The two are trivially interconvertible (`SteamID64 = accountid + 76561197960265728`), so redacting
+one while the other is public changes nothing about what is findable. The published one spans
+`.claude/skills/`, `.planning/spikes/`, `.acf` snapshots and
+`src/backend/storeManagers/steam/bridge/__tests__/`.
+
+**Decision (developer, 2026-08-02): redact forward only.**
+- The 4 unpublished planning files were scrubbed to `userdata/<REDACTED>` — free, since none had
+  been pushed.
+- The 37 published files and all git history are **left untouched, deliberately.** A SteamID64 is a
+  public identifier, not a credential; it grants no access. The exposure is identity linkage
+  (GitHub ↔ Steam profile), which the developer accepts. Rewriting published history would require a
+  force-push, would leave orphaned objects on GitHub until a support request, and would not reach
+  existing clones or caches — real cost for partial erasure of an already-indexed public value.
+- **New documents must use `userdata/<REDACTED>`**, which `T-34.5-C5-06` already requires and gap
+  cycle 5's own documents already follow.
+
+**This item is CLOSED by decision, not by remediation.** Future credential sweeps will still match
+the SteamID64 in those 37 published files — that is expected and must NOT be re-raised as a new
+finding or spent another cycle on. Anything genuinely new (a token, cookie, session id, OAuth code,
+or a NEW unredacted account id in an unpublished file) is still in scope and still blocks.
