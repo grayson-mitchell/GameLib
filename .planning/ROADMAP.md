@@ -1542,7 +1542,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 38/42 plans executed (gap cycle 5 added plans 34.5-38..42 on 2026-08-02; 34.5-38 executed 2026-08-02 — authorisation/disposition/measured-baseline record; 34.5-39 executed 2026-08-02 — item-4/item-5 gate preflight; 34.5-40 executed 2026-08-02 — authored `34.5-LIVE-GATE-RERUN-2.md`, the third blocking gate contract, `verdict: null`; 34.5-41 executed 2026-08-02 — RAN the third blocking gate on real hardware, **VERDICT FAIL 0/5** (see below); 34.5-29/30/31 remain HALTED and superseded — see `34.5-CYCLE5-ROUTING.md`)
+**Plans:** 39/42 plans executed — recounted from the phase directory 2026-08-02 (42 `*-PLAN.md`, 39 `*-SUMMARY.md`). **The three without a SUMMARY are 34.5-29/30/31, which are HALTED and SUPERSEDED, not pending** — 39 of 39 in-scope plans are complete. Gap cycle 5 added plans 34.5-38..42 on 2026-08-02: 34.5-38 — authorisation/disposition/measured-baseline record; 34.5-39 — item-4/item-5 gate preflight; 34.5-40 — authored `34.5-LIVE-GATE-RERUN-2.md`, the third blocking gate contract, `verdict: null`; 34.5-41 — RAN the third blocking gate on real hardware, **VERDICT FAIL 0/5** (see below); 34.5-42 — propagated that verdict and closed the cycle. Dispositions for 34.5-29/30/31: `34.5-CYCLE5-ROUTING.md`.
 3's plans 22-25 of 10 executed) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
 `34.5-16` through `34.5-18` fixed the single diagnosed root cause (a wrong `publicDir` under the
@@ -1554,9 +1554,38 @@ the `publicDir` root cause CLOSED (all four runner binaries `exists=true`, no as
 line, items 2/3 both reached backend `status=captured` for the first time this phase) but
 surfaced a NEW, downstream-of-capture defect: Epic's login form never becomes interactive, and
 GOG/Amazon's successful backend captures are never consumed into a completed, UI-visible,
-library-populated login. Per D-08's no-partial-pass rule, **the phase still does not close** —
-another gap cycle inside Phase 34.5 is next. See `34.5-LIVE-GATE-RERUN.md` for full evidence and
-`34.5-21-SUMMARY.md` for this propagation pass.
+library-populated login.
+
+Gap cycles 3 and 4 (plans `34.5-22`..`34.5-37`) diagnosed and fixed that layer without ever
+re-running the gate. **Gap cycle 5 (plans `34.5-38`..`34.5-42`) authored and RAN the third
+blocking gate on 2026-08-02** — contract `34.5-LIVE-GATE-RERUN-2.md` written with `verdict: null`
+before any live work, executed by plan `34.5-41`: **FAIL, 0 of 5 clean** — `items_passed: 0`,
+`items_failed: 2` (items 2, 4), `items_blocked: 1` (item 1, Epic, entering BLOCKED per D-CYCLE5-A
+with the parked pre-auth defect as its cause), `items_not_attempted: 2` (items 3, 5). The four
+counters reconcile to 5. Per D-08, **the phase still does not close.**
+
+What the third run nevertheless earned, stated without inflation:
+- **F-34.5-G6-02 is CLOSED, live-proven.** GOG's full backend chain — capture → `gogdl auth` →
+  `refreshLibrary complete runner=gog managers=1` → 7 titles persisted to
+  `store_cache/gog_library.json` — ran end to end, and
+  `[useTauriOAuthLogin] runner=gog phase=idle (login completed, library refresh triggered)` fired
+  **twice** where run 2 produced six backend terminal outcomes and zero such lines. The failure
+  moved again, to a frontend-render layer: the data lands and the UI shows nothing.
+- **Items 4 and 5 carry a result for the first time in this phase's history**, after being
+  silently skipped by both prior runs. Item 4 FAIL, with three named root causes (a dead
+  `nativeImage` sidecar stub, `addToSteam` returning `undefined`, and Electron-shaped Steam
+  LaunchOptions the Tauri shell ignores). Item 5 NOT ATTEMPTED — but as an explicit, recorded
+  refusal naming its blocking prerequisite, not a drift.
+- **Ledger row `U-34.5-09` retired**, live-proven twice.
+
+⚠ **A Phase 35 precondition surfaced that is larger than this gate**: `getInstallInfo` is unported
+AND absent from `IPC-PORT-INVENTORY.md` entirely (F-34.5-G6-10), so that document's own
+"Phase 35 must not run while any channel below is unported" rule cannot catch it. The extent of the
+inventory's incompleteness is UNKNOWN and must not be assumed to be one channel.
+
+See `34.5-LIVE-GATE-RERUN-2.md` for the third run's full evidence, `34.5-CYCLE5-ROUTING.md`
+§ Outcome for the routing decision, `deferred-items.md` items 13-22 for the nine new findings, and
+`34.5-42-SUMMARY.md` for this propagation pass.
 
 Plans:
 - [x] 34.5-01-PLAN.md — Wave-1 seam 1: pathShim desktop/exe/documents + GAMELIB_SHELL_EXE on both Rust spawn paths + pathShim.test.ts (wave 1)
@@ -1596,9 +1625,9 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 - [x] 34.5-26-PLAN.md — F-G6-02 layer 2 / F-G6-03: route the captured code through the post-login completion path so the library actually refreshes (gap wave 3)
 - [x] 34.5-27-PLAN.md — F-G6-04 origin shown in the login window's own chrome (phishing-resistance) + F-G6-05 light interface style for the login webview (gap wave 3)
 - [x] 34.5-28-PLAN.md — Diagnostic live checkpoint: two-arm Epic UA discriminator + one-runner capture-to-library smoke, before committing to the full gate (gap wave 4, non-autonomous)
-- [ ] 34.5-29-PLAN.md — Apply the Epic fix the discriminator SELECTED (three of four branches ship no code) + verified preflight for the never-attempted items 4 and 5 (gap wave 5)
-- [ ] 34.5-30-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, nine preconditions, all five items (gap wave 6)
-- [ ] 34.5-31-PLAN.md — **BLOCKING live gate, third run**, all 5 items on real hardware, verdict + propagation (gap wave 7, non-autonomous)
+- [ ] 34.5-29-PLAN.md — **HALTED and SUPERSEDED — never executed, deliberately left unticked and byte-unchanged on disk as the record of its own halt.** Task 1 (the Epic user-agent fix) is VOID by three independent gates: its own cycle-3 `BINDING DECISION: fix-first` self-halt, its own `R1-FALSIFIED` verdict branch, and the second discriminator's `verdict: E1` routing (diagnosis only) combined with `.planning/debug/epic-login-non-interactive.md`'s `## Constraints`, which forbid changing `USER_AGENTS`, `EPIC_LOGIN_URL` or `matchOAuthRedirect`. **Tasks 2 and 3 were RE-HOMED to `34.5-39`** and executed there. Disposition: `34.5-CYCLE5-ROUTING.md`. Do not read this `[ ]` as work left undone.
+- [ ] 34.5-30-PLAN.md — **HALTED and SUPERSEDED by `34.5-40`**, which authored `34.5-LIVE-GATE-RERUN-2.md`. Never executed; left unticked and byte-unchanged as the record of its own halt. Disposition: `34.5-CYCLE5-ROUTING.md`.
+- [ ] 34.5-31-PLAN.md — **HALTED and SUPERSEDED by `34.5-41`** (gate run + verdict) **and `34.5-42`** (propagation). Never executed; left unticked and byte-unchanged as the record of its own halt. Disposition: `34.5-CYCLE5-ROUTING.md`.
 
 > **Gap cycle 4 planned 2026-08-01.** `34.5-28`'s checkpoint recorded `BINDING DECISION: fix-first` in
 > `34.5-G6-EPIC-DISCRIMINATOR.md` § Routing. Plans **34.5-29/30/31 are HALTED — NOT EXECUTED**: the
@@ -1635,7 +1664,7 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 - [x] 34.5-39-PLAN.md — Re-homed 34.5-29 Tasks 2/3: verified item-4/item-5 preflight (`34.5-G6-ITEM45-PREFLIGHT.md`), incl. the login-dependency analysis that caused both prior skips (gap-5 wave 2)
 - [x] 34.5-40-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, eleven preconditions, a Rule-3 known-holes table, and all five items (gap-5 wave 3) — DONE 2026-08-02, ships no code
 - [x] 34.5-41-PLAN.md — **BLOCKING live gate, third run**, all five items on real hardware, verdict + four-way arithmetic (gap-5 wave 4, non-autonomous) — **RAN 2026-08-02, VERDICT FAIL 0/5** (`items_passed=0`, `items_failed=2` [item 2 GOG, item 4 shortcuts], `items_blocked=1` [item 1 Epic], `items_not_attempted=2` [item 3 Amazon, item 5 Wine]). Both run-1/run-2 root causes CONFIRMED CLOSED a second time (F-34.5-G6-02 closes: GOG's full backend chain — capture → CLI auth → dispatch → persistence, 7 games — now works end to end); a THIRD, new frontend-render-only failure blocks GOG's Library UI. Items 4 and 5 each got a real result for the first time this phase: item 4 FAIL (three new structural sidecar defects, F-34.5-G6-07/08/09 — `nativeImage` stub, `addToSteam` return type, no single-instance detection); item 5 NOT ATTEMPTED (no `wine`-type Wine version downloaded). U-34.5-09 RETIRES. All four standing research claims remain STANDING. Nine new findings (`F-34.5-G6-07..15`). See `34.5-LIVE-GATE-RERUN-2.md` and `34.5-41-SUMMARY.md`. **Phase 34.5 STILL DOES NOT CLOSE** — gap cycle 6 required.
-- [ ] 34.5-42-PLAN.md — Propagate the verdict everywhere, resolve the untested-items ledger row by row, close the cycle (gap-5 wave 5)
+- [x] 34.5-42-PLAN.md — Propagate the verdict everywhere, resolve the untested-items ledger row by row, close the cycle (gap-5 wave 5) — DONE 2026-08-02; verdict propagated to `34.5-PORTED-CHANNELS.md`, `deferred-items.md`, `IPC-PORT-INVENTORY.md`, `ROADMAP.md` and `STATE.md`; ledger resolved row by row; `34.5-CYCLE5-ROUTING.md` § Outcome filled
 
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
 
