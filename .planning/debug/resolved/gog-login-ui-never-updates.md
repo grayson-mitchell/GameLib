@@ -508,7 +508,27 @@ memo/reference identity. **It is not implicated.** The games rendered without pr
 Refresh, which is precisely the action that distinguished that bug. `uninstall-game-vanishes`
 stays parked, untouched, and its diagnosis is unaffected.
 
-## Follow-up: ~50 s from login to rendered library
+## Follow-up STATUS: redundant refetch FIXED (`c3117b1cf`), total latency still unmeasured
+
+The redundant second fetch described below is **fixed**, at all four call sites (epic, gog,
+zoom, amazon) rather than only the diagnosed one — they are the same defect, and fixing GOG
+alone would have left three latent (Phase 34.2's "count the instances before scoping the
+fix" lesson).
+
+Change: each guard now tests only its cache-backed variable
+(`if (gog.username && !gogLibrary.length)`), dropping the `|| !<runner>.library.length`
+React-state clause. Pinned by a new self-tested source-text gate
+(`GlobalStateRefreshCacheGuard.test.ts`) that was verified to go RED against a real injected
+regression, not merely against synthetic strings. `test:ci` 3579/3579, 183/183, exit 0.
+
+**NOT YET VERIFIED LIVE, and the headline number is still open.** The measured wait was
+**~50 s**; this removes a leg measured at ~10 s of it. The remaining ~40 s has no diagnosis
+at all — do not assume this fix makes the login feel fast. A live re-measure is the only
+thing that settles it, and if the wait is still ~40 s the interesting question becomes what
+the other legs are (the GOG CLI round trips at 01:40:04→01:40:14 are the obvious next
+suspects, at ~10 s each).
+
+## Follow-up (original diagnosis): ~50 s from login to rendered library
 
 Measured by the developer at **~50 s**. Not a blocker and deliberately NOT fixed in this
 session, but it is real and worth its own pass.
