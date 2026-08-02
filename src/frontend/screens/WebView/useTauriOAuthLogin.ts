@@ -34,10 +34,18 @@ import { EPIC_LOGIN_URL, GOG_LOGIN_URL, ZOOM_LOGIN_URL } from './loginRoutes'
  * never abandon an irreversible side effect (a credential already written to disk) or a
  * perishable one (a single-use OAuth code); a future "cleanup" that restores an early return on
  * `cancelled` at the capture or auth-exchange sites would silently reintroduce that defect.
+ *
+ * Quick task 260803-eee: the popup-close (`oauthCaptureLogin` resolving `{ status: 'captured' }`)
+ * to token-exchange-complete (`status: 'done'`) window is 5–27 s of dead UI under Tauri — the user
+ * stares at the static "Signing in to <Runner>" panel with no indication anything is happening.
+ * The `finalizing` phase below fills that gap. It needs no new IPC channel: `oauthCaptureLogin`'s
+ * own resolution already IS the popup-closed signal, so the transition is inserted at the existing
+ * captured/non-captured fork, immediately before the auth-exchange call.
  */
 export type TauriOAuthLoginState =
   | { phase: 'idle' }
   | { phase: 'awaiting' }
+  | { phase: 'finalizing'; runner: OAuthRunner }
   | { phase: 'blocked'; runner: OAuthRunner; channel: string }
   | { phase: 'cancelled' }
   | { phase: 'timeout' }
@@ -263,6 +271,15 @@ export function useTauriOAuthLogin(
       // function. A resolved response is checked for `status === 'done'` before this hook ever
       // treats the login as successful (F-34.5-G6-02 layer 2, F-34.5-G6-03): a resolved-but-
       // refused response must never masquerade as "not wired up yet".
+      //
+      // Quick task 260803-eee: the popup just closed and the auth-exchange call below is about
+      // to start -- this is the exact boundary the finalizing phase names. Not a terminal phase
+      // (reachedTerminal stays untouched), so it never suppresses the onLoginSuccess invocation
+      // further down.
+      window.api.logInfo(
+        `[useTauriOAuthLogin] runner=${activeRunner} phase=finalizing (capture complete, exchanging with auth channel)`
+      )
+      safeSetState({ phase: 'finalizing', runner: activeRunner })
       try {
         let status: string
         let username: string | undefined

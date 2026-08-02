@@ -951,6 +951,115 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
   })
 })
 
+describe('useTauriOAuthLogin — finalizing (capture complete, exchange in flight) [quick task 260803-eee]', () => {
+  it.each<[OAuthRunner, keyof typeof mockApi]>([
+    ['legendary', 'login'],
+    ['gog', 'authGOG'],
+    ['nile', 'authAmazon'],
+    ['zoom', 'authZoom']
+  ])(
+    'runner=%s: a captured outcome with the auth channel still pending leaves the hook at { phase: "finalizing", runner }',
+    async (runner, apiMethod) => {
+      mockApi.oauthCaptureLogin.mockResolvedValue({
+        status: 'captured',
+        runner,
+        code: 'CODE123',
+        redirectUrl: 'https://example.com/?code=CODE123'
+      })
+      mockApi[apiMethod].mockImplementation(() => new Promise(() => {}))
+
+      mount(runner)
+      const hook = await settle(runner)
+
+      expect(hook).toEqual({ phase: 'finalizing', runner })
+    }
+  )
+
+  it('when the auth channel then resolves { status: "done" }, the hook still settles on { phase: "idle" } and onLoginSuccess fires exactly once', async () => {
+    let resolveAuth: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAuth = resolve
+        })
+    )
+    const onLoginSuccess = jest.fn()
+
+    mount('gog', onLoginSuccess)
+    const finalizing = await settle('gog', onLoginSuccess)
+    expect(finalizing).toEqual({ phase: 'finalizing', runner: 'gog' })
+
+    resolveAuth({ status: 'done', data: { username: 'grayson' } })
+    const hook = await settle('gog', onLoginSuccess)
+
+    expect(hook).toEqual({ phase: 'idle' })
+    expect(onLoginSuccess).toHaveBeenCalledTimes(1)
+  })
+
+  it.each<[string, unknown]>([
+    ['cancelled', { status: 'cancelled' }],
+    ['timeout', { status: 'timeout' }],
+    ['unsupported', { status: 'unsupported' }],
+    ['error', { status: 'error', message: 'seam threw' }]
+  ])(
+    'a non-captured outcome (%s) never passes through finalizing and logs no phase=finalizing line',
+    async (_label, outcome) => {
+      mockApi.oauthCaptureLogin.mockResolvedValue(outcome)
+
+      mount('zoom')
+      const hook = await settle('zoom')
+
+      expect(hook.phase).not.toBe('finalizing')
+      const finalizingLines = mockApi.logInfo.mock.calls.filter(
+        ([line]) => typeof line === 'string' && line.includes('phase=finalizing')
+      )
+      expect(finalizingLines).toHaveLength(0)
+    }
+  )
+
+  it('an auth channel rejecting with UNPORTED_CHANNEL_MARKER still settles { phase: "blocked" } -- finalizing does not shadow it', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockRejectedValue(new Error(UNPORTED_CHANNEL_MARKER))
+
+    mount('gog')
+    const hook = await settle('gog')
+
+    expect(hook).toEqual({ phase: 'blocked', runner: 'gog', channel: 'authGOG' })
+  })
+
+  it('emits exactly one logInfo line containing phase=finalizing and the runner name per captured login', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+
+    mount('gog')
+    await settle('gog')
+
+    const matching = mockApi.logInfo.mock.calls.filter(
+      ([line]) =>
+        typeof line === 'string' &&
+        line.includes('phase=finalizing') &&
+        line.includes('runner=gog')
+    )
+    expect(matching).toHaveLength(1)
+  })
+})
+
 describe('useTauriOAuthLogin — unmount safety', () => {
   it('unmounting mid-capture does not throw, and a captured code still reaches the auth channel (Plan 34.5-34 Task 2 -- a perishable code is never abandoned)', async () => {
     let resolveCapture: (value: unknown) => void = () => {}
@@ -1066,7 +1175,11 @@ describe('useTauriOAuthLogin — cancellation suppresses state updates only (Pla
       const preUnmount = mount('gog')
       await settle('gog')
       const stateBeforeUnmount = rerender('gog')
-      expect(stateBeforeUnmount).toEqual({ phase: 'awaiting' })
+      // Quick task 260803-eee: the captured outcome now advances the hook to "finalizing" while
+      // the auth channel is still pending, instead of staying on "awaiting" forever -- this is
+      // the exact behaviour this task adds. The baseline snapshot below is updated to match; the
+      // test's actual subject (no post-unmount mutation) is unchanged.
+      expect(stateBeforeUnmount).toEqual({ phase: 'finalizing', runner: 'gog' })
 
       unmount()
 
@@ -1078,7 +1191,7 @@ describe('useTauriOAuthLogin — cancellation suppresses state updates only (Pla
       // the harness's own state slot is the only thing that COULD have been mutated, and this
       // asserts the pre-unmount snapshot is what a fresh mount would still see (i.e. nothing
       // wrote into the torn-down slot).
-      expect(stateBeforeUnmount).toEqual({ phase: 'awaiting' })
+      expect(stateBeforeUnmount).toEqual({ phase: 'finalizing', runner: 'gog' })
       expect(preUnmount).toEqual({ phase: 'idle' })
       expect(consoleError).not.toHaveBeenCalled()
     } finally {
