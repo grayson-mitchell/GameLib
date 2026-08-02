@@ -42,6 +42,7 @@ jest.mock('backend/storeManagers/index', () => ({
 }))
 
 const mockConfigStoreSet = jest.fn()
+const mockConfigStoreClear = jest.fn()
 // A plain `jest.fn(() => true)` default here does NOT survive: this suite's
 // jest.config.js sets `resetMocks: true`, which wipes any implementation
 // configured at factory time before the FIRST test even runs. The
@@ -50,7 +51,8 @@ const mockConfigStoreGetNodefault = jest.fn()
 jest.mock('backend/storeManagers/gog/electronStores', () => ({
   configStore: {
     set: mockConfigStoreSet,
-    get_nodefault: mockConfigStoreGetNodefault
+    get_nodefault: mockConfigStoreGetNodefault,
+    clear: mockConfigStoreClear
   }
 }))
 
@@ -76,6 +78,11 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
     // `isLoggedIn()` reads this -- always answer true, both call paths in
     // these tests are past the "just authenticated" point.
     mockConfigStoreGetNodefault.mockReturnValue(true)
+    // `getCredentials()`'s TTL cache (debug/gog-spawn-reduction.md fix 1) is a
+    // module-level singleton that outlives any individual test -- reset it so each
+    // test's own scripted `mockRunRunnerCommand` result is actually exercised, never
+    // shadowed by an earlier test's cached token.
+    GOGUser.__resetCredentialsCacheForTests()
   })
 
   it('login() does NOT spawn a second gogdl auth subprocess -- reuses the access_token the --code exchange already returned', async () => {
@@ -153,5 +160,213 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
         })
       })
     )
+  })
+})
+
+/**
+ * Regression coverage for debug/gog-spawn-reduction.md fix 5.
+ *
+ * `login()`'s own `gogdl auth --code` exchange returns a fresh token, but the fix-1 TTL
+ * cache stayed empty until the NEXT getCredentials() call (e.g. the post-login library
+ * refresh), which then spawned its own redundant `gogdl auth` on a cold cache. This test
+ * pins the fix: login() now seeds the same cache directly from its own stdout, so a
+ * getCredentials() call immediately after a successful login() is served from cache with
+ * zero additional gogdl subprocess spawns.
+ */
+describe('debug/gog-spawn-reduction fix 5 -- login() seeds the getCredentials() TTL cache', () => {
+  beforeEach(() => {
+    mockConfigStoreGetNodefault.mockReturnValue(true)
+    GOGUser.__resetCredentialsCacheForTests()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('getCredentials() called right after login() does NOT spawn a second gogdl auth subprocess', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'login-seeded-token',
+        refresh_token: 'r1',
+        user_id: 'u1',
+        expires_in: 3600,
+        loginTime: Date.now()
+      })
+    )
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: { username: 'testuser', email: 'x@example.com' }
+    })
+
+    const loginResult = await GOGUser.login('the-oauth-code')
+    expect(loginResult.status).toBe('done')
+
+    // login()'s own `gogdl auth --code` call is the only subprocess spawn so far.
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
+
+    const credentials = await GOGUser.getCredentials()
+
+    expect(credentials?.access_token).toBe('login-seeded-token')
+    expect(credentials?.user_id).toBe('u1')
+    // THE regression this test exists to catch: getCredentials() right after login()
+    // must be served from the cache login() seeded, not spawn a second `gogdl auth`.
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
+  })
+
+  it('getCredentials() spawns gogdl again once the login()-seeded token has passed its expires_in window', async () => {
+    const nowSpy = jest.spyOn(Date, 'now')
+    nowSpy.mockReturnValue(1_000_000)
+
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'login-seeded-token',
+        refresh_token: 'r1',
+        user_id: 'u1',
+        expires_in: 60,
+        loginTime: 1_000_000
+      })
+    )
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: { username: 'testuser', email: 'x@example.com' }
+    })
+
+    await GOGUser.login('the-oauth-code')
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
+
+    // Advance past expires_in (60s) + the 60s safety margin.
+    nowSpy.mockReturnValue(1_000_000 + 121_000)
+
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'refreshed-token',
+        refresh_token: 'r2',
+        expires_in: 3600,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's2',
+        user_id: 'u1',
+        loginType: 1
+      })
+    )
+    const credentials = await GOGUser.getCredentials()
+
+    expect(credentials?.access_token).toBe('refreshed-token')
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
+  })
+})
+
+/**
+ * Regression coverage for debug/gog-spawn-reduction.md fix 1.
+ *
+ * `GOGUser.getCredentials()` had zero caching across its 15 call sites (login/boot/
+ * library-refresh/presence/playtime/etc.), so every call spawned its own `gogdl auth`
+ * subprocess -- each carrying the ~5-13s OS-level tax documented in
+ * resolved/gogdl-spawn-tax.md. These tests pin the fix: a TTL cache keyed on the token's
+ * own `expires_in`, cleared by logout() and by natural expiry.
+ */
+describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache', () => {
+  beforeEach(() => {
+    mockConfigStoreGetNodefault.mockReturnValue(true)
+    GOGUser.__resetCredentialsCacheForTests()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('does not spawn a second gogdl auth subprocess while the cached token is still within its expires_in window', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'cached-token',
+        refresh_token: 'r1',
+        expires_in: 3600,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's1',
+        user_id: 'u1',
+        loginType: 1
+      })
+    )
+
+    const first = await GOGUser.getCredentials()
+    const second = await GOGUser.getCredentials()
+
+    expect(first?.access_token).toBe('cached-token')
+    expect(second?.access_token).toBe('cached-token')
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
+  })
+
+  it('spawns a fresh gogdl auth subprocess once the cached token has passed its expires_in window (minus the safety margin)', async () => {
+    const nowSpy = jest.spyOn(Date, 'now')
+    nowSpy.mockReturnValue(1_000_000)
+
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'first-token',
+        refresh_token: 'r1',
+        expires_in: 60,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's1',
+        user_id: 'u1',
+        loginType: 1
+      })
+    )
+    const first = await GOGUser.getCredentials()
+    expect(first?.access_token).toBe('first-token')
+
+    // Advance past expires_in (60s) + the 60s safety margin.
+    nowSpy.mockReturnValue(1_000_000 + 121_000)
+
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'second-token',
+        refresh_token: 'r2',
+        expires_in: 3600,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's2',
+        user_id: 'u1',
+        loginType: 1
+      })
+    )
+    const second = await GOGUser.getCredentials()
+
+    expect(second?.access_token).toBe('second-token')
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
+  })
+
+  it('logout() clears the cached credentials so the next getCredentials() call spawns gogdl again', async () => {
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'pre-logout-token',
+        refresh_token: 'r1',
+        expires_in: 3600,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's1',
+        user_id: 'u1',
+        loginType: 1
+      })
+    )
+    await GOGUser.getCredentials()
+
+    GOGUser.logout()
+
+    mockRunRunnerCommand.mockResolvedValueOnce(
+      stdoutFor({
+        access_token: 'post-logout-token',
+        refresh_token: 'r2',
+        expires_in: 3600,
+        token_type: 'bearer',
+        scope: 'read',
+        session_id: 's2',
+        user_id: 'u2',
+        loginType: 1
+      })
+    )
+    const afterLogout = await GOGUser.getCredentials()
+
+    expect(afterLogout?.access_token).toBe('post-logout-token')
+    expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
   })
 })

@@ -324,13 +324,15 @@ export default class GOGLibraryManager implements LibraryManager {
     stdout: ''
   }
 
+  // `credentials` is passed in rather than fetched here -- debug/gog-spawn-reduction.md
+  // fix 2. The caller (refresh()) already fetches credentials once; re-deriving them on
+  // every recursive pagination call was live-log-confirmed to spawn a redundant `gogdl
+  // auth` subprocess per page (each carrying the ~5-13s tax documented in
+  // resolved/gogdl-spawn-tax.md).
   private async getGalaxyLibrary(
+    credentials: GOGCredentials,
     page_token?: string
   ): Promise<Array<GalaxyLibraryEntry>> {
-    const credentials = await GOGUser.getCredentials()
-    if (!credentials) {
-      return []
-    }
     const headers = {
       Authorization: `Bearer ${credentials.access_token}`
     }
@@ -358,7 +360,10 @@ export default class GOGLibraryManager implements LibraryManager {
     }
 
     if (data?.next_page_token) {
-      const nextPageGames = await this.getGalaxyLibrary(data.next_page_token)
+      const nextPageGames = await this.getGalaxyLibrary(
+        credentials,
+        data.next_page_token
+      )
       if (nextPageGames.length) {
         objects.push(...nextPageGames)
       } else {
@@ -487,7 +492,8 @@ export default class GOGLibraryManager implements LibraryManager {
       return this.defaultExecResult
     }
     logInfo('Getting GOG library', LogPrefix.Gog)
-    const gameApiArray: GalaxyLibraryEntry[] = await this.getGalaxyLibrary()
+    const gameApiArray: GalaxyLibraryEntry[] =
+      await this.getGalaxyLibrary(credentials)
     if (!gameApiArray.length) {
       logError('There was an error Loading games library', LogPrefix.Gog)
       return this.defaultExecResult
@@ -654,9 +660,15 @@ export default class GOGLibraryManager implements LibraryManager {
       return
     }
 
-    const credentials = await GOGUser.getCredentials()
-    if (!credentials) {
-      logError('No credentials, cannot get install info', LogPrefix.Gog)
+    // Login gate only -- debug/gog-spawn-reduction.md fix 4. This used to call
+    // GOGUser.getCredentials(), spawning a `gogdl auth` subprocess purely to check
+    // login state; the returned credentials were never used anywhere else in this
+    // function (the `gogdl info` call below manages its own auth independently from
+    // the same auth-config-path file). isLoggedIn() is a synchronous local config read
+    // with zero subprocess spawns. See reasoning_checkpoint in the debug session file
+    // for the evidence this pre-check was not load-bearing for token freshness.
+    if (!GOGUser.isLoggedIn()) {
+      logError('Not logged in, cannot get install info', LogPrefix.Gog)
       return
     }
     const gameData = this.getGameInfo(appName)

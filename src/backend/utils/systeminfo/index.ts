@@ -67,6 +67,13 @@ interface SystemInformation {
 }
 
 let cachedSystemInfo: SystemInformation | null = null
+// In-flight-promise memoization -- debug/gog-spawn-reduction.md fix 3. The value-cache
+// above only helps SEQUENTIAL calls; concurrent callers at boot (backend boot log,
+// frontend boot IPC call, isMacSonomaOrHigher, etc.) each raced past it before the first
+// resolved, live-log-confirmed as 9 `--version` spawns in a 4s boot window instead of the
+// expected 3 (one per runner). Sharing the in-flight promise across concurrent cache=true
+// callers collapses those races back down to a single set of spawns.
+let inFlightSystemInfoFetch: Promise<SystemInformation> | null = null
 
 /**
  * Gathers information about various system components
@@ -74,7 +81,24 @@ let cachedSystemInfo: SystemInformation | null = null
  */
 async function getSystemInfo(cache = true): Promise<SystemInformation> {
   if (cache && cachedSystemInfo) return cachedSystemInfo
+  if (cache && inFlightSystemInfoFetch) return inFlightSystemInfoFetch
 
+  const fetchPromise = fetchSystemInfo()
+  if (cache) {
+    inFlightSystemInfoFetch = fetchPromise
+  }
+  try {
+    const sysinfo = await fetchPromise
+    cachedSystemInfo = sysinfo
+    return sysinfo
+  } finally {
+    if (inFlightSystemInfoFetch === fetchPromise) {
+      inFlightSystemInfoFetch = null
+    }
+  }
+}
+
+async function fetchSystemInfo(): Promise<SystemInformation> {
   const cpus = os.cpus()
   const memory = await getMemoryInfo()
   const gpus = await getGpuInfo()
@@ -118,7 +142,6 @@ async function getSystemInfo(cache = true): Promise<SystemInformation> {
       nileVersion: nileVersion
     }
   }
-  cachedSystemInfo = sysinfo
   return sysinfo
 }
 
@@ -155,5 +178,17 @@ Software Versions:
   Nile: ${info.softwareInUse.nileVersion}`
 }
 
-export { getSystemInfo, formatSystemInfo }
+/**
+ * Test-only reset hook (debug/gog-spawn-reduction.md fix 3). `cachedSystemInfo` and
+ * `inFlightSystemInfoFetch` are module-level singletons that outlive any individual test
+ * (this project's Jest config has no `resetModules`), so a value cached or an in-flight
+ * promise started by one test would silently be reused by the next. Called from this
+ * module's own test file's `beforeEach`. Never called from production code.
+ */
+function __resetSystemInfoCacheForTests(): void {
+  cachedSystemInfo = null
+  inFlightSystemInfoFetch = null
+}
+
+export { getSystemInfo, formatSystemInfo, __resetSystemInfoCacheForTests }
 export type { SystemInformation, GPUInfo }
