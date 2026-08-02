@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "GAP CYCLE 5 EXECUTING 2026-08-02 via `/gsd-execute-phase 34.5` -- scope is plans 34.5-38..42 ONLY, in 5 sequential waves. Plans 38 (wave 1), 39 (wave 2) and 40 (wave 3) are now COMPLETE. Plan 40 authored `34.5-LIVE-GATE-RERUN-2.md` -- the third blocking gate contract, `verdict: null`, written strictly before any live work of that run begins, filling in nothing. Two tasks: Task 1 (frontmatter, why-this-run-exists recap of runs 1/2 and every fix landed since by plan number, D-08 restated, the T-34.5-G6-02 evidence-handling rule, a new binding-evidence rule, item 1's BLOCKED disposition with the opportunistic-attempt clause, the known-holes table naming all 11 `34.5-UNTESTED-ITEMS.md` rows, and 11 numbered preconditions -- 7 carried forward, 4 new: cycle-3 fixes present at HEAD, cycle-4 fixes present at HEAD, the dev-secret-vault arm recorded, and the item-4/5 preflight re-confirmed at gate time) and Task 2 (the five items with items 4/5 INLINING `34.5-G6-ITEM45-PREFLIGHT.md`'s verified target/redacted path/devtools invocations/Wine prerequisites, resolving the preflight's flagged GOG-vs-sideload item-5 target trade explicitly -- GOG primary if item 2 PASSes, retiring both the narrow and storefront-specific readings of Pitfall 2; sideload fallback, retiring only the narrow reading -- plus the unfilled Verdict table, four standing-claim falsification rules, and the four-way arithmetic rule). Ships no code (zero .ts/.tsx/.rs diff). Both prior gate documents (`34.5-LIVE-GATE.md`, `34.5-LIVE-GATE-RERUN.md`) and `34.5-29/30/31-PLAN.md` verified untouched. Commits: 1f4932a43 (Task 1), f81dadd9f (Task 2), 96f3a8c02 (summary). Next: plan 41 (wave 4) -- execute this contract live. Plans 34.5-29/30/31 remain DELIBERATELY EXCLUDED from this run and stay byte-unchanged. Two binding developer decisions carry in: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` authored with `verdict: null` (plan 40, wave 3, DONE) strictly before it is run (plan 41, wave 4), gate item 1 (Epic) entering as BLOCKED with the parked pre-auth 403 named as cause so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- which keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN, named as known holes in the gate contract per ledger Rule 3. D-08 binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase; every closure criterion keys off the four RECORDED counters rather than presupposing non-closure. DECISION-COVERAGE OVERRIDE still standing: D-01 and D-03 uncovered by ID across all 42 plans -- a citation-form miss, not dropped scope; recorded so verify-phase re-surfaces it."
-last_updated: "2026-08-02T21:10:00.000Z"
-last_activity: 2026-08-02 -- Phase 34.5 gap cycle 5 plan 40 complete
+stopped_at: "GAP CYCLE 5 PLAN 41 COMPLETE 2026-08-02 -- the third blocking live gate (`34.5-LIVE-GATE-RERUN-2.md`) has been RUN, on real macOS hardware, across two sessions (session A 21:23:55-21:33:12, session B 21:42:53-22:00:24). **VERDICT: FAIL, 0 of 5 clean** (`items_passed=0`, `items_failed=2` [items 2 GOG, 4 shortcuts], `items_blocked=1` [item 1 Epic], `items_not_attempted=2` [items 3 Amazon, 5 Wine]; sum=5). Per D-08, **Phase 34.5 does NOT close.** Per `34.5-CYCLE5-ROUTING.md` Section \"Routing by verdict\", this lands in the \"any of items 2,3,4,5 FAIL\" row -- next action `/gsd-plan-phase 34.5 --gaps` (gap cycle 6). Both run-1 (publicDir/spawn) and run-2 (capture-to-propagation) defect families are now proven CLOSED (F-34.5-G6-02 closes for GOG: backend capture, frontend `phase=idle` propagation, CLI auth, runner-aware `refreshLibrary` dispatch, and persistence all succeed end to end -- 7 GOG games landed in `gog_library.json` -- for the first time this phase), but a THIRD, new failure layer blocks item 2: the Library UI never renders the persisted games. Item 1 (Epic) stays BLOCKED -- the opportunistic-attempt clause was exercised (two login windows driven, form rendered and accepted input) but the parked pre-auth defect (403 on `/id/api/email/exists`) reproduced itself rather than producing a distinguishable pass/fail. Items 4 and 5 each carry a REAL result for the FIRST TIME in this phase's history: item 4 FAILS with three new structural sidecar defects found (`nativeImage` stub lacks `createFromBuffer`, blocking the macOS `.app` shortcut for every game; `addToSteam` returns `undefined` not a boolean; the shell ignores `--no-gui`/deep-links and boots a second GameLib instance instead of the game); item 5 is NOT ATTEMPTED, blocking prerequisite (no `wine`-type Wine version downloaded) unmet and re-verified at gate time. U-34.5-09 (mid-flight-teardown login propagation) RETIRES -- live-proven twice in one session. All other `34.5-UNTESTED-ITEMS.md` OPEN rows stay OPEN; all four `34.5-LIVE-GATE-RERUN-2.md` standing research claims stay STANDING (zero items PASSed). Nine new findings recorded (`F-34.5-G6-07`..`-15`), observation-only. Two evidence-fidelity discrepancies caught and corrected during re-verification against the source log/filesystem directly (a mis-stated `getInstallInfo` occurrence count; `shortcuts.vdf`'s post-run size/mtime). Both prior gate documents (`34.5-LIVE-GATE.md`, `34.5-LIVE-GATE-RERUN.md`) and plans `34.5-29/30/31/38/39/40` verified byte-unchanged. Commits: `e30bcad34` (Task 1, pre-gate preparation), `19a5b4d1e` (Tasks 2-3, item results/verdict/falsification/known-holes), `a7a9d0d16` (summary). Next: `/gsd-plan-phase 34.5 --gaps` -- gap cycle 6, scoped to the GOG frontend-render defect, the three item-4 structural defects, and (still outstanding) Epic/Amazon/Wine's own first genuine live results for items 1/3/5 respectively. DECISION-COVERAGE OVERRIDE still standing: D-01 and D-03 uncovered by ID across all plans -- a citation-form miss, not dropped scope; recorded so verify-phase re-surfaces it."
+last_updated: "2026-08-02T22:20:00.000Z"
+last_activity: 2026-08-02 -- Phase 34.5 gap cycle 5 plan 41 complete -- third blocking gate ran, verdict FAIL 0/5
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 191
-  completed_plans: 177
-  percent: 92
+  completed_plans: 178
+  percent: 93
 ---
 
 # Project State
@@ -33,7 +33,61 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RE-RAN 2026-08-01 and FAILED AGAIN (0 of 5
+> **⛔ ACTIVE BLOCKER — Phase 34.5's blocking live gate RAN A THIRD TIME 2026-08-02
+> (`34.5-LIVE-GATE-RERUN-2.md`, plan 34.5-41) and FAILED AGAIN (0 of 5 clean).** Gap cycle 5's own
+> five plans (34.5-38..41; plan 42's propagation task is superseded by the new gap cycle this result
+> routes to) are complete, but **Phase 34.5 STILL DOES NOT CLOSE.** D-08's no-partial-pass rule
+> applies unchanged: this third FAIL is another gap cycle inside 34.5 — `/gsd-plan-phase 34.5
+> --gaps` (gap cycle 6) — not a deferred UAT entry, not an advisory note, and not a pre-authorized
+> override.
+>
+> **Both prior root causes (run 1's `publicDir`/spawn defect, run 2's capture-to-propagation defect)
+> are now CLOSED and live-proven a second time over.** `[useTauriOAuthLogin] runner=gog
+> phase=idle (login completed, library refresh triggered)` fires twice (F-34.5-G6-02 closes) — the
+> exact clause run 2's evidence lacked entirely across six backend outcomes. GOG's full backend
+> chain (capture → CLI auth → runner-aware `refreshLibrary` dispatch → persisted library JSON, 7
+> games) now works end to end for the first time this phase.
+>
+> - **BLOCKED — item 1 (Epic):** opportunistic attempt made (2 login windows driven, form rendered
+>   and accepted input), but the SAME parked pre-auth defect (403 on `/id/api/email/exists`)
+>   reproduced itself before a distinguishable pass/fail outcome — 0 `status=captured`, 2
+>   `status=timeout`. Stays BLOCKED, not converted to FAIL.
+> - **FAIL — item 2 (GOG):** backend capture, propagation, CLI auth, dispatch and persistence (7
+>   games in `gog_library.json`) ALL succeed — but the Library UI never renders them. A THIRD,
+>   new, frontend-render-only failure layer, downstream of both prior runs' causes.
+> - **NOT ATTEMPTED — item 3 (Amazon):** session ended after item 4's root-cause diagnosis before
+>   item 3 could be driven. Assumption A1 stays UNTESTED.
+> - **FAIL — item 4 (shortcuts), first real attempt ever:** `addToSteam` writes the correct `Exe`
+>   value but returns `undefined` not a boolean; `addShortcut` is structurally dead under the
+>   sidecar (`nativeImage` stub lacks `createFromBuffer`, blocking every macOS `.app` shortcut, not
+>   just this one); launching from Steam boots a second full GameLib instance instead of the game.
+> - **NOT ATTEMPTED — item 5 (Wine), first real attempt ever:** blocking prerequisite (a `wine`-type
+>   Wine version download) unmet, re-verified at gate time — an explicit, recorded refusal, not a
+>   drift.
+> - **What this gate falsifies: nothing.** Zero items PASSed, so all four standing claims (login
+>   seam end-to-end, the `www.amazon.com` anchor, `GAMELIB_SHELL_EXE` correctness at both `exe` call
+>   sites, the non-Steam Wine claim) remain STANDING — including where a sub-clause (GOG's backend
+>   chain; `addToSteam`'s `Exe` value) was independently confirmed while its parent item still
+>   FAILed, mirroring run 2's own precedent for Assumption A1.
+> - **Ledger:** U-34.5-09 (mid-flight-teardown propagation) RETIRES — live-proven twice. All ten
+>   other `34.5-UNTESTED-ITEMS.md` OPEN rows stay OPEN, each against its own row's stated
+>   retirement bar. U-34.5-01/U-34.5-10 stay OPEN (session A's `keyring` arm — a deviation from
+>   D-CYCLE5-B — issued two real Keychain reads that both TIMED OUT rather than succeeding, which
+>   does not meet either row's retirement bar).
+> - **Nine new findings** (`F-34.5-G6-07..15`, observation-only): the `nativeImage` sidecar stub
+>   gap; `addToSteam`'s wrong return type; the shell ignoring `--no-gui`/deep-links with no
+>   single-instance detection; `getInstallInfo` unported AND absent from the IPC inventory; a
+>   contract/preflight defect (this machine's global shortcut settings would make the contract's own
+>   literal item-4 invocation a silent non-event); the GOG backend-succeeds/UI-fails split; a
+>   `phase=cancelled-midflight` line preceding each successful `phase=idle`; a persisting
+>   `[refreshLibrary] runner=all origin=unknown` line; and the log rotation that nearly lost this
+>   run's own evidence mid-gate.
+> - Full evidence and diagnosis: `34.5-LIVE-GATE-RERUN-2.md`. `34.5-LIVE-GATE.md` and
+>   `34.5-LIVE-GATE-RERUN.md` remain byte-unchanged records of runs 1 and 2.
+>
+> --- historical: run 2's own banner follows, preserved as the record of that gate ---
+>
+> **⛔ [SUPERSEDED] Phase 34.5's blocking live gate RE-RAN 2026-08-01 and FAILED AGAIN (0 of 5
 > clean).** All 21 plans (`34.5-01` through `34.5-21`) are now complete, each with a SUMMARY — but
 > **Phase 34.5 STILL DOES NOT CLOSE.** D-08's no-partial-pass rule applies unchanged: this second
 > FAIL is another gap cycle inside 34.5, not a deferred UAT entry, not an advisory note, and not a
@@ -424,8 +478,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 5 (supersedes cycles 3 and 4; plans 34.5-29/30/31 stay HALTED and superseded per 34.5-38-PLAN.md's disposition — they are NOT executed by this run)
-Plan: 37 of 39 complete (plans 01–21, 32–37, 38, 39, and 40 done; gap cycle 5 scope is 34.5-38..42 across 5 sequential waves; 29/30/31 excluded by cycle-5 routing, so the phase denominator for THIS run is 39, not 42; next up is plan 41, wave 4 — executing `34.5-LIVE-GATE-RERUN-2.md` live)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — GAP CYCLE 5 GATE RAN, FAILED 0/5 — phase does NOT close; gap cycle 6 next (supersedes cycles 3 and 4; plans 34.5-29/30/31 stay HALTED and superseded per 34.5-38-PLAN.md's disposition — they are NOT executed by this run)
+Plan: 38 of 39 complete (plans 01–21, 32–37, 38, 39, 40 and 41 done; gap cycle 5 scope is 34.5-38..42 across 5 sequential waves; 29/30/31 excluded by cycle-5 routing, so the phase denominator for THIS run is 39, not 42; plan 41 ran the third blocking gate — verdict FAIL 0/5, Phase 34.5 does NOT close per D-08; next up is `/gsd-plan-phase 34.5 --gaps` — gap cycle 6, plan 42's own propagation task is superseded by that new cycle's scoping)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
