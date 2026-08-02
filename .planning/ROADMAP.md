@@ -1542,7 +1542,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 34/37 plans executed
+**Plans:** 34/42 plans executed (gap cycle 5 added plans 34.5-38..42 on 2026-08-02; 34.5-29/30/31 remain HALTED and superseded — see `34.5-CYCLE5-ROUTING.md`)
 3's plans 22-25 of 10 executed) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
 `34.5-16` through `34.5-18` fixed the single diagnosed root cause (a wrong `publicDir` under the
@@ -1617,6 +1617,25 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 - [x] 34.5-35-PLAN.md — Routing item 3: raise the keyring read bound to 45s so a human can win the Keychain approval race, and extend the failure memo past the observed 101s re-read interval (gap-4 wave 1)
 - [x] 34.5-36-PLAN.md — Developer-scoped: dev-only secret vault (env-opt-in, loud-warned, production-refused) to remove Keychain prompts as a gate confounder, with the Keychain path tracked as UNPROVEN (gap-4 wave 2)
 - [x] 34.5-37-PLAN.md — Routing item 5: pre-registered Electron-vs-Tauri discriminator for Epic, separating "broken by the port" from "broken independently of this project" — ships no fix (gap-4 wave 2, non-autonomous). **DONE 2026-08-01: verdict E1 SELECTED** (Electron's Epic login form accepted a real login; Tauri's stayed non-interactive across two full 300s timeouts) — implicates the Tauri/WKWebView seam specifically. Routes to console/script-error instrumentation, no fix shipped. `U-34.5-06` stays OPEN. Gap cycle 4 (both waves) now fully executed; blocking 5-item gate still not authored/run.
+
+> **Gap cycle 5 planned 2026-08-02** via `/gsd-plan-phase 34.5 --gaps`. This is the cycle that
+> AUTHORS and RUNS the blocking five-item live gate cycle 4 deferred. Two binding developer
+> decisions govern it: **D-CYCLE5-A** — gate-first; gate item 1 (Epic) enters as **BLOCKED** with
+> the parked pre-authentication defect named as its cause, while items 2, 3, 4 and 5 get a real
+> attempt (4 and 5 for the first time ever). **D-CYCLE5-B** — the run uses
+> `GAMELIB_DEV_SECRET_VAULT=1`, which by the ledger's own binding statement keeps `U-34.5-01` and
+> `U-34.5-10` OPEN and forbids treating plan 34.5-35's raised keyring constants as live-proven.
+> Because a BLOCKED item is not a PASS, **5 of 5 is unreachable this cycle and Phase 34.5 cannot
+> close on it** (D-08 unchanged). Plans `34.5-29/30/31` stay on disk unexecuted as the record of
+> their own halt: 29's Task 1 is VOID, 29's Tasks 2-3 are RE-HOMED to `34.5-39`, 30 is superseded
+> by `34.5-40`, 31 by `34.5-41` + `34.5-42`. Dispositions and per-verdict routing are recorded in
+> `34.5-CYCLE5-ROUTING.md`.
+
+- [ ] 34.5-38-PLAN.md — Cycle-5 routing/authorisation record + the MEASURED build baseline that becomes the gate's own precondition floor (gap-5 wave 1)
+- [ ] 34.5-39-PLAN.md — Re-homed 34.5-29 Tasks 2/3: verified item-4/item-5 preflight (`34.5-G6-ITEM45-PREFLIGHT.md`), incl. the login-dependency analysis that caused both prior skips (gap-5 wave 2)
+- [ ] 34.5-40-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, eleven preconditions, a Rule-3 known-holes table, and all five items (gap-5 wave 3)
+- [ ] 34.5-41-PLAN.md — **BLOCKING live gate, third run**, all five items on real hardware, verdict + four-way arithmetic (gap-5 wave 4, non-autonomous)
+- [ ] 34.5-42-PLAN.md — Propagate the verdict everywhere, resolve the untested-items ledger row by row, close the cycle (gap-5 wave 5)
 
 ### Phase 34.6: Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork and winetricks (INSERTED)
 
