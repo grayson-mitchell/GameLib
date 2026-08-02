@@ -1,5 +1,5 @@
 ---
-status: root_cause_confirmed
+status: fixed_pending_live_verification
 trigger: "GOG login completes fully in the backend but the frontend never updates: login window vanishes, Manage Accounts stays on 'logging into gog', Library spinner never resolves and no games appear"
 created: 2026-08-03T01:00:00Z
 updated: 2026-08-03T01:00:00Z
@@ -372,9 +372,95 @@ the rest of the session. A restart repairs it, because boot re-hydrates.
 ## Resolution
 
 root_cause: |
-  PENDING live confirmation via the devtools discriminator in `next_action`. Statically
-  confirmed: the renderer's Tauri store snapshot has no invalidation path for
-  sidecar-initiated writes to BOOT_SET cache stores.
-fix: ""
-verification: ""
-files_changed: []
+  LIVE-CONFIRMED (restart experiment, all pre-registered predictions held).
+
+  Phase 29 D-06's `STORE_CHANGED_CHANNEL` keeps the renderer's synchronous store snapshot
+  in sync with disk, but its only emit site was inside `applyStoreWrite()` — the handler
+  for the `storeSet`/`storeDelete` frames the RENDERER sends. Writes the SIDECAR performs
+  (every backend store manager, via `cache.ts`/`electron_store.ts`) bypassed it and
+  announced nothing. `hydrated` was append-only, so once a store was hydrated its snapshot
+  was frozen for the life of the window. Both synchronous read paths then fail closed and
+  silently, which is why the failure carried no error of any kind.
+fix: |
+  Commit `eb117d9e4`. Sidecar-initiated writes now reach the same D-06 listener that
+  renderer-initiated writes already did.
+
+  - `src/backend/storeChangeNotifier.ts` (new): a dependency-free seam the store classes
+    call. INJECTED rather than importing the IPC layer, because `cache.ts` and
+    `electron_store.ts` are imported by every backend store module and must not reach
+    `sendFrontendMessage` (`storeRegistration.ts:112`'s warning;
+    `electronReachLedger.test.ts` pins the electron-importing module count). Under
+    Electron no notifier is installed, so `notifyStoreChanged` is an unconditional no-op
+    and the Electron write paths are byte-for-byte unchanged.
+  - `cache.ts` / `electron_store.ts` announce `set`/`delete`/`clear` (plus `commit`).
+    `CacheStore` announces BOTH the value AND its `__timestamp.<key>` — the renderer's
+    mirror returns the caller fallback unless both resolve, so a value-only push would
+    have been a fix that looked right in the payload and changed nothing observable.
+  - `clear()`/`commit()` emit a new `invalidated` payload rather than per-key pushes: a
+    per-key encoding cannot express REMOVALS, so a cleared store would keep its stale keys
+    in the renderer forever. The renderer responds by dropping the store from `hydrated`
+    and re-fetching (`hydrateStore` REPLACES, per WR-07). **That is the only place
+    `hydrated` is ever removed from** — its append-only-ness is what froze the snapshot.
+  - `pushStoreChanged` gates on `isAllowedStoreField`. `applyStoreWrite` validated
+    renderer-driven writes BEFORE writing, so its pushes were already safe; the store
+    classes have no such gate and write whatever the backend hands them. Without this
+    guard a sidecar write of a Steam refresh token or Humble session cookie would land in
+    the renderer's snapshot, defeating `filterStoreSnapshot()` through a side door.
+  - `withStoreChangeSuppressed` fixes a double-push introduced mid-implementation and
+    caught by the existing `skeletonFlows.test.ts`: `applyStoreWrite` writes THROUGH these
+    classes and then pushes a richer payload itself. Rule established: whoever initiates a
+    write owns its notification. `applyStoreWrite` keeps its own push because its
+    cache-store branch can resolve a RAW `electron-store` instance with no hook at all.
+
+  Single-push-site invariant preserved — still exactly one
+  `pushFrontendMessage(STORE_CHANGED_CHANNEL, …)` call in the tree.
+verification: |
+  AUTOMATED (complete): `npm run test:ci` **exit 0, 182/182 suites, 3569/3569 tests**
+  (baseline 3553 + this change's new cases). `npx tsc --noEmit` exit 0. The pre-existing
+  whole-suite Jest teardown warning (`deferred-items.md` item 5) still fires and still does
+  not affect the exit code. One pre-existing eslint error in `storeWriteHandlers.ts`
+  (`no-unnecessary-type-assertion`, was line 118, now 123 after this change's import
+  block) is UNTOUCHED and confirmed pre-existing by stash-and-lint — not introduced here,
+  and deliberately not fixed as unrelated scope.
+
+  The secret-leak guard was verified **RED/GREEN**, not merely asserted: neutering the
+  `isAllowedStoreField` check makes
+  `storeLayer.test.ts` › "never PUSHES a secret field…" fail, and restoring it makes it
+  pass. A security test that cannot fail is worse than no test.
+
+  **LIVE VERIFICATION IS STILL OWED — this fix has NOT been exercised against a real GOG
+  login.** Everything above is automated/structural. Per this project's standing
+  `live-gate-beats-green-suite-three-times` lesson (three separate blocking defects found
+  by a human driving the UI against a fully-green suite), a green suite is not evidence
+  that the observable symptom is gone.
+
+  The live check: sign out of GOG, sign back in, and confirm WITHOUT restarting that the
+  Library renders the games and `gamelib.log` shows no repeating
+  `No cache found, getting data from gog...` loop.
+files_changed:
+  - src/backend/storeChangeNotifier.ts (new)
+  - src/backend/cache.ts
+  - src/backend/electron_store.ts
+  - src/backend/sidecar/storeWriteHandlers.ts
+  - src/common/types/sidecarTransport.ts
+  - src/preload/tauriTransport.ts
+  - src/backend/__tests__/storeChangeNotifier.test.ts (new)
+  - src/backend/sidecar/__tests__/storeLayer.test.ts
+  - src/preload/__tests__/tauriTransport.test.ts
+
+## Still open after this fix — do NOT read the fix as closing these
+
+1. **The perpetual Library spinner.** Not explained by this root cause and not addressed by
+   this fix. `refresh()` completed each cycle, so `refreshing:false` should have been set.
+   The empty-library half is fixed; the spinner needs its own observation. It may resolve
+   incidentally once the library renders — that must be CHECKED, not assumed.
+2. **The Manage Accounts panel frozen on "logging into gog".** Rendered by the WebView
+   screen that owns `useTauriOAuthLogin`, where `phase=teardown inflight=true` and
+   `phase=cancelled-midflight` both fire immediately before `phase=idle`
+   (F-34.5-G6-13). The original unmount hypothesis may still be correct for THIS symptom.
+   Likely a second, independent defect.
+3. **Gate item 2 clause (g)** — one `[refreshLibrary] runner=all origin=unknown` still
+   occurs (F-34.5-G6-14). Untouched by this fix.
+4. **Whether Epic and Amazon now render** — they share the same boot-set store mechanism
+   and should benefit identically, but neither has been driven to a successful login, so
+   this is inference, not evidence.
