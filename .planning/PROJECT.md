@@ -85,7 +85,7 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 ## Constraints
 
-- **Tech stack**: Must remain Electron + React + TypeScript to stay mergeable with Heroic upstream improvements
+- **Tech stack**: React + TypeScript hold. The **Electron half is SUPERSEDED as of v0.8** (2026-08-02) — it originally read "must remain Electron + React + TypeScript to stay mergeable with Heroic upstream improvements", and the v0.8 Tauri rearchitecture (phases 27–35) knowingly trades that mergeability away. See the "Port to Tauri v2" row in Key Decisions for the reasoning. Recorded because the constraint sat unamended while nine phases of work contradicted it, which repeatedly resurfaced as a false alarm during planning and review.
 - **Compatibility**: Linux, macOS, Windows (same as Heroic)
 - **Steam auth**: RESOLVED in v0.1 — `steam-session` (QR + credentials/SteamGuard refresh token) + `steam-user` (CM connect, owned apps). Pure-JS, no native modules. Steamworks SDK and browser-OpenID approaches rejected (see research).
 
@@ -94,6 +94,7 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Fork Heroic (not build from scratch) | Heroic already solves multi-store UI, download manager, game config, Linux/Wine — no need to rebuild | ✓ Good — Steam slotted into existing Runner/storeManager patterns cleanly |
+| **Port to Tauri v2** (Rust shell + Rust seam + Node sidecar) — v0.8, phases 27–35 | Three reasons, recorded 2026-08-02 because none were written down and the absence kept re-opening the question: (1) **Learning** — going through a real end-to-end port is itself a goal, so difficulty is part of the value rather than only a cost; (2) **Architecture** — a cleaner shell/backend separation than Electron's main/renderer split; (3) **Ownership** — GameLib has diverged far enough from Heroic v2.22.0 that "a fork tracking upstream" no longer describes it, which is also what makes the mergeability constraint above worth less than it was when written. **Accepted cost, stated explicitly:** upstream Heroic changes are Electron-shaped and must be re-ported through the sidecar seam by hand, permanently. | ⏳ In progress — **121 of 201 IPC channels** ported as of 2026-08-02. Porting is fast (28 → 121 in ~8 days); **verification is the cost driver**. All 8 WKWebView-vs-Chromium divergences found so far were found by a human driving the UI, none by the ~3,500-test suite (see memory `live-gate-beats-green-suite-three-times`). Phase 34.5's live gate has failed twice and carries 10 open untested items. |
 | Steam store manager follows existing pattern | `src/backend/storeManagers/` pattern is clean; new `steam/` directory keeps parity with gog/legendary/nile | ✓ Good — `satisfies Record<Runner, LibraryManager>` made it first-class |
 | Start with Manage Accounts | Account auth is the prerequisite for everything else; unblocks library, install, launch | ✓ Good — auth-first sequencing held |
 | `steam-session` + `steam-user` for auth/library | Pure-JS, no native rebuild; handles QR/credentials/SteamGuard + owned-apps | ⚠️ Revisit — works, but session lifecycle (QR vs credential vs DeviceConfirmation polling) caused several v0.1 bugs; needs careful listener handling |
