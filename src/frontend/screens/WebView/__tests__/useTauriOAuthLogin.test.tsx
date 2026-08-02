@@ -124,16 +124,26 @@ function harness(): HookHarness {
 }
 
 type OnLoginSuccess = (payload: OAuthLoginCompletionPayload) => void
+// Quick task 260803-eee Task 4: the cancel-path sibling of OnLoginSuccess.
+type OnCancelled = () => void
 
-function mount(runner: OAuthRunner | undefined, onLoginSuccess?: OnLoginSuccess): Hook {
+function mount(
+  runner: OAuthRunner | undefined,
+  onLoginSuccess?: OnLoginSuccess,
+  onCancelled?: OnCancelled
+): Hook {
   harness().__resetMount()
   harness().__beginRender()
-  return useTauriOAuthLogin(runner, onLoginSuccess)
+  return useTauriOAuthLogin(runner, onLoginSuccess, onCancelled)
 }
 
-function rerender(runner: OAuthRunner | undefined, onLoginSuccess?: OnLoginSuccess): Hook {
+function rerender(
+  runner: OAuthRunner | undefined,
+  onLoginSuccess?: OnLoginSuccess,
+  onCancelled?: OnCancelled
+): Hook {
   harness().__beginRender()
-  return useTauriOAuthLogin(runner, onLoginSuccess)
+  return useTauriOAuthLogin(runner, onLoginSuccess, onCancelled)
 }
 
 function unmount(): void {
@@ -151,12 +161,13 @@ function flushPromises(): Promise<void> {
  * render-hops to become observable. */
 async function settle(
   runner: OAuthRunner | undefined,
-  onLoginSuccess?: OnLoginSuccess
+  onLoginSuccess?: OnLoginSuccess,
+  onCancelled?: OnCancelled
 ): Promise<Hook> {
   let value: Hook = { phase: 'idle' }
   for (let i = 0; i < 8; i++) {
     await flushPromises()
-    value = rerender(runner, onLoginSuccess)
+    value = rerender(runner, onLoginSuccess, onCancelled)
   }
   return value
 }
@@ -715,6 +726,87 @@ describe('useTauriOAuthLogin — non-captured outcomes map to their own phases',
     mount('zoom')
     const hook = await settle('zoom')
     expect(hook).toEqual({ phase: 'error', message: 'seam threw' })
+  })
+})
+
+describe('useTauriOAuthLogin — onCancelled callback (quick task 260803-eee Task 4)', () => {
+  it('{ status: "cancelled" } invokes onCancelled exactly once', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({ status: 'cancelled' })
+    const onCancelled = jest.fn()
+
+    mount('gog', undefined, onCancelled)
+    const hook = await settle('gog', undefined, onCancelled)
+
+    expect(hook).toEqual({ phase: 'cancelled' })
+    expect(onCancelled).toHaveBeenCalledTimes(1)
+  })
+
+  it.each<[string, unknown]>([
+    ['timeout', { status: 'timeout' }],
+    ['unsupported', { status: 'unsupported' }],
+    ['error', { status: 'error', message: 'seam threw' }]
+  ])(
+    'a non-cancelled outcome (%s) never invokes onCancelled',
+    async (_label, outcome) => {
+      mockApi.oauthCaptureLogin.mockResolvedValue(outcome)
+      const onCancelled = jest.fn()
+
+      mount('gog', undefined, onCancelled)
+      await settle('gog', undefined, onCancelled)
+
+      expect(onCancelled).not.toHaveBeenCalled()
+    }
+  )
+
+  it('a captured login that succeeds never invokes onCancelled', async () => {
+    mockApi.oauthCaptureLogin.mockResolvedValue({
+      status: 'captured',
+      runner: 'gog',
+      code: 'GOG-CODE',
+      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+    })
+    mockApi.authGOG.mockResolvedValue({ status: 'done', data: { username: 'grayson' } })
+    const onCancelled = jest.fn()
+    const onLoginSuccess = jest.fn()
+
+    mount('gog', onLoginSuccess, onCancelled)
+    await settle('gog', onLoginSuccess, onCancelled)
+
+    expect(onLoginSuccess).toHaveBeenCalledTimes(1)
+    expect(onCancelled).not.toHaveBeenCalled()
+  })
+
+  it('a late { status: "cancelled" } resolution after real unmount does not invoke onCancelled (shares the pre-capture short-circuit with timeout/error/unsupported)', async () => {
+    let resolveCapture: (value: unknown) => void = () => {}
+    mockApi.oauthCaptureLogin.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCapture = resolve
+        })
+    )
+    const onCancelled = jest.fn()
+
+    mount('gog', undefined, onCancelled)
+    await flushPromises()
+    rerender('gog', undefined, onCancelled)
+
+    unmount()
+
+    resolveCapture({ status: 'cancelled' })
+    await flushPromises()
+
+    // The component (and the route it would have navigated away from) is already gone in this
+    // scenario, so there is nothing for onCancelled to usefully do -- unlike onLoginSuccess,
+    // which must still propagate a captured code's irreversible auth-exchange result.
+    expect(onCancelled).not.toHaveBeenCalled()
+  })
+
+  it('runner=undefined never invokes onCancelled (guard no-op)', async () => {
+    const onCancelled = jest.fn()
+
+    await settle(undefined, undefined, onCancelled)
+
+    expect(onCancelled).not.toHaveBeenCalled()
   })
 })
 

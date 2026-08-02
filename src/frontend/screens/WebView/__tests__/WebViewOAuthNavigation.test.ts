@@ -68,6 +68,10 @@ function extractBlock(source: string, marker: string): string {
 describe('WebView Tauri OAuth post-login navigation', () => {
   const source = stripSourceComments(readFileSync(indexPath, 'utf-8'))
   const successHandler = extractBlock(source, 'handleTauriOAuthSuccess = useCallback')
+  const cancelledHandler = extractBlock(
+    source,
+    'handleTauriOAuthCancelled = useCallback'
+  )
 
   it('hands the payload to GlobalState’s completion path', () => {
     expect(successHandler).toContain('completeOAuthLogin(payload)')
@@ -87,11 +91,11 @@ describe('WebView Tauri OAuth post-login navigation', () => {
     expect(successHandler).not.toMatch(/\bcancelled\b/)
   })
 
-  it('is wired into the hook in place of the bare completion callback', () => {
+  it('is wired into the hook in place of the bare completion callback, alongside handleTauriOAuthCancelled', () => {
     // Parenthesised call, not a brace block — matched by regex rather than `extractBlock`,
     // which scans to the next `{` and would run past this call into the following statement.
     expect(source).toMatch(
-      /useTauriOAuthLogin\(\s*runner[^)]*,\s*handleTauriOAuthSuccess\s*\)/
+      /useTauriOAuthLogin\(\s*runner[^)]*,\s*handleTauriOAuthSuccess\s*,\s*handleTauriOAuthCancelled\s*\)/
     )
     // And the bare callback must NOT still be the one passed to the hook.
     expect(source).not.toMatch(
@@ -129,6 +133,68 @@ describe('WebView Tauri OAuth post-login navigation', () => {
     it('detects the hook being wired back to the bare callback', () => {
       const regressed = 'const oauthLoginState = useTauriOAuthLogin(runner, completeOAuthLogin)'
       expect(regressed).not.toContain('handleTauriOAuthSuccess')
+    })
+  })
+
+  /**
+   * Quick task 260803-eee Task 4: the cancel-path sibling of the success-navigation gate above.
+   *
+   * THE BUG THIS PINS: closing the native popup without completing sign-in correctly lands
+   * `useTauriOAuthLogin` on `{ phase: 'cancelled' }` (TauriLoginPanel does render its cancelled
+   * surface -- unlike the success path, this state transition is not itself suppressed). But
+   * nothing left the login route afterward, so the user was stuck on "Signing in to <Runner> was
+   * cancelled" indefinitely instead of returning to Manage Accounts.
+   */
+  describe('cancel-path navigation (handleTauriOAuthCancelled)', () => {
+    it('leaves the login surface on cancel, exactly as the success path does', () => {
+      expect(cancelledHandler).toContain("navigate('/login')")
+    })
+
+    it('guards navigation on a TRUE-UNMOUNT ref', () => {
+      expect(cancelledHandler).toContain('mountedRef.current')
+    })
+
+    it('does NOT guard navigation on the hook’s cancelled/teardown flag', () => {
+      expect(cancelledHandler).not.toMatch(/\bcancelled\b/)
+    })
+
+    it('is wired into the hook as the third (onCancelled) argument', () => {
+      expect(source).toMatch(
+        /useTauriOAuthLogin\(\s*runner[^)]*,\s*handleTauriOAuthSuccess\s*,\s*handleTauriOAuthCancelled\s*\)/
+      )
+    })
+
+    it('has a stable identity — a bare `[navigate]` dependency array', () => {
+      // Unlike handleTauriOAuthSuccess this handler has no completeOAuthLogin equivalent to
+      // depend on -- navigate is its only, and already-stable (react-router v6), input.
+      expect(source).toMatch(
+        /handleTauriOAuthCancelled = useCallback\([\s\S]*?\[navigate\]\s*\)/
+      )
+    })
+
+    it('scope: is NOT referenced anywhere near a timeout/error/unsupported branch in this file', () => {
+      // This file has no such branches at all (they live in useTauriOAuthLogin.ts), but this
+      // guards against a future edit accidentally wiring the same handler to a broader surface.
+      expect(source).not.toMatch(/timeout[\s\S]{0,80}handleTauriOAuthCancelled/)
+      expect(source).not.toMatch(/handleTauriOAuthCancelled[\s\S]{0,80}timeout/)
+    })
+
+    describe('self-test (anti-vacuity)', () => {
+      it('detects a handler that never navigates', () => {
+        const regressed = '{ if (mountedRef.current) { /* no navigate */ } }'
+        expect(regressed).not.toContain("navigate('/login')")
+      })
+
+      it('detects a handler that guards navigation on cancelled instead of mountedRef', () => {
+        const regressed = "{ if (!cancelled) navigate('/login') }"
+        expect(regressed).toMatch(/\bcancelled\b/)
+      })
+
+      it('detects the hook being wired back to only two arguments', () => {
+        const regressed =
+          'const oauthLoginState = useTauriOAuthLogin(runner, handleTauriOAuthSuccess)'
+        expect(regressed).not.toContain('handleTauriOAuthCancelled')
+      })
     })
   })
 })

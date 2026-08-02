@@ -130,10 +130,24 @@ export function createOAuthLoginCompletion(
  * and nothing started, and `onLoginSuccess` is never invoked. No other gate exists (a stale
  * premise in a guard's own comment is exactly how 34.4's gate item 2 shipped a
  * registered-but-unreachable channel).
+ *
+ * Quick task 260803-eee Task 4: `onCancelled` is the user-cancelled sibling of `onLoginSuccess`,
+ * called directly at the `outcome.status === 'cancelled'` site rather than through
+ * `safeSetState`'s `!cancelled` gate -- the same pattern `onLoginSuccess` uses so a mid-flight
+ * teardown cannot suppress it. `WebView/index.tsx`'s `handleTauriOAuthCancelled` wires this to
+ * `navigate('/login')` (guarded by its own `mountedRef`, not this hook's `cancelled`) so the
+ * panel does not get stuck on the cancelled surface indefinitely -- the cancel-path counterpart
+ * of the success-path navigation fixed by `handleTauriOAuthSuccess`. Scoped strictly to
+ * `cancelled`: timeout/error/unsupported keep their own retry-affordance surfaces and are
+ * untouched by this callback. Like its timeout/error/unsupported siblings, `onCancelled` is still
+ * reachable only through the shared pre-capture short-circuit a few lines above (an effect torn
+ * down before `oauthCaptureLogin` resolves returns before any of these four branches run) --
+ * that guard is not something this callback overrides.
  */
 export function useTauriOAuthLogin(
   runner: OAuthRunner | undefined,
-  onLoginSuccess?: (payload: OAuthLoginCompletionPayload) => void
+  onLoginSuccess?: (payload: OAuthLoginCompletionPayload) => void,
+  onCancelled?: () => void
 ): TauriOAuthLoginState {
   const [state, setState] = useState<TauriOAuthLoginState>({ phase: 'idle' })
 
@@ -240,6 +254,14 @@ export function useTauriOAuthLogin(
       if (outcome.status === 'cancelled') {
         window.api.logInfo(`[useTauriOAuthLogin] runner=${activeRunner} phase=cancelled`)
         reachedTerminal = true
+        // Quick task 260803-eee Task 4: called directly, NOT routed through `safeSetState`'s own
+        // `!cancelled` gate -- the navigation this drives in WebView/index.tsx cannot be
+        // suppressed the way the terminal state update can be. (This branch is only reached at
+        // all when a `captured`-outcome fall-through, or a not-yet-torn-down effect, got here in
+        // the first place -- the same pre-capture short-circuit above that already governs the
+        // timeout/error/unsupported siblings applies equally here; nothing about `onCancelled`
+        // changes that shared gate.)
+        onCancelled?.()
         safeSetState({ phase: 'cancelled' })
         return
       }
@@ -388,7 +410,7 @@ export function useTauriOAuthLogin(
         `[useTauriOAuthLogin] runner=${activeRunner} phase=teardown inflight=${!reachedTerminal}`
       )
     }
-  }, [runner, onLoginSuccess])
+  }, [runner, onLoginSuccess, onCancelled])
 
   return state
 }

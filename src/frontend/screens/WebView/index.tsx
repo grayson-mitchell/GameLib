@@ -136,9 +136,33 @@ export default function WebView() {
     [completeOAuthLogin, navigate]
   )
 
+  /**
+   * Quick task 260803-eee Task 4: the cancel-path sibling of `handleTauriOAuthSuccess` above.
+   *
+   * THE BUG THIS FIXES: closing the native popup without completing sign-in correctly lands
+   * `useTauriOAuthLogin` on `{ phase: 'cancelled' }` (unlike the success path, this state
+   * transition is NOT suppressed by the mid-flight teardown, since `TauriLoginPanel` does render
+   * its cancelled surface). But nothing then leaves the login route — the user is stuck on
+   * "Signing in to <Runner> was cancelled" indefinitely instead of returning to Manage Accounts.
+   *
+   * Guarded by `mountedRef` (true-unmount), not the hook's `cancelled`/teardown flag — same
+   * reasoning as `handleTauriOAuthSuccess`: this callback itself is invoked unconditionally by
+   * the hook (see `useTauriOAuthLogin.ts`'s `onCancelled` call site), so gating navigation on the
+   * hook's internal flag here would be checking the wrong thing.
+   *
+   * Deliberately NOT wired to timeout/error/unsupported — those keep their own retry-affordance
+   * surfaces (a Retry button); only the user-cancelled outcome exits automatically.
+   */
+  const handleTauriOAuthCancelled = useCallback(() => {
+    if (mountedRef.current) {
+      navigate('/login')
+    }
+  }, [navigate])
+
   const oauthLoginState = useTauriOAuthLogin(
     runner as OAuthRunner | undefined,
-    handleTauriOAuthSuccess
+    handleTauriOAuthSuccess,
+    handleTauriOAuthCancelled
   )
 
   let lang = i18n.language
