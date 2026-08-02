@@ -183,16 +183,6 @@ function ensureChangeListenerAttached(): void {
     const payload = args[0] as StoreChangedPayload | undefined
     if (!payload) return
     const { store, key, value, deleted, invalidated } = payload
-    // TEMPORARY DIAGNOSTIC — remove before merge.
-    // debug/gog-login-ui-never-updates.md: proves whether the sidecar's storeChanged
-    // frames reach the renderer AT ALL. Narrowed to gog_library so this cannot flood the
-    // log with every configStore write.
-    if (store === 'gog_library') {
-      send('logInfo', [
-        `[diag] storeChanged RECEIVED store=${store} key=${key} ` +
-          `invalidated=${!!invalidated} deleted=${!!deleted}`
-      ])
-    }
     if (!snapshot[store]) snapshot[store] = {}
 
     // A whole-store change (`store.clear()`, or a `CacheStore.commit()` replacing the
