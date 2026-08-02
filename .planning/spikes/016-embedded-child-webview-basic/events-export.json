@@ -1,0 +1,1710 @@
+{
+  "eventCount": 77,
+  "events": [
+    {
+      "category": "control-server",
+      "data": {
+        "origin": "http://localhost:17913"
+      },
+      "message": "listening",
+      "ms": 0,
+      "t": "2026-08-02T23:53:42.364Z"
+    },
+    {
+      "category": "app",
+      "data": {
+        "controlOrigin": "http://localhost:17913",
+        "mainThread": "ThreadId(1)",
+        "unstableFeature": true
+      },
+      "message": "started",
+      "ms": 441,
+      "t": "2026-08-02T23:53:42.805Z"
+    },
+    {
+      "category": "env",
+      "data": {
+        "controlOrigin": "http://localhost:17913",
+        "gogStoreUrl": "https://www.gog.com/en/games",
+        "steamStoreUrl": "https://store.steampowered.com/app/440/Team_Fortress_2/",
+        "tauri": "2.11.5 (Cargo.lock-pinned, matches src-tauri) + `unstable` feature",
+        "wry": "0.55.1"
+      },
+      "message": "environment",
+      "ms": 1196,
+      "t": "2026-08-02T23:53:43.560Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 0: baseline ===",
+      "ms": 1946,
+      "t": "2026-08-02T23:53:44.310Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "count": 1,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "list_webviews",
+      "ms": 1947,
+      "t": "2026-08-02T23:53:44.311Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "count": 1,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "0a list_webviews before anything (expect exactly ['main'])",
+      "ms": 1947,
+      "t": "2026-08-02T23:53:44.312Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===",
+      "ms": 1948,
+      "t": "2026-08-02T23:53:44.312Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "isolatedStore": false,
+        "requested": {
+          "h": 560.0,
+          "w": 760.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "spoofUa": true,
+        "thread": "main",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "add_child",
+      "ms": 1948,
+      "t": "2026-08-02T23:53:44.313Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
+        "elapsedMs": 51,
+        "label": "store-embed",
+        "windowNumber": 43759,
+        "windowWebviews": [
+          "main",
+          "store-embed"
+        ]
+      },
+      "message": "add_child OK",
+      "ms": 2001,
+      "t": "2026-08-02T23:53:44.365Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
+        "elapsedMs": 51,
+        "label": "store-embed",
+        "windowNumber": 43759,
+        "windowWebviews": [
+          "main",
+          "store-embed"
+        ]
+      },
+      "message": "1a create_embed → control origin /set (UA + cookie oracles server-side)",
+      "ms": 2001,
+      "t": "2026-08-02T23:53:44.366Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_navigation",
+      "ms": 2033,
+      "t": "2026-08-02T23:53:44.397Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "",
+        "cookieHeaderNames": [],
+        "path": "/set",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 2040,
+      "t": "2026-08-02T23:53:44.405Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_page_load",
+      "ms": 2049,
+      "t": "2026-08-02T23:53:44.414Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_page_load",
+      "ms": 2058,
+      "t": "2026-08-02T23:53:44.423Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "count": 2,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 56.0 }), size: Logical(LogicalSize { width: 986.0, height: 481.0 }) }",
+            "label": "store-embed",
+            "url": "http://localhost:17913/set",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "list_webviews",
+      "ms": 4007,
+      "t": "2026-08-02T23:53:46.371Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "count": 2,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 56.0 }), size: Logical(LogicalSize { width: 986.0, height: 481.0 }) }",
+            "label": "store-embed",
+            "url": "http://localhost:17913/set",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "1b list_webviews (expect main + store-embed, same window)",
+      "ms": 4007,
+      "t": "2026-08-02T23:53:46.372Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 2 (016): /probe — server echoes Cookie header + UA of the EMBED ===",
+      "ms": 4007,
+      "t": "2026-08-02T23:53:46.372Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "label": "store-embed",
+        "url": "http://localhost:17913/probe"
+      },
+      "message": "navigate",
+      "ms": 4008,
+      "t": "2026-08-02T23:53:46.372Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "2a navigate embed to /probe",
+      "ms": 4008,
+      "t": "2026-08-02T23:53:46.372Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/probe"
+      },
+      "message": "embed on_navigation",
+      "ms": 4009,
+      "t": "2026-08-02T23:53:46.373Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "spike_domain=echo5; spike_httponly=bravo2; spike_plain=alpha1",
+        "cookieHeaderNames": [
+          "spike_domain",
+          "spike_httponly",
+          "spike_plain"
+        ],
+        "path": "/probe",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 4012,
+      "t": "2026-08-02T23:53:46.377Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://localhost:17913/probe"
+      },
+      "message": "embed on_page_load",
+      "ms": 4273,
+      "t": "2026-08-02T23:53:46.638Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://localhost:17913/probe"
+      },
+      "message": "embed on_page_load",
+      "ms": 4277,
+      "t": "2026-08-02T23:53:46.642Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 3 (016): a REAL store page in the embed ===",
+      "ms": 5511,
+      "t": "2026-08-02T23:53:47.876Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "label": "store-embed",
+        "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
+      },
+      "message": "navigate",
+      "ms": 5512,
+      "t": "2026-08-02T23:53:47.876Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "3a navigate embed to the Steam store",
+      "ms": 5512,
+      "t": "2026-08-02T23:53:47.877Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
+      },
+      "message": "embed on_navigation",
+      "ms": 5513,
+      "t": "2026-08-02T23:53:47.878Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
+      },
+      "message": "embed on_page_load",
+      "ms": 6093,
+      "t": "2026-08-02T23:53:48.457Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
+      },
+      "message": "embed on_page_load",
+      "ms": 6964,
+      "t": "2026-08-02T23:53:49.329Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 4 (017): bounds round-trips, hide/show ===",
+      "ms": 15514,
+      "t": "2026-08-02T23:53:57.879Z"
+    },
+    {
+      "category": "bounds",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 700.0,
+          "w": 900.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "readbackPhysical": {
+          "h": 700,
+          "w": 900,
+          "x": 290,
+          "y": 96
+        },
+        "requestedLogical": {
+          "h": 700.0,
+          "w": 900.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "set_bounds round-trip",
+      "ms": 15515,
+      "t": "2026-08-02T23:53:57.880Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 700.0,
+          "w": 900.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "readbackPhysical": {
+          "h": 700,
+          "w": 900,
+          "x": 290,
+          "y": 96
+        },
+        "requestedLogical": {
+          "h": 700.0,
+          "w": 900.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "4a set_bounds(290,96,900,700) round-trip",
+      "ms": 15516,
+      "t": "2026-08-02T23:53:57.880Z"
+    },
+    {
+      "category": "bounds",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 300.0,
+          "w": 400.0,
+          "x": 10.0,
+          "y": 400.0
+        },
+        "readbackPhysical": {
+          "h": 300,
+          "w": 400,
+          "x": 10,
+          "y": 400
+        },
+        "requestedLogical": {
+          "h": 300.0,
+          "w": 400.0,
+          "x": 10.0,
+          "y": 400.0
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "set_bounds round-trip",
+      "ms": 15919,
+      "t": "2026-08-02T23:53:58.284Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 300.0,
+          "w": 400.0,
+          "x": 10.0,
+          "y": 400.0
+        },
+        "readbackPhysical": {
+          "h": 300,
+          "w": 400,
+          "x": 10,
+          "y": 400
+        },
+        "requestedLogical": {
+          "h": 300.0,
+          "w": 400.0,
+          "x": 10.0,
+          "y": 400.0
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "4b set_bounds(10,400,400,300) round-trip",
+      "ms": 15919,
+      "t": "2026-08-02T23:53:58.284Z"
+    },
+    {
+      "category": "bounds",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 561.0,
+          "w": 760.0,
+          "x": 291.0,
+          "y": 97.0
+        },
+        "readbackPhysical": {
+          "h": 561,
+          "w": 760,
+          "x": 291,
+          "y": 97
+        },
+        "requestedLogical": {
+          "h": 560.75,
+          "w": 760.25,
+          "x": 290.5,
+          "y": 96.5
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "set_bounds round-trip",
+      "ms": 16325,
+      "t": "2026-08-02T23:53:58.690Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "elapsedMs": 0,
+        "readbackLogical": {
+          "h": 561.0,
+          "w": 760.0,
+          "x": 291.0,
+          "y": 97.0
+        },
+        "readbackPhysical": {
+          "h": 561,
+          "w": 760,
+          "x": 291,
+          "y": 97
+        },
+        "requestedLogical": {
+          "h": 560.75,
+          "w": 760.25,
+          "x": 290.5,
+          "y": 96.5
+        },
+        "scaleFactor": 1.0
+      },
+      "message": "4c set_bounds(290.5,96.5,760.25,560.75) round-trip",
+      "ms": 16325,
+      "t": "2026-08-02T23:53:58.690Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "error": null,
+        "label": "store-embed",
+        "ok": true
+      },
+      "message": "hide",
+      "ms": 16731,
+      "t": "2026-08-02T23:53:59.096Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "4d hide()",
+      "ms": 16732,
+      "t": "2026-08-02T23:53:59.097Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "error": null,
+        "label": "store-embed",
+        "ok": true
+      },
+      "message": "show",
+      "ms": 17336,
+      "t": "2026-08-02T23:53:59.701Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "4e show()",
+      "ms": 17336,
+      "t": "2026-08-02T23:53:59.701Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 5 (018): cookies on child vs main handle ===",
+      "ms": 17337,
+      "t": "2026-08-02T23:53:59.701Z"
+    },
+    {
+      "category": "cookie-read",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 11,
+        "elapsedMs": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "cookies()",
+      "ms": 17340,
+      "t": "2026-08-02T23:53:59.705Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 11,
+        "elapsedMs": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "5a cookies() on the CHILD handle (expect control + steam cookies)",
+      "ms": 17343,
+      "t": "2026-08-02T23:53:59.708Z"
+    },
+    {
+      "category": "cookie-read",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 11,
+        "elapsedMs": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "main"
+      },
+      "message": "cookies()",
+      "ms": 17348,
+      "t": "2026-08-02T23:53:59.713Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 11,
+        "elapsedMs": 3,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "main"
+      },
+      "message": "5b cookies() on the MAIN handle (default shared jar? — 015 said yes for windows)",
+      "ms": 17350,
+      "t": "2026-08-02T23:53:59.714Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 6 (016 probe B): bare Window + two children ===",
+      "ms": 17351,
+      "t": "2026-08-02T23:53:59.716Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "webviews": [
+          "multi-store",
+          "multi-panel"
+        ],
+        "window": "multi",
+        "windowNumber": 43787
+      },
+      "message": "probe B window built",
+      "ms": 17423,
+      "t": "2026-08-02T23:53:59.788Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "webviews": [
+          "multi-store",
+          "multi-panel"
+        ],
+        "window": "multi",
+        "windowNumber": 43787
+      },
+      "message": "6a create_multi_window",
+      "ms": 17424,
+      "t": "2026-08-02T23:53:59.788Z"
+    },
+    {
+      "category": "env",
+      "data": {
+        "controlOrigin": "http://localhost:17913",
+        "gogStoreUrl": "https://www.gog.com/en/games",
+        "steamStoreUrl": "https://store.steampowered.com/app/440/Team_Fortress_2/",
+        "tauri": "2.11.5 (Cargo.lock-pinned, matches src-tauri) + `unstable` feature",
+        "wry": "0.55.1"
+      },
+      "message": "environment",
+      "ms": 17517,
+      "t": "2026-08-02T23:53:59.881Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "https://www.gog.com/en/games"
+      },
+      "message": "multi-store on_page_load",
+      "ms": 20448,
+      "t": "2026-08-02T23:54:02.813Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "https://www.gog.com/en/games"
+      },
+      "message": "multi-store on_page_load",
+      "ms": 21378,
+      "t": "2026-08-02T23:54:03.743Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "count": 4,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 320.0, y: 0.0 }), size: Logical(LogicalSize { width: 780.0, height: 720.0 }) }",
+            "label": "multi-store",
+            "url": "https://www.gog.com/en/games",
+            "window": "multi"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 320.0, height: 720.0 }) }",
+            "label": "multi-panel",
+            "url": "tauri://localhost",
+            "window": "multi"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
+            "label": "store-embed",
+            "url": "https://store.steampowered.com/app/440/Team_Fortress_2/",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "list_webviews",
+      "ms": 23429,
+      "t": "2026-08-02T23:54:05.794Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "count": 4,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 320.0, y: 0.0 }), size: Logical(LogicalSize { width: 780.0, height: 720.0 }) }",
+            "label": "multi-store",
+            "url": "https://www.gog.com/en/games",
+            "window": "multi"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 320.0, height: 720.0 }) }",
+            "label": "multi-panel",
+            "url": "tauri://localhost",
+            "window": "multi"
+          },
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
+            "label": "store-embed",
+            "url": "https://store.steampowered.com/app/440/Team_Fortress_2/",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "6b list_webviews with probe B alive",
+      "ms": 23430,
+      "t": "2026-08-02T23:54:05.795Z"
+    },
+    {
+      "category": "embed",
+      "data": {},
+      "message": "probe B window closed",
+      "ms": 23431,
+      "t": "2026-08-02T23:54:05.796Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "6c close probe B window",
+      "ms": 23431,
+      "t": "2026-08-02T23:54:05.796Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 7: destroy the embed; handle lifetime after close ===",
+      "ms": 24236,
+      "t": "2026-08-02T23:54:06.601Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "label": "store-embed"
+      },
+      "message": "destroyed",
+      "ms": 24238,
+      "t": "2026-08-02T23:54:06.603Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "7a destroy_embed",
+      "ms": 24239,
+      "t": "2026-08-02T23:54:06.604Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "count": 1,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "list_webviews",
+      "ms": 25040,
+      "t": "2026-08-02T23:54:07.405Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "count": 1,
+        "webviews": [
+          {
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
+            "window": "main"
+          }
+        ]
+      },
+      "message": "7b list_webviews after destroy (expect ['main'] again)",
+      "ms": 25040,
+      "t": "2026-08-02T23:54:07.405Z"
+    },
+    {
+      "category": "cookie-read",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [],
+        "cookies": [],
+        "count": 0,
+        "elapsedMs": 0,
+        "error": "no webview 'store-embed'",
+        "ok": false,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "cookies()",
+      "ms": 25041,
+      "t": "2026-08-02T23:54:07.406Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [],
+        "cookies": [],
+        "count": 0,
+        "elapsedMs": 0,
+        "error": "no webview 'store-embed'",
+        "ok": false,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "7c cookies() on the DESTROYED child (expect loud error — 015's handle-lifetime rule)",
+      "ms": 25041,
+      "t": "2026-08-02T23:54:07.406Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 8 (018): data_store_identifier isolation on a CHILD webview ===",
+      "ms": 25041,
+      "t": "2026-08-02T23:54:07.406Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "isolatedStore": true,
+        "requested": {
+          "h": 560.0,
+          "w": 760.0,
+          "x": 290.0,
+          "y": 96.0
+        },
+        "spoofUa": true,
+        "thread": "main",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "add_child",
+      "ms": 25041,
+      "t": "2026-08-02T23:54:07.406Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
+        "elapsedMs": 38,
+        "label": "store-embed",
+        "windowNumber": 43759,
+        "windowWebviews": [
+          "main",
+          "store-embed"
+        ]
+      },
+      "message": "add_child OK",
+      "ms": 25080,
+      "t": "2026-08-02T23:54:07.445Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
+        "elapsedMs": 38,
+        "label": "store-embed",
+        "windowNumber": 43759,
+        "windowWebviews": [
+          "main",
+          "store-embed"
+        ]
+      },
+      "message": "8a create_embed ISOLATED → control /set",
+      "ms": 25080,
+      "t": "2026-08-02T23:54:07.445Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_navigation",
+      "ms": 25107,
+      "t": "2026-08-02T23:54:07.472Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "",
+        "cookieHeaderNames": [],
+        "path": "/set",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 25110,
+      "t": "2026-08-02T23:54:07.475Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_page_load",
+      "ms": 25112,
+      "t": "2026-08-02T23:54:07.477Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://localhost:17913/set"
+      },
+      "message": "embed on_page_load",
+      "ms": 25117,
+      "t": "2026-08-02T23:54:07.482Z"
+    },
+    {
+      "category": "cookie-read",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_domain",
+          "spike_plain",
+          "spike_httponly"
+        ],
+        "cookies": [
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          }
+        ],
+        "count": 3,
+        "elapsedMs": 2,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "cookies()",
+      "ms": 27084,
+      "t": "2026-08-02T23:54:09.449Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_domain",
+          "spike_plain",
+          "spike_httponly"
+        ],
+        "cookies": [
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          }
+        ],
+        "count": 3,
+        "elapsedMs": 2,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "store-embed"
+      },
+      "message": "8b cookies() on the ISOLATED child (expect spike_* present, Steam cookies ABSENT)",
+      "ms": 27085,
+      "t": "2026-08-02T23:54:09.450Z"
+    },
+    {
+      "category": "cookie-read",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "cart_token",
+            "secure": false,
+            "value": "a88…<redacted 16 chars>",
+            "value_len": 16
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 12,
+        "elapsedMs": 2,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "main"
+      },
+      "message": "cookies()",
+      "ms": 27089,
+      "t": "2026-08-02T23:54:09.454Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "api": "cookies",
+        "controlCookiesSeen": [
+          "spike_plain",
+          "spike_httponly",
+          "spike_domain"
+        ],
+        "cookies": [
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "cart_token",
+            "secure": false,
+            "value": "a88…<redacted 16 chars>",
+            "value_len": 16
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_plain",
+            "secure": false,
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "localhost",
+            "http_only": false,
+            "name": "spike_domain",
+            "secure": false,
+            "value": "echo5",
+            "value_len": 5
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "browserid",
+            "secure": true,
+            "value": "577…<redacted 18 chars>",
+            "value_len": 18
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "recentapps",
+            "secure": true,
+            "value": "%7B…<redacted 28 chars>",
+            "value_len": 28
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "timezoneOffset",
+            "secure": false,
+            "value": "432…<redacted 7 chars>",
+            "value_len": 7
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "7f0…<redacted 24 chars>",
+            "value_len": 24
+          }
+        ],
+        "count": 12,
+        "elapsedMs": 2,
+        "error": null,
+        "ok": true,
+        "thread": "main",
+        "webview": "main"
+      },
+      "message": "8c cookies() on MAIN (expect Steam cookies still present — shared jar untouched)",
+      "ms": 27091,
+      "t": "2026-08-02T23:54:09.456Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "label": "store-embed"
+      },
+      "message": "destroyed",
+      "ms": 27093,
+      "t": "2026-08-02T23:54:09.458Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "8d destroy isolated embed",
+      "ms": 27093,
+      "t": "2026-08-02T23:54:09.458Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== COMPLETE ===",
+      "ms": 27093,
+      "t": "2026-08-02T23:54:09.458Z"
+    }
+  ],
+  "exportedAt": "2026-08-02T23:54:09.459Z"
+}

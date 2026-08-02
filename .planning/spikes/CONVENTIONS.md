@@ -38,6 +38,17 @@ question requires otherwise.
   build takes **5 s instead of ~10 min**. Ship both an interactive control panel *and* a scripted
   `SPIKE_AUTORUN=N` path, so the evidence is reproducible and diffable rather than
   click-dependent.
+- **When a spike's claim is VISUAL ("renders", "composites", "is inside the window"), the
+  evidence must be pixels, not API returns.** Log each window's `NSWindow.windowNumber`
+  (== `CGWindowID`; one `objc2::msg_send![…, windowNumber]` on `ns_window()`) and have the
+  run photograph itself with `screencapture -x -o -l<id>` — this captures the exact window
+  even when occluded or on another display, which full-screen grabs repeatedly failed at
+  (and full-screen grabs also sweep in the user's unrelated windows — delete those on
+  sight). Established in 016.
+- **Truncate logged evidence AFTER the discriminating byte.** A 60-char UA prefix cut at
+  `AppleWebKit/` made a *working* Chrome-UA spoof look failed in 016's first log pass —
+  Chrome and default WebKit UAs are identical up to exactly that point. When a field exists
+  to discriminate two outcomes, log at least through the point where they diverge.
 - **When the question is "does this API silently no-op?", build a POSITIVE CONTROL first.**
   A read returning `[]` is uninterpretable on its own. Stand up a loopback origin whose state you
   set exactly, prove the API can see it, and only then trust an empty result from the real

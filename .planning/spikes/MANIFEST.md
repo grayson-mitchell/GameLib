@@ -238,6 +238,9 @@ manager, dialog, launcher.
 | 014a | cookie-read-rust-webview-api | comparison | Given a webview that provably received Set-Cookie incl. HttpOnly, when Rust `cookies()`/`cookies_for_url()` runs on macOS, then real values return — and empty is distinguishable from unsupported | ✓ **WINNER** — API is real (HttpOnly+Secure values, 2–4 ms, any thread) **BUT `cookies_for_url()` does exact domain `==` and silently drops `_simpleauth_sess` for `www.humblebundle.com`** | tauri, cookies, wkwebview, false-negative, humble |
 | 014b | cookie-read-injected-js | comparison | Same precondition, when read via injected JS `document.cookie`, then which subset is visible — and does HttpOnly vanish silently | ✗ INVALIDATED as a login channel (`_simpleauth_sess` is HttpOnly → structurally invisible; 27 other cookies make it *look* healthy; remote-origin IPC denied by the ACL) | tauri, javascript, httponly, ipc, capabilities |
 | 015 | cookie-jar-isolation-persistence | standard | Given a login jar, when the window closes and the app restarts, then cookies persist and stay isolated from the main webview | ✓ VALIDATED (24 cookies survived process exit; `data_store_identifier` genuinely partitions) — **but there is no `session.fromPartition()` shape: jar access requires a LIVE webview handle** | tauri, cookies, persistence, partition, data-store-identifier |
+| 016 | embedded-child-webview-basic | standard | Given Tauri 2.11.5 with the `unstable` feature, when a child webview is added to the main window at a position/size, then an external store URL renders INSIDE the window alongside the main webview, with the Chrome UA override applied | ✓ VALIDATED (`add_child` works on the CONFIG-CREATED main window, 42–51 ms; real Steam store composited in-window with the app UI live around it — screenshot evidence; per-child UA reaches the network; `unstable` costs one 10.8 s 2-crate rebuild) | tauri, webview, multiwebview, unstable, embed, store-browser |
+| 017 | child-webview-bounds-sync | standard | Given an embedded child webview, when the window resizes and JS reports a new content rect, then the child's bounds track it acceptably, and it can be hidden/shown/destroyed on route change | ✓ VALIDATED (JS `getBoundingClientRect` → `set_position/set_size` lands exactly; fractional px round to whole logical px; hide/show/close work) — **two geometry writers = silent last-write-wins; the renderer must be the ONLY bounds owner**; retina + drag-resize latency unmeasured | tauri, webview, bounds, resize, lifecycle |
+| 018 | child-webview-coexistence | standard | Given main + child webviews in one window, when cookies and events are exercised, then `cookies()` works on the child handle, `on_page_load` fires for it, and jar sharing/isolation matches spike 015's window-level findings | ✓ VALIDATED (cookies()/on_page_load/on_navigation all work per-child; **ONE default jar per process across all windows AND children**; `data_store_identifier` partitions a child jar for real) — surprise: Secure-over-http-localhost control cookies absent this session, contra 014a's note | tauri, webview, cookies, events, isolation, data-store-identifier |
 
 > **Overall Idea C feasibility (spikes 009–012):** A Rust/Tauri rearchitecture is **FEASIBLE but is
 > a deliberate reshape, not a free lunch** — and the divorce from Heroic upstream is its dominant
@@ -315,3 +318,35 @@ and one difference silently breaks Humble login.
   `#[tauri::command]`s (`rejected: … Plugin not found`). Meanwhile the Tauri global **is**
   injected into `https://www.humblebundle.com`. Threat-model that before shipping a store
   browser. *(014b.)*
+
+### Requirements (Idea C — in-app store browser / embedded child webviews, from spikes 016–018)
+
+The in-app "Store tab" UX (Electron `<webview>` parity) is achievable via the `unstable`
+multiwebview API. All macOS-only evidence, like 013–015.
+
+- **Embed with `Window::add_child` on the existing config-created main window** — no window
+  restructuring needed. The child composites ABOVE the main webview; reserve a layout region
+  for it. `add_child` hops to the main thread internally; callable from any thread. *(016.)*
+- **The `unstable` cargo feature is the price and it is small.** Only `tauri` +
+  `tauri-runtime-wry` recompile (10.8 s with the shared target dir). It is compile-time only —
+  no config/capability changes to the existing app surface. *(016.)*
+- **The renderer must be the ONLY owner of the embed's geometry.** JS
+  `getBoundingClientRect()` → `set_position/set_size` in logical px lands exactly (fractional
+  px round to whole logical px; no titlebar offset at scale 1.0). Two writers (backend +
+  renderer) silently last-write-wins with no error. *(017.)*
+- **Overlay UI cannot render above the embed.** The child is a native subview; modals or
+  dropdowns over the store region must `hide()` the embed first or avoid its rect. *(017.)*
+- **One default cookie jar per PROCESS — all windows and all children share it.** A store
+  embed's logged-in session is readable from any webview handle (handy for pollers, bad
+  hygiene). Per-store isolation works on children via `data_store_identifier` (macOS 14+),
+  proven by a fresh isolated jar seeing none of the shared jar's Steam/GOG cookies. *(018.)*
+- **All 013–015 rules carry over to embeds unchanged:** `cookies()` never `cookies_for_url()`;
+  `on_page_load` not `on_navigation` for deadline-armed relays; per-child `.user_agent()` is
+  mandatory and reaches the network; handle dies with the webview — anchor pollers to a
+  survivor. *(018.)*
+- **Do not rely on Secure cookies over `http://localhost` in positive controls.** Contra
+  014a's note, `spike_secure`/`spike_both` never surfaced this session; keep control cookies
+  flag-free or HttpOnly-only. Real-HTTPS Secure+HttpOnly cookies work fine. *(016/018.)*
+- **Open before shipping:** input/scroll feel (needs a human on the interactive harness),
+  retina (`scale_factor` 2.0), drag-resize latency, Windows/Linux backends, and Epic's
+  anti-bot posture inside an embed (its pre-auth 403 is a known parked blocker). *(016–018.)*

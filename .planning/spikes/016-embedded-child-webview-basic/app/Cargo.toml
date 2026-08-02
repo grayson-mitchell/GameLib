@@ -1,0 +1,21 @@
+[package]
+name = "spike-016-embedded-webview"
+version = "0.0.0"
+description = "Spike 016/017/018 harness — Tauri `unstable` multiwebview: an embedded child webview as an in-app store browser (add_child, bounds sync, coexistence)."
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Features MATCH src-tauri/Cargo.toml PLUS `unstable`, which gates
+# Window::add_child / WindowBuilder (tauri-2.11.5/src/window/mod.rs:1126).
+# The shared CARGO_TARGET_DIR still reuses every crate BELOW tauri; the
+# `tauri` crate itself recompiles once for the changed feature set.
+tauri = { version = "2", features = ["tray-icon", "image-png", "unstable"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Already in the tree via wry — used only to read NSWindow.windowNumber so the
+# autorun can hand `screencapture -l<id>` an exact window to photograph.
+objc2 = "0.6"
