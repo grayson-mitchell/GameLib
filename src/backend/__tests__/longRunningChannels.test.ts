@@ -160,6 +160,46 @@ function stripRustCharLiterals(source: string): string {
 }
 
 /**
+ * Removes Rust RAW string literals (`r"..."`, `r#"..."#`, `r##"..."##`, ...) from `source`.
+ *
+ * The WR-08 guards above measure ONE property: did the comment stripper cut an ORDINARY string
+ * literal in half? A raw string is not that — it legitimately spans many lines, so its opening
+ * delimiter (e.g. `r#"`) and closing delimiter (e.g. `"#;`) each carry exactly one bare `"` on
+ * their own line even though nothing was truncated. `main.rs`'s
+ * `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"..."#` (commit `88c2043cc`) is exactly this case,
+ * and without this pass its opener/closer lines read as "unbalanced" — a false positive in the
+ * normalizer, not a real defect in the source.
+ *
+ * The `r` MUST sit at start-of-string or be preceded by a non-identifier character
+ * (`[^A-Za-z0-9_]`). This is not defensive hedging: 14 lines in `main.rs` end an ORDINARY string
+ * literal with the letter `r` — `"repair",`, `const KEYRING_SERVICE: &str =
+ * "com.gamelib.launcher";`, `.unwrap_or("sidecar error")`, and friends. Without the boundary
+ * check, the pattern would match the `r"` inside `"repair"` and delete everything up to the next
+ * quote — real source, potentially including `LONG_RUNNING_CHANNELS` members. The boundary
+ * character is re-emitted, never swallowed.
+ *
+ * The hash count of the closing delimiter must match the opener EXACTLY (`\3` backreferences the
+ * captured hashes), so an `r##"..."##` body containing a `"#` sequence is not terminated early.
+ *
+ * The replacement strips every NON-NEWLINE character from the matched literal rather than
+ * deleting it outright, so the line count is preserved. The per-line WR-08 guard reports `index`
+ * values to make a real failure diagnosable; collapsing a 332-line literal to nothing would shift
+ * every subsequent index and destroy that diagnosability.
+ *
+ * Accepted limitation (same register as `parseMsConstantFromSource`'s caveat below): this is a
+ * narrow normalizer for trusted first-party source, not a Rust lexer. An `r#"` sequence
+ * appearing INSIDE an ordinary string literal would be mis-detected. That failure mode is loud —
+ * it unbalances quotes and the guard goes red — not silent.
+ */
+function stripRustRawStrings(source: string): string {
+  return source.replace(
+    /(^|[^A-Za-z0-9_])(r(#*)"[\s\S]*?"\3)/g,
+    (_match, boundary: string, literal: string) =>
+      boundary + literal.replace(/[^\n]/g, '')
+  )
+}
+
+/**
  * True if `source` contains a `#[cfg(test)]` module that genuinely exercises `timeout_for` via a
  * real `assert_eq!` call (not merely the identifier appearing somewhere in the region) and
  * iterates `LONG_RUNNING_CHANNELS` (rather than hardcoding a second duplicate list).
@@ -340,7 +380,7 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
  */
 describe('stripper integrity (WR-08)', () => {
   test('the real file: stripping does not cut a string literal in half (quote count stays EVEN)', () => {
-    const stripped = stripRustCharLiterals(loadMainRsCode())
+    const stripped = stripRustCharLiterals(stripRustRawStrings(loadMainRsCode()))
     const quoteCount = (stripped.match(/"/g) ?? []).length
     // Plain `toBe(0)` would only report "Expected: 0, Received: 1" on failure — the raw count
     // itself (needed to locate which literal got cut) would be lost. Assert via a labeled
@@ -350,7 +390,10 @@ describe('stripper integrity (WR-08)', () => {
   })
 
   test('the real file: every line of the stripped output has a balanced (even) "-count', () => {
-    const strippedLines = loadMainRsCode().split('\n')
+    // Raw strings are stripped from the FULL source BEFORE `.split('\n')` — a per-line pass
+    // cannot see a multi-line construct like `r#"..."#`, so reordering these two calls (splitting
+    // first, then trying to strip raw strings per-line) silently reverts this fix.
+    const strippedLines = stripRustRawStrings(loadMainRsCode()).split('\n')
     const unbalancedLines = strippedLines
       .map((line, index) => ({
         index,
@@ -416,6 +459,89 @@ describe('stripper integrity (WR-08)', () => {
     const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
     const quoteCount = (strippedLine.match(/"/g) ?? []).length
     expect(quoteCount % 2).toBe(1)
+  })
+
+  test('self-test: a synthetic multi-line r#"..."# literal is normalized away (its delimiter lines become balanced) and the line count is preserved', () => {
+    const syntheticSource = [
+      'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
+      'const SCRIPT: &str = r#"',
+      'console.log("a bare quote on this body line");',
+      'const note = 1; // a // sequence NOT at line-start, still inside the raw string body',
+      'const x = 1;',
+      '"#;',
+      'const AFTER: &str = "sentinel";'
+    ].join('\n')
+    const strippedLines = stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')
+    const unbalancedLines = strippedLines
+      .map((line, index) => ({
+        index,
+        line,
+        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
+      }))
+      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
+    expect(unbalancedLines).toEqual([])
+    // Pins Task 1 rule 4 (newline-preserving replacement) — without it every reported `index`
+    // in the real guard would shift once the literal collapsed, destroying diagnosability.
+    expect(strippedLines).toHaveLength(syntheticSource.split('\n').length)
+  })
+
+  // THIS IS THE MOST IMPORTANT TEST IN THE TASK. The WR-08 block's own history comment (above)
+  // warns that fixing the stripper without this lever "would have silently converted guard (b)
+  // into an unfalsifiable no-op". A fix that makes the guard unfalsifiable is a FAILED fix even
+  // if the suite goes green. This is NOT a duplicate of the existing "genuinely unbalanced code
+  // line" self-test above — that test predates `stripRustRawStrings` entirely; this one proves
+  // the NEW normalizer specifically does not neutralize the guard's ability to fail.
+  test('self-test: a genuinely truncated "steam:// literal STILL produces an ODD "-count after raw-string normalization (proves guard (b) remains falsifiable)', () => {
+    const syntheticSource = [
+      'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
+      'const BROKEN: &str = "steam://unterminated;'
+    ].join('\n')
+    const strippedLine = stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')[1]
+    const quoteCount = (stripRustCharLiterals(strippedLine).match(/"/g) ?? []).length
+    expect(quoteCount % 2).toBe(1)
+  })
+
+  test('self-test: an r##"..."## literal whose body contains a "# sequence is not terminated early, and following code survives', () => {
+    const syntheticSource = [
+      'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
+      'const SCRIPT: &str = r##"',
+      'this body line contains a "# sequence that must NOT close the literal early',
+      '"##;',
+      'const AFTER: &str = "sentinel";'
+    ].join('\n')
+    const stripped = stripRustRawStrings(loadMainRsCode(syntheticSource))
+    const unbalancedLines = stripped
+      .split('\n')
+      .map((line, index) => ({
+        index,
+        line,
+        quoteCount: (stripRustCharLiterals(line).match(/"/g) ?? []).length
+      }))
+      .filter(({ quoteCount }) => quoteCount % 2 !== 0)
+    expect(unbalancedLines).toEqual([])
+    // Proves the closer matched `"##`, not the body's `"#` — a premature match would have eaten
+    // this trailing line along with the body.
+    expect(stripped).toContain('const AFTER: &str = "sentinel";')
+  })
+
+  test('self-test: the zero-hash r"..." form is removed', () => {
+    const syntheticSource = 'const X: &str = r"plain";'
+    const stripped = stripRustRawStrings(syntheticSource)
+    const quoteCount = (stripRustCharLiterals(stripped).match(/"/g) ?? []).length
+    expect(quoteCount % 2).toBe(0)
+  })
+
+  test('self-test: stripRustRawStrings leaves an ordinary string literal ending in r untouched ("repair", "com.gamelib.launcher")', () => {
+    // Measured fact (planner finding F2): main.rs has 14 lines where an ORDINARY string literal
+    // happens to end in the letter `r`, and zero real boundary-preceded `r"` raw-string openers.
+    // Without the non-identifier boundary guard in Task 1, this pass would match the `r"` inside
+    // `"repair"` and delete everything up to the next quote — real source between them.
+    const syntheticSource = [
+      '    "repair",',
+      '    const KEYRING_SERVICE: &str = "com.gamelib.launcher";',
+      '    const AFTER: &str = "sentinel";'
+    ].join('\n')
+    expect(stripRustRawStrings(syntheticSource)).toBe(syntheticSource)
   })
 })
 
