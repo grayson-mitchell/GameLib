@@ -1,5 +1,5 @@
 ---
-status: fixed_pending_live_verification
+status: resolved
 trigger: "GOG login completes fully in the backend but the frontend never updates: login window vanishes, Manage Accounts stays on 'logging into gog', Library spinner never resolves and no games appear"
 created: 2026-08-03T01:00:00Z
 updated: 2026-08-03T01:00:00Z
@@ -448,12 +448,102 @@ files_changed:
   - src/backend/sidecar/__tests__/storeLayer.test.ts
   - src/preload/__tests__/tauriTransport.test.ts
 
+## LIVE VERIFICATION — PASSED 2026-08-03 01:39-01:40
+
+**The fix works. Confirmed on real macOS hardware, developer-driven, with no restart between
+login and render — the exact thing that was impossible before.**
+
+Two false starts on the way, both recorded because each was a real trap:
+
+1. **First "no change" report was a stale build.** The app under test was still the
+   01:05:42 instance; `build/main/sidecar.js` predated the fix commit (01:24:43) and
+   `grep -c storeChangeNotifier build/main/sidecar.js` returned **0**. `tauri:dev` rebuilds
+   the sidecar, but only on launch — a window that never went down never picked it up.
+   **Always verify the fix is IN the running bundle before trusting a negative result.**
+2. **Second "no change" report was measured too early.** The games do land, but ~50 s after
+   login. The developer had checked before that.
+
+Instrumented evidence (temporary `[diag]` probes, reverted in `7b2ca2c9`-equivalent revert
+commit — see below), verbatim:
+
+```
+(01:39:10) [diag] loadGOGLibrary store=7 state=7 username=set          ← boot, healthy
+(01:39:25) [diag] storeChanged RECEIVED store=gog_library key= invalidated=true
+(01:40:14) [diag] storeChanged RECEIVED store=gog_library key=__timestamp.games
+(01:40:14) [diag] storeChanged RECEIVED store=gog_library key=games
+(01:40:14) [diag] loadGOGLibrary store=7 state=0 username=set
+(01:40:24) [diag] loadGOGLibrary after refresh store=7
+```
+
+What each line proves:
+- The sidecar's pushes **reach the renderer** — 3 frames, for a store that previously
+  received none.
+- **Both** keys arrive, including `__timestamp.games`. Had only the value been pushed, the
+  renderer's `CacheStore.get` would still have returned its fallback and nothing would have
+  changed — the failure mode explicitly guarded against in `cache.ts`'s comment.
+- The `invalidated=true` frame is the logout `clear()`/`commit()` path working as designed.
+- `store=7` — **the renderer snapshot is correct.** This is the observable that was
+  impossible before the fix: the whole defect was `store=0` while disk held 7.
+- `No cache found` fired **once**, not in the old repeating loop.
+
+Developer confirmation: *"gog games are there"*, without pressing Refresh.
+
+**Consequences for the phase:**
+- **F-34.5-G6-12 / F-34.5-G6-03 (Library UI never renders persisted games) — CLOSED,
+  live-proven.** This is gate item 2's clause (d), the third failure layer that made gate 3
+  a FAIL.
+- **Gate item 2 itself is NOT retired.** Per the gate's own rules only a gate RUN can do
+  that, and clause (g) (`origin=unknown`, F-34.5-G6-14) is untouched by this work. A gate
+  re-run is required.
+- **Ledger row U-34.5-07** ("live GOG-library-populated session") — its stated retirement
+  condition was `refreshLibrary complete runner=gog managers=1` **and** the Library UI
+  showing GOG tiles. Both halves were observed this session. Retirement is for a gate run
+  to record, not this debug file.
+
+### NOT the parked `uninstall-game-vanishes` defect
+
+That session (parked 2026-07-22) was the leading suspect once `state=0` appeared — same
+shape, "present in state and store while invisible", surviving suspect being React
+memo/reference identity. **It is not implicated.** The games rendered without pressing
+Refresh, which is precisely the action that distinguished that bug. `uninstall-game-vanishes`
+stays parked, untouched, and its diagnosis is unaffected.
+
+## Follow-up: ~50 s from login to rendered library
+
+Measured by the developer at **~50 s**. Not a blocker and deliberately NOT fixed in this
+session, but it is real and worth its own pass.
+
+At least ~10 s of it is provably wasted, visible in the log above between 01:40:14 and
+01:40:24: `refresh()` (GlobalState.tsx) does
+
+```js
+if (gog.username && (!gogLibrary.length || !gog.library.length)) {
+  await window.api.refreshLibrary('gog')   // full network refetch
+}
+```
+
+At 01:40:14 `gogLibrary.length` is already **7** — the store has the data — but
+`gog.library.length` is **0**, because React state is only updated by the `setState` at the
+END of this same function. So the `|| !gog.library.length` clause fires a complete second
+GOG library fetch for data the next line already holds. The outer `refreshLibrary`
+(`origin=login-success`) had refreshed GOG ten seconds earlier, so freshness does not
+justify it.
+
+Caveats before anyone "fixes" this:
+- The redundant fetch accounts for ~10 s of ~50 s. **The other ~40 s is unexplained** and
+  must be measured, not assumed — an estimate of ~20 s total was made from the log and the
+  real figure was 50 s, so the log timestamps alone are not a reliable model of perceived
+  latency.
+- This clause fires on ANY path where React state is empty but the cache is warm, not only
+  after login, so a change here has wider reach than the login flow.
+
 ## Still open after this fix — do NOT read the fix as closing these
 
-1. **The perpetual Library spinner.** Not explained by this root cause and not addressed by
-   this fix. `refresh()` completed each cycle, so `refreshing:false` should have been set.
-   The empty-library half is fixed; the spinner needs its own observation. It may resolve
-   incidentally once the library renders — that must be CHECKED, not assumed.
+1. **The perpetual Library spinner — LIKELY RESOLVED INCIDENTALLY, but NOT confirmed.** The
+   library now renders, and the developer did not report a stuck spinner on the passing
+   run. That is absence of a complaint, not an observation: nobody was watching for it, and
+   the ~50 s wait means a spinner that runs for most of that window would look normal
+   rather than stuck. Treat as unconfirmed until someone specifically watches for it.
 2. **The Manage Accounts panel frozen on "logging into gog".** Rendered by the WebView
    screen that owns `useTauriOAuthLogin`, where `phase=teardown inflight=true` and
    `phase=cancelled-midflight` both fire immediately before `phase=idle`
