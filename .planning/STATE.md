@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: Ready to execute
-stopped_at: "GAP CYCLE 5 PLANNED 2026-08-02 via `/gsd-plan-phase 34.5 --gaps` -- plans 34.5-38..42 written in 5 sequential waves (39 of 42 plans now exist unexecuted at 38..42; 34 executed; 29/30/31 still HALTED and superseded, not deleted). This is the cycle that AUTHORS AND RUNS the blocking five-item gate cycles 3 and 4 both deferred. Two binding developer decisions, made 2026-08-02: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` is authored with `verdict: null` (plan 40, wave 3) strictly before it is run (plan 41, wave 4), and gate item 1 (Epic) enters as BLOCKED with the parked pre-auth 403 named as cause, so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- accepted knowingly, which per the ledger's own binding statement keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN and requires both to be named as known holes in the gate contract per ledger Rule 3. Plan 34.5-29's Tasks 2/3 (the item-4/item-5 preflight) are RE-HOMED into plan 39, wave 2, one wave before the contract, with a gate-time staleness re-check as contract precondition 11 -- deliberately, because groundwork written days early is what caused both prior item-4/5 skips. D-08 still binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase, and a BLOCKED item 1 means it is EXPECTED not to -- but plan 40's opportunistic-attempt clause makes a genuine 5/5 reachable, so every closure criterion is keyed to the four recorded counters rather than presupposing non-closure. Plan checker: 0 blockers (1 warning closed in `bd2b23572`, its stale second copy in `df7ad5fa2`). DECISION-COVERAGE OVERRIDE: D-01 and D-03 are uncovered by ID across all 42 plans; both are cycle-1 scope decisions already honoured in substance (Phase 34.6 exists in ROADMAP with exactly D-03's 16 deferred channels; the 38/3/16 split is reconciled in IPC-PORT-INVENTORY.md by executed plan 34.5-03) -- a citation-form miss, not dropped scope. Recorded here so verify-phase re-surfaces it."
-last_updated: "2026-08-02T19:45:00.000Z"
-last_activity: 2026-08-02
+status: executing
+stopped_at: "GAP CYCLE 5 EXECUTING 2026-08-02 via `/gsd-execute-phase 34.5` -- scope is plans 34.5-38..42 ONLY, in 5 sequential waves. Plan 38 (wave 1) is now COMPLETE: authored `34.5-CYCLE5-ROUTING.md`, dispositioning 29/30/31 without editing any of them (29 Task 1 VOID, Tasks 2/3 re-homed to 39; 30 superseded by 40; 31 superseded by 41+42), naming Epic item 1's BLOCKED cause (post-auth fix static-only, U-34.5-11/c857ade8e; pre-auth 403x1/timeout x2/success x1, parked by developer override), and measuring the build-health floor LIVE at HEAD c8f314205 (npm test:ci 3553/3553 -- the WR-08 guard failure the debug cycle recorded is now CLOSED, confirmed via d22fe0dfd/50a807a56 ancestry; tsc/cargo check/cargo test/ported-channels-gate.py all exit 0; cargo test 92/0/1-ignored matches the debug file exactly; the +5 jest delta vs the debug file's 3548 is recorded as an open, unexplained discrepancy since zero src/src-tauri diff exists in that commit range). Commits: 0c70cc3bf (routing+baseline), 04868ae72 (summary). Next: plan 39 (wave 2) -- re-homed item-4/item-5 preflight. Plans 34.5-29/30/31 remain DELIBERATELY EXCLUDED from this run and stay byte-unchanged. Two binding developer decisions carry in: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` authored with `verdict: null` (plan 40, wave 3) strictly before it is run (plan 41, wave 4), gate item 1 (Epic) entering as BLOCKED with the parked pre-auth 403 named as cause so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- which keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN and requires both named as known holes in the gate contract per ledger Rule 3. D-08 binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase; every closure criterion keys off the four RECORDED counters rather than presupposing non-closure. Plan checker: 0 blockers. DECISION-COVERAGE OVERRIDE still standing: D-01 and D-03 uncovered by ID across all 42 plans -- a citation-form miss, not dropped scope; recorded so verify-phase re-surfaces it."
+last_updated: "2026-08-02T20:45:00.000Z"
+last_activity: 2026-08-02 -- Phase 34.5 gap cycle 5 plan 38 complete
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 191
-  completed_plans: 174
-  percent: 91
+  completed_plans: 175
+  percent: 92
 ---
 
 # Project State
@@ -424,8 +424,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 4 (supersedes gap cycle 3 below; plans 34.5-29/30/31 HALTED by `BINDING DECISION: fix-first`, see 34.5-CYCLE4-ROUTING.md)
-Plan: 37 of 37 complete (plans 01–21 done; gap cycle 4 scope is 34.5-32..37 across 2 waves per 34.5-CYCLE4-ROUTING.md; 32 (routing/ledger), 33 (Routing items 1+2), 34 (Routing item 4), and 35 (Routing item 3, keyring bound) done — wave 1 FULLY complete; 36 (dev-only secret vault) and 37 (Epic Electron-vs-Tauri discriminator-2, verdict E1) done — wave 2 FULLY complete, gap cycle 4 scope exhausted; the blocking five-item gate is STILL NOT authored, NOT run this cycle — phase does NOT close until a future cycle's gate records 5/5)
+Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 5 (supersedes cycles 3 and 4; plans 34.5-29/30/31 stay HALTED and superseded per 34.5-38-PLAN.md's disposition — they are NOT executed by this run)
+Plan: 35 of 39 complete (plans 01–21, 32–37, and 38 done; gap cycle 5 scope is 34.5-38..42 across 5 sequential waves; 29/30/31 excluded by cycle-5 routing, so the phase denominator for THIS run is 39, not 42; next up is plan 39, wave 2 — the re-homed item-4/item-5 preflight)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
