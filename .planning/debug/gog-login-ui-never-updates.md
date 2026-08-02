@@ -62,6 +62,7 @@ reasoning_checkpoint:
     - "tauriTransport.ts:438-448 — `snapshotSet` is the only writer into `snapshot`, and it is renderer-initiated only. No sidecar->renderer store-invalidation message exists."
     - "electronStores.ts:90-93 — `CacheStore.get()` returns `fallback` immediately when `storeHas` is false, before any timestamp/lifespan logic."
     - "GlobalState.tsx:932-937 — refresh() only logs 'No cache found, getting data from gog...' when `!gogLibrary.length || !gog.library.length`; it then awaits refreshLibrary('gog') and re-reads via the SAME stale path."
+    - "GlobalState.tsx:675-685 — `gogLogout` ends with `window.location.reload()`. THIS is what emptied the snapshot: the reload re-runs `hydrateStoreSnapshot()` against the disk state at 00:42:56 (just-logged-out, library cleared), and the 00:43:44 sidecar write that repopulates disk lands 48s later, after hydration is already done and `hydrated` is already set. Completes the timeline: boot-hydrate at 00:19:10 had the gate-3 games, which is why they rendered at 00:31/00:34; the logout reload replaced that snapshot with an empty one; nothing could refill it."
     - "LOG: the loop is deterministic and repeats verbatim at 00:43:44, 00:46:09 and 00:52:24 — each time backend `Saved games data` + `refreshLibrary complete`, each time frontend 'No cache found'. 8 backend `refreshLibrary complete` lines total."
     - "LOG: zero errors — `Library refresh failed` count 0, `Force Update` count 0. Consistent with a silent fail-closed read, inconsistent with a throw/rejection."
     - "DISK: store_cache/gog_library.json, 9867 bytes, 7 titles, mtime 00:46 — the backend half demonstrably works."
@@ -91,6 +92,46 @@ reasoning_checkpoint:
        `phase=cancelled-midflight` both fire at 00:43:29. The original unmount hypothesis
        may still be correct FOR THAT SYMPTOM specifically. Two defects may be in play.
     3. Static confirmation only. No live devtools read has been taken.
+
+## Pre-registered predictions (written BEFORE the experiment ran)
+
+The `gogLogout` reload finding (GlobalState.tsx:675-685) completes the causal chain and
+makes the restart itself a valid discriminator, so it is recorded here in advance. Any
+result that contradicts these predictions FALSIFIES the hypothesis — this section must not
+be edited after the run, only answered.
+
+**Experiment:** fully quit the app and relaunch `pnpm tauri:dev`. Do NOT log in to GOG
+again. Disk holds 7 titles in `store_cache/gog_library.json` (9867 bytes, mtime 00:46).
+
+| # | Prediction if hypothesis is CORRECT | Strength |
+|---|---|---|
+| P1 | The GOG games appear in the Library **with no login performed** — boot re-hydrates the snapshot from a disk that already has them | **PRIMARY** — decisive either way |
+| P2 | GOG is present as a Library filter option | strong |
+| P3 | `No cache found, getting data from gog...` does NOT fire on this boot | secondary, see caveat |
+| P4 | `window.api.storeHas('gog_library','games')` → `true`, and `storeGet` returns 7 entries (the inverse of what it would have returned in the broken session) | confirmatory |
+
+**P3's caveat, stated in advance so it is not read as a failure:** the guard is
+`gog.username && (!gogLibrary.length || !gog.library.length)`. `gog.library` is React state.
+If it is initialised from the store in GlobalState's constructor it will already be
+populated and P3 holds; if it initialises empty, the line fires ONCE harmlessly even in the
+healthy case. Evidence that P3 is the real behaviour: the 00:19:10 boot of the failing
+session — which had a populated `gog_library.json` from gate 3 — produced NO "No cache
+found" line at all, and games rendered (observed at 00:31/00:34). So P3 held once already
+under exactly these conditions.
+
+**What FALSIFIES the hypothesis:** games still absent after restart with no login (P1
+fails). That would mean disk-to-renderer is broken at a layer deeper than snapshot
+staleness, and this entire diagnosis is wrong.
+
+**What this experiment does NOT prove even if all four hold:** that re-hydrating is the
+correct FIX. It confirms the mechanism only. A fix must still decide where invalidation
+belongs (a sidecar->renderer store-changed signal, re-hydrate after login, or dropping the
+`hydrated` short-circuit for cache stores) — and must cover `legendary_library` and
+`nile_library`, not just GOG.
+
+### Result
+
+[awaiting run]
 
 ## Symptoms
 
