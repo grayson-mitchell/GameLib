@@ -1295,6 +1295,131 @@ fn clear_storage_script(exfil_host: &str) -> String {
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
 
+// ---- humble_login_open OAuth-redirect-capture support (post-auth silent-navigation-refusal
+// fix, epic-login-non-interactive investigation, Resolution.fix 2026-08-02) ----
+//
+// Confirmed root cause (`Resolution.root_cause`): Epic's login page, once authenticated in
+// this arm's login window, obtains a valid OAuth payload from its own `/id/api/redirect`
+// response and its only remaining job is a client-side navigation to the `redirectUrl` that
+// response already carries -- a navigation WKWebView silently refuses, with no error, no
+// event, and nothing this arm's `on_page_load` hook (its only wired navigation signal) ever
+// observes. This section adds a SECOND capture path for the SAME window: an in-page response
+// observer (`epic_oauth_redirect_observer_script`, injected Epic-only) reads that SAME value
+// directly out of Epic's own fetch response -- nothing here re-derives or re-requests it --
+// and relays it to Rust via the identical `on_navigation` + non-resolvable-host exfil pattern
+// `humble_reveal_post`/`humble_login_clear_storage` above already prove works for this exact
+// "get a value out of page JS, into Rust, without Tauri IPC" shape. The relayed event is
+// pushed onto the SAME `LOGIN_WINDOW_EVENTS` queue via the SAME `push_login_window_event`
+// helper the `on_page_load` hook already feeds, carrying Epic's own literal `redirectUrl`
+// value, unmodified, as `.url` -- structurally indistinguishable from an ordinary nav event to
+// every downstream consumer. `matchOAuthRedirect` (`oauthLoginCapture.ts:113-119`),
+// `oauthLoginCapture.ts`'s poll loop, `useTauriOAuthLogin.ts` and the `LoginWindowSeam`
+// interface all need ZERO changes as a result.
+
+/// Non-resolvable exfil host for the Epic OAuth-redirect capture (post-auth
+/// silent-navigation-refusal fix, `Resolution.fix`, 2026-08-02). Deliberately DISTINCT from
+/// `REVEAL_EXFIL_HOST` above: that host's `on_navigation` intercept lives on the hidden,
+/// short-lived windows `humble_reveal_post`/`humble_login_clear_storage` build, never on
+/// `humble_login_open`'s long-lived, VISIBLE, shared login window -- a shared exfil host
+/// would let either arm's cancellation fire for the other's exfil navigation if the two
+/// hosts were ever confused. RFC 2606 reserves the `.invalid` TLD as guaranteed
+/// non-resolvable, mirroring `REVEAL_EXFIL_HOST`'s own guarantee.
+const OAUTH_REDIRECT_EXFIL_HOST: &str = "gamelib-oauth-redirect.invalid";
+
+/// Host this arm uses to decide whether the window it is about to open is Epic's --
+/// the ONLY signal available here, since `LoginWindowSeam.open()` (`loginWindowSeam.ts`)
+/// takes no `runner` argument and `humble_login_open` is runner-agnostic by design. Mirrors
+/// the literal host of `EPIC_LOGIN_URL` (`frontend/screens/WebView/loginRoutes.ts:45`,
+/// READ ONLY, never imported -- this file has no access to frontend source at build time)
+/// without changing that constant, per this cycle's hard constraint.
+const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
+
+/// Builds the PRODUCTION (never `#[cfg(debug_assertions)]`-gated) Epic OAuth-redirect
+/// response-observer script (post-auth silent-navigation-refusal fix, `Resolution.fix`,
+/// 2026-08-02). Injected ONLY into Epic's own login window (host check at the call site,
+/// via `EPIC_LOGIN_HOST`/`is_epic_login`, not here) as an `initialization_script()`, so it
+/// observes Epic's own `/id/api/redirect?flow=login&responseType=code` request the moment
+/// it resolves -- including the FIRST one, before any later console read could ever catch
+/// it.
+///
+/// PURELY ADDITIVE (mirrors `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s own non-interference
+/// discipline above): wraps `window.fetch` once, always calls through to the TRUE original
+/// implementation, and returns its EXACT promise to the caller unmodified -- the observer is
+/// a SEPARATE `.then()`/`.catch()` chain attached to that ORIGINAL promise (`res.clone()`
+/// before any body read), never the value Epic's own code awaits (independent `.then()`
+/// handlers on one promise are independent by spec). This is a SEPARATE, non-debug-gated,
+/// Epic-only production script -- NEVER a reuse or extension of that dev-only diagnostic,
+/// which mirrors everything to `console.warn` and stays gated behind `GAMELIB_LOGIN_DIAG`
+/// (default off). NEW RISK, recorded honestly rather than hidden (Current Focus,
+/// `developer_override_2026_08_02T19_00_00`): this script wraps `window.fetch` using the
+/// same technique the dev-only diagnostic uses, and that diagnostic's patched network
+/// primitives are this investigation's own live suspect for the SEPARATE, parked pre-auth
+/// 403 defect -- unlike that diagnostic, this script ships unconditionally for Epic, not
+/// opt-in. This has not been live-verified either way this cycle.
+///
+/// SCOPE: fires only for a response whose pathname is EXACTLY `/id/api/redirect` (never a
+/// broad credential-shaped substring match), whose status is `200`, and whose JSON body
+/// carries a non-empty string `redirectUrl` -- fails closed (does nothing) on any other
+/// response, any non-JSON body, or any script error, at most once per matching response.
+///
+/// SECRET HANDLING (T-34.4.1-21/T-28-04 convention, mirrors `reveal_post_script` above): the
+/// `redirectUrl` value NEVER reaches `console.log`/`console.warn`/`console.error` and is
+/// NEVER written to `window.__GAMELIB_DIAG__`. It exists only as a transient local inside
+/// this closure, read via `response.clone().json()`, used exactly once to build the exfil
+/// URL's query string via `encodeURIComponent(JSON.stringify(...))`, then falls out of
+/// scope as the (cancelled) navigation discards the in-page JS environment's reference.
+/// `exfil_host` is embedded via `serde_json::to_string` (never a naive
+/// `format!("'{}'", value)` interpolation) -- the arm's entire defense against a
+/// tampered/attacker-influenceable value breaking out of its string context (ASVS V5),
+/// mirroring `reveal_post_script`'s own discipline exactly.
+///
+/// Built via a `concat!` template + `.replace()`, mirroring `clear_storage_script`'s own
+/// convention immediately above (not `reveal_post_script`'s `format!` + `{{`/`}}`-escaping
+/// convention) -- this script's JS has too many literal `{`/`}` characters for `{{`/`}}`
+/// escaping to stay readable. Every JS string literal uses single quotes, so no `"`
+/// character appears anywhere except each `concat!` piece's own two Rust delimiters -- the
+/// SAME per-line-balanced-`"`-count discipline `longRunningChannels.test.ts`'s WR-08
+/// stripper-integrity guard requires (`reveal_post_script`'s own doc comment explains this
+/// guard in full).
+fn epic_oauth_redirect_observer_script(exfil_host: &str) -> String {
+    let exfil_host_js = serde_json::to_string(exfil_host)
+        .unwrap_or_else(|_| "\"gamelib-oauth-redirect.invalid\"".to_string());
+    let template = concat!(
+        "(function() { ",
+        "try { ",
+        "if (typeof window.fetch !== 'function') { return; } ",
+        "var originalFetch = window.fetch.bind(window); ",
+        "window.fetch = function(input, init) { ",
+        "var reqUrl = ''; ",
+        "try { reqUrl = (typeof input === 'string') ? input : ((input && input.url) || ''); } catch (eUrl) {} ",
+        "var fetchPromise = originalFetch(input, init); ",
+        "try { ",
+        "fetchPromise.then(function(res) { ",
+        "try { ",
+        "var status = (res && typeof res.status === 'number') ? res.status : undefined; ",
+        "var pathname = ''; ",
+        "try { pathname = new URL((res && res.url) || reqUrl, location.href).pathname; } catch (ePath) {} ",
+        "if (status !== 200 || pathname !== '/id/api/redirect') { return; } ",
+        "res.clone().json().then(function(body) { ",
+        "try { ",
+        "var redirectUrl = body && body.redirectUrl; ",
+        "if (typeof redirectUrl === 'string' && redirectUrl.length > 0) { ",
+        "var payload = encodeURIComponent(JSON.stringify({ redirectUrl: redirectUrl })); ",
+        "location.href = 'https://' + @@EXFIL_HOST@@ + '/oauth-redirect?data=' + payload; ",
+        "} ",
+        "} catch (eBody) {} ",
+        "}).catch(function() {}); ",
+        "} catch (eRes) {} ",
+        "}).catch(function() {}); ",
+        "} catch (eAttach) {} ",
+        "return fetchPromise; ",
+        "}; ",
+        "} catch (eOuter) {} ",
+        "})();"
+    );
+    template.replace("@@EXFIL_HOST@@", &exfil_host_js)
+}
+
 /// Classifies a raw `keyring` crate outcome (`Entry::new(...).and_then(|e| e.get_password())`)
 /// into the arm's `Value`/`String` contract (34.4.1 gap cycle 2 plan 26, F-9 observability
 /// half). Extracted as its own pure function so this classification is directly testable
@@ -1804,6 +1929,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         "humble_login_open" => {
             let url = login_window_url_arg(args)?;
             let origin = url.origin().ascii_serialization();
+            // Epic-only scoping for the OAuth-redirect-capture observer script below (post-auth
+            // silent-navigation-refusal fix, Resolution.fix, 2026-08-02) -- computed BEFORE
+            // `url` moves into the builder below, since this is the only signal this
+            // runner-agnostic arm has (see `EPIC_LOGIN_HOST`'s own doc comment).
+            let is_epic_login = url.host_str() == Some(EPIC_LOGIN_HOST);
             let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
             let user_agent = args
                 .get(2)
@@ -1817,10 +1947,52 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // `on_document_title_changed` so a title change is always composed against
             // the CURRENT host, not the one the window opened on.
             let current_origin = Arc::new(Mutex::new(origin.clone()));
+            // OAuth-redirect-capture exfil intercept (post-auth silent-navigation-refusal fix,
+            // Resolution.fix, 2026-08-02): a navigation-POLICY hook, added alongside the
+            // `on_page_load` hook below on this SAME window/builder (confirmed no structural
+            // conflict this cycle by direct read of the vendored `tauri` 2.11.5 crate source,
+            // `tauri-2.11.5/src/webview/mod.rs:275,277` -- `navigation_handler` and
+            // `on_page_load_handler` are independent `Option` fields). Fires on navigation
+            // INTENT, before WKWebView ever attempts to resolve/connect anything, so it never
+            // needs the confirmed-broken outcome-reporting signal `on_page_load` relies on.
+            // Matches ONLY `OAUTH_REDIRECT_EXFIL_HOST` -- a host DISTINCT from
+            // `REVEAL_EXFIL_HOST` (see that constant's own doc comment) -- and for every other
+            // host returns `true` (allow) unconditionally, so no real page navigation on this
+            // arm's existing `on_page_load`-only design (including legitimate same-origin or
+            // third-party iframe navigation) is ever affected. On a match: extracts the
+            // `data` query param, parses it, and relays Epic's own literal `redirectUrl` value
+            // (unmodified) into the SAME `LOGIN_WINDOW_EVENTS` queue via the SAME
+            // `push_login_window_event` helper the `on_page_load` hook below already feeds --
+            // then cancels (`return false`), mirroring `humble_reveal_post`'s own cancellation
+            // discipline above. Never `eprintln!`s the payload, the parsed value, or any part
+            // of the exfil URL (T-34.4.1-21/T-28-04 convention) -- this closure has no
+            // `eprintln!` call at all, on any path.
+            let oauth_exfil_label = event_label.clone();
             let mut builder =
                 tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))
                     .user_agent(user_agent)
-                    .visible(visible);
+                    .visible(visible)
+                    .on_navigation(move |nav_url| {
+                        if nav_url.host_str() == Some(OAUTH_REDIRECT_EXFIL_HOST) {
+                            if let Some((_, payload)) =
+                                nav_url.query_pairs().find(|(k, _)| k == "data")
+                            {
+                                if let Ok(parsed) = serde_json::from_str::<Value>(&payload) {
+                                    if let Some(redirect_url) =
+                                        parsed.get("redirectUrl").and_then(|v| v.as_str())
+                                    {
+                                        let event = login_event_value("finished", redirect_url);
+                                        push_login_window_event(&oauth_exfil_label, event);
+                                    }
+                                }
+                            }
+                            // Cancel -- gamelib-oauth-redirect.invalid is RFC 2606 reserved and
+                            // never actually resolves regardless, but this is the real guard
+                            // (mirrors humble_reveal_post's own on_navigation discipline above).
+                            return false;
+                        }
+                        true
+                    });
             if visible {
                 let title_origin = Arc::clone(&current_origin);
                 builder = builder
@@ -1906,6 +2078,22 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 eprintln!(
                     "[shell] humble_login_open: GAMELIB-DIAG init script INJECTED for '{label}' (GAMELIB_LOGIN_DIAG=1)"
                 );
+            }
+            // Epic OAuth-redirect response observer (post-auth silent-navigation-refusal fix,
+            // Resolution.fix, 2026-08-02): PRODUCTION script, injected ONLY for Epic's own
+            // login window (`is_epic_login`, computed above from the validated open URL's
+            // host) -- NOT gated by `#[cfg(debug_assertions)]` or `GAMELIB_LOGIN_DIAG` above
+            // (unlike the dev-only diagnostic immediately above, which is a live suspect for
+            // CAUSING the separate, parked pre-auth 403 defect -- see the "THIRD GATE ADDED"
+            // comment above, and `developer_override_2026_08_02T19_00_00` in the debug file's
+            // Current Focus for the same risk applied to THIS script). This script is a
+            // SEPARATE, narrowly-scoped observer, never a reuse or extension of that
+            // diagnostic -- see `epic_oauth_redirect_observer_script`'s own doc comment for
+            // its full non-interference and secret-handling discipline.
+            if is_epic_login {
+                builder = builder.initialization_script(epic_oauth_redirect_observer_script(
+                    OAUTH_REDIRECT_EXFIL_HOST,
+                ));
             }
             let page_load_origin = Arc::clone(&current_origin);
             let window = builder

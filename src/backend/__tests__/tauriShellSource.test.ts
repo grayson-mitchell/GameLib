@@ -614,6 +614,17 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 // unfiltered file-wide search -- this plan's own justifying prose names `on_navigation`
 // repeatedly (explaining why it must NOT be used here), so a naive unscoped count would
 // be satisfied by the prose alone even if the real arm still used it.
+//
+// AMENDED (post-auth silent-navigation-refusal fix, `Resolution.fix`, epic-login-
+// non-interactive investigation, 2026-08-02): the arm now DOES contain a single
+// `.on_navigation(` call, added deliberately once the confirmed root cause showed
+// `on_page_load` can never observe Epic's own silently-refused redirect navigation. The
+// blanket "no `.on_navigation(` anywhere" guard below has been NARROWED, not deleted, to
+// still enforce the real invariant this describe block exists to protect: the login
+// window's ORIGIN/TITLE state must never be driven by `on_navigation` (which also fires
+// for third-party iframes, T-34.5-G6-39's own anti-phishing concern) -- only the new,
+// narrowly-scoped exfil-cancel hook may exist, and it must never reference
+// `current_origin`/`title_origin`/`set_title(`.
 describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_load, never on_navigation', () => {
   function extractHumbleLoginOpenArmBody(code: string): string {
     const armStart = code.indexOf('"humble_login_open" => {')
@@ -621,6 +632,31 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
+  }
+
+  /**
+   * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
+   * (inclusive of both braces), counting depth rather than relying on a second string
+   * marker. Mirrors the WR-07 describe block's own `extractBracedBlock` helper below in
+   * this file (duplicated locally rather than hoisted to module scope, matching this
+   * file's own per-describe-block helper convention).
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
   }
 
   test('POSITIVE: the title-refresh call (set_title) lives inside the arm\'s .on_page_load( hook body', () => {
@@ -633,9 +669,19 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     expect(pageLoadBlock).toContain('set_title(')
   })
 
-  test('NEGATIVE: the humble_login_open arm contains no .on_navigation( call anywhere in its own body', () => {
+  test('the arm contains EXACTLY ONE .on_navigation( call (post-auth silent-navigation-refusal fix, Resolution.fix, 2026-08-02)', () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
-    expect(armBody).not.toContain('.on_navigation(')
+    const matches = armBody.match(/\.on_navigation\(/g) ?? []
+    expect(matches.length).toBe(1)
+  })
+
+  test('NEGATIVE: the humble_login_open arm\'s .on_navigation( hook never touches origin/title state -- reintroduced ONLY for the OAuth-redirect exfil-cancel path, scoped to OAUTH_REDIRECT_EXFIL_HOST, so the anti-phishing invariant this describe block protects (title/origin never driven by on_navigation, which also fires for third-party iframes) still holds', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const navBlock = extractBracedBlock(armBody, '.on_navigation(')
+    for (const forbidden of ['set_title(', 'current_origin', 'title_origin']) {
+      expect(navBlock).not.toContain(forbidden)
+    }
+    expect(navBlock).toContain('OAUTH_REDIRECT_EXFIL_HOST')
   })
 
   test('the login_window_title pure helper exists (AppHandle-free, mirrors clipboard_text_arg/login_window_url_arg)', () => {

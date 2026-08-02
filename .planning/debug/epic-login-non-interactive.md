@@ -1,5 +1,5 @@
 ---
-status: root_cause_confirmed_post_auth_only
+status: post_auth_fix_implemented_static_only_live_gate_owed
 root_cause_scope: |
   SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the
   POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized
@@ -14,7 +14,7 @@ root_cause_scope: |
   `pending_question`, for the live test that resolves this before implementation proceeds.
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T18:00:00
+updated: 2026-08-02T20:00:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -2977,6 +2977,144 @@ finding: F-34.5-G6-01
 
 ## Current Focus
 
+<!-- SUPERSEDING BLOCK 2026-08-02T19:00:00 -- DEVELOPER OVERRIDE OF PRE-REGISTERED BRANCH B,
+     opening a new IMPLEMENTATION cycle for the POST-AUTH fix only. Everything below this block,
+     INCLUDING the 2026-08-02T18:00:00 block and its own pre-auth-403 reasoning trail, is now
+     HISTORICAL for that thread and remains UNTOUCHED this cycle -- this block does not act on,
+     revise, or continue the pre-auth 403 investigation in any way. Read THIS block first. -->
+
+developer_override_2026_08_02T19_00_00: |
+  DATED, ATTRIBUTED DEVELOPER OVERRIDE of `pending_question`'s pre-registered BRANCH B
+  instruction (see the `fix_design`/`pending_question` block further down this file, and the
+  2026-08-02T04:30:00-and-later evidence establishing that branch B is what actually occurred:
+  the sign-out/sign-back-in test found NO usable login form -- a SECOND, independent
+  pre-authentication defect, the deterministic Talon anti-bot 403 the 18:00:00 block above is
+  mid-investigation on).
+
+  Branch B is NOT being silently walked past. It fired exactly as designed: it found a second,
+  independent pre-auth defect, and its own instruction was "do NOT implement the exfiltration
+  design this cycle" pending that defect's own separate diagnosis. That instruction is being
+  KNOWINGLY OVERRIDDEN this cycle by explicit developer direction: the pre-auth 403 thread is
+  PARKED (developer decision, reason: six of seven fingerprint hypotheses already dead, the
+  underlying WKWebView-gets-blocked-where-Chromium-doesn't observation is already
+  well-characterized in this file, and the developer's own priority is implementing the
+  post-auth fix now regardless of the pre-auth thread's unresolved state) and the post-auth fix
+  is directed to proceed to implementation THIS cycle anyway.
+
+  THE STANDING RULE IN `deferred_considerations` REMAINS IN FORCE, UNCHANGED, FOR CLOSURE
+  PURPOSES. Quoted verbatim, not softened or reworded: "NO FIX SHIPS UNTIL THE LOGGED-OUT PATH
+  HAS BEEN OBSERVED WORKING END TO END ON REAL HARDWARE -- not inferred from the fact that an
+  authenticated session's flow was independently understood, and not assumed to follow
+  automatically from the post-auth root cause being confirmed. Two independent things must each
+  be true before this finding is considered closed and the fix shipped: (1) the post-auth
+  navigation-refusal fix works end to end (exfil mechanism delivers the code, capture/login
+  completes) -- not yet built; and (2) the pre-auth login form is confirmed to render and accept
+  input for a genuinely logged-out user -- not yet tested at all... A passing verification of (1)
+  alone must never be read as verification of the finding as a whole while (2) remains
+  unresolved." This cycle's own work can satisfy (1) IMPLEMENTED-BUT-NOT-LIVE-VERIFIED at best
+  (see below) -- it cannot satisfy (1) VERIFIED, and it does not and cannot touch (2) at all,
+  because (2) is blocked by the SAME parked 403 that makes a fresh logged-out Epic login
+  undriveable this cycle.
+
+  CONSEQUENCES THIS CYCLE MUST HONOR, explicitly, so a future reader never mistakes this cycle's
+  work for a closed finding:
+  - The fix built this cycle is IMPLEMENTED-BUT-NOT-LIVE-VERIFIED. Static/compile/unit proof
+    (`cargo check`/`cargo test`/`tsc --noEmit`/the Jest suite) is NOT live proof -- this project's
+    own F-10 lesson, recorded elsewhere in this repo's memory: "a green 3447-test suite confirmed
+    nothing about a live-only defect." The same discipline applies here without exception.
+  - FIX DESIGN branch-A step (4) -- the full live gate (fresh logged-out Epic login completes, an
+    already-authenticated session's redirect is captured, library refresh triggers) -- CANNOT RUN
+    this cycle, because a fresh logged-out Epic login cannot be driven while the pre-auth 403
+    stands in front of the login form. It is OWED, not passed, not attempted, not partially
+    covered by anything built this cycle.
+  - `U-34.5-06` (`.planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-
+    shortc/34.5-UNTESTED-ITEMS.md`) STAYS OPEN. This cycle may ADD a new OPEN row for the
+    unverified exfil mechanism (see below) but may NOT close, retire, or mark verified `U-34.5-06`
+    or any other existing row -- per that ledger's own Rule 1, a row is retired ONLY by the
+    observation named in its own row, never by a passing test suite.
+  - Finding `F-34.5-G6-01` does NOT close. Phase 34.5 does NOT close. This debug session's own
+    `status` frontmatter will NOT be set to anything implying closure at the end of this cycle.
+
+  NEW RISK SURFACED THIS CYCLE, honestly recorded (not a re-investigation of the pre-auth thread,
+  a direct consequence of information already established in THIS file, applied to THIS cycle's
+  own design): the FIX DESIGN's mechanism (b) -- the in-page response observer -- necessarily
+  wraps `window.fetch` on Epic's login page, using the SAME wrapping technique
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` uses (`main.rs`, the "THIRD GATE ADDED 2026-08-02" comment
+  above the `humble_login_open` arm) -- and that script's patched network primitives are this
+  file's OWN live suspect for CAUSING the 403 the pre-auth thread is investigating. Unlike that
+  diagnostic (opt-in, `GAMELIB_LOGIN_DIAG` default OFF), this cycle's observer is a PRODUCTION,
+  always-on script for Epic's login window -- if patched `fetch` is confirmed to be what Talon's
+  fingerprinting keys on, shipping this fix unconditionally could make the pre-auth 403 permanent
+  for every Epic login attempt rather than opt-in. This is NOT grounds to redesign the fix this
+  cycle (explicit instruction: implement the design as specified, do not redesign) -- it is
+  recorded here as an open risk for the live gate this cycle cannot run, and as a candidate
+  explanation to check FIRST if/when that live gate still shows a 403 after this fix ships.
+
+reasoning_checkpoint: |
+  hypothesis: "WKWebView silently refuses Epic's client-side navigation to the localhost
+    `redirectUrl` once the page has already obtained it from its own `/id/api/redirect`
+    response -- Epic's page has nothing left to render (skeleton in transit) and the only
+    thing missing is that navigation's outcome ever reaching any hook this arm listens for.
+    Relaying the SAME `redirectUrl` value into the SAME `LOGIN_WINDOW_EVENTS` queue via a
+    channel that does not depend on WKWebView reporting a navigation OUTCOME (an
+    `on_navigation` POLICY hook, which fires on intent, before any outcome exists) closes the
+    gap without touching any downstream matcher."
+  confirming_evidence:
+    - "Evidence 2026-08-02T04:00:00: Epic's own `/id/api/redirect` request (id 15, sent from
+      the login window's own bootstrap) returned HTTP 200 with a `redirectUrl` field shaped
+      `https://localhost/launcher/authorized?code=<code>` -- the exact shape
+      `matchOAuthRedirect`'s `legendary` arm already expects, unmodified."
+    - "Evidence 2026-08-02T05:00:00: a manual, developer-run `location.href` assignment to the
+      identical URL shape produced no visible effect and `location.href` read back unchanged --
+      direct proof the navigation is refused, not merely slow or unobserved."
+    - "Resolution.root_cause (evidenced 2026-08-02): this arm's `on_page_load` hook (the only
+      navigation signal wired to `humble_login_open`) never fires Started/Finished for this
+      navigation, so no downstream consumer ever sees it -- the gap is specifically in
+      OUTCOME REPORTING, which `on_navigation` structurally does not depend on."
+    - "main.rs read this cycle, `humble_reveal_post`/`humble_login_clear_storage`
+      (`main.rs:2304-2357`, `:2371`+): the identical `on_navigation` + non-resolvable-host
+      exfil + cancel pattern is SHIPPED and WORKING today for a structurally identical
+      'get a value out of page JS, into Rust, without Tauri IPC' problem."
+  falsification_test: "The live gate (branch-A step 4, OWED this cycle, not run): a real
+    logged-out-then-authenticated Epic login window reaches `status=captured` with
+    `useTauriOAuthLogin` observing `phase=idle` in the same session. If Epic's own
+    `/id/api/redirect` response shape ever omits `redirectUrl`, or if the exfil navigation
+    to the new dedicated host is ALSO silently refused for some reason specific to this
+    long-lived, VISIBLE, shared window (unlike the hidden windows the working analog uses),
+    this hypothesis is falsified and the fix does nothing."
+  fix_rationale: "Addresses the root cause directly, not a symptom: it does not attempt to
+    make WKWebView report the refused navigation (unexplained mechanism, no lever this
+    codebase has ever found), and it does not poll or re-request anything from Epic (would
+    add bot-shaped traffic and require independently proving authentication). It reads the
+    SAME value the confirmed root cause already names as the missing piece and delivers it
+    through a channel that does not require the broken signal at all."
+  blind_spots: |
+    Explicitly not tested this cycle, in order of what the design's own 'Open questions/risks'
+    section (this file, `fix_design`) already named plus one new item surfaced this cycle:
+    (1) whether Epic's REAL logged-out login form renders/accepts input under WKWebView at
+    all -- ANSWERED NO by the 403 finding, which is exactly why this fix cannot be
+    live-verified this cycle; (2) whether `on_navigation` + `on_page_load` combined on ONE
+    long-lived VISIBLE window behaves identically to the hidden-window precedent (static
+    crate-source confirmation only, no live-fire); (3) pathname-match stability if Epic
+    changes `/id/api/redirect`'s shape upstream; (4) NEW THIS CYCLE: the observer's
+    `window.fetch` wrap uses the same technique the file's own suspect-for-403 diagnostic
+    uses, now shipped unconditionally rather than opt-in (see
+    `developer_override_2026_08_02T19_00_00` above) -- if that suspicion is later confirmed,
+    THIS fix's own observer could itself trigger or perpetuate the pre-auth 403 for every
+    Epic login, a possibility the original design (written before the 403 was linked to
+    patched fetch/XHR) did not consider.
+
+next_action: |
+  Proceed to implementation per the FIX DESIGN block below (`fix_design`), exactly as specified,
+  with the structured reasoning checkpoint written before any source edit (mandatory per the
+  debugger's own fix_and_verify protocol). Verify via `cargo check`/`cargo test`/`npx tsc
+  --noEmit`/`npm run test:ci` ONLY -- branch-A step (4)'s live gate is OUT OF REACH this cycle,
+  per `developer_override_2026_08_02T19_00_00` above, and must be recorded as OWED, never as
+  passed or implied passed. Update `Resolution.fix`/`Resolution.verification`/
+  `Resolution.files_changed` honestly at the end of this cycle without touching `status` in any
+  way that implies closure. Add a new OPEN row to `34.5-UNTESTED-ITEMS.md` for the unverified
+  exfil mechanism; do not close any existing row there.
+
 <!-- SUPERSEDING BLOCK 2026-08-02T18:00:00 -- everything below this block, INCLUDING the
      2026-08-02T17:00:00 block, is now HISTORICAL reasoning trail. This block records the
      outerWidth/outerHeight shim result (403 recurred -- AMBIGUOUS per its own pre-registered
@@ -5374,9 +5512,134 @@ root_cause: |
   verdict exactly — see Evidence 2026-08-02T05:05:00's annotation for the full account of
   which five proposed mechanisms for E1 were tried and falsified before this one was found.
 fix: |
-  NOT YET APPLIED. A fix approach has been DESIGNED this cycle (prose only, no source edits)
-  — see "FIX DESIGN (ready for review, NOT implemented)" in Current Focus below. Awaiting
-  explicit confirmation the developer's `pnpm tauri:dev` hardware session is closed and the
-  build freeze is lifted before any implementation cycle begins.
-verification:
+  IMPLEMENTED 2026-08-02T19:00:00-20:00:00, under an explicit DEVELOPER OVERRIDE of the
+  pre-registered branch-B hold (`Current Focus`, `developer_override_2026_08_02T19_00_00`) --
+  IMPLEMENTED BUT NOT LIVE-VERIFIED (see `verification` below; do not read this entry as
+  closure). Exactly the two mechanisms the FIX DESIGN block specifies, unchanged in shape:
+
+  1. Rust `on_navigation` exfil intercept (`src-tauri/src/main.rs`, `humble_login_open` arm):
+     a single `.on_navigation(move |nav_url| {...})` closure added to the SAME
+     `WebviewWindowBuilder` chain that already carries `.on_page_load(...)` for this arm's
+     shared login window. Matches ONLY a new, dedicated `OAUTH_REDIRECT_EXFIL_HOST`
+     (`gamelib-oauth-redirect.invalid`) -- deliberately DISTINCT from `humble_reveal_post`'s
+     `REVEAL_EXFIL_HOST` to avoid any collision between this arm's long-lived, VISIBLE, shared
+     login window and the hidden, short-lived windows that constant's own arms build. On a
+     match: extracts the `data` query param, parses it, and relays Epic's own literal
+     `redirectUrl` value (unmodified) into the SAME `LOGIN_WINDOW_EVENTS` queue via the SAME
+     `push_login_window_event` helper the `on_page_load` hook already feeds -- then cancels
+     (`return false`), mirroring `humble_reveal_post`'s own cancellation discipline. For every
+     other host, returns `true` unconditionally, so no real page navigation (including
+     legitimate same-origin or third-party iframe navigation) is affected. Scoping to Epic
+     only (`is_epic_login`, computed from the validated open URL's host against a new
+     `EPIC_LOGIN_HOST` constant, since `LoginWindowSeam.open()` carries no `runner` argument)
+     governs ONLY the new production script's injection (mechanism 2) -- the `.on_navigation`
+     hook itself is attached unconditionally to every runner's window, since it is inert for
+     every host except the new dedicated exfil host no other runner's page will ever navigate
+     to.
+
+  2. New production (non-debug-gated) in-page response observer,
+     `epic_oauth_redirect_observer_script` (`src-tauri/src/main.rs`), injected as an
+     `initialization_script()` ONLY when `is_epic_login` is true -- a SEPARATE function from,
+     never a reuse or extension of, the pre-existing `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` (which
+     stays dev-only, gated behind `GAMELIB_LOGIN_DIAG`, default off). Wraps `window.fetch`
+     once, always calling through to the true original implementation and returning its exact
+     promise unmodified; attaches a SEPARATE `.then()`/`.catch()` chain to that original
+     promise (`res.clone()` before any body read) scoped narrowly to responses whose pathname
+     is EXACTLY `/id/api/redirect` and whose status is `200`. On a JSON body carrying a
+     non-empty string `redirectUrl`, triggers the exfil navigation
+     (`location.href` to `OAUTH_REDIRECT_EXFIL_HOST` with the payload JSON-encoded in the query
+     string, `exfil_host` embedded via `serde_json::to_string`, never naive interpolation).
+     Fails closed (does nothing) on any other response, non-JSON body, or script error. Built
+     via a `concat!` template + `.replace()` (mirrors `clear_storage_script`'s convention, not
+     `reveal_post_script`'s `{{`/`}}`-escaping convention) -- every JS string literal uses
+     single quotes, satisfying `longRunningChannels.test.ts`'s WR-08 per-line-balanced-`"`-
+     count guard (confirmed: this cycle's new code introduces ZERO new WR-08 violations, see
+     `verification` below).
+
+  Secret handling (both mechanisms): the `redirectUrl` value never reaches
+  `console.log`/`console.warn`/`console.error`, is never written to
+  `window.__GAMELIB_DIAG__`, and the Rust `on_navigation` closure has NO `eprintln!` call on
+  any path -- it exists only as a transient local in the JS closure and moves through Rust via
+  the same `LOGIN_WINDOW_EVENTS` queue nile/gog/zoom already carry real codes through today.
+  Re-read in full before finishing: no literal secret/authorization-code value appears
+  anywhere in this file's own additions this cycle.
+
+  ONE PRE-EXISTING TEST UPDATED (not new scope, a direct consequence of this fix):
+  `src/backend/__tests__/tauriShellSource.test.ts`'s `F-34.5-G6-04` describe block contained a
+  blanket NEGATIVE assertion ("the humble_login_open arm contains no `.on_navigation(` call
+  anywhere in its own body") that this fix necessarily breaks by design (FIX DESIGN section
+  (d) explicitly specifies adding `.on_navigation`). Confirmed via `git stash`
+  before/after comparison that this test PASSED at HEAD and only failed once this cycle's
+  Rust change was applied (a genuine, expected consequence, not a pre-existing failure).
+  NARROWED rather than deleted: the arm may now contain exactly one `.on_navigation(` call,
+  but that call's own body must never reference `set_title(`/`current_origin`/`title_origin`
+  -- preserving the real anti-phishing invariant (T-34.5-G6-39: origin/title must never be
+  driven by `on_navigation`, which also fires for third-party iframes) the original test was
+  protecting, rather than the stricter-than-necessary proxy ("no `on_navigation` at all") it
+  used to enforce that invariant with.
+verification: |
+  STATIC/COMPILE/UNIT PROOF ONLY -- explicitly NOT live proof, per this project's own F-10
+  lesson ("a green 3447-test suite confirmed nothing about a live-only defect") and per
+  `developer_override_2026_08_02T19_00_00` above, which both apply here without exception:
+
+  - `cargo check` (src-tauri): clean, no errors or warnings from this cycle's new code.
+  - `cargo test` (src-tauri): 92 passed, 0 failed, 1 ignored (pre-existing ignored test,
+    unrelated to this cycle). No new Rust test was added this cycle -- the fix's Rust surface
+    (a navigation-intercept closure and a pure script-builder function) is exercised
+    end-to-end only by the live gate this cycle cannot run, mirroring
+    `reveal_post_script`/`clear_storage_script`'s own precedent of being covered by their
+    `#[cfg(test)]` siblings (escaping/embedding correctness) rather than a live-fire unit test
+    -- no equivalent embedding test was added for `epic_oauth_redirect_observer_script` this
+    cycle; that is itself an additional, undesigned gap, recorded honestly rather than
+    silently left implicit.
+  - `npx tsc --noEmit`: clean, zero errors. No TypeScript file was touched this cycle (the
+    design's own constraint -- `matchOAuthRedirect`, `oauthLoginCapture.ts`, `useTauriOAuthLogin.ts`
+    and the `LoginWindowSeam` interface all remain byte-for-byte unchanged).
+  - `npm run test:ci`: 3548/3548 passing (+1 from the new `.on_navigation` count/scope test
+    added to `tauriShellSource.test.ts` this cycle), ONE known, PRE-EXISTING, UNRELATED
+    failure carried over unchanged from baseline: `longRunningChannels.test.ts`'s WR-08
+    stripper-integrity guard flags `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s own multi-line
+    `r#"..."#;` raw-string delimiter lines (index 262/549, identical content and count before
+    and after this cycle's changes) -- confirmed via `git stash`/`git stash pop` that this
+    exact failure exists at HEAD, untouched by this cycle, and belongs to the SEPARATE, parked
+    pre-auth 403 thread's own diagnostic script, not this cycle's scope. Not fixed this cycle;
+    not this cycle's defect to fix.
+
+  WHAT WAS NOT PROVEN, named explicitly so no future reader mistakes static proof for live
+  proof:
+  - FIX DESIGN branch-A step (4), the full live gate (fresh logged-out Epic login completes,
+    an already-authenticated session's redirect is captured, library refresh triggers) --
+    OWED, not attempted, not partially covered by anything above. Cannot run this cycle: a
+    fresh logged-out Epic login is blocked by the SEPARATE, parked pre-auth 403.
+  - `U-34.5-06` (Epic's success path end to end,
+    `.planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/
+    34.5-UNTESTED-ITEMS.md`) STAYS OPEN, unchanged. A new row, `U-34.5-11`, was ADDED this
+    cycle for the unverified exfil mechanism specifically -- it shares `U-34.5-06`'s own
+    live-session blocker and is expected to retire together with it, not independently. No
+    existing row in that ledger was closed, retired, or modified.
+  - Finding `F-34.5-G6-01` does NOT close. Phase 34.5 does NOT close. This file's own
+    `status` frontmatter reflects "implemented, static-only, live gate owed" -- deliberately
+    NOT any value implying closure.
+  - The standing rule in `deferred_considerations` REMAINS IN FORCE, unchanged: "NO FIX SHIPS
+    UNTIL THE LOGGED-OUT PATH HAS BEEN OBSERVED WORKING END TO END ON REAL HARDWARE." This
+    cycle satisfies half of condition (1) (implemented, not verified) and does not touch
+    condition (2) at all (still blocked by the parked pre-auth 403). Neither condition is
+    closed; the finding as a whole is not closed.
+  - NEW RISK, not evaluated live either way this cycle: the production observer script wraps
+    `window.fetch` using the same technique this investigation's own suspect-for-the-403
+    diagnostic uses (see `Current Focus`, `developer_override_2026_08_02T19_00_00`, and this
+    fix's own doc comment in `main.rs`). Whether this makes the pre-auth 403 more likely, less
+    likely, or unaffected for Epic specifically is UNKNOWN and must be checked first when the
+    live gate this cycle could not run is eventually attempted.
 files_changed:
+  - src-tauri/src/main.rs (added `OAUTH_REDIRECT_EXFIL_HOST`, `EPIC_LOGIN_HOST`,
+    `epic_oauth_redirect_observer_script()`; added `is_epic_login` computation, the
+    `.on_navigation` exfil-intercept closure, and the Epic-only production script injection to
+    the `humble_login_open` arm)
+  - src/backend/__tests__/tauriShellSource.test.ts (narrowed the F-34.5-G6-04 NEGATIVE
+    `.on_navigation` guard to preserve its real anti-phishing invariant rather than a stricter
+    blanket-absence proxy; added a companion "exactly one `.on_navigation(` call" test)
+  - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/
+    34.5-UNTESTED-ITEMS.md (added new OPEN row `U-34.5-11`; no existing row touched)
+  - .planning/debug/epic-login-non-interactive.md (this file -- developer-override
+    superseding block, structured reasoning checkpoint, and this Resolution update)
