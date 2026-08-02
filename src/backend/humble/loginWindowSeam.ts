@@ -42,13 +42,25 @@ export interface LoginWindowCookieRead {
 }
 
 /**
- * A single relayed main-frame navigation event. Sourced from Rust's `on_page_load` hook only --
- * NEVER `on_navigation`, which also fires for third-party subframes (spike 013: 5 of 8 events on
- * Humble's real login page were iframes) and would let an ad frame re-arm a login watch's deadline
- * indefinitely.
+ * A single relayed main-frame navigation event. `'started'`/`'finished'` are sourced from Rust's
+ * `on_page_load` hook only -- NEVER `on_navigation`, which also fires for third-party subframes
+ * (spike 013: 5 of 8 events on Humble's real login page were iframes) and would let an ad frame
+ * re-arm a login watch's deadline indefinitely.
+ *
+ * Quick task 260803-eee Task 5: `'closed'` is additive -- sourced from Rust's
+ * `on_window_event(WindowEvent::Destroyed)` hook on the SAME window (`main.rs`'s
+ * `humble_login_open` arm), pushed onto the SAME `LOGIN_WINDOW_EVENTS` queue via the SAME
+ * `push_login_window_event` helper the nav events already use. It carries an empty `url` (there is
+ * no navigation url for a close). Fires once the window is truly gone, regardless of whether the
+ * user closed it or a caller closed it programmatically -- `oauthLoginCapture.ts`'s `captureOAuthLogin`
+ * is the only consumer that acts on it (resolve-first-wins via its own `settled` flag makes a
+ * caller-initiated close, which always happens AFTER that flag is already set and polling has
+ * already stopped, a no-op). `humble/user.ts`'s `watchForLogin()` -- the OTHER `takeEvents()`
+ * consumer -- only ever checks for `'finished'`, so a `'closed'` entry passing through it is
+ * inert, not a behaviour change.
  */
 export interface LoginWindowNavEvent {
-  event: 'started' | 'finished'
+  event: 'started' | 'finished' | 'closed'
   url: string
 }
 

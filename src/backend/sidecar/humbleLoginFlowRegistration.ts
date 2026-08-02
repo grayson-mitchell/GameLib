@@ -111,10 +111,23 @@ function coerceCookie(raw: unknown): LoginWindowCookie {
   }
 }
 
-/** Coerces one raw navigation event from a `humble_login_take_events` response. */
+/**
+ * Coerces one raw navigation event from a `humble_login_take_events` response.
+ *
+ * Quick task 260803-eee Task 5: `'closed'` was ADDED to this allow-list alongside `'started'`/
+ * `'finished'`. Before this change, an unrecognized `event` value defaulted to `'finished'` --
+ * which would have silently swallowed a real window-close signal from Rust into a bogus,
+ * non-matching nav event (its `url` would still coerce to `''`, so `matchOAuthRedirect` would
+ * just return null and the close would vanish with no trace). This IS the layer the developer's
+ * evidence pointed at: `oauthLoginCapture.ts`'s cancel-detection logic can only be as correct as
+ * this allow-list lets a `'closed'` event actually reach it.
+ */
 function coerceNavEvent(raw: unknown): LoginWindowNavEvent {
   const entry = raw as { event?: unknown; url?: unknown } | null
-  const event = entry?.event === 'started' || entry?.event === 'finished' ? entry.event : 'finished'
+  const event =
+    entry?.event === 'started' || entry?.event === 'finished' || entry?.event === 'closed'
+      ? entry.event
+      : 'finished'
   return {
     event,
     url: typeof entry?.url === 'string' ? entry.url : ''

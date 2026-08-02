@@ -373,6 +373,53 @@ describe('rustInvoke frame shape — createRustLoginWindowSeam() drives the real
     ])
   })
 
+  // Quick task 260803-eee Task 5: `'closed'` was added to `coerceNavEvent`'s allow-list
+  // alongside `'started'`/`'finished'`. Before this change, `coerceNavEvent` silently defaulted
+  // any unrecognized `event` value to `'finished'` -- which would have swallowed a real
+  // window-close signal from Rust into a bogus, non-matching nav event with no trace. This test
+  // proves the value survives the coercion layer unchanged, which `oauthLoginCapture.ts`'s
+  // cancel-detection logic (`captureOAuthLogin`) depends on to ever see it at all.
+  it("humble_login_take_events: a 'closed' event passes through uncoerced (does NOT default to 'finished')", async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.takeEvents('oauth-capture-0')
+    await flush()
+
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS)
+    expect(frame).toBeDefined()
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [{ event: 'closed', url: '' }]
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual([{ event: 'closed', url: '' }])
+  })
+
+  it('humble_login_take_events: a genuinely unrecognized event value still defaults to "finished" (the pre-existing fail-safe is unchanged)', async () => {
+    const { input, frames } = startTransport()
+    const seam = createRustLoginWindowSeam()
+
+    const promise = seam.takeEvents('login-humble-1')
+    await flush()
+
+    const frame = frames.find((f) => f.channel === RUST_HUMBLE_LOGIN_TAKE_EVENTS)
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [{ event: 'something-else', url: 'https://www.humblebundle.com/x' }]
+      })}\n`
+    )
+    await expect(promise).resolves.toEqual([
+      { event: 'finished', url: 'https://www.humblebundle.com/x' }
+    ])
+  })
+
   it('humble_login_close: emits [label] and resolves the coerced boolean', async () => {
     const { input, frames } = startTransport()
     const seam = createRustLoginWindowSeam()

@@ -212,7 +212,10 @@ export function captureOAuthLogin(
     // the attempt) is ever written.
     let lastLoggedHost: string | null = null
 
-    async function settle(outcome: OAuthCaptureOutcome): Promise<void> {
+    // Quick task 260803-eee Task 5: `reason` is optional and additive -- every EXISTING call site
+    // below is unchanged (no `reason` argument), so their log line is byte-identical to before.
+    // Only the new `'closed'`-event branch in `poll()` below passes one.
+    async function settle(outcome: OAuthCaptureOutcome, reason?: string): Promise<void> {
       if (settled) return
       settled = true
       if (pollInterval !== null) clearInterval(pollInterval)
@@ -228,7 +231,11 @@ export function captureOAuthLogin(
           )
         }
       }
-      logInfo(`[oauthLoginCapture] runner=${runner} status=${outcome.status}`, LogPrefix.Backend)
+      const reasonSuffix = reason ? ` reason=${reason}` : ''
+      logInfo(
+        `[oauthLoginCapture] runner=${runner} status=${outcome.status}${reasonSuffix}`,
+        LogPrefix.Backend
+      )
       resolve(outcome)
     }
 
@@ -239,6 +246,23 @@ export function captureOAuthLogin(
         const events = await activeSeam.takeEvents(label)
         if (settled) return
         for (const event of events) {
+          // Quick task 260803-eee Task 5: a real close (`WindowEvent::Destroyed` on the Rust
+          // side, mirrored here as `'closed'`) settles this capture as user-cancelled. Checked
+          // FIRST, ahead of the nav-host logging/match below, for two reasons: (1) a close event
+          // carries an empty `url`, which would otherwise log a spurious `nav host=<unparseable>`
+          // line; (2) events are drained in chronological push order, so if a matching redirect
+          // and a close somehow landed in the SAME batch, checking in array order and returning
+          // immediately on whichever comes first is what makes "resolve first wins" hold -- a
+          // captured redirect that arrived before the window closed still wins, exactly as a
+          // close that arrived first (before any redirect) correctly wins here. This can only
+          // observe a GENUINE user-initiated close: `captureOAuthLogin`'s own `settle()` always
+          // clears `pollInterval` (stopping further polling) BEFORE it ever calls
+          // `activeSeam.close()`, so a close this function itself triggered can never be read
+          // back through this loop.
+          if (event.event === 'closed') {
+            await settle({ status: 'cancelled' }, 'window-closed')
+            return
+          }
           // T-34.5-G6-11: hostname ONLY -- never origin, pathname, search, or href. Epic's
           // redirect carries the authorization code in the query string (the `legendary` branch
           // below reads it via `searchParams.get('code')`), so logging anything past the hostname

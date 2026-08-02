@@ -2121,6 +2121,47 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 })
                 .build()
                 .map_err(|e| format!("humble_login_open:build-failed:{e}"))?;
+            // Quick task 260803-eee Task 5: close-detection, added AFTER `.build()` because
+            // `on_window_event` is a method on the built `WebviewWindow` handle
+            // (`tauri-2.11.5/src/webview/webview_window.rs:1524`), not on the builder --
+            // confirmed by direct read of the vendored crate source, mirroring this arm's own
+            // established discipline of checking the crate before adding a hook (see the WR-07
+            // CORRECTION comment above).
+            //
+            // THE BUG THIS FIXES: closing this window (any way -- clicking its close button,
+            // Cmd+W, the OS window-close gesture) produced NO signal at all on the JS side.
+            // `oauthLoginCapture.ts`'s `captureOAuthLogin` kept polling forever until its
+            // five-minute deadline, so cancelling a GOG/Epic/Amazon/Zoom sign-in never resolved
+            // `{ status: 'cancelled' }` -- the frontend hook stayed on `awaiting` and the
+            // cancel-path navigation fix (Task 4, `onCancelled`/`handleTauriOAuthCancelled`)
+            // could never fire, because the outcome it depends on never arrived.
+            //
+            // `WindowEvent::Destroyed`, not `CloseRequested`: `CloseRequested` fires BEFORE the
+            // window is actually gone and exists so a handler can call `api.prevent_close()` --
+            // this arm never wants to prevent closing, only observe that it happened, and
+            // `Destroyed` is the point that is actually true. Pushed onto the SAME
+            // `LOGIN_WINDOW_EVENTS` queue via the SAME `push_login_window_event` helper the
+            // `on_page_load` hook above already uses -- one relay mechanism, not two. Fires for
+            // ANY window this arm builds (hidden reveal/clear windows included, not gated on
+            // `visible`) -- harmless for those, since nothing calls `takeEvents()` on a
+            // reveal/clear window's label, and `humble/user.ts`'s own `takeEvents()` consumer
+            // (`watchForLogin()`) only ever checks for `'finished'`, so a `'closed'` entry
+            // passing through it is inert (see `loginWindowSeam.ts`'s `LoginWindowNavEvent` doc
+            // comment for the full cross-consumer safety argument). No url to relay -- `""`,
+            // never a partial/stale navigation url that could be mistaken for one.
+            //
+            // NOT a race with this arm's own `humble_login_close` (a few match arms below):
+            // every caller that closes a window programmatically (`captureOAuthLogin`'s
+            // `settle()`, `humble_login_close` itself) does so only AFTER it has already decided
+            // the real outcome and stopped consuming events for that label -- so a `'closed'`
+            // event produced by that SAME programmatic close is written to a queue nothing reads
+            // again, never observed as a spurious cancel.
+            let close_event_label = label.clone();
+            window.on_window_event(move |event| {
+                if matches!(event, tauri::WindowEvent::Destroyed) {
+                    push_login_window_event(&close_event_label, login_event_value("closed", ""));
+                }
+            });
             // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
             // it is visible from the moment the window appears, rather than only after the
             // first `on_page_load`/`on_document_title_changed` event.
@@ -3693,6 +3734,17 @@ mod tests {
         assert_eq!(
             login_event_value("finished", "https://www.humblebundle.com/login"),
             json!({ "event": "finished", "url": "https://www.humblebundle.com/login" })
+        );
+    }
+
+    // Quick task 260803-eee Task 5: the shape `humble_login_open`'s new
+    // `on_window_event(WindowEvent::Destroyed)` hook pushes -- an empty url is deliberate (a
+    // close is not a navigation), never a stale/partial one that could be mistaken for one.
+    #[test]
+    fn humble_login_event_value_closed_shape_has_an_empty_url() {
+        assert_eq!(
+            login_event_value("closed", ""),
+            json!({ "event": "closed", "url": "" })
         );
     }
 

@@ -356,6 +356,150 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     expect(mockSeamClose).not.toHaveBeenCalled()
   })
 
+  // Quick task 260803-eee Task 5 (F-34.5-G6-... follow-up): closing the login window without
+  // completing sign-in must resolve { status: 'cancelled' }, not hang until the 5-minute
+  // deadline. The evidence that motivated this: a live session log showing NO status line at
+  // all for a closed popup, because nothing on the JS side ever recognised the closure.
+  it('resolves { status: "cancelled" } when a "closed" nav event is drained, and closes the window exactly once', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
+
+      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      await flushAsync()
+
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+
+      await expect(promise).resolves.toEqual({ status: 'cancelled' })
+      expect(mockSeamClose).toHaveBeenCalledTimes(1)
+      expect(mockSeamClose).toHaveBeenCalledWith('oauth-capture-0')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('logs status=cancelled reason=window-closed for a closed-window cancel (and only that reason)', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      const loggerModule = jest.requireMock('backend/logger')
+      loggerModule.logInfo.mockClear()
+      mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
+
+      const promise = captureOAuthLogin('zoom', 'https://www.zoom-platform.com/login')
+      await flushAsync()
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+      await promise
+
+      const statusLines = loggerModule.logInfo.mock.calls
+        .map(([msg]: [unknown]) => String(msg))
+        .filter((msg: string) => msg.includes('status=cancelled'))
+      expect(statusLines).toHaveLength(1)
+      expect(statusLines[0]).toBe(
+        '[oauthLoginCapture] runner=zoom status=cancelled reason=window-closed'
+      )
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a "closed" event does NOT log a spurious "nav host=" line (empty url is not a navigation)', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      const loggerModule = jest.requireMock('backend/logger')
+      loggerModule.logInfo.mockClear()
+      mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
+
+      const promise = captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login')
+      await flushAsync()
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+      await promise
+
+      const navLines = loggerModule.logInfo.mock.calls
+        .map(([msg]: [unknown]) => String(msg))
+        .filter((msg: string) => msg.includes('nav host='))
+      expect(navLines).toHaveLength(0)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('resolve-first-wins: a captured redirect earlier in the SAME drained batch wins over a later "closed" entry', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([
+        { event: 'finished', url: 'https://embed.gog.com/on_login_success?code=GOG1' },
+        { event: 'closed', url: '' }
+      ])
+
+      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      await flushAsync()
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+
+      await expect(promise).resolves.toEqual({
+        status: 'captured',
+        runner: 'gog',
+        code: 'GOG1',
+        redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG1'
+      })
+      expect(mockSeamClose).toHaveBeenCalledTimes(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('resolve-first-wins: a "closed" entry earlier in the SAME drained batch wins over a later matching redirect', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([
+        { event: 'closed', url: '' },
+        { event: 'finished', url: 'https://embed.gog.com/on_login_success?code=GOG1' }
+      ])
+
+      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      await flushAsync()
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+
+      await expect(promise).resolves.toEqual({ status: 'cancelled' })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('a "closed" event arriving AFTER the capture already settled (e.g. this module\'s own programmatic close) triggers no second settle and no extra close call', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      mockSeamTakeEvents.mockResolvedValue([
+        { event: 'finished', url: 'https://embed.gog.com/on_login_success?code=GOG1' }
+      ])
+
+      const promise = captureOAuthLogin('gog', 'https://auth.gog.com/auth')
+      await flushAsync()
+      jest.advanceTimersByTime(500)
+      await flushAsync()
+      await promise
+      expect(mockSeamClose).toHaveBeenCalledTimes(1)
+
+      // Simulate the window's own Destroyed event (a consequence of the close this module just
+      // triggered) showing up in a later drain -- polling has already stopped, so this must
+      // never be read at all.
+      mockSeamTakeEvents.mockClear()
+      mockSeamClose.mockClear()
+      mockSeamTakeEvents.mockResolvedValue([{ event: 'closed', url: '' }])
+      jest.advanceTimersByTime(5000)
+      await flushAsync()
+
+      expect(mockSeamTakeEvents).not.toHaveBeenCalled()
+      expect(mockSeamClose).not.toHaveBeenCalled()
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it('resolves { status: "error" } (never rejects) when takeEvents() throws, and still closes the window', async () => {
     jest.useFakeTimers({ doNotFake: ['setImmediate'] })
     try {
