@@ -182,8 +182,25 @@ function ensureChangeListenerAttached(): void {
   listen(STORE_CHANGED_CHANNEL, (...args: unknown[]) => {
     const payload = args[0] as StoreChangedPayload | undefined
     if (!payload) return
-    const { store, key, value, deleted } = payload
+    const { store, key, value, deleted, invalidated } = payload
     if (!snapshot[store]) snapshot[store] = {}
+
+    // A whole-store change (`store.clear()`, or a `CacheStore.commit()` replacing the
+    // store object wholesale) carries no meaningful `key`. Patching a field would be
+    // wrong in both directions: it cannot express the REMOVALS a clear/commit performs,
+    // so stale keys would survive in the snapshot for the life of the window. Drop the
+    // store from `hydrated` and re-fetch instead — `hydrateStore` REPLACES rather than
+    // merges (WR-07), which is exactly the semantics a bulk change needs.
+    //
+    // This is the ONLY place `hydrated` is removed from. Without it the set is
+    // append-only, which is precisely how a hydrated store became permanently frozen
+    // against sidecar writes (see .planning/debug/gog-login-ui-never-updates.md).
+    if (invalidated) {
+      hydrated.delete(store)
+      void hydrateStore(store)
+      return
+    }
+
     // CR-03: the echo must patch the snapshot through the SAME nested path helpers
     // the read side uses, otherwise it re-creates the flat/nested mismatch it exists
     // to repair.

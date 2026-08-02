@@ -486,10 +486,19 @@ export const STORE_LAZY_MISS_MARKER = '[GAMELIB_STORE_LAZY_MISS]' as const
 /**
  * Payload shape for a `STORE_CHANGED_CHANNEL` push. `key` is the top-level (or dot-notation)
  * field that changed; `value` is present on a set, `deleted` is `true` on a delete.
+ *
+ * `invalidated` marks a WHOLE-STORE change that cannot be described key-by-key — a
+ * `store.clear()` or a `CacheStore.commit()` flushing an in-memory map. On such a push
+ * `key` carries no meaning (it is `''`) and the renderer must re-fetch the store rather
+ * than patch a field. A per-key encoding of a bulk change cannot express REMOVALS, so a
+ * cleared store would otherwise keep its stale keys in the renderer's snapshot for the
+ * life of the window — the same failure WR-07 fixed for `hydrateStore` by making it
+ * REPLACE rather than merge.
  */
 export interface StoreChangedPayload {
   store: string
   key: string
   value?: unknown
   deleted?: boolean
+  invalidated?: boolean
 }

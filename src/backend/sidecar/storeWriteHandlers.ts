@@ -28,10 +28,15 @@ import { ipcMain } from './electronStub'
 // single-choke-point note above `applyStoreWrite`.
 import * as sidecarRpc from './sidecarRpc'
 import { getRegisteredStore } from '../electron_store'
+import {
+  setStoreChangeNotifier,
+  withStoreChangeSuppressed
+} from '../storeChangeNotifier'
 import { TOKEN_STORE_KEY } from '../storeManagers/steam/constants'
 import {
   CACHE_STORE_NAME_PATTERN,
   DENIED_CACHE_STORES,
+  isAllowedStoreField,
   isSafeKeyPath,
   isWritableStoreField,
   RECOGNIZED_CACHE_STORE_NAMES,
@@ -179,11 +184,21 @@ export function applyStoreWrite(
   }
 
   try {
-    if (op === 'set') {
-      target.set(key, value)
-    } else {
-      target.delete(key)
-    }
+    // Suppressed because THIS function pushes the change itself, a few lines down, with a
+    // richer payload than the store class can produce (an explicit `deleted` flag either
+    // way). Without this the write emits two frames — one from the class, one from here.
+    // Whoever initiates a write owns its notification; this handler initiates these.
+    //
+    // The push below is NOT redundant with the class-level one and must not be deleted in
+    // favour of it: `resolveWritableStore` can hand back a RAW `electron-store` instance
+    // for the cache-store branch, which has no notification hook at all.
+    withStoreChangeSuppressed(() => {
+      if (op === 'set') {
+        target.set(key, value)
+      } else {
+        target.delete(key)
+      }
+    })
   } catch (error) {
     // Repudiation control (T-29-30): a write failure must never be purely silent.
     process.stderr.write(
@@ -194,14 +209,54 @@ export function applyStoreWrite(
     return
   }
 
-  // D-06: the ONLY frontend-push call site for this event in this file (or anywhere
-  // else) — see the header comment.
-  sidecarRpc.pushFrontendMessage(STORE_CHANGED_CHANNEL, {
+  pushStoreChanged({
     store: storeName,
     key,
     value,
     deleted: op === 'delete'
-  } satisfies StoreChangedPayload)
+  })
+}
+
+/**
+ * D-06: the ONLY frontend-push call site for this event in this file (or anywhere else) —
+ * see the header comment.
+ *
+ * Extracted from `applyStoreWrite`'s body so a SECOND class of producer can reach it
+ * without violating that single-call-site rule. `applyStoreWrite` covers writes the
+ * RENDERER initiated (`storeSet`/`storeDelete` frames); the sidecar's own store managers
+ * write straight through `cache.ts`/`electron_store.ts` and used to announce nothing at
+ * all — the divergence this file's header warned about, live-confirmed in
+ * `.planning/debug/gog-login-ui-never-updates.md` (GOG login persisted 7 games while the
+ * renderer rendered none, silently, until restart). Those writers now reach this same
+ * function through the `storeChangeNotifier` seam installed below.
+ */
+function pushStoreChanged(payload: StoreChangedPayload): void {
+  // SECRET-LEAK GUARD — load-bearing for the sidecar-initiated producer, redundant for
+  // `applyStoreWrite`.
+  //
+  // `applyStoreWrite` validates every renderer-driven write against
+  // `isWritableStoreField` BEFORE it writes, so anything reaching this function from
+  // there was already allow-listed. The store classes have no such gate: they write
+  // whatever the backend asks them to, including genuinely secret fields (Steam refresh
+  // tokens, Humble session/CSRF values). Pushing those unfiltered would place secrets in
+  // the renderer's snapshot — the exact thing `handlers.ts`'s `filterStoreSnapshot()`
+  // exists to prevent on the fetch path, defeated through a side door.
+  //
+  // The renderer's listener deliberately does NOT re-filter on the way in (it trusts this
+  // emitter), so this is the only place the check can happen.
+  //
+  // An `invalidated` push carries no value and no meaningful key — it only tells the
+  // renderer to re-fetch, and that re-fetch goes through `STORE_FETCH_CHANNEL`, which is
+  // already filtered sidecar-side. It is therefore safe and must NOT be gated on a key
+  // that does not exist.
+  if (!payload.invalidated && !isAllowedStoreField(payload.store, payload.key)) {
+    return
+  }
+
+  sidecarRpc.pushFrontendMessage(
+    STORE_CHANGED_CHANNEL,
+    payload satisfies StoreChangedPayload
+  )
 }
 
 let handlersRegistered = false
@@ -215,6 +270,15 @@ export function registerStoreWriteHandlers(): void {
     return
   }
   handlersRegistered = true
+
+  // Point the sidecar-side store classes' notification seam at this file's single push
+  // site, so writes the SIDECAR itself performs reach the renderer's D-06 listener the
+  // same way renderer-initiated writes already do. Installed here rather than in
+  // bootstrap because this is the sidecar-only, idempotent entry point that already owns
+  // this channel — and because doing it anywhere else would put the wiring further from
+  // the invariant it has to respect. Under Electron this function never runs, so
+  // `notifyStoreChanged` stays a no-op and the Electron write paths are unchanged.
+  setStoreChangeNotifier(pushStoreChanged)
 
   // `send`-kind (fire-and-forget) registrations: unlike an `invoke` channel there is no
   // response frame and no promise to reject on the renderer side — which is exactly why

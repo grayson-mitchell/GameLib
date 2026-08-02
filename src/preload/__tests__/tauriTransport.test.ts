@@ -316,6 +316,42 @@ describe('change events', () => {
     })
     expect(snapshotHas('configStore', 'zoomPercent')).toBe(false)
   })
+
+  it('an `invalidated` push re-fetches the store instead of patching a key', async () => {
+    // Regression pin for .planning/debug/gog-login-ui-never-updates.md.
+    //
+    // `hydrated` used to be append-only, so once a store was hydrated the renderer could
+    // never pick up a sidecar-side bulk change (`store.clear()`, `CacheStore.commit()`).
+    // A per-key patch cannot express those either: it has no way to state the REMOVALS,
+    // so stale keys survived for the life of the window. The `invalidated` branch drops
+    // the store from `hydrated` and re-fetches, and `hydrateStore` REPLACES (WR-07).
+    //
+    // Set up a stale key that the authoritative re-fetch does NOT contain: if the branch
+    // merely patched, `staleKey` would survive.
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: 'theme', value: 'stale-value' }]
+      }
+    })
+    expect(snapshotGet('configStore', 'theme')).toBe('stale-value')
+
+    mockedInvoke.mockResolvedValueOnce({ theme: 'authoritative-value' })
+
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: '', invalidated: true }]
+      }
+    })
+
+    // The re-fetch is fired with `void` from a synchronous handler — let it settle.
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(snapshotGet('configStore', 'theme')).toBe('authoritative-value')
+  })
 })
 
 describe('allow-list', () => {

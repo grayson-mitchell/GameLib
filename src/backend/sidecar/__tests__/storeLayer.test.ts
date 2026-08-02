@@ -371,6 +371,63 @@ describe('allow-list', () => {
     expect(fetched).not.toHaveProperty('refreshToken')
   })
 
+  it('never PUSHES a secret field to the renderer when the sidecar itself writes one', async () => {
+    // The snapshot/fetch paths above are filtered by `filterStoreSnapshot()`. The
+    // store-change PUSH path is a third way into the renderer's snapshot, and it was
+    // opened by the sidecar-write notification fix
+    // (.planning/debug/gog-login-ui-never-updates.md).
+    //
+    // `applyStoreWrite` validates renderer-driven writes against `isWritableStoreField`
+    // BEFORE writing, so its pushes were already safe. The store classes have no such
+    // gate — they write whatever the backend hands them, secrets included. Without the
+    // allow-list check in `pushStoreChanged`, every `steamConfigStore.set('refreshToken',
+    // …)` in the real app would have shipped that token straight into the renderer's
+    // in-memory snapshot, defeating `filterStoreSnapshot()` through a side door.
+    //
+    // This suite's own `beforeEach` writes three real secret fields through the real
+    // store layer, so simply installing the real notifier and watching the wire is a
+    // faithful end-to-end exercise of that path.
+    const sidecarRpc = await import('../sidecarRpc')
+    const { registerStoreWriteHandlers } = await import('../storeWriteHandlers')
+
+    const pushSpy = jest
+      .spyOn(sidecarRpc, 'pushFrontendMessage')
+      .mockImplementation(() => undefined)
+
+    try {
+      // Idempotent; installs the real `pushStoreChanged` as the store-change notifier.
+      registerStoreWriteHandlers()
+
+      probeSteamConfig.set('refreshToken', 'leak-canary-refresh-token')
+      probeHumbleConfig.set('csrfToken', 'leak-canary-csrf')
+      probeHumbleConfig.set('sessionCookie', 'leak-canary-session')
+      // A non-secret write on the same stores, to prove the guard is discriminating
+      // rather than simply muting the channel.
+      probeHumbleConfig.set('isLoggedIn', true)
+
+      const storeChangedPayloads = pushSpy.mock.calls
+        .filter(([channel]) => channel === 'storeChanged')
+        .map(([, payload]) => payload as { key: string; value?: unknown })
+
+      const pushedKeys = storeChangedPayloads.map((p) => p.key)
+      expect(pushedKeys).not.toContain('refreshToken')
+      expect(pushedKeys).not.toContain('csrfToken')
+      expect(pushedKeys).not.toContain('sessionCookie')
+
+      // By value too — a secret must not ride along inside some other field's payload.
+      const serialized = JSON.stringify(storeChangedPayloads)
+      expect(serialized).not.toContain('leak-canary-refresh-token')
+      expect(serialized).not.toContain('leak-canary-csrf')
+      expect(serialized).not.toContain('leak-canary-session')
+
+      // The allow-listed field DID go out — otherwise this test would pass just as well
+      // against a completely broken channel.
+      expect(pushedKeys).toContain('isLoggedIn')
+    } finally {
+      pushSpy.mockRestore()
+    }
+  })
+
   it('rejects a path-traversal store name without throwing, returning {}', async () => {
     const result = await invokeStoreFetch('../../etc/passwd')
     expect(result).toEqual({})
