@@ -1,5 +1,5 @@
 ---
-status: root_cause_found
+status: root_cause_confirmed
 trigger: "GOG login completes fully in the backend but the frontend never updates: login window vanishes, Manage Accounts stays on 'logging into gog', Library spinner never resolves and no games appear"
 created: 2026-08-03T01:00:00Z
 updated: 2026-08-03T01:00:00Z
@@ -131,7 +131,65 @@ belongs (a sidecar->renderer store-changed signal, re-hydrate after login, or dr
 
 ### Result
 
-[awaiting run]
+**RAN 2026-08-03 01:05:45, on real macOS hardware, developer-driven. ALL PREDICTIONS HELD.
+Hypothesis is now LIVE-CONFIRMED, not merely statically confirmed.**
+
+| # | Prediction | Result |
+|---|---|---|
+| P1 | Games appear with no login | ✅ **CONFIRMED** — developer, verbatim: "games are showing after restart, no login needed" |
+| P2 | GOG present as a filter option | ⚠️ implied by P1 but NOT separately transcribed — recorded as not-independently-observed |
+| P3 | No `No cache found, getting data from gog...` line | ✅ **CONFIRMED** — `grep -c` returns exactly **0** on the 01:05:45 boot |
+| P4 | `storeHas('gog_library','games')` → true | ⏭ NOT RUN — devtools had been closed; P1+P3 make it redundant |
+
+Contrast, same machine, same disk, two boots:
+
+| Observable | Broken session (00:19 boot, post-logout-reload) | Healthy boot (01:05:45) |
+|---|---|---|
+| `No cache found, getting data from gog...` | 3 (00:43:44, 00:46:09, 00:52:24) | **0** |
+| `[refreshLibrary]` frontend calls | 4, in a repeating loop | **1** (`runner=all origin=mount`) |
+| Backend `refreshLibrary complete` | 8 | 1 cycle |
+| ERROR lines | 0 | 0 |
+| Games rendered | **no** | **yes** |
+
+The disk contents did not change between those two boots — `gog_library.json` held the same
+7 titles. Only the renderer's snapshot differed. That isolates the defect to the renderer
+snapshot with no remaining ambiguity.
+
+P3 is the sharpest of the four: it was predicted to be exactly zero, on the stated reasoning
+that `gog.library` initialises from the store at construction, and it was exactly zero.
+
+## Blast radius — CORRECTED AND MUCH WIDER after the confirming run
+
+The original "four boot-set cache stores" scoping was too narrow. `hydrated.add()` is called
+for EVERY store after its first hydration (line 231 eager, line 261 lazy), and is never
+removed — so **every store in `STORE_UNIVERSE` is frozen against sidecar-initiated writes
+once hydrated.** Boot-set stores freeze at boot; lazy stores freeze on first access.
+
+`BOOT_SET_STORES` (storePolicy.ts) — all 15 frozen from boot:
+
+| Store | Sidecar writes it after boot? | User-visible consequence when stale |
+|---|---|---|
+| `gog_library` / `legendary_library` / `nile_library` | yes, on every login + refresh | **the defect this session diagnosed**; Epic and Amazon inherit it identically |
+| `gogInstalledGamesStore` | yes, on install/uninstall | **explains the 2026-08-03 UAT "uninstall failed" gap** — sidecar uninstalled Alan Wake at 00:33:24, renderer kept showing it installed, developer pressed Play again at 00:33:42 |
+| `zoomInstalledGamesStore` | n/a (Zoom dropped, D-02) | — |
+| `sideloadedStore` | yes | sideloaded game changes invisible until restart |
+| `wineDownloaderInfoStore` | yes, on Wine version install/remove | a downloaded/removed Wine version may not reflect in Wine Manager |
+| `steamConfigStore` / `humbleConfigStore` / `gogConfigStore` / `nileConfigStore` | yes, on auth changes | stale signed-in/out state |
+| `configStore` / `gameOverridesStore` | mostly renderer-written (`snapshotSet` keeps those correct) | lower risk |
+
+**Two of the five gaps recorded in `34.5-UAT.md` are therefore the SAME defect**, not
+independent ones: the post-login render failure and the uninstall-not-reflected failure.
+
+**Why the existing `hydrated` short-circuit cannot be simply removed as the fix:** dropping
+it would make a MISSING value re-hydrate, but a stale-but-PRESENT value never misses.
+`gogInstalledGamesStore.installed` after an uninstall is present-and-wrong, so no miss ever
+fires and no re-hydrate is triggered. Any fix that keys on "value absent" fixes the library
+case and leaves the uninstall case broken.
+
+**Family note.** This is the same failure shape as the `publicdir-getapppath-chunking`
+recurrences and CR-03 in this very file: the hazard was documented in-source (CR-03's
+comment describes stale-snapshot reads precisely) but the implication was generalised only
+as far as the renderer's OWN writes, never to sidecar-initiated ones.
 
 ## Symptoms
 
