@@ -158,6 +158,60 @@ snapshot with no remaining ambiguity.
 P3 is the sharpest of the four: it was predicted to be exactly zero, on the stated reasoning
 that `gog.library` initialises from the store at construction, and it was exactly zero.
 
+## CORRECTION — the invalidation mechanism DOES exist (recorded 2026-08-03, post-confirmation)
+
+**An earlier claim in this file's `confirming_evidence` is WRONG and is corrected here
+rather than edited away:**
+
+> "tauriTransport.ts:438-448 — `snapshotSet` is the only writer into `snapshot` ... **No
+> sidecar->renderer store-invalidation message exists.**"
+
+A sidecar→renderer invalidation message **does** exist: `STORE_CHANGED_CHANNEL`
+(`common/types/sidecarTransport.ts:474`), shipped as Phase 29 D-06. The renderer side is
+fully wired — `tauriTransport.ts:178-196` subscribes once (lazily, on first
+`registerStore()`) and patches the snapshot in place via the same nested path helpers the
+read side uses. `snapshotSet` is therefore NOT the only writer into `snapshot`.
+
+**The corrected root cause is narrower and more precise, and the live evidence is
+unchanged by the correction:**
+
+The D-06 mechanism covers **renderer-initiated writes only**. Its single emit site is
+`storeWriteHandlers.ts:199`, inside `applyStoreWrite()` — the handler for the
+`storeSet`/`storeDelete` RPC frames the RENDERER sends. The sidecar's own internal writes
+(`GOGLibraryManager` → `gogLibraryStore.set('games', …)` → `src/backend/cache.ts` →
+`electron-store`) never pass through `applyStoreWrite()` and emit nothing at all. So the
+renderer is never told, and its snapshot silently diverges from disk.
+
+**`storeWriteHandlers.ts`'s own file header predicted this exact failure, in writing:**
+
+> "`applyStoreWrite()` is THE single write choke point (D-06). Any future sidecar-side write
+> that bypasses this function will make the renderer's snapshot silently diverge from what
+> is actually on disk — do not add a second frontend-push call site for the
+> `STORE_CHANGED_CHANNEL` event anywhere else."
+
+Every backend store manager's write is such a bypass. The invariant was stated and then
+never enforced — the same "documented in-source but never generalized" shape as the
+`publicdir-getapppath-chunking` family and as CR-03 in `tauriTransport.ts` itself. That
+makes this the THIRD instance of that pattern in this subsystem.
+
+**What this does NOT change:** the live confirmation (P1/P3), the blast radius below, or
+the conclusion that the renderer snapshot is stale. It changes only the FIX — this is
+extending an existing, working mechanism to a second class of writer, not building a new
+one, which makes the chosen approach substantially cheaper than estimated when it was
+chosen.
+
+**Constraint the fix must respect (from the same header):** exactly ONE line in the tree may
+name `pushFrontendMessage(STORE_CHANGED_CHANNEL, …)`. Backend store writes must therefore
+reach that existing call site rather than adding a second one.
+
+**Second constraint — import hygiene.** `src/backend/cache.ts` and
+`src/backend/electron_store.ts` must not import the sidecar/IPC layer.
+`storeRegistration.ts:112` explicitly warns that pulling in `sendFrontendMessage` drags
+Electron's `app` and the logger along with it, and `electronReachLedger.test.ts` pins the
+electron-importing module count. The fix therefore needs an injected notifier: a
+dependency-free module the store classes call, wired at sidecar bootstrap to the existing
+single push site.
+
 ## Blast radius — CORRECTED AND MUCH WIDER after the confirming run
 
 The original "four boot-set cache stores" scoping was too narrow. `hydrated.add()` is called
