@@ -922,15 +922,41 @@ class GlobalState extends PureComponent<Props> {
 
     const currentLibraryLength = epic.library?.length
 
+    // Each of the four blocks below asks the same question: "is the CACHE empty, and do we
+    // therefore have to go fetch the library?" All four used to also test
+    // `!<runner>.library.length` — the length of REACT STATE — and refetch when that was
+    // empty even though the cache was full.
+    //
+    // That second clause was pure cost. React state is only written by the `setState` at
+    // the END of this same function, so on any path that deliberately empties state — most
+    // obviously a fresh login, where `gogLogin`/`completeOAuthLogin` set
+    // `{library: [], username}` before triggering this refresh — it is guaranteed empty
+    // here while the cache is already correct. The refetch then went to the network for
+    // data the very next line already had in hand.
+    //
+    // Measured (debug/resolved/gog-login-ui-never-updates.md, live log 2026-08-03):
+    // at 01:40:14 the GOG cache held 7 games and React state held 0, so this fired a full
+    // second GOG library fetch that finished at 01:40:24 — ~10 seconds, for nothing.
+    //
+    // Dropping it is safe because freshness is already guaranteed by the CALLER: the
+    // post-login path is `handleSuccessfulLogin` -> `refreshLibrary({library: runner})`,
+    // whose own `await window.api.refreshLibrary(library)` (see `refreshLibrary` below)
+    // has just repopulated the backend store — including for a DIFFERENT account than the
+    // cache previously held. A genuinely empty cache still refetches, which is the case
+    // this guard exists for.
+    //
+    // Fixed at all four call sites at once, deliberately. Three of them (epic, zoom,
+    // amazon) had no reported symptom — only GOG was diagnosed — but they are the same
+    // defect and fixing one would have left three latent.
     let epicLibrary = libraryStore.get('library', [])
-    if (epic.username && (!epicLibrary.length || !epic.library.length)) {
+    if (epic.username && !epicLibrary.length) {
       window.api.logInfo('No cache found, getting data from legendary...')
       const { library: legendaryLibrary } = await getLegendaryConfig()
       epicLibrary = legendaryLibrary
     }
 
     let gogLibrary = this.loadGOGLibrary(overrides)
-    if (gog.username && (!gogLibrary.length || !gog.library.length)) {
+    if (gog.username && !gogLibrary.length) {
       window.api.logInfo('No cache found, getting data from gog...')
       await window.api.refreshLibrary('gog')
       gogLibrary = this.loadGOGLibrary(overrides)
@@ -939,7 +965,7 @@ class GlobalState extends PureComponent<Props> {
     let zoomLibrary: GameInfo[] = []
     if (zoom.enabled) {
       zoomLibrary = this.loadZoomLibrary(overrides)
-      if (zoom.username && (!zoomLibrary.length || !zoom.library.length)) {
+      if (zoom.username && !zoomLibrary.length) {
         window.api.logInfo('No cache found, getting data from zoom...')
         await window.api.refreshLibrary('zoom')
         zoomLibrary = this.loadZoomLibrary(overrides)
@@ -947,7 +973,7 @@ class GlobalState extends PureComponent<Props> {
     }
 
     let amazonLibrary = nileLibraryStore.get('library', [])
-    if (amazon.user_id && (!amazonLibrary.length || !amazon.library.length)) {
+    if (amazon.user_id && !amazonLibrary.length) {
       window.api.logInfo('No cache found, getting data from nile...')
       await window.api.refreshLibrary('nile')
       amazonLibrary = this.loadAmazonLibrary(overrides)
