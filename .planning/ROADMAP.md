@@ -1542,7 +1542,7 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 > **What this dependency does and does not block.** The seam itself is BUILT and unit-proven — 8 of 9 of 34.4.1's plans are executed, the runner-agnostic child-window mechanism is deliberately Humble-agnostic, and 34.4.1-09 already **wired** all four OAuth runners via the new `oauthCaptureLogin` channel with a declared-blocked UI surface naming each runner's unported channel. So 34.5 may be **discussed and planned now**. What is still outstanding is 34.4.1's *live proof* (plan 08's blocking 4-item gate, plus item 3(b) already recorded BLOCKED-UNOBSERVABLE and headed for a gap cycle). 34.5 must not **ship** a real OAuth credential path on a seam whose live gate never ran.
 >
 > **Inherited obligation, not a note — `T-34.4.1-44b`.** nile and zoom capture via a **host-free param match** inherited from the Electron original. This is harmless in 34.4.1 only because the captured value is handed to a channel that rejects. **34.5 MUST host-anchor both before it mints a real credential.** Also inherited: navigation observation (NOT the cookie read) is the actual seam surface, and 34.4.1 RESEARCH Open Question 1 — in-app `on_navigation` cancellation timing — remains unobserved.
-**Plans:** 36/42 plans executed (gap cycle 5 added plans 34.5-38..42 on 2026-08-02; 34.5-38 executed 2026-08-02 — authorisation/disposition/measured-baseline record; 34.5-39 executed 2026-08-02 — item-4/item-5 gate preflight; 34.5-29/30/31 remain HALTED and superseded — see `34.5-CYCLE5-ROUTING.md`)
+**Plans:** 37/42 plans executed (gap cycle 5 added plans 34.5-38..42 on 2026-08-02; 34.5-38 executed 2026-08-02 — authorisation/disposition/measured-baseline record; 34.5-39 executed 2026-08-02 — item-4/item-5 gate preflight; 34.5-40 executed 2026-08-02 — authored `34.5-LIVE-GATE-RERUN-2.md`, the third blocking gate contract, `verdict: null`; 34.5-29/30/31 remain HALTED and superseded — see `34.5-CYCLE5-ROUTING.md`)
 3's plans 22-25 of 10 executed) — **PHASE DOES NOT CLOSE.** The blocking 5-item live gate (`34.5-15-PLAN.md`) ran
 2026-08-01 and FAILED (0/5 PASS) — see `34.5-LIVE-GATE.md` and `34.5-15-SUMMARY.md`. Gap cycle
 `34.5-16` through `34.5-18` fixed the single diagnosed root cause (a wrong `publicDir` under the
@@ -1633,7 +1633,7 @@ the transport would have produced a third FAIL for a different reason (F-34.5-G6
 
 - [x] 34.5-38-PLAN.md — Cycle-5 routing/authorisation record + the MEASURED build baseline that becomes the gate's own precondition floor (gap-5 wave 1) — `34.5-CYCLE5-ROUTING.md` authored, HEAD `c8f314205` measured live (jest 3553/3553, tsc/cargo check/cargo test/gate.py all exit 0)
 - [x] 34.5-39-PLAN.md — Re-homed 34.5-29 Tasks 2/3: verified item-4/item-5 preflight (`34.5-G6-ITEM45-PREFLIGHT.md`), incl. the login-dependency analysis that caused both prior skips (gap-5 wave 2)
-- [ ] 34.5-40-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, eleven preconditions, a Rule-3 known-holes table, and all five items (gap-5 wave 3)
+- [x] 34.5-40-PLAN.md — Author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, eleven preconditions, a Rule-3 known-holes table, and all five items (gap-5 wave 3) — DONE 2026-08-02, ships no code
 - [ ] 34.5-41-PLAN.md — **BLOCKING live gate, third run**, all five items on real hardware, verdict + four-way arithmetic (gap-5 wave 4, non-autonomous)
 - [ ] 34.5-42-PLAN.md — Propagate the verdict everywhere, resolve the untested-items ledger row by row, close the cycle (gap-5 wave 5)
 

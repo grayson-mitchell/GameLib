@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "GAP CYCLE 5 EXECUTING 2026-08-02 via `/gsd-execute-phase 34.5` -- scope is plans 34.5-38..42 ONLY, in 5 sequential waves. Plan 38 (wave 1) and plan 39 (wave 2) are now COMPLETE. Plan 39 re-homed 34.5-29's Tasks 2/3 (Task 1, the Epic UA fix, stays VOID) and produced `34.5-G6-ITEM45-PREFLIGHT.md`: re-verified GOG Alan Wake (1207659037) still installed for item 4, proved both `exe` call sites (nonesteamgame.ts:258, shortcuts.ts:227) are runner/login-independent so no fresh GOG login is needed, resolved the Steam userdata path (committed REDACTED) and confirmed shortcuts.vdf absent. For item 5, named `toggleDXVK` (AutoDXVK, invoke-kind) as the one macOS-permitted Wine action and found a NEW eligibility trap: Alan Wake's wineVersion.type is `toolkit`, which hides the toggle in the UI and short-circuits `DXVK.installRemove` before `runWineCommand` is ever reached -- a second guaranteed non-event distinct from the known VKD3D-on-macOS trap. No wine-type Wine version is downloaded on this machine (recorded as a checked prerequisite). Evaluated `sideload` as a login-independent item-5 fallback and flagged the GOG-vs-sideload target trade to plan 34.5-40 by name rather than silently substituting. Ships no code (zero .ts/.tsx/.rs diff). No new `34.5-UNTESTED-ITEMS.md` row needed -- U-34.5-02/U-34.5-03 already cover these gaps. Commits: cca3b0498 (preflight doc), b35992738 (summary). Next: plan 40 (wave 3) -- author `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`, strictly before it is run (plan 41, wave 4). Plans 34.5-29/30/31 remain DELIBERATELY EXCLUDED from this run and stay byte-unchanged. Two binding developer decisions carry in: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` authored with `verdict: null` (plan 40, wave 3) strictly before it is run (plan 41, wave 4), gate item 1 (Epic) entering as BLOCKED with the parked pre-auth 403 named as cause so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- which keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN and requires both named as known holes in the gate contract per ledger Rule 3. D-08 binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase; every closure criterion keys off the four RECORDED counters rather than presupposing non-closure. Plan checker: 0 blockers. DECISION-COVERAGE OVERRIDE still standing: D-01 and D-03 uncovered by ID across all 42 plans -- a citation-form miss, not dropped scope; recorded so verify-phase re-surfaces it."
-last_updated: "2026-08-02T08:22:15.000Z"
-last_activity: 2026-08-02 -- Phase 34.5 gap cycle 5 plan 39 complete
+stopped_at: "GAP CYCLE 5 EXECUTING 2026-08-02 via `/gsd-execute-phase 34.5` -- scope is plans 34.5-38..42 ONLY, in 5 sequential waves. Plans 38 (wave 1), 39 (wave 2) and 40 (wave 3) are now COMPLETE. Plan 40 authored `34.5-LIVE-GATE-RERUN-2.md` -- the third blocking gate contract, `verdict: null`, written strictly before any live work of that run begins, filling in nothing. Two tasks: Task 1 (frontmatter, why-this-run-exists recap of runs 1/2 and every fix landed since by plan number, D-08 restated, the T-34.5-G6-02 evidence-handling rule, a new binding-evidence rule, item 1's BLOCKED disposition with the opportunistic-attempt clause, the known-holes table naming all 11 `34.5-UNTESTED-ITEMS.md` rows, and 11 numbered preconditions -- 7 carried forward, 4 new: cycle-3 fixes present at HEAD, cycle-4 fixes present at HEAD, the dev-secret-vault arm recorded, and the item-4/5 preflight re-confirmed at gate time) and Task 2 (the five items with items 4/5 INLINING `34.5-G6-ITEM45-PREFLIGHT.md`'s verified target/redacted path/devtools invocations/Wine prerequisites, resolving the preflight's flagged GOG-vs-sideload item-5 target trade explicitly -- GOG primary if item 2 PASSes, retiring both the narrow and storefront-specific readings of Pitfall 2; sideload fallback, retiring only the narrow reading -- plus the unfilled Verdict table, four standing-claim falsification rules, and the four-way arithmetic rule). Ships no code (zero .ts/.tsx/.rs diff). Both prior gate documents (`34.5-LIVE-GATE.md`, `34.5-LIVE-GATE-RERUN.md`) and `34.5-29/30/31-PLAN.md` verified untouched. Commits: 1f4932a43 (Task 1), f81dadd9f (Task 2), 96f3a8c02 (summary). Next: plan 41 (wave 4) -- execute this contract live. Plans 34.5-29/30/31 remain DELIBERATELY EXCLUDED from this run and stay byte-unchanged. Two binding developer decisions carry in: **D-CYCLE5-A gate-first** -- `34.5-LIVE-GATE-RERUN-2.md` authored with `verdict: null` (plan 40, wave 3, DONE) strictly before it is run (plan 41, wave 4), gate item 1 (Epic) entering as BLOCKED with the parked pre-auth 403 named as cause so items 2-5 finally get a real attempt and items 4/5 their FIRST EVER. **D-CYCLE5-B the run uses `GAMELIB_DEV_SECRET_VAULT=1`** -- which keeps `U-34.5-01` (real Keychain path) and `U-34.5-10` (34.5-35's raised 45s/120s constants) OPEN, named as known holes in the gate contract per ledger Rule 3. D-08 binds unchanged: only 5 PASS / 0 FAIL / 0 BLOCKED / 0 NOT-ATTEMPTED closes the phase; every closure criterion keys off the four RECORDED counters rather than presupposing non-closure. DECISION-COVERAGE OVERRIDE still standing: D-01 and D-03 uncovered by ID across all 42 plans -- a citation-form miss, not dropped scope; recorded so verify-phase re-surfaces it."
+last_updated: "2026-08-02T21:10:00.000Z"
+last_activity: 2026-08-02 -- Phase 34.5 gap cycle 5 plan 40 complete
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 191
-  completed_plans: 176
+  completed_plans: 177
   percent: 92
 ---
 
@@ -425,7 +425,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
 Phase: 34.5 (tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc) — EXECUTING GAP CYCLE 5 (supersedes cycles 3 and 4; plans 34.5-29/30/31 stay HALTED and superseded per 34.5-38-PLAN.md's disposition — they are NOT executed by this run)
-Plan: 36 of 39 complete (plans 01–21, 32–37, 38, and 39 done; gap cycle 5 scope is 34.5-38..42 across 5 sequential waves; 29/30/31 excluded by cycle-5 routing, so the phase denominator for THIS run is 39, not 42; next up is plan 40, wave 3 — authoring `34.5-LIVE-GATE-RERUN-2.md` with `verdict: null`)
+Plan: 37 of 39 complete (plans 01–21, 32–37, 38, 39, and 40 done; gap cycle 5 scope is 34.5-38..42 across 5 sequential waves; 29/30/31 excluded by cycle-5 routing, so the phase denominator for THIS run is 39, not 42; next up is plan 41, wave 4 — executing `34.5-LIVE-GATE-RERUN-2.md` live)
 
 > **✅ GAP CYCLE 2 PLANNED 2026-07-31 — plans 21-29, 7 waves. Checker: VERIFICATION PASSED, 0 blockers.**
 > Research: `34.4.1-RESEARCH-GAP-CYCLE-2.md` (`420d02528`). Scope approved by user as FULL — all 8 items.
@@ -3621,8 +3621,35 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-08-01T11:00:00.000Z
-Stopped at: Completed 34.5-37-PLAN.md
+Last session: 2026-08-02T21:10:00.000Z
+Stopped at: Completed 34.5-40-PLAN.md
+  This session (sequential executor): executed 34.5-40 (gap cycle 5, wave 3 -- author the third
+  blocking gate contract). Task 1 (docs, commit `1f4932a43`): frontmatter (`verdict: null`), a
+  "why this run exists" recap naming every fix landed since run 2 by plan number (34.5-23, -26,
+  -27, -33, -34, -35, -36, plus the 2026-08-02 Epic post-auth exfil commit `c857ade8e`), D-08
+  restated verbatim, the T-34.5-G6-02 evidence-handling rule, a new binding-evidence rule (a
+  mutating call's own report is never proof of its effect), item 1's BLOCKED disposition with the
+  opportunistic-attempt clause from D-CYCLE5-A, a known-holes table naming all 11
+  `34.5-UNTESTED-ITEMS.md` rows (U-34.5-01/06/10/11 explicitly marked not-retirable-this-run or
+  retirable-only-together), and 11 numbered preconditions (7 carried forward, 4 new: cycle-3
+  fixes present at HEAD, cycle-4 fixes present at HEAD, the dev-secret-vault arm recorded, the
+  item-4/5 preflight re-confirmed at gate time). Task 2 (docs, commit `f81dadd9f`): the five items
+  with inlined evidence -- items 1-3 share five common clauses naming the specific terminal
+  `phase=idle (login completed, library refresh triggered)` value a PASS requires; item 2 adds the
+  cycle-4 `refreshLibrary complete`/`origin=`/two-consecutive-attempts clauses; item 3 keeps the
+  origin-mismatch three-way rule and adds the code-field-legibility and title-bar-origin-change
+  transcriptions; items 4/5 INLINE `34.5-G6-ITEM45-PREFLIGHT.md`'s verified GOG *Alan Wake*
+  target, redacted Steam userdata path, devtools invocations, and Wine prerequisites, and resolve
+  the preflight's flagged GOG-vs-sideload item-5 target trade explicitly (GOG primary, retiring
+  both readings of Pitfall 2, if item 2 PASSes; sideload fallback, retiring only the narrow
+  reading) -- plus the unfilled Verdict table, four standing-claim falsification rules, and the
+  four-way arithmetic rule. Ships no code (zero `.ts`/`.tsx`/`.rs` diff). Verified: both prior
+  gate documents and `34.5-29/30/31-PLAN.md` show zero changes in `git status --porcelain`; all
+  11 preconditions and 5 items carry empty Result slots (grep-verified). SUMMARY commit
+  `96f3a8c02`. Next: plan 41 (wave 4) -- execute this contract live.
+
+Prior session context, retained for history:
+Stopped at (superseded): Completed 34.5-37-PLAN.md
   This session (continuation executor): resumed 34.5-37 from its Task 2 checkpoint (human-verify,
   answered by the developer). Task 1 (commit `0b982d23c`, prior session) had already committed
   `34.5-G6-EPIC-DISCRIMINATOR-2.md` with `verdict: null`. Task 2 was a human checkpoint (no
