@@ -1,4 +1,11 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
@@ -12,6 +19,7 @@ import { isTauri } from '../../../preload/tauriTransport'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
+import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
@@ -75,9 +83,62 @@ export default function WebView() {
   // GlobalState.tsx's own post-login completion path (setState + handleSuccessfulLogin ->
   // refreshLibrary) -- passing it here is what makes a captured OAuth login actually refresh the
   // library instead of silently landing nowhere.
+  // True-unmount flag. NOT the same thing as the hook's own `cancelled` — see
+  // `handleTauriOAuthSuccess` below for why that distinction is the whole bug. Empty deps, so
+  // this cleanup runs on unmount ONLY, never on a dependency-identity change.
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  /**
+   * Post-login completion for the Tauri OAuth path: finish the login AND leave the login
+   * surface, which is what every other successful-login path in this file already does
+   * (`handleSuccessfulLogin` -> `navigate('/login')` for Electron's epic/gog/zoom/amazon
+   * branches; the humble watch's own `navigate('/login')` at the `status === 'done'` arm).
+   *
+   * THE BUG THIS FIXES: the Tauri path completed the login but never navigated, so the user
+   * stayed on the WebView login route staring at `TauriLoginPanel`. The panel could not
+   * recover on its own either — `useTauriOAuthLogin` routes its terminal
+   * `setState({ phase: 'idle' })` through `safeSetState`, which is gated on `!cancelled`, and
+   * a teardown lands mid-flight on this path (`phase=cancelled-midflight at=auth
+   * authStatus=done` is logged immediately before every success). So the panel stayed at
+   * `awaiting` — "Signing in to Gog" — indefinitely, while the login had in fact succeeded and
+   * the library had refreshed underneath it.
+   *
+   * Navigating rather than un-gating that state update is deliberate: `phase: 'idle'` renders
+   * the DECLARED-BLOCKED copy, so forcing the panel to idle would replace "Signing in…" with a
+   * message implying the sign-in channel is unported — a worse lie than the stuck spinner. The
+   * correct end state after a successful login is not a better panel, it is not being on the
+   * login page at all.
+   *
+   * Guarded by `mountedRef`, NOT by the hook's `cancelled`, mirroring the humble watch's own
+   * "a late resolution after the route unmounted must not navigate" rule. The two are not
+   * interchangeable: `cancelled` means "this effect instance was superseded", which is TRUE on
+   * every successful login here while the user is still sitting on the route. Gating on it
+   * would reintroduce the exact bug.
+   *
+   * Stable identity via `useCallback` over two stable inputs — `completeOAuthLogin` is a
+   * GlobalState class field and `navigate` is stable in react-router v6 — because
+   * `onLoginSuccess` is one of `useTauriOAuthLogin`'s effect dependencies. A wrapper that
+   * changed identity per render would re-run the capture effect on every render.
+   */
+  const handleTauriOAuthSuccess = useCallback(
+    (payload: OAuthLoginCompletionPayload) => {
+      completeOAuthLogin(payload)
+      if (mountedRef.current) {
+        navigate('/login')
+      }
+    },
+    [completeOAuthLogin, navigate]
+  )
+
   const oauthLoginState = useTauriOAuthLogin(
     runner as OAuthRunner | undefined,
-    completeOAuthLogin
+    handleTauriOAuthSuccess
   )
 
   let lang = i18n.language
