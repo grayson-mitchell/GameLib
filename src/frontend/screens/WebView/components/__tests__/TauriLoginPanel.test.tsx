@@ -52,6 +52,23 @@ function collectText(node: unknown): string {
   return ''
 }
 
+// Quick task 260803-eee: walks the same element graph as collectText, gathering every
+// `props.className` found so the spinner's presence can be asserted without a DOM.
+function collectClassNames(node: unknown): string[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return []
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap(collectClassNames)
+  }
+  if (typeof node === 'object' && node !== null && 'props' in node) {
+    const props = (node as AnyReactElement & { props?: { className?: unknown } }).props
+    const own = typeof props?.className === 'string' ? [props.className] : []
+    return [...own, ...collectClassNames(props?.children)]
+  }
+  return []
+}
+
 describe('TauriLoginPanel — Humble in-progress surface', () => {
   it('renders in-progress copy and never the word "unavailable"', () => {
     const element = TauriLoginPanel({ runner: 'humble' }) as AnyReactElement
@@ -111,6 +128,62 @@ describe('TauriLoginPanel — OAuth declared-blocked surface (D-04)', () => {
 
     expect(text).toContain('the sign-in channel')
     expect(text).toContain('Phase 34.5')
+  })
+})
+
+describe('TauriLoginPanel — finalizing surface [quick task 260803-eee]', () => {
+  it.each(['legendary', 'gog', 'nile', 'zoom'])(
+    'runner=%s renders "Finalizing" + the runner label, a spinner element, and never the blocked copy',
+    (runner) => {
+      const element = TauriLoginPanel({
+        runner,
+        state: { phase: 'finalizing', runner: runner as never }
+      }) as AnyReactElement
+      const text = collectText(element)
+      const runnerLabel = runner.charAt(0).toUpperCase() + runner.slice(1)
+
+      expect(text).toContain('Finalizing')
+      expect(text).toContain(runnerLabel)
+      expect(text).not.toContain('Phase 34.5')
+      expect(text).not.toContain('not wired up')
+      expect(text.toLowerCase()).not.toContain('sign-in window has opened')
+
+      const classNames = collectClassNames(element)
+      expect(classNames).toContain('WebView__unavailablePanel-spinner')
+    }
+  )
+
+  it('{ phase: "awaiting" } still renders the byte-identical original copy, distinct from finalizing', () => {
+    const element = TauriLoginPanel({
+      runner: 'gog',
+      state: { phase: 'awaiting' }
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Signing in to Gog')
+    expect(text).toContain('A sign-in window has opened.')
+    expect(text).not.toContain('Finalizing')
+    const classNames = collectClassNames(element)
+    expect(classNames).not.toContain('WebView__unavailablePanel-spinner')
+  })
+
+  it('the declared-blocked default (state undefined) is unchanged: same text, same single logInfo call', () => {
+    mockApi.logInfo.mockClear()
+    const element = TauriLoginPanel({ runner: 'gog' }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Phase 34.5')
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs one [TauriLoginPanel] runner=<runner> phase=finalizing line', () => {
+    mockApi.logInfo.mockClear()
+    TauriLoginPanel({ runner: 'gog', state: { phase: 'finalizing', runner: 'gog' } })
+
+    expect(mockApi.logInfo).toHaveBeenCalledTimes(1)
+    const [message] = mockApi.logInfo.mock.calls[0]
+    expect(message).toContain('runner=gog')
+    expect(message).toContain('phase=finalizing')
   })
 })
 

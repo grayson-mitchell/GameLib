@@ -30,3 +30,29 @@
     display: none;
   }
 }
+
+/*
+ * Quick task 260803-eee: TauriLoginPanel's "finalizing" surface renders from the early return at
+ * WebView/index.tsx line ~540 -- OUTSIDE the `.WebView` wrapper above (which only appears in the
+ * later return). A rule nested under `.WebView` would never match, so this stays top level.
+ * `gamelibFinalizingSpin` is a distinct keyframes name -- `@keyframes refreshing` is already
+ * global via UpdateComponent/index.css, and keyframes names are not scoped.
+ */
+.WebView__unavailablePanel-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto var(--space-md);
+  border: 3px solid var(--text-default);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: gamelibFinalizingSpin 0.8s linear infinite;
+}
+
+@keyframes gamelibFinalizingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

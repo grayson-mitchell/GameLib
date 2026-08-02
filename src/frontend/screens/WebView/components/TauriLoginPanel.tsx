@@ -109,6 +109,40 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     )
   }
 
+  if (state && phase === 'finalizing') {
+    // Quick task 260803-eee: the popup just closed and the token exchange is in flight (roughly
+    // 5-27 s). Prefer the runner carried on the state itself (set alongside `phase`) over the
+    // separately-passed `runner` prop, mirroring the `blocked` branch below -- the state is the
+    // single source of truth for which runner this transient phase belongs to.
+    const finalizingRunnerLabel = state.runner
+      ? state.runner.charAt(0).toUpperCase() + state.runner.slice(1)
+      : runnerLabel
+    const heading = t(
+      'webview.login.oauth.finalizing.heading',
+      finalizingRunnerLabel
+        ? `Finalizing sign-in with ${finalizingRunnerLabel}…`
+        : 'Finalizing sign-in…'
+    )
+    const body = t(
+      'webview.login.oauth.finalizing.body',
+      'Sign-in captured. Completing the exchange with the store — this can take a few seconds.'
+    )
+    window.api.logInfo(
+      `[TauriLoginPanel] runner=${state.runner} phase=finalizing`
+    )
+    return (
+      <div className="WebView__unavailablePanel">
+        <div
+          className="WebView__unavailablePanel-spinner"
+          role="progressbar"
+          aria-hidden="true"
+        />
+        <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
+        <p className="WebView__unavailablePanel-body">{body}</p>
+      </div>
+    )
+  }
+
   if (phase === 'cancelled') {
     const heading = t(
       'webview.login.oauth.cancelled.heading',
