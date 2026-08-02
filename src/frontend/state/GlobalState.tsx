@@ -930,10 +930,25 @@ class GlobalState extends PureComponent<Props> {
     }
 
     let gogLibrary = this.loadGOGLibrary(overrides)
+    // TEMPORARY DIAGNOSTIC — remove before merge.
+    // debug/gog-login-ui-never-updates.md: splits "the sidecar->renderer store push never
+    // landed" from "the push landed and the defect is downstream in React state". These
+    // two counts are exactly that discriminator: `store` is what the renderer's snapshot
+    // returns for gog_library.games RIGHT NOW; `state` is what React is holding.
+    window.api.logInfo(
+      `[diag] loadGOGLibrary store=${gogLibrary.length} state=${
+        gog.library?.length ?? 'nil'
+      } username=${gog.username ? 'set' : 'unset'}`
+    )
     if (gog.username && (!gogLibrary.length || !gog.library.length)) {
       window.api.logInfo('No cache found, getting data from gog...')
       await window.api.refreshLibrary('gog')
       gogLibrary = this.loadGOGLibrary(overrides)
+      // TEMPORARY DIAGNOSTIC — remove before merge. Post-refresh re-read: if the push
+      // works at all, it has had a full backend round-trip to arrive by now.
+      window.api.logInfo(
+        `[diag] loadGOGLibrary after refresh store=${gogLibrary.length}`
+      )
     }
 
     let zoomLibrary: GameInfo[] = []
