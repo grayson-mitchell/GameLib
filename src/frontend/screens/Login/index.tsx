@@ -21,6 +21,7 @@ import SIDLogin from './components/SIDLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
+import { isTauri } from '../../../preload/tauriTransport'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
@@ -162,9 +163,21 @@ export default React.memo(function NewLogin() {
               isLoggedIn={isEpicLoggedIn}
               user={epic.username}
               logoutAction={epic.logout}
-              alternativeLoginAction={() => {
-                setShowSidLogin(true)
-              }}
+              // F-34.5-G6-01 (2026-08-03): under Tauri, Epic's embedded WebKit login hits
+              // Epic's Talon anti-bot 403 (see debug file `descriptor_findings_2026_08_03T09_00_00`),
+              // so SIDLogin (real system browser) is the PRIMARY tile there, while the embedded
+              // login stays reachable as the "Alternative Login Method" tile for continued 403
+              // experimentation. Under Electron `isTauri()` is false: primaryLoginAction is
+              // undefined (primary tile navigates to the embedded route as before) and the
+              // alternative tile is SIDLogin -- identical to the original behavior.
+              primaryLoginAction={
+                isTauri() ? () => setShowSidLogin(true) : undefined
+              }
+              alternativeLoginAction={
+                isTauri()
+                  ? () => navigate(epicLoginPath)
+                  : () => setShowSidLogin(true)
+              }
               disabled={oldMac}
             />
             <Runner

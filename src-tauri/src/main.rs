@@ -1381,6 +1381,12 @@ const EPIC_LOGIN_HOST: &str = "www.epicgames.com";
 /// SAME per-line-balanced-`"`-count discipline `longRunningChannels.test.ts`'s WR-08
 /// stripper-integrity guard requires (`reveal_post_script`'s own doc comment explains this
 /// guard in full).
+///
+/// PENDING REMOVAL -- after SIDLogin pivot is live-verified (F-34.5-G6-01, OPTION 1,
+/// 2026-08-03): this script only matters for Epic's embedded-webview login window, which
+/// becomes permanently unreachable for Epic under Tauri once that pivot is confirmed live.
+/// Left in place, behavior unchanged, until that live verification closes this cycle's
+/// checkpoint -- comment only, do not remove yet.
 fn epic_oauth_redirect_observer_script(exfil_host: &str) -> String {
     let exfil_host_js = serde_json::to_string(exfil_host)
         .unwrap_or_else(|_| "\"gamelib-oauth-redirect.invalid\"".to_string());
@@ -1419,6 +1425,106 @@ fn epic_oauth_redirect_observer_script(exfil_host: &str) -> String {
     );
     template.replace("@@EXFIL_HOST@@", &exfil_host_js)
 }
+
+/// Builds the PRODUCTION (never `#[cfg(debug_assertions)]`-gated) Epic-login structural-
+/// fingerprint shim (pre-auth 403 investigation, 2026-08-03, F-34.5-G6-01 -- a SEPARATE
+/// candidate from `epic_oauth_redirect_observer_script` above, which addresses the POST-AUTH
+/// silent-navigation-refusal defect; this shim addresses the PRE-AUTH Talon anti-bot 403,
+/// unrelated code, deliberately named and shaped differently so a future live-test result can
+/// be attributed to ONE of the two, never both at once). Injected ONLY into Epic's own login
+/// window (host check at the call site, via `EPIC_LOGIN_HOST`/`is_epic_login`, not here) as an
+/// `initialization_script()` -- fires before Epic's own bundle, and before this file's OWN
+/// `epic_oauth_redirect_observer_script` runs too has no bearing either way since both scripts
+/// are independent and idempotent.
+///
+/// Corrects exactly the two structural candidates the 2026-08-03 3-arm control test (Tauri vs
+/// Electron vs Safari.app, `.planning/debug/epic-login-non-interactive.md`, Evidence
+/// 2026-08-03T01:00:00) found SURVIVING as unique to Tauri's WKWebView:
+///
+/// 1. `window.outerWidth`/`window.outerHeight` read `0` under WKWebView (no OS window-chrome
+///    concept), vs real non-zero values in both control arms. Mirrored to `innerWidth`/
+///    `innerHeight` via `Object.defineProperty` (NOT naive assignment -- these read as
+///    getters here, a plain `window.outerWidth = ...` would silently no-op).
+///
+/// 2. `window.alert`/`window.confirm` are reassigned by `tauri_plugin_dialog::init()`
+///    (`main.rs:3086`) to IPC-routed functions -- `confirm` specifically declared as an
+///    `async function`, which the real `window.confirm` DOM API can never be. Confirmed by
+///    direct read of the vendored `tauri-plugin-dialog` crate's own `init-iife.js` AND of
+///    `tauri-2.11.5/src/manager/webview.rs`'s `prepare_pending_webview`: plugin init scripts
+///    run BEFORE any per-window `initialization_script()` call (`all_initialization_scripts`
+///    is built from Tauri-internal + plugin scripts FIRST, then
+///    `webview_attributes.initialization_scripts` -- this window's own additions -- is
+///    appended after). There is NO per-window opt-out for a registered plugin's init script,
+///    so THIS script cannot prevent the clobber, only correct its externally-visible shape
+///    AFTER the fact: it patches `Function.prototype.toString` (via a `WeakMap`, the standard
+///    technique this exact class of fingerprint-evasion code elsewhere also uses) so that
+///    `window.alert`/`window.confirm` -- whatever they currently are -- report
+///    `function alert() { [native code] }` / `function confirm() { [native code] }` when
+///    stringified, matching what a real, unmodified browser reports. This changes ONLY the
+///    functions' `.toString()` IDENTITY, never their actual behavior -- neither function's
+///    real (IPC-routed) call path is touched, so nothing that currently depends on that path
+///    elsewhere in the app is affected. Known, undesigned residual gap, recorded honestly: a
+///    check of `window.confirm.constructor.name` (rather than `.toString()`) would still read
+///    `AsyncFunction` -- not patched this cycle (see the debug file's
+///    `reasoning_checkpoint_2026_08_03T02_00_00`, `blind_spots`, for why).
+///
+/// PURELY ADDITIVE / fail-closed, mirroring both `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` and
+/// `epic_oauth_redirect_observer_script`'s own non-interference discipline: every block is
+/// independently try/caught so one failing property patch cannot take down the page or the
+/// other patch. Touches no request/response, no cookie, no credential-shaped value, no
+/// network primitive (`fetch`/`XMLHttpRequest`) at all -- entirely orthogonal to
+/// `epic_oauth_redirect_observer_script`'s `window.fetch` wrapping, hence the two remain
+/// independently attributable if a future live test clears the 403.
+///
+/// Built as a plain `concat!` `&'static str` (no `exfil_host`/runtime substitution needed,
+/// unlike `epic_oauth_redirect_observer_script` above) -- every JS string literal uses single
+/// quotes exclusively, satisfying `longRunningChannels.test.ts`'s WR-08 per-line-balanced-`"`-
+/// count guard the same way `epic_oauth_redirect_observer_script`'s own template does.
+///
+/// PENDING REMOVAL -- after SIDLogin pivot is live-verified (F-34.5-G6-01, OPTION 1,
+/// 2026-08-03): this shim only matters for Epic's embedded-webview login window, which
+/// becomes permanently unreachable for Epic under Tauri once that pivot is confirmed live.
+/// Left in place, behavior unchanged, until that live verification closes this cycle's
+/// checkpoint -- comment only, do not remove yet.
+const EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT: &str = concat!(
+    "(function() { ",
+    "try { ",
+    "try { ",
+    "Object.defineProperty(window, 'outerWidth', { ",
+    "get: function () { return window.innerWidth; }, ",
+    "configurable: true ",
+    "}); ",
+    "} catch (eOuterW) {} ",
+    "try { ",
+    "Object.defineProperty(window, 'outerHeight', { ",
+    "get: function () { return window.innerHeight; }, ",
+    "configurable: true ",
+    "}); ",
+    "} catch (eOuterH) {} ",
+    "try { ",
+    "var nativeToStringFn = Function.prototype.toString; ",
+    "var fakeNativeMap = new WeakMap(); ",
+    "function markAsNative(fn, name) { ",
+    "try { ",
+    "if (typeof fn === 'function') { ",
+    "fakeNativeMap.set(fn, 'function ' + name + '() { [native code] }'); ",
+    "} ",
+    "} catch (eMark) {} ",
+    "return fn; ",
+    "} ",
+    "Function.prototype.toString = function () { ",
+    "try { ",
+    "if (fakeNativeMap.has(this)) { return fakeNativeMap.get(this); } ",
+    "} catch (eHas) {} ",
+    "return nativeToStringFn.call(this); ",
+    "}; ",
+    "markAsNative(Function.prototype.toString, 'toString'); ",
+    "markAsNative(window.alert, 'alert'); ",
+    "markAsNative(window.confirm, 'confirm'); ",
+    "} catch (eDialog) {} ",
+    "} catch (eOuterCatch) {} ",
+    "})();"
+);
 
 /// Classifies a raw `keyring` crate outcome (`Entry::new(...).and_then(|e| e.get_password())`)
 /// into the arm's `Value`/`String` contract (34.4.1 gap cycle 2 plan 26, F-9 observability
@@ -1973,6 +2079,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     .user_agent(user_agent)
                     .visible(visible)
                     .on_navigation(move |nav_url| {
+                        // PENDING REMOVAL once the SIDLogin pivot (F-34.5-G6-01, OPTION 1,
+                        // 2026-08-03) is live-verified: this Epic-specific
+                        // `OAUTH_REDIRECT_EXFIL_HOST` match arm becomes permanently-inert dead
+                        // code once Epic stops using this embedded login window at all. Left
+                        // unchanged (behavior-identical) this cycle -- only a comment was added.
+                        // A future cleanup cycle must remove only this match arm's body, not
+                        // the `.on_navigation` registration itself (still needed by whatever
+                        // other mechanism, if any, relies on it for a different host).
                         if nav_url.host_str() == Some(OAUTH_REDIRECT_EXFIL_HOST) {
                             if let Some((_, payload)) =
                                 nav_url.query_pairs().find(|(k, _)| k == "data")
@@ -2094,6 +2208,20 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 builder = builder.initialization_script(epic_oauth_redirect_observer_script(
                     OAUTH_REDIRECT_EXFIL_HOST,
                 ));
+            }
+            // Epic pre-auth structural-fingerprint shim (pre-auth 403 investigation,
+            // 2026-08-03, F-34.5-G6-01): a SEPARATE, independently-attributable production
+            // script from the one immediately above -- see `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`'s
+            // own doc comment for the full mechanism and the two structural candidates it
+            // corrects (outerWidth/outerHeight == 0; alert/confirm non-native `.toString()`
+            // shape from `tauri_plugin_dialog`). Gated by the SAME `is_epic_login` check --
+            // this fix is scoped to Epic's own login window only, never the app's own "main"
+            // window (which legitimately relies on `tauri_plugin_dialog`'s native-dialog IPC
+            // bridge and must keep its real, unmodified shape). IMPLEMENTED BUT NOT
+            // LIVE-VERIFIED this cycle -- see the debug file's
+            // `reasoning_checkpoint_2026_08_03T02_00_00` and Resolution entries.
+            if is_epic_login {
+                builder = builder.initialization_script(EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT);
             }
             let page_load_origin = Arc::clone(&current_origin);
             let window = builder
@@ -4082,6 +4210,73 @@ mod tests {
         let exfil_call_index = script.rfind("exfil(report)").unwrap();
         let last_await_index = script.rfind("await ").unwrap();
         assert!(exfil_call_index > last_await_index);
+    }
+
+    // ---- EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT (pre-auth 403 investigation, 2026-08-03,
+    // F-34.5-G6-01) ----
+    //
+    // Static/compile-time proof only, per this project's own F-10 lesson ("a green test suite
+    // confirmed nothing about a live-only defect") -- these tests pin the SHAPE of the script,
+    // never that it actually clears the live Talon 403. That is the separate, owed live
+    // checkpoint.
+
+    #[test]
+    fn epic_login_fingerprint_shim_script_mirrors_outer_dimensions_to_inner_via_defineproperty()
+    {
+        let script = EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT;
+        // Naive assignment (`window.outerWidth = ...`) would silently no-op on some engines --
+        // this pins that the fix uses `Object.defineProperty`, matching the reasoning
+        // checkpoint's own stated mechanism.
+        assert!(script.contains("Object.defineProperty(window, 'outerWidth'"));
+        assert!(script.contains("Object.defineProperty(window, 'outerHeight'"));
+        assert!(script.contains("return window.innerWidth;"));
+        assert!(script.contains("return window.innerHeight;"));
+        assert!(script.contains("configurable: true"));
+    }
+
+    #[test]
+    fn epic_login_fingerprint_shim_script_patches_function_prototype_tostring_not_the_dialog_ipc_call_path(
+    ) {
+        let script = EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT;
+        // Pins that the fix targets `.toString()` IDENTITY only -- it must never reassign
+        // `window.alert`/`window.confirm` to a NEW function (that would touch the real,
+        // IPC-routed call path other code may depend on); it only marks the EXISTING
+        // (already-clobbered-by-the-dialog-plugin) functions as native-looking.
+        assert!(script.contains("Function.prototype.toString = function"));
+        assert!(script.contains("markAsNative(window.alert, 'alert')"));
+        assert!(script.contains("markAsNative(window.confirm, 'confirm')"));
+        assert!(script.contains("[native code]"));
+        assert!(!script.contains("window.alert = "));
+        assert!(!script.contains("window.confirm = "));
+    }
+
+    #[test]
+    fn epic_login_fingerprint_shim_script_is_purely_additive_and_every_block_is_try_caught() {
+        let script = EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT;
+        // Mirrors DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT/epic_oauth_redirect_observer_script's own
+        // non-interference discipline: a failing property patch must never take down the
+        // page or the sibling patch.
+        assert!(script.contains("catch (eOuterW)"));
+        assert!(script.contains("catch (eOuterH)"));
+        assert!(script.contains("catch (eDialog)"));
+        assert!(script.contains("catch (eOuterCatch)"));
+        // Never touches network primitives -- orthogonal to epic_oauth_redirect_observer_script.
+        assert!(!script.contains("fetch"));
+        assert!(!script.contains("XMLHttpRequest"));
+    }
+
+    #[test]
+    fn epic_login_fingerprint_shim_script_is_never_debug_gated_and_contains_no_double_quotes() {
+        // This const must NOT be `#[cfg(debug_assertions)]` -- unlike
+        // DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT, this is a production fix, not a diagnostic. There
+        // is no direct way to assert an absent cfg attribute from within the const's own
+        // value, so this test instead pins the WR-08-safe construction (every JS string
+        // literal uses single quotes only, matching `epic_oauth_redirect_observer_script`'s
+        // own convention) -- a `"` anywhere in this constant's JS body would either break the
+        // surrounding Rust string literal at compile time (caught by `cargo check` already) or
+        // trip `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard.
+        let script = EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT;
+        assert!(!script.contains('"'));
     }
 
     // ---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----

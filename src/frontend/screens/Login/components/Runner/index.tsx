@@ -17,6 +17,14 @@ interface RunnerProps {
   alternativeLoginAction?: () => any
   buttonText: string
   disabled: boolean
+  // Epic-under-Tauri SIDLogin pivot (F-34.5-G6-01, 2026-08-03): when provided, the primary
+  // tile invokes this action instead of navigating to `loginUrl`. Epic under Tauri passes
+  // SIDLogin here (system-browser auth, the working path) so the primary tile is SIDLogin,
+  // while the embedded WebKit login stays reachable via the "Alternative Login Method" tile
+  // (for continued 403 experimentation). Optional and defaults to undefined for every runner
+  // that does not pass it, so existing behavior is unchanged for any runner that omits it.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  primaryLoginAction?: () => any
 }
 
 export default function Runner(props: RunnerProps) {
@@ -45,6 +53,13 @@ export default function Runner(props: RunnerProps) {
 
   function handleLogin() {
     if (props.disabled) {
+      return
+    }
+
+    if (props.primaryLoginAction) {
+      // F-34.5-G6-01: the primary tile runs a custom action instead of navigating to the
+      // embedded route (Epic under Tauri routes it to SIDLogin, the working path).
+      props.primaryLoginAction()
       return
     }
 

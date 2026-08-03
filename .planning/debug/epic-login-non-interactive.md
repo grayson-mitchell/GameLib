@@ -1,5 +1,5 @@
 ---
-status: post_auth_fix_implemented_static_only_live_gate_owed
+status: resolved_pending_cleanup_sidlogin_pivot_live_verified_pre_auth_2026_08_03_f_34_5_g6_01_and_phase_34_5_remain_open_two_reconciliation_items_owed_deferred_dead_code_removal_and_34_5_untested_items_ledger_edit
 root_cause_scope: |
   SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the
   POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized
@@ -14,7 +14,7 @@ root_cause_scope: |
   `pending_question`, for the live test that resolves this before implementation proceeds.
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-02T20:00:00
+updated: 2026-08-03T17:00:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -2691,7 +2691,275 @@ finding: F-34.5-G6-01
     dispatch and design only, per this file's raw-evidence-first discipline. Current Focus below
     pre-registers the branches for when it lands.
 
+- timestamp: 2026-08-03T01:00:00
+  source: developer checkpoint response (this cycle) — raw Electron-arm fingerprint dump, run
+    inside the WORKING/UNBLOCKED Electron login `<webview>` on the identical property list used
+    for the 17:00:00 Tauri-vs-Safari.app diff (dispatched 18:00:00, result landed this cycle)
+  note: |
+    RAW DUMP (JSON.stringify return value; a console.log-based variant of the same script printed
+    nothing useful in this webview's devtools, so a return-value variant was substituted, script
+    otherwise identical to the 18:00:00 dispatch):
+    ```
+    webdriver: false | plugins: 5 | mimeTypes: 2 | pdfViewerEnabled: true
+    langs: ["en-GB","en-NZ"] | hardwareConcurrency: 10 | maxTouchPoints: 0
+    vendor: "Google Inc." | screen: [3440,1440,3440,1410,24] | outer: [3440,1440]
+    inner: [2164,1160] | dpr: 1.2000000476837158 | hasSafari: false | hasChrome: true
+    notifNative:   "function Notification() { [native code] "
+    alertNative:   "function alert() { [native code] }"
+    confirmNative: "function confirm() { [native code] }"
+    fetchNative:   "function(...re){const{method:ne,url:oe}="
+    xhrNative:     "function(...ne){const oe=this[SENTRY_XHR"
+    ```
+    Dump taken on the Epic page loaded in the Electron login webview, prior to any credential
+    submission; whether an Epic login form was visible on screen at dump time was not reported.
+
+    CROSS-MACHINE CAVEAT, recorded honestly: `hardwareConcurrency` (10 here vs 8 in the
+    17:00:00 Tauri/Safari.app run), and `screen`/`outer`/`dpr` (3440x1440 @ 1.2 here vs
+    1470x956/1470x923 @ 2 there) do not match the 17:00:00 run's machine/display profile at all.
+    This dump was almost certainly captured on different hardware/display than the same-machine,
+    same-session Tauri-vs-Safari.app comparison. This confounds any property whose raw MAGNITUDE
+    is inherently hardware/display-dependent (`hardwareConcurrency`, `langs`, absolute `screen`
+    values, `dpr`) for a naive value-equality comparison — see interpretation in Current Focus for
+    how this is handled without discarding the structurally-meaningful properties (zero-vs-nonzero
+    `outer`, native-vs-wrapped `notifNative`/`alertNative`/`confirmNative`) that do NOT depend on
+    raw magnitude and are therefore NOT confounded by the machine difference.
+
+    SOURCE-LEVEL CHECK (this cycle, static read only, no rebuild): read
+    `epic_oauth_redirect_observer_script` in full (`src-tauri/src/main.rs:1384-1421`). It wraps
+    ONLY `window.fetch` (never `XMLHttpRequest`), is applied as a Tauri `initialization_script`
+    (document-start, before Epic's page JS runs), and its wrapper attaches a `.then()`/`.catch()`
+    to EVERY fetch response (acting only on `status===200 && pathname==='/id/api/redirect'`,
+    an early no-op return otherwise). Also confirmed `tauri_plugin_dialog::init()` is registered
+    in `main()` (`main.rs:3086`) and is the source of the `alertNative`/`confirmNative`
+    "plugin:dialog|message" IPC-routed overrides seen in the Tauri dump (`confirmNative` being
+    reassigned to an `async function` is this plugin's doing, not Epic's or Talon's) — a DIFFERENT
+    plugin than `tauri_plugin_notification` (already eliminated as sole cause, R3, 2026-08-01).
+
+- timestamp: 2026-08-03T04:00:00
+  source: fresh logged-out Epic login, `pnpm tauri:dev`, EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT in
+    place (live test the 2026-08-03T02:30:00 checkpoint asked for), console relayed by the
+    session coordinator with an accompanying TRIAGE (verified point-by-point below rather than
+    accepted at face value)
+  note: |
+    RAW LOG (as relayed):
+    ```
+    [Error] Refused to connect to ipc://localhost/plugin%3Anotification%7Cis_permission_granted ...
+    [Error] Viewport argument key "minimal-ui" not recognized and ignored. (login, line 6)
+    [Warning] IPC custom protocol failed, Tauri will now use the postMessage interface instead –
+      TypeError: Load failed (user-script:23, line 106)
+    TypeError: Load failed
+    [Error] Unhandled Promise Rejection: notification.is_permission_granted not allowed on window
+      "loginwin-0-18c8259ec45f2580-a839aa9b" ...
+    [Warning] Parsing application manifest ... start_url origin differs from document origin
+    [Warning] "[Statsig]" ... "accountportal_-_fe_test" (index-BMTfSvFa.js line 501)
+    [Error] Source Map loading errors (x13)
+    [Error] Failed to load resource: 403 (13 distinct *.js.map files, including LoginPage-*,
+      EpicLogo-*, ModalBasePage-*, Divider-*, TrackedListItemButton-*, disney-logo-small-*)
+    [Debug] undefined
+    [Error] Blocked a frame with origin "https://newassets.hcaptcha.com" from accessing a frame
+      with origin "https://www.epicgames.com" ...
+    [Warning] window.styleMedia is a deprecated draft version of window.matchMedia API
+    [Error] Failed to load resource: 429 (envelope)
+    [Warning] Inter-*.woff2 / InterTight-*.woff2 preloaded but not used (x6)
+    [Error] Failed to load resource: the server responded with a status of 403 () (exists, line 0)
+    ```
+
+    VERIFICATION OF EACH TRIAGE CLAIM (against this file's own recorded history, not accepted on
+    relay alone):
+
+    (1) `.js.map` 403s as noise: CONFIRMED, and NOT new — the file already established this at
+    Evidence 2026-08-02T00:20:00 ("[seven *.js.map 403s — Epic does not serve maps publicly;
+    confirmed benign in a prior cycle]"). Today's count is 13, not 7 — six MORE map files
+    404/403'd than that read, and the six new names (`LoginPage-*`, `EpicLogo-*`,
+    `ModalBasePage-*`, `Divider-*`, `TrackedListItemButton-*`, `disney-logo-small-*`) are
+    plainly UI-component chunk names, not infra chunks. This is corroborating evidence that MORE
+    of the login page's component tree loaded/mounted this run than in the 2026-08-02T00:20:00
+    read (which had `{"inputs":0,"forms":0,"iframes":[]}` — an empty DOM). The specific
+    cross-machine ask ("does Electron also 403 these") remains UNVERIFIED by this cycle —
+    I cannot drive a live Electron arm myself. Folded into the checkpoint below as optional,
+    not asserted as fact.
+
+    (2) `429 (envelope)` as Sentry rate-limiting: CONFIRMED as an EXISTING, already-recorded
+    finding, not new inference — Evidence 2026-08-02T00:20:00 item (3): "`envelope` (Sentry's
+    error-ingest endpoint) returned 429 — rate-limited, meaning enough error reports were sent in
+    a short window to trip Sentry's own rate limiter." Today's single 429 (vs a prior read that
+    paired it with proof of repeated internal throws) is consistent with this same mechanism,
+    not evidence of a new one.
+
+    (3) `403 (exists)` = `/id/api/email/exists` as the real blocker: PARTIALLY VERIFIABLE from
+    this file alone. This exact endpoint is independently named in `root_cause_scope`
+    (frontmatter) as the trigger's own reference point ("HTTP 403 at `/id/api/email/exists`"),
+    so its appearance here is consistent with the SAME defect this whole thread investigates,
+    not a new one. What IS new relative to the last full-DOM read (2026-08-02T00:20:00,
+    `{"inputs":0,"forms":0,"iframes":[]}`, zero DOM to interact with): today's log shows an
+    hCaptcha frame (`newassets.hcaptcha.com`) present and blocked from cross-origin frame access
+    — this could not happen if the DOM were still empty, since there is no iframe to be blocked
+    from accessing anything. Combined with (1)'s extra UI-component chunk 403s, this is
+    consistent with the page rendering FURTHER than the 2026-08-02 baseline. It is NOT confirmed
+    that the actual email/password fields were visible and interactive — no DOM dump
+    (`{"inputs":...}`) was captured this run, and the developer was not asked this directly.
+    Treated as an OPEN QUESTION for the checkpoint, not assumed either way, per instruction.
+
+    (4) Notification-plugin CSP/IPC errors as a resurrection of R3 with a NEW mechanism: see the
+    new Eliminated entry and Current Focus reasoning below for the full comparison against R3's
+    actual falsification text. Short version: the two console lines named here (CSP refusal +
+    unhandled rejection) are NOT new — they are the SAME two lines the file already recorded at
+    Evidence 2026-08-02T00:20:00 and explicitly noted as "expected to be present again" (plugin
+    registration was reverted after the R3 removal test). What the coordinator is actually
+    pointing at is a DIFFERENT claim than "these two lines cause the symptom" (already killed) —
+    it is "the mere presence of Tauri's IPC/plugin JS surface in this webview is itself a
+    Talon-visible automation signal," which is a genuinely distinct, previously untested
+    mechanism (see below).
+
+    (5) `user-script:23, line 106` attribution: DETERMINED, with high confidence, via direct
+    source read this cycle (not guessed). Both `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (this
+    cycle's own shim, `main.rs:1477-1515`) and `epic_oauth_redirect_observer_script`
+    (`main.rs:1384-1421`, the post-auth fix) are built via Rust `concat!` of many
+    space-terminated fragments with NO embedded `\n` — each compiles to a SINGLE line of JS.
+    Neither contains the substring "postMessage" or "IPC custom protocol" anywhere (grepped
+    `main.rs` directly — the only occurrence of that phrase in the whole file is inside a DOC
+    COMMENT at line 470-471, referencing this very defect, not inside any script literal). The
+    dev-only `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` (332 lines, the one multi-line app script that
+    COULD in principle produce a "line 106" location) is gated OFF by default
+    (`GAMELIB_LOGIN_DIAG=1` required, unset by default) and also contains no matching text.
+    Both plugin init scripts (`tauri-plugin-notification-2.3.3` and `tauri-plugin-dialog-2.7.2`
+    `init-iife.js`) are single-line minified bundles with no matching text either. The ONLY
+    matching, multi-line candidate is Tauri's own core transport script,
+    `tauri-2.11.5/scripts/ipc-protocol.js` (91 raw lines; contains the exact string "IPC custom
+    protocol failed, Tauri will now use the postMessage interface instead" at its own line 61) —
+    this file already source-traced this EXACT warning to this EXACT file in the
+    2026-08-02T18:00:00+ cycle (item 3 in that entry: "traced to its exact source,
+    `tauri-2.11.5/scripts/ipc-protocol.js` (read in full, 92 lines)"), where it first appeared
+    at `user-script:103, line 106` — SAME "line 106" as today's `user-script:23, line 106`. The
+    line-number match across two different `user-script` ordinal indices, combined with today's
+    IIFE-single-line ruling-out of all three app-authored scripts, is strong (not merely
+    circumstantial) confirmation this is the SAME Tauri-internal script both times, not a defect
+    in this cycle's own shim. The `103 -> 23` ordinal SHIFT is most plausibly explained by the
+    two runs' login-window labels: 2026-08-02's read was `loginwin-4-*` (5th login window opened
+    in that app session), today's is `loginwin-0-*` (1st window in a fresh session) — if
+    WebKit's `user-script:N` numbering accumulates per-process (across every webview the app has
+    ever created in that run, not reset per-window), a first-window session naturally starts
+    from a lower baseline than a fifth-window session. This explanation is PLAUSIBLE and
+    consistent with all available evidence but not verified against WebKit's own internal
+    numbering scheme (undocumented at this level) — recorded honestly as the most likely
+    explanation, not a certainty. CONCLUSION: this cycle's own shim is NOT the script throwing;
+    no self-inflicted defect from this cycle's fix is indicated by this line.
+
+- timestamp: 2026-08-03T05:00:00
+  source: session coordinator relay, developer correction to the 2026-08-03T04:00:00 checkpoint's
+    own instruction (that checkpoint explicitly asked the developer to leave `GAMELIB_LOGIN_DIAG`
+    unset for the fresh logged-out run; the developer has now reported that instruction was NOT
+    followed)
+  note: |
+    MATERIAL CONFOUND, recorded honestly before any further interpretation is trusted:
+    `GAMELIB_LOGIN_DIAG=1` WAS actually set on the exact live run that produced Evidence
+    2026-08-03T04:00:00 (the run with the interactive-looking form + `403 (exists)` on submit,
+    `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` in place). This matters mechanically, not just
+    procedurally: per the gate at `main.rs` (`if visible && std::env::var("GAMELIB_LOGIN_DIAG")
+    .as_deref() == Ok("1")`, confirmed opt-in/default-OFF, see Evidence 2026-08-02T17:00:00 PART C
+    and the 2026-08-02T15:00:00+ region), setting this var turns ON
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` -- a 332-line document-start `initialization_script` that
+    wraps `window.fetch`/`XMLHttpRequest.prototype.send`/`navigator.sendBeacon`. This file has
+    LONG carried `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s own fetch-wrapping as an unresolved suspect
+    for the pre-auth 403 in its own right (see `epic_oauth_redirect_observer_script_unresolved_by
+    _this_test`, Evidence 2026-08-03T01:00:00, reasoning about a STRUCTURALLY DIFFERENT but
+    mechanistically ANALOGOUS fetch-wrapper, `epic_oauth_redirect_observer_script` -- the same
+    class of concern applies at least as strongly to `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`, which is
+    older, larger, and wraps MORE surfaces: fetch, XHR, AND sendBeacon).
+
+    CONSEQUENCE FOR EVIDENCE 2026-08-03T04:00:00's INTERPRETATION: that run's `403 (exists)`
+    result is CONFOUNDED, not clean. It does NOT, by itself, cleanly establish that
+    `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (outerWidth/outerHeight/alertNative/confirmNative) is
+    insufficient to prevent the 403 -- the diagnostic script's own fetch-wrapping was ALSO active
+    and is an independently-suspected confound on the exact same request path
+    (`/id/api/email/exists`, POST). It likewise does NOT cleanly point at the Tauri IPC surface
+    (`hypothesis_new` in Current Focus) either, for the identical reason: a known, unrelated
+    fetch-wrapping suspect was live during the same observation. Neither conclusion in either
+    direction may be drawn from this run alone. A clean re-run with `GAMELIB_LOGIN_DIAG` EXPLICITLY
+    UNSET is required before trusting this run's `403 (exists)` result as evidence either for or
+    against the fingerprint-shim-sufficiency question or the new IPC-surface hypothesis.
+
+    NOT AFFECTED BY THIS CONFOUND, stands as previously recorded: the `user-script:23, line 106`
+    -> Tauri core `tauri-2.11.5/scripts/ipc-protocol.js` attribution (Evidence 2026-08-03T04:00:00,
+    item 5) -- that attribution was derived from static source comparison of script byte-shape
+    (single-line IIFE vs. multi-line), not from anything `GAMELIB_LOGIN_DIAG`'s state could alter,
+    and is independent of whether the diagnostic script was itself injected.
+
+    DEVELOPER DECISION THIS CYCLE (relayed): proceed with OPTION B from the 2026-08-03T04:00:00
+    checkpoint (test the new Tauri-IPC-surface hypothesis via a 3-arm elimination dump, same
+    discipline as the outerWidth/alertNative/confirmNative dump) -- but SEQUENCED after a clean
+    re-run of the fresh logged-out Epic login with `GAMELIB_LOGIN_DIAG` explicitly unset, since
+    this confound must be resolved first. If the 403 does NOT reproduce with DIAG off, that is
+    itself a major finding (implicates `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s own fetch-wrapping,
+    not the IPC surface or residual fingerprint tells) and would need to be reported and weighed
+    before the 3-arm IPC dump is even the right next question. See Current Focus (superseding
+    block, this timestamp) for the full checkpoint issued to the developer.
+
+- timestamp: 2026-08-03T06:00:00
+  source: session coordinator relay, live hardware, `env -u GAMELIB_LOGIN_DIAG pnpm tauri:dev` --
+    the coordinator verified `GAMELIB_LOGIN_DIAG` ABSENT from the running process environment
+    directly (Rust shell pid, sidecar pid, tauri-dev pid all inspected, not user self-report) --
+    this is the clean re-run required by the 2026-08-03T05:00:00 confound entry's
+    `required_sequencing` step (a)
+  note: |
+    CLEAN REPRO, DE-CONFOUNDED: a fresh logged-out Epic login was attempted with
+    `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` verifiably OFF (`GAMELIB_LOGIN_DIAG` absent from the actual
+    running environment, not merely "not exported by the developer" -- this closes the exact gap
+    the 04:00:00 run left open). Incidental and unrelated to this test: `GAMELIB_DEV_SECRET_VAULT=1`
+    was present, expected, explains the absence of a Keychain prompt this run.
+
+    RESULT, user's report verbatim: "ok, done, with 403". The pre-auth `403 (exists)` on email
+    submit at `/id/api/email/exists` STILL FIRES with the diagnostic fetch-wrapper OFF.
+
+    CONSEQUENCE 1 -- `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s fetch/XHR/sendBeacon wrapping is
+    EXONERATED as the cause of THIS 403: the 403 reproduces identically with that specific wrapper
+    verifiably absent from the page. See Eliminated, this timestamp, for the formal entry. This is
+    a real elimination -- cite this run for it.
+
+    CONSEQUENCE 2 -- NUANCE, do not overclaim: this WEAKENS but does NOT fully kill the standing,
+    separately-recorded worry that document-start fetch-wrapping IN GENERAL is Talon's trigger. The
+    diagnostic script was the most aggressive wrapper in play (three surfaces: fetch, XHR,
+    sendBeacon) and removing it changed nothing -- that is real signal. But two other wrappers were
+    STILL present and active during this exact run and are UNADDRESSED by this test:
+    `epic_oauth_redirect_observer_script` (the post-auth fix's own fetch wrapper, added in
+    `c857ade8e`) and Epic's own Sentry SDK wrapper (`SENTRY_XHR`, confirmed present across all
+    control arms per the DIAGNOSTIC-INSTRUMENTATION-AS-SIGNAL elimination, Eliminated section
+    below). "Fetch-wrapping in general is harmless" is NOT proven by this run -- only that removing
+    the diagnostic's specific wrapper did not clear the 403.
+
+    CONSEQUENCE 3 -- retroactive consistency: the prior (DIAG-ON) 04:00:00 run's `403 (exists)`
+    result is now RETROACTIVELY CONSISTENT with this clean run -- same failure, same endpoint, same
+    point in the flow -- so the confound did not, in the end, change the outcome. This means:
+    - `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (outerWidth/outerHeight/alertNative/confirmNative)
+      remains exactly as previously scoped: necessary-but-not-sufficient (Eliminated,
+      `reasoning_checkpoint_2026_08_03T02_00_00` entry above/below) -- this run neither
+      strengthens nor weakens that finding; it was orthogonal to the diagnostic-script variable.
+    - The Tauri IPC-surface hypothesis (`hypothesis_new`, recorded 04:00:00) is UNCHANGED in
+      status by this result specifically -- it remains the leading live candidate, neither newly
+      confirmed nor newly elevated. This run answers ONE question (was the diagnostic script the
+      confound?) and answers it: no. It does not itself test the IPC-surface hypothesis.
+
+    SCOPE: this run isolates and answers the diagnostic-script confound specifically -- nothing
+    more, nothing less. Step (b) of `required_sequencing` (the 3-arm IPC-surface dump) is now
+    unblocked and confirmed as the correct next question; see Current Focus, this timestamp.
+
 ## Eliminated
+
+- hypothesis: `alertNative`/`confirmNative` (window.alert/window.confirm `.toString()` shape) as
+  a currently-live Talon signal.
+  eliminated_by: fresh 3-arm dump, 2026-08-03T07:00:00 (Tauri/Electron/Safari.app), coordinator-
+    relayed.
+  note: |
+    CONFIRMED FIXED, not merely "was already handled." All three arms now read
+    `function alert() { [native code] }` / `function confirm() { [native code] }` identically.
+    This is `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`'s `Function.prototype.toString` WeakMap patch
+    (Resolution -- PRE-AUTH structural-fingerprint fix, `fix_pre_auth_fingerprint` item 2)
+    holding under live conditions for the first time -- previously only static-verified
+    (`verification_pre_auth_fingerprint`). Does NOT mean the pre-auth 403 itself is fixed (see
+    the 2026-08-03T04:00:00/06:00:00 blocks: the shim is necessary-but-not-sufficient, the 403
+    still fired with the shim in place). Do not re-open alert/confirm toString as a candidate
+    without new evidence the patch stopped applying (e.g. a future Tauri/plugin upgrade changing
+    injection order).
 
 - hypothesis: ITP/third-party-storage sub-hypothesis — WKWebView's default third-party-cookie
   blocking (Intelligent Tracking Prevention) silently stalls a cross-origin captcha/fingerprint/
@@ -2975,7 +3243,1455 @@ finding: F-34.5-G6-01
     instrumentation-as-cause framing for this 403 without new evidence specifically implicating the
     diagnostic wrapper under a condition neither refutation covered.
 
+    UPDATE 2026-08-03: a THIRD independent control arm (Electron login `<webview>`, Evidence
+    2026-08-03T01:00:00) reinforces Refutation 2 — Electron's `fetchNative`/`xhrNative` carry the
+    identical Sentry-wrapper signature too. Three arms (Tauri-blocked, Safari.app-unblocked,
+    Electron-unblocked) now all show the same wrapped-fetch/XHR signature; this is Epic's own
+    Sentry SDK on every arm regardless of block status. Does NOT extend to the NEW production
+    `epic_oauth_redirect_observer_script` (added in `c857ade8e`, AFTER this refutation's evidence
+    was captured) — see the 2026-08-03T01:00:00+ Current Focus block for why that script is a
+    separate, still-open question this refutation does not resolve.
+
+- hypothesis: `webdriver`/`plugins`/`mimeTypes`/`pdfViewerEnabled`/`maxTouchPoints`/`langs`/
+  `hardwareConcurrency`/`vendor`/`screen`/`dpr`/`hasChrome`/`hasSafari` — any ONE of these
+  JS-observable fingerprint properties is, by itself, sufficient for Talon to block the pre-auth
+  Tauri arm.
+  eliminated_by: 3-arm control comparison (Tauri=blocked, Safari.app=unblocked same-machine/session
+    per Evidence 2026-08-02T17:00:00 PART B, Electron=unblocked per Evidence 2026-08-03T01:00:00).
+  note: |
+    FALSIFIED for each of these properties INDIVIDUALLY, by the same logic the 2026-08-02T18:00:00
+    block pre-registered: a property cannot be Talon's sole signal if its Tauri (blocked) value is
+    ALSO present in at least one UNBLOCKED control arm. Applying this per-property, using BOTH
+    unblocked controls (not just Electron), each of these is eliminated because Tauri's own value
+    is shared by at least one unblocked arm:
+    - `webdriver`(false), `plugins`(5), `mimeTypes`(2), `pdfViewerEnabled`(true),
+      `maxTouchPoints`(0): identical across all three arms.
+    - `langs`(`["en-NZ"]`), `hardwareConcurrency`(8), `vendor`(`"Apple Computer, Inc."`),
+      `screen`(`[1470,956,1470,923,24]`), `dpr`(2): identical Tauri vs Safari.app, same
+      machine/session — Electron's differing raw values here are a cross-machine artifact (see
+      2026-08-03T01:00:00's cross-machine caveat) and irrelevant to this elimination, which already
+      holds on the Safari.app match alone.
+    - `hasChrome`(false): identical Tauri vs Safari.app (both false), Electron's `true` irrelevant.
+    - `hasSafari`(false): identical Tauri vs Electron (both false) — despite differing from real
+      Safari's `true`, an UNBLOCKED arm (Electron) shares Tauri's exact value, so `hasSafari:false`
+      alone cannot be sufficient for blocking.
+
+    `inner` (window content-area dimensions) is NOT treated as a candidate at all — it legitimately
+    varies by window size in every real browser and carries no fixed engine-identity meaning, unlike
+    `outer` (see the surviving candidate below).
+
+- hypothesis: `reasoning_checkpoint_2026_08_03T02_00_00` — correcting `window.outerWidth`/
+  `outerHeight` (0 -> mirrored to inner) and `window.alert`/`confirm`'s non-native `.toString()`
+  shape, alone, is SUFFICIENT to clear the pre-auth Talon 403 at `/id/api/email/exists` (and/or
+  `/v1/init`).
+  eliminated_by: live hardware, fresh logged-out Epic login, `pnpm tauri:dev`,
+    EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT in place, Evidence 2026-08-03T04:00:00.
+  note: |
+    FALSIFIED AS SUFFICIENT, per this hypothesis's own pre-registered falsification test
+    (`reasoning_checkpoint_2026_08_03T02_00_00`, `falsification_test`: "If the 403 ...still
+    occurs identically ... after both properties are corrected, this hypothesis is FALSIFIED").
+    The final line of today's console is `[Error] Failed to load resource: the server responded
+    with a status of 403 () (exists, line 0)` — `/id/api/email/exists`, the same Talon-gated
+    endpoint this investigation's `root_cause_scope` already names. The 403 did NOT clear with
+    the shim in place. The two corrected properties were either not load-bearing for Talon's
+    decision at all, or necessary-but-not-sufficient (some other signal — TLS/JA3, header
+    ordering, the still-separately-open Tauri-IPC-surface lead below, or something not yet
+    found — also has to change before the 403 clears).
+
+    PARTIAL EFFECT, characterized honestly and NOT claimed as a win for the shim: today's log
+    shows MORE of the login page rendered than the 2026-08-02T00:20:00 baseline read (13 vs 7
+    component-chunk 403s including plainly UI-named chunks; an hCaptcha iframe present and
+    blocked from cross-origin frame access, where the baseline read had zero iframes; an actual
+    `/id/api/email/exists` call attempted, where the baseline read had zero DOM inputs/forms to
+    drive such a call from). This COULD mean the shim measurably improved page bootstrap
+    progress even though it did not clear the 403 — but this is AMBIGUOUS, not confirmed: no
+    controlled A/B (shim off vs shim on, same session, same conditions) was run this cycle, the
+    two reads are two days apart with unknown other intervening changes, and the "further
+    rendering" could equally be explained by something else entirely (a different Epic-side
+    A/B bucket, a warmed CDN/cache state, timing, or the extra scripts this cycle added
+    changing script-injection order in a way unrelated to the two targeted properties). Do NOT
+    read this as "the shim is a partial success" without a dedicated, controlled follow-up test.
+    Do NOT revert or remove the shim — it corrects two independently real, structurally-provable
+    fingerprint signals regardless of whether they turn out to be THE load-bearing one, and
+    removing it would only reintroduce known-bad structural signals with no offsetting benefit.
+
+- hypothesis: "`DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s fetch/XHR/sendBeacon wrapping (the 332-line,
+  opt-in, `GAMELIB_LOGIN_DIAG`-gated document-start diagnostic script) is a SOLE or NECESSARY cause
+  of the pre-auth `/id/api/email/exists` 403."
+  eliminated_by: clean, de-confounded live re-run, `env -u GAMELIB_LOGIN_DIAG pnpm tauri:dev`,
+    `GAMELIB_LOGIN_DIAG` verified ABSENT from the actual running process environment by the
+    session coordinator directly (not user self-report), Evidence 2026-08-03T06:00:00.
+  note: |
+    FALSIFIED for necessity. The pre-auth 403 reproduces identically with this script's
+    fetch/XHR/sendBeacon wrapping verifiably absent from the page -- the wrapper is not required
+    for the block to occur. This is a distinct, additionally-verified confirmation of the same
+    directional conclusion already reached via an A/B toggle in the DIAGNOSTIC-INSTRUMENTATION-
+    AS-SIGNAL entry above (Evidence 2026-08-02T17:00:00 PART A) -- that entry's refutation is NOT
+    superseded or weakened by this one. This entry adds an independently-derived confirmation using
+    direct process-environment verification (coordinator-inspected, not developer self-report)
+    rather than a same-build A/B toggle, and exists specifically to close the confound raised at
+    Evidence 2026-08-03T05:00:00 (where the developer's self-reported "left it unset" turned out to
+    be wrong for the prior run).
+
+    SCOPE NOTE, do not overextend: this does NOT establish that fetch-wrapping in general is
+    harmless to this flow. `epic_oauth_redirect_observer_script` (the post-auth fix's own wrapper,
+    `c857ade8e`) and Epic's own Sentry SDK wrapper (`SENTRY_XHR`) were BOTH still present and active
+    during this exact clean run and remain UNADDRESSED by this specific test. Only the diagnostic
+    script's own wrapper is exonerated here as THIS 403's cause. Does not change the status of the
+    Tauri IPC-surface hypothesis (`hypothesis_new`, Current Focus 04:00:00 block) or the fingerprint
+    shim's necessary-but-not-sufficient status (entry above) -- both stand exactly as previously
+    scoped.
+
 ## Current Focus
+
+<!-- SUPERSEDING BLOCK 2026-08-03T10:00:00 -- USER DECISION RECEIVED: PIVOT TO SIDLOGIN (option
+     ii from the 09:00:00 checkpoint). This cycle (1) records the pivot as the pre-auth path's
+     established resolution direction WITHOUT closing F-34.5-G6-01/Phase 34.5, and (2) plans the
+     pivot's routing/viability/cleanup/verification in detail from real source reads. NO CODE
+     CHANGED THIS CYCLE -- planning + re-issued CHECKPOINT (decision) only, per explicit
+     instruction. Everything below this block, including the 09:00:00/08:00:00/... blocks, remains
+     HISTORICAL/authoritative context this block acted on -- nothing reverted; the throwaway
+     diagnostic and both Epic-only production scripts remain untouched in source. Read THIS block
+     first. -->
+
+pivot_decision_recorded_2026_08_03T10_00_00: |
+  User decision, relayed via session coordinator, dated 2026-08-03: "lets pivot to sidlogin for
+  epic" -- option (ii) from `recommendation_2026_08_03T09_00_00`, chosen over option (i) (one more
+  live reassignment iteration) and option (iii) (Tauri/wry source-level patch/fork).
+
+established_resolution_direction_pre_auth_2026_08_03T10_00_00: |
+  Recorded here as the finding's established root-cause-for-the-embedded-path + chosen resolution
+  direction. This EXTENDS `root_cause_pre_auth_fingerprint`/`recommendation_2026_08_03T09_00_00`
+  below -- does NOT overwrite or blend with the POST-AUTH `Resolution.root_cause`/`Resolution.fix`
+  entry (silently-refused WKWebView navigation, Evidence 2026-08-02T05:05:00), which is a separate,
+  already-implemented-but-not-live-verified fix for a different defect in the same flow.
+
+  To the extent this investigation can determine: Talon (Epic's anti-bot service) rejects the
+  Epic login page under Tauri with a pre-auth HTTP 403 because the WKWebView carries
+  Tauri-injected global surface (`window.isTauri`, `window.__TAURI_INTERNALS__`, `window.ipc`, six
+  `window.__TAURI_PLUGIN_*` keys, `window.__TAURI__`/`window.__TAURI_IIFE__`) that is entirely
+  absent from the two arms proven interactive (Electron's `<webview>`, Safari.app) -- see
+  `descriptor_findings_2026_08_03T09_00_00` for the full primary-source citation chain.
+  `window.isTauri` -- Tauri's own literal, purpose-built "is this page running inside Tauri" flag
+  -- is the single most plausible detection target, and is PROVEN, both by direct primary-source
+  descriptor reads (`tauri-2.11.5/src/manager/webview.rs:168-170`,
+  `Object.defineProperty(window, 'isTauri', { value: true })`, no `writable`/`configurable`
+  specified -> both default `false`) AND by this cycle's own live diagnostic
+  (`tauriInternalsGone:false`, `isTauriGone:false`, `ipcGone:false` despite the script's own
+  delete-then-reassign attempt against all three) to be PERMANENTLY UNMASKABLE from page JS --
+  `delete` fails, reassignment fails, and a `Proxy` cannot help either (spec-mandated invariants
+  for a non-configurable/non-writable data property, AND no mechanism for page JS to make another
+  script's `window` reference transparently pass through a proxy of our construction). THEREFORE:
+  the seamless embedded-webview Epic login CANNOT be fixed from the JS layer under Tauri. This is
+  the practical ceiling of this investigation's JS-layer approach, not a claim that Talon's exact
+  check is confirmed -- nothing here identifies which specific propert(ies) Talon actually reads,
+  only that the most purpose-fit candidate is unfixable regardless.
+
+  CHOSEN ROUTE-AROUND: SIDLogin (auth via the user's real system browser, never a WKWebView),
+  structurally immune to this entire class of JS-surface fingerprinting because Talon never sees
+  a WKWebView-shaped `window` object during that flow at all.
+
+  EXPLICIT NON-CLOSURE: this pivot decision does NOT close `F-34.5-G6-01` or Phase 34.5, and does
+  NOT retire any `34.5-UNTESTED-ITEMS.md` row. The pivot must still be IMPLEMENTED and
+  LIVE-VERIFIED end-to-end (see `live_verification_requirements_2026_08_03T10_00_00` below) before
+  anything closes. This file's `status` frontmatter reflects "pivot decided, plan drafted, pending
+  implementation + live verification" -- deliberately not any value implying closure.
+
+post_auth_live_gate_flagged_for_reconciliation_2026_08_03T10_00_00: |
+  NAMING, NOT DROPPING: the separately-owed post-auth live-gate checkpoint (Resolution.verification
+  above, "WHAT WAS NOT PROVEN" -- FIX DESIGN branch-A step (4): a fresh logged-out Epic login
+  completes, AND an already-authenticated session's redirect is captured via
+  `epic_oauth_redirect_observer_script`/the `on_navigation` exfil intercept, AND library refresh
+  triggers; tracked by `U-34.5-06` and `U-34.5-11` in
+  `.planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/
+  34.5-UNTESTED-ITEMS.md`) is now LIKELY MOOT FOR EPIC SPECIFICALLY if the embedded Epic login is
+  being abandoned in favor of SIDLogin -- there would be no more embedded Epic session for that
+  exfil mechanism to ever capture a redirect from. This is flagged explicitly for reconciliation,
+  NOT silently marked resolved and NOT silently dropped: `U-34.5-06`/`U-34.5-11` remain OPEN rows
+  in the ledger, untouched by this cycle. Whether they get formally retired as
+  "N/A -- superseded by SIDLogin pivot" or kept open pending a final decision on whether the
+  embedded Epic path survives as a fallback (see routing option 2 below) is itself part of what
+  the routing decision in this checkpoint needs to settle -- this cycle does not decide it
+  unilaterally. GOG/Amazon/Zoom/Humble's own post-auth capture verification is UNAFFECTED either
+  way -- `epic_oauth_redirect_observer_script` and the `OAUTH_REDIRECT_EXFIL_HOST` intercept are
+  Epic-only (confirmed by source read this cycle, see `cleanup_scope_proposal` below); no other
+  runner's login flow depends on them.
+
+routing_investigation_2026_08_03T10_00_00: |
+  Re-verified from the ACTUAL current source this cycle (not trusted from the 07:00:00 block's
+  citation):
+
+  - `src/frontend/screens/Login/index.tsx:157-169` (Epic's `Runner` tile): `loginUrl={
+    epicLoginPath}` (`epicLoginPath = '/loginweb/legendary'`) is the PRIMARY action --
+    `Runner/index.tsx`'s `handleLogin()` does `navigate(props.loginUrl)` on click,
+    UNCONDITIONALLY (no `isTauri()` gate at all today). `alternativeLoginAction={() =>
+    setShowSidLogin(true)}` is the SECONDARY action, rendered by `Runner/index.tsx` as a second,
+    visually distinct "Alternative Login Method" tile shown only when `alternativeLoginAction` is
+    passed AND `!isLoggedIn` -- Epic is the ONLY runner given this prop today (GOG/Amazon/Zoom/
+    Steam/Humble tiles have no `alternativeLoginAction`, so they never render a second tile).
+    CONFIRMED, re-read this cycle: line numbers and behavior match the 07:00:00 block's citation
+    exactly.
+  - `/loginweb/legendary` resolves through `frontend/screens/WebView/index.tsx` +
+    `useTauriOAuthLogin.ts` + `loginRoutes.ts` (`EPIC_LOGIN_URL` constant, `isLoginPathname()`) --
+    this is the SAME shared `TauriLoginPanel`/`humble_login_open` machinery GOG (`/loginweb/gog`),
+    Amazon/nile (`/loginweb/nile`), Zoom (`/loginweb/zoom`), and Humble (`/loginweb/humble`) all
+    route through too (`loginRoutes.ts`'s `LOGIN_PATHNAMES` list, all 5 `/loginweb/*` entries plus
+    2 legacy paths). Confirms the shared-vs-Epic-only split at the ROUTING layer, not just the
+    Rust-arm layer already established below.
+  - Today, under Tauri, an Epic user hits the KNOWN-BROKEN embedded path FIRST (primary tile) and
+    only discovers the working SIDLogin path via the secondary "Alternative Login Method" tile --
+    the opposite of what the pivot should produce.
+
+  THREE ROUTING OPTIONS, with tradeoffs (not a unilateral choice -- see CHECKPOINT):
+
+  OPTION 1 -- SIDLogin becomes Epic's ONLY path under Tauri (embedded hidden for Epic, Tauri only;
+  Electron's Epic tile stays exactly as-is, since Electron's embedded Epic login is E1-proven
+  interactive). Mechanism: gate `Login/index.tsx`'s Epic `Runner` props on `isTauri()` (imported
+  from `preload/tauriTransport`, the SAME established import this codebase already uses at
+  `WebView/index.tsx:557`/`useTauriOAuthLogin.ts:155` -- reusing the proven gate, not inventing a
+  new one, given this project's own recorded `isTauri()` stale-guard gotcha, phase 34.4 gate item
+  2). Under Tauri: Epic's tile would pass `loginUrl` unused/inert or repoint `alternativeLoginAction`
+  as the ONLY action (needs a small `Runner` prop-shape decision -- e.g. an `onClick` override, or
+  simply always calling `alternativeLoginAction` when `isTauri()` is true for Epic). Pros: no
+  Tauri user ever hits the guaranteed-403 path; enables full removal of the three Epic-only
+  scripts + the exfil intercept once shipped. Cons: largest of the three changes; touches
+  `Runner`'s generic prop contract (shared by all 6 runners) to add Epic+Tauri-specific behavior,
+  raising re-regression risk for the other 5 tiles if done carelessly; loses the embedded path as
+  a fallback entirely (no escape hatch if SIDLogin's `legendary.gl/epiclogin` page itself ever
+  breaks).
+
+  OPTION 2 -- SIDLogin becomes the DEFAULT/PRIMARY tile under Tauri, embedded kept as a SECONDARY
+  "Alternative Login Method" fallback (i.e., swap which action is primary vs alternative for Epic,
+  Tauri only; Electron unchanged). Mechanism: same `isTauri()` gate, smaller surface -- swap which
+  callback `Runner`'s primary `onClick` invokes for Epic specifically under Tauri, keep
+  `alternativeLoginAction` wired to the embedded flow instead of removing it. Pros: smallest,
+  least risky change (one conditional swap, not a new prop shape); keeps a fallback route alive
+  if SIDLogin's own external page ever changes; the recommendation's own phrasing ("small, scoped
+  frontend change") most closely matches this option's size. Cons: a Tauri user can still click
+  the demoted "alternative" tile and hit the guaranteed-403 embedded path -- confusing, not fixed,
+  just deprioritized; does not, by itself, retire the Epic-only Rust scripts or resolve the
+  post-auth live-gate reconciliation question above (embedded Epic path still technically live and
+  reachable).
+
+  OPTION 3 -- status quo, relabeled as deliberate (do not change which tile is primary). NOT
+  RECOMMENDED: every Tauri user would keep hitting the guaranteed-broken primary path first, which
+  is the exact problem the pivot exists to solve. Listed for completeness, not as a real
+  candidate.
+
+  This cycle does not choose between options 1/2 -- see CHECKPOINT below.
+
+sidlogin_under_tauri_viability_2026_08_03T10_00_00: |
+  Checked the ACTUAL code path end-to-end this cycle, not assumed from the component rendering
+  (per this project's own repeated Tauri-vs-Electron surprises --
+  `navigator.clipboard`/`queryLocalFonts`/`safeStorage` precedent):
+
+  1. `SIDLogin/index.tsx`'s "open the login page" buttons call `loginPage()`
+     (`frontend/helpers/index.ts:35`, `const loginPage = window.api.openLoginPage`). Traced to
+     `src/backend/sidecar/shellFilesFlowRegistration.ts:174` (`ipcMain.on('openLoginPage', ...)`,
+     Phase 34.3, already-ported channel) -> `openUrlOrFile(epicLoginUrl)`
+     (`src/backend/utils.ts:418-423`) -> `shell.openExternal(url)`. Under the Tauri sidecar,
+     `shell` is `src/backend/sidecar/electronStub.ts:525-527`'s real stub:
+     `openExternal: async (url) => { transport?.openExternal(url) }` -- forwards to the Rust
+     `open_external` command (`src-tauri/src/main.rs:380`), which calls
+     `tauri_plugin_opener::OpenerExt`'s real opener plugin (a maintained, genuine
+     "open in the OS default handler" mechanism -- the same plugin used for `steam://` links per
+     the doc comment at `main.rs:11`). CONFIRMED: this is a real Tauri-side implementation, not a
+     hollow/no-op stub of the kind this project has hit before (`nativeImage`, `safeStorage`).
+     `loginPage()` genuinely opens the user's system browser under Tauri.
+  2. `handleCopyLink`/the paste-back input use `window.api.clipboardWriteText`/
+     `window.api.clipboardReadText` (`SIDLogin/index.tsx:31,137`) -- NOT bare `navigator.clipboard`,
+     which this project's own memory records as silently no-op-ing under WKWebView
+     (`navigator-clipboard-noops-under-tauri.md`). SIDLogin already uses the correct,
+     already-fixed wrapper API -- no new gap here, and this is independent confirmation the
+     component was built (or already patched) with the Tauri clipboard gotcha in mind.
+  3. `handleLogin(sid)` calls `epic.login(sid)` (`GlobalState.tsx:624`, `epicLogin`) ->
+     `window.api.login(sid)` -> traced to `src/backend/sidecar/runnerAuthFlowRegistration.ts:136`
+     (`ipcMain.handle('login', ...)`, already-ported channel, validates `sid` is a non-empty
+     string then calls) -> `LegendaryUser.login(sid)` -- the REAL, pre-existing legendary auth
+     path, unchanged, not a stub. `getUserInfo()` (called on success) is likewise already ported
+     (`runnerAuthFlowRegistration.ts:122`).
+
+  CONCRETE GAPS FOUND: NONE. Every link in SIDLogin's chain (open system browser -> user pastes
+  SID -> `epic.login(sid)` -> `LegendaryUser.login`) resolves to a genuinely-ported, real Tauri
+  implementation, confirmed by reading the actual sidecar registration + Rust command + backend
+  function, not inferred from the TypeScript being present. Stated honestly: this is a STATIC
+  confirmation only (source reads, not a live run) -- it rules out the *known class* of
+  Tauri-silent-stub gap this project has hit three times before, but a live run is still the only
+  real proof per this project's own F-10 lesson (a green suite/clean static trace has been wrong
+  before). No gap of that kind was found this cycle; that is not the same as "guaranteed to work
+  live."
+
+cleanup_scope_proposal_2026_08_03T10_00_00: |
+  Gating verified directly from `src-tauri/src/main.rs` this cycle (lines 2150-2157, 2192-2366):
+  `humble_login_open` is explicitly documented in its own body comment as "this runner-agnostic
+  arm" -- SHARED, single Rust match arm used by Epic, GOG, Amazon/nile, Zoom, AND Humble's login
+  windows alike (confirmed independently at the frontend routing layer too, see
+  `routing_investigation` above -- all 5 `/loginweb/*` paths funnel through the same
+  `TauriLoginPanel`/`useTauriOAuthLogin` machinery). `is_epic_login = url.host_str() ==
+  Some(EPIC_LOGIN_HOST)` (line 2157) is a per-window runtime boolean computed once per login
+  window open, checked against the validated open URL's host -- it is `false` for every
+  non-Epic runner's window, unconditionally.
+
+  DEFINITELY REMOVE (regardless of routing option chosen):
+  - `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` (`main.rs` ~1583-1641) and its injection at
+    `main.rs:2365-2366` (`if is_epic_login { builder = builder.initialization_script(
+    EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT) }`) -- already labeled THROWAWAY at build time,
+    Epic-only AND additionally `#[cfg(debug_assertions)]`-gated (confirmed: the injection itself
+    is not further gated in the snippet read, but the diagnostic's own eprintln markers inside the
+    shared `on_navigation` closure are `#[cfg(debug_assertions)]`, e.g. lines 2206-2209,
+    2211-2214, 2224-2227, all additionally `if is_epic_login`). This was never a candidate for
+    keeping -- remove alongside its labeled markers once the pivot supersedes the question it was
+    built to answer.
+
+  EPIC-SPECIFIC, BECOME DEAD CODE ONCE THE PIVOT LANDS (removable once Epic stops using the
+  embedded webview for login; NOT removable yet -- the embedded path is still the only live path
+  until the routing option ships and is verified):
+  - `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (`main.rs`, injected at line ~2351-2352, gated
+    `if is_epic_login` only, no debug gate -- a real production script today). Confirmed
+    Epic-only by the same `is_epic_login` gate; confirmed inert for every other runner (their
+    windows never reach this branch's `true` arm).
+  - `epic_oauth_redirect_observer_script` (`main.rs`, injected at line ~2335-2336, gated
+    `if is_epic_login` only). Same confirmation: Epic-only, inert elsewhere.
+  - The `.on_navigation` exfil-intercept closure's `OAUTH_REDIRECT_EXFIL_HOST` match arm
+    (`main.rs:2196-2230`-ish): the closure itself is attached UNCONDITIONALLY to the shared arm
+    (not gated by `is_epic_login`), but its exfil-match body only ever fires for
+    `OAUTH_REDIRECT_EXFIL_HOST`, a host distinct from `REVEAL_EXFIL_HOST` and one no other
+    runner's page will ever navigate to (per the fix's own `Resolution.fix` doc comment,
+    Resolution section above). Once Epic stops using this window entirely, this arm becomes
+    permanently-inert dead weight -- safe to remove, but its removal must be scoped carefully
+    since the closure is textually shared plumbing (the `.on_navigation` REGISTRATION itself, not
+    just this one match arm, sits in the shared builder chain) -- a future implementation cycle
+    must remove only the Epic-specific match arm and its debug-log lines, not the closure
+    registration if any other mechanism still needs `.on_navigation` for a different host.
+
+  EXPLICITLY SHARED -- DO NOT TOUCH, regardless of pivot outcome:
+  - The `humble_login_open` Rust match arm itself, `WebviewWindowBuilder`, `.on_page_load(...)`
+    hook, `next_login_window_label()`, `LOGIN_WINDOW_EVENTS`/`push_login_window_event`, the
+    `current_origin`/title-tracking mechanism (anti-phishing, T-34.5-G6-39), and the `.theme(...)`
+    light-interface-style call -- ALL used by GOG/Amazon/Zoom/Humble's still-needed login flows.
+  - `frontend/screens/WebView/index.tsx`, `useTauriOAuthLogin.ts`, `loginRoutes.ts`'s
+    `LOGIN_PATHNAMES`/`isLoginPathname()` and the GOG/ZOOM_LOGIN_URL constants -- shared routing
+    infrastructure for the other 4 runners.
+  - `EPIC_LOGIN_URL` (`loginRoutes.ts:45`) and `matchOAuthRedirect` -- under the STANDING
+    CONSTRAINT (unchanged this cycle and not proposed for change even in a future cycle without a
+    separate, explicit decision): even if routing OPTION 1 is chosen and Epic's embedded tile is
+    hidden under Tauri, `EPIC_LOGIN_URL` would still be reachable via Electron's unchanged Epic
+    tile -- it does not become dead code app-wide, only unused on the Tauri build specifically.
+    Flagged as a genuine tension for the record, not resolved here: OPTION 1 would make
+    `/loginweb/legendary` unreachable FROM THE UI on Tauri specifically, but the route/constant
+    itself must stay wired for Electron. No removal of `EPIC_LOGIN_URL` is proposed by this
+    cleanup scope.
+
+live_verification_requirements_2026_08_03T10_00_00: |
+  Real close criterion, not a static check, per this project's own F-10 lesson ("a green suite
+  confirmed nothing about a live-only defect") and the standing `deferred_considerations` rule
+  ("NO FIX SHIPS UNTIL THE LOGGED-OUT PATH HAS BEEN OBSERVED WORKING END TO END ON REAL
+  HARDWARE"):
+  1. Whichever routing option is chosen, a live `pnpm tauri:dev` run confirming the CHOSEN Epic
+     tile action (primary for option 1, or the demoted-but-still-present alternative for option 2)
+     actually surfaces SIDLogin's modal/instructions correctly -- a single UI-level check.
+  2. `loginPage()`/the "Open"/"Copy Link" buttons genuinely open `https://legendary.gl/epiclogin`
+     in the REAL system default browser (not silently no-op, not opening a second in-app surface)
+     -- observable directly (a real browser window/tab appears on screen).
+  3. A genuine, fresh, logged-out Epic account: complete the real Epic login in that system
+     browser, obtain the real SID string `legendary.gl/epiclogin` produces.
+  4. Paste that real SID into the input (`clipboardReadText`-driven paste or manual paste both
+     count) and click Login -- confirm `handleLogin` resolves `status === 'done'`, the modal
+     closes (`backdropClick()`), and `getUserInfo()`/`handleSuccessfulLogin('legendary')` fire --
+     observable via the Epic tile flipping to logged-in state and a library refresh occurring.
+  5. Confirm Epic's library actually populates afterward (mirrors `U-34.5-06`'s own closure
+     criterion) -- this is what allows `U-34.5-06`/`U-34.5-11` to be formally reconciled
+     (retired-as-superseded or reframed), per `post_auth_live_gate_flagged_for_reconciliation`
+     above.
+  6. Only after 1-5 pass on real hardware: `F-34.5-G6-01` may be reconsidered for closure, and the
+     Epic-only dead-code cleanup (`cleanup_scope_proposal` above) becomes safe to execute.
+
+next_action: |
+  CHECKPOINT REACHED (decision) issued this cycle -- see the structured checkpoint returned to the
+  user/orchestrator. NO CODE CHANGED THIS CYCLE. Do NOT close `F-34.5-G6-01`, phase 34.5, or any
+  `34.5-UNTESTED-ITEMS.md` row. Do NOT touch `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`.
+  Do NOT remove `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT`/`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`/
+  `epic_oauth_redirect_observer_script` yet -- cleanup is proposed, not executed, and the embedded
+  path remains the only live Epic path under Tauri until the pivot ships. AWAITING: the
+  developer's choice of routing option (1, 2, or a variant), confirmation to proceed with
+  implementation, and eventually the live verification run described above.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T09:00:00 -- PURE STATIC ANALYSIS CYCLE. Live result from the
+     08:00:00 diagnostic RECEIVED and RE-INTERPRETED (result is INCONCLUSIVE for the hypothesis,
+     not falsifying -- see `live_result_reinterpreted` below). Exact JS property descriptors for
+     every SURVIVES-list global determined by direct primary-source read (tauri-2.11.5, wry-0.55.1,
+     all 6 plugin crates' actual api-iife.js text -- not inferred, not guessed). NO CODE CHANGED
+     THIS CYCLE. CHECKPOINT (decision) REISSUED. Everything below this block, including the
+     08:00:00/07:00:00/06:00:00/05:00:00/04:00:00 blocks, remains HISTORICAL/authoritative context
+     this block acted on -- nothing reverted; the throwaway diagnostic code itself is untouched.
+     Read THIS block first. -->
+
+live_result_reinterpreted_2026_08_03T09_00_00: |
+  Verified against the actual `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` source
+  (`src-tauri/src/main.rs:1583-1641`, read in full this cycle) before trusting the coordinator's
+  relay. The script's own marker field names (`tauriGlobalGone`, `tauriInternalsGone`,
+  `isTauriGone`, `ipcGone`, `notifNativeLooking`) match exactly the five `diagSummary` keys built
+  at line 1628-1634 -- no misattribution. CONFIRMED: the script attempts BOTH `delete` AND a
+  reassign-to-`undefined` fallback (`if (typeof window.X !== 'undefined') { window.X = undefined }`)
+  on exactly FOUR targets: `window.__TAURI__` (line 1586-1587), `window.__TAURI_INTERNALS__`
+  (1588-1589), `window.isTauri` (1590-1591), `window.ipc` (1592-1593). It attempts `delete` ONLY
+  (no reassignment fallback) on the remaining SEVEN: `window.__TAURI_IIFE__` and the six
+  `window.__TAURI_PLUGIN_*` keys (lines 1594-1600).
+
+  THIS MEANS THE 07:00:00-BLOCK QUESTION "would reassignment work where delete didn't" IS ALREADY
+  PARTIALLY ANSWERED BY THIS RUN'S OWN DATA, not just by delete: the marker showed
+  `tauriInternalsGone:false`, `isTauriGone:false`, `ipcGone:false` -- meaning reassignment ALSO
+  failed for these three (only `tauriGlobalGone:true` succeeded, and that one could have been
+  delete or reassignment). This is a live, empirical, direct-observation result -- not a static
+  inference -- and it is corroborated below by the actual property descriptors read from source
+  this cycle. For the other seven (IIFE + 6 plugin globals), only `delete` was tried; reassignment
+  remains UNTESTED live for those specifically (their descriptor answer, from source, is given
+  below).
+
+  Corrected framing (per the coordinator's own flagged concern, verified true): the pre-auth 403
+  STILL FIRING after this run is INCONCLUSIVE for the surviving-JS-surface hypothesis, not a
+  falsification -- the independent variable (presence of `__TAURI_INTERNALS__`/`isTauri`/`ipc`/the
+  plugin keys) never actually changed for 10 of the 11 survivors (only `__TAURI__` cleared). "The
+  403 still fires with most of the surface still present" tells us nothing new about whether that
+  surface is Talon's signal. Framing corrected in this file's own words, not merely accepted from
+  the relay.
+
+  Lifecycle note carried forward, not investigated further this cycle (explicitly low priority per
+  the relayed data): `on_window_event(Destroyed)` was not observed this run. Most likely
+  explanation remains "the user did not close the window during this run" -- this is a plausible,
+  ordinary non-event, not a regression signal, and does not block or change this cycle's
+  descriptor findings. Flagged for the next live cycle to clarify, not for static analysis to
+  resolve.
+
+descriptor_findings_2026_08_03T09_00_00: |
+  Read directly from source this cycle (NOT inferred from TypeScript types or doc comments --
+  the actual injected JS text IS available in cleartext, contrary to the guidance's concern about
+  minification obscuring it; every relevant script is either a literal Rust string constant or a
+  small unminified/lightly-minified `.js` file shipped inside the crate's own package on disk):
+  `~/.cargo/registry/src/index.crates.io-*/tauri-2.11.5/src/manager/webview.rs` (lines 122-224,
+  full `prepare_pending_webview`), `~/.cargo/registry/src/index.crates.io-*/wry-0.55.1/src/
+  wkwebview/mod.rs` (lines 636-645), and the actual shipped `api-iife.js` / `src/init-iife.js` /
+  `bundle.global.js` text for all 6 plugins plus Tauri's own global-`__TAURI__` bundle.
+
+  CORE THREE (window.ipc, window.isTauri, window.__TAURI_INTERNALS__) -- PROVEN, both by this
+  cycle's source read AND by the live diagnostic's own reassignment-fallback data above, to be
+  PERMANENTLY UNALTERABLE from JS:
+
+  1. `window.ipc` -- injected by **wry itself**, natively, at `wry-0.55.1/src/wkwebview/mod.rs:
+     636-642`, via `w.init(...)` called BEFORE the `for init_script in attributes.
+     initialization_scripts` loop (line 643) that carries every one of Tauri's own scripts and
+     every one of this app's own registered scripts. Exact text:
+     `Object.defineProperty(window, 'ipc', { value: Object.freeze({postMessage: function(s) {
+     window.webkit.messageHandlers.ipc.postMessage(s); }}) });` -- ONLY `value` is specified.
+     Per the `Object.defineProperty` spec, every unspecified attribute defaults to `false` when
+     creating a new property: `writable: false, enumerable: false, configurable: false`. The
+     `value` itself is ALSO `Object.freeze`d, so even if some other technique could somehow reach
+     the object, `.postMessage` inside it cannot be reassigned either. This independently CONFIRMS,
+     from primary source rather than inference, the exact ordering blind spot the 07:00:00 block
+     flagged as unconfirmed ("wry's own source was not read") -- now closed: `window.ipc` is
+     injected strictly BEFORE every JS init script this app or Tauri registers, by a completely
+     separate native code path outside `all_initialization_scripts` entirely, exactly as the
+     07:00:00 block inferred from the `ipc-protocol.js` comment, now proven from wry's own source
+     directly.
+  2. `window.isTauri` -- `tauri-2.11.5/src/manager/webview.rs:168-170`:
+     `Object.defineProperty(window, 'isTauri', { value: true });` -- same shape, only `value`
+     given: `writable: false, enumerable: false, configurable: false`.
+  3. `window.__TAURI_INTERNALS__` -- `webview.rs:172-178`:
+     `if (!window.__TAURI_INTERNALS__) { Object.defineProperty(window, '__TAURI_INTERNALS__',
+     { value: { plugins: {} } }) }` -- same shape: `writable: false, enumerable: false,
+     configurable: false`.
+
+  CONCLUSION FOR THE CORE THREE, stated definitively: non-configurable AND non-writable. `delete`
+  fails (already known). Reassignment ALSO fails -- not merely "expected to fail," but ALREADY
+  OBSERVED to fail live in this very run's own marker (`tauriInternalsGone:false`,
+  `isTauriGone:false`, `ipcGone:false`, despite the script's own reassignment-fallback code path
+  having executed against all three). A `Proxy` cannot help either, for two independent reasons,
+  both verified rather than assumed: (a) ECMAScript's mandatory Proxy invariants
+  (`[[GetOwnProperty]]`/`[[Get]]`/`[[Has]]`/`[[Delete]]` traps) REQUIRE a proxy's reported behavior
+  to stay consistent with an already-existing non-configurable target property -- a `deleteProperty`
+  trap that reports success for a non-configurable property throws a `TypeError`, and a `get`/`has`
+  trap that hides a non-configurable, non-writable data property's true value also throws. This is
+  a genuine, spec-enforced invariant, not a library limitation. (b) Even setting invariant (a)
+  aside, there is no mechanism for in-page JS to make Talon's OWN script (running in the same
+  document, reading the real global `window`) transparently go through a Proxy our script
+  constructs -- `window`/`globalThis` is the actual realm global object; you cannot swap in a
+  proxy as the thing other scripts see when they reference `window`. Both problems are independent
+  and either alone rules out Proxy-based masking for these three properties. JS-side suppression
+  is FUNDAMENTALLY IMPOSSIBLE for `window.ipc`, `window.isTauri`, and `window.__TAURI_INTERNALS__`.
+
+  REMAINING EIGHT (window.__TAURI__, window.__TAURI_IIFE__, and the 6 `__TAURI_PLUGIN_*` keys) --
+  DIFFERENT, MORE PERMISSIVE shape, confirmed by reading each plugin's actual shipped script text
+  (not assumed to be uniform with the core three, per the guidance's explicit instruction to check):
+
+  4. `window.__TAURI__` -- `tauri-2.11.5/scripts/bundle.global.js` (the actual shipped JS, tail of
+     the file): `window.__TAURI__=__TAURI_IIFE__;` -- a PLAIN ASSIGNMENT EXPRESSION, not
+     `Object.defineProperty`. Since no property of that name previously existed, this creates an
+     ordinary, fully mutable own property: `writable: true, enumerable: true, configurable: true`
+     (JS default for assignment-created properties). This is EXACTLY why `delete window.__TAURI__`
+     already succeeded live this run (`tauriGlobalGone:true`) -- fully explained, not just observed.
+     Gated app-wide by `tauri.conf.json`'s `"withGlobalTauri": true` (per the 07:00:00 block's Q3,
+     re-confirmed, no per-window opt-out).
+  5. `window.__TAURI_IIFE__` -- same file, top of the bundle: `var __TAURI_IIFE__ = function(e){
+     ...}(...)`. A top-level `var` declaration executed at the GLOBAL scope of this init script.
+     Per ECMAScript's `GlobalDeclarationInstantiation`, a global `var` binding creates a property
+     on the global object with `writable: true, enumerable: true, configurable: false` -- this is
+     a hard, unambiguous spec guarantee (not an inference from behavior), and it is the SAME
+     mechanism as a normal top-level `var x = 1` in any browser script. Explains why `delete`
+     already failed live (`__TAURI_IIFE__` was in the SURVIVES list -- configurable:false, matches).
+     PREDICTS reassignment (`window.__TAURI_IIFE__ = undefined`) WOULD succeed (writable:true) --
+     but this specific script never attempted reassignment on it (only `delete`, per the
+     `live_result_reinterpreted` finding above), so this is a confident, source-grounded PREDICTION,
+     not yet a live-observed fact.
+  6. All SIX `window.__TAURI_PLUGIN_*` keys -- read the ACTUAL shipped `api-iife.js` for every one
+     of the 6 plugins this app registers (`main.rs:3372-3391`: opener, dialog, notification,
+     updater, shell, clipboard-manager -- matches the SURVIVES list exactly, no extra/missing
+     plugin). ALL SIX use the IDENTICAL pattern, independently confirmed by reading each file's
+     text in full, not assumed from one example: `if ("__TAURI__" in window) { var
+     __TAURI_PLUGIN_X__ = (IIFE)(...); Object.defineProperty(window.__TAURI__, "name",
+     { value: ... }) }`. The `var __TAURI_PLUGIN_X__ = ...` inside the `if` block still hoists to
+     the enclosing script's global/function scope (var is function-scoped, not block-scoped) --
+     SAME global-var shape as `__TAURI_IIFE__` above: `writable: true, enumerable: true,
+     configurable: false`. (The plugin's OWN `window.X.name` property it separately defines via
+     `Object.defineProperty(window.__TAURI__, "dialog", {value:...})` is a property ON the
+     `__TAURI__` object, not a `window`-level global, and not part of the SURVIVES list -- not
+     relevant here.) These `api-iife.js` files are the plugin's `global_api_script_path` (build.rs),
+     distinct from each plugin's `src/init-iife.js` (`js_init_script` -- e.g. notification's own
+     `window.Notification` clobber, R3's already-closed mechanism); reading both confirms they are
+     different files with different roles, not the same script under two names. PREDICTS
+     reassignment would ALSO succeed for all 6 plugin globals -- same confident, source-grounded,
+     not-yet-live-tested prediction as `__TAURI_IIFE__`.
+
+  Q1 injection-order gap the 07:00:00 block explicitly left open ("wry's own source was not read")
+  is now CLOSED: confirmed from `wkwebview/mod.rs` directly, `window.ipc` is injected natively,
+  before every JS-level init script. This does not change any conclusion already reached (ordering
+  was already known not to block deletion attempts), it only converts a disclosed inference into a
+  confirmed fact.
+
+recommendation_2026_08_03T09_00_00: |
+  Per the analysis above: THREE of the eleven SURVIVES-list globals (`window.ipc`,
+  `window.isTauri`, `window.__TAURI_INTERNALS__`) are PROVEN, by direct primary-source
+  descriptor read AND by this run's own live reassignment-fallback data, to be permanently
+  immune to delete, reassignment, AND Proxy-based masking -- no JS-side technique can ever
+  touch them. The other eight (`__TAURI__`, `__TAURI_IIFE__`, 6 `__TAURI_PLUGIN_*` keys) are
+  writable-but-non-configurable or fully mutable, and COULD be cleared by reassignment (one
+  already is, live; the other seven are a confident source-grounded prediction, not yet tested).
+
+  This makes `window.isTauri` in particular impossible to ignore: it is Tauri's own
+  purpose-built, literally-named "is this page running inside Tauri" flag -- the single most
+  obvious, most convenient property a fingerprinting script would check for exactly this
+  question -- and it is one of the three now PROVEN unmaskable by any JS technique. Nothing in
+  this investigation identifies which specific propert(ies) Talon's check actually reads, but
+  `isTauri` is a stronger, more purpose-fit candidate than any of the eight
+  potentially-maskable properties, none of which are named or documented as
+  detection/automation signals.
+
+  RECOMMENDATION: option (ii) -- pivot to SIDLogin, over option (i) or (iii).
+
+  Against option (i) (one more live iteration using reassignment instead of delete): the ONLY
+  new ground a reassignment iteration could cover is the seven untested-for-reassignment globals
+  (`__TAURI_IIFE__` + 6 plugin keys) -- `__TAURI__` itself needs no new test, it is already
+  proven deletable. In the single most likely scenario -- Talon's check reads `isTauri` and/or
+  `__TAURI_INTERNALS__` and/or `ipc`, all three of which remain exactly as detectable after a
+  reassignment pass as before it -- a fifth live cycle would reproduce this run's exact
+  inconclusive 403 result with no new discriminating information, at the cost of a full live
+  cycle. Reassignment is only worth running if there is a specific reason to believe Talon
+  checks ONLY the plugin-key/`__TAURI_IIFE__` surface and ignores the purpose-built `isTauri`
+  flag sitting right next to it -- nothing in this investigation supports that narrower bet.
+
+  Against option (iii) (Tauri-source-level suppression): a real, concrete mechanism EXISTS but
+  is heavy and was found to have NO existing opt-out. The exact patch points are locatable --
+  `tauri-2.11.5/src/manager/webview.rs:168-178` (the `isTauri`/`__TAURI_INTERNALS__`
+  `Object.defineProperty` calls) and `wry-0.55.1/src/wkwebview/mod.rs:638-640` (the `window.ipc`
+  `Object.defineProperty` call) would each need `writable: true, configurable: true` added --
+  but `tauri-2.11.5/Cargo.toml`'s full `[features]` list (checked this cycle) contains no
+  existing flag that gates or alters this behavor; there is no supported way to do this short of
+  vendoring/forking both `tauri` and `wry` crates via a Cargo `[patch.crates-io]` override and
+  maintaining that patch across every future upstream upgrade. This is a real, nameable option,
+  not hand-waved -- but it is a substantial, ongoing maintenance burden to win one round of a
+  fingerprinting arms race Talon could simply respond to with a different signal (TLS/JA3,
+  header ordering, timing -- all untouched by any JS-side technique regardless).
+
+  For option (ii): SIDLogin (`src/frontend/screens/Login/components/SIDLogin/index.tsx`, read in
+  full this cycle) is real, already shipped, requires ZERO new Tauri/wry code, and is
+  STRUCTURALLY IMMUNE to this entire fingerprinting question -- authentication happens in the
+  user's actual system browser (`window.api.clipboardWriteText`/`loginPage()` opens
+  `https://legendary.gl/epiclogin` externally), never in a WKWebView Talon could ever fingerprint
+  as automation. What end-to-end verification would take: (1) confirm `loginPage()`
+  (`frontend/helpers`) actually opens the system browser under `pnpm tauri:dev`, not an
+  in-app webview -- a single live check; (2) confirm the pasted SID successfully completes
+  `epic.login(sid)` -- a single live check, already a well-trodden code path (this is Heroic's
+  inherited, previously-working flow, not new code); (3) UX gap vs the target embedded flow: the
+  user must manually visit a URL, log in, copy a session-id string, and paste it back -- a real,
+  disclosed cost, but a working one today. Making it the DEFAULT path (rather than the
+  `alternativeLoginAction` secondary affordance) is a small, scoped frontend change (`src/
+  frontend/screens/Login/index.tsx:115-167`, not re-read line-by-line this cycle beyond what the
+  07:00:00 block already established) -- NOT a Tauri/wry patch, NOT a new fingerprint-evasion
+  technique, and not blocked by anything this cycle found.
+next_action: |
+  CHECKPOINT REACHED (decision) issued this cycle -- see the structured checkpoint returned to
+  the user/orchestrator. NO CODE CHANGED THIS CYCLE, per explicit instruction (pure static
+  analysis only). Do NOT close `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row.
+  Do NOT act on the SEPARATE, still-owed post-auth live-gate checkpoint. Do NOT touch
+  `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. Do NOT revert or remove
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, `epic_oauth_redirect_observer_script`, or the still-labeled
+  THROWAWAY `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` (untouched this cycle). AWAITING: the
+  developer's choice among (i) one more live reassignment-based iteration, (ii) pivot to
+  SIDLogin (this cycle's recommendation), or (iii) a Tauri/wry source-level patch/fork -- see
+  `recommendation_2026_08_03T09_00_00` above for the reasoning behind the recommendation.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T08:00:00 -- THROWAWAY DELETION DIAGNOSTIC BUILT AND STATICALLY
+     VERIFIED (user decision OPTION C, acted on this cycle). CHECKPOINT (human-verify) REISSUED,
+     collecting a live run. NOT A FIX -- see the file's new EXPERIMENTAL/THROWAWAY section
+     (after the two real Resolution entries) for the full build record; do not read this cycle
+     as evidence the 403 is fixed or that this deletion is safe to ship. Everything below this
+     block, including the 07:00:00/06:00:00/05:00:00/04:00:00 blocks, remains
+     HISTORICAL/authoritative context this block acted on -- nothing reverted or eliminated by
+     this block. Read THIS block first. -->
+
+throwaway_diagnostic_built_2026_08_03T08_00_00: |
+  User decision OPTION C acted on this cycle: build a narrow, throwaway, instrumented
+  diagnostic BEFORE committing to any shipped mitigation. See the file's new
+  `## EXPERIMENTAL/THROWAWAY -- deletion-diagnostic` section (after the two real `Resolution`
+  entries, kept deliberately separate) for the full `reasoning_checkpoint`, `what_was_built`,
+  and `static_verification` record. Short version: a new, distinctly-named Rust const
+  (`EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT`) deletes the 2026-08-03T07:00:00 SURVIVES list
+  (`window.__TAURI__`, `window.__TAURI_INTERNALS__`, `window.isTauri`, `window.ipc`, the 8
+  `__TAURI_PLUGIN_*`/`__TAURI_IIFE__` keys) and restores a native-looking `window.Notification`,
+  registered in the guaranteed-last init-script slot, Epic-only, with an additional
+  `#[cfg(debug_assertions)]` safety gate disclosed as a deliberate divergence from the literal
+  ask. The arm's own already-shipped `on_navigation`/`on_page_load`/`on_window_event(Destroyed)`
+  hooks gained THROWAWAY-labeled `[epic-deletion-diag]` Rust-log markers (no new hooks needed --
+  all three already existed). `cargo check` clean; `cargo test` 102/0/1-ignored (+5 new tests);
+  `npx tsc --noEmit` clean; `npm run test:ci` 187/187 suites, 3647/3647 tests. ONE genuine
+  regression was introduced and fixed DURING this cycle's own verification (a stray `*/` in a
+  test comment accidentally paired with an unrelated pre-existing `/*` ~900 lines away and
+  corrupted a TS suite's stripped-source view of the file) -- confirmed via `git stash`/`git
+  stash pop` this was NOT pre-existing, fixed by rewording the comment, full suite re-confirmed
+  green afterward. Recorded honestly in `static_verification`, not silently corrected.
+next_action: |
+  CHECKPOINT REACHED (human-verify) issued this cycle -- see the structured checkpoint returned
+  to the user/orchestrator. IMPLEMENTED BUT NOT LIVE-VERIFIED: static proof only, per this
+  project's own F-10 lesson. THIS IS A DIAGNOSTIC, NOT A FIX -- do not close `F-34.5-G6-01`,
+  phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row on this cycle's work. Do NOT act on the
+  SEPARATE, still-owed post-auth live-gate checkpoint (already-authenticated Epic session) --
+  unchanged, untouched, still owed. Do NOT touch
+  `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. Do NOT revert or remove
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` or `epic_oauth_redirect_observer_script`. AWAITING: the
+  developer's live `env -u GAMELIB_LOGIN_DIAG pnpm tauri:dev` run against a fresh logged-out
+  Epic session, reporting all four items the checkpoint asks for (403 status; instrumentation
+  markers; new JS errors; re-verified 3-arm dump confirming the globals are actually gone) --
+  this result determines whether option A (ship a real, hardened version of this deletion) or
+  option B (SIDLogin) is the right next move. Whichever direction the live result points, this
+  THROWAWAY code is expected to be removed or replaced, not kept as-is.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T07:00:00 -- STEP (b) 3-ARM IPC-SURFACE DUMP LANDED, UNANIMOUS.
+     MITIGATION-FEASIBILITY INVESTIGATION DONE (STATIC ONLY). CHECKPOINT (decision) REISSUED.
+     Everything below this block, including the 06:00:00/05:00:00/04:00:00 blocks, remains
+     HISTORICAL/authoritative context this block acted on -- nothing reverted; `alertNative`/
+     `confirmNative` move from SURVIVES to a new formal Eliminated entry (confirmed fixed), the
+     Tauri IPC/plugin surface + `window.ipc` + `notifNative` become the new leading, best-
+     surviving candidate set. Read THIS block first. -->
+
+ipc_surface_dump_result_2026_08_03T07_00_00: |
+  Step (b) of the 05:00:00 checkpoint's `required_sequencing` landed. Same elimination discipline
+  as every prior 3-arm dump this file has run (rule: Tauri value shared by >=1 unblocked arm ->
+  eliminated; Tauri-unique value -> survives).
+
+  ELIMINATED THIS RUN (new formal Eliminated entry added, this timestamp):
+  `alertNative`/`confirmNative` -- all three arms now read native-code `.toString()`. This is
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` visibly working live for the first time (previously only
+  static-verified). Does not touch the pre-auth 403's own status (still fires, per 06:00:00).
+
+  SURVIVES (unique to Tauri across all three arms, never checked by the twelve-property dump
+  at 2026-08-03T01:00:00 -- genuinely untested territory, not contradicted-and-now-reconsidered):
+  1. The full injected Tauri surface: `window.__TAURI__` (object), `window.__TAURI_INTERNALS__`
+     (object), `window.isTauri` (boolean), and 8 `tauriKeys` (`__TAURI__`, `__TAURI_IIFE__`,
+     `__TAURI_PLUGIN_DIALOG__`, `__TAURI_PLUGIN_NOTIFICATION__`, `__TAURI_PLUGIN_SHELL__`,
+     `__TAURI_PLUGIN_CLIPBOARD_MANAGER__`, `__TAURI_PLUGIN_OPENER__`, `__TAURI_PLUGIN_UPDATER__`)
+     -- all `undefined`/absent in both Electron and Safari.app.
+  2. `window.ipc` (object) + `window.ipc.postMessage` (function) -- absent in both unblocked
+     arms. This is wry's own IPC bridge object (see `feasibility_answers` below for exactly
+     where it comes from -- NOT from `ipc-protocol.js`, a mechanistic correction to this file's
+     own 2026-08-03T05:00:00/06:00:00 attribution of `window.ipc` origin).
+  3. `notifNative` (`window.Notification.toString()`) -- non-native
+     (`function(n,t){const o=t||{}...`) vs native in both controls. SAME mechanism R3 already
+     eliminated as SOLE cause (`tauri_plugin_notification::init()`'s `init-iife.js`) -- listed
+     here again per this file's own discipline of not treating "surfaces in a fresh dump" as
+     automatically new, but NOT a new candidate; do not re-litigate R3 from this line alone.
+
+  This is corroborating context only, cited from a prior cycle's already-established fact, not
+  re-derived this cycle: the live console evidence of
+  `plugin:notification|is_permission_granted` throwing inside this exact login window
+  (Evidence, 2026-08-02T00:20:00 era) already showed this IPC surface is not just present but
+  ACTIVELY firing calls into it during Epic's page lifetime.
+
+feasibility_answers_2026_08_03T07_00_00: |
+  All four questions answered from DIRECT PRIMARY SOURCE reads this cycle (vendored
+  `tauri-2.11.5` crate source under
+  `~/.cargo/registry/src/index.crates.io-*/tauri-2.11.5/`, plus this repo's own
+  `src-tauri/src/main.rs` and `tauri.conf.json`), not inferred from this file's own prior
+  summaries alone -- two of those prior summaries (04:00:00's `feasibility_finding` step
+  ordering vs 02:00:00's `reasoning_checkpoint`) were mutually AMBIGUOUS on exactly the ordering
+  question this cycle needed resolved, so the primary source was re-read to settle it
+  definitively rather than trusting either summary.
+
+  Q1 -- INJECTION ORDER (definitive, from `tauri-2.11.5/src/manager/webview.rs`,
+  `prepare_pending_webview`, lines 122-224, read in full this cycle): `all_initialization_scripts`
+  is assembled in this EXACT order, then handed to the webview as one ordered list:
+    1. inline `isTauri`/`__TAURI_INTERNALS__` base-object script (line 166-181)
+    2. `self.invoke_initialization_script` -- defines `window.__TAURI_INTERNALS__.invoke` (line 182)
+    3. metadata script, stamps window/webview labels onto `__TAURI_INTERNALS__` (line 183-194)
+    4. `self.initialization_script(...)` -- this is Tauri's OWN internal core script (rendered
+       from `ipc-protocol.js`, confirmed by `app.rs:1561`'s `#[default_template("../scripts/
+       ipc-protocol.js")]`) -- NOT our app's registered scripts, despite the confusingly
+       identical method name. It defines `window.__TAURI_INTERNALS__.postMessage`, which calls
+       `window.ipc.postMessage(data)` as its fallback path (line 195-200).
+    5. `plugin_init_scripts` -- EVERY registered plugin's init script, extended in wholesale
+       (line 202) -- this is where `tauri_plugin_dialog`/`notification`/`shell`/
+       `clipboard-manager`/`opener`/`updater`'s init-iife scripts land.
+    6. (isolation-feature only, not used by this app)
+    7. `plugin_global_api_scripts`, IF `app.withGlobalTauri` (line 216-220) -- gates only the
+       `window.__TAURI__` convenience-wrapper layer, still app-wide/unconditional per-window.
+    8. **`all_initialization_scripts.extend(webview_attributes.initialization_scripts)`** (line
+       223) -- OUR app's own `.initialization_script()` builder calls (in the order WE call
+       them: `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` if dev-gated-on, then
+       `epic_oauth_redirect_observer_script`, then `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, per
+       `main.rs:2169-2205`'s own call order) are appended DEAD LAST, strictly AFTER every one of
+       steps 1-7.
+
+     ANSWER: app-registered `.initialization_script()` calls reliably run AFTER Tauri's own core
+     bootstrap and ALL plugin init scripts -- not unspecified, not against us. This is exactly
+     the position our two already-shipped, already-working production scripts occupy today, so
+     a THIRD script registered the identical way (same builder, same `is_epic_login` gate,
+     appended after the fingerprint shim) would occupy the same guaranteed-last position and
+     would run before Epic's own page bundle starts (the same guarantee our two shipped scripts
+     already rely on and that this file's own evidence confirms holds in practice).
+
+     CORRECTION to this file's own prior attribution (2026-08-03T05:00:00 `confound_recorded`
+     citing "`user-script:23, line 106` -> `tauri-2.11.5/scripts/ipc-protocol.js`" as the source
+     of `window.ipc`): `ipc-protocol.js` does NOT define `window.ipc` -- it only CALLS
+     `window.ipc.postMessage(data)` as an already-existing object (line 84, and its own comment
+     at line 83: "`window.ipc.postMessage` came from `tauri-runtime-wry` > `wry`'s
+     `with_ipc_handler`"). `window.ipc` itself is therefore NOT part of
+     `all_initialization_scripts` at all -- it must be wired up natively by wry's own WKWebView
+     configuration (a `WKScriptMessageHandler`/`with_ipc_handler` registration made directly on
+     the webview at a lower level than Tauri's JS init-script pipeline), most likely BEFORE step
+     1 above, not interleaved with it. This was NOT independently confirmed this cycle (wry's own
+     source was not read -- out of scope for the time available) -- flagged as the one piece of
+     this ordering question resolved by inference from the ipc-protocol.js comment, not by
+     reading wry itself. PRACTICAL CONSEQUENCE for feasibility: since `window.ipc` is set up
+     earlier than (or entirely outside) the `all_initialization_scripts` list, and our own
+     scripts already run LAST in that list, a `delete window.ipc` in a new last-appended script
+     would still execute after wry's own injection -- ordering is not a blocker for deletion
+     either way.
+
+  Q2 -- DEPENDENCY CHECK (from direct re-read of both shipped scripts' `Resolution` entries and
+  this cycle's re-read of the `humble_login_open` arm, `main.rs:2023-2296`):
+    - `epic_oauth_redirect_observer_script` (Resolution.fix, mechanism 2): wraps `window.fetch`
+      only, reads response bodies via `res.clone()`, and exfiltrates via `location.href` to a
+      dedicated `.invalid` host caught by the NATIVE `.on_navigation` Rust closure. Zero calls to
+      `window.ipc`/`window.__TAURI__`/`window.__TAURI_INTERNALS__`/`invoke` anywhere in its
+      described mechanism.
+    - `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (Resolution.fix_pre_auth_fingerprint): patches
+      `outerWidth`/`outerHeight` getters and `Function.prototype.toString` only. Zero calls to
+      the Tauri JS bridge anywhere in its described mechanism.
+    - The window's OWN native capture hooks -- `.on_navigation` (line 2069-2089), `.on_page_load`
+      (line 2208-2229), `.on_window_event(Destroyed)` (line 2268-2272) -- are ALL Rust-side
+      closures registered directly on the `WebviewWindowBuilder`/`WebviewWindow` handle. These
+      are native WKWebView-delegate-level callbacks (navigation-policy decisions, page-load
+      lifecycle, window-destroy notifications) that fire regardless of page-JS state -- they do
+      not call into the page via `window.ipc`/invoke, and nothing in their own bodies references
+      any of the three globals in question (confirmed by this cycle's direct re-read of the full
+      arm; grep of the arm's body for `ipc`/`__TAURI__`/`__TAURI_INTERNALS__` -- none found).
+
+    ANSWER: for THIS window's own currently-shipped mechanisms (both JS scripts, all three
+    native hooks), capture does NOT depend on `window.ipc`/`__TAURI_INTERNALS__`/`__TAURI__`
+    being present or functional. Deletion of all three appears safe for what this window
+    ITSELF currently needs.
+
+    HONEST BLIND SPOT, not ruled out: whether Tauri's OWN internal plumbing depends on these
+    globals persisting for something this investigation has not traced -- e.g., whether Rust
+    ever delivers an event INTO this webview via an `eval()`'d snippet that itself assumes
+    `window.__TAURI_INTERNALS__` still exists (event emission, some internal housekeeping tied
+    to window close/focus, or a future code path added by this app that isn't there yet). This
+    was NOT traced this cycle (would require reading Tauri's event-emission internals and/or a
+    live test) and is exactly the kind of thing a static read cannot fully rule out. The
+    concrete way to close this gap is a LIVE test: apply the deletion in a throwaway build,
+    then verify the window still closes cleanly (`on_window_event(Destroyed)` still fires),
+    still reports page loads (`on_page_load` events still land in
+    `LOGIN_WINDOW_EVENTS`/`oauthLoginCapture.ts`'s poll), and the exfil navigation still gets
+    caught (`on_navigation`) -- i.e., re-run this exact investigation's own capture plumbing
+    end-to-end with the globals deleted, before trusting the static answer alone.
+
+  Q3 -- ARE THEY NEEDED / APP-WIDE VS PER-WINDOW (re-confirmed this cycle by independent direct
+  read, not just re-citing the 04:00:00 block): `tauri.conf.json:11`, `"withGlobalTauri": true`
+  -- app-wide, single boolean, no per-window variant in the schema. `main.rs:3192-3212`,
+  `fn main() { tauri::Builder::default().plugin(tauri_plugin_opener::init())
+  .plugin(tauri_plugin_dialog::init()) ... }` -- all 6 plugins registered directly on the single
+  app-wide `Builder` chain inside `fn main()`, before `.setup()`; there is no per-window overload
+  of `.plugin()` anywhere in the public Tauri 2.11.5 API this app links against. Matches
+  `prepare_pending_webview`'s own unconditional, no-window-label-branch behavior confirmed under
+  Q1. ANSWER: not needed by the login window specifically -- injected purely as a side effect of
+  app-wide configuration with no opt-out surface, exactly as the 04:00:00 block already
+  concluded; this cycle independently re-verified rather than assuming it was still accurate.
+
+  Q4 -- SIDLOGIN BYPASS (searched this cycle -- real, found, NOT taken at face value): confirmed
+  via direct file read, `src/frontend/screens/Login/components/SIDLogin/index.tsx` (full file)
+  and its wiring in `src/frontend/screens/Login/index.tsx:115-167`. This is Heroic's inherited
+  manual-SID flow, ALREADY SHIPPED and ALREADY REACHABLE today, gated only by `disabled={oldMac}`
+  -- not behind any Tauri-specific flag. The Epic `Runner` component's PRIMARY action
+  (`loginUrl={epicLoginPath}`) drives the embedded webview this whole investigation concerns;
+  its `alternativeLoginAction={() => setShowSidLogin(true)}` is a SEPARATE, always-visible
+  affordance on the same button that opens the `SIDLogin` modal instead. That modal: (1) shows a
+  copy/open button for `https://legendary.gl/epiclogin`, opened via `window.api.openLoginPage`
+  (`src/preload/api/helpers.ts:6`) -- the user's REAL, UNMODIFIED SYSTEM BROWSER, not this app's
+  embedded WKWebView/Electron `<webview>` at all; (2) the user completes Epic's actual login
+  there and is shown a session-id ("SID") string on that page; (3) the user pastes it into a
+  plain text `<input>` in the modal; (4) `handleLogin` calls `epic.login(sid)` ->
+  `window.api.login(sid)` directly, with no webview/OAuth-redirect-capture machinery involved at
+  all. BECAUSE the actual authentication happens in the user's genuine system browser, Talon
+  never sees a WKWebView-shaped session for this path -- the entire injected-JS-surface
+  fingerprinting question this cycle investigated is STRUCTURALLY INAPPLICABLE to SIDLogin, not
+  merely mitigated. This is a real, already-working, zero-new-code fallback, not a proposal --
+  its only cost is the extra manual copy/paste step for the user. Not independently confirmed
+  end-to-end THIS cycle (no live test run against it), but the code path itself is unambiguous
+  from direct source read, not inferred from the coordinator's mention.
+
+next_action: |
+  CHECKPOINT REACHED (decision) issued this cycle -- see the structured checkpoint returned to
+  the user/orchestrator. NO SOURCE EDIT THIS CYCLE, NO IMPLEMENTATION. Do NOT close
+  `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row. Do NOT act on the SEPARATE,
+  still-owed post-auth live-gate checkpoint. Do NOT touch
+  `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. Do NOT revert or remove
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` or `epic_oauth_redirect_observer_script`. AWAITING: the
+  developer's choice among the options in the reissued checkpoint (attempt the deletion shim
+  live; pursue SIDLogin instead; or run the narrower live diagnostic first to close the Q2 blind
+  spot before either).
+
+<!-- SUPERSEDING BLOCK 2026-08-03T06:00:00 -- CLEAN REPRO LANDED (STEP (a) OF THE 05:00:00
+     CHECKPOINT'S required_sequencing IS COMPLETE), CONFOUND RESOLVED, STEP (b) CHECKPOINT
+     REISSUED. Everything below this block, including the 05:00:00 and 04:00:00 blocks, remains
+     HISTORICAL/authoritative context this block acted on -- nothing reverted or eliminated by
+     this block beyond the specific diagnostic-script-as-cause hypothesis (see Eliminated, this
+     timestamp). Read THIS block first. -->
+
+clean_repro_result: |
+  Step (a) of the 05:00:00 checkpoint's `required_sequencing` is COMPLETE. See Evidence
+  2026-08-03T06:00:00 for the full record. Short version: `env -u GAMELIB_LOGIN_DIAG pnpm
+  tauri:dev` was run, `GAMELIB_LOGIN_DIAG` confirmed ABSENT from the actual running process
+  environment (coordinator-verified by direct process inspection, not self-report), and the
+  pre-auth `403 (exists)` on email submit STILL FIRED ("ok, done, with 403", verbatim).
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s fetch-wrapping is EXONERATED as this 403's cause (see
+  Eliminated, this timestamp -- formal entry). This does NOT prove fetch-wrapping in general is
+  harmless -- `epic_oauth_redirect_observer_script` and Epic's own Sentry wrapper were both still
+  present and active during this exact run and are unaddressed by this test. The fingerprint shim
+  remains necessary-but-not-sufficient, unchanged by this run. The Tauri IPC-surface hypothesis
+  (`hypothesis_new`, 04:00:00 block below) is UNCHANGED in status by this result -- still the
+  leading live candidate, neither newly confirmed nor newly tested by this run; this run only
+  answers the diagnostic-script-confound question.
+next_action: |
+  Step (b) of the `required_sequencing` is now the confirmed right next question and is UNBLOCKED.
+  CHECKPOINT REISSUED (human-verify) this cycle, handing over the already-prepared 3-arm
+  IPC-surface dump script (`ipc_surface_dump_script`, 05:00:00 block below) VERBATIM -- re-verified
+  this cycle against the guidance checklist (covers `window.__TAURI_INTERNALS__`,
+  `window.__TAURI__`, `window.isTauri`, a tauri-regex `Object.keys(window)` scan,
+  `window.ipc`/`window.ipc.postMessage` markers, notification-plugin globals via
+  `Notification.toString()`, and the already-established `alertNative`/`confirmNative` toString
+  checks). No defect found; the script is complete and correct as written and is reused
+  byte-for-byte from the 05:00:00 block for cross-cycle attribution consistency -- it is NOT
+  regenerated here. See the structured checkpoint returned to the user/orchestrator for the exact
+  paste-as-single-expression instructions and run steps across all three arms (Tauri login window,
+  the working Electron `<webview>`, Safari.app). THIS CYCLE IS RECORDING + HANDOVER ONLY: no
+  source edits were made, no claim is made about which hypothesis is right, no fix or mitigation
+  was implemented. Do NOT close `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row.
+  Do NOT act on the SEPARATE, still-owed post-auth live-gate checkpoint. Do NOT touch
+  `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. Do NOT revert or remove
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`. AWAITING: the developer's 3-arm dump results, labeled by
+  arm, before the IPC-surface hypothesis can be evaluated property-by-property.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T05:00:00 -- CONFOUND DISCOVERED AND RECORDED, CHECKPOINT
+     REISSUED WITH MANDATORY SEQUENCING. Everything below this block, including the 04:00:00
+     block, remains HISTORICAL/authoritative context this block acted on -- NONE of it is reverted
+     or marked eliminated by this block; the 04:00:00 run's result is downgraded from
+     "interpreted" to "confounded, pending clean re-run" only. Read THIS block first. -->
+
+confound_recorded: |
+  See Evidence 2026-08-03T05:00:00 for the full mechanical explanation. Short version:
+  `GAMELIB_LOGIN_DIAG=1` WAS set on the run that produced Evidence 2026-08-03T04:00:00, contrary
+  to that checkpoint's own explicit instruction to leave it unset. That var gates
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` (main.rs, opt-in, default OFF) -- a 332-line document-start
+  script wrapping fetch/XHR/sendBeacon, and this file has an existing, independent, unresolved
+  suspicion that fetch-wrapping init scripts of this shape can interact with Talon's own
+  attestation calls (see `epic_oauth_redirect_observer_script_unresolved_by_this_test`, Evidence
+  2026-08-03T01:00:00 -- same class of concern, different script, arguably stronger here since
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` is older/larger and wraps three surfaces instead of one).
+  CONSEQUENCE: Evidence 2026-08-03T04:00:00's `403 (exists)` result is CONFOUNDED. It does NOT
+  cleanly show `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` is insufficient, and does NOT cleanly point at
+  the Tauri IPC surface (`hypothesis_new`, 04:00:00 block below) either -- a known, independent
+  fetch-wrapping suspect was live during that exact observation. NOT reverted or downgraded by
+  this confound: the `user-script:23, line 106` -> `tauri-2.11.5/scripts/ipc-protocol.js`
+  attribution (04:00:00 block, item 5) -- derived from static script-shape comparison, unaffected
+  by whether the diagnostic script was injected.
+required_sequencing: |
+  The developer must run TWO things in order, same session -- (a) FIRST, then (b) ONLY informed by
+  (a)'s result. Do not run (b) before (a) lands. Full detail in the checkpoint issued this cycle
+  (returned to the orchestrator/user), summarized here for file-resume continuity:
+    (a) Clean re-run: `pnpm tauri:dev` with `GAMELIB_LOGIN_DIAG` explicitly UNSET (verified this
+        cycle: no `.env` file and no shell profile in this repo or the developer's home dotfiles
+        sets this var anywhere -- grepped `.env*`, `.zshrc`, `.zprofile`, `.bashrc`,
+        `.bash_profile`, zero matches -- so a plain `unset GAMELIB_LOGIN_DIAG` before launch, or
+        simply not exporting it, is sufficient). Attempt the fresh logged-out Epic login again.
+        Report: does `403 (exists)` still fire on email submit? Is the form still interactive?
+    (b) THEN, informed by (a): the 3-arm IPC-surface console dump (script below), run in the Tauri
+        login window, the Electron login webview, and Safari.app, same elimination discipline as
+        the outerWidth/alertNative/confirmNative dump (Evidence 2026-08-03T01:00:00): a property
+        present-and-identical in an unblocked arm is eliminated as Talon's signal; a
+        Tauri-unique property survives as a candidate.
+  If (a) shows the 403 does NOT reproduce with DIAG off, that is ITSELF a major finding (implicates
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s own fetch-wrapping, not the IPC surface or residual
+  fingerprint tells, and retroactively strengthens the already-recorded risk on
+  `epic_oauth_redirect_observer_script`'s own fetch-wrapping in the post-auth fix) -- report that
+  back before necessarily proceeding to (b); (a)'s outcome may change whether (b) is even the
+  right next question.
+ipc_surface_dump_script: |
+  Return-value style (matches the working pattern already established for the
+  outerWidth/alertNative/confirmNative dump -- Evidence 2026-08-03T01:00:00 notes a
+  console.log-based variant of that dump "printed nothing useful in this webview's devtools," so a
+  return-value variant was substituted; reusing that same style here for consistency and because
+  it's the version already known to work in this project's devtools). Paste as a single expression
+  so the console shows the return value directly, no `console.log` needed:
+  ```js
+  JSON.stringify({
+    typeofTauriInternals: typeof window.__TAURI_INTERNALS__,
+    typeofTauriGlobal: typeof window.__TAURI__,
+    typeofIsTauri: typeof window.isTauri,
+    tauriKeys: Object.keys(window).filter(k => /tauri/i.test(k)),
+    typeofIpc: typeof window.ipc,
+    typeofIpcPostMessage: typeof (window.ipc && window.ipc.postMessage),
+    notifNative: (function(){ try { return window.Notification.toString().slice(0,60); } catch(e){ return 'ERR:'+e.message; } })(),
+    alertNative: (function(){ try { return window.alert.toString().slice(0,60); } catch(e){ return 'ERR:'+e.message; } })(),
+    confirmNative: (function(){ try { return window.confirm.toString().slice(0,60); } catch(e){ return 'ERR:'+e.message; } })()
+  })
+  ```
+  Grounding for each check (no unverifiable checks invented -- each is tied to a specific source
+  read this cycle or a prior cycle's already-confirmed mechanism):
+  - `__TAURI_INTERNALS__`/`__TAURI__`/`isTauri`/`tauriKeys`: `hypothesis_new`'s
+    `feasibility_finding` (04:00:00 block below), grounded in
+    `tauri-2.11.5/src/manager/webview.rs`, `prepare_pending_webview` (lines 122-224), which
+    unconditionally injects `window.isTauri` and `window.__TAURI_INTERNALS__` into every webview;
+    `window.__TAURI__` is gated by the app-wide `withGlobalTauri` config flag (`tauri.conf.json`:
+    `true`), also unconditional per-window.
+  - `typeofIpc`/`typeofIpcPostMessage`: read this cycle, `tauri-2.11.5/scripts/ipc-protocol.js`
+    (full 92 lines) -- line 84, `window.ipc.postMessage(data)`, with the script's own comment
+    attributing `window.ipc` to `tauri-runtime-wry` > `wry`'s `with_ipc_handler`. This is the
+    concrete, source-confirmed postMessage-IPC-bridge marker (not invented) -- the same mechanism
+    behind the "IPC custom protocol failed, Tauri will now use the postMessage interface instead"
+    warning already attributed to `user-script:23, line 106` (Evidence 2026-08-03T04:00:00, item
+    5; source line 61 of the same file).
+  - `notifNative`/`alertNative`/`confirmNative`: NOT a new check -- reused verbatim from the
+    already-working 2026-08-03T01:00:00 dump (the `tauri_plugin_dialog`/`tauri_plugin_notification`
+    IPC-routed overrides), included here again for completeness in a single combined paste, not as
+    a new candidate. Read this cycle, `tauri-plugin-notification-2.3.3/src/init-iife.js` (full
+    source): confirms it clobbers `window.Notification` directly with no additional distinctively-
+    named global beyond that reassignment -- there is no separate "notification-plugin marker"
+    property to check beyond the already-established `notifNative` toString shape.
+next_action: |
+  CHECKPOINT REACHED (human-verify) issued this cycle -- see the structured checkpoint returned to
+  the user/orchestrator. THIS CYCLE IS DOCUMENTATION + CHECKPOINT CONSTRUCTION ONLY: no source
+  edits were made, no claim is made about which hypothesis is right, no implementation was done.
+  Do NOT close `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row. Do NOT act on the
+  SEPARATE, still-owed post-auth live-gate checkpoint. Do NOT revert or remove
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` -- still only confounded-not-falsified, not shown harmful.
+  Do NOT touch `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. AWAITING: the developer's
+  report from step (a) first; step (b) only after that, per `required_sequencing` above.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T04:00:00 -- LIVE RESULT LANDED, SHIM FALSIFIED AS SUFFICIENT,
+     NEW LEAD INVESTIGATED, CHECKPOINT REISSUED. Everything below this block, including the
+     02:30:00 block, remains HISTORICAL/authoritative context this block acted on. Read THIS
+     block first. -->
+
+hypothesis_new: |
+  Tauri's WKWebView unconditionally exposes a distinctive JS/IPC surface into EVERY webview it
+  creates — `window.isTauri`, `window.__TAURI_INTERNALS__`, the `ipc://localhost` custom-scheme
+  invoke transport (with its own document-visible postMessage fallback), and EVERY registered
+  plugin's injected init script (`notification`, `dialog`, `opener`, `updater`, `shell`,
+  `clipboard-manager`) — into Epic's login page, and this surface is itself a structurally
+  detectable automation signal Talon's fingerprint check could key off, DISTINCT from (not a
+  restatement of) R3's already-killed "does the notification plugin's init-iife.js BREAK the
+  page" mechanism. THIS is a detection-based hypothesis (does Talon SEE and SCORE this surface);
+  R3 was a breakage-based hypothesis (does this plugin's script CRASH something the page needs).
+falsifiability_and_r3_comparison: |
+  R3's actual text (Eliminated, "hypothesis: R3"): "`tauri_plugin_notification::init()`'s
+  globally-injected `init-iife.js` (clobbered `window.Notification` + its self-invoked failing
+  `is_permission_granted` call) is causally responsible for Epic's login form staying
+  non-interactive." Tested by REMOVING the plugin's registration entirely and rebuilding; the
+  form stayed non-interactive anyway -> killed as sole cause. Its own SCOPE CORRECTION note
+  (2026-08-02) already says explicitly: "R3 killed one instance of the injection-breaks-the-page
+  family; it did not kill the family" -- and reopened a "Tauri's own core IPC bootstrap" thread,
+  which a LATER cycle (2026-08-02T18:00:00+, item 3) closed again by source-tracing the "IPC
+  custom protocol failed" warning to `tauri-2.11.5/scripts/ipc-protocol.js` and proving it is
+  "structurally incapable" of touching Epic's `https://` traffic (different URL scheme,
+  in-process, non-network). That closure answered ONE specific sub-question ("can this failing
+  in-process fetch itself corrupt/interfere with Epic's own network requests") -- it never
+  asked, and does not answer, "can Talon's OWN JavaScript, running inside the SAME page,
+  observe `window.__TAURI_INTERNALS__`/`window.isTauri`/plugin globals as evidence of automation
+  tooling." Those are different questions. Verdict: (a) genuinely NEW hypothesis, not a
+  restatement of R3 or its already-closed reopening -- it deserves its own registration, not a
+  reopening of either prior entry.
+
+  CORROBORATING, NOT YET DECISIVE, evidence for treating this as live: the 2026-08-03T01:00:00
+  3-arm property dump (which used the SAME elimination discipline that killed twelve OTHER
+  properties at "Eliminated," the `webdriver`/`plugins`/... entry) never included
+  `__TAURI__`/`__TAURI_INTERNALS__`/`isTauri`/any IPC-bridge-shaped property in its checked list
+  -- this specific candidate is UNTESTED by the very rigor that closed the other twelve, not
+  contradicted by it. Source read this cycle also found a genuine STRUCTURAL ASYMMETRY the
+  control-arm comparison never accounted for: Electron's own login window
+  (`src/backend/main.ts:816`, `new BrowserWindow({ height: 700, width: 1200 }).loadURL(url)`) is
+  created with NO `preload` script and NO custom `webPreferences` at all -- Epic's page in the
+  Electron arm gets ZERO injected globals from GameLib's own code, a genuinely blank/vanilla JS
+  environment. Tauri's login window, by contrast, structurally CANNOT be given an equivalently
+  blank environment (see feasibility finding below) -- so the "unblocked" Electron control arm
+  and the "blocked" Tauri arm differ not just in the two already-targeted properties, but in
+  this entire un-targeted surface too. This is a real, previously-unexamined asymmetry between
+  the two arms' controls -- worth surfacing, not proof of causation.
+feasibility_finding: |
+  Direct read this cycle of vendored `tauri-2.11.5/src/manager/webview.rs`,
+  `prepare_pending_webview` (lines 122-224, the SAME function the prior cycle's plugin-init-
+  script finding already cited, read further this time): this function runs UNCONDITIONALLY for
+  every webview with NO window-label branch anywhere in it. It unconditionally pushes, in this
+  exact order, onto `all_initialization_scripts`: (1) an inline script defining
+  `window.isTauri = true` and `window.__TAURI_INTERNALS__` if absent; (2)
+  `self.invoke_initialization_script` (the core IPC invoke bootstrap, source of the observed
+  "IPC custom protocol failed" warning); (3) a metadata script stamping the current
+  window/webview labels onto `__TAURI_INTERNALS__`; (4) the app's own core
+  `initialization_script(...)`; (5) `plugin_init_scripts` -- EVERY registered plugin's init
+  script, unconditionally, for every webview (already-established finding, reconfirmed); (6)
+  IF-AND-ONLY-IF `app.withGlobalTauri` (`tauri.conf.json`: currently `true`, APP-WIDE, not
+  per-window) is enabled, the plugin_global_api_scripts (the `@tauri-apps/api`-equivalent JS
+  convenience wrappers) -- this one step IS gated by a config flag, but the flag is a single
+  compile-time boolean baked in by `tauri-codegen` (`context.rs:428`,
+  `if config.app.with_global_tauri`) with no per-window override anywhere in the codegen or
+  runtime path. Steps (1)-(5) have NO gate of any kind, config-level or capability-level.
+
+  The `capabilities/*.json` system (`default.json`, `"windows": ["main"]`) does NOT control any
+  of this -- its own file header already documents (and this cycle's read confirms against
+  actual source) that capabilities gate WHICH COMMANDS a window's IPC invoke may successfully
+  reach (`runtime_authority`, a check that happens AFTER the JS surface already exists and a
+  call is attempted), never WHETHER the JS globals/scripts are injected into the DOM in the
+  first place. This is why `loginwin-N-*` (matching no capability) still gets
+  `window.__TAURI_INTERNALS__`, `window.isTauri`, and every plugin's init script executing --
+  it just cannot successfully INVOKE most commands afterward (hence "not allowed on window").
+
+  CONCLUSION: withholding the Tauri IPC/plugin JS surface from the login window specifically is
+  NOT structurally possible in Tauri 2.11.5 via any capability, config, or per-window builder
+  option available in the public API surface. The only levers that touch ANY of this are
+  APP-WIDE: (a) disable `withGlobalTauri` entirely (removes only step 6 -- the convenience
+  `window.__TAURI__` wrapper -- app-wide; does NOT remove `__TAURI_INTERNALS__`, the invoke
+  bootstrap, or any plugin init script, so it would NOT address what's actually observed in the
+  console; low risk since this app appears to use `@tauri-apps/api` module imports rather than
+  the bare `window.__TAURI__` global, but this was not exhaustively grepped this cycle), or (b)
+  disable a plugin's registration entirely app-wide (removes that plugin's init script from
+  EVERY window including "main," which for `tauri_plugin_dialog` would remove the app's own
+  native dialog feature, and for `tauri_plugin_notification` risks the previously-documented
+  Humble-expiration-alert panic path unless `expirationAlerts.ts` is also touched) or (c) fork
+  the vendored `tauri` crate to add a per-window opt-out to `prepare_pending_webview` itself
+  (disproportionate, and this file's OWN prior fix already ruled out the equivalent move for
+  just the dialog plugin on exactly this proportionality basis). No low-risk, scoped mitigation
+  exists at the application-configuration layer for this specific ask.
+next_action: |
+  CHECKPOINT REACHED (decision) issued this cycle -- see the structured checkpoint returned to
+  the user/orchestrator. Do NOT implement anything from this cycle's investigation without a
+  decision first, per standing instruction. Do NOT close `F-34.5-G6-01`, phase 34.5, or any
+  `34.5-UNTESTED-ITEMS.md` row. Do NOT act on the SEPARATE, still-owed post-auth live-gate
+  checkpoint. Do NOT revert or remove `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` -- falsified as
+  SUFFICIENT, not shown harmful or wrong to keep. `reasoning_checkpoint_2026_08_03T02_00_00`
+  (immediately below) and its own fix remain historical/authoritative context for how the
+  currently-shipped shim was reasoned about; the NEW `hypothesis_new` above is a fresh,
+  independent, NOT-YET-TESTED candidate awaiting the user's decision on which experiment (if
+  any) to run next.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T02:30:00 -- STATIC VERIFICATION COMPLETE, CHECKPOINT ISSUED.
+     The fix designed/implemented in the 02:00:00 block below has been statically verified
+     (cargo check clean; cargo test 97/0/1-ignored, +4 new tests, all passing; npx tsc --noEmit
+     clean; npm run test:ci 187/187 suites, 3646/3646 tests, zero failures). Full detail in
+     Resolution, `verification_pre_auth_fingerprint`. Everything below this block, including
+     the 02:00:00 reasoning checkpoint, remains HISTORICAL/authoritative context this block
+     acted on. Read THIS block first. -->
+
+next_action: |
+  CHECKPOINT REACHED (human-verify) issued this cycle -- see the structured checkpoint
+  returned to the user/orchestrator. IMPLEMENTED BUT NOT LIVE-VERIFIED: static proof only,
+  per this project's own F-10 lesson. Do NOT close `F-34.5-G6-01`, phase 34.5, or any
+  `34.5-UNTESTED-ITEMS.md` row on this cycle's work alone. Do NOT act on the SEPARATE,
+  still-owed post-auth live-gate checkpoint (already-authenticated Epic session) -- unchanged,
+  untouched, still owed. Awaiting the developer's live `pnpm tauri:dev` fresh-logged-out-Epic-
+  login result to determine whether this cycle's hypothesis
+  (`reasoning_checkpoint_2026_08_03T02_00_00`) is confirmed or falsified.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T02:00:00 -- CONTINUATION CYCLE, USER DECISION "OPTION A --
+     CONTINUE" ACTED ON. Implements a fix for BOTH surviving candidates registered at
+     01:00:00 (`outerWidth`/`outerHeight` == 0; `alertNative`/`confirmNative` clobbered by
+     `tauri_plugin_dialog`). Everything below this block, including the 01:00:00 block itself,
+     remains HISTORICAL/authoritative context this block acted on. Read THIS block first. -->
+
+reasoning_checkpoint_2026_08_03T02_00_00: |
+  hypothesis: "Talon's pre-auth fingerprint check at Epic's `/v1/init` (or the page bootstrap
+    that precedes it) rejects the Tauri WKWebView session as automated because two DOM/BOM
+    properties read as structurally impossible for a real browser: (1) `window.outerWidth`/
+    `window.outerHeight` are exactly `[0, 0]` -- a real browser (including a chromeless/
+    borderless one) never reports a zero-area outer window while `innerWidth`/`innerHeight`
+    are non-zero and the page is visibly rendered and interactive-looking; (2)
+    `window.confirm` is an `async function` (`Function.prototype.toString` reveals
+    `async function`/non-native source), which the `window.confirm` DOM API can never
+    legitimately be -- it is always a synchronous, native-code function per spec. Both
+    properties are Tauri-only (confirmed absent from BOTH unblocked control arms, Electron
+    and Safari.app, in the SAME 2026-08-03T01:00:00 dump), so fixing both removes two
+    concrete, structurally-provable automation signals from the page BEFORE Epic's own
+    bootstrap script (and Talon's fingerprint collector) ever runs."
+  confirming_evidence:
+    - "Evidence 2026-08-03T01:00:00 (3-arm dump): Tauri outerWidth/outerHeight == [0,0];
+       Electron arm == [3440,1440]; Safari.app arm == [1470,923]. Property is UNIQUE to Tauri
+       across all three arms -- the elimination rule's own SURVIVES condition."
+    - "Same dump: Tauri confirmNative.toString() == an async-function source
+       ('async function(i){return await n(\"plugin:dialog|message\"...' truncated form
+       recorded in Evidence at 2026-08-02); both Electron and Safari.app report
+       'function confirm() { [native code] }'. Property is UNIQUE to Tauri."
+    - "Static source read this cycle, main.rs:3086 (`.plugin(tauri_plugin_dialog::init())`)
+       and the vendored crate's own init-iife.js
+       (tauri-plugin-dialog-2.7.2/src/init-iife.js): confirms the EXACT mechanism --
+       `window.alert`/`window.confirm` are unconditionally reassigned by this plugin's
+       injected init script, `confirm` specifically declared `async function`."
+    - "Static source read this cycle, vendored tauri-2.11.5/src/manager/webview.rs
+       prepare_pending_webview (lines ~131-224): plugin init scripts are placed into
+       `all_initialization_scripts` BEFORE `webview_attributes.initialization_scripts` is
+       appended (`all_initialization_scripts.extend(webview_attributes.initialization_scripts)`
+       then assigned back) -- i.e. our own per-window `.initialization_script(...)` calls on
+       the `WebviewWindowBuilder` execute AFTER the dialog plugin has already clobbered
+       alert/confirm, and there is NO per-window opt-out for a registered plugin's init
+       script (confirmed by direct read; this matches the existing main.rs:3087-3094 comment
+       recorded for the unrelated notification-plugin finding, which independently confirmed
+       the same absence of a capability-scoped exclusion for plugin JS injection). This RULES
+       OUT fix option (a) (\"prevent the plugin from touching this window\") as
+       architecturally unavailable without disabling the plugin app-wide (out of scope --
+       would remove the app's own native dialog feature for the main window) or forking the
+       plugin crate (disproportionate). It also confirms our new script CAN run after the
+       plugin's clobber and re-shape what it left behind, which is what the fix below does."
+  falsification_test: "Ship the fix, then drive a FRESH LOGGED-OUT Epic login through
+    `pnpm tauri:dev`. If the 403 at `/v1/init`/`/v1/init/execute` still occurs identically
+    (same on-screen anti-bot copy, same timing) after both properties are corrected, this
+    hypothesis is FALSIFIED -- the fingerprint check is keying off some OTHER signal this
+    investigation has not yet found (TLS/JA3, header ordering, or the still-separately-open
+    `epic_oauth_redirect_observer_script` question), and the two \"fixed\" properties were
+    either not load-bearing for Talon's decision or were necessary-but-not-sufficient. This is
+    exactly why this cycle ends in a CHECKPOINT, not a closure."
+  fix_rationale: "The fix targets the ROOT MECHANISM identified above (Tauri's WKWebView has
+    no window-chrome concept so outerWidth/outerHeight default to 0; the dialog plugin's
+    JS-injected overrides are structurally non-native), not a symptom -- it does not touch
+    EPIC_LOGIN_URL, USER_AGENTS, matchOAuthRedirect, or any request/response handling, and it
+    does not attempt to suppress or mask the 403 response itself. It restores two specific,
+    concretely-identified structural signals to look like a real browser's, using the SAME
+    injection mechanism (`initialization_script()` on the Epic login `WebviewWindowBuilder`,
+    gated by the pre-existing `is_epic_login` computation) this file's own prior fix and prior
+    diagnostic already established as the correct early-injection point -- reusing proven
+    plumbing rather than inventing a second gating mechanism."
+  blind_spots: "(1) alert/confirm cannot be restored to TRUE native functions -- by the time
+    our script runs, the plugin has already overwritten them and the original native
+    references are unrecoverable (not saved anywhere). The fix corrects `.toString()`
+    IDENTITY only (via a `Function.prototype.toString` WeakMap patch, the standard technique),
+    not full behavioral parity -- `window.confirm`'s `.constructor.name` will still read
+    `AsyncFunction` if any code inspects that property instead of `.toString()`, and this is
+    NOT patched (a `.constructor` swap was judged more invasive/riskier than the benefit,
+    since it is unknown whether Talon checks constructor.name at all -- recorded honestly, not
+    silently). (2) It is UNKNOWN whether Talon's check even reads outerWidth/confirm at
+    pre-auth page-load time versus some other point in the flow. (3) It is UNKNOWN whether
+    fixing these two removes the 403 at all, given `epic_oauth_redirect_observer_script`
+    remains a separate, untested-by-this-method candidate that this cycle does not touch. (4)
+    outerWidth/outerHeight are mirrored to innerWidth/innerHeight (zero visual chrome) rather
+    than to screen.width/height -- a real windowed browser's outer dims are usually >= inner by
+    a small chrome margin; mirroring exactly equal is a judgment call, not verified against
+    what Talon's check actually expects numerically (only that it stops reading [0,0])."
+
+next_action: |
+  STRUCTURED REASONING CHECKPOINT complete (all five fields concrete, hypothesis falsifiable).
+  Proceeding to fix_and_verify: implement `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` in
+  `src-tauri/src/main.rs`, injected as a SEPARATE `initialization_script()` call (distinct
+  name/content from `epic_oauth_redirect_observer_script`, coexisting alongside it) gated by
+  the SAME `is_epic_login` check. Then run `cargo check`, `cargo test`, `npx tsc --noEmit`,
+  `npm run test:ci`, record results honestly (including the ALREADY-KNOWN pre-existing
+  `longRunningChannels.test.ts` WR-08 failure on `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s raw-string
+  delimiter lines, unrelated to this cycle -- do not mistake it for a regression this cycle
+  caused). Mark Resolution as IMPLEMENTED-BUT-NOT-LIVE-VERIFIED. Issue a CHECKPOINT
+  (human-verify) for the live fresh-logged-out-Epic-login test. Do NOT close
+  `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row. Do NOT act on the
+  SEPARATE, still-owed post-auth live-gate checkpoint.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T01:00:00 -- CONTINUATION CYCLE. The Electron-arm fingerprint-
+     dump result (asked for at 00:30:00) HAS LANDED and is applied here, property-by-property,
+     against the branches pre-registered at 2026-08-02T18:00:00
+     (`pending_branches_electron_dump_PRE_REGISTERED_before_result_lands`). The gamelib.log
+     question from 00:30:00 remains UNANSWERED and is NOT re-asked this cycle per this cycle's own
+     scope (not surfaced as new evidence, out of scope). Everything below this block, including the
+     00:30:00 block, remains HISTORICAL/authoritative context this block acted on. Read THIS block
+     first. -->
+
+electron_dump_applied_2026_08_03T01_00_00: |
+  Raw dump: Evidence 2026-08-03T01:00:00. Applied a STRENGTHENED 3-arm version of the pre-registered
+  2-arm (Electron-vs-Tauri) elimination rule, using BOTH available unblocked controls (Electron AND
+  the same-machine/session Safari.app from Evidence 2026-08-02T17:00:00 PART B), not just Electron
+  alone — this removes the cross-machine confound a strict 2-arm reading would otherwise carry (see
+  the cross-machine caveat in the new Evidence entry: this Electron dump's hardwareConcurrency/
+  screen/dpr do not match the 17:00:00 run's machine profile at all, strongly suggesting different
+  hardware/display). Rule: a property is ELIMINATED as a sole-cause candidate if Tauri's (blocked)
+  value is shared by AT LEAST ONE unblocked arm; it SURVIVES only if Tauri's value is unique to
+  Tauri among all three arms.
+
+  ELIMINATED (new Eliminated entry added this cycle, full property list and reasoning there):
+  `webdriver`, `plugins`, `mimeTypes`, `pdfViewerEnabled`, `maxTouchPoints`, `langs`,
+  `hardwareConcurrency`, `vendor`, `screen`, `dpr`, `hasChrome`, `hasSafari`. Also reinforced (not
+  newly eliminated — already dead via DIAGNOSTIC-INSTRUMENTATION-AS-SIGNAL): `fetchNative`/
+  `xhrNative` wrapper-presence, now confirmed identical across all THREE arms, all Epic's own
+  Sentry SDK.
+
+  SURVIVES (non-empty residue — full detail below):
+  1. `outerWidth`/`outerHeight` — Tauri reports `[0,0]`; BOTH unblocked arms (Electron `[3440,1440]`,
+     Safari.app `[1470,923]`) report real, non-zero values matching their own screen/window. This is
+     now confirmed CLEANLY (not the ambiguous console-timed shim from 18:00:00) via TWO independent
+     unblocked controls, stronger than the single-Electron-arm test originally pre-registered.
+     Per the pre-registered branch's own letter ("outer reads non-zero in Electron -> SURVIVES as
+     the leading candidate"): SURVIVES, confirmed. The document-start init-script shim (real
+     rebuild) is the next concrete test, exactly as pre-registered at 17:00:00 sub-branch (a).
+  2. `alertNative`/`confirmNative` (window.alert/window.confirm) — Tauri's are IPC-routed overrides
+     from `tauri_plugin_dialog::init()` (`main.rs:3086`, confirmed by static read this cycle);
+     `confirmNative` is reassigned to an `async function`, which a native `window.confirm` can never
+     be. BOTH unblocked arms (Electron, Safari.app) show real native code for both. This is a NEW
+     candidate this cycle — genuinely untested before, and NOT the same mechanism as the
+     already-eliminated R3 (`tauri_plugin_notification`, a DIFFERENT plugin). SURVIVES.
+
+  NOT A NEW CANDIDATE, do not resurrect: `notifNative` (window.Notification) also differs
+  Tauri-vs-both-unblocked-arms in this same dump, but this is the SAME mechanism R3 already
+  eliminated as SOLE cause via live hardware removal (`tauri_plugin_notification` commented out,
+  symptom persisted, 2026-08-01). This dump is CONSISTENT with R3's setup (the plugin is back in
+  place, so Notification is still clobbered) — it does not contradict or reopen R3. Per the standing
+  instruction not to re-derive eliminated hypotheses without new evidence, and since this evidence
+  is consistent with (not contradicting) R3, `notifNative` stays eliminated as SOLE cause. It is
+  listed here only so the reasoning trail doesn't look like an oversight.
+
+epic_oauth_redirect_observer_script_unresolved_by_this_test: |
+  The NEW production candidate added at the 2026-08-03T00:00:00 un-parking block is NOT resolved by
+  this cycle's control-arm test, for two independent, compounding reasons (static source read this
+  cycle, `main.rs:1384-1421`, no rebuild):
+  1. EVIDENCE-TIMING GAP: the Tauri fingerprint data being compared (17:00:00 PART B) was captured
+     BEFORE commit `c857ade8e` existed. That Tauri build never had this script. Nothing in this
+     file's evidence shows what the fingerprint — or the pre-auth 403 itself — looks like on the
+     CURRENT build with this script present.
+  2. STRUCTURALLY UNTESTABLE BY A FINGERPRINT DUMP, even in principle: this script only ever runs
+     inside Tauri (it is Tauri-only Rust code, injected via `initialization_script`), so Electron can
+     never serve as a control for it — any difference found wouldn't distinguish "our extra
+     fetch-wrapping layer" from "Tauri is WKWebView, Electron is Chromium" (already-confirmed,
+     separately-eliminated confound). Worse: this script wraps `window.fetch` at document-start,
+     BEFORE Epic's own Sentry SDK loads; Sentry re-wraps whatever `window.fetch` currently is at ITS
+     init time, and Sentry's own wrapper source text does not change based on what it wraps. So even
+     a FRESH same-machine Tauri dump on the current build would show the identical Sentry-wrapper
+     `fetchNative` string whether or not our script's extra layer sits underneath it — a
+     `.toString()`-based fingerprint dump cannot detect this candidate's presence or absence at all.
+
+  Also newly confirmed by this cycle's source read: the wrapper attaches a `.then()`/`.catch()` to
+  EVERY fetch response on the page (early no-op return for non-matching pathnames), meaning if
+  Talon's own `/v1/init`/`/v1/init/execute` calls are `fetch()`-based, this script attaches an extra
+  promise continuation to THEM too, not just to the OAuth redirect response — a low-risk but nonzero
+  behavioral difference invisible to `.toString()` comparison. (If Talon's calls are XHR-based
+  instead, this script never touches them at all and is categorically irrelevant to the pre-auth
+  403.) This remains a genuinely OPEN, UNRESOLVED question — not eliminated, not confirmed — and
+  requires a DIFFERENT test than a fingerprint dump (e.g., a live A/B with the script temporarily
+  gated off for pre-auth page loads only, or pathname-logging instrumentation to see whether it's
+  even invoked during Talon's own calls). Do not conflate this with the fetchNative/xhrNative
+  elimination above — that elimination covers Epic's OWN Sentry wrapping only, not this app's own
+  additional layer.
+
+residue_outcome_2026_08_03T01_00_00: |
+  Per the pre-registered branch's own named outcomes: residue is NOT empty. Two candidates survive
+  cleanly (`outerWidth`/`outerHeight`; `alertNative`/`confirmNative` via `tauri_plugin_dialog`), and
+  one additional question (`epic_oauth_redirect_observer_script`) remains genuinely open and
+  untested by this method regardless of residue size. The "empty residue -> redirect to TLS/JA3/
+  header-ordering, end the fingerprint line of inquiry" branch does NOT apply.
+
+  The developer's own position statement (recorded 2026-02-08T18:00:00 -- sic, 2026-08-02T18:00:00,
+  `position_statement_weighed_not_acted_on`) was explicitly conditioned on empty residue: "if the
+  Electron-arm dump does NOT leave a small, obvious residue of candidates, stop." That literal
+  condition is not met — residue is non-empty, and arguably STRONGER than before (two independently
+  confirmed structural candidates via two unblocked controls, not one ambiguous console-timed shim).
+  Per its own stated logic, this does not trigger the stopping rule. This is recorded as a
+  recommendation to weigh, NOT a decision this agent is making — the developer may still choose to
+  stop given the broader, unstated question about the Tauri migration's worth continuing at all
+  (also recorded at 18:00:00), independent of whether this specific stopping condition was met.
+
+next_action: |
+  CHECKPOINT REACHED (decision) issued this cycle. Two live options for the developer to choose
+  between, since the next concrete step on the surviving residue (`outerWidth`/`outerHeight` +
+  `alertNative`/`confirmNative`) is a real rebuild + live hardware-driven behavioral test — exactly
+  the kind of step this project's standing rule says needs the user driving it, not silently
+  proceeded on:
+    (A) Proceed with the document-start init-script shim rebuild — extended this cycle's analysis to
+        cover BOTH surviving candidates in one shim (patch `outerWidth`/`outerHeight` to mirror
+        `innerWidth`/`innerHeight` AND make `window.alert`/`window.confirm` report as native code,
+        e.g. via a `Function.prototype.toString` proxy or by not letting `tauri_plugin_dialog`
+        clobber them on the login window specifically) — a real rebuild, needs the developer to
+        drive `pnpm tauri:dev` and report the live pre-auth 403 result.
+    (B) Stop the pre-auth thread per the developer's own broader (not literally-triggered) reasoning,
+        given the residue's mixed actionability (`outerWidth`/`outerHeight` is app-controllable;
+        `vendor`/engine-identity differences are NOT app-fixable without abandoning WKWebView, though
+        those were eliminated as sole-cause this cycle, not surviving) and the still-open, differently-
+        shaped `epic_oauth_redirect_observer_script` question that would need its own separate test
+        regardless of (A)/(B).
+  NO SOURCE EDIT THIS CYCLE. `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect` untouched. Do NOT
+  act on the post-auth live-gate checkpoint (separate, still-owed thread). Do NOT close
+  `F-34.5-G6-01` or any `34.5-UNTESTED-ITEMS.md` row. `notifNative`/R3 not reopened.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T00:30:00 -- CONTINUATION CYCLE, CHECKPOINT ISSUED FOR THE
+     PRE-AUTH 403 THREAD (this is a DIFFERENT checkpoint than the "CHECKPOINT ISSUED, NOT A GATE
+     RESULT" block below it, which is for the SEPARATE post-auth live-gate thread and remains
+     untouched/owed). Everything below this block, including the un-parking block, remains
+     HISTORICAL/authoritative context this block acted on. Read THIS block first. -->
+
+drift_check_2026_08_03T00_30_00: |
+  Re-read frontmatter, the 2026-08-03T00:00:00 un-parking block, the 2026-08-02T19:00:00 override
+  block, and the 2026-08-02T18:00:00 block in full, per this cycle's required reading. Checked for
+  drift before acting, per the objective's own instruction:
+  - Scanned all Evidence `timestamp:` entries (last one is 2026-08-02T18:00:00) -- NO 2026-08-03
+    Evidence entry exists. The Electron-arm fingerprint-dump result has NOT landed. No drift: the
+    guidance's assumed state matches the file's actual state exactly.
+  - Read `/Users/graysonmitchell/Library/Logs/GameLib/gamelib.log` in full (26 lines, 3.5KB,
+    timestamps 12:14:28-12:14:47 today). Content: a routine Tauri-sidecar bootstrap log only
+    (GAMELIB_SHELL_EXE/appRoot/publicDir resolution, runner-binary path checks, dev-secret-vault
+    install notice + two `read key=sessionCookie` lines, connectivity check, releases/anticheat
+    checks, three runner `--version` invocations). NOTHING Epic-login-related, no 403, no login
+    window activity, no console output at all -- this log slice does not by itself explain what
+    drew the user's attention to it. Recorded honestly as inconclusive on its own; asking the user
+    directly rather than guessing (per guidance item 2).
+  - Confirmed the exact original fingerprint-dump script's source text is NOT preserved verbatim
+    anywhere in this file -- only its resulting property/value table (Evidence 2026-08-02T17:00:00
+    PART B) was recorded. Re-issuing the console script below is a reconstruction matching that
+    same property list, not a byte-for-byte re-paste of a script this file never stored. Flagged
+    honestly in the checkpoint rather than silently presented as verbatim-identical.
+
+next_action: |
+  CHECKPOINT REACHED (human-verify) issued this cycle, per guidance -- see the structured
+  checkpoint returned to the user/orchestrator. Two questions outstanding: (1) whether the
+  dispatched Electron-arm fingerprint dump was ever run, and if so its raw result (to be applied
+  against the pre-registered branches in the 2026-08-02T18:00:00 block property-by-property); (2)
+  what the user was looking at in `gamelib.log`, since this cycle's own read of it found nothing
+  Epic-login-related and cannot resolve that on its own. Do NOT act on the post-auth live-gate
+  checkpoint (separate, still-owed thread). Do NOT re-open any of the six eliminated hypotheses
+  without new evidence specifically implicating them. `USER_AGENTS`/`EPIC_LOGIN_URL`/
+  `matchOAuthRedirect` untouched this cycle; no source edit made.
+
+<!-- SUPERSEDING BLOCK 2026-08-03T00:00:00 -- USER UN-PARKING OF THE PRE-AUTH 403 THREAD.
+     Everything below this block, INCLUDING the 2026-08-02T19:00:00 developer-override block,
+     remains HISTORICAL for the POST-AUTH thread it governs and is UNTOUCHED by this block. This
+     block does NOT revise, retract, or act on the post-auth fix/live-gate-checkpoint state --
+     that checkpoint stays OWED, exactly as issued. Read THIS block first. -->
+
+user_unparking_2026_08_03: |
+  DATED, ATTRIBUTED USER DIRECTION (2026-08-03), received directly from the developer via the
+  session coordinator (bounded user quote: "i wanted to debug the 403..."). This EXPLICITLY
+  UN-PARKS the pre-auth Talon anti-bot 403 thread that `developer_override_2026_08_02T19_00_00`
+  (below) parked in order to let the post-auth fix proceed to implementation.
+
+  Scope of the supersession: ONLY the parking decision itself is reversed. Every other
+  consequence recorded in the 2026-08-02T19:00:00 block remains in force, unchanged:
+  - The post-auth fix (commit `c857ade8e`) stays IMPLEMENTED-BUT-NOT-LIVE-VERIFIED.
+  - The live-gate checkpoint issued this session (asking the user to drive an
+    already-authenticated Epic login through `pnpm tauri:dev`) remains OWED and un-actioned --
+    it is simply no longer this cycle's focus. It is NOT being withdrawn, cancelled, or marked
+    stale; a future cycle should still collect that result when the user is ready.
+  - `F-34.5-G6-01` does NOT close. Phase 34.5 does NOT close. No `34.5-UNTESTED-ITEMS.md` row
+    is closed by this block.
+  - The pre-auth thread's own standing closure-condition (2) --  "the pre-auth login form is
+    confirmed to render and accept input for a genuinely logged-out user" -- is exactly what
+    resuming this thread investigates. Nothing here presumes an outcome.
+
+  NEW PRODUCTION SURFACE NOW IN THE CANDIDATE SET, recorded honestly per the coordinator's
+  instruction: the post-auth fix shipped in `c857ade8e` added `epic_oauth_redirect_observer_script`
+  (`src-tauri/src/main.rs`), a PRODUCTION, always-on script that wraps `window.fetch` on Epic's
+  login page. This is the SAME wrapping technique this thread's own `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`
+  uses and which this thread's own instrumentation-hypothesis testing was built around. Unlike
+  that diagnostic (opt-in, `GAMELIB_LOGIN_DIAG` default off), this new script is unconditional for
+  every Epic login. It must be added to the candidate set for this resumed investigation --
+  NOT assumed guilty, NOT assumed innocent by the prior (pre-existing) instrumentation elimination,
+  because that elimination tested the OLD diagnostic script, not this NEW production one, and they
+  are different code even though they share a technique.
+
+next_action: |
+  Before generating any new hypothesis or candidate, close out the loose end already
+  pre-registered and dispatched in the 2026-08-02T18:00:00 block below
+  (`pending_branches_electron_dump_PRE_REGISTERED_before_result_lands`): a single-shot Electron
+  control-arm fingerprint dump was dispatched to the developer and its result had NOT landed as
+  of the last update. First move THIS cycle: ask the user (via checkpoint, since this requires
+  a human to report console output) whether that Electron-arm dump was ever run, and if so
+  collect the raw result and apply the pre-registered branches property-by-property (see that
+  block for the exact elimination rule and the four possible outcomes, including the
+  "empty residue" outcome that would redirect suspicion to non-JS-observable signals).
+  If it was never run, re-issue the exact console-paste instructions for it (same fingerprint-dump
+  script used for the 17:00:00 Tauri-vs-Safari.app diff, run inside the WORKING Electron login
+  `<webview>` arm this time) so the user can produce it.
+
+  SEPARATELY, also ask the user about `/Users/graysonmitchell/Library/Logs/GameLib/gamelib.log`,
+  which the coordinator noted the user just opened in their IDE -- this may contain fresh,
+  unreported log output relevant to the 403 (timing of Talon's `/v1/init`/`/v1/init/execute`
+  calls, any console errors surfaced via the login-window devtools added in an earlier cycle,
+  or evidence bearing on the outerWidth/outerHeight or fetch-wrapper candidates). Ask what
+  they were looking at in that log before assuming it is unrelated noise.
+
+  Do NOT re-derive or second-guess the six already-eliminated hypotheses (ITP, R1 user-agent, R3
+  notification-plugin-as-sole-cause, the clobbered-global misread, the connection-loss single-run
+  reading, DIAGNOSTIC-INSTRUMENTATION-AS-SIGNAL for the OLD diagnostic script) without new
+  evidence. Do NOT touch `USER_AGENTS`/`EPIC_LOGIN_URL`/`matchOAuthRedirect`. Do NOT act on the
+  post-auth live-gate checkpoint this cycle -- that is a separate, still-owed, still-pending
+  thread.
+
+
+<!-- SUPERSEDING BLOCK 2026-08-03T00:00:00 -- CHECKPOINT ISSUED, NOT A GATE RESULT. Everything
+     below this block, INCLUDING the 2026-08-02T19:00:00 implementation block, remains
+     HISTORICAL/authoritative for what was built and why -- this block does not change the fix,
+     does not touch the parked pre-auth 403 thread, and does not imply the live gate has run or
+     passed. It records only that a resumed continuation session re-confirmed the fix is present
+     exactly as described (commit `c857ade8e`, `git log` + direct read of
+     `src-tauri/src/main.rs`'s `humble_login_open` arm this session) and issued the OWED
+     branch-A step (4) live gate as a human-verify checkpoint, per this project's own standing
+     rule that a hardware-driven step cannot be substituted with a test-suite run. -->
+
+session_recheck_2026_08_03: |
+  Re-read `Resolution.root_cause`/`Resolution.fix`/`Resolution.verification` and directly
+  re-read the current `humble_login_open` arm in `src-tauri/src/main.rs` (lines ~1929-2130) plus
+  `epic_oauth_redirect_observer_script` (~1384-1420) and `oauthLoginCapture.ts`/
+  `useTauriOAuthLogin.ts` in full. Confirmed byte-for-byte consistent with what this file already
+  records: commit `c857ade8e` ("fix(34.5): capture Epic's OAuth redirect via on_navigation exfil
+  (post-auth)") is present on this branch, one commit before HEAD (`e1cef86e4`, an UNRELATED
+  quick-task fix for user-closed-popup cancellation added 2026-08-03 on top of it -- reviewed,
+  does not touch the exfil mechanism, out of scope this cycle). No contradiction found. Nothing
+  new to investigate; proceeding straight to the owed checkpoint rather than re-deriving anything
+  already confirmed.
+
+next_action: |
+  ISSUED this session: a CHECKPOINT REACHED (human-verify) asking the developer to physically
+  drive `pnpm tauri:dev`, log into Epic from an ALREADY-AUTHENTICATED session only (the
+  fresh-logged-out case stays blocked by the parked pre-auth 403 and must NOT be attempted this
+  cycle), and report the exact backend/frontend log lines observed. Awaiting that response. Do
+  NOT re-run static verification (already done, recorded above) and do NOT touch the parked
+  403 thread. When the user responds:
+    - If they report `status=captured` + `phase=idle (login completed, library refresh
+      triggered)` + a real library refresh -> branch-A step (4) is VERIFIED. Update
+      `Resolution.verification` to add this live confirmation, update `34.5-UNTESTED-ITEMS.md`'s
+      `U-34.5-11` row per its own retirement rule, but DO NOT close `F-34.5-G6-01` or Phase 34.5
+      as a whole -- condition (2) (pre-auth logged-out path) is still untested and still blocks
+      the finding's overall closure per the standing rule.
+    - If they report a 403 -- check FIRST whether `epic_oauth_redirect_observer_script`'s
+      `window.fetch` wrap is implicated (the KNOWN RISK recorded in the 2026-08-02T19:00:00
+      block above), before assuming it is a recurrence of the already-parked pre-auth 403.
+      This is new evidence either way (confirms or rules out the NEW RISK) and must be recorded
+      in Evidence, not silently folded into the parked thread.
+    - If they report anything else (hang, error, no console output) -- treat as new evidence,
+      append to Evidence, do not guess.
 
 <!-- SUPERSEDING BLOCK 2026-08-02T19:00:00 -- DEVELOPER OVERRIDE OF PRE-REGISTERED BRANCH B,
      opening a new IMPLEMENTATION cycle for the POST-AUTH fix only. Everything below this block,
@@ -5643,3 +7359,752 @@ files_changed:
     34.5-UNTESTED-ITEMS.md (added new OPEN row `U-34.5-11`; no existing row touched)
   - .planning/debug/epic-login-non-interactive.md (this file -- developer-override
     superseding block, structured reasoning checkpoint, and this Resolution update)
+
+---
+
+## Resolution -- PRE-AUTH structural-fingerprint fix (SEPARATE from the POST-AUTH entry above)
+
+<!-- This subsection is for the DIFFERENT, PRE-AUTH Talon-403 candidate fix implemented
+     2026-08-03, under user decision "OPTION A -- Continue" (Current Focus,
+     reasoning_checkpoint_2026_08_03T02_00_00). Deliberately kept SEPARATE from the
+     POST-AUTH `root_cause`/`fix`/`verification`/`files_changed` entries immediately above --
+     do NOT blend the two. Neither entry supersedes the other; they are two independent,
+     still-separately-unverified fixes for two different defects in the same login flow. -->
+
+root_cause_pre_auth_fingerprint: |
+  NOT CONFIRMED -- this is a HYPOTHESIS, not a confirmed root cause, and this cycle's own
+  status reflects that honestly (`IMPLEMENTED-BUT-NOT-LIVE-VERIFIED`, not `CONFIRMED`). The
+  2026-08-03T01:00:00 3-arm control test (Tauri vs Electron vs Safari.app) found two
+  structural DOM/BOM properties unique to Tauri's WKWebView among all three arms:
+  `window.outerWidth`/`window.outerHeight` == `[0, 0]` (real browsers never report this while
+  rendering interactively), and `window.alert`/`window.confirm` reassigned by
+  `tauri_plugin_dialog::init()` to IPC-routed functions, `confirm` specifically an
+  `async function` (structurally impossible for the real, synchronous `window.confirm` DOM
+  API). Both are candidate contributing signals to Epic's Talon anti-bot service rejecting
+  the pre-auth page load with an HTTP 403 at `/id/api/email/exists` (and, per this
+  investigation's trigger, potentially at `/v1/init`/`/v1/init/execute`). See
+  `reasoning_checkpoint_2026_08_03T02_00_00` in Current Focus for the full evidence chain,
+  falsification test, and named blind spots -- this entry does not repeat that detail.
+fix_pre_auth_fingerprint: |
+  IMPLEMENTED 2026-08-03, under user decision "OPTION A -- Continue" (explicit, dated,
+  relayed via session coordinator). A new, independently-named, independently-attributable
+  production script -- `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` (`src-tauri/src/main.rs`) --
+  injected via a SEPARATE `.initialization_script()` call on the Epic login
+  `WebviewWindowBuilder`, gated by the SAME pre-existing `is_epic_login` check the post-auth
+  fix's `epic_oauth_redirect_observer_script` already uses. Deliberately NOT merged into that
+  script, NOT sharing a helper, and textually distinct (different name, different
+  content/mechanism, no shared constants) -- per the user's own explicit instruction, so a
+  future live-test result (403 clears or does not) can be attributed to ONE of the two
+  scripts, never both at once.
+
+  Two corrections, matching the two surviving candidates exactly:
+  1. `Object.defineProperty(window, 'outerWidth'/'outerHeight', { get: () => window.inner*,
+     configurable: true })` -- mirrors outer dimensions to inner (zero visual chrome), not
+     naive assignment (which would silently no-op since these read as getters under Tauri).
+  2. A `Function.prototype.toString` patch (`WeakMap`-keyed, the standard fingerprint-evasion
+     technique) that makes `window.alert`/`window.confirm` -- WHATEVER THEY CURRENTLY ARE,
+     already clobbered by `tauri_plugin_dialog`'s own init script by the time this script
+     runs -- report `function alert() { [native code] }` / `function confirm() { [native
+     code] }` when stringified. Does NOT reassign `window.alert`/`window.confirm` themselves
+     (confirmed by a dedicated test asserting neither `window.alert = ` nor
+     `window.confirm = ` appears in the script) -- only their `.toString()` IDENTITY changes;
+     their real (IPC-routed) call behavior is completely untouched, so nothing elsewhere in
+     the app that depends on that call path is affected.
+
+  Option (a) from the implementation guidance ("prevent `tauri_plugin_dialog::init()` from
+  touching this window") was RULED OUT, not silently skipped: direct read of vendored
+  `tauri-2.11.5/src/manager/webview.rs`'s `prepare_pending_webview` confirms plugin init
+  scripts are placed into `all_initialization_scripts` BEFORE this window's own
+  `webview_attributes.initialization_scripts` is appended, and there is no per-window
+  opt-out for a registered plugin's init script -- disabling the plugin app-wide would
+  remove the app's own native-dialog feature for the "main" window (out of scope, and a
+  functional regression this cycle must not introduce). Option (b) (`.toString()` shim) was
+  therefore the only available lever, and is what was built.
+
+  Every block in the new script is independently try/caught (mirrors
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`/`epic_oauth_redirect_observer_script`'s own
+  non-interference discipline) -- one failing property patch cannot take down the page or
+  the other patch. Touches no network primitive, no request/response, no cookie, no
+  credential-shaped value at all -- entirely orthogonal to
+  `epic_oauth_redirect_observer_script`'s `window.fetch` wrapping. Built as a plain `concat!`
+  `&'static str` (no runtime substitution needed) using single-quoted JS strings exclusively,
+  satisfying `longRunningChannels.test.ts`'s WR-08 per-line-balanced-`"`-count guard the same
+  way `epic_oauth_redirect_observer_script`'s own template does (confirmed directly this
+  cycle -- see `verification_pre_auth_fingerprint` below).
+verification_pre_auth_fingerprint: |
+  STATIC/COMPILE/UNIT PROOF ONLY -- explicitly NOT live proof, per this project's own F-10
+  lesson ("a green test suite confirmed nothing about a live-only defect"). IMPLEMENTED BUT
+  NOT LIVE-VERIFIED. Do not read anything below as evidence the pre-auth 403 is fixed.
+
+  - `cargo check` (src-tauri): clean, no errors or warnings from this cycle's new code.
+  - `cargo test` (src-tauri): 97 passed, 0 failed, 1 ignored (the same pre-existing ignored
+    test as the post-auth cycle, unrelated). FOUR new tests added this cycle, all passing,
+    pinning: (1) both `outerWidth`/`outerHeight` use `Object.defineProperty` mirroring
+    `innerWidth`/`innerHeight`; (2) the alert/confirm fix patches
+    `Function.prototype.toString` ONLY and never reassigns `window.alert`/`window.confirm`
+    themselves; (3) every block is independently try/caught and the script never touches
+    `fetch`/`XMLHttpRequest`; (4) the script contains zero `"` characters (WR-08-safe
+    construction, single-quoted JS only).
+  - `npx tsc --noEmit`: clean, zero errors. No TypeScript file touched this cycle.
+  - `npm run test:ci`: 187/187 suites, 3646/3646 tests passing, ZERO failures -- including
+    `longRunningChannels.test.ts`'s WR-08 stripper-integrity guard, run directly and
+    confirmed passing on its own (`the real file: every line of the stripped output has a
+    balanced (even) "-count` -- PASS). Note for the record: the post-auth fix cycle's own
+    `verification` entry (immediately above) recorded ONE known, pre-existing WR-08 failure
+    on `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`'s raw-string delimiter lines at that time; this
+    cycle's full run shows that failure NOT present (187/187 suites green, no WR-08 failure
+    of any kind). Recorded honestly rather than silently assumed away: this could mean an
+    intervening cycle fixed it, or the failure was environment/flake-specific to that run --
+    this cycle did not investigate which, since it is outside this cycle's scope and the
+    suite is unambiguously green now regardless of the earlier note's cause.
+
+  WHAT WAS NOT PROVEN, named explicitly so no future reader mistakes static proof for live
+  proof:
+  - Whether the pre-auth 403 actually clears for a genuinely logged-out Epic user under
+    `pnpm tauri:dev` -- OWED, this cycle's own CHECKPOINT below collects that result.
+  - Whether `outerWidth`/`outerHeight` and/or `alert`/`confirm` were ever the load-bearing
+    signal for Talon's decision at all, versus TLS/JA3/header-ordering or the separately-open
+    `epic_oauth_redirect_observer_script` question -- the falsification test in
+    `reasoning_checkpoint_2026_08_03T02_00_00` is what will answer this, not this entry.
+  - Whether `window.confirm.constructor.name` (still `AsyncFunction`, unpatched) matters to
+    Talon's check -- named as an explicit blind spot, not silently assumed irrelevant.
+  - `F-34.5-G6-01` does NOT close. Phase 34.5 does NOT close. No `34.5-UNTESTED-ITEMS.md` row
+    is closed by this entry. The SEPARATE, still-owed post-auth live-gate checkpoint (already-
+    authenticated Epic session) is UNCHANGED and UNTOUCHED by this cycle's work.
+files_changed_pre_auth_fingerprint:
+  - src-tauri/src/main.rs (added `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` const and its injection
+    into the `humble_login_open` arm's Epic-only `is_epic_login` branch, alongside but
+    textually separate from `epic_oauth_redirect_observer_script`'s own injection; added four
+    new `#[cfg(test)]` tests pinning the new const's shape)
+  - .planning/debug/epic-login-non-interactive.md (this file -- structured reasoning
+    checkpoint and this separate Resolution subsection)
+
+live_verification_pre_auth_2026_08_03T17_00_00: |
+  LIVE-VERIFIED, PASSED. This entry does NOT retroactively confirm
+  `root_cause_pre_auth_fingerprint`'s two named candidate signals (`outerWidth`/`outerHeight`,
+  `alert`/`confirm` `.toString()`) as the true mechanism Talon's check reads -- that question
+  is now MOOT rather than answered, because the resolution path taken was the OPTION 1
+  ROUTING PIVOT (`reasoning_checkpoint_2026_08_03T15_00_00`, Current Focus), not the
+  fingerprint shim. `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` remains implemented in source,
+  still never live-exercised on its own (it is dead code on the Epic-under-Tauri path now
+  that the embedded route is unreachable via routing rather than defeated via mitigation) --
+  see `deferred_cleanup_reconciliation_2026_08_03T17_00_00` below for its disposition.
+
+  What was actually live-verified this cycle, relayed by the session coordinator, user's
+  exact confirmation "confirmed fixed" (full detail in the superseding Current Focus block
+  below, `live_gate_result_2026_08_03T17_00_00`): under `pnpm tauri:dev`, Epic's tile now
+  surfaces SIDLogin only -- the embedded 403 path is unreachable for Epic under Tauri, not
+  merely hidden by default; the real system browser opens; a genuine logged-out Epic login
+  completes there; the pasted authorization code runs `epic.login(sid)`; Epic's library
+  actually populates in the app afterward. This satisfies the close criterion this debug
+  session itself set for `F-34.5-G6-01`'s pre-auth arm
+  (`live_verification_requirements_2026_08_03T10_00_00`, Current Focus, checkpoint items
+  1-4).
+
+  ROOT CAUSE, for the record, restated as CONFIRMED (not merely hypothesized) now that a
+  structural fix eliminating its only trigger path has live-verified: Tauri unconditionally
+  injects a JS-observable global surface into every WKWebView (`window.isTauri`,
+  `window.__TAURI_INTERNALS__`, `window.ipc`, plugin globals); `window.isTauri` specifically
+  is proven non-configurable AND non-writable, hence permanently unmaskable from page JS by
+  any technique (delete, reassignment, Proxy) -- matching this file's own
+  `descriptor_findings_2026_08_03T09_00_00` (Current Focus). Epic's Talon anti-bot
+  fingerprints this surface and rejects the login before it can complete under the embedded
+  webview.
+
+  RESOLUTION, for the record: pivot Epic's login under Tauri to SIDLogin (system-browser
+  auth, no WKWebView involved, structurally immune to this fingerprint class) -- OPTION 1,
+  implemented `reasoning_checkpoint_2026_08_03T15_00_00`/`scope_executed_2026_08_03T15_00_00`
+  (Current Focus), now LIVE-VERIFIED.
+
+  STATUS: F-34.5-G6-01's pre-auth arm is RESOLVED. `F-34.5-G6-01` as a whole and Phase 34.5
+  do NOT close this cycle -- two reconciliation items remain open, tracked explicitly in
+  `deferred_cleanup_reconciliation_2026_08_03T17_00_00` below and in the superseding Current
+  Focus block. This cycle performed documentation/bookkeeping only: no source file was
+  edited, nothing was committed, per explicit scope limits relayed by the session
+  coordinator.
+
+deferred_cleanup_reconciliation_2026_08_03T17_00_00: |
+  Two loose ends flagged by `scope_executed_2026_08_03T15_00_00` item 3 and this file's own
+  `next_action` entries across the 15:00:00 and 16:00:00 Current Focus blocks. Both are now
+  SAFE TO ACT ON given the live-gate pass above, but NEITHER WAS ACTIONED THIS CYCLE --
+  recorded here explicitly so they are not silently dropped.
+
+  1. DEFERRED DEAD-CODE CLEANUP (not done this cycle): `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`
+     (this subsection's own `fix_pre_auth_fingerprint`), `epic_oauth_redirect_observer_script`
+     (the SEPARATE post-auth Resolution entry's `fix`, immediately above this `---` divider),
+     and the Epic-specific `.on_navigation` match arm's `OAUTH_REDIRECT_EXFIL_HOST` intercept
+     (same post-auth entry) are all still marked "PENDING REMOVAL once the SIDLogin pivot is
+     live-verified" in source (`resume_ground_truth_2026_08_03T16_00_00` item (c), Current
+     Focus -- comment added, behavior unchanged). That precondition is now satisfied: the
+     SIDLogin pivot IS live-verified (this entry, above). All three are SAFE to remove in a
+     follow-up cycle -- the embedded Epic login path they exist to serve/mitigate is retired
+     and structurally unreachable under Tauri (routing change,
+     `scope_executed_2026_08_03T15_00_00` item 1). NOT removed this cycle: this cycle is
+     documentation-only, no source edits authorized.
+
+  2. `34.5-UNTESTED-ITEMS.md` LEDGER / POST-AUTH LIVE-GATE CHECKPOINT DISPOSITION: rows
+     `U-34.5-06` ("Epic's success path end to end") and `U-34.5-11` ("The Epic OAuth-redirect-
+     capture exfil mechanism ... actually delivering a captured redirect code end to end"),
+     both `.planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/
+     34.5-UNTESTED-ITEMS.md`, both currently **OPEN**, both explicitly noted in their own
+     "Retires together with [the other] or not at all" clause (confirmed by direct read of
+     both rows' full text this cycle, ledger file untouched). The mechanism both rows describe
+     -- an already-authenticated embedded Epic WKWebView session's OAuth redirect being
+     captured via `.on_navigation`/`epic_oauth_redirect_observer_script` -- is now MOOT FOR
+     EPIC SPECIFICALLY: the SIDLogin pivot means there is no more embedded Epic login session,
+     authenticated or otherwise, for that exfil mechanism to ever capture a redirect from.
+     Epic's real auth flow now runs entirely in the system browser (SIDLogin), never in the
+     Tauri-managed WKWebView those rows' own capture criteria describe ("a live `pnpm
+     tauri:dev` session in which a real Epic login reaches `runner=legendary status=captured`"
+     -- that specific runner=legendary embedded-webview code path is retired, not exercised,
+     by the pivot). DISPOSITION, recorded explicitly per the coordinator's instruction:
+     superseded by the SIDLogin pivot, no longer applicable to Epic. NOT closed as
+     PASSED/VERIFIED (they never ran and never will run via the embedded path) -- the correct
+     ledger treatment is retire-as-superseded/no-longer-applicable, with a note pointing to
+     this debug session and the routing pivot, not a silent pass. The ledger file itself was
+     NOT edited this cycle (read-only per explicit scope limit) -- this is a follow-up-cycle
+     action item, not performed here. `.on_navigation`/`epic_oauth_redirect_observer_script`
+     remain live in source pending the dead-code removal in item 1 above; their mootness for
+     Epic does not retroactively make them wrong or unshippable for any hypothetical future
+     runner reusing the same `humble_login_open` arm -- it only means Epic itself no longer
+     exercises them.
+
+resolution_direction_pre_auth_2026_08_03T10_00_00: |
+  APPENDED, does not overwrite `root_cause_pre_auth_fingerprint`/`fix_pre_auth_fingerprint`/
+  `verification_pre_auth_fingerprint` above -- those remain the honest record of the
+  outerWidth/outerHeight + alert/confirm `.toString()` shim HYPOTHESIS and its
+  implemented-but-not-live-verified fix, which is now SUPERSEDED IN PRIORITY (not falsified, not
+  reverted) by the descriptor-analysis finding below.
+
+  Per `descriptor_findings_2026_08_03T09_00_00`/`recommendation_2026_08_03T09_00_00` and
+  `established_resolution_direction_pre_auth_2026_08_03T10_00_00` (Current Focus, this cycle):
+  three of the eleven Tauri-unique JS-surface globals surviving every prior mitigation attempt --
+  `window.ipc`, `window.isTauri`, `window.__TAURI_INTERNALS__` -- are PROVEN, by direct
+  primary-source property-descriptor reads (tauri-2.11.5, wry-0.55.1) AND by this
+  investigation's own live delete/reassign diagnostic, to be PERMANENTLY UNMASKABLE from page JS.
+  `window.isTauri` in particular is Tauri's own purpose-built detection flag and the strongest
+  candidate for whatever Talon's anti-bot check actually reads. CONCLUSION: no JS-layer mitigation
+  (this shim included) can be proven sufficient, and a mitigation-only strategy has a real,
+  structural ceiling. CHOSEN DIRECTION (user decision, 2026-08-03, option ii): pivot Epic login to
+  SIDLogin (system-browser auth), which sidesteps the fingerprinting question entirely rather than
+  attempting to win it. This does NOT retroactively mark `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` as
+  wrong or harmful -- it remains a plausible, still-untested-live, narrower mitigation; it is
+  simply no longer the primary resolution path. `F-34.5-G6-01`/Phase 34.5 remain OPEN; this is a
+  chosen direction pending implementation and live verification, not a closure.
+
+---
+
+## EXPERIMENTAL/THROWAWAY -- deletion-diagnostic (pre-auth 403 investigation, 2026-08-03, user decision OPTION C)
+
+<!-- THIS SECTION IS NOT A FIX. It documents a THROWAWAY, instrumented diagnostic built to
+     answer an open question before committing to either a real shipped mitigation (option A)
+     or SIDLogin (option B). Deliberately kept SEPARATE from both real `Resolution` entries
+     above -- do NOT blend them. Do NOT read anything below as evidence the 403 is fixed or
+     that deleting Tauri's JS surface is safe to ship. Remove or replace this section (and the
+     Rust code it describes) once the live result is known. -->
+
+experiment_summary: |
+  Built under user decision OPTION C, relayed via session coordinator: build a narrow,
+  throwaway, instrumented diagnostic BEFORE committing to any shipped mitigation. The
+  diagnostic does two things at once, in a SEPARATE, distinctly-named script from all three
+  existing login-window scripts: (1) deletes the surviving Tauri-unique fingerprint surface
+  identified by the 2026-08-03T07:00:00 3-arm dump, and (2) instruments the login window's own
+  native lifecycle/capture hooks (already-shipped `on_navigation`, `on_page_load`,
+  `on_window_event(Destroyed)`) with Rust-log markers so a live run can prove -- not assume --
+  whether those hooks still fire after the deletion.
+
+reasoning_checkpoint:
+  hypothesis: |
+    THIS IS A DIAGNOSTIC EXPERIMENT, NOT A CONFIRMED FIX HYPOTHESIS -- no claim is made that
+    deleting the Tauri JS/IPC surface resolves the pre-auth 403 or is safe to ship. The
+    experiment tests two independent things at once: (a) IF Talon's pre-auth fingerprint check
+    keys off the surviving Tauri-unique JS/IPC surface (`window.__TAURI__`,
+    `window.__TAURI_INTERNALS__`, `window.isTauri`, `window.ipc`, the 8
+    `__TAURI_PLUGIN_*`/`__TAURI_IIFE__` keys, non-native `window.Notification`), THEN deleting
+    that surface at document-start (after Tauri's own injection, in the guaranteed-last
+    app-script slot) should change the pre-auth 403 outcome; (b) INDEPENDENTLY of (a), the
+    login window's own native capture mechanisms (`on_navigation`, `on_page_load`,
+    `on_window_event(Destroyed)`, the OAuth-redirect exfil path) do not depend on any of the
+    deleted globals per Q2's static finding, and should continue to fire exactly as before the
+    deletion.
+  confirming_evidence:
+    - "Q1 (injection order, `tauri-2.11.5/src/manager/webview.rs::prepare_pending_webview`,
+       lines 122-224, direct source read this cycle and the prior cycle): app-registered
+       `.initialization_script()` calls run strictly AFTER Tauri's core bootstrap and every
+       plugin's init script, in the exact order this file calls `.initialization_script()` --
+       so registering the new script LAST in this arm's builder chain (after
+       `epic_oauth_redirect_observer_script` and `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`)
+       guarantees it deletes the FULLY-injected surface rather than racing it, and inherits the
+       fingerprint shim's already-applied outerWidth/outerHeight/alert/confirm patches for
+       free, without duplicating that logic."
+    - "Q2 (dependency check, direct re-read this cycle of the humble_login_open arm's own
+       on_navigation/on_page_load/on_window_event(Destroyed) bodies, both before and after this
+       cycle's edits): none of these three native Rust hooks reference
+       window.ipc/__TAURI_INTERNALS__/__TAURI__ anywhere in their own bodies -- they are
+       WKWebView-delegate-level callbacks that fire regardless of page-JS state. Grep of the
+       arm's full body for `ipc`/`__TAURI__`/`__TAURI_INTERNALS__` outside the new diagnostic
+       script's own const: zero matches in any native hook."
+    - "The 2026-08-03T07:00:00 3-arm dump (Current Focus, that timestamp): these properties are
+       the ONLY remaining Tauri-unique candidates after outerWidth/outerHeight and
+       alert/confirm were already fixed, and alert/confirm's non-native shape was already
+       confirmed eliminated LIVE (not just statically) by that same dump."
+  falsification_test: |
+    Live run with `GAMELIB_LOGIN_DIAG` unset, fresh logged-out Epic session, `pnpm tauri:dev`:
+    (a) if `403 (exists)` still fires identically on email submit after this deletion, the
+    surviving-JS-surface hypothesis is FALSIFIED for THIS specific candidate set (not
+    necessarily for TLS/JA3/header-ordering, which this script does not touch and remain
+    untested); (b) INDEPENDENTLY, if any of the four `[epic-deletion-diag]` Rust-log markers
+    (`on_navigation fired` / `on_navigation EXFIL-HOST match` / `on_page_load fired` /
+    `on_window_event Destroyed fired`) fail to appear where the flow reaches them, Q2's static
+    "capture does not depend on these globals" answer is FALSIFIED, and Tauri's own internal
+    plumbing DOES depend on something this investigation missed -- a materially different and
+    more serious finding than the 403 status alone.
+  fix_rationale: |
+    N/A -- this is explicitly NOT a fix decision, and none of this cycle's code is a candidate
+    fix. It exists solely to produce evidence that will inform the NEXT decision: ship a real,
+    hardened deletion mitigation (option A) if the 403 clears and capture stays intact, or
+    pursue SIDLogin instead (option B) if it does not, or if the deletion itself proves unsafe
+    (breaks the lifecycle hooks, throws new JS errors, or otherwise regresses something this
+    investigation did not anticipate).
+  blind_spots: |
+    Whether Tauri's own internal event-emission/housekeeping (untraced this cycle -- wry's own
+    source was not read, same disclosed gap as the 07:00:00 block's Q1 answer) depends on any
+    deleted global for something other than this window's four already-shipped hooks. Whether
+    replacing `window.Notification` with a throwing shim breaks anything Epic's own page calls
+    Notification for (unlikely for a login form, not verified live). Whether the deletion
+    itself throws a new JS error this cycle's static read did not predict -- devtools auto-open
+    for this window already (existing `#[cfg(debug_assertions)]` behavior, unrelated to this
+    cycle), so this is directly observable live but not provable statically. Whether
+    TLS/JA3/header-ordering (untouched by this script) is the REAL signal, in which case this
+    experiment will read as "inconclusive on the 403, but proves capture is independent of the
+    JS surface" rather than closing anything. Whether the ADDITIONAL
+    `#[cfg(debug_assertions)]` registration gate this cycle added beyond the user's literal
+    "same is_epic_login gate" ask changes anything for the live test -- it should not, since
+    `pnpm tauri:dev` is always a debug build, but this divergence from the letter of the
+    instruction is disclosed here rather than silently applied.
+
+what_was_built: |
+  A new, independently-named, independently-attributable const, `src-tauri/src/main.rs`:
+  `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` -- distinct from, never a reuse or extension of,
+  `epic_oauth_redirect_observer_script`, `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, or
+  `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT`. Explicitly labeled THROWAWAY DIAGNOSTIC in its own Rust
+  doc comment (`// ==== THROWAWAY DIAGNOSTIC ... ====` banner plus a full doc comment block).
+
+  1. DELETION (document-start, guaranteed-last init-script slot): registered via
+     `.initialization_script(EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT)` in the `humble_login_open`
+     arm, gated on the SAME `is_epic_login` check `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` uses, AND
+     registered strictly AFTER both `epic_oauth_redirect_observer_script`'s and
+     `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`'s own registration calls in the same builder chain --
+     the guaranteed-last slot per Q1's injection-order finding. Deletes exactly the
+     2026-08-03T07:00:00 SURVIVES list: `window.__TAURI__`, `window.__TAURI_INTERNALS__`,
+     `window.isTauri`, `window.ipc`, and the 8 `__TAURI_PLUGIN_*`-prefixed / `__TAURI_IIFE__`
+     keys (`delete` first, `= undefined` fallback if non-configurable). Restores a
+     native-looking `window.Notification` via an independent
+     `Function.prototype.toString`/`WeakMap` chain that layers on top of (chains to, never
+     replaces) whatever `Function.prototype.toString` already is at that point -- the
+     fingerprint shim's own already-patched version, since that script runs first by
+     registration order. Does NOT re-patch `outerWidth`/`outerHeight`/`alert`/`confirm` itself
+     -- those are already applied by `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` by the time this
+     script runs, so duplicating that logic would be redundant, never more correct (pinned by a
+     dedicated negative test, see `static_verification` below). Ends with a single
+     `console.log`/`console.error` summarizing which properties read as gone/native-looking
+     immediately after the script ran (booleans only, never a secret-shaped value) -- a
+     convenience self-check, not a substitute for the separately required manual 3-arm dump
+     re-run below.
+
+  2. ADDITIONAL SAFETY GATE beyond the literal user ask: the script's REGISTRATION (not its
+     content) is also wrapped in `#[cfg(debug_assertions)]`, disclosed here as a deliberate
+     divergence from "the same `is_epic_login` gate" alone -- added because this deletes a real
+     API surface and must never reach a release build if forgotten. `pnpm tauri:dev` (the run
+     this diagnostic is FOR) is always a debug build, so this does not block the requested live
+     test.
+
+  3. INSTRUMENTATION (Rust-side, added to the arm's own ALREADY-SHIPPED native hooks, not new
+     hooks -- `on_window_event(Destroyed)` already existed from quick task 260803-eee Task 5;
+     no new hook had to be added for this diagnostic):
+     - `on_navigation`: a marker on EVERY navigation (`[epic-deletion-diag] on_navigation
+       fired ... host=...`, gated `is_epic_login` + `#[cfg(debug_assertions)]`), a second
+       marker specifically on an `OAUTH_REDIRECT_EXFIL_HOST` match (`on_navigation EXFIL-HOST
+       match observed`), and a third marker once the payload is successfully parsed and relayed
+       into `LOGIN_WINDOW_EVENTS` (`EXFIL capture relayed`). None logs the redirectUrl/code
+       value itself -- only host strings and booleans, matching this file's existing
+       T-34.4.1-21/T-28-04 secret-handling convention.
+     - `on_page_load`: a marker per page-load event (`on_page_load fired ... kind=... host=...`
+       -- never the full URL/query string).
+     - `on_window_event(Destroyed)`: a marker when the window is actually destroyed (`
+       on_window_event Destroyed fired`).
+     All four markers are `#[cfg(debug_assertions)]`-gated and `is_epic_login`-gated (so other
+     runners' login windows, e.g. GOG/Amazon/Humble/Zoom, produce zero extra log noise).
+
+static_verification: |
+  STATIC/COMPILE/UNIT PROOF ONLY -- explicitly NOT live proof, per this project's own F-10
+  lesson. Do not read anything below as evidence about the live 403 or the live
+  instrumentation markers.
+
+  - `cargo check` (src-tauri): clean, no errors or warnings from this cycle's new code.
+  - `cargo test` (src-tauri): 102 passed, 0 failed, 1 ignored (same pre-existing ignored test,
+    unrelated). FIVE new tests added this cycle, all passing, pinning: (1) the script deletes
+    the full SURVIVES list (all 11 delete statements); (2) it restores `window.Notification`
+    via its OWN independent WeakMap/toString chain (never reaching into the fingerprint shim's
+    private closure, which is structurally impossible from a separate IIFE) and marks it
+    native-looking; (3) it does NOT duplicate the outerWidth/outerHeight/alert/confirm patches
+    (negative assertions); (4) every delete/patch block is independently try/caught and the
+    script never touches `fetch`/`XMLHttpRequest`; (5) the script contains zero `"` characters
+    (WR-08-safe, single-quoted JS only). A sixth ordering assertion (registered LAST among this
+    arm's own `.initialization_script()` calls) is pinned in
+    `src/backend/__tests__/tauriShellSource.test.ts` instead of as a Rust unit test, matching
+    this codebase's own convention that arm-body source-ordering assertions live in that TS
+    suite (see the F-34.5-G6-04 describe block), not in a Rust `#[test]`.
+  - `npx tsc --noEmit`: clean, zero errors.
+  - `npm run test:ci`: 187/187 suites, 3647/3647 tests passing, ZERO failures.
+
+  ONE DEFECT FOUND AND FIXED DURING THIS CYCLE'S OWN VERIFICATION, recorded honestly rather
+  than silently corrected: an early draft of the new test comment at
+  `epic_login_deletion_diagnostic_script_deletes_the_full_survives_list` wrote the literal text
+  "__TAURI_PLUGIN_*/__TAURI_IIFE__" inside a plain `//` comment (not backtick-separated the way
+  the const's own doc comment safely writes it). The bare `*/` substring this produced paired
+  with an unrelated, pre-existing, harmless stray `/*` elsewhere in the file (inside a
+  `.github/workflows/*.yml` path mentioned in an unrelated doc comment, line ~3535) and caused
+  `src/backend/__tests__/tauriShellSource.test.ts`'s
+  `REQ-34.3-08 every clipboard #[cfg(test)] fn plan 34.3-03 added still exists` test to fail --
+  the file-wide block-comment stripper (`stripSourceComments`) paired that distant `/*` with
+  the new `*/` and silently swallowed roughly 900 lines of the file as one giant "comment",
+  removing several clipboard test function signatures from the stripped copy the TS suite
+  checks against. CONFIRMED via `git stash`/`git stash pop` that this exact test PASSED at HEAD
+  and only failed once this cycle's comment text was introduced -- a genuine regression this
+  cycle caused and fixed, not a pre-existing failure. Fixed by rewording the comment to avoid
+  the adjacent `*/` sequence entirely (`__TAURI_PLUGIN_-prefixed keys plus __TAURI_IIFE__`)
+  rather than adding a workaround elsewhere. Full suite re-run afterward confirmed zero
+  regressions remain (187/187 suites, 3647/3647 tests, all passing).
+
+  WHAT WAS NOT PROVEN, named explicitly so no future reader mistakes static proof for live
+  proof:
+  - Whether the pre-auth 403 clears, is unaffected, or changes shape for a genuinely
+    logged-out Epic user under `pnpm tauri:dev` with this deletion applied -- OWED, this
+    cycle's CHECKPOINT below collects that result.
+  - Whether all four `[epic-deletion-diag]` instrumentation markers actually appear in a live
+    run, in the expected order, for the expected events -- OWED, same checkpoint.
+  - Whether the deletion itself throws any new JS error visible in the login window's devtools
+    (already auto-open in debug builds) -- OWED, same checkpoint.
+  - Whether the SURVIVES-list globals are actually GONE when independently re-checked via the
+    already-established 3-arm dump script, re-pasted in the Tauri login window specifically --
+    OWED, same checkpoint, requested regardless of the 403 outcome.
+  - `F-34.5-G6-01` does NOT close. Phase 34.5 does NOT close. No `34.5-UNTESTED-ITEMS.md` row is
+    touched by this entry. The SEPARATE, still-owed post-auth live-gate checkpoint (already-
+    authenticated Epic session) is UNCHANGED and UNTOUCHED by this cycle's work.
+  - This code is NOT a candidate fix and is NOT being proposed for shipment as-is. It is
+    THROWAWAY and is expected to be removed or replaced, in whichever direction the live result
+    points, before this finding can close.
+
+files_changed_experimental_throwaway:
+  - src-tauri/src/main.rs (added `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` const and its
+    `#[cfg(debug_assertions)]` + `is_epic_login`-gated registration, placed last among the
+    arm's own `.initialization_script()` calls; added THROWAWAY-labeled instrumentation markers
+    to the arm's existing `on_navigation`, `on_page_load`, and `on_window_event(Destroyed)`
+    hook bodies; added five new `#[cfg(test)]` tests pinning the new const's shape)
+  - src/backend/__tests__/tauriShellSource.test.ts (added a THROWAWAY-labeled describe block
+    pinning the new script's guaranteed-last registration order relative to the two sibling
+    production scripts)
+  - .planning/debug/epic-login-non-interactive.md (this file -- this EXPERIMENTAL/THROWAWAY
+    section, kept deliberately separate from the two real `Resolution` entries above)
+
+---
+
+## Current Focus (SUPERSEDING, 2026-08-03T15:00:00) -- OPTION 1 routing implementation cycle
+
+<!-- User decision received: OPTION 1 (SIDLogin becomes Epic's ONLY login path under Tauri;
+     Electron's Epic tile unchanged). This block documents the MANDATORY structured reasoning
+     checkpoint (fix_and_verify protocol, Step 0) written BEFORE any source edit this cycle,
+     plus the exact scope executed. Does not reopen or reinterpret anything in the routing
+     options / cleanup scope / live-verification-requirements blocks above -- this cycle
+     executes OPTION 1 exactly as scoped there. -->
+
+reasoning_checkpoint_2026_08_03T15_00_00:
+  hypothesis: |
+    Under Tauri, Epic's embedded-webview login is unconditionally reachable via `Runner`'s
+    primary tile (`handleLogin()` -> `navigate(props.loginUrl)`, no `isTauri()` gate today),
+    and that exact path is the one this investigation has spent the whole session proving hits
+    a permanent, structurally-unmaskable-fingerprint-driven pre-auth 403 (Talon). Rerouting
+    Epic's PRIMARY tile action, under Tauri only, to invoke `alternativeLoginAction` (which
+    already opens the SIDLogin modal) instead of navigating to the embedded route -- and
+    suppressing the now-redundant secondary "Alternative Login Method" tile in that case --
+    removes the ONLY UI path that reaches the guaranteed-403 embedded flow for Epic under
+    Tauri, without touching Electron at all (Electron's Epic `Runner` instance does not set the
+    new prop, so its behavior is provably, structurally unchanged -- not just "expected to be
+    unchanged").
+  confirming_evidence:
+    - "`routing_investigation_2026_08_03T10_00_00` (Current Focus, prior block): direct source
+       read confirmed `Runner/index.tsx`'s `handleLogin()` calls `navigate(props.loginUrl)`
+       unconditionally, no `isTauri()` gate anywhere in the component today. Epic is the ONLY
+       one of the 6 runners (Epic/GOG/Amazon-nile/Zoom/Steam/Humble, re-verified this cycle
+       directly from `Login/index.tsx:157-228`) given `alternativeLoginAction` -- confirmed by
+       re-reading `Login/index.tsx` in full this cycle before writing this checkpoint."
+    - "`sidlogin_under_tauri_viability_2026_08_03T10_00_00` (Current Focus, prior block): every
+       link in SIDLogin's own chain (`loginPage()` -> `shell.openExternal` -> the real Tauri
+       `tauri_plugin_opener` command; `epic.login(sid)` -> the already-ported
+       `runnerAuthFlowRegistration.ts` `login` channel -> the real, unchanged `LegendaryUser.
+       login`) was confirmed by direct source read to be a genuine Tauri implementation, not a
+       silent stub of the kind this project has hit three times before (`nativeImage`/
+       `safeStorage`/`navigator.clipboard`)."
+    - "The user's own OPTION 1 decision (relayed via session coordinator, dated 2026-08-03)
+       explicitly authorizes gating on the SAME established `isTauri()` import this codebase
+       already uses at `WebView/index.tsx:557` and `useTauriOAuthLogin.ts:155` -- re-verified
+       directly, this cycle, at both citations (both true: `isTauri` imported from
+       `preload/tauriTransport` and used as a first, unconditional guard) before reusing it, per
+       this project's own recorded `isTauri()` stale-guard gotcha (phase 34.4 gate item 2)."
+  falsification_test: |
+    If a live `pnpm tauri:dev` run shows Epic's tile still navigating to `/loginweb/legendary`
+    (the embedded webview route) on click, or shows BOTH the primary tile's click opening
+    SIDLogin AND a redundant "Alternative Login Method" second tile for Epic under Tauri, the
+    routing change did not take effect as designed and must be re-diagnosed before the
+    live-verification checkpoint result is trusted. This is exactly what the checkpoint below
+    asks the user to observe directly (item 1: "Epic tile now shows ONLY SIDLogin, no embedded
+    window option at all").
+  fix_rationale: |
+    The root problem is not a bug in the embedded flow's mechanics -- it is that the ONLY UI
+    path Epic offers under Tauri today leads to a mechanism this investigation's own
+    `descriptor_findings_2026_08_03T09_00_00` concluded has a genuine, provable structural
+    ceiling (`window.ipc`/`window.isTauri`/`window.__TAURI_INTERNALS__` are non-configurable,
+    non-writable, and provably un-maskable from page JS -- not merely hard to mask). Rerouting
+    the UI eliminates the only path to that mechanism entirely, rather than attempting to keep
+    winning an unwinnable JS-layer fingerprinting fight. This is a root-cause-addressing
+    routing change, not a cosmetic one: the change is scoped to the exact prop/click-handler
+    boundary already identified as Epic-only (`alternativeLoginAction`), so it is structurally
+    incapable of regressing any of the other 5 runners -- none of them set the new prop, so
+    their `handleLogin()` code path is byte-for-byte identical to before this change for their
+    inputs.
+  blind_spots: |
+    This cycle does NOT live-verify that SIDLogin's real system-browser flow completes end to
+    end for a genuinely fresh, logged-out Epic account under Tauri specifically -- that is the
+    live-verification checkpoint below, deliberately not this cycle's static work. It does NOT
+    verify that hiding the primary tile's `navigate()` call makes the embedded path
+    UNREACHABLE by every other route (e.g., the `/loginweb/legendary` route itself remains
+    registered app-wide for Electron and is not removed by this change) -- the checkpoint
+    explicitly asks the user to confirm this live, not assume it from the UI change alone. It
+    does not address whether Epic's tile should carry different copy/label text now that it
+    always opens SIDLogin under Tauri -- left unchanged per the "minimal prop-contract change"
+    guidance; a future cycle could revisit copy if user testing surfaces confusion. It does not
+    re-litigate OPTION 2 or 3 -- OPTION 1 was the user's explicit, final choice.
+
+scope_executed_2026_08_03T15_00_00: |
+  1. ROUTING (implements OPTION 1 exactly as scoped in `routing_investigation`/
+     `cleanup_scope_proposal` above): added an optional `hideEmbeddedLogin?: boolean` prop to
+     `Runner`'s prop contract (the smallest shape change that expresses "this runner has no
+     embedded login option under Tauri" without restructuring the component). `handleLogin()`
+     now calls `props.alternativeLoginAction?.()` instead of `navigate(props.loginUrl)` when
+     `hideEmbeddedLogin` is true; the secondary "Alternative Login Method" tile is suppressed in
+     that same case (folded into the primary action instead of duplicated below it).
+     `Login/index.tsx` passes `hideEmbeddedLogin={isTauri()}` on Epic's `Runner` ONLY -- the
+     other 5 runners (GOG/Amazon-nile/Zoom/Steam/Humble) receive no new prop, so they default to
+     `undefined`/falsy and their behavior is unchanged (added/verified by new tests).
+  2. CLEANUP (SAFE-NOW, unconditional per user decision): `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT`
+     (`src-tauri/src/main.rs`), its registration call, its four `[epic-deletion-diag]`
+     instrumentation markers inside the shared `on_navigation`/`on_page_load`/
+     `on_window_event(Destroyed)` hooks, its five `#[cfg(test)]` tests, and the companion
+     THROWAWAY describe block in `src/backend/__tests__/tauriShellSource.test.ts` were all
+     removed entirely.
+  3. DEFERRED (NOT done this cycle, per explicit instruction): `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`,
+     `epic_oauth_redirect_observer_script`, and the `.on_navigation` closure's
+     `OAUTH_REDIRECT_EXFIL_HOST` match arm are UNCHANGED in behavior -- each gained a
+     "PENDING REMOVAL once the SIDLogin pivot is live-verified" comment only, so a future reader
+     does not mistake them for permanent production code.
+
+next_action: |
+  Static verification (`cargo check`/`cargo test`/`npx tsc --noEmit`/`npm run test:ci`), then
+  issue a human-verify CHECKPOINT with the exact live-verification steps from
+  `live_verification_requirements_2026_08_03T10_00_00` above. Record this cycle's fix as
+  IMPLEMENTED-NOT-LIVE-VERIFIED, exactly like the two prior fixes in this file. Do NOT close
+  `F-34.5-G6-01`, phase 34.5, or any `34.5-UNTESTED-ITEMS.md` row this cycle -- only a passing
+  live run makes them eligible for reconsideration. The deferred cleanup (fingerprint shim +
+  observer script + Epic `.on_navigation` arm removal) and the
+  `34.5-UNTESTED-ITEMS.md`/post-auth-live-gate-checkpoint reconciliation are explicitly NOT this
+  cycle's work -- flagged as the next cycle's follow-up once the live run passes.
+
+## Current Focus (SUPERSEDING, 2026-08-03T16:00:00) -- resumed after stall, cleanup repaired, static verification complete
+
+<!-- The 15:00:00 cycle stalled (watchdog timeout / network error, not a logic failure) with
+     UNCOMMITTED edits left in the working tree. Nothing was committed. This block records what
+     was found on resume (ground truth from `git diff`/`git status`, read BEFORE trusting the
+     15:00:00 block's own `scope_executed` claim) and what was repaired. Does not redo any
+     correctly-completed work. -->
+
+resume_ground_truth_2026_08_03T16_00_00: |
+  Verified via `git status --short` / `git diff --stat` against HEAD (fix/steam-native-install-
+  stability branch) before reading anything else, per this cycle's own required_reading
+  instruction:
+    M src-tauri/src/main.rs (+324 vs HEAD at the time of resume)
+    M src/frontend/screens/Login/components/Runner/index.tsx (+17)
+    M src/frontend/screens/Login/index.tsx (+9)
+    ?? src/frontend/screens/Login/components/Runner/__tests__/index.test.tsx (new, untracked)
+    M src/backend/__tests__/tauriShellSource.test.ts (+38)
+    M .planning/debug/epic-login-non-interactive.md (+2190, this file)
+
+  Assessment against the 15:00:00 block's `scope_executed_2026_08_03T15_00_00` claim, item by
+  item:
+
+  (a) ROUTING -- Runner/index.tsx + Login/index.tsx: CORRECT AND COMPLETE, matches the claim
+      exactly. `hideEmbeddedLogin?: boolean` added to `RunnerProps`; `handleLogin()` routes to
+      `alternativeLoginAction` and returns early when set, checked AFTER the existing `disabled`
+      short-circuit (preserving that guard's precedence); the secondary "Alternative Login
+      Method" tile's render condition gained `&& !props.hideEmbeddedLogin`. `Login/index.tsx`
+      passes `hideEmbeddedLogin={isTauri()}` on Epic's `Runner` only, importing `isTauri` from
+      `../../../preload/tauriTransport` -- confirmed as the SAME relative-depth import path this
+      codebase already uses at `WebView/index.tsx:18` and `useTauriOAuthLogin.ts:3`. All 5 other
+      runners (gog/nile/zoom/steam/humble) pass no new prop -- confirmed by direct read of
+      `Login/index.tsx:157-228`. The new `Runner/__tests__/index.test.tsx` is a real, complete
+      test file (not a stub): 7 tests across two describe blocks, one proving the other-5-runners
+      default path is byte-identical to before (navigates, renders the alt tile, no
+      `hideEmbeddedLogin` regression), one proving Epic-under-Tauri's new path (routes to
+      `alternativeLoginAction`, suppresses the alt tile, `disabled` still short-circuits first,
+      silent no-op if no `alternativeLoginAction` provided). Ran in isolation this cycle: 7/7
+      pass. NO REPAIR NEEDED for (a).
+
+  (b) CLEANUP of `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` -- FALSE, only PARTIALLY done, and the
+      file was left in a NON-COMPILING state. The const's own definition (`const
+      EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT: &str = concat!(...)`) WAS successfully deleted --
+      confirmed absent from both HEAD and the working tree (`grep -n "^const
+      EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT"` and `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT: &str`
+      both returned nothing, before repair). But its THREE registration/instrumentation call
+      sites (the `#[cfg(debug_assertions)] if is_epic_login { builder =
+      builder.initialization_script(EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT); }` block plus its
+      13-line doc comment; the `eprintln!("[epic-deletion-diag] on_page_load fired...")`
+      diagnostic plus its 4-line comment inside `.on_page_load`; the `eprintln!("[epic-deletion-
+      diag] on_window_event Destroyed fired...")` diagnostic plus its 4-line comment inside
+      `.on_window_event`) and the entire 6-test `#[cfg(test)]` module pinning the deleted const's
+      shape (109 lines, `epic_login_deletion_diagnostic_script_*`) were all STILL PRESENT,
+      referencing a symbol that no longer existed. This is the true explanation for the
+      "suspiciously large +324" this cycle's objective flagged: net-positive because the const's
+      own ~90-line body genuinely was removed (net negative there), but the surrounding
+      apparatus, the two new production doc comments (`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`'s and
+      the routing/cleanup rationale comments), and the still-dangling references combined to a
+      net +324. `cargo check` would have failed with "cannot find value
+      `EPIC_LOGIN_DELETION_DIAGNOSTIC_SCRIPT` in this scope" in at least 4 places had it been run
+      at resume. REPAIRED this cycle: removed all three call/instrumentation sites (with their
+      doc comments) and the entire dangling test module. The companion THROWAWAY `describe`
+      block in `tauriShellSource.test.ts` (pinning the deletion script's registration-order
+      claim) was also removed -- its own doc comment already said "remove alongside the Rust
+      const and its call site once the live result is known," which this repair now satisfies.
+      Removing that block brought `tauriShellSource.test.ts` back to byte-identical with HEAD
+      (confirmed: `git diff -- src/backend/__tests__/tauriShellSource.test.ts` now empty) --
+      that file's only change in this whole cycle was the since-removed throwaway block.
+
+  (c) PENDING REMOVAL comments on `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`,
+      `epic_oauth_redirect_observer_script`, and the `.on_navigation` closure's
+      `OAUTH_REDIRECT_EXFIL_HOST` Epic match arm -- FALSE, only 1 of 3 was actually present.
+      `grep -n "PENDING REMOVAL"` before repair returned exactly one hit: the `.on_navigation`
+      match-arm comment (correct, matches the claimed text, no behavior change). Neither
+      `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`'s nor `epic_oauth_redirect_observer_script`'s own doc
+      comment carried the marker, contradicting the 15:00:00 block's claim that all three
+      "gained a comment only." REPAIRED this cycle: added a 5-line "PENDING REMOVAL -- after
+      SIDLogin pivot is live-verified (F-34.5-G6-01, OPTION 1, 2026-08-03)" doc-comment paragraph
+      immediately above each of the two missing targets' declarations (`fn
+      epic_oauth_redirect_observer_script` and `const EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`),
+      matching the wording/rationale already used on the `.on_navigation` arm. Comment-only --
+      neither function/const body, gating (`is_epic_login`), nor call site was touched. All three
+      targets now carry the marker (verified: `grep -n "PENDING REMOVAL"` returns 3 hits post-
+      repair).
+
+  (d) Shared code (`humble_login_open` arm itself, `.on_page_load`'s core body,
+      `LOGIN_WINDOW_EVENTS`, anti-phishing origin/title tracking, `EPIC_LOGIN_URL`,
+      `matchOAuthRedirect`) -- CONFIRMED genuinely untouched: `git diff -- src-tauri/src/main.rs
+      | grep -n "EPIC_LOGIN_URL\|matchOAuthRedirect\|LOGIN_WINDOW_EVENTS"` returned zero matches
+      against the diff. NO REPAIR NEEDED for (d).
+
+repair_summary_2026_08_03T16_00_00: |
+  Net effect on `src-tauri/src/main.rs`: diff went from +324/-0 (broken, non-compiling) to
+  +195/-0 (compiles clean) vs HEAD. Removed: the deletion-diagnostic's 3 call/instrumentation
+  sites + their doc comments (~50 lines) and its entire 6-test module + trailing NOTE (~110
+  lines). Added: 2 new PENDING REMOVAL doc-comment paragraphs (~10 lines) that the stalled cycle
+  should have added but didn't. `src/backend/__tests__/tauriShellSource.test.ts` reverted to
+  byte-identical with HEAD (its only change, the throwaway ordering-claim `describe` block, was
+  removed). `Runner/index.tsx`, `Login/index.tsx`, and `Runner/__tests__/index.test.tsx` were
+  NOT touched this cycle -- already correct from the 15:00:00 cycle.
+
+static_verification_2026_08_03T16_00_00: |
+  - `cargo check` (src-tauri): PASS, clean, zero errors/warnings.
+  - `cargo test` (src-tauri): 97 passed, 0 failed, 1 ignored (pre-existing ignore, unrelated to
+    this cycle) -- includes the surviving `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` test module
+    (untouched, still 4/4 passing) and confirms no dangling reference to the removed deletion
+    script remains anywhere in the crate.
+  - `npx tsc --noEmit`: PASS, clean, zero type errors.
+  - `npm run test:ci`: PASS, 188/188 suites, 3653/3653 tests, 0 failed. Includes
+    `src/backend/__tests__/tauriShellSource.test.ts` (post-repair, throwaway block removed) and
+    `src/frontend/screens/Login/components/Runner/__tests__/index.test.tsx` (7/7, verified both
+    in the full run and in isolation).
+  - Recorded honestly per this project's own F-10 lesson: a green suite proves the SHAPE is
+    correct and the code compiles/runs -- it does NOT prove SIDLogin actually completes a real,
+    logged-out Epic login under `pnpm tauri:dev`, nor that the embedded route is truly
+    unreachable end-to-end. That is the live-verification checkpoint below.
+
+next_action: |
+  Issue the human-verify CHECKPOINT with the exact live-verification steps from this file's
+  `original_task_scope`/`live_verification_requirements_2026_08_03T10_00_00`. Record this cycle's
+  fix as IMPLEMENTED-NOT-LIVE-VERIFIED. Do NOT close `F-34.5-G6-01`, phase 34.5, or any
+  `34.5-UNTESTED-ITEMS.md` row. Two items remain explicitly flagged (not done) for the FOLLOWING
+  cycle, after the live run passes: (1) the deferred cleanup of
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` + `epic_oauth_redirect_observer_script` + the Epic
+  `.on_navigation` match arm; (2) `34.5-UNTESTED-ITEMS.md`/post-auth-live-gate-checkpoint
+  reconciliation.
+
+## Current Focus (SUPERSEDING, 2026-08-03T17:00:00) -- live-gate PASSED, bookkeeping cycle, RESOLVED-PENDING-CLEANUP
+
+<!-- Documentation/bookkeeping-only cycle. No source file edited, nothing committed, per
+     explicit scope limits relayed by the session coordinator. Records the human-verify
+     checkpoint's result (issued by the 16:00:00 cycle's own `next_action`) and reconciles the
+     two loose ends that checkpoint's own scope deliberately deferred. Does not redo, blend
+     with, or reinterpret any prior block -- purely additive. -->
+
+live_gate_result_2026_08_03T17_00_00: |
+  Relayed by the session coordinator. User's exact confirmation: "confirmed fixed".
+
+  Checkpoint (issued by the 16:00:00 cycle, `live_verification_requirements_2026_08_03T10_00_00`
+  in this file) PASSED, end to end, under `pnpm tauri:dev`:
+  1. Epic's tile now surfaces SIDLogin only -- the embedded 403 path is unreachable for Epic
+     under Tauri, not just hidden by default.
+  2. The real system browser opens.
+  3. A genuine logged-out Epic login completes there.
+  4. The pasted authorization code runs `epic.login(sid)`.
+  5. Epic's library actually populates in the app afterward.
+
+  This satisfies the close criterion this debug session set for `F-34.5-G6-01`'s pre-auth arm.
+  Full root-cause/resolution restatement and the two reconciliation items are recorded in the
+  PRE-AUTH Resolution subsection above (`live_verification_pre_auth_2026_08_03T17_00_00`,
+  `deferred_cleanup_reconciliation_2026_08_03T17_00_00`) -- not repeated here in full to avoid
+  drift between two copies of the same record.
+
+status_disposition_2026_08_03T17_00_00: |
+  F-34.5-G6-01's PRE-AUTH arm: RESOLVED, live-verified, per `live_gate_result_2026_08_03T17_00_00`
+  above.
+
+  F-34.5-G6-01 as a whole: NOT CLOSED. Two concrete, tracked reconciliation items remain (both
+  detailed in `deferred_cleanup_reconciliation_2026_08_03T17_00_00`, PRE-AUTH Resolution
+  subsection):
+    (1) dead-code removal of `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`,
+        `epic_oauth_redirect_observer_script`, and the Epic `.on_navigation` match arm -- SAFE
+        now, NOT done this cycle.
+    (2) `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` need a follow-up edit to record
+        "superseded by the SIDLogin pivot, no longer applicable to Epic" rather than staying
+        silently OPEN with no disposition note -- ledger file NOT edited this cycle (read-only
+        this cycle per explicit scope limit).
+
+  Phase 34.5: NOT CLOSED -- unaffected by this cycle beyond the above; this debug session does
+  not have authority to close a phase, only its own finding.
+
+  The POST-AUTH Resolution entry (`epic_oauth_redirect_observer_script`, root_cause/fix/
+  verification, `c857ade8e`) is UNCHANGED by this cycle -- its own live gate was never run (it
+  cannot be: the embedded Epic session it targets no longer exists as a reachable UI path after
+  the pivot) and its disposition is exactly the MOOT-FOR-EPIC note recorded in
+  `deferred_cleanup_reconciliation_2026_08_03T17_00_00`, item 2, not a pass or a fail.
+
+  The working-tree pivot changes (`Runner/index.tsx`, `Login/index.tsx`,
+  `Runner/__tests__/index.test.tsx`, the `src-tauri/src/main.rs` cleanup from the 16:00:00
+  cycle) remain UNCOMMITTED -- this cycle was explicitly not asked to commit them.
+
+next_action: |
+  Follow-up cycle (separate from this one, explicitly out of scope here): (1) remove the three
+  named dead-code items now that they are confirmed safe; (2) edit
+  `34.5-UNTESTED-ITEMS.md` to retire/reframe `U-34.5-06`/`U-34.5-11` with the
+  superseded-by-SIDLogin-pivot disposition; (3) only after both land, reconsider whether
+  `F-34.5-G6-01`/Phase 34.5 are eligible for closure. This bookkeeping cycle's own work is
+  complete: status recorded, live-gate result recorded, both loose ends reconciled with an
+  explicit disposition note (not silently dropped). No further action this cycle.
