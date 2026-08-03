@@ -117,3 +117,19 @@ question requires otherwise.
   and restore on exit (trap). Note: `steam_api.dll` return values (`Init`,
   `RestartAppIfNecessary`) are **advisory** — many games ignore them; the bridge is a compatibility
   layer, not a DRM gate.
+
+- **Login-UX spikes (019–021):** the shared fixture is spike 019's DummyStore
+  (`019-dummy-oauth-store/store-server.mjs`, zero-dep Node ESM, port 17940) — an OAuth 2.0
+  auth-code-grant provider with a hot-editable login form. Scripted flows against it MUST run
+  a logout preamble and baseline the store's `/events` counters after it: the login-window
+  jar persists across app restarts, so "logged in" is sticky and silently skips the form.
+  Claims get TWO oracles — the harness `run.log` and the store's own `/events` export.
+- **Human-judgment spikes get a probe-checklist UI** (020/021): an explicit numbered probe
+  table in the control panel with yes/no/n-a toggles + note fields, each toggle logged into
+  the same forensic stream as the machine events. Conversational reports are acceptable
+  evidence — record them in the README trail as "reported conversationally" with the date.
+- **objc2 binding gaps: use raw `msg_send!`** when a method (`orderedWindows`,
+  `childWindows`, `sheetParent`) isn't generated under src-tauri's pinned feature set —
+  extends 016's `windowNumber` convention. Match src-tauri's `Cargo.toml` verbatim for the
+  objc2 crates AND remember `tauri`'s `unstable` feature is required for
+  `tauri::WindowBuilder`/`get_window` (raw-window shells, multiwebview).

@@ -1,0 +1,460 @@
+{
+  "eventCount": 27,
+  "events": [
+    {
+      "category": "app",
+      "data": {
+        "storeOrigin": "http://127.0.0.1:17940"
+      },
+      "message": "started",
+      "ms": 1258,
+      "t": "2026-08-03T23:35:26.503Z"
+    },
+    {
+      "category": "env",
+      "data": {
+        "autorun": "1",
+        "macos": true,
+        "storeOrigin": "http://127.0.0.1:17940"
+      },
+      "message": "environment",
+      "ms": 2193,
+      "t": "2026-08-03T23:35:27.438Z"
+    },
+    {
+      "category": "app",
+      "data": {},
+      "message": "store server reachable",
+      "ms": 2274,
+      "t": "2026-08-03T23:35:27.519Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 1: baseline (free window) — reproduce 'login gets lost' ===",
+      "ms": 2759,
+      "t": "2026-08-03T23:35:28.004Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login",
+        "url": "http://127.0.0.1:17940/login"
+      },
+      "message": "opened login",
+      "ms": 2766,
+      "t": "2026-08-03T23:35:28.011Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/login",
+        "window": "login"
+      },
+      "message": "on_page_load",
+      "ms": 2903,
+      "t": "2026-08-03T23:35:28.147Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/login",
+        "window": "login"
+      },
+      "message": "on_page_load",
+      "ms": 2918,
+      "t": "2026-08-03T23:35:28.163Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          }
+        ],
+        "keyWindow": "login — login"
+      },
+      "message": "order_report: 1a after open (login should be front)",
+      "ms": 4773,
+      "t": "2026-08-03T23:35:30.018Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          }
+        ],
+        "keyWindow": "Spike 021 — modal login window probes"
+      },
+      "message": "order_report: 1b after raising MAIN over a FREE login (login now behind = the bug)",
+      "ms": 5382,
+      "t": "2026-08-03T23:35:30.627Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 2: child-window attachment ===",
+      "ms": 5383,
+      "t": "2026-08-03T23:35:30.628Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "login",
+        "result": "Ok(())"
+      },
+      "message": "attach_child",
+      "ms": 5388,
+      "t": "2026-08-03T23:35:30.632Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          },
+          {
+            "childWindows": [
+              "login — login"
+            ],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          }
+        ],
+        "keyWindow": "Spike 021 — modal login window probes"
+      },
+      "message": "order_report: 2a after attach_child (login should list as main's child)",
+      "ms": 5798,
+      "t": "2026-08-03T23:35:31.043Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          },
+          {
+            "childWindows": [
+              "login — login"
+            ],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          }
+        ],
+        "keyWindow": "Spike 021 — modal login window probes"
+      },
+      "message": "order_report: 2b after raising MAIN over a CHILD login (login should STAY in front)",
+      "ms": 6399,
+      "t": "2026-08-03T23:35:31.644Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 3: minimize behavior with child attached ===",
+      "ms": 6400,
+      "t": "2026-08-03T23:35:31.644Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "main",
+        "result": "Ok(())",
+        "un": false
+      },
+      "message": "miniaturize_window",
+      "ms": 6403,
+      "t": "2026-08-03T23:35:31.648Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [
+              "login — login"
+            ],
+            "isSheet": false,
+            "miniaturized": true,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": false,
+            "windowNumber": 64715
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": false,
+            "windowNumber": 64736
+          }
+        ],
+        "keyWindow": "<none>"
+      },
+      "message": "order_report: 3a after miniaturizing MAIN (does the child follow or detach?)",
+      "ms": 7609,
+      "t": "2026-08-03T23:35:32.853Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "main",
+        "result": "Ok(())",
+        "un": true
+      },
+      "message": "miniaturize_window",
+      "ms": 7609,
+      "t": "2026-08-03T23:35:32.854Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [
+              "login — login"
+            ],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          }
+        ],
+        "keyWindow": "<none>"
+      },
+      "message": "order_report: 3b after deminiaturizing MAIN",
+      "ms": 8813,
+      "t": "2026-08-03T23:35:34.058Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== PHASE 4: sheet mode ===",
+      "ms": 8813,
+      "t": "2026-08-03T23:35:34.058Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "login",
+        "result": "Ok(())"
+      },
+      "message": "detach_child",
+      "ms": 8814,
+      "t": "2026-08-03T23:35:34.059Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "login",
+        "result": "Ok(())"
+      },
+      "message": "begin_sheet",
+      "ms": 8825,
+      "t": "2026-08-03T23:35:34.069Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": true,
+            "miniaturized": false,
+            "sheetParent": "Spike 021 — modal login window probes",
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          }
+        ],
+        "keyWindow": "login — login"
+      },
+      "message": "order_report: 4a after beginSheet (isSheet/sheetParent should be set)",
+      "ms": 10331,
+      "t": "2026-08-03T23:35:35.576Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": true,
+            "miniaturized": false,
+            "sheetParent": "Spike 021 — modal login window probes",
+            "title": "login — login",
+            "visible": true,
+            "windowNumber": 64736
+          },
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          }
+        ],
+        "keyWindow": "login — login"
+      },
+      "message": "order_report: 4b after raising MAIN under a SHEET login",
+      "ms": 10936,
+      "t": "2026-08-03T23:35:36.181Z"
+    },
+    {
+      "category": "modal",
+      "data": {
+        "label": "login",
+        "result": "Ok(())"
+      },
+      "message": "end_sheet",
+      "ms": 10946,
+      "t": "2026-08-03T23:35:36.191Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          },
+          {
+            "childWindows": [],
+            "isSheet": true,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": false,
+            "windowNumber": 64736
+          }
+        ],
+        "keyWindow": "Spike 021 — modal login window probes"
+      },
+      "message": "order_report: 4c after endSheet",
+      "ms": 11752,
+      "t": "2026-08-03T23:35:36.997Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "=== SCRIPTED PHASES COMPLETE — window numbers for screenshots ===",
+      "ms": 11753,
+      "t": "2026-08-03T23:35:36.998Z"
+    },
+    {
+      "category": "oracle",
+      "data": {
+        "frontToBack": [
+          {
+            "childWindows": [],
+            "isSheet": false,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "Spike 021 — modal login window probes",
+            "visible": true,
+            "windowNumber": 64715
+          },
+          {
+            "childWindows": [],
+            "isSheet": true,
+            "miniaturized": false,
+            "sheetParent": null,
+            "title": "login — login",
+            "visible": false,
+            "windowNumber": 64736
+          }
+        ],
+        "keyWindow": "Spike 021 — modal login window probes"
+      },
+      "message": "order_report: final",
+      "ms": 11754,
+      "t": "2026-08-03T23:35:36.998Z"
+    }
+  ],
+  "exportedAt": "2026-08-03T23:35:36.999Z"
+}

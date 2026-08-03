@@ -381,6 +381,14 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
   key-equivalent local-monitor fix (re-proven under a minimal reimplementation). Login UX
   should surface these two system channels (hint text), not build a custom credential store.
   *(020)*
+- **Login windows attach as AppKit child windows (`addChildWindow:ordered:Above` via objc2),
+  not Tauri `.parent()`** — one runtime-switchable code path covers the wry AND pristine
+  surfaces; un-losable behind main; typing/paste/AutoFill panel keep working. Re-assert
+  z-order after main deminiaturizes (child returns behind main until re-raised). *(021)*
+- **Sheet-mode login is forbidden without self-dismissal**: the sheet blocks the window
+  holding any dismiss control, the store's page has no cancel, and sheets render no close
+  button — an abandoning user is trapped (observed live). If ever used: auto-close on OAuth
+  code capture + a sheet-owned Esc/cancel affordance; `endSheet` hides the window. *(021)*
 
 ### Spikes (Idea D)
 
@@ -388,4 +396,4 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
 |---|------|------|-----------|---------|------|
 | 019 | dummy-oauth-store | standard | Given a local OAuth2 auth-code-grant provider, when a Tauri login window drives the flow end-to-end, then every step is observable and the harness is reusable for UI/form iteration | ✓ VALIDATED (2 consecutive scripted runs exit 0; replay + PKCE-tamper rejected; warm-session flow 75 ms) | oauth, pkce, login, webview, harness |
 | 020 | keychain-autofill-login-webview | standard | Given the dummy store's login form in (a) a wry WebviewWindow and (b) a pristine raw WKWebView, when the user focuses the credential fields, then macOS Keychain/password-manager autofill offers to fill — or the gating (web-browser entitlement) is proven and fallbacks enumerated | ⚠ PARTIAL (inline autofill + save-prompt platform-blocked on macOS 26, both surfaces, HTTP & HTTPS; BUT right-click → AutoFill → Passwords fills in both, and Cmd+V paste works in both) | keychain, autofill, wkwebview, entitlement |
-| 021 | modal-login-window | standard | Given the main Tauri window, when the login window opens modal (.parent() / NSWindow child / always-on-top), then it cannot be lost behind the main window and input+autofill still work | ○ PENDING | modal, nswindow, parent, window-management |
+| 021 | modal-login-window | standard | Given the main Tauri window, when the login window opens modal (.parent() / NSWindow child / always-on-top), then it cannot be lost behind the main window and input+autofill still work | ✓ VALIDATED (child-window attachment RECOMMENDED — un-losable, input/autofill intact; sheet works but TRAPS the user without self-dismissal; oracle-proven restore-order gotcha) | modal, nswindow, child-window, sheet, window-management |
