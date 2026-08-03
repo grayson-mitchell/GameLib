@@ -76,3 +76,11 @@
 {"category":"autorun","data":{"ok":true},"message":"8d destroy isolated embed","ms":27093,"t":"2026-08-02T23:54:09.458Z"}
 {"category":"autorun","data":{},"message":"=== COMPLETE ===","ms":27093,"t":"2026-08-02T23:54:09.458Z"}
 {"category":"autorun","data":{"path":"/Users/graysonmitchell/Projects/GameLib/.planning/spikes/016-embedded-child-webview-basic/events-export.json"},"message":"exported","ms":27097,"t":"2026-08-02T23:54:09.462Z"}
+{"category":"control-server","data":{"origin":"http://localhost:17913"},"message":"listening","ms":0,"t":"2026-08-02T23:59:50.282Z"}
+{"category":"app","data":{"controlOrigin":"http://localhost:17913","mainThread":"ThreadId(1)","unstableFeature":true},"message":"started","ms":393,"t":"2026-08-02T23:59:50.675Z"}
+{"category":"env","data":{"controlOrigin":"http://localhost:17913","gogStoreUrl":"https://www.gog.com/en/games","steamStoreUrl":"https://store.steampowered.com/app/440/Team_Fortress_2/","tauri":"2.11.5 (Cargo.lock-pinned, matches src-tauri) + `unstable` feature","wry":"0.55.1"},"message":"environment","ms":1129,"t":"2026-08-02T23:59:51.410Z"}
+{"category":"embed","data":{"isolatedStore":false,"requested":{"h":630.0,"w":986.0,"x":282.0,"y":56.0},"spoofUa":true,"thread":"main","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"},"message":"add_child","ms":18171,"t":"2026-08-03T00:00:08.453Z"}
+{"category":"embed","data":{"boundsReadback":"Rect { position: Logical(LogicalPosition { x: 282.0, y: 56.0 }), size: Logical(LogicalSize { width: 986.0, height: 630.0 }) }","elapsedMs":46,"label":"store-embed","windowNumber":43955,"windowWebviews":["store-embed","main"]},"message":"add_child OK","ms":18219,"t":"2026-08-03T00:00:08.500Z"}
+{"category":"navigation","data":{"url":"https://store.steampowered.com/app/440/Team_Fortress_2/"},"message":"embed on_navigation","ms":18249,"t":"2026-08-03T00:00:08.530Z"}
+{"category":"navigation","data":{"event":"started","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"},"message":"embed on_page_load","ms":18826,"t":"2026-08-03T00:00:09.108Z"}
+{"category":"navigation","data":{"event":"finished","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"},"message":"embed on_page_load","ms":19189,"t":"2026-08-03T00:00:09.471Z"}
