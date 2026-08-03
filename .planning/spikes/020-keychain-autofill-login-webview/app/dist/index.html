@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spike 020 — Keychain autofill probes</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 18px 22px 40px;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #0e1116; color: #d7dde5;
+      }
+      h1 { font-size: 15px; margin: 0 0 2px; letter-spacing: .02em; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+           color: #7d8899; margin: 22px 0 8px; font-weight: 600; }
+      .sub { color: #6b7686; font-size: 11.5px; margin-bottom: 14px; }
+      .row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; align-items: center; }
+      button {
+        font: inherit; font-size: 12px; padding: 6px 11px; border-radius: 6px;
+        border: 1px solid #2b3442; background: #171d26; color: #cfd8e3; cursor: pointer;
+      }
+      button:hover { background: #1e2732; border-color: #3a4657; }
+      button.p { background: #1b3a5c; border-color: #2d5c8f; color: #d7e9ff; }
+      button.g { background: #1c3d2a; border-color: #2c6141; color: #d3f2df; }
+      input[type=text] {
+        font: inherit; font-size: 12px; padding: 6px 9px; border-radius: 6px;
+        border: 1px solid #2b3442; background: #0f131d; color: #e8edf5; width: 320px;
+      }
+      table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 12px; }
+      th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #1e2732; vertical-align: top; }
+      th { color: #6f7b8c; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .07em; }
+      td.probe { width: 46%; }
+      .seg { display: inline-flex; border: 1px solid #2b3442; border-radius: 6px; overflow: hidden; }
+      .seg button { border: 0; border-radius: 0; padding: 4px 10px; }
+      .seg button.sel-yes { background: #1c3d2a; color: #63d992; }
+      .seg button.sel-no { background: #3a1c22; color: #ff8f6b; }
+      .seg button.sel-na { background: #2a2f3a; color: #9aa5b5; }
+      td input { width: 95%; font: inherit; font-size: 11.5px; padding: 3px 6px;
+                 background: #0f131d; border: 1px solid #232c38; border-radius: 5px; color: #cfd8e3; }
+      #log { height: 200px; overflow: auto; border: 1px solid #232c38; border-radius: 8px;
+             background: #0b0f14; padding: 8px 10px; font-size: 11px; margin-top: 8px; }
+      .ev { white-space: pre-wrap; word-break: break-word; padding: 1px 0; }
+      .c-navigation { color: #8fb8ff; } .c-observation { color: #ffd39b; }
+      .c-window { color: #c9a7ff; } .c-app, .c-env, .c-autorun { color: #6f7b8c; }
+      code { background: #1a212c; padding: 1px 5px; border-radius: 4px; color: #9fd6ff; }
+      .ok { color: #57d98a; } .bad { color: #ff8f6b; }
+      .callout { border: 1px solid #4a3b1e; background: #201a10; border-radius: 8px;
+                 padding: 10px 12px; font-size: 12px; color: #d8c69a; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike 020 — Keychain / password-manager autofill in the login webviews</h1>
+    <div class="sub" id="env">loading env…</div>
+
+    <div class="callout">
+      <b>Before probing:</b> ① make sure the spike-019 store is running
+      (<code>node ../../019-dummy-oauth-store/store-server.mjs</code>);
+      ② in the macOS <b>Passwords</b> app, add a manual entry for site
+      <code>127.0.0.1</code> (user <code>demo</code>, pw <code>dummy-store-pw</code>) so the local
+      form has something fillable; ③ have a real site with a saved Keychain password for the
+      HTTPS probes (default: github.com).
+    </div>
+
+    <h2>1 · Open the surfaces</h2>
+    <div class="row">
+      <button class="g" onclick="openWin('wry', STORE + '/login')">Open DummyStore form (wry)</button>
+      <button class="p" onclick="openWin('pristine', STORE + '/login')">Open DummyStore form (pristine WKWebView)</button>
+    </div>
+    <div class="row">
+      <input type="text" id="httpsUrl" value="https://github.com/login" />
+      <button class="g" onclick="openWin('wry', document.getElementById('httpsUrl').value)">Open HTTPS site (wry)</button>
+      <button class="p" onclick="openWin('pristine', document.getElementById('httpsUrl').value)">Open HTTPS site (pristine)</button>
+      <button onclick="closeAll()">Close login windows</button>
+    </div>
+
+    <h2>2 · Record what you see</h2>
+    <div class="sub">
+      Click in the username/password fields of each window and watch for ANY autofill affordance:
+      key icon in the field, dropdown of saved logins, Touch ID prompt. Then submit the demo
+      credentials and watch for a "Save password?" offer. Every toggle is logged immediately.
+    </div>
+    <table id="probes"></table>
+    <div class="row" style="margin-top:10px">
+      <button class="g" onclick="exportAll()">Export observations + log</button>
+    </div>
+
+    <h2>Event log</h2>
+    <div id="log"></div>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const listen = window.__TAURI__.event.listen;
+      let STORE = 'http://127.0.0.1:17940';
+
+      const logEl = document.getElementById('log');
+      function push(e) {
+        const div = document.createElement('div');
+        div.className = 'ev c-' + e.category;
+        div.textContent = `${String(e.ms).padStart(6)}ms [${e.category}] ${e.message} ${JSON.stringify(e.data)}`;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      listen('spike-log', (e) => push(e.payload));
+      const uiLog = (category, message, data = {}) =>
+        invoke('log_from_ui', { category, message, data }).catch(() => {});
+
+      const PROBES = [
+        ['P1', 'wry + DummyStore form: ANY autofill UI on focusing username/password? (key icon / dropdown / Touch ID)'],
+        ['P2', 'wry + DummyStore form: after submitting demo creds, any "Save password?" offer?'],
+        ['P3', 'pristine + DummyStore form: any autofill UI on focus?'],
+        ['P4', 'pristine + DummyStore form: any "Save password?" offer on submit?'],
+        ['P5', 'wry + real HTTPS site (saved Keychain password exists): autofill offered?'],
+        ['P6', 'pristine + real HTTPS site: autofill offered?'],
+        ['P7', 'right-click inside a password field (either surface): any AutoFill / Passwords context-menu item?'],
+        ['P8', 'copy password in Passwords app → Cmd+V pastes into the wry window field?'],
+        ['P9', 'copy password in Passwords app → Cmd+V pastes into the PRISTINE window field?']
+      ];
+      const results = {};
+
+      function renderProbes() {
+        document.getElementById('probes').innerHTML =
+          '<tr><th>#</th><th class="probe">probe</th><th>observed</th><th>note</th></tr>' +
+          PROBES.map(([id, text]) => `
+            <tr>
+              <td><b>${id}</b></td>
+              <td class="probe">${text}</td>
+              <td><span class="seg">
+                <button id="${id}-yes" onclick="setResult('${id}','yes')">yes</button>
+                <button id="${id}-no" onclick="setResult('${id}','no')">no</button>
+                <button id="${id}-na" onclick="setResult('${id}','n/a')">n/a</button>
+              </span></td>
+              <td><input id="${id}-note" placeholder="what exactly did you see?"
+                         onchange="noteChanged('${id}')" /></td>
+            </tr>`).join('');
+      }
+      renderProbes();
+
+      window.setResult = (id, val) => {
+        results[id] = { ...(results[id] || {}), observed: val };
+        for (const v of ['yes', 'no', 'na']) {
+          const b = document.getElementById(`${id}-${v}`);
+          b.className = (v === val || (val === 'n/a' && v === 'na')) ? `sel-${v}` : '';
+        }
+        uiLog('observation', `${id} = ${val}`, { probe: PROBES.find(p => p[0] === id)[1], note: results[id].note || '' });
+      };
+      window.noteChanged = (id) => {
+        const note = document.getElementById(`${id}-note`).value;
+        results[id] = { ...(results[id] || {}), note };
+        uiLog('observation', `${id} note`, { note });
+      };
+
+      window.openWin = async (kind, url) => {
+        const cmd = kind === 'wry' ? 'open_wry_login' : 'open_pristine_login';
+        const label = kind === 'wry' ? 'login-wry' : 'login-pristine';
+        try {
+          await invoke(cmd, { label, url, spoofUa: true });
+          const n = await invoke('window_number', { label }).catch(() => null);
+          uiLog('window', `${kind} window number`, { label, windowNumber: n });
+        } catch (e) {
+          uiLog('window', `${kind} open FAILED`, { error: String(e) });
+        }
+      };
+      window.closeAll = () => {
+        invoke('close_window', { label: 'login-wry' }).catch(() => {});
+        invoke('close_window', { label: 'login-pristine' }).catch(() => {});
+      };
+
+      window.exportAll = async () => {
+        uiLog('observation', 'FINAL RESULTS TABLE', { results });
+        const p = await invoke('export_log');
+        uiLog('app', 'exported', { path: p });
+      };
+
+      (async () => {
+        STORE = await invoke('store_origin');
+        const env = await invoke('env_report');
+        document.getElementById('env').textContent =
+          `store: ${env.storeOrigin} · macos: ${env.macos} · autorun: ${env.autorun ?? 'off'}`;
+        try {
+          await fetch(STORE + '/events');
+          uiLog('app', 'store server reachable', {});
+        } catch {
+          uiLog('app', 'store server UNREACHABLE — start node ../../019-dummy-oauth-store/store-server.mjs', {});
+        }
+      })();
+    </script>
+  </body>
+</html>

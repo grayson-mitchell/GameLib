@@ -370,11 +370,22 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
   across app restarts (015), so "logged-in" is sticky and silently skips the form. *(019)*
 - **`crypto.subtle` is available on the `tauri://` origin (macOS)** — S256 PKCE works
   in-renderer. Windows/Linux unverified. *(019)*
+- **Inline Password AutoFill and save-password prompts do NOT exist in either login surface**
+  (wry WebviewWindow AND pristine WKWebView; loopback-HTTP and real-HTTPS) on macOS 26 —
+  live-confirmed; matches Apple's browser-only policy; no public entitlement changes it. *(020)*
+- **The system right-click → AutoFill → Passwords panel IS a working Keychain channel in both
+  surfaces** — fills credentials even on loopback HTTP; GameLib never touches the secret. UX
+  caveats (both surfaces, so system behavior not a harness bug): no site auto-match, panel
+  search box rejects typed input with a beep, manual scroll, click-per-field fill. *(020)*
+- **Cmd+V paste from the Passwords app works in both surfaces**; the pristine window needs the
+  key-equivalent local-monitor fix (re-proven under a minimal reimplementation). Login UX
+  should surface these two system channels (hint text), not build a custom credential store.
+  *(020)*
 
 ### Spikes (Idea D)
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 019 | dummy-oauth-store | standard | Given a local OAuth2 auth-code-grant provider, when a Tauri login window drives the flow end-to-end, then every step is observable and the harness is reusable for UI/form iteration | ✓ VALIDATED (2 consecutive scripted runs exit 0; replay + PKCE-tamper rejected; warm-session flow 75 ms) | oauth, pkce, login, webview, harness |
-| 020 | keychain-autofill-login-webview | standard | Given the dummy store's login form in (a) a wry WebviewWindow and (b) a pristine raw WKWebView, when the user focuses the credential fields, then macOS Keychain/password-manager autofill offers to fill — or the gating (web-browser entitlement) is proven and fallbacks enumerated | ○ PENDING | keychain, autofill, wkwebview, entitlement |
+| 020 | keychain-autofill-login-webview | standard | Given the dummy store's login form in (a) a wry WebviewWindow and (b) a pristine raw WKWebView, when the user focuses the credential fields, then macOS Keychain/password-manager autofill offers to fill — or the gating (web-browser entitlement) is proven and fallbacks enumerated | ⚠ PARTIAL (inline autofill + save-prompt platform-blocked on macOS 26, both surfaces, HTTP & HTTPS; BUT right-click → AutoFill → Passwords fills in both, and Cmd+V paste works in both) | keychain, autofill, wkwebview, entitlement |
 | 021 | modal-login-window | standard | Given the main Tauri window, when the login window opens modal (.parent() / NSWindow child / always-on-top), then it cannot be lost behind the main window and input+autofill still work | ○ PENDING | modal, nswindow, parent, window-management |

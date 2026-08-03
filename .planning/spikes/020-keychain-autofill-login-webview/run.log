@@ -1,0 +1,51 @@
+{"category":"app","data":{"storeOrigin":"http://127.0.0.1:17940"},"message":"started","ms":835,"t":"2026-08-03T20:45:27.287Z"}
+{"category":"env","data":{"autorun":"1","macos":true,"storeOrigin":"http://127.0.0.1:17940"},"message":"environment","ms":2115,"t":"2026-08-03T20:45:28.566Z"}
+{"category":"app","data":{},"message":"store server reachable","ms":2169,"t":"2026-08-03T20:45:28.621Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opening wry login window","ms":2344,"t":"2026-08-03T20:45:28.796Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":2351,"t":"2026-08-03T20:45:28.802Z"}
+{"category":"window","data":{"label":"login-pristine","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opened (pristine raw WKWebView)","ms":2455,"t":"2026-08-03T20:45:28.906Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":2513,"t":"2026-08-03T20:45:28.965Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":2520,"t":"2026-08-03T20:45:28.971Z"}
+{"category":"autorun","data":{"pristine":{"open":"Ok(\"login-pristine\")","windowNumber":"Ok(62068)"},"wry":{"open":"Ok(\"login-wry\")","windowNumber":"Ok(62067)"}},"message":"SMOKE READY","ms":4960,"t":"2026-08-03T20:45:31.412Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"https://github.com/login"},"message":"opening wry login window","ms":6880520,"t":"2026-08-03T23:17:06.049Z"}
+{"category":"window","data":{"error":"a webview with label `login-wry` already exists"},"message":"wry open FAILED","ms":6880565,"t":"2026-08-03T23:17:06.095Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"https://github.com/login"},"message":"opening wry login window","ms":6883277,"t":"2026-08-03T23:17:08.807Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":6883354,"t":"2026-08-03T23:17:08.884Z"}
+{"category":"window","data":{"label":"login-wry","windowNumber":64339},"message":"wry window number","ms":6883365,"t":"2026-08-03T23:17:08.895Z"}
+{"category":"navigation","data":{"event":"started","url":"https://github.com/login","window":"login-wry"},"message":"on_page_load (wry)","ms":6883822,"t":"2026-08-03T23:17:09.352Z"}
+{"category":"navigation","data":{"event":"finished","url":"https://github.com/login","window":"login-wry"},"message":"on_page_load (wry)","ms":6883929,"t":"2026-08-03T23:17:09.459Z"}
+{"category":"window","data":{"error":"pristine window build failed: a window with label `login-pristine` already exists"},"message":"pristine open FAILED","ms":6936949,"t":"2026-08-03T23:18:02.479Z"}
+{"category":"window","data":{"label":"login-pristine","spoofUa":true,"url":"https://github.com/login"},"message":"opened (pristine raw WKWebView)","ms":6939045,"t":"2026-08-03T23:18:04.575Z"}
+{"category":"window","data":{"label":"login-pristine","windowNumber":64370},"message":"pristine window number","ms":6939057,"t":"2026-08-03T23:18:04.587Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"https://github.com/login"},"message":"opening wry login window","ms":7109575,"t":"2026-08-03T23:20:55.106Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":7109648,"t":"2026-08-03T23:20:55.179Z"}
+{"category":"window","data":{"label":"login-wry","windowNumber":64446},"message":"wry window number","ms":7109666,"t":"2026-08-03T23:20:55.196Z"}
+{"category":"navigation","data":{"event":"started","url":"https://github.com/","window":"login-wry"},"message":"on_page_load (wry)","ms":7110567,"t":"2026-08-03T23:20:56.098Z"}
+{"category":"navigation","data":{"event":"finished","url":"https://github.com/","window":"login-wry"},"message":"on_page_load (wry)","ms":7110973,"t":"2026-08-03T23:20:56.504Z"}
+{"category":"navigation","data":{"event":"started","url":"https://github.com/logout","window":"login-wry"},"message":"on_page_load (wry)","ms":7142531,"t":"2026-08-03T23:21:28.062Z"}
+{"category":"navigation","data":{"event":"finished","url":"https://github.com/logout","window":"login-wry"},"message":"on_page_load (wry)","ms":7142828,"t":"2026-08-03T23:21:28.359Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"https://github.com/login"},"message":"opening wry login window","ms":7148709,"t":"2026-08-03T23:21:34.240Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":7148775,"t":"2026-08-03T23:21:34.306Z"}
+{"category":"window","data":{"label":"login-wry","windowNumber":64448},"message":"wry window number","ms":7148786,"t":"2026-08-03T23:21:34.317Z"}
+{"category":"navigation","data":{"event":"started","url":"https://github.com/","window":"login-wry"},"message":"on_page_load (wry)","ms":7149749,"t":"2026-08-03T23:21:35.280Z"}
+{"category":"navigation","data":{"event":"finished","url":"https://github.com/","window":"login-wry"},"message":"on_page_load (wry)","ms":7150139,"t":"2026-08-03T23:21:35.670Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opening wry login window","ms":7230600,"t":"2026-08-03T23:22:56.131Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":7230663,"t":"2026-08-03T23:22:56.194Z"}
+{"category":"window","data":{"label":"login-wry","windowNumber":64486},"message":"wry window number","ms":7230678,"t":"2026-08-03T23:22:56.210Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":7230787,"t":"2026-08-03T23:22:56.318Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":7230805,"t":"2026-08-03T23:22:56.336Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/","window":"login-wry"},"message":"on_page_load (wry)","ms":7279194,"t":"2026-08-03T23:23:44.725Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/","window":"login-wry"},"message":"on_page_load (wry)","ms":7279199,"t":"2026-08-03T23:23:44.731Z"}
+{"category":"window","data":{"label":"login-pristine","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opened (pristine raw WKWebView)","ms":7286243,"t":"2026-08-03T23:23:51.775Z"}
+{"category":"window","data":{"label":"login-pristine","windowNumber":64507},"message":"pristine window number","ms":7286252,"t":"2026-08-03T23:23:51.783Z"}
+{"category":"window","data":{"label":"login-wry","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opening wry login window","ms":7565633,"t":"2026-08-03T23:28:31.154Z"}
+{"category":"window","data":{"label":"login-wry"},"message":"opened (wry)","ms":7565718,"t":"2026-08-03T23:28:31.239Z"}
+{"category":"window","data":{"label":"login-wry","windowNumber":64630},"message":"wry window number","ms":7565752,"t":"2026-08-03T23:28:31.273Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":7565936,"t":"2026-08-03T23:28:31.456Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/login","window":"login-wry"},"message":"on_page_load (wry)","ms":7565955,"t":"2026-08-03T23:28:31.475Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/login?next=%2F&error=Invalid%20username%20or%20password.","window":"login-wry"},"message":"on_page_load (wry)","ms":7587496,"t":"2026-08-03T23:28:53.016Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/login?next=%2F&error=Invalid%20username%20or%20password.","window":"login-wry"},"message":"on_page_load (wry)","ms":7587496,"t":"2026-08-03T23:28:53.017Z"}
+{"category":"navigation","data":{"event":"started","url":"http://127.0.0.1:17940/","window":"login-wry"},"message":"on_page_load (wry)","ms":7619841,"t":"2026-08-03T23:29:25.361Z"}
+{"category":"navigation","data":{"event":"finished","url":"http://127.0.0.1:17940/","window":"login-wry"},"message":"on_page_load (wry)","ms":7619841,"t":"2026-08-03T23:29:25.362Z"}
+{"category":"window","data":{"label":"login-pristine","spoofUa":true,"url":"http://127.0.0.1:17940/login"},"message":"opened (pristine raw WKWebView)","ms":7629255,"t":"2026-08-03T23:29:34.775Z"}
+{"category":"window","data":{"label":"login-pristine","windowNumber":64648},"message":"pristine window number","ms":7629262,"t":"2026-08-03T23:29:34.783Z"}
