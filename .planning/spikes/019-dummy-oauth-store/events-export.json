@@ -1,0 +1,653 @@
+{
+  "eventCount": 61,
+  "events": [
+    {
+      "category": "app",
+      "data": {
+        "storeOrigin": "http://127.0.0.1:17940"
+      },
+      "message": "started",
+      "ms": 209,
+      "t": "2026-08-03T19:20:33.493Z"
+    },
+    {
+      "category": "env",
+      "data": {
+        "autorun": "1",
+        "callbackPrefix": "http://127.0.0.1:17940/callback",
+        "storeOrigin": "http://127.0.0.1:17940",
+        "tauri": "2.x (Cargo.lock-pinned, shares src-tauri target dir)"
+      },
+      "message": "environment",
+      "ms": 294,
+      "t": "2026-08-03T19:20:33.579Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "store": "http://127.0.0.1:17940"
+      },
+      "message": "store server reachable",
+      "ms": 362,
+      "t": "2026-08-03T19:20:33.647Z"
+    },
+    {
+      "category": "autorun",
+      "data": {},
+      "message": "signalling UI to start scripted flow",
+      "ms": 1714,
+      "t": "2026-08-03T19:20:34.999Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "scripted: logout preamble",
+      "ms": 1717,
+      "t": "2026-08-03T19:20:35.001Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore",
+        "spoofUa": true,
+        "url": "http://127.0.0.1:17940/logout"
+      },
+      "message": "opening login window",
+      "ms": 1717,
+      "t": "2026-08-03T19:20:35.002Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "opened",
+      "ms": 1770,
+      "t": "2026-08-03T19:20:35.055Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "logout requested",
+      "ms": 1778,
+      "t": "2026-08-03T19:20:35.062Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/logout",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 1802,
+      "t": "2026-08-03T19:20:35.086Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 1806,
+      "t": "2026-08-03T19:20:35.091Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 1810,
+      "t": "2026-08-03T19:20:35.094Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 1814,
+      "t": "2026-08-03T19:20:35.098Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "closed",
+      "ms": 3273,
+      "t": "2026-08-03T19:20:36.558Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "scripted: FLOW A (autologin, cold session)",
+      "ms": 3780,
+      "t": "2026-08-03T19:20:37.065Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "autologin": true,
+        "pkceMethod": "S256",
+        "state": "gw-w1tv3MEr18ksVCRydgg"
+      },
+      "message": "authorize URL built",
+      "ms": 3783,
+      "t": "2026-08-03T19:20:37.068Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore",
+        "spoofUa": true,
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1"
+      },
+      "message": "opening login window",
+      "ms": 3783,
+      "t": "2026-08-03T19:20:37.068Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "opened",
+      "ms": 3826,
+      "t": "2026-08-03T19:20:37.111Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 3853,
+      "t": "2026-08-03T19:20:37.137Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/login?next=%2Fauthorize%3Fresponse_type%3Dcode%26client_id%3Dgamelib-dummy%26redirect_uri%3Dhttp%253A%252F%252F127.0.0.1%253A17940%252Fcallback%26scope%3Dprofile%26state%3Dgw-w1tv3MEr18ksVCRydgg%26code_challenge%3D05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8%26code_challenge_method%3DS256%26autologin%3D1&autologin=1",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 3857,
+      "t": "2026-08-03T19:20:37.141Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/login?next=%2Fauthorize%3Fresponse_type%3Dcode%26client_id%3Dgamelib-dummy%26redirect_uri%3Dhttp%253A%252F%252F127.0.0.1%253A17940%252Fcallback%26scope%3Dprofile%26state%3Dgw-w1tv3MEr18ksVCRydgg%26code_challenge%3D05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8%26code_challenge_method%3DS256%26autologin%3D1&autologin=1",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 3860,
+      "t": "2026-08-03T19:20:37.144Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/login?next=%2Fauthorize%3Fresponse_type%3Dcode%26client_id%3Dgamelib-dummy%26redirect_uri%3Dhttp%253A%252F%252F127.0.0.1%253A17940%252Fcallback%26scope%3Dprofile%26state%3Dgw-w1tv3MEr18ksVCRydgg%26code_challenge%3D05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8%26code_challenge_method%3DS256%26autologin%3D1&autologin=1",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 3867,
+      "t": "2026-08-03T19:20:37.151Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/login",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4464,
+      "t": "2026-08-03T19:20:37.749Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4473,
+      "t": "2026-08-03T19:20:37.757Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/callback?code=_5wdNYkBETEdzku3rGJqJNrVOeGPBQjZ&state=gw-w1tv3MEr18ksVCRydgg",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4478,
+      "t": "2026-08-03T19:20:37.762Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/callback?code=_5wdNYkBETEdzku3rGJqJNrVOeGPBQjZ&state=gw-w1tv3MEr18ksVCRydgg",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4485,
+      "t": "2026-08-03T19:20:37.770Z"
+    },
+    {
+      "category": "oauth",
+      "data": {
+        "code": "_5w…<32 chars>",
+        "error": null,
+        "state": "gw-w1tv3MEr18ksVCRydgg",
+        "window": "login-dummystore"
+      },
+      "message": "authorization code CAPTURED via navigation observation",
+      "ms": 4486,
+      "t": "2026-08-03T19:20:37.770Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "elapsedMs": 706
+      },
+      "message": "code received",
+      "ms": 4487,
+      "t": "2026-08-03T19:20:37.772Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/callback?code=_5wdNYkBETEdzku3rGJqJNrVOeGPBQjZ&state=gw-w1tv3MEr18ksVCRydgg",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4488,
+      "t": "2026-08-03T19:20:37.773Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "expiresIn": 3600,
+        "tokenType": "Bearer"
+      },
+      "message": "token exchanged",
+      "ms": 4494,
+      "t": "2026-08-03T19:20:37.779Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "closed",
+      "ms": 4513,
+      "t": "2026-08-03T19:20:37.797Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "pkceMethod": "S256",
+        "totalMs": 733,
+        "user": "demo"
+      },
+      "message": "FLOW COMPLETE",
+      "ms": 4522,
+      "t": "2026-08-03T19:20:37.807Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "scripted: replay probe with flow A code",
+      "ms": 4522,
+      "t": "2026-08-03T19:20:37.807Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "body": {
+          "error": "invalid_grant",
+          "error_description": "code REPLAY detected — code already redeemed"
+        },
+        "rejected": true,
+        "status": 400
+      },
+      "message": "replay probe",
+      "ms": 4523,
+      "t": "2026-08-03T19:20:37.808Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "scripted: FLOW B (no autologin — session cookie should skip the form)",
+      "ms": 4524,
+      "t": "2026-08-03T19:20:37.808Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "autologin": false,
+        "pkceMethod": "S256",
+        "state": "ij8jq3LzKuvxXjTvZecjWg"
+      },
+      "message": "authorize URL built",
+      "ms": 4524,
+      "t": "2026-08-03T19:20:37.808Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore",
+        "spoofUa": true,
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=ij8jq3LzKuvxXjTvZecjWg&code_challenge=3chOHKPRjg6rW15-jrVbvxdniPMBJyl4lsx0xiwJEo8&code_challenge_method=S256"
+      },
+      "message": "opening login window",
+      "ms": 4524,
+      "t": "2026-08-03T19:20:37.808Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "opened",
+      "ms": 4552,
+      "t": "2026-08-03T19:20:37.837Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=ij8jq3LzKuvxXjTvZecjWg&code_challenge=3chOHKPRjg6rW15-jrVbvxdniPMBJyl4lsx0xiwJEo8&code_challenge_method=S256",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4581,
+      "t": "2026-08-03T19:20:37.865Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/callback?code=qILy-wNKqKNUiQAUwShmsDZP9dDDXQjv&state=ij8jq3LzKuvxXjTvZecjWg",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4585,
+      "t": "2026-08-03T19:20:37.869Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/callback?code=qILy-wNKqKNUiQAUwShmsDZP9dDDXQjv&state=ij8jq3LzKuvxXjTvZecjWg",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4587,
+      "t": "2026-08-03T19:20:37.871Z"
+    },
+    {
+      "category": "oauth",
+      "data": {
+        "code": "qIL…<32 chars>",
+        "error": null,
+        "state": "ij8jq3LzKuvxXjTvZecjWg",
+        "window": "login-dummystore"
+      },
+      "message": "authorization code CAPTURED via navigation observation",
+      "ms": 4587,
+      "t": "2026-08-03T19:20:37.871Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "elapsedMs": 68
+      },
+      "message": "code received",
+      "ms": 4587,
+      "t": "2026-08-03T19:20:37.872Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "expiresIn": 3600,
+        "tokenType": "Bearer"
+      },
+      "message": "token exchanged",
+      "ms": 4591,
+      "t": "2026-08-03T19:20:37.876Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/callback?code=qILy-wNKqKNUiQAUwShmsDZP9dDDXQjv&state=ij8jq3LzKuvxXjTvZecjWg",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4592,
+      "t": "2026-08-03T19:20:37.876Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "closed",
+      "ms": 4596,
+      "t": "2026-08-03T19:20:37.881Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "pkceMethod": "S256",
+        "totalMs": 78,
+        "user": "demo"
+      },
+      "message": "FLOW COMPLETE",
+      "ms": 4605,
+      "t": "2026-08-03T19:20:37.889Z"
+    },
+    {
+      "category": "flow",
+      "data": {},
+      "message": "scripted: FLOW C (warm session + PKCE tamper probe)",
+      "ms": 4605,
+      "t": "2026-08-03T19:20:37.890Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "autologin": false,
+        "pkceMethod": "S256",
+        "state": "hsTvPjFy9ARVLJ1Fw1ftZA"
+      },
+      "message": "authorize URL built",
+      "ms": 4605,
+      "t": "2026-08-03T19:20:37.890Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore",
+        "spoofUa": true,
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=hsTvPjFy9ARVLJ1Fw1ftZA&code_challenge=C_3ov_nubzt0b5UrVpcFotBGDV6eq0skRqKkkGAtKOU&code_challenge_method=S256"
+      },
+      "message": "opening login window",
+      "ms": 4605,
+      "t": "2026-08-03T19:20:37.890Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "opened",
+      "ms": 4627,
+      "t": "2026-08-03T19:20:37.912Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=hsTvPjFy9ARVLJ1Fw1ftZA&code_challenge=C_3ov_nubzt0b5UrVpcFotBGDV6eq0skRqKkkGAtKOU&code_challenge_method=S256",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4658,
+      "t": "2026-08-03T19:20:37.942Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://127.0.0.1:17940/callback?code=ldxHFjZC3-vAPiLmYL7XVNcZ0m3G2iqt&state=hsTvPjFy9ARVLJ1Fw1ftZA",
+        "window": "login-dummystore"
+      },
+      "message": "on_navigation",
+      "ms": 4661,
+      "t": "2026-08-03T19:20:37.946Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://127.0.0.1:17940/callback?code=ldxHFjZC3-vAPiLmYL7XVNcZ0m3G2iqt&state=hsTvPjFy9ARVLJ1Fw1ftZA",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4663,
+      "t": "2026-08-03T19:20:37.948Z"
+    },
+    {
+      "category": "oauth",
+      "data": {
+        "code": "ldx…<32 chars>",
+        "error": null,
+        "state": "hsTvPjFy9ARVLJ1Fw1ftZA",
+        "window": "login-dummystore"
+      },
+      "message": "authorization code CAPTURED via navigation observation",
+      "ms": 4663,
+      "t": "2026-08-03T19:20:37.948Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "elapsedMs": 67
+      },
+      "message": "code received",
+      "ms": 4664,
+      "t": "2026-08-03T19:20:37.949Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://127.0.0.1:17940/callback?code=ldxHFjZC3-vAPiLmYL7XVNcZ0m3G2iqt&state=hsTvPjFy9ARVLJ1Fw1ftZA",
+        "window": "login-dummystore"
+      },
+      "message": "on_page_load",
+      "ms": 4668,
+      "t": "2026-08-03T19:20:37.953Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "body": {
+          "error": "invalid_grant",
+          "error_description": "PKCE verification FAILED (method S256)"
+        },
+        "rejected": true,
+        "status": 400
+      },
+      "message": "PKCE tamper probe",
+      "ms": 4670,
+      "t": "2026-08-03T19:20:37.954Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "expiresIn": 3600,
+        "tokenType": "Bearer"
+      },
+      "message": "token exchanged",
+      "ms": 4673,
+      "t": "2026-08-03T19:20:37.958Z"
+    },
+    {
+      "category": "window",
+      "data": {
+        "label": "login-dummystore"
+      },
+      "message": "closed",
+      "ms": 4678,
+      "t": "2026-08-03T19:20:37.962Z"
+    },
+    {
+      "category": "flow",
+      "data": {
+        "pkceMethod": "S256",
+        "totalMs": 81,
+        "user": "demo"
+      },
+      "message": "FLOW COMPLETE",
+      "ms": 4681,
+      "t": "2026-08-03T19:20:37.966Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "flows": [
+          {
+            "codeMs": 706,
+            "name": "A cold+autologin",
+            "ok": true,
+            "pkceMethod": "S256",
+            "totalMs": 733,
+            "user": "demo"
+          },
+          {
+            "name": "replay probe",
+            "ok": true,
+            "status": 400
+          },
+          {
+            "codeMs": 68,
+            "name": "B warm session",
+            "ok": true,
+            "pkceMethod": "S256",
+            "totalMs": 78,
+            "user": "demo"
+          },
+          {
+            "codeMs": 67,
+            "name": "C pkce tamper",
+            "ok": true,
+            "pkceMethod": "S256",
+            "pkceTamperRejected": true,
+            "totalMs": 81,
+            "user": "demo"
+          }
+        ],
+        "storeOracle": {
+          "codesIssued": 3,
+          "expectation": "formServes=1, codesIssued=3",
+          "formServes": 1
+        }
+      },
+      "message": "=== COMPLETE: SUCCESS ===",
+      "ms": 4685,
+      "t": "2026-08-03T19:20:37.969Z"
+    }
+  ],
+  "exportedAt": "2026-08-03T19:20:37.969Z"
+}

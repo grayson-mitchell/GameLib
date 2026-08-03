@@ -1,0 +1,111 @@
+[server] DummyStore listening on http://127.0.0.1:17940 {"clientId":"gamelib-dummy","redirectUri":"http://127.0.0.1:17940/callback","demoUser":"demo"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"curl/8.7.1"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"x6PH2535QImrUqj7fiuBrQ","code_challenge":"FbF…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorize → no session, redirecting to login form {"state":"x6PH2535QImrUqj7fiuBrQ","autologin":true}
+[request] GET /login {"query":{"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=x6PH2535QImrUqj7fiuBrQ&code_challenge=FbFQCyFWc-ffLV1osYA_J_rtVUk82E8HGjDUzA12DuY&code_challenge_method=S256&autologin=1","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login form served {"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=x6PH2535QImrUqj7fiuBrQ&code_challenge=FbFQCyFWc-ffLV1osYA_J_rtVUk82E8HGjDUzA12DuY&code_challenge_method=S256&autologin=1","autologin":true,"error":null}
+[request] POST /login {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login SUCCESS {"user":"demo","sid":"vJT…<32 chars>","next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=x6PH2535QImrUqj7fiuBrQ&code_challenge=FbFQCyFWc-ffLV1osYA_J_rtVUk82E8HGjDUzA12DuY&code_challenge_method=S256&autologin=1"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"x6PH2535QImrUqj7fiuBrQ","code_challenge":"FbF…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"MKY…<32 chars>","pkceMethod":"S256","state":"x6PH2535QImrUqj7fiuBrQ"}
+[request] GET /callback {"query":{"code":"MKY…<32 chars>","state":"x6PH2535QImrUqj7fiuBrQ"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"MKY…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"wFZ…<43 chars>","pkce":"verified (S256)"}
+[request] OPTIONS /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token exchange REJECTED {"error":"invalid_grant","why":"code REPLAY detected — code already redeemed"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"EcNCk3CRtuz1bc1P93kNgw","code_challenge":"Ttj…<43 chars>","code_challenge_method":"S256"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"xDr…<32 chars>","pkceMethod":"S256","state":"EcNCk3CRtuz1bc1P93kNgw"}
+[request] GET /callback {"query":{"code":"xDr…<32 chars>","state":"EcNCk3CRtuz1bc1P93kNgw"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"xDr…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"d0t…<43 chars>","pkce":"verified (S256)"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /logout {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] logout {"hadSession":false}
+[request] GET / {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"DISnNY-JTVQ0b6j7Fc_8LA","code_challenge":"reH…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorize → no session, redirecting to login form {"state":"DISnNY-JTVQ0b6j7Fc_8LA","autologin":true}
+[request] GET /login {"query":{"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=DISnNY-JTVQ0b6j7Fc_8LA&code_challenge=reH-xKU5i90uA97c43K3LpX95BZi28j6CrCMysF7cXo&code_challenge_method=S256&autologin=1","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login form served {"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=DISnNY-JTVQ0b6j7Fc_8LA&code_challenge=reH-xKU5i90uA97c43K3LpX95BZi28j6CrCMysF7cXo&code_challenge_method=S256&autologin=1","autologin":true,"error":null}
+[request] POST /login {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login SUCCESS {"user":"demo","sid":"sMu…<32 chars>","next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=DISnNY-JTVQ0b6j7Fc_8LA&code_challenge=reH-xKU5i90uA97c43K3LpX95BZi28j6CrCMysF7cXo&code_challenge_method=S256&autologin=1"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"DISnNY-JTVQ0b6j7Fc_8LA","code_challenge":"reH…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"Yod…<32 chars>","pkceMethod":"S256","state":"DISnNY-JTVQ0b6j7Fc_8LA"}
+[request] GET /callback {"query":{"code":"Yod…<32 chars>","state":"DISnNY-JTVQ0b6j7Fc_8LA"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"Yod…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"MyX…<43 chars>","pkce":"verified (S256)"}
+[request] OPTIONS /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token exchange REJECTED {"error":"invalid_grant","why":"code REPLAY detected — code already redeemed"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"P87IEU19AIwrqLn-rh0HWg","code_challenge":"qS2…<43 chars>","code_challenge_method":"S256"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"fmN…<32 chars>","pkceMethod":"S256","state":"P87IEU19AIwrqLn-rh0HWg"}
+[request] GET /callback {"query":{"code":"fmN…<32 chars>","state":"P87IEU19AIwrqLn-rh0HWg"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"fmN…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"-7g…<43 chars>","pkce":"verified (S256)"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"mJDQwYMxiA80tY9S4pgERw","code_challenge":"5yw…<43 chars>","code_challenge_method":"S256"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"py3…<32 chars>","pkceMethod":"S256","state":"mJDQwYMxiA80tY9S4pgERw"}
+[request] GET /callback {"query":{"code":"py3…<32 chars>","state":"mJDQwYMxiA80tY9S4pgERw"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"py3…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token exchange REJECTED {"error":"invalid_grant","why":"PKCE verification FAILED (method S256)"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"miV…<43 chars>","pkce":"verified (S256)"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /logout {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] logout {"hadSession":false}
+[request] GET / {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"gw-w1tv3MEr18ksVCRydgg","code_challenge":"05k…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorize → no session, redirecting to login form {"state":"gw-w1tv3MEr18ksVCRydgg","autologin":true}
+[request] GET /login {"query":{"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1","autologin":"1"},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login form served {"next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1","autologin":true,"error":null}
+[request] POST /login {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[auth] login SUCCESS {"user":"demo","sid":"tt3…<32 chars>","next":"/authorize?response_type=code&client_id=gamelib-dummy&redirect_uri=http%3A%2F%2F127.0.0.1%3A17940%2Fcallback&scope=profile&state=gw-w1tv3MEr18ksVCRydgg&code_challenge=05kncDUQbTTneB07uGaiaSgfXjxhm_SJNj-bEuvwkC8&code_challenge_method=S256&autologin=1"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"gw-w1tv3MEr18ksVCRydgg","code_challenge":"05k…<43 chars>","code_challenge_method":"S256","autologin":"1"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"_5w…<32 chars>","pkceMethod":"S256","state":"gw-w1tv3MEr18ksVCRydgg"}
+[request] GET /callback {"query":{"code":"_5w…<32 chars>","state":"gw-w1tv3MEr18ksVCRydgg"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"_5w…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"cxc…<43 chars>","pkce":"verified (S256)"}
+[request] OPTIONS /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token exchange REJECTED {"error":"invalid_grant","why":"code REPLAY detected — code already redeemed"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"ij8jq3LzKuvxXjTvZecjWg","code_challenge":"3ch…<43 chars>","code_challenge_method":"S256"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"qIL…<32 chars>","pkceMethod":"S256","state":"ij8jq3LzKuvxXjTvZecjWg"}
+[request] GET /callback {"query":{"code":"qIL…<32 chars>","state":"ij8jq3LzKuvxXjTvZecjWg"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"qIL…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"Sq3…<43 chars>","pkce":"verified (S256)"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] GET /authorize {"query":{"response_type":"code","client_id":"gamelib-dummy","redirect_uri":"http://127.0.0.1:17940/callback","scope":"profile","state":"hsTvPjFy9ARVLJ1Fw1ftZA","code_challenge":"C_3…<43 chars>","code_challenge_method":"S256"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] authorization code ISSUED {"user":"demo","code":"ldx…<32 chars>","pkceMethod":"S256","state":"hsTvPjFy9ARVLJ1Fw1ftZA"}
+[request] GET /callback {"query":{"code":"ldx…<32 chars>","state":"hsTvPjFy9ARVLJ1Fw1ftZA"},"hasSession":true,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "}
+[oauth] callback landing served {"code":"ldx…<32 chars>"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token exchange REJECTED {"error":"invalid_grant","why":"PKCE verification FAILED (method S256)"}
+[request] POST /token {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[oauth] token ISSUED {"user":"demo","token":"sZS…<43 chars>","pkce":"verified (S256)"}
+[request] GET /me {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}
+[api] /me OK {"user":"demo"}
+[request] GET /events {"query":{},"hasSession":false,"ua":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, lik"}

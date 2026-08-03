@@ -350,3 +350,31 @@ multiwebview API. All macOS-only evidence, like 013–015.
 - **Open before shipping:** input/scroll feel (needs a human on the interactive harness),
   retina (`scale_factor` 2.0), drag-resize latency, Windows/Linux backends, and Epic's
   anti-bot posture inside an embed (its pre-auth 403 is a known parked blocker). *(016–018.)*
+
+---
+
+## Idea D — Login-window UX (dummy store, modal windows, password managers)
+
+**Distinct idea line.** Improve the login-window UX under the Tauri rearchitecture, iterated
+against a fully-controlled local OAuth 2.0 auth-code-grant provider ("DummyStore") instead of
+real stores' anti-bot surfaces (Epic's pre-auth 403 is a parked blocker). Two target UX
+capabilities: (1) a **modal** login window that cannot get lost behind the main window;
+(2) **Apple Keychain / password-manager autofill** inside the login webview.
+
+### Requirements (Idea D — emerging)
+
+- **Capture OAuth codes by navigation observation** — `on_page_load` (Started, main frame)
+  delivers `code`+`state` to the app before the landing page paints. No callback server, no
+  remote-page IPC (014b: ACL-denied anyway). *(019)*
+- **Any scripted login test needs an explicit logout preamble.** The shared jar persists
+  across app restarts (015), so "logged-in" is sticky and silently skips the form. *(019)*
+- **`crypto.subtle` is available on the `tauri://` origin (macOS)** — S256 PKCE works
+  in-renderer. Windows/Linux unverified. *(019)*
+
+### Spikes (Idea D)
+
+| # | Name | Type | Validates | Verdict | Tags |
+|---|------|------|-----------|---------|------|
+| 019 | dummy-oauth-store | standard | Given a local OAuth2 auth-code-grant provider, when a Tauri login window drives the flow end-to-end, then every step is observable and the harness is reusable for UI/form iteration | ✓ VALIDATED (2 consecutive scripted runs exit 0; replay + PKCE-tamper rejected; warm-session flow 75 ms) | oauth, pkce, login, webview, harness |
+| 020 | keychain-autofill-login-webview | standard | Given the dummy store's login form in (a) a wry WebviewWindow and (b) a pristine raw WKWebView, when the user focuses the credential fields, then macOS Keychain/password-manager autofill offers to fill — or the gating (web-browser entitlement) is proven and fallbacks enumerated | ○ PENDING | keychain, autofill, wkwebview, entitlement |
+| 021 | modal-login-window | standard | Given the main Tauri window, when the login window opens modal (.parent() / NSWindow child / always-on-top), then it cannot be lost behind the main window and input+autofill still work | ○ PENDING | modal, nswindow, parent, window-management |
