@@ -1,10 +1,11 @@
-import { useContext, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Info from '@mui/icons-material/Info'
 import LinkIcon from '@mui/icons-material/Link'
 import PublicIcon from '@mui/icons-material/Public'
 import { Button, Paper, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { loginPage, sidInfoPage } from 'frontend/helpers'
+import { parseEpicAuthCode } from 'frontend/helpers/epicAuthCode'
 import './index.css'
 import { Autorenew } from '@mui/icons-material'
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -24,6 +25,7 @@ export default function SIDLogin({ backdropClick }: Props) {
     error: false
   })
   const [linkCopied, setLinkCopied] = useState(false)
+  const lastAutoFilledRef = useRef('')
 
   const { loading, error } = status
 
@@ -31,6 +33,32 @@ export default function SIDLogin({ backdropClick }: Props) {
     window.api.clipboardWriteText(epicLoginUrl)
     setLinkCopied(true)
   }
+
+  const tryPrefillFromClipboard = useCallback(async () => {
+    const clipboardText = await window.api.clipboardReadText()
+    const code = parseEpicAuthCode(clipboardText)
+    if (!code) {
+      return
+    }
+    setInput((current) => {
+      if (current !== '' && current !== lastAutoFilledRef.current) {
+        return current
+      }
+      lastAutoFilledRef.current = code
+      return code
+    })
+  }, [])
+
+  useEffect(() => {
+    void tryPrefillFromClipboard()
+    const onFocus = () => {
+      void tryPrefillFromClipboard()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [tryPrefillFromClipboard])
 
   const handleLogin = async (sid: string) => {
     window.api.logInfo('Called Epic Login')
@@ -129,25 +157,41 @@ export default function SIDLogin({ backdropClick }: Props) {
             </li>
           </ol>
         </div>
-        <input
-          type="text"
-          className="sid-input"
-          value={input}
-          onAuxClick={async () => {
-            const text = await window.api.clipboardReadText()
-            setInput(text)
-          }} // clipboard.readText('clipboard'))}
-          onChange={(e) => setInput(e.target.value)}
-        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <input
+            type="text"
+            className="sid-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+          <Button
+            className="icon-button"
+            onClick={() => void tryPrefillFromClipboard()}
+            size="small"
+            variant="outlined"
+          >
+            {t('button.paste', 'Paste')}
+          </Button>
+        </Stack>
         {loading && (
           <p className="message">
             <Autorenew className="material-icons refreshing" />{' '}
           </p>
         )}
         <button
-          onClick={async () => handleLogin(input)}
+          onClick={async () => {
+            const code = parseEpicAuthCode(input)
+            if (!code) {
+              setStatus({ loading: false, error: true })
+              setTimeout(() => {
+                setStatus({ loading: false, error: false })
+              }, 2500)
+              return
+            }
+            await handleLogin(code)
+          }}
           className="button is-primary"
-          disabled={loading || input.length < 30 || error}
+          disabled={loading || error || parseEpicAuthCode(input) === null}
         >
           {getButtonLabel()}
         </button>
