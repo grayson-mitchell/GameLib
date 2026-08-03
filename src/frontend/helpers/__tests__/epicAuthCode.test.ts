@@ -1,7 +1,7 @@
 import { parseEpicAuthCode } from '../epicAuthCode'
 
 describe('parseEpicAuthCode', () => {
-  it.each([
+  it.each<[string, string | null, string]>([
     [
       'abc1234567890abc1234567890abcd12',
       'abc1234567890abc1234567890abcd12',
