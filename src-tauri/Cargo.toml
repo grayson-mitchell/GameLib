@@ -97,6 +97,13 @@ objc2 = "0.6.4"
 # (wry's `objc2-app-kit` feature list has no `NSAlert`/`NSTextField`), so unlike the
 # `objc2-web-kit` features above, these are net-new compiled surface, not just an explicit
 # declaration of an already-present one.
+# `NSEvent`/`block2` added for the Cmd+V (and Cmd+C/X/A/Z) key-equivalent delivery fix on the
+# pristine Epic login window: `open_pristine_epic_login_window` installs an `NSEvent` local
+# monitor (`addLocalMonitorForEventsMatchingMask:handler:`, gated behind objc2-app-kit's own
+# `block2` feature since the handler is a block2 closure) to re-dispatch those key-equivalents
+# through `sendAction:to:from:` -- the menu bar's own working path -- since the tao/wry `NSWindow`
+# swallows the raw `NSEvent` before `performKeyEquivalent:` traversal ever sees it. `NSEvent`
+# itself is not unioned in by any existing feature above.
 objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSView",
     "NSWindow",
@@ -104,8 +111,10 @@ objc2-app-kit = { version = "0.3.2", default-features = false, features = [
     "NSApplication",
     "NSButton",
     "NSControl",
+    "NSEvent",
     "NSResponder",
     "NSTextField",
+    "block2",
 ] }
 objc2-foundation = "0.3.2"
 objc2-web-kit = { version = "0.3.2", default-features = false, features = [

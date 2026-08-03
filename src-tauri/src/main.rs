@@ -1595,7 +1595,7 @@ const EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT: &str = concat!(
 #[cfg(target_os = "macos")]
 use objc2::rc::Retained;
 #[cfg(target_os = "macos")]
-use objc2::runtime::{Bool, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, Bool, NSObject, ProtocolObject};
 #[cfg(target_os = "macos")]
 use objc2::{define_class, msg_send, DeclaredClass, MainThreadOnly};
 #[cfg(target_os = "macos")]
@@ -1859,31 +1859,70 @@ fn open_pristine_epic_login_window(
         .build()
         .map_err(|e| format!("humble_login_open:pristine:build-failed:{e}"))?;
 
+    // SAFETY (Send across the `run_on_main_thread`/`on_window_event` boundaries in this
+    // function): a raw pointer value is not normally `Send`, but this is a bare address,
+    // reconstructed into a live reference only from within a main-thread closure. Reused for two
+    // addresses: the webview's content-view pointer just below, and (further down) the `NSEvent`
+    // local monitor token the Cmd+V/C/X/A/Z fix installs.
+    struct SendPtr(*mut std::ffi::c_void);
+    unsafe impl Send for SendPtr {}
+
+    // Cmd+V (and Cmd+C/X/A/Z) key-equivalent fix: holds the `NSEvent` local monitor token once
+    // it's installed (further below, after the webview exists) so the close hook just below can
+    // remove it via `NSEvent::removeMonitor`. Unlike `EpicPristineNavDelegate` -- which this
+    // section's own doc comment above deliberately `std::mem::forget`s for the app's whole
+    // lifetime -- a leaked monitor would keep intercepting Cmd+V/C/X/A/Z key-down events
+    // app-wide (scoped out by the key-window check below, but still running on every keystroke)
+    // for as long as the process lives, so it MUST be torn down on close instead.
+    let monitor_slot: Arc<Mutex<Option<SendPtr>>> = Arc::new(Mutex::new(None));
+
     // Close-detection: IDENTICAL mechanism/semantics to the existing arm's own
     // `WindowEvent::Destroyed` hook (Quick task 260803-eee Task 5) -- same queue, same helper,
     // same "closed" event shape, so `oauthLoginCapture.ts`'s cancel-on-close branch needs no
     // changes for this window either.
     let close_event_label = event_label.clone();
+    let monitor_slot_for_close = Arc::clone(&monitor_slot);
+    let app_for_close = app.clone();
     window.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::Destroyed) {
             push_login_window_event(&close_event_label, login_event_value("closed", ""));
+            // Tear down the Cmd+V/C/X/A/Z local event monitor, if the main-thread setup below
+            // ever installed one -- see `monitor_slot`'s doc comment above.
+            if let Ok(mut guard) = monitor_slot_for_close.lock() {
+                if let Some(monitor_ptr) = guard.take() {
+                    let _ = app_for_close.run_on_main_thread(move || {
+                        // Forces Rust 2021 disjoint closure capture to move in the WHOLE
+                        // `SendPtr` wrapper (same reason as the `ns_view_addr` rebinding above),
+                        // not just its inner `*mut c_void` field, which would bypass the
+                        // wrapper's `Send` impl entirely and fail to compile.
+                        let monitor_ptr = monitor_ptr;
+                        // SAFETY: `monitor_ptr` is the address
+                        // `addLocalMonitorForEventsMatchingMask:handler:` returned below;
+                        // `removeMonitor:` is the documented way to release it, and this is the
+                        // only call site that ever does so for this token.
+                        let monitor: &AnyObject =
+                            unsafe { &*(monitor_ptr.0 as *const AnyObject) };
+                        unsafe {
+                            objc2_app_kit::NSEvent::removeMonitor(monitor);
+                        }
+                    });
+                }
+            }
         }
     });
 
     let ns_view_ptr = window
         .ns_view()
         .map_err(|e| format!("humble_login_open:pristine:ns_view-failed:{e}"))?;
-    // SAFETY (Send across the `run_on_main_thread` boundary below): a raw pointer value is not
-    // normally `Send`, but this is a bare address, reconstructed into a live reference only
+    // SAFETY: see `SendPtr`'s doc comment above -- reconstructed into a live reference only
     // INSIDE the main-thread closure below, which is guaranteed to run before `window` (still
     // alive on THIS function's own stack via the blocking `rx.recv_timeout` below) could
     // possibly be dropped.
-    struct SendPtr(*mut std::ffi::c_void);
-    unsafe impl Send for SendPtr {}
     let ns_view_addr = SendPtr(ns_view_ptr);
     let url_string = url.to_string();
     let user_agent_owned = user_agent.to_string();
     let main_thread_label = event_label.clone();
+    let monitor_slot_for_main = Arc::clone(&monitor_slot);
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {
@@ -1948,6 +1987,102 @@ fn open_pristine_epic_login_window(
                     eprintln!(
                         "[shell] WARN: humble_login_open:pristine: makeFirstResponder declined for '{main_thread_label}' -- paste may not reach the login form"
                     );
+                }
+
+                // Key-equivalent delivery fix (live-confirmed 2026-08-03): choosing Edit > Paste
+                // from the menu bar pastes into the login form correctly -- proving the webview
+                // IS first responder and DOES handle `paste:` -- but pressing Cmd+V does nothing.
+                // The gap is purely in *key-equivalent delivery*: tao's `NSWindow` subclass
+                // consumes the raw Cmd+V `NSEvent` before AppKit's `performKeyEquivalent:`
+                // main-menu traversal ever sees it (a known class of tao/wry issue). Rather than
+                // patch tao, install a narrowly-scoped local event monitor that re-dispatches the
+                // five standard Edit-menu actions through the EXACT SAME `sendAction:to:from:`
+                // path the menu bar itself already uses successfully, and let every other event
+                // -- including these same shortcuts in every OTHER window -- fall through
+                // completely unchanged.
+                let monitor_ns_window = ns_window.clone();
+                let monitor_handler = block2::RcBlock::new(
+                    move |event: std::ptr::NonNull<
+                        objc2_app_kit::NSEvent,
+                    >|
+                          -> *mut objc2_app_kit::NSEvent {
+                        // SAFETY: AppKit hands local monitor handlers a valid, live `NSEvent`
+                        // for the duration of this call.
+                        let event_ref = unsafe { event.as_ref() };
+                        let flags = event_ref.modifierFlags();
+                        // Command held, WITHOUT Control/Option, so this never steals any other
+                        // chord (e.g. Cmd+Opt+I devtools).
+                        let is_plain_command = flags
+                            .contains(objc2_app_kit::NSEventModifierFlags::Command)
+                            && !flags.intersects(
+                                objc2_app_kit::NSEventModifierFlags::Control
+                                    | objc2_app_kit::NSEventModifierFlags::Option,
+                            );
+                        let action = is_plain_command
+                            .then(|| event_ref.charactersIgnoringModifiers())
+                            .flatten()
+                            .map(|s| s.to_string().to_lowercase())
+                            .and_then(|s| match s.as_str() {
+                                "v" => Some(objc2::sel!(paste:)),
+                                "c" => Some(objc2::sel!(copy:)),
+                                "x" => Some(objc2::sel!(cut:)),
+                                "a" => Some(objc2::sel!(selectAll:)),
+                                "z" => Some(objc2::sel!(undo:)),
+                                _ => None,
+                            });
+                        if let Some(sel) = action {
+                            if let Some(mtm) = objc2::MainThreadMarker::new() {
+                                let ns_app = objc2_app_kit::NSApplication::sharedApplication(mtm);
+                                // SAFETY: `mtm` proves this handler is running on the main
+                                // thread, as AppKit guarantees for local monitor callbacks.
+                                let is_this_window = ns_app.keyWindow().is_some_and(|key_window| {
+                                    std::ptr::eq(&*key_window, &*monitor_ns_window)
+                                });
+                                if is_this_window {
+                                    // SAFETY: `sel` is one of the five hardcoded, valid Cocoa
+                                    // selectors above; nil target/sender lets AppKit walk the
+                                    // normal responder chain, exactly like the Edit menu's own
+                                    // items already do successfully.
+                                    let _ = unsafe {
+                                        ns_app.sendAction_to_from(sel, None, None)
+                                    };
+                                    // Consumed: every OTHER window (and every non-matching
+                                    // event) falls through via the `event.as_ptr()` return below
+                                    // instead.
+                                    return std::ptr::null_mut();
+                                }
+                            }
+                        }
+                        event.as_ptr()
+                    },
+                );
+                // SAFETY: `monitor_handler` is a valid block; AppKit copies it internally when
+                // registering the monitor (the standard Cocoa block-parameter convention for
+                // handlers a callee stores beyond the call), so it outliving this call is not
+                // required.
+                let monitor_token = unsafe {
+                    objc2_app_kit::NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+                        objc2_app_kit::NSEventMask::KeyDown,
+                        &monitor_handler,
+                    )
+                };
+                match monitor_token {
+                    Some(token) => {
+                        // Transfers ownership of the +1 retain count
+                        // `addLocalMonitorForEventsMatchingMask:handler:` returned into a bare
+                        // address -- NOT a leak, unlike the navigation delegate's
+                        // `std::mem::forget` above: `NSEvent::removeMonitor` in the close hook
+                        // above is the release, called exactly once, when this window closes.
+                        let ptr = Retained::into_raw(token) as *mut std::ffi::c_void;
+                        if let Ok(mut guard) = monitor_slot_for_main.lock() {
+                            *guard = Some(SendPtr(ptr));
+                        }
+                    }
+                    None => {
+                        eprintln!(
+                            "[shell] WARN: humble_login_open:pristine: addLocalMonitorForEventsMatchingMask failed for '{main_thread_label}' -- Cmd+V/C/X/A/Z may not reach the login form"
+                        );
+                    }
                 }
             } else {
                 eprintln!(

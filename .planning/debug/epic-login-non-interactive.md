@@ -8512,3 +8512,37 @@ next_action: |
   (2) Delete the three now-genuinely-dead OLD items; run cargo check/test + npx tsc --noEmit +
       npm run test:ci. (3) Edit `34.5-UNTESTED-ITEMS.md` rows U-34.5-06/U-34.5-11. (4) Only then
       reconsider F-34.5-G6-01 closure.
+
+## Current Focus (SUPERSEDING, 2026-08-03T20:50:00) -- Cmd+V open item CLOSED, live-verified
+
+<!-- Closes open item 1 of the 20:30:00 block. Additive; that block's record stands. -->
+
+cmd_v_resolution_2026_08_03T20_50_00: |
+  FIXED and LIVE-VERIFIED -- user, verbatim: "cmd-v works now".
+
+  Mechanism (as the 20:30:00 block's diagnosis predicted, no new root-causing needed): tao's
+  `NSWindow` consumes the Cmd+V `NSEvent` before AppKit's `performKeyEquivalent:` main-menu
+  traversal sees it. The responder chain was never the problem -- Edit-menu > Paste already
+  worked, which is what made the diagnosis certain rather than speculative.
+
+  Fix: a local `NSEvent` KeyDown monitor installed with the pristine window, which re-dispatches
+  the five standard Edit actions (`paste:`/`copy:`/`cut:`/`selectAll:`/`undo:`) through the
+  EXACT `sendAction:to:from:` path the menu bar itself already uses. Narrowly scoped:
+    - fires ONLY when `NSApp.keyWindow()` is pointer-identical to THIS login window;
+    - requires Command WITHOUT Control/Option, so no other chord (Cmd+Opt+I etc.) is stolen;
+    - returns the event unchanged on every non-matching path, so all other windows and
+      shortcuts behave exactly as before;
+    - the monitor token is released via `NSEvent::removeMonitor` in the existing
+      `WindowEvent::Destroyed` hook -- deliberately NOT `std::mem::forget`ed the way
+      `EpicPristineNavDelegate` is (a per-window leak is bounded; a permanent global key monitor
+      is not).
+  No JavaScript injection was added -- the zero-injection property that defeats Talon is intact.
+  cargo check clean, cargo test 97/97, clippy at the pre-existing 6-warning baseline.
+
+remaining_open_items: |
+  Unchanged from the 20:30:00 block except that Cmd+V is now CLOSED:
+  (1) delete the three now-genuinely-dead OLD items (`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`,
+      `epic_oauth_redirect_observer_script`, the Epic `.on_navigation` arm);
+  (2) `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` disposition edit;
+  (3) only then reconsider F-34.5-G6-01 closure. Phase 34.5 closure remains out of this
+      session's authority.
