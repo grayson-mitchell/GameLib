@@ -1526,6 +1526,657 @@ const EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT: &str = concat!(
     "})();"
 );
 
+// ---- Pristine Epic login webview (bounded "pristine-webview attempt", checkpoint response,
+// 2026-08-03T18:00:00 superseding cycle, F-34.5-G6-01) ----
+//
+// User-directed bounded attempt: build Epic's login window as a raw WKWebView with ZERO Tauri
+// initialization-script injection, so Talon (Epic's anti-bot) sees a Safari-like `window`
+// surface instead of the CONFIRMED root cause (`window.isTauri`, `__TAURI_INTERNALS__`,
+// `window.ipc`, 8 `__TAURI_PLUGIN_*`/`__TAURI_IIFE__` keys, notification-plugin `Notification`
+// override -- proven non-configurable AND non-writable via 3-arm fingerprint elimination,
+// debug file Evidence 2026-08-02). SIDLogin stays untouched as the working, live-verified
+// primary path -- this is Epic's ALTERNATIVE tile only.
+//
+// MECHANISM: `tauri::WebviewWindowBuilder` (used by every other arm below, including THIS SAME
+// arm for non-Epic runners) ALWAYS injects Tauri's core.js -- there is no public builder flag to
+// suppress it, and the project's OWN `unstable` multiwebview spike confirmed even a
+// Tauri-MANAGED CHILD webview still gets `window.__TAURI__`
+// (`.claude/skills/spike-findings-gamelib/references/tauri-embedded-store-browser.md`,
+// "window.__TAURI__ is injected into the remote store origin"). The only way to get a
+// genuinely pristine WKWebView under this app is to bypass Tauri's webview construction
+// entirely: build a WEBVIEW-LESS `tauri::WindowBuilder` window (native chrome only --
+// title/size/center/close-detection are all `Window`-level, not `Webview`-level, APIs, so they
+// still work) and construct a raw `WKWebView` ourselves via `objc2-web-kit` (already a project
+// dependency -- see `humble_login_clear_cookies`'s own `with_webview()` +
+// `objc2_web_kit::WKWebView` cast above for the established precedent of direct native WebKit
+// access in this file), attached as the window's content view's only subview, with our OWN
+// `WKNavigationDelegate` (via `objc2::define_class!`, pattern copied from wry's own
+// `WryNavigationDelegate` -- `wry-0.55.1/src/wkwebview/class/wry_navigation_delegate.rs`, the
+// exact same crate/version already vendored here) instead of Tauri's.
+//
+// CAPTURE MECHANISM SIMPLIFICATION: unlike the OLD `epic_oauth_redirect_observer_script` above
+// (an in-page `fetch` wrapper relaying via a fake `.invalid` exfil host, because the OLD
+// Tauri-managed webview's only Rust-visible navigation signal was `on_page_load`, which never
+// fires for the silently-refused localhost redirect -- this investigation's own POST-AUTH root
+// cause), this delegate uses `decidePolicyForNavigationAction`, which WebKit calls for EVERY
+// navigation ATTEMPT, including ones it will go on to silently refuse -- so Epic's real
+// `http://localhost:PORT/?code=...` redirect attempt is directly, natively observable, no
+// in-page JS relay needed at all. Confirmed against `matchOAuthRedirect`
+// (`backend/sidecar/oauthLoginCapture.ts`, `legendary` case): it requires ONLY
+// `hostname === 'localhost'` + a non-empty `code` param, so pushing the FULL captured url as a
+// `'finished'` `LoginWindowNavEvent` (the exact shape `push_login_window_event`/
+// `login_event_value` already produce for every other runner's `on_page_load` hook) needs ZERO
+// changes to `matchOAuthRedirect`, `oauthLoginCapture.ts`, `useTauriOAuthLogin.ts`, or
+// `LoginWindowSeam` -- this delegate is a drop-in alternate PRODUCER for the same event queue,
+// never a new consumer contract.
+//
+// SCOPE: Epic-only (`is_epic_login`, computed by the caller), macOS-only (`#[cfg(target_os =
+// "macos")]`) -- GOG/Amazon/Zoom/Humble and Epic-on-non-macOS keep the existing
+// `WebviewWindowBuilder` path in this same arm, completely untouched.
+//
+// KNOWN, DELIBERATE SIMPLIFICATIONS for this bounded attempt (documented, not hidden):
+//   - The navigation delegate is intentionally LEAKED (`std::mem::forget`) rather than tracked
+//     in a label-keyed side table: `setNavigationDelegate` is a WEAK property (the vendored
+//     `objc2-web-kit` binding's own doc comment), so an un-leaked delegate would be deallocated
+//     the instant this function returns, silently breaking capture. A per-window delegate leak
+//     is a small, bounded cost (one login window per attempt, closed by the user) -- acceptable
+//     for a single bounded experiment, called out here rather than solved with a bigger
+//     cross-thread-safe registry this cycle does not need.
+//   - No `on_document_title_changed` equivalent -- the title is set once, from the opened
+//     origin, and never updated. Cosmetic only, not needed to prove or disprove the 403
+//     hypothesis.
+//   - RESOLVED 2026-08-03 (live testing found the login hangs after the password step): the
+//     delegate below now implements `WKUIDelegate` too, so JS `alert`/`confirm`/`prompt` present
+//     real native `NSAlert` panels instead of silently hanging, and `window.open`/`target=_blank`
+//     navigations (`targetFrame() == nil`, otherwise silently dropped by WebKit with no
+//     UIDelegate) load into this SAME webview via `createWebViewWithConfiguration:` rather than
+//     opening a second window -- `decidePolicyForNavigationAction` below does the identical
+//     redirect as a belt-and-braces second layer.
+#[cfg(target_os = "macos")]
+use objc2::rc::Retained;
+#[cfg(target_os = "macos")]
+use objc2::runtime::{Bool, NSObject, ProtocolObject};
+#[cfg(target_os = "macos")]
+use objc2::{define_class, msg_send, DeclaredClass, MainThreadOnly};
+#[cfg(target_os = "macos")]
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURL, NSURLRequest};
+#[cfg(target_os = "macos")]
+use objc2_web_kit::{
+    WKFrameInfo, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKUIDelegate,
+    WKWebView, WKWebViewConfiguration, WKWindowFeatures,
+};
+
+#[cfg(target_os = "macos")]
+struct EpicPristineNavDelegateIvars {
+    event_label: String,
+}
+
+#[cfg(target_os = "macos")]
+define_class!(
+    #[unsafe(super(NSObject))]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = EpicPristineNavDelegateIvars]
+    struct EpicPristineNavDelegate;
+
+    unsafe impl NSObjectProtocol for EpicPristineNavDelegate {}
+
+    unsafe impl WKNavigationDelegate for EpicPristineNavDelegate {
+        #[unsafe(method(webView:decidePolicyForNavigationAction:decisionHandler:))]
+        fn navigation_policy(
+            &self,
+            webview: &WKWebView,
+            action: &WKNavigationAction,
+            handler: &block2::Block<dyn Fn(WKNavigationActionPolicy)>,
+        ) {
+            // Mirrors this file's OTHER `on_navigation` cancellation arms
+            // (`humble_reveal_post`, the OLD `OAUTH_REDIRECT_EXFIL_HOST` arm above): never
+            // `eprintln!`s the captured url (T-34.4.1-21/T-28-04) -- it is a live OAuth
+            // authorization code.
+            let url_string = unsafe {
+                action
+                    .request()
+                    .URL()
+                    .and_then(|u| u.absoluteString())
+                    .map(|s| s.to_string())
+                    .unwrap_or_default()
+            };
+            let is_redirect_attempt = tauri::Url::parse(&url_string)
+                .map(|parsed| parsed.host_str() == Some("localhost"))
+                .unwrap_or(false);
+            if is_redirect_attempt {
+                push_login_window_event(
+                    self.ivars().event_label.as_str(),
+                    login_event_value("finished", &url_string),
+                );
+                (*handler).call((WKNavigationActionPolicy::Cancel,));
+                return;
+            }
+            // New-window navigations (`targetFrame` nil: `window.open`/`target=_blank`) are NOT
+            // redirected here. `WKUIDelegate::createWebViewWithConfiguration:` below is the
+            // documented hook and handles them. A nil-`targetFrame` cancel-and-reload arm lived
+            // here briefly (2026-08-03) and blanked the window: WebKit reports a nil `targetFrame`
+            // for the FIRST main-frame load of a fresh `WKWebView` too -- the frame does not exist
+            // yet -- so the initial `loadRequest` cancelled and re-issued itself forever and Epic's
+            // page never rendered. Live-confirmed regression; do not reinstate.
+            //
+            // Observability parity with every OTHER runner's `on_page_load` hook, which pushes one
+            // event per main-frame navigation. `oauthLoginCapture`'s poll loop logs the HOSTNAME
+            // ONLY (T-34.5-G6-11) and de-duplicates consecutive same-host lines, so a live
+            // authorization code can never reach the log through this path, and a non-matching
+            // event is simply logged and dropped by `matchOAuthRedirect`. Without this the
+            // pristine window was the ONLY login window in the app that logged no navigation at
+            // all: the 2026-08-03T20:13 live timeout could not be diagnosed because nothing
+            // recorded whether Epic ever attempted its post-password redirect. Main frame only --
+            // this method also fires for every iframe (Epic's login embeds several), which would
+            // swamp the log and defeat the de-duplication.
+            let is_main_frame = unsafe {
+                action
+                    .targetFrame()
+                    .map(|frame| frame.isMainFrame())
+                    .unwrap_or(false)
+            };
+            if is_main_frame {
+                push_login_window_event(
+                    self.ivars().event_label.as_str(),
+                    login_event_value("nav", &url_string),
+                );
+            }
+            (*handler).call((WKNavigationActionPolicy::Allow,));
+        }
+    }
+
+    unsafe impl WKUIDelegate for EpicPristineNavDelegate {
+        // `window.open`/`target=_blank` navigations otherwise silently refused by WebKit (see
+        // `navigation_policy`'s own comment above) -- this is the DOCUMENTED hook
+        // (`WKUIDelegate`'s own doc comment: "If you do not implement this method, the web view
+        // will cancel the navigation"). Never creates a second window: loads the popup's request
+        // into the SAME webview that asked for it and returns `None` so WebKit never allocates a
+        // second `WKWebView`.
+        #[unsafe(method_id(webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:))]
+        fn create_web_view_for_navigation_action(
+            &self,
+            webview: &WKWebView,
+            _configuration: &WKWebViewConfiguration,
+            action: &WKNavigationAction,
+            _window_features: &WKWindowFeatures,
+        ) -> Option<Retained<WKWebView>> {
+            unsafe {
+                webview.loadRequest(&action.request());
+            }
+            None
+        }
+
+        // Without a `WKUIDelegate`, JS `alert()` is a silent no-op (the module doc comment's now-
+        // resolved "KNOWN, DELIBERATE SIMPLIFICATION" above) -- live testing found this is why
+        // Epic's login hangs after the password step. Presents a real modal `NSAlert` and always
+        // calls the completion handler exactly once, on every path.
+        #[unsafe(method(webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:))]
+        fn run_js_alert(
+            &self,
+            _webview: &WKWebView,
+            message: &NSString,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn()>,
+        ) {
+            if let Some(mtm) = objc2::MainThreadMarker::new() {
+                present_native_js_alert(mtm, &message.to_string());
+            }
+            (*completion_handler).call(());
+        }
+
+        /// Same rationale as `run_js_alert` above, for JS `confirm()`. Always calls the
+        /// completion handler exactly once.
+        #[unsafe(method(webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:))]
+        fn run_js_confirm(
+            &self,
+            _webview: &WKWebView,
+            message: &NSString,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn(Bool)>,
+        ) {
+            let confirmed = objc2::MainThreadMarker::new()
+                .map(|mtm| present_native_js_confirm(mtm, &message.to_string()))
+                .unwrap_or(false);
+            (*completion_handler).call((Bool::from(confirmed),));
+        }
+
+        /// Same rationale as `run_js_alert` above, for JS `prompt()`. Always calls the completion
+        /// handler exactly once: a live `NSTextField` accessory view collects the entered text on
+        /// OK, `nil` on Cancel or if no main-thread marker is available (never dropped either
+        /// way).
+        #[unsafe(method(webView:runJavaScriptTextInputPanelWithPrompt:defaultText:initiatedByFrame:completionHandler:))]
+        fn run_js_prompt(
+            &self,
+            _webview: &WKWebView,
+            prompt: &NSString,
+            default_text: Option<&NSString>,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn(*mut NSString)>,
+        ) {
+            let default_text_owned = default_text.map(|s| s.to_string()).unwrap_or_default();
+            let entered = objc2::MainThreadMarker::new()
+                .and_then(|mtm| present_native_js_prompt(mtm, &prompt.to_string(), &default_text_owned));
+            match entered {
+                Some(text) => {
+                    let ns_text = NSString::from_str(&text);
+                    (*completion_handler).call((Retained::as_ptr(&ns_text) as *mut NSString,));
+                }
+                None => (*completion_handler).call((std::ptr::null_mut(),)),
+            }
+        }
+    }
+);
+
+#[cfg(target_os = "macos")]
+impl EpicPristineNavDelegate {
+    fn new(event_label: String, mtm: objc2::MainThreadMarker) -> Retained<Self> {
+        let delegate = mtm
+            .alloc::<EpicPristineNavDelegate>()
+            .set_ivars(EpicPristineNavDelegateIvars { event_label });
+        unsafe { msg_send![super(delegate), init] }
+    }
+}
+
+/// Presents a native, modal `NSAlert` for JS `alert()` (single OK button). Runs synchronously
+/// (`runModal`) -- WebKit always invokes `WKUIDelegate` methods on the main thread, so this never
+/// competes with the `run_on_main_thread` dispatch `open_pristine_epic_login_window` uses for
+/// setup, only with itself (and only one modal alert can be on-screen at a time regardless).
+#[cfg(target_os = "macos")]
+fn present_native_js_alert(mtm: objc2::MainThreadMarker, message: &str) {
+    let alert = objc2_app_kit::NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str(message));
+    alert.addButtonWithTitle(&NSString::from_str("OK"));
+    alert.runModal();
+}
+
+/// Presents a native, modal `NSAlert` for JS `confirm()` (OK/Cancel). Returns `true` only when
+/// the user picked the first ("OK") button.
+#[cfg(target_os = "macos")]
+fn present_native_js_confirm(mtm: objc2::MainThreadMarker, message: &str) -> bool {
+    let alert = objc2_app_kit::NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str(message));
+    alert.addButtonWithTitle(&NSString::from_str("OK"));
+    alert.addButtonWithTitle(&NSString::from_str("Cancel"));
+    alert.runModal() == objc2_app_kit::NSAlertFirstButtonReturn
+}
+
+/// Presents a native, modal `NSAlert` for JS `prompt()` (OK/Cancel plus a single-line
+/// `NSTextField` accessory view seeded with `default_text`). Returns the entered text on OK,
+/// `None` on Cancel -- matching `WKUIDelegate`'s own documented completion-handler contract
+/// ("Pass the entered text if the user chose OK, otherwise nil").
+#[cfg(target_os = "macos")]
+fn present_native_js_prompt(
+    mtm: objc2::MainThreadMarker,
+    prompt: &str,
+    default_text: &str,
+) -> Option<String> {
+    let alert = objc2_app_kit::NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str(prompt));
+    alert.addButtonWithTitle(&NSString::from_str("OK"));
+    alert.addButtonWithTitle(&NSString::from_str("Cancel"));
+
+    let field_frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0));
+    let text_field = objc2_app_kit::NSTextField::initWithFrame(mtm.alloc(), field_frame);
+    text_field.setStringValue(&NSString::from_str(default_text));
+    alert.setAccessoryView(Some(&text_field));
+
+    if alert.runModal() == objc2_app_kit::NSAlertFirstButtonReturn {
+        Some(text_field.stringValue().to_string())
+    } else {
+        None
+    }
+}
+
+/// Builds Epic's login window as a genuinely pristine WKWebView (no Tauri injection at all --
+/// see the module-level doc comment above this function for the full mechanism and rationale).
+/// Runs on whatever thread `dispatch_rust_channel` itself runs on (a spawned worker thread, per
+/// this arm's own established convention -- see `humble_login_clear_cookies`'s threading doc
+/// comment above) and internally hops to the OS main thread via `AppHandle::run_on_main_thread`
+/// for every objc2/AppKit/WebKit call, exactly the "worker blocks on a channel, main thread does
+/// the real work" shape `humble_login_clear_cookies` already established for this same
+/// main-thread-confinement problem.
+#[cfg(target_os = "macos")]
+fn open_pristine_epic_login_window(
+    app: &AppHandle,
+    label: &str,
+    url: tauri::Url,
+    visible: bool,
+    user_agent: &str,
+) -> Result<Value, String> {
+    let origin = url.origin().ascii_serialization();
+    let event_label = label.to_string();
+
+    let mut window_builder = tauri::WindowBuilder::new(app, label).visible(visible);
+    if visible {
+        window_builder = window_builder
+            .inner_size(900.0, 700.0)
+            .center()
+            .focused(true)
+            .theme(Some(tauri::Theme::Light))
+            .title(login_window_title(&origin, None));
+    }
+    let window = window_builder
+        .build()
+        .map_err(|e| format!("humble_login_open:pristine:build-failed:{e}"))?;
+
+    // Close-detection: IDENTICAL mechanism/semantics to the existing arm's own
+    // `WindowEvent::Destroyed` hook (Quick task 260803-eee Task 5) -- same queue, same helper,
+    // same "closed" event shape, so `oauthLoginCapture.ts`'s cancel-on-close branch needs no
+    // changes for this window either.
+    let close_event_label = event_label.clone();
+    window.on_window_event(move |event| {
+        if matches!(event, tauri::WindowEvent::Destroyed) {
+            push_login_window_event(&close_event_label, login_event_value("closed", ""));
+        }
+    });
+
+    let ns_view_ptr = window
+        .ns_view()
+        .map_err(|e| format!("humble_login_open:pristine:ns_view-failed:{e}"))?;
+    // SAFETY (Send across the `run_on_main_thread` boundary below): a raw pointer value is not
+    // normally `Send`, but this is a bare address, reconstructed into a live reference only
+    // INSIDE the main-thread closure below, which is guaranteed to run before `window` (still
+    // alive on THIS function's own stack via the blocking `rx.recv_timeout` below) could
+    // possibly be dropped.
+    struct SendPtr(*mut std::ffi::c_void);
+    unsafe impl Send for SendPtr {}
+    let ns_view_addr = SendPtr(ns_view_ptr);
+    let url_string = url.to_string();
+    let user_agent_owned = user_agent.to_string();
+    let main_thread_label = event_label.clone();
+
+    let (tx, rx) = mpsc_channel::<Result<(), String>>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper
+        // (which has an explicit `unsafe impl Send`), not just its inner `*mut c_void` field --
+        // without this rebinding, precise capture analysis captures `ns_view_addr.0` directly
+        // (since that's the only path ever referenced below), bypassing the wrapper's `Send`
+        // impl entirely and failing to compile.
+        let ns_view_addr = ns_view_addr;
+        let result: Result<(), String> = (|| {
+            let mtm = objc2::MainThreadMarker::new()
+                .ok_or_else(|| "humble_login_open:pristine:no-main-thread-marker".to_string())?;
+            // SAFETY: `ns_view_addr` was obtained from this SAME window's `ns_view()` just
+            // before dispatch, on the same call this closure is part of -- the window (and
+            // therefore its content view) is still alive, since the caller is blocked on
+            // `rx.recv_timeout` below and cannot have dropped it yet.
+            let ns_view: &objc2_app_kit::NSView =
+                unsafe { &*(ns_view_addr.0 as *const objc2_app_kit::NSView) };
+            let frame = ns_view.frame();
+
+            let config = unsafe { WKWebViewConfiguration::new(mtm) };
+            let webview: Retained<WKWebView> =
+                unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+            webview.setAutoresizingMask(
+                objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
+                    | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
+            );
+            unsafe {
+                webview.setCustomUserAgent(Some(&NSString::from_str(&user_agent_owned)));
+            }
+            // Dev-only Web Inspector, gated identically to this file's existing
+            // `window.open_devtools()` gate for the main (Tauri-managed) webview above -- the key
+            // diagnostic tool for the NEXT live run of this window. `setInspectable` is
+            // WKWebView-macOS-13.3+; unavailable in release builds, matching the project's
+            // existing debug-only devtools convention.
+            #[cfg(debug_assertions)]
+            unsafe {
+                webview.setInspectable(true);
+            }
+
+            let delegate = EpicPristineNavDelegate::new(main_thread_label.clone(), mtm);
+            unsafe {
+                webview.setNavigationDelegate(Some(ProtocolObject::from_ref(&*delegate)));
+            }
+            // Intentional leak -- see this section's "KNOWN, DELIBERATE SIMPLIFICATIONS" doc
+            // comment above.
+            std::mem::forget(delegate);
+
+            ns_view.addSubview(&webview);
+            // Paste (Cmd+V) -- and every other Edit-menu key equivalent -- routes via
+            // `[NSApp sendAction:to:from:]` to the KEY window's first responder; `addSubview`
+            // alone does not promote the new subview into the responder chain. Without this, the
+            // long password this window exists to let the user paste (rather than hand-type)
+            // silently goes nowhere. `tauri-2.11.5/src/app.rs` (`Builder::build`,
+            // `enable_macos_default_menu` defaults to `true`, `Menu::default`'s own "Edit" submenu
+            // already includes `PredefinedMenuItem::paste`) confirms this app already gets a
+            // standard macOS Edit menu for free -- `main()` never calls `.menu(...)` or
+            // `.enable_macos_default_menu(false)`, so no new menu needs building here, only this
+            // first-responder promotion.
+            if let Some(ns_window) = ns_view.window() {
+                if !ns_window.makeFirstResponder(Some(&webview)) {
+                    eprintln!(
+                        "[shell] WARN: humble_login_open:pristine: makeFirstResponder declined for '{main_thread_label}' -- paste may not reach the login form"
+                    );
+                }
+            } else {
+                eprintln!(
+                    "[shell] WARN: humble_login_open:pristine: no NSWindow for '{main_thread_label}' -- cannot promote webview to first responder"
+                );
+            }
+
+            let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
+                .ok_or_else(|| "humble_login_open:pristine:bad-nsurl".to_string())?;
+            let request = NSURLRequest::requestWithURL(&nsurl);
+            unsafe {
+                webview.loadRequest(&request);
+            }
+            Ok(())
+        })();
+        let _ = tx.send(result);
+    }) {
+        return Err(format!("humble_login_open:pristine:dispatch-failed:{e}"));
+    }
+
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(Ok(())) => {
+            eprintln!(
+                "[shell] humble_login_open: pristine WKWebView built for '{label}' (zero Tauri injection, F-34.5-G6-01 bounded attempt)"
+            );
+            Ok(Value::String(label.to_string()))
+        }
+        Ok(Err(e)) => Err(e),
+        Err(_) => Err("humble_login_open:pristine:main-thread-timeout".to_string()),
+    }
+}
+
+/// The domain-suffix target `humble_login_clear_cookies`'s pristine-window fallback (below)
+/// gates on -- MUST equal `legendary/user.ts`'s own `EPIC_COOKIE_HOST` constant, the only
+/// value that arm's `clearEpicCookies` step ever passes as `domain`. Kept as a literal
+/// (mirroring `EPIC_LOGIN_HOST`'s own "read only, never imported" convention above, since this
+/// file has no build-time access to frontend/backend TS source) rather than derived from
+/// `EPIC_LOGIN_HOST`, which is a full hostname (`www.epicgames.com`), not the cookie-domain
+/// suffix (`epicgames.com`) Epic's session cookies are actually set against.
+#[cfg(target_os = "macos")]
+const EPIC_COOKIE_DOMAIN: &str = "epicgames.com";
+
+/// Fixes the live-observed Epic logout defect (`humble_login_clear_cookies` rejecting with
+/// `humble_login:no-window:{label}` on EVERY Epic logout, `gamelib.log`, 2026-08-03): Epic's
+/// login window is ALWAYS the pristine, webview-less `WindowBuilder` window
+/// `open_pristine_epic_login_window` builds (`humble_login_open`'s `is_epic_login` branch,
+/// unconditional on macOS -- there is no "Epic but not pristine" case to preserve), so
+/// `app.get_webview_window(label)` structurally can never find it, for ANY label, fresh or
+/// stale. The label was never a real lookup key for cookie data in the first place: the
+/// pristine webview's `WKWebViewConfiguration::new(mtm)` uses no custom `websiteDataStore`
+/// override, so its cookies live in the SAME process-wide `WKWebsiteDataStore::defaultDataStore()`
+/// every Tauri-managed window already shares -- D-08's own "the jar is app-wide" comment on
+/// `humble_login_clear_cookies` above. Clearing that store directly needs no window handle at
+/// all, live or closed, Tauri-managed or raw -- so this function is deliberately
+/// label-independent, taking only the domain to filter on.
+///
+/// Removal mechanism is the SAME one `humble_login_clear_cookies`'s existing per-window macOS
+/// branch already proved correct (Plan 23, F-6 Defect B): `WKWebsiteDataStore
+/// .removeDataOfTypes(forDataRecords:completionHandler:)`, scoped to `WKWebsiteDataTypeCookies`
+/// only and to records whose `displayName()` domain-suffix-matches `domain` -- never
+/// `WKHTTPCookieStore.deleteCookie()` (the filed WebKit defect, bugs.webkit.org #184938, that
+/// reports success while silently deleting nothing; see that branch's own doc comment). The
+/// measured count comes from `WKHTTPCookieStore.getAllCookies()` -- a real per-cookie read,
+/// genuinely INDEPENDENT of the data-record removal path above it -- taken both before and
+/// after the removal and reduced through the same `verified_delete_count` (before-after,
+/// saturating) contract every other clear path in this file uses. This function can never
+/// report success while removing nothing: the count it returns is never the mutating call's
+/// own report, always a fresh re-read (the discipline the file's D-08 comment establishes and
+/// this function's own doc note repeats because F-6 already proved a mutating call's own
+/// "it completed" signal is not proof of anything on this platform).
+#[cfg(target_os = "macos")]
+fn clear_default_data_store_cookies_for_domain(
+    app: &AppHandle,
+    domain: &str,
+) -> Result<Value, String> {
+    let count_matching_cookies = |domain: &str| -> Result<usize, String> {
+        let (tx, rx) = mpsc_channel::<Result<usize, String>>();
+        let domain_owned = domain.to_string();
+        if let Err(e) = app.run_on_main_thread(move || {
+            let outcome: Result<(), String> = (|| {
+                let mtm = objc2::MainThreadMarker::new().ok_or_else(|| {
+                    "humble_login_clear_cookies:default-store:no-main-thread-marker".to_string()
+                })?;
+                // SAFETY: `mtm` proves this closure is running on the main thread.
+                let data_store =
+                    unsafe { objc2_web_kit::WKWebsiteDataStore::defaultDataStore(mtm) };
+                let cookie_store = unsafe { data_store.httpCookieStore() };
+                let target_domain = domain_owned.clone();
+                let tx_fetch = tx.clone();
+                // SAFETY: `getAllCookies` hands the completion handler a valid, live array
+                // pointer for the duration of this call; `tx_fetch` outlives it.
+                let completion = block2::RcBlock::new(
+                    move |cookies: std::ptr::NonNull<
+                        objc2_foundation::NSArray<objc2_foundation::NSHTTPCookie>,
+                    >| {
+                        let cookies_ref = unsafe { cookies.as_ref() };
+                        // Never logged (T-34.4.1-21/T-28-04/T-34.4.1-39/-75/-91) -- each
+                        // cookie's domain is read only to feed the pure, count-only
+                        // `cookie_domain_matches` filter, never printed.
+                        let count = cookies_ref
+                            .to_vec()
+                            .iter()
+                            .filter(|cookie| {
+                                cookie_domain_matches(
+                                    &cookie.domain().to_string(),
+                                    Some(&target_domain),
+                                )
+                            })
+                            .count();
+                        let _ = tx_fetch.send(Ok(count));
+                    },
+                );
+                unsafe {
+                    cookie_store.getAllCookies(&completion);
+                }
+                Ok(())
+            })();
+            if let Err(e) = outcome {
+                let _ = tx.send(Err(e));
+            }
+        }) {
+            return Err(format!(
+                "humble_login_clear_cookies:default-store:dispatch-failed:{e}"
+            ));
+        }
+        match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
+            Ok(inner) => inner,
+            // Mirrors the per-window branch above: a timeout here means the SIGNAL was
+            // missed, not that the read itself is meaningless -- there is nothing to fall
+            // back to for a COUNT specifically (unlike the removal below, which always has
+            // a re-read to fall through to), so this one case does surface as an error.
+            Err(_) => Err("humble_login_clear_cookies:default-store:timeout".to_string()),
+        }
+    };
+
+    let before_matching = count_matching_cookies(domain)?;
+    if before_matching == 0 {
+        return Ok(Value::Number(0.into()));
+    }
+
+    let (tx, rx) = mpsc_channel::<()>();
+    let domain_for_removal = domain.to_string();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let Some(mtm) = objc2::MainThreadMarker::new() else {
+            // Structurally should not happen inside a run_on_main_thread closure; fail safe
+            // by signalling "done, nothing removed" rather than hanging until the timeout.
+            let _ = tx.send(());
+            return;
+        };
+        // SAFETY: `mtm` proves this closure is running on the main thread.
+        let data_store = unsafe { objc2_web_kit::WKWebsiteDataStore::defaultDataStore(mtm) };
+        let data_store_for_removal = data_store.clone();
+        let all_types = unsafe { objc2_web_kit::WKWebsiteDataStore::allWebsiteDataTypes(mtm) };
+        let tx_fetch = tx.clone();
+        let target_domain = domain_for_removal.clone();
+        let fetch_completion = block2::RcBlock::new(
+            move |records: std::ptr::NonNull<
+                objc2_foundation::NSArray<objc2_web_kit::WKWebsiteDataRecord>,
+            >| {
+                // SAFETY: WebKit hands the completion handler a valid, live array pointer for
+                // the duration of this call.
+                let records_ref = unsafe { records.as_ref() };
+                let all_records: Vec<objc2::rc::Retained<objc2_web_kit::WKWebsiteDataRecord>> =
+                    records_ref.to_vec();
+                let matching_records: Vec<&objc2_web_kit::WKWebsiteDataRecord> = all_records
+                    .iter()
+                    .filter(|record| {
+                        // SAFETY: `displayName()` is a simple ObjC accessor; `record` is a
+                        // live, retained object from `all_records`. Never logged -- passed
+                        // only into the pure, count-only `website_data_record_matches_domain`
+                        // filter.
+                        let display_name = unsafe { record.displayName() }.to_string();
+                        website_data_record_matches_domain(&display_name, &target_domain)
+                    })
+                    .map(|record| &**record)
+                    .collect();
+                if matching_records.is_empty() {
+                    let _ = tx_fetch.send(());
+                    return;
+                }
+                // Scoped to WKWebsiteDataTypeCookies ONLY -- a matched record may carry
+                // localStorage/IndexedDB/cache data for the same domain too;
+                // `humble_login_clear_storage` (a separate, already-shipped step) owns those.
+                // SAFETY: `WKWebsiteDataTypeCookies` is a valid static `NSString` this crate
+                // exposes; reading an extern static is the only unsafe part of this line.
+                let cookies_type: &objc2_foundation::NSString =
+                    unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
+                let cookies_type_set = objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                let records_array = objc2_foundation::NSArray::from_slice(&matching_records);
+                let tx_remove = tx_fetch.clone();
+                let remove_completion = block2::RcBlock::new(move || {
+                    let _ = tx_remove.send(());
+                });
+                // SAFETY: `data_store_for_removal` is a live object obtained on the main
+                // thread above; `cookies_type_set`/`records_array` are freshly built, live
+                // objects; `remove_completion` outlives the call.
+                unsafe {
+                    data_store_for_removal.removeDataOfTypes_forDataRecords_completionHandler(
+                        &cookies_type_set,
+                        &records_array,
+                        &remove_completion,
+                    );
+                }
+            },
+        );
+        // SAFETY: `data_store`/`all_types` are live objects obtained above on the main
+        // thread; `fetch_completion` outlives the call.
+        unsafe {
+            data_store.fetchDataRecordsOfTypes_completionHandler(&all_types, &fetch_completion);
+        }
+    }) {
+        eprintln!("[shell] humble_login_clear_cookies: default-store dispatch failed: {e}");
+        return Err(format!(
+            "humble_login_clear_cookies:default-store:dispatch:{e}"
+        ));
+    }
+
+    if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
+        eprintln!(
+            "[shell] humble_login_clear_cookies: default-store WKWebsiteDataStore removal timed out waiting for the completion signal"
+        );
+    }
+
+    let after_matching = count_matching_cookies(domain)?;
+    Ok(Value::Number(
+        verified_delete_count(before_matching, after_matching).into(),
+    ))
+}
+
 /// Classifies a raw `keyring` crate outcome (`Entry::new(...).and_then(|e| e.get_password())`)
 /// into the arm's `Value`/`String` contract (34.4.1 gap cycle 2 plan 26, F-9 observability
 /// half). Extracted as its own pure function so this classification is directly testable
@@ -2047,6 +2698,20 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
             let label = next_login_window_label();
             let event_label = label.clone();
+            // Bounded pristine-webview attempt (checkpoint response, 2026-08-03T18:00:00
+            // superseding cycle; F-34.5-G6-01): route Epic's login window through a
+            // Tauri-injection-free WKWebView on macOS instead of this arm's own
+            // `WebviewWindowBuilder` path below. See `open_pristine_epic_login_window`'s own
+            // doc comment (above, near `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`) for the full
+            // mechanism. Scoped to `is_epic_login` + macOS only -- every other runner (and Epic
+            // itself on non-macOS) falls through to the existing, completely untouched code
+            // below. `url` is only moved into this branch when it is actually taken (`return`
+            // on the same expression), so the unconditional uses of `url` further down this
+            // arm remain valid on every path that reaches them.
+            #[cfg(target_os = "macos")]
+            if is_epic_login {
+                return open_pristine_epic_login_window(app, &label, url, visible, user_agent);
+            }
             // Shared last-known main-frame origin (Phase 34.5 Plan 27): seeded from the
             // validated open URL so it is never empty, updated only from `on_page_load`
             // (main-frame only, per this arm's own doc comment above), and read by
@@ -2432,9 +3097,27 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .get(1)
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?;
-            let window = app
-                .get_webview_window(label)
-                .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
+            let existing_window = app.get_webview_window(label);
+
+            // Epic pristine-window fallback (macOS only; see
+            // `clear_default_data_store_cookies_for_domain`'s own doc comment for the full
+            // defect this closes). `open_pristine_epic_login_window` never registers a
+            // Tauri-managed `WebviewWindow` under ITS label -- `existing_window` is
+            // structurally always `None` for it, for every label, fresh or stale -- so this
+            // branch is gated on BOTH "no such webview window" AND "the domain being cleared
+            // is Epic's own", the only combination `legendary/user.ts`'s `clearEpicCookies`
+            // step can ever produce. Every other caller (Humble/GOG/Amazon, all still routed
+            // through a live Tauri-managed window at this point) fails the domain check and
+            // falls straight through to the existing `no-window` error below, completely
+            // unchanged.
+            #[cfg(target_os = "macos")]
+            if existing_window.is_none() && cookie_domain_matches(domain, Some(EPIC_COOKIE_DOMAIN))
+            {
+                return clear_default_data_store_cookies_for_domain(app, domain);
+            }
+
+            let window =
+                existing_window.ok_or_else(|| format!("humble_login:no-window:{label}"))?;
 
             // The SAME clear-direction filter as before (unedited by Plan 23, Plan 22
             // already proved it correct against Defect A): the cookie's OWN domain first,

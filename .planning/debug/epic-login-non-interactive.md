@@ -1,5 +1,5 @@
 ---
-status: resolved_pending_cleanup_sidlogin_pivot_live_verified_pre_auth_2026_08_03_f_34_5_g6_01_and_phase_34_5_remain_open_two_reconciliation_items_owed_deferred_dead_code_removal_and_34_5_untested_items_ledger_edit
+status: root_cause_confirmed_and_fix_live_verified_2026_08_03T20_28_00_pristine_wkwebview_zero_tauri_injection_defeats_talon_403_and_captures_redirect_natively_first_ever_fresh_logged_out_epic_login_under_tauri_both_arms_of_f_34_5_g6_01_proven_three_cleanup_items_remain_cmd_v_paste_dead_code_removal_ledger_edit_finding_eligible_for_closure_not_closed_phase_34_5_unaffected
 root_cause_scope: |
   SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the
   POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized
@@ -14,7 +14,7 @@ root_cause_scope: |
   `pending_question`, for the live test that resolves this before implementation proceeds.
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-03T17:00:00
+updated: 2026-08-03T20:30:00
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -8108,3 +8108,407 @@ next_action: |
   `F-34.5-G6-01`/Phase 34.5 are eligible for closure. This bookkeeping cycle's own work is
   complete: status recorded, live-gate result recorded, both loose ends reconciled with an
   explicit disposition note (not silently dropped). No further action this cycle.
+
+## Current Focus (SUPERSEDING, 2026-08-03T18:00:00) -- follow-up cycle BLOCKED, stale premise found, both planned actions reverted
+
+<!-- This is the follow-up cycle the 17:00:00 block's own `next_action` named. It did NOT
+     complete as planned. Task 1 (dead-code removal) was executed, then discovered unsafe and
+     fully reverted before any commit. Task 2 (ledger edit) was executed, then discovered to
+     rest on the same false premise and also fully reverted before any commit. Nothing in this
+     cycle's file-removal or ledger-relabeling work survives -- this block exists to record WHY,
+     not to redo it. -->
+
+deviation_found_2026_08_03T18_00_00: |
+  BLOCKING DISCREPANCY between this debug file's own 17:00:00 record and the actual committed
+  codebase state.
+
+  The 17:00:00 block's `live_gate_result` item 1 states: "Epic's tile now surfaces SIDLogin
+  only -- the embedded 403 path is unreachable for Epic under Tauri, not just hidden by
+  default." This cycle's own scope instructions relied on that statement to treat
+  `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, `epic_oauth_redirect_observer_script`, and the Epic
+  `.on_navigation` match arm (`src-tauri/src/main.rs`) as confirmed-safe dead code.
+
+  Direct read of the CURRENT source (not this debug file's own account of it) shows this is
+  FALSE:
+    - `src/frontend/screens/Login/components/Runner/index.tsx`: `RunnerProps` carries a
+      `primaryLoginAction` prop (doc comment: "the embedded WebKit login stays reachable via
+      the 'Alternative Login Method' tile (for continued 403 experimentation)"). `handleLogin`
+      calls it when present; `handleAltLogin` still calls `props.alternativeLoginAction`
+      unconditionally when the tile is clicked.
+    - `src/frontend/screens/Login/index.tsx` (Epic `<Runner>` instance): under Tauri,
+      `primaryLoginAction={() => setShowSidLogin(true)}` (SIDLogin, as the 17:00:00 block
+      says) BUT `alternativeLoginAction={() => navigate(epicLoginPath)}` -- the embedded
+      WebKit route, reachable via the always-rendered "Alternative Login Method" second tile
+      (`Runner/index.tsx`'s `{props.alternativeLoginAction && !props.isLoggedIn && (...)}`
+      block has no `isTauri()` gate of its own).
+    - That route drives `humble_login_open` with the Epic URL exactly as before, so
+      `is_epic_login` still evaluates true and the fingerprint shim + OAuth-redirect observer
+      + `.on_navigation` match arm are still the ONLY code that runs for it.
+
+  Root of the discrepancy: git commit `470323e70` ("feat(epic-login): SIDLogin pivot under
+  Tauri + restore embedded WebKit login as alt tile"), timestamped 2026-08-03T16:30:44 --
+  BEFORE this file's own 17:00:00 checkpoint text was written -- is ALREADY on this branch
+  (`fix/steam-native-install-stability`; `git log` confirms, working tree was clean for these
+  paths at this cycle's start). Its own commit message states outright: "Per request for a
+  further 403 investigation, the embedded WebKit login is restored as the Alternative Login
+  Method tile under Tauri... The now-dead EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT,
+  epic_oauth_redirect_observer_script, and Epic on_navigation arm are intentionally KEPT
+  (marked PENDING REMOVAL) because the reopened embedded path needs them for the next debug
+  try." This debug file has NO record of that decision anywhere in its 8110 lines -- it was
+  made and committed outside this session's own tracked history, and the 17:00:00 block's
+  author either did not know about it or the "unreachable, not just hidden" wording predates
+  it and was never corrected afterward.
+
+  Also relayed as already-established fact for this cycle: "the pivot working-tree changes
+  remain UNCOMMITTED." This was also false at cycle start -- `470323e70` (and
+  `fd44c58d0`) were already committed; `git status --porcelain` showed no modifications to
+  `Runner/index.tsx`, `Login/index.tsx`, or `Runner/__tests__/index.test.tsx` before this
+  cycle touched anything.
+
+actions_taken_and_reverted_2026_08_03T18_00_00: |
+  1. Removed `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, `epic_oauth_redirect_observer_script`, the
+     `is_epic_login`/`EPIC_LOGIN_HOST`/`OAUTH_REDIRECT_EXFIL_HOST` supporting code, the two
+     `initialization_script()` call sites, the `.on_navigation` match-arm body, and 4 dead unit
+     tests from `src-tauri/src/main.rs`. `cargo check` and `cargo test` (93/93) were clean
+     against the edited file -- the removal was mechanically sound, NOT unsafe by any compiler
+     or test signal. It was unsafe only because the premise licensing it (embedded path
+     unreachable) is false. FULLY REVERTED via `git checkout -- src-tauri/src/main.rs` before
+     any commit; `cargo check` reconfirmed clean against the reverted (original) file; grep
+     confirms all 3 symbols present again (21 occurrences).
+  2. Edited `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` (plus the ledger's own header
+     summary) to **SUPERSEDED**, stating the embedded mechanism "no longer applicable to
+     Epic" and reflecting the (also reverted) code deletion. FULLY REVERTED via
+     `git checkout -- .planning/phases/.../34.5-UNTESTED-ITEMS.md` before any commit --
+     confirmed by re-read, rows `U-34.5-06`/`U-34.5-11` are back to their original 2026-08-02
+     **OPEN** text.
+  3. Nothing was committed at any point this cycle. `git status --porcelain` at end of cycle
+     shows zero changes to any file this cycle touched (`main.rs`, the ledger) -- only the
+     pre-existing, unrelated `.vscode/settings.json` modification and untracked
+     `scratchpad/`/`steam_appid.txt` remain, exactly as they were before this cycle started.
+     `commit_docs`/step 3/step 4 of this cycle's instructions (commit the pivot + cleanup,
+     verify build/tests, mark resolved, move to `resolved/`) were NOT executed -- doing so
+     would have committed a false ledger disposition and a codebase-breaking deletion.
+
+status_disposition_2026_08_03T18_00_00: |
+  F-34.5-G6-01's PRE-AUTH arm: the 17:00:00 block's RESOLVED/live-verified disposition for
+  SIDLogin itself is UNCHANGED and not in question -- SIDLogin works, live-verified,
+  independent of this discrepancy.
+
+  What IS now in question: whether the 17:00:00 checkpoint's own verification actually covered
+  what it claims. Item 1 of that checkpoint ("the embedded 403 path is unreachable for Epic
+  under Tauri, not just hidden by default") does not match the code that was live at the time
+  of that checkpoint (`470323e70` predates it). Whether the user's "confirmed fixed" response
+  was given with knowledge that the embedded path is still one click away via "Alternative
+  Login Method" is unknown from this file's own record -- the checkpoint questions asked for
+  1-5 in `live_gate_result_2026_08_03T17_00_00` do not ask the user to check for or rule out a
+  second tile.
+
+  The two reconciliation items named by the 17:00:00 block's `next_action` are NOT closed:
+    (1) dead-code removal -- NOT SAFE as stated; the embedded path is deliberately reachable
+        and this code is its only implementation. Removing it would break the "Alternative
+        Login Method" tile outright for Epic under Tauri (an EMPTY `initialization_script`
+        chain, no fingerprint shim, no OAuth-redirect capture -- `on_page_load`'s
+        already-confirmed-broken silent-navigation-refusal would be the ONLY remaining signal,
+        i.e. reintroducing the exact defect `Resolution.fix` 2026-08-02 addressed).
+    (2) `34.5-UNTESTED-ITEMS.md` edit -- NOT SAFE as drafted; `U-34.5-06`/`U-34.5-11` describe
+        a mechanism that is still live code on a still-reachable UI path, not dead code. A
+        correction is still owed (the ledger's current OPEN text does not mention the
+        alternative-tile design at all), but "SUPERSEDED, no longer applicable" is the wrong
+        correction.
+
+  Phase 34.5 / F-34.5-G6-01 closure eligibility: NOT ELIGIBLE this cycle. Closure eligibility
+  cannot be assessed honestly until it's established (by asking the user, since this file has
+  no record of it) whether the "Alternative Login Method" tile's continued existence under
+  Tauri was an intentional, accepted design decision (kept for future 403 debugging, as
+  `470323e70`'s own message says) or an oversight that should itself be removed -- which is a
+  DIFFERENT, larger change (removing the tile AND its frontend wiring, not just the Rust dead
+  code) than anything this cycle was scoped to do.
+
+next_action: |
+  CHECKPOINT (decision) -- return to the user/orchestrator rather than proceeding. Do not
+  re-attempt the dead-code removal or the ledger edit under the old premise. Two options, both
+  requiring a decision this debug session cannot make on its own:
+    (A) Keep the "Alternative Login Method" embedded-login tile for Epic under Tauri
+        (matches `470323e70`'s own stated intent: "for continued 403 experimentation"). In
+        this case the three `main.rs` items are NOT dead code -- update the debug file's
+        17:00:00 record to correct the false "unreachable, not just hidden" claim, correct
+        `34.5-UNTESTED-ITEMS.md` to describe the mechanism as "still live, reachable via the
+        alternative tile, not yet live-gated" rather than superseded, and re-run (or newly run)
+        a live checkpoint that explicitly exercises the alternative tile before any closure
+        claim.
+    (B) Remove the "Alternative Login Method" tile for Epic under Tauri entirely (SIDLogin
+        becomes the ONLY Epic path under Tauri, matching this file's ORIGINAL 17:00:00 intent).
+        In this case the three `main.rs` items become genuinely dead and this cycle's
+        (reverted) removal work is correct and can be redone -- but the frontend also needs a
+        follow-up change (drop `alternativeLoginAction` for Epic under Tauri in
+        `Login/index.tsx`, or gate the second tile's render on `!isTauri()`), which is outside
+        this cycle's original scope and needs its own plan/commit.
+  Whichever option the user picks, the SAME two reconciliation items named by the 17:00:00
+  block remain open until it lands.
+
+## Current Focus (SUPERSEDING, 2026-08-03T19:00:00) -- pristine-webview attempt IMPLEMENTED, compiles clean, awaiting live human verification
+
+<!-- Resolves the 18:00:00 block's checkpoint with a THIRD option the user chose, distinct from
+     both (A) keep-alt-tile-as-is and (B) remove-alt-tile: build a genuinely pristine (zero
+     Tauri injection) WKWebView for Epic's embedded login window specifically, bypassing
+     Tauri's own webview construction entirely, while leaving SIDLogin untouched as the primary,
+     working path. If this fails a live 403 check, the fallback is (B) from the 18:00:00
+     block. -->
+
+user_direction_2026_08_03T19_00_00: |
+  Checkpoint response (verbatim, see the orchestrator's `<checkpoint_response>` for the full
+  text): "Pristine-webview attempt" -- one bounded attempt at the embedded login: build the
+  Epic login window as a raw wry/native WKWebView with zero Tauri injection so Talon sees a
+  Safari-like surface. SIDLogin stays as the working fallback. If it still 403s, fall back to
+  cleanup (remove/gate the alt tile for Epic under Tauri + delete the then-dead Rust items).
+  Also clarified this session: the "no not fixed always gets a 403" report is about the
+  embedded "Alternative Login Method" tile specifically, NOT SIDLogin -- SIDLogin remains
+  live-verified working (16:59/17:39 `legendary auth --code` successes, unchanged this cycle).
+
+feasibility_research_2026_08_03T19_00_00: |
+  Investigated three candidate routes (fix plan's own preference order) before writing any
+  code:
+    (a) raw wry `WebView` -- FEASIBLE, chosen. `tauri::WindowBuilder`/`Window` (a WEBVIEW-LESS
+        window -- title/size/center/close-detection all live on `Window`, not `Webview`) is
+        gated behind the `unstable` cargo feature (`tauri-2.11.5/src/window/mod.rs`'s
+        `unstable_struct!` macro: `pub` with the feature, `pub(crate)`-only -- unusable from
+        this crate -- without it). `Window::ns_view()`/`ns_window()` (used by
+        `humble_login_clear_cookies` already, via the WEBVIEW-carrying `WebviewWindow`'s own
+        copy of the same methods) return the raw native pointer regardless of feature-gating.
+        Confirmed via DIRECT READ of the vendored `tauri-2.11.5` crate source (not assumed).
+    (b) native WKWebView via objc2 -- this is what (a) resolves to in practice: once the
+        webview-less `Window` exists, its content view (`ns_view()`) is a bare `NSView` with
+        NO WKWebView attached at all -- attaching a hand-built `objc2_web_kit::WKWebView` via
+        `addSubview` (own `WKWebViewConfiguration`, own `objc2::define_class!`-declared
+        `WKNavigationDelegate`, own `NSURLRequest`) is the ONLY way to get a webview with zero
+        Tauri involvement. `wry-0.55.1/src/wkwebview/class/wry_navigation_delegate.rs` (the
+        EXACT vendored wry version this project already uses) is wry's OWN
+        `WKNavigationDelegate` implementation via `define_class!` -- read in full and used as
+        the direct pattern reference (delegate ivars struct, `#[thread_kind = MainThreadOnly]`,
+        `mtm.alloc().set_ivars(...)` + `msg_send![super(delegate), init]` construction,
+        `(*handler).call((Policy,))` decision-handler invocation convention).
+    (c) tauri-supported injection suppression -- CONFIRMED NOT TO EXIST, and confirmed doubly:
+        no such builder flag exists in the vendored crate source, AND the project's own
+        `tauri-embedded-store-browser.md` skill already recorded that even a Tauri-MANAGED
+        CHILD webview (the `unstable` `add_child`/`WebviewBuilder` route) still gets
+        `window.__TAURI__` injected ("window.__TAURI__ is injected into the remote store
+        origin (014b)") -- so ANY webview Tauri itself constructs, by any route, carries the
+        injection. Route (a)/(b) above is the only way to avoid it, because it never asks
+        Tauri to construct a webview at all.
+  Dependency audit (before touching Cargo.toml): `objc2-app-kit` 0.3.2 and the WKWebView-family
+  features of `objc2-web-kit` 0.3.2 (`WKWebView`, `WKWebViewConfiguration`, `WKNavigation`,
+  `WKNavigationDelegate`, `WKNavigationAction`) are ALL already resolved in `Cargo.lock` and
+  already COMPILED into the dependency tree -- pulled in transitively by `wry`'s own feature
+  requests (`wry-0.55.1/Cargo.toml`, read directly, lines 282-301 and 382-412). Promoting them
+  to explicit, direct, pinned-version dependencies (mirrors the SPIKE 016 precedent already in
+  this file's own Cargo.toml comments for `objc2-web-kit`/`WKWebsiteDataRecord`) adds ZERO new
+  compiled surface -- confirmed by the actual `cargo check` compile time below (14s, not a
+  from-scratch dependency build).
+
+implementation_2026_08_03T19_00_00: |
+  `src-tauri/Cargo.toml`:
+    - Added `"unstable"` to `tauri`'s feature list (required for `WindowBuilder`, per the
+      feasibility research above). Purely additive per this project's own prior `unstable`
+      multiwebview spike finding (`tauri-embedded-store-browser.md`).
+    - Promoted `objc2-app-kit` (`NSView`, `NSWindow` features) from transitive to direct,
+      pinned-version dependency.
+    - Extended `objc2-web-kit`'s explicit feature list with `WKWebView`,
+      `WKWebViewConfiguration`, `WKNavigation`, `WKNavigationDelegate`, `WKNavigationAction`
+      (all already unioned in via `wry`, added for explicit-declaration hygiene matching this
+      file's own established `WKWebsiteDataRecord` convention).
+  `src-tauri/src/main.rs` (near `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`, before the
+  `humble_login_open` match arm):
+    - New `EpicPristineNavDelegate` (`objc2::define_class!`, `WKNavigationDelegate`): the ONLY
+      method implemented is `webView:decidePolicyForNavigationAction:decisionHandler:`. Unlike
+      the OLD `epic_oauth_redirect_observer_script` (an in-page `fetch`-wrapper JS relay via a
+      fake `.invalid` exfil host -- needed only because the OLD Tauri-managed webview's sole
+      Rust-visible signal, `on_page_load`, never fires for a silently-refused navigation), this
+      delegate sees Epic's real `http://localhost:PORT/?code=...` redirect attempt DIRECTLY and
+      NATIVELY at the navigation-policy-decision point (before WebKit ever tries to
+      resolve/refuse it) -- no in-page JS relay of any kind. On a `localhost`-host match:
+      pushes a `'finished'` `LoginWindowNavEvent` carrying the full captured url onto the SAME
+      `LOGIN_WINDOW_EVENTS` queue via the SAME `push_login_window_event`/`login_event_value`
+      helpers every other runner's `on_page_load` hook already feeds, then cancels the
+      navigation. Verified against `matchOAuthRedirect`'s `legendary` case
+      (`backend/sidecar/oauthLoginCapture.ts:113-119`, read in full this cycle): requires ONLY
+      `hostname === 'localhost'` + non-empty `code` -- ZERO changes needed to
+      `matchOAuthRedirect`, `oauthLoginCapture.ts`, `useTauriOAuthLogin.ts`, or
+      `LoginWindowSeam` (`backend/humble/loginWindowSeam.ts`, read in full this cycle to confirm
+      the exact `LoginWindowNavEvent`/`takeEvents()` contract this delegate must reproduce).
+    - New `open_pristine_epic_login_window()`: builds a webview-less `tauri::WindowBuilder`
+      window (title/size/center/focused/theme/visible -- same presentation as the OLD arm) with
+      the SAME `WindowEvent::Destroyed` close-detection hook the OLD arm uses (same queue, same
+      helper, same `'closed'` event shape -- `oauthLoginCapture.ts`'s cancel-on-close branch
+      needs no changes). Then hops to the OS main thread via `AppHandle::run_on_main_thread`
+      (the SAME "worker thread blocks on an `mpsc` channel, main thread does the real
+      objc2/AppKit/WebKit work" shape `humble_login_clear_cookies` already established above in
+      this same file for the identical main-thread-confinement constraint) to construct a raw
+      `WKWebView` (fresh `WKWebViewConfiguration`, NO initialization scripts of any kind --
+      neither the fingerprint shim nor the OAuth-redirect observer, satisfying the "zero
+      page-side injection" requirement literally), attach it as the content view's only
+      subview, set the navigation delegate, and `loadRequest` the Epic login URL.
+    - Wired into `humble_login_open`'s existing match arm as an early `#[cfg(target_os =
+      "macos")] if is_epic_login { return open_pristine_epic_login_window(...); }` branch,
+      placed immediately after `label`/`event_label` are computed and BEFORE the OLD arm's
+      `WebviewWindowBuilder` chain begins. GOG/Amazon/Zoom/Humble (`is_epic_login` false) and
+      Epic-on-non-macOS both fall through to the OLD, completely untouched code below --
+      confirmed by direct re-read after the edit that no other branch's code was touched.
+    - The OLD `epic_oauth_redirect_observer_script`/`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`/
+      `.on_navigation` `OAUTH_REDIRECT_EXFIL_HOST` match arm are UNCHANGED and NOT deleted this
+      cycle (per the fix plan's own bounded-ness/reversibility instruction) -- they are now
+      unreachable for Epic specifically (the early return above never falls through to them for
+      `is_epic_login`), but still compile and still apply to any future non-Epic host that might
+      reuse `is_epic_login`'s pattern... they do not; they are Epic-only-gated too, so they are
+      simply dormant. Kept as the fast, one-line-revert fallback: deleting the
+      `#[cfg(target_os = "macos")] if is_epic_login { return ...; }` branch alone restores the
+      OLD behavior exactly, with no other code changes needed, if this attempt is abandoned.
+  Two deliberate, documented compile-fix iterations (both are ordinary Rust correctness fixes,
+  not design changes): (1) `objc2::DeclaredClass` was missing from this file's new `use` list --
+  `self.ivars()` does not resolve without it. (2) Rust 2021 disjoint closure capture moved in
+  only the `*mut c_void` FIELD of the `SendPtr(*mut c_void)` wrapper (not the whole `Send`-
+  wrapped struct) because the closure only ever accessed `.0` -- fixed with the standard
+  `let ns_view_addr = ns_view_addr;` whole-value rebinding idiom at the top of the closure,
+  forcing capture of the wrapper, not its field. Both are recorded here because they are the
+  kind of native-FFI gotcha a future cycle reading this file would otherwise have to
+  rediscover.
+
+verification_self_checked_2026_08_03T19_00_00: |
+  - `cargo check` (macOS, this machine): CLEAN, zero errors, zero warnings, 14.07s incremental
+    (confirms the feasibility research's "adds zero new compiled surface" claim -- this was NOT
+    a from-scratch dependency build).
+  - `cargo test` (macOS, this machine): 97/97 passed, 1 ignored (pre-existing, unrelated --
+    `keyring_read_timing_hypothesis_absent_vs_present_entry`), 0 failed. No test file was
+    touched this cycle -- this is a pure regression check, not new coverage (the new pristine-
+    webview code is native-FFI/main-thread-confined and cannot be exercised by this crate's
+    existing `#[cfg(test)] mod tests` harness, which explicitly notes elsewhere in this file
+    that `with_webview()`-style live-webview code "cannot be proven the same way (a `#[test]`
+    cannot construct a live `WebviewWindowBuilder`)" -- the same limitation applies here).
+  - `cargo clippy`: 6 warnings, ALL pre-existing (lines 531-535 doc-list-indentation, line 910
+    manual-`hash_one` -- none inside this cycle's diff, confirmed by line-range comparison
+    against the actual edit). Zero NEW clippy warnings from this cycle's code.
+  - `git status --porcelain`: touched paths are exactly `src-tauri/Cargo.toml`,
+    `src-tauri/Cargo.lock` (1 line), `src-tauri/src/main.rs`, and this debug file -- the
+    pre-existing unrelated dirt (`.vscode/settings.json`, `scratchpad/`, `steam_appid.txt`) is
+    untouched and will NOT be swept into any commit.
+  - NOT YET DONE, and cannot be done from this environment: the actual live behavioral check
+    (does the 403 still occur). This requires a human driving `pnpm tauri:dev`, clicking Epic's
+    Alternative Login tile, and observing the ACTUAL rendered page -- exactly the mandatory
+    CHECKPOINT the fix plan itself requires before any closure claim. No code in this cycle
+    self-verifies the one thing that actually matters.
+
+next_action: |
+  CHECKPOINT (human-verify) -- issued to the user/orchestrator, NOT skipped. See the
+  structured `## CHECKPOINT REACHED` block returned alongside this file update for the exact
+  steps and what to report back. Do not mark F-34.5-G6-01/Phase 34.5 closed, do not archive
+  this debug session, and do not touch the OLD (dormant, not-yet-deleted)
+  `epic_oauth_redirect_observer_script`/`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`/`.on_navigation`
+  items until this checkpoint's result is known. Two outcomes, both already planned for (fix
+  plan's own step 5, "Bounded-ness / fallback"):
+    - PASSES (real login form renders, no 403, login completes, `legendary auth --code`
+      succeeds, Epic library populates): a FOLLOW-UP cycle deletes the three now-genuinely-dead
+      OLD `main.rs` items, runs `cargo check`/`cargo test`/`npx tsc --noEmit`/
+      `npm run test:ci`, and commits the whole pristine-webview change as one unit. The two
+      RECONCILIATION items the 17:00:00 block named (dead-code removal, ledger edit) can THEN
+      be redone correctly, this time against a TRUE premise.
+    - STILL 403s (with the empty-window-property probe from the fix plan's step 4 confirmed
+      clean, i.e. this attempt genuinely eliminated the Tauri fingerprint and Talon still
+      blocked it): record that elimination honestly in a NEW superseding block, then fall back
+      to the 18:00:00 checkpoint's option (B) -- remove/gate the alt tile for Epic under Tauri,
+      delete the three OLD items for real, run the same test suite, commit only that cleanup.
+  Nothing in this cycle is committed yet -- commit happens only after the checkpoint result is
+  known and the correct one of the two paths above is taken.
+
+## Current Focus (SUPERSEDING, 2026-08-03T20:30:00) -- PRISTINE WEBVIEW LIVE-VERIFIED, fresh logged-out login CAPTURED end-to-end
+
+<!-- Result of the human-verify checkpoint issued by the 19:00:00 block. Outcome = its
+     "PASSES" branch. Purely additive; supersedes no prior block's record. -->
+
+live_gate_result_2026_08_03T20_28_00: |
+  The checkpoint PASSED, on the branch the 19:00:00 block pre-registered as "PASSES". This is
+  the FIRST genuinely logged-out Epic login ever driven through this shell -- the exact gap
+  `root_cause_scope` (top of this file) has flagged as UNVERIFIED since 2026-08-01.
+
+  Log evidence, ~/Library/Logs/GameLib/gamelib.log, uninterrupted sequence:
+    (20:26:15) [oauthLoginCapture] runner=legendary label=loginwin-0-<REDACTED>
+    (20:26:16) [oauthLoginCapture] runner=legendary nav host=www.epicgames.com
+    (20:28:00) [oauthLoginCapture] runner=legendary nav host=localhost
+    (20:28:00) [oauthLoginCapture] runner=legendary status=captured
+    (20:28:00) [Legendary]  Logging in: ... legendary auth --code <redacted>
+    (20:28:11) [useTauriOAuthLogin] runner=legendary phase=idle (login completed, ...)
+    (20:28:24) [Legendary]  Game list updated, got 15 games & DLCs
+  User confirmed Epic games VISIBLE IN THE UI, not merely in the runner log.
+
+  The TWO-HOSTNAME `nav host=` progression is the discriminator that separates a genuine fresh
+  login from a silent re-auth. Every failed run in this file's history sat on ONE hostname.
+
+  Preconditions that made it reachable, both fixed this cycle (see below): Epic cookies were
+  ACTUALLY cleared at logout ((20:12:53) `cleared 6 epicgames.com cookie(s) (measured
+  post-removal delta)`), and the pristine window now logs navigations at all.
+
+what_shipped_this_cycle: |
+  1. PRISTINE WEBVIEW (pre-existing from the 19:00:00 block, now live-proven): raw `WKWebView` on
+     a webview-less `tauri::WindowBuilder` window, ZERO Tauri injection, own
+     `WKNavigationDelegate`. Talon serves the REAL login form -- the pre-auth 403 is GONE.
+  2. POST-AUTH SOLVED NATIVELY, unplanned bonus: `decidePolicyForNavigationAction` SEES the
+     `localhost` redirect WKWebView silently refuses to LOAD. So the POST-AUTH Resolution's
+     `epic_oauth_redirect_observer_script` (`c857ade8e`) is now REDUNDANT, not merely
+     "MOOT-FOR-EPIC" as the 17:00:00 block recorded -- a stronger disposition, and it means NO
+     in-page JS injection is needed anywhere in the Epic login path.
+  3. `WKUIDelegate` added -- JS `alert`/`confirm`/`prompt` (real `NSAlert`s, handler always
+     invoked exactly once) + `window.open` loaded into the same webview. Almost certainly what
+     unstuck the observed post-password hang.
+  4. `setInspectable(true)` under `#[cfg(debug_assertions)]`.
+  5. WINDOWLESS COOKIE CLEAR: `humble_login_clear_cookies` resolved a Tauri webview BY LABEL,
+     which for Epic can NEVER succeed (the pristine window registers no Tauri webview) -- so
+     logout had been silently leaving Epic session cookies, for ANY label, fresh or stale. Now
+     falls back to `WKWebsiteDataStore::defaultDataStore()` record-based removal (never wry's
+     `deleteCookie`, WebKit #184938) with a verified post-removal re-read. Epic-domain-gated;
+     every other runner's path byte-identical.
+  6. MAIN-FRAME NAV LOGGING on the pristine delegate. It had been the ONLY login window in the
+     app logging no navigation at all -- which is precisely why the 20:13 timeout below was
+     undiagnosable. Hostname-only via `oauthLoginCapture`'s existing T-34.5-G6-11 discipline.
+
+two_regressions_found_and_fixed_live_this_cycle: |
+  (a) NIL-`targetFrame` CANCEL-AND-RELOAD ARM blanked the window. WebKit reports a nil
+      `targetFrame` for the FIRST main-frame load of a fresh `WKWebView` (the frame does not
+      exist yet), so the initial `loadRequest` cancelled and re-issued itself forever. Removed;
+      new-window handling belongs in `WKUIDelegate::createWebViewWithConfiguration:` ONLY. An
+      explicit "do not reinstate" comment is now in the source.
+  (b) A BLANK WINDOW WAS MISREPORTED AS FAILURE -- for the THIRD time in this file's history.
+      The 19:52 run was reported by the user as "form does not render"; the log showed it had
+      ALREADY LOGGED IN SUCCESSFULLY in 2 seconds (already-authenticated -> Epic in transit ->
+      nothing to render). This is the SAME phenomenon as this file's own "SECOND MATERIAL
+      CORRECTION" (Symptoms section). Standing rule earned three times over: READ THE LOG BEFORE
+      BELIEVING A BLANK-PAGE REPORT.
+  Also NOT a defect: a run where the spinner completed but the window stayed open, followed by
+  Epic's "service is temporarily unavailable" -- Epic RATE-LIMITING after repeated attempts.
+  Wait 10-15 minutes between login attempts when testing.
+
+open_items: |
+  - Cmd+V DOES NOT PASTE in the pristine login window. Diagnosis is PRECISE and live-confirmed,
+    not a guess: Edit-menu -> Paste WORKS (so the app menu exists, the action routes, and the
+    `WKWebView` IS first responder and does handle `paste:`); only the KEY EQUIVALENT is
+    swallowed before reaching the menu's `performKeyEquivalent:` traversal (tao's `NSWindow`).
+    Fix direction: a scoped `NSEvent` local key-down monitor installed with the window and
+    REMOVED on `WindowEvent::Destroyed`. `addSubview` + `makeFirstResponder` is NOT sufficient
+    (both already present). NOT YET IMPLEMENTED -- deliberately left out of this commit.
+  - The three OLD dead items (`EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT`,
+    `epic_oauth_redirect_observer_script`, the Epic `.on_navigation` arm) are NOW genuinely dead
+    per item 2 above, but were deliberately NOT deleted in this commit -- removal is its own
+    reviewable change, and this file has already been burned once by a cleanup executed against
+    a premise that turned out to be false.
+  - `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` still need a disposition edit.
+
+status_disposition_2026_08_03T20_30_00: |
+  F-34.5-G6-01: BOTH arms now live-verified. PRE-AUTH (403) and POST-AUTH (redirect capture) are
+  each solved and each proven by the 20:26-20:28 log sequence plus the user's UI confirmation.
+  Recommend ELIGIBLE FOR CLOSURE once the three cleanup items above land -- this session does
+  not close it unilaterally, given this file's own history of two premature "confirmed fixed"
+  records (17:00:00, and the 19:52 misread).
+  Phase 34.5: NOT CLOSED -- out of this session's authority, unchanged.
+
+next_action: |
+  (1) Implement the Cmd+V `NSEvent` local-monitor fix and live-verify paste in the login window.
+  (2) Delete the three now-genuinely-dead OLD items; run cargo check/test + npx tsc --noEmit +
+      npm run test:ci. (3) Edit `34.5-UNTESTED-ITEMS.md` rows U-34.5-06/U-34.5-11. (4) Only then
+      reconsider F-34.5-G6-01 closure.

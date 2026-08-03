@@ -12,7 +12,17 @@ rust-version = "1.77.2"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
+# "unstable" (epic-login-non-interactive, pristine-webview attempt, 2026-08-03): required for
+# `tauri::WindowBuilder`/`Window::build()` (a WEBVIEW-LESS window -- see
+# `tauri-2.11.5/src/window/mod.rs`'s `unstable_struct!` macro, which makes `WindowBuilder`
+# `pub(crate)`-only, i.e. unusable from this crate, without this feature). Enables the
+# "pristine Epic webview" arm in `open_pristine_epic_login_window` to get native window
+# chrome/lifecycle (title, size, center, close-detection) from Tauri while attaching a raw,
+# non-Tauri-managed `WKWebView` as the content view -- see that function's own doc comment.
+# Cost: purely additive per the project's own `unstable` multiwebview spike
+# (`tauri-embedded-store-browser.md`: "only tauri + tauri-runtime-wry recompile -- 10.8s with a
+# warm target dir. No config or capability changes to the existing app.").
+tauri = { version = "2", features = ["tray-icon", "image-png", "unstable"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
@@ -37,11 +47,80 @@ tauri-plugin-clipboard-manager = "2"
 # are already unioned in from `wry`'s own (non-default) feature request (`wry-0.55.1/Cargo.toml`)
 # -- the ONLY feature this spike needs that wry does not already request is
 # `WKWebsiteDataRecord` (for `fetchDataRecordsOfTypes_completionHandler`'s record type).
+# epic-login-non-interactive, pristine-webview attempt, 2026-08-03: `objc2-app-kit` promoted
+# from ALREADY-RESOLVED transitive dependency (pulled in by `wry`'s own `objc2-web-kit` feature
+# request, see `wry-0.55.1/Cargo.toml`) to a direct, macOS-only dependency at its identical
+# pinned version -- same convention SPIKE 016 established for `objc2-web-kit` below. Only
+# `NSView`/`NSWindow` requested: the two feature flags `open_pristine_epic_login_window` (and
+# `Window::ns_view()`, internally, on the tauri side) actually touch; both are already enabled
+# project-wide via `wry`'s own request, so this adds no new compiled surface, only an explicit,
+# correct declaration for code that directly names `objc2_app_kit::*` types.
+#
+# `objc2-web-kit`'s feature list grew by five (`WKWebView`, `WKWebViewConfiguration`,
+# `WKNavigation`, `WKNavigationDelegate`, `WKNavigationAction`) for the same reason: this file's
+# new pristine-webview code constructs a raw `WKWebView` and implements `WKNavigationDelegate`
+# directly, rather than only reading platform state off a Tauri-managed one (`WKWebsiteDataRecord`
+# above stays for the pre-existing `humble_login_clear_cookies` use). All five are ALREADY
+# unioned in via `wry`'s own request (`wry-0.55.1/Cargo.toml`) -- explicit here for the same
+# "declare what your own code directly needs, even if already present" discipline the existing
+# `WKWebsiteDataRecord` comment states, not because compilation would fail without them.
+#
+# pristine-webview JS-dialog/popup fix (2026-08-03): `EpicPristineNavDelegate` now also
+# implements `WKUIDelegate` (alert/confirm/prompt panels + `window.open`/`target=_blank`
+# popup redirection), so `objc2-web-kit` gained `WKUIDelegate`, `WKFrameInfo` (the
+# `initiatedByFrame:` parameter on every dialog method), and `WKWindowFeatures` (the
+# `createWebViewWithConfiguration:...windowFeatures:` parameter) -- all three, plus the
+# `objc2-app-kit` feature flag WKUIDelegate's macOS methods are gated behind, are ALREADY
+# unioned in via `wry`'s own request (`wry-0.55.1/Cargo.toml`'s `objc2-web-kit` feature list
+# includes exactly these four), same "declare what your own code directly needs" discipline as
+# above.
+#
+# Epic logout cookie-clear defect fix (2026-08-03, live-observed `humble_login:no-window`
+# rejection on every Epic logout): `objc2-web-kit` gained `WKHTTPCookieStore` for
+# `clear_default_data_store_cookies_for_domain`'s `WKWebsiteDataStore.httpCookieStore()` +
+# `WKHTTPCookieStore.getAllCookies()` call, the independent per-cookie read path that verifies
+# the pristine Epic login window's default-data-store cookie clear actually removed something
+# (never trusting the removal call's own completion signal as proof, same discipline Plan 23's
+# F-6 fix established). ALREADY unioned in via `wry`'s own request (`wry-0.55.1/Cargo.toml`'s
+# `objc2-web-kit` feature list already includes it), same "declare what your own code directly
+# needs, even if already present" discipline as every feature above.
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"
 objc2 = "0.6.4"
+# `NSAlert`/`NSApplication`/`NSButton`/`NSControl`/`NSResponder`/`NSTextField` added for the
+# pristine-webview JS-dialog fix (2026-08-03): `EpicPristineNavDelegate`'s new `WKUIDelegate`
+# methods present native `NSAlert` panels (OK/Cancel buttons need `NSButton`+`NSControl`, the
+# alert itself needs `NSApplication` for `runModal`/`NSAlertFirstButtonReturn`, and the text-input
+# panel's accessory view is an `NSTextField`, which needs `NSResponder`+`NSView` alongside
+# `NSControl` to satisfy `NSAlert.rs`'s own `#[cfg(feature = ...)]` gates on
+# `addButtonWithTitle`/`accessoryView`). None of these are unioned in via `wry`'s own request
+# (wry's `objc2-app-kit` feature list has no `NSAlert`/`NSTextField`), so unlike the
+# `objc2-web-kit` features above, these are net-new compiled surface, not just an explicit
+# declaration of an already-present one.
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "NSView",
+    "NSWindow",
+    "NSAlert",
+    "NSApplication",
+    "NSButton",
+    "NSControl",
+    "NSResponder",
+    "NSTextField",
+] }
 objc2-foundation = "0.3.2"
-objc2-web-kit = { version = "0.3.2", default-features = false, features = ["WKWebsiteDataRecord"] }
+objc2-web-kit = { version = "0.3.2", default-features = false, features = [
+    "WKWebsiteDataRecord",
+    "WKWebView",
+    "WKWebViewConfiguration",
+    "WKNavigation",
+    "WKNavigationDelegate",
+    "WKNavigationAction",
+    "WKUIDelegate",
+    "WKFrameInfo",
+    "WKWindowFeatures",
+    "WKHTTPCookieStore",
+    "objc2-app-kit",
+] }
 
 [profile.release]
 opt-level = "s"
