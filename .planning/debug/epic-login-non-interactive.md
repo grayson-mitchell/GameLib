@@ -8546,3 +8546,52 @@ remaining_open_items: |
   (2) `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` disposition edit;
   (3) only then reconsider F-34.5-G6-01 closure. Phase 34.5 closure remains out of this
       session's authority.
+
+## Current Focus (SUPERSEDING, 2026-08-03T21:05:00) -- dead-code removal DONE, open item 1 CLOSED
+
+<!-- Closes open item 1 of the 20:30:00 block (as re-stated at 20:50:00). Additive. -->
+
+dead_code_removal_2026_08_03T21_05_00: |
+  User decision, asked explicitly BEFORE deleting because the premise was only half true:
+  the three items were dead on macOS but NOT on Windows/Linux -- `src-tauri/tauri.conf.json`
+  targets `["nsis", "appimage", "dmg"]` and `release-tauri.yml` exists, while the pristine
+  WKWebView replacing them is `#[cfg(target_os = "macos")]`, and the injections were gated on
+  `is_epic_login` with NO platform gate. Options offered: delete outright / delete shim + cfg-gate
+  observer / cfg-gate all three. User chose DELETE OUTRIGHT, accepting that Epic's EMBEDDED login
+  on Windows/Linux loses its post-auth observer -- rationale: the proven root cause (Tauri's
+  injected globals) is platform-independent, so that flow is very likely 403-blocked there
+  regardless, and SIDLogin is the working primary Epic path on all platforms.
+  (This question was asked because THIS file already records one cleanup executed against a
+  premise that turned out to be false -- see the 17:00:00 block and its reversal.)
+
+  Deleted from `src-tauri/src/main.rs` (net -382 lines):
+    - `EPIC_LOGIN_FINGERPRINT_SHIM_SCRIPT` + its 4 unit tests (it targeted outerWidth/outerHeight
+      and alert/confirm `toString` shape -- candidates FALSIFIED by the 3-arm elimination; never
+      live-verified).
+    - `epic_oauth_redirect_observer_script()` (no dedicated tests existed).
+    - `OAUTH_REDIRECT_EXFIL_HOST` + the `.on_navigation` closure in `humble_login_open` that
+      consumed it -- removed outright, not left as an always-allow stub, as it had no other
+      responsibility. `humble_reveal_post`'s own separate navigation-cancel logic is UNTOUCHED.
+    - Both `if is_epic_login { ... initialization_script(...) }` injection sites.
+  KEPT (deliberately, against a STALE earlier plan in this same file that proposed removing them):
+    `EPIC_LOGIN_HOST` and `is_epic_login` are now load-bearing -- they gate
+    `open_pristine_epic_login_window`. Also kept `DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT` (debug-only,
+    `GAMELIB_LOGIN_DIAG=1` opt-in, all-runners, out of scope).
+  Comments across the file that cross-referenced the deleted symbols by NAME were rewritten to
+  state their fact directly, so no dangling identifier references remain (verified: 0 matches
+  repo-wide).
+  `src/backend/__tests__/tauriShellSource.test.ts`: the `F-34.5-G6-04` block was reverted to its
+  pre-`c857ade8e` form -- it asserts against `main.rs` AS TEXT, so it had to move in lockstep;
+  its original blanket invariant ("the `humble_login_open` arm contains no `.on_navigation(`
+  call anywhere in its own body") is once again TRUE and is now the guard against reintroduction.
+
+  Verification (orchestrator-run, not agent self-report): `cargo check` clean; `cargo clippy
+  --all-targets` exactly 6 warnings = the pre-existing baseline; `cargo test` 93 passed / 1
+  ignored (down 4 from 97 -- exactly the four deleted shim tests); `npx jest
+  tauriShellSource.test.ts` 46/46; `npx tsc --noEmit` exit 0.
+
+remaining_open_items: |
+  (1) `34.5-UNTESTED-ITEMS.md` rows `U-34.5-06`/`U-34.5-11` disposition edit -- NOT done.
+  (2) Then reconsider F-34.5-G6-01 closure (both arms are live-verified; this session still
+      declines to close it unilaterally). Phase 34.5 closure remains out of this session's
+      authority.
