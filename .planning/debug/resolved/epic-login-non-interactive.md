@@ -1,5 +1,5 @@
 ---
-status: root_cause_confirmed_and_fix_live_verified_2026_08_03T20_28_00_pristine_wkwebview_zero_tauri_injection_defeats_talon_403_and_captures_redirect_natively_first_ever_fresh_logged_out_epic_login_under_tauri_both_arms_of_f_34_5_g6_01_proven_three_cleanup_items_remain_cmd_v_paste_dead_code_removal_ledger_edit_finding_eligible_for_closure_not_closed_phase_34_5_unaffected
+status: resolved
 root_cause_scope: |
   SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the
   POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized
@@ -14,7 +14,10 @@ root_cause_scope: |
   `pending_question`, for the live test that resolves this before implementation proceeds.
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
-updated: 2026-08-03T20:30:00
+updated: 2026-08-03T22:15:00
+resolved: 2026-08-03T22:15:00
+finding: F-34.5-G6-01
+finding_status: CLOSED
 phase: 34.5
 finding: F-34.5-G6-01
 ---
@@ -8657,3 +8660,91 @@ standing_constraint_on_the_embedded_flow: |
   hCaptcha cannot initialize under, the embedded path has a failure mode SIDLogin (a real system
   browser) structurally does not. Independent of how well the embedded window works, this is an
   argument for keeping SIDLogin as Epic's PRIMARY tile and the embedded window as the alternative.
+
+## RESOLUTION -- SESSION CLOSED 2026-08-03T22:15:00 (F-34.5-G6-01 CLOSED by operator decision)
+
+<!-- Final block. Closes the session opened 2026-08-01. Operator instruction: "close the finding".
+     Supersedes the 20:30:00 block's "eligible for closure, not closed" holding position, which
+     deliberately reserved this call for the human who watched the login work. -->
+
+root_cause: |
+  Epic's Talon anti-bot fingerprinted the GLOBAL SURFACE Tauri injects into every webview it
+  manages -- `window.isTauri`, `__TAURI_INTERNALS__`, `window.ipc`, eight
+  `__TAURI_PLUGIN_*`/`__TAURI_IIFE__` keys, and the notification plugin's non-native
+  `window.Notification` override. Proven by a 3-arm elimination (Tauri vs Electron `<webview>` vs
+  Safari.app) in which twelve-plus other properties were identical across arms. Those properties
+  are defined non-configurable AND non-writable, so no `Proxy`, `delete`, or reassignment can hide
+  them (ECMAScript invariant) -- correctly concluded UNFIXABLE FROM JS. The error was treating
+  that as "unfixable"; the surface only exists because Tauri creates it.
+  A SECOND, INDEPENDENT defect sat behind it: WKWebView silently refuses the client-side
+  navigation to the `localhost` redirect (no error, no console line, no `on_page_load`,
+  `location.href` reads back unchanged), so even an authenticated session never delivered its code.
+
+fix: |
+  Stop creating the surface instead of trying to hide it. `open_pristine_epic_login_window`
+  (`src-tauri/src/main.rs`, macOS + Epic only) builds a WEBVIEW-LESS `tauri::WindowBuilder` window
+  and attaches a raw `WKWebView` with a fresh `WKWebViewConfiguration`, ZERO initialization
+  scripts, and a hand-written `WKNavigationDelegate`. Talon serves the real login form.
+  The second defect fell out of the same change: `decidePolicyForNavigationAction` fires for every
+  navigation ATTEMPT, including ones WebKit goes on to refuse -- so the redirect is captured
+  natively and NO JavaScript is injected into Epic's page anywhere in the flow.
+  Four supporting fixes, each found by live testing, none by reasoning:
+    - `WKUIDelegate` (JS dialogs as real `NSAlert`s, handler invoked exactly once; `window.open`
+      into the same webview) -- the post-password hang.
+    - Windowless cookie clear at `WKWebsiteDataStore` level -- logout had been leaving Epic's
+      session cookies, so every "login" was a silent re-auth against a blank in-transit page.
+    - `NSEvent` key-down monitor scoped to the window -- Cmd+V (tao's NSWindow swallows the key
+      equivalent; the Edit menu's `paste:` always worked, which is what pinned the diagnosis).
+    - `humble_login_close` falling back to `get_window` -- the window never closed after a
+      successful login, and every logout leaked an invisible cookie-clear window.
+  Plus: `setInspectable` on debug builds, main-frame `nav host=` logging, and deletion of the
+  three obsolete injection scripts the native path made redundant.
+
+verification: |
+  ALL live, on hardware, driven by the operator -- never by a passing test suite:
+    - 2026-08-03 20:26-20:28, THE decisive run: first genuinely logged-out Epic login ever driven
+      under Tauri. `nav host=www.epicgames.com` -> real form -> password -> `nav host=localhost` ->
+      `status=captured` -> `legendary auth --code` -> `phase=idle` -> `Game list updated, got 15
+      games & DLCs`, operator confirmed Epic games VISIBLE IN THE UI.
+    - 2026-08-03 22:03: window CLOSES ITSELF on success (operator: "yes it closed by itself,
+      worked whole way through") -- the log cannot prove this, see that block's own caveat.
+    - Cmd+V verified by the operator directly ("cmd-v works now").
+    - Cookie clear verified by measured post-removal delta (`cleared 6/7 epicgames.com cookie(s)`).
+  Static, every commit: `cargo check` clean, `cargo test` 93 passed (down 4 by deletion of exactly
+  the shim's own tests), clippy at the pre-existing 6-warning baseline, `npx tsc --noEmit` clean,
+  jest `tauriShellSource` 46/46.
+
+files_changed: |
+  `src-tauri/src/main.rs`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`,
+  `src/backend/__tests__/tauriShellSource.test.ts`,
+  `.planning/phases/34.5-.../34.5-UNTESTED-ITEMS.md`, this file.
+  Commits: `03b75211a` (pristine webview), `b76d58ee6` (Cmd+V), `da529ca86` (dead-code deletion),
+  `fe8a0ca2b` (ledger), `b8e73e437` (window close).
+
+carried_forward_NOT_closed_by_this_session: |
+  1. USER-AGENT finding, UNPROVEN, deliberately not defaulted: Safari engine tokens WITH
+     ` EpicGamesLauncher` appended satisfied both Epic's launcher routing AND hCaptcha's engine
+     check -- but that run auto-logged-in and never rendered a captcha. Retire only after a fresh
+     logged-out login that actually renders and solves one. Details in the 22:05:00 block.
+  2. STANDING CONSTRAINT: Epic can demand a captcha at any time, and the launcher UA its OAuth
+     flow requires is one hCaptcha cannot initialize under. The embedded window therefore has a
+     failure mode SIDLogin (a real system browser) structurally does not -- keep SIDLogin as
+     Epic's PRIMARY tile.
+  3. `humble_login_cookies` / `humble_login_cookies_for_domain` still resolve the pristine window
+     via `get_webview_window` and would fail `no-window` for Epic. They fail LOUDLY and Epic's
+     flow never calls them, so they are not defects today -- but they are the same bug's fourth
+     and fifth sites.
+  4. The hidden logout cookie-clear window is now pointless for Epic (the clear ignores its
+     label). Harmless once it closes properly; worth removing later.
+  5. Phase 34.5 closure -- explicitly OUT of this session's authority, unchanged.
+
+process_lessons: |
+  - THREE times this file's own recorded symptom was materially wrong and misdirected the
+    investigation; twice a blank Epic page was reported as failure when the log showed a
+    SUCCESSFUL login. Standing rule: READ THE LOG BEFORE BELIEVING A BLANK-PAGE REPORT.
+  - Two "confirmed fixed" records were written on 2026-08-03 before the thing was fixed. The one
+    that held was the one an operator drove end to end on hardware.
+  - "Unfixable from JS" was correct AND was not the end of the road. The constraint was real; the
+    conclusion drawn from it (abandon the embedded webview) was not forced by it.
+  - Every one of the four supporting defects was invisible to a green suite and to static
+    reasoning. Compare [[live-gate-beats-green-suite-three-times]].

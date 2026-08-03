@@ -163,6 +163,18 @@ D-CYCLE5-B; session B (21:42:53) `dev-vault`. Both preserved as
 
 ### Disposition of items 6-11 (F-34.5-G6-01..06) against this run
 
+> **UPDATE 2026-08-03T22:15 — item 6 / F-34.5-G6-01 is now CLOSED.** The "STILL OPEN" text below is
+> the accurate record of the 2026-08-02 gate-3 run and is left unedited. Closed by the debug session
+> `.planning/debug/resolved/epic-login-non-interactive.md` (archived): the 403 was Talon
+> fingerprinting Tauri's injected globals, fixed by building Epic's login window as a raw
+> `WKWebView` with zero Tauri injection (`03b75211a`); the post-auth redirect is now captured
+> natively by `decidePolicyForNavigationAction`, so no in-page JS is injected anywhere and the
+> `epic_oauth_redirect_observer_script` referenced below has been DELETED (`da529ca86`). Live-proven
+> 2026-08-03 20:26-20:28 — the first genuinely logged-out Epic login ever driven under Tauri —
+> `nav host=www.epicgames.com` → `nav host=localhost` → `status=captured` → `Game list updated, got
+> 15 games & DLCs`, operator-confirmed in the UI. `U-34.5-06` retired; `U-34.5-11` retired as
+> subject-deleted. Phase 34.5 closure is unaffected and remains open.
+
 - **Item 6 / F-34.5-G6-01 (Epic non-interactive) — STILL OPEN.** This run drove two login windows
   and reproduced the parked pre-auth defect: operator-observed HTTP 403 on `/id/api/email/exists`
   (webview devtools, not in the log) plus two `[oauthLoginCapture] runner=legendary status=timeout`
