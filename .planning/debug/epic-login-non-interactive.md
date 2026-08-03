@@ -8595,3 +8595,65 @@ remaining_open_items: |
   (2) Then reconsider F-34.5-G6-01 closure (both arms are live-verified; this session still
       declines to close it unilaterally). Phase 34.5 closure remains out of this session's
       authority.
+
+## Current Focus (SUPERSEDING, 2026-08-03T22:05:00) -- login window auto-close FIXED + live-verified; UA finding recorded
+
+<!-- Additive. Covers a defect found by the operator AFTER the 21:05 cleanup commit. -->
+
+login_window_never_closed_2026_08_03T22_05_00: |
+  DEFECT (operator-reported, verbatim: "what i still have not seen is the login window closing on
+  a successful login"). After a fully SUCCESSFUL login the window stayed on screen.
+
+  ROOT CAUSE -- the THIRD instance of one structural bug: `humble_login_close` resolved the window
+  via `app.get_webview_window(label)`. The pristine Epic login window is a PLAIN `tauri::Window`
+  with a raw `WKWebView` attached, never a Tauri-managed `WebviewWindow`, so that lookup returns
+  `None` for ANY label and the arm fell through to `Ok(Value::Bool(false))` -- which the TS side
+  treats as a NON-FATAL close failure by design (`oauthLoginCapture`'s `settle()` swallows it so a
+  close failure can never fail a login that already succeeded). Net effect: silent no-op, nothing
+  logged anywhere. (Instances 1 and 2 of the same bug: `clearEpicCookies` `no-window`, fixed
+  earlier today.)
+  SECOND, WORSE LEAK from the same cause: `legendary/user.ts`'s logout opens a HIDDEN
+  (`visible: false`) Epic window to clear cookies and closes it in a `finally` whose own comment
+  reads "Closed unconditionally -- even when clearCookies rejects -- so a failed clear never leaks
+  the hidden window." That guarantee was defeated by the same lookup: `Ok(false)` is not a
+  rejection, so the `.catch` never fired and an INVISIBLE window leaked on EVERY logout. The
+  operator eventually noticed two login windows open; the log showed 5 windows opened
+  (`loginwin-2`..`-6`) and four manual `status=cancelled reason=window-closed` closes.
+  This also plausibly explains the 21:10 "1-second spinner, no capture" run: with several windows
+  open, a password typed into an older window whose capture had already timed out would produce
+  exactly that -- nothing in the log, window stays open.
+
+  FIX: `humble_login_close` falls back to `app.get_window(label)` (finds plain AND webview
+  windows) when `get_webview_window` misses. Every other runner's path is unchanged.
+  LIVE-VERIFIED 2026-08-03 22:03 (operator: "yes it closed by itself, worked whole way through"):
+  `nav host=www.epicgames.com` (22:03:14) -> `nav host=localhost` -> `status=captured` (22:03:16)
+  -> window closed ITSELF -> `phase=idle` (22:03:33) -> `Game list updated, got 15 games & DLCs`.
+  NOTE the log alone CANNOT prove auto-close -- `humble_login_close` logs nothing, and after
+  `settle()` polling stops so a later manual close is not recorded either. The operator's direct
+  observation is the only evidence; do not later cite the log as the proof.
+
+user_agent_finding_2026_08_03T22_05_00_NOT_YET_DEFAULTED: |
+  Found while diagnosing a "failed to initialize CAPTCHA" error (Epic escalated to demanding a
+  captcha after many rapid login attempts). Three UAs, three DIFFERENT outcomes, all live:
+    1. `Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher` (the CURRENT default,
+       `USER_AGENTS.legendary`, copied verbatim from Electron's `WebView/index.tsx`): Epic routes
+       the launcher OAuth flow correctly, but the string names NO browser engine (no AppleWebKit,
+       no Safari, no version) and hCaptcha FAILS TO INITIALIZE against it.
+    2. A plain macOS Safari UA: hCaptcha's precondition is satisfied, but Epic drops the launcher
+       routing and the flow dies with `parameter "client_id" required`. So the
+       `EpicGamesLauncher` token is LOAD-BEARING, not cosmetic -- an important correction to any
+       reading of the earlier "UA-independent" note, which was about 403s only, never about flow
+       routing.
+    3. Safari engine tokens WITH ` EpicGamesLauncher` appended (135 chars, via the existing
+       `GAMELIB_OAUTH_UA_LEGENDARY` diagnostic seam): login completed end to end.
+  ⚠ DELIBERATELY NOT MADE THE DEFAULT. Arm 3's successful run was an AUTO-LOGIN (cookies still
+  live, no logout first) so it NEVER RENDERED A CAPTCHA -- the exact condition the change exists
+  to fix is UNTESTED. Defaulting it now would ship an unproven fix, which is the failure mode this
+  file has already recorded twice today. Retire this only after a FRESH LOGGED-OUT login that
+  actually renders and solves a captcha under arm 3.
+
+standing_constraint_on_the_embedded_flow: |
+  Epic can demand a captcha at any time. If the launcher UA the OAuth flow REQUIRES is one
+  hCaptcha cannot initialize under, the embedded path has a failure mode SIDLogin (a real system
+  browser) structurally does not. Independent of how well the embedded window works, this is an
+  argument for keeping SIDLogin as Epic's PRIMARY tile and the embedded window as the alternative.

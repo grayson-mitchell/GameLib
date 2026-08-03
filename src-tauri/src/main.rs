@@ -2878,18 +2878,39 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .first()
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| "humble_login_close:bad-args".to_string())?;
-            match app.get_webview_window(label) {
+            // The pristine Epic login window (`open_pristine_epic_login_window`) is a PLAIN
+            // `tauri::Window` with a raw `WKWebView` attached, never a Tauri-managed
+            // `WebviewWindow` -- so `get_webview_window(label)` can never find it, for ANY
+            // label. This arm used to fall straight through to `Ok(false)`, which the
+            // TypeScript side treats as a NON-FATAL close failure (`oauthLoginCapture`'s
+            // `settle()` swallows it deliberately, so a close failure cannot fail a login that
+            // already succeeded). Net effect: after a fully SUCCESSFUL Epic login the window
+            // just stayed on screen, with nothing logged anywhere. Third instance of this exact
+            // structural bug -- `humble_login_clear_cookies` (cookies surviving logout) and this
+            // one both came from resolving a pristine window through a webview-only lookup.
+            // `get_window` finds both kinds, so every other runner's behaviour is unchanged and
+            // the pristine window now closes through the same path.
+            let closed = match app.get_webview_window(label) {
                 Some(window) => {
                     window.close().map_err(|e| e.to_string())?;
-                    if let Ok(mut guard) = LOGIN_WINDOW_EVENTS.lock() {
-                        if let Some(map) = guard.as_mut() {
-                            map.remove(label);
-                        }
-                    }
-                    Ok(Value::Bool(true))
+                    true
                 }
-                None => Ok(Value::Bool(false)),
+                None => match app.get_window(label) {
+                    Some(window) => {
+                        window.close().map_err(|e| e.to_string())?;
+                        true
+                    }
+                    None => false,
+                },
+            };
+            if closed {
+                if let Ok(mut guard) = LOGIN_WINDOW_EVENTS.lock() {
+                    if let Some(map) = guard.as_mut() {
+                        map.remove(label);
+                    }
+                }
             }
+            Ok(Value::Bool(closed))
         }
         // Domain-SCOPED cookie clear (Phase 34.4.1 Plan 01/23, D-08, REQ-34.4.1-06, threat
         // T-34.4.1-03/-98/-99/-100/-101/-102).
