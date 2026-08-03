@@ -119,6 +119,14 @@ interface StateProps {
   isIntelMac: boolean
   refreshing: boolean
   refreshingInTheBackground: boolean
+  // debug/login-logout-wipes-library: per-runner scoped refresh tracking, kept
+  // SEPARATE from the two global flags above. A single-runner refresh (login/
+  // logout of ONE platform) writes here instead of `refreshing`/
+  // `refreshingInTheBackground` -- those two remain reserved for a genuine
+  // all-runners refresh (mount-time load, manual "Refresh Library"), so
+  // Library/index.tsx's merged-grid gate never blanks every platform's games
+  // just because one platform logged in or out.
+  refreshingByRunner: Partial<Record<Runner, boolean>>
   steamMetadataSyncing: boolean
   hiddenGames: HiddenGame[]
   favouriteGames: FavouriteGame[]
@@ -285,6 +293,7 @@ class GlobalState extends PureComponent<Props> {
     isIntelMac: false,
     refreshing: false,
     refreshingInTheBackground: true,
+    refreshingByRunner: {},
     steamMetadataSyncing: false,
     hiddenGames: configStore.get('games.hidden', []),
     currentCustomCategories: loadCurrentCategories(),
@@ -651,7 +660,6 @@ class GlobalState extends PureComponent<Props> {
     })
     console.log('Logging out from epic')
     this.setState({ refreshing: false })
-    window.location.reload()
   }
 
   gogLogin = async (token: string) => {
@@ -681,7 +689,6 @@ class GlobalState extends PureComponent<Props> {
       }
     })
     console.log('Logging out from gog')
-    window.location.reload()
   }
 
   amazonLogin = async (data: NileRegisterData) => {
@@ -713,7 +720,6 @@ class GlobalState extends PureComponent<Props> {
       }
     })
     console.log('Logging out from amazon')
-    window.location.reload()
   }
 
   getAmazonLoginData = async () => window.api.getAmazonLoginData()
@@ -748,7 +754,6 @@ class GlobalState extends PureComponent<Props> {
       }
     })
     console.log('Logging out from zoom')
-    window.location.reload()
   }
 
   steamLogin = async (result: { status: string; username?: string }) => {
@@ -794,7 +799,6 @@ class GlobalState extends PureComponent<Props> {
           }
         })
         console.log('Logging out from steam')
-        window.location.reload()
       },
       onSignOutFailed: () => {
         console.warn(
@@ -911,6 +915,18 @@ class GlobalState extends PureComponent<Props> {
 
     const overrides = overridesArg || currentOverrides()
 
+    // debug/login-logout-wipes-library: `library` names the ONE runner this
+    // refresh is scoped to. `undefined` here means "no scope" -- either the
+    // caller passed no `library` at all, or explicitly passed `'all'` (both
+    // mean the same thing to this function, matching the pre-existing
+    // no-argument behavior exactly). Every `includesX` below reads as "no
+    // scope => touch everything, same as before this fix".
+    const scopedRunner = library && library !== 'all' ? library : undefined
+    const includesEpic = !scopedRunner || scopedRunner === 'legendary'
+    const includesGog = !scopedRunner || scopedRunner === 'gog'
+    const includesZoom = !scopedRunner || scopedRunner === 'zoom'
+    const includesAmazon = !scopedRunner || scopedRunner === 'nile'
+
     let updates = gameUpdates
     if (checkUpdates) {
       try {
@@ -948,22 +964,36 @@ class GlobalState extends PureComponent<Props> {
     // Fixed at all four call sites at once, deliberately. Three of them (epic, zoom,
     // amazon) had no reported symptom — only GOG was diagnosed — but they are the same
     // defect and fixing one would have left three latent.
-    let epicLibrary = libraryStore.get('library', [])
-    if (epic.username && !epicLibrary.length) {
-      window.api.logInfo('No cache found, getting data from legendary...')
-      const { library: legendaryLibrary } = await getLegendaryConfig()
-      epicLibrary = legendaryLibrary
+    //
+    // debug/login-logout-wipes-library: each block is now ALSO gated on its
+    // `includesX` flag. A runner-scoped call (e.g. `library: 'gog'`) no
+    // longer re-reads the other three runners' caches at all — previously
+    // pure waste on a scoped call, and now load-bearing: the final
+    // `setState` below only writes the slice(s) `includesX` allowed, so a
+    // variable that was never (re)computed here must default to the
+    // UNCHANGED current value, never an empty/stale placeholder.
+    let epicLibrary = epic.library
+    if (includesEpic) {
+      epicLibrary = libraryStore.get('library', [])
+      if (epic.username && !epicLibrary.length) {
+        window.api.logInfo('No cache found, getting data from legendary...')
+        const { library: legendaryLibrary } = await getLegendaryConfig()
+        epicLibrary = legendaryLibrary
+      }
     }
 
-    let gogLibrary = this.loadGOGLibrary(overrides)
-    if (gog.username && !gogLibrary.length) {
-      window.api.logInfo('No cache found, getting data from gog...')
-      await window.api.refreshLibrary('gog')
+    let gogLibrary = gog.library
+    if (includesGog) {
       gogLibrary = this.loadGOGLibrary(overrides)
+      if (gog.username && !gogLibrary.length) {
+        window.api.logInfo('No cache found, getting data from gog...')
+        await window.api.refreshLibrary('gog')
+        gogLibrary = this.loadGOGLibrary(overrides)
+      }
     }
 
-    let zoomLibrary: GameInfo[] = []
-    if (zoom.enabled) {
+    let zoomLibrary: GameInfo[] = zoom.library
+    if (includesZoom && zoom.enabled) {
       zoomLibrary = this.loadZoomLibrary(overrides)
       if (zoom.username && !zoomLibrary.length) {
         window.api.logInfo('No cache found, getting data from zoom...')
@@ -972,38 +1002,76 @@ class GlobalState extends PureComponent<Props> {
       }
     }
 
-    let amazonLibrary = nileLibraryStore.get('library', [])
-    if (amazon.user_id && !amazonLibrary.length) {
-      window.api.logInfo('No cache found, getting data from nile...')
-      await window.api.refreshLibrary('nile')
-      amazonLibrary = this.loadAmazonLibrary(overrides)
+    let amazonLibrary = amazon.library
+    if (includesAmazon) {
+      amazonLibrary = nileLibraryStore.get('library', [])
+      if (amazon.user_id && !amazonLibrary.length) {
+        window.api.logInfo('No cache found, getting data from nile...')
+        await window.api.refreshLibrary('nile')
+        amazonLibrary = this.loadAmazonLibrary(overrides)
+      }
     }
 
     const updatedSideload = sideloadLibrary.get('games', [])
 
-    this.setState({
-      epic: {
-        library: applyGameOverrides(epicLibrary, overrides),
-        username: epic.username
-      },
-      gog: {
-        library: gogLibrary,
-        username: gog.username
-      },
-      zoom: {
-        library: zoomLibrary,
-        username: zoom.username,
-        enabled: zoom.enabled
-      },
-      amazon: {
-        library: amazonLibrary,
-        user_id: amazon.user_id,
-        username: amazon.username
-      },
-      gameUpdates: updates,
-      refreshing: false,
-      refreshingInTheBackground: true,
-      sideloadedLibrary: applyGameOverrides(updatedSideload, overrides)
+    // debug/login-logout-wipes-library: the functional form (matching the
+    // existing precedent in `handleGamePush`'s steam branch) reads the
+    // LATEST `refreshingByRunner` map at commit time, not the snapshot
+    // captured when this async function started — required because two
+    // scoped refreshes (e.g. Epic and GOG logging in back-to-back) can have
+    // overlapping in-flight windows, and a direct-object merge here would
+    // silently drop whichever one's flag got applied first.
+    this.setState((prevState: StateProps) => {
+      const next: Partial<StateProps> = {
+        gameUpdates: updates,
+        sideloadedLibrary: applyGameOverrides(updatedSideload, overrides)
+      }
+
+      if (includesEpic) {
+        next.epic = {
+          library: applyGameOverrides(epicLibrary, overrides),
+          username: epic.username
+        }
+      }
+      if (includesGog) {
+        next.gog = {
+          library: gogLibrary,
+          username: gog.username
+        }
+      }
+      if (includesZoom) {
+        next.zoom = {
+          library: zoomLibrary,
+          username: zoom.username,
+          enabled: zoom.enabled
+        }
+      }
+      if (includesAmazon) {
+        next.amazon = {
+          library: amazonLibrary,
+          user_id: amazon.user_id,
+          username: amazon.username
+        }
+      }
+
+      // debug/login-logout-wipes-library: the final write is scoped exactly
+      // like the fetch blocks above. A no-scope ('all'/mount/manual-refresh)
+      // call clears the two GLOBAL flags exactly as before this fix. A
+      // single-runner call clears ONLY that runner's own `refreshingByRunner`
+      // entry — the global flags are never touched, so Library/index.tsx's
+      // merged-grid gate (which reads only the two global flags) is
+      // completely unaffected by one platform's login/logout finishing.
+      if (!scopedRunner) {
+        next.refreshing = false
+        next.refreshingInTheBackground = true
+      } else {
+        next.refreshingByRunner = {
+          ...prevState.refreshingByRunner,
+          [scopedRunner]: false
+        }
+      }
+
+      return next
     })
 
     if (currentLibraryLength !== epicLibrary.length) {
@@ -1020,10 +1088,6 @@ class GlobalState extends PureComponent<Props> {
   }: RefreshLibraryOptions): Promise<void> => {
     if (this.state.refreshing) return
 
-    this.setState({
-      refreshing: true,
-      refreshingInTheBackground: runInBackground
-    })
     // GAP CYCLE 4 (34.5-33, item 2): this line used to be
     // `Refreshing ${library} Library`, which printed the literal word
     // `undefined` whenever `library` was omitted — indistinguishable from a
@@ -1037,6 +1101,33 @@ class GlobalState extends PureComponent<Props> {
     window.api.logInfo(
       `[refreshLibrary] runner=${runnerScope} origin=${origin}`
     )
+
+    // debug/login-logout-wipes-library: a SCOPED call (a specific runner,
+    // never `undefined`/`'all'`) tracks its own `refreshingByRunner` entry
+    // instead of the two GLOBAL flags below — see `.refresh()`'s matching
+    // final `setState` and `StateProps.refreshingByRunner`'s doc comment for
+    // why. The guard mirrors the top-of-function `if (this.state.refreshing)
+    // return` above, but scoped to this ONE runner, so two overlapping
+    // scoped refreshes of the SAME runner (e.g. a double-click) can't step
+    // on each other; it does NOT block a DIFFERENT runner's scoped refresh
+    // from starting concurrently — that's the whole point of this fix.
+    const scopedRunner = library && library !== 'all' ? library : undefined
+    if (scopedRunner && this.state.refreshingByRunner[scopedRunner]) return
+
+    if (scopedRunner) {
+      this.setState((prevState: StateProps) => ({
+        refreshingByRunner: {
+          ...prevState.refreshingByRunner,
+          [scopedRunner]: true
+        }
+      }))
+    } else {
+      this.setState({
+        refreshing: true,
+        refreshingInTheBackground: runInBackground
+      })
+    }
+
     try {
       await window.api.refreshLibrary(library)
       return await this.refresh(library, checkForUpdates)
@@ -1051,6 +1142,18 @@ class GlobalState extends PureComponent<Props> {
       // function happens to reset `refreshing`. Reset it here so a failed
       // refresh never blocks the next attempt.
       this.setState({ refreshing: false })
+      // debug/login-logout-wipes-library: mirror that same never-wedge
+      // guarantee for the scoped path — a failed scoped refresh must clear
+      // its OWN `refreshingByRunner` entry, or that one runner's future
+      // scoped refreshes wedge forever behind the guard just above.
+      if (scopedRunner) {
+        this.setState((prevState: StateProps) => ({
+          refreshingByRunner: {
+            ...prevState.refreshingByRunner,
+            [scopedRunner]: false
+          }
+        }))
+      }
     }
   }
 

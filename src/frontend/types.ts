@@ -51,6 +51,10 @@ export interface ContextType {
   completeOAuthLogin: (payload: OAuthLoginCompletionPayload) => void
   refreshing: boolean
   refreshingInTheBackground: boolean
+  // debug/login-logout-wipes-library: per-runner scoped refresh tracking,
+  // separate from the two global flags above — see GlobalState.tsx's
+  // StateProps.refreshingByRunner doc comment for the full rationale.
+  refreshingByRunner: Partial<Record<Runner, boolean>>
   // True while Steam per-game metadata/art is streaming in the background.
   steamMetadataSyncing: boolean
   hiddenGames: {

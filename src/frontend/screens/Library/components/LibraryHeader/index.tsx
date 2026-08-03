@@ -32,6 +32,7 @@ export default React.memo(function LibraryHeader({ list }: Props) {
   const {
     refreshing,
     refreshingInTheBackground,
+    refreshingByRunner,
     steamMetadataSyncing,
     connectivity
   } = useContext(ContextProvider)
@@ -62,8 +63,18 @@ export default React.memo(function LibraryHeader({ list }: Props) {
   // Show the spinner both during the library-list refresh AND while per-game
   // metadata/art is still streaming in the background (the long tail on a cold
   // cache) — otherwise the art appears to load with no sign anything's happening.
+  //
+  // debug/login-logout-wipes-library: a single-runner refresh (login/logout
+  // of ONE platform) no longer flips the two GLOBAL flags above at all — it
+  // writes `refreshingByRunner` instead (see GlobalState.tsx's
+  // `refreshLibrary`/`refresh`). Without this OR clause, that scoped case
+  // would silently lose this spinner entirely (a real, if pre-existing and
+  // mislabeled, feedback regression) — checking whether ANY runner is mid
+  // scoped-refresh preserves the exact same "something is syncing" signal.
   const isSteamSyncing =
-    (refreshing && refreshingInTheBackground) || steamMetadataSyncing
+    (refreshing && refreshingInTheBackground) ||
+    steamMetadataSyncing ||
+    Object.values(refreshingByRunner).some(Boolean)
 
   const showStaleIndicator =
     connectivity.status !== 'online' && syncedAt !== null

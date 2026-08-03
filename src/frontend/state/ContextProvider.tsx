@@ -58,6 +58,7 @@ const initialContext: ContextType = {
   completeOAuthLogin: () => null,
   refreshing: false,
   refreshingInTheBackground: true,
+  refreshingByRunner: {},
   steamMetadataSyncing: false,
   isRTL: false,
   isFullscreen: false,
