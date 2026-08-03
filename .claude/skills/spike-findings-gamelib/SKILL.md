@@ -1,6 +1,6 @@
 ---
 name: spike-findings-gamelib
-description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, and (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, and the login webview / cookie-read surface). Auto-loaded during Steam, macOS, or Tauri implementation work.
+description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, and (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API). Auto-loaded during Steam, macOS, or Tauri implementation work.
 ---
 
 <context>
@@ -15,7 +15,9 @@ and the **Rust/Tauri v2 rearchitecture** (Idea C — swap the Electron shell for
 platform seam + a bundled Node sidecar, keeping the React UI and the Steam stack).
 
 Spike sessions wrapped: 2026-07-14 → 2026-07-18 (bridge line through 008), 2026-07-20 (Tauri
-feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015).
+feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 2026-08-03
+(embedded in-app store browser 016–018).
+</context>
 
 <requirements>
 ## Requirements (non-negotiable — see the reference files for full detail)
@@ -63,6 +65,21 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015).
 - The UA override is **mandatory** (Tauri's default macOS UA has no browser product token).
 - Cookie persistence is free; **isolation costs a live window** — there is no
   `session.fromPartition()` shape in Tauri.
+
+**Tauri embedded store browser (016–018):**
+- The in-app "Store tab" (Electron `<webview>` parity) is achievable: **`Window::add_child`
+  on the existing config-created main window** (`unstable` cargo feature; only `tauri` +
+  `tauri-runtime-wry` recompile, ~11 s warm).
+- **The renderer is the ONLY owner of the embed's geometry** — a second bounds writer
+  silently last-write-wins. JS `getBoundingClientRect()` maps 1:1 to child logical coords
+  (no titlebar offset at scale 1.0); fractional px round to whole logical px.
+- **Overlay UI cannot render above the embed** (native subview) — `hide()` it first.
+- **One default cookie jar per PROCESS across all windows AND children**;
+  `data_store_identifier` genuinely partitions a child jar (macOS 14+).
+- All 013–015 rules carry over to embeds unchanged; don't build positive controls on
+  Secure-over-`http://localhost` cookies (contra 014a's note, they didn't surface in 016–018).
+- Unverified: input/scroll feel, retina, drag-resize latency, Windows/Linux backends, Epic
+  anti-bot inside an embed.
 </requirements>
 
 <findings_index>
@@ -74,13 +91,16 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015).
 | macOS native Steam bridge | references/macos-steam-bridge.md | Out-of-process `steam_api` bridge PROVEN end-to-end incl. a **real commercial game** (007) and the **C++ vtable ABI** (006); it's a compatibility layer not a DRM gate (008). Remaining: full shim generator + P2P join |
 | Tauri/Rust rearchitecture | references/tauri-rearchitecture.md | Feasible reshape, no idea-killer: 80% of backend files are Electron-free, Steam comes along free as a Node sidecar, 13/16 Electron APIs have full Tauri parity, and the frontend port is 3 factory functions. Cost is the 220-endpoint IPC re-plumb + `electron-store` swap |
 | Tauri login webview + cookies | references/tauri-login-webview-cookies.md | The Rust cookie API is sound on macOS (HttpOnly+Secure values, 2–4 ms, any thread) — **but `cookies_for_url()` does string `==` on the domain and silently drops `_simpleauth_sess` for `www.humblebundle.com`**, and `document.cookie` can never see it |
+| Tauri embedded store browser | references/tauri-embedded-store-browser.md | In-app store browser VALIDATED: `add_child` embeds a child webview in the config-created main window (real Steam store composited, screenshot-proven); renderer must be the sole bounds owner; one shared jar per process across all windows/children |
 
 ## Source Files
 
 Original spike source is preserved in `sources/` (001–003 = Node `.mjs`; 005 = C helper/shim/harness
 + build/run scripts + in-bottle evidence; 004 = research READMEs; 009 = `Module._load` Proxy-recorder
 probes; 011 = Rust `keyring` parity probe; 012 = preload bridge-shim demo; 013 = a full runnable
-Tauri cookie-probe app with `SPIKE_AUTORUN=1|2`; 014a = raw JSONL evidence logs).
+Tauri cookie-probe app with `SPIKE_AUTORUN=1|2`; 014a = raw JSONL evidence logs; 016 = a full
+runnable Tauri multiwebview harness with `SPIKE_AUTORUN=1`, JSONL run.log, and window-targeted
+screenshot evidence, shared by 017/018).
 </findings_index>
 
 <metadata>
@@ -106,4 +126,7 @@ Tauri cookie-probe app with `SPIKE_AUTORUN=1|2`; 014a = raw JSONL evidence logs)
 - 014a-cookie-read-rust-webview-api
 - 014b-cookie-read-injected-js
 - 015-cookie-jar-isolation-persistence
+- 016-embedded-child-webview-basic
+- 017-child-webview-bounds-sync
+- 018-child-webview-coexistence
 </metadata>

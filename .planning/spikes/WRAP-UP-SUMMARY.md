@@ -1,8 +1,8 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-07-27 (updated — Tauri line 009–015 wrapped)
-**Spikes processed:** 20
-**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies
+**Date:** 2026-08-03 (updated — embedded store browser 016–018 wrapped)
+**Spikes processed:** 23
+**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
 ## Processed Spikes
@@ -29,6 +29,9 @@
 | 014a | cookie-read-rust-webview-api | comparison | ✓ WINNER | Tauri login webview + cookies |
 | 014b | cookie-read-injected-js | comparison | ✗ INVALIDATED | Tauri login webview + cookies |
 | 015 | cookie-jar-isolation-persistence | standard | ✓ VALIDATED | Tauri login webview + cookies |
+| 016 | embedded-child-webview-basic | standard | ✓ VALIDATED | Tauri embedded store browser |
+| 017 | child-webview-bounds-sync | standard | ✓ VALIDATED | Tauri embedded store browser |
+| 018 | child-webview-coexistence | standard | ✓ VALIDATED | Tauri embedded store browser |
 
 ## Key Findings
 
@@ -86,8 +89,31 @@ product token**, making the Chrome-UA spoof mandatory rather than reinforcement.
 the verdicts are trustworthy because three independent oracles watched the same jar, which is also
 what caught two of my own wrong assumptions mid-spike.
 
+**Tauri embedded store browser (016–018, run 2026-08-03):** The in-app "Store tab" (Electron
+`<webview>` parity for `WebView/index.tsx`) is **VALIDATED** via the `unstable` multiwebview API.
+**016** — `Window::add_child` works on the *config-created* main window (42–51 ms; no window
+restructuring); the real Steam store composited inside the window above the live app UI,
+**screenshot-proven** via window-targeted `screencapture -l<NSWindow.windowNumber>` (full-screen
+grabs repeatedly failed); per-child `.user_agent()` reaches the network (server-side oracle); the
+`unstable` feature costs one ~11 s rebuild of `tauri`+`tauri-runtime-wry` only. A bare
+`WindowBuilder` window with two children (probe B) also works. **017** — JS
+`getBoundingClientRect()` → `set_position/set_size` lands exactly (1:1 coordinate space, no
+titlebar offset at scale 1.0; fractional px round to whole logical px); hide/show/close support
+route-change semantics; the panel's live ResizeObserver sync silently **overrode** the scripted
+bounds — two geometry writers last-write-wins with no error, so the renderer must be the SOLE
+bounds owner; native child renders above the main webview, so overlay UI must hide the embed.
+**018** — the 013–015 cookie/event model carries over unchanged to children (`cookies()` works on
+the child handle incl. HttpOnly; `on_page_load` fires per-child), with one ecosystem-level fact:
+**one default jar per process across ALL windows and children** (probe B's GOG child dropped
+cookies the main webview could read), and `data_store_identifier` genuinely partitions a child jar
+(isolated child saw none of the shared jar's Steam/GOG cookies). Discrepancy vs 014a: Secure
+cookies over `http://localhost` did NOT surface this session — positive controls must not depend
+on them. Unverified: input/scroll feel (interactive checkpoint pending), retina, drag-resize
+latency, Windows/Linux backends, Epic anti-bot inside an embed.
+
 ## Blueprint
 
 `./.claude/skills/spike-findings-gamelib/` — auto-loads in future build conversations
 (`references/steam-native-install.md`, `references/macos-steam-bridge.md`,
-`references/tauri-rearchitecture.md`, `references/tauri-login-webview-cookies.md`, `sources/`).
+`references/tauri-rearchitecture.md`, `references/tauri-login-webview-cookies.md`,
+`references/tauri-embedded-store-browser.md`, `sources/`).
