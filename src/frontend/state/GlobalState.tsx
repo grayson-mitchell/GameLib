@@ -1412,6 +1412,14 @@ class GlobalState extends PureComponent<Props> {
     const gogUser = gogConfigStore.has('userData')
     const amazonUser = nileConfigStore.has('userData')
     const zoomUser = zoomConfigStore.has('isLoggedIn')
+    // debug/steam-refresh-hung-on-startup: a Steam-only login (no Epic/GOG/
+    // Amazon/Zoom account) was previously excluded from the mount-time
+    // "refresh everything" gate below entirely, so SteamLibraryManager.refresh()
+    // never ran on startup and the "Syncing your Steam library…" spinner
+    // (true by default: steam.username seeded synchronously above,
+    // refreshingInTheBackground defaults true, steam.library starts empty)
+    // spun forever with no errors, since nothing was ever running to clear it.
+    const steamUser = steamConfigStore.has('userData')
 
     if (legendaryUser) {
       await window.api.getUserInfo()
@@ -1430,7 +1438,13 @@ class GlobalState extends PureComponent<Props> {
       this.setState({ gameUpdates: storedGameUpdates })
     }
 
-    if (legendaryUser || gogUser || amazonUser || (zoom.enabled && zoomUser)) {
+    if (
+      legendaryUser ||
+      gogUser ||
+      amazonUser ||
+      steamUser ||
+      (zoom.enabled && zoomUser)
+    ) {
       this.refreshLibrary({
         checkForUpdates: true,
         runInBackground:

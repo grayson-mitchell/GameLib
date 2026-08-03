@@ -106,6 +106,36 @@ function countOriginLiteral(strippedSource: string, value: string): number {
   return matches?.length ?? 0
 }
 
+/**
+ * debug/steam-refresh-hung-on-startup: the mount-time "refresh everything"
+ * call (the sole `origin: 'mount'` call site) MUST include a Steam-login
+ * check in its gating condition. A Steam-only session (no Epic/GOG/Amazon/
+ * Zoom account) was previously excluded from this gate entirely, so
+ * SteamLibraryManager.refresh() never ran on startup and the "Syncing your
+ * Steam library…" spinner (true by default) never cleared. Asserts both
+ * that a `steamUser` variable is derived from `steamConfigStore.has(...)`
+ * (mirroring the existing gogUser/amazonUser/zoomUser pattern) and that it
+ * appears in the `if (...)` condition immediately gating the `origin:
+ * 'mount'` refreshLibrary call.
+ */
+function mountGateIncludesSteamUser(strippedSource: string): boolean {
+  const definesSteamUser =
+    /const\s+steamUser\s*=\s*steamConfigStore\.has\(\s*['"]userData['"]\s*\)/.test(
+      strippedSource
+    )
+
+  const mountIdx = strippedSource.indexOf("origin: 'mount'")
+  if (mountIdx === -1) return false
+
+  const windowStart = Math.max(0, mountIdx - 800)
+  const before = strippedSource.slice(windowStart, mountIdx)
+  const ifIdx = before.lastIndexOf('if (')
+  if (ifIdx === -1) return false
+  const condition = before.slice(ifIdx)
+
+  return definesSteamUser && /steamUser/.test(condition)
+}
+
 describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefined (gap cycle 4, item 2)', () => {
   const rawSource = readFileSync(globalStatePath, 'utf-8')
   const stripped = stripSourceComments(rawSource)
@@ -236,5 +266,76 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
     ].join('\n')
 
     expect(refreshingGuardAndResetUnchanged(missingResetShape)).toBe(false)
+  })
+})
+
+describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes Steam (debug/steam-refresh-hung-on-startup)', () => {
+  const rawSource = readFileSync(globalStatePath, 'utf-8')
+  const stripped = stripSourceComments(rawSource)
+
+  it('the real source derives steamUser from steamConfigStore and includes it in the origin:"mount" gate', () => {
+    expect(mountGateIncludesSteamUser(stripped)).toBe(true)
+  })
+
+  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
+    const correctShape = [
+      'async componentDidMount() {',
+      "    const legendaryUser = configStore.has('userInfo')",
+      "    const gogUser = gogConfigStore.has('userData')",
+      "    const amazonUser = nileConfigStore.has('userData')",
+      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
+      "    const steamUser = steamConfigStore.has('userData')",
+      '    if (legendaryUser || gogUser || amazonUser || steamUser || (zoom.enabled && zoomUser)) {',
+      '      this.refreshLibrary({',
+      '        checkForUpdates: true,',
+      '        runInBackground: false,',
+      "        origin: 'mount'",
+      '      })',
+      '    }',
+      '}'
+    ].join('\n')
+
+    expect(mountGateIncludesSteamUser(correctShape)).toBe(true)
+  })
+
+  it('self-test: the gate REJECTS the pre-fix shape that omits steamUser entirely (the exact regression this test guards against)', () => {
+    const preFixShape = [
+      'async componentDidMount() {',
+      "    const legendaryUser = configStore.has('userInfo')",
+      "    const gogUser = gogConfigStore.has('userData')",
+      "    const amazonUser = nileConfigStore.has('userData')",
+      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
+      '    if (legendaryUser || gogUser || amazonUser || (zoom.enabled && zoomUser)) {',
+      '      this.refreshLibrary({',
+      '        checkForUpdates: true,',
+      '        runInBackground: false,',
+      "        origin: 'mount'",
+      '      })',
+      '    }',
+      '}'
+    ].join('\n')
+
+    expect(mountGateIncludesSteamUser(preFixShape)).toBe(false)
+  })
+
+  it('self-test: the gate REJECTS a shape that defines steamUser but forgets to add it to the if-condition', () => {
+    const definedButUnusedShape = [
+      'async componentDidMount() {',
+      "    const legendaryUser = configStore.has('userInfo')",
+      "    const gogUser = gogConfigStore.has('userData')",
+      "    const amazonUser = nileConfigStore.has('userData')",
+      "    const zoomUser = zoomConfigStore.has('isLoggedIn')",
+      "    const steamUser = steamConfigStore.has('userData')",
+      '    if (legendaryUser || gogUser || amazonUser || (zoom.enabled && zoomUser)) {',
+      '      this.refreshLibrary({',
+      '        checkForUpdates: true,',
+      '        runInBackground: false,',
+      "        origin: 'mount'",
+      '      })',
+      '    }',
+      '}'
+    ].join('\n')
+
+    expect(mountGateIncludesSteamUser(definedButUnusedShape)).toBe(false)
   })
 })
