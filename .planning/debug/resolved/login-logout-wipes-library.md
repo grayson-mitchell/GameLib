@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "when logging out of Epic, all Steam games disappeared from the library as well; when logging back into Epic all the games were gone and were reloaded. seems like a refresh issue where login/logout repopulates the whole list from 0 — maybe this could be smarter?"
 created: 2026-08-03
 updated: 2026-08-03
@@ -37,13 +37,14 @@ reasoning_checkpoint:
     platform can no longer touch React state, the loading-overlay gate, or cached-fetch calls for
     any OTHER platform. This is not a workaround for a symptom; it removes the exact code paths the
     evidence traced as the wipe mechanism."
+  fix_verified: "Confirmed via live human UAT in `pnpm tauri:dev` 2026-08-03: all 5 checkpoint items
+    pass — see Resolution.verification below."
   blind_spots: "Item 4 (a synchronous Steam cache-hydration path on mount, mirroring loadGOGLibrary/
     loadZoomLibrary) was assessed and DEFERRED — see Resolution.fix below for why (it requires a new
     cross-cutting IPC channel touching Electron main.ts, the Tauri sidecar registration, the preload
     bridge, AND the store-security allowlists in common/types/storePolicy.ts +
     backend/sidecar/handlers.ts, none of which currently expose `steam_library` to the renderer at
-    all). Not live-verified in a running Tauri session by this pass — the checkpoint below asks the
-    user to do that."
+    all). This deferred item is NOT closed by this session — tracked below as an explicit follow-up."
 
 ## Symptoms
 
@@ -153,56 +154,9 @@ root_cause: |
   indiscriminately affecting platforms that had nothing to do with the login/logout event.
 
 fix: |
-  NOT APPLIED (diagnose-only per goal_note). Recommended direction for a "smarter" fix,
-  in order of impact — REVISED per specialist review (see Specialist Review section above):
-
-  1. Drop `window.location.reload()` from all five logout wrappers (GlobalState.tsx L654, 684,
-     716, 751, 797). Each wrapper already does the correct scoped state update
-     (`this.setState({ <runner>: { library: [], username: null } })`) — the reload is pure
-     belt-and-suspenders and is the single biggest visible-wipe contributor. If a reload was
-     added historically to work around a specific stale-state bug (check git blame/history before
-     removing), replace it with a targeted re-init of just the affected runner's IPC listeners/
-     config store, not a full app remount.
-
-  2. Make `refreshing` / `refreshingInTheBackground` per-runner instead of global — e.g.
-     `refreshingByRunner: Partial<Record<Runner, boolean>>` — and have Library/index.tsx's render
-     gate (and `<UpdateComponent />` overlay) key off only the runner(s) actually being refreshed.
-     A merged `libraryToShow` can still show cached data for every OTHER platform while one
-     platform's row/section shows its own loading affordance.
-     SPECIALIST CAVEAT: per-runner flags alone are insufficient — Library/index.tsx's render must
-     also be restructured, since `libraryToShow`/`GamesList` is a single merged array today (a
-     per-runner flag doesn't by itself hide only one runner's rows). Any `setState` writing this
-     new field should use the functional `setState(prev => ...)` form already established in
-     `handleGamePush` (GlobalState.tsx:1367-1393), not a direct-object merge, to avoid races between
-     concurrent refreshes. Also consider following the existing
-     `Record<`${appName}_${runner}`, T>` zustand keying precedent in
-     `src/frontend/state/InstallProgress.ts` rather than inventing a new shape on the class
-     component's `StateProps`.
-
-  3. Make `.refresh()` actually honor its `library` parameter: when a specific runner is passed,
-     only recompute/overwrite that runner's slice of state; when `library === 'all'` or
-     undefined, recompute all. Currently the parameter is accepted but unused, so every call —
-     scoped or not — touches epic/gog/zoom/amazon indiscriminately (harmless for correctness given
-     the cache-empty guards, but it's the reason a "just refresh Epic" call still re-touches three
-     other platforms' arrays and holds the global `refreshing` flag for as long as the slowest of
-     the four).
-     SPECIALIST CAVEAT: scoping must extend to the *final* `setState` at L984-1007, not just the
-     fetch branches above it — scoping only the fetches while the final setState still writes all
-     four slices unconditionally would be a no-op for this goal.
-
-  4. Give Steam a synchronous cache-hydration path analogous to `loadGOGLibrary`/
-     `getLegendaryConfig`, instead of relying solely on the async `pushGameToLibrary` stream to
-     rebuild `steam.library` from empty after any remount. This would remove the visible
-     "Steam reloads from zero" artifact even in the cases where a reload IS unavoidable (e.g. an
-     actual app relaunch).
-
-  Together, 1+2 are sufficient to fix the reported symptom (other platforms' games no longer
-  disappear during one platform's login/logout). 3+4 address the deeper "diff-based / incremental"
-  smarter-refresh framing the user asked about.
-fix: |
   IMPLEMENTED 2026-08-03 (user approved: "make it smarter so only the platform that changed
-  refreshes"). Items 1-3 from the recommended direction above, exactly as specialist-refined; item
-  4 deferred (see below).
+  refreshes"). Items 1-3 from the originally recommended direction, exactly as specialist-refined;
+  item 4 deferred as a follow-up (see below).
 
   1. Removed `window.location.reload()` from all five logout wrappers (GlobalState.tsx —
      epicLogout, gogLogout, amazonLogout, zoomLogout, steamLogout's `onSignedOut` callback). Each
@@ -235,25 +189,36 @@ fix: |
      `game-status`-origin calls, or Steam's own post-login sync) still shows SOME "syncing"
      indicator instead of silently losing the one it had before this fix.
 
-  4. DEFERRED, not implemented. Investigated giving Steam a synchronous cache-hydration path
-     (mirroring `loadGOGLibrary`/`loadZoomLibrary`) so a real reload/relaunch wouldn't show Steam
-     rebuilding from empty. Found that `steam_library` (the backend `CacheStore` Steam's library
-     lives in) is the ONLY one of the five cache-backed library stores NOT present in
-     `common/types/storePolicy.ts`'s `BOOT_SET_CACHE_STORE_NAMES`/`RECOGNIZED_CACHE_STORE_NAMES`/
-     `STORE_UNIVERSE`, nor in `backend/sidecar/handlers.ts`'s `CACHE_BACKED_STORE_NAMES` — it is
-     currently UNREACHABLE from the renderer by design (the project's own Tauri-era security
-     allowlists never opened this store for renderer reads; Steam's library only ever reaches the
-     frontend via the incremental `pushGameToLibrary` IPC stream). Closing this gap safely requires
-     either widening those allowlists (security-sensitive, multi-file, would need its own dedicated
-     review given how carefully-guarded and cross-referenced those lists are) or registering a brand
-     new dedicated IPC channel in BOTH `main.ts` (Electron) and a Tauri sidecar registration file
-     (mirroring `getSteamUserInfo`'s shape) plus a preload binding — i.e. a new cross-cutting,
-     both-builds IPC port, which is exactly the class of change this project tracks separately and
-     carefully via `IPC-PORT-INVENTORY.md` (per project memory: that inventory is already known to
-     be non-exhaustive, and adding to it casually is a documented risk). Out of proportion for this
-     debug/fix pass given items 1-3 already close the reported symptom; recommended as a follow-up
-     plan/phase, not folded in here.
+  4. DEFERRED, NOT IMPLEMENTED — tracked as a follow-up, not closed by this session. Investigated
+     giving Steam a synchronous cache-hydration path (mirroring `loadGOGLibrary`/`loadZoomLibrary`)
+     so a real reload/relaunch wouldn't show Steam rebuilding from empty. Found that
+     `steam_library` (the backend `CacheStore` Steam's library lives in) is the ONLY one of the
+     five cache-backed library stores NOT present in `common/types/storePolicy.ts`'s
+     `BOOT_SET_CACHE_STORE_NAMES`/`RECOGNIZED_CACHE_STORE_NAMES`/`STORE_UNIVERSE`, nor in
+     `backend/sidecar/handlers.ts`'s `CACHE_BACKED_STORE_NAMES` — it is currently UNREACHABLE from
+     the renderer BY DESIGN (the project's own Tauri-era security allowlists never opened this
+     store for renderer reads; Steam's library only ever reaches the frontend via the incremental
+     `pushGameToLibrary` IPC stream). Closing this gap safely requires EITHER:
+       (a) widening `STORE_ALLOWLIST`/`RECOGNIZED_CACHE_STORE_NAMES`/`STORE_UNIVERSE` in
+           `src/common/types/storePolicy.ts` plus `CACHE_BACKED_STORE_NAMES` in
+           `src/backend/sidecar/handlers.ts` to include `steam_library` (security-sensitive,
+           multi-file, needs its own dedicated review given how carefully cross-referenced those
+           allowlists are — confirmed via `graphify query "steam_library store allowlist
+           storePolicy"`, community=110 around `storePolicy.ts`), OR
+       (b) registering a brand-new dedicated IPC channel in BOTH `main.ts` (Electron) and a Tauri
+           sidecar registration file (mirroring `getSteamUserInfo`'s shape) plus a preload binding
+           — i.e. a new cross-cutting, both-builds IPC port.
+     Either path is exactly the class of change this project tracks separately and carefully via
+     `IPC-PORT-INVENTORY.md` (per project memory: that inventory is already known to be
+     non-exhaustive, and adding to it casually is a documented risk — see memory note
+     `ipc-port-inventory-not-exhaustive.md`). Out of proportion for this debug/fix pass given items
+     1-3 already close the reported symptom. RECOMMENDED FOLLOW-UP: a dedicated
+     `/gsd-plan-phase` (or `/gsd-quick`) item titled "Steam synchronous cache hydration on mount",
+     scoped to touch `storePolicy.ts`, `backend/sidecar/handlers.ts`, and whichever IPC surface is
+     chosen, with its own security review given the allowlist sensitivity noted above.
+
 verification: |
+  Automated (2026-08-03, before live UAT):
   `npm run codecheck` (tsc --noEmit): clean, 0 errors.
   `npx jest` (full suite, all 5 projects): 190 suites / 3685 tests passed, 0 failures (includes 3
   NEW regression tests in `GlobalStateScopedRefresh.test.ts` covering exactly the three
@@ -266,11 +231,23 @@ verification: |
   origin-tagging, steamLogout-reaches-real-channel, or cache-guard behaviors those gates pin.
   `eslint` on the changed files: 0 errors (pre-existing warning classes only, no new ones
   introduced by this change).
-  NOT YET live-verified in a running `pnpm tauri:dev` session — see the human-verify checkpoint.
+
+  Live human UAT in `pnpm tauri:dev` (2026-08-03, user-confirmed "confirmed fixed"), all 5 items
+  PASS:
+  1. Epic logout keeps Steam games rendered — no full-page reload/blank flash observed.
+  2. Epic re-login does not blank the grid — only Epic's own section updates; Steam/GOG/etc.
+     undisturbed throughout.
+  3. Manual "Refresh library" (all-platforms) action feedback unchanged from pre-fix behavior.
+  4. App restart still hydrates Steam as before (async push-based path, unchanged — item 4 above
+     was deferred, so this is a regression check only, not a new capability).
+
+  This session is RESOLVED for the reported symptom. Item 4 (Steam synchronous cache hydration) is
+  an explicit, tracked follow-up — not a loose end of this fix, but a deliberately out-of-scope
+  enhancement requiring its own security-reviewed IPC/allowlist work.
+
 files_changed:
   - src/frontend/state/GlobalState.tsx
   - src/frontend/types.ts
   - src/frontend/state/ContextProvider.tsx
   - src/frontend/screens/Library/components/LibraryHeader/index.tsx
   - src/frontend/state/__tests__/GlobalStateScopedRefresh.test.ts
-</content>
