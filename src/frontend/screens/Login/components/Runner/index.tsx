@@ -25,6 +25,12 @@ interface RunnerProps {
   // that does not pass it, so existing behavior is unchanged for any runner that omits it.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   primaryLoginAction?: () => any
+  // Purely visual deletion-pending marker (quick task 260805-d62) for the interactive
+  // legendary/SID login ahead of ROADMAP Phase 34.7. Names WHICH tile is the SIDLogin
+  // action, never a fixed tile position, because Epic's two tiles swap roles by shell
+  // (F-34.5-G6-01 above): under Electron SIDLogin is the alternative tile, under Tauri
+  // it is the primary tile. Changes no behavior -- only a class name and a title string.
+  deprecatedTile?: 'primary' | 'alternative'
 }
 
 export default function Runner(props: RunnerProps) {
@@ -74,12 +80,21 @@ export default function Runner(props: RunnerProps) {
     props.alternativeLoginAction()
   }
 
+  const primaryDeprecated =
+    props.deprecatedTile === 'primary' && !props.isLoggedIn
+  const alternativeDeprecated =
+    props.deprecatedTile === 'alternative' && !props.isLoggedIn
+  const deprecatedHint = t(
+    'login.deprecated_hint',
+    'Deprecated — this sign-in method is scheduled for removal'
+  )
+
   return (
     <>
       <div
         className={`runnerWrapper ${props.class} ${
           props.disabled ? 'disabled' : ''
-        }`}
+        } ${primaryDeprecated ? 'deprecated' : ''}`}
       >
         <div className={`runnerIcon ${props.class}`}>{props.icon()}</div>
         {props.isLoggedIn && (
@@ -92,7 +107,11 @@ export default function Runner(props: RunnerProps) {
         )}
         <div className="runnerButtons">
           {!props.isLoggedIn ? (
-            <div className="runnerLogin" onClick={() => handleLogin()}>
+            <div
+              className={`runnerLogin${primaryDeprecated ? ' deprecated' : ''}`}
+              onClick={() => handleLogin()}
+              title={primaryDeprecated ? deprecatedHint : undefined}
+            >
               {props.buttonText}
             </div>
           ) : isLoggingOut ? (
@@ -112,12 +131,19 @@ export default function Runner(props: RunnerProps) {
         </div>
       </div>
       {props.alternativeLoginAction && !props.isLoggedIn && (
-        <div className={`runnerWrapper ${props.disabled ? 'disabled' : ''}`}>
+        <div
+          className={`runnerWrapper ${props.disabled ? 'disabled' : ''} ${
+            alternativeDeprecated ? 'deprecated' : ''
+          }`}
+        >
           <div className="runnerIcon alternative">{props.icon()}</div>
           <div className="runnerButtons">
             <div
               onClick={() => handleAltLogin()}
-              className="runnerLogin alternative"
+              className={`runnerLogin alternative${
+                alternativeDeprecated ? ' deprecated' : ''
+              }`}
+              title={alternativeDeprecated ? deprecatedHint : undefined}
             >
               {`${props.class} ${t(
                 'login.alternative_method',

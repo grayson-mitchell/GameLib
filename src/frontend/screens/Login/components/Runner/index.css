@@ -88,3 +88,22 @@
 .userData {
   flex: 1;
 }
+
+/* Quick task 260805-d62: purely visual deletion-pending marker for the interactive
+   legendary/SID login ahead of ROADMAP Phase 34.7. `outline` (not `border`) is used
+   on the wrapper because `.runnerWrapper` is a fixed-height flex row -- a border
+   would shift layout by its own width, while an inset outline paints without
+   reflow. The hover rule must out-specify the existing (0,4,0) hover rule below,
+   which would otherwise repaint this tile accent-coloured on hover. */
+.runnerLogin.deprecated {
+  color: var(--danger);
+}
+
+.runnerWrapper:not(.disabled) .runnerLogin.deprecated:hover {
+  color: var(--danger-hover, var(--danger));
+}
+
+.runnerWrapper.deprecated {
+  outline: 1px solid var(--danger);
+  outline-offset: -1px;
+}

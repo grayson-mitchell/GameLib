@@ -214,3 +214,133 @@ describe('Runner: primaryLoginAction set (Epic under Tauri, F-34.5-G6-01)', () =
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 })
+
+function hasDeprecatedClass(el: ReactElement<PropsWithChildren>) {
+  const className = el.props?.className
+  return typeof className === 'string' && className.split(' ').includes('deprecated')
+}
+
+function anyDeprecated(tree: ReactNode) {
+  return collectElements(tree).some(hasDeprecatedClass)
+}
+
+function findClickablePrimary(tree: ReactNode) {
+  return collectElements(tree).find((el) => {
+    const className = el.props?.className
+    return (
+      typeof className === 'string' &&
+      className.split(' ').includes('runnerLogin') &&
+      !className.split(' ').includes('alternative') &&
+      !className.split(' ').includes('logged') &&
+      typeof (el.props as Record<string, unknown>).onClick === 'function'
+    )
+  })
+}
+
+function findClickableAlternative(tree: ReactNode) {
+  return collectElements(tree).find((el) => {
+    const className = el.props?.className
+    return (
+      typeof className === 'string' &&
+      className.split(' ').includes('alternative') &&
+      typeof (el.props as Record<string, unknown>).onClick === 'function'
+    )
+  })
+}
+
+describe('Runner: deprecatedTile marker (quick task 260805-d62)', () => {
+  afterEach(() => {
+    mockNavigate.mockClear()
+  })
+
+  it("deprecatedTile: 'alternative' marks only the alternative tile's clickable div", () => {
+    const alternativeLoginAction = jest.fn()
+    const tree = mount(
+      makeProps({ alternativeLoginAction, deprecatedTile: 'alternative' })
+    )
+
+    const primary = findClickablePrimary(tree)!
+    const alternative = findClickableAlternative(tree)!
+
+    expect(hasDeprecatedClass(primary)).toBe(false)
+    expect(hasDeprecatedClass(alternative)).toBe(true)
+  })
+
+  it("deprecatedTile: 'primary' marks only the primary tile's clickable div", () => {
+    const primaryLoginAction = jest.fn()
+    const alternativeLoginAction = jest.fn()
+    const tree = mount(
+      makeProps({
+        primaryLoginAction,
+        alternativeLoginAction,
+        deprecatedTile: 'primary'
+      })
+    )
+
+    const primary = findClickablePrimary(tree)!
+    const alternative = findClickableAlternative(tree)!
+
+    expect(hasDeprecatedClass(primary)).toBe(true)
+    expect(hasDeprecatedClass(alternative)).toBe(false)
+  })
+
+  it('deprecatedTile omitted (the GOG/Amazon/Zoom/Steam/Humble shape) renders zero deprecated classes', () => {
+    const tree = mount(makeProps({ class: 'gog', buttonText: 'GOG Login' }))
+
+    expect(anyDeprecated(tree)).toBe(false)
+  })
+
+  it('deprecatedTile: primary + isLoggedIn: true renders no deprecated class -- the logout tile is not a login entry point', () => {
+    const tree = mount(
+      makeProps({ deprecatedTile: 'primary', isLoggedIn: true, user: 'Someone' })
+    )
+
+    expect(anyDeprecated(tree)).toBe(false)
+  })
+
+  it('clicking a marked primary tile invokes exactly the same action as an unmarked one', () => {
+    const primaryLoginAction = jest.fn()
+    const tree = mount(makeProps({ primaryLoginAction, deprecatedTile: 'primary' }))
+    const primary = findClickablePrimary(tree)!
+    ;(primary.props as unknown as { onClick: () => void }).onClick()
+
+    expect(primaryLoginAction).toHaveBeenCalledTimes(1)
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('clicking a marked primary tile with no primaryLoginAction still navigates to loginUrl, unchanged', () => {
+    const tree = mount(makeProps({ deprecatedTile: 'primary' }))
+    const primary = findClickablePrimary(tree)!
+    ;(primary.props as unknown as { onClick: () => void }).onClick()
+
+    expect(mockNavigate).toHaveBeenCalledWith('/loginweb/legendary')
+  })
+
+  it('clicking a marked alternative tile invokes exactly the same action as an unmarked one', () => {
+    const alternativeLoginAction = jest.fn()
+    const tree = mount(
+      makeProps({ alternativeLoginAction, deprecatedTile: 'alternative' })
+    )
+    const alternative = findClickableAlternative(tree)!
+    ;(alternative.props as unknown as { onClick: () => void }).onClick()
+
+    expect(alternativeLoginAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('the marked tile carries a non-empty title attribute; the unmarked tile carries none', () => {
+    const alternativeLoginAction = jest.fn()
+    const tree = mount(
+      makeProps({ alternativeLoginAction, deprecatedTile: 'alternative' })
+    )
+
+    const primary = findClickablePrimary(tree)!
+    const alternative = findClickableAlternative(tree)!
+
+    expect(
+      (primary.props as unknown as { title?: string }).title
+    ).toBeFalsy()
+    expect(
+      (alternative.props as unknown as { title?: string }).title
+    ).toBeTruthy()
+  })
+})
